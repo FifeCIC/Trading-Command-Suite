@@ -24,7 +24,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import SignalBadge from '../components/SignalBadge';
 import NoticeBlock from '../components/NoticeBlock';
-import { buildScoreDisplay } from '../core/score-display';
+import { buildScoreDisplay, thresholdGeometry, describeThresholdScale } from '../core/score-display';
 import { timeAgo } from '../core/format-utils';
 import { stripWarningGlyph } from '../core/signal-utils';
 // #826 Phase 2 — every user-facing message on this page comes from the notice registry. Call sites
@@ -41,6 +41,7 @@ import {
   fetchSignalAction,
   tradeSignal,
   createSignalPlan,
+  fetchScoringThresholds,
 } from '../core/api/signals';
 import './signals-overview.css';
 
@@ -95,6 +96,26 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
     signal: envelope.signal,
     value: envelope.composite,
   });
+
+  // Live thresholds — the scale the Signal bar is drawn against.
+  //
+  // ⚠️ Shared queryKey: every card issues this, but react-query dedupes them into ONE
+  // network call. `retry: 1` and a long staleTime keep a briefly-unavailable endpoint from
+  // turning into a burst of retries on a page that renders many cards.
+  //
+  // The thresholds are only needed to draw the bar, so a failure here must NOT blank the
+  // card — `thresholdGeometry()` falls back to the documented defaults, and `conventional`
+  // records that they were defaulted rather than read.
+  const { data: thresholdData } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: fetchScoringThresholds,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const scale = thresholdData?.classification ?? null;
+  const signalGeometry = thresholdGeometry(envelope.signalPct, scale);
+  const scaleTitle = describeThresholdScale(scale);
+
   const marketOpen = envelope.marketStatus ? envelope.marketStatus.open !== false : true;
   const dir = directionLabel(envelope.directionMode);
   // BUY/STRONG_BUY → long; SELL/STRONG_SELL → short; SHORT_ONLY protocols always short.
@@ -475,6 +496,21 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
   const isBuy = envelope.directionMode !== 'SHORT_ONLY'
     && !String(envelope.signal || '').toUpperCase().includes('SELL');
 
+  // Live thresholds — the scale the Signal bar is drawn against.
+  //
+  // ⚠️ Shared queryKey with OpportunityCard: only ONE network call is made however many cards
+  // render. A failure here must NOT blank the card — `thresholdGeometry()` falls back to the
+  // documented defaults and reports `conventional: false`.
+  const { data: thresholdData } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: fetchScoringThresholds,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const scale = thresholdData?.classification ?? null;
+  const signalGeometry = thresholdGeometry(envelope.signalPct, scale);
+  const scaleTitle = describeThresholdScale(scale);
+
   const actionQuery = useQuery({
     queryKey: ['signal-action', envelope.scoreId],
     queryFn: () => fetchSignalAction(envelope.scoreId),
@@ -597,12 +633,57 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
             <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${strength}%` }} /></span>
             <strong className="sig-b-row-pct sig-b-row-pct--combined">{envelope.combinedStrength}</strong>
           </div>
-          <div className="sig-b-row" title="Signal = directional conviction of this setup (0–100%)">
+          <div className="sig-b-row" title={`Signal = directional conviction of this setup. ${scaleTitle}`}>
             <span className="sig-b-row-label">Signal</span>
-            <span className="sig-b-row-track"><span className="sig-b-row-fill sig-b-row-fill--accent" style={{ width: `${Math.max(0, Math.min(100, signalPct || 0))}%` }} /></span>
-            <strong className="sig-b-row-pct">{signalPct ?? '—'}{signalPct != null ? '%' : ''}</strong>
+            <span className="sig-b-row-track">
+              {/*
+                * ⚠️ Width is the NORMALISED fill (STRONG = 100%), NOT the raw percentage.
+                * Raw ~15% at the measured peak used to draw a near-empty bar, which read as
+                * "nothing here is worth trading" when the reading was in fact at the top of
+                * the achievable range. See `thresholdGeometry()` for the full reasoning.
+                */}
+              <span
+                className="sig-b-row-fill sig-b-row-fill--accent"
+                style={{ width: `${signalGeometry.fillPct}%` }}
+              />
+              {/*
+                * ⚠️ CONDITIONAL. `entryMarkPct` is null when the thresholds could not be read,
+                * and `left: null%` is not valid CSS — the tick would silently sit at 0.
+                * No scale known means NO mark, rather than a mark in the wrong place.
+                */}
+              {signalGeometry.entryMarkPct != null && (
+                <span
+                  className="sig-b-row-tick"
+                  style={{ left: `${signalGeometry.entryMarkPct}%` }}
+                  aria-hidden="true"
+                />
+              )}
+            </span>
+            {/*
+              * ⚠️ The chip MUST stay INSIDE this wrapper. `.sig-b-row { display: contents }`
+              * joins a fixed 3-column grid (label | bar | value), so a 4th direct child wraps
+              * to a new implicit row and breaks the alignment of EVERY row in the list.
+              * Wrap, don't add a sibling.
+              */}
+            <span className="sig-b-row-value">
+              <strong className="sig-b-row-pct">{signalPct ?? '—'}{signalPct != null ? '%' : ''}</strong>
+              {signalGeometry.standing && (
+                <span
+                  className={`sig-b-row-standing sig-b-row-standing--${signalGeometry.standing}`}
+                  title={
+                    signalGeometry.standing === 'strong' ? 'At or above the STRONG bar — the top of the achievable scale.'
+                      : signalGeometry.standing === 'entry' ? 'At or above the entry bar — a tradable reading.'
+                        : 'Below the entry bar — not yet a tradable reading.'
+                  }
+                >
+                  {signalGeometry.standing === 'strong' ? 'STRONG'
+                    : signalGeometry.standing === 'entry' ? 'ENTRY'
+                      : 'BELOW'}
+                </span>
+              )}
+            </span>
           </div>
-          <div className="sig-b-row" title="Opportunity = additive screen value on top of the setup (0–100%)">
+          <div className="sig-b-row" title="Opportunity = additive screen value on top of the setup. Measured against ALL directive capacity (including gates), so its scale differs from Signal's — do not compare the two bars directly.">
             <span className="sig-b-row-label">Opportunity</span>
             <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${Math.max(0, Math.min(100, oppPct || 0))}%` }} /></span>
             <strong className="sig-b-row-pct">{oppPct ?? '—'}{oppPct != null ? '%' : ''}</strong>

@@ -1245,7 +1245,16 @@ export class AutomationLoopService implements OnModuleInit {
 
       const evalSide = async (side: 'A' | 'B', cfg: any, score: any): Promise<void> => {
         if (!score || score.composite === undefined) return;
-        const threshold = cfg.tradeThreshold ?? 60;
+        // ⚠️ `BOT_BAR_DEFAULT`, not a literal.
+        //
+        // This line read `?? 60` while `BOT_BAR_DEFAULT` was ALREADY IMPORTED at the top of this
+        // very file (L66) — the canonical constant was in scope and a stale literal was written
+        // anyway. That is the whole lesson of #839: making the right value *available* does not
+        // make it *used*. The 60 was a pre-rescale bar the new scale (~10-33) can never clear,
+        // so A/B variants were gated by an unclearable threshold and silently never traded.
+        //
+        // Enforced now by nest/scripts/validate-threshold-sources.cjs — a literal here fails the build.
+        const threshold = cfg.tradeThreshold ?? BOT_BAR_DEFAULT;
         const direction = score.signal === 'SELL' ? 'SELL' : 'BUY';
         // A/B trades are BUY-side unless the protocol signals a clear SELL.
         if (score.composite < threshold) {

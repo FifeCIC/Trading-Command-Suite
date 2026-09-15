@@ -1225,7 +1225,14 @@ model TradingStrategy {
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
-  minComposite  Float    @default(65)
+  // ⚠️ 65 -> 10 (2026-09-15, #839). This is a POLICY default, not a schema convenience.
+  //
+  // `minComposite` is gated on (automation-loop Gate 4: `gatePct < minC`). Measured `compositePct`
+  // peaks at ~33 since the ADR-011 rescale, so a default of 65 meant any INSERT that omitted the
+  // field produced a bot that could never fire — silently, with no error. Must equal
+  // `BOT_BAR_DEFAULT` in nest/src/common/utils/style-thresholds.ts; verified by
+  // nest/scripts/validate-threshold-sources.cjs.
+  minComposite  Float    @default(10)
   minRarityBand String?  @db.VarChar(20)
   requireDirection String? @db.VarChar(10)
   slPct         Float?   @default(1.0)
@@ -1343,7 +1350,12 @@ model ScoringStrategy {
   watchlistId     String?  @db.VarChar(36)  // Phase A.3: FK to Watchlist — nullable during transition
   brokerId        String   @default("mt5") @db.VarChar(50)
   mode            String   @default("manual") @db.VarChar(20)
-  tradeThreshold  Float    @default(60)
+  // ⚠️ 60 -> 10 (2026-09-15, #839). Pre-rescale value; nothing on the new scale (~10-33) can
+  // clear it. See TradingStrategy.minComposite above for the full reasoning.
+  // ⚠️ NOTE: this column is NOT gated on any more (the scoring_strategy layer was retired from
+  // the trading loop 2026-08-27) — but it IS read for display, where an unclearable value
+  // renders a false "FAIL". The 25 legacy rows still holding 50/55/60 were NOT rewritten.
+  tradeThreshold  Float    @default(10)
   baseSize        Float    @default(0.01)
   slPct           Float    @default(1.0)
   tpPct           Float    @default(1.0)
@@ -1471,7 +1483,9 @@ model AutomationConfig {
   enabled               Boolean  @default(false)
   tradingEnabled        Boolean  @default(false)
   scoreIntervalMs       Int      @default(300000)
-  tradeThreshold        Int      @default(65)
+  // ⚠️ 65 -> 10 (2026-09-15, #839). Same policy default as TradingStrategy.minComposite; kept in
+  // step with BOT_BAR_DEFAULT deliberately.
+  tradeThreshold        Int      @default(10)
   requireConfirmation   Boolean  @default(true)
 
   pauseOnHighImpactEvents Boolean @default(true)

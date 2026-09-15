@@ -194,7 +194,7 @@ export default function BtcSpeedTradingPage() {
         </div>
         {scanExpanded && (
           <div className="btc-scan-body">
-            {scanError && <div className="btc-scan-error">Scanner offline — {scanError}</div>}
+            {scanError && <div className="btc-scan-error">{scanError}</div>}
             {scanData?.scan?.slice(0, 5).map((item, i) => (
               <div key={item.symbol} className={`btc-scan-row ${item.symbol === SYMBOL ? 'active' : ''}`}>
                 <span className="btc-scan-rank">#{i + 1}</span>

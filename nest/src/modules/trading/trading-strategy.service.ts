@@ -18,6 +18,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Mt5TradingService } from './mt5-trading.service';
 import { ConditionDetectorService } from '../directives/condition-detector.service';
+// ⚠️ SINGLE SOURCE for the bot strength bar. Do NOT reintroduce a literal here.
+//
+// This file previously defaulted to `?? 60` (scoring_strategy) and `?? 65` (trading_strategy) —
+// both pre-rescale values. The 2026-09-15 rescale divides every percentage by ~6.3, so measured
+// `compositePct` now peaks at ~33. A bot created through the API therefore received a bar it
+// could NEVER clear: it would appear active, score normally, emit SKIP decisions with a
+// plausible reason, and never trade. No error anywhere. See #839, and the guard that now
+// enforces this: `nest/scripts/validate-threshold-sources.cjs`.
+import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import { RiskService } from '../risk/risk.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
@@ -358,7 +367,7 @@ export class TradingStrategyService {
               watchlistId: data.watchlistId ?? null,
               brokerId: data.brokerId ?? 'mt5',
               mode: data.mode ?? 'score',
-              tradeThreshold: data.minComposite ?? 60,
+              tradeThreshold: data.minComposite ?? BOT_BAR_DEFAULT,
               baseSize: data.baseSize ?? 0.01,
               slPct: data.slPct ?? 1.0,
               tpPct: data.tpPct ?? 1.0,
@@ -382,7 +391,7 @@ export class TradingStrategyService {
         symbol: data.symbol.toUpperCase(),
         brokerId: data.brokerId ?? 'mt5',
         timeframe: data.timeframe ?? '5m',
-        minComposite: data.minComposite ?? 65,
+        minComposite: data.minComposite ?? BOT_BAR_DEFAULT,
         minRarityBand: data.minRarityBand ?? null,
         requireDirection: data.requireDirection ?? null,
         slPct: data.slPct ?? 1.0,

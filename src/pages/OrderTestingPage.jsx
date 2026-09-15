@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiGet } from '../core/api/client';
+import { noticeLine } from '../core/notices/registry.js';
 import './trading-platforms.css';
 import './order-test.css';
 
@@ -53,7 +54,7 @@ export default function OrderTestingPage() {
           status: err.status || err.code || 'ERROR',
           ms,
           data: null,
-          error: err.message,
+          error: noticeLine('TCS-SYS-007', { operation: `call ${key}`, detail: err }),
           time: new Date().toLocaleTimeString(),
         },
       }));
@@ -161,7 +162,7 @@ export default function OrderTestingPage() {
                 </summary>
                 <pre className="ot-pre">
                   {r.error
-                    ? `ERROR: ${r.error}`
+                      ? r.error
                     : JSON.stringify(r.data, null, 2).slice(0, 2000)}
                 </pre>
               </details>

@@ -8,6 +8,9 @@ import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../../database/prisma.service';
 import { RequireAuthGuard } from '../auth/guards/require-auth.guard';
 import { PositionSyncService } from '../providers/position-sync.service';
+// ⚠️ SINGLE SOURCE for the bot strength bar — see validate-threshold-sources.cjs (#839).
+// The literals here were `60`, a pre-rescale value the new scale can never clear.
+import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import type { CacheStats, CacheDebugEntry } from './symbol-data-cache.service';
 import type { ProtocolRunConfig, RunResult } from './protocol-runner.service';
 import type { QueueJob, QueueStats } from './execution-queue.service';
@@ -577,7 +580,7 @@ export class AutomationController {
         enabled: false,
         tradingEnabled: false,
         scoreIntervalMs: 300000,
-        tradeThreshold: 60,
+        tradeThreshold: BOT_BAR_DEFAULT,
         requireConfirmation: true,
       };
     }
@@ -595,7 +598,7 @@ export class AutomationController {
         enabled: false,
         tradingEnabled: false,
         scoreIntervalMs: 300000,
-        tradeThreshold: 60,
+        tradeThreshold: BOT_BAR_DEFAULT,
         requireConfirmation: true,
       };
     }
@@ -665,7 +668,7 @@ export class AutomationController {
       watchlistName: body.watchlistName,
       brokerId: body.brokerId || 'mt5',
       mode: (body.mode as any) || 'manual',
-      tradeThreshold: body.tradeThreshold ?? 60,
+      tradeThreshold: body.tradeThreshold ?? BOT_BAR_DEFAULT,
       baseSize: body.baseSize ?? 0.01,
       slPct: body.slPct ?? 1.0,
       tpPct: body.tpPct ?? 1.5,

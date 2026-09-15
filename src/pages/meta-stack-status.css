@@ -7,7 +7,7 @@
 .mss-page {
   padding: 24px 28px;
   max-width: 1320px;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .mss-header {
@@ -36,9 +36,9 @@
 }
 
 .mss-banner--warn {
-  background: color-mix(in srgb, var(--riskHigh, #d97706) 12%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--riskHigh, #d97706) 30%, var(--border));
-  color: var(--riskHigh, #d97706);
+  background: color-mix(in srgb, var(--risk-high, #d97706) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--risk-high, #d97706) 30%, var(--border));
+  color: var(--risk-high, #d97706);
 }
 
 .mss-banner--info {
@@ -81,18 +81,18 @@
   line-height: 1.1;
 }
 
-.mss-stat--bullish { color: var(--riskNormal, #16a34a); }
-.mss-stat--bearish { color: var(--riskHigh, #dc2626); }
+.mss-stat--bullish { color: var(--risk-normal, #16a34a); }
+.mss-stat--bearish { color: var(--risk-high, #dc2626); }
 
 .mss-stat-label {
   font-size: 0.8125rem;
-  color: var(--textDim);
+  color: var(--text-dim);
   margin-top: 4px;
 }
 
 .mss-stat-sub {
   font-size: 0.75rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
   margin-top: 2px;
 }
 
@@ -169,7 +169,7 @@
   text-align: left;
   padding: 8px 12px;
   font-weight: 600;
-  color: var(--textDim);
+  color: var(--text-dim);
   border-bottom: 1px solid var(--border);
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -203,8 +203,8 @@
 }
 
 .mss-chip--ok {
-  background: color-mix(in srgb, var(--riskNormal, #16a34a) 15%, transparent);
-  color: var(--riskNormal, #16a34a);
+  background: color-mix(in srgb, var(--risk-normal, #16a34a) 15%, transparent);
+  color: var(--risk-normal, #16a34a);
 }
 
 .mss-chip--neutral {
@@ -213,13 +213,13 @@
 }
 
 .mss-chip--warn {
-  background: color-mix(in srgb, var(--riskHigh, #dc2626) 15%, transparent);
-  color: var(--riskHigh, #dc2626);
+  background: color-mix(in srgb, var(--risk-high, #dc2626) 15%, transparent);
+  color: var(--risk-high, #dc2626);
 }
 
 .mss-chip--dim {
-  background: color-mix(in srgb, var(--textFaint) 15%, transparent);
-  color: var(--textFaint);
+  background: color-mix(in srgb, var(--text-faint) 15%, transparent);
+  color: var(--text-faint);
 }
 
 .mss-signal-chip {
@@ -233,18 +233,18 @@
 }
 
 .mss-signal--buy {
-  background: color-mix(in srgb, var(--riskNormal, #16a34a) 18%, transparent);
-  color: var(--riskNormal, #16a34a);
+  background: color-mix(in srgb, var(--risk-normal, #16a34a) 18%, transparent);
+  color: var(--risk-normal, #16a34a);
 }
 
 .mss-signal--sell {
-  background: color-mix(in srgb, var(--riskHigh, #dc2626) 18%, transparent);
-  color: var(--riskHigh, #dc2626);
+  background: color-mix(in srgb, var(--risk-high, #dc2626) 18%, transparent);
+  color: var(--risk-high, #dc2626);
 }
 
 .mss-signal--hold {
-  background: color-mix(in srgb, var(--textFaint) 15%, transparent);
-  color: var(--textFaint);
+  background: color-mix(in srgb, var(--text-faint) 15%, transparent);
+  color: var(--text-faint);
 }
 
 /* ── Priority Symbol Detail ────────────────────────────── */
@@ -275,7 +275,7 @@
 
 .mss-priority-score-label {
   font-size: 0.75rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
   margin-top: 4px;
 }
 
@@ -320,7 +320,7 @@
   margin: 0 0 10px;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--textDim);
+  color: var(--text-dim);
 }
 
 .mss-checklist-item {
@@ -328,8 +328,8 @@
   font-size: 0.8125rem;
 }
 
-.mss-checklist--ok { color: var(--riskNormal, #16a34a); }
-.mss-checklist--warn { color: var(--riskHigh, #dc2626); }
+.mss-checklist--ok { color: var(--risk-normal, #16a34a); }
+.mss-checklist--warn { color: var(--risk-high, #dc2626); }
 
 /* Directive Breakdown */
 .mss-breakdown {
@@ -352,9 +352,9 @@
   font-size: 0.7rem;
 }
 
-.mss-sig--bullish { color: var(--riskNormal, #16a34a); }
-.mss-sig--bearish { color: var(--riskHigh, #dc2626); }
-.mss-sig--neutral { color: var(--textFaint); }
+.mss-sig--bullish { color: var(--risk-normal, #16a34a); }
+.mss-sig--bearish { color: var(--risk-high, #dc2626); }
+.mss-sig--neutral { color: var(--text-faint); }
 
 .mss-breakdown-name {
   flex: 1;
@@ -362,7 +362,7 @@
 }
 
 .mss-breakdown-score {
-  color: var(--textFaint);
+  color: var(--text-faint);
   font-family: var(--font-mono, monospace);
   font-size: 0.7rem;
   min-width: 48px;
@@ -380,7 +380,7 @@
 .mss-breakdown-reason {
   margin-top: 6px;
   font-size: 0.7rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
   font-style: italic;
   line-height: 1.4;
 }
@@ -389,7 +389,7 @@
 
 .mss-scoring-meta {
   font-size: 0.8125rem;
-  color: var(--textDim);
+  color: var(--text-dim);
   margin-bottom: 14px;
   display: flex;
   flex-wrap: wrap;
@@ -407,9 +407,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.mss-score--high { color: var(--riskNormal, #16a34a); }
+.mss-score--high { color: var(--risk-normal, #16a34a); }
 .mss-score--mid  { color: #ca8a04; }
-.mss-score--low  { color: var(--textFaint); }
+.mss-score--low  { color: var(--text-faint); }
 
 /* ── Badge ─────────────────────────────────────────────── */
 
@@ -429,10 +429,10 @@
 
 /* ── Utility ───────────────────────────────────────────── */
 
-.mss-dim { color: var(--textFaint); }
+.mss-dim { color: var(--text-faint); }
 .mss-mono { font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace); font-size: 0.75rem; }
-.mss-muted { color: var(--textDim); }
+.mss-muted { color: var(--text-dim); }
 .mss-center { text-align: center; }
 .mss-message { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mss-empty { text-align: center; padding: 24px; color: var(--textDim); }
+.mss-empty { text-align: center; padding: 24px; color: var(--text-dim); }
 .mss-empty p { margin: 4px 0; }

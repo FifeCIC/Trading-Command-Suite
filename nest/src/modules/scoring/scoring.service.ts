@@ -40,6 +40,10 @@ import { MarketDataService } from '../market-data/market-data.service';
 // no cycle. See the ENTRY_THRESHOLD / WATCH_THRESHOLD comment below for the defect this fixes.
 import { SIGNAL_THRESHOLDS } from './protocol-gating.service';
 import { selectBaseTimeframe, DEFAULT_LIVE_TIMEFRAME } from '../../common/utils/timeframe';
+// ⚠️ MST-014 (#827) — imported to produce the 'stale' dataStatus. See the note at the
+// `hasData` computation below: 'stale' was DECLARED in the RankedSymbol type and never
+// produced, so a symbol whose feed died months ago reported 'live'.
+import { computeMarketStatus } from '../directives/market-status';
 import {
   DirectiveInput,
   MarketBar,
@@ -503,7 +507,43 @@ export class ScoringService implements OnModuleInit {
       const normScore = normalizedScorePct;
       // Determine data status and signal (rebase on normalizedScore)
       const hasData = bars.length > 0;
-      const dataStatus: RankedSymbol['dataStatus'] = hasData ? 'live' : 'no_data';
+
+      // ── MST-014 (#827) — 'stale' was declared and NEVER PRODUCED ────────────────
+      //
+      // `RankedSymbol['dataStatus']` has been `'live' | 'stale' | 'no_data' | 'error'`
+      // while this line read `hasData ? 'live' : 'no_data'`. Two consequences, both
+      // silent:
+      //
+      //   1. A symbol whose newest bar is FOUR MONTHS OLD still has `bars.length > 0`,
+      //      so it was reported **'live'**. Measured 2026-09-15: HOOD (bars end Jul 31),
+      //      MARA/ASTS/TSLA (Jul 17), NVDA/AVGO (Sep 3) were all 'live'. Because
+      //      `directiveoutcome.predictedAt` inherits the EVALUATED BAR's open time, those
+      //      stale symbols generated outcome rows stamped months in the past — which then
+      //      sorted to the FRONT of the maturation queue and starved it.
+      //
+      //   2. The filter below (`symbolsWithData` counts `'live' || 'stale'`) explicitly
+      //      handles `'stale'` — a branch that could never execute. Dead code that reads
+      //      as coverage is how this survived.
+      //
+      // `computeMarketStatus` is the canonical, cadence-aware staleness rule and already
+      // implements the whole decision (insufficient bars, all-synthetic, clock skew,
+      // stale, closed). Using it rather than a second bespoke age test keeps one rule in
+      // one place — a private age threshold here would be a third copy to drift.
+      //
+      // ⚠️ `hasData` is deliberately still used for the SIGNAL below. A stale feed must not
+      // be able to emit `entry`, and it cannot here: the directives score from the same
+      // stale bars, so the composite reflects old data. Changing the signal path is a
+      // separate, riskier decision (#827 tracks it).
+      let dataStatus: RankedSymbol['dataStatus'] = 'no_data';
+      if (hasData) {
+        try {
+          const status = computeMarketStatus(bars, new Date(), barsCadence);
+          dataStatus = status.open ? 'live' : 'stale';
+        } catch {
+          // An unmeasurable feed is NOT 'live'. Fail to 'stale' rather than assume health.
+          dataStatus = 'stale';
+        }
+      }
       const signal = !hasData
         ? 'no_data'
         : maxPossibleScore === 0

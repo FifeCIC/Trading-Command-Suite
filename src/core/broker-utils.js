@@ -28,11 +28,28 @@ export function useBrokers() {
   return { brokers, brokerMap, ...query };
 }
 
-/** Protocol trading style → default risk parameters */
+/**
+ * Protocol trading style → default RISK parameters (size and SL/TP only).
+ *
+ * ⚠️ `minComposite` WAS REMOVED FROM THIS TABLE DELIBERATELY (2026-09-15, #839). Do not add it back.
+ *
+ * It used to carry a strength bar per style — 70 / 65 / 75 / 60 / 55 — a hand-copied duplicate of
+ * the backend table in `nest/src/common/utils/style-thresholds.ts`. When that table was rescaled
+ * (old ÷ ~6.3, because ADR-011 changed the percentage denominator), THIS copy was missed. So
+ * choosing a style in the Create-Strategy form filled in a bar the new scale (~10-33) can never
+ * clear, and the created bot never traded.
+ *
+ * The bar is NOT a frontend concern. There is one owner (the backend table) and one transport for
+ * it (`GET /api/scoring/gated/thresholds` → `preTradeGate.byStyle`). The frontend READS the bar
+ * from the API — it does not remember it. Two memory sites is exactly how this drifted.
+ *
+ * Size and SL/TP stay here: they are not capability thresholds, they were never rescaled, and they
+ * have no server-side owner to defer to.
+ */
 export const STYLE_DEFAULTS = {
-  scalp:      { baseSize: 0.01, slPct: 0.3, tpPct: 0.5, minComposite: 70, timeframe: '5s' },
-  'day-trade': { baseSize: 0.02, slPct: 0.5, tpPct: 1.0, minComposite: 65, timeframe: '5m' },
-  speed:      { baseSize: 0.01, slPct: 0.2, tpPct: 0.4, minComposite: 75, timeframe: '15s' },
-  swing:      { baseSize: 0.05, slPct: 1.5, tpPct: 3.0, minComposite: 60, timeframe: '1h' },
-  position:   { baseSize: 0.1, slPct: 3.0, tpPct: 6.0, minComposite: 55, timeframe: '1d' },
+  scalp:      { baseSize: 0.01, slPct: 0.3, tpPct: 0.5, timeframe: '5s' },
+  'day-trade': { baseSize: 0.02, slPct: 0.5, tpPct: 1.0, timeframe: '5m' },
+  speed:      { baseSize: 0.01, slPct: 0.2, tpPct: 0.4, timeframe: '15s' },
+  swing:      { baseSize: 0.05, slPct: 1.5, tpPct: 3.0, timeframe: '1h' },
+  position:   { baseSize: 0.1, slPct: 3.0, tpPct: 6.0, timeframe: '1d' },
 };

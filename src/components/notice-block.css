@@ -5,10 +5,25 @@
  * literal is the code chip's `rgba(255,255,255,0.06)` overlay, which the typography table in that
  * same file prescribes verbatim for code.
  *
- * Contrast (accessibility-policy.instructions.md, AA): all text is `--ink` or `--ink-soft` on
- * `--color-input-bg` — the highest-contrast pairing available, because an error the user cannot
- * read is not an error report. Severity uses the left border, and is also stated by the code and
- * the Why/Fix labels, so colour is never the only carrier of meaning.
+ * Appearance (revised 2026-09-15) — a flat bordered block, NOT a dark inset panel and NOT a
+ * left-bar notice. Two defects were reported on /signals/signals-overview:
+ *   1. "It's dark." The background was the fixed `--color-input-bg` (#111318), a token defined only
+ *      in `index.css :root`. It is NOT theme-aware, so on the SciFi navy panel (#0f1b2e) — and on
+ *      any light pack — the block read as a muddy dark box dropped onto the card.
+ *   2. "The notice style with left coloured bar." The 3px `border-left` severity bar is gone.
+ * NOTE: no notice style exists in `src/theme/**`. The theme packs only publish palette tokens
+ * (--bg/--panel/--line/--accent/--danger); component chrome has always lived in component CSS, so
+ * the fix belongs here rather than in a theme pack.
+ *
+ * The new background is a translucent tint over whatever surface the block sits on
+ * (`color-mix(… transparent)`), so ONE rule reads correctly on black, on a white Slate panel and on
+ * the SciFi navy panel. Severity is now carried by the border + fill tint of the whole block, which
+ * matches the card's existing "uniform notices" system (`.sig-b-notice`, signals-overview.css).
+ *
+ * Contrast (accessibility-policy.instructions.md, AA): all text is `--ink` or `--ink-soft`. The
+ * tints are low-alpha (8% fill / 45% border) and sit over the card, so they never move the text
+ * background far enough to break AA. Severity is also stated by the stable code and the Why/Fix
+ * labels, so a colour-blind user is never relying on the tint alone.
  */
 
 .notice-block {
@@ -17,9 +32,8 @@
   gap: 4px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--color-muted);
   border-radius: 4px;
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
   color: var(--ink);
 }
 
@@ -29,19 +43,23 @@
 
 .notice-block--critical,
 .notice-block--error {
-  border-left-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 .notice-block--warning {
-  border-left-color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+  background: color-mix(in srgb, var(--color-warning) 8%, transparent);
 }
 
 .notice-block--info {
-  border-left-color: var(--color-accent-blue);
+  border-color: color-mix(in srgb, var(--color-accent-blue) 45%, transparent);
+  background: color-mix(in srgb, var(--color-accent-blue) 8%, transparent);
 }
 
 .notice-block--success {
-  border-left-color: var(--color-profit);
+  border-color: color-mix(in srgb, var(--color-profit) 45%, transparent);
+  background: color-mix(in srgb, var(--color-profit) 8%, transparent);
 }
 
 .notice-head {

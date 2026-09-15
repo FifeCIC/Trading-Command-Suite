@@ -17,7 +17,12 @@ function mockPrisma() {
   return {
     isAvailable: true,
     symbol: { findFirst: jest.fn().mockResolvedValue({ id: 'sym-1' }) },
-    marketBar: { findFirst: jest.fn().mockResolvedValue({ close: 0.7215 }) },
+    // ⚠️ `timestamp` MUST be present. #830 added it to the query select and uses it to
+    // classify a resolution as on-time vs next-session; a mock returning only `{ close }`
+    // is not a faithful double and previously made every horizon resolve to null.
+    marketBar: {
+      findFirst: jest.fn().mockResolvedValue({ close: 0.7215, timestamp: new Date() }),
+    },
     directiveOutcome: {
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({}),
@@ -120,9 +125,12 @@ describe('OutcomeTrackerService — maturation', () => {
 
   it('warns when a saturated batch hides a backlog', async () => {
     const prisma = mockPrisma();
-    // 1000 rows = the batch size → saturation path.
+    // ⚠️ Must equal MATURATION_BATCH (250 since #828) or the saturation branch never runs.
+    // The previous value of 1000 silently stopped exercising it when the batch was reduced
+    // for pool health — the test kept passing its setup while asserting nothing.
+    const BATCH = 250;
     prisma.directiveOutcome.findMany.mockResolvedValue(
-      Array.from({ length: 1000 }, (_, i) => pendingRow({ id: `row-${i}` })),
+      Array.from({ length: BATCH }, (_, i) => pendingRow({ id: `row-${i}` })),
     );
     prisma.directiveOutcome.count.mockResolvedValue(37120);
     const warn = jest.spyOn(require('@nestjs/common').Logger.prototype, 'warn').mockImplementation(() => undefined);
@@ -131,6 +139,40 @@ describe('OutcomeTrackerService — maturation', () => {
     await service.computeOutcomes();
 
     expect(warn.mock.calls.map((c) => String(c[0])).join('\n')).toMatch(/batch saturated.*37120 rows pending/s);
+    warn.mockRestore();
+  });
+
+  // ⚠️ REGRESSION GUARD (#828/#830). `Matured N` counted rows VISITED, not filled, so a
+  // sweep that achieved nothing logged identically to one that filled everything. That is
+  // what hid a stopped pipeline for a day. These pin the split counters, and the WARN when
+  // nothing was filled.
+  it('reports visited / filled / finalised separately, not one misleading total', async () => {
+    const prisma = mockPrisma();
+    prisma.directiveOutcome.findMany.mockResolvedValue([pendingRow()]);
+    const log = jest.spyOn(require('@nestjs/common').Logger.prototype, 'log').mockImplementation(() => undefined);
+
+    const service = new OutcomeTrackerService(prisma as any);
+    await service.computeOutcomes();
+
+    const line = log.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(line).toMatch(/visited \d+/);
+    expect(line).toMatch(/filled \d+/);
+    expect(line).toMatch(/finalised \d+/);
+    log.mockRestore();
+  });
+
+  it('logs at WARN, not LOG, when a sweep fills nothing', async () => {
+    const prisma = mockPrisma();
+    prisma.directiveOutcome.findMany.mockResolvedValue([pendingRow()]);
+    // Every horizon lookup finds no bar → visited > 0, filled 0. A stalled queue.
+    prisma.marketBar.findFirst.mockResolvedValue(null);
+    const warn = jest.spyOn(require('@nestjs/common').Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+    const service = new OutcomeTrackerService(prisma as any);
+    await service.computeOutcomes();
+
+    const line = warn.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(line).toMatch(/filled 0/);
     warn.mockRestore();
   });
 });

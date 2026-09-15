@@ -3,7 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SymbolNameEnricherService } from '../symbols/symbol-name-enricher.service';
-import { alignBarTimestamp } from '../../common/utils/timeframe';
+import { alignBarTimestamp, isBarFutureStamped } from '../../common/utils/timeframe';
 
 type EnqueueImportInput = {
   symbolId: string;
@@ -360,6 +360,8 @@ export class ImportJobsService {
     let skipped = 0;
     let misaligned = 0;
     let invalid = 0;
+    /** Bars rejected for being stamped ahead of now (#832). */
+    let impossible = 0;
 
     for (const bar of bars) {
       const aligned = alignBarTimestamp(bar.timestamp, timeframe, provider);
@@ -380,6 +382,28 @@ export class ImportJobsService {
         this.logger.debug(
           `Aligned bar for ${sym} ${timeframe}: ${new Date(rawMs).toISOString()} -> ${aligned.toISOString()} (${provider})`,
         );
+      }
+
+      // ⚠️ FUTURE-STAMP GUARD (#832) — this path previously had NO check at all, so a
+      // bulk import could write a bar ahead of now even though the refresh path could not.
+      //
+      // A bar is stamped by its OPEN time, so a future stamp describes a period that has
+      // not started. Alignment cannot rescue it — `alignBarTimestamp` FLOORS, and a bar
+      // already sitting on the next boundary floors to itself. Measured 2026-09-15: MT5
+      // wrote a 4h bar stamped `20:00` while the `16:00–20:00` bucket was still running,
+      // for 29 symbols at once. Those rows pin `MAX(timestamp)` ahead of now, so
+      // `computeMarketStatus()` fails closed with "data clock skew" and the symbol reads
+      // as permanently untradeable (`Gold Position 4H` could not trade).
+      //
+      // Rejecting is safe: the spurious row duplicates the in-progress bucket (its open
+      // price was byte-identical to the genuine bar's), so no information is lost.
+      if (isBarFutureStamped(aligned)) {
+        impossible++;
+        this.logger.warn(
+          `Bar rejected for ${sym} ${timeframe}: timestamp ${aligned.toISOString()} is ahead of now ` +
+          `(${provider}). An open-stamped bar cannot be in the future — see #832.`,
+        );
+        continue;
       }
 
       try {

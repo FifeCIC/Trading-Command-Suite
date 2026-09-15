@@ -33,6 +33,10 @@ import { Mt5Adapter } from '../providers/adapters/mt5.adapter';
 import { TickRecorderService } from './tick-recorder.service';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolDbService } from './protocol-db.service';
+// ⚠️ SINGLE SOURCE for the bot strength bar — see validate-threshold-sources.cjs (#839).
+// This read `minComposite: 60`, a pre-rescale bar the new scale (~10-33) can never clear, so a
+// bot routed to trade from the Speed Scanner was created unable to fire.
+import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 
 class ScanRequestDto {
   @IsOptional() @IsArray() @IsString({ each: true }) symbols?: string[];
@@ -251,7 +255,7 @@ export class SpeedScanController {
             baseSize: finalSize,
             slPct: finalSlPct,
             tpPct: finalTpPct,
-            minComposite: 60,
+            minComposite: BOT_BAR_DEFAULT,
             active: true,
             description: 'Auto-created from Speed Scanner route-to-trade',
           },

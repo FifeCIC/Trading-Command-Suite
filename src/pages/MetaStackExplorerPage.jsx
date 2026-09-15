@@ -522,11 +522,27 @@ export default function MetaStackExplorerPage() {
         { label: 'Multiplier chain', pass: (scored.riskGate?.multiplierChain?.length || 0) > 0, detail: `${scored.riskGate?.multiplierChain?.length || 0} rules applied` },
       ],
       'composite': [
-        { label: 'Final composite', pass: (scored.composite || 0) > 0, detail: `${scored.composite}/100` },
+        // ⚠️ `${scored.composite}/100` was wrong and is deliberately gone (#839).
+        //
+        // `composite` is a percentage of CONFIGURED capacity, and since the 2026-09-15 rescale it
+        // measures 0-33 on every active protocol. Printing "/100" told the reader the scale went
+        // to 100, so a healthy reading looked like a failed one. The denominator now comes from
+        // the payload instead of being asserted.
+        { label: 'Final composite', pass: (scored.composite || 0) > 0, detail: `${scored.composite}/${scored.rawMax ?? '—'} (${scored.signalPct ?? '—'}%)` },
         { label: 'Signal assigned', pass: !!scored.signal, detail: scored.signal || '—' },
         { label: 'Score Momentum', pass: velocity?.signal !== 'insufficient_data', detail: velocity && velocity.signal !== 'insufficient_data' ? `${velocity.velocityPtsPerHour > 0 ? '📈' : '📉'} ${velocity.velocityPtsPerHour} pts/hr · ${velocity.signalLabel}` : '— (need more ticks)' },
         { label: 'Rarity', pass: !!scored.rarity, detail: scored.rarity ? `${scored.rarity.band} (p${scored.rarity.percentile}, ${scored.rarity.sampleSize} samples)` : '—' },
-        { label: 'Threshold check', pass: (scored.composite || 0) >= (matchingScoringStrat?.tradeThreshold || 60), detail: `${scored.composite} vs threshold ${matchingScoringStrat?.tradeThreshold || 60} → ${(scored.composite || 0) >= (matchingScoringStrat?.tradeThreshold || 60) ? 'PASS' : 'FAIL'}` },
+        // ⚠️ `|| 60` was a pre-rescale fallback (#839) — it made an absent threshold silently read
+        // as 60, and the comparison then reported a confident FAIL against a bar that does not
+        // exist. An absent bar is NOT APPLICABLE; saying so is the only honest output.
+        ...(() => {
+          const bar = matchingScoringStrat?.tradeThreshold;
+          if (bar == null) {
+            return [{ label: 'Threshold check', pass: true, detail: 'no scoring strategy threshold set — not applicable (this is not a pass or a fail)' }];
+          }
+          const composite = scored.composite || 0;
+          return [{ label: 'Threshold check', pass: composite >= bar, detail: `${composite} vs threshold ${bar} → ${composite >= bar ? 'PASS' : 'FAIL'}` }];
+        })(),
       ],
     };
   }, [scored, selectedProtocol, activeProtocolId, activeSymbol, selectedStrategy, symbolsQuery.data, watchlistsQuery.data, allProtocolsData, autoQuery.data, providerHealthQuery.data, scoringStratsQuery.data, tradingStratsQuery.data, positionsQuery.data]);

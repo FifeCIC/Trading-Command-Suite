@@ -10,6 +10,8 @@
 import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DEFAULT_SCORING_STRATEGIES, SeedScoringStrategy } from './scoring-strategy-seed';
+// ⚠️ SINGLE SOURCE for the bot strength bar — see validate-threshold-sources.cjs (#839).
+import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 
 export interface CreateScoringStrategyDto {
   name: string;
@@ -80,7 +82,7 @@ export class ScoringStrategyService implements OnModuleInit {
         watchlistId: dto.watchlistId || null,
         brokerId: dto.brokerId || 'mt5',
         mode: dto.mode || 'score',
-        tradeThreshold: dto.tradeThreshold ?? 60,
+        tradeThreshold: dto.tradeThreshold ?? BOT_BAR_DEFAULT,
         baseSize: dto.baseSize ?? 0.01,
         slPct: dto.slPct ?? 1.0,
         tpPct: dto.tpPct ?? 1.0,

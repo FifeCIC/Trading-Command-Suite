@@ -543,11 +543,18 @@ export class OutcomeTrackerService {
         select: { close: true, timestamp: true },
       });
       if (!bar) return null;
-      // Count rather than discard: a delayed resolution is still a valid observation,
-      // but the sweep should be able to report how many of its fills crossed a close
-      // so the sample's true character is knowable (#830).
-      if (bar.timestamp.getTime() - targetTime.getTime() > nominalToleranceMs) {
-        this.marketGapResolutions++;
+      // ⚠️ Defensive: `timestamp` is selected explicitly for the market-gap classification
+      // below, but a caller/test double that returns only `{ close }` would make this throw
+      // and silently degrade EVERY horizon to null — the exact silent-failure shape this
+      // service has already produced three times (#733, #825, #830). Missing metadata must
+      // not cost the price.
+      if (bar.timestamp instanceof Date) {
+        // Count rather than discard: a delayed resolution is still a valid observation,
+        // but the sweep should be able to report how many of its fills crossed a close
+        // so the sample's true character is knowable (#830).
+        if (bar.timestamp.getTime() - targetTime.getTime() > nominalToleranceMs) {
+          this.marketGapResolutions++;
+        }
       }
       return bar.close;
     } catch (err) {

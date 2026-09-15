@@ -1,11 +1,8 @@
 {
   "note": "Raw error renders left in the UI (#826 Phase 5). This number may only go DOWN: raising it is a regression and the gate fails on it. Lower it with: node scripts/validate-notices.cjs --update-allowance",
-  "total": 12,
+  "total": 9,
   "files": {
-    "src/core/fx/useFxRate.js": 1,
-    "src/core/hooks/useSpeedCockpit.js": 1,
     "src/pages/Mt5TradingPage.jsx": 5,
-    "src/pages/OrderTestingPage.jsx": 1,
     "src/pages/ProtocolsPageB.jsx": 1,
     "src/pages/SignalsOverviewPage.jsx": 1,
     "src/theme/registry.js": 2

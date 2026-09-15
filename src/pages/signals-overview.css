@@ -472,12 +472,72 @@
 .sig-b-row--combined { } /* group hook; emphasis applied to its children below */
 .sig-b-row--combined .sig-b-row-label { color: var(--ink); font-weight: 700; }
 .sig-b-row-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
-.sig-b-row-track { height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 10%, transparent); overflow: hidden; }
+/*
+ * ⚠️ `position: relative` is load-bearing — the ENTRY tick below is absolutely positioned
+ * inside this track. Keep them together.
+ */
+.sig-b-row-track { position: relative; height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 10%, transparent); overflow: hidden; }
 .sig-b-row-fill { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--accent) 55%, #22c55e); transition: width 0.4s ease; }
 .sig-b-row-fill--accent { background: var(--accent); }
 .sig-b-row-fill--conf { background: #38bdf8; }
+/*
+ * ENTRY tick — marks where the entry threshold sits on the bar scale.
+ *
+ * WHY: the Signal bar fills at the STRONG bar (see `thresholdGeometry()` in
+ * src/core/score-display.js), so without a mark the user cannot tell "below entry"
+ * from "nearly strong". The tick is the one reference point that makes a short bar
+ * legible: is it before or after the line?
+ *
+ * ⚠️ Sits ABOVE the fill (z-index) so it stays visible once the bar passes it — the mark
+ * is useful precisely when the fill has crossed it.
+ */
+.sig-b-row-tick {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  z-index: 1;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  pointer-events: none;
+}
 .sig-b-row-pct { font-size: 0.78rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .sig-b-row-pct--combined { font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+/*
+ * Value cell — the percentage AND any chip beside it, as ONE grid child.
+ *
+ * ⚠️ `.sig-b-row { display: contents }` unpacks each row into the parent's 3-column grid
+ * (`.sig-b-bars`: label | bar | value). Adding the standing chip as a 4th direct child
+ * therefore wrapped it onto a new implicit row and knocked the whole list out of alignment.
+ * Keeping both inside this single wrapper preserves the 3-column contract.
+ */
+.sig-b-row-value { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+
+/*
+ * Standing chip — "STRONG" / "ENTRY" / "BELOW ENTRY" next to the Signal value.
+ *
+ * ⚠️ This mirrors the SERVER's classification scale for orientation only. It is not a
+ * second classifier: pages must keep rendering `signal` (server-owned) for the actual
+ * BUY/HOLD/SELL. See the file header in src/core/score-display.js.
+ */
+.sig-b-row-standing {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.sig-b-row-standing--strong { color: #052e16; background: #22c55e; }
+.sig-b-row-standing--entry { color: #052e16; background: color-mix(in srgb, #22c55e 62%, var(--accent)); }
+.sig-b-row-standing--below { color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 12%, transparent); }
+
+/*
+ * Reduced motion (accessibility-policy): the fill animates its width. Honour a user's
+ * request to reduce motion by making it instant rather than animating.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .sig-b-row-fill { transition: none; }
+}
 
 /* ── Uniform notices (single system, severity = tint only) ── */
 .sig-b-notices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }

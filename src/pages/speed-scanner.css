@@ -1,8 +1,8 @@
 .ss-page { padding: 16px 20px; max-width: 1100px; }
 .ss-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
 .ss-header h1 { margin: 0 0 4px; font-size: 1.3rem; }
-.ss-subtitle { margin: 0; color: var(--textDim); font-size: 0.82rem; }
-.ss-subtitle span { color: var(--text); }
+.ss-subtitle { margin: 0; color: var(--text-dim); font-size: 0.82rem; }
+.ss-subtitle span { color: var(--ink); }
 
 /* Live Data badge */
 .ss-live-badge {
@@ -23,14 +23,14 @@
 }
 .ss-header-right { display: flex; align-items: center; gap: 14px; }
 .ss-top-pick { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; }
-.ss-top-label { font-size: 0.68rem; color: var(--textFaint); text-transform: uppercase; }
+.ss-top-label { font-size: 0.68rem; color: var(--text-faint); text-transform: uppercase; }
 .ss-top-symbol { font-weight: 700; font-size: 1rem; font-family: monospace; }
 .ss-top-trend { font-size: 0.75rem; color: var(--accent); }
-.ss-interval { padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.78rem; }
+.ss-interval { padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--ink); font-size: 0.78rem; }
 
 .ss-summary { display: flex; gap: 14px; padding: 10px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .ss-summary-item { display: flex; flex-direction: column; }
-.ss-summary-label { font-size: 0.65rem; color: var(--textFaint); text-transform: uppercase; }
+.ss-summary-label { font-size: 0.65rem; color: var(--text-faint); text-transform: uppercase; }
 .ss-summary-value { font-size: 1.05rem; font-weight: 700; }
 .ss-trending .ss-summary-value { color: #22c55e; }
 .ss-sideways .ss-summary-value { color: #ef4444; }
@@ -38,7 +38,7 @@
 
 .ss-next-best { padding: 8px 14px; background: var(--panel); border: 1px dashed var(--border); border-radius: 6px; margin-bottom: 12px; font-size: 0.8rem; }
 .ss-switch-hint { color: #ef4444; }
-.ss-next-hint { color: var(--textDim); }
+.ss-next-hint { color: var(--text-dim); }
 .ss-next-best strong { color: var(--accent); }
 
 /* Sort & Filter bar */
@@ -48,18 +48,18 @@
   background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
 }
 .ss-filter-group { display: flex; align-items: center; gap: 4px; }
-.ss-filter-label { font-size: 0.65rem; color: var(--textFaint); text-transform: uppercase; margin-right: 4px; }
+.ss-filter-label { font-size: 0.65rem; color: var(--text-faint); text-transform: uppercase; margin-right: 4px; }
 .ss-filter-chip {
   padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px;
-  background: none; color: var(--textDim); font-size: 0.7rem;
+  background: none; color: var(--text-dim); font-size: 0.7rem;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.ss-filter-chip:hover { border-color: var(--accent); color: var(--text); }
+.ss-filter-chip:hover { border-color: var(--accent); color: var(--ink); }
 .ss-filter-chip.ss-filter-active {
   background: rgba(14,165,166,0.15); color: var(--accent); border-color: var(--accent);
 }
 .ss-filter-count {
-  margin-left: auto; font-size: 0.65rem; color: var(--textFaint);
+  margin-left: auto; font-size: 0.65rem; color: var(--text-faint);
 }
 
 .ss-list { display: flex; flex-direction: column; gap: 6px; }
@@ -68,10 +68,10 @@
 .ss-top { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
 .ss-sideways-row { opacity: 0.7; }
 
-.ss-rank { width: 30px; font-size: 0.72rem; color: var(--textFaint); font-weight: 600; text-align: center; }
+.ss-rank { width: 30px; font-size: 0.72rem; color: var(--text-faint); font-weight: 600; text-align: center; }
 .ss-symbol-col { min-width: 90px; }
 .ss-symbol-name { font-weight: 700; font-family: monospace; font-size: 0.92rem; }
-.ss-protocol { font-size: 0.65rem; color: var(--textFaint); }
+.ss-protocol { font-size: 0.65rem; color: var(--text-faint); }
 
 .ss-score-col { min-width: 60px; text-align: center; }
 .ss-composite { font-size: 1.1rem; font-weight: 700; }
@@ -80,21 +80,21 @@
 .ss-trend-col { flex: 1; min-width: 180px; }
 .ss-trend-header { display: flex; justify-content: space-between; margin-bottom: 2px; }
 .ss-trend-label { font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
-.ss-adx { font-size: 0.65rem; color: var(--textFaint); }
+.ss-adx { font-size: 0.65rem; color: var(--text-faint); }
 .ss-trend-bar { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
 .ss-trend-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
-.ss-trend-detail { display: flex; gap: 10px; font-size: 0.62rem; color: var(--textFaint); }
+.ss-trend-detail { display: flex; gap: 10px; font-size: 0.62rem; color: var(--text-faint); }
 
 .ss-pattern-col { min-width: 140px; }
 .ss-pattern-signal { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; }
-.ss-pattern-count { font-size: 0.65rem; color: var(--textFaint); margin-left: 4px; }
+.ss-pattern-count { font-size: 0.65rem; color: var(--text-faint); margin-left: 4px; }
 .ss-pattern-types { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; }
-.ss-pattern-tag { font-size: 0.6rem; padding: 1px 5px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--textDim); }
-.ss-pattern-more { font-size: 0.6rem; color: var(--textFaint); }
-.ss-no-patterns { font-size: 0.7rem; color: var(--textFaint); }
+.ss-pattern-tag { font-size: 0.6rem; padding: 1px 5px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim); }
+.ss-pattern-more { font-size: 0.6rem; color: var(--text-faint); }
+.ss-no-patterns { font-size: 0.7rem; color: var(--text-faint); }
 
 .ss-rec-col { min-width: 130px; display: flex; flex-direction: column; gap: 2px; }
-.ss-rec-reason { font-size: 0.6rem; color: var(--textFaint); line-height: 1.2; }
+.ss-rec-reason { font-size: 0.6rem; color: var(--text-faint); line-height: 1.2; }
 
 .ss-sideways-warn { width: 100%; font-size: 0.65rem; color: #ef4444; padding-top: 4px; border-top: 1px solid var(--border); margin-top: 4px; }
 

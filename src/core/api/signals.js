@@ -36,6 +36,18 @@ export function fetchTradeDefaults() {
   return apiGet('/api/signals/trade-defaults');
 }
 
+/**
+ * Live classification thresholds (percent of CONFIGURED directional capacity).
+ *
+ * ⚠️ The server owns these numbers (`ENTRY_THRESHOLD` / `STRONG_PCT` in
+ * protocol-gating.service.ts). The UI must READ them, never hardcode them: after the
+ * 2026-09-15 rescale (40→6, 80→13) a hand-copied value in a component would silently
+ * describe the wrong scale, and the Signal bar is drawn against exactly this scale.
+ */
+export function fetchScoringThresholds() {
+  return apiGet('/api/scoring/gated/thresholds');
+}
+
 /** GET /api/signals/:id/action — bot-action state (none | pending | filled). */
 export function fetchSignalAction(signalId) {
   return apiGet(`/api/signals/${signalId}/action`);

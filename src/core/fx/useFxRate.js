@@ -10,6 +10,9 @@
 
 import { useState, useEffect } from 'react';
 import { apiUrl } from '../api/client';
+// ⚠️ No consumers found when this was migrated (2026-09-15) — the hook is currently unreferenced.
+// Migrated anyway so that whoever wires it up gets a coded failure rather than a bare sentence.
+import { noticeLine } from '../notices/registry.js';
 
 const CACHE = new Map();
 const CACHE_TTL = 60_000; // 1 minute
@@ -48,7 +51,7 @@ export function useFxRate(pair) {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err.message);
+        setError(noticeLine('TCS-SYS-007', { operation: 'fetch the FX rate', detail: err }));
         setRate(null);
       })
       .finally(() => {

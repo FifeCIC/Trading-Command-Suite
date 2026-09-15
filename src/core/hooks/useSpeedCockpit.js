@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../api/client';
+// The scanner's failure becomes a CODE at its SOURCE. Three pages render this string, so producing a
+// coded one-liner here fixes all three at once — and the alternative (each page converting a string it
+// cannot inspect) is how "Scanner offline —" ended up with no identity (#826 Phase 5).
+import { noticeLine } from '../notices/registry.js';
 
 /**
  * useSpeedCockpit — shared behavioural core for the speed-trading cockpits
@@ -96,7 +100,7 @@ export function useSpeedScanner({ paused, locked, timeframe, symbols }) {
         setScanData(await res.json());
         setScanError(null);
       } catch (e) {
-        setScanError(e.message);
+        setScanError(noticeLine('TCS-SYS-007', { operation: 'connect to the speed scanner', detail: e }));
       }
       setScanLoading(false);
     };

@@ -55,7 +55,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
-import { isBarBeyondItsOwnLength, alignBarTimestamp } from '../../common/utils/timeframe';
+import { isBarFutureStamped, alignBarTimestamp } from '../../common/utils/timeframe';
 
 // Avoid importing the concrete adapter class
 interface BarProvider {
@@ -567,20 +567,30 @@ export class BarRefreshService {
               continue;
             }
 
-            // Never persist a bar dated beyond its own bar length (#780) — see
-            // `isBarBeyondItsOwnLength`. Such a row is unoverwritable and would
-            // pin `MAX(timestamp)` for this symbol forever.
+            // Never persist a bar stamped AHEAD of now (#832, tightening #780/#785).
             //
-            // Judged on the ALIGNED value: aligning can only move a timestamp EARLIER
-            // (floor), so this check is strictly more permissive after alignment and can
-            // never reject a bar that the raw value would have allowed.
-            if (isBarBeyondItsOwnLength(aligned, tf)) {
+            // ⚠️ A BAR IS STAMPED BY ITS OPEN, SO A FUTURE STAMP IS ALWAYS INVALID.
+            // The previous check allowed a lead of up to one full bar length, which let
+            // through the case that actually occurs: MT5 serving a 4h bar stamped `20:00`
+            // while the `16:00-20:00` bucket was still running. Only 21-52 minutes ahead
+            // — well inside the old bound — so it was persisted, whereupon it pinned
+            // `MAX(timestamp)` ahead of now and made `computeMarketStatus()` fail closed
+            // with "data clock skew" on EVERY pass. Live effect: `Gold Position 4H`
+            // (XAUUSD / `xau-speed-4h`) could not trade at all, and the row was
+            // unoverwritable because the upsert only touches rows it just fetched.
+            //
+            // Alignment cannot rescue this case: `alignBarTimestamp` FLOORS, and a bar
+            // already sitting on the next boundary floors to itself.
+            //
+            // Rejecting it loses no data — the duplicate's open price was identical to
+            // the genuine bar's, so it re-described a bucket already covered correctly.
+            if (isBarFutureStamped(aligned)) {
               impossibleBars++;
               this.logger.warn(
-                `Skipped impossible bar for ${symbol} (${tf}): timestamp ${aligned.toISOString()} ` +
-                `is more than one bar length ahead of now. A bridge never serves a future bar, so this row ` +
-                `would be unoverwritable and would pin the symbol's newest-bar time. ` +
-                `If this repeats, suspect bridge clock skew (#750) or a dead bridge returning stale data (#780).`,
+                `Skipped future-stamped bar for ${symbol} (${tf}): ${aligned.toISOString()} is ahead of now. ` +
+                `Bars are stamped by their OPEN time, so this row describes a period that has not started. ` +
+                `It would be unoverwritable and would pin MAX(timestamp) for this symbol, making it read as ` +
+                `permanently clock-skewed and untradeable (#832, was #780/#785).`,
               );
               continue;
             }
@@ -621,7 +631,7 @@ export class BarRefreshService {
         // inserting a new flat bar every 5 min), and lets the real bar
         // overwrite the placeholder once it closes.
         //
-        // This one needs no `isBarBeyondItsOwnLength` check (#780): it is derived from
+            // This one needs no future-stamp check: it is derived from
         // the LOCAL clock, so it is at most one 5m bucket ahead of now — i.e. a
         // legitimate forming bar, indistinguishable from what the bridge serves.
         const now = new Date();

@@ -70,19 +70,45 @@ function edge(distinctDays: number): EdgeReport {
   };
 }
 
-describe('decideVerdict — exit geometry must never be dropped', () => {
-  it('reports inverted reward:risk even in the insufficient-data branch', () => {
+/**
+ * ⚠️ REVISED 2026-09-15 (#786) — this block previously asserted a RETRACTED claim.
+ *
+ * The prior version asserted the finding text "Reward:risk is INVERTED" and
+ * "names exits/stops as the suspect, not entry scoring". **Both were removed from the
+ * source deliberately on 2026-09-12 (#805)** after the raw rows were checked:
+ *
+ *   - The 2.11x ratio came from TWO single trades:
+ *       worst loss -65.25 = 69.3% of ALL losses  ->  avgLoss without it: -7.22 (not -18.83)
+ *       best  win  +55.49 = 62.2% of ALL wins    ->  avgWin  without it: +3.75 (not  +8.92)
+ *   - The CONFIGURED geometry contradicts it: 13 of 22 bots set slPct 1 / tpPct 1 (1:1),
+ *     the rest 1.5:1 or 2:1 favourable. The app is not set up to target less than it risks.
+ *
+ * So "this points at exits/stops" would have sent an agent to fix something that is not
+ * broken — the exact failure this project keeps repeating (#638, #789/#790).
+ *
+ * ⚠️ A test asserting a retracted conclusion is WORSE than no test: it re-licenses the bad
+ * fix every time someone runs the suite and reads a pass. These now pin the HONEST
+ * statement, and the absence of the retracted one, so it cannot be quietly reintroduced.
+ */
+describe('decideVerdict — realised loss/win ratio must never be dropped', () => {
+  it('reports the realised ratio even in the insufficient-data branch', () => {
     // 4 days -> early return. This is EXACTLY the path that silently discarded the warning.
     const v = decideVerdict(edge(4), pnl());
     expect(v.level).toBe('insufficient-data');
     const joined = v.findings.join(' ');
-    expect(joined).toContain('Reward:risk is INVERTED');
+    expect(joined).toContain('Realised loss/win ratio');
+    expect(joined).toContain('2.11:1');
   });
 
-  it('names exits/stops as the suspect, not entry scoring', () => {
+  it('does NOT claim exits/stops are at fault — that diagnosis was retracted (#805)', () => {
     const v = decideVerdict(edge(4), pnl());
-    expect(v.findings.join(' ')).toContain('exits/stops');
-    expect(v.findings.join(' ')).toContain('NOT at entry scoring');
+    const joined = v.findings.join(' ');
+    // The retracted phrasing must stay gone. If someone reintroduces it, this fails.
+    expect(joined).not.toContain('INVERTED');
+    expect(joined).not.toContain('exits/stops');
+    expect(joined).not.toContain('NOT at entry scoring');
+    // The honest hedge replaces it.
+    expect(joined).toContain('geometry or outliers');
   });
 
   it('computes the break-even win rate from the actual geometry', () => {
@@ -93,15 +119,17 @@ describe('decideVerdict — exit geometry must never be dropped', () => {
 
   it('states the ratio between loss and win', () => {
     const v = decideVerdict(edge(4), pnl());
-    // 18.828 / 8.924 = 2.11
-    expect(v.findings.join(' ')).toContain('2.11x');
+    // 18.828 / 8.924 = 2.11 — rendered as a ratio, not a multiplier (#805 rewording).
+    expect(v.findings.join(' ')).toContain('2.11:1');
   });
 
-  it('stays quiet when reward:risk is favourable', () => {
+  it('stays quiet when the realised ratio is favourable', () => {
     // avgLoss smaller than avgWin -> no warning
     const good = pnl({ overall: bucket({ avgWin: 20, avgLoss: -10 }) });
     const v = decideVerdict(edge(4), good);
-    expect(v.findings.join(' ')).not.toContain('INVERTED');
+    const joined = v.findings.join(' ');
+    expect(joined).not.toContain('INVERTED');
+    expect(joined).not.toContain('Realised loss/win ratio');
   });
 
   it('stays quiet when there is no PnL at all', () => {
@@ -125,6 +153,10 @@ describe('decideVerdict — exit geometry must never be dropped', () => {
     withEdge.overall.bearish = { n: 4000, hitRate: 0.56, ci95: { low: 0.545, high: 0.575 }, pValue: 0.0001, edgeAboveCoinFlip: 0.045, verdict: 'edge' };
     const v = decideVerdict(withEdge, adequate);
     expect(v.level).toBe('losing');
-    expect(v.findings.join(' ')).toContain('Reward:risk is INVERTED');
+    const joined = v.findings.join(' ');
+    // On an ADEQUATE sample the geometry statement is allowed — but still not the retracted
+    // "exits/stops" attribution, which was never supported.
+    expect(joined).toContain('Realised loss/win ratio');
+    expect(joined).not.toContain('exits/stops');
   });
 });

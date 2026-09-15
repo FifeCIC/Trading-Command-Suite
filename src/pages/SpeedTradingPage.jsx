@@ -595,7 +595,7 @@ export default function SpeedTradingPage() {
         {scanExpanded && (
           <div className="st-scan-body">
             {scanError && (
-              <div className="st-scan-error">Scanner offline — {scanError}</div>
+              <div className="st-scan-error">{scanError}</div>
             )}
             {scanLoading && !scanData && (
               <div className="st-scan-loading">Scanning…</div>

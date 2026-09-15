@@ -11,8 +11,8 @@
 }
 
 .om-modal {
-  background: var(--bg-surface, #1a1d2e);
-  border: 1px solid var(--border-color, #2a2d3e);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
   width: 480px;
   max-width: 95vw;
@@ -27,25 +27,25 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-color, #2a2d3e);
+  border-bottom: 1px solid var(--line);
 }
 
 .om-header h2 {
   margin: 0;
   font-size: 1.1rem;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--ink);
 }
 
 .om-close {
   background: none;
   border: none;
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
   font-size: 1.2rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
-.om-close:hover { color: var(--text-primary, #e0e0e0); background: rgba(255,255,255,0.05); }
+.om-close:hover { color: var(--ink); background: rgba(255,255,255,0.05); }
 
 /* ── Body ────────────────────────────────────────────────── */
 .om-body {
@@ -72,7 +72,7 @@
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
   background: rgba(255,255,255,0.08);
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -87,14 +87,14 @@
 
 .om-info-item {
   padding: 0.5rem 0.75rem;
-  background: var(--bg-elevated, #222538);
+  background: var(--bg-elev);
   border-radius: 6px;
 }
 
 .om-info-item span {
   display: block;
   font-size: 0.7rem;
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 0.15rem;
@@ -102,7 +102,7 @@
 
 .om-info-item strong {
   font-size: 0.95rem;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--ink);
 }
 
 .om-green { color: #00a63e !important; }
@@ -127,7 +127,7 @@
 .om-field label {
   display: block;
   font-size: 0.8rem;
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
   margin-bottom: 0.35rem;
 }
 
@@ -136,10 +136,10 @@
 .om-field select {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background: var(--bg-input, #0d0f1a);
-  border: 1px solid var(--border-color, #2a2d3e);
+  background: var(--color-input-bg);
+  border: 1px solid var(--line);
   border-radius: 6px;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--ink);
   font-size: 0.9rem;
 }
 
@@ -185,12 +185,12 @@
   justify-content: center;
   gap: 0.35rem;
   padding: 0.5rem;
-  background: var(--bg-elevated, #222538);
-  border: 1px solid var(--border-color, #2a2d3e);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
   transition: all 0.15s;
 }
 
@@ -205,7 +205,7 @@
 /* ── Estimate ────────────────────────────────────────────── */
 .om-estimate {
   padding: 0.75rem;
-  background: var(--bg-elevated, #222538);
+  background: var(--bg-elev);
   border-radius: 6px;
   margin-bottom: 1rem;
 }
@@ -216,10 +216,10 @@
   align-items: center;
   padding: 0.25rem 0;
   font-size: 0.85rem;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--ink);
 }
 
-.om-est-row span:first-child { color: var(--text-muted, #888); }
+.om-est-row span:first-child { color: var(--ink-soft); }
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .om-btn {
@@ -240,9 +240,9 @@
 .om-btn-primary:hover { filter: brightness(1.1); }
 
 .om-btn-secondary {
-  background: var(--bg-elevated, #222538);
-  color: var(--text-primary, #e0e0e0);
-  border: 1px solid var(--border-color, #2a2d3e);
+  background: var(--bg-elev);
+  color: var(--ink);
+  border: 1px solid var(--line);
 }
 .om-btn-secondary:hover { background: rgba(255,255,255,0.05); }
 
@@ -282,7 +282,7 @@
 /* ── Order Summary ───────────────────────────────────────── */
 .om-order-summary {
   padding: 0.75rem;
-  background: var(--bg-elevated, #222538);
+  background: var(--bg-elev);
   border-radius: 6px;
   margin-bottom: 1rem;
 }
@@ -290,7 +290,7 @@
 .om-order-summary h3 {
   margin: 0 0 0.5rem;
   font-size: 0.9rem;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--ink);
 }
 
 .om-summary-row {
@@ -300,15 +300,15 @@
   font-size: 0.85rem;
 }
 
-.om-summary-row span { color: var(--text-muted, #888); }
-.om-summary-row strong { color: var(--text-primary, #e0e0e0); }
+.om-summary-row span { color: var(--ink-soft); }
+.om-summary-row strong { color: var(--ink); }
 
 /* ── Cooldown ────────────────────────────────────────────── */
 .om-cooldown {
   text-align: center;
   padding: 0.5rem;
   font-size: 0.85rem;
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
   margin-bottom: 0.75rem;
 }
 
@@ -377,12 +377,12 @@
 .om-result-details span {
   display: block;
   font-size: 0.7rem;
-  color: var(--text-muted, #888);
+  color: var(--ink-soft);
 }
 
 .om-result-details strong {
   font-size: 0.9rem;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--ink);
 }
 
 .om-error-msg {

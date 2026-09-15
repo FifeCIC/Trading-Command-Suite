@@ -87,23 +87,62 @@ export function barLengthMs(timeframe: string): number {
 export const BAR_LEAD_TOLERANCE_MS = 120_000;
 
 /**
- * Would this bar timestamp be impossible for its own cadence?
+ * Is this bar timestamp AHEAD of now — i.e. impossible for open-stamped data?
  *
- * True when the timestamp leads `now` by more than one bar length plus a jitter
- * tolerance. Such a row cannot be a real closed OR forming bar, so it must never be
- * persisted — and the reason is worse than "it looks odd":
+ * ⚠️ THE RULE IS "NOT IN THE FUTURE", NOT "NOT MORE THAN ONE BAR LENGTH AHEAD"
  *
- *   The upsert only touches rows it just fetched (`ON DUPLICATE KEY UPDATE`), and a
- *   bridge never serves a future bar. So once an over-length row exists, **nothing can
- *   ever overwrite it**. It pins `MAX(timestamp)` for its symbol indefinitely, making the
- *   feed read as permanently future-dated and defeating every staleness check downstream.
+ * A bar is stamped by the time its period **OPENED** (`alignBarTimestamp` floors, and
+ * `market-status.ts` states the contract). A period that opens in the future cannot
+ * have happened, **so no legitimate bar is ever stamped ahead of `now`** — not by a
+ * minute, not by a second. The only permitted lead is `BAR_LEAD_TOLERANCE_MS`, which
+ * absorbs clock jitter between the source host and this one.
  *
- * Measured live (#780): 226 such rows were written while the bridges were DOWN, pinning 17
- * symbols. They also propagated into `directiveoutcome` — `predictedAt` copies the
- * evaluated bar's open time — so one bad bar produced bad outcome rows too.
+ * ⚠️ WHY THE OLD BOUND (one bar length + tolerance) WAS WRONG
+ *
+ * It was chosen on the reasoning that "a bar can't be more than one bar-length early",
+ * which is true but far too loose to be safe. Measured 2026-09-15 (#832): MT5 served a
+ * 4h bar stamped `20:00` while the current bucket was `16:00–20:00` — a lead of only
+ * ~21–52 minutes, comfortably INSIDE the old bound, so this guard returned `false` and
+ * the row was persisted. A test naming this case already existed
+ * (`bar-refresh-alignment.spec.ts`: *"the raw 20:45 bar IS future-dated, and
+ * `isBarBeyondItsOwnLength` cannot see it"*), and the chosen remedy — aligning `:45`
+ * to `:00` — cannot help a bar that is ALREADY on a boundary.
+ *
+ * The consequence is the same one this guard was built for (#780), just smaller:
+ * the row pins `MAX(timestamp)` ahead of now, so `computeMarketStatus()` fails closed
+ * with *"data clock skew"* and the symbol reads as permanently untradeable. Live
+ * evidence: `Gold Position 4H` (XAUUSD / `xau-speed-4h`) was blocked pre-trade on every
+ * pass, and the row is unoverwritable because the upsert only touches rows it fetched.
+ *
+ * The duplicate is also redundant: `open[20:00]` was identical to `open[16:00]`, so the
+ * 20:00 row re-described a bucket that a correct row already covered. Rejecting it loses
+ * nothing.
+ *
+ * `dataIsOpenStamped` exists so a future close-stamped source can be admitted explicitly
+ * rather than by silently loosening this bound for everything.
  *
  * Return false for a malformed timestamp: an unparseable value is a different fault and
  * must not be silently swallowed by this check.
+ */
+export function isBarFutureStamped(
+  timestamp: unknown,
+  now: number = Date.now(),
+  /** Set false ONLY for a proven close-stamped source; see the note above. */
+  dataIsOpenStamped = true,
+): boolean {
+  const ms = new Date(timestamp as any).getTime();
+  if (Number.isNaN(ms)) return false;
+  if (!dataIsOpenStamped) return false;
+  return ms > now + BAR_LEAD_TOLERANCE_MS;
+}
+
+/**
+ * @deprecated Superseded by {@link isBarFutureStamped} (#832).
+ *
+ * Kept ONLY so the historical `#780` specs still express what they were written to
+ * assert. Its bound — one full bar length plus tolerance — is too loose to protect the
+ * feed: a 4h bar stamped 21 minutes ahead passes it (measured, #832). New callers must
+ * use `isBarFutureStamped`.
  */
 export function isBarBeyondItsOwnLength(
   timestamp: unknown,
