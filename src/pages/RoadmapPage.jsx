@@ -33,8 +33,8 @@ export default function RoadmapPage() {
   const sortFn = (a, b) => compareCards(a, b, sortMode);
 
   // ── Column lifecycle (2026-09-03) ──────────────────────────────
-  // Completed columns (have cards, zero open) are hidden so the next
-  // column rolls into the "Next Sprint" position automatically.
+  // Completed columns (have cards, zero open) are hidden so the board only shows live work.
+  // ⚠️ Column TITLES are never rewritten here — see the removal note below.
   const activeColumns = useMemo(() => {
     return board.columns.filter((col) => {
       if (col.id === 'discussion') return true; // always visible
@@ -52,16 +52,27 @@ export default function RoadmapPage() {
     });
   }, [board.columns, board.cards]);
 
-  // The SECOND active column displays as "Next Sprint" while keeping
-  // its real name underneath — when it completes and hides, the next
-  // column becomes the new "Next Sprint" automatically.
-  const displayColumns = useMemo(
-    () =>
-      activeColumns.map((c, i) =>
-        i === 1 ? { ...c, title: 'Next Sprint', originalTitle: c.title } : c,
-      ),
-    [activeColumns],
-  );
+  /**
+   * ⚠️ REMOVED 2026-09-15 — the rolling "Next Sprint" relabel.
+   *
+   * Until today the SECOND active column was force-renamed to "Next Sprint" at render time
+   * (`activeColumns[1]`), on the theory that the board is a sequence and whatever follows the
+   * current column is "next". Two things were wrong with it:
+   *
+   *   1. **It hijacked a real column.** It happened to hit `phase-2`, so the board showed
+   *      "Phase 2 — Signals" as "Next Sprint" and the phase's own name appeared nowhere on
+   *      screen. The code set an `originalTitle` field intending to show the real name
+   *      underneath — but no component ever read that field, so the intent was never finished
+   *      and the visible label was simply wrong (see the buried-abilities rule).
+   *   2. **It collided with an explicit column.** A real `next-sprint` sprint column was created
+   *      2026-09-06 — three days AFTER the relabel shipped in d3aa7d9 — so the board rendered TWO
+   *      columns headed "NEXT SPRINT", one of which was actually Phase 2.
+   *
+   * The rolling pointer is now redundant: `next-sprint` is a maintained column and says the same
+   * thing without hiding anything. **Do not reintroduce view-level title rewriting.** If a column
+   * should be called "Next Sprint", rename the column (the board supports it) so the name is
+   * persisted in `roadmap_column` rather than faked on every render.
+   */
 
   const visibleCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -234,7 +245,7 @@ export default function RoadmapPage() {
         <div className="rm-page-loading">Loading roadmap…</div>
       ) : (
         <RoadmapBoard
-          columns={displayColumns}
+          columns={activeColumns}
           cards={visibleCards}
           sortMode={sortMode}
           onMove={handleMove}

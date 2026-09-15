@@ -2,6 +2,7 @@
   "repo": "FifeCIC/Trading-Command-Suite",
   "defaultColumns": [
     { "id": "discussion", "title": "Discussions/Review", "kind": "discussion" },
+    { "id": "next-sprint", "title": "Next Sprint", "kind": "sprint" },
     { "id": "phase-2", "title": "Phase 2 — Signals", "kind": "phase" },
     { "id": "phase-3", "title": "Phase 3 — Trading", "kind": "phase" },
     { "id": "phase-4", "title": "Phase 4 — Backtesting", "kind": "phase" }

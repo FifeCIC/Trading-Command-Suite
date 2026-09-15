@@ -7,6 +7,11 @@
       "kind": "discussion"
     },
     {
+      "id": "next-sprint",
+      "title": "Next Sprint",
+      "kind": "sprint"
+    },
+    {
       "id": "phase-2",
       "title": "Phase 2 — Signals",
       "kind": "phase"
