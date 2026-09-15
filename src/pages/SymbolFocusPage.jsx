@@ -14,6 +14,8 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { timeAgo } from '../core/format-utils';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './symbol-focus.css';
 
 const DECISION_COLORS = {
@@ -57,7 +59,7 @@ export default function SymbolFocusPage() {
       <div className="sf-page">
         <div className="sf-error">
           <h2>⚠️ Unable to load symbol data</h2>
-          <p>{error?.message || 'Symbol not found or API unreachable'}</p>
+          {error ? <NoticeBlock notice={noticeFromError(error)} /> : <p>Symbol not found or API unreachable</p>}
           <Link to="/dashboard" className="sf-back-link">← Back to Dashboard</Link>
         </div>
       </div>

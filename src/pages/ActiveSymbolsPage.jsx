@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPatch } from '../core/api/client';
 import { exportCsv } from '../utils/exportCsv';
 import CopyViewData from '../components/CopyViewData';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './trading-platforms.css';
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex'];
@@ -137,7 +139,7 @@ export default function ActiveSymbolsPage() {
       await apiPatch(`/api/symbols/${sym.id}`, { active: !(sym.active !== false) });
       queryClient.invalidateQueries({ queryKey: ['active-symbols'] });
     } catch (e) {
-      setError(`Failed to update ${sym.ticker}: ${e.message}`);
+      setError(noticeFromError(e, 'TCS-SYS-007', { operation: `update ${sym.ticker}` }));
     }
   }
 
@@ -183,7 +185,7 @@ export default function ActiveSymbolsPage() {
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['watchlists'] });
     } catch (e) {
-      setError(`Failed to create watchlist: ${e.message}`);
+      setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'create the watchlist' }));
     } finally {
       setCreatingWatchlist(false);
     }
@@ -200,7 +202,7 @@ export default function ActiveSymbolsPage() {
 
       {error && (
         <div className="tp-banner-retry" style={{ marginBottom: 16 }}>
-          {error}
+          <NoticeBlock notice={error} compact />
           <button type="button" onClick={() => setError(null)} style={{ marginLeft: 12 }}>Dismiss</button>
         </div>
       )}
