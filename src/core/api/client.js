@@ -15,20 +15,34 @@ async function fetchWithTimeout(url, options = {}) {
       // 400s (market closed, duplicate, diversification…) carry the reason
       // in `message` and were previously discarded here.
       let detail = '';
+      let payload = null;
       try {
-        const data = await res.json();
-        const msg = data?.message ?? data?.error;
+        payload = await res.json();
+        const msg = payload?.message ?? payload?.error;
         if (typeof msg === 'string') detail = `: ${msg}`;
         else if (Array.isArray(msg)) detail = `: ${msg.join('; ')}`;
       } catch { /* non-JSON error body — keep the bare status */ }
       const err = new Error(`Request failed with ${res.status}${detail}`);
       err.status = res.status;
+      // ── Structured facts for the notice registry (#826 Phase 2) ──────────
+      // The message above stays exactly as it was so nothing that reads it breaks. These extra
+      // fields mean a caller can render `notice(code, params)` instead of showing prose, and can
+      // quote the server's own wording as the CAUSE rather than re-parsing it out of the message.
+      // `code`/`params` are picked up if the server ever sends them — that is #826 Phase 1.
+      err.detail = detail.replace(/^: /, '');
+      if (typeof payload?.code === 'string') err.code = payload.code;
+      if (payload?.params && typeof payload.params === 'object') err.params = payload.params;
       throw err;
     }
     return res.json();
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error(`Request timed out after ${DEFAULT_TIMEOUT_MS / 1000}s`);
+      const timeout = new Error(`Request timed out after ${DEFAULT_TIMEOUT_MS / 1000}s`);
+      // Marked so noticeFromError() can map it to its own code — an abandoned request has no
+      // HTTP status, and reporting one would be a fabrication.
+      timeout.timedOut = true;
+      timeout.timeoutSeconds = DEFAULT_TIMEOUT_MS / 1000;
+      throw timeout;
     }
     throw err;
   } finally {

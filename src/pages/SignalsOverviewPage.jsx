@@ -23,9 +23,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageInfoPopover from '../components/PageInfoPopover';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import SignalBadge from '../components/SignalBadge';
+import NoticeBlock from '../components/NoticeBlock';
 import { buildScoreDisplay } from '../core/score-display';
 import { timeAgo } from '../core/format-utils';
 import { stripWarningGlyph } from '../core/signal-utils';
+// #826 Phase 2 — every user-facing message on this page comes from the notice registry. Call sites
+// pass a CODE plus data; the wording lives in src/core/notices/registry.js. This is what lets a user
+// quote a code we can grep, and what stops each card inventing its own phrasing for the same event.
+import { notice } from '../core/notices/registry';
+import { noticeFromError } from '../core/notices/from-error';
 import {
   fetchBestSignals,
   fetchSignalDismissals,
@@ -117,26 +123,41 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
       },
     }),
     onSuccess: () => {
-      setResult({ type: 'dismissed', text: `Dismissed for ${dismissHours}h` });
+      setResult({
+        type: 'dismissed',
+        text: `Dismissed for ${dismissHours}h`,
+        notice: notice('TCS-SIG-003', { hours: dismissHours }),
+      });
       onDismissed();
     },
-    onError: (e) => setError(e?.message || 'Dismiss failed'),
+    onError: (e) => setError(noticeFromError(e, 'TCS-SIG-002')),
   });
 
   const tradeMutation = useMutation({
     mutationFn: ({ side }) => tradeSignal(envelope.scoreId, { side, brokerId: 'mt5' }),
     onSuccess: (r) => {
       if (r?.success === false) {
-        setError(r.error || 'Order failed');
+        // The bridge/API refused the order. Its own wording carries the specifics (broker message,
+        // retcode) and is preserved verbatim as the notice's `cause` — never discarded. We do NOT
+        // pattern-match that prose to choose a code: the code names the OPERATION that failed.
+        setError(notice('TCS-TRADE-005', {
+          symbol: envelope.symbol,
+          detail: r.error || 'The broker refused the order without giving a reason.',
+        }));
       } else {
         // Replace the trade button with the placed order — clicking it opens
         // Positions Monitor with the position highlighted. No double-trade.
-        setResult({ type: 'trade', text: `Order placed #${r?.orderId}`, orderId: r?.orderId });
+        setResult({
+          type: 'trade',
+          text: `Order placed #${r?.orderId}`,
+          orderId: r?.orderId,
+          notice: notice('TCS-TRADE-008', { symbol: envelope.symbol, orderId: r?.orderId ?? 'pending' }),
+        });
       }
       setConfirming(false);
     },
     onError: (e) => {
-      setError(e?.message || 'Trade failed');
+      setError(noticeFromError(e, 'TCS-TRADE-005', { symbol: envelope.symbol }));
       setConfirming(false);
     },
   });
@@ -157,12 +178,21 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
     }),
     onSuccess: (r) => {
       if (r?.success === false) {
-        setError(r.message || 'Plan already exists for this signal');
+        // The server names the reason when it has one. With none, this is the known duplicate case
+        // (#702) — so say that rather than inventing a reason the server did not give.
+        setError(r.message
+          ? notice('TCS-TRADE-007', { symbol: envelope.symbol, detail: r.message })
+          : notice('TCS-TRADE-006', { symbol: envelope.symbol }));
       } else {
-        setResult({ type: 'plan', text: 'Plan created', planId: r?.planId });
+        setResult({
+          type: 'plan',
+          text: 'Plan created',
+          planId: r?.planId,
+          notice: notice('TCS-TRADE-009', { symbol: envelope.symbol }),
+        });
       }
     },
-    onError: (e) => setError(e?.message || 'Plan creation failed'),
+    onError: (e) => setError(noticeFromError(e, 'TCS-TRADE-007', { symbol: envelope.symbol })),
   });
 
   const startConfirm = () => {
@@ -179,9 +209,26 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
   // Pre-flight: why a trade would 400 right now (checked before the click,
   // mirroring the server's safety chain — market gate + pre-trade readiness
   // + execution feasibility).
-  const tradeBlockedReason = execBlockers[0]?.message
-    || (!marketOpen ? (envelope.marketStatus?.reason || 'Market closed — trade blocked') : null)
-    || (blocked ? envelope.preTradeBlockers.slice(0, 2).join(' · ') : null);
+  //
+  // #826 Phase 2 — computed as a REGISTRY NOTICE so the reason carries a code. Precedence mirrors
+  // the server's own order of checks: execution feasibility, then the market gate, then readiness.
+  const blockedNotice = execBlockers[0]?.message
+    ? notice('TCS-RISK-001', {
+      reason: [execBlockers[0].message, execBlockers[0].hint].filter(Boolean).join(' · '),
+    })
+    : !marketOpen
+      ? notice('TCS-TRADE-002', {
+        symbol: envelope.symbol,
+        reason: envelope.marketStatus?.reason || 'The exchange session is closed.',
+      })
+      : blocked
+        ? notice('TCS-RISK-001', { reason: envelope.preTradeBlockers.slice(0, 2).join(' · ') })
+        : null;
+  // The code rides in the tooltip text. ⚠️ A tooltip is a hover-only surface — card B renders the
+  // same notices as a visible list, which is the accessible form. See NoticeBlock's header.
+  const tradeBlockedReason = blockedNotice
+    ? `${blockedNotice.message} [${blockedNotice.code}]`
+    : null;
 
   return (
     <motion.article
@@ -316,7 +363,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
             disabled={!envelope.scoreId || Boolean(tradeBlockedReason)}
             title={
               tradeBlockedReason
-                ? `Blocked: ${tradeBlockedReason}${execBlockers[0]?.hint ? ` — ${execBlockers[0].hint}` : ''}`
+                ? `Blocked: ${tradeBlockedReason}`
                 : !envelope.scoreId
                   ? 'No persisted score to trade against'
                   : `Open ${isBuy ? 'long' : 'short'} CFD on MT5`
@@ -347,16 +394,20 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
       <AnimatePresence>
         {(result || error) && (
           <motion.div
-            className={`sig-opp-feedback ${error ? 'sig-opp-feedback--error' : 'sig-opp-feedback--ok'}`}
+            className="sig-opp-feedback"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {error || (result?.type === 'plan' ? (
-              <span>
-                Plan created — <Link to="/trading/trading-plans">open in Trading Plans</Link>
+            {/* #826 Phase 2 — the registry notice IS the message: title, code, why and the fix.
+                It replaced a bare server string, which is why a failure used to arrive with
+                nothing to act on. */}
+            <NoticeBlock notice={error || result?.notice} compact />
+            {!error && result?.type === 'plan' && (
+              <span className="sig-opp-feedback-link">
+                <Link to="/trading/trading-plans">Open in Trading Plans</Link>
               </span>
-            ) : result?.text)}
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -364,35 +415,39 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
   );
 }
 
-/** Round a percentage to a whole number for display (avoids 55.555…%). */
-function roundPct(v) { return v == null ? null : Math.round(v); }
+/** Round a percentage to a whole number for display (avoids 55.555…%). */function roundPct(v) { return v == null ? null : Math.round(v); }
 
 /** Normalise every blocker/warning/conflict into ONE uniform notice list so the
- *  card never mixes ad-hoc styles. severity: 'critical' | 'warning' | 'info'. */
+ *  card never mixes ad-hoc styles.
+ *
+ *  #826 Phase 2 — each entry is now a rendered REGISTRY NOTICE (code + severity + wording) rather
+ *  than `{severity, text, title}` prose. The server still supplies the raw reason for blockers,
+ *  warnings and conflicts, so it is passed through as a notice PARAM (`reason`/`warning`/
+ *  `description`) — the code gives the condition an identity while the server's own wording is
+ *  preserved verbatim inside it. */
 function buildNotices(envelope) {
-  const notices = [];
-  const add = (severity, text, title) => {
-    const t = String(text || '').trim();
-    if (t) notices.push({ severity, text: t, title: title || t });
-  };
-  // Execution feasibility (blocks the trade) — most important, shown first.
+  const out = [];
+  const add = (n) => { if (n) out.push(n); };
+
+  // Execution feasibility (blocks the trade) — most important, shown first. The bot name is
+  // context the registry cannot know, so it is prepended to the reason rather than replacing the
+  // notice's own title.
   (envelope.executionBlockers || []).forEach((b) =>
-    add('critical', b.message, `${envelope.botName ? `${envelope.botName} · ` : ''}${b.hint || b.message}`));
+    add(notice('TCS-RISK-001', {
+      reason: [envelope.botName, b.message, b.hint].filter(Boolean).join(' · '),
+    })));
   // Pre-trade block (duplicate/cooldown etc).
   if ((envelope.preTradeBlockers || []).length) {
-    add('critical', envelope.preTradeBlockers.slice(0, 2).join(' · '), 'Pre-trade block');
+    add(notice('TCS-RISK-001', { reason: envelope.preTradeBlockers.slice(0, 2).join(' · ') }));
   }
-  // Risk-gate warnings — each is its own notice; the visible text is clamped in
-  // CSS and the full, technical detail is preserved on hover (tooltip).
-  (envelope.riskGate?.warnings || []).map(stripWarningGlyph).slice(0, 2).forEach((w) => add('warning', w, w));
-  // Directive conflicts — low/med = info, high = warning.
+  // Risk-gate warnings — the gate's own wording is the message.
+  (envelope.riskGate?.warnings || []).map(stripWarningGlyph).slice(0, 2).forEach((w) =>
+    add(notice('TCS-RISK-003', { warning: w })));
+  // Directive conflicts — low/med = info, high = warning. The registry entry carries a fixed
+  // severity, so a HIGH conflict is reported with its own code/severity rather than re-coloured here.
   (envelope.conflicts || []).forEach((c) =>
-    add(
-      c.severity === 'high' ? 'warning' : 'info',
-      c.description,
-      `${c.type} · ${c.severity}${c.directives?.length ? ` · ${c.directives.join(', ')}` : ''}`,
-    ));
-  return notices;
+    add(notice('TCS-RISK-002', { description: c.description, type: c.type, severity: c.severity })));
+  return out;
 }
 
 /**
@@ -439,18 +494,24 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
         opportunityPct: envelope.opportunityPct,
       },
     }),
-    onSuccess: () => { setResult({ type: 'dismissed', text: `Dismissed for ${dismissHours}h` }); onDismissed(); },
-    onError: (e) => setError(e?.message || 'Dismiss failed'),
+    onSuccess: () => { setResult({ type: 'dismissed', text: `Dismissed for ${dismissHours}h`, notice: notice('TCS-SIG-003', { hours: dismissHours }) }); onDismissed(); },
+    onError: (e) => setError(noticeFromError(e, 'TCS-SIG-002')),
   });
 
   const tradeMutation = useMutation({
     mutationFn: ({ side }) => tradeSignal(envelope.scoreId, { side, brokerId: 'mt5' }),
     onSuccess: (r) => {
-      if (r?.success === false) { setError(r.error || 'Order failed'); }
-      else { setResult({ type: 'trade', text: `Order placed #${r?.orderId}`, orderId: r?.orderId }); }
+      if (r?.success === false) {
+        setError(notice('TCS-TRADE-005', {
+          symbol: envelope.symbol,
+          detail: r.error || 'The broker refused the order without giving a reason.',
+        }));
+      } else {
+        setResult({ type: 'trade', text: `Order placed #${r?.orderId}`, orderId: r?.orderId, notice: notice('TCS-TRADE-008', { symbol: envelope.symbol, orderId: r?.orderId ?? 'pending' }) });
+      }
       setConfirming(false);
     },
-    onError: (e) => { setError(e?.message || 'Trade failed'); setConfirming(false); },
+    onError: (e) => { setError(noticeFromError(e, 'TCS-TRADE-005', { symbol: envelope.symbol })); setConfirming(false); },
   });
 
   const planMutation = useMutation({
@@ -467,10 +528,13 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
       },
     }),
     onSuccess: (r) => {
-      if (r?.success === false) { setError(r.message || 'Plan already exists for this signal'); }
-      else { setResult({ type: 'plan', text: 'Plan created', planId: r?.planId }); }
+      if (r?.success === false) {
+        setError(r.message
+          ? notice('TCS-TRADE-007', { symbol: envelope.symbol, detail: r.message })
+          : notice('TCS-TRADE-006', { symbol: envelope.symbol }));
+      } else { setResult({ type: 'plan', text: 'Plan created', planId: r?.planId, notice: notice('TCS-TRADE-009', { symbol: envelope.symbol }) }); }
     },
-    onError: (e) => setError(e?.message || 'Plan creation failed'),
+    onError: (e) => setError(noticeFromError(e, 'TCS-TRADE-007', { symbol: envelope.symbol })),
   });
 
   const startConfirm = () => { setError(null); setResult(null); setConfirming(true); };
@@ -480,8 +544,11 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
   const execBlockers = envelope.executionBlockers || [];
   const execBlocked = execBlockers.length > 0;
   const tradeBlockedReason = execBlockers[0]?.message
-    || (!marketOpen ? (envelope.marketStatus?.reason || 'Market closed — trade blocked') : null)
-    || (blocked ? envelope.preTradeBlockers.slice(0, 2).join(' · ') : null);
+    ? notice('TCS-RISK-001', { reason: [execBlockers[0].message, execBlockers[0].hint].filter(Boolean).join(' · ') }).message
+      + ` [TCS-RISK-001]`
+    : !marketOpen
+      ? `The market for ${envelope.symbol} is closed, so the trade was blocked. [TCS-TRADE-002]`
+      : (blocked ? `${envelope.preTradeBlockers.slice(0, 2).join(' · ')} [TCS-RISK-001]` : null);
 
   const notices = buildNotices(envelope);
   const signalPct = roundPct(envelope.signalPct);
@@ -552,9 +619,18 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
       {notices.length > 0 && (
         <ul className="sig-b-notices">
           {notices.map((n, i) => (
-            <li key={i} className={`sig-b-notice sig-b-notice--${n.severity}`} title={n.title}>
-              <strong className="sig-b-notice-label">{n.severity === 'critical' ? 'Blocked' : n.severity === 'warning' ? 'Warning' : 'Note'}</strong>
-              <span className="sig-b-notice-text">{n.text}</span>
+            // ⚠️ Deliberately COMPACT. This list can hold several notices, so it shows severity,
+            // the message and the CODE, and keeps the full why/fix in the tooltip. The code is the
+            // part that makes it reportable. A single notice that needs explaining (the feedback
+            // slot below) gets the full <NoticeBlock> with Why and Fix written out.
+            <li
+              key={`${n.code}-${i}`}
+              className={`sig-b-notice sig-b-notice--${n.severity}`}
+              title={[n.cause, n.action].filter(Boolean).join(' — ')}
+            >
+              <strong className="sig-b-notice-label">{n.severity === 'critical' || n.severity === 'error' ? 'Blocked' : n.severity === 'warning' ? 'Warning' : 'Note'}</strong>
+              <span className="sig-b-notice-text">{n.message}</span>
+              <code className="sig-b-notice-code">{n.code}</code>
             </li>
           ))}
         </ul>
@@ -588,7 +664,7 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
             disabled={!envelope.scoreId || Boolean(tradeBlockedReason)}
             title={
               tradeBlockedReason
-                ? `Blocked: ${tradeBlockedReason}${execBlockers[0]?.hint ? ` — ${execBlockers[0].hint}` : ''}`
+                ? `Blocked: ${tradeBlockedReason}`
                 : !envelope.scoreId
                   ? 'No persisted score to trade against'
                   : `Open ${isBuy ? 'long' : 'short'} CFD on MT5`
@@ -625,14 +701,20 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
       <AnimatePresence>
         {(result || error) && (
           <motion.div
-            className={`sig-opp-feedback ${error ? 'sig-opp-feedback--error' : 'sig-opp-feedback--ok'}`}
+            className="sig-opp-feedback"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {error || (result?.type === 'plan' ? (
-              <span>Plan created — <Link to="/trading/trading-plans">open in Trading Plans</Link></span>
-            ) : result?.text)}
+            {/* #826 Phase 2 — the registry notice IS the message: title, code, why and the fix.
+                It replaced a bare server string, which is why a failure used to arrive with
+                nothing to act on. */}
+            <NoticeBlock notice={error || result?.notice} compact />
+            {!error && result?.type === 'plan' && (
+              <span className="sig-opp-feedback-link">
+                <Link to="/trading/trading-plans">Open in Trading Plans</Link>
+              </span>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -831,8 +913,15 @@ export default function SignalsOverviewPage() {
       {bestQuery.isLoading && <LoadingSkeleton rows={4} />}
 
       {bestQuery.isError && (
-        <div className="sig-banner sig-banner--error">
-          Signals data unavailable — {bestQuery.error?.message || 'check the API'}.{' '}
+        <div className="sig-banner">
+          {/* Page-level failure as a registry notice, so it carries a code the user can quote. */}
+          <NoticeBlock
+            notice={notice('TCS-SIG-001', {
+              detail: bestQuery.error?.detail
+                || bestQuery.error?.message
+                || 'The API returned no usable response.',
+            })}
+          />
           <button type="button" className="sig-link-btn" onClick={refresh}>Retry</button>
         </div>
       )}

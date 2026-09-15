@@ -1,0 +1,109 @@
+/*
+ * NoticeBlock — one registry notice (#826).
+ *
+ * Colour rules from ui-standards.instructions.md: every semantic colour is a CSS variable. The one
+ * literal is the code chip's `rgba(255,255,255,0.06)` overlay, which the typography table in that
+ * same file prescribes verbatim for code.
+ *
+ * Contrast (accessibility-policy.instructions.md, AA): all text is `--ink` or `--ink-soft` on
+ * `--color-input-bg` — the highest-contrast pairing available, because an error the user cannot
+ * read is not an error report. Severity uses the left border, and is also stated by the code and
+ * the Why/Fix labels, so colour is never the only carrier of meaning.
+ */
+
+.notice-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--color-muted);
+  border-radius: 4px;
+  background: var(--color-input-bg);
+  color: var(--ink);
+}
+
+.notice-block--compact {
+  padding: 8px 10px;
+}
+
+.notice-block--critical,
+.notice-block--error {
+  border-left-color: var(--danger);
+}
+
+.notice-block--warning {
+  border-left-color: var(--color-warning);
+}
+
+.notice-block--info {
+  border-left-color: var(--color-accent-blue);
+}
+
+.notice-block--success {
+  border-left-color: var(--color-profit);
+}
+
+.notice-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notice-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notice-code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.notice-message {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.notice-detail {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.notice-label {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.notice-external {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+/* Inside a card, the notice should not shout louder than the card content. */
+.notice-block--compact .notice-title {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 600px) {
+  .notice-head {
+    justify-content: flex-start;
+  }
+}
