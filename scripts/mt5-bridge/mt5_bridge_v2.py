@@ -179,6 +179,73 @@ def journal_trade(action, details):
     entry.update(details)
     logger.info(f'[TRADE JOURNAL] {json.dumps(entry)}')
 
+# ─── Order filling mode (#824) ────────────────────────────
+#
+# ⚠️ ALWAYS put `type_filling` on a market (TRADE_ACTION_DEAL) request. When the
+# field is absent MT5 applies its own default (FOK), and a broker that does not
+# accept FOK for that instrument refuses the order with retcode 10030
+# "Unsupported filling mode" — a message that names neither the symbol, the
+# attempted mode, nor the modes that WOULD work.
+#
+# Measured 2026-09-15 (issue #824): the Pepperstone account failed EVERY order
+# this way (0 placed / 2 failed) while MetaQuotes-Demo filled normally
+# (8 placed / 0 failed), because MetaQuotes accepts the FOK default. The defect
+# is therefore invisible unless the order goes through the restricted broker.
+#
+# `symbol_info().filling_mode` is a BITMASK of what the broker allows:
+#   SYMBOL_FILLING_FOK = 1
+#   SYMBOL_FILLING_IOC = 2
+# RETURN is not represented in the mask (it is assumed available).
+
+def pick_filling_name(mask):
+    """Pure decision: a symbol filling_mode bitmask -> 'IOC' | 'FOK' | 'RETURN'.
+
+    Deliberately free of the MT5 API and of all module state, so the policy can
+    be tested without a terminal — see scripts/mt5-bridge/test_filling_modes.py.
+    IOC is preferred: it is the mode ECN-style brokers (Pepperstone) allow on
+    instruments they will not FOK.
+    """
+    if mask & 2:      # SYMBOL_FILLING_IOC
+        return 'IOC'
+    if mask & 1:      # SYMBOL_FILLING_FOK
+        return 'FOK'
+    return 'RETURN'
+
+
+def symbol_filling(symbol):
+    """(mode name, raw mask, allowed names) the broker permits for `symbol`."""
+    info = mt5.symbol_info(symbol)
+    mask = int(getattr(info, 'filling_mode', 0) or 0) if info else 0
+    allowed = [n for n, bit in (('FOK', 1), ('IOC', 2)) if mask & bit]
+    return pick_filling_name(mask), mask, allowed
+
+
+def apply_filling(req, symbol):
+    """Set `type_filling` on a market-order request. Returns (name, mask).
+
+    Falls back cleanly when the mt5 module exposes no matching constant, so a
+    missing attribute can never stop an order outright.
+    """
+    name, mask, _ = symbol_filling(symbol)
+    const = getattr(mt5, 'ORDER_FILLING_' + name, None)
+    if const is not None:
+        req['type_filling'] = const
+    return name, mask
+
+
+def order_rejected(result, symbol, filling_name, mask):
+    """Diagnostic error text for a refused order (#824).
+
+    The bridge used to return the broker's bare `result.comment`, so the Signals
+    card showed "Unsupported filling mode" with no symbol, no retcode and no
+    remedy. Keep the broker's text, but add the three facts needed to act on it.
+    """
+    allowed = [n for n, bit in (('FOK', 1), ('IOC', 2)) if mask & bit]
+    retcode = getattr(result, 'retcode', None)
+    comment = getattr(result, 'comment', None) or str(mt5.last_error())
+    return (f"{symbol} rejected (retcode {retcode}, filling={filling_name}): {comment}. "
+            f"Broker allows: {', '.join(allowed) if allowed else 'none reported'}.")
+
 def get_active_credentials():
     active = os.environ.get('MT5_ACTIVE_ACCOUNT', '1')
     account = os.environ.get(f'MT5_ACCOUNT_{active}', os.environ.get('MT5_ACCOUNT', ''))
@@ -572,7 +639,22 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 ok, err = ensure_mt5()
                 if not ok: return json_response(self, {'connected': False, 'error': str(err)}, 503)
                 syms = mt5.symbols_get()
-                result = [{'name': s.name, 'path': s.path, 'tradeMode': s.trade_mode} for s in (syms or [])]
+                # ⚠️ These are the PER-SYMBOL BROKER CONSTRAINTS, and the /order pre-flight
+                # below tests exactly two of them: `tradeMode != FULL` and
+                # `volume < volume_min`. They MUST travel with the name, because a name
+                # alone only proves the symbol is LISTED — which is not the same fact as
+                # the broker ACCEPTING A TRADE for it.
+                #
+                # Measured 2026-09-15 (#US500): US500 reports `tradeMode 0` (disabled) on
+                # :5000 and `tradeMode 4` on :5001, and `volumeMin 0.1` on BOTH while the
+                # manual-trade default size is 0.01. The app therefore offered a trade
+                # that the bridge refused at click time, twice over.
+                #
+                # ⚠️ Keep this list in step with the /order pre-flight. A constraint
+                # tested there but missing here is a constraint the app cannot see.
+                result = [{'name': s.name, 'path': s.path, 'tradeMode': s.trade_mode,
+                           'volumeMin': float(s.volume_min), 'volumeMax': float(s.volume_max),
+                           'digits': s.digits} for s in (syms or [])]
                 return json_response(self, {'symbols': result, 'count': len(result)})
 
             # /account
@@ -855,12 +937,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if sl: req['sl'] = float(sl)
                 if tp: req['tp'] = float(tp)
 
+                # #824 — a market order with no filling mode is refused by brokers
+                # that will not FOK the instrument (Pepperstone). Pending orders
+                # do not use filling mode, so only market orders get it.
+                if is_market:
+                    filling_name, filling_mask = apply_filling(req, symbol)
+                else:
+                    filling_name, filling_mask = 'n/a (pending)', 0
+
                 result = mt5.order_send(req)
                 successful_retcodes = (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL)
                 if not result or result.retcode not in successful_retcodes:
-                    error = mt5.last_error() if not result else result.comment
-                    journal_trade('order_failed', {'symbol': symbol, 'type': order_type, 'volume': volume, 'error': str(error), 'clientOrderId': client_order_id or None})
-                    return json_response(self, {'success': False, 'error': str(error)}, 400)
+                    error = order_rejected(result, symbol, filling_name, filling_mask)
+                    journal_trade('order_failed', {'symbol': symbol, 'type': order_type, 'volume': volume, 'error': error, 'fillingMode': filling_name, 'retcode': getattr(result, 'retcode', None), 'clientOrderId': client_order_id or None})
+                    return json_response(self, {'success': False, 'error': error}, 400)
 
                 # Store idempotency key
                 fill_status = 'partially_filled' if result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL else 'filled'
@@ -892,10 +982,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
                        'price': close_price, 'deviation': 20, 'magic': 234000, 'comment': 'Close by TCS',
                        'type_time': mt5.ORDER_TIME_GTC}
+                # #824 — closing is a market deal, so it carries a filling mode too.
+                filling_name, filling_mask = apply_filling(req, pos.symbol)
                 result = mt5.order_send(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
-                    error = mt5.last_error() if not result else result.comment
-                    return json_response(self, {'success': False, 'error': str(error)}, 400)
+                    error = order_rejected(result, pos.symbol, filling_name, filling_mask)
+                    return json_response(self, {'success': False, 'error': error}, 400)
 
                 # ── Report the REALISED outcome, not pre-close floating values ──
                 #
@@ -984,10 +1076,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
                        'price': cp, 'deviation': 20, 'magic': 234000, 'comment': 'Partial close',
                        'type_time': mt5.ORDER_TIME_GTC}
+                # #824 — partial close is a market deal as well.
+                filling_name, filling_mask = apply_filling(req, pos.symbol)
                 result = mt5.order_send(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
-                    error = mt5.last_error() if not result else result.comment
-                    return json_response(self, {'success': False, 'error': str(error)}, 400)
+                    error = order_rejected(result, pos.symbol, filling_name, filling_mask)
+                    return json_response(self, {'success': False, 'error': error}, 400)
                 return json_response(self, {'success': True, 'ticket': ticket, 'closed': vol,
                     'remaining': float(pos.volume)-vol, 'closePrice': cp, 'price': cp,
                     'retcode': result.retcode, 'partial': result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL})
@@ -1022,11 +1116,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                                    'comment': op.get('comment', 'TCS Bulk'), 'type_time': mt5.ORDER_TIME_GTC}
                             if op.get('sl'): req['sl'] = float(op['sl'])
                             if op.get('tp'): req['tp'] = float(op['tp'])
+                            # #824 — bulk market order needs a filling mode too.
+                            filling_name, filling_mask = apply_filling(req, sym)
                             res = mt5.order_send(req)
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': res.order if ok_res else None, 'symbol': sym, 'action': 'place',
-                                'error': None if ok_res else (res.comment if res else str(mt5.last_error()))})
+                                'error': None if ok_res else order_rejected(res, sym, filling_name, filling_mask)})
                         elif action == 'close':
                             ticket = int(op.get('ticket', 0))
                             positions = mt5.positions_get(ticket=ticket)
@@ -1044,11 +1140,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                                    'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY,
                                    'price': cp, 'deviation': 20, 'magic': 234000,
                                    'comment': 'TCS Bulk Close', 'type_time': mt5.ORDER_TIME_GTC}
+                            # #824 — bulk close is a market deal.
+                            filling_name, filling_mask = apply_filling(req, pos.symbol)
                             res = mt5.order_send(req)
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': ticket, 'symbol': pos.symbol, 'action': 'close',
-                                'error': None if ok_res else (res.comment if res else str(mt5.last_error()))})
+                                'error': None if ok_res else order_rejected(res, pos.symbol, filling_name, filling_mask)})
                         elif action == 'modify':
                             ticket = int(op.get('ticket', 0))
                             positions = mt5.positions_get(ticket=ticket)

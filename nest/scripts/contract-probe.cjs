@@ -708,6 +708,131 @@ async function main() {
     }
   }
 
+  // ── INV-TRADEABLE-ROUTE ────────────────────────────────────────────────
+  //
+  // A symbol can be LISTED by a broker and still be REFUSED by it. The bridge's `/order`
+  // pre-flight tests `tradeMode !== 4` and `volume < volumeMin` before it will send
+  // anything, and the app could see neither — so US500 sat on the Signals ladder as a
+  // fully actionable card while MetaQuotes reported `tradeMode 0`, and the refusal
+  // ("US500 not tradeable (trade mode: 0)") appeared only AFTER the click.
+  //
+  // ⚠️ WHY THIS IS NOT SIMPLY "tradeMode MUST BE 4". `tradeMode` is a property of
+  // BROKER × SYMBOL, and it drops to 0 whenever that market is shut — so the naive form
+  // of this check is red every night and every weekend, and a guard that is never green
+  // is one everyone learns to ignore (strictly worse than no guard).
+  //
+  // The SESSION-INDEPENDENT fault is: the routed broker refuses the symbol while ANOTHER
+  // broker would accept it. That is a routing mistake, it is exactly what happened here,
+  // and it is what this check fails on. When NO bridge accepts the symbol we cannot tell
+  // "session closed" from "disabled" from here, so it is reported rather than failed.
+  //
+  // ⚠️ AND THE TWO READINGS OF "another broker accepts it" NEED DIFFERENT ACTIONS.
+  // `symbol_route` chooses a broker for the FEED and for ORDERS at once, so a bridge that
+  // accepts orders is not automatically the right route: if the only live FEED sits on the
+  // broker that refuses orders, re-pointing would trade a live feed for tradability. The
+  // discriminator is therefore the ALTERNATIVE broker's feed, not the routed one's.
+  //
+  // Worked example of the guard earning its keep (2026-09-15): it flagged US500 (no route
+  // at all), then US30 and FRA40 — and on measuring both bridges, US30 and FRA40 turned out
+  // to have live feeds on BOTH bridges with orders refused only on :5000, i.e. plain
+  // mis-routes that were safe to re-point. ⚠️ An earlier 2-bar sample had made :5001's feed
+  // look days stale; a 4-bar sample showed contiguous hourly bars. Measure the FEED before
+  // deciding — a single narrow window is not enough to call a feed dead.
+  if (!prisma) {
+    record('INV-TRADEABLE-ROUTE', 'every traded symbol resolves to a broker that will accept it', true, 'skipped — no database connection', true);
+  } else {
+    try {
+      const bridgePorts = [5000, 5001];
+      const modesByPort = new Map(); // port -> Map(TICKER -> tradeMode)
+      for (const port of bridgePorts) {
+        try {
+          const list = await getJson(`http://127.0.0.1:${port}/symbols`);
+          modesByPort.set(port, new Map((list.symbols || []).map((s) => [String(s.name).toUpperCase(), s.tradeMode])));
+        } catch {
+          /* bridge down — it simply has no opinion below */
+        }
+      }
+      if (modesByPort.size === 0) {
+        record('INV-TRADEABLE-ROUTE', 'every traded symbol resolves to a broker that will accept it', true, 'skipped — no bridge reachable', true);
+      } else {
+        // Broker slot -> bridge port is declared by MT5_ACTIVE_BROKERS order (2 = :5000).
+        const portByBroker = { 2: 5000, 3: 5001 };
+        const rows = await prisma.$queryRawUnsafe(
+          `SELECT DISTINCT s.ticker AS ticker,
+                  (SELECT sr.brokerId FROM symbol_route sr
+                    WHERE sr.symbol = s.ticker AND sr.enabled = 1 AND sr.provider = 'mt5'
+                    ORDER BY sr.priority ASC LIMIT 1) AS routedBroker
+             FROM symbol s
+             JOIN symbol_protocol_assignment a ON a.symbol = s.ticker
+            WHERE s.active = 1`,
+        );
+        const primary = Number((process.env.MT5_ACTIVE_BROKERS || '2,3').split(',')[0]);
+        const misrouted = [];
+        const splits = [];
+        const nowhere = [];
+        /** Newest 1h bar a bridge can serve for a symbol — tells a LIVE feed from an absent one. */
+        const newestBarAgeHours = async (port, ticker) => {
+          try {
+            const res = await getJson(`http://127.0.0.1:${port}/candles?symbol=${encodeURIComponent(ticker)}&timeframe=1h&limit=1`);
+            const bars = res.bars || [];
+            if (!bars.length) return null;
+            const t = Date.parse(bars[bars.length - 1].timestamp);
+            return Number.isNaN(t) ? null : (Date.now() - t) / 3_600_000;
+          } catch {
+            return null;
+          }
+        };
+        const age = (h) => (h == null ? 'ABSENT' : `${h.toFixed(1)}h old`);
+        for (const r of rows) {
+          const ticker = String(r.ticker).toUpperCase();
+          // An ABSENT route falls back to the primary broker — the silent fallback that
+          // made this invisible in the first place, so it must be modelled, not ignored.
+          const brokerId = r.routedBroker != null ? Number(r.routedBroker) : primary;
+          const port = portByBroker[brokerId];
+          const here = port != null ? modesByPort.get(port)?.get(ticker) : undefined;
+          if (here === 4 || here === undefined) continue; // accepted here, or not served here (#719 covers that)
+          const elsewhere = bridgePorts.filter((p) => p !== port && modesByPort.get(p)?.get(ticker) === 4);
+          if (elsewhere.length === 0) {
+            nowhere.push(`${ticker}(${here})`);
+            continue;
+          }
+          // Two readings, and they need DIFFERENT actions, so they are reported apart.
+          // The route serves the FEED as well as orders (one row, two jobs), so
+          // "the other broker accepts orders" does not by itself mean re-route: for
+          // FRA40 and US30 the routed broker is the only one with a live feed.
+          const otherPort = elsewhere[0];
+          const [routedAge, otherAge] = await Promise.all([
+            newestBarAgeHours(port, ticker),
+            newestBarAgeHours(otherPort, ticker),
+          ]);
+          // ⚠️ The discriminator is the ALTERNATIVE broker's feed, NOT the routed one's.
+          // Re-pointing is only safe when the alternative can actually deliver the symbol;
+          // that is the whole question. Measured 2026-09-15: US30 and FRA40 have live feeds
+          // on BOTH bridges, so they are plain mis-routes (and were fixed). A symbol whose
+          // live feed sits on the broker that refuses orders, while the broker that accepts
+          // them cannot deliver it, is the genuine feed/trade split — re-pointing THAT one
+          // would trade a live feed for tradability, so it needs a human decision.
+          const altFeedLive = otherAge != null && otherAge < 6;
+          if (altFeedLive) {
+            misrouted.push(`${ticker}: :${port} REFUSES orders (tradeMode ${here}; feed ${age(routedAge)}) while :${otherPort} ACCEPTS them and feeds it live (${age(otherAge)}) — re-point the route`);
+          } else {
+            splits.push(`${ticker}: :${port} serves the LIVE feed (${age(routedAge)}) but REFUSES orders (tradeMode ${here}), and :${otherPort} accepts orders but its feed is ${age(otherAge)} — a DECISION is required`);
+          }
+        }
+        const problems = [...misrouted, ...splits];
+        record('INV-TRADEABLE-ROUTE', `traded symbols resolve to a broker that accepts them (${rows.length} checked)`,
+          problems.length === 0,
+          problems.length > 0
+            ? `${misrouted.length ? `MIS-ROUTED (re-route safe): ${misrouted.join(' | ')}. ` : ''}${splits.length ? `FEED/TRADE SPLIT (decision required — symbol_route serves the FEED as well as orders, so re-pointing it trades a live feed for tradability): ${splits.join(' | ')}` : ''}`
+            : (nowhere.length
+              ? `all routes accepted; ${nowhere.length} symbol(s) not tradeable on ANY bridge at this instant (session shut or disabled — not distinguishable here): ${nowhere.slice(0, 8).join(', ')}`
+              : 'every routed broker accepts its symbols'));
+      }
+    } catch (err) {
+      record('INV-TRADEABLE-ROUTE', 'every traded symbol resolves to a broker that will accept it', true, `skipped — ${err.message}`, true);
+    }
+  }
+
   // ── INV-NO-SYMBOL-GUESSING ─────────────────────────────────────────────
   //
   // HISTORY: this check was INV-SYMBOL-HINTS-RESOLVE — "every target the hint tables can

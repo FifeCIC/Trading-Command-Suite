@@ -49,6 +49,25 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string }> = [
   // `symbol_route`, so no broker could price it. It is the app's only tradable
   // short instrument, which made the short-side path untestable.
   { ticker: 'VIX', name: 'CBOE Volatility Index', type: 'index' },
+  // ── FX crosses for the forex-session-v1 session pairs (2026-09-15) ──────────
+  //
+  // Eight bots exist for these pairs (`… Session`, active:false) but their SYMBOLS WERE
+  // NEVER REGISTERED — so `forex-session-v1` could not resolve them, no bars were ever
+  // fetched, and the bots could not have traded even if enabled. Registering the symbol is
+  // the precondition for every other reference to it (the same lesson as XAGUSD above).
+  //
+  // ⚠️ Verified BEFORE onboarding, on BOTH bridges (2026-09-15): all eight report
+  // `tradeMode 4` with a 0.01 volume floor — except NZDJPY, whose MetaQuotes floor is
+  // **0.1**, so its bot's `baseSize` had to be 0.1 rather than the 0.01 the other FX
+  // session bots use.
+  { ticker: 'AUDJPY', name: 'Australian Dollar vs Japanese Yen', type: 'forex' },
+  { ticker: 'EURCAD', name: 'Euro vs Canadian Dollar', type: 'forex' },
+  { ticker: 'EURCHF', name: 'Euro vs Swiss Franc', type: 'forex' },
+  { ticker: 'EURGBP', name: 'Euro vs British Pound', type: 'forex' },
+  { ticker: 'EURJPY', name: 'Euro vs Japanese Yen', type: 'forex' },
+  { ticker: 'GBPCAD', name: 'British Pound vs Canadian Dollar', type: 'forex' },
+  { ticker: 'GBPJPY', name: 'British Pound vs Japanese Yen', type: 'forex' },
+  { ticker: 'NZDJPY', name: 'New Zealand Dollar vs Japanese Yen', type: 'forex' },
 ];
 
 // Broker slot → bridge port is declared in MT5_ACTIVE_BROKERS order
@@ -61,7 +80,52 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string }> = [
 const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?: string; brokerSymbol?: string | null }> = [
   { symbol: 'UK100', brokerId: 3, note: 'FTSE 100 — Pepperstone feed current; MetaQuotes stale since 2026-05' },
   { symbol: 'GER40', brokerId: 3, note: 'DAX 40 — Pepperstone has a real GER40 feed' },
-  { symbol: 'FRA40', brokerId: 2, note: 'CAC 40 — MetaQuotes feed live; Pepperstone returns 0' },
+  // ⚠️ FRA40 RE-POINTED 2 -> 3 on 2026-09-15. The previous note ("Pepperstone returns 0")
+  // was measured on 2026-09-10 and is NO LONGER TRUE: :5001 now feeds FRA40 live
+  // (contiguous 1h bars verified on BOTH bridges), and it is the broker that ACCEPTS
+  // orders — :5000 reports FRA40 as tradeMode 0. Keeping the route on :5000 meant a
+  // FRA40 card could never be traded. Found by INV-TRADEABLE-ROUTE.
+  // ⚠️ The seeder is UPSERT-ONLY, so it cannot remove the retired broker-2 row — that row
+  // must be deleted explicitly (or it competes with this one in the router, which takes
+  // the first row per symbol).
+  {
+    symbol: 'FRA40',
+    brokerId: 3,
+    note: 'CAC 40 — re-pointed to Pepperstone 2026-09-15: :5000 refuses orders (tradeMode 0), :5001 accepts them AND feeds it live (both bridges verified, contiguous 1h bars)',
+  },
+  // US30 — added 2026-09-15. It had NO route row, so orders fell back to the primary broker
+  // (MetaQuotes :5000) which reports US30 as `tradeMode 0` — the identical US500 fault
+  // (a card that reads actionable while the bridge refuses the click). Pepperstone accepts
+  // US30 orders and feeds it live, so :5001 is safe for both jobs. Found by
+  // INV-TRADEABLE-ROUTE's live probe, which is the point of the guard.
+  {
+    symbol: 'US30',
+    brokerId: 3,
+    note: 'Dow 30 — added 2026-09-15: no route existed (silent fallback to :5000, tradeMode 0); Pepperstone accepts orders and feeds it live (verified both bridges)',
+  },
+  // US500 — added 2026-09-15. It had NO route row at all, so `Mt5SymbolRouter` fell
+  // back to the PRIMARY broker (slot 2 = MetaQuotes :5000) for both its feed and its
+  // orders — silently, because an absent route and a deliberate one are indistinguishable
+  // from the caller's side.
+  //
+  // MetaQuotes reports US500 as `tradeMode 0` (trading DISABLED), so the bridge's
+  // `/order` pre-flight refused every attempt with "US500 not tradeable (trade mode: 0)"
+  // — while the Signals card showed it as fully actionable, because the app could only
+  // see that the symbol was LISTED. Pepperstone (:5001) reports `tradeMode 4` (FULL) under
+  // Retail\Indices\Majors\US500, i.e. it is the broker that can actually trade it.
+  //
+  // ⚠️ Re-verify with BOTH of these before changing or trusting this route, because
+  // `tradeMode` is a property of the BROKER, not of the symbol — the same ticker is
+  // listed on both bridges and tradeable on only one:
+  //   (Invoke-RestMethod http://localhost:5001/symbols).symbols | ? name -eq US500   # expect tradeMode 4
+  //   (Invoke-RestMethod http://localhost:5000/symbols).symbols | ? name -eq US500   # measures 0
+  // A tradeMode of 0 outside its session means "market shut", not "disabled" — so check
+  // during exchange hours before concluding the route is wrong.
+  {
+    symbol: 'US500',
+    brokerId: 3,
+    note: 'US 500 Index — Pepperstone tradeMode=4 verified 2026-09-15; MetaQuotes :5000 reports tradeMode=0 (trading disabled)',
+  },
   { symbol: 'XAGUSD', brokerId: 3, note: 'Silver — live on both bridges; Pepperstone (3) is primary for metals' },
   // VIX — added 2026-09-11 (#772). Pepperstone-ONLY: :5001 lists
   // {"name":"VIX","tradeMode":4} under Retail\Indices\Minors\VIX and returns 200
@@ -96,6 +160,19 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string }> = [
   { symbol: 'GER40', protocolSlug: 'dax-speed-v1' },
   { symbol: 'FRA40', protocolSlug: 'cac-speed-v1' },
   { symbol: 'XAGUSD', protocolSlug: 'xau-speed-v1' },
+  // FX crosses (2026-09-15) — path 0 of the resolution chain in
+  // docs/guides/symbol-onboarding-procedure.md (a real FK, not name guessing --
+  // INV-NO-SYMBOL-GUESSING). Assignment is ALSO what puts a symbol into the
+  // bar-refresh set: that feature resolves ['positions','active-strategies',
+  // 'forex-floor','protocol-symbols'], and `protocol-symbols` IS this table.
+  { symbol: 'AUDJPY', protocolSlug: 'forex-session-v1' },
+  { symbol: 'EURCAD', protocolSlug: 'forex-session-v1' },
+  { symbol: 'EURCHF', protocolSlug: 'forex-session-v1' },
+  { symbol: 'EURGBP', protocolSlug: 'forex-session-v1' },
+  { symbol: 'EURJPY', protocolSlug: 'forex-session-v1' },
+  { symbol: 'GBPCAD', protocolSlug: 'forex-session-v1' },
+  { symbol: 'GBPJPY', protocolSlug: 'forex-session-v1' },
+  { symbol: 'NZDJPY', protocolSlug: 'forex-session-v1' },
   // VIX short assignment is deliberately NOT added yet. Per #772, nothing is
   // assigned until the first demo short has actually executed (Step 2), so the
   // short path is not spread across more protocols before it is proven once.
@@ -116,9 +193,13 @@ async function main() {
           name: s.name,
           exchange: 'Xtrend',
           type: s.type,
-          tags: s.type === 'index'
-            ? (['speed-trading', 'xtrend', 'index'] as any)
-            : (['speed-trading', 'xtrend', 'metals', 'commodity'] as any),
+          // Tags are display/filter metadata. They must not claim a type the symbol is
+          // not, or a filter on them silently lies about the instrument.
+          tags: (s.type === 'index'
+            ? ['speed-trading', 'xtrend', 'index']
+            : s.type === 'forex'
+              ? ['speed-trading', 'xtrend', 'forex']
+              : ['speed-trading', 'xtrend', 'metals', 'commodity']) as any,
         },
       });
       console.log(`  ✓ symbol ${s.ticker} (${s.type})`);

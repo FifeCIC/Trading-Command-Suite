@@ -81,6 +81,10 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
   // Best-of scores use 1d bars, which are always >30m old — buildScoreDisplay
   // would mark every card STALE/PAUSED. Closed markets are shown as an
   // explicit chip instead, and the server blocks trades when truly closed.
+  // ⚠️ The chip reads "MARKET CLOSED", not "CLOSED". The bare word was mistaken for a
+  // POSITION-closed indicator — on a signals page that also reports closed-trade stats
+  // ("Closed win rate", "won/closed"), "CLOSED" alone is ambiguous about WHAT is closed.
+  // Keep the MARKET qualifier; the chip is about the exchange session, not a trade.
   const vm = buildScoreDisplay({
     signal: envelope.signal,
     value: envelope.composite,
@@ -196,7 +200,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
             className="sig-opp-closed"
             title={`Market closed — trade blocked: ${envelope.marketStatus?.reason || 'closed'}`}
           >
-            CLOSED
+            MARKET CLOSED
           </span>
         )}
         <span className="sig-opp-proto" title={`Protocol (signal thesis): ${envelope.protocolName || envelope.protocolId} · slug ${envelope.protocolId}`}>
@@ -500,7 +504,7 @@ function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
           <span className={`sig-opp-dir sig-opp-dir--${dir.cls}`}>{dir.label}</span>
           {!marketOpen && (
             <span className="sig-opp-closed" title={`Market closed — trade blocked: ${envelope.marketStatus?.reason || 'closed'}`}>
-              CLOSED
+              MARKET CLOSED
             </span>
           )}
         </div>

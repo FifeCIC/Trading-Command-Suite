@@ -282,6 +282,20 @@ const CANARIES = [
     markers: ['sessionGated', 'getSessionGated'],
     hint: 'The session gate must PUBLISH which bots it is holding shut. A deduped log line alone made three gated forex bots indistinguishable from idle ones, so AUDUSD scored 100% STRONG_BUY while shut (#759).',
   },
+  {
+    id: 'INV-TRADEABLE-ROUTE',
+    root: 'nest',
+    file: 'src/modules/trading/execution-feasibility.service.ts',
+    // BOTH markers are the contract, and they guard different halves:
+    //   - `symbol-not-tradeable` is the blocker that stops an untradeable symbol being
+    //     offered at all. Without it the card reads actionable and the broker refuses
+    //     the click — the measured US500 failure.
+    //   - `getSymbolTradability` is the accessor that supplies the per-BROKER constraint
+    //     the blocker needs. Without it `getSymbols()` only proves the symbol is LISTED,
+    //     which is the fact that made this bug look like a working setup.
+    markers: ['symbol-not-tradeable', 'getSymbolTradability'],
+    hint: 'A symbol may be offered for trade only when the broker that will receive the order reports it tradeable (tradeMode 4) and the size clears that broker\'s volume floor. US500 is LISTED on both bridges and tradeable on only one (tradeMode 0 on MetaQuotes :5000, 4 on Pepperstone :5001), and its floor is 0.1 lots against a 0.01 manual default — so the card read as fully actionable while the bridge would have refused the click twice over (#US500).',
+  },
 ];
 
 /** Invariants enforced by a scan rather than a canary. */
@@ -323,6 +337,10 @@ const PROBE_ENFORCED = {
   // them. Build gates cannot see this — they pass while the live system is unchanged,
   // which is exactly how 30 orphan rows sat there with every build green (#789/#792).
   'INV-SEED-DB-CONSISTENT': 'scripts/contract-probe.cjs',
+  // Needs the LIVE bridges: "will the broker that receives this order accept it" is a
+  // property of BROKER × SYMBOL, so no static check can answer it. Measured case (#US500):
+  // tradeMode 0 on :5000 vs 4 on :5001 for the same ticker.
+  'INV-TRADEABLE-ROUTE': 'scripts/contract-probe.cjs',
 };
 
 /**

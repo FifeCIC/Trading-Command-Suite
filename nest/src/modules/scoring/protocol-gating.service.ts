@@ -243,11 +243,13 @@ export interface GatedScore {
   /** Directives excluded from the composite due to ALPHA readiness. */
   excludedBreakdown: { directiveId: string; name: string; reason: string }[];
   /**
-   * Protocol direction intent (#684): 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH'.
+   * Protocol direction intent (#684): 'LONG_ONLY' | 'SHORT_ONLY'.
    * BUY/SELL labels already encode this — the raw mode is returned so the
    * Signals UI can distinguish "open short (CFD)" from "close long (stock)".
+   *
+   * ⚠️ 'BOTH' removed 2026-09-15 (#818). See score-units.ts for the full reasoning.
    */
-  directionMode: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
+  directionMode: 'LONG_ONLY' | 'SHORT_ONLY';
 }
 
 // ─── Rarity Bands ────────────────────────────────────────
@@ -305,23 +307,60 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
  * share identical semantics.
  *
  *   compositePct = (composite / protocolMaxScore) × 100
- *   ≥ 80% → STRONG_BUY / STRONG_SELL
- *   ≥ 40% → BUY / SELL
- *   ≥ 20% → HOLD
- *   < 20% → SELL (LONG_ONLY → HOLD)
+ *   ≥ 13% → STRONG_BUY / STRONG_SELL
+ *   ≥  6% → BUY / SELL
+ *   <  6% → HOLD
  *
  * ⚠️ HISTORICAL NOTE ⚠️
- * The previous design used ABSOLUTE constants (ENTRY_THRESHOLD=40,
- * HOLD_FLOOR=20) calibrated for an old 0-100 percentage scale. When the
- * composite moved to raw scores (hundreds), those constants silently broke
- * — every composite ≥ 40 was classified BUY/SELL. That caused the
- * over-production of BUY signals reported on 2026-08-12.
+ * The previous design used ABSOLUTE constants calibrated for an old 0-100
+ * percentage scale. When the composite moved to raw scores (hundreds), those
+ * constants silently broke — every composite ≥ 40 was classified BUY/SELL.
+ * That caused the over-production of BUY signals reported on 2026-08-12.
  *
  * Absolute thresholds cannot serve custom protocols with wildly different
  * maxScores. Percentage-based classification is the only scalable design.
  * The constants below are now percentage points (not absolute scores).
+ *
+ * ⚠️ RESCALED 2026-09-15 — 40 → 6, 80 → 13 ⚠️
+ * The SECOND breakage of this same constant, and the reason the app stopped
+ * trading entirely. ADR-011 (#758, second pass) changed the percentage
+ * DENOMINATOR from the OBSERVED directional sum (~130) to the CONFIGURED
+ * directional capacity (~725-815) — about 6.3x larger — which divided every
+ * percentage by that factor. Measured peak `signalPct` is now 10-33.
+ *
+ * Against ENTRY_THRESHOLD = 40, `signal` was therefore **HOLD on every single
+ * tick**, so nothing was ever queued and no trade executed after 2026-09-10
+ * (the last queue entry and last closed trade are both from that date).
+ *
+ * Every value is the old one divided by ~6.3, rounded, ordering preserved —
+ * a units migration, not a tuning decision. The same rescale is applied in
+ * common/utils/style-thresholds.ts, strategy-seed-data.ts and the
+ * evaluatePreTrade default in signal-envelope.service.ts.
+ *
+ * ⚠️ MAKING THE APP TRADE IS NOT MAKING IT PROFITABLE. Measured directional
+ * accuracy was 39-48% over 2026-09-08..15, at or below chance. These bars exist
+ * so the pipeline PRODUCES TRADES TO BE MEASURED (#817). Tune from outcomes.
  */
-const ENTRY_THRESHOLD = 40;   // % of maxScore — BUY/SELL above this; below = HOLD (no directional edge)
+const ENTRY_THRESHOLD = 6;   // % of maxScore — BUY/SELL above this; below = HOLD (no directional edge)
+
+/**
+ * % of configured capacity for STRONG_BUY / STRONG_SELL. Was 80, rescaled 2026-09-15.
+ * Hoisted to module scope so the Settings page can DISPLAY it from the same source the
+ * classifier uses — a hand-copied number in the UI would be a second place to drift, and
+ * an invisible threshold is exactly how the app sat unable to trade for five days.
+ */
+export const STRONG_PCT = 13;
+
+/**
+ * The classification thresholds, for display. Exported as ONE object so the Settings page
+ * renders the live values and cannot show a stale copy (#761 follow-up).
+ */
+export const SIGNAL_THRESHOLDS = {
+  entry: ENTRY_THRESHOLD,
+  strong: STRONG_PCT,
+  /** What the percentages are measured against. */
+  scale: 'percent of CONFIGURED directional capacity (ADR-011)',
+} as const;
 
 /**
  * The pre-gate raw composite for Adaptive Target purposes — the sum of the per-group RAW
@@ -682,8 +721,11 @@ export class ProtocolGatingService {
         // observe bearish evidence, but that evidence must never increase BUY
         // strength (and vice versa for SHORT_ONLY). BOTH protocols retain the
         // two sides separately until the winner is selected below.
+        // A protocol observes only its OWN side. Bearish evidence in a LONG_ONLY protocol
+        // must never increase BUY strength. The former `directionMode === 'BOTH'` clause is
+        // gone (#818) — a mode that decides its side at runtime is a mode whose side can be
+        // decided by a moving denominator, which was #813.
         const directionAllowed =
-          directionMode === 'BOTH' ||
           (directionMode === 'LONG_ONLY' && result.signalClass === 'bullish') ||
           (directionMode === 'SHORT_ONLY' && result.signalClass === 'bearish');
         const inSignal = !isGateGroup && directional && directionAllowed;
@@ -893,7 +935,9 @@ export class ProtocolGatingService {
     // BUY/HOLD/SELL classification AND displayed on the card, so the label and the percentage
     // can never disagree. See the `signalDenominator` note above for why the observed max is
     // not acceptable here (#758 follow-up).
-    const STRONG_PCT = 80; // % of configured capacity for STRONG_BUY / STRONG_SELL
+    // STRONG_PCT is module scope (#761 follow-up) so Settings can display it.
+    // 80 -> 13 (2026-09-15): rescaled onto the post-ADR-011 percentage scale. See
+    // the RESCALED note on ENTRY_THRESHOLD above for the derivation.
     const signalPct = normalizeScorePercent(selectedEvidence.raw, signalDenominator);
 
     let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';

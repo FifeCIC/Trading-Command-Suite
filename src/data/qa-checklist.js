@@ -2953,6 +2953,18 @@ const QA_CHECKLIST = [
     priority: 'critical',
     versionNote: '2026-09-11 — #789/#792 seed/DB drift; Gate 3 (STATE) added to the probe',
   },
+  {
+    id: 'qa-contract-024',
+    invariant: 'INV-TRADEABLE-ROUTE',
+    area: 'Pipeline Contracts',
+    system: 'Trading / Broker routing',
+    name: 'A tradable symbol resolves to a broker that will actually accept the order',
+    procedure: 'Run `npm --prefix nest run test -- --testPathPatterns="execution-feasibility"` (8 tests), then `node scripts/contract-probe.cjs` from nest/ and read the `INV-TRADEABLE-ROUTE` line. To inspect a named symbol by hand: `(Invoke-RestMethod http://localhost:5001/symbols).symbols | ? name -eq US500` (expect `tradeMode 4` = FULL) and the same against `:5000` (measures `0` = DISABLED), plus `GET /api/providers/mt5/routes/US500` (expect `explicit: true, brokerId: 3`).',
+    expected: 'All 8 tests pass, and the probe reports no MIS-ROUTED symbol. **Then prove the guards bite:** (a) unit — the spec asserts a `tradeMode 0` broker yields `symbol-not-tradeable`, a `0.01` size against a `0.1` floor yields `size-below-minimum`, and that an UNREACHABLE broker (`null`) blocks NOTHING; (b) build — delete the `symbol-not-tradeable` blocker (or the `getSymbolTradability` call) and `node scripts/validate-pipeline-contracts.cjs` must FAIL on the canary; (c) live — repoint the route with `PUT /api/providers/mt5/routes/US500 {\'brokerId\':2}` and the probe must report `US500 routes to broker 2 (tradeMode 0) but IS tradeable on :5001`. Restore afterwards. ⚠️ The probe deliberately does NOT require `tradeMode === 4` for every symbol: `tradeMode` drops to 0 whenever that market is shut, so the naive form is red every night and weekend, and a guard that is never green gets ignored. It fails only on the SESSION-INDEPENDENT fault — the routed broker refuses while another broker accepts. ⚠️ Measured 2026-09-15 (#US500): US500 had NO `symbol_route` row, so orders fell back to the primary broker (MetaQuotes `:5000`, `tradeMode 0`) while Pepperstone `:5001` reported 4; and `volumeMin` is 0.1 lots on BOTH bridges against a manual default of 0.01 — so a route-only fix just moves the refusal one gate along. `tradeMode` is a property of BROKER × SYMBOL, never of the symbol alone.',
+    category: 'Contract',
+    priority: 'critical',
+    versionNote: '2026-09-15 — #US500 manual trade refused with "not tradeable (trade mode: 0)"',
+  },
   // ═══════════════════════════════════════════════════
   // HANDOFF BATCH #15 (2026-09-08 → 09-10)
   // ═══════════════════════════════════════════════════════

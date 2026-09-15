@@ -139,6 +139,24 @@ export class SignalActionsService {
     const brokerId = body.brokerId || 'mt5';
     if (!ticker) throw new BadRequestException('No symbol resolved for this signal');
 
+    const broker = this.adapterFactory.create(brokerId);
+    if (!broker?.placeOrder) {
+      throw new BadRequestException(`Broker ${brokerId} does not support order placement`);
+    }
+
+    // 5. Sizing + SL/TP — explicit in body, else the persisted Settings defaults
+    //    (#720). Defaults are read at order time so Settings edits apply live.
+    //
+    // ⚠️ Read BEFORE the feasibility assessment below, because the SIZE is one of the
+    // facts that assessment needs: brokers enforce a per-symbol volume floor, and "your
+    // size is below this broker's minimum" is a refusal the app can predict instead of
+    // discovering it after the click (measured: US500's floor is 0.1 lots on both bridges
+    // while the manual default is 0.01).
+    const defaults = await this.tradeDefaults.getDefaults();
+    const quantity = body.size ?? defaults.size;
+    const slPct = body.slPct ?? defaults.slPct;
+    const tpPct = body.tpPct ?? defaults.tpPct;
+
     // #723 — the SAME feasibility assessment that annotated the signal at
     // generation time, re-run as the authoritative execution check (state can
     // change between generation and click). One library, two phases.
@@ -148,23 +166,12 @@ export class SignalActionsService {
       brokerId,
       protocolId: protocol,
       marketStatus: marketStatus as any,
+      size: quantity,
     });
     if (!feas.feasible) {
       const first = feas.blockers[0];
       throw new BadRequestException(first.message);
     }
-
-    const broker = this.adapterFactory.create(brokerId);
-    if (!broker?.placeOrder) {
-      throw new BadRequestException(`Broker ${brokerId} does not support order placement`);
-    }
-
-    // 5. Sizing + SL/TP — explicit in body, else the persisted Settings defaults
-    //    (#720). Defaults are read at order time so Settings edits apply live.
-    const defaults = await this.tradeDefaults.getDefaults();
-    const quantity = body.size ?? defaults.size;
-    const slPct = body.slPct ?? defaults.slPct;
-    const tpPct = body.tpPct ?? defaults.tpPct;
 
     let entryPrice: number | null = null;
     try {

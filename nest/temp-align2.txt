@@ -1,0 +1,36 @@
+4h ALIGNMENT: does the bar describe [ts, ts+4h) or [ts-4h, ts)?
+
+4h bar @ 2026-09-14T20:00:00.000Z
+   bar high=4301.27  low=4283.08
+   FWD  1h[20:00:00..00:00:00)  n=4 hi=4317.79
+   BWD  1h[16:00:00..20:00:00)  n=4 hi=4317.79
+
+4h bar @ 2026-09-14T16:00:00.000Z
+   bar high=4316.49  low=4282.75
+   FWD  1h[16:00:00..20:00:00)  n=4 hi=4317.79
+   BWD  1h[12:00:00..16:00:00)  n=4 hi=4298.32
+
+4h bar @ 2026-09-14T12:00:00.000Z
+   bar high=4317.79  low=4253.48
+   FWD  1h[12:00:00..16:00:00)  n=4 hi=4298.32
+   BWD  1h[08:00:00..12:00:00)  n=4 hi=4318.26   <<< MATCHES (close-stamped)
+
+4h bar @ 2026-09-14T08:00:00.000Z
+   bar high=4311.67  low=4265.76
+   FWD  1h[08:00:00..12:00:00)  n=4 hi=4318.26
+   BWD  1h[04:00:00..08:00:00)  n=4 hi=4338.74
+
+4h bar @ 2026-09-14T04:00:00.000Z
+   bar high=4338.74  low=4303.23
+   FWD  1h[04:00:00..08:00:00)  n=4 hi=4338.74   <<< MATCHES (open-stamped)
+   BWD  1h[00:00:00..04:00:00)  n=4 hi=4355.27
+
+4h bar @ 2026-09-14T00:00:00.000Z
+   bar high=4355.27  low=4321.87
+   FWD  1h[00:00:00..04:00:00)  n=4 hi=4355.27   <<< MATCHES (open-stamped)
+   BWD  1h[20:00:00..00:00:00)  n=2 hi=4342.39
+
+1h ALIGNMENT (control - expected open-stamped):
+  1h @ 2026-09-14T20:00:00.000Z high=4317.79  FWD(12x5m) n=12 hi=4299.7  BWD n=12 hi=4307.91
+  1h @ 2026-09-14T19:00:00.000Z high=4307.91  FWD(12x5m) n=12 hi=4307.91 <-- MATCH  BWD n=12 hi=4315.83
+  1h @ 2026-09-14T18:00:00.000Z high=4315.83  FWD(12x5m) n=12 hi=4315.83 <-- MATCH  BWD n=12 hi=4316.49

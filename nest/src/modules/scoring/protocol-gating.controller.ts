@@ -1,5 +1,10 @@
 import { BadRequestException, Controller, Get, Post, Patch, Param, Body, Logger, Query } from '@nestjs/common';
-import { ProtocolGatingService, GatedScore } from './protocol-gating.service';
+import { ProtocolGatingService, GatedScore, SIGNAL_THRESHOLDS } from './protocol-gating.service';
+import {
+  STYLE_THRESHOLDS,
+  SIGNALS_GATE_DEFAULT,
+  BOT_BAR_DEFAULT,
+} from '../../common/utils/style-thresholds';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
@@ -65,6 +70,90 @@ export class ProtocolGatingController {
   async protocolsHealth() {
     const issues = await this.health.validateAll();
     return { generatedAt: new Date().toISOString(), issues };
+  }
+
+  /**
+   * GET /api/scoring/gated/thresholds
+   *
+   * EVERY trade threshold in one place, with the measured ceiling it is compared against.
+   *
+   * ⚠️ WHY THIS EXISTS
+   * -----------------
+   * On 2026-09-10 the app stopped trading completely and nobody could see why. ADR-011
+   * changed the percentage DENOMINATOR from the observed directional sum (~130) to the
+   * configured capacity (~725-815) — ~6.3x larger — which divided every percentage by that
+   * factor. Every threshold stayed on the old scale, so `ENTRY_THRESHOLD = 40` classified
+   * every tick as HOLD and nothing was ever queued. Trading resumed 2026-09-15 once the
+   * thresholds were rescaled.
+   *
+   * Three people had written the diagnosis in code comments. **Nobody could SEE the
+   * numbers**, so it was never fixed. This endpoint exists so that class of failure is
+   * visible: a bar above its achieved ceiling is a bot that cannot fire, and it should be
+   * obvious rather than inferable.
+   *
+   * `achievedPct` is the best compositePct the bot's protocol has actually produced in the
+   * window. `clears` is the verdict — the single most useful cell in the response.
+   */
+  @Get('thresholds')
+  async thresholds() {
+    const WINDOW_DAYS = 7;
+
+    // Per-bot bar vs its protocol's measured ceiling. Note the COLLATE: `score.strategyId`
+    // is defined with a different collation from `trading_strategy.protocolId`, and MySQL
+    // refuses the comparison without it.
+    const bots = await this.prisma.$queryRawUnsafe<Array<{
+      name: string; symbol: string; protocolId: string; mode: string; active: number;
+      minComposite: number; achievedPct: number | null; samples: bigint;
+    }>>(`
+      SELECT ts.name, ts.symbol, ts.protocolId, ts.mode, ts.active, ts.minComposite,
+             MAX(s.breakdown->>'$.rawComposite' / NULLIF(s.breakdown->>'$.configuredSignalMax', 0) * 100) AS achievedPct,
+             COUNT(s.id) AS samples
+      FROM trading_strategy ts
+      LEFT JOIN score s
+        ON s.strategyId COLLATE utf8mb4_unicode_ci = ts.protocolId COLLATE utf8mb4_unicode_ci
+       AND s.timestamp >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
+      GROUP BY ts.id, ts.name, ts.symbol, ts.protocolId, ts.mode, ts.active, ts.minComposite
+      ORDER BY ts.active DESC, ts.minComposite ASC, ts.name ASC
+    `);
+
+    const rows = bots.map((b) => {
+      const achieved = b.achievedPct == null ? null : Number(b.achievedPct);
+      const samples = Number(b.samples);
+      return {
+        name: b.name,
+        symbol: b.symbol,
+        protocolId: b.protocolId,
+        mode: b.mode,
+        active: b.active === 1,
+        barPct: Number(b.minComposite),
+        achievedPct: achieved == null ? null : Math.round(achieved * 10) / 10,
+        samples,
+        // Three outcomes, kept distinct on purpose. "no data" is NOT "cannot fire" —
+        // conflating them is how a protocol looks broken when it is merely unmeasured.
+        clears: achieved == null ? 'no-data' : achieved >= Number(b.minComposite) ? 'yes' : 'no',
+      };
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays: WINDOW_DAYS,
+      classification: SIGNAL_THRESHOLDS,
+      preTradeGate: {
+        default: SIGNALS_GATE_DEFAULT,
+        botBarFallback: BOT_BAR_DEFAULT,
+        byStyle: STYLE_THRESHOLDS,
+        note: 'Per-protocol override > trading style > default. The gate blocks a signal when signalPct is below the resolved bar.',
+      },
+      bots: rows,
+      summary: {
+        total: rows.length,
+        active: rows.filter((r) => r.active).length,
+        activeClearing: rows.filter((r) => r.active && r.clears === 'yes').length,
+        // The number that would have flagged the 2026-09-10 outage immediately.
+        activeCannotFire: rows.filter((r) => r.active && r.clears === 'no').length,
+        activeNoData: rows.filter((r) => r.active && r.clears === 'no-data').length,
+      },
+    };
   }
 
   /**

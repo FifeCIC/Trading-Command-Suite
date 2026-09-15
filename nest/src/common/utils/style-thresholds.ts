@@ -43,25 +43,78 @@ export interface StyleGateResolution {
   label: string;
 }
 
-/** Canonical bars per style. Higher = stricter. */
+/**
+ * Canonical bars per style. Higher = stricter.
+ *
+ * ⚠️ RESCALED 2026-09-15 — the values below are NOT the historic ones, and the
+ * reason matters more than the numbers.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHY THE OLD VALUES (75/80/65/55/45) MADE THE APP UNABLE TO TRADE
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ADR-011 (#758, second pass, deployed ~2026-09-10) changed the percentage
+ * DENOMINATOR from the OBSERVED directional sum to the CONFIGURED directional
+ * capacity. For a typical protocol that moved the divisor from ~130 to ~725-815,
+ * i.e. **~6.3x larger**, and therefore divided EVERY percentage by that factor.
+ *
+ * The bars in this table were calibrated against the old scale, where readings
+ * reached 60-100. After the denominator change the same readings became ~10-33.
+ * Measured peak `compositePct` per protocol (2026-09-15):
+ *
+ *     hourly-3dir-v1 33.3   vix-short-v1 25.8   xau-speed-v1/m5/m15 23-24
+ *     gold-macro-v1  21.6   vix-spike-v1 18.8   spy-speed-v1 18.7
+ *     qqq-speed-v1   17.2   xau-speed-4h 16.6   forex-session-v1 15.0
+ *     ftse/dax/cac   13.5-16.4                   china-speed-v1 10.2
+ *
+ * Against a bar of 65-80, **nothing could ever clear the gate**, and live trading
+ * stopped on 2026-09-10 — the last queue entry and the last closed trade are both
+ * from that date. The app was not broken; it was measuring on a new scale and
+ * comparing against old numbers.
+ *
+ * The repo already carried the diagnosis twice in comments
+ * (`protocol-gating.service.ts` "SCALE WARNING", `automation-loop.service.ts`
+ * "these thresholds were calibrated for the OLD 0-100 composite scale") — and one
+ * bot, `VIX Spike Short`, was seeded with `minComposite: 0` specifically to dodge
+ * it. This table is the same defect, fixed at source.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * HOW THE NEW VALUES WERE DERIVED — a units migration, not a tuning decision
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Every bar is the old value divided by the denominator ratio (~6.3), rounded to
+ * an integer, with the ORDERING PRESERVED exactly (scalp < speed, and
+ * day-trade > swing > position). No value was picked by feel.
+ *
+ * ⚠️ These are ENTRY-QUALITY bars, not risk limits. The risk engine
+ * (`riskMultiplier`, `hardGateTriggered`), SL/TP and position sizing are
+ * unchanged and still apply — lowering an entry bar admits more trades, it does
+ * not remove a guard.
+ *
+ * ⚠️ MAKING THE APP TRADE IS NOT THE SAME AS MAKING IT PROFITABLE. Directional
+ * accuracy measured on `directiveoutcome` was 39-48% over 2026-09-08..15, i.e.
+ * at or below chance. These bars exist so the pipeline can produce trades TO BE
+ * MEASURED — they are not evidence of edge, and must not be read as such. Raise
+ * them from measured outcomes (#817), never by intuition.
+ */
 export const STYLE_THRESHOLDS: Record<StyleCategory, number> = {
-  scalp: 75,
-  speed: 80,
-  'day-trade': 65,
-  swing: 55,
-  position: 45,
+  scalp: 12,
+  speed: 13,
+  'day-trade': 10,
+  swing: 9,
+  position: 7,
 };
 
 export type StyleCategory = 'scalp' | 'speed' | 'day-trade' | 'swing' | 'position';
 
 /**
  * Consumer defaults — deliberately different, and that is preserved:
- *   - SIGNALS_GATE_DEFAULT: the historical Signals pre-trade gate (65).
- *   - BOT_BAR_DEFAULT:      the legacy automation-loop bot bar (60).
- * Unifying these would change trading behaviour in one of the two paths.
+ *   - SIGNALS_GATE_DEFAULT: the historical Signals pre-trade gate (was 65).
+ *   - BOT_BAR_DEFAULT:      the legacy automation-loop bot bar (was 60).
+ * Unifying these would change trading behaviour in one of the two paths, so they
+ * stay separate — but both are rescaled on the same basis as the table above
+ * (old / ~6.3), because both were compared against the same percentage.
  */
-export const SIGNALS_GATE_DEFAULT = 65;
-export const BOT_BAR_DEFAULT = 60;
+export const SIGNALS_GATE_DEFAULT = 10;
+export const BOT_BAR_DEFAULT = 10;
 
 /** Original keyword set and order — DO NOT reorder, see behaviour contract above. */
 const LEGACY_PASS: Array<[string[], StyleCategory]> = [

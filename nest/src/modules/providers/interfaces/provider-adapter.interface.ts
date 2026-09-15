@@ -40,6 +40,27 @@ export interface ProviderProfile {
   marketCap: number | null;
 }
 
+/**
+ * Per-symbol BROKER CONSTRAINTS for one broker instance.
+ *
+ * A provider can list a symbol and still refuse to trade it, so "listed" and "tradeable"
+ * are separate facts and only the second one justifies offering a trade. Both fields here
+ * are the ones the MT5 bridge's `/order` pre-flight tests.
+ *
+ * ⚠️ `tradeMode` is a property of the BROKER × symbol pair, never of the symbol alone:
+ * the same ticker can be tradeable on one bridge and disabled on another (measured
+ * 2026-09-15 — US500: `tradeMode 0` on MetaQuotes :5000, `4` on Pepperstone :5001). Never
+ * cache or persist it against the symbol by itself.
+ */
+export interface SymbolTradability {
+  /** MT5 SYMBOL_TRADE_MODE: 4 = FULL (tradeable), 0 = DISABLED, 1/2 = one-way, 3 = close-only. */
+  tradeMode: number;
+  /** Minimum order volume in lots; `null` = not reported by this provider (UNKNOWN, not 0). */
+  volumeMin: number | null;
+  /** Maximum order volume in lots; `null` = unknown. */
+  volumeMax: number | null;
+}
+
 export interface IProviderAdapter {
   /** Human-readable adapter name, used in health responses. */
   readonly name: string;
@@ -123,6 +144,19 @@ export interface IProviderAdapter {
    * Returns a Set (MT5) or array (some adapters) — callers should normalise.
    */
   getSymbols?(brokerId?: number): Promise<Set<string> | string[] | null>;
+
+  /**
+   * Per-symbol broker constraints (trade mode + volume limits) for one broker instance.
+   *
+   * `getSymbols()` answers "is this symbol listed?"; this answers "will the broker ACCEPT
+   * A TRADE for it?". Both are needed to know whether offering a trade is honest — the
+   * bridge refuses on either failing, and a refusal discovered after the click is the bug
+   * this exists to prevent.
+   *
+   * Returns `null` when the provider is unreachable. Callers MUST treat that as UNKNOWN
+   * rather than as untradeable.
+   */
+  getSymbolTradability?(brokerId?: number): Promise<Map<string, SymbolTradability> | null>;
 
   /** Close an open position by broker ticket (optional, broker-aware). #747 */
   closePosition?(ticket: string, volume?: number, brokerId?: number): Promise<BrokerOrderResult>;

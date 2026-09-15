@@ -2171,7 +2171,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   "eurusd-macro-v1": {
     "name": "EURUSD Macro-Pair V1",
     "description": "Rate-differential and macro-data-driven protocol for EURUSD.",
-    "directionMode": "BOTH",
+    "directionMode": "LONG_ONLY",
     "tradingStyle": "swing",
     "recommendedTimeframe": null,
     "avgHoldTime": null,
@@ -2236,7 +2236,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   "usdjpy-risk-v1": {
     "name": "USDJPY Risk-Pair V1",
     "description": "Risk-sentiment yen protocol",
-    "directionMode": "BOTH",
+    "directionMode": "LONG_ONLY",
     "tradingStyle": "swing",
     "recommendedTimeframe": null,
     "avgHoldTime": null,
@@ -2286,7 +2286,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   "gbpusd-news-v1": {
     "name": "GBPUSD News-Pair V1",
     "description": "News-surprise cable protocol",
-    "directionMode": "BOTH",
+    "directionMode": "LONG_ONLY",
     "tradingStyle": "day-trade",
     "recommendedTimeframe": null,
     "avgHoldTime": null,
@@ -2337,7 +2337,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   "usdcad-oil-v1": {
     "name": "USDCAD Oil-Pair V1",
     "description": "Oil-correlation protocol for USDCAD — replaces the older CAD-focused protocol.",
-    "directionMode": "BOTH",
+    "directionMode": "LONG_ONLY",
     "tradingStyle": "day-trade",
     "recommendedTimeframe": null,
     "avgHoldTime": null,
@@ -2388,7 +2388,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   "commodity-pairs-v1": {
     "name": "Commodity-Pairs Macro V1",
     "description": "Commodity currency strength",
-    "directionMode": "BOTH",
+    "directionMode": "LONG_ONLY",
     "tradingStyle": "swing",
     "recommendedTimeframe": null,
     "avgHoldTime": null,

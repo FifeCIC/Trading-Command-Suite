@@ -95,7 +95,7 @@ export interface SignalEnvelope {
   protocolName: string | null;
   /** Executing bot (TradingStrategy) name — distinct from the protocol (signal thesis). */
   botName?: string | null;
-  directionMode: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
+  directionMode: 'LONG_ONLY' | 'SHORT_ONLY';
   scoreId: string | null;          // persisted Score row id — required for /:id/action + /:id/trade
   signalPct: number | null;        // pre-gate directional % (classification basis)
   opportunityPct: number | null;   // additive screening %
@@ -384,6 +384,15 @@ export class SignalEnvelopeService {
           .map(item => ({
             directiveId: item.directiveId,
             symbol: cleanTicker,
+            // ⚠️ #821 — `strategyId` was OMITTED here, so `directiveoutcome.strategyId`
+            // was NULL in 16,673 of 16,673 rows (100%) and NO per-protocol statistic was
+            // computable. The table collected correctly and was simply unattributable,
+            // which is why it reported nothing while its row count grew healthily.
+            //
+            // `protocolId` is the PROTOCOL SLUG, matching `score.strategyId` — the two
+            // tables must use the same key or they cannot be joined. Do not switch this
+            // to the protocol UUID; that was the shape of the original mistake.
+            strategyId: protocolId,
             timeframe: baseTimeframe,
             score: item.score,
             signalClass: item.signalClass,
@@ -674,7 +683,13 @@ export class SignalEnvelopeService {
   private evaluatePreTrade(
     gated: GatedScore,
     conflicts: SignalEnvelope['conflicts'],
-    gateThreshold = 65,
+    // 65 -> 10 (2026-09-15): rescaled onto the post-ADR-011 percentage scale.
+    // ADR-011 changed the denominator from the OBSERVED directional sum (~130) to the
+    // CONFIGURED directional capacity (~725-815), dividing every percentage by ~6.3x.
+    // A gate of 65 was therefore unreachable — measured peak `signalPct` is ~10-33 — and
+    // live trading stopped on 2026-09-10. See the RESCALED block in
+    // common/utils/style-thresholds.ts for the full derivation.
+    gateThreshold = 10,
     gateLabel = '',
   ): {
     preTradeReady: boolean;

@@ -216,3 +216,38 @@
 2026-09-14 16:02:06,289 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
 2026-09-14 16:02:06,290 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
 2026-09-14 16:02:06,300 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-14 21:25:30,941 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-14 21:25:30,941 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-14 21:25:30,941 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-14 21:25:30,941 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-14 21:25:30,942 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-14 21:25:30,944 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-14 21:25:30,944 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-14 21:25:30,979 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-15 10:01:01,723 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-15 10:01:01,727 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-15 10:01:01,727 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-15 10:01:01,727 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-15 10:01:01,727 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-15 10:01:01,729 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-15 10:01:01,729 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-15 10:01:01,774 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-15 14:15:40,222 [INFO] [broker3] [TRADE JOURNAL] {"timestamp": "2026-09-15T14:15:40.217129", "action": "order_failed", "symbol": "XAGUSD", "type": "buy", "volume": 0.01, "error": "Unsupported filling mode", "clientOrderId": "signal-d1e1858c-c2f4-4aa1-b672-cc759a8780b2"}
+2026-09-15 14:15:51,977 [INFO] [broker3] [TRADE JOURNAL] {"timestamp": "2026-09-15T14:15:51.977453", "action": "order_failed", "symbol": "XAGUSD", "type": "buy", "volume": 0.01, "error": "Unsupported filling mode", "clientOrderId": "signal-d1e1858c-c2f4-4aa1-b672-cc759a8780b2"}
+2026-09-15 14:24:07,723 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-15 14:24:07,723 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-15 14:24:07,723 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-15 14:24:07,723 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-15 14:24:07,724 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-15 14:24:07,729 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-15 14:24:07,729 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-15 14:24:07,741 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-15 14:52:01,043 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-15 14:52:01,044 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-15 14:52:01,044 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-15 14:52:01,044 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-15 14:52:01,044 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-15 14:52:01,046 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-15 14:52:01,046 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-15 14:52:01,056 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-15 20:28:37,842 [INFO] [broker3] [TRADE JOURNAL] {"timestamp": "2026-09-15T20:28:37.838129", "action": "order_placed", "ticket": 89649760, "symbol": "GER40", "type": "buy", "volume": 0.1, "price": 25453.5, "clientOrderId": "signal-fe628edf-5460-4e7b-a602-d57f854d489b"}

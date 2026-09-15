@@ -22,7 +22,7 @@ export interface SymbolSuitabilityDescriptor {
 export interface ProtocolSuitabilityDescriptor {
   slug: string;
   name?: string | null;
-  directionMode?: string | null; // LONG_ONLY | SHORT_ONLY | BOTH
+  directionMode?: string | null; // LONG_ONLY | SHORT_ONLY  (BOTH removed #818)
   /** If non-empty, the protocol only fits these symbol types. */
   symbolTypes?: string[];
   recommendedTimeframe?: string | null;
@@ -35,7 +35,7 @@ export interface SuitabilityVerdict {
   fits: boolean;
   /** Exclusion reasons when !fits; informational notes when fits. */
   reasons: string[];
-  direction: 'LONG' | 'SHORT' | 'BOTH';
+  direction: 'LONG' | 'SHORT';
 }
 
 @Injectable()
@@ -47,7 +47,7 @@ export class SuitabilityService {
   evaluateOne(symbol: SymbolSuitabilityDescriptor, protocol: ProtocolSuitabilityDescriptor): SuitabilityVerdict {
     const directionMode = (protocol.directionMode || 'LONG_ONLY').toUpperCase();
     const direction: SuitabilityVerdict['direction'] =
-      directionMode === 'SHORT_ONLY' ? 'SHORT' : directionMode === 'BOTH' ? 'BOTH' : 'LONG';
+      directionMode === 'SHORT_ONLY' ? 'SHORT' : 'LONG';
 
     const reasons: string[] = [];
     let fits = true;

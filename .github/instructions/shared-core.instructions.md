@@ -36,6 +36,41 @@ The thresholds `>= 65` / `>= 40` were hardcoded identically in every file. If th
 | Protocol data hook (protocols + runs + name lookup) | `src/core/useProtocolData.js` |
 | Signal display model (signal/tone/state/pct from a score row) | `src/core/score-display.js` — `buildScoreDisplay()` |
 | Signal badge component (render a signal from the view model) | `src/components/SignalBadge.jsx` |
+| **User-facing message text** (errors, warnings, info, success) | **`src/core/notices/registry.js`** — `notice(code, params)`. Add a **code**, never inline prose. |
+
+---
+
+## 🗣️ Messages — one registry, stable codes (#824)
+
+Every message the app shows a human lives in **`src/core/notices/registry.js`**, keyed by a stable
+code (`TCS-TRADE-001`). A call site passes a **code plus data**, never a sentence:
+
+```js
+import { notice } from '../../core/notices/registry';
+
+const n = notice('TCS-TRADE-001', { symbol: 'XAGUSD', mode: 'FOK', broker, allowed });
+// n.severity · n.title · n.message · n.cause · n.action · n.external · n.refs
+```
+
+The server never sends wording — it sends `{ code, params }` and the client renders from the
+registry. That keeps one source of text (translation-friendly), and it is why the two roots need no
+shared build.
+
+**Why codes, not strings:** wording can be reworded, translated or rewritten without breaking the
+link between a log line, a UI card, a test and a GitHub issue. Before this, the identity of a
+message *was* its wording — so a typo fix orphaned every reference to it.
+
+**Rules**
+1. New message → add a registry entry first. Never inline a user-facing string.
+2. Unresolved `{placeholders}` and unknown codes render **loudly**, never blank — a message that
+   hides its own defect is worse than none.
+3. `scripts/validate-notices.cjs` (runs in the backend `prebuild`) fails on an unregistered code,
+   a malformed code, an undeclared placeholder or duplicate params.
+
+```powershell
+node scripts/validate-notices.cjs --list   # catalogue
+node scripts/validate-notices.cjs --md     # markdown table, for docs/Librarian
+```
 
 ---
 

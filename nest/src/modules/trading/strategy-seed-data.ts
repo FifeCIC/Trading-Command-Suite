@@ -20,7 +20,10 @@ export interface SeedTradingStrategy {
   symbol: string;
   protocolId: string;
   brokerId: string;
-  mode: 'semi-auto' | 'auto' | 'score';
+  // ⚠️ 'manual' is a REAL stored value (it is the schema default) and was missing from this
+  // union until 2026-09-15 — so the one bot that is deliberately manual could not be described
+  // here at all, which is part of why it stayed DB-only.
+  mode: 'semi-auto' | 'auto' | 'score' | 'manual';
   timeframe: string;
   baseSize: number;
   slPct: number;
@@ -45,8 +48,27 @@ export interface SeedTradingStrategy {
    * See database-seed-discipline.instructions.md.
    */
   requireDirection?: 'BUY' | 'SELL' | null;
+  /**
+   * Position time-stop in HOURS (#773). null/absent = NO LIMIT.
+   *
+   * Carried by this seeder because it is a SLOT-RELEASING control: #773 measured 11 auto
+   * bots sharing 5 broker-wide slots with nothing freeing them, while composites of 81–82
+   * sat BLOCKED on "Max open positions (5) reached". It was applied to the live database by
+   * `set-max-hold-hours-773.sql` only, so a reinstall silently dropped it. The seeder now
+   * transports the field (`seedDefaults` writes it) — a control that only exists in SQL is
+   * a control that only exists on one machine.
+   */
+  maxHoldHours?: number | null;
+  /**
+   * Whether the bot starts ENABLED. Absent = true (the historical behaviour).
+   *
+   * Exists so a deliberately-inactive bot (the `hourly-3dir-v1` A/B control) can be
+   * described here. Without it, a fresh install re-activated it and "off on purpose" was
+   * indistinguishable from "lost in the reinstall".
+   */
+  active?: boolean;
   /** Trading style from the protocol */
-  style: string;
+  style?: string;
 }
 
 export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
@@ -64,10 +86,18 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // to Pepperstone, so it is the proof path for multi-broker execution.
     mode: 'auto',
     timeframe: '5m',
-    baseSize: 0.01,
+    // ⚠️ 0.1 IS THE BROKER FLOOR, NOT A PREFERENCE (2026-09-15). Every index symbol
+    // has `volumeMin 0.1` on BOTH bridges, so the 0.01 this shipped with made the order
+    // IMPOSSIBLE: `ORDER REJECTED UK100 BUY ×0.01 — Volume 0.01 below UK100 minimum (0.1)`
+    // appears repeatedly in the API log. The "proof path for multi-broker execution"
+    // named in the comment above had never executed a single trade because of it.
+    // FX/metals are unaffected (their floor IS 0.01) — check the broker before changing.
+    baseSize: 0.1,
     slPct: 0.4,
     tpPct: 0.6,
-    minComposite: 65,
+    // 65 -> 10 (2026-09-15): rescaled onto the post-ADR-011 percentage scale.
+    // See the RESCALED block in common/utils/style-thresholds.ts for the derivation.
+    minComposite: 10,
     sessionWindow: ['london'],
     style: 'Tick Scalp',
   },
@@ -76,12 +106,15 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'GER40',
     protocolId: 'dax-speed-v1',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    // semi-auto -> auto (2026-09-15): same reason the FTSE bot was flipped on 09-10.
+    // Paper/dev runs exist to GENERATE DATA; a bot awaiting a click generates none.
+    // Also baseSize 0.01 -> 0.1 (GER40's broker floor).
+    mode: 'auto',
     timeframe: '5m',
-    baseSize: 0.01,
+    baseSize: 0.1,
     slPct: 0.4,
     tpPct: 0.6,
-    minComposite: 65,
+    minComposite: 10,
     sessionWindow: ['london'],
     style: 'Tick Scalp',
   },
@@ -90,12 +123,13 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'FRA40',
     protocolId: 'cac-speed-v1',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    // semi-auto -> auto and 0.01 -> 0.1 (FRA40's broker floor) — 2026-09-15.
+    mode: 'auto',
     timeframe: '5m',
-    baseSize: 0.01,
+    baseSize: 0.1,
     slPct: 0.4,
     tpPct: 0.6,
-    minComposite: 65,
+    minComposite: 10,
     sessionWindow: ['london'],
     style: 'Tick Scalp',
   },
@@ -106,12 +140,14 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'XAGUSD',
     protocolId: 'xau-speed-v1',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    // semi-auto -> auto (2026-09-15) for data generation. baseSize stays 0.01: silver's
+    // broker floor IS 0.01, unlike the index symbols.
+    mode: 'auto',
     timeframe: '5m',
     baseSize: 0.01,
     slPct: 0.6,
     tpPct: 1.0,
-    minComposite: 60,
+    minComposite: 10,
     sessionWindow: ['london'],
     style: 'Tick Scalp',
   },
@@ -125,7 +161,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     baseSize: 0.01,
     slPct: 0.3,
     tpPct: 0.5,
-    minComposite: 55,
+    minComposite: 9,
     sessionWindow: null,
     style: 'Scalp',
   },
@@ -139,7 +175,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     baseSize: 0.02,
     slPct: 0.5,
     tpPct: 1.0,
-    minComposite: 60,
+    minComposite: 10,
     sessionWindow: null,
     style: 'Day Trade',
   },
@@ -153,7 +189,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     baseSize: 0.05,
     slPct: 1.5,
     tpPct: 3.0,
-    minComposite: 55,
+    minComposite: 9,
     sessionWindow: null,
     style: 'Swing',
   },
@@ -167,7 +203,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     baseSize: 0.1,
     slPct: 3.0,
     tpPct: 6.0,
-    minComposite: 50,
+    minComposite: 8,
     sessionWindow: null,
     style: 'Position',
   },
@@ -183,7 +219,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     baseSize: 0.05,
     slPct: 1.5,
     tpPct: 3.0,
-    minComposite: 60,
+    minComposite: 10,
     sessionWindow: ['asian'],
     style: 'Swing',
   },
@@ -192,26 +228,33 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'EURUSD',
     protocolId: 'eurusd-macro-v1',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    // semi-auto -> auto (2026-09-15) for data generation.
+    mode: 'auto',
     timeframe: '15m',
     baseSize: 0.02,
     slPct: 0.5,
     tpPct: 1.0,
-    minComposite: 60,
+    minComposite: 10,
     sessionWindow: ['london'],
     style: 'Day Trade',
   },
   {
     name: 'US SPY Speed',
-    symbol: 'SPX500',
+    // ⚠️ SPX500 -> US500 (2026-09-15). `SPX500` is not a ticker either broker offers: it
+    // had ZERO bars ever (`BROKER-HAS-NO-SYMBOL` in scripts/audit-bot-activation.cjs;
+    // `got 0 candles for SPX500` on every refresh). Its own twin row `US500` exists, has
+    // bars, and is now routed to Pepperstone. The fix is the ticker, not the strategy —
+    // see nest/fix-symbol-tickers.sql (which could not apply the rename because a US500
+    // row already exists).
+    symbol: 'US500',
     protocolId: 'spy-day-v1',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    mode: 'auto',
     timeframe: '1h',
     baseSize: 0.1,
     slPct: 3.0,
     tpPct: 6.0,
-    minComposite: 55,
+    minComposite: 9,
     sessionWindow: ['us'],
     style: 'Position',
   },
@@ -243,7 +286,11 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     brokerId: 'mt5',
     mode: 'auto',
     timeframe: '5m',
-    baseSize: 0.01,
+    // ⚠️ 0.01 -> 0.1 (2026-09-15): VIX's broker floor is 0.1, so the short path this bot
+    // exists to PROVE could never execute — `ORDER REJECTED VIX SELL ×0.01 — Volume 0.01
+    // below VIX minimum (0.1)` in the API log. #772's "first demo short" was blocked by
+    // size, not by the strategy.
+    baseSize: 0.1,
     slPct: 2.0,
     tpPct: 4.0,
     minComposite: 0,
@@ -253,5 +300,265 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // have been created without a declared direction.
     requireDirection: 'SELL',
     style: 'Scalp',
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FX SESSION PAIRS (#526–#531) — EXPORTED FROM THE LIVE DATABASE 2026-09-15
+  // ════════════════════════════════════════════════════════════════════════════
+  //
+  // ⚠️ WHY THIS BLOCK EXISTS. These 14 bots existed **only in the database**, so a
+  // reinstall would have silently deleted every one of them — leaving `forex-session-v1`
+  // with symbols, routes, bars and assignments but **no bot able to trade them**. They were
+  // created by "DB activation only (no code change)" (#526–#531), which is why nothing
+  // seeded them: this file held 12 of the 26 bots that were actually running.
+  //
+  // Two more fields are carried here because they too were set against the live database
+  // only, and both are load-bearing:
+  //   · `maxHoldHours: 12` — the position time-stop from **#773**. It is a SLOT-RELEASING
+  //     control (the incident measured 11 auto bots sharing 5 broker-wide slots, with
+  //     composites of 81–82 BLOCKED on "Max open positions reached"). A reinstall that
+  //     dropped it would re-create that strand. The seeder now transports the field.
+  //   · `active` — the A/B control bot is inactive **on purpose**. Without the field, a
+  //     fresh install could not tell "deliberately off" from "lost".
+  //
+  // All 14 pairs were verified tradeable before being enabled (2026-09-15): `tradeMode 4`
+  // on BOTH bridges, volume floor 0.01 — except **NZDJPY, whose MetaQuotes floor is 0.1**,
+  // which is why its size is 0.1 and the others are 0.01.
+  //
+  // ⚠️ `USDCAD Forex Session` declares `timeframe: '5s'` because that is what the live row
+  // holds. This is a faithful export, not an endorsement — `'5s–30s'` resolves to `1m` per
+  // `selectBaseTimeframe()`, so '5s' is a legal declared cadence, but it was never reviewed.
+  //
+  // ⚠️ Session windows are written in the canonical JSON form the seeder produces
+  // (`['asian']`, `['london']`). Some live rows hold a bare `asian` string instead, which
+  // the session parser also accepts — converging to the canonical form is deliberate.
+  {
+    name: 'Sydney AUDUSD Session',
+    symbol: 'AUDUSD',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: ['asian'],
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'Sydney AUDJPY Session',
+    symbol: 'AUDJPY',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'GBPUSD Session',
+    symbol: 'GBPUSD',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'London EURGBP Session',
+    symbol: 'EURGBP',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: ['london'],
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'London GBPJPY Session',
+    symbol: 'GBPJPY',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: ['london'],
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'Zurich EURCHF Session',
+    symbol: 'EURCHF',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'Zurich USDCHF Session',
+    symbol: 'USDCHF',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: ['london'],
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'Tokyo EURJPY Session',
+    symbol: 'EURJPY',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'Wellington NZDUSD Session',
+    symbol: 'NZDUSD',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: ['asian'],
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'Wellington NZDJPY Session',
+    symbol: 'NZDJPY',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    // 0.1, not 0.01: NZDJPY's MetaQuotes floor is 0.1 (measured 2026-09-15). Every
+    // other FX pair's floor is 0.01.
+    baseSize: 0.1,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'EURCAD Macro Session',
+    symbol: 'EURCAD',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'GBPCAD Macro Session',
+    symbol: 'GBPCAD',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    name: 'USDCAD Forex Session',
+    symbol: 'USDCAD',
+    protocolId: 'forex-session-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5s',
+    baseSize: 0.01,
+    slPct: 1,
+    tpPct: 1,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: true,
+    style: 'Session / Mean Reversion',
+  },
+  {
+    // A/B CONTROL — deliberately `manual` and `active: false`. It has NO
+    // `strategy_protocol` subscription (see #833), which is the documented property of a
+    // bot that can never receive a queued signal; here that is intended, but it should be
+    // declared rather than discovered.
+    name: 'Hourly Triple-Directive Control',
+    symbol: 'EURUSD',
+    protocolId: 'hourly-3dir-v1',
+    brokerId: 'mt5',
+    mode: 'manual',
+    timeframe: '1h',
+    baseSize: 0.01,
+    slPct: 1.5,
+    tpPct: 3,
+    minComposite: 9,
+    sessionWindow: null,
+    maxHoldHours: 12,
+    active: false,
   },
 ];

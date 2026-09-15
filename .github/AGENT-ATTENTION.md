@@ -225,3 +225,61 @@ untouched deliberately; flagging so it is not lost.
 - **Verified:** `GET /api/system/health-summary` → "🔴 DB retention critical: directiveoutcome"
 - **Affected:** Data retention cron should gradually prune. Monitor over next 24h.
 - **Agent:** DeepSeek (2026-07-22)
+
+---
+
+## 2026-09-15 — SESSION IN PROGRESS (Copilot / DeepSeek V4 Pro)
+
+⚠️ **ANOTHER AGENT IS WORKING. Read before restarting the API or rebuilding.**
+
+### Who / what
+- **Agent:** Copilot (DeepSeek V4 Pro), working the scoring/trading data-quality chain.
+- **Status:** ACTIVE as of 19:10 UTC. I am rebuilding `nest/` periodically, which
+  **stops and restarts the API on 3201** — if you see it bounce, that is likely me.
+- **Version:** I set 0.7.1 → **0.8.0**; the file now reads **0.9.0**, so someone else
+  bumped it after me. Both package.json are in sync. **I have not touched it since.**
+
+### How to avoid stepping on each other
+- **Do NOT `Stop-Process` the API without checking first** — a rebuild is often
+  mid-flight. If `build:api` says *"PID N is listening on 3201 but does not look like
+  this repo's API"*, that check is comparing the command line, and a manually started
+  `node dist/src/main.js` does not match its expected form. **It is a false alarm** —
+  resolve manually and re-run.
+- **Announce here before any restart.** Append a line; do not edit mine.
+- Prefer `npx tsc -p tsconfig.build.json --noEmit` (works with the API running) over a
+  full build when you only need to verify a `.ts` change.
+
+### What I changed today (all built, deployed, verified)
+
+| File | Change | Issue |
+|---|---|---|
+| `nest/src/modules/scoring/outcome-tracker.service.ts` | pool-starving sweep fixed: batch 1000→250, symbol-id TTL cache, `visited/filled/finalised` counters, `filled===0` now WARN; `HORIZON_MAX_FORWARD_MS` 72h forward window | #828, #830 |
+| `nest/src/modules/scoring/scoring.service.ts` | `ENTRY_THRESHOLD` 40→`SIGNAL_THRESHOLDS.entry` (6); `WATCH_THRESHOLD` 20→3 | #831 |
+| `nest/src/modules/replay/replay.service.ts` | `scoreOk.required` 40→`SIGNAL_THRESHOLDS.entry` | #831 |
+
+**Nothing else was touched.** No schema change, no seed change, **no `db push`**.
+
+### ⚠️ Known-live problems I filed but did NOT fix
+- **#832** — 4h bars are stamped at bucket CLOSE while all other timeframes are OPEN.
+  `Gold Position 4H` (XAUUSD / `xau-speed-4h`) is **permanently blocked** by the
+  clock-skew guard. Fix approach is a **decision**, not a mechanical edit — see the issue.
+- **#825** — outcome recording's 5-min dedup window vs ~2-min cadence discards most
+  observations, and the key omits `strategyId`. **Every accuracy figure is thinned by this.**
+- **#827** — stale symbols (HOOD, MARA, TSLA, NVDA, AVGO) are still scored with dead bar
+  dates; writer **not identified**.
+- **#831** — fixed at the API level, **UI not visually confirmed**.
+
+### ⚠️ Unfiled, observed, NOT investigated — do not assume
+- **MySQL's clock reads 1 hour ahead of the OS clock.** `MYSQL NOW()=21:07` and
+  `UTC_TIMESTAMP()=20:07` when true UTC was `19:07`. **Every SQL-side time comparison is
+  off by an hour** — which is why a naive `TIMESTAMPDIFF(NOW(), timestamp)` reports the
+  4h bars as *past* while Node correctly reports them as *future*. Worth filing.
+- **The API died silently twice** with an empty stderr log. Cause unknown; possibly a
+  concurrent restart.
+
+### ⚠️ Do not quote these numbers
+Directional-accuracy figures from earlier today (39–48%) were computed over data thinned
+by #825 **and** with overnight/weekend predictions excluded by #830. That is a biased
+subsample, not a smaller one. They need full re-measurement.
+
+— Copilot, 2026-09-15

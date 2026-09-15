@@ -29,6 +29,7 @@ import {
   MarketBar,
   ProviderProfile,
   ProviderQuote,
+  SymbolTradability,
 } from '../interfaces/provider-adapter.interface';
 import { NotificationService } from '../../notifications/notifications.service';
 import { BridgeEventService } from '../bridge-event.service';
@@ -56,6 +57,27 @@ interface BridgeCandlesResponse {
     close: number;
     volume: number;
   }>;
+}
+
+/** One entry of the bridge's `/symbols` list — a name PLUS that broker's constraints. */
+interface BridgeSymbolListResponse {
+  symbols: Array<{
+    name: string;
+    path?: string;
+    /** MT5 SYMBOL_TRADE_MODE: 4 = FULL, 0 = DISABLED, 1/2 = one-way, 3 = close-only. */
+    tradeMode?: number;
+    /** Absent on bridges older than 2026-09-15 — see `SymbolTradability.volumeMin`. */
+    volumeMin?: number;
+    volumeMax?: number;
+    digits?: number;
+  }>;
+  count?: number;
+}
+
+interface BrokerSymbolCacheEntry {
+  names: Set<string>;
+  tradability: Map<string, SymbolTradability>;
+  fetchedAt: number;
 }
 
 interface BridgeHealthResponse {
@@ -306,27 +328,67 @@ export class Mt5Adapter implements IProviderAdapter {
 
   /** Per-broker cached symbol lists (TTL 5 min) — powers the #723 symbol-availability gate.
    *  Keyed per broker so one broker's list can't poison another's (#747). */
-  private readonly symbolsCacheByBroker = new Map<number, { names: Set<string>; fetchedAt: number }>();
-  async getSymbols(brokerId?: number): Promise<Set<string> | null> {
+  private readonly symbolsCacheByBroker = new Map<number, BrokerSymbolCacheEntry>();
+
+  /**
+   * Load (or reuse) one broker's symbol list, KEEPING the per-symbol broker constraints.
+   *
+   * ⚠️ WHY THE CONSTRAINTS ARE KEPT HERE. The bridge has always returned `tradeMode`
+   * next to the name, and `/order` refuses a trade on precisely two of these fields
+   * (`tradeMode !== 4`, `volume < volumeMin`). This method used to project onto
+   * `s.name` alone, so the app knew a symbol was LISTED but nothing about whether the
+   * broker would ACCEPT A TRADE — which is how US500 sat on the Signals ladder looking
+   * fully tradeable while MetaQuotes reported `tradeMode: 0`, with the refusal appearing
+   * only after the click. `ExecutionFeasibilityService` now blocks it before the click.
+   *
+   * ⚠️ A missing `volumeMin` is UNKNOWN, never "no minimum": the check that consumes it
+   * (`size-below-minimum`) skips rather than assuming a floor.
+   */
+  private async loadSymbols(brokerId?: number): Promise<BrokerSymbolCacheEntry | null> {
     const key = brokerId ?? this.symbolRouter?.primaryBrokerId() ?? 0;
     const cached = this.symbolsCacheByBroker.get(key);
     try {
       const now = Date.now();
       if (cached && now - cached.fetchedAt < 300_000) {
-        return cached.names;
+        return cached;
       }
       const route = this.symbolRouter?.routeForBroker(key);
-      const data = await this.bridgeGet<{ symbols: Array<{ name: string }>; count: number }>('/symbols', route);
-      if (!data?.symbols?.length) return cached?.names ?? null;
-      const entry = {
-        names: new Set(data.symbols.map(s => String(s.name).toUpperCase())),
-        fetchedAt: now,
-      };
+      const data = await this.bridgeGet<BridgeSymbolListResponse>('/symbols', route);
+      if (!data?.symbols?.length) return cached ?? null;
+      const names = new Set<string>();
+      const tradability = new Map<string, SymbolTradability>();
+      for (const s of data.symbols) {
+        const name = String(s.name).toUpperCase();
+        names.add(name);
+        if (typeof s.tradeMode === 'number') {
+          tradability.set(name, {
+            tradeMode: s.tradeMode,
+            volumeMin: typeof s.volumeMin === 'number' ? s.volumeMin : null,
+            volumeMax: typeof s.volumeMax === 'number' ? s.volumeMax : null,
+          });
+        }
+      }
+      const entry: BrokerSymbolCacheEntry = { names, tradability, fetchedAt: now };
       this.symbolsCacheByBroker.set(key, entry);
-      return entry.names;
+      return entry;
     } catch {
-      return cached?.names ?? null;
+      return cached ?? null;
     }
+  }
+
+  async getSymbols(brokerId?: number): Promise<Set<string> | null> {
+    return (await this.loadSymbols(brokerId))?.names ?? null;
+  }
+
+  /**
+   * Per-symbol broker constraints (`tradeMode`, volume floor/ceiling) for ONE broker.
+   *
+   * Returns `null` when the broker is unreachable — callers MUST treat that as UNKNOWN
+   * and not block on it, since "the broker never answered" is not evidence that a symbol
+   * is untradeable (#723 fails open on unknown availability, deliberately).
+   */
+  async getSymbolTradability(brokerId?: number): Promise<Map<string, SymbolTradability> | null> {
+    return (await this.loadSymbols(brokerId))?.tradability ?? null;
   }
 
   async healthCheck(): Promise<boolean> {

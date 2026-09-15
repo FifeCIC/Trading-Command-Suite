@@ -76,7 +76,7 @@ export interface ProtocolConfig {
   name: string;
   description: string;
   active?: boolean;
-  directionMode?: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
+  directionMode?: 'LONG_ONLY' | 'SHORT_ONLY';
   tradingStyle?: string;
   recommendedTimeframe?: string;
   derivedFrom?: string | null;
@@ -361,7 +361,7 @@ export class ProtocolDbService implements OnModuleInit {
         groups,
         name: protocol.name,
         description: protocol.description ?? '',
-        directionMode: (protocol.directionMode as 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH') || 'LONG_ONLY',
+        directionMode: (protocol.directionMode as 'LONG_ONLY' | 'SHORT_ONLY') || 'LONG_ONLY',
         tradingStyle: protocol.tradingStyle ?? undefined,
         recommendedTimeframe: protocol.recommendedTimeframe ?? undefined,
         derivedFrom: protocol.derivedFrom ?? null,

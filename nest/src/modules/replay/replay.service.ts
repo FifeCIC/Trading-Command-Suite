@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { ProtocolGatingService, SIGNAL_THRESHOLDS } from '../scoring/protocol-gating.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import type { MarketBar } from '../directives/interfaces/directive.interface';
 
@@ -348,7 +348,19 @@ export class ReplayService {
         signal: result.signal,
         passed: result.signal !== 'HOLD' && !result.riskGate?.hardGateTriggered,
         checks: {
-          scoreOk: { passed: result.signal !== 'HOLD', required: 40, actual: result.signalPct },
+          // ⚠️ `required` must come from SIGNAL_THRESHOLDS, not a literal.
+          //
+          // This read `required: 40` — the PRE-RESCALE entry threshold. The 2026-09-15
+          // rescale divided every percentage by ~6.3x (ADR-011 changed the denominator
+          // from the observed directional sum to the configured directional capacity),
+          // so `signalPct` now runs 6-33 instead of 40-80. A hardcoded 40 therefore
+          // reports a FAILED check (required 40, actual 12) on ticks that actually
+          // PASSED — `passed` is derived from `signal !== 'HOLD'`, which is already
+          // rescaled, so the two fields disagreed on every replay.
+          //
+          // Importing the shared constant means the next rescale updates both together;
+          // a second copy of a threshold is guaranteed to drift and only one gets fixed.
+          scoreOk: { passed: result.signal !== 'HOLD', required: SIGNAL_THRESHOLDS.entry, actual: result.signalPct },
           directionOk: { passed: result.meta.directionalEvidence.selected !== 'none' },
           riskOk: { passed: !result.riskGate?.hardGateTriggered },
         },

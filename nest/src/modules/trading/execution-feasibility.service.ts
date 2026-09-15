@@ -38,6 +38,16 @@ export interface FeasibilityResult {
   blockers: FeasibilityBlocker[];
 }
 
+/**
+ * MT5 `SYMBOL_TRADE_MODE_FULL` — the ONLY trade mode at which the bridge's `/order`
+ * pre-flight (`scripts/mt5-bridge/mt5_bridge_v2.py`) will accept an order.
+ * 0 = disabled, 1 = long only, 2 = short only, 3 = close only.
+ *
+ * ⚠️ The value is PER BROKER, not per symbol: US500 reports 0 on MetaQuotes (:5000)
+ * and 4 on Pepperstone (:5001). Keep this in step with the bridge's own constant.
+ */
+const SYMBOL_TRADE_MODE_FULL = 4;
+
 @Injectable()
 export class ExecutionFeasibilityService {
   private readonly logger = new Logger(ExecutionFeasibilityService.name);
@@ -65,6 +75,12 @@ export class ExecutionFeasibilityService {
     protocolId?: string | null;
     positions?: any[];
     marketStatus?: { open: boolean; reason?: string | null } | null;
+    /**
+     * Order size in lots. EXECUTION phase only — the ladder does not know which size it
+     * will be asked for, so generation-time calls omit it and the volume-floor check
+     * (which needs it) simply does not run in that phase.
+     */
+    size?: number | null;
   }): Promise<FeasibilityResult> {
     const { symbol, side, brokerId, protocolId } = params;
     const blockers: FeasibilityBlocker[] = [];
@@ -75,10 +91,14 @@ export class ExecutionFeasibilityService {
     // Check the broker that ACTUALLY serves this symbol (per symbol_route), not
     // just the default bridge — otherwise a symbol routed to another broker
     // (e.g. GER40 on Pepperstone) is wrongly reported unavailable (#747).
+    //
+    // ⚠️ LISTED ≠ TRADEABLE — see 1b below. These two checks are deliberately
+    // separate: this one answers "does the broker quote it?", which is NOT enough to
+    // justify offering a trade.
+    const adapterId = (adapter as any)?.id;
+    const routedBrokerId = adapterId === 'mt5' ? this.symbolRouter?.getBrokerId(ticker) : undefined;
+    const brokerSymbol = (adapterId === 'mt5' ? this.symbolRouter?.getBrokerSymbol(ticker) : ticker) || ticker;
     try {
-      const adapterId = (adapter as any)?.id;
-      const routedBrokerId = adapterId === 'mt5' ? this.symbolRouter?.getBrokerId(ticker) : undefined;
-      const brokerSymbol = (adapterId === 'mt5' ? this.symbolRouter?.getBrokerSymbol(ticker) : ticker) || ticker;
       const raw = await (adapter as any)?.getSymbols?.(routedBrokerId);
       const names: Set<string> | null = raw instanceof Set
         ? raw
@@ -92,6 +112,39 @@ export class ExecutionFeasibilityService {
       }
     } catch {
       /* unknown availability — do not block */
+    }
+
+    // ── 1b. Broker TRADE MODE and VOLUME FLOOR — the /order pre-flight, mirrored ──
+    //
+    // The bridge refuses an order when `tradeMode !== 4` or `volume < volumeMin`, and it
+    // refuses BEFORE calling order_send. Neither fact was visible here, so a card could
+    // read fully actionable while the broker would reject the click. Measured 2026-09-15:
+    // US500 — listed on BOTH bridges, `tradeMode 0` (disabled) on MetaQuotes, 4 on
+    // Pepperstone, and `volumeMin 0.1` on both against a manual default of 0.01 lots.
+    //
+    // ⚠️ Unknown (broker unreachable → `null`) must NOT block: "we could not ask" is not
+    // evidence of untradeability, and the bridge still refuses safely at click time.
+    try {
+      const tradability = await (adapter as any)?.getSymbolTradability?.(routedBrokerId);
+      const info = tradability instanceof Map
+        ? (tradability.get(brokerSymbol.toUpperCase()) ?? tradability.get(ticker))
+        : undefined;
+      if (info && info.tradeMode !== SYMBOL_TRADE_MODE_FULL) {
+        blockers.push({
+          key: 'symbol-not-tradeable',
+          message: `Broker ${routedBrokerId ?? brokerId} reports ${ticker} as NOT tradeable (trade mode ${info.tradeMode})`,
+          hint: 'Route the symbol to a broker that reports it tradeable (symbol_route), or trade a symbol this broker accepts',
+        });
+      }
+      if (info && info.volumeMin != null && params.size != null && params.size < info.volumeMin) {
+        blockers.push({
+          key: 'size-below-minimum',
+          message: `${params.size} lots is below ${brokerSymbol}'s ${info.volumeMin}-lot minimum on broker ${routedBrokerId ?? brokerId}`,
+          hint: `Raise the manual trade size to at least ${info.volumeMin} lots (Settings → manual trade defaults)`,
+        });
+      }
+    } catch {
+      /* unknown trade mode — do not block */
     }
 
     // ── 2. Market status (the score's own tradability state) ──

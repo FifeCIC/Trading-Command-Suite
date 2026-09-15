@@ -902,6 +902,22 @@ export class TradingStrategyService {
      * Required for SHORT_ONLY protocols so a seeded short bot cannot open longs.
      */
     requireDirection?: string | null;
+    /**
+     * Whether the bot starts enabled. Absent = true (the historical behaviour).
+     *
+     * Added 2026-09-15 so the seed can be a FAITHFUL copy of the database: without it,
+     * a deliberately-INACTIVE bot (the `hourly-3dir-v1` A/B control) came back active on
+     * a fresh install, and "inactive on purpose" was indistinguishable from "lost".
+     */
+    active?: boolean;
+    /**
+     * Position time-stop in HOURS (#773). null/absent = NO LIMIT.
+     *
+     * Carried by this seeder because it is a slot-releasing control: 11 auto bots shared
+     * 5 broker-wide slots and nothing freed them until this existed (#773). A fresh install
+     * that silently dropped it would re-create the strand.
+     */
+    maxHoldHours?: number | null;
   }>): Promise<{ created: number; skipped: number; scoringCreated: number }> {
     if (!this.prisma.isAvailable) {
       return { created: 0, skipped: strategies.length, scoringCreated: 0 };
@@ -962,7 +978,10 @@ export class TradingStrategyService {
             // Direction constraint. A SHORT_ONLY protocol must not be allowed to
             // open longs; null = unconstrained (legacy behaviour).
             requireDirection: (s as any).requireDirection ?? null,
-            active: true,
+            // Position time-stop (#773) and start state — both optional in the seed,
+            // defaulted here so every existing entry keeps its behaviour.
+            maxHoldHours: (s as any).maxHoldHours ?? null,
+            active: (s as any).active ?? true,
           },
         });
 

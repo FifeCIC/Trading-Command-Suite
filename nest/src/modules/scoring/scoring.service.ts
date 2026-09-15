@@ -35,6 +35,10 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CryptoProviderRouter } from '../providers/crypto-provider-router.service';
 import { MarketDataService } from '../market-data/market-data.service';
+// ⚠️ MST-013 — imported so the flat-scoring thresholds cannot drift from the gating
+// thresholds again. protocol-gating.service.ts does NOT import this file, so there is
+// no cycle. See the ENTRY_THRESHOLD / WATCH_THRESHOLD comment below for the defect this fixes.
+import { SIGNAL_THRESHOLDS } from './protocol-gating.service';
 import { selectBaseTimeframe, DEFAULT_LIVE_TIMEFRAME } from '../../common/utils/timeframe';
 import {
   DirectiveInput,
@@ -49,14 +53,34 @@ import {
  * No artificial cap at 100 — scores flow from directive ranges.
  */
 
-const ENTRY_THRESHOLD = 40;  // % of max — entry (matches protocol BUY/SELL)
-const WATCH_THRESHOLD = 20;  // % of max — watch (matches protocol HOLD)
-
-// ⚠️ Aligned with ProtocolGatingService (also 40/20, percentage-based). Both are
-// percentages of a protocol's max score, so a symbol shows the same signal in
-// flat scoring (dashboard) as in protocol scoring (automation loop). Previously
-// flat scoring used 60/40 while protocol scoring used 40 — the same symbol could
-// show HOLD in one view and BUY in another.
+/**
+ * ⚠️ RESCALED 2026-09-15 (MST-013) — these were 40 / 20, the PRE-RESCALE scale.
+ *
+ * These are the FLAT-SCORING (dashboard) thresholds. They must equal the protocol
+ * gating thresholds, and the comment below says so — but when the gating service was
+ * rescaled from 40 to 6, only ONE of the two copies was updated.
+ *
+ * Measured 2026-09-15: `signalPct` now runs 6–33 (was 40–80) because ADR-011 changed
+ * the denominator from the OBSERVED directional sum (~130) to the CONFIGURED
+directional capacity (~725–815), a ~6.3× increase that divides every percentage by
+ * that factor. Against a literal 40, flat scoring could therefore **never** emit
+ * `entry` — every symbol fell to `defensive`, and notification at L504 never fired.
+ *
+ * ⚠️ The two are genuinely the same units, verified rather than assumed:
+ *   - scoring.service.ts L447        `maxPossibleScore += d.maxScore`      (configured)
+ *   - protocol-gating.service.ts L792 `capacityMax += maxScore`            (configured)
+ * Both divide by the sum of CONFIGURED directive maxScores, so `normScore` and
+ * `signalPct` are the same scale and sharing the constant below is correct.
+ *
+ * ⚠️ The DB-read paths (L576/L614/L622) read a STORED `signalPct` — already written by
+ * the gating service on the rescaled scale — so a literal 40 there compared a rescaled
+ * number against a pre-rescale bar and reported BUY as HOLD.
+ *
+ * This is precisely the drift the original comment warned about: "a second copy of a
+ * threshold is guaranteed to drift and only one gets fixed". Now there is one source.
+ */
+const ENTRY_THRESHOLD = SIGNAL_THRESHOLDS.entry; // 6 — %% of configured capacity
+const WATCH_THRESHOLD = Math.max(1, Math.round(SIGNAL_THRESHOLDS.entry / 2)); // 3 — preserves the original 2:1 entry:watch ratio (was 40:20)
 
 /** Cooldown for per-symbol entry notifications — prevents duplicate alerts. */
 const ENTRY_NOTIFY_COOLDOWN_MS = 30 * 60 * 1000; // 30 min

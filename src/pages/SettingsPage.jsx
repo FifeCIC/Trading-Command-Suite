@@ -70,6 +70,135 @@ function SettingRow({ label, children, hint }) {
   )
 }
 
+/**
+ * TradeThresholdsSection — every trade threshold, with the ceiling it is compared against.
+ *
+ * ⚠️ WHY THIS EXISTS (2026-09-15)
+ * ------------------------------
+ * The app stopped trading completely on 2026-09-10 and nobody could see why. ADR-011
+ * changed the percentage DENOMINATOR from the observed directional sum (~130) to the
+ * configured capacity (~725-815) — about 6.3x larger — so every percentage divided by
+ * that factor. Every threshold stayed on the old scale, `ENTRY_THRESHOLD = 40` classified
+ * every tick as HOLD, and no trade executed for five days.
+ *
+ * The diagnosis had been written in code comments **three separate times**. Nobody could
+ * SEE the numbers. This section is the fix for that, not for the numbers themselves: an
+ * invisible threshold is one that cannot be questioned.
+ *
+ * The key cell is `achieved` vs `bar`. A bar above its achieved ceiling is a bot that can
+ * never fire, and that should be obvious at a glance rather than inferable from a hand-run
+ * SQL query.
+ *
+ * `no-data` is deliberately distinct from `cannot-fire`: the first means unmeasured, the
+ * second means structurally blocked. Conflating them would make a merely-unmeasured bot
+ * look broken — and vice versa.
+ */
+function TradeThresholdsSection() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: () => apiGet('/api/scoring/gated/thresholds'),
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  if (isLoading) return <p className="settings-section-desc">Loading thresholds…</p>;
+  if (isError || !data) {
+    return (
+      <p className="settings-section-desc">
+        Could not load thresholds from the API. They are reported by
+        <code> GET /api/scoring/gated/thresholds</code>.
+      </p>
+    );
+  }
+
+  const { classification, preTradeGate, bots, summary, windowDays } = data;
+  const active = bots.filter((b) => b.active);
+
+  const verdict = (c) =>
+    c === 'yes' ? { text: 'clears', cls: 'threshold-ok' }
+      : c === 'no' ? { text: 'CANNOT FIRE', cls: 'threshold-bad' }
+        : { text: 'no data', cls: 'threshold-unknown' };
+
+  return (
+    <>
+      <SettingRow
+        label="Entry threshold"
+        hint={`A reading is BUY/SELL at or above this, HOLD below it. Was 40 before the 2026-09-15 rescale — at which point nothing could ever clear it, so no signal was ever queued.`}
+      >
+        <code>{classification.entry}%</code>
+      </SettingRow>
+      <SettingRow
+        label="Strong threshold"
+        hint="A reading is STRONG_BUY / STRONG_SELL at or above this.">
+        <code>{classification.strong}%</code>
+      </SettingRow>
+      <SettingRow
+        label="What the percentages are measured against"
+        hint="This is the scale that matters. When the denominator changed, every threshold below silently became unreachable.">
+        <code>{classification.scale}</code>
+      </SettingRow>
+      <SettingRow
+        label="Pre-trade gate"
+        hint={`Blocks a signal whose strength is below this. Resolved as: per-protocol override → trading style → default (${preTradeGate.default}).`}>
+        <code>{Object.entries(preTradeGate.byStyle).map(([k, v]) => `${k} ${v}`).join(' · ')}</code>
+      </SettingRow>
+      <SettingRow
+        label="Bot bars"
+        hint={`Each bot has its own bar (minComposite). ${summary.activeClearing} of ${summary.active} active bots have cleared theirs in the last ${windowDays} days.`}>
+        <span className={summary.activeCannotFire > 0 ? 'threshold-bad' : 'threshold-ok'}>
+          {summary.activeCannotFire > 0
+            ? `${summary.activeCannotFire} active bot(s) CANNOT FIRE`
+            : 'No active bot is structurally blocked'}
+          {summary.activeNoData > 0 && ` · ${summary.activeNoData} unmeasured`}
+        </span>
+      </SettingRow>
+
+      <div className="setting-row">
+        <div className="setting-info" style={{ maxWidth: '100%', width: '100%' }}>
+          <strong>Bot bar vs achieved ceiling</strong>
+          <p>
+            <code>achieved</code> is the highest composite the bot&apos;s protocol has actually
+            produced in {windowDays} days. <strong>A bar above its achieved value can never
+            fire.</strong>
+          </p>
+          <div className="threshold-table-wrap">
+            <table className="threshold-table">
+              <thead>
+                <tr>
+                  <th scope="col">Bot</th>
+                  <th scope="col">Symbol</th>
+                  <th scope="col">Bar</th>
+                  <th scope="col">Achieved</th>
+                  <th scope="col">Verdict</th>
+                </tr>
+              </thead>
+              <tbody>
+                {active.map((b) => {
+                  const v = verdict(b.clears);
+                  return (
+                    <tr key={`${b.name}-${b.symbol}`} className={v.cls}>
+                      <td>{b.name}</td>
+                      <td>{b.symbol}</td>
+                      <td>{b.barPct}%</td>
+                      <td>{b.achievedPct == null ? '—' : `${b.achievedPct}%`}</td>
+                      <td className={v.cls}>{v.text}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ marginTop: '0.5rem' }}>
+            ⚠️ <strong>A bot clearing its bar is not evidence of profit.</strong> These bars
+            admit trades so they can be <em>measured</em>. Directional accuracy has been
+            at or below chance — see the edge report before drawing conclusions.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function SettingsPage() {
   const themeMode = useUiStore((state) => state.themeMode);
   const setThemeMode = useUiStore((state) => state.setThemeMode);
@@ -132,6 +261,18 @@ export default function SettingsPage() {
         <SettingRow label="Queue Mode" hint="Set QUEUE_MODE in nest/.env. Off means no background processing.">
           <code>off</code>
         </SettingRow>
+      </section>
+
+      {/* Placed high deliberately: on 2026-09-10 the app stopped trading because
+          these numbers were invisible and unreachable. See the component docstring. */}
+      <section className="settings-section" id="trade-thresholds">
+        <h2>Trade Thresholds</h2>
+        <p className="settings-section-desc">
+          Every bar that decides whether a signal becomes a trade, with the highest score
+          the protocol has actually produced. A bar above its achieved value is a bot that
+          can never fire.
+        </p>
+        <TradeThresholdsSection />
       </section>
 
       <section className="settings-section">
