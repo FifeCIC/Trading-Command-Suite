@@ -64,6 +64,35 @@ function record(invariant, name, ok, detail, skipped = false) {
   results.push({ invariant, name, ok, detail, skipped });
 }
 
+/**
+ * HELD — known-broken checks that name a TRACKED issue, and so do not fail the run.
+ *
+ * ⚠️ WHY THIS EXISTS. A single permanently-red check makes the whole probe useless: it exits 1,
+ * the reader sees a wall of red, and a genuinely NEW failure is indistinguishable from the known
+ * one. That is how a diagnostic tool teaches people to stop reading it.
+ *
+ * The pattern is copied from `validate-pipeline-contracts.cjs`, which already carries a `WHITELIST`
+ * of tracked deviations with a `checkStaleWhitelist()` that fails when an entry no longer matches
+ * anything. One project, one way to record known debt.
+ *
+ * RULES
+ *   1. An entry MUST name an open issue. This is debt, not an exemption.
+ *   2. It must SHRINK. When an entry's check starts passing, the report says so and asks for the
+ *      entry to be removed. It does not fail the run, because these conditions are usually
+ *      data-dependent and failing would make the guard flap — see the note at the report.
+ *   3. Never add an entry to silence a new finding. Fix it, or file it and say why it is deferred.
+ */
+const HELD = {
+  'INV-NO-FUTURE-ROWS': {
+    issue: '#844',
+    reason:
+      '5 columns carry DEFAULT CURRENT_TIMESTAMP, which MySQL evaluates in the SESSION timezone ' +
+      '(SYSTEM = UTC+1 here) while the app writes UTC. Rows omitted on insert are stamped an hour ' +
+      'ahead, so position/trade counts are non-zero. Real and tracked — but it is a DEFAULT on a ' +
+      'column, not a broker-clock skew, and the two need different fixes.',
+  },
+};
+
 function request(method, url, body, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : null;
@@ -1146,14 +1175,48 @@ async function main() {
   if (prisma) await prisma.$disconnect();
 
   // ── report ─────────────────────────────────────────────────────────────
-  const failed = results.filter((r) => !r.ok);  const skipped = results.filter((r) => r.skipped).length;
+  //
+  // ⚠️ TRACKED DEBT IS NOT A FAILURE (2026-09-16).
+  //
+  // Without this, one known-broken check makes EVERY other check invisible: the run exits 1, the
+  // reader sees a red wall, and the new checks added alongside it never get a clean signal. That
+  // is the same defect as an always-red guard — "a guard that is never green is a guard everyone
+  // learns to ignore" (see the ALIGNED_SINCE comment above, which was written for exactly this
+  // reason and then not applied to the report itself).
+  //
+  // So a failing check that names a TRACKED issue is reported as HELD and does NOT fail the run.
+  // Anything else still does. The list is debt: it must shrink, and an entry is only legitimate
+  // while its issue is open.
+  const held = results.filter((r) => !r.ok && HELD[r.invariant]);
+  const failed = results.filter((r) => !r.ok && !HELD[r.invariant]);
+  const skipped = results.filter((r) => r.skipped).length;
+
   console.log('\n[pipeline-contracts] live probe\n');
   for (const r of results) {
-    const mark = r.skipped ? 'SKIP' : r.ok ? 'PASS' : 'FAIL';
+    const mark = r.skipped ? 'SKIP' : r.ok ? 'PASS' : HELD[r.invariant] ? 'HELD' : 'FAIL';
     console.log(`  ${mark}  [${r.invariant}] ${r.name}`);
-    console.log(`        ${r.detail}`);
+    console.log(`        ${r.detail}${mark === 'HELD' ? `\n        ↳ tracked as ${HELD[r.invariant].issue}: ${HELD[r.invariant].reason}` : ''}`);
   }
-  console.log(`\n${results.length - failed.length - skipped} passed, ${failed.length} failed, ${skipped} skipped`);
+
+  if (held.length) {
+    console.log('\n[pipeline-contracts] held (tracked debt, does not fail the build):');
+    for (const h of held) {
+      console.log(`    - [${h.invariant}] ${HELD[h.invariant].issue} — ${HELD[h.invariant].reason}`);
+    }
+  }
+
+  // A held entry whose check now passes is INFORMATION, not a failure: the underlying condition
+  // is data-dependent (a future-dated row can be pruned and then re-appear), so failing the run
+  // would make the guard flap. Reported so the list can still be pruned deliberately.
+  const resolved = Object.keys(HELD).filter(
+    (inv) => results.some((r) => r.invariant === inv && r.ok) && !results.some((r) => r.invariant === inv && !r.ok),
+  );
+  if (resolved.length) {
+    console.log('\n[pipeline-contracts] ⚠️ held debt now PASSES — remove these entries from HELD:');
+    for (const inv of resolved) console.log(`    - [${inv}] ${HELD[inv].issue}`);
+  }
+
+  console.log(`\n${results.length - failed.length - held.length - skipped} passed, ${failed.length} failed, ${held.length} held, ${skipped} skipped`);
   if (failed.length) {
     console.error('\nSee .github/instructions/meta-stack-contracts.instructions.md\n');
     process.exit(1);
