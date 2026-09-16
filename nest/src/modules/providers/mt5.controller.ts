@@ -163,6 +163,11 @@ export class Mt5Controller {
     const connected = accounts.filter((a: any) => a.health?.connected);
     const reachable = accounts.filter((a: any) => a.reachable);
 
+    // #846 — per-broker circuit-breaker state. The breaker is keyed per broker, so this
+    // reports each one separately: a single tripped broker no longer implies the others are
+    // gated, and the reader can see WHICH is open instead of inferring it from log rows.
+    const circuitBreakers = this.getMt5Adapter()?.circuitBreakerSnapshot?.() ?? [];
+
     if (connected.length > 0) {
       const best = connected[0];
       return {
@@ -176,6 +181,7 @@ export class Mt5Controller {
         balance: best.health?.balance ?? null,
         equity: best.health?.equity ?? null,
         brokerId: best.brokerId,
+        circuitBreakers,
         instructions: null,
         timestamp: new Date().toISOString(),
       };
@@ -196,6 +202,7 @@ export class Mt5Controller {
         server: healthData?.server ?? null,
         balance: null,
         equity: null,
+        circuitBreakers,
         instructions: res.ok
           ? 'Bridge is running but cannot connect to MT5. Open MetaTrader 5 and log in.'
           : `Bridge not reachable on ${this.BRIDGE_URL}`,
@@ -208,6 +215,7 @@ export class Mt5Controller {
         bridgeError: err.message || 'Bridge unreachable',
         activeAccounts: 0,
         totalAccounts: reachable.length,
+        circuitBreakers,
         instructions: 'No MT5 bridges are running. Start from Intranet controls.',
         timestamp: new Date().toISOString(),
       };

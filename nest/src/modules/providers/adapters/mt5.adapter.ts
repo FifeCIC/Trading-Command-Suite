@@ -516,6 +516,37 @@ export class Mt5Adapter implements IProviderAdapter {
 
 
   /**
+   * Per-broker circuit-breaker state for health/diagnostic surfaces (#846).
+   *
+   * ⚠️ Exposed because the state was previously INVISIBLE: the only way to discover that a
+   * broker was gated was to watch `bridge_event` fill with `circuit breaker active
+   * (skipped)` rows and infer which broker they belonged to from the account column — and
+   * that column falls back to `MT5_ACTIVE_ACCOUNT` when no route is present, so it does not
+   * reliably identify the key. A mechanism that exists but cannot be seen is
+   * indistinguishable from one that does not work.
+   */
+  circuitBreakerSnapshot(): Array<{
+    brokerKey: number | 'default';
+    tripped: boolean;
+    trippedAt: string | null;
+    consecutiveErrors: number;
+    cooldownRemainingMs: number;
+  }> {
+    const now = Date.now();
+    return [...this.breakers.entries()].map(([key, s]) => ({
+      // `0` is the no-route / single-default-bridge key, named rather than printed as 0.
+      brokerKey: key === 0 ? 'default' : key,
+      tripped: s.tripped,
+      trippedAt: s.trippedAt ? new Date(s.trippedAt).toISOString() : null,
+      consecutiveErrors: s.consecutiveErrors,
+      cooldownRemainingMs:
+        s.tripped && s.trippedAt
+          ? Math.max(0, Mt5Adapter.COOLDOWN_MS - (now - s.trippedAt))
+          : 0,
+    }));
+  }
+
+  /**
    * Reset circuit breaker manually (e.g., after bridge restart).
    *
    * Pass a `brokerId` to clear ONE broker (#846); omit it to clear all of them, which is
