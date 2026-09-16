@@ -1014,6 +1014,135 @@ async function main() {
     }
   }
 
+  // ── Aggregate endpoint latency budgets ─────────────────────────────────
+  //
+  // ⚠️ WHY THIS IS AN INVARIANT AND NOT A PERFORMANCE NICETY (2026-09-16).
+  //
+  // `apiactivitylog` records a real event: `GET /api/system/health-dashboard` returned **504 after
+  // 30,015 ms** against a 30,000 ms gateway timeout, and `/status/health-check` sat on a loading
+  // skeleton until someone opened that page on an unrelated task.
+  //
+  // ⚠️ WHAT WAS ORIGINALLY CLAIMED HERE, AND IS RETRACTED. This comment first said the cause was a
+  // retention column left unindexed, scanning a 1,497 MB table. Measurement does not support it:
+  //
+  //   • the table is **1.10 MB / ~7,000 rows** — a 32s scan of it is impossible
+  //   • the log holds exactly **ONE** 504 (09:01:47); by 09:06:33 the endpoint returned 200 in 348 ms
+  //   • with the index deliberately dropped again, it answered in **88 ms**
+  //
+  // Two changes were made at once (add index + restart API) and the credit went to the one with a
+  // story. **The cause of that one 504 is still unknown.** See `change-completion.instructions.md`
+  // → Gate 3 for the full correction.
+  //
+  // WHY THE CHECK IS STILL WORTH HAVING — and this part does NOT depend on the attribution:
+  //
+  //   • `health-dashboard` aggregates ~120 per-table queries. It is genuinely the most expensive
+  //     diagnostic endpoint in the app.
+  //   • **Nothing probed it.** `health-check.ps1`, the documented session-start script, probes
+  //     `/api/system/health-summary` — a different, much cheaper code path.
+  //   • The timeouts already in `request()` are GIVE-UP limits, not assertions. A 30-second response
+  //     "succeeded" at 15s and would otherwise have passed in silence.
+  //
+  // So the missing capability was never a code check — it was "does the running system still
+  // RESPOND, in reasonable time, for the endpoints that aggregate over per-table queries?"
+  // This guard is CAUSE-AGNOSTIC, which is precisely why it is the useful one: it would have
+  // flagged 09:01:47 without needing to know why the request took 30 seconds.
+  //
+  // ⚠️ A BUDGET, NOT A BENCHMARK. These are set an order of magnitude above observed cost (the
+  // dashboard runs ~120 per-table MIN/MAX scans and returns in ~50ms) so the check fails on a
+  // REGRESSION and not on a busy machine. A guard that is noisy gets ignored — see the
+  // ALIGNED_SINCE comment above for the same reasoning.
+  //
+  // ⚠️⚠️ WHY THE COLD CALL IS THE ONE THAT MATTERS — AND WHY MY FIRST VERSION OF THIS CHECK WAS
+  // WRONG (found and corrected in the same session, by trying to canary it).
+  //
+  // The first version made a "warm-up" call and discarded it, then measured the second call. That
+  // is the conventional way to avoid measuring lazy-init noise. It was EXACTLY BACKWARDS, and the
+  // canary is what exposed it — dropping the index on purpose and watching the guard still PASS:
+  //
+  //     index dropped -> health-check.ps1 reported "ok  88ms (budget 5000ms)"
+  //
+  // ⚠️ WHY. The warm-up call performs the slow traversal, pulling pages into the InnoDB buffer
+  // pool; the measured call then serves them from memory and returns quickly. The guard's own
+  // warm-up was masking the condition it existed to detect — it asserted the FAST of two calls
+  // whose costs differ by orders of magnitude.
+  //
+  // The lesson generalises past this endpoint: **a warm-up call can hide the regression you are
+  // measuring.** When the property under test is "a user's first request works", warming is not
+  // neutral — it removes the condition being tested. So this now measures BOTH calls and asserts
+  // the WORST, because the cold path is what a real user hits after a restart or an eviction.
+  //
+  // (This is independent of what caused the 2026-09-16 504, whose cause remains unknown — see the
+  // header of this block. A flawed guard is a flaw whether or not it ever fired in anger.)
+  //
+  // A healthy indexed predicate is an index seek — microseconds cold and warm — so asserting the
+  // cold call costs nothing on a working system and is the only thing that catches this class.
+  {
+    /**
+     * Endpoints that aggregate over many tables/rows. Both a cold and a warm call are measured and
+     * the worse of the two is asserted, so a buffer-pool-dependent regression cannot hide.
+     *
+     * `budgetMs` is deliberately loose. The failure being guarded is 32,000ms against 30,000ms —
+     * two orders of magnitude above normal — so a generous budget still catches it while never
+     * firing on a healthy system.
+     */
+    const BUDGETS = [
+      { path: '/api/system/health-summary', budgetMs: 2000, note: 'session-start health surface' },
+      { path: '/api/system/health-dashboard', budgetMs: 5000, note: 'per-table row counts, sizes AND MIN/MAX per retention table — the endpoint that recorded a single 504 on 2026-09-16' },
+      { path: '/api/market-data/bars/refresh/status', budgetMs: 2000, note: 'feeds the Feed Freshness panel (#841)' },
+      { path: '/api/scoring/gated/thresholds', budgetMs: 5000, note: 'per-bot and per-protocol ceiling aggregates' },
+    ];
+
+    if (!apiUp) {
+      for (const b of BUDGETS) {
+        record('INV-ENDPOINT-BUDGET', `${b.path} responds within ${b.budgetMs}ms`, true, apiSkipReason || 'API not reachable', true);
+      }
+    } else {
+      for (const b of BUDGETS) {
+        const url = `${API}${b.path}`;
+        // Generous ceiling so a genuinely slow call COMPLETES and is measured, rather than
+        // aborting at a give-up limit and losing the number. A timeout is reported separately.
+        const hardTimeout = Math.max(b.budgetMs * 12, 120000);
+        const samples = [];
+        let hardFailure = null;
+
+        for (const kind of ['cold', 'warm']) {
+          try {
+            const t0 = Date.now();
+            const res = await request('GET', url, null, hardTimeout);
+            samples.push({ kind, ms: Date.now() - t0, status: res.status });
+          } catch (err) {
+            hardFailure = `${kind} call: ${err.message}`;
+            break;
+          }
+        }
+
+        if (hardFailure) {
+          record(
+            'INV-ENDPOINT-BUDGET',
+            `${b.path} responds within ${b.budgetMs}ms`,
+            false,
+            `did not respond — ${hardFailure}. ${b.note}. A timeout here is how the 2026-09-16 outage presented: the Health page rendered a permanent loading skeleton while the API returned 504.`,
+          );
+          continue;
+        }
+
+        const badStatus = samples.find((s) => s.status !== 200);
+        const worst = samples.reduce((a, s) => (s.ms > a.ms ? s : a), samples[0]);
+        const ok = !badStatus && worst.ms <= b.budgetMs;
+
+        const detail = badStatus
+          ? `HTTP ${badStatus.status} on the ${badStatus.kind} call — the endpoint failed, not just slowly. ${b.note}`
+          : ok
+            ? `cold ${samples[0].ms}ms / warm ${samples[1]?.ms ?? '-'}ms (budget ${b.budgetMs}ms) — ${b.note}`
+            : `WORST of cold ${samples[0].ms}ms / warm ${samples[1]?.ms ?? '-'}ms exceeds the ${b.budgetMs}ms budget. ${b.note}. ` +
+              `⚠️ If the COLD call is the slow one and the warm call is fast, the query is not indexed and is being served from the InnoDB buffer pool — it will be slow again after a restart or an eviction, which is why the cold call is the one asserted. ` +
+              `Check that every column in a WHERE/MIN/MAX clause LEADS an index: \`npm run db:config-refs\`.`;
+
+        record('INV-ENDPOINT-BUDGET', `${b.path} responds within ${b.budgetMs}ms`, ok, detail);
+      }
+    }
+  }
+
   if (prisma) await prisma.$disconnect();
 
   // ── report ─────────────────────────────────────────────────────────────

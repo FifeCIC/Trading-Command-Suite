@@ -1,0 +1,170 @@
+{
+  "takenAt": "2026-09-15T21:11:21.200Z",
+  "reason": "Align scoring_strategy.tradeThreshold with the post-rescale style owner (#839).",
+  "table": "scoring_strategy",
+  "column": "tradeThreshold",
+  "rows": [
+    {
+      "id": "ss-1783710564305",
+      "name": "Primary Conviction Dip",
+      "protocolId": "060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d",
+      "tradeThreshold": 0
+    },
+    {
+      "id": "192a0888-cc58-4036-8746-fefed7435d77",
+      "name": "BTC Speed (default)",
+      "protocolId": "btc-speed-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "auto-cad-sniper-v1",
+      "name": "cad-sniper-v1 — Auto",
+      "protocolId": "cad-sniper-v1",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785459282433",
+      "name": "London EURUSD Macro",
+      "protocolId": "eurusd-macro-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "a660682e-f83d-49b9-9e1a-0439f7767056",
+      "name": "Forex Session (default)",
+      "protocolId": "forex-session-v1",
+      "tradeThreshold": 50
+    },
+    {
+      "id": "auto-forex-session-v1",
+      "name": "forex-session-v1 — Auto",
+      "protocolId": "forex-session-v1",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785459281331",
+      "name": "Tokyo USDJPY Session",
+      "protocolId": "forex-session-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "ss-1783121267358",
+      "name": "MT5 Technical Core",
+      "protocolId": "mt5-technical-core-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "ss-1783121314793",
+      "name": "MT5 Technical Core",
+      "protocolId": "mt5-technical-core-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "ss-1783121859956",
+      "name": "MT5 Technical Core",
+      "protocolId": "mt5-technical-core-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "09489a46-b06a-471a-b93a-1f8622b32dfa",
+      "name": "Oil Speed (default)",
+      "protocolId": "oil-speed-v1",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785459607660",
+      "name": "US SPX500 Day",
+      "protocolId": "spy-day-v1",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "auto-spy-speed-v1",
+      "name": "spy-speed-v1 — Auto",
+      "protocolId": "spy-speed-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "ss-1785459283611",
+      "name": "US SPY Speed",
+      "protocolId": "spy-speed-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "251059e2-fcd4-487d-9b32-be81b7b40244",
+      "name": "VIX Spike Short (demo proof #772) Scoring",
+      "protocolId": "vix-short-v1",
+      "tradeThreshold": 0
+    },
+    {
+      "id": "auto-vix-dual-v1",
+      "name": "VIX Spike Dual (LONG+SHORT) — Auto",
+      "protocolId": "vix-spike-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "ss-1785454827762",
+      "name": "XAU 1H Swing",
+      "protocolId": "xau-speed-1h",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785454845782",
+      "name": "XAU 1H Swing",
+      "protocolId": "xau-speed-1h",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785454827794",
+      "name": "XAU 4H Position",
+      "protocolId": "xau-speed-4h",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785454849604",
+      "name": "XAU 4H Position",
+      "protocolId": "xau-speed-4h",
+      "tradeThreshold": 50
+    },
+    {
+      "id": "ss-1785454827730",
+      "name": "XAU M15 Day-Trade",
+      "protocolId": "xau-speed-m15",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785454844642",
+      "name": "XAU M15 Day-Trade",
+      "protocolId": "xau-speed-m15",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785454827668",
+      "name": "XAU M5 Scalp",
+      "protocolId": "xau-speed-m5",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "ss-1785454834875",
+      "name": "XAU M5 Scalp",
+      "protocolId": "xau-speed-m5",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "626a6c7a-cc1e-42fb-9bbd-8336cabce672",
+      "name": "Gold Speed (default)",
+      "protocolId": "xau-speed-v1",
+      "tradeThreshold": 55
+    },
+    {
+      "id": "2d0fab13-edba-42ce-8c72-ab9c15dc1e6a",
+      "name": "Test Gold Strategy",
+      "protocolId": "xau-speed-v1",
+      "tradeThreshold": 60
+    },
+    {
+      "id": "auto-xau-speed-v1",
+      "name": "xau-speed-v1 — Auto",
+      "protocolId": "xau-speed-v1",
+      "tradeThreshold": 60
+    }
+  ]
+}

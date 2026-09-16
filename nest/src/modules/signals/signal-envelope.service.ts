@@ -9,7 +9,7 @@ import { SignalQueueService, RoutableSignal } from './signal-queue.service';
 import { SignalOutcomeService } from './signal-outcome.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
-import { selectBaseTimeframe } from '../../common/utils/timeframe';
+import { selectBaseTimeframe, everyCadenceStale } from '../../common/utils/timeframe';
 import {
   resolveStyleThreshold,
   SIGNALS_GATE_DEFAULT,
@@ -354,6 +354,68 @@ export class SignalEnvelopeService {
       return this.emptyEnvelope(cleanTicker);
     }
 
+    // ⚠️ A STALE SET IS NOT AN EMPTY SET, BUT A SYMBOL IS ONLY "DEAD" WHEN **EVERY** CADENCE IS
+    // STALE — NOT WHEN ITS BASE CADENCE IS (#827).
+    //
+    // This was the whole defect: the guard above rejects EMPTY and nothing else, so a symbol whose
+    // bars stopped on 17 July sailed through and was SCORED with no current market state to judge.
+    // Ten US equities (TSLA, COIN, PLTR, SOFI, RKLB, RIOT, MARA, ASTS, HOOD…) all shared one exact
+    // stale timestamp (`21:00:00`) from a single import that was never refreshed, and were still
+    // producing scores EIGHT WEEKS later. The damage was the DATE as much as the score: see
+    // `predictedAt` below.
+    //
+    // ⚠️ THE OBVIOUS IMPLEMENTATION IS WRONG, AND WAS MEASURED TO BE WRONG BEFORE SHIPPING.
+    // Checking only `baseTimeframe` skipped **11 symbols, ALL of them ALIVE** — SPY, QQQ, US500,
+    // USTEC, XAUUSD, XAGUSD, UK100, GER40, FRA40, CHINA50, VIX. Measured cadence ages at the time:
+    //
+    //     SPY    1m=12h  <- rejected on this   5m=0.1h  15m=12h  1h=4.7h  1d=35h
+    //     XAUUSD 1m=8.6h <- rejected on this   5m=0.0h  15m=0.0h 1h=0.7h  1d=11h
+    //
+    // A `1m` feed goes quiet whenever the market is closed or the session is thin — the `1m`
+    // tolerance is 1h, while a US equity's overnight gap is ~17h. So a base-cadence-only check
+    // silently removes the core instruments from the ladder outside cash hours, which is a far
+    // worse failure than the one it fixes. The issue's own wording is "a symbol with NO bar within
+    // the last N minutes" — i.e. no fresh cadence ANYWHERE.
+    //
+    // The four arrays below are exactly what the envelope loads, so this is the symbol's whole
+    // picture. A genuinely dead symbol is stale on all of them (HOOD: 1h ended 31 July, `1d` too),
+    // so it is still caught.
+    //
+    // ⚠️ RESIDUAL, DELIBERATELY NOT FIXED HERE: a symbol that is alive overall but stale on its
+    // BASE cadence (SPY above) still scores from that stale array. That is the last known state and
+    // is defensible while the market is shut, but the honest fix is to SCORE ON THE FRESHEST
+    // AVAILABLE cadence rather than to skip, which would change what every protocol evaluates. That
+    // is a design decision, not a bug fix, so it is called out rather than smuggled in.
+    const cadenceSets: Array<{ tf: string; bars: any[] }> = [
+      { tf: baseTimeframe, bars: marketBars },
+      { tf: '1d', bars: dayBars },
+      { tf: '1h', bars: hourBars },
+      { tf: '15m', bars: min15Bars },
+    ].filter((s) => Array.isArray(s.bars) && s.bars.length > 0);
+
+    const dead = everyCadenceStale(
+      cadenceSets.map((s) => ({ timeframe: s.tf, newest: s.bars[s.bars.length - 1]?.timestamp })),
+    );
+
+    if (dead) {
+      const newestOfTf = (tf: string) => {
+        const set = cadenceSets.find((s) => s.tf === tf);
+        return set ? new Date(set.bars[set.bars.length - 1].timestamp).toISOString() : 'none';
+      };
+      this.logger.warn(
+        `Skipped scoring ${cleanTicker}: EVERY cadence is stale (${cadenceSets
+          .map((s) => `${s.tf}=${newestOfTf(s.tf)}`)
+          .join(', ')}). The symbol has no current market state, so scoring it would produce a ` +
+        `plausible number for a moment that has passed. Not scored (#827).`,
+      );
+      const skipped = this.emptyEnvelope(cleanTicker);
+      skipped.preTradeBlockers = [
+        `No current market data — every cadence is stale (base ${baseTimeframe} newest ` +
+        `${newestOfTf(baseTimeframe)}). Not scored (#827).`,
+      ];
+      return skipped;
+    }
+
     // Score via ProtocolGatingService
     //
     // ⚠️ `baseTimeframe` is passed THROUGH (2026-09-10). It was computed above
@@ -378,6 +440,18 @@ export class SignalEnvelopeService {
     // not an execution decision source and must not be the sole producer.
     const priceAtPredict = Number(marketBars[marketBars.length - 1]?.close ?? 0);
     if (priceAtPredict > 0) {
+      // ⚠️ `predictedAt` IS THE DECISION TIME, NOT THE BAR'S TIMESTAMP (#827).
+      //
+      // This read `marketBars[marketBars.length - 1].timestamp` — the evaluated bar's OPEN time.
+      // That is fragile even for a healthy symbol (a delayed import mis-dates the prediction),
+      // but for a stale one it is destructive: the row claimed a prediction made months ago, and
+      // because the maturation sweep is `orderBy: predictedAt ASC`, it sorted ahead of every real
+      // row. All four horizons are measured FORWARD from this value (`predicted + 15m/1h/4h/24h`),
+      // so a stale base also made them target prices inside a dead window that may never fill.
+      //
+      // A prediction is a decision made NOW about the future. `priceAtPredict` is still the last
+      // bar's close — that is the price the decision was based on — but the CLOCK is now.
+      const decidedAt = new Date();
       this.outcomeTracker.recordOutcomes(
         Object.values(gated.breakouts).flat()
           .filter(item => item.score > 0 && item.signalClass !== 'neutral')
@@ -397,7 +471,7 @@ export class SignalEnvelopeService {
             score: item.score,
             signalClass: item.signalClass,
             confidence: item.normalizedScore / 100,
-            predictedAt: marketBars[marketBars.length - 1].timestamp,
+            predictedAt: decidedAt,
             priceAtPredict,
           })),
       ).catch(err => this.logger.warn(`Outcome capture failed: ${(err as Error).message}`));

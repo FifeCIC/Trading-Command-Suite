@@ -158,6 +158,9 @@ model MarketBar {
   @@index([symbolId, timeframe, timestamp])
   @@index([provider, importedAt])
   @@index([recordingSessionId])
+  // Retention column — see the note on DirectiveOutcome.createdAt. `timestamp` was only ever the
+  // THIRD column of the indexes above, so the prune `WHERE timestamp < cutoff` could not use one.
+  @@index([timestamp])
   @@unique([symbolId, timeframe, timestamp])
 }
 
@@ -476,6 +479,20 @@ model DirectiveOutcome {
   @@index([directiveId, symbol, predictedAt])
   @@index([predictedAt])
   @@index([directionCorrect])
+  // ⚠️ REQUIRED by the retention policy, not an optimisation. `createdAt` is this table's
+  // retention column (see `retention.config.ts`) — it was changed from `predictedAt` because a
+  // bound keyed on a DERIVED value deleted a mis-stamped row immediately, destroying the evidence
+  // of the very defect being investigated (#827).
+  //
+  // Adding this index is what makes that fix VIABLE: the prune is
+  // `WHERE createdAt < cutoff`, and without an index that is a full scan of a ~1.5 GB table on
+  // every retention run. Measured 2026-09-16 — `SELECT MIN(createdAt)` took 32,298ms unindexed,
+  // which alone exceeded the 30s gateway timeout and returned 504 for /api/system/health-dashboard,
+  // leaving the whole Health page stuck on a loading skeleton.
+  //
+  // A retention column without an index is a latent outage, so `validate-retention-columns.cjs`
+  // now fails the build if one is declared that no index can serve.
+  @@index([createdAt])
 }
 
 model MarketSnapshot {
@@ -748,6 +765,7 @@ model Order {
   updatedAt   DateTime @updatedAt
 
   @@index([symbol, createdAt])
+  @@index([createdAt])
   @@index([status])
 }
 
@@ -1136,6 +1154,9 @@ model ScoreSnapshot {
   @@map("score_snapshot")
   @@index([protocolId, snappedAt])
   @@index([symbol, snappedAt])
+  // Retention column — see the note on DirectiveOutcome.createdAt. `snappedAt` was only ever the
+  // SECOND column of the indexes above, so the prune could not use one.
+  @@index([snappedAt])
 }
 
 
@@ -1190,6 +1211,8 @@ model PortfolioSnapshot {
 
   @@map("portfolio_snapshot")
   @@index([snapshotType, takenAt])
+  // Retention column — see the note on DirectiveOutcome.createdAt.
+  @@index([takenAt])
 }
 
 model PortfolioSnapshotPosition {
@@ -1318,6 +1341,9 @@ model StrategyEvaluation {
   strategy TradingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 
   @@map("strategy_evaluation")
+  // Retention column — see the note on DirectiveOutcome.createdAt. `evaluatedAt` must LEAD an
+  // index or neither the prune nor the health MIN/MAX can use one.
+  @@index([evaluatedAt])
   @@index([strategyId, evaluatedAt])
 }
 
@@ -1841,6 +1867,9 @@ model AutomationEvent {
   @@index([strategyId, tickNumber])
   @@index([symbol, timestamp])
   @@index([step, timestamp])
+  // Retention column — see the note on DirectiveOutcome.createdAt. `timestamp` was only ever the
+  // SECOND column of the indexes above.
+  @@index([timestamp])
 }
 
 // ── Directive Audit Runs ─────────────────────────────────

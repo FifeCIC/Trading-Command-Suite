@@ -3,25 +3,16 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { BacktestArchiveService } from './backtest-archive.service';
 import { Prisma } from '@prisma/client';
-
-/** Table configuration for pruning — each table has its own date column and retention. */
-const TABLE_CONFIG: Record<string, { dateCol: string; defaultDays: number; envKey: string; label: string }> = {
-  directiveoutcome:     { dateCol: 'predictedAt',  defaultDays: 3,   envKey: 'DATA_RETENTION_DIRECTIVE_DAYS',  label: 'Directive Outcomes' },
-  score:                { dateCol: 'timestamp',    defaultDays: 30,  envKey: 'DATA_RETENTION_SCORE_DAYS',      label: 'Scores' },
-  score_snapshot:       { dateCol: 'snappedAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_SNAPSHOT_DAYS',   label: 'Score Snapshots' },
-  marketbar:            { dateCol: 'timestamp',    defaultDays: 60,  envKey: 'DATA_RETENTION_BARS_DAYS',       label: 'Market Bars' },
-  strategy_evaluation:  { dateCol: 'evaluatedAt',  defaultDays: 90,  envKey: 'DATA_RETENTION_EVAL_DAYS',       label: 'Strategy Evaluations' },
-  decision_log:         { dateCol: 'timestamp',    defaultDays: 90,  envKey: 'DATA_RETENTION_DECISION_DAYS',   label: 'Decision Log' },
-  automation_event:     { dateCol: 'timestamp',    defaultDays: 60,  envKey: 'DATA_RETENTION_EVENT_DAYS',      label: 'Automation Events' },
-  portfolio_snapshot:   { dateCol: 'takenAt',      defaultDays: 365, envKey: 'DATA_RETENTION_PORTFOLIO_DAYS',  label: 'Portfolio Snapshots' },
-  order:                { dateCol: 'createdAt',    defaultDays: 365, envKey: 'DATA_RETENTION_ORDER_DAYS',      label: 'Orders' },
-  bridge_event:         { dateCol: 'createdAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_BRIDGE_DAYS',     label: 'Bridge Events' },
-};
+import { RETENTION_TABLES } from './retention.config';
 /**
  * Data retention service — prunes old data to prevent unbounded growth.
  *
  * Triggered via API: POST /api/system/data-retention/prune?table=directiveoutcome&days=30
  * Scheduled: Cron daily at 3 AM prunes all configured tables.
+ *
+ * ⚠️ The per-table config now lives in `retention.config.ts` — the ONE owner. It was declared here
+ * and mirrored in two other files (`backtest-archive` said "keep in sync"; `system-health` said
+ * "mirrored from DataRetentionService"), with nothing enforcing it.
  */
 @Injectable()
 export class DataRetentionService {
@@ -37,7 +28,7 @@ export class DataRetentionService {
   async scheduledPruneAll() {
     this.logger.log('Running scheduled data retention pruning...');
     let grandTotal = 0;
-    for (const [table, config] of Object.entries(TABLE_CONFIG)) {
+    for (const [table, config] of Object.entries(RETENTION_TABLES)) {
       try {
         const result = await this.pruneTable(table);
         if (result.deleted > 0) {
@@ -122,7 +113,7 @@ export class DataRetentionService {
 
   /** Prune a specific table — batch DELETE to avoid table locks. */
   async pruneTable(table: string, retentionDays?: number): Promise<{ table: string; deleted: number; cutoff: Date }> {
-    const config = TABLE_CONFIG[table];
+    const config = RETENTION_TABLES[table];
     if (!config) return { table, deleted: 0, cutoff: new Date() };
 
     const days = retentionDays ?? parseInt(process.env[config.envKey] || String(config.defaultDays), 10);
@@ -134,8 +125,20 @@ export class DataRetentionService {
       const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');
 
       // ── Archive before pruning (#354) — best-effort, don't block prune ──
+      //
+      // ⚠️ A FAILED ARCHIVE BEFORE A DELETE IS LOGGED, NOT SWALLOWED (2026-09-16).
+      // This was `.catch(() => {})`. Archiving is best-effort by design — a corrupt export must not
+      // wedge retention — but "we destroyed the rows and the backup also failed" is a materially
+      // different situation from "we backed the rows up first", and the silent version makes the two
+      // indistinguishable in the log. Retention is the one place in the system that deletes data, so
+      // it reports its own failures.
       if (table === 'directiveoutcome') {
-        this.archive.exportAndPrune(table, config.dateCol, days).catch(() => {});
+        this.archive.exportAndPrune(table, config.dateCol, days).catch((err) => {
+          this.logger.error(
+            `Archive-before-prune FAILED for ${table} (${(err as Error).message}) — pruning proceeded ` +
+            `WITHOUT a fresh export. If those rows mattered, they are now gone.`,
+          );
+        });
       }
 
       // eslint-disable-next-line no-constant-condition
@@ -148,7 +151,13 @@ export class DataRetentionService {
         await new Promise(r => setTimeout(r, 200));
       }
       if (totalDeleted > 0) {
-        this.logger.log(`Pruned ${totalDeleted} rows from ${table} (${config.label}, older than ${days}d).`);
+        // ⚠️ NAMES THE COLUMN AND THE CUTOFF. "Pruned 4,000 rows older than 3d" does not say older
+        // than 3d BY WHAT — and when that column was `predictedAt`, a bug that mis-stamped it caused
+        // rows to be deleted the moment they were created, while the log read like routine housekeeping.
+        this.logger.log(
+          `Pruned ${totalDeleted} rows from ${table} (${config.label}), \`${config.dateCol}\` < ` +
+          `${cutoff.toISOString()} (${days}d).`,
+        );
       }
     } catch (err) {
       this.logger.error(`Prune failed for ${table}: ${(err as Error).message}`);
@@ -160,7 +169,7 @@ export class DataRetentionService {
   /** Prune all configured tables. */
   async pruneAll(): Promise<Array<{ table: string; deleted: number; cutoff: Date; label: string }>> {
     const results: Array<{ table: string; deleted: number; cutoff: Date; label: string }> = [];
-    for (const [table, config] of Object.entries(TABLE_CONFIG)) {
+    for (const [table, config] of Object.entries(RETENTION_TABLES)) {
       const r = await this.pruneTable(table);
       results.push({ ...r, label: config.label });
       await new Promise(res => setTimeout(res, 300));
@@ -181,7 +190,7 @@ export class DataRetentionService {
       for (const r of rows) tableRows[r.TABLE_NAME] = Number(r.TABLE_ROWS);
     } catch { /* fallback to zero */ }
 
-    for (const [table, config] of Object.entries(TABLE_CONFIG)) {
+    for (const [table, config] of Object.entries(RETENTION_TABLES)) {
       const retentionDays = parseInt(process.env[config.envKey] || String(config.defaultDays), 10);
       const count = tableRows[table] || 0;
 

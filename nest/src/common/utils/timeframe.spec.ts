@@ -1,4 +1,4 @@
-import { selectBaseTimeframe, DEFAULT_LIVE_TIMEFRAME, alignBarTimestamp, isBarAligned } from './timeframe';
+import { selectBaseTimeframe, DEFAULT_LIVE_TIMEFRAME, alignBarTimestamp, isBarAligned, barLengthMs, cadenceStaleMs, isStaleForCadence, everyCadenceStale } from './timeframe';
 
 /**
  * timeframe.spec.ts — pins the cadence mapping (#751, 2026-09-10).
@@ -233,5 +233,147 @@ describe('isBarAligned', () => {
     expect(isBarAligned('2026-09-08T21:30:00.000Z', '1d', 'mt5')).toBe(false);
     expect(isBarAligned('2026-09-07T21:30:00.000Z', '1d', 'mt5')).toBe(false);
     expect(isBarAligned('2026-09-06T21:30:00.000Z', '1d', 'mt5')).toBe(false);
+  });
+});
+
+/**
+ * Cadence staleness — the shared owner for "is this series still current?" (#827 / #838).
+ *
+ * TWO consumers depend on these numbers agreeing, which is why the table is here rather than
+ * duplicated: `bar-refresh.service.ts` decides whether to WRITE a bar set, and
+ * `signal-envelope.service.ts` decides whether to SCORE a symbol at all. If they disagreed, ingest
+ * would accept what scoring rejects (or worse, the reverse).
+ */
+describe('cadenceStaleMs — how old the newest bar may be', () => {
+  const NOW = Date.parse('2026-09-16T12:00:00.000Z');
+  const ago = (ms: number) => new Date(NOW - ms).toISOString();
+
+  it('is NOT the bar length — conflating the two is the trap this guards', () => {
+    // "how long is a bar" and "how long may the newest bar be before I stop trusting it" are
+    // different questions. For 1m they differ by 60x. If someone ever "simplifies" the staleness
+    // check onto barLengthMs(), this fails immediately rather than shipping a feed that either
+    // rejects every live symbol (tolerance = one bar) or accepts months-old data.
+    expect(cadenceStaleMs('1m')).toBe(3_600_000);
+    expect(barLengthMs('1m')).toBe(60_000);
+    expect(cadenceStaleMs('1m')).not.toBe(barLengthMs('1m'));
+
+    // ...and it is not merely a constant multiple either — the RATIO changes by cadence.
+    expect(cadenceStaleMs('1d') / barLengthMs('1d')).toBe(3);   // 72h / 24h
+    expect(cadenceStaleMs('1m') / barLengthMs('1m')).toBe(60);  // 1h / 1m
+  });
+
+  it('allows the real weekend gap for mt5 dailies — Fri 21:00 -> Mon 21:00 is exactly 72h', () => {
+    // The tightest legitimate case for 1d. `isStaleForCadence` uses `>` so the boundary is
+    // inclusive; if this starts failing, a quiet Monday has begun rejecting Friday's daily bar.
+    expect(isStaleForCadence(ago(72 * 3_600_000), '1d', NOW)).toBe(false);
+    expect(isStaleForCadence(ago(72 * 3_600_000 + 1), '1d', NOW)).toBe(true);
+  });
+
+  it('every cadence tolerates at least several of its own bars', () => {
+    for (const tf of ['1m', '5m', '15m', '1h', '4h', '1d']) {
+      const bars = cadenceStaleMs(tf) / barLengthMs(tf);
+      expect(bars).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('does NOT reject a session break on coarser cadences — the #838 measurement, as a test', () => {
+    // Measured live: 18 rejected pairs were ALL 1m, 1.9-4.6h old, on symbols ALIVE on 5-6 other
+    // timeframes (SPY, QQQ, AMZN, UK100). A 2h-old stamp is stale for 1m (1h) but fresh for
+    // everything else, so a nightly break costs only the tightest cadence. This pins that the
+    // check is per (symbol, timeframe) and never suppresses a symbol wholesale.
+    const twoHoursOld = ago(2 * 3_600_000);
+    expect(isStaleForCadence(twoHoursOld, '1m', NOW)).toBe(true);
+    for (const tf of ['5m', '15m', '1h', '4h', '1d']) {
+      expect(isStaleForCadence(twoHoursOld, tf, NOW)).toBe(false);
+    }
+  });
+
+  it('treats a malformed timestamp as NOT stale — a different fault must stay distinguishable', () => {
+    // Returning `true` here would let an unparseable timestamp masquerade as "old data" and be
+    // silently skipped. `isBarFutureStamped` draws the same line for the same reason.
+    expect(isStaleForCadence('nonsense', '1h', NOW)).toBe(false);
+    expect(isStaleForCadence(undefined, '1h', NOW)).toBe(false);
+  });
+
+  it('falls back to daily for an unrecognised cadence', () => {
+    expect(cadenceStaleMs('1w')).toBe(24 * 3_600_000);
+    expect(isStaleForCadence(ago(25 * 3_600_000), '1w', NOW)).toBe(true);
+  });
+
+  it('reproduces the live #827 defect — the 17 July cohort is stale on EVERY cadence', () => {
+    // Ten US equities (TSLA, COIN, PLTR, SOFI, RKLB, RIOT, MARA, ASTS, HOOD, NVDA…) shared one
+    // exact stale timestamp and were scored for eight weeks. Under the old envelope check only
+    // EMPTY was rejected, so all ten produced predictions dated 17 July — which then sorted to the
+    // FRONT of the maturation queue (`orderBy: predictedAt ASC`) ahead of every real row.
+    const jul17 = '2026-07-17T21:00:00.000Z';
+    for (const tf of ['1m', '5m', '15m', '1h', '4h', '1d']) {
+      expect(isStaleForCadence(jul17, tf, NOW)).toBe(true);
+    }
+  });
+});
+
+/**
+ * Is the SYMBOL dead? (#827)
+ *
+ * ⚠️ THESE TESTS EXIST BECAUSE THE OBVIOUS IMPLEMENTATION WAS SHIPPED-BY-ACCIDENT-AND-CAUGHT.
+ *
+ * Checking only the BASE cadence skipped 11 symbols that were all ALIVE — SPY, QQQ, US500, USTEC,
+ * XAUUSD, XAGUSD, UK100, GER40, FRA40, CHINA50, VIX — because a `1m` feed goes quiet whenever the
+ * market is closed or the session is thin. The values below are the LIVE MEASUREMENTS from that
+ * check, not invented ones, which is what makes them a real regression guard rather than a
+ * restatement of the implementation.
+ */
+describe('everyCadenceStale — per-symbol, not per-base-cadence', () => {
+  const NOW = Date.parse('2026-09-16T07:43:00.000Z');
+  const at = (hoursAgo: number) => new Date(NOW - hoursAgo * 3_600_000).toISOString();
+
+  it('⚠️ SPY at 04:43 ET is ALIVE — a stale 1m must not remove it from the ladder', () => {
+    // Measured: SPY 1m=12h, 5m=0.1h, 15m=12h, 1h=4.7h, 1d=35h.
+    // The 1m feed is 12h quiet because the US market is CLOSED; the symbol is trading on 5m.
+    // A base-cadence-only check returns TRUE here and silently drops SPY.
+    expect(everyCadenceStale([
+      { timeframe: '1m', newest: at(12) },    // stale (tol 1h)
+      { timeframe: '1d', newest: at(35) },    // FRESH (tol 72h)
+      { timeframe: '1h', newest: at(4.7) },   // fresh (tol 12h)
+      { timeframe: '15m', newest: at(12) },   // stale (tol 4h)
+    ], NOW)).toBe(false);
+  });
+
+  it('⚠️ XAUUSD is ALIVE while its 1m is quiet — the tightest real case measured', () => {
+    // Measured: XAUUSD 1m=8.6h, 5m=0.0h, 15m=0.0h, 1h=0.7h, 1d=11h. Gold is trading NOW.
+    expect(everyCadenceStale([
+      { timeframe: '1m', newest: at(8.6) },   // stale
+      { timeframe: '15m', newest: at(0.0) },  // forming
+      { timeframe: '1h', newest: at(0.7) },
+      { timeframe: '1d', newest: at(11) },
+    ], NOW)).toBe(false);
+  });
+
+  it('the 17 July cohort IS dead — every cadence stale, so it is still caught', () => {
+    // HOOD: 1h ended 31 July, 1d ended 21 July. Nothing is alive.
+    expect(everyCadenceStale([
+      { timeframe: '1d', newest: '2026-07-21T21:00:00.000Z' },
+      { timeframe: '1h', newest: '2026-07-31T21:00:00.000Z' },
+      { timeframe: '15m', newest: '2026-07-31T21:00:00.000Z' },
+      { timeframe: '1m', newest: '2026-07-31T21:00:00.000Z' },
+    ], NOW)).toBe(true);
+  });
+
+  it('one fresh cadence anywhere is enough to keep scoring', () => {
+    expect(everyCadenceStale([
+      { timeframe: '1m', newest: at(500) },
+      { timeframe: '1d', newest: at(1) },   // the only fresh one
+    ], NOW)).toBe(false);
+  });
+
+  it('an EMPTY set is NOT dead — "nothing to judge" differs from "judged and all stale"', () => {
+    // The caller handles an empty marketBars array separately. Returning true here would skip a
+    // symbol because of a loading fault, which is the opposite of the intent.
+    expect(everyCadenceStale([], NOW)).toBe(false);
+  });
+
+  it('a single stale cadence IS dead — a symbol with only one usable series', () => {
+    expect(everyCadenceStale([{ timeframe: '1h', newest: at(100) }], NOW)).toBe(true);
+    expect(everyCadenceStale([{ timeframe: '1h', newest: at(1) }], NOW)).toBe(false);
   });
 });

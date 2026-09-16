@@ -51,6 +51,88 @@ how 30 orphan rows sat in the database while every build was green.
 node scripts/diff-seed-vs-db.cjs     # exit 1 = drift; MUST be run after any seed/config edit
 ```
 
+#### ⚠️ Gate 3 has TWO questions, and only the first one was being asked (2026-09-16)
+
+The wording above — *"does the running system **agree** with the config"* — is about **data**: does
+the database match the file that describes it. `diff-seed-vs-db.cjs` answers that.
+
+There is a second question the wording does not force:
+
+> **Does the running system still WORK with the config I just changed?**
+
+**The mechanical rule, which is cheap and is not a heuristic:**
+
+> After changing ANY value in a shared config file, **enumerate its consumers and call each one.**
+> A config value is validated by the thing that reads it, not by the file that declares it.
+
+For `retention.config.ts` that means: run the prune, open the health panel, call
+`db:config-refs`. For a threshold: score a protocol. For a cadence: fetch a bar. The enumeration is
+the work — a value with four consumers has four ways to be wrong, and only one of them is visible
+in the file you edited.
+
+**The generalised shape, stated once:**
+
+> **A config that PARSES is not a config that WORKS.**
+
+Same shape as the rule already learned for seeders in
+`database-seed-discipline.instructions.md` — *"A seeder that RUNS is not a seeder that RESTORES."*
+Both say a declaration is not validated by being well-formed, only by being checked against the
+thing it names.
+
+---
+
+#### 🛑 CORRECTION (2026-09-16, same day) — the worked example below was MISATTRIBUTED
+
+This section originally presented a confident causal story. It was wrong, and the way it was wrong
+is a better lesson than the story was. The original claim, and what measurement later showed:
+
+| Claimed | Actual |
+|---|---|
+| A retention config change left `directiveoutcome` on an unindexed column | true — but see below |
+| `MIN(createdAt)` became a **32-second full scan of a 1,497 MB table** | ❌ **this table is 1.10 MB / 6,979 rows.** A 32s scan of it is physically impossible. The row/size figures came from a different table and were never re-checked |
+| The missing index **caused** `/api/system/health-dashboard` to return 504 | ❌ **unsupported.** `apiactivitylog` records exactly **one** 504, at 09:01:47 (30,015 ms). By 09:06:33 the same endpoint returned **200 in 348 ms** — *before the index was added*. With the index deliberately dropped again later, the endpoint returned **88 ms** |
+| Adding the index fixed it (0.36 s) | ❌ it **coincided** with recovery. The API was also restarted at the same time, and the restart is at least as plausible a cause |
+
+**What actually happened:** two changes were made together (add index + restart API), recovery was
+observed, and the credit was given to the change that had a story attached to it. Nobody verified
+which one mattered. The 504 was a single transient event.
+
+**What remains true and useful:**
+
+- The 504 was real (one occurrence, 30,015 ms, hitting the gateway timeout). It was not
+  reproducible afterwards and **its cause is still unknown**.
+- `health-dashboard` aggregates ~120 per-table queries. It is genuinely the most expensive
+  diagnostic endpoint, and nothing probed it or asserted a latency budget. That gap was real.
+- A column used as a **range predicate** should lead an index. That is sound on its own merits —
+  it just was not the cause of this outage, and the performance benefit on this table was never
+  measured.
+- The six "present in an index but not the leading column" findings were real, and their impact
+  was **not** measured. Do not cite them as a speed-up.
+
+**The lesson, which is the actual carry:**
+
+> **Do not attribute a fix you did not isolate.** When two things change and the symptom goes away,
+> you have a correlation, not a cause. Say "recovery coincided with X and Y; not isolated" — or
+> isolate it. An unverified cause written into an instruction file is worse than no explanation,
+> because the next reader trusts it and stops looking.
+
+This is the same defect as the one this file already documents — #638's ticked checkbox for a check
+that was never run. A *causal claim* is also a claim, and it needs the same treatment: name the
+observation that supports it.
+
+**Guards that were added, and what each is actually worth:**
+
+| Guard | Runs | Value |
+|---|---|---|
+| `validate-retention-columns.cjs` | `prebuild` (static) | retention column must be intrinsic, declared once, and **lead** an index in `schema.prisma` |
+| `db:config-refs` | on demand (live) | the same column exists in the **real** database, leads a **real** index, and the predicate answers in budget — the gap the static check cannot see, because `schema.prisma` is documentation here (no migrations, `db push` banned) |
+| `INV-ENDPOINT-BUDGET` | `contract-probe.cjs` (live) | an aggregate endpoint that stops responding in reasonable time. **Cause-agnostic** — it would have flagged this at 09:01 without needing to know why |
+
+⚠️ The budget check is the only one of the three that would have caught the actual event, and it is
+the one whose value does not depend on the attribution being right. That is the argument for
+preferring **symptom** guards over **cause** guards when the cause is not understood.
+
+
 An **upsert-only** seeder cannot delete. So a removal or move in a config file is silently a
 no-op in the database, and re-seeding cannot converge them. **Any config edit that removes or
 moves something requires an explicit state reconciliation as part of the same change.**

@@ -9,13 +9,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as os from 'os';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { RETENTION_DAYS, TABLE_DATE_COLUMN } from './retention.config';
 
-// ── Retention config (mirrored from DataRetentionService for cross-reference) ──
-const RETENTION_DAYS: Record<string, number> = {
-  directiveoutcome: 3, score: 30, score_snapshot: 90, marketbar: 60,
-  strategy_evaluation: 90, decision_log: 90, automation_event: 60,
-  portfolio_snapshot: 365, order: 365,
-};
+// ⚠️ Retention days and date columns now come from `retention.config.ts` — the ONE owner. Both were
+// previously declared HERE as well, the days under "mirrored from DataRetentionService" and the
+// columns as an inline map. A health panel that reports a DIFFERENT retention window from the one
+// actually applied is worse than no panel, because it looks authoritative.
 
 export interface SystemVitals {
   cpuLoad1m: number; cpuLoad5m: number; cpuLoad15m: number;
@@ -297,11 +296,8 @@ export class SystemHealthService {
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
          ORDER BY DATA_LENGTH DESC`,
       );
-      const dateCols: Record<string, string> = {
-        directiveoutcome: 'predictedAt', score: 'timestamp', score_snapshot: 'snappedAt',
-        marketbar: 'timestamp', strategy_evaluation: 'evaluatedAt', decision_log: 'timestamp',
-        automation_event: 'timestamp', portfolio_snapshot: 'takenAt', order: 'createdAt',
-      };
+      // From the shared owner — not a local copy. See `retention.config.ts`.
+      const dateCols: Record<string, string> = TABLE_DATE_COLUMN;
       for (const r of rows) {
         const name = r.TABLE_NAME;
         const rowCount = Number(r.TABLE_ROWS) || 0;

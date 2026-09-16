@@ -135,6 +135,13 @@ const DEFAULT_BAR_PATTERNS = [
   { re: /\b(?:minComposite|tradeThreshold)\s*\?\?\s*(\d{1,3})\b/g, kind: 'nullish-default' },
   // `stack.tradeThreshold || 3`
   { re: /\b(?:minComposite|tradeThreshold)\s*\|\|\s*(\d{1,3})\b/g, kind: 'or-default' },
+  // ⚠️ The KEYED + COERCED form: `tradeThreshold: parseInt(e.target.value) || 65`.
+  // Added 2026-09-15 (#839). Every pattern above requires the identifier to sit IMMEDIATELY before
+  // the operator, so a value that is PARSED first was invisible to all of them — and that is the
+  // form UI code actually writes. Found live in AutomationDashboardPage.jsx: a 65 fallback on an
+  // empty input, i.e. the guard's own headline defect, sitting inside the guard's own scan root.
+  // The negated class stops at a comma/brace/newline so the match cannot wander across a line.
+  { re: /\b(?:minComposite|tradeThreshold)\s*:\s*[^,;}\n]{0,80}?\|\|\s*(\d{1,3})\b/g, kind: 'or-default-coerced' },
   // `useState(65)` where the state is named minComposite (StrategyCreatePage)
   { re: /\bconst\s*\[\s*(?:minComposite|tradeThreshold)\s*,\s*set\w+\s*\]\s*=\s*useState\(\s*(\d{1,3})\s*\)/g, kind: 'ui-initial-state' },
   // Prisma column default: `minComposite Float @default(60)`

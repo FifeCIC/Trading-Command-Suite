@@ -54,6 +54,37 @@ export function selectBaseTimeframe(recommended?: string | null): string {
 export const DEFAULT_LIVE_TIMEFRAME = '5m';
 
 /**
+ * THE canonical cadence→duration table. Single source for the whole application.
+ *
+ * ⚠️ DO NOT ADD A SECOND COPY OF THIS TABLE. "How long is a 1h bar?" had FOUR independent
+ * answers before 2026-09-15 — here, in `directives/market-status.ts`, as a derived parser in
+ * `scoring/outcome-tracker.service.ts`, and in `scripts/contract-probe.cjs`. They agreed on the
+ * seven common lowercase cadences and DIVERGED on everything else, measured:
+ *
+ *     tf     this table    market-status   outcome-tracker
+ *     1w     604800000     undefined       3600000   (1h — 168x too small)
+ *     '1M'   86400000      undefined       60000     (1min — 1440x too small)
+ *
+ * Guarded at build time by `nest/scripts/validate-timeframe-sources.cjs`. Import `barLengthMs()`
+ * (or `barLengthMsOrUndefined()` when "unknown" must stay distinguishable) — never a local map.
+ *
+ * ⚠️ KEYS ARE CASE-SENSITIVE, DELIBERATELY. `'1M'` is NOT `'1m'`. Do not make this lookup
+ * case-insensitive: an uppercase string reaching here is a BUG upstream (the frontend has
+ * `['1M','5M','15M','1H']` display arrays), and silently reading `'1M'` as one minute would hide
+ * it. Falling back to daily is visible; accepting it would not be.
+ */
+export const BAR_LENGTH_MS: Record<string, number> = {
+  '1m': 60_000,
+  '5m': 300_000,
+  '15m': 900_000,
+  '30m': 1_800_000,
+  '1h': 3_600_000,
+  '4h': 14_400_000,
+  '1d': 86_400_000,
+  '1w': 604_800_000,
+};
+
+/**
  * Duration of one bar of this cadence, in milliseconds. Unknown cadences are treated as
  * daily, matching `TF_STALE_MS`'s own default in `bar-refresh.service.ts`.
  *
@@ -68,16 +99,158 @@ export const DEFAULT_LIVE_TIMEFRAME = '5m';
  * `isBarBeyondItsOwnLength()` below.
  */
 export function barLengthMs(timeframe: string): number {
-  return {
-    '1m': 60_000,
-    '5m': 300_000,
-    '15m': 900_000,
-    '30m': 1_800_000,
-    '1h': 3_600_000,
-    '4h': 14_400_000,
-    '1d': 86_400_000,
-    '1w': 604_800_000,
-  }[timeframe] ?? 86_400_000;
+  return BAR_LENGTH_MS[timeframe] ?? 86_400_000;
+}
+
+/**
+ * The same lookup, but `undefined` for an unrecognised cadence instead of a daily default.
+ *
+ * ⚠️ WHY THIS EXISTS — the difference is LOAD-BEARING, not a convenience.
+ *
+ * `computeMarketStatus()` uses "no declared cadence" to decide whether it can measure staleness
+ * at all, and FAILS CLOSED when it cannot:
+ *
+ *     if (!declaredCadenceMs && medianInterval <= 0) return { open: false, reason: 'indeterminate…' }
+ *
+ * If that call site used `barLengthMs()` it would always receive a number, the fail-closed branch
+ * would become unreachable, and an unmeasurable feed would silently read as OPEN. Returning
+ * `undefined` here is what keeps that guard alive — so do NOT "simplify" callers onto
+ * `barLengthMs()` without checking whether they depend on the absence.
+ */
+export function barLengthMsOrUndefined(timeframe: string | null | undefined): number | undefined {
+  if (!timeframe) return undefined;
+  return BAR_LENGTH_MS[timeframe];
+}
+
+/**
+ * How old the NEWEST bar of a cadence may be before that cadence's data is treated as STALE.
+ *
+ * ⚠️ THIS IS NOT A BAR LENGTH, AND THE DISTINCTION IS THE WHOLE POINT.
+ *
+ * `BAR_LENGTH_MS` answers "how long is one bar?" (`1m` = 60s). This answers "how long may the
+ * newest bar be before I stop trusting the series?" (`1m` = 1h — 60x larger). They are different
+ * questions with different answers. Conflating them would either reject every live feed (if the
+ * tolerance were one bar length) or accept months-old data (if it were too generous).
+ *
+ * Each value allows for the cadence's NATURAL gap plus scheduling slack — a quiet market, a
+ * weekend, a slow refresh — while still catching a feed that has actually stopped:
+ *
+ *     cadence   tolerance   why
+ *     1m        1h          an equity's overnight break is ~17h, so this rejects only a dead feed
+ *     5m        2h
+ *     15m       4h
+ *     1h        12h
+ *     4h        24h
+ *     1d        72h         exactly Fri 21:00 -> Mon 21:00, the real weekend gap for mt5 dailies
+ *
+ * ⚠️ MEASURED 2026-09-15 against all 456 live (symbol, timeframe) pairs: the rejected pairs showed
+ * 18 under 1 day, **ZERO in the 1-3 day band**, and 233 at 3-60 days, while the freshest KEPT pairs
+ * sat at 77% of tolerance. A threshold that lands in an EMPTY GAP between two clear populations is
+ * set correctly; a threshold inside a distribution is not. If you change these numbers, re-check
+ * that gap — see the note on `isStaleForCadence` below for why the borderline cases are harmless.
+ *
+ * ⚠️ SINGLE OWNER (moved here 2026-09-16). This table lived as `TF_STALE_MS`, a LOCAL constant
+ * inside `bar-refresh.service.ts`, and `barLengthMs()`'s own doc comment referred to it by name —
+ * a cross-file reference to a local, which is how a second copy starts. It now has TWO consumers
+ * that must never disagree:
+ *
+ *   - `bar-refresh.service.ts` — should the ingest try another broker, and is the winner usable?
+ *     (#838). Persisting a stale set is permanent, because the upsert keys on timestamp so a later
+ *     fetch cannot overwrite it.
+ *   - `signal-envelope.service.ts` — should this symbol be SCORED at all? (#827). A stale symbol
+ *     has no current market state to judge; scoring it stamps a prediction with a months-old date,
+ *     which then sorts to the FRONT of the maturation queue (`orderBy: predictedAt ASC`) and is
+ *     consumed in preference to real rows.
+ *
+ * Guarded by `nest/scripts/validate-timeframe-sources.cjs`.
+ */
+export const CADENCE_STALE_MS: Record<string, number> = {
+  '1m': 1 * 3_600_000,
+  '5m': 2 * 3_600_000,
+  '15m': 4 * 3_600_000,
+  '1h': 12 * 3_600_000,
+  '4h': 24 * 3_600_000,
+  '1d': 72 * 3_600_000,
+};
+
+/** Tolerance applied to a cadence with no declared value — daily, the coarsest entry above. */
+export const DEFAULT_CADENCE_STALE_MS = 24 * 3_600_000;
+
+/** The tolerance for this cadence, falling back to {@link DEFAULT_CADENCE_STALE_MS}. */
+export function cadenceStaleMs(timeframe: string): number {
+  return CADENCE_STALE_MS[timeframe] ?? DEFAULT_CADENCE_STALE_MS;
+}
+
+/**
+ * Is the newest bar of this cadence too old to trust?
+ *
+ * ⚠️ REJECTION IS ALWAYS HARMLESS — IT ONLY DECLINES, NEVER DELETES.
+ *
+ * This is what makes the borderline cases safe rather than lucky. A stale set's bars are almost
+ * always ALREADY STORED, so refusing to write (ingest) or refusing to score (envelope) loses
+ * nothing; and a genuinely fresh feed is never older than its tolerance, so it always proceeds.
+ * The asymmetry matters: being slightly too strict costs a redundant skip, while being too loose
+ * persists an unoverwritable stale row or scores a market that is not there.
+ *
+ * ⚠️ VERIFIED IN BOTH DIRECTIONS, not just the passing one — the same discipline the ingest guard
+ * needed (#838). These thresholds were checked to REJECT a dead feed and to ACCEPT a legitimate
+ * weekend boundary, because a threshold only confirmed to "not fire" has not been tested at all.
+ *
+ * ⚠️ CASE-SENSITIVE, matching `BAR_LENGTH_MS`. `'1M'` is month, `'1m'` is minute; an uppercase
+ * cadence arriving here is an upstream bug and falls back to daily, which is visible.
+ *
+ * @param newest    Newest bar timestamp of the set (Date | ISO string | epoch ms).
+ * @param timeframe Declared cadence, e.g. '15m', '1h', '1d'.
+ * @param now       Current time, injectable so tests do not depend on the wall clock.
+ */
+export function isStaleForCadence(
+  newest: unknown,
+  timeframe: string,
+  now: number = Date.now(),
+): boolean {
+  const ms = new Date(newest as any).getTime();
+  // An unparseable timestamp is a DIFFERENT fault and must not be reported as staleness —
+  // the caller needs to distinguish "old" from "malformed", the same way
+  // `isBarFutureStamped` returns false for a malformed value rather than absorbing it.
+  if (Number.isNaN(ms)) return false;
+  return now - ms > cadenceStaleMs(timeframe);
+}
+
+/**
+ * Is this SYMBOL dead — i.e. is every one of its cadences stale?
+ *
+ * ⚠️ THIS IS THE RULE THAT MATTERS, AND THE OBVIOUS ALTERNATIVE IS WRONG.
+ *
+ * "Is the base cadence stale?" is NOT the same question, and answering that one instead was
+ * measured to skip **11 symbols that were all ALIVE** (#827): SPY, QQQ, US500, USTEC, XAUUSD,
+ * XAGUSD, UK100, GER40, FRA40, CHINA50, VIX. Their `1m` feeds were 4-12 hours quiet while their
+ * `5m`/`15m` feeds were MINUTES old:
+ *
+ *     SPY    1m=12h   5m=0.1h   15m=12h  1h=4.7h  1d=35h   <- 1m stale, symbol trading
+ *     XAUUSD 1m=8.6h  5m=0.0h   15m=0.0h  1h=0.7h  1d=11h   <- 1m stale, symbol trading
+ *
+ * A `1m` feed goes quiet whenever the market is closed or the session is thin — the `1m` tolerance
+ * is 1h, while a US equity's overnight gap is ~17h — so a base-cadence-only test removes the core
+ * instruments from the ladder outside cash hours. **That is a far worse failure than the one it
+ * fixes**, and it is invisible: the symbol simply stops appearing.
+ *
+ * A genuinely dead symbol is stale on EVERY cadence. Measured: the 17 July cohort (TSLA, COIN,
+ * PLTR, SOFI, RKLB, RIOT, MARA, ASTS, HOOD…) had `1h` ending 31 July and `1d` ending 21 July —
+ * every cadence stale, correctly rejected.
+ *
+ * ⚠️ EMPTY INPUT IS NOT DEAD. `false` here, because "I have no cadences to judge" is a different
+ * condition from "I judged them and they are all stale" — the caller already handles an empty
+ * marketBars array separately, and conflating the two would skip a symbol for a loading fault.
+ *
+ * @param sets Every cadence available for the symbol, with its newest bar timestamp.
+ * @param now  Current time, injectable for tests.
+ */
+export function everyCadenceStale(
+  sets: Array<{ timeframe: string; newest: unknown }>,
+  now: number = Date.now(),
+): boolean {
+  if (sets.length === 0) return false;
+  return sets.every((s) => isStaleForCadence(s.newest, s.timeframe, now));
 }
 
 /**

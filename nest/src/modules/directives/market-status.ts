@@ -1,4 +1,7 @@
 import { MarketBar } from './interfaces/directive.interface';
+// ⚠️ Cadence→duration comes from the ONE owner. Do not add a local map here (2026-09-15).
+// ⚠️ Use the *OrUndefined variant: the fail-closed branch below tests for absence.
+import { barLengthMsOrUndefined } from '../../common/utils/timeframe';
 
 /**
  * market-status.ts — THE tradability boundary.
@@ -47,16 +50,18 @@ export interface MarketStatus {
  * `spy-day-v1` / `qqq-day-v1` were gated shut on EVERY tick in a 45-minute
  * window. Bar ages observed tripping the false close were 4m, 17m and 18m —
  * 17m and 18m being ordinary mid-formation states for a 15m bar.
+ *
+ * ⚠️ THE CADENCE TABLE THAT USED TO LIVE HERE IS GONE (2026-09-15).
+ *
+ * It was a verbatim copy of `barLengthMs()` minus `1w`, so `1w` resolved to `undefined` here
+ * while the owner returned 604800000. Two tables, one concept.
+ *
+ * The fix uses `barLengthMsOrUndefined()` — NOT `barLengthMs()` — because the `undefined` is
+ * load-bearing: the fail-closed branch tests `!declaredCadenceMs` to detect an unmeasurable feed.
+ * `barLengthMs()` always returns a number (defaulting to daily), which would have made that
+ * branch unreachable and let a dead feed read as OPEN. Same owner, strict variant.
+ * The import is at the top of this file with the others.
  */
-const TIMEFRAME_MS: Record<string, number> = {
-  '1m': 60_000,
-  '5m': 300_000,
-  '15m': 900_000,
-  '30m': 1_800_000,
-  '1h': 3_600_000,
-  '4h': 14_400_000,
-  '1d': 86_400_000,
-};
 
 /**
  * Hard floor for the staleness window, so a very short cadence (1m, or a
@@ -197,7 +202,7 @@ export function computeMarketStatus(
   // not depend on measuring intervals at all, so an unmeasurable median is not a
   // reason to veto. This keeps fail-closed for callers that gave us nothing while
   // not punishing a caller that gave us the timeframe (2026-09-10).
-  const declaredCadenceMs = timeframe ? TIMEFRAME_MS[timeframe] : undefined;
+  const declaredCadenceMs = barLengthMsOrUndefined(timeframe);
   if (!declaredCadenceMs && medianInterval <= 0) {
     return {
       open: false,

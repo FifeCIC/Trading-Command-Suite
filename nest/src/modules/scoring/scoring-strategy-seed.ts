@@ -16,9 +16,23 @@
  * by ~6.3, so measured `compositePct` now peaks at ~33 — a bar of 50-60 can NEVER be cleared.
  * Any scoring strategy seeded from here would silently never fire a trade.
  *
- * Values are the old ones divided by ~6.3, rounded, ORDERING PRESERVED (gold 9 > forex 8,
- * btc 10 highest, oil 9) — a units migration, not a tuning decision. Same basis as
- * `common/utils/style-thresholds.ts`, which owns the authoritative table.
+ * ⚠️ The values are NOT a mechanical ÷6.3 of the old numbers. A first pass did exactly that
+ * (55/50/60/55 -> 9/8/10/9) and was WRONG: it preserved the old ORDERING but ignored each
+ * protocol's declared `tradingStyle`, which is the semantic the app actually uses. Under the
+ * owner's own resolution the order is different — `btc-speed-v1` is `Monitor / Position`
+ * (position = 7, the LOWEST) while `xau-speed-v1` and `oil-speed-v1` are `Tick Scalp`
+ * (scalp = 12, the HIGHEST). The ÷6.3 pass had BTC highest. That is not a rescale, it is a
+ * silent re-ranking.
+ *
+ * Each value below is therefore the output of `resolveStyleThreshold(protocol.tradingStyle)`
+ * — the SAME function the running app uses, so seed and runtime cannot disagree:
+ *
+ *     xau-speed-v1     'Tick Scalp'                -> scalp      -> 12
+ *     oil-speed-v1     'Tick Scalp'                -> scalp      -> 12
+ *     forex-session-v1 'Session / Mean Reversion'   -> day-trade  -> 10
+ *     btc-speed-v1     'Monitor / Position'         -> position   ->  7
+ *
+ * Re-derive with: `node nest/scripts/align-scoring-strategy-thresholds.cjs` (dry run).
  *
  * ⚠️ NOT VERIFIED, AND FLAGGED DELIBERATELY: the `gateConfig.*.threshold` values below
  * (40 / 35 / 45) are ALSO on the old scale and were NOT changed here. A group-gate threshold
@@ -42,7 +56,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
     name: 'Gold Speed (default)',
     protocolId: 'xau-speed-v1',
     watchlistName: 'default',
-    tradeThreshold: 9,
+    tradeThreshold: 12, // 'Tick Scalp' -> scalp
     mode: 'score',
     gateConfig: {
       risk: { enabled: true, threshold: 40 },
@@ -53,7 +67,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
     name: 'Forex Session (default)',
     protocolId: 'forex-session-v1',
     watchlistName: 'default',
-    tradeThreshold: 8,
+    tradeThreshold: 10, // 'Session / Mean Reversion' -> day-trade
     mode: 'score',
     gateConfig: {
       risk: { enabled: true, threshold: 35 },
@@ -64,7 +78,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
     name: 'BTC Speed (default)',
     protocolId: 'btc-speed-v1',
     watchlistName: 'default',
-    tradeThreshold: 10,
+    tradeThreshold: 7, // 'Monitor / Position' -> position (the LOWEST bar, not the highest)
     mode: 'score',
   },
   // ── Oil ──
@@ -72,7 +86,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
     name: 'Oil Speed (default)',
     protocolId: 'oil-speed-v1',
     watchlistName: 'default',
-    tradeThreshold: 9,
+    tradeThreshold: 12, // 'Tick Scalp' -> scalp
     mode: 'score',
     gateConfig: {
       risk: { enabled: true, threshold: 45 },

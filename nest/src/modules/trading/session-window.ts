@@ -21,12 +21,16 @@
  * ------------
  * - Times are defined in **ET (America/New_York)** to match the existing
  *   MarketContextService definitions, which were already in ET.
- * - DST is approximated by month (Mar–Nov = EDT/UTC-4) — this reproduces the
- *   pre-existing behaviour exactly. Replace with a real tz library only as a
- *   deliberate change, since it shifts every session boundary.
+ * - ⚠️ DST is now resolved for real (2026-09-15), via `minutesInZone()` from
+ *   `common/utils/session-time`. It was previously APPROXIMATED BY MONTH, which treated all of
+ *   March and all of November as EDT and put every session boundary an hour out for ~36 days a
+ *   year. The old note read "replace with a real tz library only as a deliberate change, since
+ *   it shifts every session boundary" — this IS that change, and it was made in both copies of
+ *   the rule at once so they cannot disagree.
  * - Pure functions only: no DI, no Prisma, no clock. Callers pass `at`.
  * - Session windows may wrap past midnight (Asian opens 19:00, closes 04:00).
  */
+import { minutesInZone } from '../../common/utils/session-time';
 
 export type SessionTag = 'asian' | 'london' | 'us';
 
@@ -196,16 +200,22 @@ export function auditNameVsWindow(name: unknown, raw: unknown): NameWindowAudit 
 
 /**
  * Convert a UTC instant to minutes-since-midnight in ET.
- * DST approximated by month — identical to the historic MarketContextService
- * behaviour, so session boundaries do not move as a side effect of this file.
+ *
+ * ⚠️ DST-CORRECT as of 2026-09-15. This previously approximated DST by MONTH
+ * (`month >= 2 && month <= 10`) — which treats ALL of March and ALL of November as EDT.
+ * Real US DST 2026 runs **8 Mar → 1 Nov**, so the ET clock was **an hour out for ~36 days a
+ * year**, moving every session boundary. It now delegates to `minutesInZone()`, the owner,
+ * which resolves the zone's actual offset at the actual instant via `Intl`.
+ *
+ * ⚠️ WHY THIS AND `market-context.service.ts` MUST CHANGE TOGETHER — the previous comment here
+ * read: *"identical to the historic MarketContextService behaviour, so session boundaries do
+ * not move as a side effect of this file."* That was TRUE and DELIBERATE: the duplicate existed
+ * to avoid moving boundaries while doing something unrelated. The consequence is that fixing
+ * one alone would make the two implementations DISAGREE, which is worse than both being
+ * consistently wrong. They are now both correct, and both read from one owner.
  */
 export function toEtMinutes(at: Date): number {
-  const month = at.getUTCMonth(); // 0 = Jan
-  const isDst = month >= 2 && month <= 10; // Mar–Nov approximate DST
-  let etHour = at.getUTCHours() - (isDst ? 4 : 5);
-  if (etHour < 0) etHour += 24;
-  // Preserve minute precision (the historic helper returned whole hours only).
-  return etHour * 60 + at.getUTCMinutes();
+  return minutesInZone(at, 'America/New_York');
 }
 
 /** True when `at` falls inside the named session's window (wraps midnight). */

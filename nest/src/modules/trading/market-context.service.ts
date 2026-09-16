@@ -12,7 +12,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 // Canonical session definitions live in session-window.ts — the same module the
 // execution-side session gate uses. Never re-declare them here.
-import { SESSION_DEFS } from './session-window';
+import { SESSION_DEFS, toEtMinutes } from './session-window';
 
 export interface DayContext {
   dayOfWeek: string;
@@ -231,14 +231,27 @@ export class MarketContextService {
     };
   }
 
-  /** Convert UTC to approximate ET hour (ET = UTC - 4 during EDT, -5 during EST) */
+  /**
+   * ET hour (0-23), DST-CORRECT.
+   *
+   * ⚠️ Delegate to `toEtMinutes()` — do not reintroduce month arithmetic here.
+   *
+   * This previously read:
+   *
+   *     const month = utc.getUTCMonth();
+   *     const isDST = month >= 2 && month <= 10; // Mar-Nov approximate DST
+   *     let etHour = utc.getUTCHours() - (isDST ? 4 : 5);
+   *
+   * with the comment *"Simplified: July = EDT (UTC-4). In production, use a timezone library."*
+   * Real US DST 2026 is **8 Mar -> 1 Nov**, so all of March and all of November were treated as
+   * EDT and the ET clock ran **an hour ahead for ~36 days a year** — which shifted every
+   * `sessions[].active` / `opensIn` / `closesIn` value this method feeds.
+   *
+   * ⚠️ This and `session-window.ts` were two copies of the SAME rule, kept identical on purpose.
+   * They are now both correct and both read from one owner.
+   */
   private getETHour(utc: Date): number {
-    // Simplified: July = EDT (UTC-4). In production, use a timezone library.
-    const month = utc.getUTCMonth(); // 0=Jan
-    const isDST = month >= 2 && month <= 10; // Mar–Nov approximate DST
-    let etHour = utc.getUTCHours() - (isDST ? 4 : 5);
-    if (etHour < 0) etHour += 24;
-    return etHour;
+    return Math.floor(toEtMinutes(utc) / 60) % 24;
   }
 
   /** Check if today is the 3rd Friday of the month (OpEx) */

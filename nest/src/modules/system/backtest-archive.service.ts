@@ -15,22 +15,19 @@ import { PrismaService } from '../../database/prisma.service';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { resolve, join } from 'path';
 import * as zlib from 'zlib';
+import { ARCHIVE_DATE_COLUMNS } from './retention.config';
 
 const ARCHIVE_DIR = resolve(process.cwd(), 'data', 'backtest-archive');
 const INDEX_FILE = join(ARCHIVE_DIR, 'index.json');
 
-// Whitelist: table/dateCol come from HTTP query params and are interpolated
-// into raw SQL (SELECT + DELETE). Without this, any table could be dumped and
-// wiped — or worse, backtick injection. Keep in sync with data-retention TABLE_CONFIG.
-const ARCHIVABLE_TABLES: Record<string, Set<string>> = {
-  directiveoutcome: new Set(['predictedAt']),
-  score: new Set(['timestamp']),
-  score_snapshot: new Set(['snappedAt']),
-  marketbar: new Set(['timestamp']),
-  strategy_evaluation: new Set(['evaluatedAt']),
-  decision_log: new Set(['timestamp']),
-  automation_event: new Set(['timestamp']),
-};
+// ⚠️ The per-table date columns now live in `retention.config.ts` — the ONE owner. This file used
+// to declare its own copy under the comment "Keep in sync with data-retention TABLE_CONFIG", which
+// is a wish rather than a mechanism: nothing failed if the two lists drifted, and a drifting entry
+// here would silently change WHICH ROWS AN ARCHIVE DELETES.
+//
+// `ARCHIVE_DATE_COLUMNS` is a deliberate SUPERSET of the retention key for `directiveoutcome` —
+// archiving may slice by `predictedAt` (a meaningful question: "archive July's predictions"), while
+// retention must bound on `createdAt` (when the row was actually written). See that file's header.
 
 interface ArchiveEntry {
   id: string;
@@ -68,7 +65,7 @@ export class BacktestArchiveService {
   ): Promise<{ exported: number; filePath: string | null }> {
     if (!this.prisma.isAvailable) return { exported: 0, filePath: null };
 
-    if (!ARCHIVABLE_TABLES[table]?.has(dateCol)) {
+    if (!ARCHIVE_DATE_COLUMNS[table]?.includes(dateCol)) {
       this.logger.warn(`Rejected archive request for non-whitelisted table/column: ${table}.${dateCol}`);
       throw new Error(`Table '${table}' with date column '${dateCol}' is not archivable`);
     }

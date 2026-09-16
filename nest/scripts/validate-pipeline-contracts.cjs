@@ -121,6 +121,124 @@ function scanObservedDenominator() {
   }
 }
 
+/**
+ * scanStaleScoringGuard() — INV-NO-STALE-SCORING (#827, #841).
+ *
+ * THE CONTRACT. A row in `directiveoutcome` claims a PREDICTION was made. A prediction made from
+ * bars that stopped days ago is not a prediction — it is a plausible number about a moment that
+ * has passed, and nothing downstream can tell the difference. So the ONE writer of
+ * `directiveoutcome` must be unreachable while the symbol's bars are stale.
+ *
+ * WHAT WAS TRUE, AND WHY A GUARD IS STILL NEEDED. `SignalEnvelopeService.buildEnvelope()` is the
+ * only caller of `recordOutcomes()`, and since #827 it returns early via `everyCadenceStale()`
+ * before recording. So the invariant currently HOLDS — but only because one function happens to
+ * sit above another. Nothing enforced it:
+ *
+ *   • a SECOND caller could be added anywhere in the codebase and would write rows freely;
+ *   • the check could be replaced by a base-cadence-only variant, which LOOKS equivalent and is
+ *     not. That exact regression nearly shipped on 2026-09-16: gating on the base cadence alone
+ *     skipped 11 symbols that were alive on 5-6 other timeframes (SPY 1m=12h stale but 5m=0.1h
+ *     fresh; XAUUSD 1m=8.6h but 15m=0.0h). A per-base-cadence check silently reclassifies healthy
+ *     symbols as dead.
+ *
+ * ⚠️ WHY THIS IS A SCAN AND NOT A CANARY. A canary asserts a marker is PRESENT; it cannot say
+ * "there is exactly one caller, and the guard runs BEFORE it in the same function body". Both
+ * halves of that are the contract. Position is checked because `everyCadenceStale` existing
+ * somewhere in the file while `recordOutcomes` sits ABOVE it would satisfy a mere presence check.
+ */
+function scanStaleScoringGuard() {
+  const WRITER = 'recordOutcomes';
+  const GUARD_FN = 'everyCadenceStale';
+  /** The definition itself, which is not a call site. */
+  const DEFINITION = `async ${WRITER}(`;
+  /** The over-rejecting near-miss: a freshness test on ONE cadence, not all of them. */
+  const BASE_ONLY_FNS = ['isStaleForCadence', 'cadenceStaleMs'];
+
+  const callSites = [];
+
+  for (const scope of ['src/modules']) {
+    for (const file of walk(path.join(NEST_ROOT, scope))) {
+      if (file.endsWith('.spec.ts') || file.endsWith('.test.ts')) continue;
+      const raw = fs.readFileSync(file, 'utf8');
+      const src = stripComments(raw);
+
+      // Count genuine call sites, ignoring the method definition.
+      let idx = 0;
+      while ((idx = src.indexOf(`${WRITER}(`, idx)) !== -1) {
+        const before = src.slice(Math.max(0, idx - 12), idx);
+        const isDefinition = before.includes('async ') || before.includes('function ');
+        if (!isDefinition) {
+          callSites.push({ file, src, at: idx });
+        }
+        idx += WRITER.length;
+      }
+    }
+  }
+
+  if (callSites.length === 0) {
+    fail(
+      'no-stale-scoring',
+      `no call site of \`${WRITER}()\` found under nest/src/modules`,
+      'INV-NO-STALE-SCORING: the scan could not find the writer it is meant to guard. ' +
+        'A verifier that cannot find its target must ERROR — a renamed method would otherwise ' +
+        'turn this guard green while `directiveoutcome` was written by something unchecked. ' +
+        'Update the WRITER constant in scanStaleScoringGuard() if the method was renamed (#841).',
+    );
+    return;
+  }
+
+  if (callSites.length > 1) {
+    fail(
+      'no-stale-scoring',
+      `${callSites.length} call sites of \`${WRITER}()\` — expected exactly 1 (${callSites
+        .map((c) => rel(c.file))
+        .join(', ')})`,
+      'INV-NO-STALE-SCORING: every writer of `directiveoutcome` must sit behind the staleness ' +
+        'guard. A second call site inherits no such guarantee and will happily record predictions ' +
+        'from dead bars. Route the new caller through buildEnvelope(), or extend this guard ' +
+        'deliberately — do not add a site and leave the guard ignorant of it (#827, #841).',
+    );
+  }
+
+  for (const site of callSites) {
+    const fileRel = rel(site.file);
+    const guardAt = site.src.indexOf(`${GUARD_FN}(`);
+
+    if (guardAt === -1) {
+      // Distinguish the two ways this goes wrong — they need different fixes.
+      const baseOnly = BASE_ONLY_FNS.filter((f) => site.src.includes(`${f}(`));
+      fail(
+        'no-stale-scoring',
+        `${fileRel} calls \`${WRITER}()\` but never calls \`${GUARD_FN}()\`` +
+          (baseOnly.length
+            ? `  (found ${baseOnly.join(', ')} instead — the BASE-CADENCE-ONLY variant)`
+            : ''),
+        baseOnly.length
+          ? `INV-NO-STALE-SCORING: \`${baseOnly.join('` / `')}\` tests ONE cadence. A symbol can be ` +
+              'stale on its base cadence and perfectly alive on another — measuring this on ' +
+              '2026-09-16, a base-cadence-only check skipped 11 symbols that had fresh bars ' +
+              '(SPY 1m=12h stale, 5m=0.1h fresh; XAUUSD 1m=8.6h, 15m=0.0h). Use ' +
+              `\`${GUARD_FN}()\`, which requires EVERY cadence to be stale before declaring the ` +
+              'symbol dead (#827, #841).'
+          : `INV-NO-STALE-SCORING: writing a prediction from stale bars produces a plausible ` +
+              'number for a moment that has passed. Guard the call with ' +
+              `\`${GUARD_FN}()\` and return an empty envelope (#827, #841).`,
+      );
+      continue;
+    }
+
+    if (guardAt > site.at) {
+      fail(
+        'no-stale-scoring',
+        `${fileRel}: \`${GUARD_FN}()\` is called AFTER \`${WRITER}()\` — the guard does not protect the write`,
+        `INV-NO-STALE-SCORING: the staleness check must run BEFORE anything is recorded, or the ` +
+          `row is already written by the time the symbol is judged dead. Move the ` +
+          `\`${GUARD_FN}()\` early-return above the \`${WRITER}()\` call (#827, #841).`,
+      );
+    }
+  }
+}
+
 function checkStaleWhitelist() {
   for (const w of WHITELIST) {
     // A rule enforced by canaries declares no scan name, so it can never appear in `held`.
@@ -307,6 +425,9 @@ const SCAN_ENFORCED = {
   'INV-MTF-BUNDLE': 'no-bundle-less-scoring',
   'INV-CADENCE-COVERAGE': 'timeframe-refresh-coverage',
   'INV-NO-FABRICATED-READING': 'no-fabricated-baseline',
+  // Enforced by a scan that checks POSITION and CARDINALITY, not merely presence: the one
+  // writer of `directiveoutcome` must call `everyCadenceStale()` BEFORE it records (#841).
+  'INV-NO-STALE-SCORING': 'no-stale-scoring',
   // Enforced by its own dedicated script (`validate-directive-group-kind.cjs`),
   // which runs earlier in `prebuild`. It is listed here because the wiring check
   // requires every invariant to name a guard, and a companion script is a guard.
@@ -341,6 +462,12 @@ const PROBE_ENFORCED = {
   // property of BROKER × SYMBOL, so no static check can answer it. Measured case (#US500):
   // tradeMode 0 on :5000 vs 4 on :5001 for the same ticker.
   'INV-TRADEABLE-ROUTE': 'scripts/contract-probe.cjs',
+  // Needed because NO build-time check could catch it: the API is STOPPED during a build
+  // (prisma generate holds the query-engine DLL), so prebuild is the one place this cannot
+  // run. A retention config change left `directiveoutcome` on an unindexed column and
+  // /api/system/health-dashboard 504'd at 32s against a 30s gateway timeout — the Health page
+  // rendered a permanent loading skeleton and NOTHING objected for a whole session (#841).
+  'INV-ENDPOINT-BUDGET': 'scripts/contract-probe.cjs',
 };
 
 /**
@@ -1029,6 +1156,7 @@ checkCanaries();
 scanBarWindows();
 scanScoreClamp();
 scanObservedDenominator();
+scanStaleScoringGuard();
 scanBundleLessScoring();
 scanFabricatedReadings();
 checkTimeframeCoverage();

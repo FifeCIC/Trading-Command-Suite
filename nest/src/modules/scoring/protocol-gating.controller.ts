@@ -134,6 +134,48 @@ export class ProtocolGatingController {
       };
     });
 
+    // ── Per-PROTOCOL measured ceiling (#840) ────────────────────────────────────────────────────
+    //
+    // ⚠️ WHY THIS IS SEPARATE FROM `bots` ABOVE. The per-bot rows answer "did THIS bot clear its
+    // bar" — which needs the bot to exist. The create form has no bot yet, so it needs the ceiling
+    // for ANY protocol, whether or not one has ever been configured. Same measurement, different
+    // question, so it is a second query rather than a wider join.
+    //
+    // ⚠️ ALL-TIME, NOT WINDOWED. `ProtocolHealthService` compares a bot's bar against the protocol's
+    // "highest composite EVER recorded", and that is the right basis here too: a bar above the
+    // all-time maximum is one the protocol has NEVER cleared, so restricting to 7 days would both
+    // understate the ceiling and make the warning flicker as history rolls off. This is the reuse
+    // the issue asked for — same definition, computed once for the create path.
+    //
+    // ⚠️ SAME SCALE AS `minComposite`. The percentage is `rawComposite / configuredSignalMax * 100`,
+    // identical to `achievedPct` above, so the form compares like with like. A raw composite here
+    // would be a units mismatch — the exact class of defect #839 was.
+    let protocolCeilings: Record<string, { ceilingPct: number; samples: number }> = {};
+    try {
+      const ceilings = await this.prisma.$queryRawUnsafe<Array<{
+        protocolId: string; ceilingPct: number | null; samples: bigint;
+      }>>(`
+        SELECT s.strategyId AS protocolId,
+               MAX(s.breakdown->>'$.rawComposite' / NULLIF(s.breakdown->>'$.configuredSignalMax', 0) * 100) AS ceilingPct,
+               COUNT(s.id) AS samples
+        FROM score s
+        WHERE s.strategyId IS NOT NULL
+        GROUP BY s.strategyId
+      `);
+      for (const c of ceilings) {
+        if (c.ceilingPct == null) continue;
+        protocolCeilings[String(c.protocolId)] = {
+          ceilingPct: Math.round(Number(c.ceilingPct) * 10) / 10,
+          samples: Number(c.samples),
+        };
+      }
+    } catch (err) {
+      // Non-fatal: the form simply cannot warn. Do NOT return an empty map silently as if every
+      // protocol were unmeasured — that would present "no warning" as "nothing to warn about".
+      this.logger.warn(`Per-protocol ceiling lookup failed: ${(err as Error).message}`);
+      protocolCeilings = {};
+    }
+
     return {
       generatedAt: new Date().toISOString(),
       windowDays: WINDOW_DAYS,
@@ -144,6 +186,13 @@ export class ProtocolGatingController {
         byStyle: STYLE_THRESHOLDS,
         note: 'Per-protocol override > trading style > default. The gate blocks a signal when signalPct is below the resolved bar.',
       },
+      /**
+       * Highest percentage each protocol has EVER achieved. Used by the create form to warn when a
+       * typed bar is above everything that protocol has reached (#840). `samples` lets the caller
+       * distinguish "measured and low" from "barely measured" — a ceiling from 3 readings is not
+       * evidence, which is the same 10-sample floor `ProtocolHealthService` uses.
+       */
+      protocolCeilings,
       bots: rows,
       summary: {
         total: rows.length,
