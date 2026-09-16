@@ -6,8 +6,12 @@
  * WHAT IT DOES
  * ------------
  * Turns any thrown value into a response body carrying a **stable code**:
- *
- *     { statusCode, code, severity, message, detail, docsUrl, params, error?, errors? }
+ * * This is STRUCTURED OUTPUT applied to failures: instead of a prose sentence that a caller has to
+ * interpret (and that no two callers interpret the same way), the API answers in a fixed schema —
+ * `{ code, params }` — and the client renders the wording. The same pattern the AI literature uses to
+ * make a model's answer machine-actionable is what makes an error machine-actionable here, and for the
+ * same reason: prose has to be parsed by guesswork, a schema does not.
+ * *     { statusCode, code, severity, message, detail, docsUrl, params, error?, errors? }
  *
  * and writes a log line that the same code can be found by, so a user's screenshot and the server
  * log can be joined:

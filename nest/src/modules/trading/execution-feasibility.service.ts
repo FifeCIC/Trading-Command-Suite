@@ -9,6 +9,16 @@ import { PyramidPolicyService } from './pyramid-policy.service';
 /**
  * ExecutionFeasibilityService — #723 shared trade-acceptance assessment.
  * ======================================================================
+ *
+ * WHAT KIND OF THING THIS IS (vocabulary)
+ * --------------------------------------
+ * This is a GUARDRAIL: a rule that constrains what an automated system may do, enforced OUTSIDE the
+ * component that made the decision. It is also a CONDITIONAL EDGE in the pipeline graph — pass → send,
+ * block → hold. Both words carry the same design constraint, and it is the reason this file must never
+ * grow a way to OVERRIDE its own verdict: a component allowed to overrule its own guardrail is not
+ * enforcing one. The caller may explain a block, surface a hint, or ask for a different symbol; it
+ * cannot turn a block into a pass.
+ *
  * ONE library, TWO phases. The same checks that gate a MANUAL trade at
  * execution time also annotate the signal at GENERATION time, so the card
  * shows execution blockers WITH change-hints before any click.

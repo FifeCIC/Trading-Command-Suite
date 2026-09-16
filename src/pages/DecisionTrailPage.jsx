@@ -6,6 +6,15 @@
  * /api/automation/status recentDecisions. No separate storage system.
  *
  * Supports ?symbol=AAPL for deep-linking from other views.
+ *
+ * WHAT THIS PAGE IS FOR, in one word: RATIONALE.
+ * Every automated decision needs an answer to "why did it do that", and a record of the rules that
+ * fired is the DETERMINISTIC half of that answer — which gate blocked the trade, which blocker carried
+ * a hint, which stages ran in what order. A model-driven stage would need to write its RATIONALE into
+ * this same trail rather than into a log of its own, because a second place where reasoning is recorded
+ * is a second place to look and the one nobody checks is the one that matters. If an AI stage is added
+ * later (see the AI-Assisted Systems terms in the glossary), this trail is where its explanation
+ * belongs — and until then, this page is the precedent that makes that decision easy.
  */
 
 import { useState, useMemo, useEffect } from 'react';

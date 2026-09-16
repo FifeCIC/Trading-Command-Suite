@@ -1,8 +1,34 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
+// ⚠️ SINGLE SOURCE for cadence→duration. See validate-timeframe-sources.cjs.
+//
+// A private `timeframeToMilliseconds()` used to live at the bottom of this file. It was a
+// DERIVED parser (`/^(\d+)(m|h|d)$/i`) and disagreed with the owner in two measured ways:
+//   - `1w`  -> 3600000 (ONE HOUR) where the owner says 604800000 — 168x too small
+//   - `'1M'` -> 60000 (ONE MINUTE) because of the `/i` flag, where the owner's case-sensitive
+//              map says 86400000 — a 1440x disagreement on the SAME string
+// It also returned 1 hour for anything unparseable, an arbitrary fallback with no basis.
+import { barLengthMs } from '../../common/utils/timeframe';
 
 // ── Configuration ────────────────────────────────────────────
+// ⚠️ CONCEPT — this file is a SAGA, not a transaction. Read before changing it.
+//
+// A decision is made NOW; its outcome is only knowable LATER (in 15m, in 4h, sometimes in the next
+// session). That is the definition of a saga — a multi-step operation that cannot be rolled back by a
+// single transaction, so each step gets a defined COMPENSATING action instead. Here the compensation is
+// an unfilled horizon being recorded as NULL rather than as a zero: "not yet knowable" and "did not
+// happen" are different facts, and collapsing them silently biases every statistic computed later.
+//
+// Two consequences worth keeping in mind while reading the sweep below:
+//   - the row is written when the outcome BECOMES knowable, so the sweep must be able to resolve a
+//     horizon across a market close (#830 — it now does, via a 72h next-session window). A horizon that
+//     can never resolve is a compensating action that never completes: the statistics quietly stop
+//     filling instead of erroring.
+//   - the sweep is a DRAIN, not a big-bang. It runs on a cron boundary against the shared Prisma pool,
+//     and an oversized batch starves the API the whole app is serving (#828 — 1000 → 250, with visited /
+//     filled / finalised counted separately so a fill-nothing sweep cannot report success).
+//
 // Set OUTCOME_TRACKING_ENABLED=false to disable all outcome recording.
 // OUTCOME_TRACKING_DEDUP_WINDOW_MS controls the dedup window (default 5 min).
 // These can be overridden via environment variables for production tuning.
@@ -529,7 +555,7 @@ export class OutcomeTrackerService {
       const barTimeframe = canonicalTimeframe(timeframe);
       // The NOMINAL window, kept only to classify a resolution as "on time" or
       // "delayed across a close". It is no longer the search bound.
-      const nominalToleranceMs = Math.max(15 * 60_000, timeframeToMilliseconds(barTimeframe) * 2);
+      const nominalToleranceMs = Math.max(15 * 60_000, barLengthMs(barTimeframe) * 2);
       const bar = await this.prisma.marketBar.findFirst({
         where: {
           symbolId,
@@ -654,12 +680,4 @@ export class OutcomeTrackerService {
     }
     return result.count;
   }
-}
-
-function timeframeToMilliseconds(timeframe: string): number {
-  const match = /^(\d+)(m|h|d)$/i.exec(timeframe);
-  if (!match) return 60 * 60_000;
-  const value = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  return value * (unit === 'm' ? 60_000 : unit === 'h' ? 60 * 60_000 : 24 * 60 * 60_000);
 }

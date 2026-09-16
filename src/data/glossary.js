@@ -365,6 +365,232 @@ const GLOSSARY = [
     category: 'Directive Categories',
     aliases: ['macro', 'macro directives'],
   },
+
+  // ── Architecture & Pipeline ─────────────────────────────────────────────
+  // Vocabulary for HOW the pipeline is shaped, as opposed to what it measures.
+  // Sources: the multi-agent AI trading literature (see architecture-framework / theory notes).
+  {
+    term: 'assembly line',
+    definition: 'A pipeline in which each stage does ONE job and hands its result to the next stage, in a fixed sequence. A useful way to read the app: directives measure, the gate decides, the queue routes, the bridge executes. Naming it matters because an assembly line stage should never do a later stage\'s job — when the gate starts sizing positions, or the bridge starts deciding direction, the line has been broken.',
+    category: 'Architecture & Pipeline',
+    aliases: ['pipeline', 'assembly-line'],
+  },
+  {
+    term: 'separation of concerns',
+    definition: 'The principle that each component owns ONE decision, so a fault has one place to live. In this app: directives produce measurements, the gate vetoes, the queue routes by protocol subscription, the bridge talks to the broker. A component that quietly does two jobs is the most expensive kind of technical debt, because fixing one copy still leaves the other wrong.',
+    category: 'Architecture & Pipeline',
+    aliases: ['concerns', 'single responsibility'],
+  },
+  {
+    term: 'pipeline topology',
+    definition: 'The SHAPE of a pipeline — which stages exist and the order they may run in. Two systems can use the same stages and still differ completely in topology: a line (A→B→C) cannot express a veto that must happen twice, and a graph with conditional routing cannot be read as a simple list. Worth naming because a change to the order is a change to the topology, not a tweak.',
+    category: 'Architecture & Pipeline',
+    aliases: ['topology', 'pipeline shape'],
+  },
+  {
+    term: 'deterministic order',
+    definition: 'Running the same stages in the same sequence every cycle, so two runs on the same data produce the same result. Not a performance detail: this app enforces bar ordering and one cadence per bar array with machine-checked invariants (INV-BAR-ORDER, INV-CADENCE) because a silently reordered window produces plausible numbers with no error — the hardest class of bug to notice.',
+    category: 'Architecture & Pipeline',
+    aliases: ['deterministic sequencing', 'stable order'],
+  },
+  {
+    term: 'node',
+    definition: 'One stage of a pipeline, treated as a single unit with one input and one output — the standard term in multi-agent and graph-based systems (a Signal Node, a Risk Node, a Decision Node). Reading this app as nodes helps: each has a name, an input contract and an output contract, and a node that cannot describe its contract is probably doing two things.',
+    category: 'Architecture & Pipeline',
+    aliases: ['nodes', 'stage', 'pipeline stage'],
+  },
+  {
+    term: 'orchestrator',
+    definition: 'The component that decides WHAT runs WHEN — it holds no market logic of its own. Here it is the automation loop: it wakes on a cadence, asks scoring for a result, asks the gate, then routes what survives. Keeping the orchestrator logic-free is what stops scheduling bugs from looking like trading bugs.',
+    category: 'Architecture & Pipeline',
+    aliases: ['orchestration', 'orchestration layer', 'orchestrated'],
+  },
+  {
+    term: 'state machine',
+    definition: 'A design where the system can only be in a set of named states and may only move between them on defined triggers. The signal and position lifecycles follow this shape (candidate → gated → queued → sent → filled/rejected → closed). Its value is that an illegal transition becomes impossible to express rather than merely discouraged.',
+    category: 'Architecture & Pipeline',
+    aliases: ['state-machine', 'state diagram'],
+  },
+  {
+    term: 'pipeline state',
+    definition: 'The object carried from stage to stage so later stages do not re-derive what earlier ones already know (the multi-agent literature calls it the state dictionary). In this app the equivalent is the scoring envelope plus its blockers and hints — passing that forward is what lets a card explain WHY a trade was blocked without re-running the gate.',
+    category: 'Architecture & Pipeline',
+    aliases: ['state dictionary', 'shared state', 'envelope'],
+  },
+  {
+    term: 'conditional edge',
+    definition: 'A routing step that chooses the next stage from a condition rather than running a fixed sequence — pass → execute, fail → hold. The pre-trade gates are conditional edges: they do not alter the input, they decide which path it takes. Naming them this way keeps a gate a ROUTER rather than a modifier.',
+    category: 'Architecture & Pipeline',
+    aliases: ['conditional routing', 'branch', 'router'],
+  },
+  {
+    term: 'monolithic',
+    definition: 'One component that does everything — the anti-pattern this architecture is built to avoid. A single script holding data, scoring, risk and execution cannot be tested in parts, cannot fail in parts, and cannot be reasoned about when it misbehaves; the failure is always "something in there is wrong".',
+    category: 'Architecture & Pipeline',
+    aliases: ['monolith', 'big ball of mud'],
+  },
+
+  // ── AI-Assisted Systems ─────────────────────────────────────────────────
+  // The vocabulary needed to describe an AI stage honestly. This app is deliberately
+  // deterministic-core first; these terms exist so the framing is ready when an AI stage is added.
+  {
+    term: 'deterministic core',
+    definition: 'The part of a system whose output is fully reproducible from its input — same data in, same decision out, every time. This app is a deterministic core by design: a scoring pipeline, gates and a bridge whose behaviour can be tested and argued about. The value of the term is that it defines what is being PROTECTED when an AI stage is added around it.',
+    category: 'AI-Assisted Systems',
+    aliases: ['deterministic system', 'reproducible core'],
+  },
+  {
+    term: 'probabilistic',
+    definition: 'A component that returns a distribution of plausible answers rather than one guaranteed answer — every LLM is probabilistic, even at temperature 0. The word matters because it explains why an AI stage can never be the last line of defence: a probabilistic component must be wrapped in deterministic checks, never trusted to enforce them.',
+    category: 'AI-Assisted Systems',
+    aliases: ['probabilistic model', 'non-deterministic'],
+  },
+  {
+    term: 'LLM as the brain',
+    definition: 'An architecture where a language model makes the final BUY/SELL/HOLD call, with the quantitative and risk stages feeding it context. The honest framing for this app: the brain is the part being ADDED, not the part being replaced. A system whose edge depends on the model cannot be tested without the model, so the deterministic core must be profitable and verifiable on its own BEFORE a brain is bolted on top.',
+    category: 'AI-Assisted Systems',
+    aliases: ['decision node', 'the brain', 'AI decision layer'],
+  },
+  {
+    term: 'advisory-only AI',
+    definition: 'An AI stage that proposes and explains but cannot place an order — its output is a suggestion a rule or a person must still accept. The safest first use of a model here: it can disagree with the pipeline, it can rank the candidates the gates already cleared, but it cannot widen a position, ignore a veto, or bypass the duplicate guard.',
+    category: 'AI-Assisted Systems',
+    aliases: ['advisory AI', 'suggest-only', 'human-in-the-loop'],
+  },
+  {
+    term: 'guardrail',
+    definition: 'A rule that constrains what an automated system may do, enforced OUTSIDE the component making the decision. Guardrails are what make autonomy acceptable; in this app they are the pre-trade gates, the bridge size and position caps, the duplicate-order window and the market-closed check. A guardrail that lives only in a prompt is not a guardrail, it is a request.',
+    category: 'AI-Assisted Systems',
+    aliases: ['guardrails', 'hard limit', 'safety rail'],
+  },
+  {
+    term: 'hard-coded guardrail',
+    definition: 'A guardrail written in code rather than expressed to a model — a fixed cap, a fixed floor, a fixed veto. Deliberately unglamorous: its point is that it cannot be argued with, cannot be reinterpreted, and fails closed when the rest of the system is confused.',
+    category: 'AI-Assisted Systems',
+    aliases: ['static guardrail', 'hard limit'],
+  },
+  {
+    term: 'structured output',
+    definition: 'Requiring a model to answer in a fixed schema — action, size, rationale — so ordinary code can act on the result. Without it you get prose that must be parsed by guesswork; with it, the model\'s answer is validated the same way any other input is, and an unparseable answer is a rejected answer rather than a crash.',
+    category: 'AI-Assisted Systems',
+    aliases: ['structured response', 'JSON schema output', 'constrained decoding'],
+  },
+  {
+    term: 'rationale',
+    definition: 'The plain-English explanation a model gives for its decision, shown alongside the decision itself. For an AI stage this is not a nicety — it is the only way a human can audit a probabilistic step, and it is the reason this app already keeps a Decision Trail: the record exists so a decision can be explained after the fact, whoever made it.',
+    category: 'AI-Assisted Systems',
+    aliases: ['reasoning', 'explanation', 'why'],
+  },
+  {
+    term: 'cognitive console',
+    definition: 'A UI surface that streams a system\'s reasoning as it happens, rather than only its results. This app\'s Decision Trail is the deterministic half of the same idea — what was considered, what was rejected, and why. Naming it makes the gap clear: the trail records RULES that fired, where a cognitive console would also record a model\'s live narration.',
+    category: 'AI-Assisted Systems',
+    aliases: ['reasoning console', 'live reasoning view'],
+  },
+  {
+    term: 'retrieval-augmented generation',
+    definition: 'Answering with retrieved documents as context instead of relying on what the model memorised — often shortened to RAG. The app already does the deterministic version of this for directives: a directive reads stored news, fundamentals or insider rows for ITS symbol rather than asking a model what it remembers. The retrieval half is the part that survives a model change.',
+    category: 'AI-Assisted Systems',
+    aliases: ['RAG', 'retrieval augmentation', 'grounded generation'],
+  },
+  {
+    term: 'embeddings',
+    definition: 'Turning text into numbers that represent its MEANING, so articles can be compared by similarity rather than by keyword. Useful to know because it is the usual next step for news: keyword matching finds articles that share words, embeddings find articles that share subject.',
+    category: 'AI-Assisted Systems',
+    aliases: ['embedding', 'vector representation'],
+  },
+  {
+    term: 'vector database',
+    definition: 'A store built for similarity search over embeddings — give it one vector, get the nearest stored ones. The trade-off against this app\'s SQL tables is honest: a vector store is better at "find related news", worse at "find every row for this symbol between two timestamps", which is why the reference above is a hybrid rather than a replacement.',
+    category: 'AI-Assisted Systems',
+    aliases: ['vector store', 'vector DB', 'Pinecone'],
+  },
+  {
+    term: 'hallucination',
+    definition: 'A confident, fluent, WRONG output from a model — most often a fabricated fact or figure rather than an obvious error. It is the reason a probabilistic stage cannot write to the database unchecked: a hallucinated price is indistinguishable from a real one once it is stored.',
+    category: 'AI-Assisted Systems',
+    aliases: ['hallucinated', 'confabulation', 'fabrication'],
+  },
+  {
+    term: 'model error',
+    definition: 'A wrong decision caused by the model rather than by the data or the code — one of the four failure classes an automated system must expect, alongside bad data, software failure and an unintended order. Worth distinguishing because the fix differs: bad data is an import bug, a model error is a reasoning bug, and only one of those is fixed by a retry.',
+    category: 'AI-Assisted Systems',
+    aliases: ['model risk', 'inference error'],
+  },
+  {
+    term: 'inference',
+    definition: 'Running a model to get an output. Inference LATENCY is the delay before the answer arrives, and it is why trading systems avoid remote model calls mid-cycle: a ten-second wait is not a slow decision, it is a stale one — the price the decision was based on has already moved.',
+    category: 'AI-Assisted Systems',
+    aliases: ['infer', 'inference latency', 'sub-second inference'],
+  },
+  {
+    term: 'prompt',
+    definition: 'The instruction text given to a model, including whatever context is supplied with it. An engineered prompt is assembled from the pipeline state (indicators, risk constraints, retrieved news) rather than written by hand — which is exactly why a model stage should receive the SAME state the deterministic stages used, and not a fresh summary of it.',
+    category: 'AI-Assisted Systems',
+    aliases: ['prompts', 'prompt engineering', 'engineered prompt'],
+  },
+  {
+    term: 'AGI',
+    definition: 'Artificial general intelligence — a system able to learn and perform any intellectual task a person can, rather than one narrow job. Useful as a horizon marker, not a plan: a trading system that is correct WITHOUT general intelligence is a prerequisite, because an AGI stage would still inherit the same problem — its output must be verifiable against something that does not depend on it.',
+    category: 'AI-Assisted Systems',
+    aliases: ['artificial general intelligence', 'general AI'],
+  },
+
+  // ── Data & Operations ───────────────────────────────────────────────────
+  {
+    term: 'time-series table',
+    definition: 'A table whose rows are ordered events (bars, fills, scores) and whose queries are almost always "for this symbol, between these times". Databases built for this partition storage by time (TimescaleDB calls the partitions hypertables) because a single huge table makes recent-data queries scan history they do not need.',
+    category: 'Data & Operations',
+    aliases: ['hypertable', 'time series', 'partitioned table'],
+  },
+  {
+    term: 'pub/sub',
+    definition: 'Publish/subscribe — a component broadcasts an event on a channel and interested consumers receive it, without the sender knowing who is listening. The alternative is polling, where every consumer asks repeatedly and most answers are "nothing new". This app still polls for most surfaces, which is why a short refresh interval feels alive and a slow one feels stale.',
+    category: 'Data & Operations',
+    aliases: ['publish-subscribe', 'event channel', 'pubsub'],
+  },
+  {
+    term: 'backpressure',
+    definition: 'What happens when work arrives faster than it can be processed: without a policy, the queue grows, memory grows, and everything slows together. The term is useful because "the system is slow" and "the system is being pushed harder than it can drain" look identical from outside and need different fixes.',
+    category: 'Data & Operations',
+    aliases: ['queue pressure', 'overload'],
+  },
+  {
+    term: 'dead letter',
+    definition: 'A message that repeatedly fails and is set aside instead of blocking the queue forever — the dead-letter queue is where poison messages go to be inspected. Without one, a single bad item can stall every item behind it while reporting no error at all.',
+    category: 'Data & Operations',
+    aliases: ['dead-letter queue', 'DLQ', 'poison message'],
+  },
+  {
+    term: 'saga',
+    definition: 'A multi-step operation that cannot be rolled back with one transaction, so each step gets a defined COMPENSATING action (if the order was sent but the record failed, the compensation is a reconciliation, not an undo). Trading is inherently a saga: the broker has already acted, so "cancel" means "reconcile", never "un-run".',
+    category: 'Data & Operations',
+    aliases: ['compensating transaction', 'saga pattern'],
+  },
+  {
+    term: 'runbook',
+    definition: 'A short, ordered procedure for a known failure — what to check, in what order, and when to stop. Valuable precisely because the person reading it is under pressure and the system is already misbehaving; it is the difference between diagnosing a fault and guessing at one.',
+    category: 'Data & Operations',
+    aliases: ['run book', 'playbook', 'incident procedure'],
+  },
+  {
+    term: 'volatility scaling',
+    definition: 'Adjusting position size to how much the instrument actually moves, so a quiet and a violent market carry comparable risk. Without it, a fixed lot size means the same trade is several times riskier on one symbol than another — the usual inputs are ATR or a model of volatility such as GARCH.',
+    category: 'Data & Operations',
+    aliases: ['volatility-adjusted sizing', 'risk parity sizing'],
+  },
+  {
+    term: 'GARCH',
+    definition: 'A family of models that forecast volatility from the fact that volatility clusters — big moves follow big moves. Used for sizing rather than direction: it answers "how much might this move", never "which way".',
+    category: 'Data & Operations',
+    aliases: ['GARCH model', 'volatility forecasting'],
+  },
+  {
+    term: 'drawdown-adjusted return',
+    definition: 'A performance figure that accounts for the pain taken to earn it — return divided by the drawdown suffered (or by volatility, as in Sharpe/Sortino). Raw return alone flatters a strategy that made 20% via a 40% plunge; the adjustment is what makes two strategies comparable at all.',
+    category: 'Data & Operations',
+    aliases: ['risk-adjusted return', 'Sharpe', 'Sortino', 'Calmar'],
+  },
 ];
 
 /**

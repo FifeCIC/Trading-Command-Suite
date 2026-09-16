@@ -8,6 +8,19 @@
  *           Default 200 bars to satisfy directives requiring deep lookback.
  *   RECORD: fetches 500+ bars/symbol, on-demand — for backtesting
  *
+ * ⚠️ CONCEPT — DETERMINISTIC ORDER, and the stamp contract (#832, 2026-09-15)
+ * -------------------------------------------------------------------------
+ * A bar array is a TIME SERIES, so its meaning depends on two things that are invisible in the data:
+ * the ORDER of the bars and the CONVENTION of the timestamp. Both were wrong at once here: 4h bars
+ * were stamped at bucket CLOSE instead of OPEN, which put the newest bar ~52 minutes in the FUTURE and
+ * made the automation loop skip every pass on a clock-skew guard. 29 duplicate bucket rows were
+ * repaired alongside it.
+ *
+ * The contract is now explicit — "a bar's OPEN cannot be in the future" — and enforced in BOTH bar
+ * writers. Learn the general lesson rather than the specific one: a re-ordered or re-stamped array
+ * produces PLAUSIBLE NUMBERS WITH NO ERROR, which is the hardest class of defect in this codebase.
+ * Deterministic order is not a performance property; it is what makes a score comparable over time.
+ *
  * Config via environment variables:
  *   BAR_REFRESH_LIVE_LIMIT      — bars per symbol in live mode (default 200)
  *   BAR_REFRESH_RECORD_LIMIT    — bars per symbol in record mode (default 500)
@@ -55,7 +68,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
-import { isBarFutureStamped, alignBarTimestamp } from '../../common/utils/timeframe';
+import { isBarFutureStamped, alignBarTimestamp, isStaleForCadence, cadenceStaleMs } from '../../common/utils/timeframe';
 
 // Avoid importing the concrete adapter class
 interface BarProvider {
@@ -440,29 +453,20 @@ export class BarRefreshService {
     const fallbackUrls = this.mt5Conn.getBrokerIds()
       .map((id) => this.mt5Conn.getUrl(id))
       .filter((url) => url !== primaryUrl);
-    // Staleness tolerance per cadence, for the multi-broker fallback below.
+    // Staleness tolerance per cadence — SINGLE OWNER as of 2026-09-16.
     //
-    // ⚠️ `1m` MUST be listed (#780). Without it, `1m` fell through to the 24h
-    // default — so a genuinely stale 1m feed (e.g. `UK100` returning a date four
-    // months old) was correctly rejected, but for the wrong reason, and the
-    // tolerance bore no relation to the cadence. Keep this in step with
-    // `barLengthMs()` below.
-    const TF_STALE_MS: Record<string, number> = {
-      '1m': 1 * 3600_000,
-      '5m': 2 * 3600_000,
-      '15m': 4 * 3600_000,
-      '1h': 12 * 3600_000,
-      '4h': 24 * 3600_000,
-      '1d': 72 * 3600_000,
-    };
+    // ⚠️ This table used to be defined RIGHT HERE as `TF_STALE_MS`, and `barLengthMs()`'s doc
+    // comment referred to it by name — a cross-file reference to a local, which is how a second
+    // copy starts. It now lives in `common/utils/timeframe.ts` because `signal-envelope.service.ts`
+    // needs the SAME thresholds to decide whether a symbol is scoreable at all (#827). Two copies
+    // would drift, and the drift would be silent: ingest would accept what scoring rejects.
     const newestOf = (bs: any[]) => Math.max(
       ...bs.map((b: any) => new Date(b.timestamp).getTime()).filter((t: number) => !Number.isNaN(t)),
     );
-    const isStaleSet = (bs: any[], tf: string) => {
-      if (!bs || !bs.length) return true;
-      const threshold = TF_STALE_MS[tf] ?? 24 * 3600_000;
-      return Date.now() - newestOf(bs) > threshold;
-    };
+    // Empty counts as stale, preserving the original semantics; the TOLERANCE decision is delegated
+    // so there is exactly one definition of "too old for this cadence" in the application.
+    const isStaleSet = (bs: any[], tf: string) =>
+      !bs || !bs.length || isStaleForCadence(newestOf(bs), tf);
 
     // ── Bar-length guard (#780) ────────────────────────────────────────────
     //
@@ -492,6 +496,10 @@ export class BarRefreshService {
     // The rule itself lives in `common/utils/timeframe.ts` so the probe and any
     // future writer share ONE definition (ADR-014).
     let impossibleBars = 0;
+    // Counts bar sets rejected because EVERY broker's newest bar was older than this
+    // cadence's tolerance. Mirrors `impossibleBars` so a skipped stale set is visible in
+    // the completion log rather than looking like a clean refresh (#838).
+    let staleRejected = 0;
     const fetchBridgeCandles = async (url: string, symbol: string, tf: string, count: number): Promise<any[]> => {
       try {
         const res = await fetch(
@@ -539,6 +547,59 @@ export class BarRefreshService {
             }
           }
           if (!bars || bars.length === 0) continue;
+
+          // ⚠️ RE-CHECK FRESHNESS AFTER THE FALLBACK (#838, mirrors #832).
+          //
+          // `isStaleSet` was consulted ONCE, to decide whether to TRY another broker. It was
+          // never consulted again to decide whether the surviving set is USABLE — the only
+          // post-fallback rejection was for EMPTY. So when every broker was stale, the
+          // least-stale set was persisted to `marketbar`.
+          //
+          // That is PERMANENTLY HARMFUL for the same reason a future-stamped bar is: the
+          // upsert below keys on `(symbolId, timeframe, timestamp)`, and a later fetch carries
+          // a DIFFERENT timestamp, so the stale row is never matched. It is not overwritten —
+          // the fresh row is inserted ALONGSIDE it. If the stale row happens to be the newest,
+          // `MAX(timestamp)` is then months old and every freshness check downstream reads the
+          // symbol as stale, which is the original #781 symptom.
+          //
+          // Rejecting loses NOTHING: a stale set describes the wrong moment, and a fresher
+          // fetch still writes normally because it is a different code path (this check only
+          // SKIPS, it never deletes). The tolerance is already generous enough for a legitimate
+          // weekend or gap (1d = 72h, which is exactly Fri 00:00 -> Mon 00:00), so a quiet
+          // symbol with no new bars is not rejected — and if it were, there is nothing new to
+          // write anyway.
+          //
+          // Applies to ALL providers, not just mt5. The fallback is mt5-only, but a stale
+          // Binance or routed set is equally unoverwritable.
+          if (isStaleSet(bars, tf)) {
+            staleRejected++;
+            // ⚠️ DEBUG, NOT WARN — and that is a deliberate, measured decision (#838).
+            //
+            // A stale set is rejected on two very different occasions, and only one of them is
+            // worth waking anyone for:
+            //
+            //   1. A SESSION BREAK. Measured live 2026-09-15: 18 pairs were stale and every one
+            //      was `1m`, 1.9-4.6h old, on a symbol ALIVE on 5-6 other timeframes — SPY, QQQ,
+            //      AMZN, UK100, GER40. That is simply the overnight gap: the `1m` tolerance is 1h
+            //      and a US equity's nightly gap is ~17h. This recurs EVERY night for every equity.
+            //
+            //   2. A DEAD FEED. 233 further pairs measured were 3-60 DAYS old. Nothing is alive.
+            //
+            // Warning on (1) would emit ~18 lines every night for perfectly correct behaviour, and
+            // noise of that kind is precisely how a check gets switched off — this repo has already
+            // lost two guards that way. Case (2) is still surfaced: the aggregate warning and the
+            // completion-log count below name the total, so a dead feed cannot pass unnoticed.
+            //
+            // Note the rejection is harmless in case (1) regardless: those rows are already stored,
+            // so skipping the write is a no-op. Rejecting NEVER deletes — it only declines to write.
+            this.logger.debug(
+              `Skipped stale bar set for ${symbol} (${tf}): newest is ${new Date(newestOf(bars)).toISOString()}, ` +
+              `beyond the ${cadenceStaleMs(tf)}ms tolerance for this cadence, and no broker had a ` +
+              `fresher set. A stale bar silently describes the wrong moment, and because the upsert keys on ` +
+              `timestamp it could never be overwritten — rejecting it loses nothing (#838, mirrors #832).`,
+            );
+            continue;
+          }
 
           const dbSymbol = await this.prisma.symbol.findFirst({ where: { ticker: symbol } });
           if (!dbSymbol) continue;
@@ -657,9 +718,21 @@ export class BarRefreshService {
       );
     }
 
+    // Surface rejected stale sets for the same reason (#838): a dropped bar set must not look
+    // like a clean refresh, and a burst of them is the signature of a dead or frozen broker
+    // rather than of a quiet market.
+    if (staleRejected > 0) {
+      this.logger.warn(
+        `Bar refresh: SKIPPED ${staleRejected} stale bar set(s) — every broker's newest bar was ` +
+        `outside its cadence tolerance. These were not written. Either the market is genuinely ` +
+        `closed, or a broker is serving a frozen feed; check before trusting this symbol (#838).`,
+      );
+    }
+
     this.logger.log(
       `Bar refresh complete (${this.mode}): ${upserted} bars for ${symbols.length} symbols` +
       (impossibleBars ? `, ${impossibleBars} impossible skipped` : '') +
+      (staleRejected ? `, ${staleRejected} stale sets skipped` : '') +
       (errors.length ? ` (${errors.length} errors)` : ''),
     );
     return { upserted, symbols, errors };
