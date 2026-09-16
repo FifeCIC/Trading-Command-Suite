@@ -159,11 +159,32 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
     onSuccess: (r) => {
       if (r?.success === false) {
         // The bridge/API refused the order. Its own wording carries the specifics (broker message,
-        // retcode) and is preserved verbatim as the notice's `cause` — never discarded. We do NOT
-        // pattern-match that prose to choose a code: the code names the OPERATION that failed.
-        setError(notice('TCS-TRADE-005', {
+        // retcode) and is preserved verbatim as the notice's `cause` — never discarded.
+        //
+        // ⚠️ USE THE CODE THE SERVER SENT. This used to hardcode 'TCS-TRADE-005', on the reasoning
+        // that "the code names the OPERATION that failed". That reasoning breaks down, because some
+        // codes carry a CAUSE-SPECIFIC `action`, and TCS-TRADE-005's action asserts a broker
+        // involvement that does not always exist:
+        //
+        //   "Broker refusals carry a retcode — the bridge reports the symbol, the filling mode it
+        //    tried and the modes the broker does allow."
+        //
+        // A circuit-breaker refusal contacts NO broker, so there is no retcode and no filling mode
+        // to look at — the user is sent hunting for information that cannot exist. Observed with
+        // signal 507f7e90 (VIX): cause correctly read "Bridge unreachable (circuit breaker active)"
+        // while the fix text talked about retcodes.
+        //
+        // `signal-actions.service.ts` already returns an accurate code and params for these cases
+        // (#826 Phase 3 — the adapter computes TCS-INTEG-001 for "no response" and TCS-INTEG-002 for
+        // "breaker active"). Dropping it here is what undid that work, so: prefer the server's code,
+        // and fall back to TCS-TRADE-005 only when it genuinely did not supply one.
+        const code = r?.code || 'TCS-TRADE-005';
+        setError(notice(code, {
           symbol: envelope.symbol,
           detail: r.error || 'The broker refused the order without giving a reason.',
+          // Pass the server's params through so codes whose placeholders are richer than
+          // {symbol}/{detail} still render their real values instead of leaving a blank.
+          ...(r?.params ?? {}),
         }));
       } else {
         // Replace the trade button with the placed order — clicking it opens
