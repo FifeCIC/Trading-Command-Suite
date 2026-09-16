@@ -107,6 +107,16 @@ class BridgeRejectedError extends Error {
   }
 }
 
+/**
+ * Circuit-breaker state for ONE bridge. Held per broker so a failure on one bridge
+ * cannot suppress requests to another (#846).
+ */
+interface BreakerState {
+  consecutiveErrors: number;
+  tripped: boolean;
+  trippedAt: number | null;
+}
+
 @Injectable()
 export class Mt5Adapter implements IProviderAdapter {
   readonly name = 'MT5';
@@ -114,9 +124,65 @@ export class Mt5Adapter implements IProviderAdapter {
   readonly supportsBrokerage = true;
   private readonly logger = new Logger(Mt5Adapter.name);
   private readonly bridgeUrl: string;
-  consecutiveErrors = 0;
-  tripped = false;
-  private trippedAt: number | null = null;
+
+  /** Errors before a broker's bridge is considered down. */
+  private static readonly MAX_ERRORS = 10;
+  /** How long a tripped breaker holds before it is allowed to retry. */
+  private static readonly COOLDOWN_MS = 60_000;
+
+  /**
+   * Per-broker circuit-breaker state (#846).
+   *
+   * ⚠️ WHY THIS IS KEYED BY BROKER, NOT A SINGLE FLAG
+   * ------------------------------------------------
+   * Each call carries a `route` with its own `brokerId` and its own bridge URL, and the
+   * two bridges fail INDEPENDENTLY. This used to be one global `tripped` boolean and one
+   * global `consecutiveErrors` counter, so 10 consecutive failures against ONE bridge
+   * stopped traffic to ALL of them.
+   *
+   * Measured 2026-09-16: MetaQuotes-Demo (:5000, broker 2) had its terminal disconnected
+   * while PepperstoneUK-Demo (:5001, broker 3) was healthy. A VIX order — routed to
+   * broker 3 — was refused with "Bridge unreachable (circuit breaker active)", and every
+   * `bridge_event` row naming the trip carried broker 2's account (10011309743). So a
+   * working broker was gagged by an unrelated one, with nothing sent to the market.
+   *
+   * This is not a new design decision: `lastBridgeStateByBroker` below already applies
+   * exactly this principle — "one broker's outage must not mask another's (#747)" — the
+   * breaker was simply never given the same treatment. The safety property is unchanged
+   * per broker; what changes is that one broker's failure no longer inherits to another.
+   *
+   * Key `0` means "no route / the single default bridge", so a deployment with one bridge
+   * behaves exactly as before.
+   */
+  private readonly breakers = new Map<number, BreakerState>();
+
+  /** Worst-case view across brokers — for logging and back-compat reads only. */
+  get consecutiveErrors(): number {
+    let worst = 0;
+    for (const b of this.breakers.values()) worst = Math.max(worst, b.consecutiveErrors);
+    return worst;
+  }
+
+  /** True when ANY broker is tripped. Prefer {@link isTripped} for a specific route. */
+  get tripped(): boolean {
+    for (const b of this.breakers.values()) if (b.tripped) return true;
+    return false;
+  }
+
+  private breakerFor(brokerId: number | undefined): BreakerState {
+    const key = brokerId ?? 0;
+    let state = this.breakers.get(key);
+    if (!state) {
+      state = { consecutiveErrors: 0, tripped: false, trippedAt: null };
+      this.breakers.set(key, state);
+    }
+    return state;
+  }
+
+  /** Is THIS broker's breaker open? Never consults another broker's state. */
+  private isTripped(brokerId?: number): boolean {
+    return this.breakerFor(brokerId).tripped;
+  }
 
   private lastPositionSnapshotAuthoritative = false;
 
@@ -229,16 +295,20 @@ export class Mt5Adapter implements IProviderAdapter {
   private async bridgeGet<T>(path: string, route?: ResolvedSymbolRoute): Promise<T | null> {
     const url = route?.url ?? this.bridgeUrl;
     const brokerId = route?.brokerId;
-    if (this.tripped) {
-      const cooldownMs = 60_000; // 1 min circuit breaker
-      if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
-        this.tripped = false;
-        this.consecutiveErrors = 0;
-        this.logger.log('MT5 circuit breaker released after cooldown');
+    // ⚠️ Per-broker breaker state (#846). Reading `this.tripped` here was the defect: it
+    // consulted a single global flag, so a failure on another bridge skipped this request.
+    const breaker = this.breakerFor(brokerId);
+    if (breaker.tripped) {
+      const cooldownMs = Mt5Adapter.COOLDOWN_MS;
+      if (breaker.trippedAt && Date.now() - breaker.trippedAt >= cooldownMs) {
+        breaker.tripped = false;
+        breaker.trippedAt = null;
+        breaker.consecutiveErrors = 0;
+        this.logger.log(`MT5 circuit breaker released after cooldown (broker ${brokerId ?? 'default'})`);
         this.logBridgeEvent('reconnected', 'Circuit breaker released', brokerId);
         this.notifications?.send({
           title: '✅ MT5 Bridge Reconnected',
-          body: 'Circuit breaker released — MT5 bridge is responding again.',
+          body: `Circuit breaker released for broker ${brokerId ?? 'default'} — the bridge is responding again.`,
           event: 'provider-degraded',
         }).catch(() => {});
       } else {
@@ -256,17 +326,17 @@ export class Mt5Adapter implements IProviderAdapter {
         // A 4xx (e.g. 404 symbol-not-available) is a per-request client error, NOT a
         // bridge outage — don't flip connection state or trip the breaker for it.
         const isClientError = res.status >= 400 && res.status < 500 && res.status !== 429;
-        if (!isClientError) this.consecutiveErrors++;
+        if (!isClientError) breaker.consecutiveErrors++;
         const errorBody = await this.readBridgeErrorBody(res);
         const detail = `HTTP ${res.status}: ${errorBody}`;
         this.logBridgeDiag('GET', path, detail, undefined, brokerId);
-        if (this.consecutiveErrors >= 10) {
+        if (breaker.consecutiveErrors >= Mt5Adapter.MAX_ERRORS) {
           this.tripBreaker(detail, brokerId);
         }
         if (!isClientError) this.logBridgeState('disconnected', `HTTP ${res.status}`, brokerId);
         return null;
       }
-      this.consecutiveErrors = 0;
+      breaker.consecutiveErrors = 0;
       this.logBridgeState('connected', undefined, brokerId);
       return (await res.json()) as T;
     } catch (error: unknown) {
@@ -274,10 +344,10 @@ export class Mt5Adapter implements IProviderAdapter {
       const category = this.classifyBridgeError(err);
       const isTransient = category === 'refused' || category === 'dns' || category === 'network';
       if (!isTransient) {
-        this.consecutiveErrors++;
+        breaker.consecutiveErrors++;
       }
       this.logBridgeDiag('GET', path, `${category}: ${err.message}`, undefined, brokerId);
-      if (this.consecutiveErrors >= 10) {
+      if (breaker.consecutiveErrors >= Mt5Adapter.MAX_ERRORS) {
         this.tripBreaker(`${category}: ${err.message}`, brokerId);
       }
       this.logBridgeState('disconnected', err.message, brokerId);
@@ -285,14 +355,27 @@ export class Mt5Adapter implements IProviderAdapter {
     }
   }
 
+  /**
+   * Open the breaker for ONE broker (#846).
+   *
+   * ⚠️ The notification names the broker. It previously said "Trading via MT5 is
+   * unavailable until the bridge recovers", which was a GLOBAL claim made from a
+   * per-bridge failure — and false, because the other bridge was up.
+   */
   private tripBreaker(reason: string, brokerId?: number): void {
-    this.tripped = true;
-    this.trippedAt = Date.now();
-    this.logger.warn(`MT5 bridge circuit breaker TRIPPED (10 errors): ${reason}`);
+    const breaker = this.breakerFor(brokerId);
+    breaker.tripped = true;
+    breaker.trippedAt = Date.now();
+    const who = brokerId !== undefined ? `broker ${brokerId}` : 'the default bridge';
+    this.logger.warn(
+      `MT5 bridge circuit breaker TRIPPED for ${who} (${Mt5Adapter.MAX_ERRORS} errors): ${reason}`,
+    );
     this.logBridgeEvent('disconnected', reason, brokerId);
     this.notifications?.send({
       title: '🚨 MT5 Bridge Disconnected',
-      body: `Circuit breaker tripped — ${reason}. Trading via MT5 is unavailable until the bridge recovers.`,
+      body:
+        `Circuit breaker tripped for ${who} — ${reason}. Trading via ${who} is unavailable ` +
+        `until it recovers; other brokers are unaffected.`,
       event: 'provider-degraded',
     }).catch(() => {});
   }
@@ -432,12 +515,20 @@ export class Mt5Adapter implements IProviderAdapter {
 
 
 
-  /** Reset circuit breaker manually (e.g., after bridge restart). */
-  resetCircuitBreaker(): void {
-    this.tripped = false;
-    this.trippedAt = null;
-    this.consecutiveErrors = 0;
-    this.logger.log('MT5 circuit breaker manually reset');
+  /**
+   * Reset circuit breaker manually (e.g., after bridge restart).
+   *
+   * Pass a `brokerId` to clear ONE broker (#846); omit it to clear all of them, which is
+   * what an operator restarting the whole stack means by "reset".
+   */
+  resetCircuitBreaker(brokerId?: number): void {
+    if (brokerId === undefined) {
+      this.breakers.clear();
+      this.logger.log('MT5 circuit breaker manually reset for ALL brokers');
+      return;
+    }
+    this.breakers.delete(brokerId);
+    this.logger.log(`MT5 circuit breaker manually reset for broker ${brokerId}`);
   }
 
   // ── Brokerage Methods (IProviderAdapter) ─────────────────
@@ -578,7 +669,7 @@ export class Mt5Adapter implements IProviderAdapter {
       clientOrderId: params.clientOrderId,
     };
 
-    this.logger.log(`MT5 order [broker ${route.brokerId}]: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
+    this.logger.log(`MT5 order [broker ${route.brokerId}]: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.isTripped(route.brokerId)} errors=${this.breakerFor(route.brokerId).consecutiveErrors}]`);
 
     let data: any;
     try {
@@ -615,10 +706,14 @@ export class Mt5Adapter implements IProviderAdapter {
       // and a network-level failure. Label the two honestly — "circuit
       // breaker active" means the cooldown is holding; anything else is the
       // bridge simply not responding.
-      const reason = this.tripped
-        ? 'Bridge unreachable (circuit breaker active)'
+      //
+      // ⚠️ #846 — read the breaker for THIS order's broker. Reading a global flag here
+      // is how a broker-3 order came to report a broker-2 trip.
+      const tripped = this.isTripped(route.brokerId);
+      const reason = tripped
+        ? `Bridge unreachable (circuit breaker active for broker ${route.brokerId})`
         : 'Bridge unreachable (no response)';
-      this.logger.warn(`MT5 order FAILED — ${reason} [url=${route.url} broker=${route.brokerId} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
+      this.logger.warn(`MT5 order FAILED — ${reason} [url=${route.url} broker=${route.brokerId} tripped=${tripped} consecutiveErrors=${this.breakerFor(route.brokerId).consecutiveErrors}]`);
       this.syslog?.error('MT5Adapter', `ORDER ${reason} ${route.brokerSymbol} ${params.side} ×${params.quantity} [broker ${route.brokerId}]`, 'trading');
       // A network timeout is an unknown outcome: MT5 may have accepted the
       // order before the response was lost. Keep it retryable with the same
@@ -640,7 +735,7 @@ export class Mt5Adapter implements IProviderAdapter {
         status: 'UNKNOWN',
         // #826 Phase 3 — the two causes are DIFFERENT conditions, so they get different codes.
         // The distinction is read from the breaker's own state, not from the message text.
-        code: this.tripped ? 'TCS-INTEG-002' : 'TCS-INTEG-001',
+        code: tripped ? 'TCS-INTEG-002' : 'TCS-INTEG-001',
         params: { detail: reason },
       };
     }
@@ -781,11 +876,14 @@ export class Mt5Adapter implements IProviderAdapter {
   private async bridgePost<T>(path: string, body: unknown, route?: ResolvedSymbolRoute): Promise<T | null> {
     const url = route?.url ?? this.bridgeUrl;
     const brokerId = route?.brokerId;
-    if (this.tripped) {
-      const cooldownMs = 60_000;
-      if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
-        this.tripped = false;
-        this.consecutiveErrors = 0;
+    // ⚠️ Per-broker breaker state (#846) — see the field comment on `breakers`.
+    const breaker = this.breakerFor(brokerId);
+    if (breaker.tripped) {
+      const cooldownMs = Mt5Adapter.COOLDOWN_MS;
+      if (breaker.trippedAt && Date.now() - breaker.trippedAt >= cooldownMs) {
+        breaker.tripped = false;
+        breaker.trippedAt = null;
+        breaker.consecutiveErrors = 0;
         this.logBridgeEvent('reconnected', 'Circuit breaker released', brokerId);
       } else {
         this.logBridgeDiag('POST', path, 'circuit breaker active (skipped)', body, brokerId);
@@ -802,11 +900,11 @@ export class Mt5Adapter implements IProviderAdapter {
       });
       if (!res.ok) {
         const isClientError = res.status >= 400 && res.status < 500 && res.status !== 429;
-        if (!isClientError) this.consecutiveErrors++;
+        if (!isClientError) breaker.consecutiveErrors++;
         const errorBody = await this.readBridgeErrorBody(res);
         const detail = `HTTP ${res.status}: ${errorBody}`;
         this.logBridgeDiag('POST', path, detail, body, brokerId);
-        if (this.consecutiveErrors >= 10) {
+        if (breaker.consecutiveErrors >= Mt5Adapter.MAX_ERRORS) {
           this.tripBreaker(detail, brokerId);
         }
         if (!isClientError) this.logBridgeState('disconnected', `HTTP ${res.status}`, brokerId);
@@ -821,7 +919,7 @@ export class Mt5Adapter implements IProviderAdapter {
           rejection.external,
         );
       }
-      this.consecutiveErrors = 0;
+      breaker.consecutiveErrors = 0;
       this.logBridgeState('connected', undefined, brokerId);
       return (await res.json()) as T;
     } catch (err) {
@@ -830,9 +928,9 @@ export class Mt5Adapter implements IProviderAdapter {
       const category = this.classifyBridgeError(error);
       this.logBridgeDiag('POST', path, `${category}: ${error.message}`, body, brokerId);
       if (category !== 'refused' && category !== 'dns' && category !== 'network') {
-        this.consecutiveErrors++;
+        breaker.consecutiveErrors++;
       }
-      if (this.consecutiveErrors >= 10) {
+      if (breaker.consecutiveErrors >= Mt5Adapter.MAX_ERRORS) {
         this.tripBreaker(`${category}: ${error.message}`, brokerId);
       }
       this.logBridgeState('disconnected', error.message, brokerId);
