@@ -70,10 +70,13 @@ DATABASE_URL="mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
 ### Create the schema
 
 > 🛑 **Do NOT run `prisma db push` in this repo.** It is a declarative diff with destructive
-> defaults: every table with no model in `schema.prisma` is dropped. This repo has **10**
-> such tables, including `strategy_signal_queue` (the trade execution queue) and the #750
-> timestamp-repair backups. See `.github/instructions/database-schema.instructions.md` and
-> issue **#769**.
+> defaults: every table with no model in `schema.prisma` is dropped. This repo has **13**
+> such tables (4 live + 9 backup, measured 2026-09-16), including `strategy_signal_queue`
+> (the trade execution queue) and the #750 timestamp-repair backups. See
+> `.github/instructions/database-schema.instructions.md` and issue **#769**.
+>
+> ⚠️ That count **grows** — every migration backup adds a table. Re-derive it with
+> `npm --prefix nest run db:check` rather than trusting this number.
 >
 > `npm run db:push` is deliberately **blocked** and explains why.
 
@@ -119,8 +122,9 @@ protocols via `POST /api/scoring/gated/protocols/seed`, trading bots via
 > ⚠️ **Schema drift — and it is dangerous, not just untidy.**
 >
 > Four **live** tables (`strategy_signal_queue`, `paper_trade`, `signal_outcome_log`,
-> `signal_outcome_meta`) plus six backup tables were created via raw SQL and are **not** in
-> `schema.prisma`. They have no `CREATE TABLE` in the repo — they exist only in the database.
+> `signal_outcome_meta`) plus nine backup tables (**13** in total, measured 2026-09-16) were
+> created via raw SQL and are **not** in `schema.prisma`. They have no `CREATE TABLE` in the
+> repo — they exist only in the database.
 >
 > This means `prisma db push` does not merely fail to create them: **it would DROP them**, because
 > Prisma treats every unmodelled table as garbage. `strategy_signal_queue` is the trade execution
@@ -189,7 +193,7 @@ curl http://localhost:3201/api/version
 Expected:
 ```json
 {
-  "version": "0.0.1",
+  "version": "0.15.0",
   "mode": "fallback",
   "services": {
     "database": true,

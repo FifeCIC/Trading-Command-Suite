@@ -29,6 +29,13 @@ authoritative field is `marketbar.provider`:
 `exchange = 'Xtrend'` appears on 21 symbols, but **there is no Xtrend adapter** in
 `src/modules/providers/`. The label is vestigial; delivery is MT5 for those symbols.
 
+> 🔁 **Counter-drift note (2026-09-16).** The per-mode counts below were measured with a
+> method this note could not reproduce, so they have **not** been re-derived — treat them as
+> claims needing re-measurement. What *is* measured, per `symbol.exchange`:
+> `Yahoo 176 · Trading212 31 · Xtrend 29 · NYSE 12 · Binance 4 · NASDAQ 1 · Unknown 1` (254 total).
+> ⚠️ In particular the `Xtrend` figure quoted below reads **21**; the measured value is **29**.
+> Do not assume `symbol_route.provider` is the same quantity — it is a different table.
+
 ## Three distinct failure modes — each needs a different fix
 
 ### Mode A — `mt5`, fresh, working (11 symbols) ✅

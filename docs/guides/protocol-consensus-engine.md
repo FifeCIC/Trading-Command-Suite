@@ -7,7 +7,7 @@
 **Owner:** TCS team
 
 
-Runs **all 32 protocols** against a single symbol and produces an ensemble vote. Instead of picking one protocol, this is "wisdom of the crowd" — 25 of 32 protocols agreeing on BUY is far stronger than any single protocol's output.
+Runs **all 47 protocols** against a single symbol and produces an ensemble vote. Instead of picking one protocol, this is "wisdom of the crowd" — a large majority of protocols agreeing on BUY is far stronger than any single protocol's output.
 
 ---
 

@@ -1,6 +1,10 @@
 # Next Agent — start here
 
-**Last session:** 2026-09-13 · **Version:** 0.6.11 · **Stack:** Vite 5173 · NestJS 3201 · MT5 5000/5001
+**Last verified:** 2026-09-16 · **Version:** 0.15.0 · **Stack:** Vite 5173 · NestJS 3201 · MT5 5000/5001
+
+> 🔁 **Re-verified 2026-09-16 by doc fact-check.** The issue list below was confirmed still accurate (all 10
+> issues OPEN). Counts elsewhere in this repo's docs had drifted — see `README.md` → Ops Notes for how to
+> measure them. If you update this file, re-measure; do not increment a number by hand.
 
 A long session on the scoring layer just finished. This file tells you **what to work on,
 in what order, and why** — so you do not re-derive it or re-break it.
@@ -11,7 +15,7 @@ in what order, and why** — so you do not re-derive it or re-break it.
 
 | | |
 |---|---|
-| **`.github/instructions/database-schema.instructions.md`** | `prisma db push` **drops 10 live tables** here, including the trade execution queue. It does **not** error. (#769) |
+| **`.github/instructions/database-schema.instructions.md`** | `prisma db push` **drops every unmodelled table** here (**13** at present, 4 live + 9 backup), including the trade execution queue. It does **not** error. (#769) |
 | **`.github/instructions/meta-stack-contracts.instructions.md`** | The `INV-*` invariants. Each was a real bug with hard evidence, each has already been "simplified away" once by someone who did not know it was load-bearing. If one looks redundant, it is not. |
 
 ---

@@ -27,9 +27,10 @@ The user has granted full permission to run shell commands, read/write files, an
 ## 🛑 Database — read before any schema change
 
 `prisma db push` **will destroy live data** in this repo. It treats `schema.prisma` as the
-complete truth and drops every table with no model — and there are **10** such tables,
-including the trade execution queue (`strategy_signal_queue`) and the #750 timestamp-repair
-backups. It does not error; it warns and waits for a `y`.
+complete truth and drops every table with no model — and there are **13** such tables
+(4 live + 9 backup, measured 2026-09-16), including the trade execution queue
+(`strategy_signal_queue`) and the #750 timestamp-repair backups. It does not error; it warns
+and waits for a `y`.
 
 ```powershell
 npm --prefix C:\wamp64\www\trading-command-suite\nest run db:check   # ALWAYS run first

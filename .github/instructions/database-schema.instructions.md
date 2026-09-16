@@ -1,5 +1,5 @@
 ---
-description: "MANDATORY before any database schema change. This repo has 10 tables managed outside Prisma (including the trade execution queue) and NO migration history, so `prisma db push` will silently DROP live data. Read before adding/changing a table or column."
+description: "MANDATORY before any database schema change. This repo has 13 tables managed outside Prisma (including the trade execution queue) and NO migration history, so `prisma db push` will silently DROP live data. Read before adding/changing a table or column."
 applyTo: "nest/**"
 ---
 
@@ -116,6 +116,42 @@ Run it **before** any schema work, and before closing a schema-touching issue.
 
 `npm run db:push` is deliberately **blocked** and explains why. The escape hatch is
 `db:unsafe-push-I-have-read-the-warning`, which runs the guard first.
+
+### ⚠️ Adding an index? Two more guards, because `schema.prisma` is not the database
+
+```powershell
+npm --prefix C:\wamp64\www\trading-command-suite\nest run db:config-refs   # LIVE
+node nest/scripts/validate-retention-columns.cjs                          # static, in prebuild
+```
+
+`db:check` compares **tables**. It does not compare **indexes**, and this repo has no migration
+history — indexes are applied by hand with `ALTER TABLE` because `db push` is banned. So an
+`@@index` line can exist in `schema.prisma` while the database has nothing, and every build stays
+green.
+
+That gap has teeth for one specific case: **any column used as a range predicate should LEAD an
+index.** A column that merely appears in a composite index cannot serve `WHERE col < x` or
+`SELECT MIN(col)`.
+
+⚠️ **CORRECTION (2026-09-16).** An earlier version of this section claimed a missing index on
+`directiveoutcome.createdAt` caused a 32-second scan of a 1,497 MB table and so a 504 on
+`/api/system/health-dashboard`. **That is not supported.** The table is **1.10 MB / ~7,000 rows**;
+`apiactivitylog` records exactly **one** 504 and the endpoint was healthy again six minutes later,
+before the index was added. Two changes were made at once — add index + restart API — and the
+credit went to the one with a story. See the full correction in
+`change-completion.instructions.md` → Gate 3.
+
+The rules below are still worth having on their own merits (they are cheap, and `schema.prisma`
+is genuinely not the database here). What is withdrawn is the claim that they would have
+prevented that outage.
+
+`db:config-refs` closes that gap by checking the **live** database: every column a config file
+names must exist, must be the leading column of a real index, and its predicate must answer within
+budget. `validate-retention-columns.cjs` checks the same property statically from `schema.prisma`
+so it runs in `prebuild` with no database. They are complementary — neither subsumes the other.
+
+See `change-completion.instructions.md` → Gate 3 → *"a config that PARSES is not a config that
+WORKS"* for why both exist and what was missing before them.
 
 ---
 

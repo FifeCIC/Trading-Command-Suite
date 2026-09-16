@@ -29,12 +29,14 @@ This is not untidy schema. It is **an unreproducible schema**:
    have destroyed the trade execution queue and 5,956 rows of signal outcome history, with
    no error and no backup.
 
-3. **The six backup tables are also unmodelled**, including
+3. **The nine backup tables are also unmodelled**, including
    `marketbar_ts_backup_20260910` (195,391 rows) created during today's timestamp repair.
    Those are recoverable by re-deriving, but only if someone remembers why they exist.
 
-4. **The database has 121 tables against 111 schema models.** Ten objects are invisible to
-   the ORM — so they are untracked, unprotected, and one `db push` from deletion.
+4. **The database has 124 tables against 111 schema models** (measured 2026-09-16). Thirteen
+   objects are invisible to the ORM — so they are untracked, unprotected, and one `db push`
+   from deletion. ⚠️ Both numbers grow: re-derive with `npm --prefix nest run db:check`
+   before quoting either, rather than trusting this line.
 
 **Root cause:** the app's newer subsystems (automation queue, paper trading, signal
 outcomes) were built by adding tables with raw SQL and accessing them via
