@@ -1,8 +1,0 @@
-+-----------------------+-------------+------+-----+---------+-------+
-| Field                 | Type        | Null | Key | Default | Extra |
-+-----------------------+-------------+------+-----+---------+-------+
-| adaptiveTargetEnabled | tinyint(1)  | NO   |     | 0       |       |
-| adaptiveTargetMax     | double      | YES  |     | NULL    |       |
-| adaptiveTargetSamples | int         | NO   |     | 0       |       |
-| adaptiveTargetSince   | datetime(3) | YES  |     | NULL    |       |
-+-----------------------+-------------+------+-----+---------+-------+

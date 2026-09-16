@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/docs-facts.cjs",
+  "regenerate": "node scripts/docs-facts.cjs --write",
+  "note": "File-derived facts only. Live values are queried, never published — see docs/GENERATED-FACTS.md.",
+  "facts": {
+    "directiveFiles": {
+      "label": "Directive implementation files",
+      "value": 106,
+      "unit": "",
+      "source": "nest/src/modules/directives/**/*.directive.ts",
+      "how": "curl -s localhost:3201/api/directives | jq length   # the registered set; files are a lower bound"
+    },
+    "glossaryEntries": {
+      "label": "Glossary entries",
+      "value": 92,
+      "unit": " across 12 categories",
+      "source": "src/data/glossary.js",
+      "how": "open /education/glossary"
+    },
+    "prismaModels": {
+      "label": "Prisma models (declared)",
+      "value": 111,
+      "unit": "",
+      "source": "nest/prisma/schema.prisma",
+      "how": "Select-String nest/prisma/schema.prisma '^model '"
+    },
+    "protocolSeedEntries": {
+      "label": "Protocols in the seed file",
+      "value": 47,
+      "unit": "",
+      "source": "nest/src/modules/scoring/protocols-seed-data.ts",
+      "how": "curl -s localhost:3201/api/scoring/protocols | jq length"
+    },
+    "providerAdapters": {
+      "label": "Provider adapter modules",
+      "value": 14,
+      "unit": "",
+      "source": "nest/src/modules/providers/adapters/*.adapter.ts (excludes specs)",
+      "how": "Get-ChildItem nest/src/modules/providers/adapters -Filter *.adapter.ts"
+    },
+    "rawManagedDdl": {
+      "label": "Live unmodelled tables with checked-in DDL",
+      "value": 4,
+      "unit": "",
+      "source": "nest/prisma/raw-managed/*.sql",
+      "how": "npm --prefix nest run db:check   # authoritative, includes backups"
+    },
+    "validators": {
+      "label": "Backend build-time validators",
+      "value": 9,
+      "unit": "",
+      "source": "nest/scripts/validate-*.cjs (run in prebuild)",
+      "how": "Get-ChildItem nest/scripts/validate-*.cjs"
+    },
+    "version": {
+      "label": "Application version",
+      "value": "0.16.0",
+      "unit": "",
+      "source": "nest/package.json (+ package.json asserted in sync)",
+      "how": "curl -s localhost:3201/api/version"
+    }
+  }
+}

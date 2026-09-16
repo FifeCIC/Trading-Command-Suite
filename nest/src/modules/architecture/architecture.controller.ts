@@ -10,6 +10,16 @@ export class ArchitectureController {
     return this.service.getIndex();
   }
 
+  /**
+   * GET /api/architecture/facts — the measurable facts, so no document has to quote one.
+   * Declared BEFORE `section/:key` so the literal path is matched rather than swallowed by the
+   * parameterised one, which would otherwise treat "facts" as a section key.
+   */
+  @Get('facts')
+  getFacts() {
+    return this.service.getFacts();
+  }
+
   @Get('section/:key')
   getSection(@Param('key') key: string) {
     return this.service.getSection(key);
