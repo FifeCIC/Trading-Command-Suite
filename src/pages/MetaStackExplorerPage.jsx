@@ -188,7 +188,13 @@ const PIPELINE = [
     dbColumns: 'minComposite, mode (manual|semi-auto|auto), baseSize, slPct, tpPct, maxPyramidTiers',
     isComplex: true,
     subs: [
-      { id: 'trade-threshold', label: 'Trade Threshold', desc: 'Composite must be ≥ minComposite (default 65) for the strategy to permit a trade.', color: '#3b82f6' },
+      // ⚠️ The bar is NOT restated here (#839). This read "(default 65)" — a pre-rescale number
+      // that the 2026-09-15 rescale invalidated; the real default is BOT_BAR_DEFAULT (10). A literal
+      // in prose cannot be updated by the compiler, so it drifted silently and the build guard does
+      // not see it: that guard matches code defaults (property init, ??, ||), not sentences.
+      // Point at the live source instead of copying it — Settings → Trade Thresholds reads
+      // GET /api/scoring/gated/thresholds, which is the single source of truth for these numbers.
+      { id: 'trade-threshold', label: 'Trade Threshold', desc: 'Composite must be ≥ minComposite (the bot bar) for the strategy to permit a trade. Current bars are shown in Settings → Trade Thresholds.', color: '#3b82f6' },
       { id: 'budget-gate-strat', label: 'Budget Gate (Strategy)', desc: 'Daily loss limit check — if cumulative P&L exceeds budget, strategy blocks all new trades.', color: '#ef4444' },
       { id: 'mode-gate', label: 'Mode Gate', desc: 'manual = user must approve, semi-auto = auto-score + manual execute, auto = full automation', color: '#f59e0b' },
       { id: 'directive-gates', label: 'Directive Group Gates', desc: 'Certain grouped directives act as strict gates — all must agree on direction for trade permission.', color: '#8b5cf6' },

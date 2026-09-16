@@ -311,10 +311,20 @@ export default function AutomationDashboardPage() {
                         </label>
                         <label className="ad-config-field">
                           <span>Threshold</span>
+                          {/* ⚠️ The bounds were {40,95} and the fallback was `|| 65` (#839).
+                              Both were pre-rescale numbers: the ADR-011 scale measures 10-33, so a
+                              bar of 65 could never be cleared and the bot would silently never
+                              trade — while looking perfectly configured in this field.
+                              The empty-input case no longer invents a bar at all. The server owns
+                              these numbers (src/core/api/signals.js), so committing a guess here
+                              would create a second owner; skipping the commit cannot. */}
                           <input
-                            type="number" min={40} max={95}
+                            type="number" min={0} max={100}
                             value={bs.tradeThreshold}
-                            onChange={(e) => configMutation.mutate({ brokerId, tradeThreshold: parseInt(e.target.value) || 65 })}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10);
+                              if (Number.isFinite(v)) configMutation.mutate({ brokerId, tradeThreshold: v });
+                            }}
                             className="ad-config-input"
                           />
                         </label>

@@ -94,4 +94,29 @@ export default {
     title: 'Textkodierung beschädigt (Mojibake)',
     message: '{count} Zeichenfolge(n) in {file} sind beschädigt.',
   },
+  // NOTE: {symbol} and {hours} are placeholders, NOT words — they are substituted from the call
+  // site. Renaming one (e.g. to {symbol_name}) renders the literal "{symbol}" to a user, and
+  // validate-notices.cjs fails the build for it. Translate the sentence, never the placeholder.
+  'TCS-DATA-002': {
+    title: 'Überhaupt keine Bars',
+    message: '{symbol} hat auf keinem Zeitrahmen Bars.',
+  },
+  'TCS-DATA-003': {
+    title: 'Datenzufuhr gestoppt',
+    message: '{symbol} hat zuletzt vor {hours} Stunden eine Bar geliefert.',
+  },
+  'TCS-DATA-004': {
+    title: 'Aktualität der Datenzufuhr unbekannt',
+    message: 'Es konnte nicht geprüft werden, welche Symbole keine Bars mehr liefern.',
+  },
+  'TCS-DATA-005': {
+    title: 'Symbole liefern keine Bars mehr',
+    message:
+      '{count} bewertete(s) Symbol(e) liefern keine frischen Bars — {noData} ganz ohne Daten und ' +
+      '{stopped}, die unterwegs aufgehört haben.',
+  },
+  'TCS-DATA-006': {
+    title: 'Alle Datenzufuhren aktuell',
+    message: 'Alle {count} bewerteten Symbole haben Bars innerhalb ihrer Kadenz-Toleranz.',
+  },
 };

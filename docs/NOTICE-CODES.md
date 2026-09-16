@@ -22,6 +22,11 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | Code | Severity | Area | Title |
 |---|---|---|---|
 | `TCS-DATA-001` | error | DATA | Text encoding corrupted (mojibake) |
+| `TCS-DATA-002` | warning | DATA | No bars at all |
+| `TCS-DATA-003` | warning | DATA | Feed stopped |
+| `TCS-DATA-004` | error | DATA | Feed freshness unknown |
+| `TCS-DATA-005` | warning | DATA | Symbols have stopped producing bars |
+| `TCS-DATA-006` | success | DATA | All feeds fresh |
 | `TCS-INTEG-001` | critical | INTEG | MT5 bridge not connected |
 | `TCS-INTEG-002` | critical | INTEG | MT5 circuit breaker open |
 | `TCS-RISK-001` | warning | RISK | Trade blocked by a safety gate |
@@ -56,7 +61,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-016` | error | TRADE | Blocked by the bridge size cap |
 | `TCS-TRADE-017` | error | TRADE | Blocked by the bridge position count |
 
-**34 codes** — 2 critical, 22 error, 6 warning, 1 info, 3 success.
+**39 codes** — 2 critical, 23 error, 9 warning, 1 info, 4 success.
 
 ## Codes by area
 
@@ -285,6 +290,54 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `count`, `file`
 - **Call:** `notice('TCS-DATA-001', { count, file })`
 - **Related:** #815
+
+#### `TCS-DATA-002` — No bars at all
+
+- **Severity:** warning
+- **Message:** {symbol} has no bars on any timeframe.
+- **Cause:** The symbol is being scored, but nothing has ever been ingested for it. Its absence from the ladder therefore looks like "no signal today" rather than "no data at all".
+- **Action:** Check that the symbol is routed to a live provider feed. Until bars exist it cannot produce a prediction, however healthy the protocol is.
+- **Params:** `symbol`
+- **Call:** `notice('TCS-DATA-002', { symbol })`
+- **Related:** #827, #841
+
+#### `TCS-DATA-003` — Feed stopped
+
+- **Severity:** warning
+- **Message:** {symbol} last produced a bar {hours} hours ago.
+- **Cause:** Bars stopped arriving while the symbol stayed on the scoring watchlist, so it silently drops off the ladder. Nightly session breaks and weekends are normal; a gap beyond the cadence tolerance is not.
+- **Action:** Check the provider for {symbol}. Scoring is suppressed until its bars are fresh again, so no signal is being lost while it is quiet.
+- **Params:** `symbol`, `hours`
+- **Call:** `notice('TCS-DATA-003', { symbol, hours })`
+- **Related:** #827, #841
+
+#### `TCS-DATA-004` — Feed freshness unknown
+
+- **Severity:** error
+- **Message:** Could not check which symbols have stopped producing bars.
+- **Cause:** {detail}
+- **Action:** This is NOT an all-clear — the feed may have stalled. An empty list and a failed query must never look the same, which is exactly why {ref} is surfaced rather than swallowed.
+- **Params:** `detail`, `ref`
+- **Call:** `notice('TCS-DATA-004', { detail, ref })`
+- **Related:** #841
+
+#### `TCS-DATA-005` — Symbols have stopped producing bars
+
+- **Severity:** warning
+- **Message:** {count} scored symbol(s) are not producing fresh bars — {noData} with no data at all and {stopped} that stopped part-way.
+- **Cause:** A stale symbol returns no score, which is indistinguishable from "no signal right now". The count is the only thing that makes the difference visible.
+- **Action:** Work through the rows below — a "no bars at all" row is a routing fault, a "feed stopped" row is a provider fault.
+- **Params:** `count`, `noData`, `stopped`
+- **Call:** `notice('TCS-DATA-005', { count, noData, stopped })`
+- **Related:** #827, #841
+
+#### `TCS-DATA-006` — All feeds fresh
+
+- **Severity:** success
+- **Message:** All {count} scored symbol(s) have bars inside their cadence tolerance.
+- **Params:** `count`
+- **Call:** `notice('TCS-DATA-006', { count })`
+- **Related:** #841
 
 ### RISK — Risk and safety gates
 

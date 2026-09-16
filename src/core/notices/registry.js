@@ -307,6 +307,84 @@ export const NOTICES = {
     refs: ['#815'],
   },
 
+  // ── Feed freshness (starved symbols) ───────────────────────────────────
+  //
+  // SCOPE NOTE — why these exist at all. #827 stopped stale symbols being scored, and logged a
+  // warning when it did. The *log* was enough for an agent reading a terminal and NOT enough for a
+  // person looking at the app: a symbol whose bars have stopped simply stops appearing on the
+  // ladder, which is indistinguishable from "no signal right now". These codes give that condition
+  // a surface. `BarRefreshStatus.starvedSymbols` already computed the data (see
+  // bar-refresh.service.ts) — it had no renderer.
+  //
+  // ⚠️ These describe TWO DIFFERENT CONDITIONS that must never be collapsed into one message:
+  //   TCS-DATA-002  the symbol has NEVER produced a bar   (a routing/setup fault)
+  //   TCS-DATA-003  the symbol produced bars and STOPPED  (a feed that has gone quiet)
+  // Both are served with `newestBar: null` vs a timestamp. A UI that shows "stale" for both
+  // sends someone hunting a provider outage when the real fault is a symbol that was never routed.
+  'TCS-DATA-002': {
+    severity: 'warning',
+    area: 'DATA',
+    title: 'No bars at all',
+    message: '{symbol} has no bars on any timeframe.',
+    cause:
+      'The symbol is being scored, but nothing has ever been ingested for it. Its absence from the ' +
+      'ladder therefore looks like "no signal today" rather than "no data at all".',
+    action:
+      'Check that the symbol is routed to a live provider feed. Until bars exist it cannot produce ' +
+      'a prediction, however healthy the protocol is.',
+    params: ['symbol'],
+    refs: ['#827', '#841'],
+  },
+  'TCS-DATA-003': {
+    severity: 'warning',
+    area: 'DATA',
+    title: 'Feed stopped',
+    message: '{symbol} last produced a bar {hours} hours ago.',
+    cause:
+      'Bars stopped arriving while the symbol stayed on the scoring watchlist, so it silently drops ' +
+      'off the ladder. Nightly session breaks and weekends are normal; a gap beyond the cadence ' +
+      'tolerance is not.',
+    action:
+      'Check the provider for {symbol}. Scoring is suppressed until its bars are fresh again, so no ' +
+      'signal is being lost while it is quiet.',
+    params: ['symbol', 'hours'],
+    refs: ['#827', '#841'],
+  },
+  'TCS-DATA-004': {
+    severity: 'error',
+    area: 'DATA',
+    title: 'Feed freshness unknown',
+    message: 'Could not check which symbols have stopped producing bars.',
+    cause: '{detail}',
+    action:
+      'This is NOT an all-clear — the feed may have stalled. An empty list and a failed query must ' +
+      'never look the same, which is exactly why {ref} is surfaced rather than swallowed.',
+    params: ['detail', 'ref'],
+    refs: ['#841'],
+  },
+  'TCS-DATA-005': {
+    severity: 'warning',
+    area: 'DATA',
+    title: 'Symbols have stopped producing bars',
+    message:
+      '{count} scored symbol(s) are not producing fresh bars — {noData} with no data at all and ' +
+      '{stopped} that stopped part-way.',
+    cause:
+      'A stale symbol returns no score, which is indistinguishable from "no signal right now". The ' +
+      'count is the only thing that makes the difference visible.',
+    action: 'Work through the rows below — a "no bars at all" row is a routing fault, a "feed stopped" row is a provider fault.',
+    params: ['count', 'noData', 'stopped'],
+    refs: ['#827', '#841'],
+  },
+  'TCS-DATA-006': {
+    severity: 'success',
+    area: 'DATA',
+    title: 'All feeds fresh',
+    message: 'All {count} scored symbol(s) have bars inside their cadence tolerance.',
+    params: ['count'],
+    refs: ['#841'],
+  },
+
   // ── Scoring ────────────────────────────────────────────────────────────
   'TCS-SCORE-001': {
     severity: 'info',

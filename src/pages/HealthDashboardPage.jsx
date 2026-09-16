@@ -6,10 +6,11 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './health-dashboard.css';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { notice } from '../core/notices/registry';
 
 // ── Helpers ──────────────────────────────────────────────
 
-import { timeAgo, formatMs, formatMb, formatCount } from '../core/format-utils';
+import { timeAgo, formatMs, formatMb, formatCount, formatDateTime } from '../core/format-utils';
 const STATUS_EMOJI = { ok: '✅', warn: '⚠️', critical: '🔴' };
 const PROVIDER_STATUS = { healthy: '🟢', degraded: '🟡', unhealthy: '🔴', unknown: '⚪' };
 const METHOD_COLOR = { GET: '#22c55e', POST: '#3b82f6', PUT: '#f59e0b', DELETE: '#ef4444' };
@@ -92,6 +93,128 @@ function TrendBar({ point, maxAvg }) {
   );
 }
 
+// ── Feed Freshness (#841) ────────────────────────────────
+
+/**
+ * FeedFreshnessSection — "STEP 3 of 3" in the stale-bar pipeline (see the sibling
+ * handoff for the whole path). The sequence is:
+ *
+ *   STEP 1  bar-refresh.service.ts  refreshes bars and computes `starvedSymbols`
+ *           from CADENCE_STALE_MS — the ONE owner of what "stale" means.
+ *   STEP 2  signal-envelope.service.ts  refuses to score a symbol whose bars are
+ *           stale on EVERY cadence (#827), so no `directiveoutcome` row is written.
+ *   STEP 3  THIS component  tells a human which symbols have gone quiet.
+ *
+ * ⚠️ WHY STEP 3 IS NOT OPTIONAL. Steps 1 and 2 make the system *correct* — a stale
+ * symbol is no longer scored, so no plausible-looking number is produced. But they
+ * make it *silent*: the symbol simply stops appearing, and "no signal today" is
+ * indistinguishable from "this symbol has had no data for six days". The data was
+ * already computed and served; nothing rendered it. This is the buried-ability
+ * pattern — the mechanism was correct and invisible.
+ *
+ * ⚠️ DO NOT RECOMPUTE STALENESS HERE. `ageHours` and the `starvedSymbols` list come
+ * from the API, because `CADENCE_STALE_MS` in `nest/src/common/utils/timeframe.ts` is
+ * the single owner of that threshold. A frontend threshold would drift from the
+ * backend one and the two would disagree about the same symbol — the same class of
+ * defect as the two bar-ordering bugs already fixed (#838).
+ */
+function StarvedSymbolRow({ s }) {
+  // ⚠️ `newestBar === null` is NOT "very stale" — it means the symbol has NEVER
+  // produced a bar. That is a routing/setup fault, while a timestamp with a large
+  // `ageHours` is a provider that has gone quiet. Collapsing both into one "stale"
+  // label sends someone hunting a feed outage when the real fault is a symbol that
+  // was never wired to a provider at all. Hence two different notices, and the
+  // backend deliberately serves the two shapes differently.
+  const neverProduced = !s.newestBar;
+  const n = notice(neverProduced ? 'TCS-DATA-002' : 'TCS-DATA-003', {
+    symbol: s.ticker,
+    hours: s.ageHours,
+  });
+  return (
+    <tr className={neverProduced ? 'hd-tr-critical' : 'hd-tr-warn'}>
+      <td className="hd-td-name" title={n.action}>{s.ticker}</td>
+      <td className="hd-td-age">
+        {neverProduced ? '—' : <span title={timeAgo(s.newestBar)}>{formatDateTime(s.newestBar)}</span>}
+      </td>
+      <td className="hd-td-num">{s.ageHours == null ? '—' : `${s.ageHours}h`}</td>
+      <td className="hd-td-hint" title={n.cause}>{n.title}</td>
+      <td className="hd-td-hint">
+        {s.missingTimeframes?.length ? s.missingTimeframes.join(', ') : '—'}
+      </td>
+    </tr>
+  );
+}
+
+function FeedFreshnessSection({ starved, error, totalScanned, isLoading }) {
+  // ⚠️ FOUR distinct states, and three of them are NOT "all clear". The order below
+  // is the whole point of the component:
+  //   1. still loading            — unknown
+  //   2. `error` non-null         — the QUERY failed, so an empty list would be a lie
+  //   3. `starved` undefined      — the server has not computed it yet (it is cached)
+  //   4. empty array              — genuinely nothing stale, the ONLY all-clear
+  // An empty list and a failed query must never look the same; the backend exposes
+  // `starvedSymbolsError` for exactly this reason (#761).
+  if (isLoading) {
+    return <span className="hd-empty" role="status">Checking which symbols are still producing bars…</span>;
+  }
+
+  if (error) {
+    const n = notice('TCS-DATA-004', { detail: error, ref: 'starvedSymbolsError' });
+    return (
+      <div className="app-notice app-notice--critical" role="alert">
+        <strong>{n.title}</strong>
+        <span> {n.message}</span>
+        {n.action && <div className="hd-td-hint">{n.action}</div>}
+      </div>
+    );
+  }
+
+  if (starved === undefined) {
+    return (
+      <span className="hd-empty" role="status">
+        Not computed yet — the starvation check is cached and runs on the refresh tick.
+      </span>
+    );
+  }
+
+  if (starved.length === 0) {
+    // Positive confirmation, NOT a blank panel. "No stale symbols" is information and
+    // must be readable as such; a blank area reads as "the check did not run".
+    const n = notice('TCS-DATA-006', { count: totalScanned ?? 0 });
+    return <div className="hd-empty-ok" role="status">✅ {n.message}</div>;
+  }
+
+  const noData = starved.filter(s => !s.newestBar).length;
+  const stopped = starved.length - noData;
+  const agg = notice('TCS-DATA-005', { count: starved.length, noData, stopped });
+
+  return (
+    <>
+      <div className="app-notice app-notice--warning" role="status">
+        <strong>{agg.title}</strong>
+        <span> {agg.message}</span>
+        {agg.action && <div className="hd-td-hint">{agg.action}</div>}
+      </div>
+      <div className="hd-table-wrap">
+        <table className="hd-table hd-table-sm">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Newest bar</th>
+              <th>Age</th>
+              <th>Condition</th>
+              <th>Missing timeframes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {starved.map(s => <StarvedSymbolRow key={s.ticker} s={s} />)}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────
 
 export default function HealthDashboardPage() {
@@ -99,6 +222,15 @@ export default function HealthDashboardPage() {
     queryKey: ['health-dashboard'],
     queryFn: () => apiGet('/api/system/health-dashboard'),
     refetchInterval: 15000,
+  });
+
+  // Separate endpoint, so a separate query. The starvation check is backed by a short
+  // server-side cache (it is a diagnostic, not a hot path), so polling it faster than
+  // the bar-refresh tick would only return the same cached rows.
+  const feedQuery = useQuery({
+    queryKey: ['bars-refresh-status'],
+    queryFn: () => apiGet('/api/market-data/bars/refresh/status'),
+    refetchInterval: 30000,
   });
 
   const data = dashQuery.data;
@@ -138,8 +270,24 @@ export default function HealthDashboardPage() {
         </div>
       </motion.section>
 
-      {/* ── 3. API Trends ── */}
+      {/* ── 3. Feed Freshness ── */}
       <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+        <h2 className="hd-section-title">🛰️ Feed Freshness</h2>
+        <p className="hd-td-hint">
+          Symbols whose newest bar is outside their cadence tolerance. Stale symbols are not scored
+          (#827), so without this they would simply vanish from the ladder — which reads as
+          &ldquo;no signal&rdquo; rather than &ldquo;no data&rdquo;.
+        </p>
+        <FeedFreshnessSection
+          starved={feedQuery.data?.starvedSymbols}
+          error={feedQuery.data?.starvedSymbolsError}
+          totalScanned={feedQuery.data?.lastSymbols}
+          isLoading={feedQuery.isLoading}
+        />
+      </motion.section>
+
+      {/* ── 4. API Trends ── */}
+      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
         <h2 className="hd-section-title">📊 API Response Times (24h)</h2>
         <div className="hd-trend-chart">
           {(data?.apiTrends || []).slice(0, 24).map(p => <TrendBar key={p.hour} point={p} maxAvg={maxAvgMs} />)}
@@ -147,8 +295,8 @@ export default function HealthDashboardPage() {
         </div>
       </motion.section>
 
-      {/* ── 4. DB Table Sizes ── */}
-      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+      {/* ── 5. DB Table Sizes ── */}
+      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.20 }}>
         <h2 className="hd-section-title">🗄️ Database Tables vs Retention</h2>
         <div className="hd-table-wrap">
           <table className="hd-table">
@@ -169,8 +317,8 @@ export default function HealthDashboardPage() {
         </div>
       </motion.section>
 
-      {/* ── 5. Slow Queries ── */}
-      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.20 }}>
+      {/* ── 6. Slow Queries ── */}
+      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
         <h2 className="hd-section-title">🐢 Slow Queries (&gt;1s)</h2>
         <div className="hd-table-wrap">
           <table className="hd-table hd-table-sm">
@@ -199,8 +347,8 @@ export default function HealthDashboardPage() {
         </div>
       </motion.section>
 
-      {/* ── 6. Trace Correlations ── */}
-      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+      {/* ── 7. Trace Correlations ── */}
+      <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
         <h2 className="hd-section-title">🔗 Trace Correlations (recent API traces)</h2>
         <div className="hd-table-wrap">
           <table className="hd-table hd-table-sm">
@@ -231,7 +379,7 @@ export default function HealthDashboardPage() {
         </div>
       </motion.section>
 
-      <motion.footer className="hd-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+      <motion.footer className="hd-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }}>
         Data fetched at {data?.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString() : '—'} · Auto-refresh 15s
       </motion.footer>
     </div>

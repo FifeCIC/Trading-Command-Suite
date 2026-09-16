@@ -251,7 +251,14 @@ const VIEW_META = {
     label: 'Health & Diagnostics',
     file: 'src/pages/HealthDashboardPage.jsx',
     css: 'src/pages/health-dashboard.css',
-    api: ['GET /api/system/health-dashboard', 'GET /api/system/health-check'],
+    api: [
+      'GET /api/system/health-dashboard',
+      'GET /api/system/health-check',
+      // Feed Freshness (#841) — served because `starvedSymbols` was computed and had no renderer.
+      // Kept as a SEPARATE call from health-dashboard: it is backed by its own short cache on the
+      // bar-refresh tick, so it has a different refresh cadence from the rest of the page.
+      'GET /api/market-data/bars/refresh/status',
+    ],
   },
   '/status/commands': {
     label: 'Commands Reference',

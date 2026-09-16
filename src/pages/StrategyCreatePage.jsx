@@ -18,6 +18,9 @@ import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
 import { getAssetType } from '../core/asset-types';
 import { STYLE_DEFAULTS } from '../core/broker-utils';
+// #840 — the above-ceiling rule. Kept in `core/` so it is covered by `node --test` rather than
+// living untested inside JSX; see the note where it is used.
+import { barAboveCeiling as barAboveCeilingRule, ceilingKnown } from '../core/threshold-ceiling.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import StrategyWizard from '../components/StrategyBuilder/StrategyWizard';
 import { noticeLine } from '../core/notices/registry.js';
@@ -129,6 +132,39 @@ export default function StrategyCreatePage() {
     retry: 1,
   });
   const serverBarDefault = thresholdsQuery.data?.preTradeGate?.default ?? null;
+
+  /**
+   * The selected protocol's measured CEILING — the highest percentage it has ever achieved (#840).
+   *
+   * ⚠️ WHY THIS WARNS INSTEAD OF BLOCKING. #839 removed the *default* trap (a blank field no longer
+   * means an unclearable bot), but nothing stopped a user TYPING 65. A bar above the protocol's
+   * all-time maximum is one it has never cleared, so the bot would look active, report no error, and
+   * never trade — the same silent failure, reached deliberately rather than by accident.
+   *
+   * It must not BLOCK, though: #817 says bars should be raised from measured outcomes, and a user
+   * may legitimately set a bar above current capacity for a protocol they expect to improve. So this
+   * names the two numbers and lets them decide.
+   */
+  const protocolCeiling = useMemo(() => {
+    const map = thresholdsQuery.data?.protocolCeilings;
+    if (!map) return null;
+    // The map is keyed by protocol SLUG (`score.strategyId`), while the select stores `id || slug`.
+    // Try both rather than assuming one — a UUID key would silently find nothing and the warning
+    // would never appear, which looks exactly like "no problem to report".
+    for (const key of [selectedProto?.slug, selectedProto?.id, protocolId]) {
+      if (key && map[key]) return map[key];
+    }
+    return null;
+  }, [thresholdsQuery.data, selectedProto, protocolId]);
+
+  const barAboveCeiling = useMemo(() => {
+    if (!protocolCeiling || minComposite == null || minComposite === '') return null;
+    // The rule lives in `core/threshold-ceiling.js` — PURE, and covered by `node --test`.
+    // ⚠️ It is NOT written inline here on purpose: the three conditions were got wrong once in JSX
+    // (a `ceilingPct`/`ceiling` field mix-up rendered the number as blank), and JSX has no test
+    // harness in this project to catch that. Pure logic goes where it can be tested.
+    return barAboveCeilingRule(protocolCeiling, minComposite);
+  }, [protocolCeiling, minComposite]);
 
   // Seed the field once the server value arrives, but never clobber a value the user has typed.
   useEffect(() => {
@@ -340,7 +376,38 @@ export default function StrategyCreatePage() {
                 </label>
                 <label className="sc-field">
                   <span>Min Composite</span>
-                  <input className="sc-input" type="number" min="40" max="95" value={minComposite} onChange={e => setMinComposite(Number(e.target.value))} />
+                  {/* ⚠️ Bounds were min="40" max="95" (#839). The state now seeds from the server
+                      (serverBarDefault = BOT_BAR_DEFAULT, 10), but the OLD bounds would have
+                      rejected it: a corrected default of 10 cannot be entered into a field whose
+                      minimum is 40, so the fix above was not reachable through this input.
+                  
+                      ⚠️ aria-label IS NOT REDUNDANT. The warning below sits inside this <label>, so
+                      without it the accessible NAME became "Min Composite ⚠️ 65 is above the highest
+                      this protocol has ever reached (…)" — a form control's name should be short, and
+                      a screen-reader user would hear the whole sentence before reaching the field.
+                      The explicit name keeps the control's identity brief; `aria-describedby` below
+                      still attaches the warning as the DESCRIPTION, which is what it is. */}
+                  <input
+                    className="sc-input" type="number" min="0" max="100"
+                    value={minComposite}
+                    onChange={e => setMinComposite(Number(e.target.value))}
+                    aria-label="Min Composite"
+                    aria-describedby={barAboveCeiling || ceilingKnown(protocolCeiling)
+                      ? 'min-composite-ceiling' : undefined}
+                  />
+                  {/* #840 — the warning, not a block. Names both numbers so the user can judge. */}
+                  {barAboveCeiling && (
+                    <span id="min-composite-ceiling" className="sc-hint sc-hint-warn" role="status">
+                      ⚠️ {barAboveCeiling.bar} is above the highest this protocol has ever reached
+                      ({barAboveCeiling.ceiling}% over {barAboveCeiling.samples.toLocaleString()} readings).
+                      A bot with this bar would probably never trade. You can still save it.
+                    </span>
+                  )}
+                  {!barAboveCeiling && ceilingKnown(protocolCeiling) && (
+                    <span id="min-composite-ceiling" className="sc-hint">
+                      This protocol's highest recorded result is {protocolCeiling.ceilingPct}%.
+                    </span>
+                  )}
                 </label>
               </div>
 

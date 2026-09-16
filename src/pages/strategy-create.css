@@ -32,6 +32,21 @@
 .sc-input:focus { border-color: var(--accent); outline: none; }
 .sc-hint { font-size: 0.6rem; color: var(--ink-soft); margin-top: 1px; }
 
+/**
+ * #840 — the above-ceiling warning. Uses the theme's notice tokens rather than a raw hex so it
+ * follows light/dark like every other warning surface. `line-height` is set deliberately: this is a
+ * full sentence in a narrow column, and without it the three wrapped lines collide.
+ */
+.sc-hint-warn {
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: var(--notice-warning-text);
+  background: var(--notice-warning-bg);
+  border-radius: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  margin-top: 3px;
+}
+
 .sc-section-label {
   font-size: 0.72rem; font-weight: 700; color: var(--ink-soft);
   text-transform: uppercase; letter-spacing: 0.5px;
