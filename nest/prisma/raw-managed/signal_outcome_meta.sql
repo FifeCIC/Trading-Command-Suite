@@ -23,4 +23,4 @@ CREATE TABLE `signal_outcome_meta` (
   PRIMARY KEY (`id`),
   KEY `idx_outmeta_log` (`logId`),
   KEY `idx_outmeta_key` (`entryKey`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

@@ -24,4 +24,4 @@ CREATE TABLE `signal_outcome_log` (
   KEY `idx_outcome_score` (`scoreId`),
   KEY `idx_outcome_proto_time` (`protocolId`,`createdAt`),
   KEY `idx_outcome_symbol` (`symbol`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

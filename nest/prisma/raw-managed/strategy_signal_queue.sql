@@ -29,4 +29,4 @@ CREATE TABLE `strategy_signal_queue` (
   UNIQUE KEY `uq_bot_signal` (`strategyId`,`protocolId`,`symbol`),
   KEY `idx_status` (`status`),
   KEY `idx_proto_sym` (`protocolId`,`symbol`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
