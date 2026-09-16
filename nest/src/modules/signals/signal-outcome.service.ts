@@ -71,7 +71,7 @@ export class SignalOutcomeService {
       await (this.prisma as any).$executeRawUnsafe(
         `INSERT INTO signal_outcome_log
            (id, scoreId, symbol, protocolId, preTradeReady, blockerCount, conflictCount, warningCount, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
         logId, out.scoreId, out.symbol, out.protocolId ?? null,
         out.preTradeReady ? 1 : 0,
         out.blockers.length, out.conflicts.length, out.warnings.length,
@@ -101,7 +101,7 @@ export class SignalOutcomeService {
         let sql = `INSERT INTO signal_outcome_meta (id, logId, entryType, entryKey, severity, message, directiveIds, hint, createdAt) VALUES `;
         const values: any[] = [];
         rows.forEach((r, i) => {
-          sql += `${i > 0 ? ',' : ''} (UUID(), ?, ?, ?, ?, ?, ?, ?, NOW())`;
+          sql += `${i > 0 ? ',' : ''} (UUID(), ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`;
           values.push(logId, r[0], r[1], r[2], r[3], r[4], r[5]);
         });
         await (this.prisma as any).$executeRawUnsafe(sql, ...values);
@@ -130,7 +130,7 @@ export class SignalOutcomeService {
                 CAST(COUNT(*) AS SIGNED) AS cnt, MAX(l.createdAt) AS lastSeenAt
          FROM signal_outcome_meta m
          JOIN signal_outcome_log l ON l.id = m.logId
-         WHERE l.createdAt >= DATE_SUB(NOW(), INTERVAL ? DAY)
+         WHERE l.createdAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)
            AND (? IS NULL OR l.symbol = ?)
            AND (? IS NULL OR l.protocolId = ?)
            AND (? IS NULL OR m.entryKey = ?)

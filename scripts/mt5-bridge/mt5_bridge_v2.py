@@ -93,26 +93,131 @@ SERVER_UTC_OFFSET_SECONDS = 0
 _SERVER_OFFSET_MEASURED_AT = 0.0
 _SERVER_OFFSET_TTL_SECONDS = 1800  # re-measure twice an hour — DST moves twice a year
 
+# The rounding step used when deriving the offset from a tick, and the tolerance it
+# implies. Rounded to 900s (15 min) because MT5 gives no cleaner source, but a
+# rounding step is a TOLERANCE BUDGET: it absorbs tick lag only up to half a step,
+# i.e. 450s. Past that the measurement is out of tolerance and must be rejected
+# rather than applied — see the guard in `detect_server_utc_offset()` (#845).
+ROUNDING_STEP_SECONDS = 900
+ROUNDING_HALF_STEP_SECONDS = ROUNDING_STEP_SECONDS // 2
+
 def detect_server_utc_offset(force=False):
     """Measure how far the broker's server clock runs ahead of true UTC.
 
     MT5 exposes no server-timezone field, so it is derived from the one pair of
     clocks readable at the same instant: a fresh tick's server epoch and the
-    machine's true epoch. Rounded to 15 minutes so tick lag cannot leak in.
-    Cheap and cached — safe to call per timestamp.
+    machine's true epoch.
+
+    ⚠️ #845 — WHY THIS IS GUARDED, AND WHY THE ROUNDING IS A TOLERANCE BUDGET
+    ------------------------------------------------------------------------
+    `tick.time` is the timestamp of the **last tick**, NOT of the current instant.
+    The expression therefore measures:
+
+        (true_UTC + server_offset) - true_UTC_now  =  server_offset - tick_age
+
+    so the offset is UNDER-measured by however old the tick is. Rounding to 900s
+    absorbs that error only up to half a step, i.e. **450s**. Beyond that the
+    measurement is out of tolerance and the residue becomes a FUTURE lead on every
+    MT5-sourced timestamp:
+
+        utc_iso(epoch) = (true_UTC + offset) - measured_offset
+                       = true_UTC + rounding_residue
+
+    MEASURED 2026-09-16: the MetaQuotes bridge reported 9900s (2h45m) against a
+    true 10800s (3h) — exactly one 900s step short — while its terminal was
+    DISCONNECTED, so the tick it probed could not have been fresh. That skew put
+    `position.openedAt` and `trade.closedAt` up to 784s in the future and kept
+    `INV-NO-FUTURE-ROWS` permanently HELD.
+
+    Two guards follow, and both are correctness, not politeness:
+
+      1. **Never measure while disconnected.** A probe with no live feed cannot
+         produce a fresh tick. Previously this ran anyway and could OVERWRITE a
+         known-good offset with a worse one — a diagnostic actively degrading the
+         system it measures.
+      2. **Reject a measurement beyond the tolerance budget.** If the freshest tick
+         available is older than half a rounding step, the result is out of
+         tolerance; keep the previous value rather than applying a known-bad one.
+
+    Retaining a stale-but-last-known-good offset is strictly better than replacing
+    it with a value that is measurably wrong: the retained value was correct when
+    measured, and the offset only moves at a DST boundary (twice a year).
+
+    ⚠️ STILL OPEN (#845): rounding to 900s is finer than the granularity brokers
+    actually use (whole/half hours). Snapping to that granularity would make the
+    probe robust to tick lag by construction, but it would break the rare
+    `UTC+5:45`-style offset, so it is a DECISION rather than a cleanup. Guarded
+    here against the two measurable failure modes only; the heuristic change is
+    deliberately NOT made silently.
     """
     global SERVER_UTC_OFFSET_SECONDS, _SERVER_OFFSET_MEASURED_AT
     now = time.time()
     if not force and _SERVER_OFFSET_MEASURED_AT and (now - _SERVER_OFFSET_MEASURED_AT) < _SERVER_OFFSET_TTL_SECONDS:
         return SERVER_UTC_OFFSET_SECONDS
+
+    # ── Guard 1: no live feed means no valid measurement (issue #845) ──────────
+    # `connected` is the terminal's own view of its link; `symbol_info_tick` can
+    # still return a cached tick while the link is down, which is exactly how the
+    # 9900s value was produced.
     try:
-        probe = os.environ.get('MT5_OFFSET_PROBE_SYMBOL', 'EURUSD')
-        tick = mt5.symbol_info_tick(probe)
-        if tick and tick.time:
-            SERVER_UTC_OFFSET_SECONDS = int(round((tick.time - now) / 900.0) * 900)
-            _SERVER_OFFSET_MEASURED_AT = now
-    except Exception as err:  # never fail a request over the probe
-        logger.debug(f'Server UTC offset probe failed: {err}')
+        terminal = mt5.terminal_info()
+        if terminal is None or not getattr(terminal, 'connected', False):
+            logger.debug(
+                'Server UTC offset probe SKIPPED — terminal not connected; '
+                f'retaining {SERVER_UTC_OFFSET_SECONDS}s'
+            )
+            return SERVER_UTC_OFFSET_SECONDS
+    except Exception as err:  # pragma: no cover - defensive, never fail a request
+        logger.debug(f'Server UTC offset probe could not read terminal_info: {err}')
+        return SERVER_UTC_OFFSET_SECONDS
+
+    # ── Guard 2: prefer the FRESHEST tick, and enforce the tolerance budget ────
+    # One probe symbol can be illiquid while the rest of the market is ticking.
+    # Take the newest tick across a small spread of liquid symbols; the newest is
+    # the least-biased measurement available.
+    probe_symbols = [
+        s.strip()
+        for s in os.environ.get('MT5_OFFSET_PROBE_SYMBOLS', 'EURUSD,GBPUSD,USDJPY,XAUUSD').split(',')
+        if s.strip()
+    ]
+    offset_probe = os.environ.get('MT5_OFFSET_PROBE_SYMBOL')
+    if offset_probe:
+        probe_symbols.insert(0, offset_probe)  # explicit override still wins
+
+    freshest_epoch = None
+    freshest_symbol = None
+    for symbol in probe_symbols:
+        try:
+            tick = mt5.symbol_info_tick(symbol)
+        except Exception:
+            continue
+        if tick and tick.time and (freshest_epoch is None or tick.time > freshest_epoch):
+            freshest_epoch = tick.time
+            freshest_symbol = symbol
+
+    if freshest_epoch is None:
+        logger.debug('Server UTC offset probe SKIPPED — no tick available; retaining previous value')
+        return SERVER_UTC_OFFSET_SECONDS
+
+    # `>= 0` guards against a tick that is genuinely ahead of the wall clock.
+    tick_age = max(0, now - (freshest_epoch - SERVER_UTC_OFFSET_SECONDS))
+    if tick_age > ROUNDING_HALF_STEP_SECONDS:
+        logger.warning(
+            f'Server UTC offset probe REJECTED — freshest tick ({freshest_symbol}) is '
+            f'{tick_age:.0f}s old, beyond the {ROUNDING_HALF_STEP_SECONDS}s tolerance budget '
+            f'of the {ROUNDING_STEP_SECONDS}s rounding step. Retaining '
+            f'{SERVER_UTC_OFFSET_SECONDS}s rather than applying a biased measurement (#845).'
+        )
+        return SERVER_UTC_OFFSET_SECONDS
+
+    measured = int(round((freshest_epoch - now) / ROUNDING_STEP_SECONDS) * ROUNDING_STEP_SECONDS)
+    if measured != SERVER_UTC_OFFSET_SECONDS:
+        logger.info(
+            f'Server UTC offset measured: {measured}s ({measured / 3600.0:.2f}h) from '
+            f'{freshest_symbol} tick {tick_age:.0f}s old — was {SERVER_UTC_OFFSET_SECONDS}s'
+        )
+    SERVER_UTC_OFFSET_SECONDS = measured
+    _SERVER_OFFSET_MEASURED_AT = now
     return SERVER_UTC_OFFSET_SECONDS
 
 def utc_iso(epoch_seconds):

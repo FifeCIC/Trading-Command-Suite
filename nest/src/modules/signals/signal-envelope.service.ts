@@ -1473,7 +1473,7 @@ export class SignalEnvelopeService {
       rankTraded,
     ] = await Promise.all([
       q(`SELECT CAST(COUNT(*) AS SIGNED) AS total,
-                CAST(SUM(dismissedUntil > NOW()) AS SIGNED) AS active,
+                CAST(SUM(dismissedUntil > UTC_TIMESTAMP()) AS SIGNED) AS active,
                 CAST(SUM(combinedStrength IS NOT NULL) AS SIGNED) AS withStrength
          FROM signal_dismissal`),
       q(`SELECT protocolId,

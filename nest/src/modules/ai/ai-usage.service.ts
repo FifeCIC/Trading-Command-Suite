@@ -92,7 +92,7 @@ export class AiUsageService {
       const id = crypto.randomUUID();
       await this.prisma.$executeRawUnsafe(
         `INSERT INTO ai_api_call (id, feature, model, tokensIn, tokensOut, cost, durationMs, success, error, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
         id,
         params.feature || 'general',
         params.model,

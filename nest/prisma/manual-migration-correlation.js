@@ -11,7 +11,7 @@ async function main() {
       symbol_b VARCHAR(20) NOT NULL,
       correlation DOUBLE NOT NULL,
       period_days INT NOT NULL DEFAULT 90,
-      computed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      computed_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
       UNIQUE KEY uk_corr_pair (symbol_a, symbol_b, period_days),
       INDEX idx_corr_sym_a (symbol_a),
       INDEX idx_corr_computed (computed_at)

@@ -84,12 +84,19 @@ function record(invariant, name, ok, detail, skipped = false) {
  */
 const HELD = {
   'INV-NO-FUTURE-ROWS': {
-    issue: '#844',
+    issue: '#845',
     reason:
-      '5 columns carry DEFAULT CURRENT_TIMESTAMP, which MySQL evaluates in the SESSION timezone ' +
-      '(SYSTEM = UTC+1 here) while the app writes UTC. Rows omitted on insert are stamped an hour ' +
-      'ahead, so position/trade counts are non-zero. Real and tracked — but it is a DEFAULT on a ' +
-      'column, not a broker-clock skew, and the two need different fixes.',
+      'Residual +15min skew from the MT5 bridge clock-offset probe — NOT a local-time default. ' +
+      'MEASURED 2026-09-16: max lead 784s, ZERO rows >900s, which rules out a whole-hour skew ' +
+      '(a local-time default would be ~3600s, the #750/#780 mix-up ~10800s). ' +
+      '`detect_server_utc_offset()` derives the offset from the LAST TICK, so a stale tick ' +
+      'under-measures it by the tick age and the residue lands in the future; measured live, the ' +
+      'MetaQuotes bridge reported 9900s (2h45m) against a true 10800s (3h) — one 900s step short — ' +
+      'while disconnected, so it can also DEGRADE a previously-good offset. ' +
+      '⚠️ RETRACTION: this entry used to blame DEFAULT CURRENT_TIMESTAMP. That was wrong. #844 DID ' +
+      'land (live schema: position.openedAt = DEFAULT utc_timestamp(3)) but these rows carry ' +
+      'EXPLICIT values from the bridge and never used the default. ' +
+      'Evidence: nest/scripts/measure-future-lead-bound.cjs, measure-broker-clock-offset.cjs.',
   },
 };
 

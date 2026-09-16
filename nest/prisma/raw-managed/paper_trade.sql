@@ -22,7 +22,7 @@ CREATE TABLE `paper_trade` (
   `baseSize` decimal(12,5) NOT NULL DEFAULT '0.00000',
   `protocolId` varchar(64) DEFAULT NULL,
   `tickNumber` int DEFAULT NULL,
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `createdAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP()),
   PRIMARY KEY (`id`),
   KEY `idx_paper_strategy` (`strategyId`),
   KEY `idx_paper_symbol` (`symbol`),

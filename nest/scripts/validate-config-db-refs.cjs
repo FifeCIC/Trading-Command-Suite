@@ -286,6 +286,45 @@ loadEnv();
 
   await prisma.$disconnect();
 
+  // ── No column may default to the LOCAL clock (#844) ─────────────────────────────────────────
+  //
+  // ⚠️ The static sibling (`validate-local-time-sources.cjs`, in prebuild) checks the DDL SOURCE.
+  // This checks the DATABASE. Both are needed and neither subsumes the other, for the same reason
+  // `schema.prisma` is not the database in this repo: the source can be right while the live
+  // columns still carry the old default, because they were created before the fix and nothing
+  // re-applies DDL on its own.
+  //
+  // MySQL evaluates `CURRENT_TIMESTAMP` in the SESSION timezone (SYSTEM = UTC+1 here) while the
+  // application stores UTC, so a row that omits the column is stamped an hour in the future —
+  // silently, and indistinguishable from a correct timestamp downstream. 113 columns had this,
+  // including the trade execution queue and the retention column.
+  {
+    const localDefaults = await prisma.$queryRawUnsafe(
+      `SELECT TABLE_NAME, COLUMN_NAME, COLUMN_DEFAULT, EXTRA
+         FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND LOWER(COLUMN_DEFAULT) LIKE '%current_timestamp%'
+        ORDER BY TABLE_NAME, COLUMN_NAME`,
+    );
+    if (localDefaults.length > 0) {
+      const db = process.env.DATABASE_URL ? 'tradingcs' : '(current)';
+      errors.push(
+        `  ${localDefaults.length} column(s) in ${db} still default to the LOCAL clock:\n` +
+          localDefaults
+            .slice(0, 10)
+            .map((c) => `      ${c.TABLE_NAME}.${c.COLUMN_NAME}  DEFAULT ${c.COLUMN_DEFAULT} ${c.EXTRA || ''}`)
+            .join('\n') +
+          (localDefaults.length > 10 ? `\n      ... +${localDefaults.length - 10} more` : '') +
+          `\n      MySQL evaluates CURRENT_TIMESTAMP in the SESSION timezone (SYSTEM = UTC+1 here)\n` +
+          `      while the application stores UTC, so a row omitting the column is stamped an hour\n` +
+          `      ahead with no error. Run:  npm run db:fix-local-time`,
+      );
+    }
+    notes.push(
+      `columns checked for a local-time default: ${localDefaults.length === 0 ? 'none — all UTC (or explicit)' : `${localDefaults.length} VIOLATION(S)`}`,
+    );
+  }
+
   // ── Report ───────────────────────────────────────────────────────────────────────────────────
   console.log('Config → database reference check\n');
   for (const n of notes) console.log(`  ${n}`);

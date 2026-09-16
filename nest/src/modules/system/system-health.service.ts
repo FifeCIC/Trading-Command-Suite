@@ -237,7 +237,7 @@ export class SystemHealthService {
     try {
       // Check if automation has run at least once
       const rows = await this.prisma.$queryRawUnsafe<Array<{ cnt: number }>>(
-        `SELECT COUNT(*) as cnt FROM decision_log WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
+        `SELECT COUNT(*) as cnt FROM decision_log WHERE timestamp > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 HOUR)`,
       );
       const recentDecisions = Number(rows[0]?.cnt ?? 0);
       if (recentDecisions > 0) return this.pass('Automation Loop', `${recentDecisions} decisions in the last hour — actively scoring`);
@@ -358,7 +358,7 @@ export class SystemHealthService {
       }>>(
         `SELECT DATE_FORMAT(timestamp, '%Y-%m-%d %H:00') as hour,
                 AVG(durationMs) as avgMs, COUNT(*) as count
-         FROM api_activity_log WHERE timestamp > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         FROM api_activity_log WHERE timestamp > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
          GROUP BY hour ORDER BY hour DESC LIMIT 48`,
       );
       return rows.map(r => ({ hour: r.hour, avgMs: Math.round(Number(r.avgMs)), p95Ms: Math.round(Number(r.avgMs) * 2.1), count: Number(r.count) }));
@@ -422,7 +422,7 @@ export class SystemHealthService {
                 COUNT(*) as total,
                 SUM(CASE WHEN statusCode >= 400 AND statusCode < 500 THEN 1 ELSE 0 END) as err4xx,
                 SUM(CASE WHEN statusCode >= 500 THEN 1 ELSE 0 END) as err5xx
-         FROM api_activity_log WHERE timestamp > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         FROM api_activity_log WHERE timestamp > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
          GROUP BY hour ORDER BY hour DESC LIMIT 48`,
       );
       return rows.map(r => {

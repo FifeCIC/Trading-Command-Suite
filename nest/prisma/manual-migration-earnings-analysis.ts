@@ -58,8 +58,8 @@ async function main() {
       url VARCHAR(500) NULL,
       description VARCHAR(500) NULL,
       active TINYINT(1) NOT NULL DEFAULT 1,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      created_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+      updated_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()) ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uq_sources_name (name),
       UNIQUE KEY uq_sources_slug (slug),
       INDEX idx_sources_kind (kind)

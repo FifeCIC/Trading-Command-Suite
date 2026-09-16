@@ -19,8 +19,8 @@ async function main() {
       time_of_day VARCHAR(20) NULL,
       currency VARCHAR(10) NULL,
       source VARCHAR(30) NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      created_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+      updated_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()) ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_earnings_report_date (report_date),
       INDEX idx_earnings_symbol_report_date (symbol, report_date),
       INDEX idx_earnings_source_created (source, created_at)
@@ -41,9 +41,9 @@ async function main() {
       analyst_count INT NULL,
       upside DOUBLE NULL,
       source VARCHAR(30) NOT NULL,
-      fetched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      fetched_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+      created_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+      updated_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()) ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_at_symbol (symbol),
       INDEX idx_at_source_fetched (source, fetched_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

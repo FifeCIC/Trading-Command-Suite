@@ -19,7 +19,7 @@ CREATE TABLE `signal_outcome_log` (
   `blockerCount` int NOT NULL DEFAULT '0',
   `conflictCount` int NOT NULL DEFAULT '0',
   `warningCount` int NOT NULL DEFAULT '0',
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `createdAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP()),
   PRIMARY KEY (`id`),
   KEY `idx_outcome_score` (`scoreId`),
   KEY `idx_outcome_proto_time` (`protocolId`,`createdAt`),

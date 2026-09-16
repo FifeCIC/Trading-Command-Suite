@@ -83,7 +83,7 @@ export class PrismaService
         type VARCHAR(50) NOT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'queued',
         priority INT NOT NULL DEFAULT 50,
-        runAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        runAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
         recurrence VARCHAR(20) NULL,
         recurrenceMs INT NULL,
         payload JSON NULL,
@@ -91,8 +91,8 @@ export class PrismaService
         maxAttempts INT NOT NULL DEFAULT 3,
         lastRunAt DATETIME(3) NULL,
         lastError TEXT NULL,
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        createdAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_scheduled_job_status_runAt (status, runAt),
         INDEX idx_scheduled_job_type (type)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
@@ -107,8 +107,8 @@ export class PrismaService
         endAt DATETIME(3) NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'draft',
         results JSON NULL,
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        createdAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_ab_test_status (status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
       // ScreenerHit (#645) — source-agnostic catalyst event. Additive, safe every boot.
@@ -121,8 +121,8 @@ export class PrismaService
         catalystStrength DOUBLE NOT NULL DEFAULT 0,
         sourceReliability DOUBLE NOT NULL DEFAULT 50,
         rawPayloadRef VARCHAR(500) NULL,
-        timestamp DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        timestamp DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        createdAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
         INDEX idx_screener_hit_ticker (ticker),
         INDEX idx_screener_hit_source (source),
         INDEX idx_screener_hit_timestamp (timestamp)
@@ -139,8 +139,8 @@ export class PrismaService
         promotedTo VARCHAR(100) NULL,
         promotedAt DATETIME(3) NULL,
         expiresAt DATETIME(3) NULL,
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        createdAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         UNIQUE KEY uq_watchlist_item_screenerHitId (screenerHitId),
         INDEX idx_watchlist_item_watchlistId (watchlistId),
         INDEX idx_watchlist_item_status (status),
@@ -155,7 +155,7 @@ export class PrismaService
         symbolsResolved INT NOT NULL DEFAULT 0,
         symbolsScored INT NOT NULL DEFAULT 0,
         lastTickAt DATETIME(3) NULL,
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_protocol_score_status_state (state)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
       // RSS news items — the RssScraperService destination. Was missing from
@@ -173,7 +173,7 @@ export class PrismaService
         sentiment VARCHAR(50) NULL,
         severity INT NOT NULL DEFAULT 0,
         status VARCHAR(20) NOT NULL DEFAULT 'new',
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        createdAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
         UNIQUE KEY uq_news_item_sourceHash (sourceHash),
         INDEX idx_news_item_publishedAt (publishedAt)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
@@ -183,8 +183,8 @@ export class PrismaService
         id VARCHAR(36) NOT NULL PRIMARY KEY,
         content TEXT NOT NULL,
         sortOrder INT NOT NULL DEFAULT 0,
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        createdAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_research_note_sortOrder (sortOrder)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];

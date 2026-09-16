@@ -16,7 +16,7 @@ async function main() {
       preview VARCHAR(1000) NULL,
       error TEXT NULL,
       cached BOOLEAN NOT NULL DEFAULT FALSE,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
       expires_at DATETIME NOT NULL,
       INDEX idx_api_trace_cache_key (cache_key, created_at),
       INDEX idx_api_trace_created (created_at),

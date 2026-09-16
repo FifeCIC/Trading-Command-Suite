@@ -178,12 +178,12 @@ export class SignalQueueService {
       await (this.prisma as any).$executeRawUnsafe(
         `INSERT INTO strategy_signal_queue
            (id, strategyId, symbol, protocolId, direction, \`signal\`, compositePct, signalPct, opportunityPct, combinedStrength, scoreId, status, createdAt, updatedAt)
-         VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', UTC_TIMESTAMP(), UTC_TIMESTAMP())
          ON DUPLICATE KEY UPDATE
            direction = VALUES(direction), \`signal\` = VALUES(\`signal\`),
            compositePct = VALUES(compositePct), signalPct = VALUES(signalPct),
            opportunityPct = VALUES(opportunityPct), combinedStrength = VALUES(combinedStrength),
-           scoreId = VALUES(scoreId), status = 'pending', updatedAt = NOW()`,
+           scoreId = VALUES(scoreId), status = 'pending', updatedAt = UTC_TIMESTAMP()`,
         strategyId, rec.symbol, rec.protocolId, rec.direction, rec.signal,
         rec.compositePct ?? null, rec.signalPct ?? null, rec.opportunityPct ?? null,
         rec.combinedStrength ?? null, rec.scoreId ?? null,

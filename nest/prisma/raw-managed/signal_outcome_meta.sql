@@ -19,7 +19,7 @@ CREATE TABLE `signal_outcome_meta` (
   `message` text,
   `directiveIds` text,
   `hint` varchar(255) DEFAULT NULL,
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `createdAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP()),
   PRIMARY KEY (`id`),
   KEY `idx_outmeta_log` (`logId`),
   KEY `idx_outmeta_key` (`entryKey`)

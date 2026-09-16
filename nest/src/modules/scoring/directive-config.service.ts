@@ -288,8 +288,8 @@ export class DirectiveConfigService {
         try {
           // UPSERT — sync class defaults into DB so both stay in lockstep.
           await this.prisma.$executeRawUnsafe(
-            `INSERT INTO global_setting (\`key\`, value, updatedAt) VALUES (?, ?, NOW())
-             ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = NOW()`,
+            `INSERT INTO global_setting (\`key\`, value, updatedAt) VALUES (?, ?, UTC_TIMESTAMP())
+             ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = UTC_TIMESTAMP()`,
             key, value,
           );
           seeded++;

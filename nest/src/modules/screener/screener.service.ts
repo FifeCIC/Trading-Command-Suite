@@ -209,7 +209,7 @@ export class ScreenerService implements OnModuleInit {
       const rss: any[] = await (this.prisma as any).$queryRawUnsafe(
         `SELECT url, symbols, severity, publishedAt FROM news_item
          WHERE symbols IS NOT NULL AND symbols <> ''
-           AND publishedAt >= DATE_SUB(NOW(), INTERVAL 2 DAY)
+           AND publishedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 2 DAY)
          ORDER BY publishedAt DESC LIMIT ?`,
         limit,
       );

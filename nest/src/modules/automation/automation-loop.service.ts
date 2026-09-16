@@ -1424,9 +1424,9 @@ export class AutomationLoopService implements OnModuleInit {
       try {
         await (this.prisma as any).$executeRawUnsafe(
           `UPDATE strategy_signal_queue
-              SET status = 'pending', updatedAt = NOW()
+              SET status = 'pending', updatedAt = UTC_TIMESTAMP()
             WHERE status = 'executing'
-              AND updatedAt < NOW() - INTERVAL 15 MINUTE`,
+              AND updatedAt < UTC_TIMESTAMP() - INTERVAL 15 MINUTE`,
         );
       } catch { /* recovery is best-effort */ }
 
@@ -1623,7 +1623,7 @@ export class AutomationLoopService implements OnModuleInit {
           // EXECUTED consumes the entry.
           if (last.decision === 'EXECUTED') {
             await (this.prisma as any).$executeRawUnsafe(
-              `UPDATE strategy_signal_queue SET status = 'executed', updatedAt = NOW() WHERE id = ? AND status = 'pending'`,
+              `UPDATE strategy_signal_queue SET status = 'executed', updatedAt = UTC_TIMESTAMP() WHERE id = ? AND status = 'pending'`,
               head.id,
             ).catch(() => {});
           }
@@ -1803,7 +1803,7 @@ export class AutomationLoopService implements OnModuleInit {
       const id = `pt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       await (this.prisma as any).$executeRawUnsafe(
         `INSERT INTO paper_trade (id, strategyId, symbol, side, composite, entryPrice, sl, tp, baseSize, protocolId, tickNumber, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
         id, strategyId, symbol, side, Math.round(composite), entryPrice || null, sl, tp, baseSize, protocolId ?? null, this.state.tickCount,
       );
       // Mark only AFTER a successful insert — a failed attempt must not

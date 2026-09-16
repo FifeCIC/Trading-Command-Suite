@@ -111,7 +111,7 @@ export class ProtocolGatingController {
       FROM trading_strategy ts
       LEFT JOIN score s
         ON s.strategyId COLLATE utf8mb4_unicode_ci = ts.protocolId COLLATE utf8mb4_unicode_ci
-       AND s.timestamp >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
+       AND s.timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${WINDOW_DAYS} DAY)
       GROUP BY ts.id, ts.name, ts.symbol, ts.protocolId, ts.mode, ts.active, ts.minComposite
       ORDER BY ts.active DESC, ts.minComposite ASC, ts.name ASC
     `);

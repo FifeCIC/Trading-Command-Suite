@@ -17,7 +17,7 @@ async function main() {
       raw_email LONGTEXT NOT NULL,
       entry_count INT NOT NULL DEFAULT 0,
       status VARCHAR(20) NOT NULL DEFAULT 'parsed',
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
       INDEX idx_ewb_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
@@ -54,8 +54,8 @@ async function main() {
       meta JSON NULL,
       raw_text LONGTEXT NOT NULL,
       ai_summary TEXT NULL,
-      parsed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      parsed_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+      created_at DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
       INDEX idx_ew_symbol_report (symbol, report_date),
       INDEX idx_ew_batch (batch_id),
       INDEX idx_ew_created (created_at)

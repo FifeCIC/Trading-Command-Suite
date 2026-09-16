@@ -506,7 +506,7 @@ export class NewsImportService {
     // help — the driver maps any BIGINT column to BigInt), so counts must be
     // converted with Number() before JSON serialisation (see getSourceCounts).
     const recent: any[] = await this.prisma.$queryRawUnsafe(
-      `SELECT category, COUNT(*) as count FROM NewsArticle WHERE publishedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY category ORDER BY count DESC`,
+      `SELECT category, COUNT(*) as count FROM NewsArticle WHERE publishedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY) GROUP BY category ORDER BY count DESC`,
     );
     const rows = recent.length > 0
       ? recent
@@ -526,7 +526,7 @@ export class NewsImportService {
       `SELECT s.name, COUNT(a.id) as count
        FROM NewsArticle a
        JOIN NewsSource s ON a.sourceId = s.id
-       WHERE a.importedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       WHERE a.importedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)
        GROUP BY s.name`,
     );
     const counts: Record<string, number> = {};
