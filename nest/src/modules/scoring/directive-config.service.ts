@@ -55,14 +55,19 @@ export class DirectiveConfigService {
       // #849 — through the settings registry's key family, not the table. `field` comes from the
       // validated match rather than slicing the key string, so the field name and its type are declared
       // in exactly one place.
-      const { members } = await this.settings.listFamily('directive', directiveId);
+      const { members } = await this.settings.listFamily(
+        'directive',
+        directiveId,
+      );
 
       const config: DirectiveConfig = {};
       for (const member of members) {
         if (member.source === 'invalid') {
           // DELIBERATE CHANGE, and a reported one: this previously assigned NaN silently. Skipping the
           // field leaves it undefined and logs why — a broken weight should not become a number.
-          this.logger.warn(`directive ${directiveId} field ${member.field} is unusable: ${member.error}`);
+          this.logger.warn(
+            `directive ${directiveId} field ${member.field} is unusable: ${member.error}`,
+          );
           continue;
         }
         // The switch below reads a local `value`, exactly as it did before the migration — the access
@@ -71,16 +76,28 @@ export class DirectiveConfigService {
         const value = String(member.value ?? '');
 
         switch (field) {
-          case 'maxScore': config.maxScore = parseInt(value, 10); break;
-          case 'minScore': config.minScore = parseInt(value, 10); break;
-          case 'priority': config.priority = parseInt(value, 10); break;
-          case 'category': config.category = value; break;
-          case 'directionBias': config.directionBias = value; break;
+          case 'maxScore':
+            config.maxScore = parseInt(value, 10);
+            break;
+          case 'minScore':
+            config.minScore = parseInt(value, 10);
+            break;
+          case 'priority':
+            config.priority = parseInt(value, 10);
+            break;
+          case 'category':
+            config.category = value;
+            break;
+          case 'directionBias':
+            config.directionBias = value;
+            break;
         }
       }
       return config;
     } catch (err) {
-      this.logger.warn(`Failed to read config for ${directiveId}: ${(err as Error).message}`);
+      this.logger.warn(
+        `Failed to read config for ${directiveId}: ${(err as Error).message}`,
+      );
       return {};
     }
   }
@@ -96,7 +113,9 @@ export class DirectiveConfigService {
       const map = new Map<string, DirectiveConfig>();
       for (const member of members) {
         if (member.source === 'invalid') {
-          this.logger.warn(`directive ${member.subject} field ${member.field} is unusable: ${member.error}`);
+          this.logger.warn(
+            `directive ${member.subject} field ${member.field} is unusable: ${member.error}`,
+          );
           continue;
         }
         const id = member.subject;
@@ -104,42 +123,79 @@ export class DirectiveConfigService {
         const row = { value: String(member.value ?? '') };
 
         let config = map.get(id);
-        if (!config) { config = {}; map.set(id, config); }
+        if (!config) {
+          config = {};
+          map.set(id, config);
+        }
 
         switch (field) {
-          case 'maxScore': config.maxScore = parseInt(row.value, 10); break;
-          case 'minScore': config.minScore = parseInt(row.value, 10); break;
-          case 'priority': config.priority = parseInt(row.value, 10); break;
-          case 'category': config.category = row.value; break;
-          case 'directionBias': config.directionBias = row.value; break;
+          case 'maxScore':
+            config.maxScore = parseInt(row.value, 10);
+            break;
+          case 'minScore':
+            config.minScore = parseInt(row.value, 10);
+            break;
+          case 'priority':
+            config.priority = parseInt(row.value, 10);
+            break;
+          case 'category':
+            config.category = row.value;
+            break;
+          case 'directionBias':
+            config.directionBias = row.value;
+            break;
         }
       }
       return map;
     } catch (err) {
-      this.logger.warn(`Failed to read all directive configs: ${(err as Error).message}`);
+      this.logger.warn(
+        `Failed to read all directive configs: ${(err as Error).message}`,
+      );
       return new Map();
     }
   }
 
   // ── Write ────────────────────────────────────────────
 
-  async updateConfig(directiveId: string, config: Partial<DirectiveConfig>): Promise<void> {
+  async updateConfig(
+    directiveId: string,
+    config: Partial<DirectiveConfig>,
+  ): Promise<void> {
     if (!this.prisma.isAvailable) return;
 
     const entries: Array<{ key: string; value: string }> = [];
-    if (config.maxScore !== undefined) entries.push({ key: this.key(directiveId, 'maxScore'), value: String(config.maxScore) });
-    if (config.minScore !== undefined) entries.push({ key: this.key(directiveId, 'minScore'), value: String(config.minScore) });
-    if (config.priority !== undefined) entries.push({ key: this.key(directiveId, 'priority'), value: String(config.priority) });
-    if (config.category !== undefined) entries.push({ key: this.key(directiveId, 'category'), value: config.category });
-    if (config.directionBias !== undefined) entries.push({ key: this.key(directiveId, 'directionBias'), value: config.directionBias });
+    if (config.maxScore !== undefined)
+      entries.push({
+        key: this.key(directiveId, 'maxScore'),
+        value: String(config.maxScore),
+      });
+    if (config.minScore !== undefined)
+      entries.push({
+        key: this.key(directiveId, 'minScore'),
+        value: String(config.minScore),
+      });
+    if (config.priority !== undefined)
+      entries.push({
+        key: this.key(directiveId, 'priority'),
+        value: String(config.priority),
+      });
+    if (config.category !== undefined)
+      entries.push({
+        key: this.key(directiveId, 'category'),
+        value: config.category,
+      });
+    if (config.directionBias !== undefined)
+      entries.push({
+        key: this.key(directiveId, 'directionBias'),
+        value: config.directionBias,
+      });
 
     for (const { key, value } of entries) {
       try {
-        await this.prisma.globalSetting.upsert({
-          where: { key },
-          update: { value, updatedAt: new Date() },
-          create: { key, value },
-        });
+        // #849 — through the resolver: the key is validated against its declared family rather than
+        // written blind, so this path cannot create an undeclared key. The surrounding try/catch is
+        // unchanged, so one bad entry still does not abort the rest.
+        await this.settings.set(key, value);
       } catch (err) {
         this.logger.error(`Failed to update ${key}: ${(err as Error).message}`);
       }
@@ -148,7 +204,11 @@ export class DirectiveConfigService {
 
   // ── Protocol-scoped overrides (Phase 5 — #609) ───────
 
-  private protocolKey(slug: string, directiveId: string, field: string): string {
+  private protocolKey(
+    slug: string,
+    directiveId: string,
+    field: string,
+  ): string {
     return `protocol:${slug}:${directiveId}:${field}`;
   }
 
@@ -156,7 +216,9 @@ export class DirectiveConfigService {
    * Read all per-protocol overrides for one protocol.
    * Returns Map<directiveId, DirectiveConfig>. Empty map when none exist.
    */
-  async getProtocolOverrides(slug: string): Promise<Map<string, DirectiveConfig>> {
+  async getProtocolOverrides(
+    slug: string,
+  ): Promise<Map<string, DirectiveConfig>> {
     if (!this.prisma.isAvailable) return new Map();
 
     try {
@@ -167,7 +229,9 @@ export class DirectiveConfigService {
       const map = new Map<string, DirectiveConfig>();
       for (const member of members) {
         if (member.source === 'invalid') {
-          this.logger.warn(`protocol ${slug} ${member.key} is unusable: ${member.error}`);
+          this.logger.warn(
+            `protocol ${slug} ${member.key} is unusable: ${member.error}`,
+          );
           continue;
         }
         const directiveId = member.subject.split(':')[1] ?? member.subject;
@@ -175,41 +239,77 @@ export class DirectiveConfigService {
         const row = { value: String(member.value ?? '') };
 
         let config = map.get(directiveId);
-        if (!config) { config = {}; map.set(directiveId, config); }
+        if (!config) {
+          config = {};
+          map.set(directiveId, config);
+        }
 
         switch (field) {
-          case 'maxScore': config.maxScore = parseInt(row.value, 10); break;
-          case 'minScore': config.minScore = parseInt(row.value, 10); break;
-          case 'priority': config.priority = parseInt(row.value, 10); break;
-          case 'category': config.category = row.value; break;
-          case 'directionBias': config.directionBias = row.value; break;
+          case 'maxScore':
+            config.maxScore = parseInt(row.value, 10);
+            break;
+          case 'minScore':
+            config.minScore = parseInt(row.value, 10);
+            break;
+          case 'priority':
+            config.priority = parseInt(row.value, 10);
+            break;
+          case 'category':
+            config.category = row.value;
+            break;
+          case 'directionBias':
+            config.directionBias = row.value;
+            break;
         }
       }
       return map;
     } catch (err) {
-      this.logger.warn(`Failed to read protocol overrides for ${slug}: ${(err as Error).message}`);
+      this.logger.warn(
+        `Failed to read protocol overrides for ${slug}: ${(err as Error).message}`,
+      );
       return new Map();
     }
   }
 
   /** Write one directive's override for a protocol. */
-  async updateProtocolConfig(slug: string, directiveId: string, config: Partial<DirectiveConfig>): Promise<void> {
+  async updateProtocolConfig(
+    slug: string,
+    directiveId: string,
+    config: Partial<DirectiveConfig>,
+  ): Promise<void> {
     if (!this.prisma.isAvailable) return;
 
     const entries: Array<{ key: string; value: string }> = [];
-    if (config.maxScore !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'maxScore'), value: String(config.maxScore) });
-    if (config.minScore !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'minScore'), value: String(config.minScore) });
-    if (config.priority !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'priority'), value: String(config.priority) });
-    if (config.category !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'category'), value: config.category });
-    if (config.directionBias !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'directionBias'), value: config.directionBias });
+    if (config.maxScore !== undefined)
+      entries.push({
+        key: this.protocolKey(slug, directiveId, 'maxScore'),
+        value: String(config.maxScore),
+      });
+    if (config.minScore !== undefined)
+      entries.push({
+        key: this.protocolKey(slug, directiveId, 'minScore'),
+        value: String(config.minScore),
+      });
+    if (config.priority !== undefined)
+      entries.push({
+        key: this.protocolKey(slug, directiveId, 'priority'),
+        value: String(config.priority),
+      });
+    if (config.category !== undefined)
+      entries.push({
+        key: this.protocolKey(slug, directiveId, 'category'),
+        value: config.category,
+      });
+    if (config.directionBias !== undefined)
+      entries.push({
+        key: this.protocolKey(slug, directiveId, 'directionBias'),
+        value: config.directionBias,
+      });
 
     for (const { key, value } of entries) {
       try {
-        await this.prisma.globalSetting.upsert({
-          where: { key },
-          update: { value, updatedAt: new Date() },
-          create: { key, value },
-        });
+        // #849 — same as updateConfig(): validated against the `protocol` family before writing.
+        await this.settings.set(key, value);
       } catch (err) {
         this.logger.error(`Failed to update ${key}: ${(err as Error).message}`);
       }
@@ -221,12 +321,15 @@ export class DirectiveConfigService {
     if (!this.prisma.isAvailable) return;
 
     try {
-      const prefix = this.protocolKey(slug, directiveId, '');
-      await this.prisma.globalSetting.deleteMany({
-        where: { key: { startsWith: prefix } },
-      });
+      // #849 — the prefix delete moves into the resolver, so the key shape is known in one place rather
+      // than being re-derived here from `protocolKey(slug, directiveId, '')`.
+      // ⚠️ The subject is the `slug:directiveId` pair, matching the `protocol` family's subject group —
+      // clearFamily() derives the same prefix that `protocolKey(..., '')` used to build by hand.
+      await this.settings.clearFamily('protocol', `${slug}:${directiveId}`);
     } catch (err) {
-      this.logger.warn(`Failed to delete protocol config for ${slug}/${directiveId}: ${(err as Error).message}`);
+      this.logger.warn(
+        `Failed to delete protocol config for ${slug}/${directiveId}: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -235,7 +338,9 @@ export class DirectiveConfigService {
    * Returns Map<slug, Map<directiveId, DirectiveConfig>>. Used by the registry
    * so its maxScore display stays in lockstep with the scoring engine.
    */
-  async getAllProtocolOverrides(): Promise<Map<string, Map<string, DirectiveConfig>>> {
+  async getAllProtocolOverrides(): Promise<
+    Map<string, Map<string, DirectiveConfig>>
+  > {
     if (!this.prisma.isAvailable) return new Map();
 
     try {
@@ -245,7 +350,9 @@ export class DirectiveConfigService {
       const map = new Map<string, Map<string, DirectiveConfig>>();
       for (const member of members) {
         if (member.source === 'invalid') {
-          this.logger.warn(`protocol override ${member.key} is unusable: ${member.error}`);
+          this.logger.warn(
+            `protocol override ${member.key} is unusable: ${member.error}`,
+          );
           continue;
         }
         const slug = member.subject.split(':')[0] ?? member.subject;
@@ -254,21 +361,39 @@ export class DirectiveConfigService {
         const row = { value: String(member.value ?? '') };
 
         let inner = map.get(slug);
-        if (!inner) { inner = new Map(); map.set(slug, inner); }
+        if (!inner) {
+          inner = new Map();
+          map.set(slug, inner);
+        }
         let config = inner.get(directiveId);
-        if (!config) { config = {}; inner.set(directiveId, config); }
+        if (!config) {
+          config = {};
+          inner.set(directiveId, config);
+        }
 
         switch (field) {
-          case 'maxScore': config.maxScore = parseInt(row.value, 10); break;
-          case 'minScore': config.minScore = parseInt(row.value, 10); break;
-          case 'priority': config.priority = parseInt(row.value, 10); break;
-          case 'category': config.category = row.value; break;
-          case 'directionBias': config.directionBias = row.value; break;
+          case 'maxScore':
+            config.maxScore = parseInt(row.value, 10);
+            break;
+          case 'minScore':
+            config.minScore = parseInt(row.value, 10);
+            break;
+          case 'priority':
+            config.priority = parseInt(row.value, 10);
+            break;
+          case 'category':
+            config.category = row.value;
+            break;
+          case 'directionBias':
+            config.directionBias = row.value;
+            break;
         }
       }
       return map;
     } catch (err) {
-      this.logger.warn(`Failed to read all protocol overrides: ${(err as Error).message}`);
+      this.logger.warn(
+        `Failed to read all protocol overrides: ${(err as Error).message}`,
+      );
       return new Map();
     }
   }
@@ -281,14 +406,16 @@ export class DirectiveConfigService {
    * source of truth for maxScore/minScore/category/directionBias/priority.
    * This keeps installation seed data and live DB values in lockstep on boot.
    */
-  async seedFromDefaults(directives: Array<{
-    id: string;
-    maxScore: number;
-    category?: string;
-    minScore?: number;
-    directionBias?: string;
-    priority?: number;
-  }>): Promise<number> {
+  async seedFromDefaults(
+    directives: Array<{
+      id: string;
+      maxScore: number;
+      category?: string;
+      minScore?: number;
+      directionBias?: string;
+      priority?: number;
+    }>,
+  ): Promise<number> {
     if (!this.prisma.isAvailable) return 0;
 
     let seeded = 0;
@@ -308,7 +435,8 @@ export class DirectiveConfigService {
           await this.prisma.$executeRawUnsafe(
             `INSERT INTO global_setting (\`key\`, value, updatedAt) VALUES (?, ?, UTC_TIMESTAMP())
              ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = UTC_TIMESTAMP()`,
-            key, value,
+            key,
+            value,
           );
           seeded++;
         } catch (err) {

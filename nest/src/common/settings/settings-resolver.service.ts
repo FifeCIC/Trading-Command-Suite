@@ -297,10 +297,16 @@ export class SettingsResolverService implements OnModuleInit {
   async listFamily(
     familyId: string,
     subject?: string,
-  ): Promise<{ members: ResolvedFamilySetting[]; invalid: number; error?: string }> {
+  ): Promise<{
+    members: ResolvedFamilySetting[];
+    invalid: number;
+    error?: string;
+  }> {
     const family = SETTING_FAMILIES.find((f) => f.id === familyId);
     if (!family) {
-      throw new Error(`no family "${familyId}" is declared in settings-registry.ts`);
+      throw new Error(
+        `no family "${familyId}" is declared in settings-registry.ts`,
+      );
     }
 
     // The subject is followed by ':' only when a field follows it. Derived from the declaration rather
@@ -314,14 +320,20 @@ export class SettingsResolverService implements OnModuleInit {
     let rows: Array<{ key: string; value: string }>;
     try {
       if (!this.prisma.isAvailable) {
-        return { members: [], invalid: 0, error: 'database unavailable — nothing was read' };
+        return {
+          members: [],
+          invalid: 0,
+          error: 'database unavailable — nothing was read',
+        };
       }
       rows = await this.prisma.globalSetting.findMany({
         where: { key: { startsWith: prefix } },
         select: { key: true, value: true },
       });
     } catch (err) {
-      this.logger.warn(`family "${familyId}" bulk read failed: ${(err as Error).message}`);
+      this.logger.warn(
+        `family "${familyId}" bulk read failed: ${(err as Error).message}`,
+      );
       return { members: [], invalid: 0, error: (err as Error).message };
     }
 
@@ -341,7 +353,8 @@ export class SettingsResolverService implements OnModuleInit {
           present: true,
           source: 'invalid',
           storedValue: row.value,
-          error: 'key sits under the family prefix but does not match its pattern',
+          error:
+            'key sits under the family prefix but does not match its pattern',
           owner: family.owner,
           userChangeable: false,
         });
@@ -384,6 +397,57 @@ export class SettingsResolverService implements OnModuleInit {
       );
     }
     return { members, invalid };
+  }
+
+  /**
+   * clearFamily() — delete every stored member of a family, optionally narrowed to one subject.
+   *
+   * WHY IT LIVES HERE: a delete is a write, and the ownership rule applies to writes as much as reads. A
+   * caller holding its own `startsWith(prefix)` string is a second place that knows the key shape — and
+   * the shape is exactly what drifts when two places know it.
+   *
+   * 🛑 DESTRUCTIVE, AND GUARDED. Clearing a whole family requires `allowAll: true` explicitly, because
+   * `clearFamily('directive')` with a mistyped subject would silently delete every directive override in
+   * the system. Having to pass the flag deliberately is the difference between a bulk delete and an
+   * accident.
+   */
+  async clearFamily(
+    familyId: string,
+    subject?: string,
+    opts: { allowAll?: boolean } = {},
+  ): Promise<{ keyPattern: string; deleted: number }> {
+    const family = SETTING_FAMILIES.find((f) => f.id === familyId);
+    if (!family) {
+      throw new Error(
+        `no family "${familyId}" is declared in settings-registry.ts`,
+      );
+    }
+    if (!subject && !opts.allowAll) {
+      throw new Error(
+        `clearFamily("${familyId}") without a subject would delete EVERY member of the family. ` +
+          `Pass a subject, or { allowAll: true } if that really is what you mean.`,
+      );
+    }
+
+    // Same derivation as listFamily(), so a bulk delete and a bulk read cannot disagree about which keys
+    // belong to a subject.
+    const prefix = subject
+      ? family.fieldGroup === 0
+        ? `${family.prefix}${subject}`
+        : `${family.prefix}${subject}:`
+      : family.prefix;
+
+    const result = await this.prisma.globalSetting.deleteMany({
+      where: { key: { startsWith: prefix } },
+    });
+    const deleted =
+      typeof result === 'number'
+        ? result
+        : ((result as { count?: number })?.count ?? 0);
+    this.logger.warn(
+      `cleared ${deleted} member(s) of family "${familyId}" (prefix ${prefix})`,
+    );
+    return { keyPattern: `${prefix}*`, deleted };
   }
 
   /**
