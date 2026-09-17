@@ -887,6 +887,32 @@ export class TradingStrategyService {
           : 30;
         const estimatedCapital = (size * 100_000) / Math.max(leverage, 1); // Margin used, not notional
 
+        // ⚠️ THE ESTIMATE BELOW IS KNOWN TO BE WRONG, AND THIS LOG IS HOW YOU SEE IT (#865).
+        //
+        // Two defects, both measured 2026-09-17:
+        //   1. `leverage` is `balance / margin` — margin UTILISATION, not a leverage ratio. It read
+        //      8.62 against the account's declared 1:100, inflating the estimate ~11x. It also FALLS
+        //      as positions open, so the more is open, the harder entries are blocked: a compounding
+        //      trap, not a constant error.
+        //   2. `size * 100_000` is the FX contract convention applied to EVERY instrument. There is no
+        //      price and no per-instrument contract size, so XAUUSD and NZDJPY produce the IDENTICAL
+        //      estimate. Measured: gold 0.1 lot needs £434.61 of margin at 1:100, NZDJPY needs £100,
+        //      and this expression returns £1,160 for both.
+        //
+        // It is NOT fixed here on purpose. The obvious repair (use `account.leverage`) makes FX
+        // correct and gold 4.3x TOO PERMISSIVE — it would admit ~4x the intended exposure on metals.
+        // Correcting it needs a per-symbol contract size, which the bridge carries on `/positions`
+        // but exposes on no symbol endpoint. Trading one wrong answer for a more dangerous one on a
+        // money path is not a fix; see the issue.
+        //
+        // Reference values for the next person: size=0.1 -> estimatedCapital=1160.09 on this account.
+        this.logger.debug(
+          `risk estimate: size=${size} contract=100000 leverage=${leverage.toFixed(2)} ` +
+            `(account declares ${account?.leverage ?? '?'}:1) margin=${account?.margin} balance=${account?.balance} ` +
+            `-> estimatedCapital=${estimatedCapital.toFixed(2)} = ` +
+            `${portfolioValue > 0 ? ((estimatedCapital / portfolioValue) * 100).toFixed(1) : '?'}% of ${portfolioValue} (#865)`,
+        );
+
         const riskProfile = buildRiskProfile({
           maxOpenPositions,
           maxPerSymbol,

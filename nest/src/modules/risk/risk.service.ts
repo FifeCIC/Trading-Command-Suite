@@ -185,7 +185,22 @@ export class RiskService {
     }
     const allocation = portfolioValue > 0 ? newCapital / portfolioValue : 0;
     if (allocation > risk.maxPerSymbol) {
-      return { allowed: false, reason: `Allocation ${(allocation * 100).toFixed(1)}% exceeds max per symbol ${(risk.maxPerSymbol * 100)}%` };
+      // ⚠️ The reason carries BOTH NUMBERS, not just the ratio (2026-09-17, #865).
+      //
+      // A block reading `Allocation 62.7% exceeds max per symbol 25%` was the largest single entry
+      // blocker — 78 in one day — and it took an hour to explain, because nothing in the record said
+      // what the estimate WAS or what it was measured against. The reader had to go and instrument
+      // the caller to discover that `estimatedCapital` was 11x too high.
+      //
+      // "`estimated capital 1160.09 of 1340.00`" answers that on sight: the second question
+      // ("why is 0.1 of a lot £1,160?") is the defect, and it is now askable from the log alone.
+      return {
+        allowed: false,
+        reason:
+          `Allocation ${(allocation * 100).toFixed(1)}% exceeds max per symbol ` +
+          `${(risk.maxPerSymbol * 100)}% — estimated capital ${newCapital.toFixed(2)} of ` +
+          `${portfolioValue.toFixed(2)}`,
+      };
     }
     return { allowed: true, reason: 'OK' };
   }
