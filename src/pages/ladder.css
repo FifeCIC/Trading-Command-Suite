@@ -83,7 +83,11 @@
 
 .lad-proto-tag { font-size: 0.62rem; color: var(--ink-soft); background: color-mix(in srgb, var(--ink-soft) 14%, transparent); padding: 1px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
 
-.lad-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+/* `container: … / inline-size` — the footer's column count is decided by the CARD's width,
+   not the window's. In the default two-column ladder split an 884px window gives a 248px
+   card, so a viewport media query would measure the wrong thing entirely (it would say
+   "884px, plenty of room" while the card has none). See the .lad-copy-ref rule. */
+.lad-card { container: lad-card / inline-size; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
 .lad-card--top { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0, 0, 0, 0.12); }
 .lad-card--filtered { opacity: 0.55; }
 
@@ -133,7 +137,39 @@
    both score slots always render. `auto` columns let a long Details value widen
    its own column only. */
 .lad-card-foot { display: block; margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
-.lad-card-scores { display: grid; grid-template-columns: auto auto auto 1fr; align-items: start; gap: 0.4rem 1.35rem; }
+.lad-card-scores { display: grid; grid-template-columns: auto auto auto 1fr auto; align-items: start; gap: 0.4rem 1.35rem; }
+
+/* Copy-to-investigate chip (2026-09-16). Shape follows .sig-opp-ref on the signals page
+   (monospace, same --line/--panel/--ink-soft tokens) so "the thing that copies a
+   reference" looks the same wherever it appears.
+   ⚠️ A real <button>, not a clickable <span> — it must be Tab-reachable and fire on
+   Enter/Space. `--ink-soft` on `--panel` meets AA; the label also reads "copied" /
+   "blocked" as text, so the outcome never depends on seeing a colour.
+   Sized to WCAG 2.5.5 (44×44, accessibility-policy) rather than to the 0.6rem label:
+   the text is small because it sits in a 1.15rem score row, not because the control is
+   unimportant, and a 16px-tall chip would be unusable on touch. */
+.lad-copy-ref {
+  align-self: center;
+  justify-self: end;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lad-copy-ref:hover { color: var(--ink); border-color: var(--ink-soft); }
+.lad-copy-ref:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Both score blocks (Signal & Opp) use identical treatment. */
 .lad-score-block { display: flex; flex-direction: column; align-items: flex-start; gap: 0.06rem; }
@@ -209,4 +245,17 @@
 @media (max-width: 760px) {
   .lad-split { grid-template-columns: 1fr; }
   .lad-proto-col { position: static; max-height: 240px; overflow: auto; }
+}
+
+/* ⚠️ THE COPY CHIP MUST NOT MAKE THE FOOTER WORSE — measured, not assumed.
+   Four readouts already fill a narrow card. Adding the chip as a fifth column took ~69px
+   from them and collapsed "Details" to 3px and "Scored" to 0px at the default 884px-window
+   split — the columns hold (both have `min-width: 0`), so it failed silently, which is the
+   worst way for a layout to fail.
+   Below 420px of CARD width the chip therefore moves to its own line and the original four
+   columns get all the space back. Above it there is room for five, and the chip sits inline
+   where it reads as part of the row. */
+@container lad-card (max-width: 420px) {
+  .lad-card-scores { grid-template-columns: auto auto auto 1fr; }
+  .lad-copy-ref { grid-column: 1 / -1; justify-self: start; }
 }

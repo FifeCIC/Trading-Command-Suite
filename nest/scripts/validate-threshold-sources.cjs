@@ -231,6 +231,70 @@ for (const file of files) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// FRONTEND THRESHOLD MEMORY — a module-level numeric threshold declared in `src/`.
+//
+// WHY THIS WAS ADDED (2026-09-16, #847)
+// --------------------------------------
+// This guard already scanned `src/`, but only for `minComposite` / `tradeThreshold` literals. It
+// therefore could not see `src/core/signal-utils.js`:
+//
+//     let _buyThreshold = 65;
+//     let _holdThreshold = 40;
+//
+// Those two numbers were a hand-copied duplicate of the pre-rescale classification scale, and the
+// comment above them claimed they came from `GET /api/settings/signals` — an endpoint that does
+// NOT exist. `setSignalThresholds()` has no caller, so the frontend classified against 65/40 for its
+// entire life. Measured live: `strategy_signal_queue.compositePct` runs 7-17, so **0 of 16 rows**
+// could reach 40 and every queued signal rendered "low" while the server called some of them
+// BUY/STRONG. Exactly the #839 shape — plausible output, no error.
+//
+// ⚠️ THE PATTERN IS DELIBERATELY NARROW AND ANCHORED. A looser `threshold\s*=\s*\d+` matches prose
+// in architecture-reference.js, a scroll pixel value in StickyHeader.jsx and a comment in
+// SettingsPage.jsx. Measured 2026-09-16: the anchored form matches 2 lines and both are real. A
+// guard with false positives gets allowlisted, and an allowlisted guard is worse than none.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+const FRONTEND_THRESHOLD_OWNERS = [
+  {
+    file: 'src/core/signal-utils.js',
+    why: 'The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) — percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.',
+  },
+];
+
+const MODULE_THRESHOLD_RE = /^(?:let|const)\s+_?\w*(?:[Tt]hreshold|[Bb]ar|[Gg]ate)\w*\s*=\s*(\d+)/;
+
+for (const file of files) {
+  const relPath = rel(file);
+  if (!relPath.startsWith('src/')) continue; // frontend only — backend bars are handled above
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch {
+    continue;
+  }
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const lineText = lines[i];
+    const m = MODULE_THRESHOLD_RE.exec(lineText.trim());
+    if (!m) continue;
+    // A commented-out declaration is documentation, not configuration (same rule as above).
+    if (/^\s*(\/\/|\*|\/\*|#)/.test(lineText)) continue;
+
+    const owner = FRONTEND_THRESHOLD_OWNERS.find((o) => o.file === relPath);
+    findings.push({
+      level: owner ? 'info' : 'error',
+      relPath,
+      lineNo: i + 1,
+      kind: 'frontend-threshold-memory',
+      value: Number(m[1]),
+      lineText: lineText.trim(),
+      note: owner
+        ? owner.why
+        : 'A module-level numeric threshold declared in the frontend. The frontend must READ a bar, not remember one — two memory sites is exactly how the 65/40 copy survived the 2026-09-15 rescale (#839, #847). Read it from GET /api/scoring/gated/thresholds via fetchScoringThresholds(), or add this file to FRONTEND_THRESHOLD_OWNERS with a reason if it is a genuine owner.',
+    });
+  }
+}
+
 // ── Report ──────────────────────────────────────────────────────────────────────────────────
 const errors = findings.filter((f) => f.level === 'error');
 const warnings = findings.filter((f) => f.level === 'warning');
@@ -262,7 +326,7 @@ if (LIST_ONLY || findings.length === 0) {
 }
 
 if (errors.length) {
-  console.log(`\n✖ ${errors.length} OUT-OF-SCALE DEFAULT(S) — these can never be cleared:\n`);
+  console.log(`\n✖ ${errors.length} THRESHOLD LITERAL(S) OUTSIDE AN OWNER:\n`);
   for (const f of errors) {
     console.log(`  ${f.relPath}:${f.lineNo}   (${f.kind} = ${f.value})`);
     console.log(`      ${f.lineText.slice(0, 130)}`);
@@ -292,9 +356,11 @@ if (failed) {
     `\n${errors.length} error(s)${STRICT ? `, ${warnings.length} warning(s) (--strict)` : ''}.\n\n` +
     `FIX: import the canonical constant instead of writing a literal.\n` +
     `     nest/src/common/utils/style-thresholds.ts  →  BOT_BAR_DEFAULT, SIGNALS_GATE_DEFAULT, STYLE_THRESHOLDS\n` +
-    `     nest/src/modules/scoring/protocol-gating.service.ts  →  SIGNAL_THRESHOLDS\n\n` +
-    `WHY: the 2026-09-15 rescale updated the owners and left these literals on the old scale,\n` +
-    `     producing bots that appear active and silently never trade (#839).\n`,
+    `     nest/src/modules/scoring/protocol-gating.service.ts  →  SIGNAL_THRESHOLDS\n` +
+    `     frontend: READ a bar, do not remember one  →  fetchScoringThresholds() + thresholdGeometry()\n\n` +
+    `WHY: the 2026-09-15 rescale updated the owners and left literals on the old scale, producing\n` +
+    `     bots that appear active and silently never trade (#839), and a UI that classified every\n` +
+    `     percent-of-capacity value as "low" (#847).\n`,
   );
   process.exit(1);
 }

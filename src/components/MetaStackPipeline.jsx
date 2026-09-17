@@ -2,7 +2,7 @@
  * MetaStackPipeline — reusable META.Stack pipeline content (Focused + Technical).
  * ==============================================================================
  * Extracted from MetaStackDisplayPage (2026-08-19) so it can be embedded in the
- * Triple-Screen Cockpit too. Renders the 6-stage pipeline (Symbols → Strategy →
+ * META.Stack Cockpit too. Renders the 6-stage pipeline (Symbols → Strategy →
  * Signals → Risk Rules → Execution → Results) as two card rows:
  *
  *   - Focused View: high-level "what" for the selected META.Stack
@@ -14,7 +14,7 @@
  *   showHeader  — set false when embedding inside a page that has its own header
  *                 (keeps the META.Stack selector visible)
  *
- * Route: embedded in /lab/triple-screen (was the standalone /lab/metastack-display)
+ * Route: embedded in /lab/meta-stack-cockpit (was the standalone /lab/metastack-display)
  * Data:  GET /api/scoring/metastacks/ratings, GET /api/scoring/protocols,
  *        GET /api/watchlists, GET /api/speed/scan
  */
@@ -78,13 +78,40 @@ export default function MetaStackPipeline({ title = 'MetaStack Display', subtitl
     return { protocols: protoMap, watchlists: wlMap };
   }, [protocols, watchlists]);
 
+  /**
+   * Live per-symbol scores for the Signals stage.
+   *
+   * ⚠️ 2026-09-17 — this called `apiGet('/api/speed/scan?limit=8')` and ALWAYS 404'd.
+   * `/api/speed/scan` is `@Post('scan')` ONLY (speed-scan.controller.ts) — there is no
+   * GET route, so `apiGet` could never succeed. The consequence was invisible in the
+   * worst way: `rawScores` was permanently `[]`, so the Signals stage silently rendered
+   * "Awaiting live data" forever, and the 15s poll flooded logs/api-err.log. No error
+   * surfaced to the user because `.data` of a failed query is `undefined`, and
+   * `undefined || []` is indistinguishable from "no signals right now".
+   *
+   * Repointed to `/api/signals/best` — a PRE-COMPUTED read, which is the right choice
+   * over POSTing to /api/speed/scan: that endpoint's own docblock declares itself the
+   * heaviest in the app (4× bar fetches per symbol across ~23 symbols) and says it is
+   * "NOT for dashboard overviews". Polling it every 15s from an always-open cockpit
+   * would be a real cost for data that is already materialised.
+   *
+   * Contract: `translateMetaStack(stack, protocols, scores, liveMaps)` does
+   * `scores.slice(0, 6).map(s => ({ symbol: s.symbol, composite: s.composite, signal: s.signal }))`
+   * — so it needs a flat ARRAY of `{symbol, composite, signal}`. `/api/signals/best`
+   * returns those three fields on each item of `envelopes`, so `.envelopes` is a
+   * drop-in. Nothing else is consumed, so no mapping layer is needed.
+   */
   var scoresQuery = useQuery({
-    queryKey: ['speed-scan', selectedStack ? selectedStack.watchlistName : ''],
-    queryFn: function () { return apiGet('/api/speed/scan?limit=8'); },
+    queryKey: ['signals-best', selectedStack ? selectedStack.watchlistName : ''],
+    queryFn: function () {
+      return apiGet('/api/signals/best').then(function (d) {
+        return (d && Array.isArray(d.envelopes)) ? d.envelopes : [];
+      });
+    },
     refetchInterval: 15000,
     enabled: !!selectedStack,
   });
-  var rawScores = scoresQuery.data || [];
+  var rawScores = Array.isArray(scoresQuery.data) ? scoresQuery.data : [];
 
   var focused = selectedStack ? translateMetaStack(selectedStack, protocols, rawScores, liveMaps) : null;
 

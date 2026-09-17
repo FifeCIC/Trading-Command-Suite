@@ -14,19 +14,19 @@
  * @uses buildScoreDisplay() (src/core/score-display.js)
  * @uses SignalBadge         (src/components/SignalBadge.jsx)
  */
-import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
-import SignalBadge from '../components/SignalBadge';
-import { buildScoreDisplay } from '../core/score-display';
+import ScoreCard from '../components/ScoreCard';
+import { buildCardRef, matchesSearch } from '../core/score-card-view';
+import { buildScoreEntries } from '../core/score-card-entries';
 import { useProtocolStatuses } from '../core/protocol-status';
 import { useProtocolData } from '../core/useProtocolData';
 import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
-import { timeAgo } from '../core/format-utils';
+import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useSymbolLookups } from '../hooks/useSymbolLookups';
 import './ladder.css';
 
 const AGE_OPTIONS = ['1', '2', '3', '4', '5', '10', '15', '20', '30', '60'];
@@ -73,38 +73,6 @@ function isDirectionApplicable(p, direction) {
 function readScoreDisplay() {
   try { return localStorage.getItem('lad-score-display') || 'both'; }
   catch { return 'both'; }
-}
-
-/**
- * Card state vocabulary — the single place that decides what a card's state chip
- * says and how it is coloured. Every card renders exactly one chip with one of
- * these values, so a card that is somehow in the wrong state is spottable by
- * reading the chip rather than by spotting a missing element.
- *
- * Deliberately a fixed map instead of string building: an unexpected
- * `vm.state` falls back to the unscored style rather than emitting a
- * `lad-state--undefined` class that would silently render unstyled.
- */
-const STATE_CLASS = {
-  live: 'lad-state--live',
-  paused: 'lad-state--paused',
-  stale: 'lad-state--stale',
-  unscored: 'lad-state--unscored',
-  closed: 'lad-state--closed',
-};
-
-/** Human label for a card's state chip. See STATE_CLASS for the vocabulary. */
-function stateLabel(vm) {
-  if (vm.state === 'unscored') return 'Not scored';
-  if (vm.frozen) return vm.state === 'stale' ? 'Stale' : 'Market closed';
-  return 'Live';
-}
-
-/** CSS modifier for a card's state chip — the label/colour pair in one place. */
-function stateClass(vm) {
-  if (vm.state === 'unscored') return STATE_CLASS.unscored;
-  if (!vm.frozen) return STATE_CLASS[vm.state] || STATE_CLASS.live;
-  return vm.state === 'stale' ? STATE_CLASS.stale : STATE_CLASS.closed;
 }
 
 /**
@@ -176,143 +144,10 @@ function readInitialSelection() {
 }
 
 /**
- * familyOf(protocolId) — the protocol FAMILY a run belongs to.
- *
- * The gated-protocol registry and the run store name the same strategy slightly
- * differently: the registry uses `xau-speed-v1` while runs are emitted per
- * timeframe as `xau-speed-m5` / `-m15` / `-1h` / `-4h`. Dropping the version
- * suffix (`-v1`) and the trailing timeframe gives the shared family key, so a
- * card can find its score whichever name produced it.
+ * buildCardRef() — MOVED to src/core/score-card-view.js (2026-09-17) so the
+ * META.Stack Cockpit can produce the same reference from the same code.
+ * LadderPage passes its own label so the pasted text is unchanged.
  */
-function familyOf(protocolId) {
-  return String(protocolId || '')
-    .toLowerCase()
-    .replace(/-v\d+$/, '')                    // xau-speed-v1   -> xau-speed
-    .replace(/-(m1|m5|m15|m30|h1|h4|d1|w1|mn1|\d+[mhd])$/, ''); // xau-speed-m5 -> xau-speed
-}
-
-/**
- * matchesSearch(entry, query) — does a ladder card match the free-text search?
- *
- * Covers the three things a user actually looks for on this page:
- *   - SYMBOL        — "xau" finds XAUUSD and XAGUSD
- *   - PROTOCOL      — the display name OR the id, so "gold" and "xau-speed" both work
- *   - STATE/SIGNAL  — "live", "stale", "closed", "not scored" and the signal word
- *                     (BUY / HOLD / SELL), which is what the badge renders.
- *
- * The state words are matched against the SAME helpers the chip renders with
- * (`stateLabel`), not a re-typed list — otherwise the search would drift from the
- * labels the moment a chip is renamed. `signalClass` is deliberately not searched:
- * the badge shows the direction word, so matching the class would accept queries
- * the user cannot see on screen.
- *
- * Space-separated terms are ANDed, so "gold live" narrows to live Gold cards.
- */
-function matchesSearch(e, query) {
-  const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return true;
-  const haystack = [
-    e.symbol,
-    e.protocolName,
-    e.protocolId,
-    e.runId,
-    e.scoreFrom,
-    stateLabel(e.vm),
-    e.hasScore ? (e.vm.signal || '') : 'not scored',
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return terms.every((t) => haystack.includes(t));
-}
-
-/**
- * One labeled score block — used for BOTH the Signal and Opportunity scores so
- * they render identically. Value format follows the Screen Options preference
- * (raw | percent | both). `active` highlights the metric the ladder is ranked by.
- */
-function ScoreBlock({ label, score, max, pct, mode, active }) {
-  const raw = score != null
-    ? `${score.toLocaleString()}${max ? ` / ${max.toLocaleString()}` : ''}`
-    : null;
-  const pctNode = pct != null ? `${pct}%` : null;
-  const value = mode === 'raw'
-    ? raw
-    : mode === 'percent'
-      ? pctNode
-      : null;
-  return (
-    <span className={`lad-score-block ${active ? 'lad-score-block--active' : ''}`}>
-      <span className="lad-score-label">{label}</span>
-      {value != null ? (
-        <span className="lad-score-value">{value ?? '—'}</span>
-      ) : (
-        <span className="lad-score-value">
-          <span>{raw ?? '—'}</span>
-          {pctNode && <span className="lad-score-pct">{pctNode}</span>}
-        </span>
-      )}
-    </span>
-  );
-}
-
-/** Numeric helpers for the opt-in facts strip (#667/#668). */
-function fmtVal(v, d = 2) { return v == null ? '—' : Number(v).toFixed(d); }
-function fmtSigned(v) {
-  if (v == null) return '—';
-  const n = Number(v);
-  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
-}
-
-/**
- * LadderFacts({ meta, pos, asBlock }) — company / open-position facts.
- *
- * `asBlock` renders it as a footer column matching ScoreBlock's label-above-value
- * rhythm (label "Details", values beneath) instead of the old inline strip. It is
- * ALWAYS ON now — the "Details" toolbar toggle was removed — so this no longer
- * depends on `showFacts`. Returns null when there is nothing to show, which stops
- * an unscored card rendering an empty third column.
- */
-function LadderFacts({ meta, pos, asBlock = false }) {
-  const co = meta && meta.name && String(meta.name).trim().toUpperCase() !== String(meta.ticker || '').toUpperCase()
-    ? meta.name
-    : null;
-  const pnl = pos && typeof pos.pnl === 'number' ? pos.pnl : null;
-  const pnlPct = pos && typeof pos.pnlPct === 'number' ? pos.pnlPct : null;
-  if (!co && !pos) return null;
-
-  const body = (
-    <>
-      {co && (
-        <span className="lad-fact" title={[meta.exchange, meta.type].filter(Boolean).join(' · ') || 'Company'}>
-          {co}
-        </span>
-      )}
-      {pos && (
-        <span
-          className={`lad-fact lad-fact--pos${pnl != null ? (pnl >= 0 ? ' lad-pnl-up' : ' lad-pnl-down') : ''}`}
-          title={`Open position${pos.provider ? ` · ${pos.provider}` : ''}`}
-        >
-          ● {fmtVal(pos.quantity, 2)} @ {fmtVal(pos.avgPrice)} → {fmtVal(pos.currentPrice)}
-          {pnl != null && (
-            <span className="lad-fact-pnl"> · P&L {fmtSigned(pnl)} ({fmtSigned(pnlPct)}%)</span>
-          )}
-        </span>
-      )}
-    </>
-  );
-
-  if (asBlock) {
-    return (
-      <span className="lad-score-block lad-score-block--facts">
-        <span className="lad-score-label">Details</span>
-        <span className="lad-score-value lad-facts-values">{body}</span>
-      </span>
-    );
-  }
-
-  return <div className="lad-facts">{body}</div>;
-}
 
 export default function LadderPage() {
   const cardsColRef = useRef(null); // scroll-reveal scope (issue #672)
@@ -374,34 +209,37 @@ export default function LadderPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // ── Copy-to-investigate (2026-09-16) ──
+  // Keyed by card, not a plain boolean: a single flag would flash the confirmation on
+  // whichever card happened to render first, which is worse than no feedback because it
+  // is confidently wrong. `ok` is tracked separately so a blocked clipboard says so
+  // instead of silently claiming success — the same "never report a success you did not
+  // observe" rule the pre-close checklist is built on.
+  const [copyState, setCopyState] = useState({ key: null, ok: false });
+  const copyTimer = useRef(null);
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+  const copyCardRef = async (e) => {
+    const key = `${e.protocolId}::${e.symbol}`;
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(buildCardRef(e, { label: 'TCS ladder card' }));
+    } catch {
+      ok = false; // clipboard blocked (insecure context / permission denied)
+    }
+    setCopyState({ key, ok });
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopyState({ key: null, ok: false }), 1800);
+  };
+
   // Issue #667/#668 — opt-in "Details": company/stock facts + our own trading
   // stats on each card. DEFAULT OFF so the production ladder is unchanged
   // (phase-6 scope; surfaced behind a toggle). Reads are single STORED GETs,
   // Company facts + open-position stats are ALWAYS shown now, on the card footer
   // (the old "Details" toolbar toggle was removed). The queries below are enabled
-  // unconditionally so the footer columns have data on first paint.
-  const posQuery = useQuery({
-    queryKey: ['symbols-positions'],
-    queryFn: () => apiGet('/api/symbols/positions'),
-    staleTime: 60_000,
-  });
-  const positionBySymbol = useMemo(() => {
-    const m = {};
-    (Array.isArray(posQuery.data?.positions) ? posQuery.data.positions : [])
-      .forEach((p) => { if (p?.symbol) m[String(p.symbol).toUpperCase()] = p; });
-    return m;
-  }, [posQuery.data]);
-  const metaQuery = useQuery({
-    queryKey: ['all-symbols-meta'],
-    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
-    staleTime: 120_000,
-  });
-  const symbolMeta = useMemo(() => {
-    const m = {};
-    (Array.isArray(metaQuery.data?.symbols) ? metaQuery.data.symbols : [])
-      .forEach((s) => { if (s?.ticker) m[String(s.ticker).toUpperCase()] = s; });
-    return m;
-  }, [metaQuery.data]);
+  // ⚠️ Position/company lookups MOVED to src/hooks/useSymbolLookups.js (2026-09-17) so the
+  // META.Stack Cockpit's Scores column renders the same "Details" footer column from the
+  // same indexing. Both queries are shared by key, so visiting both pages costs one request.
+  const { positionBySymbol, symbolMeta } = useSymbolLookups();
 
   // Active protocols only — inactive ones are skipped (matches the ladders).
   const activeProtocols = useMemo(
@@ -500,80 +338,16 @@ export default function LadderPage() {
   // is a prefix of the other — reconciles them. Two maps instead of one because a
   // direct hit must always beat a family hit: if a protocol ever does emit its own
   // run, that exact score wins and this is inert.
-  const { scoreMap, familyMap } = useMemo(() => {
-    const exact = {};
-    const family = {};
-    for (const run of runs) {
-      const proto = run.protocolId || run.strategyId;
-      for (const s of run.scores || []) {
-        const ticker = (s.ticker || s.symbol || '').toUpperCase();
-        if (!ticker) continue;
-        // Runs are timestamp-desc, so the first match per key is the latest.
-        const row = {
-          value: s.value,
-          signal: s.signal ?? null,
-          rawComposite: s.rawComposite ?? s.value,
-          rawMax: s.rawMax ?? null,
-          opportunityScore: s.opportunityScore ?? null,
-          opportunityMax: s.opportunityMax ?? null,
-          marketStatus: s.marketStatus ?? null,
-          timestamp: run.timestamp,
-          // Which protocol emitted this row — the card footer always names it.
-          protocolId: proto,
-        };
-        const key = `${ticker}::${proto}`;
-        if (!exact[key]) exact[key] = row;
-
-        // Family key: drop the version suffix and the trailing timeframe.
-        // `xau-speed-m5` and `xau-speed-v1` both become `xau-speed`.
-        const fam = `${ticker}::${familyOf(proto)}`;
-        const prev = family[fam];
-        if (!prev || Date.parse(run.timestamp) > Date.parse(prev.timestamp)) {
-          family[fam] = { ...row, sourceProtocolId: proto };
-        }
-      }
-    }
-    return { scoreMap: exact, familyMap: family };
-  }, [runs]);
+  // ⚠️ The score maps and the card-entry construction MOVED to
+  // src/core/score-card-entries.js (2026-09-17) so the META.Stack Cockpit builds its
+  // Scores column from the SAME code. Only the filtering and sorting below are
+  // page-specific — the Ladder's age/market/search rules are its own.
 
   // Partition the selected protocols' cards into those passing all filters and
   // those excluded by them. Excluded cards are still shown below a divider so
   // the user can see which protocols/cards aren't making the ladder.
   const { passing, excluded } = useMemo(() => {
-    const all = [];
-    for (const p of selectedProtocols) {
-      for (const sym of p.resolvedSymbols || []) {
-        const ticker = sym.toUpperCase();
-        // Exact run for this protocol id first; otherwise the family fallback
-        // (see the scoreMap note above). `borrowed` marks the fallback so the
-        // card can say which timeframe the number actually came from.
-        const exact = scoreMap[`${ticker}::${p.id}`] || null;
-        const borrowed = exact ? null : (familyMap[`${ticker}::${familyOf(p.id)}`] || null);
-        const raw = exact || borrowed;
-        all.push({
-          symbol: ticker,
-          protocolId: p.id,
-          protocolName: p.name || p.id,
-          raw,
-          vm: buildScoreDisplay(raw ?? {}),
-          hasScore: !!raw,
-          time: raw?.timestamp ?? null,
-          // The protocol id that actually produced the number. Equal to this
-          // card's protocolId for an exact match; the sibling's id when borrowed.
-          runId: raw?.protocolId ?? null,
-          // Only a genuine cross-timeframe borrow gets the "via" chip. When the
-          // family fallback resolves back to this card's own protocol id there is
-          // nothing borrowed, and chipping it would just duplicate the run id.
-          scoreFrom: borrowed && borrowed.sourceProtocolId !== p.id ? borrowed.sourceProtocolId : null,
-          // Adaptive Target (2026-09-10). `adaptiveTargetActive` is true only when the
-          // target is enabled AND rests on enough observations to actually move the
-          // denominator — a flag-on-but-inactive protocol is NOT badged, because its
-          // scores are still on the configured scale and a badge would mislead.
-          adaptiveTargetActive: !!p.adaptiveTargetActive,
-          adaptiveTargetMax: p.adaptiveTargetMax ?? null,
-        });
-      }
-    }
+    const all = buildScoreEntries(selectedProtocols, runs);
 
     // Market status filter — default (Open) hides closed-market symbols so the
     // ladder shows only cards backed by an open market.
@@ -612,161 +386,38 @@ export default function LadderPage() {
     pass.sort(sorter);
     excl.sort(sorter);
     return { passing: pass, excluded: excl };
-  }, [selectedProtocols, scoreMap, familyMap, ageFilter, rankBy, marketFilter, search]);
+  }, [selectedProtocols, runs, ageFilter, rankBy, marketFilter, search]);
 
   const scoredCount = passing.filter((e) => e.hasScore).length;
 
-  // Reveal-on-scroll (issue #672). Cards below the fold fade/slide in as they
-  // enter the viewport. SAFE BY DESIGN: any card already within the viewport is
-  // revealed immediately (before paint, no flash), cards are never left hidden
-  // while visible, and if IntersectionObserver is unavailable everything is
-  // revealed. popLayout/reordering/exit are untouched because we only observe an
-  // inner content div (.lad-reveal) inside the existing motion.div card.
-  useLayoutEffect(() => {
-    const root = cardsColRef.current;
-    if (!root) return;
-    const ioSupported = typeof IntersectionObserver !== 'undefined';
-    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
-    const revealAll = () => root.querySelectorAll('.lad-reveal').forEach((el) => {
-      el.classList.add('lad-reveal--show');
-      el.dataset.revealed = '1';
-    });
-    // Safety: never leave cards hidden. If IO is unavailable OR we cannot
-    // reliably measure the viewport (e.g. headless/embedded contexts where
-    // innerHeight is 0), reveal everything rather than risk stuck-hidden cards.
-    if (!ioSupported || vh <= 0) { revealAll(); return; }
-    const observers = [];
-    root.querySelectorAll('.lad-reveal').forEach((el) => {
-      if (el.dataset.revealed === '1') return;
-      const reveal = () => { el.classList.add('lad-reveal--show'); el.dataset.revealed = '1'; };
-      const r = el.getBoundingClientRect();
-      if (r.top < vh - 24 && r.bottom > 0) { reveal(); return; } // already in viewport
-      const io = new IntersectionObserver((entries, obs) => {
-        if (entries.some((en) => en.isIntersecting)) { reveal(); obs.disconnect(); }
-      }, { threshold: 0.05, rootMargin: '0px 0px -24px 0px' });
-      io.observe(el);
-      observers.push(io);
-    });
-    return () => observers.forEach((o) => o.disconnect());
-  }, [passing, excluded]);
+  // Reveal-on-scroll (issue #672). Behaviour now lives in the SHARED hook so the
+  // META.Stack Cockpit gets it by calling the same function instead of either
+  // copying the observer or (far worse) reusing `.lad-reveal` without it and
+  // rendering invisible cards. See src/hooks/useScrollReveal.js for the safety
+  // invariants (already-in-viewport reveal, IO-unavailable fallback).
+  useScrollReveal(cardsColRef, [passing, excluded]);
 
   // One card renderer — used for both the ladder and the excluded section.
+  // The card itself is the SHARED `ScoreCard` (src/components/ScoreCard.jsx),
+  // also mounted by the META.Stack Cockpit's Scores column. Everything the card
+  // needs is resolved HERE, at page level: the per-symbol lookups reuse the
+  // page's existing memoised maps, so N cards add N×0 network calls.
+  //
+  // ⚠️ `copied` is `null` unless THIS card is the one whose copy just resolved —
+  // the feedback is per-card, not global.
   const renderCard = (e, i, dimmed) => (
-    <motion.div
+    <ScoreCard
       key={`${e.protocolId}::${e.symbol}`}
-      layout
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.45, ease: 'easeOut' }}
-      className={`lad-card ${i === 0 && !dimmed ? 'lad-card--top' : ''} ${dimmed ? 'lad-card--filtered' : ''} ${e.vm.state !== 'unscored' && e.vm.frozen ? 'lad-card--closed' : ''}`}
-    >
-      <div className="lad-reveal">
-      <div className="lad-card-head">
-        <span className="lad-rank">#{i + 1}</span>
-        <Link
-          className="lad-symbol"
-          to={`/research/symbol/${encodeURIComponent(e.symbol)}`}
-          title={`Open ${e.symbol}`}
-        >
-          {e.symbol}
-        </Link>
-        <span className="lad-proto-tag">{e.protocolName}</span>
-        {/* Adaptive Target badge (2026-09-10) — this protocol's percentage is measured
-            against its own observed peak, NOT its configured capacity. Shown on the card
-            itself (not just the registry) because the whole risk of this feature is a
-            reader comparing two percentages that sit on different scales without knowing.
-            Deliberately a word, not just a colour, so it survives colour-blind rendering. */}
-        {e.adaptiveTargetActive && (
-          <span
-            className="lad-target-badge"
-            title={
-              `Adaptive Target — measured against this protocol's observed peak` +
-              `${e.adaptiveTargetMax != null ? ` (${Math.round(e.adaptiveTargetMax)})` : ''}, ` +
-              `not its configured capacity. The peak only ever rises.`
-            }
-          >
-            target
-          </span>
-        )}
-        <span className="lad-card-status">
-          <SignalBadge display={e.vm} />
-          {/* ONE state chip on every card — never a different element or a
-              missing chip. Values: Live / Market closed / Stale / Not scored.
-              Unscored rows must NOT claim "Live" (that reads as a live tradable
-              signal next to a blank score), so they get their own value here
-              rather than swapping the markup out. */}
-          <span className={`lad-state ${stateClass(e.vm)}`}>
-            {stateLabel(e.vm)}
-          </span>
-        </span>
-      </div>
-      <div className="lad-card-foot">
-        <div className="lad-card-scores">
-          <ScoreBlock
-            label="Signal"
-            score={e.vm.score}
-            max={e.vm.scoreMax}
-            pct={e.vm.pct}
-            mode={scoreDisplay}
-            active={rankBy === 'signal'}
-          />
-          {/* Both score slots always render. Previously "Opp" was omitted when
-              null, so an unscored card was visibly SHORTER than a scored one and
-              the whole row shifted. An empty slot is the honest and consistent
-              presentation: the protocol genuinely has no Opportunity score. */}
-          <ScoreBlock
-            label="Opp"
-            score={e.vm.opportunityScore}
-            max={e.vm.opportunityMax}
-            pct={e.vm.opportunityPct}
-            mode={scoreDisplay}
-            active={rankBy === 'opp'}
-          />
-          {/* Details (company + open position) now lives in the footer as a third
-              labelled column so all three read with the same label-above-value
-              rhythm. Always on; renders nothing when there is no data, so an
-              unscored card simply has two columns rather than an empty third. */}
-          <LadderFacts
-            asBlock
-            meta={symbolMeta[String(e.symbol).toUpperCase()] || null}
-            pos={positionBySymbol[String(e.symbol).toUpperCase()] || null}
-          />
-          {/* Footer meta — the SAME slots in the SAME order on every card, so a
-              card missing something is visibly missing it rather than just looking
-              shorter. Rendered as a score-block so "Scored" sits above its value
-              like "Signal" and "Opp" do. The run id is nested INSIDE the value so
-              the column stays narrow and the label never wraps to two lines. */}
-          <span className="lad-score-block lad-score-block--time">
-            <span className="lad-score-label">Scored</span>
-            <span className="lad-score-value lad-time-value">
-              {e.time ? (
-                <>
-                  <span>{timeAgo(e.time)}</span>
-                  <span
-                    className="lad-time-src"
-                    title={`Scoring run: ${e.runId || e.protocolId}`}
-                  >
-                    {e.runId || e.protocolId}
-                  </span>
-                  {e.scoreFrom && (
-                    <span
-                      className="lad-time-borrow"
-                      title={`${e.protocolId} produced no run — showing ${e.scoreFrom} instead`}
-                    >
-                      borrowed
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="lad-time-none">No scoring run yet</span>
-              )}
-            </span>
-          </span>
-        </div>
-      </div>
-      </div>
-    </motion.div>
+      entry={e}
+      rank={i}
+      dimmed={dimmed}
+      scoreDisplay={scoreDisplay}
+      rankBy={rankBy}
+      meta={symbolMeta[String(e.symbol).toUpperCase()] || null}
+      pos={positionBySymbol[String(e.symbol).toUpperCase()] || null}
+      onCopyRef={copyCardRef}
+      copied={copyState.key === `${e.protocolId}::${e.symbol}` ? copyState.ok : null}
+    />
   );
 
   if (isLoading) {

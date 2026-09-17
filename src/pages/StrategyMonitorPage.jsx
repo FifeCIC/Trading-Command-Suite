@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
-import { dismissSignal } from '../core/api/signals';
+import { dismissSignal, fetchScoringThresholds } from '../core/api/signals';
 import { timeAgo } from '../core/format-utils';
 // noticeLine() — the coded one-liner. A table cell cannot hold a NoticeBlock, and the point here is
 // the CODE, which is what makes the row's failure joinable to the API log.
@@ -24,6 +24,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { scoreClass } from '../core/signal-utils';
+import { thresholdGeometry, standingClass } from '../core/score-display';
 import { isActiveStrategy, isTradingStrategy, isScoringStrategy } from '../core/strategy-filters';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
 import './strategy-monitor.css';
@@ -64,6 +65,26 @@ export default function StrategyMonitorPage() {
     refetchInterval: 15_000,
   });
   const queueList = Array.isArray(queueEntries) ? queueEntries : [];
+
+  // ── Live thresholds — the scale the *Pct columns are measured on (#847) ──
+  //
+  // ⚠️ `compositePct` / `signalPct` / `opportunityPct` are PERCENT-OF-CAPACITY (ADR-011). Measured
+  // live 2026-09-16: compositePct and signalPct are 7-17, opportunityPct 34-45. They must NOT be
+  // passed to `scoreClass()`, which classifies a 0-100 score against 65/40 — no 7-17 value can ever
+  // clear 40, so every queued signal rendered as "low" while the server called some of them
+  // BUY/STRONG. Percentages go through `thresholdGeometry()` against the scale they were measured
+  // on. `combinedStrength` is different: measured 18-74, a real 0-100 score, and keeps
+  // `scoreClass()`.
+  //
+  // The scale is read from the server rather than remembered here — the same rule broker-utils.js
+  // documents for the style bars, and the mistake that let a hand-copied bar survive the
+  // 2026-09-15 rescale (#839).
+  const { data: thresholdData } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: fetchScoringThresholds,
+    staleTime: 300_000,
+  });
+  const scale = thresholdData?.classification ?? null;
 
   const queueBots = useMemo(() => {
     const byStrat = new Map();
@@ -391,11 +412,11 @@ export default function StrategyMonitorPage() {
                               <Link to="/protocols/protocols-registry" className="sl-chip-link">{e.protocolId}</Link>
                             </span>
                             <span className="smq-entry-scores" title="SEES dual score at signal time — composite · signal · opportunity">
-                              <span className={scoreClass(e.compositePct)}>{e.compositePct ?? '—'}</span>
-                              <i>C</i>
-                              <span className={scoreClass(e.signalPct)}>{e.signalPct ?? '—'}</span>
-                              <i>S</i>
-                              <span className={scoreClass(e.opportunityPct)}>{e.opportunityPct ?? '—'}</span>
+                                <span className={standingClass(thresholdGeometry(e.compositePct, scale).standing)}>{e.compositePct ?? '—'}</span>
+                                <i>C</i>
+                                <span className={standingClass(thresholdGeometry(e.signalPct, scale).standing)}>{e.signalPct ?? '—'}</span>
+                                <i>S</i>
+                                <span className={standingClass(thresholdGeometry(e.opportunityPct, scale).standing)}>{e.opportunityPct ?? '—'}</span>
                               <i>O</i>
                             </span>
                             <span className={`smq-entry-strength ${scoreClass(e.combinedStrength)}`} title="Combined strength">

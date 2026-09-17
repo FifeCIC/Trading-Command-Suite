@@ -75,7 +75,7 @@ const VIEW_META = {
     label: 'Strategy Monitor',
     file: 'src/pages/StrategyMonitorPage.jsx',
     css: 'src/pages/strategy-monitor.css',
-    api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena'],
+      api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena', 'GET /api/scoring/gated/thresholds'],
   },
   '/trading/strategy-create': {
     label: 'Create Strategy',
@@ -321,10 +321,14 @@ const VIEW_META = {
     api: [],
   },
   '/trading/trading-settings': {
-    label: 'Trading Settings',
+    label: 'Trading',
     file: 'src/pages/TradingSettingsPage.jsx',
-    css: 'src/pages/trading-settings.css',
-    api: ['GET /api/signals/trade-defaults', 'PUT /api/signals/trade-defaults'],
+    css: 'src/pages/settings.css',
+    api: [
+      'GET /api/signals/trade-defaults', 'PUT /api/signals/trade-defaults',
+      'GET /api/scoring/gated/thresholds', 'GET /api/trading/strategies/risk-limits',
+      'POST /api/automation/layer',
+    ],
   },
 
   // ── Accounts (trading212) ──
@@ -490,14 +494,14 @@ const VIEW_META = {
     css: 'src/pages/component-lab.css',
     api: [],
   },
-  '/lab/widget-board': {
-    label: 'Widget Board',
+  '/lab/widget-library': {
+    label: 'Widget Library',
     file: 'src/pages/WidgetBoardLabPage.jsx',
     css: 'src/components/widget-board.css',
     api: ['/api/health', '/api/signals/best', '/api/symbols/positions', '/api/trading/sessions/market-context'],
   },
-  '/lab/screen-cockpit': {
-    label: 'Screen Cockpit',
+  '/lab/screen-assignment': {
+    label: 'Screen Assignment',
     file: 'src/pages/ScreenCockpitPage.jsx',
     css: 'src/pages/screen-cockpit.css',
     api: [],
@@ -568,10 +572,10 @@ const VIEW_META = {
     css: 'src/pages/snapshot-replay.css',
     api: [],
   },
-  '/lab/triple-screen': {
-    label: 'Triple-Screen Cockpit',
-    file: 'src/pages/TripleScreenPage.jsx',
-    css: 'src/pages/triple-screen.css',
+  '/lab/meta-stack-cockpit': {
+    label: 'META.Stack Cockpit',
+    file: 'src/pages/MetaStackCockpitPage.jsx',
+    css: 'src/pages/metastack-cockpit.css',
     api: [],
   },
   '/lab/daily-briefing': {
@@ -660,7 +664,7 @@ const VIEW_META = {
     label: 'General',
     file: 'src/pages/SettingsPage.jsx',
     css: 'src/pages/settings.css',
-    api: [],
+    api: ['GET /api/system/settings/health-checks', 'PUT /api/system/settings/health-checks'],
   },
   '/settings/settings-education': {
     label: 'Education',
@@ -681,10 +685,39 @@ const VIEW_META = {
     api: [],
   },
   '/settings/trading-settings': {
-    label: 'Trading Settings',
+    label: 'Trading',
     file: 'src/pages/TradingSettingsPage.jsx',
-    css: 'src/pages/trading-settings.css',
-    api: ['GET /api/signals/trade-defaults', 'PUT /api/signals/trade-defaults'],
+    css: 'src/pages/settings.css',
+    api: [
+      'GET /api/signals/trade-defaults', 'PUT /api/signals/trade-defaults',
+      'GET /api/scoring/gated/thresholds', 'GET /api/trading/strategies/risk-limits',
+      'POST /api/automation/layer',
+    ],
+  },
+  // ── Settings split (#617) — one page per META.Stack layer question ──
+  '/settings/appearance': {
+    label: 'Appearance',
+    file: 'src/pages/AppearanceSettingsPage.jsx',
+    css: 'src/pages/settings.css',
+    api: [],
+  },
+  '/settings/scoring-settings': {
+    label: 'Scoring Settings',
+    file: 'src/pages/ScoringSettingsPage.jsx',
+    css: 'src/pages/settings.css',
+    api: ['GET /api/scoring/gated/thresholds', 'POST /api/automation/layer'],
+  },
+  '/settings/automation': {
+    label: 'Automation Settings',
+    file: 'src/pages/AutomationSettingsPage.jsx',
+    css: 'src/pages/settings.css',
+    api: [
+      'GET /api/automation/status', 'POST /api/automation/start', 'POST /api/automation/stop',
+      'POST /api/automation/interval', 'POST /api/automation/emergency-stop',
+      'POST /api/automation/layer', 'GET /api/automation/bot-queue',
+      'POST /api/automation/bot-queue', 'GET /api/automation/rules',
+      'PUT /api/automation/rules/:id',
+    ],
   },
 
   // ── Dashboard ──

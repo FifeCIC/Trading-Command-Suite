@@ -106,7 +106,7 @@
 .fi-filter-clear {
   background: none;
   border: none;
-  color: var(--riskHigh);
+  color: var(--color-loss);
   cursor: pointer;
   font-size: 0.7rem;
   padding: 0;
@@ -158,11 +158,11 @@
 }
 
 .fi-table tbody tr.fi-bloated {
-  background: color-mix(in srgb, var(--riskHigh) 6%, transparent);
+  background: color-mix(in srgb, var(--color-loss) 6%, transparent);
 }
 
 .fi-table tbody tr.fi-bloated:hover {
-  background: color-mix(in srgb, var(--riskHigh) 12%, transparent);
+  background: color-mix(in srgb, var(--color-loss) 12%, transparent);
 }
 
 .fi-path {

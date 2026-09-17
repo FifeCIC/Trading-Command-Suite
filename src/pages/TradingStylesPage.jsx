@@ -51,12 +51,12 @@ export default function TradingStylesPage() {
   }, {});
 
   return (
-    <div className="ts-page">
-      <motion.header className="ts-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="tsty-page">
+      <motion.header className="tsty-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>🎨 Trading Styles</h1>
-        <p className="ts-subtitle">
+        <p className="tsty-subtitle">
           Select the trading styles you use or want to explore. Future: your selections will adapt the UI throughout the app.
-          {enabledCount > 0 && <span className="ts-count"> — {enabledCount} enabled</span>}
+          {enabledCount > 0 && <span className="tsty-count"> — {enabledCount} enabled</span>}
         </p>
       </motion.header>
 
@@ -64,34 +64,34 @@ export default function TradingStylesPage() {
       {isLoading && <LoadingSkeleton variant="text" lines={6} />}
 
       {!isLoading && items.length === 0 && !seedMutation.isPending && (
-        <div className="ts-empty">
+        <div className="tsty-empty">
           <p>No trading styles configured.</p>
-          <button className="ts-seed-btn" onClick={() => seedMutation.mutate()}>Load Default Styles</button>
+          <button className="tsty-seed-btn" onClick={() => seedMutation.mutate()}>Load Default Styles</button>
         </div>
       )}
 
       {seedMutation.isPending && <LoadingSkeleton variant="text" lines={3} />}
 
-      <div className="ts-grid">
+      <div className="tsty-grid">
         {Object.entries(grouped).map(([category, catStyles]) => (
-          <div key={category} className="ts-category">
-            <h3 className="ts-cat-label">{CATEGORY_LABELS[category] || category}</h3>
-            <div className="ts-cat-items">
+          <div key={category} className="tsty-category">
+            <h3 className="tsty-cat-label">{CATEGORY_LABELS[category] || category}</h3>
+            <div className="tsty-cat-items">
               {catStyles.map((style, i) => (
                 <motion.div
                   key={style.styleKey}
-                  className={`ts-card ${style.enabled ? 'ts-enabled' : ''}`}
+                  className={`tsty-card ${style.enabled ? 'tsty-enabled' : ''}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
                   onClick={() => toggleMutation.mutate({ styleKey: style.styleKey, enabled: !style.enabled })}
                 >
-                  <div className="ts-card-left">
-                    <span className="ts-card-label">{style.label}</span>
-                    {style.description && <span className="ts-card-desc">{style.description}</span>}
+                  <div className="tsty-card-left">
+                    <span className="tsty-card-label">{style.label}</span>
+                    {style.description && <span className="tsty-card-desc">{style.description}</span>}
                   </div>
-                  <div className={`ts-toggle ${style.enabled ? 'ts-toggle-on' : ''}`}>
-                    <div className="ts-toggle-knob" />
+                  <div className={`tsty-toggle ${style.enabled ? 'tsty-toggle-on' : ''}`}>
+                    <div className="tsty-toggle-knob" />
                   </div>
                 </motion.div>
               ))}
@@ -100,7 +100,7 @@ export default function TradingStylesPage() {
         ))}
       </div>
 
-      <div className="ts-future-note">
+      <div className="tsty-future-note">
         <p>💡 Future: enabled styles will influence which pages, strategies, and tools are surfaced in the navigation and dashboard. Preferences stored here provide the foundation for UI adaptation.</p>
       </div>
     </div>

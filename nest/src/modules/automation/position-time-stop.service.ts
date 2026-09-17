@@ -68,6 +68,29 @@ export interface TimeStopState {
   lastTickMs: number;
   /** Positions currently past their limit. */
   candidates: TimedStopCandidate[];
+  /**
+   * Positions that could NOT be evaluated, with the reason. ⚠️ Deliberately SEPARATE from
+   * `candidates`: before this existed, "no position is over its limit" and "I could not work
+   * out whose position this is" produced identical state — so a completely dead attribution
+   * path was indistinguishable from a healthy, idle service.
+   */
+  skipped: TimeStopSkip[];
+  /**
+   * Counts from the last evaluation.
+   *
+   * ⚠️ Without this, "0 candidates" cannot be distinguished from "0 positions were read" — the
+   * happy path had exactly the blind spot that `skipped` was added to fix on the failure path.
+   * `positionsSeen` is the denominator: if it is 0 while the broker reports open positions, the
+   * read is what is broken, not the limits.
+   */
+  lastSummary: {
+    positionsSeen: number;
+    attributed: number;
+    withinLimit: number;
+    noLimitConfigured: number;
+    skipped: number;
+    candidates: number;
+  } | null;
   /** Positions actually closed since start. */
   closedCount: number;
   recentCloses: Array<{ timestamp: string; ticket: number; symbol: string; hoursHeld: number; profit: number }>;
@@ -101,6 +124,74 @@ export function parseMaxHoldHours(raw: unknown): number | null {
   }
 }
 
+/**
+ * Extract the bot token from an MT5 order comment.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────
+ * WHY THIS IS SEPARATE FROM `attributeToStrategy` (measured 2026-09-17)
+ * ─────────────────────────────────────────────────────────────────────────────────────
+ *
+ * The docs said the comment convention was `TCS:<protocol>:<strategy>`, and this service
+ * read exactly that:
+ *
+ *     /TCS:([^:]+):([^\s]+)/
+ *
+ * **That regex matched ZERO of the 76 real comments in the database.** Measured:
+ *
+ *     brokerComment LIKE 'TCS:%'   ->  0
+ *     brokerComment LIKE 'TCS %'   -> 59 of 76
+ *     examples: 'TCS Gold Day-Trade M15', 'TCS Sydney AUDUSD Session | 65%'
+ *
+ * So the writer emits `TCS <strategy NAME>`, and the reader was waiting for a
+ * colon-delimited form that nothing has ever produced. Every position therefore fell
+ * through to symbol-only matching, and every symbol traded by more than one bot was
+ * silently skipped — including XAUUSD, which has 4 bots.
+ *
+ * Two independent reasons that stayed invisible for so long, both worth naming:
+ *   1. The integration test fed the DOCUMENTED format (`TCS:xau-speed-m5:a`), so it passed
+ *      while the production path was dead. A fixture that does not match reality proves
+ *      only that the mock agrees with itself (see `development-philosophy` §3).
+ *   2. A skip was a bare `continue` + a log line, so "could not tell whose position this
+ *      is" produced the SAME state as "nothing is over its limit". No surface, no defect.
+ *
+ * `magic` is not an alternative key: the bridge hardcodes `magic: 234000`
+ * (`mt5_bridge_v2.py` /order) and ALL 5 live positions report 234000. The comment is the
+ * only per-bot identity a position carries.
+ *
+ * Returns the token to match against a strategy id, slug, or NAME. `kind: 'manual'` is a
+ * human trade — no bot owns it, so no bot's hold limit may be applied to it.
+ */
+export function parseCommentTarget(
+  raw: unknown,
+): { kind: 'strategy' | 'manual' | 'none'; token: string | null } {
+  const comment = String(raw ?? '').trim();
+  if (!comment) return { kind: 'none', token: null };
+
+  // Legacy documented form, still honoured: `TCS:<protocol>:<strategy>`.
+  const legacy = /^TCS:([^:]+):([^\s|]+)/.exec(comment);
+  if (legacy) return { kind: 'strategy', token: legacy[2] };
+
+  // MEASURED real form: `TCS <name>` optionally followed by `| <score>%`.
+  const real = /^TCS\s+(.+)$/.exec(comment);
+  if (!real) return { kind: 'none', token: null };
+
+  const token = real[1].split('|')[0].trim();
+  if (!token) return { kind: 'none', token: null };
+  // `TCS manual <protocol>` — 4 such rows exist. A human trade must not be closed on the
+  // strength of a bot's configured limit.
+  if (/^manual\b/i.test(token)) return { kind: 'manual', token };
+  return { kind: 'strategy', token };
+}
+
+/** A position that could NOT be evaluated, and why. */
+export interface TimeStopSkip {
+  ticket: number;
+  symbol: string;
+  reason: string;
+  comment: string | null;
+  hoursHeld: number | null;
+}
+
 @Injectable()
 export class PositionTimeStopService {
   private readonly logger = new Logger(PositionTimeStopService.name);
@@ -115,6 +206,8 @@ export class PositionTimeStopService {
     lastTickAt: null,
     lastTickMs: 0,
     candidates: [],
+    skipped: [],
+    lastSummary: null,
     closedCount: 0,
     recentCloses: [],
     lastError: null,
@@ -192,12 +285,43 @@ export class PositionTimeStopService {
   private async evaluate() {
     const raw = await (this.mt5Connection as any).getPositions();
     const positions: any[] = Array.isArray(raw) ? raw : (raw?.positions ?? []);
+    /** Counters — see `lastSummary`. These make a zero unambiguous. */
+    let attributed = 0;
+    let withinLimit = 0;
+    let noLimit = 0;
+    const setSummary = (candidateCount: number, skipCount: number) => {
+      this.state.lastSummary = {
+        positionsSeen: positions.length,
+        attributed,
+        withinLimit,
+        noLimitConfigured: noLimit,
+        skipped: skipCount,
+        candidates: candidateCount,
+      };
+    };
     if (!positions.length) {
       this.state.candidates = [];
+      this.state.skipped = [];
+      setSummary(0, 0);
       return;
     }
 
     const candidates: TimedStopCandidate[] = [];
+    /**
+     * ⚠️ A position we could not evaluate is NOT the same as a position inside its limit.
+     * `within_limit` is deliberately NOT recorded — that is normal operation, and mixing it
+     * in would bury the genuine failures under noise.
+     */
+    const skipped: TimeStopSkip[] = [];
+    const noteSkip = (p: any, symbol: string, reason: string, hoursHeld: number | null) => {
+      skipped.push({
+        ticket: Number(p?.ticket),
+        symbol,
+        reason,
+        comment: p?.comment != null ? String(p.comment) : null,
+        hoursHeld: hoursHeld === null ? null : Math.round(hoursHeld * 10) / 10,
+      });
+    };
 
     for (const p of positions) {
       // ⚠️ FIELD NAME: the MT5 bridge returns **`openTime`** (verified against the live
@@ -213,17 +337,38 @@ export class PositionTimeStopService {
       // the chosen value and rebuilds from one field only. Keep the parens.
       const raw = p.openTime ?? p.openedAt ?? p.time ?? null;
       const openedAt = raw === null ? null : new Date(raw);
-      if (!openedAt || Number.isNaN(openedAt.getTime())) continue;
-
       const symbol = String(p.symbol ?? '').toUpperCase();
-      if (!symbol) continue;
+      if (!openedAt || Number.isNaN(openedAt.getTime())) {
+        noteSkip(p, symbol, 'no_usable_open_time', null);
+        continue;
+      }
+      if (!symbol) {
+        noteSkip(p, symbol, 'no_symbol', null);
+        continue;
+      }
+
+      const hoursHeld = (Date.now() - openedAt.getTime()) / 3_600_000;
 
       const attribution = await this.attributeToStrategy(symbol, p.comment);
-      const maxHoldHours = parseMaxHoldHours(attribution.maxHoldDuration);
-      if (maxHoldHours === null) continue; // no limit configured → not our business
+      if (attribution.reason !== 'ok') {
+        noteSkip(p, symbol, attribution.reason, hoursHeld);
+        continue;
+      }
+      attributed++;
 
-      const hoursHeld = (Date.now() - new Date(openedAt).getTime()) / 3_600_000;
-      if (hoursHeld <= maxHoldHours) continue;
+      const maxHoldHours = parseMaxHoldHours(attribution.maxHoldDuration);
+      if (maxHoldHours === null) {
+        // No limit configured → genuinely not our business. Still recorded, so an operator can
+        // tell "this bot opted out" apart from "this bot was never matched to the position".
+        noLimit++;
+        noteSkip(p, symbol, 'no_limit_configured', hoursHeld);
+        continue;
+      }
+
+      if (hoursHeld <= maxHoldHours) {
+        withinLimit++;
+        continue; // inside its limit — normal, not a skip
+      }
 
       candidates.push({
         ticket: Number(p.ticket),
@@ -240,7 +385,27 @@ export class PositionTimeStopService {
 
     candidates.sort((a, b) => b.hoursHeld - a.hoursHeld);
     this.state.candidates = candidates;
-    if (!candidates.length) return;
+    this.state.skipped = skipped;
+    setSummary(candidates.length, skipped.length);
+    if (!candidates.length) {
+      if (skipped.length) {
+        // ⚠️ Logged loudly because this is the exact state that hid a completely dead
+        // attribution path: zero candidates with every position unattributable is
+        // indistinguishable from a healthy, idle service unless the skips are named.
+        this.logger.warn(
+          `Time-stop: no position is past its limit, but ${skipped.length} could not be evaluated — ` +
+            skipped.map((s) => `${s.symbol}#${s.ticket}(${s.reason})`).join(', '),
+        );
+      } else {
+        // Not a warning: this is healthy. Logged so the denominator is always recorded, since
+        // "read 6, all inside their limit" and "read 0" are only distinguishable with a count.
+        this.logger.log(
+          `Time-stop: ${positions.length} position(s) evaluated, ${attributed} attributed, ` +
+            `${withinLimit} inside limit, ${noLimit} without a configured limit — nothing to close.`,
+        );
+      }
+      return;
+    }
 
     this.logger.log(
       `Time-stop: ${candidates.length} position(s) past their max hold — ` +
@@ -294,19 +459,29 @@ export class PositionTimeStopService {
   private async attributeToStrategy(
     symbol: string,
     comment?: string,
-  ): Promise<{ strategyId: string | null; strategyName: string | null; maxHoldDuration: unknown }> {
-    // Prefer an explicit comment match when present — it is ground truth.
-    const fromComment = /TCS:([^:]+):([^\s]+)/.exec(String(comment ?? ''));
-    const wanted = fromComment?.[2] ?? null;
+  ): Promise<{
+    strategyId: string | null;
+    strategyName: string | null;
+    maxHoldDuration: unknown;
+    /** Why attribution succeeded or failed — surfaced in `state.skipped`. */
+    reason: string;
+  }> {
+    const parsed = parseCommentTarget(comment);
+    if (parsed.kind === 'manual') {
+      // A human trade. Applying a bot's hold limit to it could close a position nobody
+      // configured us to manage.
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'manual_trade' };
+    }
+    const wanted = parsed.token;
 
     let strategies: any[] = [];
     try {
       strategies = (await (this.strategyService as any).findAll?.()) ?? [];
     } catch {
-      return { strategyId: null, strategyName: null, maxHoldDuration: null };
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'strategy_lookup_failed' };
     }
     if (!Array.isArray(strategies) || !strategies.length) {
-      return { strategyId: null, strategyName: null, maxHoldDuration: null };
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'no_strategies_loaded' };
     }
 
     const matching = strategies.filter((s) => {
@@ -325,23 +500,56 @@ export class PositionTimeStopService {
     const holdOf = (s: any): unknown =>
       s?.maxHoldHours ?? s?.tradeManagement?.maxHoldDuration ?? null;
 
+    const ok = (s: any) => ({
+      strategyId: s.id ?? null,
+      strategyName: s.name ?? null,
+      maxHoldDuration: holdOf(s),
+      reason: 'ok',
+    });
+
     if (wanted) {
-      const exact = matching.filter((s) => s.id === wanted || s.slug === wanted);
-      if (exact.length === 1) {
-        return { strategyId: exact[0].id ?? null, strategyName: exact[0].name ?? null, maxHoldDuration: holdOf(exact[0]) };
+      // Try id, then slug, then NAME. ⚠️ Name is the one that works in production: the order
+      // comment carries the strategy's display name (`TCS Gold Day-Trade M15`), and `magic`
+      // is the shared constant 234000, so it cannot disambiguate anything.
+      const byKey = matching.filter((s) => s.id === wanted || s.slug === wanted);
+      const exact = byKey.length
+        ? byKey
+        : matching.filter(
+            (s) => String(s?.name ?? '').trim().toLowerCase() === wanted.trim().toLowerCase(),
+          );
+
+      if (exact.length === 1) return ok(exact[0]);
+      if (exact.length > 1) {
+        this.logger.warn(
+          `Time-stop: order comment '${wanted}' matches ${exact.length} strategies for ${symbol} — ` +
+            `skipping rather than guessing which hold limit applies.`,
+        );
+        return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'comment_ambiguous' };
       }
+      if (matching.length > 1) {
+        this.logger.warn(
+          `Time-stop: ${symbol} is traded by ${matching.length} strategies and the order comment ` +
+            `'${wanted}' did not match any of them — skipping rather than guessing.`,
+        );
+        return {
+          strategyId: null, strategyName: null, maxHoldDuration: null,
+          reason: 'comment_no_match_multi_strategy',
+        };
+      }
+      // A single strategy trades the symbol: the comment naming nothing we know is not a
+      // reason to refuse — fall through to the unambiguous symbol match below.
     }
 
-    if (matching.length === 1) {
-      return { strategyId: matching[0].id ?? null, strategyName: matching[0].name ?? null, maxHoldDuration: holdOf(matching[0]) };
-    }
+    if (matching.length === 1) return ok(matching[0]);
 
     if (matching.length > 1) {
       this.logger.warn(
         `Time-stop: ${symbol} is traded by ${matching.length} strategies and the order comment ` +
         `did not disambiguate — skipping rather than guessing which hold limit applies.`,
       );
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'ambiguous_multi_strategy' };
     }
-    return { strategyId: null, strategyName: null, maxHoldDuration: null };
+
+    return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'no_strategy_trades_symbol' };
   }
 }

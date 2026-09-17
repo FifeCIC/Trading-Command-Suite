@@ -37,7 +37,7 @@ import {
 
 // ── Session Definitions (UTC hours) ──────────────────────
 
-interface SessionWindow {
+interface GoldSessionProfile {
   name: string;
   startHour: number;  // UTC
   endHour: number;    // UTC
@@ -45,7 +45,7 @@ interface SessionWindow {
   description: string;
 }
 
-const GOLD_SESSIONS: SessionWindow[] = [
+const GOLD_SESSIONS: GoldSessionProfile[] = [
   {
     name: 'Asian',
     startHour: 0,
@@ -155,7 +155,7 @@ export class GoldSessionProfileDirective implements IDirective {
     }
 
     // ── Find current session ──────────────────────────────
-    let activeSession: SessionWindow | undefined;
+    let activeSession: GoldSessionProfile | undefined;
     for (const session of GOLD_SESSIONS) {
       if (utcHour >= session.startHour && utcHour < session.endHour) {
         activeSession = session;

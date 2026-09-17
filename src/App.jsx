@@ -277,7 +277,12 @@ function AppShell() {
     const hasCurrentView = views.some((item) => item.id === secondaryView);
     const hasComponent = !!VIEW_COMPONENTS[secondaryView];
     if (!hasCurrentView && !hasComponent) {
-      const firstView = views[0]?.id;
+      // ⚠️ Skip section headers when choosing the fallback route. A header is a LABEL, not a
+      // destination: it has an `id` (used as a React key) but no page, so navigating to it
+      // renders nothing and the user sees an apparently broken area. This only worked before
+      // because every header happened to sit below index 0 — the Settings area (2026-09-16,
+      // #617) is the first to open with one.
+      const firstView = views.find((item) => item.kind !== 'section-header' && item.id)?.id;
       if (firstView) {
         navigate(`/${primaryArea}/${firstView}`, { replace: true });
       }

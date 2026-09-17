@@ -1,4 +1,16 @@
 /**
+ * ⚠️ AXIS: this is the VENUE axis — "is this exchange/market open?".
+ * It is NOT the FX-session axis (`calendar/market-sessions.service.ts`, which answers "which
+ * liquidity block are we in?") and NOT the bot-policy axis (`trading/session-window.ts`, which
+ * answers "when may this bot act?"). Those are different questions with different owners; see
+ * #851. This service is authoritative for the venue axis ONLY — do not read it for the others, and
+ * do not let it grow a second axis.
+ *
+ * ⚠️ `SESSIONS` CONTAINS ONLY `US`, and an unknown exchange FAILS CLOSED. That was the #850 defect:
+ * the gate passed a hardcoded `'US'` for every instrument, so UK100/FRA40/GER40 were blocked with
+ * "US market after-hours". Which pattern governs an instrument is now decided in
+ * `market-patterns.ts` — add exchanges THERE and here together, not just here.
+ *
  * MarketCalendarService — #39
  * ============================
  * Holiday database, DST-aware session boundaries, early-close detection,

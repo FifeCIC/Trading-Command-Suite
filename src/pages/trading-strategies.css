@@ -479,7 +479,7 @@
   gap: 0.5rem;
   padding: 0.35rem 0.55rem;
   border-radius: 6px;
-  background: var(--surface, #1a1a1a);
+  background: var(--panel);
   border: 1px solid var(--line, #2a2a2a);
   font-size: 0.75rem;
 }
@@ -513,7 +513,7 @@
   min-width: 0;
   font-size: 0.7rem;
   padding: 0.25rem 0.35rem;
-  background: var(--surface, #1a1a1a);
+  background: var(--panel);
   color: var(--ink, #ddd);
   border: 1px solid var(--line, #2a2a2a);
   border-radius: 5px;

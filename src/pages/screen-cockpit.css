@@ -1,21 +1,45 @@
 /**
- * Screen Cockpit — /lab/screen-cockpit
- * ====================================
+ * Screen Assignment — /lab/screen-assignment
+ * ==========================================
  * Styles for the multi-screen assignment table. Uses the shared theme tokens so
  * a theme pack restyles it with everything else (see src/index.css tokens).
  *
+ * ⚠️ RENAMED from "Screen Cockpit" / `/lab/screen-cockpit` (2026-09-17). This page
+ * assigns a BOARD to a MONITOR — it is not a cockpit view. "Cockpit" now means the
+ * META.Stack Cockpit (`/lab/meta-stack-cockpit`) exclusively.
+ *
+ * ℹ️ The class prefix STAYS `screencockpit-` deliberately: it is file-anchored, and
+ * re-renaming 70+ selectors to track the route would be pure churn. Read it as "this
+ * file", not "this page's current route".
+ *
+ * ⚠️ PREFIX RENAMED `sc-` → `screencockpit-` (2026-09-17).
+ * `sc-` was claimed by SIX stylesheets — this one, `strategy-comparison.css`,
+ * `strategy-create.css`, `server-controls-page.css`, `startup-checklist.css` and
+ * `screener.css` — and all page CSS is bundled into ONE global stylesheet, so the last
+ * rule loaded won on EVERY page. Measured before this rename (this file declares
+ * `max-width: 1100px; margin: 0 auto; padding: 20px 18px 48px` for `.sc-page`):
+ *
+ *   /lab/screen-cockpit        .sc-page  max-width 1100px (own), margin 0px 20px (FOREIGN)
+ *   /trading/trading-strategies  -- unaffected, but Strategy Create/Comparison were not:
+ *   /trading/strategy-create   .sc-page  max-width 1100px (FOREIGN — it asks for 800px)
+ *                                       padding 20px 18px 48px (FOREIGN — asks 24px 32px)
+ *
+ * Both pages reported identical computed values, which is the tell. 17 of this file's 29
+ * selectors were shared with another stylesheet. The prefix is anchored to the FILENAME so
+ * it stays valid if the page's display label changes.
+ *
  * ⚠️ Colour-blind rule (src/index.css): class names containing up/down/buy/sell/
  * win/lose get an injected ▲/▼ pseudo-element. Keep those substrings out of the
- * names here — that is why the open-state dot is `.sc-dot--on`, not "up".
+ * names here — that is why the open-state dot is `.screencockpit-dot--on`, not "up".
  */
 
-.sc-page {
+.screencockpit-page {
   max-width: 1100px;
   margin: 0 auto;
   padding: 20px 18px 48px;
 }
 
-.sc-header h1 {
+.screencockpit-header h1 {
   margin: 0 0 6px;
   font-size: 1.35rem;
   display: flex;
@@ -23,14 +47,14 @@
   gap: 8px;
 }
 
-.sc-subtitle {
+.screencockpit-subtitle {
   margin: 0;
   color: var(--ink-soft);
   font-size: 0.9rem;
 }
 
 /* ── Actions ─────────────────────────────────────────────── */
-.sc-actions {
+.screencockpit-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -38,7 +62,7 @@
   margin: 18px 0 14px;
 }
 
-.sc-btn {
+.screencockpit-btn {
   border: 1px solid var(--border, #334155);
   background: var(--bg-elev);
   color: var(--ink);
@@ -49,36 +73,36 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.sc-btn:hover:not(:disabled) {
+.screencockpit-btn:hover:not(:disabled) {
   border-color: var(--accent, #38bdf8);
 }
 
-.sc-btn:disabled {
+.screencockpit-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.sc-btn:focus-visible {
+.screencockpit-btn:focus-visible {
   outline: 2px solid var(--accent, #38bdf8);
   outline-offset: 2px;
 }
 
-.sc-btn--primary {
+.screencockpit-btn--primary {
   background: var(--accent, #38bdf8);
   border-color: var(--accent, #38bdf8);
   color: #0b1220;
   font-weight: 600;
 }
 
-.sc-btn--ghost {
+.screencockpit-btn--ghost {
   background: transparent;
 }
 
-.sc-btn--open {
+.screencockpit-btn--open {
   padding: 6px 12px;
 }
 
-.sc-count {
+.screencockpit-count {
   margin-left: auto;
   color: var(--ink-soft);
   font-size: 0.8rem;
@@ -95,7 +119,7 @@
    fallback silently wins — so the notice was pinned to hardcoded hex (`#1e293b`/`#e2e8f0`) and
    ignored the active theme pack entirely. That is the same defect that made NoticeBlock look dark
    (#826 styling report). The tokens below all resolve. */
-.sc-notice {
+.screencockpit-notice {
   margin: 10px 0;
   padding: 10px 12px;
   border-radius: 8px;
@@ -105,39 +129,39 @@
   color: var(--ink);
 }
 
-.sc-notice--warn {
+.screencockpit-notice--warn {
   border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
   background: color-mix(in srgb, var(--color-warning) 8%, transparent);
 }
 
-.sc-notice--info {
+.screencockpit-notice--info {
   border-color: color-mix(in srgb, var(--color-accent-blue) 45%, transparent);
   background: color-mix(in srgb, var(--color-accent-blue) 8%, transparent);
 }
 
 /* ── Table ───────────────────────────────────────────────── */
-.sc-table {
+.screencockpit-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.87rem;
 }
 
-.sc-caption {
+.screencockpit-caption {
   text-align: left;
   padding: 6px 0 10px;
   color: var(--ink-soft);
   font-size: 0.8rem;
 }
 
-.sc-table th,
-.sc-table td {
+.screencockpit-table th,
+.screencockpit-table td {
   text-align: left;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border, #334155);
   vertical-align: middle;
 }
 
-.sc-table thead th {
+.screencockpit-table thead th {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -145,25 +169,25 @@
   border-bottom-width: 2px;
 }
 
-.sc-screen-cell {
+.screencockpit-screen-cell {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
 }
 
-.sc-screen-name {
+.screencockpit-screen-name {
   font-weight: 600;
 }
 
-.sc-screen-key {
+.screencockpit-screen-key {
   flex-basis: 100%;
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 0.7rem;
   color: var(--ink-soft);
 }
 
-.sc-tag {
+.screencockpit-tag {
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -173,17 +197,17 @@
   color: var(--accent, #38bdf8);
 }
 
-.sc-geometry {
+.screencockpit-geometry {
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.sc-field {
+.screencockpit-field {
   display: block;
 }
 
-.sc-select {
+.screencockpit-select {
   background: var(--bg-elev);
   color: var(--ink);
   border: 1px solid var(--border, #334155);
@@ -193,12 +217,12 @@
   min-width: 190px;
 }
 
-.sc-select:focus-visible {
+.screencockpit-select:focus-visible {
   outline: 2px solid var(--accent, #38bdf8);
   outline-offset: 1px;
 }
 
-.sc-hint {
+.screencockpit-hint {
   display: block;
   margin-top: 4px;
   font-size: 0.72rem;
@@ -207,7 +231,7 @@
 
 /* Open-state indicator — colour is never the only signal: the button label
    switches between "Open" and "Focus" and the state is in the row text too. */
-.sc-dot {
+.screencockpit-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -217,18 +241,18 @@
   vertical-align: middle;
 }
 
-.sc-dot--on {
+.screencockpit-dot--on {
   background: #22c55e;
 }
 
-.sc-empty {
+.screencockpit-empty {
   text-align: center;
   color: var(--ink-soft);
   padding: 24px 12px;
 }
 
 /* Visually hidden text that screen readers still announce. */
-.sc-sr {
+.screencockpit-sr {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -241,7 +265,7 @@
 }
 
 /* ── Notes ───────────────────────────────────────────────── */
-.sc-notes {
+.screencockpit-notes {
   margin-top: 26px;
   padding: 14px 16px;
   border: 1px solid var(--border, #334155);
@@ -249,7 +273,7 @@
   background: var(--bg-elev);
 }
 
-.sc-notes-title {
+.screencockpit-notes-title {
   margin: 0 0 8px;
   font-size: 0.85rem;
   letter-spacing: 0.04em;
@@ -257,14 +281,14 @@
   color: var(--ink-soft);
 }
 
-.sc-notes-list {
+.screencockpit-notes-list {
   margin: 0;
   padding-left: 18px;
   font-size: 0.85rem;
   line-height: 1.6;
 }
 
-.sc-notes-list code {
+.screencockpit-notes-list code {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 0.78rem;
   background: rgba(148, 163, 184, 0.14);
@@ -274,31 +298,31 @@
 
 /* Tablet/touch: keep the tap targets usable (WCAG 2.5.8 = 24px min). */
 @media (pointer: coarse) {
-  .sc-btn,
-  .sc-select {
+  .screencockpit-btn,
+  .screencockpit-select {
     min-height: 44px;
     font-size: 0.9rem;
   }
 }
 
 @media (max-width: 720px) {
-  .sc-count {
+  .screencockpit-count {
     margin-left: 0;
     flex-basis: 100%;
   }
 
-  .sc-table thead {
+  .screencockpit-table thead {
     display: none;
   }
 
-  .sc-table tr {
+  .screencockpit-table tr {
     display: block;
     border-bottom: 1px solid var(--border, #334155);
     padding: 8px 0;
   }
 
-  .sc-table th,
-  .sc-table td {
+  .screencockpit-table th,
+  .screencockpit-table td {
     display: block;
     border-bottom: 0;
     padding: 4px 0;

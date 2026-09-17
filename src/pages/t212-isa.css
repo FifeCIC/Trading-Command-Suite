@@ -143,7 +143,7 @@
 
 .t212i-note {
   font-size: 0.75rem;
-  color: var(--ink-softer, #64748b);
+  color: var(--ink-soft);
   font-style: italic;
   margin-top: 0.75rem;
 }

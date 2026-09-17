@@ -86,7 +86,7 @@
 }
 
 .df-rl-ep-label {
-  color: var(--text-primary, #ccc);
+  color: var(--ink);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;

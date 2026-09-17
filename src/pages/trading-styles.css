@@ -1,28 +1,47 @@
-.ts-page { padding: 16px 20px; max-width: 900px; }
-.ts-header { margin-bottom: 16px; }
-.ts-header h1 { margin: 0 0 4px; font-size: 1.3rem; }
-.ts-subtitle { margin: 0; color: var(--text-dim); font-size: 0.85rem; }
-.ts-count { color: var(--accent); font-weight: 600; }
+/* Trading Styles — trading-styles.css
+ *
+ * ⚠️ PREFIX RENAMED `ts-` → `tsty-` (2026-09-17).
+ *
+ * This file and `triple-screen.css` BOTH defined `.ts-page`, `.ts-header` and `.ts-subtitle`.
+ * All page CSS in this app is bundled into one global stylesheet, so a "page prefix" is a
+ * global namespace: whichever rule loaded last won, on BOTH pages. Measured on
+ * `/planner/trading-styles`, this element reported
+ *     background rgb(8,8,13); display:flex; flex-direction:column; min-height:780px
+ * — none of which THIS file declares. All three came from `triple-screen.css`'s `.ts-page`,
+ * which was itself orphaned (TripleScreenPage renders no `.ts-page` element).
+ *
+ * `ts-` now belongs to Triple-Screen alone (it is the page's own name). This page owns
+ * `tsty-`. A page cannot collide with a prefix it does not define.
+ *
+ * ⚠️ Keep this prefix unique. Two files sharing a prefix do not "override" each other —
+ * they silently style each other's pages.
+ */
 
-.ts-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); }
-.ts-seed-btn { margin-top: 10px; padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.tsty-page { padding: 16px 20px; max-width: 900px; }
+.tsty-header { margin-bottom: 16px; }
+.tsty-header h1 { margin: 0 0 4px; font-size: 1.3rem; }
+.tsty-subtitle { margin: 0; color: var(--text-dim); font-size: 0.85rem; }
+.tsty-count { color: var(--accent); font-weight: 600; }
 
-.ts-grid { display: flex; flex-direction: column; gap: 20px; }
-.ts-category { }
-.ts-cat-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-faint); margin: 0 0 8px; letter-spacing: 0.5px; }
-.ts-cat-items { display: flex; flex-direction: column; gap: 6px; }
+.tsty-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); }
+.tsty-seed-btn { margin-top: 10px; padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
 
-.ts-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
-.ts-card:hover { border-color: var(--accent); }
-.ts-enabled { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
-.ts-card-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.ts-card-label { font-weight: 600; font-size: 0.9rem; }
-.ts-card-desc { font-size: 0.75rem; color: var(--text-dim); }
+.tsty-grid { display: flex; flex-direction: column; gap: 20px; }
+.tsty-category { }
+.tsty-cat-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-faint); margin: 0 0 8px; letter-spacing: 0.5px; }
+.tsty-cat-items { display: flex; flex-direction: column; gap: 6px; }
 
-.ts-toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border); position: relative; transition: background 0.2s; flex-shrink: 0; }
-.ts-toggle-on { background: var(--accent); }
-.ts-toggle-knob { width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px; transition: left 0.2s; }
-.ts-toggle-on .ts-toggle-knob { left: 23px; }
+.tsty-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.tsty-card:hover { border-color: var(--accent); }
+.tsty-enabled { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
+.tsty-card-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tsty-card-label { font-weight: 600; font-size: 0.9rem; }
+.tsty-card-desc { font-size: 0.75rem; color: var(--text-dim); }
 
-.ts-future-note { margin-top: 20px; padding: 10px 14px; background: var(--panel); border: 1px dashed var(--border); border-radius: 6px; }
-.ts-future-note p { margin: 0; font-size: 0.78rem; color: var(--text-faint); }
+.tsty-toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border); position: relative; transition: background 0.2s; flex-shrink: 0; }
+.tsty-toggle-on { background: var(--accent); }
+.tsty-toggle-knob { width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px; transition: left 0.2s; }
+.tsty-toggle-on .tsty-toggle-knob { left: 23px; }
+
+.tsty-future-note { margin-top: 20px; padding: 10px 14px; background: var(--panel); border: 1px dashed var(--border); border-radius: 6px; }
+.tsty-future-note p { margin: 0; font-size: 0.78rem; color: var(--text-faint); }

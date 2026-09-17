@@ -4,6 +4,7 @@ import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { AutomationLoopService } from './automation-loop.service';
+import { PositionTimeStopService } from './position-time-stop.service';
 import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../../database/prisma.service';
 import { RequireAuthGuard } from '../auth/guards/require-auth.guard';
@@ -28,6 +29,7 @@ export class AutomationController {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly positionSync: PositionSyncService,
+    private readonly positionTimeStop: PositionTimeStopService,
   ) {}
 
   // ── Cache endpoints ─────────────────────────────────
@@ -495,6 +497,80 @@ export class AutomationController {
   @Post('emergency-stop')
   emergencyStop() {
     return this.loop.emergencyStop();
+  }
+
+  /**
+   * GET /api/automation/time-stop — the #773 position time-stop's state.
+   *
+   * ⚠️ `skipped` is the important half of this payload. Before it existed, this service's
+   * state could only say "no position is past its limit", which is ALSO what it said when it
+   * could not attribute a single position — so a completely dead attribution path (the order
+   * comment was parsed with a format the writer has never emitted) was indistinguishable from
+   * a healthy, idle service for as long as the regex stayed wrong. A skip now names its reason.
+   */
+  @Get('time-stop')
+  timeStopStatus() {
+    const s = this.positionTimeStop.state;
+    return {
+      enabled: s.enabled,
+      dryRun: s.dryRun,
+      armed: !s.dryRun,
+      tickIntervalMs: s.tickIntervalMs,
+      tickCount: s.tickCount,
+      lastTickAt: s.lastTickAt,
+      lastError: s.lastError,
+      wouldClose: s.candidates.length,
+      candidates: s.candidates,
+      // Cannot-evaluate, with reasons. An empty array here means every position was readable.
+      skippedCount: s.skipped.length,
+      skipped: s.skipped,
+      skippedByReason: s.skipped.reduce<Record<string, number>>((acc, k) => {
+        acc[k.reason] = (acc[k.reason] ?? 0) + 1;
+        return acc;
+      }, {}),
+      /** ⚠️ The denominator. `wouldClose: 0` with `lastSummary.positionsSeen: 0` means the READ
+       *  is broken, not the limits — without this the two are the same payload. */
+      lastSummary: s.lastSummary,
+      closedCount: s.closedCount,
+      recentCloses: s.recentCloses,
+      /**
+       * `POSITION_TIMESTOP_DRY_RUN !== '0'` makes dry-run the DEFAULT, and `nest/.env` sets
+       * nothing — so unless the operator opts in, this reports and never closes. Stated in the
+       * payload because "the control ran" and "the control did something" are not the same thing.
+       */
+      armHint: s.dryRun
+        ? 'DRY RUN — set POSITION_TIMESTOP_DRY_RUN=0 in nest/.env and restart to arm it.'
+        : null,
+    };
+  }
+
+  /**
+   * POST /api/automation/time-stop/run-now — evaluate once, on demand.
+   *
+   * The service's own comment has referenced "the manual trigger endpoint" since it was
+   * written; it did not exist, so the only way to observe the time-stop was to query state and
+   * wait up to 5 minutes, or read the log. This makes the dry run directly observable — which is
+   * the whole point of having a dry run.
+   *
+   * ⚠️ If the service is ARMED this can close positions. It is a deliberate operator action.
+   */
+  @Post('time-stop/run-now')
+  async timeStopRunNow() {
+    const s = await this.positionTimeStop.tick();
+    return {
+      ran: true,
+      dryRun: s.dryRun,
+      wouldClose: s.candidates.length,
+      candidates: s.candidates,
+      skippedCount: s.skipped.length,
+      skippedByReason: s.skipped.reduce<Record<string, number>>((acc, k) => {
+        acc[k.reason] = (acc[k.reason] ?? 0) + 1;
+        return acc;
+      }, {}),
+      lastSummary: s.lastSummary,
+      closedCount: s.closedCount,
+      lastError: s.lastError,
+    };
   }
 
   /** POST /api/automation/layer — META.Stack layer kill switch (#615) */

@@ -1,4 +1,4 @@
-import { PositionTimeStopService, parseMaxHoldHours } from './position-time-stop.service';
+import { PositionTimeStopService, parseMaxHoldHours, parseCommentTarget } from './position-time-stop.service';
 
 /**
  * Integration-style test for the #773 time-stop decision logic.
@@ -310,6 +310,254 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
       // rather than the feature quietly turning itself off.
       expect(svc.state.candidates).toHaveLength(1);
       expect(svc.state.candidates[0].maxHoldHours).toBe(4);
+    });
+  });
+
+  /**
+   * ─────────────────────────────────────────────────────────────────────────────────────
+   * THE REAL COMMENT FORMAT — measured 2026-09-17, and why this block exists
+   * ─────────────────────────────────────────────────────────────────────────────────────
+   *
+   * The service read `/TCS:([^:]+):([^\s]+)/`. Measured against the 76 real
+   * `trade.brokerComment` values:
+   *
+   *     LIKE 'TCS:%'   ->   0     (what the reader wanted)
+   *     LIKE 'TCS %'   ->  59     (what the writer emits)
+   *
+   * So the regex matched NOTHING. Every position fell through to symbol-only matching, and
+   * every multi-bot symbol — XAUUSD has 4 bots — was skipped. The reason this survived 29
+   * passing tests: the older test above feeds `'TCS:xau-speed-m5:a'`, the DOCUMENTED format,
+   * which nothing has ever produced. **A fixture that does not match reality only proves the
+   * mock agrees with itself.**
+   *
+   * These tests use the strings taken from the live database and the live bridge payload.
+   */
+  describe('attribution parses the comment format that is ACTUALLY written', () => {
+    it('parses the real name form and the score-suffixed form', () => {
+      expect(parseCommentTarget('TCS Gold Day-Trade M15'))
+        .toEqual({ kind: 'strategy', token: 'Gold Day-Trade M15' });
+      // Real row: 'TCS Sydney AUDUSD Session | 65%'
+      expect(parseCommentTarget('TCS Sydney AUDUSD Session | 65%'))
+        .toEqual({ kind: 'strategy', token: 'Sydney AUDUSD Session' });
+      // Real row: 'TCS Gold Day-Trade M15' with a trailing score
+      expect(parseCommentTarget('TCS London EURUSD Macro | 0%'))
+        .toEqual({ kind: 'strategy', token: 'London EURUSD Macro' });
+    });
+
+    it('treats `TCS manual <protocol>` as a human trade, not a bot', () => {
+      // Real rows: 'TCS manual forex-session-v1', 'TCS manual xau-speed-v1 | 283e4397'
+      expect(parseCommentTarget('TCS manual forex-session-v1').kind).toBe('manual');
+      expect(parseCommentTarget('TCS manual xau-speed-v1 | 283e4397').kind).toBe('manual');
+    });
+
+    it('still honours the legacy documented form', () => {
+      expect(parseCommentTarget('TCS:xau-speed-m5:a')).toEqual({ kind: 'strategy', token: 'a' });
+    });
+
+    it('returns none for absent or non-TCS comments', () => {
+      // Real rows: 'Reconciled: no broker counterpart (stranded row)'
+      expect(parseCommentTarget('').kind).toBe('none');
+      expect(parseCommentTarget(null).kind).toBe('none');
+      expect(parseCommentTarget(undefined).kind).toBe('none');
+      expect(parseCommentTarget('Reconciled: no broker counterpart').kind).toBe('none');
+    });
+
+    /**
+     * THE REGRESSION GUARD.
+     *
+     * The live XAUUSD failure, reproduced exactly: 4 bots trade XAUUSD and the comment names
+     * one of them. Before the fix this produced ZERO candidates, because the comment parse
+     * returned null and symbol-only matching then refused to guess.
+     *
+     * This test canaries by construction: it asserts a specific bot is selected. Revert the
+     * parser to the colon-only form and it fails (0 candidates), so it cannot pass by accident.
+     */
+    it('attributes a 4-bot symbol from the real comment, instead of skipping it', async () => {
+      const XAU_BOTS = [
+        { id: 'xau-m5',  name: 'Gold Scalp M5',     symbol: 'XAUUSD', maxHoldHours: 12 },
+        { id: 'xau-m15', name: 'Gold Day-Trade M15', symbol: 'XAUUSD', maxHoldHours: 12 },
+        { id: 'xau-1h',  name: 'Gold Swing 1H',      symbol: 'XAUUSD', maxHoldHours: 12 },
+        { id: 'xau-4h',  name: 'Gold Position 4H',   symbol: 'XAUUSD', maxHoldHours: 12 },
+      ];
+      const { svc, closeCalls } = makeService({
+        positions: [{
+          ticket: 152646482933, symbol: 'XAUUSD', type: 'buy', volume: 0.02, profit: -17.5,
+          openedAt: ago(40),
+          comment: 'TCS Gold Day-Trade M15', // the live string, verbatim
+        }],
+        strategies: XAU_BOTS,
+        dryRun: false,
+      });
+
+      await svc.tick();
+
+      expect(svc.state.skipped).toHaveLength(0);
+      expect(svc.state.candidates).toHaveLength(1);
+      expect(svc.state.candidates[0]).toMatchObject({
+        ticket: 152646482933,
+        strategyId: 'xau-m15',
+        strategyName: 'Gold Day-Trade M15',
+        hoursHeld: 40,
+        maxHoldHours: 12,
+      });
+      expect(closeCalls).toEqual([152646482933]);
+    });
+
+    it('never closes a manual trade on the strength of a bot limit', async () => {
+      const { svc, closeCalls } = makeService({
+        positions: [{
+          ticket: 12, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0,
+          openedAt: ago(500), comment: 'TCS manual forex-session-v1',
+        }],
+        strategies: [AUDUSD_STRATEGY],
+        dryRun: false, // armed
+      });
+      await svc.tick();
+      expect(svc.state.candidates).toHaveLength(0);
+      expect(closeCalls).toHaveLength(0);
+      expect(svc.state.skipped[0].reason).toBe('manual_trade');
+    });
+
+    it('records WHY a position could not be attributed, so a skip is not a silent empty', async () => {
+      const { svc, closeCalls } = makeService({
+        positions: [{
+          ticket: 13, symbol: 'XAUUSD', type: 'buy', volume: 0.01, profit: 0,
+          openedAt: ago(40), comment: 'TCS A Bot That Was Renamed',
+        }],
+        strategies: [
+          { id: 'a', name: 'Gold Scalp M5', symbol: 'XAUUSD', maxHoldHours: 12 },
+          { id: 'b', name: 'Gold Swing 1H', symbol: 'XAUUSD', maxHoldHours: 12 },
+        ],
+        dryRun: false,
+      });
+      await svc.tick();
+
+      expect(svc.state.candidates).toHaveLength(0);
+      expect(closeCalls).toHaveLength(0);
+      // The point: an empty `candidates` is now accompanied by a NAMED reason.
+      expect(svc.state.skipped).toHaveLength(1);
+      expect(svc.state.skipped[0]).toMatchObject({
+        ticket: 13,
+        symbol: 'XAUUSD',
+        reason: 'comment_no_match_multi_strategy',
+        comment: 'TCS A Bot That Was Renamed',
+        hoursHeld: 40,
+      });
+    });
+
+    it('distinguishes "inside its limit" from "could not evaluate"', async () => {
+      // Three positions: young (normal, NOT recorded), unattributable (a skip), and one that
+      // is genuinely over its limit (a candidate).
+      const { svc } = makeService({
+        positions: [
+          { ticket: 14, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(2) },
+          { ticket: 15, symbol: 'XAUUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(40), comment: 'nonsense' },
+        ],
+        strategies: [
+          AUDUSD_STRATEGY,
+          { id: 'a', name: 'Gold Scalp M5', symbol: 'XAUUSD', maxHoldHours: 12 },
+          { id: 'b', name: 'Gold Swing 1H', symbol: 'XAUUSD', maxHoldHours: 12 },
+        ],
+        dryRun: true,
+      });
+      await svc.tick();
+
+      expect(svc.state.candidates).toHaveLength(0);
+      // The young AUDUSD position is inside its limit — normal, and deliberately NOT recorded.
+      expect(svc.state.skipped).toHaveLength(1);
+      expect(svc.state.skipped[0].ticket).toBe(15);
+      // 2 XAUUSD bots and an unparseable comment → refuse rather than guess.
+      expect(svc.state.skipped[0].reason).toBe('ambiguous_multi_strategy');
+    });
+
+    it('reports an unattributed position whose bot has no limit configured', async () => {
+      const { svc } = makeService({
+        positions: [{ ticket: 16, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(500) }],
+        strategies: [{ id: 's-nolimit', name: 'No Limit', symbol: 'AUDUSD', maxHoldHours: null }],
+        dryRun: true,
+      });
+      await svc.tick();
+      expect(svc.state.candidates).toHaveLength(0);
+      // "this bot opted out" is now tellable apart from "this bot was never matched".
+      expect(svc.state.skipped[0].reason).toBe('no_limit_configured');
+    });
+  });
+
+  /**
+   * The DENOMINATOR — `lastSummary`.
+   *
+   * ⚠️ Found by using the thing on live data, not by reasoning about it. `wouldClose: 0` with
+   * `skippedCount: 0` is the SAME payload whether the service read 6 positions and found them all
+   * inside their limit, or read ZERO positions because the bridge read is broken. The first
+   * version of this fix closed that blind spot on the failure path (`skipped`) and left it wide
+   * open on the happy path — which is the more dangerous of the two, because "nothing to do" reads
+   * as a healthy result and no log line contradicts it.
+   *
+   * `positionsSeen` is the denominator. Without it there is no way to tell a working control from
+   * a disconnected one.
+   */
+  describe('the evaluation summary makes a zero attributable', () => {
+    it('counts what was seen, attributed and left alone', async () => {
+      const { svc } = makeService({
+        positions: [
+          { ticket: 1, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(2) },
+          { ticket: 2, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(3) },
+          { ticket: 3, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(4) },
+          { ticket: 4, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(40) },
+        ],
+        strategies: [AUDUSD_STRATEGY], // 12h limit
+        dryRun: true,
+      });
+      await svc.tick();
+
+      expect(svc.state.lastSummary).toEqual({
+        positionsSeen: 4,
+        attributed: 4,
+        withinLimit: 3,
+        noLimitConfigured: 0,
+        skipped: 0,
+        candidates: 1,
+      });
+    });
+
+    it('reports positionsSeen: 0 when the broker returns nothing — NOT "all within limit"', async () => {
+      const { svc } = makeService({ positions: [], strategies: [AUDUSD_STRATEGY], dryRun: true });
+      await svc.tick();
+
+      // The critical distinction: candidates 0 AND positionsSeen 0 means the read found nothing,
+      // which is a different fact from candidates 0 with positionsSeen 6.
+      expect(svc.state.lastSummary).toEqual({
+        positionsSeen: 0,
+        attributed: 0,
+        withinLimit: 0,
+        noLimitConfigured: 0,
+        skipped: 0,
+        candidates: 0,
+      });
+    });
+
+    it('counts an unattributable position in BOTH attributed and skipped terms', async () => {
+      const { svc } = makeService({
+        positions: [
+          { ticket: 5, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(30) },
+          { ticket: 6, symbol: 'XAUUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(30), comment: 'junk' },
+        ],
+        strategies: [
+          AUDUSD_STRATEGY,
+          { id: 'a', name: 'Gold Scalp M5', symbol: 'XAUUSD', maxHoldHours: 12 },
+          { id: 'b', name: 'Gold Swing 1H', symbol: 'XAUUSD', maxHoldHours: 12 },
+        ],
+        dryRun: true,
+      });
+      await svc.tick();
+
+      const s = svc.state.lastSummary!;
+      expect(s.positionsSeen).toBe(2);
+      expect(s.attributed).toBe(1); // only AUDUSD resolved
+      expect(s.skipped).toBe(1);    // the XAUUSD one, ambiguous
+      expect(s.candidates).toBe(1); // AUDUSD at 30h vs a 12h limit
+      // Seen = attributed + skipped when there is nothing malformed nested inside.
+      expect(s.positionsSeen).toBe(s.attributed + s.skipped);
     });
   });
 });

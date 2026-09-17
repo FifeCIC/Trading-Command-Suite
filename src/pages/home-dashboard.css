@@ -551,12 +551,12 @@
 }
 
 .dash-div-dupe-brokers {
-  color: var(--text-secondary, #888);
+  color: var(--ink-soft);
   flex: 1;
 }
 
 .dash-div-dupe-val {
-  color: var(--text-secondary, #888);
+  color: var(--ink-soft);
   white-space: nowrap;
 }
 

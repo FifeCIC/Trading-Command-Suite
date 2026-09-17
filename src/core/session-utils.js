@@ -1,4 +1,12 @@
 /**
+ * ⚠️ AXIS: frontend mirror of the FX-SESSION axis (`market-sessions.service.ts`). NOT the venue
+ * axis and NOT the bot-policy axis — see #851.
+ *
+ * ⚠️ A HAND-MAINTAINED MIRROR IS A DRIFT RISK, and this one duplicates a roster that is already
+ * reachable over HTTP (`market-calendar.controller.ts`). The "keep in sync" note below is asking
+ * people to remember something a machine could enforce. #851 proposes serving the roster from the
+ * API and deleting this copy — do that rather than editing the numbers here.
+ *
  * Market session utilities — canonical frontend mirror of the backend
  * MarketSessionsService (nest/src/modules/calendar/market-sessions.service.ts).
  *

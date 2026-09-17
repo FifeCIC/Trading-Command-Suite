@@ -245,8 +245,8 @@
 }
 
 .rn-delete-btn:hover {
-  color: var(--risk-high);
-  background: color-mix(in srgb, var(--risk-high) 12%, transparent);
+  color: var(--color-loss);
+  background: color-mix(in srgb, var(--color-loss) 12%, transparent);
 }
 
 .rn-item-body {
@@ -275,7 +275,7 @@
 }
 
 .rn-ticker[data-registered='no'] {
-  color: var(--risk-high);
+  color: var(--color-loss);
   border-bottom-style: dotted;
 }
 
@@ -308,7 +308,7 @@
 
 .rn-popout-msg {
   font-size: 0.7rem;
-  color: var(--risk-normal);
+  color: var(--color-profit);
 }
 
 .rn-popout-actions {

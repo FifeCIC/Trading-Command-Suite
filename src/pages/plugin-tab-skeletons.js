@@ -339,20 +339,10 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Advisor-guided focus recommendations with rationale trails.',
     domain: 'Focus / Advisor',
   },
-  'platform-api-efficiency': {
-    title: 'API Efficiency',
-    subtitle: 'Efficiency diagnostics for provider calls, pacing, and batching.',
-    domain: 'Trading Platforms / Performance',
-  },
   'platform-comparisons': {
     title: 'API Provider Comparisons',
     subtitle: 'Side-by-side provider capability matrix to guide architecture decisions.',
     domain: 'Trading Platforms / Architecture',
-  },
-  'platform-switches': {
-    title: 'Trading Platform Switches',
-    subtitle: 'Platform switch controls with safety checks and migration traces.',
-    domain: 'Trading Platforms / Operations',
   },
   'qa-lab': {
     title: 'QA Lab',

@@ -169,6 +169,38 @@ export function describeThresholdScale(thresholds) {
   );
 }
 
+/**
+ * standingClass() — map a `thresholdGeometry().standing` onto the shared score CSS classes.
+ *
+ * ⚠️ WHY THIS EXISTS, AND WHY IT IS NOT `scoreClass()` (measured 2026-09-16, #847)
+ * --------------------------------------------------------------------------------
+ * `scoreClass(v)` (in signal-utils) classifies a value against the 0-100 display scale (65/40).
+ * It was being called with PERCENT-OF-CAPACITY values — measured live on `strategy_signal_queue`:
+ *
+ *     compositePct   n=16   min 7    max 17     -> 0 rows >= 40, 0 rows >= 65
+ *     signalPct      n=16   min 7    max 17     -> 0 rows >= 40, 0 rows >= 65
+ *
+ * Against a bar of 40 a value of 7-17 can NEVER classify as anything but "low". So **100% of
+ * queued signals rendered as poor** while the server was calling some of them BUY/STRONG. That is
+ * #839's defect shape one layer up: plausible numbers, no error, nothing throws.
+ *
+ * A percentage must be classified against the scale it was measured on, and that scale is
+ * `thresholdGeometry()`'s job — it knows entry/strong and already returns a null `standing` when
+ * the thresholds could not be read.
+ *
+ * ⚠️ `null` standing renders MUTED, never "low". "We cannot judge" and "this is poor" are
+ * different claims and must never look the same — the rule stated in this file's header.
+ *
+ * @param {'strong'|'entry'|'below'|null|undefined} standing From `thresholdGeometry().standing`.
+ * @returns {string} a CSS class name.
+ */
+export function standingClass(standing) {
+  if (standing === 'strong') return 'pl-score-high';
+  if (standing === 'entry') return 'pl-score-med';
+  if (standing === 'below') return 'pl-score-low';
+  return 'pl-muted';
+}
+
 
 /**
  * Build the canonical display model for a single score row.

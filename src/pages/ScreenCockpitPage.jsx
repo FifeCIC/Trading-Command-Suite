@@ -1,5 +1,5 @@
 /**
- * Screen Cockpit — /lab/screen-cockpit (epic #746, phase 3)
+ * Screen Assignment — /lab/screen-assignment (epic #746, phase 3)
  * ========================================================
  * Assign a widget board to each physical monitor, then open that board on the
  * monitor it belongs to. This is the multi-screen half of the widget epic: the
@@ -172,14 +172,18 @@ export default function ScreenCockpitPage() {
   const permission = detection.permission;
 
   return (
-    <div className="sc-page">
-      <header className="sc-header">
+    <div className="screencockpit-page">
+      <header className="screencockpit-header">
         <h1>
           Screen Cockpit
           <PageInfoPopover>
             Assign a widget board to each monitor and open it there. Boards are arranged on the
-            Dashboard or the Widget Board page; this page only decides which board lives on which
+            Dashboard or the Widget Library page; this page only decides which board lives on which
             screen, and remembers it.
+            {'\n\n'}
+            ⚠️ The dropdown below lists BOARDS (screens you can fill), not pages. A board named
+            "Dashboard" is the Dashboard board — choosing it assigns that board to this monitor, it
+            does not navigate anywhere.
             {'\n\n'}
             Detection uses the browser's Window Management API, which needs permission and a click —
             press Detect screens if a screen list does not appear. Each screen opens in its own named
@@ -187,18 +191,18 @@ export default function ScreenCockpitPage() {
             windows share one board document: rearrange a board in any window and the others follow.
           </PageInfoPopover>
         </h1>
-        <p className="sc-subtitle">
+        <p className="screencockpit-subtitle">
           Multi-monitor layout for the widget cockpit. Each screen shows one board, full-bleed.
         </p>
       </header>
 
-      <section className="sc-actions">
-        <button type="button" className="sc-btn sc-btn--primary" onClick={detect}>
+      <section className="screencockpit-actions">
+        <button type="button" className="screencockpit-btn screencockpit-btn--primary" onClick={detect}>
           {status === 'detecting' ? 'Detecting…' : 'Detect screens'}
         </button>
         <button
           type="button"
-          className="sc-btn"
+          className="screencockpit-btn"
           onClick={openAll}
           disabled={!screens.length}
           title="Open the assigned board on every detected screen"
@@ -207,48 +211,48 @@ export default function ScreenCockpitPage() {
         </button>
         <button
           type="button"
-          className="sc-btn sc-btn--ghost"
+          className="screencockpit-btn screencockpit-btn--ghost"
           onClick={closeAll}
           disabled={!screens.length}
           title="Close every screen window"
         >
           Close all windows
         </button>
-        <span className="sc-count">
+        <span className="screencockpit-count">
           {screens.length} screen{screens.length === 1 ? '' : 's'} · {openKeys.size} window
           {openKeys.size === 1 ? '' : 's'} open
         </span>
       </section>
 
       {permission === 'denied' && (
-        <p className="sc-notice sc-notice--warn">
+        <p className="screencockpit-notice screencockpit-notice--warn">
           Screen detection was refused, so this list falls back to the one screen the browser always
           exposes. Grant the window-management permission (site settings) and press Detect screens to
           see every monitor.
         </p>
       )}
       {permission === 'unsupported' && (
-        <p className="sc-notice sc-notice--warn">
+        <p className="screencockpit-notice screencockpit-notice--warn">
           This browser has no Window Management API, so only the current screen is known. Screen
           windows still open — they just cannot be positioned onto a specific monitor.
         </p>
       )}
       {permission === 'timeout' && (
-        <p className="sc-notice sc-notice--warn">
+        <p className="screencockpit-notice screencockpit-notice--warn">
           Screen detection did not answer within {SCREEN_DETECT_TIMEOUT_MS / 1000}s, so only the
           current screen is listed. This happens when the page is not the focused window — click
           into this window and press Detect screens again.
         </p>
       )}
       {permission === 'error' && (
-        <p className="sc-notice sc-notice--warn">
+        <p className="screencockpit-notice screencockpit-notice--warn">
           Screen detection failed ({detection.error}). Showing the current screen only.
         </p>
       )}
-      {notice && <p className="sc-notice sc-notice--info">{notice}</p>}
+      {notice && <p className="screencockpit-notice screencockpit-notice--info">{notice}</p>}
 
-      <table className="sc-table">
-        <caption className="sc-caption">
+      <table className="screencockpit-table">
+        <caption className="screencockpit-caption">
           One board per monitor. Assignments save as you change them.
         </caption>
         <thead>
@@ -266,17 +270,17 @@ export default function ScreenCockpitPage() {
             const isOpen = openKeys.has(key);
             return (
               <tr key={key}>
-                <th scope="row" className="sc-screen-cell">
-                  <span className="sc-screen-name">{screen.label || `Screen ${i + 1}`}</span>
-                  {screen.isPrimary && <span className="sc-tag">primary</span>}
-                  <span className="sc-screen-key">{windowNameFor(key)}</span>
+                <th scope="row" className="screencockpit-screen-cell">
+                  <span className="screencockpit-screen-name">{screen.label || `Screen ${i + 1}`}</span>
+                  {screen.isPrimary && <span className="screencockpit-tag">primary</span>}
+                  <span className="screencockpit-screen-key">{windowNameFor(key)}</span>
                 </th>
-                <td className="sc-geometry">{describeScreen(screen)}</td>
+                <td className="screencockpit-geometry">{describeScreen(screen)}</td>
                 <td>
-                  <label className="sc-field">
-                    <span className="sc-sr">Board for {screen.label || `screen ${i + 1}`}</span>
+                  <label className="screencockpit-field">
+                    <span className="screencockpit-sr">Board for {screen.label || `screen ${i + 1}`}</span>
                     <select
-                      className="sc-select"
+                      className="screencockpit-select"
                       value={boardId}
                       onChange={(e) => assign(key, e.target.value)}
                     >
@@ -289,7 +293,7 @@ export default function ScreenCockpitPage() {
                       )}
                     </select>
                   </label>
-                  <span className="sc-hint">
+                  <span className="screencockpit-hint">
                     {boardId
                       ? `${defaultWidgetsFor(boardId).length || 'any'} default widget${
                           defaultWidgetsFor(boardId).length === 1 ? '' : 's'
@@ -300,22 +304,22 @@ export default function ScreenCockpitPage() {
                 <td>
                   <button
                     type="button"
-                    className="sc-btn sc-btn--open"
+                    className="screencockpit-btn screencockpit-btn--open"
                     onClick={() => openOn(screen)}
                     disabled={!boardId}
                     title={boardId ? `Open ${boardLabel(boardId)} here` : 'Assign a board first'}
                   >
                     {isOpen ? 'Focus' : 'Open'}
                   </button>
-                  <span className={isOpen ? 'sc-dot sc-dot--on' : 'sc-dot'} aria-hidden="true" />
-                  <span className="sc-sr">{isOpen ? 'window open' : 'window closed'}</span>
+                  <span className={isOpen ? 'screencockpit-dot screencockpit-dot--on' : 'screencockpit-dot'} aria-hidden="true" />
+                  <span className="screencockpit-sr">{isOpen ? 'window open' : 'window closed'}</span>
                 </td>
               </tr>
             );
           })}
           {!screens.length && (
             <tr>
-              <td colSpan={4} className="sc-empty">
+              <td colSpan={4} className="screencockpit-empty">
                 {status === 'detecting' ? 'Detecting screens…' : 'No screens detected yet.'}
               </td>
             </tr>
@@ -323,9 +327,9 @@ export default function ScreenCockpitPage() {
         </tbody>
       </table>
 
-      <section className="sc-notes">
-        <h2 className="sc-notes-title">How the windows behave</h2>
-        <ul className="sc-notes-list">
+      <section className="screencockpit-notes">
+        <h2 className="screencockpit-notes-title">How the windows behave</h2>
+        <ul className="screencockpit-notes-list">
           <li>
             Each screen is a normal browser window at{' '}
             <code>{'window.open'}</code> geometry <code>left/top/width/height</code> taken from that

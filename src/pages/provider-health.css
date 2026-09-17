@@ -46,7 +46,7 @@
 }
 
 .ph-refresh-btn:hover:not(:disabled) {
-  background: var(--panel-hover, #334155);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
   border-color: var(--accent, #0ea5a6);
 }
 
@@ -217,7 +217,7 @@
   margin-top: 0.5rem;
   padding: 0.35rem 0.5rem;
   border-radius: 5px;
-  background: var(--panel-alt, #0f172a);
+  background: var(--bg-elev);
   font-size: 0.7rem;
   color: var(--ink-soft);
   line-height: 1.45;

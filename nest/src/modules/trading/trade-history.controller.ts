@@ -253,6 +253,297 @@ export class TradeHistoryController {
     };
   }
 
+  // ── Protocol Profitability (#777) ─────────────────────
+
+  /**
+   * GET /api/trading/protocol-profitability
+   *
+   * "Is this profitable, and WHICH protocol makes money?" — the measurement prerequisite for every
+   * tuning decision (#777). Not a dashboard: the numbers that make tuning possible at all.
+   *
+   * ─────────────────────────────────────────────────────────────────────────────────────────────
+   * ⚠️ WHY THE EXISTING `strategy-comparison` COULD NOT ANSWER THIS
+   * ─────────────────────────────────────────────────────────────────────────────────────────────
+   *   1. It groups by `trade.strategy` — a NAME STRING — not by protocol. So "which protocol earns"
+   *      was unanswerable, and effort went to whichever protocol was loudest rather than whichever
+   *      worked.
+   *   2. It filters `pnl: { not: null }` and NOTHING ELSE, so the quarantined rows (pnlInvalid = 1,
+   *      a placeholder 0 because the exit price was never captured) are **counted as real P&L**.
+   *      Measured 2026-09-17: 80 of 129 strategy rows are quarantined, so that view is dominated by
+   *      fabricated zeros and cannot be trusted in either direction.
+   *
+   * ─────────────────────────────────────────────────────────────────────────────────────────────
+   * THE THREE STATES A ZERO CAN MEAN (acceptance criterion 3)
+   * ─────────────────────────────────────────────────────────────────────────────────────────────
+   * A `0` is ambiguous and must never be averaged as if it were a result. This splits it:
+   *
+   *   QUARANTINED   `pnlInvalid = 1`          the exit was never captured; `pnl` is a placeholder.
+   *                                           EXCLUDED, and COUNTED so it cannot vanish silently.
+   *   EXIT_UNKNOWN  `exitPrice IS NULL`        we do not know the exit. EXCLUDED and counted.
+   *                                           This is the case `strategy-comparison` mistook for 0.
+   *   FLAT          `pnl = 0`, exit known      a genuine scratch. A RESULT, and it is counted as one.
+   *
+   * "Absence must not become a number" — the same invariant as #766.
+   *
+   * ⚠️ COSTS ARE NOT AVAILABLE AND THIS SAYS SO RATHER THAN REPORTING 0 (#777 criterion 2).
+   * Measured 2026-09-17: `trade.swap` is null on **0 of 129** having a value, and there is **no
+   * `commission` column at all**. So a `costs: 0` here would be a fabricated number of exactly the
+   * kind this issue exists to remove. `grossPnl` equals `netPnl` *because costs are unmeasured*, not
+   * because they are zero — the response states that explicitly so no reader can misread it.
+   */
+  @Get('protocol-profitability')
+  async getProtocolProfitability() {
+    const trades = await this.prisma.trade.findMany({
+      where: { origin: 'strategy', status: 'closed' },
+      select: {
+        id: true, symbol: true, side: true, pnl: true, exitPrice: true,
+        pnlInvalid: true, scoringStrategyId: true, openedAt: true, closedAt: true,
+      },
+      orderBy: { closedAt: 'desc' },
+      take: 5000,
+    }).catch(() => [] as any[]);
+
+    // ─────────────────────────────────────────────────────────────────────────────────────
+    // ATTRIBUTION — MEASURED 2026-09-17. It is NOT the chain the column name implies.
+    //
+    // ⚠️ `trade.scoringStrategyId` does NOT hold a `scoring_strategy.id`. Measured over the 31
+    // distinct values on `trade`:
+    //      0 of 31 match `scoring_strategy.id`
+    //     16 of 31 match `trading_strategy.id`   ← the BOT id
+    //    The column is DUAL-MEANING because two writers disagree about what goes in it:
+    //      automation-loop.service.ts:1758  `scoringStrategyId: action.strategyId`  → bot id
+    //      signal-actions.service.ts:235    `scoringStrategyId: protocol ?? null`   → protocol slug
+    //    The row shapes confirm it: 129 rows are UUIDs (bot id), 16 rows are slugs.
+    //
+    // ⚠️ And `trading_strategy.protocolId` holds a SLUG, not a `protocol.id` (26 of 27 rows are
+    // slugs). Joining on `protocol.id` returns nothing at all.
+    //
+    // The FIRST version of this endpoint used the chain the column NAME suggests
+    // (scoringStrategyId → scoring_strategy.protocolId → protocol.slug). It resolved **0 of 26**
+    // trades and reported every one as "unattributed" — a plausible number with no error, which is
+    // precisely the defect class #777 exists to remove. Hence: a multi-path resolver, per-path
+    // counts, and a VISIBLE unresolved list, so this can never fail silently again.
+    // ─────────────────────────────────────────────────────────────────────────────────────
+    const lookupFailures: string[] = [];
+    /** An empty table and a failed query must never look the same (#777 criterion 4). */
+    const readAll = async (label: string, fn: () => Promise<any[]>): Promise<any[]> => {
+      try {
+        return await fn();
+      } catch (err) {
+        lookupFailures.push(`${label}: ${(err as Error).message}`);
+        return [];
+      }
+    };
+
+    const bots = await readAll('trading_strategy', () =>
+      (this.prisma as any).tradingStrategy.findMany({
+        select: { id: true, name: true, protocolId: true, scoringStrategyId: true },
+      }));
+    const botById = new Map<string, any>(bots.map((b: any) => [b.id, b] as [string, any]));
+
+    const protocols = await readAll('protocol', () =>
+      (this.prisma as any).protocol.findMany({ select: { id: true, slug: true, name: true } }));
+    const protocolById = new Map<string, any>(protocols.map((p: any) => [p.id, p] as [string, any]));
+    const protocolBySlug = new Map<string, any>(protocols.map((p: any) => [p.slug, p] as [string, any]));
+
+    /**
+     * Resolve a `trade.scoringStrategyId` to a protocol, trying EVERY writer's convention.
+     * Returns the path taken so the response can show which writers are actually in use —
+     * if `protocol_slug` ever stops appearing, the signal-actions writer has changed shape.
+     */
+    const resolveProtocol = (sid: string | null): { proto: any; via: string } => {
+      if (!sid) return { proto: null, via: 'no_id' };
+      const bot = botById.get(sid);
+      if (bot) {
+        const viaBot = protocolBySlug.get(bot.protocolId) || protocolById.get(bot.protocolId);
+        return viaBot ? { proto: viaBot, via: 'trading_strategy' } : { proto: null, via: 'bot_without_protocol' };
+      }
+      const viaSlug = protocolBySlug.get(sid);
+      if (viaSlug) return { proto: viaSlug, via: 'protocol_slug' };
+      const viaId = protocolById.get(sid);
+      if (viaId) return { proto: viaId, via: 'protocol_id' };
+      return { proto: null, via: 'unresolved' };
+    };
+    const resolvedVia: Record<string, number> = {};
+    const unresolvedIds = new Set<string>();
+
+    type Bucket = {
+      protocolId: string | null;
+      protocolSlug: string;
+      protocolName: string;
+      usable: number;
+      wins: number;
+      losses: number;
+      flat: number;
+      netPnl: number;
+      winPnl: number;
+      lossPnl: number;
+      best: number | null;
+      worst: number | null;
+      holdMinutes: number[];
+      symbols: Set<string>;
+      firstAt: Date | null;
+      lastAt: Date | null;
+    };
+    const buckets = new Map<string, Bucket>();
+
+    let quarantined = 0;
+    let exitUnknown = 0;
+
+    for (const t of trades) {
+      // ── Excluded, but counted. Never silently dropped. ──
+      if (Number(t.pnlInvalid) === 1) { quarantined++; continue; }
+      if (t.exitPrice == null) { exitUnknown++; continue; }
+
+      const { proto, via } = resolveProtocol(t.scoringStrategyId ?? null);
+      resolvedVia[via] = (resolvedVia[via] || 0) + 1;
+      if (!proto && t.scoringStrategyId) unresolvedIds.add(t.scoringStrategyId);
+      const key = proto?.slug || 'unattributed';
+
+      if (!buckets.has(key)) {
+        buckets.set(key, {
+          protocolId: proto?.id ?? null,
+          protocolSlug: proto?.slug ?? 'unattributed',
+          protocolName: proto?.name ?? 'Not attributed to a protocol',
+          usable: 0, wins: 0, losses: 0, flat: 0, netPnl: 0, winPnl: 0, lossPnl: 0,
+          best: null, worst: null, holdMinutes: [], symbols: new Set(), firstAt: null, lastAt: null,
+        });
+      }
+      const b = buckets.get(key)!;
+      const pnl = Number(t.pnl || 0);
+
+      b.usable++;
+      b.netPnl += pnl;
+      b.symbols.add(t.symbol);
+      if (pnl > 0) { b.wins++; b.winPnl += pnl; }
+      else if (pnl < 0) { b.losses++; b.lossPnl += pnl; }
+      else b.flat++;
+      if (b.best === null || pnl > b.best) b.best = pnl;
+      if (b.worst === null || pnl < b.worst) b.worst = pnl;
+
+      if (t.openedAt && t.closedAt) {
+        const mins = (new Date(t.closedAt).getTime() - new Date(t.openedAt).getTime()) / 60_000;
+        if (Number.isFinite(mins) && mins >= 0) b.holdMinutes.push(mins);
+      }
+      const closed = t.closedAt ? new Date(t.closedAt) : null;
+      if (closed) {
+        if (!b.firstAt || closed < b.firstAt) b.firstAt = closed;
+        if (!b.lastAt || closed > b.lastAt) b.lastAt = closed;
+      }
+    }
+
+    /** Median, not mean: the mean hold time is skewed by stale rows (#773). */
+    const median = (xs: number[]): number | null => {
+      if (xs.length === 0) return null;
+      const s = [...xs].sort((a, b) => a - b);
+      const m = Math.floor(s.length / 2);
+      return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    };
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+
+    /** ⚠️ Below this, a win rate is noise. Stated per protocol rather than implied. */
+    const MIN_SAMPLE_FOR_VERDICT = 20;
+
+    const perProtocol = [...buckets.values()].map((b) => ({
+      protocolId: b.protocolId,
+      protocolSlug: b.protocolSlug,
+      protocolName: b.protocolName,
+      trades: b.usable,
+      netPnl: r2(b.netPnl),
+      // Equals netPnl BECAUSE COSTS ARE UNMEASURED — see the `costs` block below.
+      grossPnl: r2(b.netPnl),
+      wins: b.wins,
+      losses: b.losses,
+      flat: b.flat,
+      winRate: b.usable ? r2((b.wins / b.usable) * 100) : null,
+      avgWin: b.wins ? r2(b.winPnl / b.wins) : null,
+      avgLoss: b.losses ? r2(b.lossPnl / b.losses) : null,
+      bestTrade: b.best === null ? null : r2(b.best),
+      worstTrade: b.worst === null ? null : r2(b.worst),
+      medianHoldMinutes: median(b.holdMinutes) === null ? null : Math.round(median(b.holdMinutes)!),
+      symbolsTraded: b.symbols.size,
+      firstTradeAt: b.firstAt,
+      lastTradeAt: b.lastAt,
+      inconclusive: b.usable < MIN_SAMPLE_FOR_VERDICT,
+    })).sort((a, b) => b.trades - a.trades);
+
+    const usableTotal = perProtocol.reduce((s, p) => s + p.trades, 0);
+
+    // ─────────────────────────────────────────────────────────────────────────────────────
+    // DENOMINATION — measured 2026-09-17.
+    //
+    // Every P&L figure here is in the TRADING ACCOUNT's currency, NOT USD. MEASURED: the bot
+    // account on bridge :5000 is GBP (login 10011309743, balance £1,374.57). Verified against a
+    // hand-checked trade: GBPUSD 0.01 lot, 136.9 pips, exit 1.33866 → gross −$13.69, and
+    // −13.69 / 1.33866 = −£10.226 which is the recorded `pnl` of −10.23, to the cent.
+    //
+    // ⚠️ So do NOT reconcile `pnl` against `(exitPrice - entryPrice) * quantity * contractSize`:
+    // that arithmetic yields USD and disagrees by the FX rate (~25% at GBP/USD 1.34). The gap is
+    // CURRENCY, not missing cost. Labeling this now, because an unlabelled money figure is exactly
+    // the "plausible number" class this endpoint exists to remove.
+    // ─────────────────────────────────────────────────────────────────────────────────────
+    let accountCurrency: string | null = null;
+    try {
+      const acct: any = await this.mt5.getAccount();
+      accountCurrency = acct?.currency ?? null;
+    } catch { /* reported as null below rather than assumed to be USD */ }
+
+    return {
+      // ── Data quality FIRST: a reader must see the sample before the numbers. ──
+      dataQuality: {
+        strategyTradeRows: trades.length,
+        quarantined,
+        exitUnknown,
+        usable: usableTotal,
+        excluded: quarantined + exitUnknown,
+        // Stated so the exclusions cannot be mistaken for a complete picture.
+        note:
+          'Quarantined rows (pnlInvalid) and rows with no exit price are EXCLUDED from every figure ' +
+          'and counted here. Dropping them silently would overstate performance; including them ' +
+          'would fabricate it.',
+      },
+      /** ⚠️ All money below is in this currency. `null` = could not resolve, NOT USD. */
+      denomination: {
+        currency: accountCurrency,
+        resolved: accountCurrency !== null,
+        note:
+          'pnl / netPnl / grossPnl / avgWin / avgLoss are in the TRADING ACCOUNT currency. ' +
+          'The bot account on bridge :5000 is GBP, so these are NOT dollars — comparing them with ' +
+          'USD figures (or with a USD price difference) will be wrong by the FX rate.',
+      },
+      costs: {
+        available: false,
+        // ⚠️ NOT zero — UNMEASURED. A 0 here would be the exact fabrication this endpoint exists to
+        // prevent, and on 0.01-lot FX a few pence of spread decides whether a scalp is viable.
+        commission: null,
+        swap: null,
+        reason:
+          'Not captured on `trade`: `swap` is null on all strategy rows and there is no `commission` ' +
+          'column. The bridge returns commission and swap on closing deals but they are not ' +
+          'persisted. grossPnl === netPnl because costs are unmeasured, NOT because they are zero.',
+      },
+      threshold: { minSampleForVerdict: MIN_SAMPLE_FOR_VERDICT },
+      /**
+       * Which resolution path each trade took, and what could not be resolved at all.
+       * `unresolvedIds` is deliberately a LIST of the raw values: `unattributed` on its own is a
+       * plausible-looking number that hides a broken join, which is exactly how the first version
+       * of this endpoint reported 0 of 26 and looked healthy.
+       */
+      attribution: {
+        resolvedByPath: resolvedVia,
+        // Counts only usable trades (the resolver runs after the exclusion guards).
+        unresolvedCount: (resolvedVia['unresolved'] || 0) + (resolvedVia['bot_without_protocol'] || 0),
+        unresolvedIds: [...unresolvedIds].slice(0, 25),
+        lookupFailures,
+        note:
+          'Attribution is via trading_strategy.id (the bot), NOT scoring_strategy.id — the column ' +
+          "is named scoringStrategyId but measured 0/31 matches against scoring_strategy. See the " +
+          'resolver comment in trade-history.controller.ts.',
+      },
+      protocols: perProtocol,
+    };
+  }
+
   // ── Swap Cost Calculator ──────────────────────────────
 
   @Get('swap-forecast')

@@ -98,12 +98,12 @@
 /* ─── UnavailablePlaceholder ─── */
 .unavailable-placeholder {
   max-width: 500px; margin: 60px auto; text-align: center;
-  padding: 40px; background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: 12px; color: var(--text);
+  padding: 40px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--ink);
 }
 .unavailable-icon { font-size: 2rem; margin-bottom: 12px; }
-.unavailable-title { margin: 0 0 8px; font-size: 1.2rem; color: var(--text-strong); }
-.unavailable-message { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; margin: 0 0 16px; }
+.unavailable-title { margin: 0 0 8px; font-size: 1.2rem; color: var(--ink); }
+.unavailable-message { color: var(--ink-soft); font-size: 0.85rem; line-height: 1.6; margin: 0 0 16px; }
 .unavailable-action {
   display: inline-block; padding: 8px 18px; border-radius: 8px;
   background: var(--accent); color: #fff; text-decoration: none;

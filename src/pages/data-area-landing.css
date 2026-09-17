@@ -17,7 +17,7 @@
 }
 
 .dal-subtitle {
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   font-size: 0.9rem;
   line-height: 1.5;
   max-width: 600px;
@@ -26,7 +26,7 @@
 .dal-loading {
   text-align: center;
   padding: 2rem 1rem;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   font-size: 0.9rem;
 }
 
@@ -39,7 +39,7 @@
 }
 
 .dal-card {
-  background: var(--card-bg, #ffffff);
+  background: var(--panel);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 10px;
   padding: 1.2rem 1.25rem;
@@ -99,7 +99,7 @@
 .dal-desc {
   font-size: 0.82rem;
   line-height: 1.4;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   margin: 0;
 }
 
@@ -122,7 +122,7 @@
   font-size: 1.3rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--text, #1e293b);
+  color: var(--ink);
 }
 
 .dal-stat-value.accent {
@@ -146,7 +146,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 /* ─── Card Footer ────────────────────────────────────────── */
@@ -155,7 +155,7 @@
   font-size: 0.75rem;
   font-weight: 500;
   padding-top: 0.3rem;
-  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  border-top: 1px solid var(--line);
 }
 
 .dal-ok {
@@ -163,7 +163,7 @@
 }
 
 .dal-neutral {
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 .dal-error {
@@ -193,14 +193,14 @@
 }
 
 .dal-refresh-btn {
-  background: var(--card-bg, #fff);
+  background: var(--panel);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
   padding: 0.35rem 0.75rem;
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  color: var(--text, #1e293b);
+  color: var(--ink);
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -217,7 +217,7 @@
 
 .dal-recent-meta {
   font-size: 0.72rem;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 .dal-recent-table {

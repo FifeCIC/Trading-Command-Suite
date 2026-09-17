@@ -17,7 +17,7 @@
 }
 
 .import-jobs-subtitle {
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   font-size: 0.9rem;
   line-height: 1.5;
   max-width: 640px;
@@ -39,8 +39,8 @@
 }
 
 .summary-card {
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
@@ -57,7 +57,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--text, #1e293b);
+  color: var(--ink);
 }
 
 .summary-value.success {
@@ -71,7 +71,7 @@
 .summary-value-sm {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 .summary-label {
@@ -79,15 +79,15 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   text-align: center;
 }
 
 /* ─── Trigger Form ────────────────────────────────────────── */
 
 .import-trigger-section {
-  background: var(--bg-subtle, #f1f5f9);
-  border: 1px solid var(--border, #e2e8f0);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
@@ -98,7 +98,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: var(--text, #1e293b);
+  color: var(--ink);
 }
 
 .trigger-input-row {
@@ -113,8 +113,8 @@
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
   font-size: 0.9rem;
-  background: var(--card-bg, #ffffff);
-  color: var(--text, #1e293b);
+  background: var(--panel);
+  color: var(--ink);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -138,7 +138,7 @@
 }
 
 .trigger-btn:hover:not(:disabled) {
-  background: var(--accent-hover, #0891b2);
+  background: var(--accent);
 }
 
 .trigger-btn:disabled {
@@ -181,7 +181,7 @@
 }
 
 .import-table thead {
-  background: var(--bg-subtle, #f1f5f9);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
 
 .import-table th {
@@ -190,15 +190,15 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .import-table td {
   padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
 
@@ -207,7 +207,7 @@
 }
 
 .import-table tbody tr:hover {
-  background: var(--bg-subtle, #f1f5f9);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
 
 /* Row color hints */
@@ -231,7 +231,7 @@
 .cell-timestamp {
   white-space: nowrap;
   font-size: 0.8rem;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 .cell-symbol {
@@ -246,7 +246,7 @@
 
 .symbol-name {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 .cell-duration {
@@ -306,8 +306,8 @@
 }
 
 .badge-unknown {
-  background: var(--bg-subtle, #f1f5f9);
-  color: var(--text-muted, #64748b);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: var(--ink-soft);
 }
 
 /* ─── Empty / Loading states ──────────────────────────────── */
@@ -315,8 +315,8 @@
 .import-empty {
   text-align: center;
   padding: 3rem 1rem;
-  color: var(--text-muted, #64748b);
-  border: 1px dashed var(--border, #e2e8f0);
+  color: var(--ink-soft);
+  border: 1px dashed var(--border);
   border-radius: 8px;
   font-size: 0.9rem;
 }
@@ -329,5 +329,5 @@
 .import-count {
   margin: 0.5rem 0 0;
   font-size: 0.78rem;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
 }

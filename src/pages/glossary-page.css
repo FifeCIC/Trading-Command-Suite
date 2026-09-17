@@ -143,7 +143,7 @@
 
 .glossary-entry-aliases {
   font-size: 0.72rem;
-  color: var(--ink-faint, #5a6070);
+  color: var(--ink-soft);
   margin-left: auto;
   white-space: nowrap;
   overflow: hidden;
@@ -179,7 +179,7 @@
 .glossary-footer-count {
   text-align: center;
   font-size: 0.75rem;
-  color: var(--ink-faint, #5a6070);
+  color: var(--ink-soft);
 }
 
 /* ── Compact mode (for overlay) ── */

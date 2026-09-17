@@ -1,7 +1,13 @@
 /**
- * Widget Board Lab — /lab/widget-board
+ * Widget Library — /lab/widget-library
  * ====================================
  * Prototype surface for the widget-based dashboard (epic #746, phase 1).
+ *
+ * ⚠️ RENAMED from "Widget Board" / `/lab/widget-board` (2026-09-17). The old name
+ * collided with the widget *registry* vocabulary and, worse, with a BOARD label: the
+ * board picker on /lab/screen-assignment listed one board as "Widget Board (Lab)" and
+ * another as "Cockpit", so the picker read as though it were a page chooser. See
+ * `src/core/board-defaults.js` — board labels now name the SCREEN, not the page.
  *
  * This is where the widget LIBRARY lives first: pick widgets, arrange them by
  * dragging, remove them. Layout persists per board id, so the Lab board and the
@@ -20,7 +26,7 @@ export default function WidgetBoardLabPage() {
     <div className="tl-page">
       <header className="tl-header">
         <h1>
-          Widget Board
+          Widget Library
           <PageInfoPopover>
             Prototype widget dashboard. Add widgets from the library, drag tiles to reorder, and
             remove them — the layout persists per board. All widgets read stored data only; they

@@ -36,9 +36,9 @@
 }
 
 .mss-banner--warn {
-  background: color-mix(in srgb, var(--risk-high, #d97706) 12%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--risk-high, #d97706) 30%, var(--border));
-  color: var(--risk-high, #d97706);
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, var(--border));
+  color: var(--color-warning);
 }
 
 .mss-banner--info {
@@ -81,8 +81,8 @@
   line-height: 1.1;
 }
 
-.mss-stat--bullish { color: var(--risk-normal, #16a34a); }
-.mss-stat--bearish { color: var(--risk-high, #dc2626); }
+.mss-stat--bullish { color: var(--color-profit); }
+.mss-stat--bearish { color: var(--color-loss); }
 
 .mss-stat-label {
   font-size: 0.8125rem;
@@ -203,8 +203,8 @@
 }
 
 .mss-chip--ok {
-  background: color-mix(in srgb, var(--risk-normal, #16a34a) 15%, transparent);
-  color: var(--risk-normal, #16a34a);
+  background: color-mix(in srgb, var(--color-profit) 15%, transparent);
+  color: var(--color-profit);
 }
 
 .mss-chip--neutral {
@@ -213,8 +213,8 @@
 }
 
 .mss-chip--warn {
-  background: color-mix(in srgb, var(--risk-high, #dc2626) 15%, transparent);
-  color: var(--risk-high, #dc2626);
+  background: color-mix(in srgb, var(--color-loss) 15%, transparent);
+  color: var(--color-loss);
 }
 
 .mss-chip--dim {
@@ -233,13 +233,13 @@
 }
 
 .mss-signal--buy {
-  background: color-mix(in srgb, var(--risk-normal, #16a34a) 18%, transparent);
-  color: var(--risk-normal, #16a34a);
+  background: color-mix(in srgb, var(--color-profit) 18%, transparent);
+  color: var(--color-profit);
 }
 
 .mss-signal--sell {
-  background: color-mix(in srgb, var(--risk-high, #dc2626) 18%, transparent);
-  color: var(--risk-high, #dc2626);
+  background: color-mix(in srgb, var(--color-loss) 18%, transparent);
+  color: var(--color-loss);
 }
 
 .mss-signal--hold {
@@ -328,8 +328,8 @@
   font-size: 0.8125rem;
 }
 
-.mss-checklist--ok { color: var(--risk-normal, #16a34a); }
-.mss-checklist--warn { color: var(--risk-high, #dc2626); }
+.mss-checklist--ok { color: var(--color-profit); }
+.mss-checklist--warn { color: var(--color-loss); }
 
 /* Directive Breakdown */
 .mss-breakdown {
@@ -352,8 +352,8 @@
   font-size: 0.7rem;
 }
 
-.mss-sig--bullish { color: var(--risk-normal, #16a34a); }
-.mss-sig--bearish { color: var(--risk-high, #dc2626); }
+.mss-sig--bullish { color: var(--color-profit); }
+.mss-sig--bearish { color: var(--color-loss); }
 .mss-sig--neutral { color: var(--text-faint); }
 
 .mss-breakdown-name {
@@ -407,7 +407,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.mss-score--high { color: var(--risk-normal, #16a34a); }
+.mss-score--high { color: var(--color-profit); }
 .mss-score--mid  { color: #ca8a04; }
 .mss-score--low  { color: var(--text-faint); }
 

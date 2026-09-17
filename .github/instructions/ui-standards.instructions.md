@@ -224,6 +224,67 @@ Every new page MUST:
 8. Use `motion/motion` for enter animations with `index × 0.04s` staggered delays
 9. Respect `var(--page-max-width)` for the outer container
 10. Include responsive breakpoints at `≤900px` and `≤600px`
+11. Put page/component styles in a **`*.module.css`** file — see "Page & Component Stylesheets" below
+
+---
+
+## 🗂 Page & Component Stylesheets — `*.module.css` for anything NEW
+
+> **Decided 2026-09-17.** Adopted after measuring, not on principle. Read the two rules; they
+> are short and they replace nothing else in this file.
+
+### Rule B — new stylesheets are CSS Modules
+
+**Any new page or component stylesheet MUST be `*.module.css`**, imported as
+`import styles from './x.module.css'` and used as `className={styles.foo}`.
+
+**Why (measured, not assumed):**
+
+| Fact | Value |
+|---|---|
+| Stylesheets in `src/` | **167** (135 pages, 31 components, 1 root) |
+| Built CSS output | **ONE** file — `index-*.css`, ~1,067 KB |
+| Class selectors defined in more than one stylesheet | **110** |
+| `*.module.css` in use | 0 (as of the adoption date) |
+
+Every stylesheet is concatenated into a single global sheet, so a "page prefix" is a **global
+namespace** and the last-loaded rule wins **on both pages**. This is not hypothetical — it was
+found twice in one day:
+
+- **Trading Settings** (`/settings/trading-settings`) was styled almost entirely by two *other*
+  pages. Measured: `background rgb(8,8,13)`, `display:flex`, `min-height:780px` (from
+  `triple-screen.css`) and `display:flex` overriding its own `display:grid`, making
+  `grid-template-columns` **inert**. Nothing it declared reached the DOM.
+- **Trading Styles** (`/planner/trading-styles`) was painted by the same orphaned rule.
+
+CSS Modules removes the namespace, so the class of bug cannot recur for new files.
+
+**✅ Verified working in THIS project** (Vite 8.1.3 + rolldown 1.1.4, `css.lightningcss:false`,
+`build.cssMinify:false` — non-default, hence checked rather than assumed). A probe file built to:
+
+```
+. _probeScopedBox_autgy_5 { color: rgb(1, 2, 3); }     ← hashed in the output CSS
+window.__cssmoduleProbe = { probeScopedBox: '_probeScopedBox_autgy_5' }   ← scope map exported
+```
+
+No config is required. The `_<hash>` suffix is derived from the file, so **two files may each
+define `.page` without colliding.**
+
+### Rule A — rename the prefix opportunistically
+
+The 110 existing duplicates are **not** to be fixed in a sweep. When you next work on a page
+whose stylesheet shares a class prefix with another, rename **that page's** prefix
+(`.pl-` → `.plab-`, `.ts-` → `.tsty-`) in the same change. Same for a rule whose selector has no
+consumer at all — `triple-screen.css`'s `.ts-page` was orphaned and still painted another page.
+Dead CSS is not inert when the selector is generic.
+
+### ❌ Not doing — and why
+
+- **A duplicate-selector linter + 110-entry baseline.** Rejected: it stops new collisions but
+  fixes none of the 110, and a large allowlist is close to the "an allowlisted guard is worse
+  than none" trap in `development-philosophy.instructions.md`.
+- **A full migration of all 167 stylesheets to modules.** Correct in principle, disproportionate
+  here. New files are immune; old files improve as they are touched.
 
 ---
 
@@ -244,6 +305,7 @@ Before ANY UI change is considered complete, silently verify:
 - [ ] Monospace used for all numeric data (prices, P&L, scores, percentages)
 - [ ] No library >50KB uncompressed added
 - [ ] No hardcoded hex colors in page CSS files
+- [ ] New page/component stylesheet is `*.module.css` (not a new global `.css` file)
 - [ ] Phase gates checked — no phase-gated features built prematurely
 
 ---
@@ -254,6 +316,7 @@ Before ANY UI change is considered complete, silently verify:
 |---|---|
 | **View Transitions API** | Page-to-page crossfade via `<meta name="view-transition">`. Active globally. User-toggleable via `pageTransitions` preference. |
 | **CSS Variables** (`var(--*)`)  | All theming and colors. Defined in `index.css :root`. |
+| **CSS Modules** (`*.module.css`) | ✅ **REQUIRED for new stylesheets** (2026-09-17). Scope hashes class names so they cannot collide with the 167 global stylesheets. Verified working in this project's Vite 8/rolldown config. See "Page & Component Stylesheets". |
 | **CSS Grid + Flexbox** | Layout. Standard across all pages. |
 | **`useQuery` + `apiGet`** | Data fetching pattern. From `@tanstack/react-query` and `src/core/api/client`. |
 | **LoadingSkeleton** | Loading states. Import from `src/components/LoadingSkeleton`. |

@@ -1,0 +1,310 @@
+/* Triple-Screen Cockpit — triple-screen.css
+ *
+ * ⚠️ PREFIX RENAMED `ts-` → `cockpit-` (2026-09-17).
+ *
+ * `ts-` was claimed by THREE files — this one, `trading-strategies.css` (69 selectors) and
+ * `components/toggle-switch.css` (5) — and all page CSS is bundled into ONE global stylesheet.
+ * The real collision set was `.ts-header` and `.ts-subtitle`, and it was NOT just
+ * stylesheet-vs-stylesheet: `TradingStrategiesPage.jsx` renders `className="ts-header"` and
+ * `ts-subtitle` too, so both pages were being styled by both files.
+ *
+ * Measured on `/trading/trading-strategies` BEFORE this rename — its own stylesheet declares
+ * only `margin-bottom: 1rem` for `.ts-header` and `font-size: 0.92rem` for `.ts-subtitle`:
+ *
+ *     .ts-header   display: flex · border-bottom: 1px · align-items: flex-start   ← from HERE
+ *     .ts-subtitle font-size: 12.48px (0.78rem) · margin-top: 3.2px             ← from HERE
+ *
+ * Both pages reported identical computed values, which is the tell: a style was being shared
+ * that only one of them asked for. `cockpit-` is unique, so this file can no longer style
+ * another page — and `ts-` is now owned solely by Trading Strategies.
+ *
+ * ⚠️ The `.ts-page` rule that used to open this file was DELETED — it was orphaned.
+ * TripleScreenPage renders no `.ts-page` element (its root is a fragment starting at
+ * `.ts-header`), so the rule did nothing for this page while still painting an unrelated one:
+ * measured on `/planner/trading-styles`, `.ts-page` reported `background: var(--bg)`,
+ * `display: flex` and `min-height: calc(100vh - 120px)` — all three from here, none declared
+ * by that page's own stylesheet. Dead CSS is not inert when the selector is generic.
+ */
+
+/* ── Preview mode ────────────────────────────────────── */
+.cockpit-mode-preview {
+  padding: 1rem;
+}
+
+.cockpit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line, #1a1a1a);
+}
+.cockpit-header h2 { margin: 0; font-size: 1.2rem; }
+.cockpit-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+}
+.cockpit-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cockpit-btn-launch {
+  padding: 0.6rem 1.5rem;
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cockpit-btn-launch:hover { background: #0d9495; }
+
+.cockpit-btn-close {
+  padding: 0.35rem 0.75rem;
+  background: var(--danger, #ef4444);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.cockpit-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.cockpit-status.ready { color: var(--color-profit, #22c55e); }
+.cockpit-status.waiting { color: var(--color-warning, #f59e0b); }
+
+/* Screen info bar */
+.cockpit-screen-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+  background: var(--color-panel, #1a1d2e);
+  border: 1px solid var(--color-border, #2d3040);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+  flex-wrap: wrap;
+}
+.cockpit-screen-detail {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: var(--color-muted, #64748b);
+}
+
+/* Preview grid — shows the 3 slots */
+.cockpit-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  width: 100%;
+  margin-top: 1.5rem;
+}
+@media (max-width: 900px) {
+  .cockpit-preview-grid { grid-template-columns: 1fr; }
+}
+
+.cockpit-preview-slot {
+  background: var(--color-panel, #1a1d2e);
+  border: 1px solid var(--color-border, #2d3040);
+  border-radius: 10px;
+  padding: 1rem;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cockpit-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.cockpit-slot-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.cockpit-slot-key {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.4rem;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  color: var(--color-muted, #64748b);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.cockpit-slot-desc {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+  margin: 0 0 0.75rem;
+}
+.cockpit-slot-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.25);
+  border: 1px dashed var(--color-border, #2d3040);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  color: var(--color-muted, #64748b);
+}
+
+/* Slot accent borders */
+.cockpit-slot-left { border-color: var(--color-accent-blue, #3b82f6); }
+.cockpit-slot-center { border-color: var(--accent, #0ea5a6); }
+.cockpit-slot-right { border-color: var(--color-warning, #f59e0b); }
+
+/* ── Notes ──────────────────────────────────────────── */
+.cockpit-notes {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-panel, #1a1d2e);
+  border: 1px solid var(--color-border, #2d3040);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+}
+.cockpit-notes h4 { margin: 0 0 0.3rem; font-size: 0.82rem; }
+.cockpit-notes ol { margin: 0; padding-left: 1.2rem; }
+.cockpit-notes li { margin-bottom: 0.15rem; }
+
+/* ════════════════════════════════════════════════════════
+   META.STACK COCKPIT MODE — the pipeline's steps as columns
+   ════════════════════════════════════════════════════════
+
+   ⚠️ RESPONSIVE BY VIEWPORT WIDTH — NEVER BY MONITOR COUNT (2026-09-17).
+   This was `.cockpit-mode-triple` / `.cockpit-triple-layout` with a hard-coded
+   `grid-template-columns: 1fr 1fr 1fr`. "Triple" encoded one person's hardware, not a
+   property of the layout: someone with two screens, or two very large ones, gets nothing
+   from a rule that assumes three. The column count is now derived from the available
+   WIDTH, so the same view works on 1, 2 or 3 monitors and on a laptop.
+
+   `auto-fit` + `minmax(min(320px, 100%), 1fr)` reflows automatically:
+     wide   → 3 columns      medium → 2 columns      narrow → 1 column
+   No media query needed, and `min(320px, 100%)` stops the track from overflowing a
+   viewport narrower than the minimum, which is the usual `auto-fit` trap.
+*/
+
+.cockpit-mode-full {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  z-index: 9999;
+  background: var(--bg, #000000);
+}
+
+.cockpit-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+
+.cockpit-screen-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  /* ⚠️ LOAD-BEARING — without it the columns NEVER REFLOW (measured 2026-09-17).
+     A grid item's default `min-width: auto` is its min-content width, and a `1fr` track is
+     really `minmax(auto, 1fr)` — so a wide card sets a floor that OVERRIDES the
+     `minmax(min(320px, 100%), 1fr)` rule on `.cockpit-columns`. The grid then grows past the
+     viewport instead of dropping to fewer columns: at a 680px viewport both panels still
+     measured 763px and overflowed horizontally, side by side.
+     `ladder.css` carries the same fix on `.lad-cards-col` for the same reason. */
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border, #2d3040);
+}
+/* When the grid reflows the last column has no right-hand neighbour to separate from, so
+   the divider is dropped rather than left hanging at the row edge. */
+.cockpit-screen-panel:last-child { border-right: none; }
+
+.cockpit-panel-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid var(--color-border, #2d3040);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.cockpit-panel-hint {
+  font-size: 0.62rem;
+  color: var(--color-muted, #64748b);
+  font-weight: 400;
+}
+
+.cockpit-panel-body {
+  flex: 1;
+  /* Same reason as `.cockpit-screen-panel`: a flex item defaults to `min-width: auto`,
+     so a wide card would push the panel wider instead of scrolling or shrinking. */
+  min-width: 0;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.cockpit-panel-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--color-muted, #64748b);
+}
+.cockpit-placeholder-icon { font-size: 2.5rem; opacity: 0.3; }
+.cockpit-placeholder-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-soft, #94a3b8);
+}
+.cockpit-placeholder-desc {
+  font-size: 0.72rem;
+  color: var(--color-muted, #64748b);
+}
+
+/* Panel accent borders */
+.cockpit-panel-left { border-top: 2px solid var(--color-accent-blue, #3b82f6); }
+.cockpit-panel-center { border-top: 2px solid var(--accent, #0ea5a6); }
+.cockpit-panel-right { border-top: 2px solid var(--color-warning, #f59e0b); }
+
+/* ── In-page (non-fullscreen) column area ──────────────────────────────────────
+   ⚠️ `.cockpit-columns` is `height: 100%`, which is right for the fullscreen pop-out but
+   resolves to NOTHING in normal page flow, where the parent's height is `auto` — the panels
+   would collapse to their content and the `overflow: hidden` divider borders would vanish.
+   This modifier gives the grid a DEFINITE height so each panel's internal scrolling works,
+   without taking over the viewport the way `.cockpit-mode-full` deliberately does. */
+.cockpit-columns--page {
+  height: min(76vh, 900px);
+  margin: 1rem 0 1.5rem;
+  border: 1px solid var(--color-border, #2d3040);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* `.cockpit-panel-body` is a flex column with no `gap`, so stacked cards would touch.
+   The cards bring their own margins-free layout, so the spacing lives here. */
+.cockpit-panel-cards { gap: 0.6rem; }

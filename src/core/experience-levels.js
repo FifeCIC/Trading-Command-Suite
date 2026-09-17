@@ -107,6 +107,13 @@ export const EXPERIENCE_MATRIX = {
     'mt5-demo':              { beginner: false, experienced: true,  expert: true },
     // Settings
     'settings':              { beginner: true,  experienced: true,  expert: true },
+    // #617 split — all three are visible at every level ON PURPOSE. Two of them carry a
+    // META.Stack layer kill switch, and a safety control that disappears at "beginner" is a
+    // control the beginner cannot use to stop the thing that is running.
+    'appearance':            { beginner: true,  experienced: true,  expert: true },
+    'automation':            { beginner: true,  experienced: true,  expert: true },
+    'scoring-settings':      { beginner: true,  experienced: true,  expert: true },
+    'trading-settings':      { beginner: true,  experienced: true,  expert: true },
   },
 
   // ── Feature gating within views ────────────────────

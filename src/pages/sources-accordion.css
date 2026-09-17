@@ -15,7 +15,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   border-bottom: 2px solid var(--border, #e2e8f0);
   margin-bottom: 0;
 }
@@ -36,7 +36,7 @@
 
 /* Row */
 .sa-row {
-  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  border-bottom: 1px solid var(--line);
 }
 
 .sa-row:last-child {
@@ -44,7 +44,7 @@
 }
 
 .sa-row--open {
-  background: var(--card-bg-alt, #f8fafc);
+  background: var(--bg-elev);
 }
 
 /* Row header (clickable) */
@@ -58,13 +58,13 @@
   background: none;
   cursor: pointer;
   font-size: 0.85rem;
-  color: var(--text, #1e293b);
+  color: var(--ink);
   transition: background 0.1s;
   text-align: left;
 }
 
 .sa-row-header:hover {
-  background: var(--hover-bg, rgba(14, 165, 166, 0.04));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 .sa-caret {
@@ -89,7 +89,7 @@
 
 .sa-id code {
   font-size: 0.72rem;
-  background: var(--code-bg, #f1f5f9);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
   padding: 1px 5px;
   border-radius: 3px;
 }
@@ -104,7 +104,7 @@
   text-align: right;
   font-size: 0.78rem;
   font-weight: 500;
-  color: var(--text-muted, #64748b);
+  color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
 
@@ -126,8 +126,8 @@
 }
 
 .sa-card {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 1rem;
 }
@@ -136,7 +136,7 @@
   margin: 0 0 0.5rem;
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--text, #1e293b);
+  color: var(--ink);
 }
 
 .sa-card .tp-config-table {

@@ -56,7 +56,7 @@
   border-bottom: 1px solid var(--border, #33415533);
 }
 
-.ra-table tbody tr:hover { background: var(--panel-hover, #33415522); }
+.ra-table tbody tr:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
 
 .ra-ticker {
   font-family: 'Source Code Pro', 'Consolas', monospace;

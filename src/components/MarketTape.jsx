@@ -453,12 +453,16 @@ export default function MarketTape() {
       />
       {/* The gear goes to the REAL settings surface rather than a private popover.
           A tape-only configuration UI is a second source of truth: the two lists
-          drift, and a section added to one silently misses the other. */}
+          drift, and a section added to one silently misses the other.
+          ⚠️ 2026-09-16 (§617): the tape controls moved from General to Appearance, so this
+          target changed with them. `?section=market-tape` matches the `id` on that page's
+          section — if either half is renamed the gear still renders and still navigates,
+          it just lands at the top of the page instead of on the control, with no error. */}
       <button
         className="mkt-tape-gear"
-        onClick={() => navigate('/settings?section=market-tape')}
-        title="Configure the market tape in Settings"
-        aria-label="Configure the market tape in Settings"
+        onClick={() => navigate('/settings/appearance?section=market-tape')}
+        title="Configure the market tape in Appearance settings"
+        aria-label="Configure the market tape in Appearance settings"
       >
         ⚙
       </button>

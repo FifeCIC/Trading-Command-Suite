@@ -1,4 +1,12 @@
 /**
+ * ⚠️ AXIS: this is the BOT-POLICY axis — "when may THIS BOT act?" (a strategy choice, declared
+ * per bot in `trading_strategy.sessionWindow`). It is NOT the venue axis
+ * (`calendar/market-calendar.service.ts`) and NOT the FX-session axis
+ * (`calendar/market-sessions.service.ts`). A bot's window is a policy the owner sets; the other two
+ * are facts about the market. See #851.
+ *
+ * ⚠️ "SINGLE SOURCE OF TRUTH" below means *within this axis*.
+ *
  * session-window.ts — Canonical market-session definitions + pure evaluator.
  * ========================================================================
  * SINGLE SOURCE OF TRUTH for "which market session is it right now".

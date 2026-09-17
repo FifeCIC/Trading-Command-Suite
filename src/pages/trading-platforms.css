@@ -739,7 +739,7 @@
 }
 
 .as-result-meta {
-  color: var(--ink-faint, #64748b);
+  color: var(--ink-soft);
   font-size: 0.68rem;
 }
 

@@ -1,4 +1,13 @@
 /**
+ * ⚠️ AXIS: this is the FX-SESSION axis — "which liquidity block are we in?" (sydney/tokyo/
+ * london/ny). It is NOT the venue axis (`calendar/market-calendar.service.ts`, which answers "is
+ * this exchange open?") and NOT the bot-policy axis (`trading/session-window.ts`, which answers
+ * "when may this bot act?"). See #851.
+ *
+ * ⚠️ The phrase "single source of truth" below means *within this axis*. Three files once each
+ * claimed to be THE session source of truth, which is what made the surface look contradictory —
+ * each was correct about its own axis and silent about the others.
+ *
  * MarketSessionsService — canonical, DST-aware trading session source of truth.
  * =============================================================================
  * Single source of truth for market session definitions across the app.

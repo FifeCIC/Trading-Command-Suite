@@ -180,3 +180,18 @@
   font-style: italic;
   margin: 0.5rem 0 0;
 }
+
+/* ── Save confirmation ("✓ Saved") ──
+   Shared here rather than in a page stylesheet because every settings page that
+   persists something needs the same confirmation, and a per-page copy is how the
+   `.ts-page` / `.ts-card` / `.ts-grid` collision happened: three stylesheets each
+   defined the same prefix, all three loaded globally, and only one rule could win.
+
+   ⚠️ Colour is never the only signal: the caller must include the "✓" and the word
+   "Saved", so this is a reinforcement of the text, not the message itself
+   (accessibility-policy.instructions.md — WCAG 1.4.1). */
+.settings-ok {
+  font-size: var(--text-xs, 0.7rem);
+  font-weight: var(--weight-bold, 600);
+  color: var(--color-profit);
+}

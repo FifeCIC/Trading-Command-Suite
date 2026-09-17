@@ -34,7 +34,12 @@ function classifyPost(body) {
 }
 
 // ── Colour coding ────────────────────────────────────────
-const SIGNAL_COLORS = {
+// ⚠️ NOT named `SIGNAL_COLORS` (#847). `src/core/signal-utils.js` exports a `SIGNAL_COLORS` with
+// DIFFERENT values (`buy` is green #22c55e there, blue #3b82f6 here) and it is keyed by UPPERCASE
+// signal values, while this map is keyed by the lowercase values this page receives. A shadowed
+// name is worse than a duplicate: a future `import { SIGNAL_COLORS }` in this file would silently
+// resolve to the local one and the two would disagree with no error.
+const POSITION_SIGNAL_COLORS = {
   strong_buy: '#22c55e',
   buy: '#3b82f6',
   hold: '#a1a1aa',
@@ -203,12 +208,12 @@ export default function PortfolioLabPage() {
             <div key={p.symbol} className="plab-pos-card">
               <div className="plab-pos-header">
                 <span className="plab-pos-symbol">{p.symbol}</span>
-                <span className="plab-pos-score" style={{ color: SIGNAL_COLORS[p.signal] || '#999' }}>
+                <span className="plab-pos-score" style={{ color: POSITION_SIGNAL_COLORS[p.signal] || '#999' }}>
                   {p.score > 0 ? p.score : '—'}
                 </span>
               </div>
               <div className="plab-pos-meta">
-                <span className="plab-pos-signal" style={{ color: SIGNAL_COLORS[p.signal] || '#999' }}>
+                <span className="plab-pos-signal" style={{ color: POSITION_SIGNAL_COLORS[p.signal] || '#999' }}>
                   {p.signal.replace('_', ' ')}
                 </span>
                 <span className={`plab-pos-pnl ${p.pnlPct >= 0 ? 'positive' : 'negative'}`}>

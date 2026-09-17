@@ -35,6 +35,8 @@ The thresholds `>= 65` / `>= 40` were hardcoded identically in every file. If th
 | View component registration | `src/core/view-routes.jsx` |
 | Protocol data hook (protocols + runs + name lookup) | `src/core/useProtocolData.js` |
 | Signal display model (signal/tone/state/pct from a score row) | `src/core/score-display.js` — `buildScoreDisplay()` |
+| **A `*Pct` reading's standing on the achievable scale** | `src/core/score-display.js` — `thresholdGeometry(pct, scale)` then `standingClass(standing)`. Get `scale` from `fetchScoringThresholds()`. |
+| Live classification thresholds | `src/core/api/signals.js` — `fetchScoringThresholds()` → `GET /api/scoring/gated/thresholds` |
 | Signal badge component (render a signal from the view model) | `src/components/SignalBadge.jsx` |
 | **User-facing message text** (errors, warnings, info, success) | **`src/core/notices/registry.js`** — `notice(code, params)`. Add a **code**, never inline prose. |
 
@@ -73,6 +75,31 @@ node scripts/validate-notices.cjs --md     # markdown table, for docs/Librarian
 ```
 
 ---
+
+## ⚠️ TWO SCALES — know which one your number is on (#847, measured 2026-09-16)
+
+This is the single most common way a frontend display goes wrong here, and it is **silent**: the
+number looks plausible, nothing throws, and the colour is simply wrong.
+
+| Scale | Range in practice | Correct helper |
+|---|---|---|
+| **0-100 score** — e.g. `signal_rank_snapshot.combinedStrength` | **18-74** | `scoreClass(v)` / `scoreColor(v)` (`signal-utils.js`, bars 65/40) |
+| **Percent of configured capacity** (ADR-011) — e.g. `strategy_signal_queue.compositePct`, `signalPct` | **7-17** | `thresholdGeometry(pct, scale)` + `standingClass()` |
+
+**Why it matters, measured:** `compositePct` runs 7-17. Against the 0-100 bars (65/40) that value
+can never clear 40, so `scoreClass(compositePct)` returned "low" for **100% of 16 rows** while the
+server was calling some of them BUY/STRONG. The fix was not a new number — it was classifying the
+percentage against the scale it was actually measured on.
+
+**Rules**
+1. **Never pass a `*Pct` value to `scoreClass()` / `scoreColor()`.** They classify the 0-100 scale.
+2. **Get the scale from the server** (`fetchScoringThresholds()`), never from a constant. A
+   hand-copied bar is exactly what survived the 2026-09-15 rescale and mis-classified the UI (#839).
+3. **Unknown scale renders muted, never "low".** `standingClass()` returns `pl-muted` for a null
+   `standing`. "We cannot judge" and "this is poor" are different claims — see `score-display.js`.
+
+`nest/scripts/validate-threshold-sources.cjs` fails the build on a module-level numeric threshold
+declared anywhere in `src/` outside its declared owner, so the next hand-copied bar is caught.
 
 ## 🧠 Design principle — "establish output once"
 

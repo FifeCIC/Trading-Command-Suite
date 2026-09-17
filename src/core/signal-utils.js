@@ -4,18 +4,49 @@
  * SINGLE SOURCE OF TRUTH for signal classification and display.
  * Every page that displays scores/signals imports from here.
  *
- * THRESHOLDS: Stored in global_setting DB table, fetched at runtime.
- *             Fallback constants used when API is unavailable.
+ * ⚠️ TWO SCALES LIVE IN THIS APP. Read this before using anything below (#847).
+ * --------------------------------------------------------------------------------
+ *   1. THE 0-100 SCORE SCALE — what the helpers in THIS file classify against (65/40).
+ *      Correct input: a genuine 0-100 score, e.g. `signal_rank_snapshot.combinedStrength`
+ *      (measured live 2026-09-16: 18-74).
+ *
+ *   2. THE PERCENT-OF-CAPACITY SCALE (ADR-011, rescaled 2026-09-15 to entry 6 / strong 13).
+ *      Correct input: a percentage of configured directional capacity, e.g.
+ *      `strategy_signal_queue.compositePct` (measured live: 7-17) or `signalPct` (7-17).
+ *      These are classified by `thresholdGeometry()` in `score-display.js`, NOT here.
+ *
+ * ⚠️ PASSING A SCALE-2 VALUE TO A SCALE-1 HELPER IS SILENT AND WRONG. Measured 2026-09-16: 0 of
+ * 16 `compositePct` rows reach 40, so `scoreClass(compositePct)` returned "low" for **100%** of
+ * queued signals while the server called some of them BUY/STRONG. Same defect shape as #839 — a
+ * plausible wrong answer with no error.
+ *
+ * ⚠️ THE 65/40 FALLBACK BELOW HAS NO SERVER-SIDE OWNER. It is a legacy 0-100 display scale. The
+ * comment that used to sit here claimed these come from `GET /api/settings/signals` — that endpoint
+ * does NOT exist and never did, so `setSignalThresholds()` has never been called and these values
+ * have never been anything but the literal 65/40. Do not add a second memory site (see
+ * `broker-utils.js`, which documents the same rule for the style bars); if these need to become
+ * server-driven, wire them to `GET /api/scoring/gated/thresholds` like every other live threshold.
  *
  * @file src/core/signal-utils.js
  */
 import { createElement } from 'react';
 
-/** Fallback thresholds — overridden by API response when available */
+/**
+ * Legacy 0-100 display-scale thresholds. NOT the ADR-011 percent scale — see the header.
+ * ⚠️ Unreferenced by any server endpoint; `setSignalThresholds()` currently has no caller.
+ */
 let _buyThreshold = 65;
 let _holdThreshold = 40;
 
-/** Call once at app startup with API response from GET /api/settings/signals */
+/**
+ * Inject the 0-100 display thresholds.
+ *
+ * ⚠️ NOT wired to anything, and deliberately left that way rather than pointed at a made-up
+ * endpoint. To make these live, call this from an app-level `useQuery(fetchScoringThresholds)` in
+ * `App.jsx` — but note the endpoint returns the ADR-011 percent scale (entry/strong), which is a
+ * DIFFERENT scale from this one. Deciding whether these two scales should merge is a design
+ * question, not a wiring question (#657).
+ */
 export function setSignalThresholds({ buy, hold }) {
   if (typeof buy === 'number' && buy > 0) _buyThreshold = buy;
   if (typeof hold === 'number' && hold > 0) _holdThreshold = hold;

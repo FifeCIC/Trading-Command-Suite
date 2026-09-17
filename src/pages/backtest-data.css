@@ -12,5 +12,5 @@
 .btd-chip-sm { font-size: 9px; }
 .btd-rec-btn { cursor: pointer; padding: 2px 6px; font-size: 10px; }
 .btd-rec-btn-dim { cursor: pointer; padding: 2px 6px; font-size: 10px; opacity: 0.6; }
-.btd-empty { text-align: center; padding: 24px; color: var(--tcs-text-muted); }
+.btd-empty { text-align: center; padding: 24px; color: var(--ink-soft); }
 .btd-star { color: var(--accent, #0ea5a6); margin-right: 4px; }

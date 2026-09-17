@@ -4,7 +4,7 @@
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .sdl-header {
@@ -15,7 +15,7 @@
   font-size: 1.4rem;
 }
 .sdl-header .muted {
-  color: var(--textDim);
+  color: var(--text-dim);
   font-size: 0.85rem;
   margin: 0;
 }
@@ -37,7 +37,7 @@
   flex-direction: column;
   gap: 2px;
   font-size: 0.75rem;
-  color: var(--textDim);
+  color: var(--text-dim);
 }
 .sdl-controls select,
 .sdl-controls input {
@@ -45,7 +45,7 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   font-size: 0.85rem;
   min-width: 80px;
 }
@@ -63,7 +63,7 @@
 .sdl-error {
   padding: 10px 14px;
   margin-bottom: 16px;
-  background: var(--riskHigh, #dc2626);
+  background: var(--color-loss);
   color: #fff;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -90,7 +90,7 @@
   box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
 }
 .sdl-protocol.sdl-winner:has(.short) {
-  border-color: var(--riskHigh, #ef4444);
+  border-color: var(--color-loss);
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
 }
 
@@ -111,14 +111,14 @@
   padding: 2px 6px;
   background: var(--bg);
   border-radius: 3px;
-  color: var(--textDim);
+  color: var(--text-dim);
 }
 .sdl-direction {
   font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 3px;
   background: var(--bg);
-  color: var(--textFaint);
+  color: var(--text-faint);
   margin-left: auto;
 }
 
@@ -161,23 +161,23 @@
 /* Raw total */
 .sdl-raw-total {
   font-size: 0.78rem;
-  color: var(--textDim);
+  color: var(--text-dim);
   padding: 4px 0 8px;
   text-align: center;
 }
 .sdl-raw-total strong {
-  color: var(--text);
+  color: var(--ink);
 }
 .sdl-sub-raw {
   width: 52px;
   text-align: right;
   font-size: 0.65rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
 .sdl-sub-label {
   width: 90px;
-  color: var(--textDim);
+  color: var(--text-dim);
   text-align: right;
   font-size: 0.72rem;
   flex-shrink: 0;
@@ -248,7 +248,7 @@
 }
 .sdl-breakdown summary {
   cursor: pointer;
-  color: var(--textDim);
+  color: var(--text-dim);
   padding: 4px 0;
 }
 .sdl-directive-list {
@@ -260,7 +260,7 @@
 .sdl-directive-group h5 {
   margin: 0 0 4px;
   font-size: 0.72rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -292,13 +292,13 @@
   padding: 1px 5px;
   border-radius: 3px;
   background: var(--bg);
-  color: var(--textFaint);
+  color: var(--text-faint);
   min-width: 48px;
   text-align: center;
 }
 .sdl-more {
   font-size: 0.7rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
   padding: 2px 6px;
 }
 
@@ -312,13 +312,13 @@
 .sdl-decision.win-short { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); }
 .sdl-decision.win-hold { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); }
 .sdl-decision h3 { margin: 0 0 4px; font-size: 1rem; }
-.sdl-decision p { margin: 0; font-size: 0.85rem; color: var(--textDim); }
+.sdl-decision p { margin: 0; font-size: 0.85rem; color: var(--text-dim); }
 
 /* How it works */
 .sdl-how {
   margin-top: 16px;
   font-size: 0.82rem;
-  color: var(--textDim);
+  color: var(--text-dim);
 }
 .sdl-how summary { cursor: pointer; }
 .sdl-how-content {
@@ -339,7 +339,7 @@
 .sdl-loading {
   padding: 30px 0;
   text-align: center;
-  color: var(--textDim);
+  color: var(--text-dim);
   font-size: 0.9rem;
 }
 

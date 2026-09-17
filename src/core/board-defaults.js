@@ -6,8 +6,8 @@
  * applied on first visit. Multiple pages render boards, so the default lists
  * live here rather than inside any one page:
  *
- *   dashboard : DashboardPage        (/dashboard/dashboard) — the cockpit
- *   lab       : WidgetBoardLabPage   (/lab/widget-board)    — the prototype
+ *   dashboard : DashboardPage        (/dashboard/dashboard) — the widget cockpit
+ *   lab       : WidgetBoardLabPage   (/lab/widget-library)  — the prototype
  *
  * WHY THIS FILE EXISTS
  * --------------------
@@ -42,10 +42,22 @@ export const BOARD_DEFAULTS = {
   lab: ['market-context', 'top-signals', 'positions', 'system-health'],
 };
 
-/** Human labels for the board picker. Falls back to the raw id. */
+/**
+ * Human labels for the board picker. Falls back to the raw id.
+ *
+ * ⚠️ These are SCREEN names, not page names (2026-09-17).
+ * The picker on `/lab/screen-assignment` assigns a BOARD to a physical monitor. It used to
+ * label them `dashboard: 'Cockpit'` and `lab: 'Widget Board (Lab)'` — both of which read
+ * like page names, so choosing "Cockpit" looked like navigating to a Cockpit view when it
+ * actually assigns the *dashboard* board to that monitor. Since `/lab/screen-assignment` and
+ * `/lab/meta-stack-cockpit` are pages that both say "cockpit", a board also called "Cockpit"
+ * was the third meaning of the word in one screen.
+ *
+ * Rule: a board label names the screen the board fills, and must not repeat a page name.
+ */
 export const BOARD_LABELS = {
-  dashboard: 'Cockpit',
-  lab: 'Widget Board (Lab)',
+  dashboard: 'Dashboard',
+  lab: 'Widget Library (Lab)',
 };
 
 /** Board ids the app ships with (before anything is stored). */

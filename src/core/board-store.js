@@ -2,7 +2,7 @@
  * Board store — persistence seam for widget boards
  * ================================================
  * A widget board is a **screen**: `dashboard`, `lab`, and later `cockpit-1/2/3`
- * for the triple-screen cockpit. Everything a board needs to restore itself is
+ * for the META.Stack cockpit. Everything a board needs to restore itself is
  * one versioned document:
  *
  *   {

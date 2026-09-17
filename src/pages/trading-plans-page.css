@@ -12,7 +12,7 @@
   border-right: 1px solid var(--border, #333);
   display: flex;
   flex-direction: column;
-  background: var(--surface, #1a1a1a);
+  background: var(--panel);
 }
 
 .plans-header {
@@ -26,7 +26,7 @@
 .plans-header h2 {
   margin: 0;
   font-size: 16px;
-  color: var(--text, #eee);
+  color: var(--ink);
 }
 
 .btn-new-plan {
@@ -47,18 +47,18 @@
 .plan-item {
   padding: 12px 16px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-dim, #2a2a2a);
+  border-bottom: 1px solid var(--line);
   transition: background 0.15s;
 }
 
-.plan-item:hover { background: var(--hover, #252525); }
-.plan-item.selected { background: var(--accent-dim, #1a3350); border-color: var(--accent, #0066cc); }
+.plan-item:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.plan-item.selected { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent, #0066cc); }
 
 .plan-item-title {
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 4px;
-  color: var(--text, #eee);
+  color: var(--ink);
 }
 
 .plan-item-meta {
@@ -91,7 +91,7 @@
   margin-bottom: 12px;
 }
 
-.plan-detail-header h3 { margin: 0; color: var(--text, #eee); }
+.plan-detail-header h3 { margin: 0; color: var(--ink); }
 
 .plan-actions {
   display: flex;
@@ -102,8 +102,8 @@
   padding: 4px 10px;
   border-radius: 4px;
   border: 1px solid var(--border, #444);
-  background: var(--surface, #222);
-  color: var(--text, #ddd);
+  background: var(--panel);
+  color: var(--ink);
   font-size: 12px;
   cursor: pointer;
 }
@@ -120,7 +120,7 @@
 }
 
 .plan-type-badge {
-  background: var(--accent-dim, #1a3350);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: var(--accent, #4d94ff);
   padding: 2px 10px;
   border-radius: 10px;
@@ -137,7 +137,7 @@
 
 .plan-notes {
   padding: 12px;
-  background: var(--surface-alt, #222);
+  background: var(--bg-elev);
   border-radius: 6px;
   margin-bottom: 16px;
   font-style: italic;
@@ -147,8 +147,8 @@
 
 /* Signal handover context (#702) */
 .plan-signal-context {
-  background: var(--surface-alt, #1e1e1e);
-  border: 1px solid var(--border-dim, #2a2a2a);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
   border-left: 3px solid #10b981;
   border-radius: 6px;
   padding: 12px 14px;
@@ -182,7 +182,7 @@
   margin-bottom: 8px;
 }
 .plan-signal-metrics em { font-style: normal; opacity: 0.75; margin-right: 3px; }
-.plan-signal-metrics strong { color: var(--text, #eee); }
+.plan-signal-metrics strong { color: var(--ink); }
 .plan-signal-drivers { display: flex; flex-wrap: wrap; gap: 6px; }
 .plan-signal-chip {
   font-size: 11px;
@@ -194,12 +194,12 @@
 }
 
 .plan-content pre {
-  background: var(--surface-alt, #1e1e1e);
+  background: var(--bg-elev);
   padding: 16px;
   border-radius: 6px;
   overflow-x: auto;
   font-size: 13px;
-  color: var(--text, #ddd);
+  color: var(--ink);
   line-height: 1.6;
 }
 
@@ -215,7 +215,7 @@
   max-width: 600px;
 }
 
-.plan-form h3 { margin-top: 0; color: var(--text, #eee); }
+.plan-form h3 { margin-top: 0; color: var(--ink); }
 
 .plan-form input, .plan-form select, .plan-form textarea {
   width: 100%;
@@ -223,8 +223,8 @@
   margin-bottom: 12px;
   border: 1px solid var(--border, #444);
   border-radius: 4px;
-  background: var(--surface, #1a1a1a);
-  color: var(--text, #ddd);
+  background: var(--panel);
+  color: var(--ink);
   font-size: 13px;
   font-family: inherit;
   box-sizing: border-box;

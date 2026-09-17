@@ -34,6 +34,7 @@ import { EurUsdCacheService } from './eurusd-cache.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
+import { patternForSymbol } from '../calendar/market-patterns';
 import { DirectiveConfigService } from './directive-config.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
@@ -392,6 +393,15 @@ export class ProtocolGatingService {
     private readonly marketData: MarketDataService,
     private readonly marketCalendar: MarketCalendarService,
   ) {}
+
+  /**
+   * Symbols already warned about for having NO market pattern assigned (#850).
+   *
+   * The warning must be loud but not spam: this gate runs per symbol per tick, and a per-tick log
+   * line would bury the signal it exists to give. Keyed by symbol, so a NEW unassigned symbol is
+   * always reported — the failure mode is silent inheritance of US hours, and silence is the bug.
+   */
+  private readonly unassignedPatternWarned = new Set<string>();
 
   /**
    * Load the higher-timeframe bundle (1d/1h/15m) for a symbol, sized to the
@@ -1008,20 +1018,43 @@ export class ProtocolGatingService {
     // instead of "Market closed" while execution still blocks on `open=false`.
     const freshness = computeMarketStatus(bars, new Date(), timeframe);
     let marketStatus: { open: boolean; stale?: boolean; asOf: string | null; reason?: string };
-    if (is24HourMarket(symbol)) {
+    // ── WHICH window governs this instrument (#850) ───────────────────────────────────────
+    // Was: `this.marketCalendar.getMarketStatus('US')` for EVERY symbol, while
+    // MarketCalendarService.SESSIONS contains only `US`. Every non-24h instrument was therefore
+    // judged on US hours — measured live, `UK100` and `FRA40` were blocked with the reason
+    // "US market after-hours". See market-patterns.ts for the measurement behind the assignments.
+    const pattern = patternForSymbol(symbol);
+    if (is24HourMarket(symbol) || pattern?.continuous) {
+      // Forex, metals, crypto — and the continuous CFDs whose window is the BROKER's, not the
+      // underlying cash exchange's. Data freshness is the only meaningful gate for these.
+      marketStatus = { ...freshness, stale: !freshness.open };
+    } else if (!pattern) {
+      // ⚠️ FAIL LOUD. Do NOT silently inherit US hours — that silence IS the defect (#850).
+      // Freshness-only is the honest fallback: it is a real gate, and "we have no calendar for
+      // this instrument" is a different claim from "the US market is closed".
+      if (!this.unassignedPatternWarned.has(symbol)) {
+        this.unassignedPatternWarned.add(symbol);
+        this.logger.warn(
+          `No market pattern assigned for ${symbol} — falling back to data freshness only. ` + 
+            `Add it to SYMBOL_PATTERN in market-patterns.ts so its window is a decision rather ` +
+            `than an omission (#850).`,
+        );
+      }
       marketStatus = { ...freshness, stale: !freshness.open };
     } else {
-      const cal = this.marketCalendar.getMarketStatus('US');
+      const cal = this.marketCalendar.getMarketStatus(pattern.exchange);
       const stale = cal.isOpen && !freshness.open;
       marketStatus = {
         open: cal.isOpen && freshness.open,
         stale,
         asOf: freshness.asOf,
+        // Name the PATTERN, not just "US market" — the old string asserted a US session on
+        // instruments that have nothing to do with one, which is what misled the investigation.
         reason: !cal.isOpen
-          ? `US market ${cal.status}${cal.holidayName ? ` — ${cal.holidayName}` : ''}`
+          ? `${pattern.label}: ${cal.status}${cal.holidayName ? ` — ${cal.holidayName}` : ''}`
           : stale
-            ? `US market open — ${freshness.reason ?? 'data may be stale'}`
-            : 'US market open',
+            ? `${pattern.label}: open — ${freshness.reason ?? 'data may be stale'}`
+            : `${pattern.label}: open`,
       };
     }
 

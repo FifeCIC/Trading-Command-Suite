@@ -127,6 +127,11 @@ import SettingsPage from '../pages/SettingsPage.jsx';
 import SettingsDatabasePage from '../pages/SettingsDatabasePage.jsx';
 import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
 import TradingSettingsPage from '../pages/TradingSettingsPage.jsx';
+// #617 — the settings split. General shed its META.Stack-layer sections to these three, so
+// each layer's configuration now sits on the page it governs.
+import AppearanceSettingsPage from '../pages/AppearanceSettingsPage.jsx';
+import ScoringSettingsPage from '../pages/ScoringSettingsPage.jsx';
+import AutomationSettingsPage from '../pages/AutomationSettingsPage.jsx';
 import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
@@ -157,7 +162,7 @@ import FeatureLabPage from '../pages/FeatureLabPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
-import TripleScreenPage from '../pages/TripleScreenPage.jsx';
+import MetaStackCockpitPage from '../pages/MetaStackCockpitPage.jsx';
 import HotStockPicksPage from '../pages/HotStockPicksPage.jsx';
 import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
 import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
@@ -311,6 +316,9 @@ export const VIEW_COMPONENTS = {
   'settings-database': SettingsDatabasePage,
   'settings-education': SettingsEducationPage,
   'trading-settings': TradingSettingsPage,
+  'appearance': AppearanceSettingsPage,
+  'scoring-settings': ScoringSettingsPage,
+  'automation': AutomationSettingsPage,
   'glossary': GlossaryPage,
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,
@@ -326,8 +334,8 @@ export const VIEW_COMPONENTS = {
 
   // Lab
   'component-lab': ComponentLabPage,
-  'widget-board': WidgetBoardLabPage,
-  'screen-cockpit': ScreenCockpitPage,
+  'widget-library': WidgetBoardLabPage,
+  'screen-assignment': ScreenCockpitPage,
   'responsive-layout-lab': ResponsiveLayoutLabPage,
   'charts-lab': ChartsLabPage,
   'theme-lab': ThemeLabPage,
@@ -343,7 +351,7 @@ export const VIEW_COMPONENTS = {
   'user-preferences': PreferenceLab,
   'performance-lab': PerformanceLabPage,
   'snapshot-replay': SnapshotReplayPage,
-  'triple-screen': TripleScreenPage,
+  'meta-stack-cockpit': MetaStackCockpitPage,
   'hot-stock-picks': HotStockPicksPage,
   'daily-briefing': DailyBriefingPage,
   'decision-trail': DecisionTrailPage,

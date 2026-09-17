@@ -174,7 +174,6 @@ export const NAV_TREE = {
       { id: 'system-log', label: 'System Log', icon: '📋' },
       // ── Platform ──
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
-      { id: 'platform-api-efficiency', label: 'API Efficiency', icon: '◈' },
       // ── System Maps ──
       { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔍' },
       { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
@@ -196,10 +195,10 @@ export const NAV_TREE = {
       // ── Engineering Tools ──
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
-      { id: 'widget-board', label: 'Widget Board', icon: '⬚' },
-      { id: 'screen-cockpit', label: 'Screen Cockpit', icon: '🖥️' },
+      { id: 'widget-library', label: 'Widget Library', icon: '⬚' },
+      { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
-      { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
+      { id: 'meta-stack-cockpit', label: 'META.Stack Cockpit', icon: '🧭' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       // ── Theme Engineering ──
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
@@ -235,18 +234,44 @@ export const NAV_TREE = {
       { id: 'objectives', label: 'Objectives', icon: '🎯' },
     ],
   },
+  // ── Settings area (/settings/ prefix) ──
+  //
+  // ⚠️ ORDERING IS THE DESIGN, NOT ALPHABETICAL (2026-09-16, #617).
+  // The list is grouped by the QUESTION each page answers, because the previous flat list gave
+  // the user no reason to expect any setting on any page — "General" had accumulated 13
+  // sections from theme to trade thresholds precisely because there was no rule about what
+  // belonged where. The rule now is the META.Stack layers:
+  //
+  //   directives → protocols → scoring → bots
+  //
+  // A page that configures a layer comes first and sits with the other layers. "General" is
+  // the LAST resort — everything a user can change that is NOT part of a layer (API, database,
+  // security) — and it appears under Application, below the layers, rather than at the top
+  // pretending to be the front door.
+  //
+  // Decisions behind the grouping (#617): Automation owns the loop + queue + layer inclusion
+  // switches; each layer's switch is DUPLICATED onto its own page on purpose, so the link
+  // between the loop and the layer is visible from either end.
   settings: {
     label: 'Settings',
     views: [
+      // ── META.Stack layers ──
+      { kind: 'section-header', id: 'settings-layers', label: 'META.Stack Layers', icon: '' },
+      { id: 'trading-settings', label: 'Trading', icon: '💹' },
+      { id: 'scoring-settings', label: 'Scoring', icon: '📊' },
+      { id: 'automation', label: 'Automation', icon: '⚡' },
+      { id: 'risk-controls', label: 'Risk Controls', icon: '◈' },
+      // ── Application ──
+      { kind: 'section-header', id: 'settings-app', label: 'Application', icon: '' },
       { id: 'settings', label: 'General', icon: '⚙' },
+      { id: 'appearance', label: 'Appearance', icon: '🎨' },
       { id: 'monitoring', label: 'Monitoring', icon: '🛰' },
+      // ── Reference — the full lists, not the everyday surfaces ──
+      { kind: 'section-header', id: 'settings-reference', label: 'Reference', icon: '' },
+      { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
+      { id: 'theme-packs', label: 'Theme Packs', icon: '🎨' },
       { id: 'settings-database', label: 'Database', icon: '⊞' },
       { id: 'settings-education', label: 'Education', icon: '◉' },
-      { id: 'theme-packs', label: 'Theme Packs', icon: '🎨' },
-      { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
-      { id: 'risk-controls', label: 'Risk Controls', icon: '◈' },
-      { id: 'platform-switches', label: 'Platform Switches', icon: '⇢' },
-      { id: 'trading-settings', label: 'Trading', icon: '⚙' },
     ],
   },
   // ── Development — developer-only tooling, separated on the right ──

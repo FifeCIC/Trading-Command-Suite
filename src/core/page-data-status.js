@@ -120,8 +120,6 @@ export const PAGE_DATA_STATUS = {
   'server-controls': { status: 'live', source: 'Intranet task runner' },
   'mt5-status': { status: 'live', source: 'MT5 Bridge diagnostics' },
   'platform-comparisons': { status: 'live', source: 'Provider comparison API' },
-  'platform-api-efficiency': { status: 'mock', note: 'Not yet built' },
-  'platform-switches': { status: 'mock', note: 'Not yet built' },
   'risk-controls': { status: 'live', source: 'Risk module + DB' },
   'analytics': { status: 'live', source: 'Analytics pipeline' },
   'setup': { status: 'live', source: 'GET /api/health/setup (first-run detection, SetupBanner component)' },
@@ -139,7 +137,13 @@ export const PAGE_DATA_STATUS = {
   'component-lab': { status: 'live', source: 'Self-contained showcase' },
 
   // ── Settings ──
-  'settings': { status: 'live', source: 'Zustand store + localStorage' },
+  // #617 split the old single General page (13 sections) into one page per question:
+  // Appearance (theme/display/tape), Trading (bots/defaults/risk), Scoring (thresholds),
+  // Automation (loop/queue/inclusion). General keeps only non-layer plumbing.
+  'settings': { status: 'live', source: 'Static infra info + /api/system/settings/health-checks' },
+  'appearance': { status: 'live', source: 'Zustand theme store + localStorage preferences' },
+  'scoring-settings': { status: 'live', source: '/api/scoring/gated/thresholds + /api/automation/layer' },
+  'automation': { status: 'live', source: '/api/automation/status, /bot-queue, /rules, /layer' },
   'settings-database': { status: 'partial', source: 'Schema info, no admin UI' },
   'settings-education': { status: 'mock', note: 'Not yet built' },
   'theme-packs': { status: 'live', source: 'Theme system + CSS vars' },

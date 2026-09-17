@@ -254,7 +254,7 @@
   border-color: var(--accent, #4d94ff);
   padding: 0.55rem 0.8rem;
 }
-.sig-opp-btn--plan:hover { background: var(--accent-dim, #1a3350); }
+.sig-opp-btn--plan:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .sig-opp-feedback a { color: var(--accent, #4d94ff); text-decoration: underline; }
 
 /* Signal feedback loop (#693) — non-executive observability panel */
@@ -307,7 +307,7 @@
 .sig-loop-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
 .sig-loop-table td {
   padding: 0.25rem 0.4rem;
-  border-bottom: 1px solid var(--line-dim, #222);
+  border-bottom: 1px solid var(--line);
   color: var(--ink-soft, #bbb);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -18,6 +18,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import QA_CHECKLIST from '../data/qa-checklist';
+import { useUiStore } from '../stores/useUiStore';
 import './qa-testing.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -60,6 +61,17 @@ export default function QATestingPage() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
 
+  // ⚠️ TWO DIFFERENT STORES — do not merge them, they record different things.
+  //   1. `state` (local, localStorage) is THIS page's per-check result: pass/fail/needs-retest
+  //      plus the tester's notes.
+  //   2. `qaChecks` (useUiStore) is the Capability Map's "this page has been QA tested" marks.
+  // The reset control below acts on (2) only. It was moved here from the General settings page
+  // (§617): a developer tool for the QA surface belongs on the QA surface, not among server
+  // configuration where it had no context.
+  const qaChecks = useUiStore((s) => s.qaChecks || {});
+  const resetQaChecks = useUiStore((s) => s.resetQaChecks);
+  const qaMarkedCount = Object.keys(qaChecks).length;
+
   useEffect(() => { saveState(state); }, [state]);
 
   const items = useMemo(() => {
@@ -101,6 +113,22 @@ export default function QATestingPage() {
             record the result, and leave feedback. This is how you learn your own app.
           </PageInfoPopover>
         </h1>
+        </div>
+        <div className="inline-actions">
+          <button
+            type="button"
+            className="cta"
+            onClick={() => {
+              if (qaMarkedCount === 0 || window.confirm(`Reset ${qaMarkedCount} capability-map QA mark${qaMarkedCount !== 1 ? 's' : ''}? This does not change any test result below.`)) {
+                resetQaChecks();
+              }
+            }}
+            disabled={qaMarkedCount === 0}
+            style={qaMarkedCount === 0 ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+            title="Clears the 'QA tested' marks shown on the Capability Map. Test results on this page are unaffected."
+          >
+            ↺ Reset capability-map marks ({qaMarkedCount})
+          </button>
         </div>
       </header>
 

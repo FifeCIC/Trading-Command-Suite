@@ -12,7 +12,7 @@
   outline: none;
   transition: border-color 0.15s;
 }
-.sa-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-alpha, rgba(59,130,246,0.2)); }
+.sa-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
 .sa-dropdown {
   position: absolute;
   top: 100%;
@@ -48,6 +48,6 @@
   transition: background 0.1s;
 }
 .sa-dropdown-item:last-child { border-bottom: none; }
-.sa-dropdown-item:hover { background: var(--accent-alpha, rgba(59,130,246,0.08)); }
+.sa-dropdown-item:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .sa-item-ticker { font-weight: 600; }
 .sa-item-name { color: var(--ink-soft); font-size: 0.75rem; }
