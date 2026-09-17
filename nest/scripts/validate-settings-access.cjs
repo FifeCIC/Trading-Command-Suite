@@ -66,8 +66,19 @@ const EXEMPT_PREFIXES = [path.join(NEST_ROOT, 'src', 'common', 'settings')];
 
 const SCAN_DIRS = [path.join(NEST_ROOT, 'src'), path.join(NEST_ROOT, 'prisma')];
 
-/** Rule B's pattern: any `<expr>.globalSetting.<method>(`. */
-const RULE_B = /\.globalSetting\s*\.\s*\w+\s*\(/g;
+/**
+ * Rule B's pattern: any `<expr>.<store>.<method>(`.
+ *
+ * ⚠️ CHANGED 2026-09-17 — this covered `globalSetting` ONLY, which was a real gap rather than a
+ * simplification. A review comment on #849 noted that "four settings stores exist with no ownership
+ * rule", and the guard was enforcing the rule for ONE of the three database stores. `appsetting` and
+ * `userPreferences` had no access rule at all — so the write-only-store defect this whole issue is about
+ * (a control that saves successfully into a store nothing reads) could be recreated in either of them
+ * with every gate green. A guard that covers one third of a problem is worse than an obviously missing
+ * one, because it reads as coverage.
+ */
+const STORES = ['globalSetting', 'appSetting', 'userPreferences'];
+const RULE_B = new RegExp(`\\.(${STORES.join('|')})\\s*\\.\\s*\\w+\\s*\\(`, 'g');
 
 /**
  * Produce two renderings of ONE line: comments removed, and string spans either blanked or kept.
@@ -180,6 +191,7 @@ function ruleAEnvMatches(blankedLine, intactLine, envVars) {
 function scanSource(src, envVars, relLabel) {
   const ruleA = [];
   const ruleB = new Map();
+  const storeCounts = new Map();
   const lines = src.split('\n');
 
   for (let i = 0; i < lines.length; i += 1) {
@@ -191,10 +203,18 @@ function scanSource(src, envVars, relLabel) {
     }
 
     const hits = blanked.match(RULE_B);
-    if (hits) ruleB.set(relLabel, (ruleB.get(relLabel) ?? 0) + hits.length);
+    if (hits) {
+      ruleB.set(relLabel, (ruleB.get(relLabel) ?? 0) + hits.length);
+      for (const hit of hits) {
+        // A per-store tally, so "20 accesses" cannot hide "and one of these stores is being touched from
+        // somewhere it should not be". The total alone loses that information.
+        const store = hit.match(new RegExp(`\\.(${STORES.join('|')})`))?.[1];
+        if (store) storeCounts.set(store, (storeCounts.get(store) ?? 0) + 1);
+      }
+    }
   }
 
-  return { ruleA, ruleB };
+  return { ruleA, ruleB, storeCounts };
 }
 
 function walk(dir, acc = []) {
@@ -215,14 +235,16 @@ function walk(dir, acc = []) {
 function findViolations(envVars) {
   const ruleA = [];
   const ruleB = new Map();
+  const storeCounts = new Map();
   for (const file of SCAN_DIRS.flatMap((d) => walk(d))) {
     if (EXEMPT_PREFIXES.some((p) => file.startsWith(p))) continue;
     const rel = path.relative(NEST_ROOT, file).replace(/\\/g, '/');
     const result = scanSource(fs.readFileSync(file, 'utf8'), envVars, rel);
     ruleA.push(...result.ruleA);
     for (const [f, c] of result.ruleB) ruleB.set(f, (ruleB.get(f) ?? 0) + c);
+    for (const [s, c] of result.storeCounts) storeCounts.set(s, (storeCounts.get(s) ?? 0) + c);
   }
-  return { ruleA, ruleB };
+  return { ruleA, ruleB, storeCounts };
 }
 
 function loadAllowance() {
@@ -243,13 +265,13 @@ function compareRatchet(ruleB, allowance) {
     const was = allowed[file];
     if (was === undefined) {
       problems.push(
-        `  ${file} has ${count} raw globalSetting access(es) and is NOT in the allowance — read the ` +
+        `  ${file} has ${count} raw settings-store access(es) and is NOT in the allowance — read the ` +
           `value through SettingsResolverService instead. If direct access is genuinely required here, ` +
           `record it deliberately: node nest/scripts/validate-settings-access.cjs --update-allowance`,
       );
     } else if (count > was) {
       problems.push(
-        `  ${file} went UP from ${was} to ${count} raw globalSetting access(es). New direct access is the ` +
+        `  ${file} went UP from ${was} to ${count} raw settings-store access(es). New direct access is the ` +
           `defect this gate exists for — use the resolver.`,
       );
     } else if (count < was) {
@@ -263,7 +285,7 @@ function compareRatchet(ruleB, allowance) {
   for (const file of Object.keys(allowed).sort()) {
     if (!ruleB.has(file)) {
       problems.push(
-        `  ${file} no longer accesses globalSetting but is still in the allowance — remove its entry: ` +
+        `  ${file} no longer accesses a settings store but is still in the allowance — remove its entry: ` +
           `node nest/scripts/validate-settings-access.cjs --update-allowance`,
       );
     }
@@ -315,6 +337,13 @@ function selfTest() {
 
   // Rule B
   ok('Rule B fires on prisma.globalSetting.upsert', B('await this.prisma.globalSetting.upsert({});') === 1);
+  ok('Rule B fires on prisma.appSetting.upsert', B('await this.prisma.appSetting.upsert({});') === 1);
+  ok('Rule B fires on prisma.userPreferences.upsert', B('await this.prisma.userPreferences.upsert({});') === 1);
+  ok(
+    'Rule B counts all three stores',
+    scanSource('a.globalSetting.create({}); b.appSetting.create({}); c.userPreferences.create({});', ENV, '<f>')
+      .ruleB.get('<f>') === 3,
+  );
   ok('Rule B fires on the cast form', B('await (this.prisma as any).globalSetting.create({});') === 1);
   ok('Rule B ignores a comment', B('// previously this.prisma.globalSetting.upsert(...)') === 0);
   ok('Rule B ignores a quoted mention', B('const t = "prisma.globalSetting.upsert(";') === 0);
@@ -358,16 +387,18 @@ function selfTest() {
     process.exit(1);
   }
 
-  const { ruleA, ruleB } = violations;
+  const { ruleA, ruleB, storeCounts } = violations;
   const totalB = [...ruleB.values()].reduce((a, b) => a + b, 0);
+  const storeSummary = STORES.map((s) => `${s}=${storeCounts.get(s) ?? 0}`).join(', ');
 
   if (argv.includes('--list')) {
     console.log(`[settings-access] migrated env vars (rule A): ${envVars.join(', ')}`);
     console.log(`[settings-access] rule A violations: ${ruleA.length}`);
     for (const v of ruleA) console.log(`  ${v.file}:${v.line}  ${v.name}  ${v.text}`);
     console.log(
-      `\n[settings-access] rule B — raw globalSetting access outside the settings module: ${totalB} in ${ruleB.size} file(s)`,
+      `\n[settings-access] rule B — raw access outside the settings module: ${totalB} in ${ruleB.size} file(s)`,
     );
+    console.log(`[settings-access]   by store: ${storeSummary}`);
     for (const [file, count] of [...ruleB.entries()].sort()) console.log(`  ${count}\t${file}`);
     return;
   }
@@ -431,6 +462,7 @@ function selfTest() {
 
   console.log(
     `[settings-access] ✅ OK — no migrated env var is read (${envVars.length} checked); ` +
-      `${totalB} recorded raw globalSetting access(es) in ${ruleB.size} file(s), none increased`,
+      `${totalB} recorded raw settings-store access(es) in ${ruleB.size} file(s), none increased ` +
+      `(${storeSummary})`,
   );
 })();
