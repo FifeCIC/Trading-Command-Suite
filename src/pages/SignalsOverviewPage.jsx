@@ -32,6 +32,7 @@ import { stripWarningGlyph } from '../core/signal-utils';
 // quote a code we can grep, and what stops each card inventing its own phrasing for the same event.
 import { notice } from '../core/notices/registry';
 import { noticeFromError } from '../core/notices/from-error';
+import { tradeFailureNotice } from '../core/notices/trade-result';
 import {
   fetchBestSignals,
   fetchSignalDismissals,
@@ -141,34 +142,25 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
     mutationFn: ({ side }) => tradeSignal(envelope.scoreId, { side, brokerId: 'mt5' }),
     onSuccess: (r) => {
       if (r?.success === false) {
-        // The bridge/API refused the order. Its own wording carries the specifics (broker message,
-        // retcode) and is preserved verbatim as the notice's `cause` — never discarded.
+        // ⚠️ USE THE CODE THE SERVER SENT.
         //
-        // ⚠️ USE THE CODE THE SERVER SENT. This used to hardcode 'TCS-TRADE-005', on the reasoning
-        // that "the code names the OPERATION that failed". That reasoning breaks down, because some
-        // codes carry a CAUSE-SPECIFIC `action`, and TCS-TRADE-005's action asserts a broker
-        // involvement that does not always exist:
+        // This used to hardcode 'TCS-TRADE-005', on the reasoning that "the code names the
+        // OPERATION that failed". That reasoning breaks down, because some codes carry a
+        // CAUSE-SPECIFIC `action`, and TCS-TRADE-005's action asserts a broker involvement that
+        // does not always exist:
         //
         //   "Broker refusals carry a retcode — the bridge reports the symbol, the filling mode it
         //    tried and the modes the broker does allow."
         //
-        // A circuit-breaker refusal contacts NO broker, so there is no retcode and no filling mode
-        // to look at — the user is sent hunting for information that cannot exist. Observed with
-        // signal 507f7e90 (VIX): cause correctly read "Bridge unreachable (circuit breaker active)"
-        // while the fix text talked about retcodes.
+        // A bridge position cap never contacts a broker, so there is no retcode and no filling
+        // mode to look at — the user is sent hunting for information that cannot exist.
         //
-        // `signal-actions.service.ts` already returns an accurate code and params for these cases
-        // (#826 Phase 3 — the adapter computes TCS-INTEG-001 for "no response" and TCS-INTEG-002 for
-        // "breaker active"). Dropping it here is what undid that work, so: prefer the server's code,
-        // and fall back to TCS-TRADE-005 only when it genuinely did not supply one.
-        const code = r?.code || 'TCS-TRADE-005';
-        setError(notice(code, {
-          symbol: envelope.symbol,
-          detail: r.error || 'The broker refused the order without giving a reason.',
-          // Pass the server's params through so codes whose placeholders are richer than
-          // {symbol}/{detail} still render their real values instead of leaving a blank.
-          ...(r?.params ?? {}),
-        }));
+        // `signal-actions.service.ts` forwards an accurate code and params (the bridge computes
+        // TCS-TRADE-017 for its own position cap; the adapter computes TCS-INTEG-001/002 for an
+        // unreachable bridge). Dropping them here is what undid that work.
+        //
+        // The mapping now lives in ONE place so this cannot drift from SignalCard again.
+        setError(tradeFailureNotice(r, envelope.symbol));
       } else {
         // Replace the trade button with the placed order — clicking it opens
         // Positions Monitor with the position highlighted. No double-trade.

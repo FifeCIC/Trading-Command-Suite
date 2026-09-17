@@ -256,7 +256,11 @@ export const NOTICES = {
     title: 'Blocked by the bridge size cap',
     message: '{volume} lots exceeds the bridge\u2019s own maximum position size of {maximum}.',
     cause: 'This is a safety cap in the bridge, not a broker limit — it applies before any order is sent.',
-    action: 'Reduce the size, or raise MT5_MAX_POSITION_SIZE deliberately if the cap is wrong.',
+    // ⚠️ Names the SETTING, not the old env var. The three MT5 caps moved out of `.env` into the
+    // settings registry on 2026-09-17 (#849) and are applied live. Naming MT5_MAX_POSITION_SIZE here
+    // sent the user to a control that no longer does anything — the same "I changed it and nothing
+    // happened" defect this registry exists to prevent. Guarded by notices.test.js.
+    action: 'Reduce the size, or raise the position-size cap (risk.maxPositionSize) deliberately if it is wrong — it applies live, with no restart.',
     params: ['volume', 'maximum'],
     refs: [],
   },
@@ -266,7 +270,8 @@ export const NOTICES = {
     title: 'Blocked by the bridge position count',
     message: 'Already holding {open} position(s) — the bridge cap is {maximum}.',
     cause: 'This is a safety cap in the bridge, not a broker limit.',
-    action: 'Close a position, or raise MT5_MAX_OPEN_POSITIONS deliberately if the cap is wrong.',
+    // ⚠️ Names the SETTING, not the old env var — see the note on TCS-TRADE-016 above.
+    action: 'Close a position, or raise the open-positions cap (risk.maxOpenPositions) deliberately if it is wrong — it applies live, with no restart.',
     params: ['open', 'maximum'],
     refs: [],
   },

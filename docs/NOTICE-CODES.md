@@ -221,7 +221,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Severity:** error
 - **Message:** {volume} lots exceeds the bridge’s own maximum position size of {maximum}.
 - **Cause:** This is a safety cap in the bridge, not a broker limit — it applies before any order is sent.
-- **Action:** Reduce the size, or raise MT5_MAX_POSITION_SIZE deliberately if the cap is wrong.
+- **Action:** Reduce the size, or raise the position-size cap (risk.maxPositionSize) deliberately if it is wrong — it applies live, with no restart.
 - **Params:** `volume`, `maximum`
 - **Call:** `notice('TCS-TRADE-016', { volume, maximum })`
 - **Related:** *none*
@@ -231,7 +231,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Severity:** error
 - **Message:** Already holding {open} position(s) — the bridge cap is {maximum}.
 - **Cause:** This is a safety cap in the bridge, not a broker limit.
-- **Action:** Close a position, or raise MT5_MAX_OPEN_POSITIONS deliberately if the cap is wrong.
+- **Action:** Close a position, or raise the open-positions cap (risk.maxOpenPositions) deliberately if it is wrong — it applies live, with no restart.
 - **Params:** `open`, `maximum`
 - **Call:** `notice('TCS-TRADE-017', { open, maximum })`
 - **Related:** *none*

@@ -38,6 +38,7 @@ import {
   getNoticeLocale,
 } from './registry.js';
 import { AVAILABLE_LOCALES, applyNoticeLocale, registerBundledLocales } from './apply-locale.js';
+import { tradeFailureNotice } from './trade-result.js';
 import de from './locales/de.js';
 
 const CODES = Object.keys(NOTICES);
@@ -174,3 +175,91 @@ test('listNotices() exposes the whole catalogue to tooling', () => {
   assert.equal(listed.length, CODES.length);
   for (const n of listed) assert.ok(n.code && n.title, 'every listed notice needs a code and a title');
 });
+  // ── The server → client code contract (#826 Phase 1/2) ────────────────────────────────────
+  //
+  // These guard a defect that was found TWICE, because it lived in two card components: the
+  // `success: false` path hardcoded a code and discarded the one the server had computed. The
+  // symptom was correct-looking text with wrong advice attached.
+  //
+  // ⚠️ The second assertion is deliberately a SYMPTOM guard, not a cause guard. It does not care
+  // WHY the code was dropped — only that the user is no longer told to go and read a broker
+  // retcode for a refusal that never reached a broker.
+
+  test('a trade refusal renders the SERVER code, not a hardcoded one', () => {
+    // The MT5 bridge refuses when it is already holding its cap, and says so with its own code.
+    const refusal = {
+      success: false,
+      error: 'Max open positions (5) reached — 5 currently open',
+      code: 'TCS-TRADE-017',
+      params: { open: 5, maximum: 5 },
+    };
+
+    const n = tradeFailureNotice(refusal, 'XAUUSD');
+
+    assert.equal(n.code, 'TCS-TRADE-017', 'the server-supplied code must win');
+    assert.equal(n.known, true);
+
+    // ⚠️ THE REGRESSION, ASSERTED AS A SYMPTOM. TCS-TRADE-005's action tells the user to go and
+    // read a BROKER RETCODE and a filling mode. A bridge position cap never contacts a broker, so
+    // that advice is unactionable — it sends the user looking for something that cannot exist.
+    // Reverting to a hardcoded TCS-TRADE-005 makes this assertion fail.
+    assert.doesNotMatch(n.action, /retcode/i);
+    assert.match(n.action, /position/i, 'the remedy must name the thing that is actually wrong');
+
+    // The server's own sentence survives verbatim as the cause — never discarded.
+    assert.equal(n.cause, 'This is a safety cap in the bridge, not a broker limit.');
+  });
+
+  test('server params are passed through, so richer codes render real values', () => {
+    const n = tradeFailureNotice(
+      { success: false, code: 'TCS-TRADE-017', params: { open: 7, maximum: 9 } },
+      'XAUUSD',
+    );
+    assert.match(n.message, /7/, '{open} must come from the server, not a default');
+    assert.match(n.message, /9/, '{maximum} must come from the server, not a default');
+    assert.doesNotMatch(n.message, /\{/, 'no placeholder may be left unsubstituted');
+  });
+
+  test('a refusal with NO server code falls back, and keeps the server wording', () => {
+    const n = tradeFailureNotice({ success: false, error: 'broker said no' }, 'XAUUSD');
+
+    assert.equal(n.code, 'TCS-TRADE-005', 'the fallback is the only case where the cause is unknown');
+    assert.equal(n.cause, 'broker said no', "the server's own sentence is never discarded");
+
+    // The canary for the test above: the fallback code's action DOES name a retcode, which is why
+    // it must not be reached when the server supplied something more specific.
+    assert.match(n.action, /retcode/i);
+  });
+
+  test('a refusal with an empty result still renders a non-blank notice (anti-silence)', () => {
+    for (const bad of [undefined, null, {}, { success: false }]) {
+      const n = tradeFailureNotice(bad, 'XAUUSD');
+      assert.ok(n && n.code, 'a notice is always returned');
+      assert.ok(n.title && n.message, 'never blank, whatever the server sent');
+      assert.equal(n.code, 'TCS-TRADE-005');
+    }
+  });
+
+  test('no notice sends the user to a control that no longer controls anything', () => {
+    // The three MT5 caps moved OUT of `.env` and into the settings registry on 2026-09-17 (#849):
+    // they are now read through SettingsResolverService and applied live, with no restart.
+    //
+    // ⚠️ Naming the old env var is not a cosmetic problem. It is the exact defect this whole
+    // registry exists to prevent — a user edits what the message named, sees no change, and
+    // concludes the setting is broken. That is what happened when the position cap was raised in
+    // the UI and `MT5_MAX_OPEN_POSITIONS=5` kept enforcing 5. Advice must name the LIVE control.
+    const RETIRED = ['MT5_MAX_POSITION_SIZE', 'MT5_MAX_OPEN_POSITIONS', 'MT5_MAX_DAILY_LOSS'];
+
+    for (const [code, def] of Object.entries(NOTICES)) {
+      for (const field of ['title', 'message', 'cause', 'action']) {
+        const text = def[field];
+        if (typeof text !== 'string') continue;
+        for (const env of RETIRED) {
+          assert.ok(
+            !text.includes(env),
+            `${code}.${field} tells the user to edit ${env}, which no longer controls this`,
+          );
+        }
+      }
+    }
+  });

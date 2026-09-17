@@ -49,6 +49,7 @@ import { timeAgo } from '../core/format-utils';
 import { thresholdGeometry, describeThresholdScale } from '../core/score-display';
 import { notice } from '../core/notices/registry';
 import { noticeFromError } from '../core/notices/from-error';
+import { tradeFailureNotice } from '../core/notices/trade-result';
 import {
   dismissSignal,
   tradeSignal,
@@ -126,10 +127,11 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
     mutationFn: ({ side }) => tradeSignal(envelope.scoreId, { side, brokerId: 'mt5' }),
     onSuccess: (r) => {
       if (r?.success === false) {
-        setError(notice('TCS-TRADE-005', {
-          symbol: envelope.symbol,
-          detail: r.error || 'The broker refused the order without giving a reason.',
-        }));
+        // ⚠️ The server sends a CAUSE-SPECIFIC code and params; use them. Hardcoding
+        // TCS-TRADE-005 here discarded them, so a bridge position-cap refusal was rendered
+        // with TCS-TRADE-005's action ("Broker refusals carry a retcode …") even though no
+        // broker was contacted. See trade-result.js for the full reasoning.
+        setError(tradeFailureNotice(r, envelope.symbol));
       } else {
         setResult({ type: 'trade', text: `Order placed #${r?.orderId}`, orderId: r?.orderId, notice: notice('TCS-TRADE-008', { symbol: envelope.symbol, orderId: r?.orderId ?? 'pending' }) });
       }
