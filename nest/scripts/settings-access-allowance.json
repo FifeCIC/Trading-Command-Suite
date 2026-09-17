@@ -1,0 +1,16 @@
+{
+  "_comment": "Ratchet for RAW globalSetting access outside nest/src/common/settings. A file may only go DOWN. New direct access is the defect validate-settings-access.cjs exists to catch. These keys must be read through SettingsResolverService so provenance and the declared default are not bypassed.",
+  "totals": {
+    "files": 7,
+    "hits": 25
+  },
+  "files": {
+    "src/modules/automation/automation-loop.service.ts": 7,
+    "src/modules/diversification/global-diversification.service.ts": 2,
+    "src/modules/portfolio/portfolio-accounts.service.ts": 2,
+    "src/modules/research/earnings-import-settings.service.ts": 4,
+    "src/modules/scoring/directive-config.service.ts": 7,
+    "src/modules/signals/manual-trade-defaults.service.ts": 2,
+    "src/modules/trading/pyramid-policy.service.ts": 1
+  }
+}
