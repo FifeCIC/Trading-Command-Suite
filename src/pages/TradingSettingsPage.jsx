@@ -7,22 +7,67 @@ import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import PageInfoPopover from '../components/PageInfoPopover';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
-import './trading-settings.css';
+import MetaStackLayerSwitch from '../components/MetaStackLayerSwitch';
+import { BotBarsTable } from '../components/ScoringThresholds';
+import { SettingRow, SettingsSection, MovedNote } from '../components/SettingsControls';
+import { usePreferences } from '../core/hooks/usePreferences';
+// ⚠️ `./settings.css` ONLY — deliberately.
+//
+// This page used to import `./trading-settings.css`, which defined `.ts-page`,
+// `.ts-header`, `.ts-card` and `.ts-grid`. So did `trading-styles.css` and
+// `metastack-cockpit.css` (was `triple-screen.css`) — three stylesheets, one prefix, and ALL of them load globally, so
+// only one rule could win and the page was styled almost entirely by two OTHER pages:
+//
+//   measured on /settings/trading-settings before this change:
+//     .ts-page  background rgb(8,8,13)   ← metastack-cockpit.css  (--bg, not the panel surface)
+//               display flex, min-height 780px, max-width 900px
+//     .ts-grid  display flex             ← trading-styles.css (so grid-template-columns
+//               with grid-template-columns still declared but INERT — the three trade
+//               default fields stacked vertically instead of forming a row)
+//     .ts-header margin-bottom 16px      ← trading-styles.css (this page asked for 20px)
+//
+// Nothing this page declared was reaching the DOM. Deleting the stylesheet and using the
+// shared `settings-page` scaffolding removes the collision and the whole class of it —
+// a page cannot collide with a prefix it no longer defines. See settings.css for the
+// primitives (`SettingRow`, `.settings-input`, `.cta`, `.settings-ok`).
+import './settings.css';
 
 /**
- * TradingSettingsPage — manual-trade defaults (#720).
- * One source of truth, two entry points: Settings → Trading and
- * Trading → Settings both render this same page (view id `trading-settings`).
- * Values persist in global_setting via /api/signals/trade-defaults.
+ * TradingSettingsPage — BOTS, their bars, their defaults, and the risk limits they run under.
+ * (#720 initial page, extended by §617.)
+ *
+ * ⚠️ FRAMING — there are MANY bots, and the user creates more.
+ *   Each trading setup (a symbol + strategy + bar) is its own bot. This page is where a bot's
+ *   behaviour is configured, which is why "Bot settings" landed here rather than on a page
+ *   called "Bot & Automation" — that name implied a single bot, and would have been wrong the
+ *   moment a second bot existed.
+ *
+ *   The loop that RUNS the bots, and the queue that paces them, are on Automation. This page
+ *   governs what a bot does when the loop reaches it.
+ *
+ * ⚠️ One source of truth, two entry points: Settings → Trading and Trading → Settings both
+ *   render this same page (view id `trading-settings`, registered twice in nav-tree under
+ *   different areas at different labels). That duplication is deliberate — a user looking for
+ *   "settings" from either direction should land here.
+ *
+ * ⚠️ STYLING CONTRACT: this page must stay on the shared settings vocabulary so it looks
+ *   identical to General / Appearance / Scoring / Automation. If a control genuinely needs a
+ *   new look, add it to `settings.css` under a `settings-` name — do NOT introduce a
+ *   page-specific prefix. A second prefix is how the three-way `.ts-*` collision began.
  */
 
 const FIELDS = [
-  { key: 'size', label: 'Position size', unit: 'lots', step: 0.01, min: 0.001, max: 100 },
-  { key: 'slPct', label: 'Stop loss', unit: '%', step: 0.5, min: 0, max: 50 },
-  { key: 'tpPct', label: 'Take profit', unit: '%', step: 0.5, min: 0, max: 100 },
+  { key: 'size', label: 'Position size', unit: 'lots', step: 0.01, min: 0.001, max: 100, hint: 'Lots. Used when a Signals card places a manual trade without a size. The server-enforced hard cap still applies — see Risk Limits below.' },
+  { key: 'slPct', label: 'Stop loss', unit: '%', step: 0.5, min: 0, max: 50, hint: 'Stop loss as a percentage of entry. 0 means no stop is attached by default.' },
+  { key: 'tpPct', label: 'Take profit', unit: '%', step: 0.5, min: 0, max: 100, hint: 'Take profit as a percentage of entry. Measured: no closed bot trade has reached its take profit yet, so treat this as untested in practice.' },
 ];
 
-export default function TradingSettingsPage() {
+/**
+ * ManualTradeDefaults — values applied when a Signals card places a manual trade without
+ * explicit size / SL / TP. Persisted in `global_setting` via /api/signals/trade-defaults,
+ * read at ORDER TIME (not at boot), so a save affects the next manual trade with no restart.
+ */
+function ManualTradeDefaults() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState({ size: '0.01', slPct: '2', tpPct: '4' });
   const [saved, setSaved] = useState(false);
@@ -54,75 +99,221 @@ export default function TradingSettingsPage() {
 
   const submit = (e) => {
     e.preventDefault();
-    const values = {
+    saveMutation.mutate({
       size: parseFloat(draft.size),
       slPct: parseFloat(draft.slPct),
       tpPct: parseFloat(draft.tpPct),
-    };
-    saveMutation.mutate(values);
+    });
   };
 
-  if (defaultsQuery.isLoading) {
-    return <div className="ts-page"><LoadingSkeleton variant="card" count={1} /></div>;
-  }
+  if (defaultsQuery.isLoading) return <LoadingSkeleton variant="card" count={1} />;
 
   return (
-    <div className="ts-page">
-      <motion.header className="ts-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <div>
-          <h1>Trading Settings
-            <PageInfoPopover>
-              Defaults applied when a Signals card places a manual trade without explicit
-              size / stop-loss / take-profit. Same values from Settings or Trading.
-            </PageInfoPopover>
-          </h1>
-          <p className="muted">Manual-trade defaults used by the Signals cards.</p>
-        </div>
-      </motion.header>
-
+    <>
       {defaultsQuery.isError && <ApiOfflineBanner />}
 
-      <motion.form
-        className="ts-card"
-        onSubmit={submit}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-      >
-        <div className="ts-grid">
-          {FIELDS.map((f) => (
-            <label key={f.key} className="ts-field">
-              <span className="ts-field-label">{f.label}</span>
-              <div className="ts-field-input">
-                <input
-                  type="number"
-                  step={f.step}
-                  min={f.min}
-                  max={f.max}
-                  value={draft[f.key]}
-                  onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
-                />
-                <span className="ts-field-unit">{f.unit}</span>
-              </div>
-            </label>
-          ))}
-        </div>
+      {/* No <motion.form> and no card: the rows below are the same `setting-row` markup
+          General / Appearance / Scoring use, so this section is visually identical to
+          theirs. The card was the only reason this page needed its own stylesheet. */}
+      <form onSubmit={submit}>
+        {FIELDS.map((f) => (
+          <SettingRow
+            key={f.key}
+            label={f.label}
+            hint={f.hint}
+          >
+            <input
+              type="number"
+              step={f.step}
+              min={f.min}
+              max={f.max}
+              aria-label={`${f.label} in ${f.unit}`}
+              className="settings-input settings-input-sm"
+              value={draft[f.key]}
+              onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+            />
+          </SettingRow>
+        ))}
 
-        <footer className="ts-actions">
-          <button type="submit" className="ts-save" disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? 'Saving…' : 'Save defaults'}
-          </button>
-          {saved && <span className="ts-saved">✓ Saved</span>}
-          {saveMutation.isError && (
-            <NoticeBlock notice={noticeFromError(saveMutation.error, 'TCS-SYS-007', { operation: 'save the trading settings' })} compact />
-          )}
-        </footer>
-      </motion.form>
+        <SettingRow
+          label="Save"
+          hint="Read at order time, so a save affects the next manual trade immediately — no restart needed."
+        >
+          <div className="inline-actions">
+            <button type="submit" className="cta" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Saving…' : 'Save defaults'}
+            </button>
+            {/* ⚠️ The tick and the word carry the meaning; `.settings-ok` only reinforces
+                them. Colour alone must never be the signal (WCAG 1.4.1). */}
+            {saved && <span className="settings-ok">✓ Saved</span>}
+          </div>
+        </SettingRow>
+      </form>
 
-      <p className="ts-note muted">
-        These defaults are read at order time, so a save here affects the next manual trade
-        immediately — no restart needed. Stored in <code>global_setting</code> (backup-safe).
+      {saveMutation.isError && (
+        <NoticeBlock notice={noticeFromError(saveMutation.error, 'TCS-SYS-007', { operation: 'save the trading settings' })} compact />
+      )}
+
+      <p className="settings-note">
+        Stored in <code>global_setting</code>, so a reinstall restores it from the seed.
       </p>
+    </>
+  );
+}
+
+/**
+ * RiskLimits — the preference-backed limits, plus the server-enforced hard limits.
+ *
+ * ⚠️ These are DUPLICATED BY DESIGN (§617 decision). The same preferences also appear on the
+ *   User Preferences page, and the server-enforced values are fixed in `nest/.env`.
+ *   Seeing the limits here — on the page where a bot's size is set — is the point: a limit
+ *   that only exists on a different page is a limit nobody checks before raising a position.
+ *
+ * ⚠️ The two blocks are NOT the same kind of thing, and the page says so:
+ *   - "Risk Limits" are CLIENT preferences in localStorage. A strategy or the UI can change
+ *     them, and they do not constrain the server.
+ *   - "Server-Enforced Hard Limits" are read LIVE from the database (`global_setting`, keys `risk.*`)
+ *     by the backend, and cannot be overridden by anything in the app. They are no longer `.env` values,
+ *     so they no longer need a restart. Presenting them together without that distinction would imply
+ *     the soft limits are a hard ceiling — they are not.
+ *
+ * ⚠️ #849 (2026-09-17): the `Max Positions` field below writes a CLIENT preference and is not read by
+ * the backend for enforcement. A user set it to 20, the UI confirmed the save, and 5 (the enforced
+ * `risk.maxOpenPositions`) was still in force — the value saved correctly to a store nothing enforces.
+ * Its hint now says so explicitly, and the enforced cap is shown in the same panel for comparison.
+ * Making it write `risk.maxOpenPositions` directly is the remaining step, and is deliberately not done
+ * in the same change as the migration that moved that value into the database.
+ */
+function RiskLimits() {
+  const { prefs, set } = usePreferences();
+  const { data: serverLimits } = useQuery({
+    queryKey: ['trading-risk-limits'],
+    queryFn: () => apiGet('/api/trading/strategies/risk-limits').catch(() => null),
+    staleTime: 300_000,
+    retry: 1,
+  });
+
+  return (
+    <>
+      <SettingRow label="Max Drawdown (%)" hint="Circuit breaker trips when drawdown exceeds this. Client-side preference.">
+        <input type="number" min="5" max="50" step="1" className="settings-input settings-input-sm"
+          value={prefs.riskMaxDrawdown}
+          onChange={e => set('riskMaxDrawdown', parseInt(e.target.value, 10) || 25)} />
+      </SettingRow>
+      <SettingRow label="Max Positions (soft)" hint="CLIENT-SIDE ONLY — this does not constrain the server. The enforced cap is 'Max Open Positions' under Server-Enforced Hard Limits below, and where two numbers disagree, THAT one is in force.">
+        <input type="number" min="1" max="20" step="1" className="settings-input settings-input-sm"
+          value={prefs.riskMaxPositions}
+          onChange={e => set('riskMaxPositions', parseInt(e.target.value, 10) || 5)} />
+      </SettingRow>
+      <SettingRow label="Max Per Symbol (%)" hint="Maximum portfolio allocation to a single symbol.">
+        <input type="number" min="5" max="100" step="5" className="settings-input settings-input-sm"
+          value={prefs.riskMaxPerSymbol}
+          onChange={e => set('riskMaxPerSymbol', parseInt(e.target.value, 10) || 25)} />
+      </SettingRow>
+      <SettingRow label="Max Per Trade Risk (%)" hint="Maximum portfolio risk per individual trade.">
+        <input type="number" min="1" max="10" step="0.5" className="settings-input settings-input-sm"
+          value={prefs.riskMaxPerTrade}
+          onChange={e => set('riskMaxPerTrade', parseFloat(e.target.value) || 2)} />
+      </SettingRow>
+      <SettingRow label="CB Drawdown Trigger (%)" hint="Circuit breaker trips at this drawdown level.">
+        <input type="number" min="5" max="40" step="1" className="settings-input settings-input-sm"
+          value={prefs.circuitBreakerDrawdownTrigger}
+          onChange={e => set('circuitBreakerDrawdownTrigger', parseInt(e.target.value, 10) || 20)} />
+      </SettingRow>
+      <SettingRow label="CB Exposure Trigger (%)" hint="Circuit breaker trips when total exposure exceeds this.">
+        <input type="number" min="20" max="100" step="5" className="settings-input settings-input-sm"
+          value={prefs.circuitBreakerExposureTrigger}
+          onChange={e => set('circuitBreakerExposureTrigger', parseInt(e.target.value, 10) || 80)} />
+      </SettingRow>
+
+      {serverLimits ? (
+        <>
+          <h3 className="settings-subheading">Server-Enforced Hard Limits</h3>
+          <p className="settings-hint-text">
+            Read live from the database (<code>global_setting</code>, keys <code>risk.*</code>) by the
+            backend on every order. They no longer need a restart, and neither strategies nor the client
+            preferences above can override them.
+          </p>
+          <SettingRow label="Max Position Size (lots)" hint="Hard cap on any single position volume.">
+            <code className="settings-limit-value">{serverLimits.maxPositionSize}</code>
+          </SettingRow>
+          <SettingRow label="Max Daily Loss ($)" hint="Trading halts if today's P&L drops below this.">
+            <code className="settings-limit-value settings-limit-danger">${serverLimits.maxDailyLoss}</code>
+          </SettingRow>
+          <SettingRow label="Max Open Positions" hint="Absolute cap on concurrent positions across all strategies.">
+            <code className="settings-limit-value">{serverLimits.maxOpenPositions}</code>
+          </SettingRow>
+          {serverLimits.note && <p className="settings-note">ℹ️ {serverLimits.note}</p>}
+        </>
+      ) : (
+        // ⚠️ "could not load" is stated, never rendered as an empty block. A missing hard-limit
+        // panel must not read as "there are no hard limits".
+        <p className="settings-hint-text">
+          Server-enforced hard limits could not be read from
+          <code> GET /api/trading/strategies/risk-limits</code>. The values above are
+          client-side only — do not assume they are enforced.
+        </p>
+      )}
+    </>
+  );
+}
+
+export default function TradingSettingsPage() {
+  return (
+    <div className="settings-page">
+      <motion.header className="settings-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+        <h1>Trading
+          <PageInfoPopover>
+            Where each bot's behaviour is configured: its bar, its default size / stop-loss /
+            take-profit, and the risk limits it runs under. The loop that runs the bots and
+            the queue that paces them are on Automation.
+          </PageInfoPopover>
+        </h1>
+        <p>Bots, thresholds, trade defaults and risk limits.</p>
+      </motion.header>
+
+      <SettingsSection
+        id="trading-layer"
+        title="Trading layer"
+        desc="The META.Stack kill switch for dispatch. OFF keeps scoring and signals running but sends every order to paper."
+      >
+        <MetaStackLayerSwitch layer="trading" />
+        <MovedNote>
+          The same switch appears on <a href="/settings/automation">Automation</a>, alongside the
+          loop and the queue. Bots can dispatch only when BOTH this layer and the bot's own
+          broker flag allow it.
+        </MovedNote>
+      </SettingsSection>
+
+      <SettingsSection
+        id="bots"
+        title="Bots"
+        desc="Every active bot's bar against the highest score its protocol has actually produced. A bar above the achieved ceiling is a bot that can never fire."
+      >
+        <BotBarsTable />
+        <MovedNote>
+          Add and edit bots on <a href="/trading/trading-strategies">Trading Strategies</a> or{' '}
+          <a href="/trading/strategy-create">Create Strategy</a>. Live evaluations are on{' '}
+          <a href="/trading/strategy-monitor">Strategy Monitor</a>. The queue that paces them is
+          on <a href="/settings/automation">Automation</a>.
+        </MovedNote>
+      </SettingsSection>
+
+      <SettingsSection
+        id="trade-defaults"
+        title="Manual trade defaults"
+        desc="Applied when a Signals card places a manual trade without explicit size / stop-loss / take-profit."
+      >
+        <ManualTradeDefaults />
+      </SettingsSection>
+
+      <SettingsSection
+        id="risk-limits"
+        title="Risk Limits"
+        desc="Client-side limits, shown here because this is where position size is set. These are preferences — the hard ceiling is the server-enforced block below."
+      >
+        <RiskLimits />
+      </SettingsSection>
     </div>
   );
 }

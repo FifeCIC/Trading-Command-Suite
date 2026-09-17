@@ -31,6 +31,9 @@ import { RiskService } from '../risk/risk.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { MarketBar } from '../directives/interfaces/directive.interface';
+// ⚠️ #849 (2026-09-17): the three risk caps below were `process.env.MT5_MAX_*`. They are now declared
+// settings read through this resolver — see settings-registry.ts for why, and for the carried-over defaults.
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
 export interface StrategySummary {
   id: string;
@@ -93,6 +96,7 @@ export class TradingStrategyService {
     private readonly riskService: RiskService,
     private readonly notificationService: NotificationService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly settings: SettingsResolverService,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -772,22 +776,22 @@ export class TradingStrategyService {
     size: number,
   ): Promise<{ allowed: boolean; reason: string }> {
     // ── 1. MT5_MAX_POSITION_SIZE ──
-    const maxPosSize = parseFloat(process.env.MT5_MAX_POSITION_SIZE || '1.0');
+    const maxPosSize = await this.settings.get<number>('risk.maxPositionSize');
     if (size > maxPosSize) {
-      return { allowed: false, reason: `Position size ${size} exceeds MT5_MAX_POSITION_SIZE (${maxPosSize})` };
+      return { allowed: false, reason: `Position size ${size} exceeds risk.maxPositionSize (${maxPosSize})` };
     }
 
     // ── 2. MT5_MAX_OPEN_POSITIONS ──
-    const maxOpenPositions = parseInt(process.env.MT5_MAX_OPEN_POSITIONS || '5', 10);
+    const maxOpenPositions = await this.settings.get<number>('risk.maxOpenPositions');
     try {
       const positions = await this.mt5.getPositions();
       if (positions.length >= maxOpenPositions) {
-        return { allowed: false, reason: `Max open positions (${maxOpenPositions}) reached — ${positions.length} currently open` };
+        return { allowed: false, reason: `risk.maxOpenPositions (${maxOpenPositions}) reached — ${positions.length} currently open` };
       }
     } catch { /* MT5 may be unreachable — proceed with caution */ }
 
     // ── 3. MT5_MAX_DAILY_LOSS ──
-    const maxDailyLoss = parseFloat(process.env.MT5_MAX_DAILY_LOSS || '100');
+    const maxDailyLoss = await this.settings.get<number>('risk.maxDailyLoss');
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -801,7 +805,7 @@ export class TradingStrategyService {
       });
       const dailyPnl = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
       if (dailyPnl < -maxDailyLoss) {
-        return { allowed: false, reason: `Daily loss $${Math.abs(dailyPnl).toFixed(2)} exceeds MT5_MAX_DAILY_LOSS ($${maxDailyLoss})` };
+        return { allowed: false, reason: `Daily loss $${Math.abs(dailyPnl).toFixed(2)} exceeds risk.maxDailyLoss ($${maxDailyLoss})` };
       }
     } catch { /* DB may be unavailable */ }
 
@@ -809,45 +813,78 @@ export class TradingStrategyService {
     try {
       const positions = await this.mt5.getPositions().catch(() => []);
       const account = await this.mt5.getAccount().catch(() => null);
-      const portfolioValue = account?.equity ?? account?.balance ?? 10_000;
-      // Use actual margin impact instead of notional (0.01 lot at 1:30 = ~$33, not $1,000)
-      const leverage = account?.margin && account?.balance
-        ? account.balance / account.margin
-        : 30;
-      const estimatedCapital = (size * 100_000) / Math.max(leverage, 1); // Margin used, not notional
 
-      const riskProfile = {
-        maxPortfolioRisk: 0.15,
-        maxPerTradeRisk: 0.02,
-        maxPerSymbol: 0.25,
-        maxPositions: maxOpenPositions,
-        maxDrawdown: 0.25,
-        trailingStopAtProfit: 0.03,
-      };
+      // ⚠️ A DRAWDOWN CANNOT BE MEASURED WITHOUT A REAL ACCOUNT VALUE (#848, 2026-09-16).
+      //
+      // This line used to read `account?.equity ?? account?.balance ?? 10_000`. That fabricated
+      // $10,000 then seeded `peakEquity`, which is MONOTONIC — so the fabricated value became a
+      // permanent high-water mark and the REAL account looked like a catastrophic loss:
+      //
+      //   measured live 2026-09-16
+      //     08:28-18:40  bridge unreachable — 707 FAILED decisions; account=null -> peak = 10,000
+      //     ~18:40       bridge recovers (both bridges connected=true)
+      //     18:42, 18:44 EURCAD/NZDJPY/EURCHF/GBPCAD blocked: "Drawdown 86.1% exceeds limit"
+      //     arithmetic   (10_000 - 1,389.37) / 10_000 = 86.11%   <- the logged figure, exactly
+      //
+      // So the gate failed CLOSED on a number it invented, and stayed that way until the process
+      // restarted (the field is in-memory and only ever increases). Worse, it was the bridge
+      // RECOVERING that triggered the block — the system got worse as infrastructure got better.
+      //
+      // Skipping the gate is the honest behaviour: there is no drawdown to evaluate. Bridge-down is
+      // already handled by the circuit breaker and the FAILED decision path, so nothing is lost.
+      // The position-capital check is skipped with it, deliberately: if the account is unreadable
+      // then `getPositions()` also fell back to `[]`, and counting 0 open positions would
+      // under-count against `maxPositions` — a second fabricated answer from the same outage.
+      const realAccountValue = account?.equity ?? account?.balance ?? null;
 
-      const posCheck = this.riskService.canOpenPosition(
-        positions.length,
-        portfolioValue,
-        estimatedCapital,
-        riskProfile,
-      );
-      if (!posCheck.allowed) {
-        return { allowed: false, reason: posCheck.reason };
-      }
+      if (realAccountValue === null) {
+        this.logger.warn(
+          'Portfolio risk gates SKIPPED — MT5 account value unavailable (bridge unreachable?). ' +
+            'No peak recorded: a fabricated value would become a permanent high-water mark and ' +
+            'block every subsequent trade (#848).',
+        );
+      } else {
+        const portfolioValue = realAccountValue;
+        // Use actual margin impact instead of notional (0.01 lot at 1:30 = ~$33, not $1,000)
+        const leverage = account?.margin && account?.balance
+          ? account.balance / account.margin
+          : 30;
+        const estimatedCapital = (size * 100_000) / Math.max(leverage, 1); // Margin used, not notional
 
-      // Drawdown check — track peak equity (only increases) so drawdown is real.
-      // Previously peak was hardcoded to current equity, making drawdown always 0%
-      // and permanently disabling the maxDrawdown: 0.25 risk limit.
-      if (this.peakEquity === null || portfolioValue > this.peakEquity) {
-        this.peakEquity = portfolioValue;
-      }
-      const drawdownCheck = this.riskService.checkDrawdown(
-        this.peakEquity,
-        portfolioValue,
-        riskProfile,
-      );
-      if (drawdownCheck.inDrawdown) {
-        return { allowed: false, reason: `Drawdown ${(drawdownCheck.drawdownPercent * 100).toFixed(1)}% exceeds limit` };
+        const riskProfile = {
+          maxPortfolioRisk: 0.15,
+          maxPerTradeRisk: 0.02,
+          maxPerSymbol: 0.25,
+          maxPositions: maxOpenPositions,
+          maxDrawdown: 0.25,
+          trailingStopAtProfit: 0.03,
+        };
+
+        const posCheck = this.riskService.canOpenPosition(
+          positions.length,
+          portfolioValue,
+          estimatedCapital,
+          riskProfile,
+        );
+        if (!posCheck.allowed) {
+          return { allowed: false, reason: posCheck.reason };
+        }
+
+        // Drawdown check — track peak equity (only increases) so drawdown is real.
+        // Previously peak was hardcoded to current equity, making drawdown always 0%
+        // and permanently disabling the maxDrawdown: 0.25 risk limit.
+        // ⚠️ `portfolioValue` here is a REAL account reading — never a fallback (#848).
+        if (this.peakEquity === null || portfolioValue > this.peakEquity) {
+          this.peakEquity = portfolioValue;
+        }
+        const drawdownCheck = this.riskService.checkDrawdown(
+          this.peakEquity,
+          portfolioValue,
+          riskProfile,
+        );
+        if (drawdownCheck.inDrawdown) {
+          return { allowed: false, reason: `Drawdown ${(drawdownCheck.drawdownPercent * 100).toFixed(1)}% exceeds limit` };
+        }
       }
     } catch (err: any) {
       this.logger.warn(`Risk gate check failed: ${err.message} — proceeding with caution`);

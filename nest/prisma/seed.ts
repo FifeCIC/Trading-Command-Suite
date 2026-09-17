@@ -2,6 +2,8 @@ import "dotenv/config";
 import { PrismaClient } from '@prisma/client';
 import { seedFaq } from './seed-faq';
 import { STRATEGY_SEEDS } from '../src/modules/strategies/strategy-seeds';
+// Shared with the boot path — see the note at the call site below.
+import { ensureDeclaredSettings } from '../src/common/settings/settings-seeder';
 
 const prisma = new PrismaClient();
 
@@ -208,6 +210,25 @@ async function main() {
     console.log('  ✓ App settings seeded (earnings, correlation, seasonality, analyst, data, news import, health checks).');
   } else {
     console.log('  • App settings already exist — skipping.');
+  }
+
+  // ── Declared settings (#849, 2026-09-17) ───────────────────────────────────
+  // This calls the SAME function as the boot path (`SettingsResolverService.onModuleInit`). One
+  // implementation, two callers — so the install path and the runtime path cannot come to disagree
+  // about what a default is, or about when a row should be created.
+  //
+  // 🛑 It CREATES only what is missing and never updates an existing row. That is the entire safety
+  // property: nothing writes a setting row until a user changes it, so every row that exists is a
+  // deliberate choice — and a seeder that upserted would overwrite those choices with defaults on the
+  // next run, silently.
+  const settingsReport = await ensureDeclaredSettings(prisma);
+  if (settingsReport.created.length) {
+    console.log(`  ✓ Declared settings seeded: ${settingsReport.created.join(', ')}`);
+  } else {
+    console.log(`  • Declared settings present (${settingsReport.existing.length}) — skipping.`);
+  }
+  for (const problem of settingsReport.errors) {
+    console.log(`  ⚠ setting seed problem (${problem.key}): ${problem.reason}`);
   }
 }
 
