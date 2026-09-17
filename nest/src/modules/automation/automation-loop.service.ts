@@ -65,6 +65,10 @@ import { ExecutionFeasibilityService } from '../trading/execution-feasibility.se
 import { checkSessionWindow, auditNameVsWindow, SessionGateResult } from '../trading/session-window';
 import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import { computeMarketStatus } from '../directives/market-status';
+// #849 (2026-09-17) — the layer kill switches and bot-queue settings are declared settings now.
+// ⚠️ The DEFAULTS in settings-registry.ts are load-bearing: `automation.tradingEnabled` is false, and it
+// must stay false. See the warning comment there before changing any of them.
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -469,6 +473,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly marketData: MarketDataService,
     private readonly barRefresh: BarRefreshService,
     private readonly auditLog: AuditLogService,
+    private readonly settings: SettingsResolverService,
     private readonly directivesService: DirectivesService,
     private readonly protocolDb: ProtocolDbService,
     private readonly versioningService: MetaStackVersioningService,
@@ -1982,11 +1987,14 @@ export class AutomationLoopService implements OnModuleInit {
       throw new BadRequestException(`Unknown layer: ${layer} — expected 'protocols' or 'trading'`);
     }
     try {
-      await (this.prisma as any).globalSetting.upsert({
-        where: { key: `automation.${layer}Enabled` },
-        create: { key: `automation.${layer}Enabled`, value: String(enabled) },
-        update: { value: String(enabled) },
-      });
+      // #849 — through the resolver, so the default lives in ONE place (settings-registry.ts) rather than
+      // being implicit in the state initialiser. `layer` is a two-value union, so the key stays static
+      // and declarable: the previous dynamic `automation.${layer}Enabled` template was doing by string
+      // interpolation what the type system already knows.
+      await this.settings.set(
+        layer === 'protocols' ? 'automation.protocolsEnabled' : 'automation.tradingEnabled',
+        enabled,
+      );
     } catch (err) {
       this.logger.warn(`Layer flag persist failed: ${(err as Error).message}`);
     }
@@ -1994,28 +2002,20 @@ export class AutomationLoopService implements OnModuleInit {
     return { layer, enabled };
   }
 
-  /** #615 — restore persisted layer flags (safe defaults if missing/unreadable). */
+  /** #615 — restore persisted layer flags. */
   private async restoreLayerFlags() {
     if (!this.prisma.isAvailable) return;
     try {
-      const rows: any[] = await (this.prisma as any).globalSetting.findMany({
-        where: { key: { in: ['automation.protocolsEnabled', 'automation.tradingEnabled'] } },
-      });
-      for (const r of rows) {
-        if (r.key === 'automation.protocolsEnabled') this.state.protocolsEnabled = r.value === 'true';
-        if (r.key === 'automation.tradingEnabled') this.state.tradingEnabled = r.value === 'true';
-      }
+      // #849 — resolved rather than read raw. Each default reproduces the state initialiser exactly, so
+      // this is behaviour-neutral; the gain is that "what is the default" is now answerable in one file,
+      // and an unparseable row is REPORTED by the resolver instead of being silently coerced.
+      this.state.protocolsEnabled = await this.settings.get<boolean>('automation.protocolsEnabled');
+      this.state.tradingEnabled = await this.settings.get<boolean>('automation.tradingEnabled');
       // #714 Stage 3 — bot queue + pacing settings (defaults: ON, 10m).
-      const botRows: any[] = await (this.prisma as any).globalSetting.findMany({
-        where: { key: { in: ['automation.botQueueEnabled', 'automation.botInterTradeDelayMinutes'] } },
-      });
-      for (const r of botRows) {
-        if (r.key === 'automation.botQueueEnabled') this.state.botQueueEnabled = r.value !== 'false';
-        if (r.key === 'automation.botInterTradeDelayMinutes') {
-          const mins = parseInt(String(r.value), 10);
-          if (Number.isFinite(mins) && mins >= 0) this.state.botInterTradeDelayMinutes = mins;
-        }
-      }
+      this.state.botQueueEnabled = await this.settings.get<boolean>('automation.botQueueEnabled');
+      this.state.botInterTradeDelayMinutes = await this.settings.get<number>(
+        'automation.botInterTradeDelayMinutes',
+      );
       // NOTE: the per-broker trading flag is NOT restored here — it is restored
       // separately, after the LAST initBrokerStates() call. See onModuleInit().
       this.logger.log(
@@ -2117,20 +2117,14 @@ export class AutomationLoopService implements OnModuleInit {
   async setBotQueueConfig(body: { enabled?: boolean; interTradeDelayMinutes?: number }) {
     if (body.enabled !== undefined) {
       this.state.botQueueEnabled = body.enabled;
-      await (this.prisma as any).globalSetting.upsert({
-        where: { key: 'automation.botQueueEnabled' },
-        create: { key: 'automation.botQueueEnabled', value: String(body.enabled) },
-        update: { value: String(body.enabled) },
-      }).catch((err: any) => this.logger.warn(`botQueueEnabled persist failed: ${err.message}`));
+      await this.settings.set('automation.botQueueEnabled', body.enabled)
+        .catch((err: any) => this.logger.warn(`botQueueEnabled persist failed: ${err.message}`));
     }
     if (body.interTradeDelayMinutes !== undefined) {
       const mins = Math.max(0, Math.floor(body.interTradeDelayMinutes));
       this.state.botInterTradeDelayMinutes = mins;
-      await (this.prisma as any).globalSetting.upsert({
-        where: { key: 'automation.botInterTradeDelayMinutes' },
-        create: { key: 'automation.botInterTradeDelayMinutes', value: String(mins) },
-        update: { value: String(mins) },
-      }).catch((err: any) => this.logger.warn(`botInterTradeDelayMinutes persist failed: ${err.message}`));
+      await this.settings.set('automation.botInterTradeDelayMinutes', mins)
+        .catch((err: any) => this.logger.warn(`botInterTradeDelayMinutes persist failed: ${err.message}`));
     }
     this.logger.warn(`QueueBot config — enabled=${this.state.botQueueEnabled}, interTradeDelay=${this.state.botInterTradeDelayMinutes}m`);
     return {

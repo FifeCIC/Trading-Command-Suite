@@ -391,7 +391,13 @@ function selfTest() {
           _comment:
             'Ratchet for RAW globalSetting access outside nest/src/common/settings. A file may only go DOWN. ' +
             'New direct access is the defect validate-settings-access.cjs exists to catch. These keys must be ' +
-            'read through SettingsResolverService so provenance and the declared default are not bypassed.',
+            'read through SettingsResolverService so provenance and the declared default are not bypassed. ' +
+            'A file may legitimately REMAIN here for a DYNAMIC key that cannot be declared at all — currently ' +
+            'automation-loop.service.ts, whose remaining 2 sites are the per-broker ' +
+            '`automation.brokerTrading.<brokerId>` read and write (brokers are data, so there is no finite ' +
+            'list to declare, and the resolver deliberately refuses undeclared keys). Note the consequence: ' +
+            'those two reads do NOT fall back to a declared default, which is unchanged behaviour but is not ' +
+            'yet covered by provenance reporting.',
           totals: { files: ruleB.size, hits: totalB },
           files: Object.fromEntries([...ruleB.entries()].sort()),
         },

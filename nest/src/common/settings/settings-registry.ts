@@ -140,6 +140,80 @@ export const SETTINGS: SettingDefinition[] = [
     max: 100000,
     migratedFrom: 'MT5_MAX_DAILY_LOSS',
   },
+
+  // ── META.Stack layer kill switches (#615) + bot-queue pacing (#714) ─────────
+  // Migrated 2026-09-17 (#849). Previously read and written directly on `global_setting` inside
+  // automation-loop.service.ts — `restoreLayerFlags()`, `setLayer()` and `setBotQueueConfig()`.
+  //
+  // 🛑 THESE DEFAULTS ARE LOAD-BEARING, NOT DECORATION.
+  //
+  // Declaring a setting ASSERTS its default, and `ensureDefaults()` MATERIALISES it on the next boot. A
+  // wrong default is therefore a behaviour change, not a tidy-up. Declaring `automation.tradingEnabled:
+  // true` would seed a row saying trading is ON, the loader would read it, and the loop would begin
+  // placing orders — the single worst outcome available in this codebase.
+  //
+  // It is `false` because the code says so, in two places, with emphasis:
+  //     automation-loop.service.ts  "NEVER auto-trade — user must opt in"
+  //     automation-loop.service.ts  "NEVER auto-trade by default"
+  // ...and because an earlier version of that service had exactly this bug: it forced
+  // `tradingEnabled = true` on every restart, which is why the comment exists at all.
+  //
+  // ⚠️ HOW EACH DEFAULT WAS VERIFIED, not assumed: the loader leaves the STATE INITIALISER in place when
+  // a row is absent, so the initialiser IS the effective default. Each value below was copied from
+  // there (automation-loop.service.ts, the state object), which makes the migration provably
+  // behaviour-neutral for both the absent-row case and the seeded case.
+  {
+    key: 'automation.protocolsEnabled',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'automation',
+    label: 'Protocols layer (kill switch)',
+    description:
+      'OFF skips scoring entirely — no scoring and no trading. This is the OUTERMOST switch in the mandate ' +
+      'hierarchy (Protocols → Trading), so it is the one to reach for when everything must stop producing ' +
+      'signals. Restart default: ON.',
+    userChangeable: true,
+  },
+  {
+    key: 'automation.tradingEnabled',
+    type: 'boolean',
+    defaultValue: false,
+    class: 'runtime',
+    owner: 'automation',
+    label: 'Trading layer (kill switch)',
+    description:
+      'OFF blocks order dispatch while scoring and signals keep being produced. Defaults to OFF: a system ' +
+      'that starts trading because a database row was missing is a worse failure than one that needs an ' +
+      'operator to opt in. The emergency stop persists this OFF so a restart cannot undo it.',
+    userChangeable: true,
+  },
+  {
+    key: 'automation.botQueueEnabled',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'automation',
+    label: 'Bot queue',
+    description:
+      'Kill switch for the queue bot path only — the orchestrated strategy queue, not the main loop. ' +
+      'Defaults ON, matching the code that treats anything other than an explicit false as enabled.',
+    userChangeable: true,
+  },
+  {
+    key: 'automation.botInterTradeDelayMinutes',
+    type: 'number',
+    defaultValue: 10,
+    class: 'runtime',
+    owner: 'automation',
+    label: 'Bot inter-trade delay (minutes)',
+    description:
+      'Minimum spacing between queue-bot entries. This is a rate limit, not a scheduling preference — ' +
+      'shortening it increases burst exposure on correlated instruments.',
+    userChangeable: true,
+    min: 0,
+    max: 1440,
+  },
 ];
 
 /** Fast lookup. Built once at module load; the registry is static by design. */
