@@ -10,6 +10,10 @@ import { SignalOutcomeService } from './signal-outcome.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
 import { selectBaseTimeframe, everyCadenceStale } from '../../common/utils/timeframe';
+// ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Do NOT reintroduce a prefix test here:
+// `'STRONG_SELL'.startsWith('SELL')` is FALSE, which routed the strongest bearish signal as a
+// LONG/BUY. See the file header in `signal-direction.ts` for the measured evidence.
+import { signalToDirection, signalToSide, isBuySignal, isSellSignal } from '../../common/utils/signal-direction';
 import {
   resolveStyleThreshold,
   SIGNALS_GATE_DEFAULT,
@@ -1154,7 +1158,11 @@ export class SignalEnvelopeService {
 
           scoredEnvelopes.push(env);
 
-          const direction = env.signal.startsWith('SELL') ? 'short' : 'long';
+          // ⚠️ The dedupe key is `symbol|direction` — "best protocol wins per symbol PER DIRECTION".
+          // A prefix test here put a STRONG_SELL into the LONG bucket, where it could displace a
+          // genuine long envelope and vice versa. `UNKNOWN` is its own bucket rather than sharing
+          // a bucket with longs.
+          const direction = signalToDirection(env.signal) ?? 'UNKNOWN';
           const key = `${sym}|${direction}`;
           const existing = byKey.get(key);
           if (!existing || env.combinedStrength > existing.combinedStrength) {
@@ -1238,9 +1246,18 @@ export class SignalEnvelopeService {
     // broker symbol list, so the card explains blockers before any click.
     try {
       for (const env of scoredEnvelopes) {
+        const side = signalToSide(env.signal);
+        if (!side) {
+          // ⚠️ Fail CLOSED. Previously an underivable side became 'BUY', so feasibility was
+          // assessed for the wrong direction and the envelope still looked executable.
+          env.executionBlockers = [
+            { code: 'UNKNOWN_SIGNAL_CLASS', reason: `Signal class "${env.signal}" has no derivable side` } as any,
+          ];
+          continue;
+        }
         const res = await this.feasibility.assess({
           symbol: env.symbol,
-          side: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
+          side,
           brokerId: 'mt5',
           protocolId: env.protocolId,
           positions: mt5Positions,
@@ -1294,15 +1311,19 @@ export class SignalEnvelopeService {
         env.preTradeReady &&
         (env.executionBlockers?.length ?? 0) === 0 &&
         Boolean(env.scoreId) &&
-        !dismissed.has(`${env.symbol}|${env.protocolId}`);
+        !dismissed.has(`${env.symbol}|${env.protocolId}`) &&
+        // ⚠️ A signal whose direction cannot be derived must not route. Previously an
+        // underivable class fell through to LONG/BUY and was queued as a BUY.
+        signalToDirection(env.signal) !== null;
 
       const routeable: RoutableSignal[] = scoredEnvelopes
         .filter(isRouteable)
         .map(env => ({
           protocolId: env.protocolId!,
           symbol: env.symbol,
-          direction: env.signal.startsWith('SELL') ? 'SHORT' : 'LONG',
-          signal: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
+          // Non-null by the `isRouteable` guard above — the single authority, not a prefix test.
+          direction: signalToDirection(env.signal)!,
+          signal: signalToSide(env.signal)!,
           compositePct: env.signalPct,
           signalPct: env.signalPct,
           opportunityPct: env.opportunityPct,
@@ -1328,6 +1349,11 @@ export class SignalEnvelopeService {
             .join('; ');
         } else if (!env.scoreId) {
           why = 'no score lineage';
+        } else if (signalToDirection(env.signal) === null) {
+          // ⚠️ Must be checked BEFORE the final `else`, or this case is misreported as
+          // 'dismissed' — which is the same shape as the original bug: a real cause labelled as
+          // something it is not, sending the next investigation after the wrong component.
+          why = `signal class "${env.signal}" has no derivable direction`;
         } else {
           why = 'dismissed';
         }
@@ -1366,8 +1392,8 @@ export class SignalEnvelopeService {
       this.logger.warn(`Rank snapshot failed: ${(err as Error).message}`);
     }
 
-    const buyCount = visible.filter(e => e.signal.startsWith('BUY')).length;
-    const sellCount = visible.filter(e => e.signal.startsWith('SELL')).length;
+    const buyCount = visible.filter(e => isBuySignal(e.signal)).length;
+    const sellCount = visible.filter(e => isSellSignal(e.signal)).length;
 
     return {
       generatedAt: new Date().toISOString(),

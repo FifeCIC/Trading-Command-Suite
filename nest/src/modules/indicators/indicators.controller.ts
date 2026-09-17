@@ -45,6 +45,27 @@ export class IndicatorsController {
     return { ...metrics, bars: chartBars };
   }
 
+  /**
+   * ⚠️ DECLARED ABOVE `@Get(':symbol/:indicator')`.
+   *
+   * A 2-segment PARAMETERISED route captures ANY 2-segment path, so this route used to be
+   * unreachable. Worse than unreachable: the request resolved to the indicator handler and returned
+   *     {"symbol":"SECTORS","timeframe":"H1","name":"PERFORMANCE","values":[],"currentValue":null}
+   * — `sectors` read as the symbol, `performance` as the indicator. A plausible, well-formed payload
+   * for a request that matched no route, which is why it survived. See #856. Guarded by
+   * `nest/src/common/route-order.spec.ts`.
+   */
+  @Get('sectors/performance')
+  @ApiOperation({ summary: 'Sector ETF performance across timeframes' })
+  async sectorPerformance(@Query('tf') tf = 'D1') {
+    const etfs = ['XLK', 'XLF', 'XLE', 'XLV', 'XLY', 'XLP', 'XLI', 'XLB', 'XLRE', 'XLU', 'XLC'];
+    const barsByEtf: Record<string, any[]> = {};
+    for (const etf of etfs) {
+      barsByEtf[etf] = await this.indicatorsService.getBars(etf, tf);
+    }
+    return this.indicatorsService.computeSectorPerformance(barsByEtf);
+  }
+
   @Get(':symbol/:indicator')
   @ApiOperation({ summary: 'Compute a specific indicator' })
   async indicator(
@@ -68,16 +89,5 @@ export class IndicatorsController {
     const barsB = await this.indicatorsService.getBars(symB.toUpperCase(), tf);
     const corr = this.indicatorsService.computeCorrelation(barsA, barsB);
     return { symA: symA.toUpperCase(), symB: symB.toUpperCase(), timeframe: tf, correlation: corr };
-  }
-
-  @Get('sectors/performance')
-  @ApiOperation({ summary: 'Sector ETF performance across timeframes' })
-  async sectorPerformance(@Query('tf') tf = 'D1') {
-    const etfs = ['XLK', 'XLF', 'XLE', 'XLV', 'XLY', 'XLP', 'XLI', 'XLB', 'XLRE', 'XLU', 'XLC'];
-    const barsByEtf: Record<string, any[]> = {};
-    for (const etf of etfs) {
-      barsByEtf[etf] = await this.indicatorsService.getBars(etf, tf);
-    }
-    return this.indicatorsService.computeSectorPerformance(barsByEtf);
   }
 }

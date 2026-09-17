@@ -169,9 +169,55 @@ G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\
 Include the issue number in the slug where one exists so the handoff is greppable from the issue —
 `2026-09-11-789-session-open-effect-placement.md`.
 
+## 🛑 THE THREE PAGES — MANDATORY CONTENT, NOT OPTIONAL TAGS
+
+> **Added 2026-09-17 at the project owner's request:** *"please ensure handoffs ask for strong
+> documentation, diagrams, architecture, capabilities (those three pages)."*
+
+Every handoff **MUST** carry all three entries, filled properly:
+
+| Page | Entry | Filled how |
+|---|---|---|
+| **Capability Map** | `## Capability Map Entry` | The capability the user can now see/do. `persistence`, `uiSurfaces`, `pipeline`, `completion` are all required — `uiSurfaces: 0` is a **finding**, not a blank (a capability with no surface is invisible and must be declared as such) |
+| **QA Testing page** | `## QA Test Entry` | A **procedure someone else can execute** plus the result that proves it. Not "it works" |
+| **Architecture Framework** | `## Architecture Framework Entry` | The SLICE: what exists, why, key files, endpoint names |
+
+**A handoff missing any of the three is incomplete and the Librarian should reject it rather than
+silently infer the content.**
+
+## 📊 DIAGRAMS — REQUIRED WHEN DATA FLOW CHANGES
+
+A handoff that changes **data flow, ordering, a contract, or system boundaries MUST include a
+diagram.** ASCII or `mermaid` — both are accepted; mermaid is preferred because it renders.
+
+Include a diagram when the change touches any of:
+
+- the order gates run in, or where a new gate is inserted
+- a value's journey from source → transform → consumer (e.g. a signal class becoming a broker side)
+- which component owns a decision, or a boundary that moves
+- a state machine (queue statuses, position lifecycle, pipeline stages)
+
+**Skip it** for a pure bugfix with no shape change, a copy tweak, or a colour change.
+
+### Why this is a hard rule here
+
+The defects this repo keeps re-finding share one signature: **plausible output, no error, wrong
+shape underneath.** Three examples from 2026-09-17 alone, all invisible in prose and all obvious in
+a diagram:
+
+| Defect | What a diagram would have shown |
+|---|---|
+| `'STRONG_SELL'.startsWith('SELL') === false` → routed as LONG/BUY | The signal-class → direction → side path, with `STRONG_SELL` mapped to the wrong branch |
+| `trade.scoringStrategyId` holds a **bot** id, not a `scoring_strategy` id | The attribution graph: column → real FK → protocol, versus the join everyone assumed |
+| Order comment `TCS <name>` vs a reader expecting `TCS:a:b` | Who *writes* the string and who *reads* it — the two ends are in different files |
+
+A prose description of any of these reads as correct. A diagram of any of them exposes the break at a
+glance. That is the entire argument for the rule.
+
 ## Required Format
 
-Write exactly this structure. Keep it terse — the Librarian only needs the facts:
+Write exactly this structure. Keep prose terse — the Librarian only needs the facts — but do **not**
+omit the three page entries or the diagram:
 
 ```markdown
 ---
@@ -189,11 +235,21 @@ type: {feature|bugfix|refactor|test|docs}
 - {path/to/file.ts} — {brief reason}
 - {path/to/file.jsx} — {brief reason}
 
+## Diagram
+
+{REQUIRED when data flow / ordering / a contract / a boundary changed. Omit ONLY for a pure bugfix
+with no shape change. State explicitly which you did and why.}
+
+```mermaid
+flowchart LR
+  A[signal class] --> B{direction authority} --> C[queue routing] --> D[broker side]
+```
+
 ## Capability Map Entry
 
 - **name:** {Feature name for Capability Map}
 - **persistence:** {ephemeral|stored|config|cached|localStorage}
-- **uiSurfaces:** {number}
+- **uiSurfaces:** {number — 0 is a finding, say so}
 - **pipeline:** {scoring|trading|both|none}
 - **completion:** {complete|partial}
 
@@ -201,7 +257,7 @@ type: {feature|bugfix|refactor|test|docs}
 
 - **area:** {System Area}
 - **name:** {Test name}
-- **procedure:** {How to test — 1-2 sentences}
+- **procedure:** {How to test — 1-2 sentences, executable by someone else}
 - **expected:** {What result proves it works}
 
 ## Architecture Framework Entry
@@ -297,5 +353,10 @@ When processing handoffs, the Librarian invokes the `update-architecture-framewo
 - Updating `src/pages/architecture-framework.data.js` (human-facing UI page)
 - Adding route contracts, SLICE entries, and database schema changes
 - **Skipping** handoffs whose entries are already recorded — re-running the batch must be idempotent, so detect-and-skip rather than adding duplicates
+- **Rejecting** a handoff that is missing any of the three page entries (Capability Map / QA / Architecture
+  Framework) or that changed data flow without a diagram. Report it back rather than inferring the
+  missing content — an inferred entry is a fabricated one.
+- **Preserving the diagram** in the Architecture Framework entry where the slice has a shape worth
+  keeping. The diagram is usually the most durable part of the handoff.
 
 **The handoff files STAY.** Git history is not a substitute for a file that is still there.

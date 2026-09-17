@@ -1,0 +1,240 @@
+/**
+ * risk-profile-rules.ts — THE RISK CAPS, declared once.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * WHY THIS FILE EXISTS (2026-09-17)
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * `bot-rules.ts` declares every behavioural column on `trading_strategy`. It does NOT cover the
+ * **six constants in the `PortfolioRisk` object literals** that a bot's behaviour also depends on —
+ * and those constants are copied into FOUR files with no declaration anywhere:
+ *
+ *   measured 2026-09-17
+ *     `maxPerSymbol: 0.25`   literal in 5 places (risk.controller ×3, trading-strategy.interface,
+ *                            trading-strategy.service) plus 2 more in the service interface
+ *     `maxDrawdown: 0.25`    same 5 places
+ *     `maxPortfolioRisk: 0.15`, `maxPerTradeRisk: 0.02`, `trailingStopAtProfit: 0.03` — same again
+ *     `trading-strategy.interface.ts` is imported by NOTHING (its only mention is a comment in
+ *                            position-time-stop.service.ts), so its defaults are dead but look live
+ *
+ * This is the same defect class as the 8 unenforced bot columns, and it cost 78 blocked trades
+ * before anyone saw it: the largest entry blocker that day was
+ * `Allocation 62.7% exceeds max per symbol 25%`, and **no setting could change the 25%**.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * THE RULE THIS FILE ESTABLISHES
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * > **Every key of `PortfolioRisk` must be declared here, with its enforcement status AND the
+ * > settings key that backs it. A constant that can stop a live trade must be backed by a setting,
+ * > because a risk cap an operator cannot move is a cap that will be worked around instead.**
+ *
+ * Enforced by `nest/scripts/validate-risk-profile.cjs` (runs in `prebuild`). Adding a key to
+ * `PortfolioRisk` without declaring it here is a build error that NAMES the key.
+ *
+ * ⚠️ **What the build check can and cannot prove.** It proves every key is declared, that each
+ * `enforcedBy` file exists and references the field, and that no constant is re-spelled as a literal
+ * outside this file. It does NOT prove the *value* is right, or that the number feeding it was
+ * computed correctly — that is #865, and it is a maths problem a static check cannot see.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * THE AXIS THAT MATTERS: can an operator move it, and does it actually stop a trade
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * `enforcement` reuses the SAME vocabulary as `bot-rules.ts` (imported, not re-declared — two
+ * spellings of one idea is how the meanings drift apart):
+ *
+ *   | enforcement    | means                                                          |
+ *   |----------------|----------------------------------------------------------------|
+ *   | `live`         | can block a trade on the live path (`assessGlobalRiskLimits`)  |
+ *   | `legacy-only`  | applied only on a manual/API path, never by the automation loop|
+ *   | `display-only` | returned in a response; cannot affect a trade                  |
+ *   | `none`         | no reader anywhere                                             |
+ *
+ * `settingKey` is the second axis, and the one this file adds: **`enforcement: 'live'` with
+ * `settingKey: null` FAILS THE BUILD.** That single rule would have surfaced this defect on the day
+ * the cap was written.
+ */
+
+import type { PortfolioRisk } from './risk.service';
+// One vocabulary. See bot-rules.ts for the full explanation of the four values.
+import type { Enforcement } from '../trading/bot-rules';
+
+export interface RiskConstantRule {
+  /** The `PortfolioRisk` key this rule declares. */
+  field: string;
+  label: string;
+  enforcement: Enforcement;
+  /**
+   * Where the constant is consumed. `null` when `enforcement` is `none`.
+   * Checked by the validator: the file must exist AND reference `field`.
+   */
+  enforcedBy: string | null;
+  /**
+   * The `settings-registry.ts` key backing this constant, or `null` if it is hardcoded.
+   * ⚠️ `null` on a `live` constant is a build failure — see the rule in the file header.
+   */
+  settingKey: string | null;
+  /** The value in force today. For a settings-backed constant this MUST equal the setting default. */
+  defaultValue: number;
+  summary: string;
+  /** ⚠️ What a reader must know — especially when enforcement is not `live`. */
+  caveat?: string;
+}
+
+export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
+  // ── live — these can refuse a real order ───────────────────────────────────────────────────
+  {
+    field: 'maxPerSymbol',
+    label: 'Max per symbol',
+    enforcement: 'live',
+    enforcedBy: 'nest/src/modules/risk/risk.service.ts',
+    settingKey: 'risk.maxPerSymbol',
+    defaultValue: 0.25,
+    summary:
+      'Ceiling on a single position as a fraction of portfolio value. Blocks the order in ' +
+      'canOpenPosition().',
+    caveat:
+      '⚠️ TWO READERS THAT DISAGREE: checkMaxAllocation() only LOGS A WARNING, canOpenPosition() ' +
+      'BLOCKS. Same constant, same file, opposite outcomes — do not treat the warning as the rule. ' +
+      'In September 2026 this was the largest single entry blocker (78 trades/day) and no setting ' +
+      'could move it (#865).',
+  },
+  {
+    field: 'maxDrawdown',
+    label: 'Max drawdown',
+    enforcement: 'live',
+    enforcedBy: 'nest/src/modules/risk/risk.service.ts',
+    settingKey: 'risk.maxDrawdown',
+    defaultValue: 0.25,
+    summary: 'Peak-to-current fall in equity that stops further order placement. Blocks via checkDrawdown().',
+    caveat:
+      '⚠️ The peak is IN-MEMORY and only ever increases, so a bad reading becomes a permanent ' +
+      'high-water mark until the process restarts. That is exactly how a fabricated $10,000 seed ' +
+      'blocked every trade for hours on 2026-09-16 (#848) — the guard for that is the `null` check ' +
+      'in assessGlobalRiskLimits(), which must not be removed.',
+  },
+  {
+    field: 'maxPositions',
+    label: 'Max positions',
+    enforcement: 'live',
+    enforcedBy: 'nest/src/modules/risk/risk.service.ts',
+    settingKey: 'risk.maxOpenPositions',
+    defaultValue: 5,
+    summary: 'Concurrent position ceiling, read from settings and passed into the profile.',
+    caveat:
+      '✅ The one constant that was ALREADY settings-backed, and the proof the pattern works: a live ' +
+      'PUT on risk.maxOpenPositions changes the next decision with no restart. Broker-wide, not ' +
+      'per-bot — see the per-bot `maxPositions` column, which is legacy-only.',
+  },
+
+  // ── enforced, but only off the live path ───────────────────────────────────────────────────
+  {
+    field: 'maxPerTradeRisk',
+    label: 'Max per-trade risk',
+    enforcement: 'legacy-only',
+    enforcedBy: 'nest/src/modules/risk/risk.service.ts',
+    settingKey: null,
+    defaultValue: 0.02,
+    summary: 'Capital-at-risk fraction used by calculatePositionSize() (risk-based and Kelly sizing).',
+    caveat:
+      '⚠️ calculatePositionSize() is reachable ONLY from risk.controller.ts, so this constant shapes ' +
+      'a sizing request made by hand and never the automation loop. Note it also FLOORS to a whole ' +
+      'share (`Math.floor`), which is meaningless for FX volume.',
+  },
+
+  // ── declared, no reader ────────────────────────────────────────────────────────────────────
+  {
+    field: 'maxPortfolioRisk',
+    label: 'Max portfolio risk',
+    enforcement: 'none',
+    enforcedBy: null,
+    settingKey: null,
+    defaultValue: 0.15,
+    summary: 'Declared: total portfolio fraction at risk across all open positions.',
+    caveat:
+      '⚠️ NO READER ANYWHERE. It is written into four literals and never consumed — grep confirms ' +
+      'the only occurrences are the literals themselves and the interface. A portfolio-level risk ' +
+      'cap that does not exist is worse than none: it is assumed to be protecting something.',
+  },
+  {
+    field: 'trailingStopAtProfit',
+    label: 'Trailing stop activation',
+    enforcement: 'none',
+    enforcedBy: null,
+    settingKey: null,
+    defaultValue: 0.03,
+    summary: 'Declared: profit at which the stop begins to trail.',
+    caveat:
+      '⚠️ Its only consumer, `updateTrailingStop()`, has NO CALLER outside its own spec — so the ' +
+      'trailing stop is described in three files and armed in none. Any position without a ' +
+      'broker-side trailing stop relies on slPct alone.',
+  },
+];
+
+/** Constants that can refuse a live order. */
+export const LIVE_RISK_CONSTANTS = RISK_CONSTANT_RULES.filter((r) => r.enforcement === 'live');
+
+/** Constants a reader might reasonably assume are protecting them, but are not. */
+export const NOT_LIVE_RISK_CONSTANTS = RISK_CONSTANT_RULES.filter((r) => r.enforcement !== 'live');
+
+/** Counts for a UI badge or a log line. */
+export function riskEnforcementCounts() {
+  return RISK_CONSTANT_RULES.reduce<Record<string, number>>((acc, r) => {
+    acc[r.enforcement] = (acc[r.enforcement] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+/**
+ * buildRiskProfile() — THE ONLY PLACE a `PortfolioRisk` literal may be constructed.
+ *
+ * Before this existed the same six-key object was hand-written in four files, so a change to one
+ * cap could — and did — leave the others behind. The validator forbids `maxPerSymbol: <number>`
+ * outside this file, which makes "there is one copy" a build-enforced fact rather than a habit.
+ *
+ * ⚠️ Callers must pass EVERY live value from `SettingsResolverService`. Do not default a parameter
+ * here: a `?? 0.25` in this function would silently restore the hardcoded cap the whole change
+ * removes, and it would do so invisibly. Missing values must be a compile error (they are — all
+ * three are required).
+ */
+export function buildRiskProfile(values: {
+  /** From `risk.maxOpenPositions`. */
+  maxOpenPositions: number;
+  /** From `risk.maxPerSymbol`. */
+  maxPerSymbol: number;
+  /** From `risk.maxDrawdown`. */
+  maxDrawdown: number;
+}): PortfolioRisk {
+  // ⚠️ FAIL LOUDLY ON AN UNREADABLE CAP — this is not a defensive nicety, it is the difference
+  // between a gate that is ON and a gate that is SILENTLY OFF.
+  //
+  // `allocation > undefined` evaluates to `false`, and `drawdown >= undefined` is also `false`. So a
+  // cap that arrives as `undefined` does not trip the check — it DISABLES it, with no error, no log
+  // line, and output that looks like a normal permit. Measured 2026-09-17: a test fixture missing
+  // two keys made the drawdown gate stop blocking entirely, and the only reason it was noticed is
+  // that a test asserted the gate still fires.
+  //
+  // Callers that must not throw (the automation loop) should catch this and refuse the trade with a
+  // named reason rather than trade without a cap. See assessGlobalRiskLimits().
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw new Error(
+        `buildRiskProfile: '${key}' is ${String(value)} — refusing to build a risk profile from an ` +
+          'unreadable cap. A missing cap does not block the check, it disables it.',
+      );
+    }
+  }
+
+  const byField = new Map(RISK_CONSTANT_RULES.map((r) => [r.field, r]));
+  return {
+    // Declared but unread — carried at their declared default so the shape stays complete and the
+    // count of live constants does not silently change.
+    maxPortfolioRisk: byField.get('maxPortfolioRisk')!.defaultValue,
+    maxPerTradeRisk: byField.get('maxPerTradeRisk')!.defaultValue,
+    maxPerSymbol: values.maxPerSymbol,
+    maxPositions: values.maxOpenPositions,
+    maxDrawdown: values.maxDrawdown,
+    trailingStopAtProfit: byField.get('trailingStopAtProfit')!.defaultValue,
+  };
+}

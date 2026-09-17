@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, Logger } from '@nest
 import { TradingStrategyService } from './trading-strategy.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { DEFAULT_TRADING_STRATEGIES } from './strategy-seed-data';
+import { BOT_RULES, LIVE_RULES, NOT_LIVE_RULES, ruleEnforcementCounts } from './bot-rules';
 
 @Controller('trading/strategies')
 export class TradingStrategyController {
@@ -47,6 +48,40 @@ export class TradingStrategyController {
       maxDailyLoss: await this.settings.get<number>('risk.maxDailyLoss'),
       maxOpenPositions: await this.settings.get<number>('risk.maxOpenPositions'),
       note: 'Server-enforced hard limits, read LIVE from global_setting (risk.*). Change them in Settings; no restart needed. Provenance per value: GET /api/system/settings/registry.',
+    };
+  }
+
+  /**
+   * GET /api/trading/strategies/bot-rules — WHAT A BOT IS, and what actually applies.
+   *
+   * ⚠️ DECLARED ABOVE `@Get(':id')`. This is the SECOND time this exact mistake was made in this
+   * controller — `risk-limits` was ordered wrongly on 2026-09-16 and returned 200 with an EMPTY
+   * BODY (a comment warning about it already existed, and this route was still written below the
+   * `:id` route on 2026-09-17). A comment is not a guard. The class is now closed by
+   * `route-order.spec.cjs`, which fails if any literal route in this file is declared after a
+   * parameterised one.
+   *
+   * This endpoint is the honest counterpart to the create form. The form offers every column; this
+   * says which ones can actually change a trade. Measured 2026-09-17: 8 of 29 behavioural columns
+   * were enforced nowhere, yet the form still offered all of them, and nothing failed when the two
+   * disagreed.
+   */
+  @Get('bot-rules')
+  getBotRules() {
+    return {
+      counts: ruleEnforcementCounts(),
+      /** Can block or shape a live trade. */
+      live: LIVE_RULES,
+      /** Might be assumed to apply, but does not — the list that matters. */
+      notLive: NOT_LIVE_RULES,
+      all: BOT_RULES,
+      note:
+        '`enforcement` is the axis that matters: live = can stop or shape a trade on the queue ' +
+        'path; legacy-only = enforced ONLY on POST /:id/execute, so a UI action can behave ' +
+        'differently to the loop; display-only = read but cannot affect a trade; none = no reader. ' +
+        'Guarded by nest/scripts/validate-bot-rules.cjs, which fails the build if a behavioural ' +
+        'column on trading_strategy has no declaration here — but note that check is STATIC: it ' +
+        'proves ownership, not that a rule fires.',
     };
   }
 

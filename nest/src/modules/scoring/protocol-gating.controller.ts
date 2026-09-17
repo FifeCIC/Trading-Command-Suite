@@ -585,6 +585,71 @@ export class ProtocolGatingController {
   }
 
   /**
+   * ⚠️ DECLARED ABOVE `@Get(':symbol')`.
+   *
+   * Both are single-segment paths, so the parameterised route captured `portfolio` and this
+   * endpoint was unreachable. Instead of the portfolio's gated scores it returned a SINGLE score
+   * for a symbol named "PORTFOLIO":
+   *     {"symbol":"PORTFOLIO","composite":50,"signal":"HOLD","directionMode":"LONG_ONLY",...}
+   * A plausible, well-formed result for a path that matched no route — no error, which is why it
+   * survived. See #856. Guarded by `nest/src/common/route-order.spec.ts`.
+   */
+  @Get('portfolio')
+  async getPortfolioGated(): Promise<GatedScore[]> {
+    const portfolioData = await this.portfolio.getPortfolio();
+    const positions = portfolioData?.positions ?? [];
+    if (positions.length === 0) {
+      return [];
+    }
+
+    // Each position is scored with ITS OWN assigned protocol. Positions without
+    // a protocol assignment are skipped — unscoped default scoring was removed (2026-08-22).
+    const results: GatedScore[] = [];
+    for (const p of positions) {
+      const sym = await this.prisma.symbol.findFirst({
+        where: { ticker: p.symbol },
+      });
+      if (!sym) {
+        this.logger.warn(`Portfolio position ${p.symbol} has no symbol record — skipped`);
+        continue;
+      }
+
+      let slug: string | null = null;
+      try {
+        const assignment = await (this.prisma as any).symbolProtocolAssignment.findFirst({
+          where: { symbol: p.symbol },
+          orderBy: { priority: 'asc' },
+          include: { protocol: { select: { slug: true } } },
+        });
+        slug = assignment?.protocol?.slug ?? null;
+      } catch { /* assignment table may not exist */ }
+
+      if (!slug) {
+        this.logger.warn(`Portfolio position ${p.symbol} has no protocol assignment — skipped (unscoped scoring removed)`);
+        continue;
+      }
+
+      const requiredBars = this.protocolDb.getRequiredBars(slug);
+      // ⚠️ Cadence from the PROTOCOL, not a hardcoded '1d' — see the `batch` handler below
+      // for the full explanation (#783 follow-up). This site additionally omitted the
+      // `timeframe` argument on `scoreWithGating`, so the freshness check had to infer the
+      // cadence from the array's median even when the bars were loaded correctly.
+      const cadence = selectBaseTimeframe(
+        this.protocolDb.getCached(slug)?.recommendedTimeframe,
+      );
+      const bars = await this.marketData.getBars(sym.id, cadence, requiredBars[cadence] ?? requiredBars['1d'] ?? 200);
+      if (!bars || bars.length === 0) continue;
+
+      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, slug);
+      results.push(await this.protocolGating.scoreWithGating(
+        p.symbol, bars as any, slug, { dayBars, hourBars, min15Bars }, 'group-weighted', cadence,
+      ));
+    }
+
+    return results.sort((a, b) => b.composite - a.composite);
+  }
+
+  /**
    * GET /api/scoring/gated/:symbol
    *
    * Returns a multiplicatively-gated score for a single symbol.
@@ -659,66 +724,6 @@ export class ProtocolGatingController {
 
     const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, protocol);
     return this.protocolGating.scoreWithGating(ticker, marketBars, protocol, { dayBars, hourBars, min15Bars });
-  }
-
-  /**
-   * GET /api/scoring/gated/portfolio
-   *
-   * Returns multiplicatively-gated scores for all portfolio positions.
-   */
-  @Get('portfolio')
-  async getPortfolioGated(): Promise<GatedScore[]> {
-    const portfolioData = await this.portfolio.getPortfolio();
-    const positions = portfolioData?.positions ?? [];
-    if (positions.length === 0) {
-      return [];
-    }
-
-    // Each position is scored with ITS OWN assigned protocol. Positions without
-    // a protocol assignment are skipped — unscoped default scoring was removed (2026-08-22).
-    const results: GatedScore[] = [];
-    for (const p of positions) {
-      const sym = await this.prisma.symbol.findFirst({
-        where: { ticker: p.symbol },
-      });
-      if (!sym) {
-        this.logger.warn(`Portfolio position ${p.symbol} has no symbol record — skipped`);
-        continue;
-      }
-
-      let slug: string | null = null;
-      try {
-        const assignment = await (this.prisma as any).symbolProtocolAssignment.findFirst({
-          where: { symbol: p.symbol },
-          orderBy: { priority: 'asc' },
-          include: { protocol: { select: { slug: true } } },
-        });
-        slug = assignment?.protocol?.slug ?? null;
-      } catch { /* assignment table may not exist */ }
-
-      if (!slug) {
-        this.logger.warn(`Portfolio position ${p.symbol} has no protocol assignment — skipped (unscoped scoring removed)`);
-        continue;
-      }
-
-      const requiredBars = this.protocolDb.getRequiredBars(slug);
-      // ⚠️ Cadence from the PROTOCOL, not a hardcoded '1d' — see the `batch` handler above
-      // for the full explanation (#783 follow-up). This site additionally omitted the
-      // `timeframe` argument on `scoreWithGating`, so the freshness check had to infer the
-      // cadence from the array's median even when the bars were loaded correctly.
-      const cadence = selectBaseTimeframe(
-        this.protocolDb.getCached(slug)?.recommendedTimeframe,
-      );
-      const bars = await this.marketData.getBars(sym.id, cadence, requiredBars[cadence] ?? requiredBars['1d'] ?? 200);
-      if (!bars || bars.length === 0) continue;
-
-      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, slug);
-      results.push(await this.protocolGating.scoreWithGating(
-        p.symbol, bars as any, slug, { dayBars, hourBars, min15Bars }, 'group-weighted', cadence,
-      ));
-    }
-
-    return results.sort((a, b) => b.composite - a.composite);
   }
 
   /**

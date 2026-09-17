@@ -62,6 +62,13 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
      * A bare `{}` would make `settings.get(...)` throw and the whole method would be skipped,
      * so these tests would pass while testing nothing. Same defect as the time-stop fixture that
      * fed a comment format the writer never emits.
+     *
+     * ⚠️ 2026-09-17 (#865) — `risk.maxPerSymbol` and `risk.maxDrawdown` were ADDED to this map when
+     * they stopped being hardcoded literals. Leaving them out was not a harmless staleness: the caps
+     * arrived as `undefined`, and `drawdown >= undefined` is `false`, so the drawdown gate silently
+     * STOPPED BLOCKING and only the "still blocks a genuine drawdown" test noticed. A fixture that
+     * mirrors the registry is load-bearing here; when the registry gains a cap, this map must too.
+     * The sibling test below locks that requirement in with an explicit refusal.
      */
     const settings = {
       get: jest.fn(async (key: string) =>
@@ -69,6 +76,8 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
           'risk.maxPositionSize': 1.0,
           'risk.maxOpenPositions': 5,
           'risk.maxDailyLoss': 100,
+          'risk.maxPerSymbol': 0.25,
+          'risk.maxDrawdown': 0.25,
         } as Record<string, number>)[key],
       ),
     } as any;
@@ -142,5 +151,59 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     expect(afterDrop.allowed).toBe(false);
     expect(afterDrop.reason).toContain('Drawdown');
     expect(afterDrop.reason).toContain('40.0%');
+  });
+
+  /**
+   * REGRESSION GUARD — an unreadable cap must REFUSE, not disappear (#865, 2026-09-17).
+   *
+   * This test exists because the failure it describes actually happened while #865 was being
+   * written. Adding `risk.maxPerSymbol` / `risk.maxDrawdown` to the profile turned a test fixture
+   * that did not list them into one where both arrived as `undefined` — and:
+   *
+   *     allocation  > undefined   is false   ->  the per-symbol cap stopped blocking
+   *     drawdown   >= undefined   is false   ->  the drawdown cap stopped blocking
+   *
+   * Nothing errored. Nothing was logged. The gate simply reported that everything was fine, which
+   * is the single most expensive failure shape in this codebase — a risk control that is OFF while
+   * reading as ON.
+   *
+   * Refusing is the correct direction. "We could not evaluate the limit" must never render as "the
+   * limit is fine": on a money path the difference is a trade nobody authorised.
+   */
+  it('REFUSES the order when a cap cannot be read — an unreadable cap must not disable the gate', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue({ equity: 1000, balance: 1000, margin: 100 }),
+    };
+    const svc = build(mt5);
+
+    // Reach in and remove a cap, exactly as a missing setting row would.
+    const settingsStub = (svc as any).settings;
+    const realGet = settingsStub.get.getMockImplementation();
+    settingsStub.get.mockImplementation(async (key: string) =>
+      key === 'risk.maxDrawdown' ? undefined : realGet(key),
+    );
+
+    const result = await svc.assessGlobalRiskLimits(SIZE);
+
+    expect(result.allowed).toBe(false);
+    // The reason must NAME the key — a bare "risk check failed" would send the next reader looking
+    // through five gates instead of at the one setting that is missing.
+    expect(result.reason).toContain('risk.maxDrawdown');
+    expect(result.reason).toContain('unreadable');
+  });
+
+  it('the unreadable-cap guard is not vacuous — a fully readable set still trades', async () => {
+    // ⚠️ Two-directional on purpose. The test above proves the refusal FIRES; this one proves it does
+    // not fire when every cap is present. Without it, a guard that refused unconditionally would
+    // pass the test above and quietly stop all trading.
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue({ equity: 1000, balance: 1000, margin: 100 }),
+    };
+    const svc = build(mt5);
+    const result = await svc.assessGlobalRiskLimits(SIZE);
+    expect(result.allowed).toBe(true);
+    expect(result.reason).not.toContain('unreadable');
   });
 });

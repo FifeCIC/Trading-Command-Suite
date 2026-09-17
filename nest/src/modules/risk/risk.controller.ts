@@ -7,10 +7,12 @@
 import { Controller, Get, Post, Body, Query, Logger } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RiskService, PortfolioRisk, PositionSizeType, StopLossType, TakeProfitType } from './risk.service';
+import { buildRiskProfile } from './risk-profile-rules';
 import { TradingGatesService, GateConfig } from '../trading-gates/trading-gates.service';
 import { MonteCarloService } from './monte-carlo.service';
 import { PrismaService } from '../../database/prisma.service';
 import { WeekendGapRiskService } from './weekend-gap-risk.service';
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
 @ApiTags('risk')
 @Controller('risk')
@@ -23,7 +25,23 @@ export class RiskController {
     private readonly monteCarlo: MonteCarloService,
     private readonly prisma: PrismaService,
     private readonly weekendGapRisk: WeekendGapRiskService,
+    private readonly settings: SettingsResolverService,
   ) {}
+
+  /**
+   * readRiskCapValues() — the three settings the `PortfolioRisk` caps are built from.
+   *
+   * One helper for three call sites (GET /overview, GET /limits, POST /calculate-position). Each of
+   * those used to hand-write its own six-key literal, which is how `0.25` came to exist in five
+   * copies across four files (#865). Now there is one builder and one source per value.
+   */
+  private async readRiskCapValues() {
+    return {
+      maxOpenPositions: await this.settings.get<number>('risk.maxOpenPositions'),
+      maxPerSymbol: await this.settings.get<number>('risk.maxPerSymbol'),
+      maxDrawdown: await this.settings.get<number>('risk.maxDrawdown'),
+    };
+  }
 
   /**
    * GET /api/risk/overview
@@ -67,15 +85,14 @@ export class RiskController {
       },
     };
 
-    // Get risk limits
-    const limits = {
-      maxPortfolioRisk: 0.15,
-      maxPerTradeRisk: 0.02,
-      maxPerSymbol: 0.25,
-      maxPositions: gateConfig.positions.maxPositions,
-      maxDrawdown: 0.25,
-      trailingStopAtProfit: 0.03,
-    };
+    // Risk limits — built from the SAME settings the live gate reads, so this dashboard cannot
+    // disagree with the engine that refuses the order.
+    //
+    // ⚠️ This block used to spell all six caps by hand AND take `maxPositions` from the
+    // TRADING-GATES config, while GET /api/trading/strategies/risk-limits takes it from
+    // `risk.maxOpenPositions`. Two endpoints therefore reported a DIFFERENT max-positions cap — and
+    // the one reported here came from a config nothing on the live path consults. (#865)
+    const limits = await buildRiskProfile(await this.readRiskCapValues());
 
     // Determine circuit breaker state
     const circuitBreaker = this.evaluateCircuitBreaker(health, gateConfig);
@@ -178,7 +195,7 @@ export class RiskController {
 
   @Post('calculate-position')
   @ApiOperation({ summary: 'Calculate suggested position size, SL, and TP' })
-  calculatePosition(
+  async calculatePosition(
     @Body() body: {
       symbol: string;
       score: number;
@@ -195,14 +212,9 @@ export class RiskController {
       avgWinLossRatio?: number;
     },
   ) {
-    const riskProfile: PortfolioRisk = {
-      maxPortfolioRisk: 0.15,
-      maxPerTradeRisk: 0.02,
-      maxPerSymbol: 0.25,
-      maxPositions: 5,
-      maxDrawdown: 0.25,
-      trailingStopAtProfit: 0.03,
-    };
+    // Built from settings, not literals: this endpoint is reachable from the UI, so a hardcoded cap
+    // here would let a manual sizing request disagree with the automation loop's own limits. (#865)
+    const riskProfile: PortfolioRisk = await buildRiskProfile(await this.readRiskCapValues());
 
     const slPrice = this.riskService.calculateStopLoss(
       body.entryPrice,
@@ -251,15 +263,11 @@ export class RiskController {
 
   @Get('limits')
   @ApiOperation({ summary: 'Get current risk limits configuration' })
-  getLimits() {
-    return {
-      maxPortfolioRisk: 0.15,
-      maxPerTradeRisk: 0.02,
-      maxPerSymbol: 0.25,
-      maxPositions: 5,
-      maxDrawdown: 0.25,
-      trailingStopAtProfit: 0.03,
-    };
+  async getLimits() {
+    // ⚠️ `defaultValue` in settings-registry.ts is the DECLARED default; this returns the EFFECTIVE
+    // value (a DB override wins). Those two differing is normal and is why the response is now read
+    // live rather than echoed from a literal. Provenance per value: GET /api/system/settings/registry
+    return buildRiskProfile(await this.readRiskCapValues());
   }
 
   // ── Weekend Gap Risk ──────────────────────────────────

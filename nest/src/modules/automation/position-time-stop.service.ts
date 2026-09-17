@@ -11,11 +11,18 @@
  *     BLOCKED  Max open positions (5) reached — 5 currently open   28 times
  *     Blocked signals reached composite 81 and 82
  *
- * The broker cap is `MT5_MAX_OPEN_POSITIONS=5` and it is broker-wide. 11 active `auto`
- * bots compete for those 5 slots. Nothing was freeing them, because **no time-based exit
- * existed anywhere in the codebase**: `maxHoldDuration` is declared on the strategy
- * interface (`trading-strategy.interface.ts`) with a default of `'30d'`, but it is never
- * READ. The only exits were price-based (SL/TP via StopGuardianService) or manual.
+ * The broker cap is `MT5_MAX_OPEN_POSITIONS=5` — now the `risk.maxOpenPositions` setting — and it
+ * is broker-wide. 11 active `auto` bots compete for those 5 slots. Nothing was freeing them,
+ * because **no time-based exit existed anywhere in the codebase**: `maxHoldDuration` was declared
+ * on a strategy interface with a default of `'30d'`, but it was never READ. The only exits were
+ * price-based (SL/TP via StopGuardianService) or manual.
+ *
+ * ⚠️ That interface (`nest/src/modules/strategies/trading-strategy.interface.ts`) was DELETED on
+ * 2026-09-17 — it described a strategy model that never existed (`account: alpaca|trading212|ibkr`,
+ * `automation.schedule`) and was imported by nothing. Its `maxHoldDuration` default and four
+ * hand-copied risk caps were the last trace of the promise, which is why the defect above was
+ * invisible: the field LOOKED declared. The lesson is carried by `risk-profile-rules.ts` now, which
+ * fails the build when a declared constant has no reader or no setting.
  *
  * The consequence is a one-way ratchet: slots fill and stay filled. A protocol named
  * "Scalp (5s–30s)" was observed holding for weeks, because a position with no time-stop

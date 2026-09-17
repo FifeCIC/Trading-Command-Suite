@@ -69,6 +69,19 @@ export class ImportJobsController {
     return this.importJobsService.getBatchStatus();
   }
 
+  /**
+   * ⚠️ DECLARED ABOVE `@Post('orchestrate/:symbolId')` — same 2-segment shape, so the
+   * parameterised route captured `orchestrate/portfolio` and this endpoint was unreachable,
+   * resolving to `ensureSymbolFresh('portfolio')`. See #856. Guarded by
+   * `nest/src/common/route-order.spec.ts`.
+   */
+  /** Orchestrate freshness for all portfolio symbols */
+  @Post('orchestrate/portfolio')
+  @ApiOperation({ summary: 'Orchestrate data freshness for all active portfolio symbols' })
+  async orchestratePortfolio() {
+    return this.orchestrator.ensurePortfolioFresh();
+  }
+
   /** Orchestrate freshness + imports for a single symbol */
   @Post('orchestrate/:symbolId')
   @ApiOperation({ summary: 'Orchestrate data freshness across all types for a symbol' })
@@ -77,13 +90,6 @@ export class ImportJobsController {
     @Query('ticker') ticker?: string,
   ) {
     return this.orchestrator.ensureSymbolFresh(symbolId, ticker);
-  }
-
-  /** Orchestrate freshness for all portfolio symbols */
-  @Post('orchestrate/portfolio')
-  @ApiOperation({ summary: 'Orchestrate data freshness for all active portfolio symbols' })
-  async orchestratePortfolio() {
-    return this.orchestrator.ensurePortfolioFresh();
   }
 
   /**

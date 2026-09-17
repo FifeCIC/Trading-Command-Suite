@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { resolveEffectiveRole, directionAllowed } from '../../common/utils/signal-direction';
 
 /** A per-protocol actionable signal record, ready for queue routing (#714). */
 export interface RoutableSignal {
@@ -53,10 +54,17 @@ export class SignalQueueService {
   ) {
     if (!this.prisma.isAvailable) return;
     if (actionable.length === 0 && scoredPairs.size === 0) return;
+    const directionSkips: string[] = [];
     try {
       // Subscriptions joined to the bot config (symbol scope + active flag).
+      //
+      // ⚠️ `sp.role` and `ts.requireDirection` are SELECTED and used below. They were not even
+      // selected before, so a `role: 'short'` subscription received long signals while a bot whose
+      // only purpose was to sell had no direction constraint in the live path. Measured
+      // 2026-09-17: 24 subscriptions `role='long'`, 1 `role='short'`, and the routing filter matched
+      // on protocol + symbol only.
       const subs: any[] = await (this.prisma as any).$queryRawUnsafe(
-        `SELECT sp.strategyId, sp.protocolId, ts.symbol AS strategySymbol
+        `SELECT sp.strategyId, sp.protocolId, sp.role, ts.requireDirection, ts.symbol AS strategySymbol
          FROM strategy_protocol sp
          JOIN trading_strategy ts ON ts.id = sp.strategyId
          WHERE ts.active = 1`,
@@ -71,8 +79,21 @@ export class SignalQueueService {
         for (const sub of subs) {
           if (sub.protocolId !== rec.protocolId) continue;
           if (sub.strategySymbol && sub.strategySymbol !== rec.symbol) continue;
+          // Gate 0 — DIRECTION PERMISSION. ONE decision, via the single authority.
+          const role = resolveEffectiveRole(sub.role, sub.requireDirection);
+          if (!directionAllowed(role, rec.direction)) {
+            directionSkips.push(`${rec.symbol}(${rec.direction} not in role=${role ?? 'any'})`);
+            continue;
+          }
           await this.upsertEntry(sub.strategyId, rec);
         }
+      }
+      if (directionSkips.length > 0) {
+        // Named, not silent: a direction skip and "no signal" must not look alike in the log.
+        this.logger.log(
+          `Queue direction filter: dropped ${directionSkips.length} entry(ies) whose role does not permit the direction — ` +
+            [...new Set(directionSkips)].join(', '),
+        );
       }
 
       // Void pass — for every protocol scored this run, drop pending entries

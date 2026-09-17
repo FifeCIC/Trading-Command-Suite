@@ -304,46 +304,6 @@ export class DirectivesController {
   }
 
   /**
-   * GET /api/directives/:id
-   *
-   * Returns a single directive by ID, directly from the registry + DB.
-   */
-  @Get(':id')
-  async getOne(@Param('id') id: string) {
-    const directive = this.directivesService.get(id);
-    if (!directive) return { error: `Directive "${id}" not found` };
-
-    // Load DB metadata
-    let dbMeta: any = {};
-    try {
-      const dbResult = await this.directivesService.getDbStatuses();
-      const dbRow = dbResult?.find((d: any) => d.id === id);
-      if (dbRow) dbMeta = { active: dbRow.active, nature: dbRow.nature, readiness: dbRow.readiness };
-    } catch {}
-
-    return {
-      id: directive.id,
-      name: directive.name,
-      description: directive.description,
-      category: (directive as any).category || 'Other',
-      maxScore: directive.maxScore,
-      complexity: (directive as any).complexity,
-      active: dbMeta.active ?? true,
-      classification: (directive as any).classification || 'active',
-      nature: dbMeta.nature,
-      readiness: dbMeta.readiness || directive.readiness || 'alpha',
-      requiredDataFeeds: (directive as any).requiredDataFeeds || [],
-      directionBias: directive.directionBias,
-      version: directive.version,
-      priority: directive.priority,
-      performance: dbMeta.performance,
-      inputs: (directive as any).inputs,
-      dependsOn: (directive as any).dependsOn,
-      formula: (directive as any).formula,
-    };
-  }
-
-  /**
    * GET /api/directives/:id/viewer
    *
    * One-shot payload for the Directive Viewer page: directive detail,
@@ -674,6 +634,57 @@ export class DirectivesController {
       result[id] = config;
     }
     return result;
+  }
+
+  /**
+   * ⚠️ DECLARED BELOW the literal GET routes (`stats`, `forks`, `effective`, `config`).
+   *
+   * Express matches in declaration order. This parameterised route was declared near the TOP of
+   * the controller, so it captured every one-segment literal path: `GET /api/directives/stats` did
+   * not 404 — it ran this handler with id="stats" and returned
+   *
+   *     {"error":"Directive \"stats\" not found"}
+   *
+   * — HTTP 200 with a plausible error body, so nothing looked broken. Four routes were affected:
+   * `stats`, `forks`, `effective`, `config`. See #856. Guarded by
+   * `nest/src/common/route-order.spec.ts`, which fails if any literal route is declared after a
+   * parameterised one in the same method.
+   *
+   * Returns a single directive by ID, directly from the registry + DB.
+   */
+  @Get(':id')
+  async getOne(@Param('id') id: string) {
+    const directive = this.directivesService.get(id);
+    if (!directive) return { error: `Directive "${id}" not found` };
+
+    // Load DB metadata
+    let dbMeta: any = {};
+    try {
+      const dbResult = await this.directivesService.getDbStatuses();
+      const dbRow = dbResult?.find((d: any) => d.id === id);
+      if (dbRow) dbMeta = { active: dbRow.active, nature: dbRow.nature, readiness: dbRow.readiness };
+    } catch {}
+
+    return {
+      id: directive.id,
+      name: directive.name,
+      description: directive.description,
+      category: (directive as any).category || 'Other',
+      maxScore: directive.maxScore,
+      complexity: (directive as any).complexity,
+      active: dbMeta.active ?? true,
+      classification: (directive as any).classification || 'active',
+      nature: dbMeta.nature,
+      readiness: dbMeta.readiness || directive.readiness || 'alpha',
+      requiredDataFeeds: (directive as any).requiredDataFeeds || [],
+      directionBias: directive.directionBias,
+      version: directive.version,
+      priority: directive.priority,
+      performance: dbMeta.performance,
+      inputs: (directive as any).inputs,
+      dependsOn: (directive as any).dependsOn,
+      formula: (directive as any).formula,
+    };
   }
 
   @Get(':id/config')

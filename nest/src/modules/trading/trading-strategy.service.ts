@@ -27,7 +27,9 @@ import { ConditionDetectorService } from '../directives/condition-detector.servi
 // plausible reason, and never trade. No error anywhere. See #839, and the guard that now
 // enforces this: `nest/scripts/validate-threshold-sources.cjs`.
 import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
+import { resolveEffectiveRole } from '../../common/utils/signal-direction';
 import { RiskService } from '../risk/risk.service';
+import { buildRiskProfile } from '../risk/risk-profile-rules';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { MarketBar } from '../directives/interfaces/directive.interface';
@@ -810,6 +812,40 @@ export class TradingStrategyService {
     } catch { /* DB may be unavailable */ }
 
     // ── 4. RiskService portfolio gates ──
+    //
+    // ⚠️ These two caps are read OUTSIDE the try block below, deliberately. Inside it, a settings
+    // failure would be swallowed by the catch — which logs "proceeding with caution" and lets the
+    // order through. That would turn a broken settings read into a SILENTLY DISABLED risk cap, which
+    // is the exact defect shape this file keeps producing. Outside, it is visible here. (#865)
+    const maxPerSymbol = await this.settings.get<number>('risk.maxPerSymbol');
+    const maxDrawdown = await this.settings.get<number>('risk.maxDrawdown');
+
+    // ⚠️ FAIL CLOSED ON AN UNREADABLE CAP (2026-09-17).
+    //
+    // `allocation > undefined` is `false` and `drawdown >= undefined` is `false`, so a cap that
+    // arrives as `undefined` does not block the trade — it REMOVES the block, silently. Discovered
+    // by a test fixture that was missing two keys: the drawdown gate stopped firing altogether and
+    // nothing in the log said so.
+    //
+    // A cap we cannot read is a cap we cannot honour, so the trade is refused with a reason that
+    // NAMES the key. Refusing is the safe direction: this is a money path, and "we could not
+    // evaluate the limit" must never render as "the limit is fine" (development-philosophy §7).
+    const unreadableCaps = (
+      [
+        ['risk.maxOpenPositions', maxOpenPositions],
+        ['risk.maxPerSymbol', maxPerSymbol],
+        ['risk.maxDrawdown', maxDrawdown],
+      ] as [string, unknown][]
+    ).filter(([, v]) => typeof v !== 'number' || !Number.isFinite(v));
+    if (unreadableCaps.length > 0) {
+      return {
+        allowed: false,
+        reason:
+          `Risk cap(s) unreadable: ${unreadableCaps.map(([k]) => k).join(', ')} — refusing the order ` +
+          'rather than trading without them',
+      };
+    }
+
     try {
       const positions = await this.mt5.getPositions().catch(() => []);
       const account = await this.mt5.getAccount().catch(() => null);
@@ -851,14 +887,11 @@ export class TradingStrategyService {
           : 30;
         const estimatedCapital = (size * 100_000) / Math.max(leverage, 1); // Margin used, not notional
 
-        const riskProfile = {
-          maxPortfolioRisk: 0.15,
-          maxPerTradeRisk: 0.02,
-          maxPerSymbol: 0.25,
-          maxPositions: maxOpenPositions,
-          maxDrawdown: 0.25,
-          trailingStopAtProfit: 0.03,
-        };
+        const riskProfile = buildRiskProfile({
+          maxOpenPositions,
+          maxPerSymbol,
+          maxDrawdown,
+        });
 
         const posCheck = this.riskService.canOpenPosition(
           positions.length,
@@ -1038,16 +1071,23 @@ export class TradingStrategyService {
         // NOTE: `protocolId` here is the protocol SLUG (matching the routing
         // records at runtime), while trading_strategy.protocolId may hold a UUID.
         //
-        // ⚠️ `role` is DERIVED FROM THE PROTOCOL, not hardcoded. It was hardcoded
-        // 'long', which is wrong for the SHORT_ONLY protocol (vix-short-v1) — a
-        // short bot seeded as role 'long' would be routed as if it were going long.
+        // ⚠️ `role` is DERIVED, not hardcoded. It was hardcoded 'long', which is wrong for the
+        // SHORT_ONLY protocol (vix-short-v1) — a short bot seeded as role 'long' would be routed as
+        // if it were going long.
+        //
+        // Precedence: the bot's DECLARED `requireDirection` wins, because that is the field the
+        // create form exposes and the field a person sets. The protocol-name heuristic remains only
+        // as a fallback for seeds that declare nothing — it is a name guess, and it cannot be
+        // removed until every seeded bot declares its direction, since removing it silently would
+        // flip a short bot back to 'long'.
         try {
-          const shortOnly = /-short|short-/i.test(s.protocolId);
+          const declared = resolveEffectiveRole(null, (s as any).requireDirection);
+          const shortFromName = /-short|short-/i.test(s.protocolId);
           await (this.prisma as any).strategyProtocol.create({
             data: {
               strategyId: createdBot.id,
               protocolId: s.protocolId,
-              role: shortOnly ? 'short' : 'long',
+              role: declared ?? (shortFromName ? 'short' : 'long'),
               sortOrder: 0,
             },
           });

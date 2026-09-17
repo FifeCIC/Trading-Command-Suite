@@ -64,6 +64,10 @@ import { PositionTimeStopService } from './position-time-stop.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
 import { checkSessionWindow, auditNameVsWindow, SessionGateResult } from '../trading/session-window';
 import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
+// ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Replacing local predicates here because
+// `score.signal === 'SELL'` misses `STRONG_SELL`, which dispatched a BUY on the strongest bearish
+// signal. See `signal-direction.ts`.
+import { signalToSide, directionToSide } from '../../common/utils/signal-direction';
 import { computeMarketStatus } from '../directives/market-status';
 // #849 (2026-09-17) — the layer kill switches and bot-queue settings are declared settings now.
 // ⚠️ The DEFAULTS in settings-registry.ts are load-bearing: `automation.tradingEnabled` is false, and it
@@ -1260,8 +1264,6 @@ export class AutomationLoopService implements OnModuleInit {
         //
         // Enforced now by nest/scripts/validate-threshold-sources.cjs — a literal here fails the build.
         const threshold = cfg.tradeThreshold ?? BOT_BAR_DEFAULT;
-        const direction = score.signal === 'SELL' ? 'SELL' : 'BUY';
-        // A/B trades are BUY-side unless the protocol signals a clear SELL.
         if (score.composite < threshold) {
           decisions.push({
             timestamp: new Date().toISOString(),
@@ -1276,7 +1278,23 @@ export class AutomationLoopService implements OnModuleInit {
           return;
         }
 
-        const sideDir: 'BUY' | 'SELL' = direction === 'SELL' ? 'SELL' : 'BUY';
+        // ⚠️ Single authority. This read `score.signal === 'SELL' ? 'SELL' : 'BUY'`, which turned a
+        // STRONG_SELL into a BUY — the same inversion the router had — followed by a pointless
+        // round-trip (`direction === 'SELL' ? 'SELL' : 'BUY'`).
+        const sideDir = signalToSide(score.signal);
+        if (!sideDir) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: `ab-test:${side}`,
+            symbol: sym,
+            brokerId,
+            decision: 'SKIP',
+            reason: `AB-${side} ${test.name}: signal class "${score.signal}" has no derivable side`,
+            composite: score.composite,
+            signal: score.signal ?? 'HOLD',
+          });
+          return;
+        }
         const entryPrice = bars[bars.length - 1]?.close ?? 0;
         const result = await this.abTestService.dispatchSideTrade({
           test,
@@ -1478,7 +1496,22 @@ export class AutomationLoopService implements OnModuleInit {
         // same number the retired scoring path compared. combinedStrength stays
         // for logs/display only.
         const gatePct = Number(head.compositePct ?? 0);
-        const side: 'BUY' | 'SELL' = head.direction === 'SHORT' ? 'SELL' : 'BUY';
+        // ⚠️ Single authority for direction → side. This read
+        // `head.direction === 'SHORT' ? 'SELL' : 'BUY'`, so ANY unrecognised direction silently
+        // became a BUY. Combined with the router's `startsWith('SELL')` bug, a STRONG_SELL reached
+        // here as direction=LONG and became a BUY. An underivable direction is now BLOCKED and
+        // named rather than defaulted into the wrong side of the market.
+        const side = directionToSide(head.direction);
+        if (!side) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'BLOCKED',
+            reason: `[QueueBot] queue direction "${head.direction}" has no derivable side`,
+            composite: 0, signal: 'HOLD',
+          });
+          continue;
+        }
 
         if (!head.scoreId || !Number.isFinite(gatePct) || gatePct < 0 || gatePct > 100) {
           decisions.push({

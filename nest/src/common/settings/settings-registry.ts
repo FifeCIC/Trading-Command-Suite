@@ -140,6 +140,54 @@ export const SETTINGS: SettingDefinition[] = [
     max: 100000,
     migratedFrom: 'MT5_MAX_DAILY_LOSS',
   },
+  {
+    // ⚠️ Added 2026-09-17 (#865). This cap was HARDCODED as `maxPerSymbol: 0.25` in five places —
+    // four of them in `risk.controller.ts` alone. Measured that day it was the single largest entry
+    // blocker: 78 refusals, every one reading `Allocation 62.7% exceeds max per symbol 25%`, and
+    // **no setting existed to move it**. A risk cap an operator cannot find is a cap that gets
+    // worked around rather than reviewed.
+    //
+    // ⚠️ The value is a FRACTION of portfolio value (0.25 = 25%), unlike the frontend's
+    // `riskMaxPerSymbol`, which is a whole-number percent in localStorage. Do not mix them.
+    key: 'risk.maxPerSymbol',
+    type: 'number',
+    defaultValue: 0.25,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Max per symbol',
+    description:
+      'Ceiling on a single position as a fraction of portfolio value (0.25 = 25%). Refuses the ' +
+      'order rather than reducing its size. ⚠️ Raising this does not by itself admit more trades: ' +
+      'the estimate it is compared against is computed in assessGlobalRiskLimits() and has its own ' +
+      'defect (#865) — check the decision log after any change here.',
+    userChangeable: true,
+    min: 0.01,
+    // A cap of 1.0 permits the whole portfolio in one instrument, which is a decision an operator
+    // may legitimately make on a demo account — so it is reachable, but it is not the default and
+    // the description says what it means.
+    max: 1.0,
+  },
+  {
+    // ⚠️ Added 2026-09-17 (#865) — same class as risk.maxPerSymbol: declared live, hardcoded 0.25
+    // in five places, unmovable.
+    //
+    // ⚠️ Read `maxDrawdown`'s caveat in risk-profile-rules.ts before changing it. The peak equity
+    // this is measured against is IN-MEMORY and only ever increases, so raising the limit does not
+    // fix a bad peak — it only makes the system tolerate one. The real guard is the `null` check in
+    // assessGlobalRiskLimits() that refuses to invent an account value (#848).
+    key: 'risk.maxDrawdown',
+    type: 'number',
+    defaultValue: 0.25,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Max drawdown',
+    description:
+      'Peak-to-current fall in equity (0.25 = 25%) that stops further order placement. Measured ' +
+      'against an in-memory, monotonically increasing high-water mark that resets only on restart.',
+    userChangeable: true,
+    min: 0.01,
+    max: 1.0,
+  },
 
   // ── META.Stack layer kill switches (#615) + bot-queue pacing (#714) ─────────
   // Migrated 2026-09-17 (#849). Previously read and written directly on `global_setting` inside
