@@ -328,3 +328,200 @@ export function parseStoredSetting(
 ): SettingValidation {
   return validateSetting(def, stored);
 }
+
+// ── Key families ───────────────────────────────────────────────────────────────
+//
+// A FAMILY is a declaration covering a PATTERN of keys rather than one key.
+//
+// WHY IT EXISTS: the 2026-09-17 inventory measured 462 `global_setting` keys, and 442 of them are
+// `directive:<id>:<field>` config — 101 directives × {directionBias, maxScore, priority, category,
+// minScore}. Writing 442 declarations would be absurd, and more importantly it would be WRONG: each
+// `maxScore` is a load-bearing scoring weight, so inventing 442 defaults is exactly the class of mistake
+// that would have declared `automation.tradingEnabled` as `true`.
+//
+// 🛑 THE SAFETY PROPERTY, AND IT IS THE WHOLE DESIGN
+// --------------------------------------------------
+// **A family member has NO default, therefore `ensureDefaults()` can never materialise one.**
+// Seeding is driven by `RUNTIME_SETTINGS`, built from `SETTINGS` (individual declarations with defaults).
+// Families are a separate list, never iterated for seeding. So adding a family cannot change a single
+// value on any install — it can only make an EXISTING key readable through one owner, with validation
+// and provenance reporting.
+//
+// ⚠️ AND SO: `resolve()` REFUSES a family key. A family member with no row has no value to report, and
+// returning `null`/`0` for it would be a fabricated reading — the *plausible numbers, no error* defect.
+// Read a family member with `resolveFamily()`, which reports whether a row EXISTS and validates it if so,
+// and leaves the fallback to the code that owns the behaviour.
+
+export interface SettingFamilyField {
+  type: SettingType;
+  min?: number;
+  max?: number;
+  /**
+   * Documented, and deliberately NOT enforced. An over-tight validator that rejects a valid value turns
+   * a working directive into an unreadable row, and that failure looks like data corruption rather than
+   * like a limit — a worse outcome than not validating at all.
+   */
+  allowed?: string[];
+  description: string;
+  userChangeable: boolean;
+}
+
+export interface SettingFamily {
+  id: string;
+  label: string;
+  owner: string;
+  description: string;
+  /** Anchored pattern whose captures identify the subject and the field. */
+  pattern: RegExp;
+  /** 1-based capture group holding the FIELD name. 0 means the key has no field component. */
+  fieldGroup: number;
+  /** 1-based capture group holding the SUBJECT (directive slug, broker id, …). */
+  subjectGroup: number;
+  fields: Record<string, SettingFamilyField>;
+}
+
+/**
+ * The declared families.
+ *
+ * ⚠️ Add a family only when the key SHAPE is genuinely open-ended. A family that matches one key is an
+ * individual declaration wearing a pattern — it would hide that key's default from `ensureDefaults()`
+ * while pretending to be a setting.
+ */
+export const SETTING_FAMILIES: SettingFamily[] = [
+  {
+    id: 'directive',
+    label: 'Per-directive configuration',
+    owner: 'directives',
+    description:
+      'Tuning for one directive: category, direction bias, score weights and priority. Read by ' +
+      'directive-config.service.ts and the gating pipeline. ⚠️ `maxScore` is a WEIGHT, not a percentage — ' +
+      'changing it changes every protocol that uses that directive, so it is the most consequential field.',
+    pattern: /^directive:([a-z0-9-]+):([A-Za-z]+)$/,
+    subjectGroup: 1,
+    fieldGroup: 2,
+    fields: {
+      category: {
+        type: 'string',
+        description: 'Grouping label used by the directive explorer.',
+        userChangeable: false,
+      },
+      directionBias: {
+        type: 'string',
+        allowed: ['LONG_ONLY', 'SHORT_ONLY', 'BOTH', 'NEUTRAL'],
+        description:
+          'Which direction this directive may justify. A one-sided directive inside a two-sided protocol ' +
+          'is a real constraint, not a label.',
+        userChangeable: false,
+      },
+      // Bounds are deliberately WIDE. Observed range is 30-200, but a directive may legitimately be
+      // reweighted, and rejecting a valid weight would make the row unreadable.
+      maxScore: {
+        type: 'number',
+        min: 1,
+        max: 1000,
+        description:
+          'Maximum score this directive can contribute. A WEIGHT: it sets the directive’s share of a ' +
+          'protocol’s total.',
+        userChangeable: true,
+      },
+      minScore: {
+        type: 'number',
+        min: 0,
+        max: 1000,
+        description: 'Floor below which the directive reports nothing.',
+        userChangeable: true,
+      },
+      priority: {
+        type: 'number',
+        min: 0,
+        max: 100,
+        description: 'Evaluation ordering hint.',
+        userChangeable: true,
+      },
+    },
+  },
+  {
+    id: 'brokerTrading',
+    label: 'Per-broker trading flag',
+    owner: 'automation',
+    description:
+      'The #615 trading kill switch for one broker. ⚠️ FAIL-CLOSED: the reader treats an absent row as ' +
+      'DISABLED (see restoreBrokerTradingFlags), which is why this is a family with no default rather ' +
+      'than a seeded setting — a seeded `true` would re-enable a broker a human had switched off.',
+    pattern: /^automation\.brokerTrading\.([A-Za-z0-9_-]+)$/,
+    subjectGroup: 1,
+    fieldGroup: 0,
+    fields: {
+      __value: {
+        type: 'boolean',
+        description: 'Whether trading is permitted for this broker.',
+        userChangeable: true,
+      },
+    },
+  },
+];
+
+/**
+ * Match a key against the declared families.
+ *
+ * Returns null when nothing matches — which is the signal for "this key has no owner", the number
+ * `/api/system/settings/registry` reports as `undeclaredKeysInDb`.
+ */
+export function matchFamily(
+  key: string,
+): { family: SettingFamily; subject: string; field: string } | null {
+  for (const family of SETTING_FAMILIES) {
+    const m = family.pattern.exec(key);
+    if (!m) continue;
+    const subject = m[family.subjectGroup] ?? '';
+    // fieldGroup 0 means the key has no field component; one `__value` field describes it.
+    const field =
+      family.fieldGroup === 0 ? '__value' : (m[family.fieldGroup] ?? '');
+    if (!family.fields[field]) continue;
+    return { family, subject, field };
+  }
+  return null;
+}
+
+/** Is this a well-formed key for the given family field? */
+export function validateFamilyValue(
+  field: SettingFamilyField,
+  raw: unknown,
+): SettingValidation {
+  if (field.type === 'boolean') {
+    if (typeof raw === 'boolean') return { ok: true, value: raw };
+    if (raw === 'true' || raw === 1 || raw === '1')
+      return { ok: true, value: true };
+    if (raw === 'false' || raw === 0 || raw === '0')
+      return { ok: true, value: false };
+    return {
+      ok: false,
+      reason: `expected a boolean, received ${JSON.stringify(raw)}`,
+    };
+  }
+  if (field.type === 'number') {
+    const n =
+      typeof raw === 'number'
+        ? raw
+        : typeof raw === 'string'
+          ? Number(raw.trim())
+          : NaN;
+    if (!Number.isFinite(n))
+      return {
+        ok: false,
+        reason: `expected a number, received ${JSON.stringify(raw)}`,
+      };
+    if (field.min !== undefined && n < field.min)
+      return { ok: false, reason: `${n} is below the minimum of ${field.min}` };
+    if (field.max !== undefined && n > field.max)
+      return { ok: false, reason: `${n} is above the maximum of ${field.max}` };
+    return { ok: true, value: n };
+  }
+  if (typeof raw !== 'string') {
+    return {
+      ok: false,
+      reason: `expected a string, received ${JSON.stringify(raw)}`,
+    };
+  }
+  return { ok: true, value: raw };
+}

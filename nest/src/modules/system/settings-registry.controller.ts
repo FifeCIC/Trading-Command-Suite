@@ -7,12 +7,14 @@ import {
   Post,
   Put,
   Param,
+  Query,
 } from '@nestjs/common';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import {
   SETTINGS,
   RUNTIME_SETTINGS,
   SECRET_SETTINGS,
+  SETTING_FAMILIES,
 } from '../../common/settings/settings-registry';
 
 /**
@@ -61,8 +63,28 @@ export class SettingsRegistryController {
         runtime: RUNTIME_SETTINGS.length,
         secrets: SECRET_SETTINGS.length,
         undeclaredKeysInDb: undeclared.count,
+        familyMembers: undeclared.familyMembers,
       },
       undeclaredKeySample: undeclared.sample,
+      // Families are reported so the mechanism is VISIBLE. A key-family layer nobody can see is
+      // indistinguishable from one that does not exist, and the count above only becomes meaningful
+      // once it is clear how many keys are covered by a shape rather than by a named setting.
+      families: SETTING_FAMILIES.map((f) => ({
+        id: f.id,
+        label: f.label,
+        owner: f.owner,
+        pattern: f.pattern.source,
+        fields: Object.entries(f.fields).map(([name, def]) => ({
+          field: name,
+          type: def.type,
+          min: def.min,
+          max: def.max,
+          allowed: def.allowed,
+          userChangeable: def.userChangeable,
+        })),
+        seeded: false,
+        note: 'Members have NO default, so ensureDefaults() never creates one. Read via GET .../family/:key',
+      })),
       settings,
       // Present so the shape of the contract is self-describing — an API that documents its own
       // provenance semantics is one a new agent can use without reading this file.
@@ -102,6 +124,31 @@ export class SettingsRegistryController {
         ? 'DRY RUN — nothing was written. `wouldCreate` is what a real run would add.'
         : 'Only missing settings are created. Any setting with an existing value is left untouched.',
     };
+  }
+
+  /**
+   * GET /api/system/settings/registry/family?key=<full key> — read one KEY-FAMILY member.
+   *
+   * The key travels as a QUERY parameter, not a path segment, because keys contain dots and colons
+   * (`directive:adx:maxScore`, `automation.brokerTrading.mt5`) which a path parameter would split.
+   *
+   * ⚠️ `source: 'absent'` is a real answer, not an error: a family member has no declared default, so an
+   * absent row means the OWNER's fallback is in force. Returning a value here would fabricate one.
+   */
+  @Get('family')
+  async readFamily(@Query('key') key?: string) {
+    if (!key) {
+      throw new BadRequestException(
+        'pass ?key=<full setting key>, for example ?key=directive:adx:maxScore',
+      );
+    }
+    const resolved = await this.resolver.resolveFamily(key);
+    if (resolved.source === 'invalid') {
+      this.logger.warn(
+        `family key "${key}" holds an unusable value: ${resolved.error}`,
+      );
+    }
+    return resolved;
   }
 
   /**

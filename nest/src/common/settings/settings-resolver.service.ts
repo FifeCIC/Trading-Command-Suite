@@ -7,6 +7,8 @@ import {
   parseStoredSetting,
   validateSetting,
   isSettingFailure,
+  matchFamily,
+  validateFamilyValue,
 } from './settings-registry';
 import {
   EnsureSettingsReport,
@@ -72,6 +74,29 @@ export interface ResolvedSetting {
  */
 export type EnsureReport = EnsureSettingsReport;
 
+/**
+ * A resolved KEY-FAMILY member.
+ *
+ * ⚠️ `source: 'absent'` is a THIRD state, and it is not the same as a default. A declared setting with no
+ * row falls back to its declared default; a family member has no default, so "absent" means *the reader's
+ * own fallback applies* — e.g. a directive code default, or the fail-closed `disabled` for a broker.
+ * Collapsing that into a value here would fabricate a reading.
+ */
+export interface ResolvedFamilySetting {
+  key: string;
+  family: string;
+  subject: string;
+  field: string;
+  /** Whether a row exists. `false` means the owner's own fallback is in force. */
+  present: boolean;
+  value?: number | boolean | string;
+  source: 'db' | 'absent' | 'invalid';
+  storedValue?: string;
+  error?: string;
+  owner: string;
+  userChangeable: boolean;
+}
+
 @Injectable()
 export class SettingsResolverService implements OnModuleInit {
   private readonly logger = new Logger(SettingsResolverService.name);
@@ -123,10 +148,19 @@ export class SettingsResolverService implements OnModuleInit {
   async resolve(key: string): Promise<ResolvedSetting> {
     const def = SETTINGS_BY_KEY.get(key);
     if (!def) {
+      const family = matchFamily(key);
+      if (family) {
+        throw new Error(
+          `"${key}" belongs to the "${family.family.id}" key family, which has NO declared default. ` +
+            `Use resolveFamily() — it reports whether a row exists and validates it, and leaves the ` +
+            `fallback to the code that owns the behaviour. This method cannot answer, and returning a ` +
+            `made-up value here is how a fabricated reading enters the pipeline.`,
+        );
+      }
       throw new Error(
-        `setting "${key}" is not declared in settings-registry.ts. ` +
-          `Declare it (with a verified default) before reading it — an undeclared read is how a ` +
-          `setting ends up in a store with no owner.`,
+        `setting "${key}" is not declared in settings-registry.ts and matches no family. ` +
+          `Declare it (with a verified default) before reading it, or add a family if its shape is ` +
+          `open-ended — an undeclared read is how a setting ends up in a store with no owner.`,
       );
     }
 
@@ -175,6 +209,71 @@ export class SettingsResolverService implements OnModuleInit {
       userChangeable: def.userChangeable,
       owner: def.owner,
       migratedFrom: def.migratedFrom,
+    };
+  }
+
+  /**
+   * Read a KEY-FAMILY member: does a row exist, and is it valid?
+   *
+   * ⚠️ DELIBERATELY DOES NOT SUPPLY A FALLBACK. A family member has no declared default, so when no row
+   * exists the honest answer is "absent" — the decision about what that MEANS belongs to the code that
+   * owns the behaviour. The alternative (return the reader's current fallback as if it were the value)
+   * would hide the difference between "configured" and "defaulted", which is the distinction the
+   * registry exists to make.
+   */
+  async resolveFamily(key: string): Promise<ResolvedFamilySetting> {
+    const match = matchFamily(key);
+    if (!match) {
+      throw new Error(
+        `"${key}" matches no declared key family. Families are declared in settings-registry.ts.`,
+      );
+    }
+    const { family, subject, field } = match;
+    const fieldDef = family.fields[field];
+    const base = {
+      key,
+      family: family.id,
+      subject,
+      field,
+      owner: family.owner,
+      userChangeable: fieldDef.userChangeable,
+    };
+
+    let stored: string | null = null;
+    try {
+      if (this.prisma.isAvailable) {
+        const row = await this.prisma.globalSetting.findUnique({
+          where: { key },
+        });
+        stored = row?.value ?? null;
+      }
+    } catch (err) {
+      this.logger.warn(
+        `family key "${key}" could not be read: ${(err as Error).message}`,
+      );
+    }
+
+    if (stored === null) return { ...base, present: false, source: 'absent' };
+
+    const parsed = validateFamilyValue(fieldDef, stored);
+    if (isSettingFailure(parsed)) {
+      this.logger.error(
+        `family key "${key}" holds an unusable value (${JSON.stringify(stored)}): ${parsed.reason}`,
+      );
+      return {
+        ...base,
+        present: true,
+        source: 'invalid',
+        storedValue: stored,
+        error: parsed.reason,
+      };
+    }
+    return {
+      ...base,
+      present: true,
+      source: 'db',
+      value: parsed.value,
+      storedValue: stored,
     };
   }
 
@@ -240,27 +339,34 @@ export class SettingsResolverService implements OnModuleInit {
    */
   async undeclaredKeys(
     limit = 25,
-  ): Promise<{ count: number; sample: string[] }> {
+  ): Promise<{ count: number; sample: string[]; familyMembers: number }> {
     try {
-      if (!this.prisma.isAvailable) return { count: 0, sample: [] };
-      const declared = [...SETTINGS_BY_KEY.keys()];
-      const [count, rows] = await Promise.all([
-        this.prisma.globalSetting.count({
-          where: { key: { notIn: declared } },
-        }),
-        this.prisma.globalSetting.findMany({
-          where: { key: { notIn: declared } },
-          select: { key: true },
-          orderBy: { key: 'asc' },
-          take: limit,
-        }),
-      ]);
-      return { count, sample: rows.map((r) => r.key) };
+      if (!this.prisma.isAvailable)
+        return { count: 0, sample: [], familyMembers: 0 };
+      // Fetch every key and classify in JS rather than building a SQL `notIn` over 100+ declarations and
+      // family patterns. The table is small (462 rows measured 2026-09-17), and the classification MUST
+      // use the same `matchFamily()` the resolver uses — a second, SQL-shaped approximation of "is this
+      // declared?" is exactly the two-copies-of-a-rule problem this module exists to remove.
+      const rows = await this.prisma.globalSetting.findMany({
+        select: { key: true },
+        orderBy: { key: 'asc' },
+      });
+      const undeclared = rows
+        .map((r) => r.key)
+        .filter((k) => !SETTINGS_BY_KEY.has(k) && !matchFamily(k));
+      const declaredPresent = [...SETTINGS_BY_KEY.keys()].filter((k) =>
+        rows.some((r) => r.key === k),
+      ).length;
+      return {
+        count: undeclared.length,
+        sample: undeclared.slice(0, limit),
+        familyMembers: rows.length - undeclared.length - declaredPresent,
+      };
     } catch (err) {
       this.logger.warn(
         `undeclared-key count failed: ${(err as Error).message}`,
       );
-      return { count: 0, sample: [] };
+      return { count: 0, sample: [], familyMembers: 0 };
     }
   }
 
@@ -276,12 +382,36 @@ export class SettingsResolverService implements OnModuleInit {
    * Secrets are refused outright: they belong in `.env`, and a settings endpoint that can write to them
    * would be a route to persisting a credential in the database.
    */
-  async set(key: string, raw: unknown): Promise<ResolvedSetting> {
+  async set(
+    key: string,
+    raw: unknown,
+  ): Promise<ResolvedSetting | ResolvedFamilySetting> {
     const def = SETTINGS_BY_KEY.get(key);
     if (!def) {
-      throw new Error(
-        `setting "${key}" is not declared in settings-registry.ts — declare it before writing it.`,
+      const family = matchFamily(key);
+      if (!family) {
+        throw new Error(
+          `setting "${key}" is not declared in settings-registry.ts and matches no family — declare it before writing it.`,
+        );
+      }
+      // A family member may be written: unlike READING, there is no ambiguity about what the caller
+      // means. The field definition still supplies validation, so a family is not an escape hatch from it.
+      const parsedFamily = validateFamilyValue(
+        family.family.fields[family.field],
+        raw,
       );
+      if (isSettingFailure(parsedFamily)) {
+        throw new Error(
+          `invalid value for "${key}" (family ${family.family.id}, field ${family.field}): ${parsedFamily.reason}`,
+        );
+      }
+      const familyValue = String(parsedFamily.value);
+      await this.prisma.globalSetting.upsert({
+        where: { key },
+        update: { value: familyValue },
+        create: { key, value: familyValue },
+      });
+      return this.resolveFamily(key);
     }
     if (def.class === 'secret') {
       throw new Error(
