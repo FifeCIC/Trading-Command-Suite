@@ -9,6 +9,7 @@ import {
   isSettingFailure,
   matchFamily,
   validateFamilyValue,
+  SETTING_FAMILIES,
 } from './settings-registry';
 import {
   EnsureSettingsReport,
@@ -275,6 +276,114 @@ export class SettingsResolverService implements OnModuleInit {
       value: parsed.value,
       storedValue: stored,
     };
+  }
+
+  /**
+   * listFamily() — every STORED member of a family, validated.
+   *
+   * WHY BULK: `directive-config.service.ts` reads all ~442 directive keys in one query. Routing that
+   * through `resolveFamily()` would be 442 round-trips, and an access path that is 442x slower is one
+   * that gets bypassed — which is exactly how the raw access this migration removes would come back.
+   *
+   * ⚠️ THREE OUTCOMES, DELIBERATELY DISTINCT (the rule this module keeps enforcing):
+   *   - `members: []`, no error        → there genuinely are no rows
+   *   - `members: [...]` with `invalid > 0` → rows exist but some cannot be parsed; each carries `error`
+   *   - `error` set                    → the query FAILED. This is not "no rows", and a caller that
+   *     treats it as one would silently fall back to code defaults while the table still holds data.
+   *
+   * ⚠️ An invalid member is RETURNED, not dropped. Dropping it would make an unreadable weight look like
+   * an absent one, and the broken row would stay in the table unseen.
+   */
+  async listFamily(
+    familyId: string,
+    subject?: string,
+  ): Promise<{ members: ResolvedFamilySetting[]; invalid: number; error?: string }> {
+    const family = SETTING_FAMILIES.find((f) => f.id === familyId);
+    if (!family) {
+      throw new Error(`no family "${familyId}" is declared in settings-registry.ts`);
+    }
+
+    // The subject is followed by ':' only when a field follows it. Derived from the declaration rather
+    // than a separate lookup table, so a new family cannot get this subtly wrong.
+    const prefix = subject
+      ? family.fieldGroup === 0
+        ? `${family.prefix}${subject}`
+        : `${family.prefix}${subject}:`
+      : family.prefix;
+
+    let rows: Array<{ key: string; value: string }>;
+    try {
+      if (!this.prisma.isAvailable) {
+        return { members: [], invalid: 0, error: 'database unavailable — nothing was read' };
+      }
+      rows = await this.prisma.globalSetting.findMany({
+        where: { key: { startsWith: prefix } },
+        select: { key: true, value: true },
+      });
+    } catch (err) {
+      this.logger.warn(`family "${familyId}" bulk read failed: ${(err as Error).message}`);
+      return { members: [], invalid: 0, error: (err as Error).message };
+    }
+
+    const members: ResolvedFamilySetting[] = [];
+    let invalid = 0;
+    for (const row of rows) {
+      const match = matchFamily(row.key);
+      // A row under the prefix that the pattern does not accept (e.g. an extra segment) is reported
+      // rather than skipped: it is a key the family claims by prefix but cannot describe.
+      if (!match || match.family.id !== familyId) {
+        invalid += 1;
+        members.push({
+          key: row.key,
+          family: familyId,
+          subject: subject ?? '',
+          field: '',
+          present: true,
+          source: 'invalid',
+          storedValue: row.value,
+          error: 'key sits under the family prefix but does not match its pattern',
+          owner: family.owner,
+          userChangeable: false,
+        });
+        continue;
+      }
+      const parsed = validateFamilyValue(family.fields[match.field], row.value);
+      if (isSettingFailure(parsed)) {
+        invalid += 1;
+        members.push({
+          key: row.key,
+          family: familyId,
+          subject: match.subject,
+          field: match.field,
+          present: true,
+          source: 'invalid',
+          storedValue: row.value,
+          error: parsed.reason,
+          owner: family.owner,
+          userChangeable: family.fields[match.field].userChangeable,
+        });
+        continue;
+      }
+      members.push({
+        key: row.key,
+        family: familyId,
+        subject: match.subject,
+        field: match.field,
+        present: true,
+        source: 'db',
+        value: parsed.value,
+        storedValue: row.value,
+        owner: family.owner,
+        userChangeable: family.fields[match.field].userChangeable,
+      });
+    }
+
+    if (invalid > 0) {
+      this.logger.warn(
+        `family "${familyId}" (prefix ${prefix}) has ${invalid} unusable member(s) — they are reported, not skipped`,
+      );
+    }
+    return { members, invalid };
   }
 
   /**

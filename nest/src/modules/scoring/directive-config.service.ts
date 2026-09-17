@@ -15,6 +15,10 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// #849 (2026-09-17) — directive/protocol config is now read through the settings registry's key families.
+// ⚠️ The family has NO default on purpose: `seedFromDefaults()` below is explicit that the directive
+// CLASS is the single source of truth for these weights and the table is a mirror of it.
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
 export interface DirectiveConfig {
   maxScore?: number;
@@ -31,7 +35,10 @@ export class DirectiveConfigService {
   private cacheTime = 0;
   private readonly CACHE_TTL = 30_000; // 30 seconds
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingsResolverService,
+  ) {}
 
   // ── Key helpers ──────────────────────────────────────
 
@@ -45,16 +52,23 @@ export class DirectiveConfigService {
     if (!this.prisma.isAvailable) return {};
 
     try {
-      const prefix = `directive:${directiveId}:`;
-      const rows = await this.prisma.globalSetting.findMany({
-        where: { key: { startsWith: prefix } },
-        select: { key: true, value: true },
-      });
+      // #849 — through the settings registry's key family, not the table. `field` comes from the
+      // validated match rather than slicing the key string, so the field name and its type are declared
+      // in exactly one place.
+      const { members } = await this.settings.listFamily('directive', directiveId);
 
       const config: DirectiveConfig = {};
-      for (const row of rows) {
-        const field = row.key.slice(prefix.length);
-        const value = row.value;
+      for (const member of members) {
+        if (member.source === 'invalid') {
+          // DELIBERATE CHANGE, and a reported one: this previously assigned NaN silently. Skipping the
+          // field leaves it undefined and logs why — a broken weight should not become a number.
+          this.logger.warn(`directive ${directiveId} field ${member.field} is unusable: ${member.error}`);
+          continue;
+        }
+        // The switch below reads a local `value`, exactly as it did before the migration — the access
+        // path changed here, the coercion did not.
+        const field = member.field;
+        const value = String(member.value ?? '');
 
         switch (field) {
           case 'maxScore': config.maxScore = parseInt(value, 10); break;
@@ -76,17 +90,18 @@ export class DirectiveConfigService {
     if (!this.prisma.isAvailable) return new Map();
 
     try {
-      const rows = await this.prisma.globalSetting.findMany({
-        where: { key: { startsWith: 'directive:' } },
-        select: { key: true, value: true },
-      });
+      // #849 — one bulk family read replaces the raw prefix query.
+      const { members } = await this.settings.listFamily('directive');
 
       const map = new Map<string, DirectiveConfig>();
-      for (const row of rows) {
-        // key format: "directive:{id}:{field}"
-        const parts = row.key.split(':');
-        if (parts.length !== 3) continue;
-        const [, id, field] = parts;
+      for (const member of members) {
+        if (member.source === 'invalid') {
+          this.logger.warn(`directive ${member.subject} field ${member.field} is unusable: ${member.error}`);
+          continue;
+        }
+        const id = member.subject;
+        const field = member.field;
+        const row = { value: String(member.value ?? '') };
 
         let config = map.get(id);
         if (!config) { config = {}; map.set(id, config); }
@@ -145,19 +160,19 @@ export class DirectiveConfigService {
     if (!this.prisma.isAvailable) return new Map();
 
     try {
-      const prefix = `protocol:${slug}:`;
-      const rows = await this.prisma.globalSetting.findMany({
-        where: { key: { startsWith: prefix } },
-        select: { key: true, value: true },
-      });
+      // #849 — protocol overrides are a key family too; the subject is the slug:directiveId pair.
+      // ⚠️ Measured 2026-09-17: this family has ZERO rows, so this read returns empty today.
+      const { members } = await this.settings.listFamily('protocol', slug);
 
       const map = new Map<string, DirectiveConfig>();
-      for (const row of rows) {
-        // key format: "protocol:{slug}:{directiveId}:{field}"
-        const parts = row.key.split(':');
-        if (parts.length !== 4) continue;
-        const directiveId = parts[2];
-        const field = parts[3];
+      for (const member of members) {
+        if (member.source === 'invalid') {
+          this.logger.warn(`protocol ${slug} ${member.key} is unusable: ${member.error}`);
+          continue;
+        }
+        const directiveId = member.subject.split(':')[1] ?? member.subject;
+        const field = member.field;
+        const row = { value: String(member.value ?? '') };
 
         let config = map.get(directiveId);
         if (!config) { config = {}; map.set(directiveId, config); }
@@ -224,16 +239,19 @@ export class DirectiveConfigService {
     if (!this.prisma.isAvailable) return new Map();
 
     try {
-      const rows = await this.prisma.globalSetting.findMany({
-        where: { key: { startsWith: 'protocol:' } },
-        select: { key: true, value: true },
-      });
+      // #849 — one bulk family read for every protocol override. Zero rows measured 2026-09-17.
+      const { members } = await this.settings.listFamily('protocol');
 
       const map = new Map<string, Map<string, DirectiveConfig>>();
-      for (const row of rows) {
-        const parts = row.key.split(':');
-        if (parts.length !== 4) continue;
-        const [, slug, directiveId, field] = parts;
+      for (const member of members) {
+        if (member.source === 'invalid') {
+          this.logger.warn(`protocol override ${member.key} is unusable: ${member.error}`);
+          continue;
+        }
+        const slug = member.subject.split(':')[0] ?? member.subject;
+        const directiveId = member.subject.split(':')[1] ?? '';
+        const field = member.field;
+        const row = { value: String(member.value ?? '') };
 
         let inner = map.get(slug);
         if (!inner) { inner = new Map(); map.set(slug, inner); }

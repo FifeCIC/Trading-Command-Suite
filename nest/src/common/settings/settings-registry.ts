@@ -377,6 +377,13 @@ export interface SettingFamily {
   fieldGroup: number;
   /** 1-based capture group holding the SUBJECT (directive slug, broker id, …). */
   subjectGroup: number;
+  /**
+   * Bulk-read prefix, so a caller that needs EVERY member of a family is one indexed query rather than
+   * one round-trip per key. `directive-config.service.ts` reads all ~442 directive keys at once, so a
+   * per-key accessor would have been 442 queries — which is how a "cleaner" access path becomes a
+   * performance problem and then gets bypassed.
+   */
+  prefix: string;
   fields: Record<string, SettingFamilyField>;
 }
 
@@ -397,6 +404,7 @@ export const SETTING_FAMILIES: SettingFamily[] = [
       'directive-config.service.ts and the gating pipeline. ⚠️ `maxScore` is a WEIGHT, not a percentage — ' +
       'changing it changes every protocol that uses that directive, so it is the most consequential field.',
     pattern: /^directive:([a-z0-9-]+):([A-Za-z]+)$/,
+    prefix: 'directive:',
     subjectGroup: 1,
     fieldGroup: 2,
     fields: {
@@ -449,6 +457,7 @@ export const SETTING_FAMILIES: SettingFamily[] = [
       'DISABLED (see restoreBrokerTradingFlags), which is why this is a family with no default rather ' +
       'than a seeded setting — a seeded `true` would re-enable a broker a human had switched off.',
     pattern: /^automation\.brokerTrading\.([A-Za-z0-9_-]+)$/,
+    prefix: 'automation.brokerTrading.',
     subjectGroup: 1,
     fieldGroup: 0,
     fields: {
@@ -456,6 +465,60 @@ export const SETTING_FAMILIES: SettingFamily[] = [
         type: 'boolean',
         description: 'Whether trading is permitted for this broker.',
         userChangeable: true,
+      },
+    },
+  },
+  {
+    id: 'protocol',
+    label: 'Per-protocol directive override',
+    owner: 'scoring',
+    description:
+      'Overrides one directive\u2019s weights INSIDE one protocol \u2014 the mechanism behind ' +
+      '`protocolKey(slug, directiveId, field)` in directive-config.service.ts.\n\n' +
+      '\u26a0\ufe0f MEASURED 2026-09-17: this family has **zero rows** in the database. It is declared so the ' +
+      'code path that WRITES it has an owner and a validator, not because anything reads it today. ' +
+      'That is worth knowing before building on it: an override feature with no data may be unused, or ' +
+      'may have been tried and abandoned.\n\n' +
+      '🛑 A protocol override silently changes how one protocol scores relative to every other protocol ' +
+      'that shares the directive \u2014 so if this is ever surfaced in a UI, the blast radius needs saying ' +
+      'out loud on the control.',
+    pattern: /^protocol:([a-z0-9-]+:[a-z0-9-]+):([A-Za-z]+)$/,
+    prefix: 'protocol:',
+    // The subject is the protocol+directive PAIR: an override is meaningless without both.
+    subjectGroup: 1,
+    fieldGroup: 2,
+    fields: {
+      maxScore: {
+        type: 'number',
+        min: 1,
+        max: 1000,
+        description: 'Overridden maximum score for this directive within this protocol only.',
+        userChangeable: true,
+      },
+      minScore: {
+        type: 'number',
+        min: 0,
+        max: 1000,
+        description: 'Overridden floor for this directive within this protocol only.',
+        userChangeable: true,
+      },
+      priority: {
+        type: 'number',
+        min: 0,
+        max: 100,
+        description: 'Evaluation ordering hint for this override.',
+        userChangeable: true,
+      },
+      category: {
+        type: 'string',
+        description: 'Overridden grouping label within this protocol only.',
+        userChangeable: false,
+      },
+      directionBias: {
+        type: 'string',
+        allowed: ['LONG_ONLY', 'SHORT_ONLY', 'BOTH', 'NEUTRAL'],
+        description: 'Overridden direction bias within this protocol only.',
+        userChangeable: false,
       },
     },
   },

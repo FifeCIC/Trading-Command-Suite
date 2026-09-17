@@ -170,12 +170,22 @@ describe('key families', () => {
     expect(validateFamilyValue(field, 'yes').ok).toBe(false);
   });
 
-  it('documented families cover the two open-ended shapes measured in the database', () => {
-    // Measured 2026-09-17: 442 directive keys across 101 directives, and one brokerTrading key.
-    // If a third open-ended shape appears, this test is where its absence becomes visible.
+  it('documented families cover the open-ended shapes measured in the database', () => {
+    // Measured 2026-09-17: 442 directive keys across 101 directives, one brokerTrading key, and
+    // ZERO `protocol:` keys.
+    //
+    // ⚠️ This test did its job: it FAILED when `protocol` was added, which is exactly what it is
+    // for — "If a third open-ended shape appears, this test is where its absence becomes visible."
+    // The failure was reviewed and the family is a deliberate declaration (complete pattern,
+    // prefix, subjectGroup/fieldGroup and fields), so the expectation is updated rather than the
+    // family removed. It is declared so the WRITE path has an owner, not because anything reads it.
+    //
+    // If a FOURTH family is added, this test fails again — update it only after confirming the
+    // new family is intentional.
     expect(SETTING_FAMILIES.map((f) => f.id).sort()).toEqual([
       'brokerTrading',
       'directive',
+      'protocol',
     ]);
   });
 });

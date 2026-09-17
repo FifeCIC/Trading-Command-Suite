@@ -2,7 +2,7 @@
   "_comment": "Ratchet for RAW globalSetting access outside nest/src/common/settings. A file may only go DOWN. New direct access is the defect validate-settings-access.cjs exists to catch. These keys must be read through SettingsResolverService so provenance and the declared default are not bypassed. A file may legitimately REMAIN here for a DYNAMIC key that cannot be declared at all — currently automation-loop.service.ts, whose remaining 2 sites are the per-broker `automation.brokerTrading.<brokerId>` read and write (brokers are data, so there is no finite list to declare, and the resolver deliberately refuses undeclared keys). Note the consequence: those two reads do NOT fall back to a declared default, which is unchanged behaviour but is not yet covered by provenance reporting.",
   "totals": {
     "files": 10,
-    "hits": 27
+    "hits": 23
   },
   "files": {
     "prisma/seed.ts": 2,
@@ -10,7 +10,7 @@
     "src/modules/diversification/global-diversification.service.ts": 2,
     "src/modules/portfolio/portfolio-accounts.service.ts": 2,
     "src/modules/research/earnings-import-settings.service.ts": 4,
-    "src/modules/scoring/directive-config.service.ts": 7,
+    "src/modules/scoring/directive-config.service.ts": 3,
     "src/modules/signals/manual-trade-defaults.service.ts": 2,
     "src/modules/system/preferences.controller.ts": 2,
     "src/modules/system/settings.service.ts": 3,
