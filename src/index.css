@@ -691,6 +691,19 @@ button.nav-active {
     'footer footer footer';
 }
 
+/* ⚠️ LOAD-BEARING — issue #853. Do not "tidy" this away as redundant.
+   `.main-stage` is a grid item in `.site-shell`, and a grid item's default `min-width: auto`
+   resolves to its MIN-CONTENT width. So the main column refuses to shrink below the widest thing
+   inside it and the whole PAGE grows instead of the content adapting. Measured 2026-09-17 at a
+   680px viewport: `.main-stage` was **1528px inside a 665px `.site-shell`**, with
+   `document.scrollWidth` at 1803px — on a page whose only content was `MetaStackPipeline`.
+
+   With this in place, an inner element that sets `overflow-x: auto` scrolls INSIDE the column
+   rather than widening the page. That is what makes the META.Stack Cockpit's single scrolling row
+   of columns possible at all (and it is the same reason `ladder.css` sets `min-width: 0` on
+   `.lad-cards-col`). */
+.main-stage { min-width: 0; }
+
 .site-shell.layout-omni {
   padding: 10px;
   gap: 5px;

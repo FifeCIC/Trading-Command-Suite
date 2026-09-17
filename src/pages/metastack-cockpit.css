@@ -89,8 +89,8 @@
   gap: 1rem;
   padding: 0.5rem 0.75rem;
   margin-top: 0.75rem;
-  background: var(--color-panel, #1a1d2e);
-  border: 1px solid var(--color-border, #2d3040);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 0.72rem;
   color: var(--ink-soft, #94a3b8);
@@ -99,7 +99,7 @@
 .cockpit-screen-detail {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.68rem;
-  color: var(--color-muted, #64748b);
+  color: var(--ink-soft);
 }
 
 /* Preview grid — shows the 3 slots */
@@ -205,14 +205,38 @@
   height: auto !important;
   padding: 0 !important;
   margin: 0 !important;
-  overflow: hidden;
+  /* ⚠️ NO `overflow: hidden` here. It used to be set on this rule, and it would CLIP the
+     horizontal scroll that `.cockpit-columns` sets up — the later columns would be cut off
+     with no way to reach them. `.cockpit-columns` owns the overflow pair now. */
   z-index: 9999;
-  background: var(--bg, #000000);
+  background: var(--bg);
 }
 
 .cockpit-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  /* ⚠️ ONE ROW, ALWAYS — horizontal scrolling, never wrapping (user decision 2026-09-17).
+     This replaced `repeat(auto-fit, minmax(min(320px, 100%), 1fr))`, which wrapped the
+     pipeline onto a second row once there were more stages than would fit. For a cockpit that
+     is the wrong behaviour: the stages have a FIXED ORDER and a reader wants to scan Symbols →
+     Results left to right, the way an operator watches a control board. Wrapping breaks the
+     order into two disconnected rows and makes "which stage is next" a spatial puzzle.
+
+     `grid-auto-flow: column` + `grid-auto-columns` keeps every column in track 1..N whatever
+     the count. `minmax(320px, 1fr)` means: never narrower than 320px, but STRETCH to share the
+     width when there is room — so on a single screen the row scrolls, and on a wide
+     multi-monitor setup the same row simply spreads out with no scrolling and no change to the
+     markup. That is the "liquid" behaviour: derived from available width, never from a
+     hard-coded column count.
+
+     ⚠️ `overflow-y: hidden` is deliberate — the panels scroll internally and the row itself
+     must not gain a vertical scrollbar.
+     ⚠️ `overscroll-behavior-x: contain` stops a trackpad two-finger swipe at the row's end from
+     triggering the browser's back-navigation gesture. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(320px, 1fr);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
   width: 100%;
   height: 100%;
   gap: 0;
@@ -232,7 +256,7 @@
      `ladder.css` carries the same fix on `.lad-cards-col` for the same reason. */
   min-width: 0;
   overflow: hidden;
-  border-right: 1px solid var(--color-border, #2d3040);
+  border-right: 1px solid var(--line);
 }
 /* When the grid reflows the last column has no right-hand neighbour to separate from, so
    the divider is dropped rather than left hanging at the row edge. */
@@ -243,15 +267,18 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.75rem;
-  background: rgba(0,0,0,0.3);
-  border-bottom: 1px solid var(--color-border, #2d3040);
+  /* Was `rgba(0,0,0,0.3)` — a dark overlay that stayed dark in light mode. `--bg` is the
+     themed page surface, so in light mode this bar reads as a light grey strip against the
+     white panels, and in black mode it recedes. The border keeps it distinct either way. */
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
   font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
 }
 .cockpit-panel-hint {
   font-size: 0.62rem;
-  color: var(--color-muted, #64748b);
+  color: var(--ink-soft);
   font-weight: 400;
 }
 
@@ -300,9 +327,11 @@
 .cockpit-columns--page {
   height: min(76vh, 900px);
   margin: 1rem 0 1.5rem;
-  border: 1px solid var(--color-border, #2d3040);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  overflow: hidden;
+  /* Was `overflow: hidden`, which clipped the horizontal scroll from the base rule. The base
+     `.cockpit-columns` sets the `overflow-x: auto` / `overflow-y: hidden` pair; the radius
+     still clips the corners because this element IS the scroll container. */
 }
 
 /* `.cockpit-panel-body` is a flex column with no `gap`, so stacked cards would touch.

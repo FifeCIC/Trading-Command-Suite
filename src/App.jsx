@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { analytics, trackAppView, trackSupportClick } from './analytics';
+import { analytics, trackAppView } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -35,6 +35,22 @@ import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 
 const NAV_STRUCTURE = getNavStructure();
+
+/**
+ * Views the SHELL renders inline, with access to App's own state.
+ *
+ * ⚠️ Why this list has to exist. These views have no entry in `VIEW_COMPONENTS` — they need parent
+ * state, so they cannot be a standalone component — and they have no nav entry either. The redirect
+ * guard that salvages an unresolvable route therefore classified them as MISSING and bounced the user
+ * to the area's first page, which silently made them unreachable.
+ *
+ * Measured 2026-09-17: `/settings/support` redirected to `/settings/trading-settings` instead of
+ * rendering the support panel.
+ *
+ * Adding a name here is the correct way to say "the shell handles this one". Adding it to
+ * `VIEW_COMPONENTS` is not an option for these.
+ */
+const INLINE_VIEWS = ['demos', 'use-cases', 'analytics', 'about'];
 
 // Redirect the legacy /scoringStrategies/ area (renamed to /scoring/ 2026-08-19).
 function ScoringStrategiesRedirect() {
@@ -116,9 +132,16 @@ function AppShell() {
     : location.pathname.startsWith('/trading/symbol/') ? 'trading'
     : 'trading';
   const primaryArea = isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')));
-  // defaultView: use the first registered view for the current area, falling back to directives-registry
+  // defaultView: the first REAL view for the current area.
+  //
+  // ⚠️ NOT `areaViews[0]`. A `kind: 'section-header'` entry is a LABEL with an `id` (used as a
+  // React key) but NO PAGE, so taking index 0 produced `/settings/settings-layers` — a header id —
+  // which resolved to no component and rendered the shell's fallback. Settings is the first area to
+  // OPEN with a header (#617), which is what exposed this; every other area happened to start with a
+  // real page.
   const areaViews = NAV_STRUCTURE[primaryArea];
-  const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-registry';
+  const defaultView = areaViews?.find((item) => item.kind !== 'section-header' && item.id)?.id
+    || 'directives-registry';
   const secondaryView = isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView));
   // Dashboard renders full-bleed — no breadcrumb, no left section nav — as a
   // step toward the future widget-based, multi-screen dashboard.
@@ -274,7 +297,12 @@ function AppShell() {
 
   useEffect(() => {
     const views = NAV_STRUCTURE[primaryArea] || [];
-    const hasCurrentView = views.some((item) => item.id === secondaryView);
+    // ⚠️ A section header SATISFIES `item.id === secondaryView`, so testing `id` alone treats a
+    // header route as a real view and the redirect below NEVER fires — which is how
+    // `/settings/settings-layers` stayed broken while this guard looked correct. Headers must not
+    // count as "the current view exists".
+    const hasCurrentView = views.some((item) => item.id === secondaryView && item.kind !== 'section-header')
+      || INLINE_VIEWS.includes(secondaryView);
     const hasComponent = !!VIEW_COMPONENTS[secondaryView];
     if (!hasCurrentView && !hasComponent) {
       // ⚠️ Skip section headers when choosing the fallback route. A header is a LABEL, not a
@@ -378,11 +406,6 @@ function AppShell() {
     };
   }, []);
 
-  function onSupportClick(surface) {
-    trackSupportClick(surface);
-    pushActivity('SUPPORT', `CTA clicked from ${surface}`);
-  }
-
   async function onDownloadRuntimeReport() {
     const { buildRuntimeReport, exportRuntimeReport } = await import('./runtime/report');
     const runtimeReport = buildRuntimeReport({
@@ -405,7 +428,10 @@ function AppShell() {
 
   function onPrimarySelect(newArea) {
     const views = NAV_STRUCTURE[newArea] || [];
-    const firstView = views[0]?.id || 'overview';
+    // ⚠️ `views[0]?.id` is WRONG when an area opens with a section header. A header is a label with
+    // an id but no page, so clicking "Settings" navigated to `/settings/settings-layers` and the user
+    // landed on the shell's fallback instead of a settings page. Land on the first REAL view.
+    const firstView = views.find((item) => item.kind !== 'section-header' && item.id)?.id || 'overview';
     navigate(`/${newArea}/${firstView}`);
   }
 
@@ -514,26 +540,30 @@ function AppShell() {
       );
     }
 
+    // ⚠️ LAST RESORT — an honest dead end, NOT a sponsorship panel.
+    //
+    // This `return` used to BE the support panel, so it fired for EVERY unresolved view. A route that
+    // exists in the nav but has no page — such as `/settings/settings-layers`, which is a
+    // section-header id — therefore rendered "Support Trading Command Suite" with a donation button.
+    // That failure mode is bad three times over: the user is told the app is broken AND asked for
+    // money, the real cause stays invisible, and a missing page looks exactly like a deliberate one.
+    //
+    // The support panel was DELETED 2026-09-17 (owner decision). It had no route of its own and was
+    // reachable only as this fallback, so it was never a page — it was a disguised error state.
+    //
+    // Reaching here means `VIEW_COMPONENTS[secondaryView]`, `PLUGIN_TAB_SKELETONS[secondaryView]` and
+    // every inline branch above all missed. Say that, and NAME the view so it is reportable.
     return (
-      <section className="demo-panel">
-        <h2>Support Trading Command Suite</h2>
+      <section className="intro-panel">
+        <h2>This view has no page</h2>
         <p>
-          If this platform saves you development time, sponsorships help maintain rapid releases and open tooling.
+          <code>{secondaryView}</code> is registered in the navigation but has no view component, so
+          there is nothing to render here.
         </p>
-        <div className="inline-actions">
-          <a
-            className="support-link-button"
-            href="https://www.buymeacoffee.com/ryanbayne"
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => onSupportClick('support.main')}
-          >
-            Buy Me a Coffee
-          </a>
-          <a className="support-link-button" href="mailto:tradingcs@fifecic.scot">
-            Contact Ryan
-          </a>
-        </div>
+        <p>
+          If you arrived from the sidebar, the nav entry is at fault: it is either a section heading
+          (a label with an id but no page) or a view that was never built.
+        </p>
       </section>
     );
   }
