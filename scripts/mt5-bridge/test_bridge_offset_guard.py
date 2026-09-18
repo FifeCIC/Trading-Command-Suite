@@ -29,6 +29,23 @@ import sys
 import time
 import types
 
+# ⚠️ A Windows console defaults to cp1252, which CANNOT encode the ✅ marks this file
+# prints. Unhandled, the harness raises UnicodeEncodeError on a guard that PASSED and
+# reports it as `[FAIL] ... unexpected UnicodeEncodeError` — so the suite is permanently
+# red on any Windows machine and the reader learns to ignore it.
+#
+# MEASURED 2026-09-19: all 4 checks failed this way, on unmodified code, with the guards
+# themselves working correctly. A guard that always fails is worse than no guard: it
+# costs attention and provides no cover.
+#
+# `errors='replace'` is the belt-and-braces: if even UTF-8 is unavailable, print a
+# placeholder rather than raising. A test must never fail because of its own output.
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 BRIDGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mt5_bridge_v2.py')
 
 

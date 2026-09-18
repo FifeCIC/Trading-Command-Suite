@@ -763,6 +763,26 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'equity': float(acc.equity) if acc else None,
                     'connectionErrors': connection_errors,
                     'circuitBreaker': {'state': circuit_state, 'failures': circuit_failures, 'threshold': CIRCUIT_BREAKER_THRESHOLD, 'cooldown': CIRCUIT_BREAKER_COOLDOWN},
+                    # ⚠️ Effective risk limits (#773).
+                    #
+                    # These are read from the environment at IMPORT (see the constants at the
+                    # top of this file), so editing `.env` does NOT take effect until this
+                    # process is restarted. Nothing used to expose that.
+                    #
+                    # MEASURED 2026-09-19: `nest/.env` said MT5_MAX_OPEN_POSITIONS=20 while
+                    # the RUNNING bridge still enforced 5 — the two were written 6.5 hours
+                    # apart and there was no way to tell from outside. The app's own cap
+                    # (`risk.maxOpenPositions`) was already 20, so the two silently disagreed
+                    # and the bridge was the binding constraint: 28 orders refused in 12h
+                    # with 'Max open positions (5) reached'.
+                    #
+                    # Publishing them here is what makes a stale read VISIBLE. A limit that
+                    # disagrees with the app is a config bug you otherwise cannot see.
+                    'riskLimits': {
+                        'maxOpenPositions': MAX_OPEN_POSITIONS,
+                        'maxPositionSize': MAX_POSITION_SIZE,
+                        'maxDailyLoss': MAX_DAILY_LOSS,
+                    },
                 })
 
             # /broker — instance identity + capability (#747)
@@ -1556,6 +1576,13 @@ if __name__ == '__main__':
         logger.warning(f'MT5 not connected at startup: {err}')
     server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
     logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port}')
+    # ⚠️ Print the EFFECTIVE limits (#773). They come from the environment at import, so
+    # this line is the only place a stale `.env` read is visible from the log. If it does
+    # not match `nest/.env`, this process predates the edit — restart it.
+    logger.info(
+        f'Risk limits in force — maxOpenPositions={MAX_OPEN_POSITIONS}, '
+        f'maxPositionSize={MAX_POSITION_SIZE}, maxDailyLoss={MAX_DAILY_LOSS}'
+    )
     try:
         server_obj.serve_forever()
     except KeyboardInterrupt:
