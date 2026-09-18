@@ -824,6 +824,32 @@ model Trade {
   swap              Float?   // Accumulated swap
   brokerComment     String?  @db.VarChar(200) // MT5 position comment
 
+  // ── WHY this trade closed ─────────────────────────────────────────────────
+  // ⚠️ Added 2026-09-18 after a measurement that could not be explained without it.
+  //
+  // Measured 2026-09-18: 15 of 16 bot trades closed at **3–18% of the distance** to their
+  // configured SL/TP — AUDJPY had a 1.003% stop and closed at 0.036% — and three positions
+  // closed inside FIVE SECONDS (NZDJPY 12:15:59, EURGBP 12:16:00, EURCHF 12:16:04). A batch,
+  // not the market. Nothing in the system could name the closer:
+  //   - the time-stop keeps its close history IN MEMORY, so it is wiped on every restart;
+  //   - every closing deal in MT5 history has an EMPTY `comment` (openings carry `TCS <bot>`),
+  //     so the broker did not tag it as an SL/TP fill either.
+  // An hour of elimination produced suspects but no cause. This column is that record.
+  //
+  // Format is `<authority>:<mechanism>` so a reader can separate WHO from WHY:
+  //   system:time-stop     the #773 position time-stop closed it
+  //   system:reconciled    the sync found no broker counterpart (stranded row)
+  //   user:manual          closed through the API/UI
+  //   broker:sl | broker:tp  MT5 closed at the stop / target (needs the deal `reason`)
+  //   broker:stop-out      MT5 margin stop-out
+  //   broker:unknown       the position vanished from the broker, cause not reported
+  //
+  // ⚠️ `broker:*` values depend on the bridge returning the deal `reason` field, which it does
+  // NOT yet (see scripts/mt5-bridge/mt5_bridge_v2.py — the field is added but the running bridge
+  // is an older build). Until it is redeployed those closes record `broker:unknown`, which is
+  // honest: it says "the broker did it and did not say why" rather than guessing.
+  closeReason       String?  @db.VarChar(60)
+
   // ── P&L validity (bridge bug, pre-2026-09-10) ────────────────────────────
   // ⚠️ These four columns EXISTED IN THE DATABASE but were MISSING FROM THIS MODEL until
   // 2026-09-12, so Prisma could neither read nor write them. That omission is how a

@@ -19,6 +19,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SystemLogService } from '../system/log.service';
+import { CLOSE_REASONS } from '../../common/trading/close-reason';
 
 export interface TradeRecord {
   symbol: string;
@@ -106,13 +107,27 @@ export class TradeRecorderService {
   }
 
   /** Mark a trade as closed (filled sell) */
-  async close(id: string, exitPrice: number, pnl: number): Promise<boolean> {
+  async close(
+    id: string,
+    exitPrice: number,
+    pnl: number,
+    /**
+     * WHY it closed — see `common/trading/close-reason.ts`.
+     *
+     * Defaults to `user:manual` because the ONLY caller is the API close path
+     * (`Mt5TradingService.closePosition`, reached from the UI and from `closeAll`/`closeProfitable`).
+     * An automatic closer must pass its own value: leaving this to default would label a
+     * system close as a human one, which is the same "attributed to the wrong actor" defect that
+     * `trade.scoringStrategyId` had (#777).
+     */
+    closeReason: string = CLOSE_REASONS.USER_MANUAL,
+  ): Promise<boolean> {
     try {
       await this.prisma.trade.update({
         where: { id },
-        data: { exitPrice, pnl, status: 'closed', closedAt: new Date() },
+        data: { exitPrice, pnl, status: 'closed', closedAt: new Date(), closeReason },
       });
-      this.syslog.trade('TradeRecorder', `Trade closed: ${id} exit=${exitPrice} PnL=${pnl.toFixed(2)}`);
+      this.syslog.trade('TradeRecorder', `Trade closed: ${id} exit=${exitPrice} PnL=${pnl.toFixed(2)} why=${closeReason}`);
       return true;
     } catch (err) {
       this.logger.error(`Failed to close trade ${id}: ${(err as Error).message}`);

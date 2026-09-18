@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradeRecorderService } from './trade-recorder.service';
 import { StopGuardianService } from './stop-guardian.service';
+import { CLOSE_REASONS } from '../../common/trading/close-reason';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { PrismaService } from '../../database/prisma.service';
 import { sanitizeMt5Comment } from '../providers/mt5-comment.util';
@@ -292,7 +293,9 @@ export class Mt5TradingService {
           orderBy: { openedAt: 'desc' },
         }).catch(() => null);
         if (existing) {
-          await this.tradeRecorder.close(existing.id, exitPrice, pnl);
+          // Explicit, not defaulted: this path is reached from the UI and from closeAll()/
+          // closeProfitable(), so the actor is a person or an operator-initiated sweep.
+          await this.tradeRecorder.close(existing.id, exitPrice, pnl, CLOSE_REASONS.USER_MANUAL);
         } else {
           await this.tradeRecorder.record({
             symbol: pos.symbol,

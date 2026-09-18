@@ -894,7 +894,25 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
                             'positionId': d.position_id, 'orderId': d.order,
                             'commission': float(d.commission), 'swap': float(d.swap), 'fee': float(d.fee),
-                            'time': utc_iso(d.time), 'comment': d.comment})
+                            'time': utc_iso(d.time), 'comment': d.comment,
+                            # ⚠️ `reason` is the broker's OWN statement of WHY the deal happened, and it is
+                            # the only authoritative answer to "what closed this position?" (2026-09-18).
+                            #
+                            # ⚠️ THIS is the route that matters: `Mt5Adapter.getDeals()` calls `/history`,
+                            # NOT `/history/deals`. Both now carry the field, but attributing an exit from
+                            # the wrong route is how a fix looks done and changes nothing.
+                            #
+                            # Without it the app cannot distinguish a stop-loss fill from a stop-out, a
+                            # manual close, or our own time-stop. Measured consequence: 15 of 16 bot trades
+                            # closed at 3-18% of their configured SL/TP distance, three inside five seconds,
+                            # and every closing deal's `comment` was EMPTY — so an hour of elimination
+                            # produced suspects and no cause.
+                            #
+                            # Values are the mt5.DEAL_REASON_* constants:
+                            #   0 client | 1 mobile | 2 web | 3 expert | 4 SL | 5 TP | 6 stop-out
+                            #   7 rollover | 8 vmargins | 9 split
+                            # Mapped to `trade.closeReason` by nest/src/common/trading/close-reason.ts.
+                            'reason': int(d.reason) if d.reason is not None else None})
                 return json_response(self, {'orders': history, 'deals': deal_list, 'orderCount': len(history), 'dealCount': len(deal_list)})
 
             # /symbol/X/info
@@ -1013,7 +1031,21 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
                             'positionId': d.position_id, 'orderId': d.order,
                             'commission': float(d.commission), 'swap': float(d.swap), 'fee': float(d.fee),
-                            'time': utc_iso(d.time), 'comment': d.comment})
+                            'time': utc_iso(d.time), 'comment': d.comment,
+                            # ⚠️ `reason` is the broker's OWN statement of WHY the deal happened, and it is
+                            # the only authoritative answer to "what closed this position?" (2026-09-18).
+                            #
+                            # Without it the app could not distinguish a stop-loss fill from a stop-out,
+                            # a manual close, or our own time-stop. Measured consequence: 15 of 16 bot
+                            # trades closed at 3-18% of their configured SL/TP distance, three inside five
+                            # seconds, and every closing deal's `comment` was EMPTY - so an hour of
+                            # elimination produced suspects and no cause.
+                            #
+                            # Values are the mt5.DEAL_REASON_* constants:
+                            #   0 client | 1 mobile | 2 web | 3 expert | 4 SL | 5 TP | 6 stop-out
+                            #   7 rollover | 8 vmargins | 9 split
+                            # Mapped to `trade.closeReason` by nest/src/common/trading/close-reason.ts.
+                            'reason': int(d.reason) if d.reason is not None else None})
                 return json_response(self, {'deals': result, 'count': len(result)})
 
             return json_response(self, {'error': 'not found'}, 404)

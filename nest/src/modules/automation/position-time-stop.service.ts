@@ -51,6 +51,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
+import { PrismaService } from '../../database/prisma.service';
+import { CLOSE_REASONS } from '../../common/trading/close-reason';
 
 /** A position the bridge reports, plus the hold time we computed for it. */
 export interface TimedStopCandidate {
@@ -223,6 +225,12 @@ export class PositionTimeStopService {
   constructor(
     private readonly mt5Connection: Mt5ConnectionManager,
     private readonly strategyService: TradingStrategyService,
+    // ⚠️ Added 2026-09-18. The service used to keep its close history ONLY in memory, so every
+    // restart erased the record of which positions it had closed and why. Measured consequence:
+    // an investigation into 15-of-16 trades closing at 3–18% of their SL/TP distance could not
+    // rule this service IN or OUT, because its evidence for the previous hours was already gone.
+    // Writing `closeReason` onto the trade row makes the record durable. See close-reason.ts.
+    private readonly prisma: PrismaService,
   ) {}
 
   // ── Loop control (mirrors StopGuardianService so operators see one pattern) ──
@@ -443,6 +451,32 @@ export class PositionTimeStopService {
           profit: c.profit,
         });
         if (this.state.recentCloses.length > 50) this.state.recentCloses.length = 50;
+
+        // ── Record WHY, durably (#865-adjacent, 2026-09-18) ──
+        //
+        // The in-memory entry above dies with the process. The trade row does not.
+        //
+        // ⚠️ Written onto the TRADE, not the position, because that is what a reader asks about
+        // ("why did this trade close?") and what survives the position row being removed. The
+        // sync's `finalizeClosedPosition()` runs on a LATER tick, when the position disappears
+        // from the broker snapshot — so it must PRESERVE this value rather than overwrite it. It
+        // does; see position-sync.service.ts.
+        //
+        // `updateMany` + a brokerTicket match, so it is a no-op when the trade row does not exist
+        // yet (the sync may not have created it) and never throws on 0 rows.
+        await this.prisma.trade
+          .updateMany({
+            where: { brokerTicket: String(c.ticket), status: 'open' },
+            data: { closeReason: CLOSE_REASONS.SYSTEM_TIME_STOP },
+          })
+          .catch((err: any) => {
+            // A missing attribution must not abort a close loop — the position IS closed, and
+            // losing the reason is bad but re-opening is worse. Log it loudly instead.
+            this.logger.warn(
+              `Time-stop closed ${c.symbol}#${c.ticket} but could not record closeReason: ${err?.message ?? err}`,
+            );
+          });
+
         this.logger.log(
           `Time-stop CLOSED ${c.symbol}#${c.ticket} after ${c.hoursHeld}h ` +
           `(limit ${c.maxHoldHours}h, pnl ${c.profit.toFixed(2)}) — slot freed`,

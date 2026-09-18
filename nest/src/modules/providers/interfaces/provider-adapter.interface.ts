@@ -275,6 +275,16 @@ export interface BrokerDeal {
   swap?: number;
   fee?: number;
   time: Date;
+  /**
+   * WHY the broker executed this deal — `mt5.DEAL_REASON_*` (4 = SL, 5 = TP, 6 = stop-out,
+   * 3 = expert, 0-2 = client/mobile/web, …).
+   *
+   * ⚠️ This is the only authoritative answer to "what closed this position?", and it is OPTIONAL
+   * because not every broker adapter reports one. `undefined` means "not reported" — callers must
+   * map it to an honest unknown (`broker:unknown`) rather than a default that reads like knowledge.
+   * See `nest/src/common/trading/close-reason.ts` and the 2026-09-18 close-attribution work.
+   */
+  reason?: number;
 }
 
 /** Normalized account summary across all brokers. */

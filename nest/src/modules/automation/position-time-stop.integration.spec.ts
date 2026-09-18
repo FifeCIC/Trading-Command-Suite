@@ -1,4 +1,5 @@
 import { PositionTimeStopService, parseMaxHoldHours, parseCommentTarget } from './position-time-stop.service';
+import { CLOSE_REASONS } from '../../common/trading/close-reason';
 
 /**
  * Integration-style test for the #773 time-stop decision logic.
@@ -50,10 +51,24 @@ function makeService(opts: {
     findAll: jest.fn(async () => opts.strategies),
   } as any;
 
-  const svc = new PositionTimeStopService(mt5, strategyService);
+  // ⚠️ Added 2026-09-18 with the close-attribution work. The time-stop now records WHY it closed
+  // a position (`trade.closeReason`), because its close history used to live only in memory and was
+  // wiped on every restart — which is what made an investigation into unexpected exits impossible.
+  // The mock records the writes so a test can assert the attribution actually happens.
+  const closeReasonWrites: any[] = [];
+  const prisma = {
+    trade: {
+      updateMany: jest.fn(async (args: any) => {
+        closeReasonWrites.push(args);
+        return { count: 1 };
+      }),
+    },
+  } as any;
+
+  const svc = new PositionTimeStopService(mt5, strategyService, prisma);
   svc.state.tickIntervalMs = 60_000; // irrelevant; we call tick() directly
   svc.state.dryRun = opts.dryRun;
-  return { svc, closeCalls, mt5 };
+  return { svc, closeCalls, mt5, closeReasonWrites };
 }
 
 /** ISO timestamp `hours` in the past. */
@@ -174,12 +189,59 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
         }),
         getUrl: () => 'http://localhost:5000',
       } as any;
-      const svc = new PositionTimeStopService(mt5, { findAll: async () => [AUDUSD_STRATEGY] } as any);
+      const svc = new PositionTimeStopService(mt5, { findAll: async () => [AUDUSD_STRATEGY] } as any, {
+    trade: { updateMany: jest.fn(async () => ({ count: 0 })) },
+  } as any);
       svc.state.dryRun = false;
 
       await svc.tick();
       expect(svc.state.closedCount).toBe(1); // only #20
       expect(svc.state.recentCloses[0].ticket).toBe(20);
+    });
+
+    /**
+     * REGRESSION GUARD — the close must say WHY (2026-09-18).
+     *
+     * Measured that morning: 15 of 16 bot trades closed at 3–18% of the distance to their configured
+     * SL/TP, and three closed inside five seconds. Nothing could name the closer, because this
+     * service kept its history ONLY in memory and `trade` had no field for it. An hour of
+     * elimination produced suspects and no cause.
+     *
+     * ⚠️ The assertion is on the WRITE, not on `state.recentCloses`. The in-memory entry is exactly
+     * the thing that does NOT survive a restart, so a test that only checked it would pass while the
+     * durable record stayed empty — i.e. it would pass while the defect it guards against was live.
+     */
+    it('records WHY it closed on the trade row, not only in memory', async () => {
+      const { svc, closeReasonWrites } = makeService({
+        positions: [
+          { ticket: 42, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 1.23, openedAt: ago(52) },
+        ],
+        strategies: [AUDUSD_STRATEGY],
+        dryRun: false,
+      });
+
+      await svc.tick();
+
+      expect(closeReasonWrites).toHaveLength(1);
+      expect(closeReasonWrites[0].where.brokerTicket).toBe('42');
+      expect(closeReasonWrites[0].where.status).toBe('open');
+      expect(closeReasonWrites[0].data.closeReason).toBe(CLOSE_REASONS.SYSTEM_TIME_STOP);
+    });
+
+    it('writes no close reason in DRY RUN — nothing closed, so nothing may be attributed', async () => {
+      // The other direction: without this, a guard that always wrote a reason would pass the test
+      // above and claim credit for a close that never happened.
+      const { svc, closeReasonWrites } = makeService({
+        positions: [
+          { ticket: 42, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 1.23, openedAt: ago(52) },
+        ],
+        strategies: [AUDUSD_STRATEGY],
+        dryRun: true,
+      });
+
+      await svc.tick();
+
+      expect(closeReasonWrites).toHaveLength(0);
     });
   });
 

@@ -67,7 +67,11 @@ describe('Mt5TradingService broker contracts', () => {
     const result = await service.closePosition(42);
 
     expect(result.success).toBe(true);
-    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10);
+    // ⚠️ The 4th argument is the close ATTRIBUTION (2026-09-18) — see
+    // common/trading/close-reason.ts. Asserted explicitly rather than with expect.anything():
+    // "the trade closed" and "we know WHY it closed" are different claims, and only the second
+    // one is what makes an unexpected exit diagnosable.
+    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10, 'user:manual');
     expect(tradeRecorder.record).not.toHaveBeenCalled();
   });
 
@@ -89,7 +93,7 @@ describe('Mt5TradingService broker contracts', () => {
     await service.closePosition(42);
 
     // (2410 - 2400) * 0.1 * +1 = 1.0 recomputed, not the floating 10.
-    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 1);
+    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 1, 'user:manual');
   });
 
   it('uses the bridge partial-close endpoint', async () => {

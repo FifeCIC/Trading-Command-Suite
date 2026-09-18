@@ -22,6 +22,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { AdapterFactory } from './adapter-factory';
+import { CLOSE_REASONS, closeReasonFromDealReason } from '../../common/trading/close-reason';
 
 /** Normalised position shape — any broker adapter should map to this. */
 export interface BrokerPosition {
@@ -227,6 +228,9 @@ export class PositionSyncService {
             closedAt: new Date(),
             pnl: 0,
             brokerComment: 'Reconciled: no broker counterpart (stranded row)',
+            // Named here rather than left null: a reaped row closed for a reason we DO know, and
+            // the 2026-09-18 investigation was slowed by exactly this kind of unattributed exit.
+            closeReason: CLOSE_REASONS.SYSTEM_RECONCILED,
           },
         }).catch(() => null);
         if (updated?.count) {
@@ -351,6 +355,9 @@ export class PositionSyncService {
     let exitPrice: number | null = dbPos.currentPrice ?? null;
     let realizedPnl: number | null = dbPos.pnl ?? null;
     let closedAt: Date | null = null;
+    // MT5 `deal.reason` off the closing deal — the broker's OWN statement of why it closed.
+    // `undefined` until the bridge is redeployed with the field; see close-reason.ts.
+    let dealReason: number | undefined;
     try {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
@@ -383,8 +390,9 @@ export class PositionSyncService {
         const positionSide = String(trade?.side ?? dbPos.side ?? '').toLowerCase();
         const closingSide = positionSide === 'sell' ? 'buy' : 'sell';
         const exitDeals = candidates.filter((d: any) => d.side === closingSide);
-        if (exitDeals.length > 0) {
-          const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
+        if (exitDeals.length > 0) {            const lastDeal: any = exitDeals[exitDeals.length - 1];
+            // The broker's own reason for the close, when it reports one.
+            if (typeof lastDeal?.reason === 'number') dealReason = lastDeal.reason;          const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
           exitPrice = filledVolume > 0
             ? exitDeals.reduce((sum: number, d: any) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
             : Number(exitDeals[exitDeals.length - 1].price || 0);
@@ -401,6 +409,20 @@ export class PositionSyncService {
     }
 
     if (trade) {
+      // ── WHY it closed (2026-09-18) ──────────────────────────────────────────
+      //
+      // ⚠️ NEVER overwrite an existing reason. The time-stop writes `system:time-stop` at the
+      // moment it sends the close — that is STRICTLY BETTER evidence than anything derivable
+      // here, because this function runs on a LATER tick, after the position has already
+      // vanished from the broker snapshot, and cannot tell a close of ours from the broker's.
+      //
+      // When nothing recorded a reason, derive one from the broker's deal `reason`. The running
+      // bridge does not forward that field yet, so this yields `broker:unknown` — deliberately.
+      // "The broker did it and did not say why" is the true statement; a guess is what made the
+      // 2026-09-18 investigation impossible in the first place.
+      const derivedCloseReason = closeReasonFromDealReason(dealReason);
+      const closeReason = trade.closeReason ?? derivedCloseReason;
+
       await this.prisma.trade.update({
         where: { id: trade.id },
         data: {
@@ -408,11 +430,14 @@ export class PositionSyncService {
           exitPrice: exitPrice ?? trade.exitPrice ?? null,
           pnl: realizedPnl ?? trade.pnl ?? null,
           closedAt: closedAt ?? new Date(),
+          closeReason,
         },
       });
 
       const pnlStr = realizedPnl != null ? ` PnL=${realizedPnl.toFixed(2)}` : '';
-      this.logger.log(`[${provider}] Closed trade ${trade.id} (${trade.symbol}) exit=${exitPrice}${pnlStr}`);
+      this.logger.log(
+        `[${provider}] Closed trade ${trade.id} (${trade.symbol}) exit=${exitPrice}${pnlStr} why=${closeReason}`,
+      );
       this.notifications?.send({
         title: `🔻 Position closed — ${trade.symbol}`,
         body: `${(trade.side || 'buy').toUpperCase()} ${trade.quantity}×${trade.symbol} closed @ ${exitPrice ?? 'market'}` +
