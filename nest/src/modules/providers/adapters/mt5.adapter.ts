@@ -565,12 +565,10 @@ export class Mt5Adapter implements IProviderAdapter {
   // ── Brokerage Methods (IProviderAdapter) ─────────────────
 
   async getPositions(): Promise<BrokerPosition[]> {
-    this.lastPositionSnapshotAuthoritative = false;
-    const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
-    if (!data?.positions) return [];
-    this.lastPositionSnapshotAuthoritative = true;
+    const { raw, authoritative } = await this.fetchAllBrokerPositions();
+    this.lastPositionSnapshotAuthoritative = authoritative;
 
-    return data.positions.map((p: any) => {
+    return raw.map(({ p, brokerId }: { p: any; brokerId?: number }) => {
       const contractSize = p.contractSize ? Number(p.contractSize) : 0;
       // Notional market value = volume (lots) × contract size × current price.
       // Falls back to price × volume when the bridge doesn't supply contract size.
@@ -610,8 +608,68 @@ export class Mt5Adapter implements IProviderAdapter {
         tp: p.tp ?? null,
         magic: p.magic ?? null,
         comment: p.comment ?? null,
+        // ⚠️ Tag every position with the ACCOUNT it came from (#883). One provider id (`mt5`)
+        // covers several bridges, so without this the reconciler cannot tell which broker a
+        // trade belongs to — and scoped writes land on the wrong account's rows.
+        accountId: brokerId !== undefined ? this.brokerEnv(brokerId, 'MT5_ACCOUNT') ?? null : null,
       };
     });
+  }
+
+  /**
+   * Ask EVERY active broker for its positions.
+   *
+   * ⚠️ WHY THIS IS NOT A SINGLE CALL (#883)
+   * ---------------------------------------
+   * `MT5_ACTIVE_BROKERS=2,3` runs two bridges — MetaQuotes (:5000) and Pepperstone (:5001). This
+   * used to call `bridgeGet('/positions')` with NO route, which resolves to the DEFAULT bridge
+   * only. The snapshot therefore held broker 2's positions and nothing from broker 3.
+   *
+   * Downstream, `position-sync` closes any open `trade` whose ticket is absent from the snapshot.
+   * Broker 3's tickets were absent from EVERY snapshot, so broker 2's sync closed broker 3's
+   * trades. Measured 2026-09-18: two LIVE Pepperstone VIX positions (`90555750`, `90563535`) were
+   * written `closed` with `exitPrice=NULL, pnl=0` while the broker still held them — the ledger
+   * said flat going into a weekend.
+   *
+   * ⚠️ `authoritative` requires EVERY broker to answer.
+   * It is true only when every broker returned a position list. If one bridge is down, the
+   * snapshot is INCOMPLETE, and calling it authoritative would let the surviving broker's sync
+   * close the missing broker's trades — the same defect, one bridge further out. A partial
+   * snapshot must refuse to be authoritative, because downstream the only thing standing between
+   * "missing" and "closed" is this flag.
+   */
+  private async fetchAllBrokerPositions(): Promise<{
+    raw: Array<{ p: any; brokerId?: number }>;
+    authoritative: boolean;
+  }> {
+    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];
+
+    // No router (tests, or a single-bridge install): keep the original single-URL path.
+    if (brokerIds.length === 0) {
+      const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
+      if (!data?.positions) return { raw: [], authoritative: false };
+      return { raw: data.positions.map((p: any) => ({ p })), authoritative: true };
+    }
+
+    const raw: Array<{ p: any; brokerId?: number }> = [];
+    let authoritative = true;
+
+    for (const brokerId of brokerIds) {
+      const route = this.symbolRouter?.routeForBroker(brokerId);
+      const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions', route);
+      if (!data?.positions) {
+        // This broker did not answer. The union is incomplete, so closure detection must not run.
+        authoritative = false;
+        this.logger.warn(
+          `MT5 broker ${brokerId} returned no position snapshot — the combined snapshot is ` +
+          'INCOMPLETE and closure detection will be skipped for this pass',
+        );
+        continue;
+      }
+      for (const p of data.positions) raw.push({ p, brokerId });
+    }
+
+    return { raw, authoritative };
   }
 
   async getPositionSnapshot(): Promise<BrokerPositionSnapshot> {

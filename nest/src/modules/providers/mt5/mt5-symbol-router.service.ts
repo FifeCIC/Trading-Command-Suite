@@ -89,6 +89,18 @@ export class Mt5SymbolRouter implements OnModuleInit {
     return this.conn.getBrokerIds()[0] ?? 2;
   }
 
+  /**
+   * Every active broker slot, in declaration order (`MT5_ACTIVE_BROKERS`).
+   *
+   * WHY (#883): the adapter needs to ask EACH bridge for its positions. Without this, a
+   * provider-wide call resolved to the default bridge only, so a second broker's positions were
+   * absent from every snapshot — and `position-sync` closes any open trade absent from the
+   * snapshot. The result was one broker's sync closing the other broker's live trades.
+   */
+  brokerIds(): number[] {
+    return this.conn.getBrokerIds();
+  }
+
   /** Resolve the brokerId for a symbol without building the full route. */
   getBrokerId(symbol: string, assetType?: string): number {
     const key = (symbol || '').toUpperCase();

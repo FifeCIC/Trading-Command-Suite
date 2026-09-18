@@ -980,8 +980,19 @@ export class AutomationLoopService implements OnModuleInit {
           allPositions.push(...positions);
 
           // Sync positions → DB (two-way data flow #470, broker-agnostic)
-          let accountId = positions.find((p: any) => p.accountId)?.accountId as string | undefined;
-          if (adapter.getAccount) {
+          //
+          // ⚠️ A snapshot spanning SEVERAL accounts must not be scoped to one of them (#883).
+          // `position-sync` scopes its `position` scan by this accountId, so passing broker 2's
+          // id while the payload also holds broker 3's positions would leave broker 3's rows
+          // unreconciled. `null` means "all accounts for this provider", which is what a merged
+          // multi-broker snapshot actually is.
+          const distinctAccounts = new Set(
+            positions.map((p: any) => p.accountId).filter((a: any) => !!a),
+          );
+          let accountId = distinctAccounts.size === 1
+            ? ([...distinctAccounts][0] as string)
+            : undefined;
+          if (adapter.getAccount && distinctAccounts.size <= 1) {
             const account = await adapter.getAccount().catch(() => null);
             accountId = accountId ?? account?.accountId;
           }
