@@ -4,6 +4,43 @@ Items needing human attention. Agents: read this at session start. Append confir
 
 ---
 
+## 2026-09-18
+
+### `nest run build:api` reported a restart failure and left the API DOWN (verified, not diagnosed)
+
+- **Symptom:** `build:api` printed `OK Build succeeded.` (every prebuild validator passed), then
+  `!! API did not report healthy within 30s - check the start log.` The API was **genuinely down**.
+- **Verified down, not assumed:** `http://localhost:3201/api/health` -> connection refused; polled
+  ~80s (20 x 4s); `Get-NetTCPConnection -LocalPort 3201 -State Listen` -> **no PID**, port free.
+- **Workaround that worked:** `npm --prefix nest run start` manually -> healthy in ~3 attempts.
+- **Not diagnosed.** The build is fine; only the restart step failed. Do not rebuild if you hit this.
+- **Agent:** Copilot (2026-09-18), landing #887.
+
+### A version bump requires regenerating `docs/GENERATED-FACTS.md` FIRST
+
+- Bumping `package.json` / `nest/package.json` makes `docs-facts` fail in `prebuild`:
+  `docs/GENERATED-FACTS.md is OUT OF DATE - regenerate it: node scripts/docs-facts.cjs --write`
+- The guard is **correct**, and it leaves the API **stopped on purpose** (documented behaviour) - so a
+  failed build here also costs a restart. Run `node scripts/docs-facts.cjs --write`, then rebuild.
+- Changed exactly one line (the version) in each of the two generated files.
+- **Agent:** Copilot (2026-09-18)
+
+### A `nest start` child SURVIVES its parent terminal, leaving an orphan on :3201 and a DEAD log
+
+- **Symptom:** started with `cmd /c "npm ... run start > logs/x.log 2>&1"`. The terminal was later
+  cleaned up, but `node.exe` kept serving :3201 with `health: ok`. Meanwhile **`logs/x.log` stopped
+  growing** (frozen at 35 bytes) because its writer was gone.
+- **Why it matters:** a silent log plus a healthy endpoint reads as "the server is fine" while you
+  are actually reading a **stale** file and cannot measure anything. Cost two measurement windows.
+- **Diagnosis:** `Get-NetTCPConnection -LocalPort 3201 -State Listen` -> take `OwningProcess` ->
+  `Get-CimInstance Win32_Process -Filter "ProcessId=<pid>"` -> compare `CreationDate` against the
+  `dist` file's `LastWriteTime`. If the process started BEFORE the build, it is serving old code.
+- **Fix:** `Stop-Process -Id <pid> -Force`, then start fresh and **measure promptly**.
+- **Rule:** before trusting a quiet log, check who owns the port and when they started.
+- **Agent:** Copilot (2026-09-18), landing #888.
+
+---
+
 ## 2026-09-15 (later)
 
 ### 🔴 BUILD BLOCKED — `validate-notices.cjs` fails on `src/core/architecture-reference.js`
@@ -363,3 +400,23 @@ subsample, not a smaller one. They need full re-measurement.
     `counts.familyMembers` = **446**, families = `directive, brokerTrading, protocol`.
 
     — Copilot, 2026-09-18
+
+    ### 11 dead compiled .js twins deleted from the prisma folder - do NOT restore them
+
+    `nest/prisma/` held a `.js` file beside every `.ts` seeder. All 11 were **tsc output**, not
+    sources — `seed-faq.js` began `"use strict"; Object.defineProperty(exports, "__esModule", …)`
+    and `const client_1 = require("@prisma/client")`. Nothing produced them (`tsconfig.build.json`
+    **excludes** `prisma`) and nothing read them.
+
+    Proof they were unreachable, not a guess — `ts.resolveModuleName` on all 11 names resolved
+    **0 to a `.js`** and 11 to their `.ts` (`allowJs` is off, so `seed.ts`'s extension-less
+    `import { seedFaq } from './seed-faq'` already chose the `.ts`). Prisma's own hook in
+    `nest/package.json` runs `ts-node prisma/*.ts`. ⚠️ Deleted files are in git history if a
+    restore is ever genuinely needed — but check first that you are not restoring compiler output.
+
+    Effect: duplication **1975 → 1491 windows** and **179 → 148 pairs** — close to a quarter of all
+    the duplication in the repo was compiled output sitting next to its source. Allowance re-banked at
+    the lower figure. **Canaried:** restoring `seed-faq.js` makes `validate:duplication` exit 1 as a NEW
+    pair, so a recompile cannot silently reintroduce them — that gate is the guard, not this note.
+
+    — Copilot, 2026-09-19
