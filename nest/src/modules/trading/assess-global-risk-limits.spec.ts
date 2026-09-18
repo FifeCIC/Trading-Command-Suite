@@ -278,27 +278,38 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     expect(result.reason).not.toContain('caution');
   });
 
-  it('REFUSES when an instrument has no derivable profit currency — no assuming it settles in GBP', async () => {
-    // An index CFD carries no currency in its name, and `/symbol/<S>` does not report one on the
-    // running bridge. Assuming the account currency would silently mis-size every index position,
-    // so the estimator returns unavailable and the gate refuses.
+  /**
+   * REGRESSION GUARD — an index CFD must be PRICED, not refused (2026-09-18, follow-up to #865).
+   *
+   * Index symbols (`US500`, `GER40`, `UK100`, `FRA40`) carry no currency in their name and the
+   * running bridge does not report `currencyProfit`, so the strict estimator returned `unavailable`
+   * and the gate REFUSED them. Measured consequence: pending queue entries for GER40 and UK100 with
+   * nowhere to go. Refusing is not "a stricter cap", it is no trades at all.
+   *
+   * The fallback is the ACCOUNT currency, and it is defensible rather than a guess because:
+   *   - it fails CLOSED — a USD or EUR notional treated as GBP OVER-states the margin;
+   *   - the error is bounded far inside the cap. Measured: UK100 0.1 lot = £102.27 assumed (7.4% of
+   *     equity) and US500 = £7.62 (0.6%), against a 25% cap;
+   *   - it is LABELLED — `profitCurrencyAssumed` and `describeMargin()` say so;
+   *   - it stops being used the moment MT5 reports the real value.
+   */
+  it('prices an index CFD instead of refusing it, using a labelled account-currency fallback', async () => {
     const mt5 = {
       getPositions: jest.fn().mockResolvedValue([]),
       getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
       getSymbolInfo: jest.fn(async () => ({
-        name: 'US500', digits: 2, contractSize: 1, volumeMin: 0.1, volumeMax: 100,
+        name: 'UK100', digits: 1, contractSize: 10, volumeMin: 0.1, volumeMax: 5,
       })),
-      // A price IS available for US500 — so the refusal must come from the PROFIT CURRENCY, which
-      // is the actual gap. Without this the price check fires first and the test would assert the
-      // wrong reason, hiding whether the profit-currency branch works at all.
-      getQuote: jest.fn(async () => ({ bid: 5000, ask: 5000.5, last: 5000 })),
+      getQuote: jest.fn(async () => ({ bid: 10227, ask: 10228, last: 10227.4 })),
     };
     const svc = build(mt5);
 
-    const result = await svc.assessGlobalRiskLimits(SIZE, 'US500');
+    const result = await svc.assessGlobalRiskLimits(0.1, 'UK100');
 
-    expect(result.allowed).toBe(false);
-    expect(result.reason).toContain('profit currency unknown');
+    // 0.1 × 10 × 10227.4 = 10,227 notional, assumed GBP, ÷ 100 = £102.27 on £1,000 → 10.2%.
+    // Under the 25% cap, so it is admitted — which is the point of the change.
+    expect(result.allowed).toBe(true);
+    expect(result.reason).not.toContain('profit currency unknown');
   });
 
   /**

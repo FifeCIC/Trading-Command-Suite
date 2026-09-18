@@ -191,11 +191,57 @@ describe('position-margin — the formula that decides if a position is allowed 
       });
     }
 
-    it('refuses an unknown profit currency instead of assuming the account currency', () => {
-      const r = estimatePositionMargin({ ...BASE, symbol: 'US500', profitCurrency: undefined });
-      expect(r.source).toBe('unavailable');
-      expect((r as any).reason).toMatch(/profit currency unknown/);
-      expect((r as any).reason).toMatch(/would be a guess/);
+    it('refuses an unknown profit currency UNLESS the caller opts into the fallback', () => {
+      const strict = estimatePositionMargin({ ...BASE, symbol: 'US500', profitCurrency: undefined });
+      expect(strict.source).toBe('unavailable');
+      expect((strict as any).reason).toMatch(/profit currency unknown/);
+      expect((strict as any).reason).toMatch(/would be a guess/);
+
+      // The opt-in path, used by the live gate for index CFDs where the alternative is refusing the
+      // order outright. It must be LABELLED — a reader has to be able to tell a measured number from
+      // an inferred one, which is the whole reason the strict path above still exists.
+      // (#865 follow-up, 2026-09-18)
+      const assumed = estimatePositionMargin({
+        ...BASE, symbol: 'UK100', profitCurrency: undefined, assumeAccountCurrencyWhenUnknown: true,
+        price: 10227.4, contractSize: 10,
+      } as any);
+      expect(assumed.source).toBe('computed');
+      expect((assumed as any).profitCurrency).toBe('GBP'); // the account currency
+      expect((assumed as any).profitCurrencyAssumed).toBe(true);
+      // 0.1 × 10 × 10227.4 = 10,227 assumed GBP ÷ 100 = £102.27 raw — the figure measured live.
+      expect((assumed as any).marginUnadjusted).toBeCloseTo(102.27, 1);
+      // ⚠️ ...but the figure COMPARED TO THE CAP is up-rated, because the assumption errs in
+      // EITHER direction (GER40/FRA40 settle EUR and UK100 settles GBP against a USD account, so
+      // the raw figure under-states by 1.17-1.27x). A risk check may only ever be too strict.
+      expect((assumed as any).margin).toBeCloseTo(102.27 * 1.5, 1);
+    });
+
+    it('leaves the margin untouched when no assumption was needed', () => {
+      // The up-rating is a penalty for NOT knowing. Applied to a measured figure it would silently
+      // tighten the cap on every correctly-priced instrument in the book.
+      const known = estimatePositionMargin({ ...BASE, symbol: 'NZDJPY', profitCurrency: 'JPY' } as any);
+      expect((known as any).marginUnadjusted).toBeUndefined();
+      const viaFlag = estimatePositionMargin({
+        ...BASE, symbol: 'NZDJPY', profitCurrency: 'JPY', assumeAccountCurrencyWhenUnknown: true,
+      } as any);
+      expect((viaFlag as any).margin).toBeCloseTo((known as any).margin, 6);
+    });
+
+    it('does NOT mark the assumption when the broker supplied the currency', () => {
+      // The flag must mean "we inferred it", not "the caller was permissive". An estimate claiming
+      // an assumption it did not make is as misleading as one that hides a real one.
+      const known = estimatePositionMargin({
+        ...BASE, symbol: 'NZDJPY', profitCurrency: 'JPY', assumeAccountCurrencyWhenUnknown: true,
+      } as any);
+      expect((known as any).profitCurrencyAssumed).toBe(false);
+    });
+
+    it('says ASSUMED in the description, so a block reason cannot hide it', () => {
+      const e = estimatePositionMargin({
+        symbol: 'UK100', volume: 0.1, price: 10227.4, contractSize: 10,
+        accountLeverage: 100, accountCurrency: 'GBP', assumeAccountCurrencyWhenUnknown: true,
+      } as any);
+      expect(describeMargin(e, 'GBP')).toContain('ASSUMED');
     });
 
     it('refuses when the conversion rate is missing, and names the pairs it tried', () => {

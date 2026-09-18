@@ -960,6 +960,13 @@ export class TradingStrategyService {
             accountCurrency: account?.currency ?? '',
             profitCurrency,
             quotes,
+            // ⚠️ Index CFDs (`US500`, `GER40`, `UK100`, `FRA40`) carry no currency in their name and
+            // the running bridge does not report `currencyProfit`, so without this they were refused
+            // outright and their queue entries went nowhere. The fallback is labelled in the estimate
+            // and in `describeMargin()`, and is up-rated by ASSUMED_CURRENCY_SAFETY_FACTOR so the cap
+            // can only be too strict — never too loose. It stops being used the moment MT5 reports
+            // the real value.
+            assumeAccountCurrencyWhenUnknown: true,
           });
         } catch (err: any) {
           this.logger.error(

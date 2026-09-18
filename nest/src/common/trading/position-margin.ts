@@ -79,7 +79,45 @@ export interface MarginInputs {
    * `{ GBPUSD: 1.33838, GBPJPY: 209.768 }`. Used to build the profit→account rate.
    */
   quotes?: Record<string, number>;
+  /**
+   * Fall back to the ACCOUNT currency when the broker reports no profit currency for the symbol.
+   *
+   * ⚠️ ONLY set this where the alternative is refusing the order outright. It is an ASSUMPTION,
+   * and the estimate records that it was made (`profitCurrencyAssumed`) so a reader can tell a
+   * measured number from an inferred one.
+   *
+   * WHY IT IS DEFENSIBLE, and not the same class of guess that produced #865:
+   *   - The error DIRECTION is not fixed, so the margin is up-rated by
+   *     `ASSUMED_CURRENCY_SAFETY_FACTOR` before it is compared to the cap. That is what makes this
+   *     fail CLOSED. Measured 2026-09-18 on the Pepperstone account (settlement USD, 1:30): GER40
+   *     and FRA40 settle EUR and UK100 settles GBP, so an un-up-rated estimate would have
+   *     UNDER-stated by 1.17-1.27x — a cap that is LOOSER than the truth, which is the one
+   *     direction a risk check must never drift.
+   *   - The error is bounded. It is at most the profit↔account FX rate, and for every G10 major
+   *     against USD that is inside the 1.5x factor.
+   *   - It STOPS being used the moment MT5 reports the real value — an open position of that
+   *     symbol, or the bridge shipping `currencyProfit` on /symbol/<SYM>/info.
+   *   - The alternative is not "a stricter cap", it is NO TRADES: index CFDs were refused outright,
+   *     with pending queue entries going nowhere. Sizes here are 2.5-8.4% of a 25% cap, so the
+   *     up-rated figure (~3.7-12.6%) still admits the trade.
+   */
+  assumeAccountCurrencyWhenUnknown?: boolean;
 }
+
+/**
+ * Applied to the notional when the profit currency was ASSUMED rather than reported by the broker.
+ *
+ * WHY 1.5: the assumption errs by the profit↔account FX rate, in EITHER direction — the broker's
+ * settlement currency for a symbol is a broker setting, not something derivable from the symbol
+ * name. Pepperstone settles the index CFDs in their home currency (GER40/FRA40 EUR, UK100 GBP)
+ * against a USD account, which UNDER-states the margin. Up-rating by a fixed factor forces the
+ * estimate to be conservative without needing the very rate that is unavailable.
+ *
+ * ⚠️ This bounds the assumption for G10 instruments. A symbol settling in a currency more than 1.5x
+ * the account currency would still be under-stated — which is why this is a last-resort fallback
+ * for symbols with no derivable currency, and not a substitute for the broker's own value.
+ */
+export const ASSUMED_CURRENCY_SAFETY_FACTOR = 1.5;
 
 export interface MarginComputed {
   source: 'computed';
@@ -92,6 +130,10 @@ export interface MarginComputed {
   /** Which pair supplied the rate, or `'same-currency'`. For the log/decision row. */
   conversionSource: string;
   profitCurrency: string;
+  /** Whether the broker's own value was used, or the account currency was assumed. */
+  profitCurrencyAssumed?: boolean;
+  /** The pre-up-rating margin, kept only when an assumption was made, so the uplift is visible. */
+  marginUnadjusted?: number;
   /** The inputs, so a block reason can explain itself instead of just naming a ratio. */
   inputs: MarginInputs;
 }
@@ -211,8 +253,11 @@ export function estimatePositionMargin(inputs: MarginInputs): MarginEstimate {
     return { source: 'unavailable', reason: 'account currency not reported' };
   }
 
-  const profitCurrency = resolveProfitCurrency(symbol, inputs.profitCurrency);
-  if (!profitCurrency) {
+  const resolvedProfitCurrency = resolveProfitCurrency(symbol, inputs.profitCurrency);
+  const assumeAccount = inputs.assumeAccountCurrencyWhenUnknown === true;
+  const profitCurrencyAssumed = resolvedProfitCurrency === null && assumeAccount;
+
+  if (!resolvedProfitCurrency && !assumeAccount) {
     return {
       source: 'unavailable',
       reason:
@@ -220,6 +265,9 @@ export function estimatePositionMargin(inputs: MarginInputs): MarginEstimate {
         'position reports currencyProfit. Assuming one would be a guess',
     };
   }
+
+  // Either the broker told us, or the caller opted into the account-currency assumption.
+  const profitCurrency = resolvedProfitCurrency ?? accountCurrency.toUpperCase();
 
   const conversion = conversionFor(profitCurrency, accountCurrency, inputs.quotes);
   if (!conversion) {
@@ -233,13 +281,21 @@ export function estimatePositionMargin(inputs: MarginInputs): MarginEstimate {
   const notionalProfitCurrency = volume * contractSize * price;
   const margin = (notionalProfitCurrency * conversion.rate) / accountLeverage;
 
+  // An assumed currency is up-rated so the comparison below can only ever be too STRICT.
+  const marginUnadjusted = margin;
+  const marginForCap = profitCurrencyAssumed
+    ? margin * ASSUMED_CURRENCY_SAFETY_FACTOR
+    : margin;
+
   return {
     source: 'computed',
-    margin,
+    margin: marginForCap,
+    marginUnadjusted: profitCurrencyAssumed ? marginUnadjusted : undefined,
     notionalProfitCurrency,
     conversionRate: conversion.rate,
     conversionSource: conversion.source,
     profitCurrency,
+    profitCurrencyAssumed,
     inputs,
   };
 }
@@ -254,11 +310,14 @@ export function estimatePositionMargin(inputs: MarginInputs): MarginEstimate {
 export function describeMargin(estimate: MarginEstimate, accountCurrency: string): string {
   if (estimate.source === 'unavailable') return `unavailable (${estimate.reason})`;
   const i = estimate.inputs;
+  const assumedNote = estimate.profitCurrencyAssumed
+    ? ` ⚠️ ASSUMED ${estimate.profitCurrency} (broker reports none) — up-rated ×${ASSUMED_CURRENCY_SAFETY_FACTOR} from ${estimate.marginUnadjusted?.toFixed(2)}`
+    : '';
   return (
     `${estimate.margin.toFixed(2)} ${accountCurrency} ` +
     `(vol ${i.volume} × contract ${i.contractSize} × px ${i.price} = ` +
     `${estimate.notionalProfitCurrency.toFixed(2)} ${estimate.profitCurrency}` +
     `${estimate.conversionSource === 'same-currency' ? '' : ` × ${estimate.conversionRate.toPrecision(6)} (${estimate.conversionSource})`}` +
-    ` ÷ ${i.accountLeverage})`
+    ` ÷ ${i.accountLeverage}${assumedNote})`
   );
 }
