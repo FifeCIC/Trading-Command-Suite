@@ -2,10 +2,10 @@ import { TradingStrategyService } from './trading-strategy.service';
 import { RiskService } from '../risk/risk.service';
 
 /**
- * assessGlobalRiskLimits() — the drawdown gate must never fabricate its own baseline (#848).
+ * assessGlobalRiskLimits() — the gates that stand between a signal and a real order.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
- * THE BUG (measured live 2026-09-16)
+ * THE BUG THIS FILE WAS CREATED FOR (#848, measured live 2026-09-16)
  * ─────────────────────────────────────────────────────────────────────────────────────────────
  *
  * The account was read as `account?.equity ?? account?.balance ?? 10_000`, and that value seeded
@@ -18,30 +18,53 @@ import { RiskService } from '../risk/risk.service';
  *     18:42, 18:44  EURCAD/NZDJPY/EURCHF/GBPCAD blocked: "Drawdown 86.1% exceeds limit"
  *     arithmetic    (10_000 - 1,389.37) / 10_000 = 86.11%   <- the logged figure, exactly
  *
- * Two properties made this worse than a normal bug:
- *
- *   1. It was SELF-INFLICTED BY RECOVERY — the bridge coming back is what triggered the block, so
- *      the system got worse as infrastructure got better.
- *   2. It NEVER EXPIRED — `peakEquity` is an in-memory field, so trading stayed blocked until the
- *      API process restarted.
+ * It was SELF-INFLICTED BY RECOVERY (the system got worse as infrastructure got better) and it
+ * NEVER EXPIRED (the peak is in-memory, so trading stayed blocked until a restart).
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
- * THE PRINCIPLE
+ * THE SECOND BUG, ADDED 2026-09-18 (#865)
  * ─────────────────────────────────────────────────────────────────────────────────────────────
  *
- * A drawdown cannot be measured without a real account value. `?? 10_000` invented one, and the
- * invented value became a *baseline* rather than a placeholder — the same shape as #839 (a
- * hand-copied bar that kept blocking trades) and #847 (a wrong scale that rendered "low" for 100%
- * of rows). In all three, **nothing errors and the output looks like a normal result.**
+ * The per-symbol cap compared an estimate against 25% of the portfolio, and the estimate was
+ * `(size × 100_000) / (balance / margin)`. It had no price and no contract size, so **XAUUSD and
+ * NZDJPY produced the same number**; and `balance / margin` is margin UTILISATION (8.62), not the
+ * account's 1:100, so it was ~11x too high. It refused 78 trades in one day.
  *
- * These tests use the REAL `RiskService`, so the drawdown arithmetic under test is the one that
- * ships. Mocking `checkDrawdown` would only prove the mock agrees with itself.
+ * That gate now reads real inputs — contract size from `/symbol/<SYM>/info`, the account's declared
+ * leverage, and a converted price. See `common/trading/position-margin.ts` for the formula and the
+ * live-account measurement that proves it.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * THE PRINCIPLE BOTH DEFECTS SHARE
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Neither errored. Both returned a plausible number and the output looked like a normal result.
+ * So these tests use the REAL `RiskService` (mocking `checkDrawdown` would only prove the mock
+ * agrees with itself), and they assert the DIRECTION of a refusal as well as its existence.
  */
 describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () => {
   /** Small enough that `canOpenPosition`'s maxPerSymbol (25%) never masks the drawdown result. */
   const SIZE = 0.001;
 
-  function build(mt5: { getPositions: jest.Mock; getAccount: jest.Mock }) {
+  /**
+   * ⚠️ The per-symbol cap now needs the INSTRUMENT, not just a size (#865). Every call passes it.
+   * A helper rather than a literal at each of the call sites, so a future signature change is one
+   * edit rather than eight.
+   */
+  const SYMBOL = 'XAUUSD';
+  const assess = (svc: any) => svc.assessGlobalRiskLimits(SIZE, SYMBOL);
+
+  /**
+   * The account fields the gates require.
+   *
+   * ⚠️ `leverage` and `currency` are REQUIRED by the per-symbol estimate (#865) and were unused by
+   * this method before, so every fixture here had to gain them. A fixture missing `leverage` makes
+   * the estimate `unavailable` and the gate REFUSES by design — which would otherwise look like
+   * these drawdown tests failing.
+   */
+  const acct = (o: Record<string, unknown>) => ({ leverage: 100, currency: 'GBP', ...o });
+
+  function build(mt5: Record<string, any>) {
     const notificationService = {
       notifyDrawdown: jest.fn().mockResolvedValue(undefined),
     } as any;
@@ -68,7 +91,6 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
      * arrived as `undefined`, and `drawdown >= undefined` is `false`, so the drawdown gate silently
      * STOPPED BLOCKING and only the "still blocks a genuine drawdown" test noticed. A fixture that
      * mirrors the registry is load-bearing here; when the registry gains a cap, this map must too.
-     * The sibling test below locks that requirement in with an explicit refusal.
      */
     const settings = {
       get: jest.fn(async (key: string) =>
@@ -81,6 +103,25 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
         } as Record<string, number>)[key],
       ),
     } as any;
+
+    // ⚠️ 2026-09-18 (#865) — the per-symbol cap reads the instrument's CONTRACT SIZE and PRICE.
+    // Supplied here (unless a test overrides them) so each test states only what it is testing.
+    // A MISSING method throws, and the gate refuses on a throw — see the fail-closed test below.
+    mt5.getSymbolInfo = mt5.getSymbolInfo ?? jest.fn(async () => ({
+      name: SYMBOL, digits: 2, contractSize: 100, volumeMin: 0.01, volumeMax: 100,
+    }));
+    // Also serves the profit→account conversion. ⚠️ This mirrors the LIVE broker faithfully:
+    // it quotes GBPUSD and GBPJPY and returns NOTHING for USDGBP/JPYGBP (both 404), so the
+    // estimator is forced down its inverse path. A mock that answered every pair would make the
+    // tests pass while the real conversion silently failed — and a rate of `4346.06` for USDGBP
+    // (the gold price) is exactly the kind of plausible-looking wrong number this change exists to
+    // eliminate.
+    const FX_QUOTES: Record<string, number> = { GBPUSD: 1.33838, GBPJPY: 209.768 };
+    mt5.getQuote = mt5.getQuote ?? jest.fn(async (s: string) => {
+      if (s === SYMBOL) return { bid: 4346, ask: 4346.5, last: 4346.06 };
+      const last = FX_QUOTES[s];
+      return last != null ? { bid: last, ask: last, last } : null; // null = "broker does not quote it"
+    });
 
     return new TradingStrategyService(
       prisma,
@@ -101,14 +142,14 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     mt5.getPositions.mockRejectedValue(new Error('Bridge unreachable (circuit breaker active)'));
     mt5.getAccount.mockRejectedValue(new Error('Bridge unreachable (circuit breaker active)'));
 
-    const first = await svc.assessGlobalRiskLimits(SIZE);
+    const first = await assess(svc);
     expect(first.allowed).toBe(true); // drawdown is 0% on the first call either way
 
     // ── tick 2: SAME account, bridge healthy again. Nothing about the account changed. ──
     mt5.getPositions.mockResolvedValue([]);
-    mt5.getAccount.mockResolvedValue({ equity: 1389.37, balance: 1389.37, margin: 100 });
+    mt5.getAccount.mockResolvedValue(acct({ equity: 1389.37, balance: 1389.37, margin: 100 }));
 
-    const second = await svc.assessGlobalRiskLimits(SIZE);
+    const second = await assess(svc);
 
     // REGRESSION GUARD: before the fix this was
     //   { allowed: false, reason: 'Drawdown 86.1% exceeds limit' }
@@ -124,14 +165,14 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     mt5.getPositions.mockRejectedValue(new Error('bridge down'));
     mt5.getAccount.mockRejectedValue(new Error('bridge down'));
 
-    await svc.assessGlobalRiskLimits(SIZE);
+    await assess(svc);
 
     // The peak is private, so assert it through behaviour: a LARGE first real reading must not be
     // treated as a drawdown from anything, and a small one must not be reported as a loss.
     mt5.getPositions.mockResolvedValue([]);
-    mt5.getAccount.mockResolvedValue({ equity: 500, balance: 500, margin: 100 });
+    mt5.getAccount.mockResolvedValue(acct({ equity: 500, balance: 500, margin: 100 }));
 
-    const after = await svc.assessGlobalRiskLimits(SIZE);
+    const after = await assess(svc);
     expect(after.allowed).toBe(true);
     expect(after.reason).not.toContain('Drawdown');
   });
@@ -140,13 +181,13 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     const mt5 = { getPositions: jest.fn().mockResolvedValue([]), getAccount: jest.fn() };
     const svc = build(mt5);
 
-    mt5.getAccount.mockResolvedValue({ equity: 1000, balance: 1000, margin: 100 });
-    const atPeak = await svc.assessGlobalRiskLimits(SIZE);
+    mt5.getAccount.mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 }));
+    const atPeak = await assess(svc);
     expect(atPeak.allowed).toBe(true);
 
     // A real 40% fall — above the 25% maxDrawdown.
-    mt5.getAccount.mockResolvedValue({ equity: 600, balance: 600, margin: 100 });
-    const afterDrop = await svc.assessGlobalRiskLimits(SIZE);
+    mt5.getAccount.mockResolvedValue(acct({ equity: 600, balance: 600, margin: 100 }));
+    const afterDrop = await assess(svc);
 
     expect(afterDrop.allowed).toBe(false);
     expect(afterDrop.reason).toContain('Drawdown');
@@ -173,7 +214,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
   it('REFUSES the order when a cap cannot be read — an unreadable cap must not disable the gate', async () => {
     const mt5 = {
       getPositions: jest.fn().mockResolvedValue([]),
-      getAccount: jest.fn().mockResolvedValue({ equity: 1000, balance: 1000, margin: 100 }),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
     };
     const svc = build(mt5);
 
@@ -184,7 +225,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
       key === 'risk.maxDrawdown' ? undefined : realGet(key),
     );
 
-    const result = await svc.assessGlobalRiskLimits(SIZE);
+    const result = await assess(svc);
 
     expect(result.allowed).toBe(false);
     // The reason must NAME the key — a bare "risk check failed" would send the next reader looking
@@ -199,11 +240,124 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     // pass the test above and quietly stop all trading.
     const mt5 = {
       getPositions: jest.fn().mockResolvedValue([]),
-      getAccount: jest.fn().mockResolvedValue({ equity: 1000, balance: 1000, margin: 100 }),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
     };
     const svc = build(mt5);
-    const result = await svc.assessGlobalRiskLimits(SIZE);
+    const result = await assess(svc);
     expect(result.allowed).toBe(true);
     expect(result.reason).not.toContain('unreadable');
+  });
+
+  /**
+   * REGRESSION GUARD — a THROW inside the per-symbol estimate must REFUSE (#865, 2026-09-18).
+   *
+   * ⚠️ This test exists because the defect it covers happened while the fix was being written. The
+   * estimate sits inside the portfolio-gate `try`, whose catch logs "proceeding with caution" and
+   * lets the order through. A test double without `getSymbolInfo` made the method throw, the outer
+   * catch swallowed it, and a gate expected to BLOCK returned `allowed: true`.
+   *
+   * "Proceeding with caution" is the right answer for an unreadable ACCOUNT — there is no drawdown
+   * to measure, and the bridge-down path is handled elsewhere. It is the WRONG answer for a cap we
+   * simply failed to compute, because the resulting trade looks like it passed a check that never
+   * ran.
+   */
+  it('REFUSES when the per-symbol estimate throws — a broken input must not disable the cap', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+      getSymbolInfo: jest.fn(async () => { throw new Error('bridge exploded'); }),
+    };
+    const svc = build(mt5);
+
+    const result = await assess(svc);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('per-symbol cap');
+    expect(result.reason).toContain('bridge exploded');
+    // ⚠️ And specifically NOT the "proceeding with caution" path, which is fail-OPEN.
+    expect(result.reason).not.toContain('caution');
+  });
+
+  it('REFUSES when an instrument has no derivable profit currency — no assuming it settles in GBP', async () => {
+    // An index CFD carries no currency in its name, and `/symbol/<S>` does not report one on the
+    // running bridge. Assuming the account currency would silently mis-size every index position,
+    // so the estimator returns unavailable and the gate refuses.
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+      getSymbolInfo: jest.fn(async () => ({
+        name: 'US500', digits: 2, contractSize: 1, volumeMin: 0.1, volumeMax: 100,
+      })),
+      // A price IS available for US500 — so the refusal must come from the PROFIT CURRENCY, which
+      // is the actual gap. Without this the price check fires first and the test would assert the
+      // wrong reason, hiding whether the profit-currency branch works at all.
+      getQuote: jest.fn(async () => ({ bid: 5000, ask: 5000.5, last: 5000 })),
+    };
+    const svc = build(mt5);
+
+    const result = await svc.assessGlobalRiskLimits(SIZE, 'US500');
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('profit currency unknown');
+  });
+
+  /**
+   * THE PROPERTY THE OLD EXPRESSION COULD NOT SATISFY (#865).
+   *
+   * With no price and no contract size it returned the IDENTICAL estimate for gold and for a yen
+   * cross — observed in the decision log as `62.7%` and `62.6%` on the same day, against a cap of
+   * 25%. Both were refused, for the same reason, with the same number.
+   *
+   * Both must now be PERMITTED at 0.1 lot on a 1,000 portfolio: gold ties up ~£3.25 and NZDJPY
+   * ~£0.47 at 0.001 lot. If the estimate ever regresses to the instrument-blind shape, at least one
+   * of these flips to refused at the same time as the other, and this test fails.
+   */
+  it('the per-symbol estimate is not instrument-blind — different instruments are priced differently', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+      getSymbolInfo: jest.fn(async (s: string) => (s === 'XAUUSD'
+        ? { name: 'XAUUSD', digits: 2, contractSize: 100, volumeMin: 0.01, volumeMax: 100 }
+        : { name: 'NZDJPY', digits: 3, contractSize: 100_000, volumeMin: 0.1, volumeMax: 100 })),
+      // ⚠️ Mirrors the live broker: the traded symbols price directly, and only GBPUSD / GBPJPY
+      // exist as conversion pairs. Answering every pair here would let a broken conversion pass.
+      getQuote: jest.fn(async (s: string) => {
+        if (s === 'NZDJPY') return { bid: 89.34, ask: 89.35, last: 89.343 };
+        if (s === 'XAUUSD') return { bid: 4346, ask: 4346.5, last: 4346.06 };
+        const fx = ({ GBPUSD: 1.33838, GBPJPY: 209.768 } as Record<string, number>)[s];
+        return fx != null ? { bid: fx, ask: fx, last: fx } : null;
+      }),
+    };
+    const svc = build(mt5);
+
+    const gold = await svc.assessGlobalRiskLimits(0.001, 'XAUUSD');
+    const yen = await svc.assessGlobalRiskLimits(0.001, 'NZDJPY');
+
+    // Both permitted. The old expression refused BOTH — at ~86%, for the same stated reason,
+    // with the same number, which is precisely what made the defect hard to see.
+    expect(gold.allowed).toBe(true);
+    expect(yen.allowed).toBe(true);
+  });
+
+  /**
+   * The number in a refusal must be explicable. `Allocation 62.7% exceeds max per symbol 25%` was
+   * true, unactionable, and took an hour to explain; the reason now carries the estimate and the
+   * portfolio value so the next reader can ask "why is that number that size?" immediately.
+   */
+  it('a refusal names the estimate and the portfolio it was measured against', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      // A large size against a small account: 1 lot of gold is ~£3,250 of margin on a £1,000
+      // portfolio, i.e. far above the 25% cap.
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const svc = build(mt5);
+
+    const result = await svc.assessGlobalRiskLimits(1, 'XAUUSD');
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('exceeds max per symbol');
+    expect(result.reason).toContain('estimated capital');
+    expect(result.reason).toContain('1000.00'); // the portfolio it was compared against
   });
 });

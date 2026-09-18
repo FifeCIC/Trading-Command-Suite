@@ -346,8 +346,10 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Portfolio-wide risk authority (merged from CodeRabbit 416f794 / MST-006).
     // Kept alongside the per-symbol duplicate/scale-in policy above: one guards
-    // position building, the other guards aggregate account risk.
-    const accountRisk = await this.strategyService.assessGlobalRiskLimits(baseSize);
+    // Position building, the other guards aggregate account risk.
+    // ⚠️ `symbol` is passed because the per-symbol cap needs the instrument's contract size and
+    // price — without them gold and a yen cross are priced identically (#865).
+    const accountRisk = await this.strategyService.assessGlobalRiskLimits(baseSize, symbol);
     if (!accountRisk.allowed) {
       this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, accountRisk.reason);
       decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: accountRisk.reason, composite, signal: side });
@@ -1721,7 +1723,7 @@ export class AutomationLoopService implements OnModuleInit {
       return { confirmed: false, message: `Broker ${action.brokerId || 'mt5'} does not support orders` };
     }
 
-    const accountRisk = await this.strategyService.assessGlobalRiskLimits(action.quantity);
+    const accountRisk = await this.strategyService.assessGlobalRiskLimits(action.quantity, action.symbol);
     if (!accountRisk.allowed) {
       return { confirmed: false, message: `Action blocked: ${accountRisk.reason}` };
     }

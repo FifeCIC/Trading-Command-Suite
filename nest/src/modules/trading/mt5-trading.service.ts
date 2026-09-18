@@ -18,6 +18,17 @@ export interface Mt5Position {
   profit: number;
   comment: string;
   time: number;
+  /**
+   * `trade_contract_size` for this position's symbol (from `/positions`).
+   * ⚠️ Added 2026-09-18 (#865) — the bridge has always sent it; this mapping dropped it.
+   */
+  contractSize?: number;
+  /**
+   * The currency this position's profit is denominated in.
+   * ⚠️ Also dropped by this mapping until 2026-09-18. It is the ONLY authoritative source for the
+   * profit currency before the bridge exposes it on `/symbol/<SYM>/info`.
+   */
+  currencyProfit?: string;
 }
 
 export interface Mt5Account {
@@ -28,6 +39,31 @@ export interface Mt5Account {
   margin_free: number;
   margin_level: number;
   currency: string;
+  /**
+   * The account's DECLARED leverage (100 = 1:100).
+   *
+   * ⚠️ Added 2026-09-18 (#865). The bridge has always sent it; this mapping dropped it. Its
+   * absence is why `assessGlobalRiskLimits()` derived leverage as `balance / margin` instead —
+   * which is margin UTILISATION (8.62 on this account), not leverage, and inflated every position
+   * estimate ~11x. It blocked 78 trades in one day.
+   */
+  leverage: number;
+}
+
+/** Symbol specification from the broker — what a position SIZE actually costs. */
+export interface Mt5SymbolInfo {
+  name: string;
+  description?: string;
+  digits: number;
+  /** `trade_contract_size`. 100 for gold (oz), 100000 for an FX pair, 1 for an index CFD. */
+  contractSize: number;
+  volumeMin: number;
+  volumeMax: number;
+  /**
+   * The currency this symbol's profit (and notional) is denominated in.
+   * ⚠️ Only present once the bridge is redeployed with the field — see position-margin.ts.
+   */
+  currencyProfit?: string;
 }
 
 @Injectable()
@@ -59,6 +95,9 @@ export class Mt5TradingService {
         margin_free: Number(data.margin_free ?? data.marginFree ?? 0),
         margin_level: Number(data.margin_level ?? data.marginLevel ?? 0),
         currency: String(data.currency ?? ''),
+        // ⚠️ `?? 0`, not `?? 100`. A missing leverage must show up as an unusable account rather
+        // than a plausible default that quietly produces a wrong margin estimate.
+        leverage: Number(data.leverage ?? 0),
       };
     } catch { return null; }
   }
@@ -82,13 +121,68 @@ export class Mt5TradingService {
         profit: Number(p.profit ?? 0),
         comment: String(p.comment ?? ''),
         time: Number(p.time ?? (p.openTime ? Date.parse(p.openTime) / 1000 : 0)),
+        contractSize: p.contractSize != null ? Number(p.contractSize) : undefined,
+        currencyProfit: p.currencyProfit != null ? String(p.currencyProfit) : undefined,
       }));
     } catch { return []; }
   }
 
-  /** Fetch candles from MT5 bridge for on-demand scoring (Sprint 2026-07-04) */
-  async getCandles(symbol: string, timeframe = '1h', limit = 200): Promise<Array<{ timestamp: Date; open: number; high: number; low: number; close: number; volume: number }>> {
+  /**
+   * getSymbolInfo() — the broker's specification for a symbol (#865).
+   *
+   * ⚠️ `contractSize` is what makes a position SIZE meaningful: 100 for gold (troy oz), 100000 for
+   * an FX pair, 1 for an index CFD. Without it, `size × 100_000` is applied to every instrument,
+   * which is why a gold entry and a yen-cross entry produced the SAME estimated capital and the
+   * per-symbol cap blocked both at the same ratio.
+   *
+   * Returns null when the symbol is unknown to the broker or the bridge is unreachable — callers
+   * must treat that as "cannot evaluate", NOT as a zero-cost position.
+   */
+  async getSymbolInfo(symbol: string): Promise<Mt5SymbolInfo | null> {
     try {
+      const res = await fetch(
+        `${this.bridgeUrl}/symbol/${encodeURIComponent(symbol)}/info`,
+        { signal: AbortSignal.timeout(8000) },
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      if (d?.error || d?.contractSize == null) return null;
+      return {
+        name: String(d.name ?? symbol),
+        description: d.description != null ? String(d.description) : undefined,
+        digits: Number(d.digits ?? 0),
+        contractSize: Number(d.contractSize),
+        volumeMin: Number(d.volumeMin ?? 0),
+        volumeMax: Number(d.volumeMax ?? 0),
+        // Absent on the running bridge build; see position-margin.ts for the resolution order.
+        currencyProfit: d.currencyProfit != null ? String(d.currencyProfit) : undefined,
+      };
+    } catch { return null; }
+  }
+
+  /**
+   * getQuote() — current bid/ask/last for a symbol.
+   *
+   * Used for two things by the risk estimate (#865): pricing the symbol being traded, and pricing a
+   * CURRENCY PAIR for the profit→account conversion. Note the broker quotes one direction only —
+   * this account has GBPUSD and GBPJPY, and neither USDGBP nor JPYGBP — so callers must be prepared
+   * to invert.
+   */
+  async getQuote(symbol: string): Promise<{ bid: number; ask: number; last: number } | null> {
+    try {
+      const res = await fetch(
+        `${this.bridgeUrl}/quote?symbol=${encodeURIComponent(symbol)}`,
+        { signal: AbortSignal.timeout(8000) },
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      if (d?.error || d?.last == null) return null;
+      return { bid: Number(d.bid ?? 0), ask: Number(d.ask ?? 0), last: Number(d.last) };
+    } catch { return null; }
+  }
+
+  /** Fetch candles from MT5 bridge for on-demand scoring (Sprint 2026-07-04) */
+  async getCandles(symbol: string, timeframe = '1h', limit = 200): Promise<Array<{ timestamp: Date; open: number; high: number; low: number; close: number; volume: number }>> {    try {
       const res = await fetch(`${this.bridgeUrl}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`);
       if (!res.ok) return [];
       const data = await res.json();

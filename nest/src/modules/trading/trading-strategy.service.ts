@@ -30,6 +30,12 @@ import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import { resolveEffectiveRole } from '../../common/utils/signal-direction';
 import { RiskService } from '../risk/risk.service';
 import { buildRiskProfile } from '../risk/risk-profile-rules';
+import {
+  estimatePositionMargin,
+  describeMargin,
+  conversionPairsNeeded,
+  resolveProfitCurrency,
+} from '../../common/trading/position-margin';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { MarketBar } from '../directives/interfaces/directive.interface';
@@ -667,7 +673,7 @@ export class TradingStrategyService {
     const tpPct = (strategy.tpPct ?? 1.0) / 100;
 
     // ── Pre-Flight Safety Gates (Issue #28) ──────────────
-    const safetyCheck = await this.assessGlobalRiskLimits(size);
+    const safetyCheck = await this.assessGlobalRiskLimits(size, strategy.symbol);
     if (!safetyCheck.allowed) {
       return { executed: false, reason: safetyCheck.reason };
     }
@@ -772,10 +778,15 @@ export class TradingStrategyService {
 
   /**
    * Pre-flight safety gates before any MT5 order.
-   * Checks env-driven risk limits + RiskService portfolio gates.
+   * Checks settings-driven risk limits + RiskService portfolio gates.
+   *
+   * ⚠️ `symbol` is REQUIRED as of 2026-09-18 (#865). The per-symbol allocation cap cannot be
+   * evaluated without knowing which instrument is being priced — the old signature took only a
+   * size, which is how `size × 100_000` came to be applied to gold and to a yen cross alike.
    */
   async assessGlobalRiskLimits(
     size: number,
+    symbol: string,
   ): Promise<{ allowed: boolean; reason: string }> {
     // ── 1. MT5_MAX_POSITION_SIZE ──
     const maxPosSize = await this.settings.get<number>('risk.maxPositionSize');
@@ -881,36 +892,105 @@ export class TradingStrategyService {
         );
       } else {
         const portfolioValue = realAccountValue;
-        // Use actual margin impact instead of notional (0.01 lot at 1:30 = ~$33, not $1,000)
-        const leverage = account?.margin && account?.balance
-          ? account.balance / account.margin
-          : 30;
-        const estimatedCapital = (size * 100_000) / Math.max(leverage, 1); // Margin used, not notional
 
-        // ⚠️ THE ESTIMATE BELOW IS KNOWN TO BE WRONG, AND THIS LOG IS HOW YOU SEE IT (#865).
+        // ── Per-symbol capital estimate (#865, 2026-09-18) ──────────────────────────────────
         //
-        // Two defects, both measured 2026-09-17:
-        //   1. `leverage` is `balance / margin` — margin UTILISATION, not a leverage ratio. It read
-        //      8.62 against the account's declared 1:100, inflating the estimate ~11x. It also FALLS
-        //      as positions open, so the more is open, the harder entries are blocked: a compounding
-        //      trap, not a constant error.
-        //   2. `size * 100_000` is the FX contract convention applied to EVERY instrument. There is no
-        //      price and no per-instrument contract size, so XAUUSD and NZDJPY produce the IDENTICAL
-        //      estimate. Measured: gold 0.1 lot needs £434.61 of margin at 1:100, NZDJPY needs £100,
-        //      and this expression returns £1,160 for both.
+        // Replaces `(size × 100_000) / (balance / margin)`, which had two defects:
         //
-        // It is NOT fixed here on purpose. The obvious repair (use `account.leverage`) makes FX
-        // correct and gold 4.3x TOO PERMISSIVE — it would admit ~4x the intended exposure on metals.
-        // Correcting it needs a per-symbol contract size, which the bridge carries on `/positions`
-        // but exposes on no symbol endpoint. Trading one wrong answer for a more dangerous one on a
-        // money path is not a fix; see the issue.
+        //   1. NO PRICE AND NO CONTRACT SIZE. `size × 100_000` is the FX convention applied to
+        //      everything, so XAUUSD and NZDJPY produced the IDENTICAL estimate — visible in the
+        //      logs as `62.7%` and `62.6%` for gold and a yen cross.
+        //   2. `balance / margin` is margin UTILISATION (8.62 here), not the account's 1:100. It
+        //      inflated every estimate ~11x AND fell as positions opened, so the more was open the
+        //      harder entries were blocked: a compounding trap. It cost 78 trades in one day.
         //
-        // Reference values for the next person: size=0.1 -> estimatedCapital=1160.09 on this account.
+        // The formula, and the live-account measurement that proves it (96.02 computed vs 95.98
+        // actual), live in `common/trading/position-margin.ts`.
+        //
+        // ⚠️ IT FAILS CLOSED. Every input is read or the order is refused with the missing input
+        // NAMED. This is the whole point: the old defect was not a wrong number, it was a wrong
+        // number that looked normal — and a cap that arrives as `undefined` does not trip a check,
+        // it DISABLES it.
+        const symbolUpper = symbol.toUpperCase();
+
+        // ⚠️ THE ENTIRE ESTIMATE IS WRAPPED, AND THE CATCH REFUSES — deliberately.
+        //
+        // This code sits inside the portfolio-gate `try`, whose catch logs "proceeding with
+        // caution" and lets the order through. That is correct for an unavailable ACCOUNT reading
+        // (handled above) but WRONG for the per-symbol cap: a throw here would silently DISABLE the
+        // cap and the trade would look like it passed. Found exactly that way — a test double
+        // without `getSymbolInfo` made the method throw, the outer catch swallowed it, and a gate
+        // expected to block returned `allowed: true`.
+        //
+        // An error we do not understand is a cap we cannot evaluate, so it refuses and says so.
+        let marginEstimate: ReturnType<typeof estimatePositionMargin>;
+        try {
+          // ⚠️ NO `.catch(() => null)` HERE, deliberately. Both methods already wrap their own
+          // fetch and return `null` on a network failure, so an outer catch would only swallow
+          // GENUINE faults — turning "the bridge exploded" into a bland "contractSize is 0" and
+          // losing the message that would have explained it. A real fault should reach the catch
+          // below, which refuses and quotes it.
+          const symbolInfo = await this.mt5.getSymbolInfo(symbol);
+          const symbolQuote = await this.mt5.getQuote(symbol);
+
+          // Profit currency, most authoritative first: broker spec → an open position of this
+          // symbol (MT5's own value) → the documented XXXYYY convention. Never a guess.
+          const profitCurrency =
+            symbolInfo?.currencyProfit?.toUpperCase() ??
+            positions.find((p) => String(p.symbol).toUpperCase() === symbolUpper)?.currencyProfit?.toUpperCase() ??
+            resolveProfitCurrency(symbol) ??
+            undefined;
+
+          // This broker quotes ONE direction per pair (GBPUSD, GBPJPY — no USDGBP/JPYGBP), so fetch
+          // both candidates and let the estimator pick; it inverts when only the reverse exists.
+          const quotes: Record<string, number> = {};
+          if (profitCurrency && account?.currency) {
+            for (const pair of conversionPairsNeeded(profitCurrency, account.currency)) {
+              const q = await this.mt5.getQuote(pair);
+              if (q?.last) quotes[pair] = q.last;
+            }
+          }
+
+          marginEstimate = estimatePositionMargin({
+            symbol,
+            volume: size,
+            price: symbolQuote?.last ?? 0,
+            contractSize: symbolInfo?.contractSize ?? 0,
+            accountLeverage: account?.leverage ?? 0,
+            accountCurrency: account?.currency ?? '',
+            profitCurrency,
+            quotes,
+          });
+        } catch (err: any) {
+          this.logger.error(
+            `Per-symbol cap could not be evaluated for ${symbol}: ${err?.message ?? err}`,
+          );
+          return {
+            allowed: false,
+            reason:
+              `Cannot evaluate the per-symbol cap for ${symbol}: ${err?.message ?? err} — ` +
+              'refusing rather than trading without it',
+          };
+        }
+
+        if (marginEstimate.source === 'unavailable') {
+          this.logger.warn(
+            `Cannot estimate capital for ${symbol} ${size} lot — ${marginEstimate.reason}. ` +
+              'Refusing rather than trading without the per-symbol cap (#865).',
+          );
+          return {
+            allowed: false,
+            reason:
+              `Cannot evaluate the per-symbol cap for ${symbol}: ${marginEstimate.reason} — ` +
+              'refusing rather than trading without it',
+          };
+        }
+
+        const estimatedCapital = marginEstimate.margin;
+
         this.logger.debug(
-          `risk estimate: size=${size} contract=100000 leverage=${leverage.toFixed(2)} ` +
-            `(account declares ${account?.leverage ?? '?'}:1) margin=${account?.margin} balance=${account?.balance} ` +
-            `-> estimatedCapital=${estimatedCapital.toFixed(2)} = ` +
-            `${portfolioValue > 0 ? ((estimatedCapital / portfolioValue) * 100).toFixed(1) : '?'}% of ${portfolioValue} (#865)`,
+          `risk estimate for ${symbol}: ${describeMargin(marginEstimate, account?.currency ?? '')} = ` +
+            `${portfolioValue > 0 ? ((estimatedCapital / portfolioValue) * 100).toFixed(1) : '?'}% of ${portfolioValue}`,
         );
 
         const riskProfile = buildRiskProfile({

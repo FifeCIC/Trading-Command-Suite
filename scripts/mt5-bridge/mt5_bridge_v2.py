@@ -928,7 +928,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 return json_response(self, {'name': info.name, 'description': info.description,
                     'digits': info.digits, 'contractSize': info.trade_contract_size,
                     'volumeMin': info.volume_min, 'volumeMax': info.volume_max, 'spread': info.spread,
-                    'swapLong': info.swap_long, 'swapShort': info.swap_short, 'swapMode': info.swap_mode})
+                    'swapLong': info.swap_long, 'swapShort': info.swap_short, 'swapMode': info.swap_mode,
+                    # ⚠️ WHY the profit currency is here (#865, 2026-09-18): the per-symbol
+                    # allocation cap needs `volume × contractSize × price` converted into the
+                    # ACCOUNT currency. Without `currencyProfit` the conversion cannot be built for
+                    # any symbol whose name does not state its quote currency — index CFDs such as
+                    # US500 / GER40 / UK100 carry no currency in their name, so the estimator must
+                    # return "unavailable" and refuse rather than assume one.
+                    # `info` already holds both, so this is a payload change, not new work.
+                    'currencyProfit': info.currency_profit, 'currencyBase': info.currency_base})
 
             # /accounts
             if path == '/accounts':
