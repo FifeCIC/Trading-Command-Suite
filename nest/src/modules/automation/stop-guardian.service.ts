@@ -36,6 +36,16 @@ export interface GuardianState {
   lastTickMs: number;
   guardedPositions: GuardedPosition[];
   recentAdjustments: StopAdjustment[];
+  /**
+   * ⚠️ #892 — why the last stop edit was REFUSED by the broker, if it was.
+   *
+   * `0 adjusted` is ambiguous: it reads as "nothing needed adjusting", and before
+   * this field the alternative — "positions needed adjusting and the broker rejected
+   * every one" — produced exactly the same output. Measured 2026-09-18: three
+   * positions cleared the confidence gate, every edit was refused with
+   * `HTTP 400 {"error": "Market closed"}`, and nothing anywhere said so.
+   */
+  lastBridgeRefusal: { at: string; path: string; detail: string } | null;
 }
 
 export interface GuardedPosition {
@@ -117,6 +127,7 @@ export class StopGuardianService {
     lastTickMs: 0,
     guardedPositions: [],
     recentAdjustments: [],
+    lastBridgeRefusal: null,
   };
 
   // ── Broker-modification throttle (#721 decision 6) ──
@@ -139,6 +150,30 @@ export class StopGuardianService {
    */
   private lastDirectiveShortfallAt = 0;
   private readonly DIRECTIVE_SHORTFALL_LOG_MS = 30 * 60_000;
+
+  /**
+   * ⚠️ #892 — throttles the "a modify was blocked" warning.
+   *
+   * The per-position cadence (60s between edits on ONE position, against a 30s
+   * tick) blocks legitimately and repeatedly, so an unthrottled warning would be
+   * mostly noise. The failure this exists to expose is the opposite one: a modify
+   * that can NEVER go out. One line per 5 minutes keeps that visible without
+   * training the reader to ignore the line.
+   */
+  private lastThrottleLogAt = 0;
+  private readonly THROTTLE_LOG_MS = 5 * 60_000;
+
+  /**
+   * ⚠️ #892 — deduplicates identical bridge refusals.
+   *
+   * The guardian retries every 30s. A closed market refuses every edit with an
+   * identical body, so an unthrottled ERROR is 3 lines per tick (~8,600/day) and it
+   * buries the one refusal that would matter. Keyed on CONTENT rather than time, so a
+   * DIFFERENT refusal still prints immediately.
+   */
+  private lastRefusalKey = '';
+  private lastRefusalLogAt = 0;
+  private readonly REFUSAL_LOG_MS = 5 * 60_000;
 
   constructor(
     private readonly strategyService: TradingStrategyService,
@@ -203,8 +238,48 @@ export class StopGuardianService {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(10_000),
       });
+      if (!res.ok) {
+        // ⚠️ #892 — the bridge answers a REFUSED modify with a 4xx and a body of
+        // `{'success': false, 'error': '<mt5 error>'}`. Returning a bare `false`
+        // threw that away, so a refused stop edit was indistinguishable from a
+        // successful one at every layer above: the caller sees only a boolean, and
+        // the guardian then reports `0 adjusted` — which reads as "nothing needed
+        // adjusting" rather than "the broker said no".
+        let detail = '';
+        try {
+          detail = (await res.text()).slice(0, 300);
+        } catch {
+          detail = '<body unreadable>';
+        }
+        // Recorded on the state so `GET /status` says WHY, not just that nothing moved.
+        this.state.lastBridgeRefusal = {
+          at: new Date().toISOString(),
+          path,
+          detail: detail || `HTTP ${res.status}`,
+        };
+        // Throttled by content — see REFUSAL_LOG_MS. A repeated identical refusal is
+        // still recorded above; only its log line is suppressed.
+        const key = `${path} ${res.status} ${detail}`;
+        const now = Date.now();
+        const isRepeat =
+          this.lastRefusalKey === key && now - this.lastRefusalLogAt < this.REFUSAL_LOG_MS;
+        if (!isRepeat) {
+          this.lastRefusalKey = key;
+          this.lastRefusalLogAt = now;
+          this.logger.error(
+            `Bridge POST ${path} refused: HTTP ${res.status} ${detail}`,
+          );
+        }
+      }
       return res.ok;
-    } catch {
+    } catch (err) {
+      // ⚠️ #892 — a TRANSPORT failure is a different cause from "the broker said
+      // no", and without this line the two are identical to every caller. The
+      // bridge being down, the request timing out, and a rejected price are three
+      // problems with three different fixes.
+      this.logger.error(
+        `Bridge POST ${path} failed: ${(err as Error).message}`,
+      );
       return false;
     }
   }
@@ -510,18 +585,39 @@ export class StopGuardianService {
     return Number(protective.toFixed(5));
   }
 
-  /** Broker-throttle gate — returns true if a modify may be sent now. */
-  private canModify(ticket: number, priority: boolean): boolean {
+  /**
+   * Broker-throttle gate — returns `null` if a modify may be sent now, or the
+   * reason it may not.
+   *
+   * ⚠️ #892 — this used to return a bare boolean and the caller logged the block
+   * at `debug`, which Nest never prints at the default level. A stop edit that
+   * could never go out was therefore completely invisible. Naming the reason is
+   * what makes the two cases distinguishable: the per-position cadence is normal
+   * and self-clearing, whereas the global cap means edits are being dropped.
+   */
+  private modifyBlockedReason(ticket: number, priority: boolean): string | null {
     const now = Date.now();
     this.modifyTimes = this.modifyTimes.filter((t) => now - t < 60_000);
     // Global hard cap applies to everyone (incl. protective floors) to avoid
     // tripping broker throttling during a mass-unlock event.
-    if (this.modifyTimes.length >= this.MAX_MODIFY_PER_MINUTE) return false;
+    if (this.modifyTimes.length >= this.MAX_MODIFY_PER_MINUTE) {
+      return `global cap — ${this.modifyTimes.length} modify(s) already sent in the last 60s (max ${this.MAX_MODIFY_PER_MINUTE})`;
+    }
     if (!priority) {
       const last = this.lastModifyAt.get(ticket) || 0;
-      if (now - last < this.MIN_MODIFY_INTERVAL_MS) return false;
+      if (now - last < this.MIN_MODIFY_INTERVAL_MS) {
+        return `per-position cadence — ${Math.round((now - last) / 1000)}s since the last edit on #${ticket} (min ${this.MIN_MODIFY_INTERVAL_MS / 1000}s)`;
+      }
     }
-    return true;
+    return null;
+  }
+
+  /** Throttled so the legitimate cadence blocks cannot flood the log they live in. */
+  private logThrottle(symbol: string, ticket: number, reason: string): void {
+    const now = Date.now();
+    if (now - this.lastThrottleLogAt < this.THROTTLE_LOG_MS) return;
+    this.lastThrottleLogAt = now;
+    this.logger.warn(`Stop modify blocked: ${symbol} #${ticket} — ${reason}`);
   }
 
   /**
@@ -539,10 +635,9 @@ export class StopGuardianService {
     priority: boolean,
     directiveScores?: Record<string, number | null>,
   ): Promise<boolean> {
-    if (!this.canModify(pos.ticket, priority)) {
-      this.logger.debug(
-        `Stop modify throttled: ${pos.symbol} #${pos.ticket} (priority=${priority})`,
-      );
+    const blocked = this.modifyBlockedReason(pos.ticket, priority);
+    if (blocked) {
+      this.logThrottle(pos.symbol, pos.ticket, blocked);
       return false;
     }
 
