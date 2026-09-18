@@ -40,7 +40,11 @@
  * USAGE
  *   node scripts/validate-qa-ids.cjs              # gate
  *   node scripts/validate-qa-ids.cjs --self-test  # prove the guard can fail
- *   node scripts/validate-qa-ids.cjs --list       # print every duplicate, verbose
+ *   node scripts/validate-qa-ids.cjs --list       # also print the LINE of every occurrence
+ *
+ * `--list` is not decoration: the repair for a duplicate is "renumber the later occurrence",
+ * and to do that you need to know WHICH LINE each one is on. The failure message tells you
+ * the rule; `--list` gives you the coordinates.
  *
  * Runs in `prebuild` (nest/package.json) after the other repo-root validators.
  */
@@ -57,6 +61,25 @@ const TAG = 'qa-ids';
 // ── extraction ────────────────────────────────────────────────────────────────
 
 /**
+ * Scan a source with a global regex, returning `{ value, line }` for each match.
+ * The line number is what makes a failure REPAIRABLE rather than merely reported:
+ * "used twice" is a fact, "used twice, at lines 2933 and 3321" is an instruction.
+ * Newlines are counted incrementally (never re-scanning from 0) so this stays O(n).
+ */
+function scan(source, re, pick) {
+  const out = [];
+  let line = 1;
+  let cursor = 0;
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    for (let i = cursor; i < m.index; i++) if (source.charCodeAt(i) === 10) line++;
+    cursor = m.index;
+    out.push({ value: pick(m), line });
+  }
+  return out;
+}
+
+/**
  * QA ids are declared as a property at the head of each entry: `id: 'qa-…'`.
  * Anchored to the line start so an id MENTIONED inside a `procedure:` string (which
  * is prose, and may legitimately cite another test) is never mistaken for a
@@ -65,11 +88,7 @@ const TAG = 'qa-ids';
  * a guard that counts prose would one day report a duplicate that does not exist.
  */
 function extractQaIds(source) {
-  const out = [];
-  const re = /^[ \t]*id:[ \t]*'([^']+)'/gm;
-  let m;
-  while ((m = re.exec(source)) !== null) out.push(m[1]);
-  return out;
+  return scan(source, /^[ \t]*id:[ \t]*'([^']+)'/gm, (m) => m[1]);
 }
 
 /**
@@ -80,20 +99,26 @@ function extractQaIds(source) {
  * `(?:[^'\\]|\\.)+` allows an escaped apostrophe inside a name.
  */
 function extractCapabilityNames(source) {
-  const out = [];
-  const re = /^[ \t]*'((?:[^'\\]|\\.)+)':[ \t]*\{[ \t]*dataPersistence/gm;
-  let m;
-  while ((m = re.exec(source)) !== null) out.push(m[1].replace(/\\'/g, "'"));
-  return out;
+  return scan(source, /^[ \t]*'((?:[^'\\]|\\.)+)':[ \t]*\{[ \t]*dataPersistence/gm, (m) =>
+    m[1].replace(/\\'/g, "'"),
+  );
 }
 
-/** Names that appear more than once, with their occurrence counts, in first-seen order. */
+/**
+ * Items used more than once, in first-seen order, each carrying the LINES it occupies.
+ * `lines.length` IS the count — keeping them separate would be two facts that can
+ * disagree, and the whole point of this guard is that a number which can disagree with
+ * its evidence is how the original defect got in.
+ */
 function findDuplicates(items) {
-  const counts = new Map();
-  for (const item of items) counts.set(item, (counts.get(item) || 0) + 1);
+  const seen = new Map();
+  for (const { value, line } of items) {
+    if (!seen.has(value)) seen.set(value, []);
+    seen.get(value).push(line);
+  }
   const dupes = [];
-  for (const [name, count] of counts) {
-    if (count > 1) dupes.push({ name, count });
+  for (const [name, lines] of seen) {
+    if (lines.length > 1) dupes.push({ name, count: lines.length, lines });
   }
   return dupes;
 }
@@ -166,8 +191,14 @@ function run({ list }) {
     for (const r of failing) {
       console.error(`  ── ${r.label} (${r.total} total, ${r.unique} unique) ──`);
       for (const d of r.dupes) {
-        const where = list ? '' : '';
+        const where = list ? `  (lines ${d.lines.join(', ')})` : '';
         console.error(`  ✖ "${d.name}" is used ${d.count} times${where}`);
+      }
+      if (!list) {
+        console.error(
+          `\n  Re-run with --list to print the line of every occurrence — the repair is to\n` +
+            `  renumber the LAST one, and you cannot do that from a count alone.`,
+        );
       }
       if (r.hint) console.error(`\n  ${r.hint}\n`);
     }
@@ -189,6 +220,15 @@ function selfTest() {
   assert('extracts ids from a well-formed entry', dupIds.length === 2);
   assert('detects a duplicate id', findDuplicates(dupIds).length === 1);
   assert('reports the duplicate count', findDuplicates(dupIds)[0].count === 2);
+  // Lines 2 and 5 — the synthetic input is two 3-line objects, so the ids sit on the
+  // second line of each. ⚠️ This expectation was WRONG on first write ([2, 4]) and the
+  // self-test failed on it: the extractor was right and the spec was wrong. That is the
+  // direction a self-test is supposed to catch, and it is why the assertion pins the
+  // exact lines rather than just "some number".
+  assert(
+    'reports the LINE of every occurrence',
+    JSON.stringify(findDuplicates(dupIds)[0].lines) === JSON.stringify([2, 5]),
+  );
 
   // Direction 2 — it is SILENT on a clean set. Without this, "always fails" would pass.
   const cleanIds = extractQaIds(
@@ -209,7 +249,7 @@ function selfTest() {
     ].join(''),
   );
   assert('extracts capability names', caps.length === 3);
-  assert('unescapes an apostrophe in a name', caps[2] === "It's Fine");
+  assert('unescapes an apostrophe in a name', caps[2].value === "It's Fine");
   assert('no duplicate among distinct capability names', findDuplicates(caps).length === 0);
 
   const dupCaps = extractCapabilityNames(
@@ -227,11 +267,15 @@ function selfTest() {
   // Direction 6 — the real files still parse to a non-zero count, i.e. the guard is
   // currently looking at something. This is the check that would have caught the
   // "blind guard" case in production.
-  const realQa = extractQaIds(fs.readFileSync(QA_FILE, 'utf8')).length;
-  const realCaps = extractCapabilityNames(fs.readFileSync(FEATURES_FILE, 'utf8')).length;
-  assert('real qa-checklist.js yields a non-zero id count', realQa > 300);
-  assert('real known-features.js yields a non-zero name count', realCaps > 300);
-  assert('real qa-checklist.js has no duplicates', findDuplicates(extractQaIds(fs.readFileSync(QA_FILE, 'utf8'))).length === 0);
+  const realQa = extractQaIds(fs.readFileSync(QA_FILE, 'utf8'));
+  const realCaps = extractCapabilityNames(fs.readFileSync(FEATURES_FILE, 'utf8'));
+  assert('real qa-checklist.js yields a non-zero id count', realQa.length > 300);
+  assert('real known-features.js yields a non-zero name count', realCaps.length > 300);
+  assert('real qa-checklist.js has no duplicates', findDuplicates(realQa).length === 0);
+  assert(
+    'every real id carries a plausible line number',
+    realQa.every((i) => Number.isInteger(i.line) && i.line > 0 && i.line <= 5000),
+  );
 
   const failed = checks.filter((c) => !c.pass);
   for (const c of checks) {
