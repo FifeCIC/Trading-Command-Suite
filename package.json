@@ -20,7 +20,9 @@
     "test:bridge-offset": "python scripts/mt5-bridge/test_bridge_offset_guard.py",
     "docs:facts": "node ./scripts/docs-facts.cjs --write",
     "docs:facts:check": "node ./scripts/docs-facts.cjs --check",
-    "test:docs-facts": "node ./scripts/docs-facts.cjs --self-test"
+    "test:docs-facts": "node ./scripts/docs-facts.cjs --self-test",
+    "validate:qa-ids": "node ./scripts/validate-qa-ids.cjs",
+    "test:qa-ids": "node ./scripts/validate-qa-ids.cjs --self-test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

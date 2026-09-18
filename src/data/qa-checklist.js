@@ -773,7 +773,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-14 — #305 ActiveSymbols enhancement',
   },
   {
-    id: 'qa-ui-006',
+    id: 'qa-ui-034',
     area: 'UI Features',
     system: 'Watchlists Inline Creation',
     name: 'Create Watchlist inline from sidebar — no standalone page',
@@ -2566,7 +2566,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-02 — #684/#712 closed; live MT5 demo-fill item → #715',
   },
   {
-    id: 'qa-health-001',
+    id: 'qa-health-005',
     area: 'Scoring/Protocols',
     system: 'Protocol config health',
     name: 'Empty groups neutral + registry flags config faults',
@@ -2822,7 +2822,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-10 — v0.6.5',
   },
   {
-    id: 'qa-contract-013',
+    id: 'qa-contract-026',
     invariant: 'INV-QUEUE-TERMINAL-STATE',
     area: 'Pipeline Contracts',
     system: 'Automation loop / signal queue',
@@ -2834,7 +2834,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-10 — #759',
   },
   {
-    id: 'qa-contract-014',
+    id: 'qa-contract-027',
     invariant: 'INV-GATE-RECONCILED',
     area: 'Pipeline Contracts',
     system: 'SEES Scoring Engine',
@@ -3296,7 +3296,7 @@ const QA_CHECKLIST = [
 
   // ── Guards & contract invariants (2026-09-10 / 2026-09-11) ──
   {
-    id: 'qa-contract-020',
+    id: 'qa-contract-028',
     area: 'Scoring',
     system: 'Gate membership guard',
     name: 'No directive voter sits inside a risk gate',
@@ -3307,7 +3307,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-11 — INV-GATE-MEMBERSHIP',
   },
   {
-    id: 'qa-contract-021',
+    id: 'qa-contract-029',
     area: 'Infra / Build',
     system: 'Contract probe',
     name: 'INV-NO-FUTURE-ROWS tolerates a forming bar without missing real skew',
@@ -3318,7 +3318,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-11 — intermittent guard',
   },
   {
-    id: 'qa-contract-022',
+    id: 'qa-contract-030',
     invariant: 'INV-NO-STALE-SCORING',
     area: 'Pipeline Contracts',
     system: 'Signal envelope / outcome tracker',
@@ -3330,7 +3330,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-16 — #827 (behaviour) + #841 (visibility + guard)',
   },
   {
-    id: 'qa-contract-023',
+    id: 'qa-contract-031',
     invariant: 'INV-ENDPOINT-BUDGET',
     area: 'Pipeline Contracts',
     system: 'Contract probe',
@@ -3366,7 +3366,7 @@ const QA_CHECKLIST = [
 
   // ── Trading path (2026-09-10) ──
   {
-    id: 'qa-trade-008',
+    id: 'qa-trade-017',
     area: 'Trading',
     system: 'Order pipeline',
     name: 'A qualified signal survives all four gates to become an order',
@@ -3449,7 +3449,7 @@ const QA_CHECKLIST = [
 
   // ── Ladder / UI (2026-09-10 / 2026-09-11) ──
   {
-    id: 'qa-ui-014',
+    id: 'qa-ui-035',
     area: 'UI',
     system: 'Ladder',
     name: 'Ladder cards are uniform and one row per scoring run',
@@ -3460,7 +3460,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-10 — ladder card uniformity',
   },
   {
-    id: 'qa-ui-015',
+    id: 'qa-ui-036',
     area: 'UI',
     system: 'Ladder selection',
     name: 'Ladder selections survive a failed protocol fetch',
@@ -3471,7 +3471,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-10 — ladder selection loss',
   },
   {
-    id: 'qa-ui-016',
+    id: 'qa-ui-037',
     area: 'UI',
     system: 'Market Tape',
     name: 'Tape loops seamlessly with no visible end, and speed is configurable',
@@ -3482,7 +3482,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-11 — market tape sections',
   },
   {
-    id: 'qa-ui-017',
+    id: 'qa-ui-038',
     area: 'UI',
     system: 'Market Tape',
     name: 'Tape sections reflect Settings from a single store',
@@ -3495,7 +3495,7 @@ const QA_CHECKLIST = [
 
   // ── Directive placement (2026-09-11) ──
   {
-    id: 'qa-directive-008',
+    id: 'qa-directive-022',
     area: 'Scoring',
     system: 'Directive placement',
     name: 'session-open-effect sits in no risk gate',
@@ -3506,7 +3506,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-11 — #789',
   },
   {
-    id: 'qa-directive-009',
+    id: 'qa-directive-023',
     area: 'Scoring',
     system: 'Directive capacity',
     name: 'Directional capacity is a small fraction of protocol maxScore',
