@@ -180,7 +180,7 @@ export class PositionSyncService {
   }
 
   /**
-   * Close out Trade rows that have no broker counterpart and no ticket.
+   * Close out Trade rows that have no broker counterpart.
    *
    * WHY (2026-09-10): the Position table self-heals, but `trade` had no
    * equivalent reaper. When a position closed, `finalizeClosedPosition()` only
@@ -191,13 +191,22 @@ export class PositionSyncService {
    * ZERO broker positions. They inflate every open-position count and corrupt
    * any exposure or P&L figure derived from `trade`.
    *
-   * ⚠️ SAFETY: only rows with NO brokerTicket are considered, and only when the
-   * symbol is absent from an AUTHORITATIVE snapshot.
-   *   - A ticket is proof of life: if the broker reports that ticket, the row is
-   *     never touched, whatever else the snapshot looks like.
-   *   - A partial/empty snapshot caused by an outage must never reap anything,
-   *     which is why this runs only after the `authoritative` early-return.
+   * WHY AGAIN (2026-09-18, #871): that fix handled only the UNTICKETED half.
+   * A Trade **with** a ticket whose Position row was gone remained invisible to
+   * both paths. Measured: 5 such rows against 5 live positions. Two cases are
+   * now distinguished, because they are not the same event and must not be
+   * closed the same way — see the per-row branch below.
+   *
+   * ⚠️ SAFETY — this function CLOSES ledger rows, so the guards are the point:
+   *   - It runs only past the `authoritative` early-return in `syncPositions()`,
+   *     so a partial or empty snapshot from an outage can never reach it. That
+   *     guard is the SAME one `finalizeClosedPosition()` already trusts; this
+   *     widening does not rely on a weaker test than the existing closure path.
+   *   - A ticket the broker still reports is proof of life: the row is never
+   *     touched, whatever else the snapshot looks like.
    *   - Rows are CLOSED, not deleted, so the record stays auditable.
+   *   - A ticketed row is finalised through `finalizeClosedPosition()` (real
+   *     exit from deal history); only a never-ticketed phantom gets `pnl: 0`.
    */
   private async reapStrandedTrades(
     provider: string,
@@ -212,14 +221,65 @@ export class PositionSyncService {
       // rows sat in the table. `provider` is the correct scope for `trade`.
       void accountId;
       const liveSymbols = new Set(positions.map((p) => String(p.symbol).toUpperCase()));
+      // ⚠️ A ticket the broker REPORTS is proof of life. Built once, compared per row.
+      const liveTickets = new Set(
+        positions.map((p) => (p.brokerTicket == null ? '' : String(p.brokerTicket))).filter(Boolean),
+      );
+      // ⚠️ NOT filtered to `brokerTicket: null` any more — that filter WAS the #871 gap.
+      //
+      // A Trade with a ticket whose Position row had already been cleaned was invisible to BOTH
+      // reconciliation paths: this reaper excluded it by ticket, and `finalizeClosedPosition()`
+      // iterates rows still present in `position`, so it never visited it either. The row stayed
+      // `status='open'` forever with no broker counterpart.
+      //
+      // Measured 2026-09-18: **5** such rows against 5 live positions (10 open trades total) — and
+      // growing. The issue recorded 3; two further VIX orphans were added the same day it was
+      // written, which is the argument for fixing the class rather than the rows.
       const stranded: any[] = await (this.prisma as any).trade.findMany({
-        where: { provider, status: 'open', brokerTicket: null },
-        select: { id: true, symbol: true, openedAt: true },
+        where: { provider, status: 'open' },
+        select: {
+          id: true, symbol: true, openedAt: true,
+          brokerTicket: true, side: true, pnl: true, exitPrice: true,
+        },
       });
       if (!Array.isArray(stranded) || stranded.length === 0) return 0;
 
       let reaped = 0;
       for (const t of stranded) {
+        const ticket = t.brokerTicket == null ? null : String(t.brokerTicket);
+
+        if (ticket) {
+          // Still reported by the broker → the position is ALIVE. Never touch it, whatever else
+          // the snapshot looks like. The retired version expressed this as "only select unticketed
+          // rows"; stated as a per-row test it now covers the case that filter could not.
+          if (liveTickets.has(ticket)) continue;
+
+          // Ticketed, and the broker does NOT report it: the position genuinely existed, so it is
+          // FINALISED — not reaped at pnl 0. `finalizeClosedPosition()` already resolves the real
+          // exit price, realised P&L and close reason from broker deal history, and it reads only
+          // the six fields supplied below. Reusing it is the difference between a correct ledger
+          // entry and a fabricated zero; re-implementing the lookup here would have been a second
+          // copy to drift.
+          const finalised = await this.finalizeClosedPosition(provider, {
+            brokerTicket: ticket,
+            symbol: t.symbol,
+            openedAt: t.openedAt,
+            side: t.side,
+            currentPrice: t.exitPrice ?? null,
+            pnl: t.pnl ?? null,
+          }).catch(() => 0);
+          if (finalised) {
+            reaped += finalised;
+            this.logger.warn(
+              `[${provider}] Finalised abandoned Trade ${t.symbol} (${t.id}, ticket ${ticket}) — ` +
+              'ticketed but absent from the broker snapshot; exit taken from deal history',
+            );
+          }
+          continue;
+        }
+
+        // No ticket at all — a legacy phantom with no broker record ever, which is why `pnl: 0`
+        // here is the truthful value rather than a placeholder for one we failed to fetch.
         if (liveSymbols.has(String(t.symbol).toUpperCase())) continue;
         const updated = await (this.prisma as any).trade.updateMany({
           where: { id: t.id, status: 'open', brokerTicket: null },
