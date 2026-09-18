@@ -329,3 +329,37 @@ subsample, not a smaller one. They need full re-measurement.
   resolve each citation against `nest/` as well as the repo root.
 
   — Copilot, 2026-09-16
+    ### ⚠️ Three items found while verifying batch #19 against the running API
+
+    **1. Stale HELD entry the probe asks you to remove — needs the API up to verify.**
+    `contract-probe.cjs` now reports:
+    `⚠️ held debt now PASSES — remove these entries from HELD: [INV-NO-FUTURE-ROWS] #845`
+    While that entry sits in HELD the invariant **does not fail the run** — it is reported, not
+    enforced. Removing it promotes a check that currently passes into one that bites.
+    Deliberately NOT done on 2026-09-18: the API was mid-rebuild (`build-api.ps1`, pid 32440) so the
+    probe could not be re-run to observe the promoted check PASS. An unobservable change to a gate is
+    the exact thing this repo keeps getting wrong. Whoever next has the API up: remove it, run
+    `node scripts/contract-probe.cjs`, and confirm 18 passed / 0 failed with no held list.
+
+    **2. `GET /api/scoring/gated/thresholds` passes its budget by 4%.**
+    Measured cold **4793 ms** against a **5000 ms** budget (warm 388 ms). It PASSES, which is the
+    problem: the next protocol or the next bot row can flip it to a failure without anyone having made
+    a mistake, and the failure will look like a regression rather than a ceiling. A budget that passes
+    by 4% is a tripwire, not a margin. Either raise the budget deliberately (and say why) or make the
+    aggregate cheaper — do not discover it as a 504.
+
+    **3. The settings registry's own `note` field tells readers to call a route that 404s.**
+    `GET /api/system/settings/registry` returns
+    `note: "... Read via GET .../family/:key"` — that path **404s**. The form that works is the
+    QUERY parameter: `GET /api/system/settings/registry/family?key=directive:adx:maxScore`.
+    A guidance string that does not run is worse than no guidance, because it is followed.
+    Filed separately; the response text is a one-line fix in
+    `nest/src/modules/system/settings-registry.controller.ts`.
+
+    ### ⚠️ Field-name trap in that same response — stated so it is not re-learned
+    `undeclaredKeysInDb` and `familyMembers` are **NESTED under `counts`**, not top-level.
+    Reading them flat returns `undefined`, which makes a healthy system look broken and is how
+    this was first mis-read. Observed 2026-09-18: `counts.undeclaredKeysInDb` = **9**,
+    `counts.familyMembers` = **446**, families = `directive, brokerTrading, protocol`.
+
+    — Copilot, 2026-09-18
