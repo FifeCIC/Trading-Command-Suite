@@ -177,13 +177,89 @@ function ManualTradeDefaults() {
  *     so they no longer need a restart. Presenting them together without that distinction would imply
  *     the soft limits are a hard ceiling — they are not.
  *
- * ⚠️ #849 (2026-09-17): the `Max Positions` field below writes a CLIENT preference and is not read by
- * the backend for enforcement. A user set it to 20, the UI confirmed the save, and 5 (the enforced
- * `risk.maxOpenPositions`) was still in force — the value saved correctly to a store nothing enforces.
- * Its hint now says so explicitly, and the enforced cap is shown in the same panel for comparison.
- * Making it write `risk.maxOpenPositions` directly is the remaining step, and is deliberately not done
- * in the same change as the migration that moved that value into the database.
+ * ⚠️ #863 (2026-09-17 → fixed 2026-09-18): the `Max Positions` field used to write a CLIENT
+ * preference stored in **localStorage**, which the backend never reads. A user set it to 20, the UI
+ * confirmed the save, and 5 (the enforced `risk.maxOpenPositions`) stayed in force. The page then
+ * displayed BOTH numbers in one panel — two values for one rule, with no way to tell which was real.
+ *
+ * It now reads and writes `risk.maxOpenPositions` through `ServerNumberInput`, so there is exactly
+ * one number and it is the one the backend uses. The old read-only comparison row is gone with it.
+ *
+ * ⚠️ `Max Per Symbol (%)` was the same lie and is now read-only on purpose: the stored value is a
+ * FRACTION (0.25) while the display is a PERCENT (25%), and an editable control that converts units
+ * on a money path is a defect waiting to happen. The other CLIENT rows below (drawdown, per-trade
+ * risk, circuit-breaker triggers) are still local preferences and are labelled as such.
  */
+/**
+ * ServerNumberInput — a number that writes a SERVER setting, and says so.
+ *
+ * ⚠️ WHY THIS EXISTS (2026-09-18). Before it, `Max Positions` on this page wrote
+ * `prefs.riskMaxPositions` — a **localStorage** value. The save succeeded, the UI confirmed it, and
+ * nothing enforced it: the backend has only ever read `risk.maxOpenPositions` from `global_setting`.
+ * Measured consequence: a user set 20, and 5 remained in force. The page then displayed BOTH numbers
+ * at once, in one panel, which is the worst form of the defect — two values for one rule, no way to
+ * tell which is real.
+ *
+ * So this control does three things the old one could not:
+ *   1. it reads the value the BACKEND is using, not a local copy;
+ *   2. it writes that same value, live, with no restart (`PUT /settings/registry/<key>`);
+ *   3. it shows what happened — saving, saved, or the server's refusal.
+ *
+ * ⚠️ The draft is local and commits on blur/Enter, NOT on every keystroke. A PUT per keypress would
+ * write "2" on the way to "20" and the cap would briefly be 2 — on a live trading system that is a
+ * real, if short, change to how many positions may open.
+ */
+function ServerNumberInput({ settingKey, value, min, max, step = 1, unit = '', queryKey = ['trading-risk-limits'] }) {
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState(value == null ? '' : String(value));
+  const [status, setStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [errorText, setErrorText] = useState('');
+
+  // Follow the server when it changes underneath us (another tab, another page) — but the input is
+  // the source while the user is typing, so this only re-syncs when `value` itself moves.
+  useEffect(() => { setDraft(value == null ? '' : String(value)); }, [value]);
+
+  const save = useMutation({
+    mutationFn: (v) => apiPut(`/api/system/settings/registry/${settingKey}`, { value: v }),
+    onSuccess: () => {
+      setStatus('saved');
+      qc.invalidateQueries({ queryKey });
+    },
+    onError: (e) => {
+      setStatus('error');
+      setErrorText(noticeFromError(e)?.message ?? 'Could not save');
+    },
+  });
+
+  const commit = () => {
+    const n = Number(draft);
+    if (draft === '' || !Number.isFinite(n)) return; // let the blur handler restore on next sync
+    if (min != null && n < min) { setStatus('error'); setErrorText(`Minimum is ${min}`); return; }
+    if (max != null && n > max) { setStatus('error'); setErrorText(`Maximum is ${max}`); return; }
+    if (n === Number(value)) { setStatus(null); return; }
+    setStatus('saving');
+    save.mutate(n);
+  };
+
+  return (
+    <>
+      <input
+        type="number" min={min} max={max} step={step}
+        className="settings-input settings-input-sm"
+        value={draft}
+        onChange={(e) => { setDraft(e.target.value); setStatus(null); }}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+        aria-label={`${settingKey} — enforced live`}
+      />
+      {unit && <span className="settings-hint-text">{unit}</span>}
+      {status === 'saving' && <span className="settings-hint-text">saving…</span>}
+      {status === 'saved' && <span className="settings-ok">saved — live now</span>}
+      {status === 'error' && <span className="settings-hint-text">⚠️ {errorText}</span>}
+    </>
+  );
+}
+
 function RiskLimits() {
   const { prefs, set } = usePreferences();
   const { data: serverLimits } = useQuery({
@@ -200,15 +276,30 @@ function RiskLimits() {
           value={prefs.riskMaxDrawdown}
           onChange={e => set('riskMaxDrawdown', parseInt(e.target.value, 10) || 25)} />
       </SettingRow>
-      <SettingRow label="Max Positions (soft)" hint="CLIENT-SIDE ONLY — this does not constrain the server. The enforced cap is 'Max Open Positions' under Server-Enforced Hard Limits below, and where two numbers disagree, THAT one is in force.">
-        <input type="number" min="1" max="20" step="1" className="settings-input settings-input-sm"
-          value={prefs.riskMaxPositions}
-          onChange={e => set('riskMaxPositions', parseInt(e.target.value, 10) || 5)} />
-      </SettingRow>
-      <SettingRow label="Max Per Symbol (%)" hint="Maximum portfolio allocation to a single symbol.">
-        <input type="number" min="5" max="100" step="5" className="settings-input settings-input-sm"
-          value={prefs.riskMaxPerSymbol}
-          onChange={e => set('riskMaxPerSymbol', parseInt(e.target.value, 10) || 25)} />
+      {serverLimits ? (
+        <SettingRow
+          label="Max Open Positions"
+          hint="How many positions may be open at once, across every bot. Enforced by the backend on every order and applied LIVE — no restart. This is the ONLY open-position cap in force: the client-side preference it replaced wrote to localStorage and constrained nothing.">
+          <ServerNumberInput settingKey="risk.maxOpenPositions" value={serverLimits.maxOpenPositions} min={1} max={1000} />
+        </SettingRow>
+      ) : (
+        // ⚠️ "could not load" is stated, never rendered as an empty control. An unavailable hard
+        // limit must not read as "there is no hard limit".
+        <SettingRow label="Max Open Positions" hint="Enforced by the backend on every order.">
+          <span className="settings-hint-text">⚠️ could not load — see the limits panel below</span>
+        </SettingRow>
+      )}
+      <SettingRow
+        label="Max Per Symbol (%)"
+        hint={`Ceiling on one instrument as a share of the portfolio. Enforced live; shown read-only here because the display is a percentage and the stored value is a fraction (0.25 = 25%) — a unit conversion in an editable control is a defect waiting to happen on a money path.`}>
+        {/* ⚠️ `Number.isFinite`, not a bare multiply. The first version of this row read a field the
+            endpoint did not return and rendered `NaN%` — a limit displayed as a non-number is worse
+            than one displayed as absent, because it reads as a value. */}
+        <code className="settings-limit-value">
+          {Number.isFinite(serverLimits?.maxPerSymbol)
+            ? `${(serverLimits.maxPerSymbol * 100).toFixed(0)}%`
+            : '— not reported'}
+        </code>
       </SettingRow>
       <SettingRow label="Max Per Trade Risk (%)" hint="Maximum portfolio risk per individual trade.">
         <input type="number" min="1" max="10" step="0.5" className="settings-input settings-input-sm"
@@ -239,9 +330,6 @@ function RiskLimits() {
           </SettingRow>
           <SettingRow label="Max Daily Loss ($)" hint="Trading halts if today's P&L drops below this.">
             <code className="settings-limit-value settings-limit-danger">${serverLimits.maxDailyLoss}</code>
-          </SettingRow>
-          <SettingRow label="Max Open Positions" hint="Absolute cap on concurrent positions across all strategies.">
-            <code className="settings-limit-value">{serverLimits.maxOpenPositions}</code>
           </SettingRow>
           {serverLimits.note && <p className="settings-note">ℹ️ {serverLimits.note}</p>}
         </>
@@ -293,7 +381,7 @@ export default function TradingSettingsPage() {
         <BotBarsTable />
         <MovedNote>
           Add and edit bots on <a href="/trading/trading-strategies">Trading Strategies</a> or{' '}
-          <a href="/trading/strategy-create">Create Strategy</a>. Live evaluations are on{' '}
+          <a href="/trading/bot-create">Create Bot</a>. Live evaluations are on{' '}
           <a href="/trading/strategy-monitor">Strategy Monitor</a>. The queue that paces them is
           on <a href="/settings/automation">Automation</a>.
         </MovedNote>

@@ -47,6 +47,11 @@ export class TradingStrategyController {
       maxPositionSize: await this.settings.get<number>('risk.maxPositionSize'),
       maxDailyLoss: await this.settings.get<number>('risk.maxDailyLoss'),
       maxOpenPositions: await this.settings.get<number>('risk.maxOpenPositions'),
+      // ⚠️ Added 2026-09-18 (#865/#863). `risk.maxPerSymbol` became a SETTING that day, so it
+      // belongs in this response — the Settings page renders it as an enforced limit and read
+      // `undefined * 100` before this, displaying `NaN%`. A panel headed "Server-Enforced Hard
+      // Limits" must not omit one of the hard limits.
+      maxPerSymbol: await this.settings.get<number>('risk.maxPerSymbol'),
       note: 'Server-enforced hard limits, read LIVE from global_setting (risk.*). Change them in Settings; no restart needed. Provenance per value: GET /api/system/settings/registry.',
     };
   }
