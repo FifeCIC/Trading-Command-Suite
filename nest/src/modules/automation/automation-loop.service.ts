@@ -1388,6 +1388,52 @@ export class AutomationLoopService implements OnModuleInit {
     return [...this.sessionGated.values()];
   }
 
+  /**
+   * Silent-gate notes — the observable counterpart to the gates that `continue` with no record.
+   *
+   * THREE gates in this loop skip a queued entry without emitting a decision row: `mode !== 'auto'`
+   * (Gate 2), data readiness (Gate 3), and the strategy cooldown (Gate 5). Their effect is
+   * indistinguishable from the loop not running at all — an entry that already PASSES minComposite
+   * simply sits `pending` with no reason on any surface.
+   *
+   * This is the same defect shape as the session gate's (#759): correct behaviour, invisible. It was
+   * found on 2026-09-18 by measuring GER40 and UK100, which had held `pending` queue entries for
+   * ~24h while their composite (10) already met their minComposite (10) — and nothing in
+   * decision_log said why. The one QueueBot line either symbol had ever produced was a PACING skip
+   * from the previous day, which pointed at the wrong gate entirely.
+   *
+   * Reported once per bot per gate per interval, because a standing condition would otherwise write
+   * a row per bot per tick and flood decision_log — the same reason `logSessionSkip` dedupes.
+   */
+  private static readonly GATE_NOTE_INTERVAL_MS = 30 * 60 * 1000;
+  private readonly gateNoteAt = new Map<string, number>();
+
+  /**
+   * Returns a SKIP decision row naming the gate that held an already-qualified entry, or null when
+   * one was reported recently. Returned rather than pushed because `decisions` is local to the
+   * caller.
+   */
+  private gateSkipNote(
+    strategy: any, symbol: string, gate: string, reason: string, composite = 0,
+  ): Record<string, unknown> | null {
+    const key = `${strategy?.id ?? ''}:${gate}`;
+    const now = Date.now();
+    if (now - (this.gateNoteAt.get(key) ?? 0) < AutomationLoopService.GATE_NOTE_INTERVAL_MS) {
+      return null;
+    }
+    this.gateNoteAt.set(key, now);
+    return {
+      timestamp: new Date().toISOString(),
+      strategyId: strategy.id,
+      symbol,
+      brokerId: strategy.brokerId || 'mt5',
+      decision: 'SKIP',
+      reason: `[QueueBot] held by ${gate} — ${reason}`,
+      composite,
+      signal: 'HOLD',
+    };
+  }
+
   private logSessionSkip(strategy: any, symbol: string, sess: SessionGateResult): void {
     const key = String(strategy?.id ?? '');
     const reason = sess.reason ?? 'session closed';
@@ -1527,10 +1573,23 @@ export class AutomationLoopService implements OnModuleInit {
         }
 
         // Gate 2 — auto bots only; manual/semi-auto stay for the UI buttons.
-        if (strategy.mode !== 'auto') continue;
+        if (strategy.mode !== 'auto') {
+          const note = this.gateSkipNote(
+            strategy, symbol, 'gate2:mode', `mode is "${strategy.mode}", only auto bots consume the queue`, gatePct,
+          );
+          if (note) decisions.push(note as any);
+          continue;
+        }
 
         // Gate 3 — data readiness (same annotation as the strategy loader).
-        if (strategy.dataStatus === 'pending_bars' || strategy.dataStatus === 'blocked') continue;
+        if (strategy.dataStatus === 'pending_bars' || strategy.dataStatus === 'blocked') {
+          const note = this.gateSkipNote(
+            strategy, symbol, 'gate3:data',
+            `${strategy.dataStatus} — ${strategy.dataStatusReason ?? 'no reason recorded'}`, gatePct,
+          );
+          if (note) decisions.push(note as any);
+          continue;
+        }
 
         // Gate 4 — minComposite bar on the SNAPSHOT (no re-scoring).
         const minC = Number(strategy.minComposite ?? 0);
@@ -1566,7 +1625,15 @@ export class AutomationLoopService implements OnModuleInit {
         // Gate 5 — strategy cooldown (shared with the legacy path).
         const lastTrade = this.lastTradeTime.get(strategy.id);
         const cooldownMs = (strategy.cooldownMinutes || 5) * 60000;
-        if (lastTrade && (Date.now() - lastTrade) < cooldownMs) continue;
+        if (lastTrade && (Date.now() - lastTrade) < cooldownMs) {
+          const note = this.gateSkipNote(
+            strategy, symbol, 'gate5:cooldown',
+            `cooldown ${strategy.cooldownMinutes || 5}m — ${Math.ceil((cooldownMs - (Date.now() - lastTrade)) / 60000)}m left`,
+            gatePct,
+          );
+          if (note) decisions.push(note as any);
+          continue;
+        }
 
         // Gate 6 — bot pacing (persisted inter-trade delay).
         const lastBot = Math.max(this.lastBotTradeAt.get(strategy.id) || 0, this.lastBotTradeAnyAt || 0);
