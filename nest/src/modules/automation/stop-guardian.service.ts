@@ -61,6 +61,46 @@ export interface StopAdjustment {
   stopConfidence: number;
 }
 
+/**
+ * The directives this guardian READS (#888).
+ *
+ * ⚠️ Every ID here must ALSO be REGISTERED in `directives.module.ts`, or it resolves
+ * to nothing. `Map.get()` returns `undefined` for a key that was never `set` — it
+ * does not throw — so an unregistered ID reads as "no evidence" and silently lowers
+ * the consensus instead of raising an error.
+ *
+ * MEASURED 2026-09-18 (#890): 3 of these 4 were unregistered — two sat in
+ * `providers` (constructed, never referenced) and one was not imported at all. A
+ * `>= 55` threshold calibrated for FOUR signals was therefore applied to ONE, and
+ * the guardian never adjusted a stop while every registry count looked healthy.
+ * Enforced at build time by `validate-guardian-directive-ids.cjs`
+ * (INV-GUARDIAN-DIRECTIVE-RESOLVABLE) and at runtime by the shortfall error in `tick()`.
+ *
+ * ⚠️ MUST list EXACTLY the IDs fetched with `resultsMap.get(...)` below.
+ *
+ * `DirectivesService.runAll(input, filter)` runs ALL registered directives when the
+ * filter is omitted, and this file used to omit it. Measured 2026-09-18: **505
+ * directives evaluated per pass** (101 registered x 5 positions) costing **780ms**, to
+ * read these four. The waste was invisible because the result map is only ever indexed
+ * by the keys below - the other ~97 results were computed and discarded.
+ *
+ * ⚠️ Adding a `.get('new-id')` below WITHOUT adding it here does not throw. It silently
+ * returns `undefined`, so the guard reads "no evidence" instead of that directive's real
+ * answer - a behaviour change disguised as a missing value. Pinned by
+ * `stop-guardian.service.spec.ts`.
+ *
+ * ⚠️ This declaration must sit ABOVE `@Injectable()`, not between it and the class: a
+ * decorator applies to the next declaration, so inserting a const there decorates the
+ * const (TS1206 "Decorators are not valid here"). The Jest suite did NOT catch that -
+ * ts-jest transpiles more permissively; `nest run build` did.
+ */
+const STOP_GUARDIAN_DIRECTIVES = new Set([
+  'atr-trailing-stop',
+  'supertrend',
+  'chandelier-exit',
+  'wick-filter',
+]);
+
 @Injectable()
 export class StopGuardianService {
   private readonly logger = new Logger(StopGuardianService.name);
@@ -88,6 +128,17 @@ export class StopGuardianService {
   private readonly MAX_MODIFY_PER_MINUTE = 10;      // global cap per minute
   private lastModifyAt = new Map<number, number>(); // ticket → last modify timestamp
   private modifyTimes: number[] = [];               // timestamps of edits in the last 60s
+
+  /**
+   * ⚠️ #890 — throttles the "declared directive did not resolve" error.
+   *
+   * The shortfall is a property of the REGISTRY, not of any one position, so
+   * unthrottled it would repeat for every position on every tick (5x30s) and
+   * bury the log it lives in. Throttled to once per 30 minutes so it stays
+   * visible without becoming noise.
+   */
+  private lastDirectiveShortfallAt = 0;
+  private readonly DIRECTIVE_SHORTFALL_LOG_MS = 30 * 60_000;
 
   constructor(
     private readonly strategyService: TradingStrategyService,
@@ -169,6 +220,18 @@ export class StopGuardianService {
 
     const adjustments: StopAdjustment[] = [];
 
+    // #888 — instrumentation, and the reason it is kept: these counters are how the change
+    // is VERIFIED rather than asserted. `resultsMap.size` is the number of directives
+    // actually evaluated for this position and is exactly what the
+    // STOP_GUARDIAN_DIRECTIVES filter below controls.
+    //   BEFORE the filter: 505 evaluated per pass (101 registered x 5 positions), 780ms,
+    //                      to read four results.
+    //   AFTER:             20 (4 x 5).
+    // The gap was invisible because the result map is only ever indexed by the four keys
+    // the guardian reads - the other ~97 results were computed and thrown away.
+    let directivesEvaluated = 0;
+    let directiveMs = 0;
+
     try {
       // 1. Fetch active auto-mode strategies
       const strategies = await this.strategyService.findAll();
@@ -213,11 +276,52 @@ export class StopGuardianService {
           continue;
         }
 
-        // 5. Run stop-focused directives
-        const resultsMap = await this.directivesService.runAll({
-          symbol: strat.symbol,
-          bars,
-        });
+        // 5. Run stop-focused directives - scoped to exactly the four IDs below (#888).
+        const dStart = Date.now();
+        const resultsMap = await this.directivesService.runAll(
+          {
+            symbol: strat.symbol,
+            bars,
+          },
+          STOP_GUARDIAN_DIRECTIVES,
+        );
+        directiveMs += Date.now() - dStart;
+        directivesEvaluated += resultsMap.size;
+
+        // ⚠️ #890 — SYMPTOM guard for a declared-but-unresolvable directive.
+        //
+        // `Map.get()` returns `undefined` for a key that was never `set`; it does not
+        // throw. So a directive this guardian reads but the registry never REGISTERED
+        // contributes nothing to `stopConfidence` below, and the guard reads that
+        // absence as "no evidence" rather than as an error — the "plausible numbers,
+        // no error" class this repo keeps re-finding.
+        //
+        // Measured 2026-09-18: 3 of these 4 IDs were unregistered, so a `>= 55`
+        // threshold calibrated for FOUR signals was applied to ONE, and the guardian
+        // sat at `0 adjusted, 5 guarded` on every pass while every registry count
+        // looked healthy (101 registered = 101 register() calls).
+        //
+        // ⚠️ Being listed in `providers` is NOT registration — the class is
+        // constructed but unreachable by `runAll(filter)`. That is how this happened.
+        //
+        // This names the shortfall without needing to know its cause. Its build-time
+        // sibling — validate-guardian-directive-ids.cjs
+        // (INV-GUARDIAN-DIRECTIVE-RESOLVABLE) — stops the next occurrence from ever
+        // reaching a running process.
+        const unresolved = [...STOP_GUARDIAN_DIRECTIVES].filter((id) => !resultsMap.has(id));
+        if (unresolved.length > 0) {
+          const now = Date.now();
+          if (now - this.lastDirectiveShortfallAt >= this.DIRECTIVE_SHORTFALL_LOG_MS) {
+            this.lastDirectiveShortfallAt = now;
+            this.logger.error(
+              `GUARDIAN DIRECTIVES UNRESOLVED — ${unresolved.join(', ')} not in the registry. ` +
+                `stopConfidence is derived from ${resultsMap.size} of ` +
+                `${STOP_GUARDIAN_DIRECTIVES.size} declared inputs, so the >= 55 consensus ` +
+                `threshold is being applied to fewer signals than it was calibrated for. ` +
+                `See INV-GUARDIAN-DIRECTIVE-RESOLVABLE.`,
+            );
+          }
+        }
 
         const atrStop = resultsMap.get('atr-trailing-stop');
         const superTrend = resultsMap.get('supertrend');
@@ -340,7 +444,8 @@ export class StopGuardianService {
 
     this.finishTick(tickStart);
     this.logger.log(
-      `Guardian #${this.state.tickCount}: ${adjustments.length} adjusted, ${this.state.guardedPositions.length} guarded`,
+      `Guardian #${this.state.tickCount}: ${adjustments.length} adjusted, ${this.state.guardedPositions.length} guarded ` +
+        `(${directivesEvaluated} directives evaluated in ${directiveMs}ms, pass ${Date.now() - tickStart}ms)`,
     );
     return adjustments;
   }

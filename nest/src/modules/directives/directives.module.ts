@@ -110,6 +110,10 @@ import { AccumulationDistDirective } from './implementations/mt5-indicators.dire
 import { BullsBearsPowerDirective } from './implementations/mt5-indicators.directives';
 import { EaseOfMovementDirective } from './implementations/mt5-indicators.directives';
 import { IchimokuCloudDirective } from './implementations/mt5-indicators.directives';
+// Chandelier Exit — stop-quality evidence for StopGuardianService (#890).
+// This file was written and spec-tested but never imported anywhere, so it could
+// never be registered. See STOP_GUARDIAN_DIRECTIVES in stop-guardian.service.ts.
+import { ChandelierExitDirective } from './implementations/chandelier-exit.directive';
 
 // Stubs (placeholder — PHP math at TradePress, awaiting NestJS port)
 import {
@@ -257,6 +261,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     BollingerPctBDirective,
     ATRTrailingStopDirective,
     WickFilterDirective,
+    ChandelierExitDirective,
     MomentumROCDirective,
     DeMarkerDirective,
     AccumulationDistDirective,
@@ -491,6 +496,16 @@ export class DirectivesModule implements OnModuleInit {
     private readonly volEnvelope: VolatilityEnvelopeDirective,
     private readonly momentumExhaust: MomentumExhaustionDirective,
     private readonly wickFilter: WickFilterDirective,
+    // ⚠️ #890 — these three are the Stop Guardian's remaining evidence inputs.
+    // They sat in `providers` (constructed, unreferenced) but register() was never
+    // called, so `runAll(filter)` could not resolve them and the guardian's
+    // stopConfidence was computed from wick-filter ALONE against a >=55 threshold
+    // calibrated for four signals. Registering is SCORE-NEUTRAL: no protocol
+    // references these IDs in protocol_directive_entry, and every runAll() call
+    // site passes a filter (scoring.service.ts:366, protocol-gating.service.ts:568).
+    private readonly superTrend: SuperTrendDirective,
+    private readonly atrTrailingStop: ATRTrailingStopDirective,
+    private readonly chandelierExit: ChandelierExitDirective,
     private readonly targetAchieved: TargetAchievedDirective,
     private readonly regimeShiftExit: RegimeShiftExitDirective,
     private readonly timeStop: TimeStopDirective,
@@ -627,6 +642,12 @@ export class DirectivesModule implements OnModuleInit {
     // Q238 — Exit Signals
     this.directivesService.register(this.momentumExhaust);
     this.directivesService.register(this.wickFilter);
+    // ⚠️ #890 — the Stop Guardian reads these four IDs by name. Registration is
+    // what makes them resolvable; without it the guardian gets `undefined` and
+    // reads that as "no evidence" (silent, not an error).
+    this.directivesService.register(this.superTrend);
+    this.directivesService.register(this.atrTrailingStop);
+    this.directivesService.register(this.chandelierExit);
     this.directivesService.register(this.targetAchieved);
     this.directivesService.register(this.regimeShiftExit);
     this.directivesService.register(this.timeStop);
