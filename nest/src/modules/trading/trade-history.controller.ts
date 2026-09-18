@@ -602,7 +602,22 @@ export class TradeHistoryController {
         };
       }
 
-      return this.weekendDefense.buildChecklist(positions);
+      // ⚠️ Pass `type` through as `side` — it is `number | 'buy' | 'sell'` and the bridge sends the
+      // STRING form. `buildChecklist` normalises it with `normalizeSide()`. Never compare it to 0:
+      // that is the #869 Finding B defect, which reported every long position as SELL.
+      return this.weekendDefense.buildChecklist(positions.map((p: any) => ({
+        symbol: p.symbol,
+        ticket: p.ticket,
+        side: p.type ?? p.side,
+        volume: p.volume ?? p.quantity ?? 0,
+        openPrice: p.price_open ?? p.avgPrice ?? 0,
+        currentPrice: p.price_current ?? p.currentPrice ?? 0,
+        profit: p.profit ?? p.pnl ?? 0,
+        swap: p.swap ?? 0,
+        // Present on MT5 positions since 2026-09-18 (#865). Without it the service reports
+        // `not-money` rather than returning a ratio as though it were a currency amount.
+        contractSize: p.contractSize ?? null,
+      })));
     } catch (err) {
       return { error: `Failed to build weekend checklist: ${(err as Error).message}` };
     }
