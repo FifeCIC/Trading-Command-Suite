@@ -227,8 +227,50 @@ function readAllowance() {
   }
 }
 
+/**
+ * The allowance records a tolerated pair as a NUMBER. That number cannot distinguish
+ * "deliberate, leave it alone" from "copy-pasted, baselined to unblock the build" —
+ * so the next agent has to re-derive the decision from scratch, and the cheapest
+ * available action is to delete one side. Two of the largest pairs in this repo are
+ * DELIBERATE (an A/B card variant and a two-surface architecture split), and deleting
+ * either would be a real regression.
+ *
+ * So each tolerated pair may carry a REASON. This is the same rule the repo applies to
+ * every other field: a number without its provenance is a claim, not a finding.
+ *
+ * ⚠️ Keys are compared ORDER-INSENSITIVELY — the pair key is built from whichever file
+ * the walker happened to visit first, and a reason that stops matching after an
+ * unrelated reorder would be worse than no reason at all.
+ */
+function normPair(a, b) {
+  return [a, b].sort().join(' || ');
+}
+
+/** Look up a recorded reason for a pair, in either order. */
+function reasonFor(reasons, a, b) {
+  if (!reasons) return null;
+  const want = normPair(a, b);
+  for (const [k, v] of Object.entries(reasons)) {
+    if (normPair(...String(k).split(' || ')) === want) return v;
+  }
+  return null;
+}
+
 function writeAllowance(pairs) {
   const sorted = [...pairs.values()].sort((x, y) => y.windows - x.windows);
+  // ⚠️ CARRY THE REASONS FORWARD. This function rebuilds the document from scratch, so
+  // without this step a routine `--update-allowance` would silently DELETE every
+  // recorded reason — destroying the expensive part during a bookkeeping act. A stale
+  // reason (its pair is gone) is DROPPED and named, so the map cannot accumulate lies.
+  const previous = readAllowance();
+  const previousReasons = previous.reasons ?? {};
+  const live = new Set(sorted.map((p) => normPair(p.a, p.b)));
+  const reasons = {};
+  const stale = [];
+  for (const [k, v] of Object.entries(previousReasons)) {
+    if (live.has(normPair(...String(k).split(' || ')))) reasons[k] = v;
+    else stale.push(k);
+  }
   const doc = {
     _comment:
       'Ratchet for cross-file duplication (INV-NO-NEW-DUPLICATION). An existing pair may only ' +
@@ -241,7 +283,12 @@ function writeAllowance(pairs) {
     totals: { pairs: sorted.length, windows: sorted.reduce((s, p) => s + p.windows, 0) },
     pairs: Object.fromEntries(sorted.map((p) => [`${p.a} || ${p.b}`, p.windows])),
   };
+  if (Object.keys(reasons).length > 0) doc.reasons = reasons;
   fs.writeFileSync(ALLOWANCE, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+  if (stale.length > 0) {
+    console.log(`[${TAG}] dropped ${stale.length} reason(s) whose pair no longer exists:`);
+    for (const k of stale) console.log(`    ${k}`);
+  }
   return doc;
 }
 
@@ -421,9 +468,19 @@ if (args.includes('--self-test')) {
   }
 } else if (args.includes('--report')) {
   const pairs = findDuplication(collectFiles());
-  for (const [key, p] of [...pairs].sort((a, b) => b[1].windows - a[1].windows)) {
+  const { reasons } = readAllowance();
+  const sorted = [...pairs].sort((a, b) => b[1].windows - a[1].windows);
+  for (const [key, p] of sorted) {
     console.log(`${String(p.windows).padStart(5)}  ${key}`);
+    const why = reasonFor(reasons, p.a, p.b);
+    if (why) console.log(`       \u21b3 ${why}`);
   }
+  const explained = sorted.filter(([, p]) => reasonFor(reasons, p.a, p.b)).length;
+  const big = sorted.filter(([, p]) => p.windows >= 20).length;
+  const bigExplained = sorted.filter(([, p]) => p.windows >= 20 && reasonFor(reasons, p.a, p.b)).length;
+  console.log('');
+  console.log(`[${TAG}] ${explained} of ${sorted.length} pair(s) carry a recorded reason.`);
+  console.log(`[${TAG}] ${bigExplained} of ${big} pair(s) at 20+ windows do \u2014 those are the ones a human asks about.`);
 } else {
   check();
 }

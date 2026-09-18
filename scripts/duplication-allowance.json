@@ -155,5 +155,13 @@
     "src/pages/protocols-page.css || src/pages/trading-strategies.css": 1,
     "src/pages/support-resistance.css || src/pages/volatility-analysis.css": 1,
     "src/pages/ThemeLabPopover.jsx || src/pages/ThemeLabTransitions.jsx": 1
+  },
+  "reasons": {
+    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": "DELIBERATE two-surface split - 839 windows, the largest in the repo. architecture-reference.js is the AI-readable module, architecture-framework.data.js is the human page, and the overlap IS the mechanism. The risk here is DIVERGENCE, not copying. Unverified: nothing checks that the two agree, and they already diverged once (batch #17 stamped a date in one and not the other). Do NOT delete either side on the strength of this number.",
+    "src/components/SignalCard.jsx || src/pages/SignalsOverviewPage.jsx": "DELIBERATE A/B variant, and the page says so in code: 'Card A stays here, reachable at ?variant=A - removing a live variant is a decision, not a refactor.' Card B is the shared component; Card A is the legacy design used for side-by-side comparison. The two button labels HAVE diverged (SignalCard 'Buy (Long)' vs OpportunityCard 'Buy CFD') - that is the experiment, not a bug. Deleting OpportunityCard would remove a live variant.",
+    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/obv-divergence.directive.ts": "NOT deliberate - extraction candidate, measured 2026-09-19. Two divergence directives share a 31-line import/header block, a 17-line helper and a ~51-line scoring tail; only the oscillator they read differs. A shared divergence base is the fix. Not done: it is a scoring path and needs its own verification.",
+    "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": "NOT deliberate - extraction candidate, measured 2026-09-19. Both consume the same breakdown payload and repeat its mapping (breakouts / subScores / subMaxTotals) across six separate blocks. Not done.",
+    "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": "NOT deliberate - the controller EMBEDS the pipeline-step descriptions that architecture-reference.js also declares, so the same prose exists in the backend and the frontend. Single-source candidate. Not done.",
+    "nest/src/modules/system/architecture-manifest.controller.ts || src/pages/architecture-framework.data.js": "Same as above, against the human-facing page: the manifest controller and the architecture page describe one pipeline in two places. Single-source candidate. Not done."
   }
 }
