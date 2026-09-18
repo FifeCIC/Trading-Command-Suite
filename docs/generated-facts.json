@@ -20,7 +20,7 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 111,
+      "value": 112,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
       "how": "Select-String nest/prisma/schema.prisma '^model '"
@@ -55,7 +55,7 @@
     },
     "version": {
       "label": "Application version",
-      "value": "0.31.0",
+      "value": "0.33.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

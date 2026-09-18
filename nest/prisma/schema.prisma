@@ -769,6 +769,27 @@ model Order {
   @@index([status])
 }
 
+/// Per-position trading intent — overrides the provider default declared in
+/// `modules/risk/position-intent.ts`.
+///
+/// WHY THIS TABLE EXISTS: the weekend-gap alert counted every row in `position`, so on
+/// 2026-09-18 it reported 26 positions to "consider flattening" when 21 of them were
+/// long-term Trading212 equity holdings. Intent is what decides which risk rules apply,
+/// and it had nowhere to live. The table holds ONLY exceptions — the provider defaults
+/// stay in code, so an empty table is the correct state after a reinstall.
+model PositionIntentSetting {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  provider  String   @db.VarChar(50)
+  symbol    String   @db.VarChar(20)
+  intent    String   @db.VarChar(20)
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, symbol])
+  @@map("position_intent")
+}
+
 model Position {
   id          String   @id @default(uuid()) @db.VarChar(36)
   symbol      String   @db.VarChar(20)

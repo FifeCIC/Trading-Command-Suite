@@ -22,6 +22,12 @@ import { AlertsService, type AlertSeverity } from './alerts.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
+import {
+  summariseExposure,
+  parseIntent,
+  overrideKey,
+  type PositionIntent,
+} from '../risk/position-intent';
 import * as http from 'http';
 
 interface TriggerConfig {
@@ -229,6 +235,24 @@ export class AlertTriggerService implements OnModuleInit {
     return { triggered: false, title: '', message: '' };
   }
 
+  /**
+   * weekend-gap-risk — counts positions a WEEKEND GAP can actually hurt.
+   *
+   * ⚠️ This used to report `position.length` — every row, with no concept of what a position is
+   * FOR. On Friday 2026-09-18 that produced:
+   *
+   *     "26 position(s) open going into weekend. Consider flattening or tightening stops."
+   *
+   * Measured: 5 were MT5 CFD positions opened within 30 hours (genuine gap risk) and **21 were
+   * Trading212 equity holdings**, the oldest opened 25 July, aggregate −996 and held deliberately.
+   * "Consider flattening" applied to a long-term holding is the opposite of the correct advice,
+   * and because it repeats every Friday it trains the reader to ignore the alert entirely.
+   *
+   * The fix is not a filter on `provider` — that would hard-code today's two brokers into a
+   * heuristic and silently mis-handle a third. Intent is resolved by `position-intent.ts`, where
+   * the provider defaults are declared and labelled as inference, and where an unknown provider
+   * becomes a QUESTION rather than either a nag or a silent omission.
+   */
   private async checkWeekendGapRisk(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string } | null> {
     const now = new Date();
     const day = now.getUTCDay();
@@ -238,9 +262,64 @@ export class AlertTriggerService implements OnModuleInit {
     try {
       const positions = await this.prisma.position.findMany();
       if (positions.length === 0) return { triggered: false, title: '', message: '' };
-      const count = positions.length;
-      return { triggered: true, title: 'Weekend Gap Risk', message: `${count} position(s) open going into weekend. Consider flattening or tightening stops.` };
+
+      const overrides = await this.loadIntentOverrides();
+      const { exposed, held, needingDecision } = summariseExposure(positions, overrides);
+
+      if (exposed.length === 0) {
+        // No gap-exposed position. Not an alert — and specifically NOT the old behaviour of
+        // reporting the whole ledger. Returning `triggered:false` here is what stops the Friday
+        // noise; the held/unknown counts are stated below so their absence is not mistaken for
+        // the check having failed to run ("fine" must not look like "cannot judge").
+        if (needingDecision.length > 0) {
+          return {
+            triggered: true,
+            title: 'Position Intent Unconfirmed',
+            message:
+              `No gap-exposed positions. ${needingDecision.length} position(s) on a provider with ` +
+              `no declared intent (${needingDecision.map((p) => p.symbol).join(', ')}) — the app will ` +
+              'not decide these for you. Set an intent to include them in risk checks.',
+          };
+        }
+        return { triggered: false, title: '', message: '' };
+      }
+
+      const byProvider = new Map<string, number>();
+      for (const p of exposed) byProvider.set(p.provider, (byProvider.get(p.provider) || 0) + 1);
+      const breakdown = [...byProvider.entries()].map(([k, v]) => `${v} ${k}`).join(', ');
+
+      return {
+        triggered: true,
+        title: 'Weekend Gap Risk',
+        message:
+          `${exposed.length} gap-exposed position(s) open going into weekend (${breakdown}). ` +
+          `Consider flattening or tightening stops. ${held.length} long-term holding(s) are ` +
+          'excluded by intent.' +
+          (needingDecision.length > 0
+            ? ` ${needingDecision.length} further position(s) are unclassified and were NOT ` +
+              'assessed — set an intent to include them.'
+            : ''),
+      };
     } catch { return null; }
+  }
+
+  /**
+   * Reads per-position intent overrides into the map `position-intent.ts` expects.
+   *
+   * ⚠️ A read FAILURE must not look like "no overrides". With an empty map every position falls
+   * back to its provider default — for `trading212` that is `long-term`, i.e. a database hiccup
+   * would silently EXEMPT the account's holdings from the alert. The failure is therefore logged
+   * and rethrown so `checkWeekendGapRisk` returns null (cannot judge) rather than a clean pass.
+   */
+  private async loadIntentOverrides(): Promise<Map<string, PositionIntent>> {
+    const rows = await this.prisma.positionIntentSetting.findMany();
+    const map = new Map<string, PositionIntent>();
+    for (const r of rows) {
+      const parsed = parseIntent(r.intent);
+      if (parsed) map.set(overrideKey(r.provider, r.symbol), parsed);
+      else this.logger.warn(`position_intent row ${r.provider}/${r.symbol} has unreadable intent "${r.intent}" — ignored`);
+    }
+    return map;
   }
 
   private async checkEarningsProximity(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string } | null> {
