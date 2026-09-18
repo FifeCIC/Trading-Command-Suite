@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -21,6 +22,7 @@ function buildIntel(strategy, protocolMap) {
 }
 
 export default function TradingStrategiesPage() {
+  const navigate = useNavigate();
   const [trading, setTrading] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,6 +30,8 @@ export default function TradingStrategiesPage() {
   const [editField, setEditField] = useState(null);     // which field is being edited
   const [editValue, setEditValue] = useState('');        // current input value
   const [saving, setSaving] = useState(false);           // save in progress
+  // #864 pass — a PATCH failure used to be invisible. See saveEdit().
+  const [saveError, setSaveError] = useState(null);
   const [sortKey, setSortKey] = useState('symbol');
   const [sortDir, setSortDir] = useState('asc');
   const [subDraft, setSubDraft] = useState({ protocolId: '', role: 'long' });
@@ -179,6 +183,7 @@ export default function TradingStrategiesPage() {
   const saveEdit = async () => {
     if (!selectedId || !editField) return;
     setSaving(true);
+    setSaveError(null);
     const val = editField === 'mode' || editField === 'brokerId'
       ? editValue
       : Number(editValue);
@@ -188,11 +193,29 @@ export default function TradingStrategiesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [editField]: val }),
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setTrading(prev => prev.map(s => s.id === selectedId ? { ...s, ...updated } : s));
+      // ⚠️ There was no `else` here (fixed 2026-09-18). A REJECTED patch was therefore
+      // INDISTINGUISHABLE from no edit at all: the editor closed, the old value snapped back, and
+      // nothing was said. Return EARLY and leave the editor open, so the typed value is not lost.
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`);
+        err.status = res.status; // resolves to TCS-SYS-002, which carries the status class
+        setSaveError(noticeFromError(err));
+        setSaving(false);
+        return;
       }
-    } catch {}
+      const updated = await res.json();
+      setTrading(prev => prev.map(s => s.id === selectedId ? { ...s, ...updated } : s));
+    } catch (e) {
+      // ⚠️ Was `catch {}` — a thrown request (API down, DNS, abort) vanished entirely. Anything
+      // that can silently fail to save a trading parameter is the defect class this repo keeps
+      // re-finding, so it is reported through the shared notice registry rather than a new string.
+      // TCS-SYS-007 is the registry's "request to {operation} failed" code, and its action line
+      // already states that nothing was changed by the attempt — which is the reassurance a
+      // failed parameter edit needs.
+      setSaveError(noticeFromError(e, 'TCS-SYS-007', { operation: 'save this bot' }));
+      setSaving(false);
+      return;
+    }
     setSaving(false);
     setEditField(null);
     setEditValue('');
@@ -335,6 +358,18 @@ export default function TradingStrategiesPage() {
               <div className="ts-sidebar-detail">
                 <h2>{selected.symbol} — {selected.name}</h2>
 
+                {/* #864 — hand off to the per-bot truth view. This aside shows 8 hand-picked
+                    fields; that page shows ALL 29 declared rules with each one's ENFORCEMENT
+                    status, which is the thing this aside cannot express: `maxPositions` looks
+                    like a working cap here and is enforced only on the retired execute() path. */}
+                <button
+                  type="button"
+                  className="ts-truth-link"
+                  onClick={() => navigate(`/trading/strategy/${selected.id}`)}
+                >
+                  Open truth view — all 29 rules with enforcement →
+                </button>
+
                 {/* Protocols — signal sources (strategy-owned subscriptions) */}
                 <section className="ts-detail-section">
                   <h3>Protocols <span className="ts-req-label">(signal sources)</span></h3>
@@ -423,6 +458,12 @@ export default function TradingStrategiesPage() {
                 {/* Trade Config — EDITABLE */}
                 <section className="ts-detail-section">
                   <h3>⚙ Trade Configuration</h3>
+                  {saveError && (
+                    <div className="ts-save-error" role="alert">
+                      <strong>{saveError.title}</strong> {saveError.message}
+                      {saveError.action ? ` ${saveError.action}` : ''}
+                    </div>
+                  )}
                   <div className="ts-detail-card ts-edit-grid">
                     <Editable field="minComposite" label="Min Score" value={selected.minComposite} />
                     <Editable field="baseSize" label="Position Size" value={selected.baseSize} suffix=" lots" />

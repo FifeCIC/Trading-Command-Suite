@@ -35,6 +35,7 @@ import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SectorRotationService } from './sector-rotation.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { StackPerformanceService } from './stack-performance.service';
+import { StrategyDerivationService } from './strategy-derivation.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
@@ -54,6 +55,7 @@ export class ScoringController {
     private readonly seasonalAffinity: SeasonalAffinityService,
     private readonly stackPerformance: StackPerformanceService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly strategyDerivation: StrategyDerivationService,
   ) {}
 
   @Get('ranked')
@@ -402,6 +404,32 @@ export class ScoringController {
   }
 
   // ── Legacy aliases (backward compat) ──────────────────────
+
+  /**
+   * GET /api/scoring/strategies/derived
+   *
+   * Renders STRATEGIES from the unique META.Stack combinations (#876).
+   *
+   * ⚠️ Why this is NOT `/metastacks/ratings`: that endpoint iterates `scoring_strategy` ROWS, so
+   * 13 bots sharing `auto-forex-session-v1` produced ONE blended rating across THREE different
+   * treatments. Here a distinct `(protocol, treatment)` is one strategy — symbols and watchlists
+   * are scope, never identity (owner's rule, docs/trading-bot-model.md §1c/§1d).
+   *
+   * Expect ~15 strategies from 26 bots, with the FX family collapsing to 3 rather than 13.
+   *
+   * ⚠️ Deliberately NOT cached. This is a truth surface — a stale strategy list is how the
+   * fingerprint-drift problem stayed invisible, and the query is a single indexed findMany over
+   * ~26 rows. Bring a `strategyKey` to any per-strategy endpoint (#875) rather than caching here.
+   */
+  @Get('strategies/derived')
+  @ApiOperation({ summary: 'Strategies derived from unique (protocol x treatment) combinations' })
+  @ApiOkResponse({
+    description:
+      'One entry per distinct strategy, each with its strategyKey, parts (protocols, bots, scope) and treatment',
+  })
+  async getDerivedStrategies() {
+    return this.strategyDerivation.deriveAll();
+  }
 
   @Get('stacks/ratings')
   @UseInterceptors(new CacheInterceptor(60000))

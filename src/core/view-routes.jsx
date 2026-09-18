@@ -17,7 +17,17 @@
 import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
 import StrategyMonitorPage from '../pages/StrategyMonitorPage.jsx';
+// The canonical bot index (#504 consolidation, 2026-07-29). It was built and then referenced by
+// nothing - no route, no nav entry, no view-meta entry - so a finished registry was invisible.
+// Surfaced 2026-09-18, then renamed to `trading-bots` (docs/trading-bot-model.md §5).
+import StrategiesListPage from '../pages/StrategiesListPage.jsx';
 import StrategyCreatePage from '../pages/StrategyCreatePage.jsx';
+// #864 — the per-bot truth view. Reached at /trading/strategy/:strategyId, NOT from the sidebar:
+// it is a detail page for one bot, so it has no nav entry (the same shape as /trading/symbol/:ticker).
+import ViewStrategyPage from '../pages/ViewStrategyPage.jsx';
+// #876 — STRATEGIES, derived from unique (protocol x treatment) combinations. Different from
+// `Trading Bots` above, which lists `trading_strategy` ROWS.
+import DerivedStrategiesPage from '../pages/DerivedStrategiesPage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
 import CalculatorsPage from '../pages/CalculatorsPage.jsx';
@@ -198,7 +208,14 @@ import ScreenCockpitPage from '../pages/ScreenCockpitPage.jsx';
 export const VIEW_COMPONENTS = {
   // Trading — Canonical (2026-07-29 #504 consolidation)
   'strategy-monitor': StrategyMonitorPage,
-  'strategy-create': StrategyCreatePage,
+  // A BOT = the execution policy. Shares `strategies-list.module.css` with StrategyMonitorPage.
+  // Renamed from `strategies-registry` 2026-09-18 (docs/trading-bot-model.md §5, display-first).
+  'trading-bots': StrategiesListPage,
+  'bot-create': StrategyCreatePage,
+  // #864 — one bot, every declared rule, with its enforcement status.
+  'strategy-detail': ViewStrategyPage,
+  // #876 — the strategies themselves: one card per distinct (protocol x treatment).
+  'strategies-derived': DerivedStrategiesPage,
   // Trading — Legacy strategy pages (under review)
   'trading-strategies': TradingStrategiesPage,
   'strategy-comparison': StrategyComparisonPage,
@@ -215,7 +232,6 @@ export const VIEW_COMPONENTS = {
   'portfolio-events': PortfolioEventsPage,
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
-  'create-strategy': StrategyCreatePage,
   'strategy-library': StrategyLibraryPage,
   'mt5-trading': Mt5TradingPage,
   'mt5-demo-trading': Mt5TradingPage,

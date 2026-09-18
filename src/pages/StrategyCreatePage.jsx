@@ -256,9 +256,11 @@ export default function StrategyCreatePage() {
     <div className="sc-page">
       <motion.header className="sc-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Create Strategy
+          <h1>Create Bot
           <PageInfoPopover>
-            Form or wizard — configure a new trading strategy
+            Form or wizard — configure a new TRADING BOT. A bot is the execution policy (sizing, risk,
+            entry/exit rules); the signal thesis comes from the protocol it subscribes to. See
+            docs/trading-bot-model.md.
           </PageInfoPopover>
         </h1>
         </div>
@@ -518,7 +520,7 @@ export default function StrategyCreatePage() {
               {/* Submit */}
               <div className="sc-actions">
                 <button type="submit" className="sc-btn-primary" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? '⏳ Creating...' : 'Create Strategy'}
+                  {createMutation.isPending ? '⏳ Creating...' : 'Create Bot'}
                 </button>
                 {msg && <span className={`sc-msg ${msg.startsWith('✅') ? 'sc-msg-ok' : 'sc-msg-err'}`}>{msg}</span>}
               </div>

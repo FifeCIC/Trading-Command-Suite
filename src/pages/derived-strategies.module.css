@@ -1,0 +1,270 @@
+/**
+ * derived-strategies.module.css — Styles for DerivedStrategiesPage.
+ *
+ * CSS MODULE (required for new stylesheets — ui-standards Rule B, 2026-09-17). The previous page
+ * in this area collided on a `.sl-` prefix shared with six other stylesheets, where every property
+ * ended up overridden. A scoped module makes that impossible.
+ *
+ * ⚠️ THEMED TOKENS ONLY. `--panel-raised` is defined ONLY in theme/packs/slate.css, so using it
+ * renders navy in every other theme — that was a real reported bug. Both themed and static token
+ * sets pass `scripts/validate-css-tokens.cjs`, so the validator will not catch this: pick from the
+ * THEMED list in ui-standards.instructions.md.
+ *
+ * Borders are FULL, not left-edge. The owner's verbatim preference (ui-standards Pattern 1,
+ * marked DISFAVOURED): "left hand coloured bordered cards which I very much dislike. I prefer ones
+ * we have in theme, full coloured borders".
+ */
+
+.page {
+  padding: 24px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.definition {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 78ch;
+}
+
+.definition code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95em;
+  color: var(--ink);
+}
+
+/* ── Stat strip ─────────────────────────────────────────── */
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 24px;
+}
+
+.stat {
+  flex: 1 1 150px;
+  min-width: 150px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elev);
+}
+
+.statValue {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+/* The "pairs" stat is the number that LOOKS like the answer but is not — dim it so the eye
+   lands on `strategies` first. */
+.statMuted .statValue {
+  color: var(--ink-soft);
+}
+
+/* ── Strategy cards ─────────────────────────────────────── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elev);
+  padding: 16px 18px;
+}
+
+/* Full coloured border for an active strategy — mirrors the chip colour without a left bar. */
+.cardActive {
+  border-color: var(--risk-normal);
+}
+
+/* ⚠️ A strategy containing a bot that can never trade. Full border, deliberately loud. */
+.cardUnreachable {
+  border-color: var(--risk-elevated);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  padding: 2px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-elev-2);
+}
+
+.protocol {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.role {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  color: var(--ink-soft);
+}
+
+.scope {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Treatment grid ─────────────────────────────────────── */
+
+.treatment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 74px;
+}
+
+.fieldLabel {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint, var(--ink-soft));
+}
+
+.fieldValue {
+  font-size: 0.85rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* NULL means "no limit" / "ungated" — a real value, NOT missing data. Rendered distinctly so it
+   is never read as a blank or a bug. */
+.fieldValueNull {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ── Symbols ────────────────────────────────────────────── */
+
+.symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.symbol {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  color: var(--ink);
+}
+
+.symbolMore {
+  composes: symbol;
+  color: var(--ink-soft);
+}
+
+/* ── Bots + warnings ────────────────────────────────────── */
+
+.bots {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.warn {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--risk-elevated);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.warn strong {
+  color: var(--risk-elevated);
+}
+
+/* ── States ─────────────────────────────────────────────── */
+
+.state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.error {
+  padding: 16px 18px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.errorHint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}

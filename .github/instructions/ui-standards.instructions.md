@@ -111,12 +111,53 @@ All trading-view pages MUST use `max-width: var(--page-max-width)` (default `140
 ## 📐 Approved Design Patterns
 
 ### 1. Card with Status Border
+
+> ⚠️ **2026-09-18 — DISFAVOURED BY THE OWNER.** Verbatim: *"which use left hand coloured bordered cards
+> which I very much dislike. I prefer ones we have in theme, full coloured borders."*
+>
+> **Use a FULL coloured border** (`border: 1px solid <tone>`) so the colour reads as part of the card
+> rather than a stripe bolted on the side. Colour the whole card edge, and leave the tone on the
+> BORDER — never on the body text (the semantic tones fail WCAG AA as text on a light panel).
+>
+> The pattern below is kept only as a description of what existing pages do. Do not add new ones.
+> Migrate existing cards to a full border opportunistically, as `ui-standards` Rule A already says
+> for prefixes.
+
 ```
-.pm-pos-card { border-left: 3px solid ... }
+.pm-pos-card { border-left: 3px solid ... }   ← do NOT copy this into a new component
 .pm-win  { border-left-color: var(--color-profit); }
 .pm-lose { border-left-color: var(--color-loss); }
 ```
 Used in: Positions Monitor, Strategy Comparison, Portfolio cards.
+
+---
+
+## ⚠️ TOKENS: STATIC vs THEMED — read before choosing a colour
+
+**The token table above is NOT all themed.** It lists tokens from `src/index.css :root`, which is
+written **once** and never changes. The real per-theme tokens are written onto `:root` at runtime by
+`src/theme/adapters/vanilla.js` on every theme change:
+
+| Kind | Tokens | Follows the theme? |
+|---|---|---|
+| **Themed (runtime)** | `--bg` `--ink` `--ink-soft` `--panel` `--line` `--accent` `--danger`, `--bg-elev` `--bg-elev-2`, `--border` `--border-strong`, `--text-dim` `--text-faint`, `--risk-normal` `--risk-watch` `--risk-elevated` `--risk-high` `--risk-critical`, `--accent-soft` | ✅ yes |
+| **Static** | `--color-profit` `--color-loss` `--color-buy` `--color-sell` `--color-warning` `--color-panel` `--color-border` `--color-muted` `--color-text-dim` `--color-neutral` `--color-grid` `--color-input-bg` | ❌ no — `index.css` only overrides `--color-loss`/`--color-sell`, and only for high contrast |
+| **Pack-only** | `--panel-raised` (declared ONLY in `theme/packs/slate.css` as `#233049`) | ❌ no — dark navy in every other pack and in light mode |
+
+⚠️ **Both sets pass `scripts/validate-css-tokens.cjs`, so the guard cannot catch a wrong choice.**
+That is what makes this a silent trap, and it produced a real defect: the per-bot truth view used
+`--panel-raised` for its summary block and rendered dark navy against every theme — reported by the
+owner as *"incorrectly styled, not using the current theme"* (2026-09-18).
+
+**Rules:**
+
+1. For anything that must follow light/dark/black, use the **themed (runtime)** column.
+2. Use `--bg-elev` for a raised surface, not `--panel-raised`.
+3. For a severity ramp (enforcement, risk, health) use the **`--risk-*`** scale — it is the app's
+   only themed multi-step severity palette. `--color-profit`/`--color-warning` cannot serve it.
+4. **`color-mix()` cannot be replaced by hex-alpha concatenation.** `typeColor + '18'` only works on
+   a hex literal; `var(--risk-normal)18` is invalid CSS and silently produces no colour.
+5. A token name is a claim. Check `theme/adapters/vanilla.js` before trusting the table above.
 
 ### 2. Dashboard Stat Card
 Background: `var(--color-panel)`, border: `1px solid var(--color-border)`, border-radius: `10px`.

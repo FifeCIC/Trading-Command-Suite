@@ -119,19 +119,23 @@ function ContentCard({ title, children }) {
  *           VIEW_COMPONENTS at core/view-routes.jsx.
  */
 function AppShell() {
-  const { area, view, symbolId, ticker } = useParams();
+  const { area, view, symbolId, ticker, strategyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   const isHomePage = location.pathname === '/';
   // `/trading/symbol/:ticker` renders the symbol page INSIDE the shell chrome.
   const isSymbolRoute = Boolean(ticker);
+  // `/trading/strategy/:strategyId` — the per-bot TRUTH VIEW (#864). In the shell chrome like the
+  // symbol routes, but pinned to the trading area rather than derived, because the path already
+  // says which area it belongs to.
+  const isStrategyRoute = Boolean(strategyId);
   // Symbol routes use literal prefixes (research/symbol, trading/symbol) so the
   // `area` param is undefined — derive the sidebar area from the pathname.
   const symbolArea = location.pathname.startsWith('/research/symbol/') ? 'research'
     : location.pathname.startsWith('/trading/symbol/') ? 'trading'
     : 'trading';
-  const primaryArea = isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')));
+  const primaryArea = isStrategyRoute ? 'trading' : (isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading'))));
   // defaultView: the first REAL view for the current area.
   //
   // ⚠️ NOT `areaViews[0]`. A `kind: 'section-header'` entry is a LABEL with an `id` (used as a
@@ -142,7 +146,7 @@ function AppShell() {
   const areaViews = NAV_STRUCTURE[primaryArea];
   const defaultView = areaViews?.find((item) => item.kind !== 'section-header' && item.id)?.id
     || 'directives-registry';
-  const secondaryView = isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView));
+  const secondaryView = isStrategyRoute ? 'strategy-detail' : (isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView)));
   // Dashboard renders full-bleed — no breadcrumb, no left section nav — as a
   // step toward the future widget-based, multi-screen dashboard.
   const isDashboard = primaryArea === 'dashboard';
@@ -1020,6 +1024,9 @@ export default function App() {
         <Routes>
           <Route path="/research/symbol/:ticker" element={<AppShell />} />
           <Route path="/trading/symbol/:ticker" element={<AppShell />} />
+          {/* #864 — the per-bot truth view. Declared with the OTHER literal-prefix routes rather
+              than left to `/:area/:view`, which matches two segments and would not reach it. */}
+          <Route path="/trading/strategy/:strategyId" element={<AppShell />} />
           <Route path="/symbol/:ticker" element={<SymbolRedirect />} />
           <Route path="/settings/data-management" element={<DataManagementPage />} />
           <Route path="/lab/top-movers" element={<TopMoversPage />} />

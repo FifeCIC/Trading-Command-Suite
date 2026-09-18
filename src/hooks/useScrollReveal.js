@@ -54,9 +54,18 @@ export function useScrollReveal(rootRef, deps = []) {
       const reveal = () => { el.classList.add('lad-reveal--show'); el.dataset.revealed = '1'; };
       const r = el.getBoundingClientRect();
       if (r.top < vh - 24 && r.bottom > 0) { reveal(); return; } // already in viewport
+      // ⚠️ Already ABOVE the viewport means the reader has scrolled past it. Reveal immediately.
+      // Without this a fast scroll (Page Down, scrollbar drag, Ctrl+End) can carry an element from
+      // below the fold to above it BETWEEN frames, so it is never intersecting and the observer
+      // never fires - leaving the element permanently at `opacity: 0` with its content INVISIBLE.
+      // Measured 2026-09-18 on the per-bot truth view: 6 of 7 groups revealed, 1 skipped.
+      if (r.bottom < 0) { reveal(); return; }
       const io = new IntersectionObserver((entries, obs) => {
         if (entries.some((en) => en.isIntersecting)) { reveal(); obs.disconnect(); }
-      }, { threshold: 0.05, rootMargin: '0px 0px -24px 0px' });
+        // The root is expanded 10000px UPWARD so anything already scrolled past counts as
+        // intersecting. Elements BELOW the viewport are still outside it and still wait for the
+        // scroll, so the reveal effect is preserved - the skip simply becomes impossible.
+      }, { threshold: 0.05, rootMargin: '10000px 0px -24px 0px' });
       io.observe(el);
       observers.push(io);
     });

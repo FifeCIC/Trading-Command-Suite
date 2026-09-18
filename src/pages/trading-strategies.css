@@ -301,6 +301,45 @@
   color: var(--accent);
 }
 
+/* #864 — hand-off to the per-bot truth view.
+   The primary action in this aside: this panel shows 8 hand-picked fields and cannot express
+   whether any of them is actually ENFORCED, which is the whole point of that page.
+   Tokens follow the `--accent`-on-`--panel` pattern this file already uses for `.ts-sidebar-detail h2`
+   rather than introducing a colour; `ui-standards` Rule B does not apply to this file (it is not a
+   new stylesheet), so a plain class is correct here. */
+.ts-truth-link {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.9rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ts-truth-link:hover {
+  color: var(--ink);
+}
+
+/* #864 pass — a failed parameter save used to be invisible (see saveEdit). Styled on the same
+   tokens as the rest of this file; colour is on the BORDER, text stays `--ink`, because the
+   semantic tones are tuned for a dark background and fail AA as text on a light panel. */
+.ts-save-error {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  border-radius: 8px;
+}
+
 /* Detail sections */
 .ts-detail-section {
   margin-bottom: 0.75rem;

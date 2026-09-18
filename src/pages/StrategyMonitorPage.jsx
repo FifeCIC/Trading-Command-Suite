@@ -28,7 +28,14 @@ import { thresholdGeometry, standingClass } from '../core/score-display';
 import { isActiveStrategy, isTradingStrategy, isScoringStrategy } from '../core/strategy-filters';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
 import './strategy-monitor.css';
-import './strategies-list.css';
+// ⚠️ The BOT CARD vocabulary is shared with StrategiesListPage and is a MODULE, so its names are
+// hashed and cannot be reached from another stylesheet. It used to be a plain `strategies-list.css`
+// whose `sl-` prefix was claimed by four other page stylesheets plus index.css, and every property
+// in it was being overridden at runtime (measured 2026-09-18: its `.sl-page` padding 24px/32px was
+// computing as 16px/24px).
+// ⚠️ `sl-chip-queue` is deliberately NOT from this module - it is defined in strategy-monitor.css
+// and is unique to this page.
+import styles from './strategies-list.module.css';
 
 export default function StrategyMonitorPage() {
   const [selectedStratId, setSelectedStratId] = useState(null);
@@ -242,7 +249,7 @@ export default function StrategyMonitorPage() {
         {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
           <EmptyState icon="◆" title="No active trading strategies" description="Activate a trading strategy to see monitoring data." />
         ) : (
-          <div className="sl-grid">
+          <div className={styles.grid}>
             {monitoredStrats.map((s, i) => {
               const isActive = isActiveStrategy(s);
               const isTrading = isTradingStrategy(s);
@@ -253,42 +260,42 @@ export default function StrategyMonitorPage() {
               return (
                 <motion.div
                   key={s.id}
-                  className={`sl-card ${selectedStratId === s.id ? 'sl-card-selected' : ''}`}
+                  className={`${styles.card} ${selectedStratId === s.id ? styles.cardSelected : ''}`}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.02 }}
                   onClick={() => setSelectedStratId(selectedStratId === s.id ? null : s.id)}
                 >
-                  <div className="sl-card-top">
-                    <span className="sl-card-dot" style={{ background: isActive ? '#22c55e' : '#64748b' }} />
-                    <strong className="sl-card-name">{s.name}</strong>
-                    <span className="sl-card-type" style={{ background: typeColor + '18', color: typeColor, borderColor: typeColor + '33' }}>
+                      <div className={styles.cardTop}>
+                        <span className={styles.cardDot} style={{ background: isActive ? 'var(--risk-normal)' : 'var(--ink-soft)' }} />
+                        <strong className={styles.cardName}>{s.name}</strong>
+                        <span className={styles.cardType} style={{ background: `color-mix(in srgb, ${typeColor} 12%, transparent)`, color: 'var(--ink)', borderColor: typeColor }}>
                       {typeLabel}
                     </span>
                   </div>
-                  <div className="sl-card-meta">
+                  <div className={styles.cardMeta}>
                     {s.symbol && (
                       <Link
                         to="/scoring/symbols-ladder"
-                        className="sl-chip sl-chip-link"
+                        className={`${styles.chip} ${styles.chipLink}`}
                         title={`Open ${s.symbol} in the symbols ladder`}
                         onClick={e => e.stopPropagation()}
                       >
                         {s.symbol}
                       </Link>
                     )}
-                    {s.watchlistName && <span className="sl-chip sl-chip-wl">{s.watchlistName}</span>}
+                    {s.watchlistName && <span className={`${styles.chip} ${styles.chipWl}`}>{s.watchlistName}</span>}
                     <Link
                       to="/protocols/protocols-registry"
-                      className="sl-chip sl-chip-proto sl-chip-link"
+                      className={`${styles.chip} ${styles.chipProto} ${styles.chipLink}`}
                       title={`Open protocol registry — this strategy consumes ${s.protocolId || 'no protocol'}`}
                       onClick={e => e.stopPropagation()}
                     >
                       {s.protocolId || '—'}
                     </Link>
-                    <span className="sl-chip sl-chip-broker">{s.brokerId || '—'}</span>
+                    <span className={`${styles.chip} ${styles.chipBroker}`}>{s.brokerId || '—'}</span>
                     {queueDepthByStrategy.get(s.id) > 0 && (
                       <span
-                        className="sl-chip sl-chip-queue"
+                        className={`${styles.chip} sl-chip-queue`}
                         title={`${queueDepthByStrategy.get(s.id)} pending signal(s) — see Signal Queues below`}
                       >
                         ⏳ {queueDepthByStrategy.get(s.id)} queued
@@ -296,8 +303,8 @@ export default function StrategyMonitorPage() {
                     )}
                   </div>
                   {s.lastComposite != null && (
-                    <div className="sl-card-score">
-                      <span className="sl-score-label">
+                    <div className={styles.cardScore}>
+                      <span className={styles.scoreLabel}>
                         Last Score
                         <PageInfoPopover>
                           <strong>Protocol-scoped gated composite (0–100%).</strong>
@@ -310,7 +317,7 @@ export default function StrategyMonitorPage() {
                       </span>
                       <Link
                         to="/scoring/live-ordering-stack"
-                        className={`sl-score-value ${scoreClass(s.lastComposite)}`}
+                        className={`${styles.scoreValue} ${scoreClass(s.lastComposite)}`}
                         title="Open the live ordering stack (Scoring)"
                         onClick={e => e.stopPropagation()}
                       >
@@ -318,11 +325,11 @@ export default function StrategyMonitorPage() {
                       </Link>
                     </div>
                   )}
-                  <StrategyFaultBadge strategy={s} />
+                  <StrategyFaultBadge strategy={s} className={styles.cardWarning} />
                   {selectedStratId === s.id && (
-                    <div className="sl-card-detail">
-                      {s.description && <p className="sl-detail-desc">{s.description}</p>}
-                      <div className="sl-detail-grid">
+                    <div className={styles.cardDetail}>
+                      {s.description && <p className={styles.detailDesc}>{s.description}</p>}
+                      <div className={styles.detailGrid}>
                         <span>Mode: <strong>{s.mode || '—'}</strong></span>
                         <span>Base Size: <strong>{s.baseSize || '—'}</strong></span>
                         <span>SL: <strong>{s.slPct != null ? s.slPct + '%' : '—'}</strong></span>
@@ -403,13 +410,13 @@ export default function StrategyMonitorPage() {
                         {bot.entries.map(e => (
                           <div key={e.id} className="smq-entry">
                             <span className="smq-entry-symbol">
-                              <Link to="/scoring/symbols-ladder" className="sl-chip-link">{e.symbol}</Link>
+                              <Link to="/scoring/symbols-ladder" className={styles.chipLink}>{e.symbol}</Link>
                             </span>
                             <span className={`smq-entry-dir smq-entry-dir--${(e.direction || 'long').toLowerCase()}`}>
                               {e.direction === 'SHORT' ? 'SELL' : e.direction === 'LONG' ? 'BUY' : e.direction || '—'}
                             </span>
                             <span className="smq-entry-proto">
-                              <Link to="/protocols/protocols-registry" className="sl-chip-link">{e.protocolId}</Link>
+                              <Link to="/protocols/protocols-registry" className={styles.chipLink}>{e.protocolId}</Link>
                             </span>
                             <span className="smq-entry-scores" title="SEES dual score at signal time — composite · signal · opportunity">
                                 <span className={standingClass(thresholdGeometry(e.compositePct, scale).standing)}>{e.compositePct ?? '—'}</span>

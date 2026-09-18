@@ -40,9 +40,9 @@ const STEPS = [
   {
     id: 'hasStrategies',
     icon: '⚙',
-    label: 'Create Trading Strategy',
+    label: 'Create Trading Bot',
     desc: 'Bind a protocol to a symbol with thresholds and sizing',
-    href: '/trading/strategy-create',
+    href: '/trading/bot-create',
   },
 ];
 

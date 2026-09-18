@@ -16,8 +16,10 @@ export const PAGE_DATA_STATUS = {
   'strategies-index': { status: 'removed', note: 'Merged into strategy-monitor (#560, 2026-08-04)' },
   'strategy-monitor': { status: 'live', source: 'DB (tabbed hub: overview/strategies/compare, #504)' },
   'strategy-builder': { status: 'removed', note: 'Scoring-strategy layer retired from the trading loop (2026-08-27) — use Protocol Builder + Create Strategy' },
-  'strategy-create': { status: 'live', source: 'Tabbed creation: form + wizard (#504)' },
-  'mt5-trading': { status: 'live', source: 'MT5 Bridge' },
+  // Renamed 2026-09-18: this creates a BOT (a `TradingStrategy` row = execution policy), not a
+  // "strategy" in the META.Stack sense. See docs/trading-bot-model.md §1 and §5.
+  'bot-create': { status: 'live', source: 'Tabbed creation: form + wizard (#504)' },
+  'trading-bots': { status: 'live', source: 'DB (canonical bot index, #504; surfaced 2026-09-18)' },    'strategies-derived': { status: 'live', source: 'GET /api/scoring/strategies/derived (#876 — derived per read, not stored)' },  'mt5-trading': { status: 'live', source: 'MT5 Bridge' },
   'calculators': { status: 'mock', note: 'Client-side only' },
   'stock-investigation': { status: 'live', source: '/api/research/investigations' },
   'portfolio-overview': { status: 'live', source: 'Alpaca + DB' },

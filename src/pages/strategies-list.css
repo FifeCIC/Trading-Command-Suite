@@ -60,6 +60,24 @@
 
 .sl-toggle-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }
 
+/* A kill-switch failure. Colour on the BORDER, text stays `--ink`: the semantic tones are tuned for
+   a dark background and #ef4444 as body text fails AA on a light panel. */
+.sl-toggle-error {
+  margin-bottom: 0.75rem; padding: 0.5rem 0.8rem;
+  font-size: 0.78rem; color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--danger);
+  border-radius: 8px;
+}
+
+/* Hand-off to the per-bot truth view (#864). */
+.sl-truth-btn {
+  display: block; width: 100%; margin-top: 0.6rem; padding: 0.35rem 0.6rem;
+  font-family: inherit; font-size: 0.68rem; font-weight: 600; text-align: left;
+  color: var(--accent); background: var(--panel);
+  border: 1px solid var(--accent); border-radius: 6px; cursor: pointer;
+}
+.sl-truth-btn:hover { color: var(--ink); }
+
 /* Faulty strategies banner */
 .sl-faulty-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;

@@ -49,6 +49,24 @@
  *     the house style, so the gap is currently theoretical — but it is a real blind spot, and the
  *     fix is to call the helper, not to widen this regex.
  *
+ * ⚠️ THE WORST BLIND SPOT: A CONSTANT PREFIX. Measured 2026-09-18, after adding three calls to a
+ * new page and watching the count NOT move (469 -> 469):
+ *
+ *     const TRADING = '/api/trading/strategies';
+ *     apiGet(`${TRADING}/${id}`)            // <-- skipped entirely, not even counted
+ *
+ *     const API = '/api/trading/strategies';
+ *     apiPost(`${API}`, body)               // <-- same
+ *
+ * The scanner requires the first argument to be a literal starting `/api/`, so this shape is
+ * dropped BEFORE the unresolved counter — it is silent, which makes it worse than the raw-`fetch`
+ * gap above (that one at least leaves nothing ambiguous about why it is missing).
+ *
+ * A guard whose count does not move when you add calls is telling you it cannot see them.
+ *
+ * Fix, not yet applied: pre-scan module scope for `const X = '/api/...'` and substitute before
+ * matching. Trivial to parse, and it would recover most of the gap. Tracked in #867.
+ *
  * ⚠️ **A check that scans nothing must FAIL, not pass.** If either side parses to zero entries this
  * exits non-zero and says which side is empty — an empty result is indistinguishable from a broken
  * parser otherwise, and a guard that inspects nothing is worse than no guard.

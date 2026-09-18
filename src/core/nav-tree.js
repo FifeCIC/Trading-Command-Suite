@@ -125,7 +125,23 @@ export const NAV_TREE = {
     label: 'Trading',
     views: [
       { id: 'strategy-monitor', label: 'Strategy Monitor', icon: '📊' },
-      { id: 'strategy-create', label: 'Create Strategy', icon: '⊞' },
+      // ── BOTS ──
+      // `Trading Bots` = a BOT, per `docs/trading-bot-model.md` §1: the EXECUTION POLICY (a
+      // `TradingStrategy` row) - money management, risk, entry/exit rules, position building. The
+      // Strategy Monitor above is the WHOLE PIPELINE (protocol + bot), which is a different thing.
+      // §5 (user-confirmed) is explicit that the display label is "Trading Bots".
+      { id: 'trading-bots', label: 'Trading Bots', icon: '🤖' },
+      // Renamed from `strategy-create` 2026-09-18: it creates a BOT row, so "Create Strategy"
+      // named the wrong layer. The alias `create-strategy` was removed - it mapped to this same
+      // component and nothing navigated to it except three stale QA procedure strings.
+      { id: 'bot-create', label: 'Create Bot', icon: '⊞' },
+      // ── STRATEGIES (derived) ──
+      // The owner's definition (docs/trading-bot-model.md §1c): "a strategy is about different
+      // treatment of a symbol". A strategy is a distinct (protocol x treatment) combination, which
+      // is a DIFFERENT thing from a bot. 26 bots -> 18 strategies. Placed directly under Trading
+      // Bots so the pair reads as "the execution policy" vs "the combinations", which is the frame
+      // the four legacy `strategy`-labelled pages above fail to make (they all render bots).
+      { id: 'strategies-derived', label: 'Strategies', icon: '🧩' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },

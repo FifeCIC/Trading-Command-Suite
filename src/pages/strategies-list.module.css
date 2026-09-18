@@ -1,0 +1,171 @@
+/**
+ * strategies-list.module.css — the SHARED bot card vocabulary.
+ * =============================================================
+ * Serves BOTH `StrategiesListPage` (Bots Registry) and `StrategyMonitorPage`. They share this
+ * stylesheet by design - both are #504 consolidation work and both render the same card.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * WHY THIS BECAME A MODULE (measured 2026-09-18)
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * It was `strategies-list.css` with an `sl-` prefix, and `sl-` was claimed by FOUR page
+ * stylesheets plus `index.css`. All page stylesheets are concatenated into ONE global sheet, so
+ * whichever file loaded last won - and it was not this one.
+ *
+ * Every property this file declares was being replaced at runtime:
+ *
+ *   | property              | declared here   | computed in the browser |
+ *   |-----------------------|-----------------|-------------------------|
+ *   | `.sl-page` padding    | 24px 32px       | 16px 24px               |
+ *   | `.sl-page` max-width  | 1400px          | none                    |
+ *   | `.sl-card` radius     | 10px            | 8px                     |
+ *   | `.sl-card` padding    | 13.6px 16px     | 8px 10.4px              |
+ *   | `.sl-header h1` size  | 24px            | 19.2px                  |
+ *
+ * The registry was rendering inside Snapshot Library's page frame. `snapshot-library.css` defines
+ * `.sl-page { max-width: none; padding: 1rem 1.5rem }` and `strategy-library.css` defines a THIRD
+ * set of the same names at `max-width: 880px` - three different answers to the same question, with
+ * load order as the tie-break.
+ *
+ * A module ends this permanently for the bot pages: the names are hashed at build time, so they
+ * cannot be reached from another stylesheet at all.
+ *
+ * ⚠️ `snapshot-library.css` and `strategy-library.css` STILL both declare `.sl-page`, `.sl-header`,
+ * `.sl-subtitle` and `.sl-card`, so they still collide with EACH OTHER. That is a different area
+ * and is filed separately - this change deliberately fixes only the bot pages.
+ *
+ * ⚠️ THEMED TOKENS ONLY - `--panel` / `--line` / `--ink` / `--ink-soft` / `--accent` / `--danger`.
+ * NOT the legacy `--color-panel` set, which is declared once in `index.css` and never changes, so it
+ * renders dark navy in light mode. Both sets pass `validate-css-tokens.cjs`, which is the trap.
+ */
+
+.page { padding: 1.5rem 2rem; max-width: var(--page-max-width, 1400px); margin: 0 auto; }
+
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { margin: 0; font-size: 1.5rem; }
+.subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+.filterBar { display: flex; gap: 4px; flex-wrap: wrap; }
+.filterChip {
+  padding: 4px 12px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink-soft); cursor: pointer;
+  font-size: 0.72rem; transition: all 0.15s;
+}
+.filterChip:hover { border-color: var(--accent); color: var(--ink); }
+.filterActive { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+/* The Faulty chip keeps a danger tone when selected, so "you are looking at problems" is visible
+   without reading the label. Dropped once while migrating this file - it is easy to miss because it
+   is a COMPOUND selector rather than its own class. */
+.filterActive.filterFaulty { background: var(--risk-critical); color: var(--bg); border-color: var(--risk-critical); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.85rem 1rem;
+  cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+}.card:hover { border-color: var(--accent); }
+.cardSelected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.cardTop { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
+.cardDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cardName { font-size: 0.9rem; flex: 1; }
+.cardType {
+  font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid;
+  font-weight: 600; white-space: nowrap;
+}
+
+.cardMeta { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.chip {
+  font-size: 0.62rem; padding: 1px 6px; border-radius: 3px;
+  background: var(--line); color: var(--ink-soft);
+}
+/* ⚠️ THEMED tokens now, NOT hex. These were literal (#8b5cf6 / #06b6d4 / #d97706) which never
+   followed the theme - the same defect the owner reported on the per-bot truth view. The runtime
+   risk ramp gives three distinguishable, theme-aware tones. */
+.chipWl { border: 1px solid var(--risk-watch); background: color-mix(in srgb, var(--risk-watch) 14%, transparent); }
+.chipProto { border: 1px solid var(--risk-normal); background: color-mix(in srgb, var(--risk-normal) 14%, transparent); }
+.chipBroker { border: 1px solid var(--risk-elevated); background: color-mix(in srgb, var(--risk-elevated) 16%, transparent); }
+
+/* The role suffix on a protocol chip (LONG / SHORT / BOTH). Direction comes from the SUBSCRIPTION,
+   not the bot, so it belongs on the protocol chip rather than anywhere else on the card. */
+.chipRole {
+  margin-left: 4px;
+  font-style: normal;
+  font-weight: var(--weight-bold);
+  opacity: 0.85;
+}
+
+/* "+N more" - the card is built to hold MANY protocols, so overflow is a normal state, not an
+   error. Full list is in the title attribute. */
+.chipMore {
+  border: 1px dashed var(--border-strong);
+  color: var(--ink-soft);
+}
+
+/* A bot with NO subscription. Routing joins `strategy_protocol`, so this bot receives nothing -
+   it looks configured and silently does nothing. Deliberately louder than the other chips. */
+.chipFaulty {
+  border: 1px solid var(--risk-critical);
+  background: color-mix(in srgb, var(--risk-critical) 12%, transparent);
+  color: var(--ink);
+}
+
+.cardScore { display: flex; justify-content: space-between; align-items: center; margin: 0.3rem 0; }
+.scoreLabel { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.65rem; color: var(--ink-soft); }
+.scoreValue { font-size: 1.1rem; font-weight: 800; }
+
+.cardPositions { font-size: 0.65rem; color: var(--accent); margin-top: 0.2rem; }
+.cardWarning {
+  font-size: 0.62rem; padding: 3px 8px; border-radius: 4px; margin-top: 0.3rem;
+  border: 1px solid var(--risk-critical);
+  background: color-mix(in srgb, var(--risk-critical) 10%, transparent);
+  color: var(--ink);
+}
+
+.cardDetail { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.detailDesc { font-size: 0.72rem; color: var(--ink-soft); margin: 0 0 0.5rem; }
+.detailGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 1rem; font-size: 0.7rem; color: var(--ink-soft); }
+.detailGrid strong { color: var(--ink); }
+
+.toggleRow { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }
+
+/* A kill-switch failure. Colour on the BORDER, text stays `--ink`: the semantic tones are tuned for
+   a dark background and #ef4444 as body text fails AA on a light panel. */
+.toggleError {
+  margin-bottom: 0.75rem; padding: 0.5rem 0.8rem;
+  font-size: 0.78rem; color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--danger);
+  border-radius: 8px;
+}
+
+/* Hand-off to the per-bot truth view (#864). */
+.truthBtn {
+  display: block; width: 100%; margin-top: 0.6rem; padding: 0.35rem 0.6rem;
+  font-family: inherit; font-size: 0.68rem; font-weight: 600; text-align: left;
+  color: var(--accent); background: var(--panel);
+  border: 1px solid var(--accent); border-radius: 6px; cursor: pointer;
+}
+.truthBtn:hover { color: var(--ink); }
+
+/* Colour on the CHIP/BORDER, text stays `--ink`. The semantic tones are tuned for a dark background
+   and fail WCAG AA as body text on a light panel. */
+.faultyBanner {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.55rem 1rem; margin-bottom: 0.75rem;
+  border: 1px solid var(--risk-critical);
+  background: color-mix(in srgb, var(--risk-critical) 8%, transparent);
+  border-radius: 8px; font-size: 0.8rem; color: var(--ink);
+}
+.faultyBannerBtn {
+  padding: 3px 10px; border: 1px solid var(--risk-critical); border-radius: 14px;
+  background: transparent; color: var(--ink); cursor: pointer; font-size: 0.7rem;
+  white-space: nowrap; font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.faultyBannerBtn:hover { background: var(--risk-critical); color: var(--bg); }
+
+/* Clickable chips + score links on monitor cards - keep chip look */
+.chipLink { cursor: pointer; text-decoration: none; }
+.chipLink:hover { text-decoration: none; filter: brightness(1.4); }
+a.scoreValue { text-decoration: none; }
+a.scoreValue:hover { text-decoration: underline; }

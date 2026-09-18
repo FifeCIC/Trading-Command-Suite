@@ -71,14 +71,20 @@ const VIEW_META = {
     css: 'src/pages/strategy-comparison.css',
     api: ['GET /api/trading/strategy-comparison'],
   },
+  '/trading/trading-bots': {
+    label: 'Trading Bots',
+    file: 'src/pages/StrategiesListPage.jsx',
+    css: 'src/pages/strategies-list.module.css',
+    api: ['GET /api/trading/strategies', 'GET /api/portfolio?source=mt5'],
+  },
   '/trading/strategy-monitor': {
     label: 'Strategy Monitor',
     file: 'src/pages/StrategyMonitorPage.jsx',
     css: 'src/pages/strategy-monitor.css',
       api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena', 'GET /api/scoring/gated/thresholds'],
   },
-  '/trading/strategy-create': {
-    label: 'Create Strategy',
+  '/trading/bot-create': {
+    label: 'Create Bot',
     file: 'src/pages/StrategyCreatePage.jsx',
     css: 'src/pages/strategy-create.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/watchlists', 'POST /api/trading/strategies'],

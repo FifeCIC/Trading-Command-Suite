@@ -181,7 +181,7 @@ const PIPELINE = [
   { isMarker: true, type: 'sees-end', label: 'SEES End' },
   // ── Post-scoring: Strategy layers ──
   {
-    id: 'scoring-strategy', title: 'Trading Strategy Rules', linkTo: '/trading/strategy-create', linkLabel: 'Create Strategy',
+    id: 'scoring-strategy', title: 'Trading Strategy Rules', linkTo: '/trading/bot-create', linkLabel: 'Create Strategy',
     fn: 'AutomationLoopService.evaluateStrategy() → gate checks',
     fnDesc: 'Active trading strategies carry rules beyond the raw protocol score: trade threshold comparison (composite must exceed minComposite), budget gate (daily loss limits), and mode-based filtering (manual/semi-auto/auto). A strategy can permit or block a trade independently of the signal. (The scoring_strategy layer was retired from the trading loop 2026-08-27 — its config now lives on the trading strategy.)',
     dbTable: 'trading_strategy, automation_rule',

@@ -172,6 +172,7 @@ import { SeptemberSlumpDirective } from './implementations/september-slump.direc
 import { OctoberReliefDirective } from './implementations/october-relief.directive';
 import { MondayEffectDirective as MondayEffectRealDirective } from './implementations/monday-effect.directive';
 import { FridayDriftDirective } from './implementations/friday-drift.directive';
+import { WeekendGapBiasDirective } from './implementations/weekend-gap-bias.directive';
 import { TurnaroundTuesdayDirective } from './implementations/turnaround-tuesday.directive';
 import { OpexGammaDirective } from './implementations/opex-gamma.directive';
 import { TripleWitchingDirective } from './implementations/triple-witching.directive';
@@ -289,6 +290,10 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     OctoberReliefDirective,
     MondayEffectRealDirective,
     FridayDriftDirective,
+    // 2026-09-18 — replaces the refuted Friday session-drift claim with a MEASURED weekend
+    // gap bias, corrected against the same symbol's weekday gaps so a bar-source skew cannot
+    // masquerade as an edge. See the class comment and issue #879.
+    WeekendGapBiasDirective,
     TurnaroundTuesdayDirective,
     OpexGammaDirective,
     TripleWitchingDirective,
