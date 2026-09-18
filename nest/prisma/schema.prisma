@@ -828,6 +828,17 @@ model Trade {
   pnl               Float?
   status            String   @default("open") @db.VarChar(50)
   provider          String   @db.VarChar(50)
+  /// WHICH BROKER ACCOUNT this trade belongs to (#889).
+  ///
+  /// One `provider` id can cover several bridge instances — `MT5_ACTIVE_BROKERS=2,3` runs
+  /// MetaQuotes and Pepperstone under the single provider `mt5`. Without this column the
+  /// reconciler could not tell which broker a trade belonged to, so an account-scoped sync
+  /// closed another account's LIVE trades (measured 2026-09-18, #883).
+  ///
+  /// ⚠️ NULL means "broker unknown" — legacy rows written before this column existed, and
+  /// historical closed trades whose `position` row is long gone. A NULL row must NEVER be
+  /// closed by an account-scoped sync; only an all-account snapshot may judge it.
+  accountId         String?  @db.VarChar(100)
   strategy          String?  @db.VarChar(200)
   scoringStrategyId String?  @db.VarChar(36)
   origin            String   @default("user") @db.VarChar(20)

@@ -158,7 +158,7 @@ export class PositionSyncService {
             : unticketedIncoming.has(dbPos.symbol);
         if (stillOpen) continue;
 
-        closed += await this.finalizeClosedPosition(provider, dbPos);
+        closed += await this.finalizeClosedPosition(provider, dbPos, accountId);
       }
 
       // Reap stranded TRADE rows — see reapStrandedTrades(). Runs only past the
@@ -214,12 +214,16 @@ export class PositionSyncService {
     positions: BrokerPosition[],
   ): Promise<number> {
     try {
-      // ⚠️ Do NOT filter by accountId here: `trade` has no such column (only
-      // `position` does). Adding it silently returns zero rows, because Prisma
-      // discards an unknown filter rather than erroring — which is exactly how
-      // the first version of this reaper reported "0 reaped" while 17 stranded
-      // rows sat in the table. `provider` is the correct scope for `trade`.
-      void accountId;
+      // ⚠️ `trade.accountId` exists as of #889 — this comment used to say it did NOT, and that
+      // `provider` was therefore the only usable scope. That was true then and is false now, and
+      // the difference matters: `provider` alone spans every account, so an account-scoped sync
+      // using it would judge trades belonging to a broker it never queried. `mayJudgeTrade()`
+      // applies the scope per row.
+      //
+      // ⚠️ Do NOT add `accountId` to the PRISMA where-clause as a shortcut. A filter that does not
+      // exist is DISCARDED rather than rejected, so it would silently return rows instead of
+      // scoping them — the same trap that made the first version of this reaper report "0 reaped"
+      // while 17 stranded rows sat in the table.
       const liveSymbols = new Set(positions.map((p) => String(p.symbol).toUpperCase()));
       // ⚠️ A ticket the broker REPORTS is proof of life. Built once, compared per row.
       const liveTickets = new Set(
@@ -240,12 +244,24 @@ export class PositionSyncService {
         select: {
           id: true, symbol: true, openedAt: true,
           brokerTicket: true, side: true, pnl: true, exitPrice: true,
+          accountId: true,
         },
       });
       if (!Array.isArray(stranded) || stranded.length === 0) return 0;
 
       let reaped = 0;
       for (const t of stranded) {
+        // ⚠️ Scope BEFORE anything else (#889). A trade belonging to another account is not
+        // "missing from the snapshot" — it is simply not this sync's business, and the retired
+        // code could not tell those two situations apart.
+        if (!this.mayJudgeTrade(t, accountId)) {
+          this.logger.debug(
+            `[${provider}] trade ${t.id} (${t.symbol}) belongs to account ` +
+            `${t.accountId ?? 'unknown'} — NOT judged by an account-${accountId} sync`,
+          );
+          continue;
+        }
+
         const ticket = t.brokerTicket == null ? null : String(t.brokerTicket);
 
         if (ticket) {
@@ -267,7 +283,7 @@ export class PositionSyncService {
             side: t.side,
             currentPrice: t.exitPrice ?? null,
             pnl: t.pnl ?? null,
-          }).catch(() => 0);
+          }, accountId).catch(() => 0);
           if (finalised) {
             reaped += finalised;
             this.logger.warn(
@@ -361,8 +377,10 @@ export class PositionSyncService {
         quantity: pos.quantity,
         entryPrice: pos.avgPrice || 0,
         pnl: 0,
-        provider,
-        status: 'open',
+        provider,        // ⚠️ Record WHICH account this trade belongs to (#889). Without it the row joins the
+        // `accountId IS NULL` pool, which is visible to every account's sync — the leak that let
+        // one broker's snapshot close another broker's live trades (#883).
+        accountId: pos.accountId ?? null,        status: 'open',
         origin: 'external',
         source: 'broker-sync',
         brokerTicket: pos.brokerTicket || null,
@@ -392,12 +410,58 @@ export class PositionSyncService {
   }
 
   /**
+   * May a sync scoped to `syncAccountId` judge this trade at all?
+   *
+   * ⚠️ THIS GUARD IS DEFENCE-IN-DEPTH, NOT THE PRIMARY PROTECTION (#883, #889)
+   * --------------------------------------------------------------------------
+   * `syncPositions()` reconciles by asking "is this trade's ticket in MY snapshot?" and treats
+   * absence as closure. When one `provider` id covers several broker accounts — `MT5_ACTIVE_BROKERS=2,3`
+   * runs MetaQuotes and Pepperstone under the single provider `mt5` — that question is only valid
+   * for trades the sync can actually observe.
+   *
+   * The PRIMARY fix landed in #883: the adapter now asks EVERY broker, so another broker's ticket
+   * is present in the snapshot and is never mistaken for "gone". This guard covers the case #883
+   * cannot: two accounts that are genuinely both KNOWN, where a scoped sync still has no business
+   * judging the other one's rows.
+   *
+   * | sync scope       | trade.accountId | may judge?                              |
+   * |------------------|-----------------|------------------------------------------|
+   * | null (all accts) | anything        | YES — the snapshot covers every account  |
+   * | X                | X               | YES — same account                       |
+   * | X                | Y ≠ X           | **NO — different account**               |
+   * | X                | null            | YES — see below                          |
+   *
+   * ⚠️ WHY `null` IS DELIBERATELY ALLOWED THROUGH
+   * ---------------------------------------------
+   * The first version of this guard blocked unknown-account trades too. That was WRONG, and the
+   * existing suite caught it: the 2026-09-10 regression (`finalizes a legacy row (no ticket, no
+   * account) that is gone from the broker`) exists precisely because legacy `accountId IS NULL`
+   * position rows must still be reconciled. Blocking them leaves a closed position sitting in
+   * `position` forever, which also keeps the duplicate guard for that symbol shut.
+   *
+   * So "I don't know which broker this is" falls through to the pre-existing behaviour rather than
+   * being refused. The safety for that case comes from #883 — a complete snapshot plus an
+   * `authoritative` flag that requires every broker to answer — not from this test. Stated plainly
+   * because the blocked-`null` version LOOKED safer and was strictly worse.
+   */
+  private mayJudgeTrade(
+    trade: { accountId?: string | null },
+    syncAccountId: string | null,
+  ): boolean {
+    if (!syncAccountId) return true;
+    const tradeAccount = trade.accountId ?? null;
+    // Unknown account: legacy row. Must remain reconcilable — see the reasoning above.
+    if (tradeAccount === null) return true;
+    return tradeAccount === syncAccountId;
+  }
+
+  /**
    * A position that was previously synced is no longer in the latest fetch —
    * it was closed (by the bot, by the user in MT5, or elsewhere). Finalize the
    * Trade with the real exit price from broker deal history and notify.
    * Returns 1 if a Trade was finalized, else 0.
    */
-  private async finalizeClosedPosition(provider: string, dbPos: any): Promise<number> {
+  private async finalizeClosedPosition(provider: string, dbPos: any, syncAccountId: string | null = null): Promise<number> {
     // Find the open trade — by broker ticket first, then symbol fallback.
     const where: any = { provider, status: 'open' };
     let trade: any = null;
@@ -408,6 +472,16 @@ export class PositionSyncService {
       trade = await this.prisma.trade
         .findFirst({ where: { ...where, symbol: dbPos.symbol, brokerTicket: null }, orderBy: { openedAt: 'desc' } })
         .catch(() => null);
+    }
+
+    // ⚠️ Out of scope — do NOT judge a trade this sync cannot see (#889). Checked BEFORE the deal
+    // history lookup so an out-of-scope row costs nothing and cannot be finalised by a later path.
+    if (trade && !this.mayJudgeTrade(trade, syncAccountId)) {
+      this.logger.debug(
+        `[${provider}] ${dbPos.symbol}: trade ${trade.id} belongs to account ` +
+        `${trade.accountId ?? 'unknown'} — NOT judged by an account-${syncAccountId} sync`,
+      );
+      return 0;
     }
 
     // Real exit price from broker deal history (#470). Falls back to the last

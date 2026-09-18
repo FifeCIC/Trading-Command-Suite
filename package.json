@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.39.0",
+  "version": "0.40.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "roadmap:sync": "node ./scripts/roadmap-sync.cjs",
     "test:roadmap": "node --test src/core/roadmap/roadmap-core.test.js",
     "test:notices": "node --test src/core/notices/notices.test.js",
+    "test:session": "node --test src/core/session-utils.test.js",
     "test:threshold-ceiling": "node --test src/core/threshold-ceiling.test.js",
     "test:bridge-offset": "python scripts/mt5-bridge/test_bridge_offset_guard.py",
     "docs:facts": "node ./scripts/docs-facts.cjs --write",
