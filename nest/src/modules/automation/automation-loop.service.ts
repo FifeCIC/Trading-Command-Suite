@@ -741,6 +741,39 @@ export class AutomationLoopService implements OnModuleInit {
 
   // ── Lifecycle ────────────────────────────────────────
 
+  /**
+   * Run the first tick once the broker adapters are registered.
+   *
+   * WHY (#877): `start()` deliberately ticks immediately so a restart does not cost a full
+   * interval. But the adapters are registered by `ProvidersModule`'s OWN `onModuleInit`, and Nest
+   * does not guarantee that hook runs before this one. Measured 2026-09-18 on 0.35.0:
+   *
+   *     Tick #1: 1 timeline events, global risk 1.00
+   *     WARN  [AdapterFactory] No adapter registered for id: mt5          ← the tick's own fetch
+   *     DEBUG [AdapterFactory] Registered adapter: mt5 (MetaTrader 5)     ← registration, after
+   *
+   * `create('mt5')` returned null, the broker loop skipped that broker, and
+   * `positionSync.syncPositions()` was never called — so the pass reconciled nothing and closed
+   * nothing, with **no line saying it had been skipped**. The next tick 2 minutes later worked.
+   *
+   * ⚠️ `listAdapters()` is read-only — it reads the registry and does NOT instantiate. That
+   * matters: `create()` would, on a registered-but-DI-not-ready adapter, fall through to
+   * `new ctor()` in `instantiate()` and then CACHE a dependency-less instance. Polling the
+   * registry avoids creating an adapter in order to ask whether adapters can be created.
+   *
+   * ⚠️ The wait is BOUNDED and proceeds either way. A genuinely unregistered adapter is a
+   * different problem and must not stop the loop; it is reported per tick by the warn in the
+   * broker loop instead.
+   */
+  private async tickWhenAdaptersReady(timeoutMs = 5000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (this.adapterFactory.listAdapters().length > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await this.tick();
+  }
+
   start(): { started: boolean; message: string } {
     if (this.timer) {
       return { started: false, message: 'Loop is already running' };
@@ -758,8 +791,10 @@ export class AutomationLoopService implements OnModuleInit {
     // because no time-based exit existed — `maxHoldDuration` was declared but never read.
     // It no-ops unless a strategy opts in, and is DRY RUN unless POSITION_TIMESTOP_DRY_RUN=0.
     this.positionTimeStop.start();
-    // Fire an immediate tick so we don't wait 5 min after restart
-    this.tick().catch(err => this.logger.error(`Initial tick failed: ${(err as Error).message}`));
+    // Fire an immediate tick so we don't wait 2 min after restart — but only once the adapters
+    // exist. Firing it unconditionally raced the adapter registration and silently skipped
+    // position sync; see tickWhenAdaptersReady().
+    this.tickWhenAdaptersReady().catch(err => this.logger.error(`Initial tick failed: ${(err as Error).message}`));
     return { started: true, message: `Loop started — ${this.state.tickIntervalMs}ms interval` };
   }
 
@@ -922,7 +957,19 @@ export class AutomationLoopService implements OnModuleInit {
       for (const [brokerId, brokerState] of Object.entries(this.state.brokerStates)) {
         if (!brokerState.enabled) continue;
         const adapter = this.adapterFactory.create(brokerId);
-        if (!adapter?.supportsBrokerage || !adapter.getPositions) continue;
+        if (!adapter) {
+          // ⚠️ Distinct from "registered but not a brokerage adapter" below, and it must be LOUD.
+          // `create()` returns null when the factory holds no REGISTRATION for the id — which on
+          // the first tick after boot is a startup-ordering artifact, not a config error.
+          // Silently `continue`-ing here is what made #877 invisible: the tick looked like it had
+          // run, while no positions were fetched and no reconciliation happened.
+          this.logger.warn(
+            `  ${brokerId}: NO ADAPTER INSTANCE — its positions were NOT fetched this tick ` +
+            '(adapter not registered yet?)',
+          );
+          continue;
+        }
+        if (!adapter.supportsBrokerage || !adapter.getPositions) continue;
 
         try {
           const snapshot = adapter.getPositionSnapshot
