@@ -9,6 +9,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as os from 'os';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { RETENTION_DAYS, TABLE_DATE_COLUMN } from './retention.config';
 
 // ⚠️ Retention days and date columns now come from `retention.config.ts` — the ONE owner. Both were
@@ -90,6 +92,10 @@ export class SystemHealthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
+    // #901 — the risk-cap alignment check compares the app's LIVE caps with each bridge's
+    // env-read copies; these two dependencies are registered in THIS module (system.module).
+    private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly settingsResolver: SettingsResolverService,
   ) {}
 
   async runAllChecks(): Promise<HealthCheckResult> {
@@ -109,6 +115,12 @@ export class SystemHealthService {
 
     // 5. MT5 bridge reachable
     checks.push(await this.checkMt5Bridge());
+
+    // 5b. Risk cap alignment — the app's LIVE caps vs each bridge's env-read copies (#901).
+    //     Separate from 5 on purpose: "the bridge is reachable" and "the bridge enforces what
+    //     the app thinks it set" are different questions, and it was the second one that cost
+    //     two days of confusion while the first answered healthy.
+    checks.push(await this.checkRiskCapAlignment());
 
     // 6. Market data available
     checks.push(await this.checkMarketData());
@@ -212,6 +224,67 @@ export class SystemHealthService {
       return this.warn('MT5 Bridge', 'Bridge reachable but not returning quote data — may need MT5 login');
     } catch {
       return this.warn('MT5 Bridge', 'Bridge unreachable — check port 5000 and mt5_bridge.py');
+    }
+  }
+
+  private async checkRiskCapAlignment(): Promise<HealthCheckItem> {
+    try {
+      // Every cap lives in TWO places: the app's live setting, and the bridge's env-read copy.
+      // The pairs are declared here so adding a fourth cap is one row, not another silent drift.
+      const CAP_PAIRS: Array<{ appKey: string; envVar: string; bridgeKey: 'maxOpenPositions' | 'maxPositionSize' | 'maxDailyLoss' }> = [
+        { appKey: 'risk.maxOpenPositions', envVar: 'MT5_MAX_OPEN_POSITIONS', bridgeKey: 'maxOpenPositions' },
+        { appKey: 'risk.maxPositionSize', envVar: 'MT5_MAX_POSITION_SIZE', bridgeKey: 'maxPositionSize' },
+        { appKey: 'risk.maxDailyLoss', envVar: 'MT5_MAX_DAILY_LOSS', bridgeKey: 'maxDailyLoss' },
+      ];
+
+      const bridges = await this.mt5Connection.getAllBrokerHealths();
+      const reporting = bridges.filter((b) => b.health?.riskLimits);
+      if (reporting.length === 0) {
+        // ⚠️ "Cannot verify" is reported as WARN — never as pass. A bridge build predating the
+        // riskLimits field cannot prove alignment, and "we could not check" must not read as OK.
+        return this.warn(
+          'Risk Cap Alignment',
+          'No reachable bridge reported its risk limits — cannot verify the running bridges ' +
+            'enforce the same caps the app shows. Restart the bridges on a current build (#901).',
+        );
+      }
+
+      const mismatches: string[] = [];
+      const agreed = new Set<string>();
+      for (const b of reporting) {
+        const limits = b.health!.riskLimits!;
+        for (const pair of CAP_PAIRS) {
+          const appValue = await this.settingsResolver.get<number>(pair.appKey);
+          const bridgeValue = limits[pair.bridgeKey];
+          if (typeof appValue !== 'number' || typeof bridgeValue !== 'number') continue;
+          if (Math.abs(appValue - bridgeValue) > 1e-9) {
+            mismatches.push(
+              `broker ${b.brokerId}: ${pair.bridgeKey} app=${appValue} bridge=${bridgeValue}`,
+            );
+          } else {
+            agreed.add(`${pair.bridgeKey}=${bridgeValue}`);
+          }
+        }
+      }
+
+      if (mismatches.length > 0) {
+        return this.warn(
+          'Risk Cap Alignment',
+          `MISMATCH — ${mismatches.join('; ')}. The bridge reads its MT5_* env caps at START; ` +
+            'edit nest/.env and RESTART THE BRIDGES to align, or set the app value to match. ' +
+            'The LOWER of the two binds, so an order may be refused by a cap the UI cannot see (#901).',
+        );
+      }
+
+      return this.pass(
+        'Risk Cap Alignment',
+        `${reporting.length} bridge(s) agree with the app caps (${[...agreed].join(', ')})` +
+          (bridges.length > reporting.length
+            ? ` — ${bridges.length - reporting.length} broker(s) unreachable, not verified`
+            : ''),
+      );
+    } catch (err) {
+      return this.warn('Risk Cap Alignment', `Check failed: ${(err as Error).message}`);
     }
   }
 

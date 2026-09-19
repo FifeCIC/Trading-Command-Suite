@@ -170,6 +170,50 @@ export const SETTINGS: SettingDefinition[] = [
     max: 1.0,
   },
   {
+    // ⚠️ Added 2026-09-19 (#900). Declared since the beginning (`maxPortfolioRisk: 0.15` in four
+    // literals) with NO READER ANYWHERE — the register's own words: "A portfolio-level risk cap
+    // that does not exist is worse than none: it is assumed to be protecting something." Now
+    // wired: the fraction of the portfolio LOST if every open position's stop filled, summed
+    // across the whole book and checked before any new order (assessGlobalRiskLimits).
+    //
+    // Definition (the one the owner asked for): "X% is in red on current positions" →
+    // Σ |entry − brokerSL| × volume × contractSize, converted to account currency. NOT the same
+    // question as maxDrawdown (peak-to-current on realised+unrealised equity).
+    key: 'risk.maxPortfolioRisk',
+    type: 'number',
+    defaultValue: 0.15,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Max portfolio risk',
+    description:
+      'Ceiling on the TOTAL loss across all open positions if every broker stop filled, as a ' +
+      'fraction of portfolio value (0.15 = 15%). Refuses new orders while the book exceeds it. ' +
+      '⚠️ Positions WITHOUT a broker stop are priced at full notional (materially larger), so a ' +
+      'naked position can trip this on its own — that is deliberate. Wired 2026-09-19 (#900); ' +
+      'before that this cap had no reader anywhere and was assumed to be protecting something.',
+    userChangeable: true,
+    min: 0.01,
+    max: 1.0,
+  },
+  {
+    // ⚠️ Added 2026-09-19 (#900). The owner's rule, verbatim: "if … the distant broker stop loss
+    // is missing … then it doesn't trade." docs/trading-bot-model.md §6b requires a broker-side
+    // protective stop on EVERY position so an app failure never leaves one unprotected — that
+    // invariant was asserted at order-building and never verified AFTERWARD. This checks it on
+    // every entry, against every open position.
+    key: 'risk.requireBrokerStopLoss',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Require broker stop loss',
+    description:
+      'Refuse a new order while ANY open position has no broker-side stop loss (SL 0). Set false ' +
+      'only to deliberately run unprotected positions — a naked position is then priced at full ' +
+      'notional in the maxPortfolioRisk check.',
+    userChangeable: true,
+  },
+  {
     // ⚠️ Added 2026-09-17 (#865) — same class as risk.maxPerSymbol: declared live, hardcoded 0.25
     // in five places, unmovable.
     //

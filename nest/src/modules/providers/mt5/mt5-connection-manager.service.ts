@@ -47,6 +47,22 @@ export interface Mt5BridgeHealth {
    */
   serverUtcOffsetSeconds?: number;
   serverUtcOffsetHours?: number;
+  /**
+   * Effective risk limits the RUNNING bridge enforces (#901).
+   *
+   * ⚠️ These are read from `nest/.env` at the bridge's IMPORT, so editing the file does NOT
+   * take effect until the bridge process is restarted. The app's own caps
+   * (`risk.maxOpenPositions`, `risk.maxPositionSize`, `risk.maxDailyLoss`) are read LIVE from
+   * settings — so the two can silently disagree and the LOWER of the two is what binds.
+   * Measured 2026-09-19 (#901): app said 20, the running bridge still enforced 5 from a stale
+   * import, and 28 orders were refused naming a control that could not clear the error.
+   * `SystemHealthService.checkRiskCapAlignment()` compares these against the app caps.
+   */
+  riskLimits?: {
+    maxOpenPositions?: number;
+    maxPositionSize?: number;
+    maxDailyLoss?: number;
+  };
 }
 
 export interface Mt5BrokerInfo {

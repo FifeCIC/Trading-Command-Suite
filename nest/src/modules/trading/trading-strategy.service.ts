@@ -34,7 +34,9 @@ import {
   estimatePositionMargin,
   describeMargin,
   conversionPairsNeeded,
+  conversionFor,
   resolveProfitCurrency,
+  ASSUMED_CURRENCY_SAFETY_FACTOR,
 } from '../../common/trading/position-margin';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
@@ -899,6 +901,32 @@ export class TradingStrategyService {
       if (positions.length >= maxOpenPositions) {
         return { allowed: false, reason: `risk.maxOpenPositions (${maxOpenPositions}) reached — ${positions.length} currently open` };
       }
+
+      // ── 2b. UNPROTECTED POSITIONS (#900, 2026-09-19) ──────────────────────────────────────
+      // The owner's rule: "if … the distant broker stop loss is missing … then it doesn't trade."
+      // docs/trading-bot-model.md §6b requires a broker-side protective stop on EVERY position so
+      // an app failure never leaves one unprotected — that invariant was asserted at order-building
+      // and NEVER verified afterwards (a dropped modify, a partial fill, a manual MT5 edit all
+      // leave it broken with no error anywhere). Checked here on every entry, against every open
+      // position, on the SAME broker fetch the count check above already made.
+      //
+      // ⚠️ `!== false` — anything but an explicit false enforces the check. An unreadable setting
+      // must not remove a money gate (the #865 lesson: a cap that arrives `undefined` DISABLES its
+      // check silently). The bridge being unreachable lands in the catch below, where trading is
+      // separately impossible — an order cannot be placed through a dead bridge.
+      const requireBrokerStopLoss = await this.settings.get<boolean>('risk.requireBrokerStopLoss');
+      if (requireBrokerStopLoss !== false) {
+        const naked = positions.filter((p) => !(Number(p.sl) > 0));
+        if (naked.length > 0) {
+          return {
+            allowed: false,
+            reason:
+              `Unprotected position(s): ${naked.map((p) => `#${p.ticket} ${p.symbol} (SL ${p.sl ?? 0})`).join(', ')} ` +
+              '— no broker stop loss. §6b requires every position to carry a broker-side stop; ' +
+              'refusing to add risk while one is unprotected (risk.requireBrokerStopLoss, #900).',
+          };
+        }
+      }
     } catch { /* MT5 may be unreachable — proceed with caution */ }
 
     // ── 3. MT5_MAX_DAILY_LOSS ──
@@ -928,6 +956,8 @@ export class TradingStrategyService {
     // is the exact defect shape this file keeps producing. Outside, it is visible here. (#865)
     const maxPerSymbol = await this.settings.get<number>('risk.maxPerSymbol');
     const maxDrawdown = await this.settings.get<number>('risk.maxDrawdown');
+    // #900 — live since 2026-09-19; declared with NO READER ANYWHERE before that (see the register).
+    const maxPortfolioRisk = await this.settings.get<number>('risk.maxPortfolioRisk');
 
     // ⚠️ FAIL CLOSED ON AN UNREADABLE CAP (2026-09-17).
     //
@@ -944,6 +974,7 @@ export class TradingStrategyService {
         ['risk.maxOpenPositions', maxOpenPositions],
         ['risk.maxPerSymbol', maxPerSymbol],
         ['risk.maxDrawdown', maxDrawdown],
+        ['risk.maxPortfolioRisk', maxPortfolioRisk],
       ] as [string, unknown][]
     ).filter(([, v]) => typeof v !== 'number' || !Number.isFinite(v));
     if (unreadableCaps.length > 0) {
@@ -1137,6 +1168,7 @@ export class TradingStrategyService {
           maxOpenPositions,
           maxPerSymbol,
           maxDrawdown,
+          maxPortfolioRisk,
         });
 
         const posCheck = this.riskService.canOpenPosition(
@@ -1166,12 +1198,173 @@ export class TradingStrategyService {
         if (drawdownCheck.inDrawdown) {
           return { allowed: false, reason: `Drawdown ${(drawdownCheck.drawdownPercent * 100).toFixed(1)}% exceeds limit` };
         }
+
+        // ── #900: THE BOOK ITSELF — total at risk if every stop filled ──
+        //
+        // Every gate above asks a question about the INCOMING ORDER. This one asks whether the
+        // book is currently safe to ADD to: Σ |entry − brokerSL| × volume × contractSize over all
+        // open positions, converted to account currency. That is maxPortfolioRisk's definition —
+        // "X% is in red on current positions" from the owner's brief — and it is NOT the same
+        // question as maxDrawdown (peak-to-current on realised+unrealised equity), which a book
+        // of losing positions can sail under indefinitely having never breached the peak.
+        //
+        // ⚠️ FAIL CLOSED. An unmeasurable position makes the TOTAL unknowable, and an
+        // unknowable total must never read as "under the cap" (the #865/#848 lesson).
+        const bookRisk = await this.assessBookAtRisk(positions, account);
+        if (bookRisk.available === false) {
+          return {
+            allowed: false,
+            reason:
+              `Cannot evaluate portfolio-at-risk: ${bookRisk.reason} — refusing rather than ` +
+              'trading without it (risk.maxPortfolioRisk, #900)',
+          };
+        }
+        const bookFraction = portfolioValue > 0 ? bookRisk.atRisk / portfolioValue : 0;
+        this.logger.debug(
+          `book at risk ${bookRisk.atRisk.toFixed(2)} ${account?.currency ?? ''} ` +
+            `(${(bookFraction * 100).toFixed(1)}% of ${portfolioValue.toFixed(2)}) vs cap ` +
+            `${(riskProfile.maxPortfolioRisk * 100)}% — ${bookRisk.detail}`,
+        );
+        if (bookFraction > riskProfile.maxPortfolioRisk) {
+          return {
+            allowed: false,
+            reason:
+              `Portfolio at risk ${(bookFraction * 100).toFixed(1)}% exceeds risk.maxPortfolioRisk ` +
+              `${(riskProfile.maxPortfolioRisk * 100)}% — ${bookRisk.detail}. ` +
+              'Measured as the loss if every broker stop filled (#900).',
+          };
+        }
       }
     } catch (err: any) {
       this.logger.warn(`Risk gate check failed: ${err.message} — proceeding with caution`);
     }
 
     return { allowed: true, reason: 'All safety gates passed' };
+  }
+
+  /**
+   * assessBookAtRisk() — Σ over OPEN positions of the loss if the position's broker stop fills.
+   * ================================================================================
+   * The maxPortfolioRisk definition (#900): |price_open − SL| × volume × contractSize, converted
+   * to the account currency, summed over every open position, compared to portfolio value by the
+   * caller. This answers "is the book currently safe to add to?" — the question NO gate asked
+   * before: every other entry gate inspects the incoming ORDER, not the state already held.
+   *
+   * ⚠️ FAIL CLOSED, and name the position that could not be measured. An unmeasurable position
+   * makes the total unknowable; an unknowable total that reads as "under the cap" is exactly the
+   * #865 failure shape (a cap that silently stops blocking). The reason quotes the ticket, the
+   * symbol and the missing input.
+   *
+   * ⚠️ NAKED POSITIONS PRICED AT FULL NOTIONAL. A position with no broker SL has no bounded loss;
+   * the full notional is the conservative stand-in. This is only reachable when
+   * `risk.requireBrokerStopLoss` is set false — the naked gate in assessGlobalRiskLimits refuses
+   * first otherwise — and the detail string says "NO SL" so the figure is explicable.
+   *
+   * One caveat, stated because it is a claim the code cannot make: this measures the loss IF THE
+   * STOP FILLS, at the STOP's price. Slippage, gaps and weekend jumps can exceed it.
+   */
+  private async assessBookAtRisk(
+    positions: Array<{
+      ticket?: number;
+      symbol?: string;
+      volume?: number;
+      price_open?: number;
+      price_current?: number;
+      sl?: number;
+      contractSize?: number;
+      currencyProfit?: string;
+    }>,
+    account: { currency?: string } | null,
+  ): Promise<
+    | { available: true; atRisk: number; detail: string }
+    | { available: false; reason: string }
+  > {
+    if (positions.length === 0) return { available: true, atRisk: 0, detail: 'no open positions' };
+
+    const accountCurrency = (account?.currency ?? '').toUpperCase();
+    if (!accountCurrency) return { available: false, reason: 'account currency not reported' };
+
+    const quoteCache: Record<string, number> = {};
+    const infoCache = new Map<string, { contractSize?: number; currencyProfit?: string } | null>();
+    const parts: string[] = [];
+    let atRisk = 0;
+
+    for (const p of positions) {
+      const symbol = String(p.symbol ?? '');
+      const ticket = p.ticket ?? '?';
+
+      // Per-symbol contract size. Positions usually carry it (mapped since #865); the symbol
+      // lookup is the fallback, cached per symbol so N positions on one symbol cost one call.
+      let contractSize = Number(p.contractSize ?? 0);
+      if (!(contractSize > 0)) {
+        const key = symbol.toUpperCase();
+        if (!infoCache.has(key)) infoCache.set(key, await this.mt5.getSymbolInfo(symbol));
+        contractSize = Number(infoCache.get(key)?.contractSize ?? 0);
+      }
+      if (!(contractSize > 0)) {
+        return { available: false, reason: `contract size unavailable for ${symbol} (position #${ticket})` };
+      }
+
+      // Profit currency, then its rate to the account currency. Same resolution order as the
+      // incoming-order estimator: position's own value (MT5's) → the symbol's info → XXXYYY.
+      const info = infoCache.get(symbol.toUpperCase()) ?? null;
+      const profitCurrency = (
+        p.currencyProfit ?? info?.currencyProfit ?? resolveProfitCurrency(symbol) ?? ''
+      ).toUpperCase();
+
+      let rate = 1;
+      let rateLabel = 'same-currency';
+      if (!profitCurrency) {
+        // Unlabelled instrument (e.g. an index CFD with no currencyProfit anywhere). The same
+        // assumption the incoming-order estimate makes, up-rated so it can only be too STRICT.
+        rate = ASSUMED_CURRENCY_SAFETY_FACTOR;
+        rateLabel = `assumed ${accountCurrency}×${ASSUMED_CURRENCY_SAFETY_FACTOR}`;
+      } else if (profitCurrency !== accountCurrency) {
+        for (const pair of conversionPairsNeeded(profitCurrency, accountCurrency)) {
+          if (quoteCache[pair] === undefined) {
+            const q = await this.mt5.getQuote(pair);
+            quoteCache[pair] = typeof q?.last === 'number' && q.last > 0 ? q.last : NaN;
+          }
+        }
+        const usable = Object.fromEntries(
+          Object.entries(quoteCache).filter(([, v]) => Number.isFinite(v)),
+        );
+        const conv = conversionFor(profitCurrency, accountCurrency, usable);
+        if (!conv) {
+          return {
+            available: false,
+            reason: `no conversion rate ${profitCurrency}→${accountCurrency} for position #${ticket} ${symbol}`,
+          };
+        }
+        rate = conv.rate;
+        rateLabel = conv.source;
+      }
+
+      const volume = Number(p.volume ?? 0);
+      const openPrice = Number(p.price_open ?? 0);
+      const sl = Number(p.sl ?? 0);
+      let riskInProfitCurrency: number;
+      let basis: string;
+      if (sl > 0) {
+        riskInProfitCurrency = Math.abs(openPrice - sl) * volume * contractSize;
+        basis = `#${ticket} ${symbol} |entry−SL|×vol×contract`;
+      } else {
+        riskInProfitCurrency = volume * contractSize * (Number(p.price_current ?? 0) || openPrice);
+        basis = `#${ticket} ${symbol} NO SL — full notional`;
+      }
+
+      const riskAccount = riskInProfitCurrency * rate;
+      atRisk += riskAccount;
+      parts.push(`${basis} = ${riskAccount.toFixed(2)} ${accountCurrency} (${rateLabel})`);
+    }
+
+    return {
+      available: true,
+      atRisk,
+      // Bounded for the log/reason: 5 positions verbatim, then a count. A 20-position book must
+      // not produce a reason nobody reads.
+      detail: parts.length <= 5 ? parts.join('; ') : `${parts.slice(0, 5).join('; ')}; +${parts.length - 5} more`,
+    };
   }
 
   // ── Helpers ───────────────────────────────────────────

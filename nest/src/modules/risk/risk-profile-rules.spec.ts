@@ -33,11 +33,18 @@ describe('risk-profile-rules registry — the caps declared once', () => {
     expect(dupes).toEqual([]);
   });
 
-  it('declares all six keys of PortfolioRisk — a missing one is an undeclared cap', () => {
+  it('declares all six PortfolioRisk keys + the #900 policy flag — a missing one is an undeclared cap', () => {
     // ⚠️ Hardcoded on purpose: adding a key to `PortfolioRisk` SHOULD fail this test and the build
     // gate, forcing a deliberate declaration rather than an accidental omission.
+    //
+    // ⚠️ `requireBrokerStopLoss` is NOT a PortfolioRisk key — it is a portfolio POLICY flag
+    // (boolean, #900) declared in the same register so the build gate proves it is real and
+    // operator-movable. The validator knows it via POLICY_FIELDS.
     expect(RISK_CONSTANT_RULES.map((r) => r.field).sort()).toEqual(
-      ['maxDrawdown', 'maxPerSymbol', 'maxPerTradeRisk', 'maxPortfolioRisk', 'maxPositions', 'trailingStopAtProfit'],
+      [
+        'maxDrawdown', 'maxPerSymbol', 'maxPerTradeRisk', 'maxPortfolioRisk',
+        'maxPositions', 'requireBrokerStopLoss', 'trailingStopAtProfit',
+      ],
     );
   });
 
@@ -46,7 +53,8 @@ describe('risk-profile-rules registry — the caps declared once', () => {
       expect(VALID_ENFORCEMENT).toContain(r.enforcement);
       expect(r.label.trim().length).toBeGreaterThan(0);
       expect(r.summary.trim().length).toBeGreaterThan(0);
-      expect(typeof r.defaultValue).toBe('number');
+      // Numbers for the caps, booleans for policy flags (#900) — nothing else.
+      expect(['number', 'boolean']).toContain(typeof r.defaultValue);
     }
   });
 
@@ -132,7 +140,7 @@ describe('risk-profile-rules registry — the caps declared once', () => {
    * right key, in one shot, with values chosen so no two are interchangeable.
    */
   describe('buildRiskProfile — the values must land on the right keys', () => {
-    const VALUES = { maxOpenPositions: 7, maxPerSymbol: 0.41, maxDrawdown: 0.13 };
+    const VALUES = { maxOpenPositions: 7, maxPerSymbol: 0.41, maxDrawdown: 0.13, maxPortfolioRisk: 0.37 };
     const profile = buildRiskProfile(VALUES);
 
     it('maps maxOpenPositions to the maxPositions key', () => {
@@ -142,9 +150,11 @@ describe('risk-profile-rules registry — the caps declared once', () => {
       expect(profile.maxPositions).toBe(7);
     });
 
-    it('passes maxPerSymbol and maxDrawdown through unchanged', () => {
+    it('passes maxPerSymbol, maxDrawdown and maxPortfolioRisk through unchanged', () => {
       expect(profile.maxPerSymbol).toBe(0.41);
       expect(profile.maxDrawdown).toBe(0.13);
+      // #900 — live since 2026-09-19; carried the declared default before (no reader anywhere).
+      expect(profile.maxPortfolioRisk).toBe(0.37);
     });
 
     it('does not substitute a default for any value it was given', () => {
@@ -155,9 +165,9 @@ describe('risk-profile-rules registry — the caps declared once', () => {
       expect(profile.maxPositions).not.toBe(5);
     });
 
-    it('carries the unread constants at their declared defaults', () => {
+    it('carries the still-unread constants at their declared defaults', () => {
       const declared = (f: string) => RISK_CONSTANT_RULES.find((r) => r.field === f)!.defaultValue;
-      expect(profile.maxPortfolioRisk).toBe(declared('maxPortfolioRisk'));
+      // maxPortfolioRisk LEFT this list in #900 — it is a real input now, asserted above.
       expect(profile.maxPerTradeRisk).toBe(declared('maxPerTradeRisk'));
       expect(profile.trailingStopAtProfit).toBe(declared('trailingStopAtProfit'));
     });

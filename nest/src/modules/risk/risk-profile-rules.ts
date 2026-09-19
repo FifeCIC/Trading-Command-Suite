@@ -76,7 +76,7 @@ export interface RiskConstantRule {
    */
   settingKey: string | null;
   /** The value in force today. For a settings-backed constant this MUST equal the setting default. */
-  defaultValue: number;
+  defaultValue: number | boolean;
   summary: string;
   /** ⚠️ What a reader must know — especially when enforcement is not `live`. */
   caveat?: string;
@@ -149,15 +149,35 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
   {
     field: 'maxPortfolioRisk',
     label: 'Max portfolio risk',
-    enforcement: 'none',
-    enforcedBy: null,
-    settingKey: null,
+    enforcement: 'live',
+    enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
+    settingKey: 'risk.maxPortfolioRisk',
     defaultValue: 0.15,
-    summary: 'Declared: total portfolio fraction at risk across all open positions.',
+    summary:
+      'Total portfolio fraction at risk if every open position’s stop filled — Σ |entry − SL| × ' +
+      'volume × contractSize across the book. Blocks a new order while the book exceeds it.',
     caveat:
-      '⚠️ NO READER ANYWHERE. It is written into four literals and never consumed — grep confirms ' +
-      'the only occurrences are the literals themselves and the interface. A portfolio-level risk ' +
-      'cap that does not exist is worse than none: it is assumed to be protecting something.',
+      '⚠️ WIRED 2026-09-19 (#900) — before that it was declared with NO READER ANYWHERE. The ' +
+      'loss figure depends on definitions: this uses “risk if every stop fills” (the conventional ' +
+      'reading), NOT peak-to-current equity (that is maxDrawdown) and NOT margin committed. ' +
+      'Naked positions (no broker SL) are priced at FULL NOTIONAL — materially larger, so the ' +
+      'requireBrokerStopLoss rule below should normally refuse them first.',
+  },
+  {
+    field: 'requireBrokerStopLoss',
+    label: 'Require broker stop loss',
+    enforcement: 'live',
+    enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
+    settingKey: 'risk.requireBrokerStopLoss',
+    defaultValue: true,
+    summary:
+      'Refuse a new order while any open position carries no broker-side stop loss (SL 0). ' +
+      'docs/trading-bot-model.md §6b: every position must ALWAYS carry a broker protective stop.',
+    caveat:
+      '⚠️ Not a PortfolioRisk key — a portfolio POLICY flag, declared here so the build gate sees ' +
+      'that it is real and operator-movable (validator: POLICY_FIELDS). The invariant it checks ' +
+      'was asserted at order-building and never verified afterwards; the gate now verifies it on ' +
+      'every entry against every open position (#900).',
   },
   {
     field: 'trailingStopAtProfit',
@@ -198,7 +218,7 @@ export function riskEnforcementCounts() {
  * ⚠️ Callers must pass EVERY live value from `SettingsResolverService`. Do not default a parameter
  * here: a `?? 0.25` in this function would silently restore the hardcoded cap the whole change
  * removes, and it would do so invisibly. Missing values must be a compile error (they are — all
- * three are required).
+ * four are required).
  */
 export function buildRiskProfile(values: {
   /** From `risk.maxOpenPositions`. */
@@ -207,6 +227,8 @@ export function buildRiskProfile(values: {
   maxPerSymbol: number;
   /** From `risk.maxDrawdown`. */
   maxDrawdown: number;
+  /** From `risk.maxPortfolioRisk` — live since #900 (2026-09-19). */
+  maxPortfolioRisk: number;
 }): PortfolioRisk {
   // ⚠️ FAIL LOUDLY ON AN UNREADABLE CAP — this is not a defensive nicety, it is the difference
   // between a gate that is ON and a gate that is SILENTLY OFF.
@@ -230,13 +252,14 @@ export function buildRiskProfile(values: {
 
   const byField = new Map(RISK_CONSTANT_RULES.map((r) => [r.field, r]));
   return {
+    // Live since #900 — real setting value, not a carried default.
+    maxPortfolioRisk: values.maxPortfolioRisk,
     // Declared but unread — carried at their declared default so the shape stays complete and the
     // count of live constants does not silently change.
-    maxPortfolioRisk: byField.get('maxPortfolioRisk')!.defaultValue,
-    maxPerTradeRisk: byField.get('maxPerTradeRisk')!.defaultValue,
+    maxPerTradeRisk: byField.get('maxPerTradeRisk')!.defaultValue as number,
     maxPerSymbol: values.maxPerSymbol,
     maxPositions: values.maxOpenPositions,
     maxDrawdown: values.maxDrawdown,
-    trailingStopAtProfit: byField.get('trailingStopAtProfit')!.defaultValue,
+    trailingStopAtProfit: byField.get('trailingStopAtProfit')!.defaultValue as number,
   };
 }

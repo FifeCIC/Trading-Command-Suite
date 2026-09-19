@@ -240,24 +240,54 @@ test('listNotices() exposes the whole catalogue to tooling', () => {
     }
   });
 
-  test('no notice sends the user to a control that no longer controls anything', () => {
-    // The three MT5 caps moved OUT of `.env` and into the settings registry on 2026-09-17 (#849):
-    // they are now read through SettingsResolverService and applied live, with no restart.
+  test('bridge-emitted cap notices name the control that ACTUALLY binds (#901)', () => {
+    // ⚠️ CORRECTED 2026-09-19 (#901) — the previous version of this test banned the three
+    // `MT5_MAX_*` env names from EVERY notice, on the belief that #849 ("the caps moved into the
+    // settings registry") retired them. #849 moved the caps for the APP-side check only. The
+    // PYTHON BRIDGE still reads its own copies from `nest/.env` at IMPORT (mt5_bridge_v2.py —
+    // MAX_POSITION_SIZE / MAX_OPEN_POSITIONS / MAX_DAILY_LOSS) and it is the bridge that EMITS
+    // TCS-TRADE-016 and TCS-TRADE-017. Measured: the UI cap was raised to 20 while the running
+    // bridge kept enforcing 5 and refused 28 orders; the old test would have blocked the one
+    // message that names the control the user actually had to change.
     //
-    // ⚠️ Naming the old env var is not a cosmetic problem. It is the exact defect this whole
-    // registry exists to prevent — a user edits what the message named, sees no change, and
-    // concludes the setting is broken. That is what happened when the position cap was raised in
-    // the UI and `MT5_MAX_OPEN_POSITIONS=5` kept enforcing 5. Advice must name the LIVE control.
-    const RETIRED = ['MT5_MAX_POSITION_SIZE', 'MT5_MAX_OPEN_POSITIONS', 'MT5_MAX_DAILY_LOSS'];
+    // The property that is truly invariant: advice must name the control that controls THE
+    // REFUSAL — and a bridge cap is restart-bound, so "no restart" has no business in these two.
+    const BRIDGE_EMITTED = ['TCS-TRADE-016', 'TCS-TRADE-017'];
+    const ENV_BY_CODE = {
+      'TCS-TRADE-016': 'MT5_MAX_POSITION_SIZE',
+      'TCS-TRADE-017': 'MT5_MAX_OPEN_POSITIONS',
+    };
+    for (const code of BRIDGE_EMITTED) {
+      const def = NOTICES[code];
+      assert.ok(def, `${code} must stay registered — the bridge emits it`);
+      assert.ok(
+        def.action.includes(ENV_BY_CODE[code]),
+        `${code}.action must name ${ENV_BY_CODE[code]} — the bridge enforces its env copy, so that is the control that clears this refusal`,
+      );
+      assert.match(def.action, /restart/i, `${code}.action must say the bridge needs a restart to re-read .env`);
+      assert.doesNotMatch(
+        def.action,
+        /applies live, with no restart/,
+        `${code}.action must not promise live-apply — the bridge's copy is restart-bound, and that promise is what kept the user chasing the wrong control`,
+      );
+    }
+  });
+
+  test('no OTHER notice sends the user to a control that no longer controls anything', () => {
+    // The app-side checks read the settings registry live (#849) — outside the two bridge-emitted
+    // codes above, naming an `MT5_*` env var would send the user to a file the app no longer reads.
+    const RETIRED_ELSEWHERE = ['MT5_MAX_POSITION_SIZE', 'MT5_MAX_OPEN_POSITIONS', 'MT5_MAX_DAILY_LOSS'];
+    const BRIDGE_EMITTED = new Set(['TCS-TRADE-016', 'TCS-TRADE-017']);
 
     for (const [code, def] of Object.entries(NOTICES)) {
+      if (BRIDGE_EMITTED.has(code)) continue;
       for (const field of ['title', 'message', 'cause', 'action']) {
         const text = def[field];
         if (typeof text !== 'string') continue;
-        for (const env of RETIRED) {
+        for (const env of RETIRED_ELSEWHERE) {
           assert.ok(
             !text.includes(env),
-            `${code}.${field} tells the user to edit ${env}, which no longer controls this`,
+            `${code}.${field} tells the user to edit ${env}, which does not control this refusal`,
           );
         }
       }

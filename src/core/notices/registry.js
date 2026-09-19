@@ -256,11 +256,13 @@ export const NOTICES = {
     title: 'Blocked by the bridge size cap',
     message: '{volume} lots exceeds the bridge\u2019s own maximum position size of {maximum}.',
     cause: 'This is a safety cap in the bridge, not a broker limit — it applies before any order is sent.',
-    // ⚠️ Names the SETTING, not the old env var. The three MT5 caps moved out of `.env` into the
-    // settings registry on 2026-09-17 (#849) and are applied live. Naming MT5_MAX_POSITION_SIZE here
-    // sent the user to a control that no longer does anything — the same "I changed it and nothing
-    // happened" defect this registry exists to prevent. Guarded by notices.test.js.
-    action: 'Reduce the size, or raise the position-size cap (risk.maxPositionSize) deliberately if it is wrong — it applies live, with no restart.',
+    // ⚠️ CORRECTED 2026-09-19 (#901). The #849 move (2026-09-17) took the caps out of `.env` for
+    // the API-side check ONLY. The PYTHON BRIDGE still reads `MT5_MAX_POSITION_SIZE` from
+    // `nest/.env` at IMPORT and enforces its own copy — and the bridge's copy is restart-bound.
+    // The previous wording told the user the setting "applies live, with no restart", which is
+    // true of the app setting and IRRELEVANT to a refusal the bridge produced. Measured: an
+    // operator raised a cap, watched nothing change, and concluded the setting was ignored.
+    action: 'Reduce the size, or raise the BRIDGE\u2019s copy of the cap: MT5_MAX_POSITION_SIZE in nest/.env, then RESTART the MT5 bridges. The app setting (risk.maxPositionSize) is enforced live by the backend, but it cannot move the bridge\u2019s own cap (#901).',
     params: ['volume', 'maximum'],
     refs: [],
   },
@@ -270,8 +272,13 @@ export const NOTICES = {
     title: 'Blocked by the bridge position count',
     message: 'Already holding {open} position(s) — the bridge cap is {maximum}.',
     cause: 'This is a safety cap in the bridge, not a broker limit.',
-    // ⚠️ Names the SETTING, not the old env var — see the note on TCS-TRADE-016 above.
-    action: 'Close a position, or raise the open-positions cap (risk.maxOpenPositions) deliberately if it is wrong — it applies live, with no restart.',
+    // ⚠️ CORRECTED 2026-09-19 (#901) — see the note on TCS-TRADE-016 above. This refusal comes
+    // from the BRIDGE's env-read copy (`MT5_MAX_OPEN_POSITIONS`, read once at import), NOT from
+    // `risk.maxOpenPositions`. The old action named the app setting and promised no restart — so
+    // a user raised risk.maxOpenPositions to 100 and the bridge still refused at 5. Both values
+    // and the restart are named here now; the health page's Risk Cap Alignment check reports a
+    // divergence before it can bite.
+    action: 'Close a position, or raise the BRIDGE\u2019s copy of the cap: MT5_MAX_OPEN_POSITIONS in nest/.env, then RESTART the MT5 bridges. The app setting (risk.maxOpenPositions) is enforced live by the backend, but it cannot move the bridge\u2019s own cap — the lower of the two binds (#901).',
     params: ['open', 'maximum'],
     refs: [],
   },

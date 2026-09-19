@@ -185,6 +185,8 @@ export class RiskController {
       maxOpenPositions: await this.settings.get<number>('risk.maxOpenPositions'),
       maxPerSymbol: await this.settings.get<number>('risk.maxPerSymbol'),
       maxDrawdown: await this.settings.get<number>('risk.maxDrawdown'),
+      // Live since #900 (2026-09-19) — declared since the beginning with no reader anywhere.
+      maxPortfolioRisk: await this.settings.get<number>('risk.maxPortfolioRisk'),
     };
   }
 

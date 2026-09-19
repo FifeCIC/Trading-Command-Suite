@@ -173,9 +173,15 @@ function ManualTradeDefaults() {
  *   - "Risk Limits" are CLIENT preferences in localStorage. A strategy or the UI can change
  *     them, and they do not constrain the server.
  *   - "Server-Enforced Hard Limits" are read LIVE from the database (`global_setting`, keys `risk.*`)
- *     by the backend, and cannot be overridden by anything in the app. They are no longer `.env` values,
- *     so they no longer need a restart. Presenting them together without that distinction would imply
- *     the soft limits are a hard ceiling — they are not.
+ *     by the backend, and cannot be overridden by anything in the app.
+ *
+ *     ⚠️ CORRECTED 2026-09-19 (#901): "no restart needed" is true of the BACKEND check and FALSE
+ *     of the MT5 bridges, which read their own copies (`MT5_MAX_OPEN_POSITIONS`,
+ *     `MT5_MAX_POSITION_SIZE`) from `nest/.env` at IMPORT — restart-bound. The run-on sentence
+ *     that used to live here ("They are no longer .env values, so they no longer need a
+ *     restart") was wrong in exactly the way this page's Max Open Positions hint was: it made a
+ *     factual claim about a second control it did not know existed. The LOWER of the app cap and
+ *     the bridge cap binds; the health page's Risk Cap Alignment check reports divergence.
  *
  * ⚠️ #863 (2026-09-17 → fixed 2026-09-18): the `Max Positions` field used to write a CLIENT
  * preference stored in **localStorage**, which the backend never reads. A user set it to 20, the UI
@@ -279,7 +285,7 @@ function RiskLimits() {
       {serverLimits ? (
         <SettingRow
           label="Max Open Positions"
-          hint="How many positions may be open at once, across every bot. Enforced by the backend on every order and applied LIVE — no restart. This is the ONLY open-position cap in force: the client-side preference it replaced wrote to localStorage and constrained nothing.">
+          hint="How many positions may be open at once, across every bot. The BACKEND enforces risk.maxOpenPositions on every order, live. ⚠️ A SECOND cap exists: each MT5 bridge also enforces MT5_MAX_OPEN_POSITIONS from nest/.env, read when the bridge process STARTED — and the LOWER of the two is what binds. If an order is refused while this reads higher than the set number, restart the bridges (tcs-stop + tcs-launch) so they re-read .env. The health page's Risk Cap Alignment check reports any divergence.">
           <ServerNumberInput settingKey="risk.maxOpenPositions" value={serverLimits.maxOpenPositions} min={1} max={1000} />
         </SettingRow>
       ) : (

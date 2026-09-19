@@ -100,7 +100,12 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
           'risk.maxDailyLoss': 100,
           'risk.maxPerSymbol': 0.25,
           'risk.maxDrawdown': 0.25,
-        } as Record<string, number>)[key],
+          // #900 (2026-09-19) — both wired; a fixture missing them would disable the two new
+          // gates silently (an unreadable number cap refuses, but a missing test double must still
+          // mirror the registry — see the note above).
+          'risk.maxPortfolioRisk': 0.15,
+          'risk.requireBrokerStopLoss': true,
+        } as Record<string, unknown>)[key],
       ),
     } as any;
 
@@ -387,9 +392,13 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
    */
   it('blocks a small order when the SYMBOL is already near the cap (#899)', async () => {
     // 0.05 lot of gold ≈ £217 margin ≈ 21.7% of the £1,000 account (contract 100, GBP, 1:100).
+    // ⚠️ `sl` is set for two reasons, both about isolating THIS test's gate (#900): a naked
+    // position is refused by the requireBrokerStopLoss gate before this one runs, and the stop
+    // distance here (23 units ≈ 8.6% book risk) stays under maxPortfolioRisk — so the per-symbol
+    // cap is provably the gate that fires.
     const existing = [{
       ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.05, price_open: 4300,
-      price_current: 4346.06, sl: 0, tp: 0, profit: 0, comment: '', time: 0,
+      price_current: 4346.06, sl: 4323, tp: 0, profit: 0, comment: '', time: 0,
       currencyProfit: 'GBP',
     }];
     const mt5 = {
@@ -413,6 +422,86 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     };
     const clean = build(emptyMt5);
     const allowed = await clean.assessGlobalRiskLimits(0.02, 'XAUUSD');
+    expect(allowed.allowed).toBe(true);
+  });
+
+  /**
+   * REGRESSION GUARD — a NAKED position must refuse new risk (#900, 2026-09-19).
+   *
+   * docs/trading-bot-model.md §6b requires a broker-side protective stop on EVERY position so an
+   * app failure never leaves one unprotected. That invariant was asserted at ORDER-BUILDING and
+   * never verified afterwards — a dropped modify, a partial fill or a manual MT5 edit leaves it
+   * broken with no error anywhere, and before this gate nothing refused the next order.
+   *
+   * Both directions are asserted: the refusal FIRES while the stop is missing, and stops firing
+   * once the position is protected — otherwise a gate that refused unconditionally would pass.
+   */
+  it('refuses while an open position has no broker stop loss (#900), and admits once protected', async () => {
+    const naked = [{
+      ticket: 7, symbol: 'XAUUSD', type: 'buy', volume: 0.001, price_open: 4346,
+      price_current: 4346, sl: 0, tp: 0, profit: 0, comment: '', time: 0,
+      currencyProfit: 'GBP',
+    }];
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue(naked),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const svc = build(mt5);
+
+    const refused = await assess(svc);
+    expect(refused.allowed).toBe(false);
+    // The reason must name the offending ticket — "risk check failed" sends the reader hunting.
+    expect(refused.reason).toContain('#7');
+    expect(refused.reason).toContain('no broker stop loss');
+
+    // ── Restore direction — the same position, protected. ──
+    const mt5b = {
+      getPositions: jest.fn().mockResolvedValue([{ ...naked[0], sl: 4300 }]),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const allowed = await assess(build(mt5b));
+    expect(allowed.allowed).toBe(true);
+  });
+
+  /**
+   * REGRESSION GUARD — the BOOK itself must be measured before adding to it (#900).
+   *
+   * Every other gate in this method asks about the incoming ORDER. `maxPortfolioRisk` was declared
+   * since the beginning (`0.15`) with NO READER ANYWHERE — "a portfolio-level risk cap that does
+   * not exist is worse than none: it is assumed to be protecting something". It is now the state
+   * check: Σ |entry − brokerSL| × volume × contractSize over the open book vs portfolio value.
+   *
+   * ⚠️ Deliberately not the same question as maxDrawdown (peak-to-current equity): a book of
+   * losing positions that has never breached the peak sails under that check indefinitely.
+   */
+  it('refuses while the BOOK exceeds risk.maxPortfolioRisk (#900), and admits once the risk shrinks', async () => {
+    // 0.05 lot of gold with the stop 46 away from entry: 46 × 0.05 × 100 = $230 ≈ £172 ≈ 17.2% of
+    // the £1,000 account — above the 15% cap. Existing-symbol margin stays ~22% under the 25%
+    // per-symbol cap, so THIS gate is the one that fires.
+    const heavy = [{
+      ticket: 9, symbol: 'XAUUSD', type: 'buy', volume: 0.05, price_open: 4400,
+      price_current: 4346.06, sl: 4354, tp: 0, profit: 0, comment: '', time: 0,
+      currencyProfit: 'GBP',
+    }];
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue(heavy),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const svc = build(mt5);
+
+    const refused = await assess(svc);
+    expect(refused.allowed).toBe(false);
+    expect(refused.reason).toContain('Portfolio at risk');
+    expect(refused.reason).toContain('risk.maxPortfolioRisk');
+    // The figure must be explicable: the position that contributed is named.
+    expect(refused.reason).toContain('#9');
+
+    // ── Restore direction — same position, stop pulled to 1 unit away (≈0.4% at risk). ──
+    const mt5b = {
+      getPositions: jest.fn().mockResolvedValue([{ ...heavy[0], sl: 4399 }]),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const allowed = await assess(build(mt5b));
     expect(allowed.allowed).toBe(true);
   });
 });

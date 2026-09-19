@@ -55,6 +55,17 @@ const REGISTRY = path.join(__dirname, '..', 'src', 'modules', 'risk', 'risk-prof
 const SETTINGS = path.join(__dirname, '..', 'src', 'common', 'settings', 'settings-registry.ts');
 const REL_REGISTRY = 'nest/src/modules/risk/risk-profile-rules.ts';
 
+/**
+ * Portfolio POLICY flags declared in the register that are NOT `PortfolioRisk` keys.
+ *
+ * ⚠️ Added 2026-09-19 (#900). `requireBrokerStopLoss` is a boolean policy — the owner's rule
+ * "if the distant broker stop loss is missing, then it doesn't trade" — not a numeric risk cap,
+ * so it does not belong in the `PortfolioRisk` object. It is declared in the same register so
+ * this gate still proves it is real and operator-movable (checks 3–6 apply to it unchanged).
+ * Check 2 below would otherwise report it as a STALE RULE.
+ */
+const POLICY_FIELDS = ['requireBrokerStopLoss'];
+
 /** Scalar keys of `interface PortfolioRisk`. */
 function readPortfolioRiskKeys(src) {
   const m = /export\s+interface\s+PortfolioRisk\s*\{([\s\S]*?)\n\}/.exec(src);
@@ -90,7 +101,9 @@ function readRegistry(src) {
         return r[1] === 'null' ? null : r[2];
       })(),
       settingKey: settingKeyRaw ? (settingKeyRaw[1] === 'null' ? null : settingKeyRaw[2]) : undefined,
-      defaultValue: pick(/defaultValue:\s*(-?[\d.]+)/),
+      // ⚠️ `true|false` added 2026-09-19 (#900) — boolean policy flags are declared in the same
+      // register; without this the default-drift check silently skipped them (undefined === skip).
+      defaultValue: pick(/defaultValue:\s*(-?[\d.]+|true|false)/),
     });
   }
   return entries;
@@ -106,8 +119,8 @@ function readSettingsDefaults(src) {
     const from = m.index;
     const nextKey = src.indexOf('key:', from + 4);
     const slice = src.slice(from, nextKey === -1 ? src.length : nextKey);
-    const d = /defaultValue:\s*(-?[\d.]+)/.exec(slice);
-    if (d) map.set(m[1], Number(d[1]));
+    const d = /defaultValue:\s*(-?[\d.]+|true|false)/.exec(slice);
+    if (d) map.set(m[1], d[1] === 'true' ? true : d[1] === 'false' ? false : Number(d[1]));
   }
   return map;
 }
@@ -168,7 +181,7 @@ function run() {
   // ── 2. every declaration still exists ───────────────────────────────────────────────────────
   const keys = new Set(shape.keys);
   for (const e of entries) {
-    if (!keys.has(e.field)) {
+    if (!keys.has(e.field) && !POLICY_FIELDS.includes(e.field)) {
       findings.push(
         `STALE RULE  risk-profile-rules.ts declares '${e.field}' but PortfolioRisk has no such key. ` +
           `Remove the declaration or restore the key.`,
@@ -231,7 +244,9 @@ function run() {
         );
       } else if (
         e.defaultValue !== undefined &&
-        Number(e.defaultValue) !== settingsDefaults.get(e.settingKey)
+        // String comparison: numbers ('0.25' vs 0.25) AND booleans ('true' vs true) both compare
+        // correctly, so a boolean policy flag gets the same default-drift protection as a cap.
+        String(e.defaultValue) !== String(settingsDefaults.get(e.settingKey))
       ) {
         findings.push(
           `DEFAULT DRIFT  '${e.field}' declares defaultValue ${e.defaultValue} but setting ` +
