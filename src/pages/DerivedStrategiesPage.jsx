@@ -10,8 +10,9 @@
  * `Trading Bots` lists `trading_strategy` ROWS: the execution policy, one card per bot. That is
  * 26 cards.
  *
- * This page lists **strategies**, which are a different thing: a distinct
- * `(protocol, treatment)` combination. It renders **18** from the same 26 bots.
+ * This page lists **strategies**, which are a different thing: a distinct combination —
+ * protocol + role + market + broker + execution policy. It renders one strategy per bot
+ * (27 on 2026-09-19, one unreachable), never merged across markets.
  *
  * The difference is the owner's rule, and it is not cosmetic:
  *
@@ -37,21 +38,25 @@
  * owner's rule is that such bots "should never" exist and "should be avoided". They are surfaced
  * loudly here rather than folded into one tidy row, because folding would hide the fault.
  *
- * NEXT: #875 pins a name onto a `strategyKey` and records the part IDs, so a named strategy survives
- * an edit to one of its parts. Until then every strategy here is unnamed and derived fresh on each
- * read — which is why editing a bot's config REPLACES a key rather than mutating one.
+ * #875 UPDATE (2026-09-20): the REGISTRY half now exists. Every materialised combination gets a
+ * stable id automatically (source 'auto') and the owner can name it; a part edit shows as DRIFT
+ * against the accepted definition until re-accepted. The derived view below stays pure — names
+ * live in `/api/scoring/strategy-registry`, never in the content key.
  */
 
-import { useMemo, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost, apiPatch } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error.js';
+import NoticeBlock from '../components/NoticeBlock';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import styles from './derived-strategies.module.css';
 
 const API = '/api/scoring/strategies/derived';
+/** #875 — the registry half: stable ids, names, drift. NEVER under /strategies/ (route collision). */
+const API_REGISTRY = '/api/scoring/strategy-registry';
 
 /** Show this many symbols before collapsing the rest into "+N more". */
 const MAX_SYMBOLS = 8;
@@ -94,11 +99,27 @@ function SymbolChips({ symbols }) {
   );
 }
 
-function StrategyCard({ strategy }) {
+function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStart, onDraftChange, onCancel, onSave, onReaccept }) {
   const t = strategy.treatment ?? {};
   const unreachable = strategy.unreachableBotNames ?? [];
   // A group with more than one bot name is a DUPLICATION FAULT, never a merged strategy.
   const duplicates = strategy.botNames.length > 1 ? strategy.botNames : [];
+
+  const nameEditor = (
+    <>
+      <input
+        className={styles.regInput}
+        value={draft}
+        placeholder="Strategy name"
+        onChange={(e) => onDraftChange(e.target.value)}
+        autoFocus
+      />
+      <button className={styles.regBtn} onClick={onSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+      <button className={styles.regBtn} onClick={onCancel}>Cancel</button>
+    </>
+  );
 
   return (
     <li
@@ -124,6 +145,66 @@ function StrategyCard({ strategy }) {
           ))}
         </span>
       </div>
+
+      {/* #875 — the registered identity: a name + a stable id. NEVER the content key. */}
+      {reg ? (
+        <div className={styles.regBar}>
+          <span className={styles.regName}>{reg.name || 'Unnamed'}</span>
+          <span
+            className={styles.regBadge}
+            title={reg.source === 'auto'
+              ? 'Auto-registered: this combination materialised (a live bot) and got a stable id.'
+              : 'Registered by the owner.'}
+          >
+            {reg.source === 'auto' ? 'auto id' : 'registered'}
+          </span>
+          <code className={styles.regId} title={`Stable id (never changes): ${reg.id}`}>{reg.id.slice(0, 8)}</code>
+          {editing ? nameEditor : (
+            <button className={styles.regBtn} onClick={() => onEditStart(reg.name ?? '')}>Rename</button>
+          )}
+        </div>
+      ) : unreachable.length > 0 && unreachable.length >= strategy.botNames.length ? (
+        // #875 — the registry refuses to mint a name for a combination with no live bot
+        // (a name for something that can never trade is noise). The card must not offer the
+        // button and then 400: say why it cannot be named instead.
+        <div className={styles.regBar}>
+          <span
+            className={styles.regId}
+            title="Registration needs one ACTIVE bot on this exact combination. This one can never trade (see the warning below), so there is nothing to name yet."
+          >
+            Not registered — no reachable bot
+          </span>
+        </div>
+      ) : (
+        <div className={styles.regBar}>
+          <span className={styles.regId}>Not registered</span>
+          {editing ? nameEditor : (
+            <button className={styles.regBtn} onClick={() => onEditStart('')}>Register / Name…</button>
+          )}
+        </div>
+      )}
+
+      {/* #875 — drift: this card IS the current configuration of a registered strategy whose parts
+          changed. The name survives (it is pinned to the id, not the key); the owner re-accepts or
+          edits the bot back. */}
+      {drift && (
+        <div className={styles.drift}>
+          <strong>Drift vs “{drift.name || drift.id.slice(0, 8)}”.</strong>{' '}
+          This configuration differs from the accepted definition.
+          {drift.changed?.length > 0 && (
+            <ul className={styles.driftList}>
+              {drift.changed.map((c) => (
+                <li key={c.field}>
+                  <code>{c.field}</code>: {c.from} → {c.to}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button className={styles.regBtn} onClick={onReaccept} disabled={saving}>
+            Re-accept this configuration
+          </button>
+        </div>
+      )}
 
       <div className={styles.treatment}>
         {field('timeframe', t.timeframe, '—')}
@@ -174,6 +255,74 @@ export default function DerivedStrategiesPage() {
   });
 
   const strategies = useMemo(() => data?.strategies ?? [], [data]);
+
+  // #875 — the registry half. A failure here must NOT blank the derived list (identities are an
+  // overlay, not the data), so the error is swallowed into an empty overlay and cards simply
+  // show "Not registered".
+  const registryQuery = useQuery({
+    queryKey: ['strategies', 'registry'],
+    queryFn: () => apiGet(API_REGISTRY).catch(() => ({ strategies: [] })),
+    staleTime: 30_000,
+  });
+  const registry = useMemo(() => {
+    const rows = registryQuery.data?.strategies ?? [];
+    return {
+      rows,
+      byKey: new Map(rows.map((r) => [r.strategyKey, r])),
+      driftByCurrentKey: new Map(
+        rows
+          .filter((r) => r.status === 'drifted' && r.current?.strategyKey)
+          .map((r) => [r.current.strategyKey, r]),
+      ),
+      unmaterialised: rows.filter((r) => r.status === 'unmaterialised').length,
+    };
+  }, [registryQuery.data]);
+
+  const queryClient = useQueryClient();
+  const [editingKey, setEditingKey] = useState(null);
+  const [draft, setDraft] = useState('');
+  const [savingKey, setSavingKey] = useState(null);
+  // #875 — a NOTICE, not a string: the notices gate (scripts/validate-notices.cjs) fails the build
+  // on a raw error render, and a hard-coded message cannot carry cause/action.
+  const [actionNotice, setActionNotice] = useState(null);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['strategies', 'derived'] });
+    queryClient.invalidateQueries({ queryKey: ['strategies', 'registry'] });
+  };
+
+  /** Name (or re-name). A name pins to the STABLE id; renaming never mints a second strategy. */
+  const handleSave = async (strategy, reg) => {
+    const name = draft.trim();
+    if (!name) return;
+    setSavingKey(strategy.strategyKey);
+    setActionNotice(null);
+    try {
+      if (reg) await apiPatch(`${API_REGISTRY}/${reg.id}`, { name });
+      else await apiPost(API_REGISTRY, { strategyKey: strategy.strategyKey, name });
+      setEditingKey(null);
+      setDraft('');
+      invalidate();
+    } catch (e) {
+      setActionNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'save the strategy name' }));
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  /** Drift resolution: accept this card's current configuration as the registered definition. */
+  const handleReaccept = async (row) => {
+    setSavingKey(row?.current?.strategyKey ?? row?.id ?? null);
+    setActionNotice(null);
+    try {
+      await apiPost(`${API_REGISTRY}/${row.id}/reaccept`);
+      invalidate();
+    } catch (e) {
+      setActionNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 're-accept the strategy definition' }));
+    } finally {
+      setSavingKey(null);
+    }
+  };
 
   // ⚠️ The ref must exist on EVERY render branch, and the effect must depend on the data as well
   // as the ref. Both are load-bearing — see the #864 handoff: with the ref only on the loaded
@@ -244,7 +393,20 @@ export default function DerivedStrategiesPage() {
             duplicates
           </span>
         </div>
+        {registry.unmaterialised > 0 && (
+          <div className={`${styles.stat} ${styles.statAlert}`}>
+            <span className={styles.statValue}>{registry.unmaterialised}</span>
+            <span
+              className={styles.statLabel}
+              title="Registered strategies whose bots no longer derive anything (deleted or unlinked). Their names are kept."
+            >
+              unmaterialised
+            </span>
+          </div>
+        )}
       </div>
+
+      {actionNotice && <NoticeBlock notice={actionNotice} compact />}
 
       {strategies.length === 0 ? (
         <EmptyState
@@ -255,7 +417,26 @@ export default function DerivedStrategiesPage() {
       ) : (
         <ul className={styles.list}>
           {strategies.map((s) => (
-            <StrategyCard strategy={s} key={s.strategyKey} />
+            <StrategyCard
+              key={s.strategyKey}
+              strategy={s}
+              reg={registry.byKey.get(s.strategyKey) ?? null}
+              drift={registry.driftByCurrentKey.get(s.strategyKey) ?? null}
+              editing={editingKey === s.strategyKey}
+              draft={draft}
+              saving={savingKey === s.strategyKey}
+              onEditStart={(initial) => {
+                setEditingKey(s.strategyKey);
+                setDraft(initial);
+              }}
+              onDraftChange={setDraft}
+              onCancel={() => {
+                setEditingKey(null);
+                setDraft('');
+              }}
+              onSave={() => handleSave(s, registry.byKey.get(s.strategyKey) ?? null)}
+              onReaccept={() => handleReaccept(registry.driftByCurrentKey.get(s.strategyKey))}
+            />
           ))}
         </ul>
       )}

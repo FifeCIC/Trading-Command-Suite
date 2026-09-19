@@ -412,10 +412,14 @@ export class ScoringController {
    *
    * ⚠️ Why this is NOT `/metastacks/ratings`: that endpoint iterates `scoring_strategy` ROWS, so
    * 13 bots sharing `auto-forex-session-v1` produced ONE blended rating across THREE different
-   * treatments. Here a distinct `(protocol, treatment)` is one strategy — symbols and watchlists
-   * are scope, never identity (owner's rule, docs/trading-bot-model.md §1c/§1d).
+   * treatments. Here a distinct combination is one strategy.
    *
-   * Expect ~15 strategies from 26 bots, with the FX family collapsing to 3 rather than 13.
+   * ⚠️ CORRECTED 2026-09-20 (#876) — this comment previously read *"symbols and watchlists are
+   * scope, never identity"* and *"Expect ~15 strategies"*. Both were the already-corrected mistake:
+   * the live identity is `strategyKey(protocolId, role, symbol, brokerId, treatment)` — the MARKET
+   * IS IN THE KEY (strategy-derivation.service.ts) — and the count is one strategy per bot (27 live
+   * on 2026-09-19). Implementing the old line collapses the count and loses identities; see #876's
+   * closing note. Do not reintroduce it.
    *
    * ⚠️ Deliberately NOT cached. This is a truth surface — a stale strategy list is how the
    * fingerprint-drift problem stayed invisible, and the query is a single indexed findMany over

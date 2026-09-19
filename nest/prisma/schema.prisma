@@ -2345,10 +2345,34 @@ model RoadmapCard {
 }
 
 model RoadmapColumn {
-  id        String   @id @db.VarChar(40)
+  id        String   @id @default(uuid()) @db.VarChar(40)
   title     String   @db.VarChar(100)
   kind      String   @default("sprint") @db.VarChar(20)
   createdAt DateTime @default(now())
 
   @@map("roadmap_column")
+}
+
+/// Registered strategy — the MATERIALISE step of #875.
+///
+/// The derived view (`StrategyDerivationService`) stays pure and per-read; this table is the
+/// durable half: a STABLE id, an optional owner name, and the ACCEPTED parts snapshot the name
+/// is pinned to. Drift = the current derived key differs from `strategyKey` → the card shows what
+/// changed until the owner re-accepts. `parts` is the whole combination (protocols, bots, symbols,
+/// scoring strategies, brokers, treatment) and seeds the full-pipeline backup (#875 part B).
+///
+/// ⚠️ Auto rows (source 'auto', name null) are minted by the loop for NEWLY MATERIALISED
+/// combinations only — a bot whose successor combination already belongs to a registered row is
+/// left to drift/re-accept instead, so one combination never gets two identities.
+model StrategyRegistry {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  strategyKey String   @unique @db.VarChar(64)
+  name        String?  @db.VarChar(120)
+  source      String   @default("owner") @db.VarChar(20)
+  parts       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+  @@map("strategy_registry")
 }

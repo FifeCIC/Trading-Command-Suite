@@ -136,11 +136,12 @@ export const NAV_TREE = {
       // component and nothing navigated to it except three stale QA procedure strings.
       { id: 'bot-create', label: 'Create Bot', icon: '⊞' },
       // ── STRATEGIES (derived) ──
-      // The owner's definition (docs/trading-bot-model.md §1c): "a strategy is about different
-      // treatment of a symbol". A strategy is a distinct (protocol x treatment) combination, which
-      // is a DIFFERENT thing from a bot. 26 bots -> 18 strategies. Placed directly under Trading
-      // Bots so the pair reads as "the execution policy" vs "the combinations", which is the frame
-      // the four legacy `strategy`-labelled pages above fail to make (they all render bots).
+      // The owner's definition (updated 2026-09-19, docs/trading-bot-model.md §1c): a strategy is
+      // a bot's WHOLE configuration (protocol + role + market + broker + execution policy). A
+      // different market is a different strategy, so it is one strategy per bot — 27 cards from
+      // 27 bots, never 18. (#876 removed the old "26 bots -> 18 strategies" merge across markets.)
+      // Placed directly under Trading Bots so the pair reads as "the execution policy" vs
+      // "the combinations". Names/ids for these live in the #875 registry, not in this tree.
       { id: 'strategies-derived', label: 'Strategies', icon: '🧩' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },

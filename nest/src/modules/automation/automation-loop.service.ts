@@ -45,6 +45,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { TimelineService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { MetaStackVersioningService } from '../scoring/metastack-versioning.service';
+import { StrategyRegistryService } from '../scoring/strategy-registry.service';
 import { ScoringLogService } from '../system/scoring-log.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
@@ -495,6 +496,9 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly stopGuardian: StopGuardianService,
     private readonly positionTimeStop: PositionTimeStopService,
     private readonly feasibility: ExecutionFeasibilityService,
+    // #875 — the materialisation watcher: syncAuto() mints a registry row (stable id, name null)
+    // for a NEWLY materialised combination, so every live strategy has an identity before naming.
+    private readonly strategyRegistry: StrategyRegistryService,
   ) {
     this.initBrokerStates();
   }
@@ -1286,7 +1290,20 @@ export class AutomationLoopService implements OnModuleInit {
     this.persistDecisions(decisions, this.state.tickCount);
     this.persistDecisionTrail(trailRecords);
 
-    // ── Portfolio Snapshot (at trade execution) ─────────
+    // #875 — materialisation watcher. A derived combination that has a LIVE bot and no registered
+    // row yet gets one (stable id, name null, source 'auto'). Successors of already-registered
+    // bots are skipped — those are the owner's drift/re-accept decisions, not new identities.
+    // Failures never block the tick: registration is an identity ledger, not a trading gate.
+    try {
+      const sync = await this.strategyRegistry.syncAuto();
+      if (sync.created > 0) {
+        this.logger.log(`Strategy registry: ${sync.created} new materialised combination(s) auto-registered (#875).`);
+      }
+    } catch (err) {
+      this.logger.warn(`Strategy registry sync failed: ${(err as Error).message}`);
+    }
+
+    // ── Portfolio Snapshot (at trade execution) ─────────────────────────────
     // Captured at the point of trade, not every tick — shows
     // the full portfolio picture at the moment of decision.
     // Enables "why was this trade placed?" analysis: what
