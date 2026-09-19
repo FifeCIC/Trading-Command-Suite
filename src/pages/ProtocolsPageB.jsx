@@ -13,9 +13,74 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPatch, apiDelete } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';
-import { getProtocolType } from '../core/protocol-utils';
+import { getProtocolType, getProtocolTiming } from '../core/protocol-utils';
 import { timeAgo, formatDateTime } from '../core/format-utils';
 import './protocols-page-b.css';
+
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** "in 2d 14h" / "in 3h 12m" / "now" — from an ISO instant. */
+function untilLabel(iso) {
+  if (!iso) return 'at an unknown time';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (!Number.isFinite(ms)) return 'at an unknown time';
+  if (ms <= 0) return 'now';
+  const mins = Math.round(ms / 60_000);
+  const d = Math.floor(mins / 1440);
+  const h = Math.floor((mins % 1440) / 60);
+  const m = mins % 60;
+  if (d > 0) return `in ${d}d ${h}h`;
+  if (h > 0) return `in ${h}h ${m}m`;
+  return `in ${m}m`;
+}
+
+/**
+ * The instant rendered in the READER's timezone — the whole point of the section.
+ * `nextOpen`/`nextClose` are exact instants from the calendar, so this conversion
+ * (and DST) is `Intl`'s job, never a hand-rolled offset.
+ */
+function localTimeLabel(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString([], {
+      weekday: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/** First 8 symbols, then "+N more" — the leverage watchlists reach 79 entries. */
+function symbolList(symbols) {
+  if (!symbols?.length) return '';
+  const head = symbols.slice(0, 8).join(', ');
+  return symbols.length > 8 ? `${head} +${symbols.length - 8} more` : head;
+}
+
+/**
+ * The three run states the registry shows — computed from the SAME inputs for the
+ * sidebar dot and the header button, so they can never disagree.
+ *
+ * `standby` is the honest label for an ENABLED protocol whose market is shut: it
+ * cannot be an active part of the loop until the venue reopens, whatever its flag
+ * says. Green = genuinely able to act now; orange = enabled, waiting; grey = off.
+ */
+function protocolRunState(proto, timing, venueStatus) {
+  if (!proto?.active) return { key: 'off', title: 'Inactive — not part of the automation loop' };
+  const venueGroups = timing.groups.filter(g => g.venue);
+  const hasCrypto = timing.groups.some(g => g.alwaysOpen);
+  const statuses = venueGroups.map(g => venueStatus[g.venue]);
+  if (venueGroups.length > 0 && statuses.some(s => !s) && !hasCrypto) {
+    return { key: 'unknown', title: 'Checking market hours…' };
+  }
+  if (hasCrypto || statuses.some(s => s?.isOpen)) {
+    return { key: 'on', title: 'Active — market open; in the automation loop now' };
+  }
+  if (venueGroups.length === 0) {
+    return { key: 'standby', title: 'Active — market hours are not modelled for these instruments' };
+  }
+  return { key: 'standby', title: `Standby — ${venueGroups.map(g => g.label).join('; ')} closed; cannot act right now` };
+}
 
 export default function ProtocolsPageB({ initialProtocolId }) {
   const [selected, setSelected] = useState(null);
@@ -55,6 +120,38 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     return m;
   }, [healthIssues]);
 
+  // ── Venue status — the calendar's own answer to "is this market open NOW?" ──
+  // Fetched once per venue and shared by every row (the sidebar dot needs it for
+  // all 45 protocols). The session payload is fetched ALONGSIDE so the "regular
+  // window" line prints what the calendar actually holds rather than a copy
+  // pasted into the UI. `nextOpen`/`nextClose` are exact instants — the display
+  // converts them to the reader's timezone with Intl, never with arithmetic.
+  const venueQueries = {
+    US: useQuery({
+      queryKey: ['venue-status', 'US'],
+      queryFn: async () => ({
+        status: await apiGet('/api/calendar/market-status?exchange=US'),
+        session: await apiGet('/api/calendar/sessions?exchange=US'),
+      }),
+      staleTime: 30_000,
+      refetchInterval: 60_000,
+    }),
+    FX: useQuery({
+      queryKey: ['venue-status', 'FX'],
+      queryFn: async () => ({
+        status: await apiGet('/api/calendar/market-status?exchange=FX'),
+        session: await apiGet('/api/calendar/sessions?exchange=FX'),
+      }),
+      staleTime: 30_000,
+      refetchInterval: 60_000,
+    }),
+  };
+  const venueStatus = {
+    US: venueQueries.US.data?.status ?? null,
+    FX: venueQueries.FX.data?.status ?? null,
+  };
+  const venueSessionFor = (venue) => venueQueries[venue]?.data?.session ?? null;
+
   const protocols = useMemo(() => {
     const raw = Array.isArray(protocolsQuery.data?.protocols) ? protocolsQuery.data.protocols : [];
     const seen = new Set();
@@ -76,6 +173,8 @@ export default function ProtocolsPageB({ initialProtocolId }) {
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
   const selectedIssues = issuesByProtocol.get(selectedProto?.id) || [];
+  const selectedTiming = getProtocolTiming(selectedProto?.resolvedSymbols);
+  const selectedRun = selectedProto ? protocolRunState(selectedProto, selectedTiming, venueStatus) : null;
 
   // ── Latest score for selected protocol ──
   const latestScoreQuery = useQuery({
@@ -299,30 +398,42 @@ export default function ProtocolsPageB({ initialProtocolId }) {
       <div className="prb-layout">
         {/* Sidebar list */}
         <div className="prb-sidebar">
-          {filteredProtocols.map(p => (
+          {filteredProtocols.map(p => {
+            const issues = issuesByProtocol.get(p.id) || [];
+            const timing = getProtocolTiming(p.resolvedSymbols);
+            const run = protocolRunState(p, timing, venueStatus);
+            const allSymbols = timing.groups.flatMap(g => g.symbols);
+            const extra = Math.max(0, allSymbols.length - 1);
+            return (
             <div
               key={p.id}
               className={`prb-item ${selectedProto?.id === p.id ? 'prb-selected' : ''}`}
               onClick={() => { setSelected(p); setAdaptiveError(null); }}
             >
-              <div className="prb-item-name">
-                {p.name}
-                <span className={`prb-active-dot ${p.active ? 'on' : 'off'}`} title={p.active ? 'Protocol enabled' : 'Protocol disabled'} />
-                {(issuesByProtocol.get(p.id) || []).length > 0 && (
-                  <span
-                    className="prb-health-chip"
-                    title={(issuesByProtocol.get(p.id) || []).map(i => i.message).join('\n')}
-                  >
-                    ⚠ {(issuesByProtocol.get(p.id) || []).length}
-                  </span>
-                )}
-              </div>
+              {/* The dot is position-absolute (top-right) so a long name can never
+                  push it around; the chips sit in their own bottom-right corner so
+                  the title row reads as ONE line of text. */}
+              <div className="prb-item-name">{p.name}</div>
+              <span className={`prb-active-dot ${run.key}`} title={run.title} aria-hidden="true" />
+              {(extra > 0 || issues.length > 0) && (
+                <div className="prb-item-corner">
+                  {extra > 0 && (
+                    <span className="prb-sym-chip" title={`All resolved symbols: ${allSymbols.join(', ')}`}>+{extra}</span>
+                  )}
+                  {issues.length > 0 && (
+                    <span className="prb-health-chip" title={issues.map(i => i.message).join('\n')}>
+                      ⚠ {issues.length}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="prb-item-meta">
                 <span className="prb-item-style" style={{ color: getProtocolType(p).color }}>{p.tradingStyle || '—'}</span>
                 <span>{p.directiveCount} directives</span>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Detail panel */}
@@ -335,13 +446,17 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                   <code className="prb-detail-id">{selectedProto.id}</code>
                 </div>
                 <div className="prb-head-actions">
+                  {/* The label states what the protocol IS DOING, not just the flag: an
+                      enabled protocol whose market is closed cannot act, and calling that
+                      "Active" invited exactly the misreading this registry now removes.
+                      The sidebar dot uses the same three states. */}
                   <button
-                    className={`prb-status-btn ${selectedProto.active ? 'active' : 'inactive'}`}
+                    className={`prb-status-btn ${selectedRun?.key === 'off' ? 'inactive' : selectedRun?.key === 'standby' ? 'standby' : 'active'}`}
                     onClick={handleToggle}
                     disabled={toggling}
-                    title={`Click to ${selectedProto.active ? 'disable' : 'enable'} this protocol`}
+                    title={`${selectedRun?.title || ''} — click to ${selectedProto.active ? 'disable' : 'enable'} this protocol`}
                   >
-                    {toggling ? '…' : selectedProto.active ? 'Active' : 'Inactive'}
+                    {toggling ? '…' : selectedRun?.key === 'off' ? 'Inactive' : selectedRun?.key === 'standby' ? 'Standby' : 'Active'}
                   </button>
                   {/* Adaptive Target toggle (2026-09-10) — off by default, and visually
                       distinct from Active/Inactive so the two are never confused: this
@@ -402,6 +517,63 @@ export default function ProtocolsPageB({ initialProtocolId }) {
               )}
 
               <p className="prb-description">{selectedProto.description}</p>
+
+              {/* ── Market & hours — WHICH market this protocol acts in, WHEN it can
+                  act (rendered in the reader's own timezone), and how long until the
+                  next change. `nextOpen`/`nextClose` are exact instants from the
+                  calendar, so DST is the calendar's problem and never this UI's. ── */}
+              {selectedTiming.groups.length > 0 && (
+                <div className="prb-market">
+                  <h3>Market &amp; hours</h3>
+                  {selectedTiming.groups.map(g => {
+                    const st = g.venue ? venueStatus[g.venue] : null;
+                    const sess = g.venue ? venueSessionFor(g.venue) : null;
+                    const stateText = g.alwaysOpen
+                      ? 'Always open'
+                      : !g.venue
+                        ? 'Hours unmodelled'
+                        : !st
+                          ? 'Checking…'
+                          : st.isOpen
+                            ? 'Open now'
+                            : `Closed${st.holidayName ? ` — ${st.holidayName}` : ''}`;
+                    const stateKey = g.alwaysOpen ? 'open' : !g.venue ? 'unmodelled' : !st ? 'checking' : st.isOpen ? 'open' : 'closed';
+                    const windowText = g.alwaysOpen
+                      ? 'Trades continuously — no open or close to wait for.'
+                      : !g.venue
+                        ? ''
+                        : sess?.weekly
+                          ? `Weekly: ${DAY_SHORT[sess.weekly.openDay]} ${sess.weekly.openTime} → ${DAY_SHORT[sess.weekly.closeDay]} ${sess.weekly.closeTime} (${sess.timezone})`
+                          : sess
+                            ? `Session: ${sess.regularOpen}–${sess.regularClose} (${sess.timezone})`
+                            : '';
+                    const timingText = g.alwaysOpen
+                      ? ''
+                      : !g.venue
+                        ? 'The gate falls back to data freshness for these instruments.'
+                        : !st
+                          ? 'Checking market hours…'
+                          : st.isOpen
+                            ? `Closes ${localTimeLabel(st.nextClose)} — ${untilLabel(st.nextClose)}.`
+                            : `Opens ${localTimeLabel(st.nextOpen)} — ${untilLabel(st.nextOpen)}.`;
+                    return (
+                      <div key={g.key} className="prb-market-row">
+                        <div className="prb-market-head">
+                          <span className="prb-market-label">{g.label}</span>
+                          <span className={`prb-market-state ${stateKey}`}>{stateText}</span>
+                        </div>
+                        <div className="prb-market-syms" title={g.symbols.join(', ')}>{symbolList(g.symbols)}</div>
+                        {(windowText || timingText) && (
+                          <div className="prb-market-times">
+                            {windowText && <span>{windowText}</span>}
+                            {timingText && <span>{timingText}</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Config health (#716 follow-up) — why a protocol may score oddly */}
               {selectedIssues.length > 0 && (

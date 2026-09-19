@@ -17,10 +17,15 @@
   text-transform: uppercase; cursor: pointer; border: 1px solid transparent;
   font-family: inherit; min-height: auto; transition: all 0.15s;
 }
-.prb-status-btn.active { background: rgba(34,197,94,0.1); color: #22c55e; border-color: rgba(34,197,94,0.25); }
-.prb-status-btn.active:hover { background: #22c55e; color: #fff; }
-.prb-status-btn.inactive { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.25); }
-.prb-status-btn.inactive:hover { background: #ef4444; color: #fff; }
+.prb-status-btn.active { background: color-mix(in srgb, var(--risk-normal, #2ecc91) 12%, transparent); color: var(--risk-normal, #2ecc91); border-color: color-mix(in srgb, var(--risk-normal, #2ecc91) 45%, transparent); }
+.prb-status-btn.active:hover { background: var(--risk-normal, #2ecc91); color: #111; }
+/* Standby — ENABLED, but its market is closed: it cannot act right now. Orange because
+   it is neither "working" (green) nor "off" (red): it is waiting. Same three states as
+   the sidebar dot, so the button and the dot can never disagree. */
+.prb-status-btn.standby { background: color-mix(in srgb, var(--risk-high, #ff8c42) 12%, transparent); color: var(--risk-high, #ff8c42); border-color: color-mix(in srgb, var(--risk-high, #ff8c42) 45%, transparent); }
+.prb-status-btn.standby:hover { background: var(--risk-high, #ff8c42); color: #111; }
+.prb-status-btn.inactive { background: color-mix(in srgb, var(--risk-critical, #ff5470) 12%, transparent); color: var(--risk-critical, #ff5470); border-color: color-mix(in srgb, var(--risk-critical, #ff5470) 45%, transparent); }
+.prb-status-btn.inactive:hover { background: var(--risk-critical, #ff5470); color: #fff; }
 .prb-status-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Adaptive Target toggle (2026-09-10) ──────────────────────────────────────
@@ -96,16 +101,28 @@
 }
 .prb-item {
   padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line);
-  cursor: pointer; transition: background 0.12s;
+  cursor: pointer; transition: background 0.12s; position: relative;
 }
 .prb-item:last-child { border-bottom: none; }
 .prb-item:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .prb-selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.prb-item-name { font-weight: 600; font-size: 0.82rem; color: var(--ink); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.prb-active-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.prb-active-dot.on { background: #22c55e; }
+/* The dot is PINNED to the row's top-right and the chips to its bottom-right, so the title
+   always reads as one clean line (a long name used to shove the dot sideways). The three
+   dot states follow the status button: green = in the loop and able to act now; orange =
+   enabled but the market is closed (standby); grey = off; muted = hours not known yet. */
+.prb-item-name { font-weight: 600; font-size: 0.82rem; color: var(--ink); padding-right: 20px; }
+.prb-active-dot { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; }
+.prb-active-dot.on { background: var(--risk-normal, #2ecc91); }
+.prb-active-dot.standby { background: var(--risk-high, #ff8c42); }
+.prb-active-dot.unknown { background: var(--text-dim, #6b7280); }
 .prb-active-dot.off { background: var(--line); }
-.prb-item-meta { display: flex; gap: 0.5rem; margin-top: 0.2rem; font-size: 0.68rem; color: var(--ink-soft); }
+.prb-item-corner { position: absolute; right: 10px; bottom: 6px; display: flex; gap: 4px; align-items: center; }
+.prb-sym-chip {
+  font-size: 0.58rem; font-weight: 700; color: var(--ink-soft);
+  background: color-mix(in srgb, var(--line) 60%, transparent); border-radius: 3px; padding: 0 4px;
+  white-space: nowrap; cursor: help;
+}
+.prb-item-meta { display: flex; gap: 0.5rem; margin-top: 0.2rem; font-size: 0.68rem; color: var(--ink-soft); padding-right: 58px; }
 .prb-item-style { font-weight: 600; }
 
 /* Detail panel */
@@ -230,6 +247,30 @@
   background: rgba(245, 158, 11, 0.12); border-radius: 3px; padding: 0 4px;
   white-space: nowrap; cursor: help;
 }
+
+/* ── Market & hours — WHICH window governs the protocol's instruments, rendered in the
+   reader's own timezone with a real countdown. Instants come from the calendar
+   (`nextOpen`/`nextClose`), never computed here — see market-calendar.service.ts. ── */
+.prb-market {
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+}
+.prb-market h3 { margin: 0 0 0.4rem; font-size: 0.72rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.prb-market-row { padding: 0.4rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.prb-market-row:first-of-type { border-top: none; padding-top: 0; }
+.prb-market-row:last-child { padding-bottom: 0; }
+.prb-market-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.prb-market-label { font-size: 0.78rem; font-weight: 600; color: var(--ink); }
+.prb-market-state {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+}
+.prb-market-state.open { color: var(--risk-normal, #2ecc91); background: color-mix(in srgb, var(--risk-normal, #2ecc91) 12%, transparent); }
+.prb-market-state.closed { color: var(--risk-high, #ff8c42); background: color-mix(in srgb, var(--risk-high, #ff8c42) 12%, transparent); }
+.prb-market-state.unmodelled,
+.prb-market-state.checking { color: var(--ink-soft); background: color-mix(in srgb, var(--line) 60%, transparent); }
+.prb-market-syms { font-size: 0.7rem; color: var(--ink-soft); font-family: monospace; margin-top: 0.1rem; }
+.prb-market-times { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.7rem; color: var(--ink-soft); margin-top: 0.15rem; }
 .prb-health { border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0.6rem 0; background: rgba(245, 158, 11, 0.06); }
 .prb-health h3 { font-size: 0.75rem; margin: 0 0 0.35rem; color: #f59e0b; }
 .prb-health-line { font-size: 0.7rem; margin: 2px 0; color: var(--ink-soft); }
