@@ -156,10 +156,12 @@ export const SETTINGS: SettingDefinition[] = [
     owner: 'trading',
     label: 'Max per symbol',
     description:
-      'Ceiling on a single position as a fraction of portfolio value (0.25 = 25%). Refuses the ' +
-      'order rather than reducing its size. ⚠️ Raising this does not by itself admit more trades: ' +
-      'the estimate it is compared against is computed in assessGlobalRiskLimits() and has its own ' +
-      'defect (#865) — check the decision log after any change here.',
+      'Ceiling on TOTAL exposure to one symbol — already-open positions PLUS this order — as a ' +
+      'fraction of portfolio value (0.25 = 25%). Refuses the order rather than reducing its size. ' +
+      '⚠️ Before #899 (2026-09-19) this measured ONE ORDER: three bots at 20% each put 60% on ' +
+      'one instrument while every check passed. ⚠️ Raising this does not by itself admit more ' +
+      'trades: the estimate it is compared against is computed in assessGlobalRiskLimits() and ' +
+      'has its own defect (#865) — check the decision log after any change here.',
     userChangeable: true,
     min: 0.01,
     // A cap of 1.0 permits the whole portfolio in one instrument, which is a decision an operator

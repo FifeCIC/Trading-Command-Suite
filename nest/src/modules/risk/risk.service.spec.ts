@@ -50,6 +50,43 @@ describe('RiskService.canOpenPosition — the per-symbol allocation gate', () =>
   });
 
   /**
+   * #899 (2026-09-19) — the cap measures the SYMBOL (existing exposure + this order), not one order.
+   *
+   * The owner's design is one protocol driving several bots on the same symbol, with the explicit
+   * constraint "…for the same symbol, but not increasing risk". Before this fix, that guarantee did
+   * not exist: three bots at 20% each put 60% on one instrument while every check passed. Each call
+   * was individually correct and the SUM was unguarded — `maxPositions` counts positions, not
+   * exposure, so it could never cover it.
+   */
+  it('blocks the SECOND bot on the same symbol once the total crosses the cap (#899)', () => {
+    // Bot A opens at 20% — passes, as one order.
+    expect(riskService.canOpenPosition(1, 1000, 200, profile(), 0).allowed).toBe(true);
+    // Bot B opens another 20% on the SAME symbol — 40% total. Before #899 this ALSO passed.
+    const botB = riskService.canOpenPosition(1, 1000, 200, profile(), 200);
+    expect(botB.allowed).toBe(false);
+    expect(botB.reason).toContain('40.0%');
+    // The reason must expose the existing term — otherwise "40% from a 20% order" is inexplicable
+    // from the record, which is the #865 lesson applied to the new parameter.
+    expect(botB.reason).toContain('already open on this symbol');
+    expect(botB.reason).toContain('200.00');
+  });
+
+  it('is inclusive at exactly the cap, existing exposure included (#899 boundary)', () => {
+    // 240 existing + 10 new = 250 of 1000 = exactly 25% — the cap is "exceeds", not "reaches".
+    expect(riskService.canOpenPosition(1, 1000, 10, profile(), 240).allowed).toBe(true);
+    // A hair over the boundary flips it.
+    expect(riskService.canOpenPosition(1, 1000, 10.01, profile(), 240).allowed).toBe(false);
+  });
+
+  it('an order that fits alone is still blocked when the symbol is already loaded (#899)', () => {
+    // The precise reported shape: the incoming ORDER is small (4%), the SYMBOL is not (23% + 4%).
+    expect(riskService.canOpenPosition(1, 1000, 40, profile(), 0).allowed).toBe(true);
+    const blocked = riskService.canOpenPosition(1, 1000, 40, profile(), 230);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.reason).toContain('27.0%');
+  });
+
+  /**
    * REGRESSION GUARD — the reason must carry the NUMBERS, not only the ratio.
    *
    * Reproduces the measured live case: `estimated capital 1160.09 of 1340.00`. That pair is what

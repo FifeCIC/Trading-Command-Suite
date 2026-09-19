@@ -1022,6 +1022,10 @@ export class TradingStrategyService {
         //
         // An error we do not understand is a cap we cannot evaluate, so it refuses and says so.
         let marginEstimate: ReturnType<typeof estimatePositionMargin>;
+        // #899 — capital already committed to THIS symbol (sum of open positions). Filled inside
+        // the inner try below; the gate compares existing + new against maxPerSymbol so three bots
+        // on one symbol cannot each pass a 25% cap and total 60%.
+        let existingSymbolCapital = 0;
         try {
           // ⚠️ NO `.catch(() => null)` HERE, deliberately. Both methods already wrap their own
           // fetch and return `null` on a network failure, so an outer catch would only swallow
@@ -1066,6 +1070,37 @@ export class TradingStrategyService {
             // the real value.
             assumeAccountCurrencyWhenUnknown: true,
           });
+
+          // ── #899: existing exposure on this symbol ──────────────────────────────────────
+          // The cap's OTHER half. `marginEstimate` above measures THIS order; without this
+          // sum, "maxPerSymbol = 25%" really meant "25% per order" and Bot A + Bot B + Bot C
+          // could pile 60% onto one instrument while every check passed. The owner's design is
+          // one protocol driving several bots on the same symbol, with the explicit constraint
+          // "…not increasing risk" — this is that constraint, enforced.
+          //
+          // Same estimator, same inputs, same fail-closed discipline as the incoming order:
+          // an existing position that cannot be measured makes the TOTAL unknowable, so we
+          // refuse (the throw below is caught by the inner catch, which refuses and quotes it).
+          for (const p of positions) {
+            if (String(p.symbol).toUpperCase() !== symbolUpper) continue;
+            const posEstimate = estimatePositionMargin({
+              symbol,
+              volume: p.volume,
+              price: p.price_current > 0 ? p.price_current : (symbolQuote?.last ?? 0),
+              contractSize: p.contractSize ?? symbolInfo?.contractSize ?? 0,
+              accountLeverage: account?.leverage ?? 0,
+              accountCurrency: account?.currency ?? '',
+              profitCurrency,
+              quotes,
+              assumeAccountCurrencyWhenUnknown: true,
+            });
+            if (posEstimate.source === 'unavailable') {
+              throw new Error(
+                `existing ${symbol} position #${p.ticket} could not be measured (${posEstimate.reason})`,
+              );
+            }
+            existingSymbolCapital += posEstimate.margin;
+          }
         } catch (err: any) {
           this.logger.error(
             `Per-symbol cap could not be evaluated for ${symbol}: ${err?.message ?? err}`,
@@ -1109,6 +1144,8 @@ export class TradingStrategyService {
           portfolioValue,
           estimatedCapital,
           riskProfile,
+          // #899 — the gate measures the SYMBOL (existing + this order), not just this order.
+          existingSymbolCapital,
         );
         if (!posCheck.allowed) {
           return { allowed: false, reason: posCheck.reason };

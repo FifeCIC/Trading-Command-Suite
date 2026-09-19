@@ -121,6 +121,9 @@ export class RiskService {
       case 'risk-based': {
         const riskPerShare = Math.abs(entryPrice - stopLossPrice);
         const shares = riskPerShare > 0 ? Math.floor(capitalAtRisk / riskPerShare) : 1;
+        // Sizing PREVIEW only — it has no symbol context to measure existing exposure with, so
+        // the warning here never sees the open-position term. The authoritative per-SYMBOL gate is
+        // canOpenPosition() in assessGlobalRiskLimits(), which receives it (#899).
         this.checkMaxAllocation(shares, entryPrice, portfolioValue, riskProfile);
         return {
           shares,
@@ -155,10 +158,22 @@ export class RiskService {
     entryPrice: number,
     portfolioValue: number,
     risk: PortfolioRisk,
+    existingSymbolCapital = 0,
   ): void {
-    const allocation = (shares * entryPrice) / portfolioValue;
+    // #899 — this warning measures the SYMBOL now (existing exposure + this order), the same
+    // computation `canOpenPosition` blocks on. Before the fix both readers measured only the
+    // incoming order, so "25% per symbol" was really "25% per order" — three bots could put 60%
+    // into one instrument while each order passed. The two readers still differ in OUTCOME
+    // (warn vs block), but they can no longer differ in ARITHMETIC.
+    const allocation =
+      portfolioValue > 0 ? (existingSymbolCapital + shares * entryPrice) / portfolioValue : 0;
     if (allocation > risk.maxPerSymbol) {
-      this.logger.warn(`Allocation ${(allocation * 100).toFixed(1)}% exceeds max per symbol ${(risk.maxPerSymbol * 100)}%`);
+      this.logger.warn(
+        `Allocation ${(allocation * 100).toFixed(1)}% exceeds max per symbol ${(risk.maxPerSymbol * 100)}%` +
+          (existingSymbolCapital > 0
+            ? ` (${existingSymbolCapital.toFixed(2)} already open on this symbol + ${(shares * entryPrice).toFixed(2)} this order) (#899)`
+            : ''),
+      );
     }
   }
 
@@ -179,11 +194,33 @@ export class RiskService {
     return { inDrawdown, drawdownPercent: drawdown };
   }
 
-  canOpenPosition(currentPositions: number, portfolioValue: number, newCapital: number, risk: PortfolioRisk): { allowed: boolean; reason: string } {
+  /**
+   * canOpenPosition() — the per-SYMBOL allocation gate (#865, corrected for #899).
+   *
+   * ⚠️ #899 (2026-09-19): `newCapital` alone measures ONE ORDER, not the SYMBOL. The owner's
+   * design is one protocol driving several bots on the same symbol (docs/trading-bot-model.md §4)
+   * with the explicit constraint "…for the same symbol, but not increasing risk". Measured at
+   * `risk.maxPerSymbol = 0.25`: Bot A opens BTC at 20% ✓, Bot B at 20% ✓, Bot C at 20% ✓ — 60%
+   * on one instrument, nothing blocked it. Each check individually correct; the SUM unguarded.
+   *
+   * The gate now answers "will the portfolio be more than maxPerSymbol in this symbol AFTER this
+   * order?" by taking `existingSymbolCapital` — the caller measures already-open positions on the
+   * same symbol through the same margin estimator as the incoming order
+   * (assessGlobalRiskLimits, trading-strategy.service.ts), so both sides of the sum are
+   * comparable. `maxPositions` counts positions, not exposure, and could never cover this.
+   */
+  canOpenPosition(
+    currentPositions: number,
+    portfolioValue: number,
+    newCapital: number,
+    risk: PortfolioRisk,
+    existingSymbolCapital = 0,
+  ): { allowed: boolean; reason: string } {
     if (currentPositions >= risk.maxPositions) {
       return { allowed: false, reason: `Max positions (${risk.maxPositions}) reached` };
     }
-    const allocation = portfolioValue > 0 ? newCapital / portfolioValue : 0;
+    const totalSymbolCapital = existingSymbolCapital + newCapital;
+    const allocation = portfolioValue > 0 ? totalSymbolCapital / portfolioValue : 0;
     if (allocation > risk.maxPerSymbol) {
       // ⚠️ The reason carries BOTH NUMBERS, not just the ratio (2026-09-17, #865).
       //
@@ -194,12 +231,18 @@ export class RiskService {
       //
       // "`estimated capital 1160.09 of 1340.00`" answers that on sight: the second question
       // ("why is 0.1 of a lot £1,160?") is the defect, and it is now askable from the log alone.
+      //
+      // #899 adds the existing-exposure term when there is one — otherwise a block at "30%" of a
+      // 10% order would be inexplicable from the reason alone.
       return {
         allowed: false,
         reason:
           `Allocation ${(allocation * 100).toFixed(1)}% exceeds max per symbol ` +
           `${(risk.maxPerSymbol * 100)}% — estimated capital ${newCapital.toFixed(2)} of ` +
-          `${portfolioValue.toFixed(2)}`,
+          `${portfolioValue.toFixed(2)}` +
+          (existingSymbolCapital > 0
+            ? `, with ${existingSymbolCapital.toFixed(2)} already open on this symbol (#899)`
+            : ''),
       };
     }
     return { allowed: true, reason: 'OK' };

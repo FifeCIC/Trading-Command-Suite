@@ -371,4 +371,48 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     expect(result.reason).toContain('estimated capital');
     expect(result.reason).toContain('1000.00'); // the portfolio it was compared against
   });
+
+  /**
+   * REGRESSION GUARD — the per-symbol cap must measure the SYMBOL, not one order (#899, 2026-09-19).
+   *
+   * The owner's design is one protocol driving several bots on the same symbol
+   * (docs/trading-bot-model.md §4) with the stated constraint "…for the same symbol, but not
+   * increasing risk". Before this fix that guarantee did not exist at the CALLER either: every
+   * bot's order was measured in isolation, so three bots at 20% could put 60% on one instrument
+   * while each check passed. `risk.maxOpenPositions` counts positions, not exposure.
+   *
+   * This test pins the caller's half of the contract: assessGlobalRiskLimits() must sum the capital
+   * ALREADY committed to the symbol — through the same margin estimator as the incoming order, so
+   * both sides of the sum are comparable — and hand it to canOpenPosition().
+   */
+  it('blocks a small order when the SYMBOL is already near the cap (#899)', async () => {
+    // 0.05 lot of gold ≈ £217 margin ≈ 21.7% of the £1,000 account (contract 100, GBP, 1:100).
+    const existing = [{
+      ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.05, price_open: 4300,
+      price_current: 4346.06, sl: 0, tp: 0, profit: 0, comment: '', time: 0,
+      currencyProfit: 'GBP',
+    }];
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue(existing),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const svc = build(mt5);
+
+    // The order alone is ~4% — it would pass measured on its own. The SYMBOL total (~26%) refuses it.
+    const blocked = await svc.assessGlobalRiskLimits(0.02, 'XAUUSD');
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.reason).toContain('max per symbol');
+    // And the reason exposes the existing term, so the refusal is explicable from the record.
+    expect(blocked.reason).toContain('already open on this symbol');
+
+    // ── Restore direction — the same order with NO existing exposure is admitted. ──
+    // Without this half, a gate that refused unconditionally would pass the test above.
+    const emptyMt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
+    };
+    const clean = build(emptyMt5);
+    const allowed = await clean.assessGlobalRiskLimits(0.02, 'XAUUSD');
+    expect(allowed.allowed).toBe(true);
+  });
 });

@@ -92,13 +92,15 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
     settingKey: 'risk.maxPerSymbol',
     defaultValue: 0.25,
     summary:
-      'Ceiling on a single position as a fraction of portfolio value. Blocks the order in ' +
-      'canOpenPosition().',
+      'Ceiling on the TOTAL exposure to one symbol — positions already open PLUS this order — as ' +
+      'a fraction of portfolio value. Blocks the order in canOpenPosition().',
     caveat:
-      '⚠️ TWO READERS THAT DISAGREE: checkMaxAllocation() only LOGS A WARNING, canOpenPosition() ' +
-      'BLOCKS. Same constant, same file, opposite outcomes — do not treat the warning as the rule. ' +
-      'In September 2026 this was the largest single entry blocker (78 trades/day) and no setting ' +
-      'could move it (#865).',
+      '⚠️ TWO READERS: checkMaxAllocation() only LOGS A WARNING, canOpenPosition() BLOCKS. Both ' +
+      'now measure the same quantity (existing symbol exposure + new order, #899) so they can no ' +
+      'longer disagree in ARITHMETIC — but the warning is still not the rule. In September 2026 ' +
+      'this was the largest single entry blocker (78 trades/day) and no setting could move it ' +
+      '(#865). ⚠️ Until #899 (2026-09-19) the cap measured ONE ORDER, not the symbol: three bots ' +
+      'at 20% each put 60% on one instrument while every check passed.',
   },
   {
     field: 'maxDrawdown',
