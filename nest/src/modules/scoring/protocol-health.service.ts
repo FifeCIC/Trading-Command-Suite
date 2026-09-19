@@ -255,7 +255,14 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
    */
   async auditMeasuredCeilings(): Promise<ProtocolHealthIssue[]> {
     const issues: ProtocolHealthIssue[] = [];
-    if (!this.prisma?.isAvailable) return issues;
+    // ⚠️ NO `isAvailable` GUARD HERE (2026-09-19, #905). It used to be
+    // `if (!this.prisma?.isAvailable) return issues;` — and at `onApplicationBootstrap` time that
+    // flag can still be false, so the audit returned an EMPTY list with no log line: the boot
+    // surface reported clean while the endpoint (a minute later, flag true) found three issues in
+    // the same process. A guard that converts "cannot run yet" into "found nothing" is the
+    // silent-no-op shape this file already warns about. Let the query run; a genuine failure
+    // reaches the catch below, which logs the FULL error.
+    if (!this.prisma) return issues;
 
     let rows: any[] = [];
     try {
