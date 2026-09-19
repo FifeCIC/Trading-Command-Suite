@@ -46,6 +46,22 @@ export interface GuardianState {
    * `HTTP 400 {"error": "Market closed"}`, and nothing anywhere said so.
    */
   lastBridgeRefusal: { at: string; path: string; detail: string } | null;
+  /**
+   * ⚠️ #893 — symbols the BROKER reported as closed, and when the guardian will
+   * probe again. A computed view (see `getState()`), not persisted state.
+   *
+   * The guardian used to attempt a stop edit per eligible position per tick at any
+   * hour. With the market closed the broker refused every one (`HTTP 400
+   * {"error": "Market closed"}`) — measured 2026-09-18: 3 refused calls per tick,
+   * one tick every 30s, for as long as the market stayed shut. Nothing was
+   * mis-applied (the refusal is honest); the cost was pointless broker traffic and
+   * a pause in stop maintenance that was invisible.
+   *
+   * The backoff is REFUSAL-DRIVEN on purpose: the closure is never PREDICTED from
+   * bar staleness or session tables, because a wrong "closed" answer would silently
+   * stop ALL stop maintenance. Only the broker's own refusal arms it.
+   */
+  marketClosedBackoff?: Array<{ symbol: string; retryAt: string }>;
 }
 
 export interface GuardedPosition {
@@ -175,6 +191,28 @@ export class StopGuardianService {
   private lastRefusalLogAt = 0;
   private readonly REFUSAL_LOG_MS = 5 * 60_000;
 
+  /**
+   * ⚠️ #893 — per-SYMBOL retry-not-before after the broker answers "Market closed".
+   *
+   * Between probes the guardian does not call the bridge at all (see
+   * `modifyBlockedReason`), so a shut market costs one probe round per symbol per
+   * window instead of one round per tick. The value is the ONLY lever: a short
+   * window reacts faster to a re-open (the FX weekend is ~47h, and the first
+   * successful tighten can only happen after it), a long one wastes less traffic.
+   * 15 minutes bounds the post-reopen delay while cutting weekend calls by ~97%
+   * (3 symbols x 4 probes/h vs 3 per 30s tick).
+   */
+  private marketClosedUntil = new Map<string, number>();
+  private readonly MARKET_CLOSED_BACKOFF_MS = 15 * 60_000;
+
+  /**
+   * #893 — the refusal body from the LAST `bridgePost` call, cleared before every
+   * post so `applyModify` can attribute a failure to THIS call. Distinct from
+   * `state.lastBridgeRefusal`, which is a historical record for `/status` and is
+   * overwritten by any refusal from any path.
+   */
+  private lastRefusalDetail: string | null = null;
+
   constructor(
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
@@ -257,6 +295,9 @@ export class StopGuardianService {
           path,
           detail: detail || `HTTP ${res.status}`,
         };
+        // #893 — remembered for ONE decision (see `lastRefusalDetail`): whether this
+        // refusal means "market closed".
+        this.lastRefusalDetail = detail;
         // Throttled by content — see REFUSAL_LOG_MS. A repeated identical refusal is
         // still recorded above; only its log line is suppressed.
         const key = `${path} ${res.status} ${detail}`;
@@ -531,7 +572,15 @@ export class StopGuardianService {
   }
 
   getState(): GuardianState {
-    return this.state;
+    return {
+      ...this.state,
+      // #893 — the live backoff view: which symbols are paused and until when.
+      // Computed rather than stored so a stale entry can never read as an active
+      // pause (an expired one is dropped here), and so the field needs no init.
+      marketClosedBackoff: [...this.marketClosedUntil.entries()]
+        .filter(([, until]) => until > Date.now())
+        .map(([symbol, until]) => ({ symbol, retryAt: new Date(until).toISOString() })),
+    };
   }
 
   // ── Private Helpers ────────────────────────────────────
@@ -595,8 +644,17 @@ export class StopGuardianService {
    * what makes the two cases distinguishable: the per-position cadence is normal
    * and self-clearing, whereas the global cap means edits are being dropped.
    */
-  private modifyBlockedReason(ticket: number, priority: boolean): string | null {
+  private modifyBlockedReason(symbol: string, ticket: number, priority: boolean): string | null {
     const now = Date.now();
+    // #893 — strongest reason first: the broker ALREADY said this market is closed.
+    // Checked before `priority` is consulted because a shut market refuses a
+    // protective floor exactly as it refuses a trailing tighten — attempting the
+    // emergency write during the backoff window cannot succeed, and the backoff
+    // always expires (15m) so the floor is still set promptly after a re-open.
+    const closedUntil = this.marketClosedUntil.get(symbol) || 0;
+    if (now < closedUntil) {
+      return `market closed (broker refusal) — next probe in ${Math.ceil((closedUntil - now) / 60_000)}m (#893)`;
+    }
     this.modifyTimes = this.modifyTimes.filter((t) => now - t < 60_000);
     // Global hard cap applies to everyone (incl. protective floors) to avoid
     // tripping broker throttling during a mass-unlock event.
@@ -635,18 +693,22 @@ export class StopGuardianService {
     priority: boolean,
     directiveScores?: Record<string, number | null>,
   ): Promise<boolean> {
-    const blocked = this.modifyBlockedReason(pos.ticket, priority);
+    const blocked = this.modifyBlockedReason(pos.symbol, pos.ticket, priority);
     if (blocked) {
       this.logThrottle(pos.symbol, pos.ticket, blocked);
       return false;
     }
 
+    // #893 — cleared so a refusal recorded during THIS call is unambiguous.
+    this.lastRefusalDetail = null;
     const ok = await this.bridgePost('/order/modify', {
       ticket: pos.ticket,
       sl: newSl,
     });
 
     if (ok) {
+      // #893 — a successful edit proves the market is open: drop any backoff.
+      this.marketClosedUntil.delete(pos.symbol);
       const now = Date.now();
       this.lastModifyAt.set(pos.ticket, now);
       this.modifyTimes.push(now);
@@ -688,6 +750,17 @@ export class StopGuardianService {
           metadata: { ticket: pos.ticket, oldSl: pos.sl, newSl, side, reason },
         })
         .catch(() => {});
+    } else if (/market\s+(is\s+)?closed/i.test(this.lastRefusalDetail ?? '')) {
+      // #893 — the bridge answered `{"success": false, "error": "Market closed"}`.
+      // That is the broker stating the market is shut, so re-asking every cadence
+      // window cannot succeed. Arm the per-symbol backoff; `modifyBlockedReason`
+      // then skips this symbol until it expires, and a later SUCCESS clears it.
+      // Any OTHER refusal (invalid stops, no such position) deliberately does NOT
+      // back off — those need attention, not silence.
+      this.marketClosedUntil.set(pos.symbol, Date.now() + this.MARKET_CLOSED_BACKOFF_MS);
+      this.logger.warn(
+        `Stop edits for ${pos.symbol} paused ${Math.round(this.MARKET_CLOSED_BACKOFF_MS / 60_000)}m — broker refused with "Market closed" (#893)`,
+      );
     }
     return ok;
   }
