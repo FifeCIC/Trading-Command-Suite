@@ -4,6 +4,22 @@ import { ModeService } from '../../config/mode.service';
 import { AdapterFactory } from './adapter-factory';
 import { IProviderAdapter } from './interfaces/provider-adapter.interface';
 
+/**
+ * Providers whose MARKET-DATA endpoints are public — no API key required (#891).
+ *
+ * ⚠️ WHY THIS IS A DISPLAY RULE, NOT A GATE
+ * -----------------------------------------
+ * `GET /api/providers/health` reported binance as `missing-credentials`
+ * ("Missing API credentials"), which reads as "the data path is broken".
+ * It is not: Binance's klines/ticker endpoints are public — verified by
+ * fetching 12,000 crypto bars with no key in the environment (#891). The
+ * missing credential is real for TRADING (no key = no orders, and no order
+ * path exists yet) and irrelevant for market data. `hasCredentials()` is only
+ * consulted for display and recording, so this set changes the LABEL a human
+ * reads, never a fetch.
+ */
+const CREDENTIAL_FREE_DATA_PROVIDERS = new Set(['binance']);
+
 @Injectable()
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
@@ -83,6 +99,9 @@ export class ProvidersService {
       activeProvider: activeAdapter?.name ?? null,
       providers: adapterConfigs.map((config) => {
         const credentialsConfigured = this.adapterFactory.hasCredentials(config.id);
+        // Public market-data provider (e.g. binance): no key is EXPECTED, so a
+        // missing key is not a fault — see CREDENTIAL_FREE_DATA_PROVIDERS above.
+        const credentialFree = CREDENTIAL_FREE_DATA_PROVIDERS.has(config.id);
         const row: any = dbByProvider.get(config.id);
         const adapter = this.adapterFactory.create(config.id);
 
@@ -94,12 +113,14 @@ export class ProvidersService {
           credentialsConfigured,
           status:
             row?.status ??
-            (credentialsConfigured ? 'unknown' : 'missing-credentials'),
+            (credentialsConfigured || credentialFree ? 'unknown' : 'missing-credentials'),
           message:
             row?.message ??
             (credentialsConfigured
               ? 'No health check recorded yet'
-              : 'Missing API credentials'),
+              : credentialFree
+                ? 'No API key required for market data'
+                : 'Missing API credentials'),
           checkedAt: row?.checkedAt?.toISOString() ?? null,
           latencyMs: row?.latencyMs ?? null,
           // Broker-aware feature gating (Sprint 2026-07-04)

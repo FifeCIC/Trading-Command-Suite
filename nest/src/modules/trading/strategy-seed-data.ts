@@ -561,4 +561,48 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     maxHoldHours: 12,
     active: false,
   },
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // CRYPTO — 24/7 coverage (#891) — ADDED 2026-09-19
+  // ════════════════════════════════════════════════════════════════════════════
+  //
+  // ⚠️ THE LIBRARY'S `crypto-majors` ENTRY IS NOT THIS. That is a Strategy-Library
+  // TEMPLATE (4 symbols, provider yahoo); a `trading_strategy` row is ONE symbol +
+  // ONE protocol + a subscription. "Persist crypto-majors as a real bot" (#891
+  // finding 2) therefore realises as per-symbol bots — BTC first, because
+  // `btc-speed-v1` is the protocol that owns the weekend instrument: its
+  // sentiment group carries the `crypto-weekend-effect` directive, and its
+  // LONG_ONLY "Monitor / Position" style holds hours to days.
+  //
+  // `manual` IS THE FLOOR, NOT A PREFERENCE (2026-09-19). There is no crypto
+  // execution path: the binance adapter fetches data but implements no
+  // `placeOrder` (#891 finding 4), and the `BTC` symbol_route must NOT be handed
+  // to MT5 as-is — `BTC` resolved against MT5 server symbols matches
+  // `Nasdaq\ETF\BTC` (~$35.86), not Bitcoin. Auto dispatch is impossible anyway
+  // (automation-loop Gate 2 skips every `mode !== 'auto'`), so this bot SCORES
+  // and WAITS for the execution decision. Flip to 'auto' only once a
+  // `brokerSymbol` route exists on a crypto-capable broker.
+  {
+    name: 'BTC Investment Monitor',
+    symbol: 'BTC',
+    protocolId: 'btc-speed-v1',
+    brokerId: 'mt5',
+    mode: 'manual',
+    timeframe: '1h',
+    // ⚠️ 0.01 is UNVERIFIED for crypto — check the broker's volume floor when
+    // execution lands (FTSE shipped 0.01 against a 0.1 floor and could never trade).
+    baseSize: 0.01,
+    slPct: 3.0,
+    tpPct: 6.0,
+    // Seeded target for btc-speed-v1 after the 2026-09-15 rescale
+    // (inspect-scoring-strategy-thresholds.cjs: SEEDED['btc-speed-v1'] = 10).
+    minComposite: 10,
+    // 24/7 — ungated. session-window.ts maps 'always'/'24-7' to null, and this is
+    // the only instrument that trades when FX is closed.
+    sessionWindow: null,
+    // btc-speed-v1 is LONG_ONLY — declared so the subscription role comes from a
+    // statement rather than the protocol-name heuristic.
+    requireDirection: 'BUY',
+    style: 'Monitor / Position',
+  },
 ];
