@@ -240,6 +240,14 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
    * directive looked healthy, so nothing reported a problem — the fault was only
    * visible by comparing the ceiling to the threshold.
    *
+   * ⚠️ UNITS — FIXED 2026-09-19 (#905). This compared the RAW composite against
+   * `minComposite`, but the GATE (protocol-gating) compares compositePct =
+   * rawComposite / configuredSignalMax × 100 against it. Raw-vs-percent made the audit
+   * silently blind: `xau-speed-1h`'s raw ceiling of 70 "cleared" its bar of 9, while its
+   * true 7.7% could never clear 9% — two bots active and incapable with this detector green.
+   * The audit now measures the SAME quantity the gate does, and `measureProtocolCeiling()`
+   * below shares that basis so detector and gate cannot disagree again.
+   *
    * ⚠️ Reported at `error` when the measured ceiling cannot reach the threshold,
    * because that is a definite fault rather than a suspicion: the bot cannot
    * trade as configured. It is deliberately NOT auto-fixed — the right response
@@ -266,19 +274,33 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       // bare `.message` that came out EMPTY, so the audit produced nothing and
       // the health endpoint looked clean. That silent-no-op shape is exactly what
       // this codebase keeps producing, hence the full-error log below.
+      //
+      // ⚠️ THE JOIN MUST MATCH BOTH protocolId FORMS (2026-09-19, #905/#801).
+      // `trading_strategy.protocolId` is slug-or-UUID; every active bot carries a SLUG
+      // today (26/26 measured), and `p.id` is a UUID — so the previous `ON p.id =
+      // ts.protocolId` joined NOTHING, the audit's row set was empty, and it reported
+      // clean forever while two bots could not fire. Matching slug OR id is the fix.
       rows = await this.prisma.$queryRawUnsafe(`
         SELECT ts.protocolId,
                p.slug                AS slug,
                MAX(ts.minComposite)  AS required,
                COUNT(DISTINCT ts.id) AS bots,
-               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(7,2)))
+               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2))
+                           / NULLIF(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2)), 0) * 100)
                   FROM score s
-                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS ceiling,
+                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS ceilingPct,
+               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2)))
+                  FROM score s
+                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS ceilingRaw,
+               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2)))
+                  FROM score s
+                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS capacity,
                (SELECT COUNT(*) FROM score s2
                  WHERE s2.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS samples
           FROM trading_strategy ts
           JOIN protocol p
-            ON p.id COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci
+            ON (p.id COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci
+                OR p.slug COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci)
          WHERE ts.active = 1
          GROUP BY ts.protocolId, p.slug
       `);
@@ -293,25 +315,33 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
 
     for (const row of rows) {
       const required = Number(row.required ?? 0);
-      const ceiling = row.ceiling == null ? null : Number(row.ceiling);
+      const ceilingPct = row.ceilingPct == null ? null : Number(row.ceilingPct);
+      const ceilingRaw = row.ceilingRaw == null ? null : Number(row.ceilingRaw);
+      const capacity = row.capacity == null ? null : Number(row.capacity);
       const samples = Number(row.samples ?? 0);
 
       // Need a real history before claiming a ceiling. 10 readings is enough to
       // see the shape without waiting a session.
-      if (ceiling == null || samples < 10) continue;
+      if (ceilingPct == null || samples < 10) continue;
 
-      if (ceiling < required) {
+      // The SAME percentage the gate compares against minComposite (#905). Raw and capacity are
+      // kept in the message so the reader can re-derive the figure — a derived number alone
+      // hides the data it came from.
+      const describeCeiling = `${ceilingPct.toFixed(1)}% of capacity (raw ${ceilingRaw ?? '?'} of ${capacity ?? '?'})`;
+
+      if (ceilingPct < required) {
         issues.push({
           protocolId: row.slug,
           kind: 'ceiling-below-threshold',
           severity: 'error',
           message:
             `Protocol "${row.slug}" cannot reach the composite its ${row.bots} active bot(s) ` +
-            `require: highest composite EVER recorded is ${ceiling} against a minComposite of ` +
-            `${required} (${samples} readings). This bot cannot trade as configured — fix the ` +
-            `protocol's directional capacity, lower minComposite, or disable the bot.`,
+            `require: highest composite EVER recorded is ${describeCeiling} against a ` +
+            `minComposite of ${required}% (${samples} readings). This bot cannot trade as ` +
+            `configured — fix the protocol's directional capacity, lower minComposite, or ` +
+            `disable the bot.`,
         });
-      } else if (ceiling < required * 1.25) {
+      } else if (ceilingPct < required * 1.25) {
         // Reaches the bar, but only just: it will fire rarely and any change to
         // directive weights could strand it.
         issues.push({
@@ -320,13 +350,79 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
           severity: 'warning',
           message:
             `Protocol "${row.slug}" barely clears its threshold: highest composite ever is ` +
-            `${ceiling} against minComposite ${required} (${samples} readings). It will trade ` +
-            `rarely, and a small change to directive weights could strand it entirely.`,
+            `${describeCeiling} against minComposite ${required}% (${samples} readings). It ` +
+            `will trade rarely, and a small change to directive weights could strand it entirely.`,
         });
       }
     }
 
     return issues;
+  }
+
+  /**
+   * measureProtocolCeiling() — the SAME measurement, scoped to one protocol (#905).
+   *
+   * Returns the protocol's MEASURED ceiling as the percentage the trading gate actually
+   * compares against (`compositePct = rawComposite / configuredSignalMax × 100`, the
+   * configured-capacity denominator documented in protocol-gating.service.ts), plus the raw
+   * figures and the sample count.
+   *
+   * Accepts a slug OR a UUID — bots carry either (`trading_strategy.protocolId` is
+   * slug-or-UUID; see #801) — by resolving the protocol row first.
+   *
+   * Used by `TradingStrategyService.assertCeilingAllowsActivation()` to REFUSE activating a
+   * bot whose protocol can never reach its bar (fix direction 3 of #905: the measurement
+   * existed, it needed to gate rather than advise). One arithmetic basis shared with the
+   * audit above, so detector and gate can never disagree about units again.
+   *
+   * ⚠️ Returns `null` on no history OR any failure — callers treat that as cannot-judge and
+   * allow (fail-open). Activation must not be blocked by an unmeasurable protocol.
+   */
+  async measureProtocolCeiling(protocolIdOrSlug: string): Promise<{
+    slug: string;
+    ceilingPct: number;
+    ceilingRaw: number;
+    capacity: number;
+    samples: number;
+  } | null> {
+    if (!this.prisma?.isAvailable || !protocolIdOrSlug) return null;
+    try {
+      const protoRows: any[] = await this.prisma.$queryRawUnsafe(
+        `SELECT slug FROM protocol
+          WHERE slug COLLATE utf8mb4_0900_ai_ci = ? COLLATE utf8mb4_0900_ai_ci
+             OR id   COLLATE utf8mb4_0900_ai_ci = ? COLLATE utf8mb4_0900_ai_ci
+          LIMIT 1`,
+        protocolIdOrSlug,
+        protocolIdOrSlug,
+      );
+      const slug = protoRows?.[0]?.slug;
+      if (!slug) return null;
+
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
+        `SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2))) AS ceilingRaw,
+                MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2))) AS capacity,
+                MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2))
+                    / NULLIF(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2)), 0) * 100) AS ceilingPct,
+                COUNT(*) AS samples
+           FROM score s
+          WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = ? COLLATE utf8mb4_0900_ai_ci`,
+        slug,
+      );
+      const r = rows?.[0];
+      if (!r || r.ceilingPct == null) return null;
+      return {
+        slug,
+        ceilingPct: Number(r.ceilingPct),
+        ceilingRaw: Number(r.ceilingRaw),
+        capacity: Number(r.capacity),
+        samples: Number(r.samples),
+      };
+    } catch (err) {
+      this.logger.warn(
+        `measureProtocolCeiling(${protocolIdOrSlug}) failed: ${(err as Error).message || String(err)}`,
+      );
+      return null;
+    }
   }
 
   getLast(): { generatedAt: string | null; issues: ProtocolHealthIssue[] } {

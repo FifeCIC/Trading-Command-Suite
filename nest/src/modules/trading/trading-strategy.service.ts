@@ -14,7 +14,7 @@
  *   OUTPUT: trade placed via broker adapter, recorded to Trade table
  *   NEVER:  computes directive scores, applies risk gates, or decides direction
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Mt5TradingService } from './mt5-trading.service';
 import { ConditionDetectorService } from '../directives/condition-detector.service';
@@ -40,6 +40,9 @@ import {
 } from '../../common/trading/position-margin';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+// ⚠️ #905 — the ceiling measurement behind the activation gate. ONE arithmetic basis shared
+// with the health audit: a REFUSAL here and an audit finding there can never disagree.
+import { ProtocolHealthService } from '../scoring/protocol-health.service';
 import { MarketBar } from '../directives/interfaces/directive.interface';
 // ⚠️ The CANONICAL session parser. Used to NORMALISE `sessionWindow` for display, because the
 // column is stored in two forms (`london` and `["london"]`) meaning the same gate. Do not
@@ -139,6 +142,7 @@ export class TradingStrategyService {
     private readonly notificationService: NotificationService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly settings: SettingsResolverService,
+    private readonly protocolHealth: ProtocolHealthService,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -493,6 +497,16 @@ export class TradingStrategyService {
       }
     }
 
+    // #905 — a bot created ACTIVE must be able to fire. (Default creation is active=false,
+    // so this only refuses the deliberate activate-on-create case.)
+    if (data.active === true) {
+      await this.assertCeilingAllowsActivation(
+        data.protocolId,
+        data.minComposite ?? BOT_BAR_DEFAULT,
+        data.name,
+      );
+    }
+
     return this.prisma.tradingStrategy.create({
       data: {
         name: data.name,
@@ -525,6 +539,23 @@ export class TradingStrategyService {
   }
 
   async update(id: string, data: Record<string, any>) {
+    const existing = await this.prisma.tradingStrategy.findUnique({ where: { id } });
+    if (!existing) throw new BadRequestException('Strategy not found');
+
+    // #905 — gate only the transitions that matter: activating, or changing the bar/protocol
+    // of an ACTIVE bot. A rename of an already-active impossible bot is still allowed — the
+    // health audit surfaces it — so operators are never locked out of editing a stranded bot.
+    const resultingActive = data.active !== undefined ? Boolean(data.active) : existing.active;
+    const reactivation = resultingActive && !existing.active;
+    const barOrProtocolChanged = data.minComposite !== undefined || data.protocolId !== undefined;
+    if (resultingActive && (reactivation || barOrProtocolChanged)) {
+      await this.assertCeilingAllowsActivation(
+        data.protocolId ?? existing.protocolId,
+        data.minComposite ?? existing.minComposite,
+        existing.name,
+      );
+    }
+
     return this.prisma.tradingStrategy.update({ where: { id }, data });
   }
 
@@ -535,10 +566,55 @@ export class TradingStrategyService {
   async toggle(id: string) {
     const strategy = await this.prisma.tradingStrategy.findUnique({ where: { id } });
     if (!strategy) throw new Error('Strategy not found');
+    const nextActive = !strategy.active;
+    // #905 — refuse to ACTIVATE a bot whose protocol's measured ceiling is below its bar.
+    // Deactivating is always allowed.
+    if (nextActive) {
+      await this.assertCeilingAllowsActivation(strategy.protocolId, strategy.minComposite, strategy.name);
+    }
     return this.prisma.tradingStrategy.update({
       where: { id },
-      data: { active: !strategy.active },
+      data: { active: nextActive },
     });
+  }
+
+  /**
+   * assertCeilingAllowsActivation() — refuse to activate a bot that can NEVER fire (#905).
+   *
+   * The measurement is the protocol's all-time maximum `compositePct` (the SAME percentage
+   * the gate compares `minComposite` against — see `ProtocolHealthService.measureProtocolCeiling()`,
+   * which shares its arithmetic with the health audit).
+   *
+   * Why refuse rather than warn: a bot with a bar its protocol has never reached is not a risky
+   * bot, it is a DECORATIVE one — it occupies a config slot, scores every tick, writes queue
+   * entries, and "SKIPs" with a plausible reason, while being mathematically incapable of
+   * trading. The owner's trading-readiness bar (#910): *every active bot either can trade, or
+   * the reason it cannot is on a surface an operator reads*. A refused activation IS that
+   * surface, delivered at the moment the mistake is made.
+   *
+   * ⚠️ FAIL-OPEN on cannot-judge, deliberately: no history (< 10 readings), unknown protocol,
+   * or a measurement failure all ALLOW the activation. Refusing on an unmeasurable protocol
+   * would block new protocols from being tried — the defect being fixed is a false GREEN, and
+   * the fix must not become a false RED.
+   */
+  private async assertCeilingAllowsActivation(
+    protocolId: string,
+    minComposite: number | null | undefined,
+    botName: string,
+  ): Promise<void> {
+    if (!protocolId) return;
+    const bar = minComposite ?? BOT_BAR_DEFAULT;
+    const measured = await this.protocolHealth.measureProtocolCeiling(protocolId);
+    if (!measured || measured.samples < 10) return;
+    if (measured.ceilingPct >= bar) return;
+
+    throw new BadRequestException(
+      `Refused: "${botName}" could never fire. Protocol ${measured.slug} has never produced ` +
+        `more than ${measured.ceilingPct.toFixed(1)}% of its capacity (raw ${measured.ceilingRaw} ` +
+        `of ${measured.capacity}) across ${measured.samples} readings, and this bot's ` +
+        `minComposite is ${bar}%. Lower minComposite below ${measured.ceilingPct.toFixed(1)}, ` +
+        `fix the protocol's capacity, or keep the bot disabled (#905).`,
+    );
   }
 
   // ── Core: Evaluate ────────────────────────────────────

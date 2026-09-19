@@ -11,7 +11,7 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
 import { DirectiveConfigService } from './directive-config.service';
-import { ProtocolHealthService } from './protocol-health.service';
+import { ProtocolHealthIssue, ProtocolHealthService } from './protocol-health.service';
 import { isDirectiveIncluded } from '../directives/directive-inclusion';
 import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-target';
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
@@ -68,8 +68,18 @@ export class ProtocolGatingController {
    */
   @Get('protocols/health')
   async protocolsHealth() {
-    const issues = await this.health.validateAll();
-    return { generatedAt: new Date().toISOString(), issues };
+    // ⚠️ #905 — the measured-ceiling audit MUST be part of this response. It previously ran
+    // only in `onApplicationBootstrap()`, so "can this bot ever fire?" was answered once in a
+    // boot log and invisible on every subsequent call — an operator-facing health surface
+    // that said clean. (`getLast()` has no callers; merging here IS the surface.)
+    const configIssues = await this.health.validateAll();
+    let ceilingIssues: ProtocolHealthIssue[] = [];
+    try {
+      ceilingIssues = await this.health.auditMeasuredCeilings();
+    } catch (err) {
+      this.logger.warn(`Measured-ceiling audit failed: ${(err as Error).message}`);
+    }
+    return { generatedAt: new Date().toISOString(), issues: [...configIssues, ...ceilingIssues] };
   }
 
   /**
