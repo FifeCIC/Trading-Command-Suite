@@ -783,6 +783,14 @@ export class Mt5Adapter implements IProviderAdapter {
           quantity: params.quantity,
           status: 'rejected',
           provider: 'mt5',
+          // ⚠️ #885 — the refusal's diagnostic, persisted. The bridge sends it
+          // (external.code = MT5 retcode, external.name = TRADE_RETCODE_*, params.fillingMode =
+          // the broker's negotiation input) and the API previously dropped all of it.
+          error: message,
+          errorCode: rejection?.code ?? null,
+          retcode: typeof (rejection as any)?.external?.code === 'number' ? (rejection as any).external.code : null,
+          externalName: (rejection as any)?.external?.name ?? null,
+          fillingMode: (rejection as any)?.params?.fillingMode ?? null,
         },
       }).catch(() => {});
       // #826 Phase 3 — pass the code/params on so the API layer and the UI can render the notice
@@ -823,6 +831,9 @@ export class Mt5Adapter implements IProviderAdapter {
           status: 'unknown',
           provider: 'mt5',
           providerId: params.clientOrderId ?? null,
+          // ⚠️ #885 — an unknown outcome is a refusal of sorts: record WHY it is unknown.
+          error: reason,
+          errorCode: tripped ? 'TCS-INTEG-002' : 'TCS-INTEG-001',
         },
       }).catch(() => {});
       return {
@@ -860,6 +871,13 @@ export class Mt5Adapter implements IProviderAdapter {
         provider: 'mt5',
         providerId: result.ticket ? String(result.ticket) : null,
         filledAt: result.success ? new Date() : null,
+        // ⚠️ #885 — a rejection that arrived as a 200-with-success:false still carries its reason
+        // (and the structured fields when the bridge included them).
+        error: result.error ?? null,
+        errorCode: (data as any).code ?? null,
+        retcode: typeof (data as any).external?.code === 'number' ? (data as any).external.code : null,
+        externalName: (data as any).external?.name ?? null,
+        fillingMode: (data as any).params?.fillingMode ?? null,
       },
     }).catch(err => this.logger.warn(`Failed to persist order: ${err.message}`));
 

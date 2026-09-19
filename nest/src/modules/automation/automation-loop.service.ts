@@ -2063,8 +2063,16 @@ export class AutomationLoopService implements OnModuleInit {
       () => this.logger.debug(`Persisted ${records.length} decisions to decision_log (${this.state.decisionLogSuppressed} suppressed this session)`),
     ).catch(err => this.logger.warn(`Failed to persist decisions: ${err.message}`));
 
-    // Also log order attempts for EXECUTED/FAILED decisions
-    const orderDecisions = keep.filter(d => d.decision === 'EXECUTED' || d.decision === 'FAILED');
+    // Also log order attempts — for decisions that BECAME an order (#885).
+    //
+    // ⚠️ #885 — this used to include FAILED decisions and write them as `rejected`. FAILED covers
+    // everything that stopped a trade before an order existed (signal below threshold, market
+    // closed, position cap reached, bridge unreachable) — so 79 "rejections" appeared in the
+    // `order` table against ZERO broker-side failures, and `WHERE status='rejected'` could not
+    // answer "is the broker refusing our orders?". A decision that never became an order is NOT
+    // an order-audit row; it already lives in decision_log (the `significant` set above keeps
+    // every FAILED row there). This table audits ORDER ATTEMPTS.
+    const orderDecisions = keep.filter(d => d.decision === 'EXECUTED');
     for (const d of orderDecisions) {
       const side = d.signal?.toLowerCase();
       if (!side || (side !== 'buy' && side !== 'sell')) continue;
@@ -2075,10 +2083,10 @@ export class AutomationLoopService implements OnModuleInit {
           side,
           quantity: d.quantity ?? 0.01,
           price: d.price ?? null,
-          status: d.decision === 'EXECUTED' ? 'filled' : 'rejected',
+          status: 'filled',
           provider: d.brokerId || 'mt5',
           providerId: d.ticket ? String(d.ticket) : null,
-          filledAt: d.decision === 'EXECUTED' ? new Date() : null,
+          filledAt: new Date(),
         },
       }).catch(() => {});
     }

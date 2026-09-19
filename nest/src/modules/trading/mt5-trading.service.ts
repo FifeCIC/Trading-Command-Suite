@@ -295,7 +295,14 @@ export class Mt5TradingService {
       // ── Order audit: record every bridge order attempt (#477) ──
       const orderStatus = data.status ?? (data.success ? 'filled' : 'rejected');
       const filledQuantity = Number(data.filledVolume ?? data.volume ?? params.volume);
-      this.recordOrder(params.symbol, params.type, params.volume, orderStatus, data.ticket, data.price, data.error);
+      // ⚠️ #885 — the bridge's refusal diagnostic (reason, TCS code, MT5 retcode, TRADE_RETCODE
+      // name, filling mode) now persists with the attempt instead of being dropped.
+      this.recordOrder(params.symbol, params.type, params.volume, orderStatus, data.ticket, data.price, data.error, {
+        errorCode: data.code ?? null,
+        retcode: typeof data.external?.code === 'number' ? data.external.code : null,
+        externalName: data.external?.name ?? null,
+        fillingMode: data.params?.fillingMode ?? null,
+      });
 
       if (data.success) {
         // Record successful trade with MT5 traceability fields (#446, #616)
@@ -348,8 +355,28 @@ export class Mt5TradingService {
     }
   }
 
-  /** Record every order attempt in the order audit table (#477). Fire-and-forget. */
-  private recordOrder(symbol: string, type: string, quantity: number, status: string, ticket?: number, price?: number, error?: string): void {
+  /**
+   * Record every order attempt in the order audit table (#477). Fire-and-forget.
+   *
+   * ⚠️ #885 — `error` was a parameter this method RECEIVED AND DISCARDED (the table had no
+   * column for it since #477). The bridge's diagnostic now persists, so "why was this refused"
+   * is answerable from the row alone.
+   */
+  private recordOrder(
+    symbol: string,
+    type: string,
+    quantity: number,
+    status: string,
+    ticket?: number,
+    price?: number,
+    error?: string,
+    extra?: {
+      errorCode?: string | null;
+      retcode?: number | null;
+      externalName?: string | null;
+      fillingMode?: string | null;
+    },
+  ): void {
     if (!this.prisma.isAvailable) return;
     this.prisma.order.create({
       data: {
@@ -362,6 +389,11 @@ export class Mt5TradingService {
         provider: 'mt5',
         providerId: ticket ? String(ticket) : null,
         filledAt: status === 'filled' ? new Date() : null,
+        error: error ?? null,
+        errorCode: extra?.errorCode ?? null,
+        retcode: extra?.retcode ?? null,
+        externalName: extra?.externalName ?? null,
+        fillingMode: extra?.fillingMode ?? null,
       },
     }).catch(() => {}); // fire-and-forget — failures logged silently
   }

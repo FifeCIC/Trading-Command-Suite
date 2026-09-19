@@ -760,6 +760,15 @@ model Order {
   provider    String   @db.VarChar(50)
   providerId  String?  @db.VarChar(100)
   accountId   String?  @db.VarChar(100)
+  // ⚠️ #885 (2026-09-19) — the refusal diagnostic, persisted. `error` was received and
+  // DISCARDED since #477 (no column existed); retcode/externalName/fillingMode stopped at the
+  // bridge journal. Applied by ALTER TABLE — this repo has no migration history and `db push`
+  // drops unmodelled tables (see database-schema.instructions.md).
+  error        String?  @db.Text
+  errorCode    String?  @db.VarChar(50)
+  retcode      Int?
+  externalName String?  @db.VarChar(64)
+  fillingMode  String?  @db.VarChar(16)
   filledAt    DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

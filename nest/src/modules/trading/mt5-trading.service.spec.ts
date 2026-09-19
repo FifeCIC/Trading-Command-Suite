@@ -8,7 +8,7 @@ describe('Mt5TradingService broker contracts', () => {
     order: { create: jest.fn().mockResolvedValue({}) },
     trade: { findFirst: jest.fn() },
   };
-  const connection = { getUrl: () => 'http://mt5.test' };
+  const connection = { getUrl: () => 'http://mt5.test', getBrokerIds: () => [2] };
   let service: Mt5TradingService;
 
   const response = (body: unknown, ok = true) => ({
@@ -113,6 +113,48 @@ describe('Mt5TradingService broker contracts', () => {
     // closed rows carried a strategy and both were phantoms, so the Strategy Comparison page
     // was built on the reject half of the ledger. The parser is extractStrategyFromComment().
     expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10, 'user:manual', 'Gold Swing 1H');
+  });
+
+  it('records the local crypto-route refusal WITH its reason in the order audit (#885)', async () => {
+    // The guard lives before the bridge call — no fetch needed. A route-less crypto symbol must
+    // REFUSE (not crash) and the row must carry the reason.
+    global.fetch = jest.fn() as any;
+    const result = await service.placeOrder({ symbol: 'BTC', type: 'BUY', volume: 0.1 });
+
+    expect(result.success).toBe(false);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(prisma.order.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: 'rejected',
+        error: expect.stringContaining('Refusing to send BTC'),
+      }),
+    }));
+  });
+
+  it('persists the bridge refusal diagnostic — code, retcode, externalName, fillingMode (#885)', async () => {
+    // The exact refusal shape the bridge sends (refusal(): {success:false, error, code, params, external}).
+    global.fetch = jest.fn().mockResolvedValue(response({
+      success: false,
+      error: 'XAUUSD rejected (retcode 10018, filling=IOC): Market closed. Broker allows: FOK, IOC.',
+      code: 'TCS-TRADE-005',
+      external: { system: 'MetaTrader 5', code: 10018, name: 'TRADE_RETCODE_MARKET_CLOSED' },
+      params: { fillingMode: 'IOC' },
+    })) as any;
+
+    await service.placeOrder({ symbol: 'XAUUSD', type: 'BUY', volume: 0.1 });
+
+    // ⚠️ #885 — `error` was a parameter recordOrder RECEIVED AND DISCARDED (no column existed),
+    // and the structured fields stopped at the bridge journal.
+    expect(prisma.order.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: 'rejected',
+        error: expect.stringContaining('Market closed'),
+        errorCode: 'TCS-TRADE-005',
+        retcode: 10018,
+        externalName: 'TRADE_RETCODE_MARKET_CLOSED',
+        fillingMode: 'IOC',
+      }),
+    }));
   });
 
   it('uses the bridge partial-close endpoint', async () => {
