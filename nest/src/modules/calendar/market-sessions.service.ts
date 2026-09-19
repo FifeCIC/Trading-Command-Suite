@@ -139,6 +139,55 @@ export class MarketSessionsService {
     }
   }
 
+  /**
+   * Minutes until this session next OPENS — looking forward across midnight and the
+   * weekend. `null` only while the session is genuinely open right now.
+   *
+   * ⚠️ WHY THIS EXISTS (2026-09-18) — the identical fix in `src/core/session-utils.js`,
+   * which is the documented mirror of this service. The old expression was
+   *     `!active && isMarketDay ? Math.max(0, openMin - now) : null`
+   * and `Math.max(0, …)` turned a session whose open time had ALREADY PASSED TODAY into
+   * `0`, which every reader takes as "opens in 0 minutes".
+   *
+   * Measured on the market tape (which computes this itself from the mirror): Friday
+   * 20:47 UK read `🇬🇧 London in 0m` when London's next open was Monday 08:00 — about 59
+   * hours away. The clamp also DEFEATED THE SORT in `nextSessionLabel()`, so every
+   * already-passed session reported `0` and the winner became whichever sat first in the
+   * roster. Two control cases read `🇦🇺 Sydney in 0m` while London opened in 60 minutes.
+   *
+   * ⚠️ Not read over HTTP today — `market-calendar.controller.ts` serves it and no
+   * frontend caller consumes it. Fixed anyway: a wrong value on an endpoint is still a
+   * wrong value, and #851 proposes serving the roster FROM HERE and deleting the frontend
+   * mirror. It should not be serving a known-bad number when that lands.
+   *
+   * ⚠️ DST: days are added as fixed 24h offsets, so a countdown spanning a DST change can
+   * be out by one hour. The previous version could be out by an entire day.
+   */
+  private minutesUntilNextOpen(
+    date: Date,
+    session: MarketSession,
+    openMin: number,
+  ): number | null {
+    const nowMinToday = this.minutesInZone(date, session.iana) ?? 0;
+    const dowToday = this.dowInZone(date, session.iana);
+
+    // Still ahead of us today, and today is a session day?
+    if (session.daysOfWeek.includes(dowToday) && nowMinToday < openMin) {
+      return openMin - nowMinToday;
+    }
+
+    // Otherwise roll forward to the next session day at the same open time.
+    for (let addDays = 1; addDays <= 8; addDays++) {
+      const dow = this.dowInZone(
+        new Date(date.getTime() + addDays * 86400000),
+        session.iana,
+      );
+      if (!session.daysOfWeek.includes(dow)) continue;
+      return 24 * 60 - nowMinToday + (addDays - 1) * 24 * 60 + openMin;
+    }
+    return null; // no session day inside 8 days — unreachable for the current roster
+  }
+
   /** Is the given session active at `date` (DST-aware)? */
   isActive(scope: SessionScope, date = new Date()): boolean {
     const s = this.getSession(scope);
@@ -177,7 +226,8 @@ export class MarketSessionsService {
         active, openMinutes: openMin, closeMinutes: closeMin,
         nowMinutes: now,
         minutesUntilClose: active ? closeMin - now : null,
-        minutesUntilOpen: !active && isMarketDay ? Math.max(0, openMin - now) : null,
+        // ⚠️ Forward-looking, never clamped — see minutesUntilNextOpen().
+        minutesUntilOpen: active ? null : this.minutesUntilNextOpen(date, s, openMin),
         closesSoon, opensSoon,
       };
     });

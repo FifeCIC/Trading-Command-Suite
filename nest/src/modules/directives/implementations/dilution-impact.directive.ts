@@ -59,6 +59,7 @@ export class DilutionImpactDirective implements IDirective {
         confidence: 0.1,
         reason: `Insufficient data.`,
         signalClass: 'neutral',
+        unmeasured: true,
       };
     }
 
@@ -69,8 +70,11 @@ export class DilutionImpactDirective implements IDirective {
       });
 
       if (!metrics) {
-        // Trigger on-demand import, then retry DB query once
-        this.logger.log(`No company metrics for ${symbol} — triggering on-demand import`);
+        // Request the on-demand import, then retry the DB read once.
+        // ⚠️ #887 — the import carries a negative cache, so a symbol the provider
+        // has no metrics for is asked about once per TTL, not once per tick.
+        // Logged at debug: this is a per-tick diagnostic, not news.
+        this.logger.debug(`No company metrics for ${symbol} — requesting on-demand import`);
         await this.researchImport.importCompanyMetricsForSymbol(symbol);
 
         // Retry DB query after import
@@ -84,6 +88,7 @@ export class DilutionImpactDirective implements IDirective {
             confidence: 0,
             reason: `No company metrics data for ${symbol}. On-demand import returned no data.`,
             signalClass: 'neutral',
+            unmeasured: true,
           };
         }
         return this.scoreMetrics(retryMetrics);
@@ -97,6 +102,7 @@ export class DilutionImpactDirective implements IDirective {
         confidence: 0,
         reason: `Failed to query/import dilution data: ${(err as Error).message}`,
         signalClass: 'neutral',
+        unmeasured: true,
       };
     }
   }

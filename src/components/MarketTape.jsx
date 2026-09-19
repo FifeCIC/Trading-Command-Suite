@@ -81,10 +81,30 @@ function escapeHtml(str) {
   ));
 }
 
+/** Plain text from a section body that may contain markup (for the live region). */
+function stripTags(html) {
+  return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/* ⚠️ THESE MUST USE TOKENS, NOT HEX (2026-09-18).
+ *
+ * The tape used to hardcode `#22c55e` / `#ef4444`, which broke two accessibility
+ * features silently — and silently is the problem, because the tape is on screen for
+ * every page and every session:
+ *
+ *   1. HIGH CONTRAST was bypassed. `:root[data-high-contrast='true']` overrides
+ *      `--color-loss` to `#fca5a5` and `--ink-soft` to `#cbd5e1`; a literal `#ef4444`
+ *      ignores all of it. The preference rendered as a working toggle that changed
+ *      nothing here.
+ *   2. `#ef4444` is the value `index.css` records as REPLACED for failing WCAG AA —
+ *      `--danger` / `--color-loss` were both boosted to `#f87171` (5.1:1 on black)
+ *      precisely because `#ef4444` does not clear 4.5:1. At `0.78rem` (~12.5px) this is
+ *      small text, so 1.4.3 applies and the old value was a real failure, not a nitpick.
+ */
 function providerColor(status) {
-  if (status === 'healthy' || status === 'connected') return 'var(--market-open, #22c55e)';
-  if (status === 'degraded' || status === 'slow') return 'var(--market-closing, #eab308)';
-  return 'var(--danger, #ef4444)';
+  if (status === 'healthy' || status === 'connected') return 'var(--color-profit, #22c55e)';
+  if (status === 'degraded' || status === 'slow') return 'var(--color-warning, #f59e0b)';
+  return 'var(--color-loss, #f87171)';
 }
 
 function timeUntil(dateStr) {
@@ -214,12 +234,20 @@ export default function MarketTape() {
    * `trades` is already closedAt-desc from the API, so the FIRST row matching each
    * predicate is the most recent one. It is re-sorted defensively here too, because
    * "latest" silently becoming "some" is what makes a tape untrustworthy.
+   *
+   * ⚠️ `exitPrice != null` IS REQUIRED (2026-09-18). A row can be `status='closed'` with
+   * NO exit price and `pnl = 0`: 103 of 155 closed rows measured, all written by a
+   * reconciler closing a row that had no broker counterpart (#885). Those are not trades,
+   * and `pnl = 0` renders as `+0.00` in PROFIT GREEN — so the tape was showing
+   * "↕ BUY VIX +0.00" for a position that was still OPEN at the broker (#883).
+   * The win/loss slices below are unaffected (they require pnl > 0 / < 0); this filter is
+   * what makes the plain "Trade" slice honest.
    */
   const closedTrades = (() => {
     const raw = tradesQuery.data?.trades;
     if (!Array.isArray(raw)) return [];
     return [...raw]
-      .filter((t) => t && t.pnl != null && t.closedAt)
+      .filter((t) => t && t.pnl != null && t.closedAt && t.exitPrice != null)
       .sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt));
   })();
   const lastWin = closedTrades.find((t) => Number(t.pnl) > 0) || null;
@@ -310,12 +338,12 @@ export default function MarketTape() {
     }
   }
 
-  // 7. Recent order — the newest CLOSED trade, whatever its result.
+  // 7. Recent order — the newest CLOSED trade with a real exit, whatever its result.
   if (userPrefs.tapeTrade && lastClose) {
     const sym = escapeHtml(lastClose.symbol || '');
     const dir = escapeHtml(String(lastClose.side || '').toUpperCase());
     const pnl = Number(lastClose.pnl) || 0;
-    const pnlColor = pnl >= 0 ? '#22c55e' : '#ef4444';
+    const pnlColor = pnl >= 0 ? 'var(--color-profit, #22c55e)' : 'var(--color-loss, #f87171)';
     sections.push({
       key: 'trade', label: 'Trade',
       htmlContent: `↕ ${dir} ${sym} <span style="color:${pnlColor}">${fmtMoney(pnl)}</span>`,
@@ -328,7 +356,7 @@ export default function MarketTape() {
     const sym = escapeHtml(lastWin.symbol || '');
     sections.push({
       key: 'profit', label: 'Profit',
-      htmlContent: `✅ ${sym} <span style="color:#22c55e">${fmtMoney(lastWin.pnl)}</span>`
+      htmlContent: `✅ ${sym} <span style="color:var(--color-profit)">${fmtMoney(lastWin.pnl)}</span>`
         + `<span style="color:var(--ink-soft)"> · ${escapeHtml(timeAgo(lastWin.closedAt))}</span>`,
       color: 'var(--ink-soft, #94a3b8)',
     });
@@ -341,7 +369,7 @@ export default function MarketTape() {
     const sym = escapeHtml(lastLoss.symbol || '');
     sections.push({
       key: 'loss', label: 'Loss',
-      htmlContent: `⚠ ${sym} <span style="color:#ef4444">${fmtMoney(lastLoss.pnl)}</span>`
+      htmlContent: `⚠ ${sym} <span style="color:var(--color-loss)">${fmtMoney(lastLoss.pnl)}</span>`
         + `<span style="color:var(--ink-soft)"> · ${escapeHtml(timeAgo(lastLoss.closedAt))}</span>`,
       color: 'var(--ink-soft, #94a3b8)',
     });
@@ -366,8 +394,8 @@ export default function MarketTape() {
       const max = Number(row.maxPossibleScore) || 0;
       const raw = Number(row.score);
       const pct = Number.isFinite(raw) && max > 0 ? Math.round((raw / max) * 100) : null;
-      const sigColor = sigRaw === 'BUY' ? 'var(--market-open, #22c55e)'
-        : sigRaw === 'SELL' ? 'var(--danger, #ef4444)'
+      const sigColor = sigRaw === 'BUY' ? 'var(--color-profit, #22c55e)'
+        : sigRaw === 'SELL' ? 'var(--color-loss, #f87171)'
           : 'var(--ink-soft, #94a3b8)';
       sections.push({
         key: 'score', label: 'Score',
@@ -441,8 +469,37 @@ export default function MarketTape() {
     ? oneCopy.repeat(COPIES)
     : '<span class="mkt-tape-section" style="color:var(--ink-soft)">All sections hidden — open Settings → Market Tape to choose what shows</span>';
 
+  /* ── Screen-reader live region — ONE copy, not eight ──
+   *
+   * ⚠️ WHAT WAS WRONG (fixed 2026-09-18). `aria-live="polite" aria-atomic="true"` sat on
+   * the `.market-tape` WRAPPER, and the seamless-loop fix (2026-09-11) had just put EIGHT
+   * identical copies of every section inside that wrapper. `aria-atomic="true"` means the
+   * whole region is re-announced whenever any part of it changes — and `dangerouslySetInnerHTML`
+   * rewrites the track's entire innerHTML on every render, while the news headline rotates
+   * every 30s on purpose. Net effect: a screen-reader user was read the complete tape,
+   * eight times over, roughly every 30 seconds.
+   *
+   * The two fixes were individually correct and combined badly: one made the strip wider,
+   * the other promised to narrate it. That is why the live region now lives here, on a
+   * single visually-hidden copy, and the track is left as plain content.
+   *
+   * ⚠️ The track is deliberately NOT `aria-hidden`. Hiding it would also remove its only
+   * link (the latest score's symbol) from screen-reader reach, and an `aria-hidden` ancestor
+   * containing a focusable element is its own WCAG 4.1.2 failure. Duplicated text that must
+   * be navigated into is a far smaller problem than a control that cannot be reached.
+   *
+   * Only genuine changes are announced: if the computed text is identical React does not
+   * touch the DOM, so no mutation fires.
+   */
+  const liveSummary = sections.length > 0
+    ? sections.map((s) => `${s.label}: ${s.content || stripTags(s.htmlContent || '')}`).join(' · ')
+    : 'All market tape sections hidden.';
+
   return (
-    <div className="market-tape" aria-label="Market status ticker" aria-live="polite" aria-atomic="true">
+    <div className="market-tape" aria-label="Market status ticker">
+      <p className="sr-only-alert" aria-live="polite" aria-atomic="true">
+        {liveSummary}
+      </p>
       <div
         className="mkt-tape-track"
         style={{

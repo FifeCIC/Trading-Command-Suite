@@ -90,6 +90,15 @@
   color: var(--ink-soft);
 }
 
+/* Duplicates must not read as a normal statistic. 0 is healthy; anything else is a defect. */
+.statAlert {
+  border-color: var(--danger);
+}
+
+.statAlert .statValue {
+  color: var(--danger);
+}
+
 /* ── Strategy cards ─────────────────────────────────────── */
 
 .list {
@@ -154,9 +163,10 @@
 
 .scope {
   margin-left: auto;
-  font-size: 0.78rem;
-  color: var(--ink-soft);
-  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 /* ── Treatment grid ─────────────────────────────────────── */

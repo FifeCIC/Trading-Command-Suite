@@ -295,14 +295,54 @@ export default function TradingStrategiesPage() {
             <table className="ts-table">
               <thead>
                 <tr>
-                  <th className="ts-sortable" onClick={() => handleSort('symbol')}>Symbol{sortArrow('symbol')}</th>
-                  <th className="ts-sortable" onClick={() => handleSort('name')}>Name{sortArrow('name')}</th>
+                  <th className="ts-sortable" onClick={() => handleSort('symbol')}>Watchlist / Symbol{sortArrow('symbol')}</th>
+                  <th className="ts-sortable" onClick={() => handleSort('protocolId')}>Protocol{sortArrow('protocolId')}</th>
+                  <th className="ts-sortable" onClick={() => handleSort('name')}>Bot{sortArrow('name')}</th>
                   <th className="ts-tf-header ts-sortable" onClick={() => handleSort('timeframe')}>
                     TF{sortArrow('timeframe')}
                     <span className="ts-tf-popover">Timeframe — the chart interval each strategy operates on (e.g. 5m = 5-minute, 1h = 1-hour, 1D = daily)</span>
                   </th>
-                  <th>Pos</th>
+                  {/*
+                    ⚠️ THE FOUR COLUMNS BELOW EXIST BECAUSE THEY DISCRIMINATE. Measured 2026-09-18
+                    across the 26 strategies: of 16 identity fields, exactly 9 take more than one
+                    value — and before this change FOUR of those nine were invisible.
+
+                    The consequence was concrete: **12 of 26 rows rendered identically**
+                    (`forex-session-index | Forex Session V1 | 5m | 1% / 1% | auto | ON`) and were
+                    distinguishable only by the bot's name. Two of the hidden fields were the ones
+                    that differ:
+
+                      sessionWindow  5 distinct  → ungated / london / asian
+                      baseSize       4 distinct  → 0.01 / 0.02 / 0.05 / 0.1  (NZDJPY is 10x)
+                      minComposite   4 distinct
+                      maxHoldHours   6 distinct
+
+                    The other 7 fields (cooldown, pyramid, maxPositions, maxDailyLoss,
+                    useRaritySizing, maxSize, brokerId) hold ONE value each across every strategy, so
+                    they get no column — a constant column is noise.
+
+                    The rule, if this needs revisiting: **show the fields that discriminate, omit the
+                    ones that are constant.** A row must be distinguishable from every other row by
+                    the columns alone.
+                  */}
+                  <th className="ts-sortable" onClick={() => handleSort('sessionWindow')}>
+                    Sess{sortArrow('sessionWindow')}
+                    <span className="ts-tf-popover">Session gate — which market session(s) this bot may act in. `ungated` means it may act at any hour. This is an identity field: an ungated bot and a London-gated bot are different strategies.</span>
+                  </th>
+                  <th className="ts-sortable" onClick={() => handleSort('minComposite')}>
+                    Min%{sortArrow('minComposite')}
+                    <span className="ts-tf-popover">Minimum composite score required before this bot will act (Gate 4). Below this the signal is skipped, not traded.</span>
+                  </th>
+                  <th className="ts-sortable" onClick={() => handleSort('baseSize')}>
+                    Size{sortArrow('baseSize')}
+                    <span className="ts-tf-popover">Base position size in lots. A differing size alone makes it a different strategy — NZDJPY is 0.1 against its siblings' 0.01.</span>
+                  </th>
                   <th>SL / TP</th>
+                  <th className="ts-sortable" onClick={() => handleSort('maxHoldHours')}>
+                    Hold{sortArrow('maxHoldHours')}
+                    <span className="ts-tf-popover">Position time-stop in hours (#773). `no limit` = none set, so the position is never closed on age. A real declared state, not missing data.</span>
+                  </th>
+                  <th>Pos</th>
                   <th className="ts-sortable" onClick={() => handleSort('mode')}>Mode{sortArrow('mode')}</th>
                   <th className="ts-sortable" onClick={() => handleSort('active')}>Active{sortArrow('active')}</th>
                 </tr>
@@ -314,12 +354,103 @@ export default function TradingStrategiesPage() {
                     className={`ts-row${selectedId === s.id ? ' ts-row--selected' : ''}`}
                     onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
                   >
-                    <td className="ts-name">{s.symbol}</td>
+                    {/*
+                      WATCHLIST / SYMBOL — the MARKET SCOPE of this strategy.
+
+                      One column, because a single symbol is a deliberate SPECIAL CASE of a
+                      watchlist rather than a different kind of thing. The owner's rule: "we apply
+                      single symbol treatment when we do not want to form a watchlist for one
+                      symbol".
+
+                      So: a genuine multi-symbol watchlist shows its NAME; a one-symbol treatment
+                      shows the SYMBOL, with the scope size stated so the two are never confused.
+                      Showing a 1-symbol watchlist's name would read as "this strategy covers a
+                      watchlist" when it in fact covers one instrument.
+                    */}
+                    <td className="ts-name">
+                      {(() => {
+                        /*
+                          ⚠️ THREE states, and they must never render alike:
+                            - `watchlists` is an ARRAY  -> the server resolved scope; judge it.
+                            - it is undefined/null      -> scope is UNKNOWN (old API build). Do NOT
+                                                           claim "single". An absent field and a
+                                                           resolved-to-nothing field are different
+                                                           facts, and collapsing them would invent a
+                                                           finding for every row.
+                        */
+                        if (!Array.isArray(s.watchlists)) {
+                          return <span className="ts-scope-single">{s.symbol}</span>;
+                        }
+                        // A real watchlist = more than one instrument. Anything else is a
+                        // single-symbol treatment and is shown as the symbol.
+                        const multi = s.watchlists.filter(w => (w.symbolCount ?? 0) > 1);
+                        if (multi.length > 0) {
+                          return (
+                            <span className="ts-scope-wl" title={`Watchlist covering ${multi.map(w => w.symbolCount).join('/')} symbols`}>
+                              {multi.map(w => w.name).join(' + ')}
+                              <span className="ts-scope-count">{multi.reduce((n, w) => n + (w.symbolCount ?? 0), 0)}</span>
+                            </span>
+                          );
+                        }
+                        // Resolved, and no multi-symbol watchlist → a single-symbol treatment.
+                        return (
+                          <span className="ts-scope-single" title="Single-symbol treatment — no watchlist formed for one symbol">
+                            {s.symbol}
+                            <span className="ts-scope-tag">single</span>
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    {/*
+                      PROTOCOL — the SIGNAL THESIS, and the third leg of the strategy definition
+                      (protocol + market + bot). Without it two rows can look identical apart from
+                      the bot name, because nothing on this table said which directives produced
+                      the signals. Falls back to the raw slug when the registry has no metadata.
+                    */}
+                    <td className="ts-proto" title={protocolMap[s.protocolId]?.name || s.protocolId || ''}>
+                      {protocolMap[s.protocolId]?.name || s.protocolId || '—'}
+                    </td>
                     <td className="ts-name-col">{s.name}</td>
                     <td className="ts-tf-cell">
                       {s.timeframe}
                       <span className="ts-tf-popover">Timeframe: {s.timeframe} — determines how frequently the strategy evaluates signals</span>
                     </td>
+                    {/*
+                      SESSION GATE — an IDENTITY field, not a setting.
+
+                      ⚠️ Reads `sessionTags` (server-normalised), NOT the raw `sessionWindow`.
+                      Measured: the raw column holds two forms — a bare `london` on some bots and
+                      `["london"]` on others — for the SAME gate. Rendering the raw value would show
+                      two identical bots as different, which is the inverse of what this table is
+                      for. Falls back to the raw value only if the server did not normalise it.
+
+                      `ungated` = NULL = the bot may act at ANY hour. That is a declared state, so it
+                      is named rather than left blank — a blank would be indistinguishable from
+                      missing data.
+                    */}
+                    <td className="ts-sess">
+                      {(() => {
+                        const tags = Array.isArray(s.sessionTags)
+                          ? s.sessionTags
+                          : (s.sessionWindow ? [String(s.sessionWindow).replace(/[\[\]"]/g, '')] : []);
+                        if (tags.length === 0) {
+                          return <span className="ts-sess-ungated" title="Ungated — may act in any session">ungated</span>;
+                        }
+                        return tags.map((t) => (
+                          <span className="ts-sess-tag" key={t}>{t}</span>
+                        ));
+                      })()}
+                    </td>
+                    <td>{s.minComposite ?? '—'}</td>
+                    <td>{s.baseSize ?? '—'}</td>
+                    <td>{s.slPct ?? '—'}% / {s.tpPct ?? '—'}%</td>
+                    {/* NULL means NO TIME-STOP exists (#773) — a real state, named rather than dashed. */}
+                    <td>{s.maxHoldHours == null ? <span className="ts-null">no limit</span> : `${s.maxHoldHours}h`}</td>
+                    {/* ⚠️ ORDER MATTERS: this Pos cell must stay BETWEEN Hold and Mode to match the
+                        header order. It was briefly dropped when the columns above were inserted,
+                        leaving 11 body cells against 12 headers — every cell after it shifted one
+                        column left, so Mode rendered under Pos and Active under Mode. A table with
+                        mismatched cell counts fails silently: the browser just reflows. */}
                     <td>
                       {(() => {
                         const sym = (s.symbol || '').toUpperCase();
@@ -331,7 +462,6 @@ export default function TradingStrategiesPage() {
                         );
                       })()}
                     </td>
-                    <td>{s.slPct ?? '—'}% / {s.tpPct ?? '—'}%</td>
                     <td>{s.mode}</td>
                     <td onClick={e => e.stopPropagation()}>
                       <button

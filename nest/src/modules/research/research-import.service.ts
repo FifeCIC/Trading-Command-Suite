@@ -15,6 +15,15 @@ export class ResearchImportService implements OnModuleInit {
   private finnhubUnavailableLogged = false;
   private earningsImportRunning = false;
 
+  // ── Negative import cache (#887) — rationale in the block below the class ──
+  private readonly negativeImportCache = new Map<string, { until: number; note: string }>();
+  private static readonly IMPORT_EMPTY_TTL_MS = Number(
+    process.env.RESEARCH_IMPORT_EMPTY_TTL_MS ?? 24 * 60 * 60 * 1000,
+  );
+  private static readonly IMPORT_ERROR_TTL_MS = Number(
+    process.env.RESEARCH_IMPORT_ERROR_TTL_MS ?? 5 * 60 * 1000,
+  );
+
   /** Returns the Finnhub adapter, or null — logs once if unavailable. */
   private getFinnhub(): any {
     const adapter = this.providers.getAdapter('finnhub');
@@ -23,6 +32,79 @@ export class ResearchImportService implements OnModuleInit {
       this.finnhubUnavailableLogged = true;
     }
     return adapter;
+  }
+
+  /**
+   * ── Negative import cache (#887) ─────────────────────────────────────────
+   *
+   * BEFORE: an on-demand import that found nothing was retried on EVERY scoring
+   * run, forever. For a symbol whose data source cannot contain the requested
+   * fact — insider filings for an FX pair, say — that is an unbounded loop, and
+   * each attempt spends a call from the SHARED Finnhub 60/min budget
+   * (`finnhub.adapter.ts:70` counts every endpoint on ONE counter). A 429 on
+   * that path then blocks the caller for 60s (`:102`), on the scoring tick's
+   * own call stack.
+   *
+   * AFTER: a definitive answer is remembered, so the provider is asked at most
+   * once per TTL instead of once per tick.
+   *
+   * TWO TTLs, because "empty" and "failed" are different claims:
+   *   • EMPTY — the provider answered and there is genuinely nothing. A filing
+   *             can appear later, so this EXPIRES rather than being permanent.
+   *   • ERROR — the provider did NOT answer (network, 429, 5xx). Short cooldown
+   *             only: a 24h TTL on a transient failure would starve a healthy
+   *             symbol for a day because of one blip.
+   *
+   * ⚠️ This does NOT suppress scoring. The directive still runs, still queries
+   * the DB, and still reports its no-data result — only the repeated PROVIDER
+   * call stops. Suppressing the reading would violate settled decision #6
+   * ("absence of evidence must never become a number or a veto").
+   *
+   * ⚠️ This is NOT the root-cause fix. `DIRECTIVE_SUITABILITY` already declares
+   * `'insider-activity': instrumentTypes: ['stocks']`, which would stop the FX
+   * attempts at the source — but its only consumer is disabled deliberately
+   * (`directives.service.ts` ~L316, Q301 / #610: "Directives should score based
+   * on data alone"). Re-enabling that gate is a settled-decision change, not
+   * this fix. Reported separately.
+   *
+   * @see #887
+   */
+  private negativeKey(kind: string, symbol: string): string {
+    return `${kind}:${symbol.toUpperCase()}`;
+  }
+
+  /** True when this symbol's last attempt is still negatively cached. */
+  private isNegativelyCached(kind: string, symbol: string): boolean {
+    const key = this.negativeKey(kind, symbol);
+    const entry = this.negativeImportCache.get(key);
+    if (!entry) return false;
+    if (Date.now() >= entry.until) {
+      this.negativeImportCache.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Remember an empty/failed import so the next scoring run does not repeat it.
+   * Logs ONCE per symbol per TTL window — the per-tick line is the log flood
+   * this issue was originally reported for (Architecture Framework, 2026-07-14).
+   */
+  private recordNegativeImport(kind: string, symbol: string, note: string, ttlMs: number): void {
+    const key = this.negativeKey(kind, symbol);
+    const alreadyCached = this.negativeImportCache.has(key);
+    this.negativeImportCache.set(key, { until: Date.now() + ttlMs, note });
+    if (!alreadyCached) {
+      const hours = Math.round((ttlMs / 3_600_000) * 10) / 10;
+      this.logger.log(
+        `On-demand ${kind} import for ${symbol.toUpperCase()}: nothing to import (${note}) — suppressed for ${hours}h (#887)`,
+      );
+    }
+  }
+
+  /** Drop a negative entry — an import finally returned data. */
+  private clearNegativeImport(kind: string, symbol: string): void {
+    this.negativeImportCache.delete(this.negativeKey(kind, symbol));
   }
 
   constructor(
@@ -604,12 +686,29 @@ export class ResearchImportService implements OnModuleInit {
    * Returns the count of new records inserted.
    */
   async importInsiderTransactionsForSymbol(symbol: string): Promise<number> {
+    if (this.isNegativelyCached('insider', symbol)) return 0;
     try {
       const finnhub = this.getFinnhub();
       if (!finnhub) return 0;
 
       const transactions = await (finnhub as any).getInsiderTransactions(symbol);
-      if (!transactions || !Array.isArray(transactions)) return 0;
+      if (!transactions || !Array.isArray(transactions)) {
+        this.recordNegativeImport(
+          'insider', symbol, 'provider returned no array',
+          ResearchImportService.IMPORT_EMPTY_TTL_MS,
+        );
+        return 0;
+      }
+      if (transactions.length === 0) {
+        // ⚠️ The structural case (#887): the provider ANSWERED and has nothing.
+        // For an FX pair there are no SEC insider filings to find, so without
+        // this cache the caller's retry repeats on every tick, forever.
+        this.recordNegativeImport(
+          'insider', symbol, 'provider returned 0 records',
+          ResearchImportService.IMPORT_EMPTY_TTL_MS,
+        );
+        return 0;
+      }
 
       let inserted = 0;
       for (const t of transactions) {
@@ -639,10 +738,22 @@ export class ResearchImportService implements OnModuleInit {
       }
 
       if (inserted > 0) {
+        this.clearNegativeImport('insider', symbol);
         this.logger.log(`On-demand insider import for ${symbol}: ${inserted} new records`);
+      } else {
+        // Rows came back and all were already stored → the DB now HAS this
+        // symbol's data, so this is a SUCCESS, not an empty result. Distinct
+        // from `transactions.length === 0` above; clearing keeps the caller's
+        // follow-up DB read working.
+        this.clearNegativeImport('insider', symbol);
       }
       return inserted;
     } catch (err) {
+      // Transient — short cooldown only, so one blip cannot starve a symbol.
+      this.recordNegativeImport(
+        'insider', symbol, `error: ${(err as Error).message}`,
+        ResearchImportService.IMPORT_ERROR_TTL_MS,
+      );
       this.logger.warn(`On-demand insider import failed for ${symbol}: ${(err as Error).message}`);
       return 0;
     }
@@ -709,12 +820,21 @@ export class ResearchImportService implements OnModuleInit {
    * Returns true if data was successfully fetched and stored.
    */
   async importCompanyMetricsForSymbol(symbol: string): Promise<boolean> {
+    if (this.isNegativelyCached('metrics', symbol)) return false;
     try {
       const finnhub = this.getFinnhub();
       if (!finnhub) return false;
 
       const metrics = await (finnhub as any).getCompanyMetrics(symbol);
-      if (!metrics) return false;
+      if (!metrics) {
+        // Same structural class as #887 — the dilution-impact directive calls
+        // this on every scoring run for every symbol with no CompanyMetric row.
+        this.recordNegativeImport(
+          'metrics', symbol, 'provider returned no metrics',
+          ResearchImportService.IMPORT_EMPTY_TTL_MS,
+        );
+        return false;
+      }
 
       await this.prisma.companyMetric.upsert({
         where: { symbol: symbol.toUpperCase() },
@@ -735,9 +855,14 @@ export class ResearchImportService implements OnModuleInit {
         },
       });
 
+      this.clearNegativeImport('metrics', symbol);
       this.logger.log(`On-demand company metrics import for ${symbol}: stored`);
       return true;
     } catch (err) {
+      this.recordNegativeImport(
+        'metrics', symbol, `error: ${(err as Error).message}`,
+        ResearchImportService.IMPORT_ERROR_TTL_MS,
+      );
       this.logger.warn(`On-demand company metrics import failed for ${symbol}: ${(err as Error).message}`);
       return false;
     }

@@ -39,6 +39,10 @@ import {
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { MarketBar } from '../directives/interfaces/directive.interface';
+// ⚠️ The CANONICAL session parser. Used to NORMALISE `sessionWindow` for display, because the
+// column is stored in two forms (`london` and `["london"]`) meaning the same gate. Do not
+// hand-roll a second parser — it would drift from the one the engine enforces with.
+import { parseSessionWindow } from './session-window';
 // ⚠️ #849 (2026-09-17): the three risk caps below were `process.env.MT5_MAX_*`. They are now declared
 // settings read through this resolver — see settings-registry.ts for why, and for the carried-over defaults.
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
@@ -66,6 +70,18 @@ export interface StrategySummary {
    * in ('asian' | 'london' | 'us'). null/empty = ungated. See session-window.ts.
    */
   sessionWindow?: string | null;
+  /**
+   * The session gate NORMALISED to canonical tags, for DISPLAY.
+   *
+   * ⚠️ `sessionWindow` is stored in two forms — measured 2026-09-18: some bots hold a bare
+   * `london`, others hold `["london"]`. They mean the SAME gate. Rendering the raw column would
+   * therefore show two rows as different when they are identical, which is the inverse of the bug
+   * this table exists to prevent. Normalised here with the CANONICAL `parseSessionWindow()`, so the
+   * display cannot drift from what the engine actually enforces.
+   *
+   * Empty array = ungated (a real declared state: the bot may act any time), NOT missing data.
+   */
+  sessionTags?: string[];
   maxPositions?: number;
   /**
    * Position time-stop limit in HOURS (#773). null = no limit.
@@ -78,6 +94,22 @@ export interface StrategySummary {
   maxHoldHours?: number | null;
   /** #344 pyramid averaging — moved here from ScoringStrategy (2026-08-27). */
   maxPyramidTiers?: number;
+  /**
+   * THE MARKET SCOPE of this strategy — the watchlist(s) its protocol is bound to.
+   *
+   * WHY THIS EXISTS: the owner defines a strategy as protocol + market + bot treatment, and the
+   * Trading Strategies table needs to show the market as "Watchlist / Symbol" — a genuine
+   * watchlist when one is used, or a single symbol when a one-symbol treatment is deliberate
+   * (*"we apply single symbol treatment when we do not want to form a watchlist for one symbol"*).
+   *
+   * ⚠️ NOT derivable in the browser. `strategy_protocol.protocolId` holds a protocol SLUG while
+   * `watchlist.protocolId` holds the protocol UUID, and no endpoint exposes both — the `protocol`
+   * table is the only bridge. Hence the join lives here.
+   *
+   * Empty array = no watchlist bound to this strategy's protocol. That is a FINDING (a single-symbol
+   * treatment), not missing data, so it is returned as `[]` rather than omitted.
+   */
+  watchlists?: Array<{ name: string; symbolCount: number }>;
   lastEvaluatedAt: string | null;
   lastSignal: string | null;
   lastComposite: number | null;
@@ -233,8 +265,70 @@ export class TradingStrategyService {
       },
     });
 
+    // ── Market scope: resolve each strategy's protocol to its watchlist ──────────────────────
+    // ⚠️ This crosses a FORMAT boundary. `strategy_protocol.protocolId` (and the legacy
+    // `trading_strategy.protocolId`) hold protocol SLUGS; `watchlist.protocolId` holds the protocol
+    // UUID. They cannot be compared directly, and the `protocol` table is the only place that
+    // carries both — so it is the bridge. This is the same slug-or-UUID hazard as #801.
+    //
+    // ⚠️ ENRICHMENT, NOT A REQUIREMENT. If this lookup fails the table must still render, so the
+    // whole block is best-effort: a strategy simply gets no `watchlists` and the UI falls back to
+    // showing its symbol. A market-scope lookup must never be able to blank the strategies list.
+    const watchlistsBySlug = new Map<string, Array<{ name: string; symbolCount: number }>>();
+    try {
+      const slugs = [
+        ...new Set(
+          strategies
+            .flatMap((s) => [
+              ...(((s as any).protocols || []) as Array<{ protocolId: string }>).map((p) => p.protocolId),
+              s.protocolId,
+            ])
+            .filter((v): v is string => Boolean(v)),
+        ),
+      ];
+
+      if (slugs.length) {
+        const protoRows = await this.prisma.protocol.findMany({
+          where: { slug: { in: slugs } },
+          select: { id: true, slug: true },
+        });
+        const uuidToSlug = new Map(protoRows.map((p) => [p.id, p.slug]));
+
+        if (protoRows.length) {
+          const wls = await this.prisma.watchlist.findMany({
+            where: { protocolId: { in: protoRows.map((p) => p.id) } },
+            select: { name: true, symbols: true, protocolId: true },
+          });
+          for (const w of wls) {
+            const slug = w.protocolId ? uuidToSlug.get(w.protocolId) : undefined;
+            if (!slug) continue;
+            const arr = (watchlistsBySlug.get(slug) ?? []);
+            arr.push({
+              name: w.name,
+              symbolCount: Array.isArray(w.symbols) ? w.symbols.length : 0,
+            });
+            watchlistsBySlug.set(slug, arr);
+          }
+        }
+      }
+    } catch (e) {
+      this.logger.warn(
+        `Market scope (watchlist) lookup failed; continuing without it: ${(e as Error)?.message}`,
+      );
+    }
+
     return strategies.map((s) => {
       const lastEval = s.evaluations?.[0];
+      // Prefer the subscription protocols; fall back to the legacy single link.
+      const slugsForThis = [
+        ...((((s as any).protocols || []) as Array<{ protocolId: string }>).map((p) => p.protocolId)),
+        s.protocolId,
+      ].filter((v): v is string => Boolean(v));
+      const watchlists = [
+        ...new Map(
+          slugsForThis.flatMap((slug) => watchlistsBySlug.get(slug) ?? []).map((w) => [w.name, w]),
+        ).values(),
+      ];
       return {
         id: s.id,
         name: s.name,
@@ -246,6 +340,7 @@ export class TradingStrategyService {
           protocolId: p.protocolId,
           role: p.role,
         })),
+        watchlists,
         symbol: s.symbol,
         timeframe: s.timeframe,
         mode: s.mode,
@@ -258,6 +353,9 @@ export class TradingStrategyService {
         cooldownMinutes: s.cooldownMinutes,
         // Session gate window — consumed by processSignalQueues (Gate 4.5).
         sessionWindow: (s as any).sessionWindow ?? null,
+        // Same gate, normalised for display (see the field docs) — `london` and `["london"]` must
+        // render identically or the table invents a difference that does not exist.
+        sessionTags: parseSessionWindow((s as any).sessionWindow),
         maxPositions: s.maxPositions,
         // Position time-stop (#773) — consumed by PositionTimeStopService. Without this the
         // limit is unreadable and the time-stop silently no-ops.

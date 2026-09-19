@@ -23,18 +23,29 @@
  * on 1h). If one treatment lost money and the rest won, the blended average hid it and there was no
  * way to tell which treatment worked.
  *
- * ⚠️ SYMBOLS ARE SCOPE, NOT IDENTITY. One strategy here can serve six FX pairs. If this page ever
- * starts showing one card per symbol it has regressed to row-counting, which is the bug it exists to
- * remove. The FX family is the test: it must show **6** cards, not 13 and not 1.
+ * ⚠️ A STRATEGY IS A BOT CONFIGURATION — protocol + role + market + broker + execution policy.
+ * Any difference at all makes a different strategy: *"The smallest change results in a different
+ * strategy because we cannot dismiss the power any single setting/behaviour could have on the stock
+ * market."* So there is ONE strategy per bot here, and a different market is a different strategy.
  *
- * NEXT: #875 pins a name onto a `strategyKey` and records the part IDs, so a named strategy
- * survives an edit to one of its parts. Until then every strategy here is unnamed and derived
- * fresh on each read — which is why editing a bot's config REPLACES a key rather than mutating one.
+ * ⚠️ AN EARLIER VERSION OF THIS PAGE SAID "symbols are scope, not identity" AND SHOWED 18. That was
+ * wrong. The corrected measured count is **26 strategies from 26 bots** (25 reachable), with the
+ * `forex-session-v1` family resolving to **14**, one per market. If this page ever shows a strategy
+ * spanning multiple markets, the identity has regressed.
+ *
+ * ⚠️ DUPLICATES ARE A DEFECT, NOT A MERGE. Two byte-identical bots are *not* one strategy — the
+ * owner's rule is that such bots "should never" exist and "should be avoided". They are surfaced
+ * loudly here rather than folded into one tidy row, because folding would hide the fault.
+ *
+ * NEXT: #875 pins a name onto a `strategyKey` and records the part IDs, so a named strategy survives
+ * an edit to one of its parts. Until then every strategy here is unnamed and derived fresh on each
+ * read — which is why editing a bot's config REPLACES a key rather than mutating one.
  */
 
 import { useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { noticeFromError } from '../core/notices/from-error.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import { useScrollReveal } from '../hooks/useScrollReveal';
@@ -86,28 +97,31 @@ function SymbolChips({ symbols }) {
 function StrategyCard({ strategy }) {
   const t = strategy.treatment ?? {};
   const unreachable = strategy.unreachableBotNames ?? [];
+  // A group with more than one bot name is a DUPLICATION FAULT, never a merged strategy.
+  const duplicates = strategy.botNames.length > 1 ? strategy.botNames : [];
 
   return (
     <li
       className={[
         styles.card,
         strategy.active ? styles.cardActive : '',
-        unreachable.length ? styles.cardUnreachable : '',
+        unreachable.length || duplicates.length ? styles.cardUnreachable : '',
       ].filter(Boolean).join(' ')}
     >
       <div className={styles.cardHead}>
-        {/* The stable identity — "the ID along with the IDs of each part" (#876/#875). */}
-        <code className={styles.key} title="SHA-256 over protocol + role + treatment. Scope is excluded.">
+        {/* The stable identity — the "ID along with the IDs of each part" (#876/#875). */}
+        <code className={styles.key} title="SHA-256 over protocol + role + market + broker + treatment.">
           {strategy.strategyKey}
         </code>
         <span className={styles.protocol}>{strategy.protocolIds.join(' + ')}</span>
         {strategy.protocolRoles.map((r) => (
           <span className={styles.role} key={r}>{r}</span>
         ))}
+        {/* The market — part of the configuration, so it belongs in the header, not a footnote. */}
         <span className={styles.scope}>
-          {strategy.symbolCount === 1 ? '1 symbol' : `${strategy.symbolCount} symbols`}
-          {' · '}
-          {strategy.botCount === 1 ? '1 bot' : `${strategy.botCount} bots`}
+          {strategy.symbols.map((s) => (
+            <span className={styles.symbol} key={s}>{s}</span>
+          ))}
         </span>
       </div>
 
@@ -129,6 +143,14 @@ function StrategyCard({ strategy }) {
       <div className={styles.bots}>
         {strategy.botNames.join(' · ')}
       </div>
+
+      {duplicates.length > 0 && (
+        <span className={styles.warn}>
+          <strong>⚠️ Duplicate bots.</strong>{' '}
+          {duplicates.length} bots are identical on protocol, role, market, broker and treatment:{' '}
+          {duplicates.join(' == ')}. These should not both exist — one should be removed. (#876)
+        </span>
+      )}
 
       {unreachable.length > 0 && (
         <span className={styles.warn}>
@@ -170,14 +192,19 @@ export default function DerivedStrategiesPage() {
 
   // An error and an empty list are DIFFERENT states and must never render the same. "No strategies"
   // is information; "the request failed" is the absence of information.
+  //
+  // ⚠️ TCS-SYS-002 rather than a raw `error.message`. The notices gate (scripts/validate-notices.cjs)
+  // fails the build on an undeclared raw error render, because an ad-hoc string has no stable
+  // identity — wording may change, a code must not.
   if (isError) {
+    const notice = noticeFromError(error, 'TCS-SYS-002', { operation: 'load derived strategies' });
     return (
       <div className={styles.page} ref={revealRef}>
         <div className={styles.error}>
-          Could not load derived strategies.
+          <strong>{notice.title}</strong> {notice.message}
           <span className={styles.errorHint}>
-            {error?.message ?? 'The request failed.'} — the derivation ran on the server, so nothing
-            has been changed or deleted. Retry, or check that the API is reachable.
+            {notice.action ? `${notice.action} ` : ''}The derivation runs on the server, so nothing has
+            been changed or deleted.
           </span>
         </div>
       </div>
@@ -189,9 +216,11 @@ export default function DerivedStrategiesPage() {
       <div className={styles.header}>
         <h1 className={styles.title}>Strategies</h1>
         <p className={styles.definition}>
-          A strategy is a distinct <code>(protocol × treatment)</code> — a different way of treating
-          a symbol. Symbols and watchlists are <strong>scope</strong>, not identity: one strategy here
-          can serve many pairs. These are derived live from the META.Stack pipeline, not stored.
+          A strategy is a bot's whole configuration — <code>protocol</code> + <code>role</code> +{' '}
+          <code>market</code> + <code>broker</code> + execution policy. <strong>Any difference is a
+          different strategy</strong>, because no single setting can be dismissed. There is therefore
+          one strategy per bot, and a different market is a different strategy. Derived live from the
+          META.Stack pipeline, not stored.
         </p>
       </div>
 
@@ -204,10 +233,15 @@ export default function DerivedStrategiesPage() {
           <span className={styles.statValue}>{data?.totalBots ?? 0}</span>
           <span className={styles.statLabel}>bots</span>
         </div>
-        <div className={`${styles.stat} ${styles.statMuted}`}>
-          <span className={styles.statValue}>{data?.totalPairs ?? 0}</span>
-          <span className={styles.statLabel} title="The naive (protocol, bot) pair count — the number that looks like the answer but is not.">
-            pairs
+        <div
+          className={`${styles.stat} ${(data?.duplicateGroups ?? 0) > 0 ? styles.statAlert : ''}`}
+        >
+          <span className={styles.statValue}>{data?.duplicateGroups ?? 0}</span>
+          <span
+            className={styles.statLabel}
+            title="Bots identical on protocol, role, market, broker and treatment. The owner's rule: these should never exist."
+          >
+            duplicates
           </span>
         </div>
       </div>

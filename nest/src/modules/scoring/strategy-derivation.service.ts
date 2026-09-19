@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { createHash } from 'crypto';
+// ⚠️ The CANONICAL session parser — do NOT hand-roll one here. `sessionWindow` is stored in TWO
+// forms (measured 2026-09-18: 9 bots bare `london`, 3 bots `["london"]`), and this function
+// normalises both AND resolves aliases (`sydney` -> `asian`, `zurich` -> `london`). Without it,
+// two bots that behave identically would hash differently and be counted as two strategies.
+import { parseSessionWindow } from '../trading/session-window';
 
 /**
  * StrategyDerivationService — renders STRATEGIES from the unique META.Stack combinations.
@@ -360,6 +365,13 @@ export class StrategyDerivationService {
    */
   private canonicalise(t: StrategyTreatment): Record<string, string> {
     const num = (v: number | null | undefined): string => (v === null || v === undefined ? 'null' : Number(v).toFixed(6));
+    // ⚠️ Hazard 3 — `sessionWindow` has TWO storage forms. Measured 2026-09-18: 9 bots store a bare
+    // `london`, 3 store `["london"]`. The schema declares both valid and the engine parses them
+    // identically, so they MUST hash identically — otherwise two bots that behave the same are
+    // reported as two different strategies. `parseSessionWindow` is the CANONICAL parser: it folds
+    // both forms AND resolves aliases (`sydney` -> `asian`, `zurich` -> `london`). Do not hand-roll
+    // this — a second implementation would drift from the one the engine actually uses.
+    const tags = parseSessionWindow(t.sessionWindow).slice().sort();
     const out: Record<string, string> = {
       baseSize: num(t.baseSize),
       cooldownMinutes: num(t.cooldownMinutes),
@@ -370,7 +382,8 @@ export class StrategyDerivationService {
       maxSize: num(t.maxSize),
       minComposite: num(t.minComposite),
       mode: String(t.mode),
-      sessionWindow: t.sessionWindow === null || t.sessionWindow === '' ? 'null' : String(t.sessionWindow),
+      // `ungated` is a real declared state (NULL = may act any time), distinct from any tag list.
+      sessionWindow: tags.length ? tags.join(',') : 'ungated',
       slPct: num(t.slPct),
       timeframe: String(t.timeframe),
       tpPct: num(t.tpPct),

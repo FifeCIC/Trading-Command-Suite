@@ -94,18 +94,49 @@
   .mkt-tape-label {
     font-size: 0.62rem;
   }
-  @keyframes mkt-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
+  /* ⚠️ A `@keyframes mkt-scroll` override lived here, pinning the mobile offset back to
+     `translateX(-50%)` — the EXACT value the top of this file explains was wrong and was
+     removed. It was left behind when the fix moved from 2 copies to 8.
+
+     It no longer breaks the loop, but only by luck: -50% of an 8-copy track equals 4
+     copies, and any whole-copy offset is seamless because the copies are identical. It
+     does mean the strip travels FOUR COPIES in the same duration the desktop rule spends
+     on ONE, so the tape scrolls 4x faster on a phone than `tapeScrollSecPerCopy` says —
+     a user-set number silently meaning something different on mobile.
+
+     It would also break outright at any odd copy count (-2.5 copies is not a loop point).
+     Removed: the single variable-driven keyframe above is correct at every width, so the
+     override had nothing left to do. */
 }
 
-/* ── Preferences Gear ── */
+/* ── Preferences Gear ──
+ *
+ * ⚠️ 44x44 MINIMUM (fixed 2026-09-18). The gear was `padding: 2px 8px` at `0.85rem`,
+ * which renders about 20x30px — under the 44x44 the accessibility policy requires
+ * (WCAG 2.5.5) and under 2.5.8's 24x24 too. `min-width`/`min-height` are set rather
+ * than larger padding so the glyph stays centred at its current visual size while the
+ * HIT AREA grows around it; the button simply becomes a bigger target.
+ *
+ * ⚠️ OCCLUSION — CONSIDERED AND DELIBERATELY NOT "FIXED". The tape scrolls underneath
+ * this button, so the last few pixels of anything reaching the right edge sit behind it.
+ * The obvious fix — reserve space with padding on `.mkt-tape-track` — would BREAK THE
+ * LOOP: the animation offset is `-100% / copies`, so any width added to the track makes
+ * that offset `oneCopy + padding` instead of a whole copy, and the strip visibly jumps
+ * every cycle. That is precisely the defect the top of this file documents.
+ *
+ * It is also not worth the risk: the strip wraps continuously, so the same content
+ * reappears from the left within one cycle. Occlusion is transient, not information loss.
+ */
 .mkt-tape-gear {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--panel, #1a1d2e);
   border: 1px solid var(--line, #334155);
   border-radius: 6px;

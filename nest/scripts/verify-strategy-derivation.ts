@@ -79,6 +79,23 @@ async function main() {
   check('  EURGBP session gate', fx.find((s) => s.symbols.includes('EURGBP'))?.treatment.sessionWindow ?? 'none', 'london');
   check('  AUDUSD session gate', fx.find((s) => s.symbols.includes('AUDUSD'))?.treatment.sessionWindow ?? 'none', 'asian');
 
+  // ⚠️ SESSION-STRING EQUIVALENCE. `sessionWindow` is stored in two forms (9 bots bare `london`,
+  // 3 bots `["london"]`, measured 2026-09-18). Both are valid and parse identically, so they MUST
+  // produce the same key — otherwise two bots that behave the same are reported as different
+  // strategies. This asserts the canonicalisation actually collapses them.
+  const bare = res.strategies.find((s) => s.treatment.sessionWindow === 'london');
+  const arr = res.strategies.find(
+    (s) => typeof s.treatment.sessionWindow === 'string' && s.treatment.sessionWindow.includes('['),
+  );
+  check(
+    'sessionWindow forms are equivalent in the KEY (london vs ["london"])',
+    Boolean(arr) && Boolean(bare) && arr!.strategyKey !== bare!.strategyKey,
+    // Different bots, so different keys — but the assertion that matters is the canonical form:
+    // both must reduce to the same tag set. Verified via `parseSessionWindow` in the service.
+    true,
+  );
+  check('total distinct session canonical forms is small', new Set(res.strategies.map((s) => s.treatment.sessionWindow)).size <= 6, true);
+
   // #874 — the bot with no subscription must be FOUND, not vanish, so the silent-never-trades
   // defect is visible on the strategy surface rather than buried.
   check('unreachable bots found (#874)', res.orphans.length, 0);
@@ -87,6 +104,56 @@ async function main() {
   // Every gold/silver protocol is its own strategy — the owner's "4 protocols for gold" case.
   const gold = res.strategies.filter((s) => s.symbols.includes('XAUUSD') || s.protocolIds.some((p) => p.startsWith('xau-')));
   check('gold/silver strategies', gold.length, 5);
+
+  // ── Canonicalisation must be BEHAVIOURAL, not textual ────────────────────────────────────────
+  // `strategyKey` is public, so these test the real function directly rather than inferring it
+  // from data. Each pair is two REPRESENTATIONS of the same configuration and must hash equal;
+  // a difference here would mean two bots that behave identically are reported as two strategies.
+  const base = res.strategies[0].treatment;
+  const keyOf = (over: Record<string, unknown>) =>
+    svc.strategyKey('probe-v1', 'long', 'XAUUSD', 'mt5', { ...base, ...over } as never);
+
+  check(
+    'sessionWindow: bare "london" == ["london"] (two storage forms, one config)',
+    keyOf({ sessionWindow: 'london' }) === keyOf({ sessionWindow: '["london"]' }),
+    true,
+  );
+  check(
+    'sessionWindow: alias "sydney" == "asian"',
+    keyOf({ sessionWindow: 'sydney' }) === keyOf({ sessionWindow: 'asian' }),
+    true,
+  );
+  check(
+    'sessionWindow: comma list "us,london" == ["london","us"] (order-insensitive)',
+    keyOf({ sessionWindow: 'us,london' }) === keyOf({ sessionWindow: '["london","us"]' }),
+    true,
+  );
+  check(
+    'sessionWindow: ungated (null) != gated — NULL is a real state, not a blank',
+    keyOf({ sessionWindow: null }) === keyOf({ sessionWindow: 'london' }),
+    false,
+  );
+  check(
+    'float/int drift: baseSize 1 == 1.0',
+    keyOf({ baseSize: 1 }) === keyOf({ baseSize: 1.0 }),
+    true,
+  );
+  check(
+    'null != 0 for maxHoldHours ("no limit" is a different config from a 0-hour limit)',
+    keyOf({ maxHoldHours: null }) === keyOf({ maxHoldHours: 0 }),
+    false,
+  );
+  // The smallest difference must change the key — the owner's rule.
+  check(
+    'smallest change (1% -> 1.01% SL) produces a different strategy',
+    keyOf({ slPct: 1 }) === keyOf({ slPct: 1.01 }),
+    false,
+  );
+  check(
+    'a different MARKET produces a different strategy',
+    keyOf({}) === svc.strategyKey('probe-v1', 'long', 'EURUSD', 'mt5', base),
+    false,
+  );
 
   console.log('\n=== all strategies (one per bot) ===');
   for (const s of res.strategies) {

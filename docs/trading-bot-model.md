@@ -81,66 +81,65 @@ config:      { "weights": {}, "entryThreshold": 60, "watchThreshold": 40, "defen
 
 > *"A strategy is about different treatment of a symbol."* — the project owner
 
-**The rule, as given:**
+**The rule, as given (corrected 2026-09-18 — this supersedes the earlier version):**
 
-- **Symbols and watchlists are SCOPE, not a multiplier.** If the same protocol and the same bot
-  serve many FX pairs, that is **ONE** strategy even when the pairs sit in different watchlists.
-- **A distinct protocol is a distinct strategy** — the directives differ. Four gold protocols are
-  four strategies even if they share bots.
-- **A distinct bot-treatment is a distinct strategy.** Two bots applying one protocol's signals
-  differently are two strategies.
-- A watchlist used by two protocols is therefore two strategies.
+> *"Two different bots results in two strategies."*
+> *"Different markets. Is different configuration therefore the end result is a unique strategy."*
+> *"The smallest change results in a different strategy because we cannot dismiss the power any
+> single setting/behaviour could have on the stock market."*
+> *"we should never have bots that do the exact same thing, even if it has different naming, it
+> would mean its a duplicate and should be avoided"*
 
-> **Strategies = distinct (protocol x bot-treatment)**, where a bot-treatment is the EXECUTION
-> CONFIG (size, stops, hold, cooldown, pyramid, timeframe, session gate) — **the symbol is not part
-> of the identity.**
+- **A strategy IS a bot's whole configuration**: protocol + role + **market** + broker + execution
+  policy.
+- **Any difference at all makes a different strategy.** No field can be dismissed, however trivial
+  the difference looks — that is the owner's explicit position.
+- **A different market IS a different configuration.** Six bots on six FX pairs are six strategies.
+- **Two byte-identical bots are a DUPLICATE — a defect, not a merge.** Such bots "should never"
+  exist. The derivation does not fold them into one tidy row; it groups them (a stable key is what
+  makes the fault *detectable*) and **reports** them.
+
+> **Strategies = distinct full configurations.** With no duplicates, that is **one strategy per
+> bot**.
 
 **Measured 2026-09-18:**
 
 | Quantity | Value |
 |---|---|
-| Active protocols | 19 |
-| Active protocols **with a bot** | 11 |
-| Active protocols with **no bot** | **8** |
+| Active protocols | 19 (11 with a bot, **8 with none**) |
 | Bots (`trading_strategy`) | 26 |
 | (protocol, bot) pairs | 26 = 25 subscriptions + 1 legacy-only |
-| **Distinct treatments = STRATEGIES** | **18** |
-| Of those, **reachable** (bot has a subscription) | **17** |
+| **STRATEGIES** | **26** — one per bot |
+| **Reachable** (bot has a subscription) | **25** |
 | Unreachable (#874 — bot with no subscription) | 1 |
+| **Duplicates** | **0** (none exist — verified) |
+| `forex-session-v1` strategies | **14** — one per market |
 | Watchlists | 42 (26 linked to a protocol) |
 
-The 26 pairs collapse to 18 because `forex-session-v1` has **14 bots but only 6 treatments**.
+### ⚠️ Two corrections, both from the same mistake
 
-**⚠️ CORRECTION (2026-09-18, same day).** An earlier version of this section reported **15**
-strategies and 3 FX treatments. **That was wrong**, and the way it was wrong is worth keeping:
+An earlier version of this section said **15** strategies, then **18**. Both were wrong. The errors
+are kept here because the *shape* of the mistake is the reusable part.
 
-> The counting query omitted **`sessionWindow`** — even though the measurement that produced the raw
-> rows had printed it (`EURGBP … london`, `AUDUSD … asian`), and the same run also printed the
-> with-session figure of **17**, which was then not used.
-
-The FX family is six, not three:
-
-| FX group | Bots | Distinguishing field |
+| Attempt | Said | Wrong because |
 |---|---|---|
-| Ungated standard 5m 0.01-lot | **6** | `sessionWindow = NULL` |
-| `london`-gated standard | **3** | `sessionWindow = 'london'` |
-| `asian`-gated standard | **2** | `sessionWindow = 'asian'` |
-| NZDJPY | 1 | `baseSize = 0.1` (10x) |
-| USDCAD | 1 | `timeframe = 5s` |
-| USDJPY (asian, 1h, wider stops) | 1 | `timeframe = 1h`, sl/tp 1.5/3 |
+| 1st | **15** | the counting query omitted `sessionWindow`, even though the query that produced the raw rows had printed it (`EURGBP … london`, `AUDUSD … asian`) and the same run printed the with-session figure of **17**, unused |
+| 2nd | **18** | the identity *excluded* `symbol`, on the reasoning "symbols are scope, not identity". The owner corrected this: a different market **is** a different configuration |
+| **correct** | **26** | every field contributes; identical bots are duplicates |
 
-A session gate is a real treatment difference: a bot gated to `london` and an ungated bot act at
-different times and produce different outcomes, so they cannot share a rating. The lesson is the
-generic one — **a field you have seen is not a field you have counted**. The derivation service
-(`verify-strategy-derivation.ts`) now asserts all of these numbers, so the error cannot recur
-silently.
+**Both wrong answers had one shape: treating a field that happened to be UNCHANGED as though it
+were not part of the identity.** First `sessionWindow` was dropped from a count; then `symbol` was
+dropped from the identity. The rule is now the opposite and simpler:
 
-**Headroom.** 18 today (17 reachable); **23+** if the 7 real boted-less protocols each gained a bot;
-then +1 for every additional bot-treatment applied to an existing protocol. The owner's example —
-"6 bots to trade 2 protocols differently" — is 2 x 6 = 12 strategies from two protocols.
+> **Every field contributes. If two bots differ in ANY field they are different strategies; if they
+> differ in NO field they are duplicates, which is a defect.**
 
-⚠️ `signals-workbench` is counted among the 8 but is **not a real trading protocol** (no trading
-style, no timeframe); it is the workbench container. Filter it before using this count.
+The guard (`nest/scripts/verify-strategy-derivation.ts`) asserts all of these numbers, including the
+canonicalisation rules, so neither error can recur silently.
+
+⚠️ `signals-workbench` is counted among the 8 boted-less protocols but is **not a real trading
+protocol** (no trading style, no timeframe); it is the workbench container. Filter it before using
+that number.
 
 ### 1d. Strategy Derivation — the META.Stack identity (design, 2026-09-18)
 
@@ -172,12 +171,12 @@ detector is blind to exactly the difference that makes them different strategies
 
 **The derivation rule.**
 
-> A **derived strategy** is one DISTINCT `(protocol, treatment)` group. **Symbols and watchlists are
-> scope, never identity.** The `strategyKey` is a stable SHA-256 over the identity fields — it is the
-> "ID along with the IDs of each part" the owner asked for.
+> A **derived strategy** is a distinct FULL configuration. The `strategyKey` is a stable SHA-256
+> over every part — it is the "ID along with the IDs of each part" the owner asked for. Two bots
+> share a key only by being byte-identical, which is reported as a duplicate.
 
 ```
-strategyKey = sha256( protocolId | canonicalTreatment )
+strategyKey = sha256( protocolId | role | symbol | brokerId | canonicalTreatment ) -> 16 hex
 
 canonicalTreatment = { minComposite, baseSize, slPct, tpPct, maxHoldHours,
                        cooldownMinutes, maxPyramidTiers, timeframe,
@@ -185,25 +184,41 @@ canonicalTreatment = { minComposite, baseSize, slPct, tpPct, maxHoldHours,
                        useRaritySizing, maxSize }
 ```
 
-⚠️ **`sessionWindow` is in this list on purpose.** Omitting it is the exact mistake that produced the
-wrong count of 15 — see the correction in §1c. A gated bot and an ungated bot are different
-treatments.
+⚠️ **`symbol` and `brokerId` are in the key on purpose.** An earlier version excluded them as
+"scope", which collapsed 26 strategies to 18. A different market is a different configuration.
+
+⚠️ **`sessionWindow` is in the key on purpose.** Omitting it is what produced the first wrong
+answer (15).
+
+**Canonicalisation must be BEHAVIOURAL, not textual** — two representations of the same
+configuration must hash identically, or bots that behave the same are reported as different
+strategies. Three rules, each verified by the guard:
+
+| Rule | Why |
+|---|---|
+| Numbers via `toFixed(6)` | `1` and `1.0` must not hash differently |
+| Keys emitted in sorted order | `JSON.stringify` follows insertion order |
+| `sessionWindow` through **`parseSessionWindow()`** | **Measured 2026-09-18: 9 bots store a bare `london`, 3 store `["london"]`.** Both are valid, the engine parses them identically, and the parser also folds aliases (`sydney` → `asian`, `zurich` → `london`). A hand-rolled second parser would drift from the one the engine actually uses |
+| `null` preserved explicitly | NULL means "ungated" / "no limit" (#773) — a real state, **not** a blank and **not** 0 |
 
 - **Derived** (no name) — computed on every read, never stored. Recomputed when a part changes,
-  which is why a config edit *renames* nothing and *creates* a new strategy. Honest: the
-  fingerprint changes, the UI says so.
+  which is why a config edit *replaces* a key rather than mutating one.
 - **Pinned** (named by the owner) — a name plus the part IDs recorded against the key, so the
   strategy survives a part being edited. **This is the follow-up (#875) and is NOT built yet.**
 - **Derivation is tracked by #876.** Naming and full-pipeline backup are #875.
 
 **What this enables that does not exist today:** a stable key to attach performance to, a surface
-that shows 18 strategies instead of 26 bots or 27 ratings, and — later — a snapshot/restore keyed
-on the STRATEGY rather than on `scoringStrategyId` (see #875).
+that shows **26 strategies** rather than 26 anonymous rows or 27 blended ratings, and — later — a
+snapshot/restore keyed on the STRATEGY rather than on `scoringStrategyId` (see #875).
 
 **Scope boundary.** `MetaStackVersioningService` already snapshots and restores, and
 `MetaStackSnapshot` (13 rows) already does the backup the owner described. It is keyed on
-`scoringStrategyId`, so it covers 22 of 26 bots and collapses the FX three into one. This is
+`scoringStrategyId`, so it covers 22 of 26 bots and collapses the FX fourteen into one. This is
 **widening an existing mechanism, not building a second one** — see #875.
+
+**Verified by** `nest/scripts/verify-strategy-derivation.ts` — 27 assertions driving the real
+service against the real database, plus a canary that removes `symbol` from the identity and
+confirms the guard fails (26 → 18, and 3 false duplicates detected).
 
 ## 2. Signal → bot binding (decision 2026-09-02)
 

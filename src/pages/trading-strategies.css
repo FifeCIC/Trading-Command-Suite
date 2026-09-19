@@ -237,6 +237,96 @@
 
 .ts-name-col { width: auto; min-width: 160px; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ── Watchlist / Symbol column (2026-09-18) ────────────────────────────────────────────────
+ *
+ * One column for the MARKET SCOPE, because a single symbol is a deliberate special case of a
+ * watchlist rather than a different kind of thing. A multi-symbol watchlist shows its NAME; a
+ * one-symbol treatment shows the SYMBOL. The scope size is always stated so the two cannot be
+ * mistaken for each other — a 1-symbol watchlist named "cac-index" would otherwise read as
+ * "this strategy covers a watchlist" when it covers exactly one instrument.
+ *
+ * THEMED tokens only (ui-standards). `--panel-raised` is NOT used: it exists solely in
+ * theme/packs/slate.css, so it renders navy in every other theme — a reported bug.
+ */
+.ts-scope-wl,
+.ts-scope-single {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* The scope size. Reads as a count, not a badge — it is a fact about the strategy, not a status. */
+.ts-scope-count,
+.ts-scope-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  color: var(--ink-soft);
+}
+
+/* "single" is deliberately the quieter of the two — it marks the ABSENCE of a watchlist. */
+.ts-scope-tag {
+  text-transform: lowercase;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* Protocol — the signal thesis. De-emphasised: it identifies the row, it is not a metric. */
+.ts-proto {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+/* ── Session gate column (2026-09-18) ─────────────────────────────────────────────────────
+ *
+ * An IDENTITY field: an ungated bot and a London-gated bot are DIFFERENT strategies. It is the
+ * field that made 12 of 26 rows render identically before this column existed, so it must be
+ * legible, not decorative.
+ *
+ * `ungated` is a DECLARED STATE (NULL = may act at any hour), not missing data. It is styled
+ * quieter than a real tag so the eye still separates "gated" from "not gated" at a glance, but it
+ * is never blank — a blank would be indistinguishable from a failed load.
+ */
+.ts-sess {
+  white-space: nowrap;
+}
+
+.ts-sess-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  margin-right: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev-2);
+  color: var(--ink);
+}
+
+.ts-sess-ungated {
+  font-size: 0.78rem;
+  color: var(--text-faint, var(--ink-soft));
+  font-style: italic;
+}
+
+/* A NULL that MEANS something ("no limit") reads as a value, not as an empty cell — same rule as
+   the session column. Dimmed so it does not compete with real numbers. */
+.ts-null {
+  font-size: 0.78rem;
+  color: var(--text-faint, var(--ink-soft));
+  font-style: italic;
+}
+
 .ts-chip {
   display: inline-block;
   padding: 2px 10px;

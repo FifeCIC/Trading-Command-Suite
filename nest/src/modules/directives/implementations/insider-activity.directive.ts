@@ -60,6 +60,7 @@ export class InsiderActivityDirective implements IDirective {
         confidence: 0.1,
         reason: `Insufficient data.`,
         signalClass: 'neutral',
+        unmeasured: true,
       };
     }
 
@@ -75,8 +76,16 @@ export class InsiderActivityDirective implements IDirective {
       });
 
       if (!recent || recent.length === 0) {
-        // Trigger on-demand import, then retry DB query once
-        this.logger.log(`No insider data for ${symbol} — triggering on-demand import`);
+        // Request the on-demand import, then retry the DB read once.
+        //
+        // ⚠️ #887 — the import applies its own negative cache, so for a symbol
+        // whose data source cannot contain insider filings (FX pairs, indices)
+        // this returns immediately on every run AFTER the first attempt rather
+        // than calling Finnhub again. Do not "restore" a per-tick log here:
+        // this line fired every ~31s for GBPCAD/EURCAD/EURCHF/EURGBP/GBPJPY and
+        // was reported as log noise on 2026-07-14. The import service logs the
+        // decision ONCE per symbol per TTL window instead.
+        this.logger.debug(`No insider data for ${symbol} — requesting on-demand import`);
         await this.researchImport.importInsiderTransactionsForSymbol(symbol);
 
         // Retry DB query after import
@@ -94,6 +103,7 @@ export class InsiderActivityDirective implements IDirective {
             confidence: 0,
             reason: `No insider transaction data for ${symbol}. On-demand import returned no records.`,
             signalClass: 'neutral',
+            unmeasured: true,
           };
         }
         return this.scoreTransactions(symbol, retryResult);
@@ -107,6 +117,7 @@ export class InsiderActivityDirective implements IDirective {
         confidence: 0,
         reason: `Failed to query/import insider data: ${(err as Error).message}`,
         signalClass: 'neutral',
+        unmeasured: true,
       };
     }
   }
