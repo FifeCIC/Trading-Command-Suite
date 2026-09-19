@@ -74,7 +74,11 @@ export const MARKET_PATTERNS: Record<string, MarketPattern> = {
     note:
       'A CFD whose window is the BROKER’s, not the underlying cash exchange’s. Measured 2026-09-17: ' +
       'these quote in 24 distinct UTC hours at 15m/1h/5m with genuine data. Gating them on the cash ' +
-      'exchange — or on US hours — is what #850 was.',
+      'exchange — or on US hours — is what #850 was. ' +
+      '⚠️ 2026-09-19 update (venueForSymbol): `continuous` means the BROKER\'s week, which is the ' +
+      'FX week (Sun 22:00 → Fri 22:00 Europe/London) — these still close for the weekend, and a ' +
+      'dead weekend feed was still producing signals. venueForSymbol() therefore routes them to ' +
+      'the FX venue, which preserves the measured weekday coverage and blocks only the weekend.',
   },
 };
 
@@ -98,7 +102,114 @@ const SYMBOL_PATTERN: Record<string, string> = {
   // That is a LIQUIDITY problem, not a window problem, and a calendar is the wrong tool for it —
   // worth its own issue. Recorded here so the decision is visible rather than implied.
   VIX: 'cfd-continuous',
+  // ── Energy CFDs — same broker week as the index CFDs. Listed explicitly because they are
+  //    letter-only tickers that would otherwise fall to the US rule below (WRONG: energy trades
+  //    the FX week).
+  WTI: 'cfd-continuous',
+  USOIL: 'cfd-continuous',
+  BRENT: 'cfd-continuous',
+  UKOIL: 'cfd-continuous',
+  // ── US index CFDs on the same Pepperstone route, same class as the measured five. Not
+  //    individually measured (the 30-day study covered the five above), included because the
+  //    FX venue blocks ONLY the weekend — a superset that cannot narrow any measured window.
+  US30: 'cfd-continuous', // Dow 30 CFD
+  USTEC: 'cfd-continuous', // Nasdaq 100 CFD
+  NAS100: 'cfd-continuous', // same instrument, common MT5 alias
 };
+
+/**
+ * venueForSymbol() — THE shared answer to "which venue window governs this instrument".
+ * =====================================================================================
+ * This is the single classifier the pipeline uses to share ONE market state from the gate
+ * down: scoring eligibility (signal-envelope.buildBestLadder), per-envelope marketStatus
+ * (protocol-gating), and queue dispatch all ask THIS function, so they cannot disagree.
+ *
+ * ⚠️ WHY IT EXISTS (2026-09-19). The user's observation, verbatim:
+ *
+ *     "there is a XAUUSD card on signals-overview despite the market for that symbol being
+ *      closed. So there shouldn't be a signal, because there shouldn't be a fresh score either."
+ *
+ * The chain that produced it: `is24HourMarket(XAUUSD)` is TRUE (forex/metals/crypto are all
+ * "24h" for session-penalty purposes), so the gate took a freshness-ONLY branch and never
+ * consulted a calendar; `bar-refresh` writes synthetic quote-stamped bars so MAX(timestamp)
+ * stayed "now"; so a Saturday XAUUSD scored, was enveloped, and reached the card layer —
+ * blocked only later at queue dispatch ("last real bar 60m old"). Three layers each had a
+ * piece of the truth and none shared it.
+ *
+ * Semantics (all fail-SOFT: "cannot judge" never becomes "closed"):
+ *   • crypto       — genuinely 24/7, no calendar. Never standby.
+ *   • venue+exchange — consult MarketCalendarService for that exchange.
+ *   • unknown      — no calendar. The gate logs once and falls back to freshness (fail loud,
+ *                    same contract as before); the standby check refuses to pause it.
+ */
+export type VenueKind = 'crypto' | 'venue' | 'unknown';
+
+export interface SymbolVenue {
+  kind: VenueKind;
+  /** Present when kind === 'venue'. MUST exist in MarketCalendarService.SESSIONS. */
+  exchange?: string;
+  /** Human label for log lines and UI copy ("Metals", "FX week", "US listed", ...). */
+  label: string;
+}
+
+/** Same currency list as `is24HourMarket()` — keep the two in step when adding a currency. */
+const FX_CURRENCIES = new Set([
+  'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF',
+  'SEK', 'NOK', 'DKK', 'SGD', 'HKD', 'TRY', 'ZAR', 'MXN',
+  'PLN', 'HUF', 'CZK', 'CNH', 'ILS', 'THB', 'RUB', 'INR',
+]);
+
+/** Crypto prefixes — same basis as `is24HourMarket()`. Crypto trades 24/7; no calendar applies. */
+const CRYPTO_PREFIX = /^(BTC|ETH|XRP|SOL|DOGE|ADA|AVAX|MATIC|LINK|DOT|LTC|BCH|UNI)/;
+
+/**
+ * Classify a symbol onto the venue axis.
+ *
+ * ⚠️ ORDER MATTERS. SYMBOL_PATTERN wins first (an explicit assignment is a decision), then
+ * crypto (24/7, never closes), then metals, then FX pairs, then the letter-only US rule.
+ *
+ * The letter-only rule (`^[A-Z]{1,5}$` → US) is a DELIBERATE default: every letter-only
+ * instrument on this stack that is not already caught above is US-listed (stocks, SPY/QQQ,
+ * inverse ETFs). Anything with digits (3AMZ, X3) or longer names stays `unknown` and keeps
+ * the gate's fail-loud warning — European leveraged ETPs have genuinely unclear venues and
+ * must not silently inherit US hours (#850). If a letter-only symbol is ever added that is
+ * NOT US-listed, add it to SYMBOL_PATTERN explicitly.
+ */
+export function venueForSymbol(symbol: string): SymbolVenue {
+  const s = (symbol || '').toUpperCase().trim();
+  if (!s) return { kind: 'unknown', label: 'unassigned' };
+
+  // 1. Explicit assignment wins — an entry in SYMBOL_PATTERN is a decision, not a default.
+  const pattern = patternForSymbol(s);
+  if (pattern) {
+    if (pattern.exchange) return { kind: 'venue', exchange: pattern.exchange, label: pattern.label };
+    if (pattern.continuous) {
+      // The broker's week for a continuous CFD is the FX week (see the pattern note).
+      return { kind: 'venue', exchange: 'FX', label: 'CFD (broker week)' };
+    }
+    return { kind: 'unknown', label: pattern.label };
+  }
+
+  // 2. Crypto — 24/7, no calendar any day of the week.
+  if (CRYPTO_PREFIX.test(s)) return { kind: 'crypto', label: 'Crypto (24/7)' };
+
+  // 3. Metals — trade the FX week (closed weekends), NOT 24/7.
+  if (/^X(AU|AG|PT|PD)/.test(s)) return { kind: 'venue', exchange: 'FX', label: 'Metals (FX week)' };
+
+  // 4. FX pairs — 6 letters, both sides a known currency.
+  if (/^[A-Z]{6}$/.test(s)) {
+    const base = s.substring(0, 3);
+    const quote = s.substring(3, 6);
+    if (FX_CURRENCIES.has(base) && FX_CURRENCIES.has(quote)) {
+      return { kind: 'venue', exchange: 'FX', label: 'FX week' };
+    }
+  }
+
+  // 5. Letter-only leftovers are US-listed on this stack (see the note above).
+  if (/^[A-Z]{1,5}$/.test(s)) return { kind: 'venue', exchange: 'US', label: 'US listed' };
+
+  return { kind: 'unknown', label: 'unassigned' };
+}
 
 /** Resolve an instrument's market pattern, or `null` when unassigned. */
 export function patternForSymbol(symbol: string): MarketPattern | null {

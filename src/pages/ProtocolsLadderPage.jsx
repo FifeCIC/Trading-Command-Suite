@@ -32,6 +32,7 @@ export default function ProtocolsLadderPage() {
 
   // Short human-readable labels for why a protocol has no scores on the ladder.
   const STALL_SHORT = {
+    standby: 'market closed',
     'no-data': 'no data',
     'no-symbols': 'not configured',
     paused: 'paused',

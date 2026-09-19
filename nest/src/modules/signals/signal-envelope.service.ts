@@ -1136,6 +1136,29 @@ export class SignalEnvelopeService {
         continue;
       }
 
+      // ── Venue standby (2026-09-19) — a closed venue produces NO FRESH SCORE ──────────────
+      // BEFORE: XAUUSD was scored every weekend tick. Its 5m bar stayed "0 min old" because
+      // bar-refresh writes a synthetic bar from the last quote (see bar-refresh.service.ts
+      // "Also upsert synthetic 'current' bars from live quotes"), so the freshness-only gate
+      // said open, envelopes were built, and a BUY card was served on signals-overview for a
+      // market that had been closed since Friday 22:00 London. The block only arrived later,
+      // at queue dispatch ("last real bar 60m old"). The user's words: "there shouldn't be a
+      // signal, because there shouldn't be a fresh score either."
+      // AFTER: ask the SHARED venue classifier (protocol-gating.getVenueStandby — same
+      // venueForSymbol + same MarketCalendarService as the per-envelope marketStatus, so the
+      // scoring gate and the serving gate cannot disagree). Standby skips scoring entirely
+      // and records why in protocol_score_status, where the Protocols page renders it.
+      const venueGate = this.protocolGating.getVenueStandby(tickers);
+      if (venueGate.standby) {
+        protocolStatus[slug] = {
+          state: 'standby',
+          symbolsResolved: tickers.length,
+          symbolsScored: 0,
+          reason: venueGate.reason,
+        };
+        continue;
+      }
+
       let protoScored = 0;
       for (const ticker of tickers) {
         try {

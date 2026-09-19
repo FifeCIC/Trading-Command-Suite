@@ -12,6 +12,9 @@
  *
  * States (loop-owned):
  *   scoring    → Active   — scored symbols on the last tick
+ *   standby    → Standby  — every venue it trades is closed; no fresh score is produced
+ *                          (venue axis, 2026-09-19 — a closed market has no signal because
+ *                          it has no fresh score, not because dispatch blocks it later)
  *   no-data    → Stalled  — symbols resolve but lack 5m bars
  *   no-symbols → Stalled  — no symbols configured at all
  *   paused     → Paused   — blocked by non-ready directives
@@ -26,6 +29,11 @@ import { apiGet } from './api/client';
 
 export const PROTOCOL_STATUS_META = {
   scoring: { label: 'Active', kind: 'ok', help: 'Scored symbols on the last tick' },
+  standby: {
+    label: 'Standby',
+    kind: 'muted',
+    help: 'Closed market — every venue this protocol trades is shut, so no fresh score is produced. The reason names the venue and its next open.',
+  },
   'no-data': { label: 'Stalled', kind: 'warn', help: 'Active but no market data to score' },
   'no-symbols': { label: 'Stalled', kind: 'warn', help: 'Active but no symbols configured' },
   paused: { label: 'Paused', kind: 'warn', help: 'Blocked by non-ready directives' },

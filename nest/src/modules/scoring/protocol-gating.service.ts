@@ -16,7 +16,7 @@
  *   NEVER:  evaluates thresholds, opens positions, or persists decisions
  */
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DirectivesService, is24HourMarket } from '../directives/directives.service';
+import { DirectivesService } from '../directives/directives.service';
 import { PrismaService } from '../../database/prisma.service';
 import {
   DirectiveInput,
@@ -34,7 +34,7 @@ import { EurUsdCacheService } from './eurusd-cache.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
-import { patternForSymbol } from '../calendar/market-patterns';
+import { venueForSymbol } from '../calendar/market-patterns';
 import { DirectiveConfigService } from './directive-config.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
@@ -1018,17 +1018,39 @@ export class ProtocolGatingService {
     // instead of "Market closed" while execution still blocks on `open=false`.
     const freshness = computeMarketStatus(bars, new Date(), timeframe);
     let marketStatus: { open: boolean; stale?: boolean; asOf: string | null; reason?: string };
-    // ── WHICH window governs this instrument (#850) ───────────────────────────────────────
+    // ── WHICH window governs this instrument (#850, #851) ─────────────────────────────────
     // Was: `this.marketCalendar.getMarketStatus('US')` for EVERY symbol, while
     // MarketCalendarService.SESSIONS contains only `US`. Every non-24h instrument was therefore
     // judged on US hours — measured live, `UK100` and `FRA40` were blocked with the reason
     // "US market after-hours". See market-patterns.ts for the measurement behind the assignments.
-    const pattern = patternForSymbol(symbol);
-    if (is24HourMarket(symbol) || pattern?.continuous) {
-      // Forex, metals, crypto — and the continuous CFDs whose window is the BROKER's, not the
-      // underlying cash exchange's. Data freshness is the only meaningful gate for these.
+    //
+    // ⚠️ 2026-09-19 — the freshness-only branch is GONE for forex/metals. It keyed off
+    // `is24HourMarket()`, which is true for forex+metals+crypto alike; forex and metals are
+    // 24/5, not 24/7, and on a weekend the branch produced marketStatus.open=true for a dead
+    // market (the synthetic bar-refresh bars kept freshness green) — the XAUUSD card the user
+    // reported. `venueForSymbol()` now answers the venue question for every symbol: crypto
+    // stays freshness-only (genuinely 24/7), forex/metals/continuous CFDs consult the FX week,
+    // US-listed instruments consult the US calendar, and unknowns keep the fail-loud fallback.
+    const venue = venueForSymbol(symbol);
+    if (venue.kind === 'crypto') {
+      // Crypto trades every hour of every day — data freshness is the only meaningful gate.
       marketStatus = { ...freshness, stale: !freshness.open };
-    } else if (!pattern) {
+    } else if (venue.kind === 'venue' && venue.exchange) {
+      const cal = this.marketCalendar.getMarketStatus(venue.exchange);
+      const stale = cal.isOpen && !freshness.open;
+      marketStatus = {
+        open: cal.isOpen && freshness.open,
+        stale,
+        asOf: freshness.asOf,
+        // Name the VENUE, not just "US market" — the old string asserted a US session on
+        // instruments that have nothing to do with one, which is what misled the investigation.
+        reason: !cal.isOpen
+          ? `${venue.label}: ${cal.status}${cal.holidayName ? ` — ${cal.holidayName}` : ''}${cal.nextOpen ? ` — opens ${cal.nextOpen}` : ''}`
+          : stale
+            ? `${venue.label}: open — ${freshness.reason ?? 'data may be stale'}`
+            : `${venue.label}: open`,
+      };
+    } else {
       // ⚠️ FAIL LOUD. Do NOT silently inherit US hours — that silence IS the defect (#850).
       // Freshness-only is the honest fallback: it is a real gate, and "we have no calendar for
       // this instrument" is a different claim from "the US market is closed".
@@ -1041,21 +1063,6 @@ export class ProtocolGatingService {
         );
       }
       marketStatus = { ...freshness, stale: !freshness.open };
-    } else {
-      const cal = this.marketCalendar.getMarketStatus(pattern.exchange);
-      const stale = cal.isOpen && !freshness.open;
-      marketStatus = {
-        open: cal.isOpen && freshness.open,
-        stale,
-        asOf: freshness.asOf,
-        // Name the PATTERN, not just "US market" — the old string asserted a US session on
-        // instruments that have nothing to do with one, which is what misled the investigation.
-        reason: !cal.isOpen
-          ? `${pattern.label}: ${cal.status}${cal.holidayName ? ` — ${cal.holidayName}` : ''}`
-          : stale
-            ? `${pattern.label}: open — ${freshness.reason ?? 'data may be stale'}`
-            : `${pattern.label}: open`,
-      };
     }
 
     // Readiness gate (#627): a protocol is only eligible when every included
@@ -1239,6 +1246,52 @@ export class ProtocolGatingService {
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, holdings.length) }, () => worker()));
     // Sort by composite descending for stable ladder display (#432)
     return results.filter(Boolean).sort((a, b) => b.composite - a.composite);
+  }
+
+  /**
+   * getVenueStandby() — should a protocol PAUSE because every venue it trades is closed?
+   * ================================================================================
+   * The scoring-side consequence of the venue axis (2026-09-19). The user's report, verbatim:
+   *
+   *     "there is a XAUUSD card on signals-overview despite the market for that symbol being
+   *      closed. So there shouldn't be a signal, because there shouldn't be a fresh score either."
+   *
+   * Exactly right on both counts. A closed venue means NO FRESH SCORE — not a score that gets
+   * blocked later at dispatch. `SignalEnvelopeService.buildBestLadder()` calls this BEFORE
+   * scoring a protocol's symbols; a standby result skips the protocol entirely (no score rows,
+   * no envelopes, no cards, no queue entries) and records the reason in protocol_score_status.
+   *
+   * Logic — deliberately fail-OPEN on any uncertainty ("cannot judge" must never read as
+   * "closed"), so it can only ever pause something that is provably shut:
+   *
+   *   • any crypto symbol        → NOT standby (crypto trades 24/7; the protocol can act)
+   *   • any unknown-venue symbol → NOT standby (no calendar; the gate's own fail-loud warning covers it)
+   *   • zero calendar venues     → NOT standby
+   *   • every venue closed       → STANDBY, with each venue's next open in the reason
+   *
+   * Uses the same `venueForSymbol()` and the same `MarketCalendarService` that the per-envelope
+   * marketStatus uses — the two can never disagree about whether the market is open.
+   */
+  getVenueStandby(tickers: string[]): { standby: boolean; reason?: string } {
+    const venues = new Map<string, string>(); // exchange → human label
+    for (const ticker of tickers) {
+      const venue = venueForSymbol(ticker);
+      if (venue.kind === 'crypto') return { standby: false };
+      if (venue.kind !== 'venue' || !venue.exchange) return { standby: false };
+      venues.set(venue.exchange, venue.label);
+    }
+    if (venues.size === 0) return { standby: false };
+
+    const closed: string[] = [];
+    for (const [exchange, label] of venues) {
+      const cal = this.marketCalendar.getMarketStatus(exchange);
+      if (cal.isOpen) return { standby: false }; // a live venue — the protocol can still act
+      closed.push(`${label} closed${cal.nextOpen ? ` — opens ${cal.nextOpen}` : ''}`);
+    }
+    return {
+      standby: true,
+      reason: `Market closed (${closed.join('; ')}). A closed venue produces no fresh score and no signal (#893/#850 venue axis).`,
+    };
   }
 
   /**
