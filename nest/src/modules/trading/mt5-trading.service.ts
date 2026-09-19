@@ -3,8 +3,10 @@ import { TradeRecorderService } from './trade-recorder.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
+import { Mt5SymbolRouter } from '../providers/mt5/mt5-symbol-router.service';
 import { PrismaService } from '../../database/prisma.service';
 import { sanitizeMt5Comment } from '../providers/mt5-comment.util';
+import { venueForSymbol } from '../calendar/market-patterns';
 
 export interface Mt5Position {
   ticket: number;
@@ -75,6 +77,9 @@ export class Mt5TradingService {
     private readonly stopGuardian: StopGuardianService,
     private readonly prisma: PrismaService,
     private readonly mt5Connection: Mt5ConnectionManager,
+    // #903 — optional so tests can construct without it; when absent, a CRYPTO order is REFUSED
+    // (fail closed — an unverifiable broker-native name must not reach MT5).
+    private readonly symbolRouter?: Mt5SymbolRouter,
   ) {}
 
   /** Get the bridge URL for a broker (defaults to first active) */
@@ -208,9 +213,69 @@ export class Mt5TradingService {
     const side = params.type === 'BUY' ? 'buy' : 'sell';
     const origin = (params.origin || 'user') as 'user' | 'agent' | 'strategy' | 'system';
 
+    // ── CRYPTO ROUTE GUARD (#903, 2026-09-19) ──────────────────────────────────────────────
+    //
+    // MT5 resolves an order symbol BY NAME with fuzzy matching. The measured hazard: the
+    // `symbol_route` row for BTC was `→ binance, brokerId 0, brokerSymbol NULL`, so this method
+    // would have handed the bare ticker `BTC` to an MT5 bridge — where it matches
+    // `Nasdaq\ETF\BTC` (~$35.86), a different instrument at a different price, and FILLS.
+    //
+    // Until the crypto execution decision (#903) deliberately chooses an MT5 broker whose
+    // contract list actually carries the instrument, a crypto ticker may only travel a route that
+    // passes ALL of these: an explicit `symbol_route` row, a brokerSymbol that is NOT the bare
+    // ticker, and a target broker that is an active MT5 bridge. Anything less refuses here — the
+    // last line before the bridge — and the refusal names exactly what is missing.
+    //
+    // Non-crypto symbols are untouched: their identity mapping is the established behaviour.
+    let orderUrl = this.bridgeUrl;
+    let orderSymbol = params.symbol;
+    if (venueForSymbol(params.symbol).kind === 'crypto') {
+      const route = this.symbolRouter?.resolve(params.symbol);
+      const activeBrokerIds = this.mt5Connection.getBrokerIds();
+      const brokerSymbol = String(route?.brokerSymbol ?? '');
+      const problems: string[] = [];
+      if (!route) {
+        problems.push('the MT5 symbol router is unavailable, so the broker-native name cannot be verified');
+      } else {
+        if (route.explicit !== true) {
+          problems.push(`no explicit symbol_route row exists for ${params.symbol}`);
+        }
+        if (!brokerSymbol) {
+          problems.push('the symbol_route row carries no brokerSymbol');
+        } else if (brokerSymbol.toUpperCase() === params.symbol.toUpperCase()) {
+          problems.push(
+            `the route's brokerSymbol is the BARE ticker '${brokerSymbol}' — MT5 resolves names ` +
+              `fuzzily and '${brokerSymbol}' matches a different instrument (measured: 'BTC' → Nasdaq\\ETF\\BTC, ~$35.86)`,
+          );
+        }
+        if (!activeBrokerIds.includes(route.brokerId)) {
+          problems.push(
+            `the route targets broker ${route.brokerId}, which is not an active MT5 bridge ` +
+              `(active: ${activeBrokerIds.join(', ') || 'none'})`,
+          );
+        }
+      }
+      if (problems.length > 0) {
+        const error =
+          `Refusing to send ${params.symbol} to MT5: ${problems.join('; ')}. ` +
+          'A crypto order may only travel an explicit symbol_route whose brokerSymbol is the ' +
+          "broker's real symbol (e.g. BTCUSD) on an active MT5 bridge — until the crypto " +
+          'execution route is decided and verified, crypto stays score-only (#903).';
+        this.logger.warn(error);
+        // The audit trail records the attempt — a refusal that never reaches the bridge is
+        // still a decision the operator should be able to find.
+        this.recordOrder(params.symbol, params.type, params.volume, 'rejected', undefined, undefined, error);
+        return { success: false, status: 'rejected', error };
+      }
+      // Route verified — address THAT broker and send the broker-native name, never the bare
+      // ticker. This is the half that makes the guard a routing decision, not just a refusal.
+      orderUrl = route.url;
+      orderSymbol = brokerSymbol;
+    }
+
     try {
       const body: any = {
-        symbol: params.symbol,
+        symbol: orderSymbol,
         type: params.type.toLowerCase(),
         volume: params.volume,
       };
@@ -219,7 +284,7 @@ export class Mt5TradingService {
       if (params.comment) body.comment = sanitizeMt5Comment(params.comment);
       if (params.clientOrderId) body.clientOrderId = params.clientOrderId;
 
-      const res = await fetch(`${this.bridgeUrl}/order`, {
+      const res = await fetch(`${orderUrl}/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

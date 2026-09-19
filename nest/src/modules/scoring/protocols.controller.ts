@@ -122,7 +122,11 @@ export class ProtocolsController {
             id: p.slug,
             name: p.name,
             description: p.description,
-            active: true,
+            // ⚠️ READ the row (#904, 2026-09-19). This was hardcoded `active: true` — by
+            // construction, not by data — so a list that should have shown `btc-speed-v1
+            // active=0` showed it as active. Same class as the #886 header marquee: a surface
+            // that computes its answer from the shape of the code rather than from the system.
+            active: p.active !== false,
             directiveCount,
             maxPossibleScore,
             lastRunAt: null,
