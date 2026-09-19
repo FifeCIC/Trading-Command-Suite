@@ -31,6 +31,10 @@ export default function StrategyComparisonPage() {
 
   const showdown = data?.showdown || [];
   const livePositions = data?.livePositions || [];
+  // #884 — what the endpoint could NOT judge: closed rows without a priced exit or without a
+  // strategy tag. Rendered so a sparse table reads as "not enough priced closes" rather than
+  // "the strategies made nothing" (a page that cannot price a trade must say so).
+  const excluded = data?.excluded;
 
   // Best/worst strategy
   const best = showdown[0];
@@ -57,6 +61,14 @@ export default function StrategyComparisonPage() {
       {showdown.length > 0 ? (
         <motion.div className="sc-section" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <h2>Strategy Showdown</h2>
+          {excluded && (excluded.noStrategy > 0 || excluded.unpriced > 0) && (
+            <p className="sc-source-note">
+              Excluded from these figures: {excluded.unpriced} of {excluded.totalClosed} closed
+              row{excluded.totalClosed === 1 ? '' : 's'} have no priced exit (never realised at a
+              broker — not $0 trades, they cannot be scored) and {excluded.noStrategy} carry no
+              strategy tag.
+            </p>
+          )}
           <div className="sc-table-wrap">
             <table className="sc-table">
               <thead>
@@ -80,8 +92,11 @@ export default function StrategyComparisonPage() {
                     className={i === 0 ? 'sc-row-best' : ''}
                   >
                     <td><strong>{s.strategy}</strong></td>
-                    <td>{s.trades}</td>
-                    <td style={{ color: s.winRate >= 50 ? '#22c55e' : '#ef4444' }}>{s.winRate}%</td>
+                    <td>{s.trades}{s.breakEven > 0 ? ` (${s.breakEven} B/E)` : ''}</td>
+                    <td
+                      style={{ color: s.winRate >= 50 ? '#22c55e' : '#ef4444' }}
+                      title="Break-even closes count in trades but are neither wins nor losses"
+                    >{s.winRate}%</td>
                     <td><PnlBadge value={s.totalPnl} /></td>
                     <td style={{ color: (s.totalPnl / Math.max(1, s.trades)) >= 0 ? '#22c55e' : '#ef4444' }}>
                       {s.trades > 0 ? `${s.totalPnl >= 0 ? '+' : ''}${(s.totalPnl / s.trades).toFixed(2)}` : '—'}
@@ -121,7 +136,12 @@ export default function StrategyComparisonPage() {
         </motion.div>
       ) : (
         <motion.div className="sc-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p>No closed trades with strategy tags yet. Trades recorded via MT5 close or strategy execution will appear here.</p>
+          <p>
+            No priced, strategy-tagged closed trades yet — this page will not guess.
+            {excluded
+              ? ` Of ${excluded.totalClosed} closed rows, ${excluded.unpriced} have no priced exit and ${excluded.noStrategy} carry no strategy tag.`
+              : ''}
+          </p>
         </motion.div>
       )}
 

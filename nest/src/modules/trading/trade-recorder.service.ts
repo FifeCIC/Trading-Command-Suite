@@ -121,11 +121,31 @@ export class TradeRecorderService {
      * `trade.scoringStrategyId` had (#777).
      */
     closeReason: string = CLOSE_REASONS.USER_MANUAL,
+    /**
+     * The strategy name this close belongs to (#884).
+     *
+     * ⚠️ WHY THIS PARAMETER EXISTS. Measured 2026-09-19: of 155 closed rows, TWO carried a
+     * strategy — and both were phantoms. The app recorded the strategy when a trade was
+     * REFUSED (reject path) and dropped it when the trade was TAKEN and closed, so every
+     * performance comparison was built on the half of the ledger nobody wants. The caller
+     * parses the MT5 position comment with `extractStrategyFromComment()` and passes it here.
+     *
+     * Optional and additive: when it is absent the existing column value is left alone — a
+     * reconciler closing a row must not erase a tag the open path wrote.
+     */
+    strategy?: string,
   ): Promise<boolean> {
     try {
       await this.prisma.trade.update({
         where: { id },
-        data: { exitPrice, pnl, status: 'closed', closedAt: new Date(), closeReason },
+        data: {
+          exitPrice,
+          pnl,
+          status: 'closed',
+          closedAt: new Date(),
+          closeReason,
+          ...(strategy ? { strategy } : {}),
+        },
       });
       this.syslog.trade('TradeRecorder', `Trade closed: ${id} exit=${exitPrice} PnL=${pnl.toFixed(2)} why=${closeReason}`);
       return true;

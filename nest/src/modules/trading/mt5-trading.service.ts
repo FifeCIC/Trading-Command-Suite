@@ -5,7 +5,7 @@ import { CLOSE_REASONS } from '../../common/trading/close-reason';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { Mt5SymbolRouter } from '../providers/mt5/mt5-symbol-router.service';
 import { PrismaService } from '../../database/prisma.service';
-import { sanitizeMt5Comment } from '../providers/mt5-comment.util';
+import { sanitizeMt5Comment, extractStrategyFromComment } from '../providers/mt5-comment.util';
 import { venueForSymbol } from '../calendar/market-patterns';
 
 export interface Mt5Position {
@@ -377,7 +377,11 @@ export class Mt5TradingService {
    * Legacy format: "TCS Strategy Name | Score%". Since the shared sanitizer
    * (mt5-comment.util.ts) strips '|', new positions use "TCS Strategy Name Score".
    * Phase 3 moves strategy tracking to the magic number + DB, replacing this
-   * fragile comment parsing entirely. Keep both parses aligned until then.
+   * fragile comment parsing entirely.
+   *
+   * ⚠️ #884 — parsing now goes through `extractStrategyFromComment()` in mt5-comment.util.ts,
+   * the ONE parser. The name is a GROUPING KEY on the Strategy Comparison page: two conventions
+   * (`"TCS X"` vs `"X 119"`) render as two strategies. Do not hand-roll a second parse.
    * @see nest/src/modules/trading/mt5-trading.service.ts placeOrder() line ~98
    */
   async closePosition(ticket: number): Promise<{ success: boolean; error?: string }> {
@@ -396,13 +400,10 @@ export class Mt5TradingService {
       // opposite-side trade for the same broker position.
       if (success && !data.partial && pos) {
         const posType = String(pos.type) === '0' || (pos as any).type === 'buy' ? 'buy' : 'sell';
-        // Extract strategy name from MT5 comment.
-        // Legacy: "TCS Strategy | 119%" → split on '|'.
-        // Sanitised (current): "TCS Strategy 119" → strip "TCS " prefix.
-        const rawComment = pos.comment ? pos.comment.trim() : '';
-        const strategyFromComment = rawComment.includes('|')
-          ? rawComment.split('|')[0]?.trim() || undefined
-          : rawComment.replace(/^TCS\s+/i, '').trim() || undefined;
+        // #884 — canonical parser (mt5-comment.util.ts). Handles both comment eras AND
+        // strips the trailing score, so the close path and the record() fallback below write
+        // the SAME grouping key.
+        const strategyFromComment = extractStrategyFromComment(pos.comment);
 
         // ⚠️ REALISED P&L, not floating (2026-09-10).
         //
@@ -454,7 +455,10 @@ export class Mt5TradingService {
         if (existing) {
           // Explicit, not defaulted: this path is reached from the UI and from closeAll()/
           // closeProfitable(), so the actor is a person or an operator-initiated sweep.
-          await this.tradeRecorder.close(existing.id, exitPrice, pnl, CLOSE_REASONS.USER_MANUAL);
+          // ⚠️ #884 — the strategy must ride the close too. It was parsed 50 lines above and
+          // then DROPPED here: rows closed through this branch kept strategy=NULL forever, which
+          // is why the Strategy Comparison page showed 2 phantom rows out of 155 closes.
+          await this.tradeRecorder.close(existing.id, exitPrice, pnl, CLOSE_REASONS.USER_MANUAL, strategyFromComment);
         } else {
           await this.tradeRecorder.record({
             symbol: pos.symbol,

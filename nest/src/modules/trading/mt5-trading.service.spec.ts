@@ -71,7 +71,9 @@ describe('Mt5TradingService broker contracts', () => {
     // common/trading/close-reason.ts. Asserted explicitly rather than with expect.anything():
     // "the trade closed" and "we know WHY it closed" are different claims, and only the second
     // one is what makes an unexpected exit diagnosable.
-    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10, 'user:manual');
+    // ⚠️ The 5th is the STRATEGY (#884) — undefined here because the fixture position carries
+    // no comment; the carry-through case is pinned by its own test below.
+    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10, 'user:manual', undefined);
     expect(tradeRecorder.record).not.toHaveBeenCalled();
   });
 
@@ -93,7 +95,24 @@ describe('Mt5TradingService broker contracts', () => {
     await service.closePosition(42);
 
     // (2410 - 2400) * 0.1 * +1 = 1.0 recomputed, not the floating 10.
-    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 1, 'user:manual');
+    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 1, 'user:manual', undefined);
+  });
+
+  it('carries the strategy name from the position comment into the close (#884)', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(response({
+        positions: [{ ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.1, priceOpen: 2400, priceCurrent: 2410, profit: 10, comment: 'TCS Gold Swing 1H 119' }],
+      }))
+      .mockResolvedValueOnce(response({ success: true, ticket: 42, closePrice: 2410, profit: 10, realized: true })) as any;
+    prisma.trade.findFirst.mockResolvedValue({ id: 'trade-42' });
+    tradeRecorder.close.mockResolvedValue(true);
+
+    await service.closePosition(42);
+
+    // ⚠️ #884 — before this, the parsed name was dropped on the close path: measured 2 of 155
+    // closed rows carried a strategy and both were phantoms, so the Strategy Comparison page
+    // was built on the reject half of the ledger. The parser is extractStrategyFromComment().
+    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10, 'user:manual', 'Gold Swing 1H');
   });
 
   it('uses the bridge partial-close endpoint', async () => {

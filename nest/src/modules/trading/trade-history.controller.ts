@@ -11,6 +11,8 @@ import { Mt5TradingService } from './mt5-trading.service';
 import { SwapCostService } from './swap-cost.service';
 import { WeekendDefenseService } from './weekend-defense.service';
 import { PositionSyncService } from '../providers/position-sync.service';
+// #884 — the ONE comment parser. The live-positions fallback below used to hand-roll its own.
+import { extractStrategyFromComment } from '../providers/mt5-comment.util';
 
 @Controller('trading')
 export class TradeHistoryController {
@@ -93,10 +95,18 @@ export class TradeHistoryController {
   @Get('strategy-comparison')
   async getStrategyComparison() {
     // ── 1. Stats from closed trades grouped by strategy ──
+    //
+    // ⚠️ #884 — THE FILTER IS THE FIX. It used to read `pnl: { not: null }`, intending "only
+    // trades whose P&L we know". Rows whose exit was never priced store 0, NOT NULL — measured
+    // 103 of 155 closed rows had `exitPrice=NULL, pnl=0` — so the filter passed every unpriced
+    // row and the page aggregated fabricated zeros as results. `exitPrice: { not: null }` is
+    // the honest test: a trade with no realised exit price cannot be scored, and is EXCLUDED
+    // (and counted in `excluded` below so the page can say so — development-philosophy §7).
     const closedTrades = await this.prisma.trade.findMany({
       where: {
         status: 'closed',
         strategy: { not: null },
+        exitPrice: { not: null },
         pnl: { not: null },
       },
       orderBy: { closedAt: 'desc' },
@@ -107,6 +117,8 @@ export class TradeHistoryController {
       trades: number;
       wins: number;
       losses: number;
+      /** Priced closes that netted exactly zero — NOT wins, NOT losses (#884). */
+      breakEven: number;
       totalPnl: number;
       avgWinPnl: number;
       avgLossPnl: number;
@@ -122,7 +134,7 @@ export class TradeHistoryController {
       const key = t.strategy || 'unknown';
       if (!strategyMap.has(key)) {
         strategyMap.set(key, {
-          trades: 0, wins: 0, losses: 0, totalPnl: 0,
+          trades: 0, wins: 0, losses: 0, breakEven: 0, totalPnl: 0,
           avgWinPnl: 0, avgLossPnl: 0, bestTrade: -Infinity, worstTrade: Infinity,
           winAmounts: [], lossAmounts: [], cumPnlHistory: [], symbols: new Set(),
         });
@@ -131,14 +143,20 @@ export class TradeHistoryController {
       s.trades++;
       s.totalPnl += t.pnl || 0;
       s.symbols.add(t.symbol);
-      if (t.pnl && t.pnl >= 0) {
+      // ⚠️ #884 — `t.pnl && t.pnl >= 0` treated 0 as FALSY and counted a priced break-even
+      // as a LOSS of $0. Three-way bucket now: > 0 win, < 0 loss, === 0 break-even (reported,
+      // not silently mislabelled).
+      const pnl = t.pnl ?? 0;
+      if (pnl > 0) {
         s.wins++;
-        s.winAmounts.push(t.pnl);
-        if (t.pnl > s.bestTrade) s.bestTrade = t.pnl;
-      } else {
+        s.winAmounts.push(pnl);
+        if (pnl > s.bestTrade) s.bestTrade = pnl;
+      } else if (pnl < 0) {
         s.losses++;
-        s.lossAmounts.push(t.pnl || 0);
-        if ((t.pnl || 0) < s.worstTrade) s.worstTrade = t.pnl || 0;
+        s.lossAmounts.push(pnl);
+        if (pnl < s.worstTrade) s.worstTrade = pnl;
+      } else {
+        s.breakEven++;
       }
       s.cumPnlHistory.push(s.totalPnl);
     }
@@ -167,6 +185,7 @@ export class TradeHistoryController {
         trades: s.trades,
         wins: s.wins,
         losses: s.losses,
+        breakEven: s.breakEven,
         winRate,
         totalPnl: Math.round(s.totalPnl * 100) / 100,
         avgWinPnl: avgWin,
@@ -214,8 +233,8 @@ export class TradeHistoryController {
       try {
         const mt5Positions = await this.mt5.getPositions();
         for (const p of mt5Positions) {
-          const rawComment = (p.comment || '').replace(/^TCS\s+/, '');
-          const strategyKey = rawComment.replace(/\s+\d+$/, '') || 'unknown';
+          // #884 — canonical parser (was a hand-rolled copy: prefix + score regex inline).
+          const strategyKey = extractStrategyFromComment(p.comment) || 'unknown';
           if (!liveByStrategy.has(strategyKey)) liveByStrategy.set(strategyKey, []);
           liveByStrategy.get(strategyKey)!.push({
             symbol: p.symbol,
@@ -238,10 +257,24 @@ export class TradeHistoryController {
       }
     }
 
+    // ⚠️ #884 — what this response CANNOT judge, counted rather than hidden. The comparison
+    // page renders these so a sparse or empty showdown reads as "not enough priced, tagged
+    // closes" rather than "the strategies made nothing" (development-philosophy §7).
+    const [totalClosed, noStrategyCount, unpricedCount] = await Promise.all([
+      this.prisma.trade.count({ where: { status: 'closed' } }),
+      this.prisma.trade.count({ where: { status: 'closed', strategy: null } }),
+      this.prisma.trade.count({ where: { status: 'closed', exitPrice: null } }),
+    ]).catch(() => [0, 0, 0] as number[]);
+
     return {
       generatedAt: new Date().toISOString(),
       liveSource,
       showdown,
+      excluded: {
+        totalClosed,
+        noStrategy: noStrategyCount,
+        unpriced: unpricedCount,
+      },
       livePositions: Array.from(liveByStrategy.entries()).map(([strategy, positions]) => ({
         strategy,
         positionCount: positions.length,
