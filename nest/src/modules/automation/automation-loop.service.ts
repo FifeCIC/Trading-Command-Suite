@@ -38,6 +38,9 @@ import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/c
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { PrismaService } from '../../database/prisma.service';
+// ⚠️ #908 — required by the data-readiness gate: `recommendedTimeframe` is FREE TEXT and
+// must reach bar queries through selectBaseTimeframe() (INV-SINGLE-CADENCE).
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TimelineService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
@@ -1083,12 +1086,23 @@ export class AutomationLoopService implements OnModuleInit {
               continue;
             }
             const requiredBars = this.protocolDb.getRequiredBars(protocolId);
-            const timeframe = this.protocolDb.getCached(protocolId)?.recommendedTimeframe || '1d';
+            // ⚠️ #908 — the cadence MUST go through selectBaseTimeframe(). `recommendedTimeframe`
+            // is FREE TEXT in the protocol seed ('5s–30s', '5m–1h', '1d (signal), 1h/15m' are real
+            // values). Used raw as a bar key, getBarCount() returned 0 FOREVER: GER40/UK100/DAX
+            // bots sat in "pending_bars — Waiting for first bars (5s–30s)" for 44h+ while their
+            // symbols held thousands of real 1m/5m bars — no marketbar row will ever carry
+            // timeframe='5s–30s', so the gate could not clear and the message read as a 30-second
+            // wait. Measured: 55 identical decision_log reasons in 24h. Resolution lives in the
+            // shared util (INV-SINGLE-CADENCE); guarded at build time by scanRawCadenceFallback().
+            const timeframe = selectBaseTimeframe(this.protocolDb.getCached(protocolId)?.recommendedTimeframe);
             const minBarsNeeded = requiredBars[timeframe] || 100;
 
             const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strat.symbol } });
             if (!dbSym) {
-              strat.dataStatus = 'pending_bars';
+              // #908 — a symbol absent from the registry is a CONFIG state, not a warm-up.
+              // "pending_bars" promised an imminent start that can never come; "blocked" says
+              // permanent. The decision-log skip text carries this reason verbatim.
+              strat.dataStatus = 'blocked';
               strat.dataStatusReason = `Symbol ${strat.symbol} not in registry`;
               continue;
             }

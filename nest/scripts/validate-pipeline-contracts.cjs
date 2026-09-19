@@ -54,6 +54,10 @@ const BAR_WINDOW_SCOPE = [
 ];
 /** Where clamping a score to 100 is forbidden. */
 const SCORE_CLAMP_SCOPE = ['src/modules/directives', 'src/modules/scoring'];
+// #908 — `recommendedTimeframe` is FREE TEXT; anything using it as a bar cadence must go
+// through selectBaseTimeframe(). Scope: every module (the bug was in automation, but the
+// class is "any bar-readiness/count caller").
+const RAW_CADENCE_SCOPE = ['src/modules'];
 
 /**
  * Where a directive may not fabricate a reading (INV-NO-FABRICATED-READING).
@@ -314,6 +318,13 @@ const CANARIES = [
     file: 'src/modules/scoring/arena.controller.ts',
     markers: ['selectBaseTimeframe'],
     hint: 'The Arena must resolve cadence per protocol, not take whatever rows are newest.',
+  },
+  {
+    id: 'INV-SINGLE-CADENCE',
+    root: 'nest',
+    file: 'src/modules/automation/automation-loop.service.ts',
+    markers: ['selectBaseTimeframe'],
+    hint: 'The automation loop’s bar-readiness gate must resolve free-text cadence through the shared util (#908).',
   },
   {
     id: 'INV-UTC-TIMESTAMPS',
@@ -901,6 +912,53 @@ function scanBarWindows() {
 }
 
 /**
+ * scanRawCadenceFallback() — INV-SINGLE-CADENCE (#908, 2026-09-19).
+ *
+ * ⚠️ THE REGRESSION THIS EXISTS TO CATCH. `recommendedTimeframe` is FREE TEXT in the protocol
+ * seed (`'5s–30s'`, `'5m–1h'`, `'1d (signal), 1h/15m'` are real values). The automation loop's
+ * data-readiness gate used it RAW with a fallback:
+ *
+ *     const timeframe = …?.recommendedTimeframe || '1d';
+ *     await this.marketData.getBarCount(dbSym.id, timeframe);
+ *
+ * `getBarCount(id, '5s–30s')` returns 0 forever — no marketbar row will ever carry that
+ * timeframe — so GER40/UK100/DAX bots sat in "pending_bars — Waiting for first bars (5s–30s)"
+ * for 44h+ with thousands of real 1m/5m bars beneath them, and the message read as a
+ * 30-second wait. Measured: 55 identical decision_log reasons in 24h.
+ *
+ * The shape scanned for is EXACTLY the bug: a `||`/`??` STRING-LITERAL fallback applied to
+ * `recommendedTimeframe` where the resolution does not go through `selectBaseTimeframe()`.
+ * Correct code does not match: `selectBaseTimeframe(x?.recommendedTimeframe)` (resolved),
+ * `x?.recommendedTimeframe ?? undefined` (no cadence literal), or plain display/echo sites.
+ * The three-line block window covers a fallback on the following line — a per-line test
+ * would miss `const tf =\n  x?.recommendedTimeframe || '1d';`.
+ */
+function scanRawCadenceFallback() {
+  for (const scope of RAW_CADENCE_SCOPE) {
+    for (const file of walk(path.join(NEST_ROOT, scope))) {
+      if (file.endsWith('.spec.ts')) continue;
+      const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+      const fileRel = rel(file);
+      for (let i = 0; i < lines.length; i++) {
+        if (isCommentLine(lines[i])) continue;
+        if (!/recommendedTimeframe/.test(stripComments(lines[i]))) continue;
+        const block = stripComments(lines.slice(i, i + 3).join('\n'));
+        if (!/recommendedTimeframe\s*(\|\||\?\?)\s*['"]/.test(block.replace(/\s*\r?\n\s*/g, ' '))) continue;
+        if (/selectBaseTimeframe/.test(block)) continue;
+        fail(
+          'raw-cadence-fallback',
+          `${fileRel}:${i + 1} applies a string fallback to the free-text recommendedTimeframe — it is being used as a bar cadence`,
+          'INV-SINGLE-CADENCE: resolve through `selectBaseTimeframe()` (common/utils/timeframe.ts). ' +
+            'Used raw as a bar key, `getBarCount()` returns 0 forever — GER40/UK100 sat in ' +
+            '"pending_bars — Waiting for first bars (5s–30s)" for 44h+ with thousands of real ' +
+            '1m/5m bars beneath them (#908).',
+        );
+      }
+    }
+  }
+}
+
+/**
  * Find every `<callee>(...)` call and return its raw argument source.
  *
  * We need real argument parsing rather than a regex, because the naive pattern
@@ -1154,6 +1212,7 @@ function reportPageCoverage(ids) {
 
 checkCanaries();
 scanBarWindows();
+scanRawCadenceFallback();
 scanScoreClamp();
 scanObservedDenominator();
 scanStaleScoringGuard();
