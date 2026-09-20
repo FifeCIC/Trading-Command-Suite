@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { fetchScoringThresholds } from '../core/api/signals';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import { buildScoreDisplay } from '../core/score-display';
+import { buildScoreDisplay, thresholdGeometry } from '../core/score-display';
 import './sees-arena.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -47,11 +48,26 @@ function ProtocolChip({ id, name, description, active, onToggle, dataInsufficien
   );
 }
 
-function scoreClass(v, hardGated) {
+/**
+ * CSS class for one protocol cell in the arena table.
+ *
+ * ⚠️ The BAR comes from the SERVER, never from this file (2026-09-20, #847). The version this
+ * replaces hard-copied `v >= 65 / v >= 40` and classified `vm.pct` — which is percent-of-CAPACITY
+ * (rawComposite / rawMax, measured ≈ 4-17) — so EVERY non-gated cell rendered `sa-score-low`
+ * while the server called some of them BUY/STRONG. The classifier guard found this file while it
+ * was being canaried, which is the whole point of the guard: the literals lived inside a function,
+ * invisible to the module-level declaration scan.
+ *
+ * `hardGated` is a page-local state (the server refused to score), not a magnitude — it keeps its
+ * own class. An unknown scale renders MUTED, never "low": "cannot judge" is not "poor".
+ */
+function arenaScoreClass(pct, hardGated, scale) {
   if (hardGated) return 'sa-score-gated';
-  if (v >= 65) return 'sa-score-high';
-  if (v >= 40) return 'sa-score-med';
-  return 'sa-score-low';
+  const standing = thresholdGeometry(pct, scale).standing;
+  if (standing === 'strong') return 'sa-score-high';
+  if (standing === 'entry') return 'sa-score-med';
+  if (standing === 'below') return 'sa-score-low';
+  return 'pl-muted';
 }
 
 const CONSENSUS_LABELS = {
@@ -79,6 +95,16 @@ export default function SeesArenaPage() {
   const filtersQuery = useQuery({
     queryKey: ['arena-filters'], queryFn: () => apiGet('/api/scoring/arena/filters'), staleTime: 60_000,
   });
+
+  // Live classification bars (#847) — the scale `vm.pct` is measured on. Read from the server, not
+  // remembered: the 2026-09-15 rescale set entry/strong to 6/13, and a hand-copied bar is exactly
+  // how the 65/40 copy this file used to carry survived it.
+  const { data: thresholdData } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: fetchScoringThresholds,
+    staleTime: 300_000,
+  });
+  const scale = thresholdData?.classification ?? null;
   const protocols = filtersQuery.data?.protocols || [];
   const allProtocolIds = useMemo(() => protocols.map((p) => p.id), [protocols]);
 
@@ -253,7 +279,7 @@ export default function SeesArenaPage() {
                         marketStatus: ps.marketStatus,
                       });
                       return (<td key={pid}>
-                        <span className={`sa-score-cell ${scoreClass(vm.pct, ps.hardGated)}`}
+                        <span className={`sa-score-cell ${arenaScoreClass(vm.pct, ps.hardGated, scale)}`}
                           title={ps.warnings?.join('; ') || (ps.hardGated ? 'Hard-gated' : '')}>
                           {ps.hardGated ? '⛔' : vm.pct != null ? `${vm.pct}%` : '—'}
                         </span><br/>

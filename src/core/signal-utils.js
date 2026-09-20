@@ -27,6 +27,23 @@
  * `broker-utils.js`, which documents the same rule for the style bars); if these need to become
  * server-driven, wire them to `GET /api/scoring/gated/thresholds` like every other live threshold.
  *
+ * ✅ 2026-09-20 — THE CLASS IS CLOSED (measured). The 2026-09-16 pass migrated the FIRST percent
+ * call sites (StrategyMonitorPage queues, `score-display.standingClass`). Measurement then found
+ * four survivors still passing values that are NOT on this file's scale into `scoreClass` /
+ * `scoreColor`:
+ *
+ *     Protocols Performance  scoreClass(e.vm.pct)      vm.pct = rawComposite/rawMax = 58/1295 = 4.5
+ *     Symbols Ladder         scoreClass(pct)           the same value, Signal AND Opportunity cells
+ *     Protocols Ladder       scoreClass(p.topScore)    a symbol's display score (0-100 observed)
+ *     Hot Picks widget       scoreColor(pick.score)    ranked score (29-57 today, not a percent)
+ *
+ * Against 65/40 the first two painted **100% of rows "low"** while the server called some of them
+ * BUY/STRONG — the #847 defect surviving one layer deeper. All four now classify on their real
+ * scale: percent-of-capacity → `thresholdGeometry()` + `standingClass()` against the LIVE server
+ * bars; server-classified → `signalClass()` below. `scoreClass` is now only for genuine 0-100
+ * display values, and `nest/scripts/validate-threshold-sources.cjs` fails the build if a `*pct` /
+ * `composite` identifier reaches it.
+ *
  * @file src/core/signal-utils.js
  */
 import { createElement } from 'react';
@@ -101,6 +118,21 @@ export function getSignal(score) {
   return 'SELL';
 }
 
+/**
+ * CSS class for a GENUINE 0-100 display value (e.g. `signal_rank_snapshot.combinedStrength`,
+ * measured 18-74). This is the legacy display scale owned by this file.
+ *
+ * ⚠️ NOT for percent-of-capacity (`compositePct`, `signalPct`, `normalizedScore` — 4-17 after the
+ * 2026-09-15 rescale) and NOT for raw composites or `*pct` fields. Measured 2026-09-20:
+ * `vm.pct` for BTC is 58/1295 = 4.5, so this function painted 100% of rows "low" while the server
+ * called some of them BUY/STRONG — plausible output, no error (#839/#847 shape).
+ *
+ *   - percent-of-capacity  →  thresholdGeometry(pct, thresholds) + standingClass(standing)
+ *   - server-classified    →  signalClass(signal)
+ *
+ * `nest/scripts/validate-threshold-sources.cjs` fails the build when a `*pct` / `composite`
+ * identifier is passed here.
+ */
 export function scoreClass(score) {
   if (score == null) return 'pl-muted';
   if (score >= _buyThreshold) return 'pl-score-high';
@@ -136,6 +168,24 @@ export function signalTone(signal) {
   if (signal === 'STRONG_SELL' || signal === 'SELL') return 'sell';
   if (signal === 'HOLD') return 'hold';
   return 'neutral';
+}
+
+/**
+ * CSS class for a SERVER-CLASSIFIED value — colour comes from the signal, not a remembered bar.
+ *
+ * Use this wherever the row already carries the server's own classification (`signal`,
+ * `topSignal`, `lastSignal`, `vm.signal`): the repo's rule is that the client NEVER re-derives
+ * BUY/HOLD/SELL from a number, so it must not grade the number against a local scale either.
+ *
+ * Unknown/absent signal resolves to `pl-muted` — "cannot judge" must never render as "good"
+ * or "poor" (see `score-display.js`: `null` standing renders muted for the same reason).
+ */
+export function signalClass(signal) {
+  const tone = signalTone(signal);
+  if (tone === 'buy') return 'pl-score-high';
+  if (tone === 'hold') return 'pl-score-med';
+  if (tone === 'sell') return 'pl-score-low';
+  return 'pl-muted';
 }
 
 /** Human-readable labels for protocol directionMode values (LONG_ONLY → 'Long Only'). */

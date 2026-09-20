@@ -19,7 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../../core/api/client';
 import { registerWidget } from '../../core/widget-registry';
-import { scoreColor } from '../../core/signal-utils';
+import { signalColor } from '../../core/signal-utils';
 
 /** MT5 bridge diagnostics — connection, balance, equity. */
 const useMt5Diag = () =>
@@ -525,7 +525,10 @@ function HotPicksWidget() {
             <span className="dash-hp-signal">
               {pick.signal === 'entry' ? '🎯' : pick.signal === 'watch' ? '👁' : '—'}
             </span>
-            <span className="dash-hp-score" style={{ color: scoreColor(pick.score) }}>{pick.score}</span>
+            {/* Colour = the SERVER's classification (`pick.signal`), not a remembered 0-100 bar.
+                Measured 2026-09-20: ranked `score` is 29-57 — a display number with no owning bar,
+                and the client never re-derives a classification from a number (#847). */}
+            <span className="dash-hp-score" style={{ color: signalColor(pick.signal) }}>{pick.score}</span>
           </a>
         ))}
       </div>

@@ -5,12 +5,13 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
+import { fetchScoringThresholds } from '../core/api/signals';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
-import { buildScoreDisplay } from '../core/score-display';
+import { buildScoreDisplay, thresholdGeometry, standingClass } from '../core/score-display';
 import './protocols-ladder.css';
 
-import { scoreClass, pnlClass, pnlSign } from '../core/signal-utils';
+import { pnlClass, pnlSign } from '../core/signal-utils';
 
 export default function ProtocolsPerformancePage() {
   const [sortBy, setSortBy] = useState('score');
@@ -25,6 +26,18 @@ export default function ProtocolsPerformancePage() {
   const { data: stratsData } = useQuery({
     queryKey: ['perf-strats'], queryFn: () => apiGet('/api/trading/strategies/with-ratios').catch(() => []), staleTime: 15_000, refetchInterval: 30_000,
   });
+
+  // Live classification bars (#847). `vm.pct` is percent-of-CAPACITY — rawComposite / rawMax, the
+  // CONFIGURED denominator. Measured 2026-09-20: BTC = 58/1295 = 4.5, so on the legacy 65/40
+  // display scale no row could ever clear 40 and the whole table rendered "low" while the server
+  // called some rows BUY/STRONG. Classify on the scale the value was measured on, read from the
+  // server — never a remembered number (same pattern as StrategyMonitorPage's queue cells).
+  const { data: thresholdData } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: fetchScoringThresholds,
+    staleTime: 300_000,
+  });
+  const scale = thresholdData?.classification ?? null;
 
   const protoMap = useMemo(() => {
     const map = {}; (protocolsData?.protocols || []).forEach(p => { map[p.id] = p.name || p.id; }); return map;
@@ -91,7 +104,7 @@ export default function ProtocolsPerformancePage() {
       </div>
       {rLoading ? <LoadingSkeleton variant="card" count={5} /> : (
         <div className="pl-table-wrap"><table className="pl-table"><thead><tr><th>#</th><th>Symbol</th><th>Score</th><th>Signal</th><th>Protocol</th><th>P&amp;L</th><th>Ratio</th></tr></thead><tbody>
-          {entries.map((e, i) => (<tr key={`${e.protocolId}:${e.ticker}`}><td className="pl-rank">{i + 1}</td><td className="pl-symbol">{e.ticker}</td><td><span className={scoreClass(e.vm.pct)}>{e.vm.pct != null ? `${e.vm.pct}%` : (e.score ?? '—')}</span></td><td>{e.vm.signal ? <span className={`pl-badge pl-badge-${String(e.vm.signal).replace('STRONG_', '').toLowerCase()}`}>{e.vm.signal}</span> : '—'}</td><td className="pl-muted">{e.protocolName}</td><td className={pnlClass(e.pnl)}>{pnlSign(e.pnl)}</td><td className="pl-muted">{e.ratio != null ? e.ratio.toFixed(2) : '—'}</td></tr>))}
+          {entries.map((e, i) => (<tr key={`${e.protocolId}:${e.ticker}`}><td className="pl-rank">{i + 1}</td><td className="pl-symbol">{e.ticker}</td><td><span className={standingClass(thresholdGeometry(e.vm.pct, scale).standing)}>{e.vm.pct != null ? `${e.vm.pct}%` : (e.score ?? '—')}</span></td><td>{e.vm.signal ? <span className={`pl-badge pl-badge-${String(e.vm.signal).replace('STRONG_', '').toLowerCase()}`}>{e.vm.signal}</span> : '—'}</td><td className="pl-muted">{e.protocolName}</td><td className={pnlClass(e.pnl)}>{pnlSign(e.pnl)}</td><td className="pl-muted">{e.ratio != null ? e.ratio.toFixed(2) : '—'}</td></tr>))}
         </tbody></table></div>
       )}
     </div>

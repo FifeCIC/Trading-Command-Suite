@@ -263,6 +263,17 @@ const FRONTEND_THRESHOLD_OWNERS = [
 
 const MODULE_THRESHOLD_RE = /^(?:let|const)\s+_?\w*(?:[Tt]hreshold|[Bb]ar|[Gg]ate)\w*\s*=\s*(\d+)/;
 
+/**
+ * ⚠️ The CLASSIFIER-MISUSE patterns (2026-09-20, #847 follow-up).
+ *
+ * Different question from MODULE_THRESHOLD_RE above: that one asks "is a bar DECLARED outside its
+ * owner?". This one asks "is a VALUE handed to the wrong SCALE?". Separate rule, separate failure.
+ * `([^()\n]*)` stops at the closing paren so a nested call cannot be half-read.
+ */
+const CLASSIFIER_CALL_RE = /\b(?:scoreClass|scoreColor)\s*\(([^()\n]*)/g;
+/** Identifiers that NAME a scale other than the 0-100 display scale. */
+const NON_DISPLAY_ARG_RE = /(?:[Pp]ct\b|omposite|ormalized|raw[A-Z])/;
+
 for (const file of files) {
   const relPath = rel(file);
   if (!relPath.startsWith('src/')) continue; // frontend only — backend bars are handled above
@@ -275,10 +286,42 @@ for (const file of files) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
-    const m = MODULE_THRESHOLD_RE.exec(lineText.trim());
-    if (!m) continue;
     // A commented-out declaration is documentation, not configuration (same rule as above).
     if (/^\s*(\/\/|\*|\/\*|#)/.test(lineText)) continue;
+
+    // ⚠️ CLASSIFIER MISUSE — a value that is NOT on the 0-100 display scale handed to the 0-100
+    // helpers. Added 2026-09-20 (#847 follow-up): the 2026-09-16 pass migrated the first percent
+    // call sites by hand, and measurement then found FOUR survivors (Protocols Performance,
+    // Symbols Ladder, Protocols Ladder, Hot Picks) plus Strategy Monitor — where 11 of 18 rows
+    // labelled BUY were rendering RED through `scoreClass(15)` against a 65/40 bar. A site-by-site
+    // fix is a promise; this is the check that makes occurrence N+1 fail the build.
+    //
+    // ANCHORED and narrow on purpose: the argument must NAME a non-display scale. The one
+    // documented legitimate caller, `scoreClass(combinedStrength)`, does not match. Measured
+    // 2026-09-20: 0 live matches after the migration.
+    CLASSIFIER_CALL_RE.lastIndex = 0;
+    let cm;
+    while ((cm = CLASSIFIER_CALL_RE.exec(lineText)) !== null) {
+      const arg = cm[1].split(',')[0].trim();
+      if (!NON_DISPLAY_ARG_RE.test(arg)) continue;
+      findings.push({
+        level: 'error',
+        relPath,
+        lineNo: i + 1,
+        kind: 'classifier-misuse',
+        value: null,
+        lineText: lineText.trim(),
+        note:
+          `"${arg}" is not on the 0-100 display scale — percent-of-capacity goes through ` +
+          'thresholdGeometry(pct, thresholds) + standingClass(standing) with bars READ from ' +
+          'fetchScoringThresholds(); a server-classified value goes through signalClass(signal). ' +
+          'Measured 2026-09-20: vm.pct = rawComposite/rawMax = 4.5 for BTC, and 11 of 18 BUY rows ' +
+          'rendered "low" — plausible output, no error (#839/#847).',
+      });
+    }
+
+    const m = MODULE_THRESHOLD_RE.exec(lineText.trim());
+    if (!m) continue;
 
     const owner = FRONTEND_THRESHOLD_OWNERS.find((o) => o.file === relPath);
     findings.push({

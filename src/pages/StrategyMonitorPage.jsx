@@ -23,7 +23,7 @@ import { noticeLine } from '../core/notices/registry.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
-import { scoreClass } from '../core/signal-utils';
+import { scoreClass, signalClass } from '../core/signal-utils';
 import { thresholdGeometry, standingClass } from '../core/score-display';
 import { isActiveStrategy, isTradingStrategy, isScoringStrategy } from '../core/strategy-filters';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
@@ -226,7 +226,11 @@ export default function StrategyMonitorPage() {
           <div className="sm-stat"><span className="sm-stat-val">{overview.total}</span><span className="sm-stat-label">Total</span></div>
           <div className="sm-stat"><span className="sm-stat-val pl-score-high">{overview.active}</span><span className="sm-stat-label">Active</span></div>
           <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#3b82f6' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
-          <div className="sm-stat"><span className={`sm-stat-val ${scoreClass(overview.avgScore)}`}>{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
+          {/* Avg Score is the mean of `lastComposite` values — an average has NO server
+              classification, so it renders MUTED ("cannot judge") instead of being graded against
+              a remembered bar. Measured 2026-09-20: `lastComposite` spans 9-108 and its own units
+              are the #909 open question; #847 closed the misclassification class. */}
+          <div className="sm-stat"><span className="sm-stat-val pl-muted">{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
           {brokerChips.map(bc => (
             <div
               key={bc.brokerId}
@@ -315,9 +319,13 @@ export default function StrategyMonitorPage() {
                           look larger. Click the score to see the live ordering stack.
                         </PageInfoPopover>
                       </span>
+                      {/* Colour = the SERVER's classification for this evaluation (`lastSignal`) —
+                          measured 2026-09-20: `scoreClass(15)` painted 11 of 18 BUY rows RED while
+                          the server called them BUY. `lastComposite` is the #909 two-unit column,
+                          so it cannot be graded locally even once its units are settled (#847). */}
                       <Link
                         to="/scoring/live-ordering-stack"
-                        className={`${styles.scoreValue} ${scoreClass(s.lastComposite)}`}
+                        className={`${styles.scoreValue} ${signalClass(s.lastSignal)}`}
                         title="Open the live ordering stack (Scoring)"
                         onClick={e => e.stopPropagation()}
                       >

@@ -19,7 +19,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
 
-import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
+import { signalClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
 import { usePersistentChoice } from '../hooks/usePersistentState';
 
 export default function ProtocolsLadderPage() {
@@ -232,7 +232,10 @@ export default function ProtocolsLadderPage() {
                     )}
                   </td>
                   <td className={p.hasData ? '' : 'pl-muted'}>
-                    {p.hasData ? <span className={`pl-highest-score ${scoreClass(p.topScore)}`}>{p.topScore}</span> : '—'}
+                    {/* topScore is a display-scale number with no owning bar — the SERVER's classification
+                        for that symbol (topSignal, badge shown beside it) colours the cell. Measured
+                        2026-09-20: it is a 0-100 display value, NOT percent-of-capacity (#847). */}
+                    {p.hasData ? <span className={`pl-highest-score ${signalClass(p.topSignal)}`}>{p.topScore}</span> : '—'}
                   </td>
                   <td><strong>{p.hasData ? p.topNScore : '—'}</strong></td>
                   <td className="pl-muted">{p.hasData ? p.avgScore : '—'}</td>

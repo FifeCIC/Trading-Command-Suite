@@ -21,9 +21,10 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import { TopRowSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
-import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
+import { DIRECTION_MODE_LABELS } from '../core/signal-utils';
 import { formatDateTime, timeAgo } from '../core/format-utils';
-import { buildScoreDisplay } from '../core/score-display';
+import { buildScoreDisplay, thresholdGeometry, standingClass } from '../core/score-display';
+import { fetchScoringThresholds } from '../core/api/signals';
 import SignalBadge from '../components/SignalBadge';
 
 /** Seconds to wait after the automation loop tick before refreshing. */
@@ -90,12 +91,20 @@ function readScoreDisplay() {
 /**
  * ScoreCell — renders one score value (Signal or Opportunity) according to the
  * user's Screen Options preference: raw only, percent only, or both stacked.
+ *
+ * ⚠️ `cls` comes from the CALLER (2026-09-20, #847). The two cells are on different scales and
+ * NEITHER is the legacy 0-100 display scale:
+ *   - Signal      → standingClass(thresholdGeometry(vm.pct, scale)) — percent-of-capacity against
+ *                   the LIVE server bars. Measured 2026-09-20: vm.pct spans ~4-17, so the old
+ *                   `scoreClass(pct)` (65/40) rendered EVERY row "low" while the server called
+ *                   some of them BUY/STRONG.
+ *   - Opportunity → no server-owned bars exist for the additive scale, so it renders MUTED
+ *                   ("cannot judge") rather than borrowing a bar it does not have.
  */
-function ScoreCell({ value, max, pct, trailLink, symbol, mode }) {
+function ScoreCell({ value, max, pct, cls = 'pl-muted', trailLink, symbol, mode }) {
   if (value == null) {
     return <td><span className="pl-muted">—</span></td>;
   }
-  const cls = scoreClass(pct);
   const raw = (
     <>
       <span className={cls}>{value.toLocaleString()}</span>
@@ -259,6 +268,16 @@ export default function SymbolsLadderPage() {
     },
     placeholderData: keepPreviousData,
   });
+
+  // Live classification bars (#847) — the scale `vm.pct` is measured on. Read from the server, not
+  // remembered: the 2026-09-15 rescale moved entry/strong to 6/13 and a hand-copied bar is exactly
+  // how the 65/40 copy survived.
+  const { data: thresholdData } = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: fetchScoringThresholds,
+    staleTime: 300_000,
+  });
+  const scale = thresholdData?.classification ?? null;
 
   // Build a symbol→score lookup from the runs
   const scoreMap = useMemo(() => {
@@ -492,7 +511,8 @@ export default function SymbolsLadderPage() {
                 <tr key={`${e.protocolId}:${e.symbol}`}>
                   <td className="pl-rank">{i + 1}</td>
                   <td className="pl-symbol">{e.symbol}</td>
-                  <ScoreCell value={vm.score} max={signalMax} pct={vm.pct} trailLink={trailLink} symbol={e.symbol} mode={scoreDisplay} />
+                  <ScoreCell value={vm.score} max={signalMax} pct={vm.pct} cls={standingClass(thresholdGeometry(vm.pct, scale).standing)} trailLink={trailLink} symbol={e.symbol} mode={scoreDisplay} />
+                  {/* Opportunity has no server-owned classification bars — muted, never "low" (#847). */}
                   <ScoreCell value={vm.opportunityScore} max={oppMax} pct={vm.opportunityPct} trailLink={trailLink} symbol={e.symbol} mode={scoreDisplay} />
                   <td>
                     <SignalBadge display={vm} />

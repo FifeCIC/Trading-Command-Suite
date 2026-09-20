@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { TcsNoticeException } from '../../common/notices/tcs-notice.exception';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
@@ -169,8 +170,34 @@ export class SignalActionsService {
       size: quantity,
     });
     if (!feas.feasible) {
+      // #826 Phase 1 — raise the CODE, not just a sentence.
+      //
+      // This threw `new BadRequestException(first.message)`, which discarded two things that
+      // the library had already computed:
+      //
+      //   · `hint` — the only actionable remedy ("Raise the manual trade size to at least …").
+      //     The client had nothing to offer but a generic transport fix.
+      //   · the blocker's identity — no `code`, so `noticeFromError()` fell through to its
+      //     HTTP-status branch and rendered `TCS-SYS-002`, *the API failed*, for what is a
+      //     domain refusal, not a transport fault.
+      //
+      // Measured 2026-09-20: a BTC manual trade was refused with a correctly-worded message
+      // and a remedy that could not work, and the operator had no way to tell it apart from a
+      // dead API. The broker-result path directly below already forwards `code`/`params` for
+      // exactly this reason (#826 Phase 3) — the feasibility path was simply missed.
+      //
+      // ⚠️ The status comes from the catalogue (`TCS-RISK-001` = 400), not from here. An
+      // earlier draft overrode it at this call site; the class deliberately derives it so two
+      // throw sites cannot disagree about what the same condition means. 400 preserves what
+      // this endpoint has always returned — a pre-trade refusal is client-actionable.
       const first = feas.blockers[0];
-      throw new BadRequestException(first.message);
+      throw new TcsNoticeException(
+        'TCS-RISK-001',
+        {
+          reason: [first.message, first.hint].filter(Boolean).join(' · '),
+        },
+        first.key ? { detail: `blocker: ${first.key}` } : {},
+      );
     }
 
     let entryPrice: number | null = null;

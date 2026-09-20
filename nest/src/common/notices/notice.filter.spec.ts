@@ -156,13 +156,29 @@ describe('describeException — the server → client notice contract (#826 Phas
   });
 
   it('gives a registry code the server catalogue does not declare a usable default rather than blanking it', () => {
-    // A code can be legitimate (RISK-001 is registered) while having no HTTP status declared for it.
+    // A code can be legitimate (DATA-001 is registered) while having no HTTP status declared for it.
     // The report must still be usable: never blank, never code-less.
+    //
+    // ⚠️ Do NOT switch this back to RISK-001. It was the example here until 2026-09-20, when it was
+    // declared in SERVER_NOTICES (400) because `SignalActionsService` now raises it — so it no longer
+    // exercises the undeclared path, and using it made this test assert the fallback's 500 against a
+    // code that has a real status. The positive case is covered separately below.
+    const report = describeException(new TcsNoticeException('TCS-DATA-001', { reason: 'gate tripped' }));
+
+    expect(report.code).toBe('TCS-DATA-001');
+    expect(report.body.message).toContain('TCS-DATA-001');
+    expect(report.statusCode).toBe(500);
+    neverBlank(report);
+  });
+
+  it('uses the DECLARED status for a code the catalogue carries — RISK-001 is 400, not the 500 fallback', () => {
+    // Guards the 2026-09-20 declaration: a feasibility refusal is client-actionable, so if this
+    // ever regresses to the undeclared fallback (500) the operator is told "server fault" for a
+    // condition they can fix themselves.
     const report = describeException(new TcsNoticeException('TCS-RISK-001', { reason: 'gate tripped' }));
 
     expect(report.code).toBe('TCS-RISK-001');
-    expect(report.body.message).toContain('TCS-RISK-001');
-    expect(report.statusCode).toBe(500);
+    expect(report.statusCode).toBe(400);
     neverBlank(report);
   });
 

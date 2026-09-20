@@ -67,6 +67,10 @@ export const SERVER_NOTICES: Record<string, ServerNotice> = {
   'TCS-SYS-006': { httpStatus: 500, severity: 'error', label: 'Unexpected server error' },
   'TCS-INTEG-001': { httpStatus: 503, severity: 'critical', label: 'MT5 bridge not connected' },
   'TCS-INTEG-002': { httpStatus: 503, severity: 'critical', label: 'MT5 circuit breaker open' },
+  // Rendered by the client since #826 Phase 2; emitted by the SERVER from 2026-09-20 so a
+  // feasibility refusal carries its identity instead of falling through to TCS-SYS-002.
+  // 400, not the undeclared 500 fallback: a pre-trade gate refusal is client-actionable.
+  'TCS-RISK-001': { httpStatus: 400, severity: 'warning', label: 'Trade blocked by a safety gate' },
 };
 
 /** Fallback for a code that is not declared above. Deliberately loud rather than blank. */
