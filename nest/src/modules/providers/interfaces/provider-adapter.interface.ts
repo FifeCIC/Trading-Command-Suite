@@ -285,6 +285,13 @@ export interface BrokerDeal {
    * See `nest/src/common/trading/close-reason.ts` and the 2026-09-18 close-attribution work.
    */
   reason?: number;
+  /**
+   * The deal's own comment, VERBATIM. Our bridge stamps `TCS:<origin>` on deals IT closes
+   * (`TCS:time-stop`, `TCS:manual`), which is how a close is attributed to an ACTOR rather than to
+   * "the terminal" (#916, 2026-09-20). A stop-loss fill instead carries the broker's `[sl <price>]`.
+   * Parsed by `closeReasonFromComment()`.
+   */
+  comment?: string;
 }
 
 /** Normalized account summary across all brokers. */

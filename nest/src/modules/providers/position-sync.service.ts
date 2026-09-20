@@ -22,7 +22,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { AdapterFactory } from './adapter-factory';
-import { CLOSE_REASONS, closeReasonFromDealReason } from '../../common/trading/close-reason';
+import { CLOSE_REASONS, closeReasonFromComment, closeReasonFromDealReason } from '../../common/trading/close-reason';
 
 /** Normalised position shape — any broker adapter should map to this. */
 export interface BrokerPosition {
@@ -492,6 +492,7 @@ export class PositionSyncService {
     // MT5 `deal.reason` off the closing deal — the broker's OWN statement of why it closed.
     // `undefined` until the bridge is redeployed with the field; see close-reason.ts.
     let dealReason: number | undefined;
+    let dealComment: string | undefined;
     try {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
@@ -526,7 +527,13 @@ export class PositionSyncService {
         const exitDeals = candidates.filter((d: any) => d.side === closingSide);
         if (exitDeals.length > 0) {            const lastDeal: any = exitDeals[exitDeals.length - 1];
             // The broker's own reason for the close, when it reports one.
-            if (typeof lastDeal?.reason === 'number') dealReason = lastDeal.reason;          const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
+            if (typeof lastDeal?.reason === 'number') dealReason = lastDeal.reason;
+            // ⚠️ The comment can be STRICTLY BETTER evidence than the enum: our bridge stamps
+            // `TCS:<origin>` on the deals it closes (#916, 2026-09-20), naming the actor. Measured
+            // on the book: 33 of 41 closes carried EMPTY comments with reason 0 — a pattern the
+            // enum alone cannot attribute to an actor or rule in as ours.
+            if (typeof lastDeal?.comment === 'string') dealComment = lastDeal.comment;
+          const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
           exitPrice = filledVolume > 0
             ? exitDeals.reduce((sum: number, d: any) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
             : Number(exitDeals[exitDeals.length - 1].price || 0);
@@ -554,7 +561,10 @@ export class PositionSyncService {
       // bridge does not forward that field yet, so this yields `broker:unknown` — deliberately.
       // "The broker did it and did not say why" is the true statement; a guess is what made the
       // 2026-09-18 investigation impossible in the first place.
-      const derivedCloseReason = closeReasonFromDealReason(dealReason);
+      // Precedence: a reason already ON the row (written by the closer at close time) > OUR comment
+      // on the closing deal (names the actor, #916) > the broker's deal-reason enum > honest unknown.
+      const fromComment = closeReasonFromComment(dealComment);
+      const derivedCloseReason = fromComment ?? closeReasonFromDealReason(dealReason);
       const closeReason = trade.closeReason ?? derivedCloseReason;
 
       await this.prisma.trade.update({

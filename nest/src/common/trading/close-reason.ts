@@ -67,10 +67,13 @@ export type CloseReason = (typeof CLOSE_REASONS)[keyof typeof CLOSE_REASONS];
 /**
  * MT5 `deal.reason` → our vocabulary.
  *
- * ⚠️ The values are the `mt5.DEAL_REASON_*` constants. MT5 reports an INTEGER; the bridge now
- * forwards it as `reason` on each deal (see `/history/deals` in `mt5_bridge_v2.py`), but the
- * RUNNING bridge is an older build that omits the field — so callers must treat `undefined` as
- * `BROKER_UNKNOWN` rather than defaulting to something that reads like knowledge.
+ * ⚠️ The values are the `mt5.DEAL_REASON_*` constants. MT5 reports an INTEGER; the bridge forwards
+ * it as `reason` on each deal (see `/history` in `mt5_bridge_v2.py`) — verified live 2026-09-20:
+ * 293/293 deals carried the field. An ABSENT value still maps to `BROKER_UNKNOWN` rather than a
+ * default that reads like knowledge.
+ *
+ * ⚠️ PREFER `closeReasonFromComment()` when a comment is available: the enum cannot distinguish our
+ * own bridge closes (reason 3 / 0) from anything else the terminal did.
  *
  * Deliberately NOT mapped to anything more specific than they are:
  *   CLIENT / MOBILE / WEB — a human closed it somewhere, but not necessarily OUR ui. Calling that
@@ -94,9 +97,37 @@ export function closeReasonFromDealReason(reason: number | null | undefined): Cl
       // client | mobile | web | expert | rollover | vmargins | split
       return CLOSE_REASONS.BROKER_TERMINAL;
     default:
-      // Including `undefined` — the running bridge does not send this field yet. Naming that
-      // honestly is the point; see the header.
+      // Including `undefined`. Naming that honestly is the point; see the header.
       return CLOSE_REASONS.BROKER_UNKNOWN;
+  }
+}
+
+/**
+ * OUR OWN comment on a closing deal → the actor that closed it, or `null` when the comment is not
+ * one of ours.
+ *
+ * ⚠️ WHY THIS EXISTS (2026-09-20, #916). The deal-reason enum cannot attribute a close: the
+ * bridge's closes surface as `3 (expert)` and terminal closes as `0 (client)`, and BOTH look the
+ * same as "a human somewhere". Measured on the closed-trade book: 33 of 41 attributable closes
+ * were reason 0 with an EMPTY comment — small winners (+0.125% average) closed in batches seconds
+ * apart — and nothing in the app, the guardian, the time-stop or any scheduled job accounted for
+ * them. The comment is the one field that survives with the deal, so the bridge now stamps
+ * `TCS:<origin>` and the close can name its actor.
+ *
+ * Returns `null` (not `BROKER_UNKNOWN`) when the comment is foreign or absent, so the caller can
+ * fall through to `closeReasonFromDealReason()` and still say something true.
+ */
+export function closeReasonFromComment(comment: string | null | undefined): CloseReason | null {
+  const m = /^TCS:([a-z][a-z0-9-]{0,24})$/.exec(String(comment ?? '').trim());
+  if (!m) return null;
+  switch (m[1]) {
+    case 'time-stop':
+      return CLOSE_REASONS.SYSTEM_TIME_STOP;
+    case 'manual':
+      return CLOSE_REASONS.USER_MANUAL;
+    default:
+      // An origin we do not know yet — fall through rather than inventing a mapping.
+      return null;
   }
 }
 

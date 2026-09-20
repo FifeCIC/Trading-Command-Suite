@@ -294,8 +294,14 @@ export class Mt5ConnectionManager {
     return { ok, ...data };
   }
 
-  async closePosition(ticket: number, brokerId?: number) {
-    const { ok, data } = await this.fetch(`/close/${ticket}`, { method: 'POST' }, brokerId);
+  /**
+   * Close a position. `origin` names the CLOSER and lands in the broker deal's comment as
+   * `TCS:<origin>` (#916, 2026-09-20) — that comment is the only record that survives a restart,
+   * so every caller should say who it is ('time-stop', 'manual', …). Defaults to 'manual'.
+   */
+  async closePosition(ticket: number, brokerId?: number, origin?: string) {
+    const query = origin ? `?origin=${encodeURIComponent(origin)}` : '';
+    const { ok, data } = await this.fetch(`/close/${ticket}${query}`, { method: 'POST' }, brokerId);
     return { ok, ...data };
   }
 

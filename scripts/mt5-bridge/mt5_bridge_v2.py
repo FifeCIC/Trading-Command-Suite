@@ -1249,9 +1249,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if not tick: return json_response(self, refusal(NOTICE_NO_QUOTE,
                     f'No quote for {pos.symbol}', {'symbol': pos.symbol}), 400)
                 close_price = tick.bid if is_buy else tick.ask
+                # ⚠️ `origin` NAMES THE CLOSER (2026-09-20, #916). Attribution used to be impossible:
+                # the comment was the fixed string 'Close by TCS', so a bridge close could not be
+                # told from a desktop-terminal close once only the deal record survived.
+                # Measured: 33 of 41 closed trades had EMPTY comments with deal reason 0 (client) —
+                # small winners closed in batches seconds apart, with no API call to account for it.
+                # The closing deal's comment is the durable answer, so it must carry the actor.
+                close_origin = (q.get('origin', ['manual'])[0] or 'manual').strip()[:24]
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': float(pos.volume),
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
-                       'price': close_price, 'deviation': 20, 'magic': 234000, 'comment': 'Close by TCS',
+                       'price': close_price, 'deviation': 20, 'magic': 234000, 'comment': f'TCS:{close_origin}',
                        'type_time': mt5.ORDER_TIME_GTC}
                 # #824 — closing is a market deal, so it carries a filling mode too.
                 filling_name, filling_mask = apply_filling(req, pos.symbol)

@@ -422,7 +422,7 @@ export class Mt5TradingService {
       const positions = await this.getPositions();
       const pos = positions.find((p) => p.ticket === ticket);
 
-      const res = await fetch(`${this.bridgeUrl}/close/${ticket}`, { method: 'POST' });
+      const res = await fetch(`${this.bridgeUrl}/close/${ticket}?origin=manual`, { method: 'POST' });
       const data = await res.json();
       // MT5 returns multiple success retcodes: 10008 (placed), 10009 (done),
       // 10010 (partial). Treat all as success; anything else is a failure.

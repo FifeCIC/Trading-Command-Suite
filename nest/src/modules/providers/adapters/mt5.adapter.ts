@@ -722,11 +722,13 @@ export class Mt5Adapter implements IProviderAdapter {
         time: new Date(d.time),
         // ⚠️ The broker's OWN reason for the deal (mt5.DEAL_REASON_*), passed through so
         // PositionSyncService can record WHY a position closed (close-attribution, 2026-09-18).
-        // ⚠️ `undefined` against the RUNNING bridge build, which predates the field on /history.
-        // Passing it through as undefined rather than coercing to 0 is deliberate:
+        // ✅ 2026-09-20: the running bridge forwards it — verified 293/293 deals carried the field.
+        // Passing an absent value through as undefined rather than coercing to 0 is deliberate:
         // closeReasonFromDealReason() maps undefined to `broker:unknown`, whereas 0 would claim
         // "the client terminal closed it" — a guess presented as knowledge.
         reason: typeof d.reason === 'number' ? d.reason : undefined,
+        // Verbatim: the bridge stamps the CLOSER's identity here (#916).
+        comment: typeof d.comment === 'string' ? d.comment : undefined,
       }))
       .filter((d: BrokerDeal) => d.time.getTime() >= sinceMs);
   }

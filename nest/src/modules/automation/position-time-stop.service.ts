@@ -437,7 +437,9 @@ export class PositionTimeStopService {
 
     for (const c of candidates) {
       try {
-        const result = await (this.mt5Connection as any).closePosition(c.ticket);
+        // `origin` stamps `TCS:time-stop` on the broker deal (#916) — belt AND braces with the
+        // closeReason write below: the deal survives even when the trade row is not matched yet.
+        const result = await (this.mt5Connection as any).closePosition(c.ticket, undefined, 'time-stop');
         if (result?.ok === false) {
           this.logger.warn(`Time-stop close rejected for ${c.symbol}#${c.ticket}: ${result?.error ?? 'unknown'}`);
           continue;
