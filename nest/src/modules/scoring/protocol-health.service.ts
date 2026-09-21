@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
-import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
 import { PrismaService } from '../../database/prisma.service';
 
 /**
@@ -27,9 +26,12 @@ export interface ProtocolHealthIssue {
     | 'no-risk-gate'
     | 'duplicate-directive'
     | 'zero-weight'
-    /** Under 25% of declared maxScore sits on direction-declaring directives.
-     *  A review prompt only — config understates real capacity (2026-09-10). */
-    | 'low-declared-directional-capacity'
+    // RETIRED 2026-09-21 (#906): 'low-declared-directional-capacity' was removed.
+    // Declared bias does not describe runtime capacity — measured: a `neutral`
+    // directive emitted 11,129 directional hits over 7 days, and the config-based
+    // verdict was already tried and reverted once as a capacity rule (ADR-011,
+    // SETTLED-DECISIONS row 9, guarded by directional-capacity-contract.spec.ts).
+    // The actionable version is evidence-based: 'ceiling-below-threshold'.
     /** Measured maximum composite is BELOW the bot's minComposite — the bot can
      *  never trade as configured, however the market behaves (2026-09-10). */
     | 'ceiling-below-threshold'
@@ -74,29 +76,23 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       const seen = new Set<string>();
       const hasRiskGate = config.groups.some((g: any) => g.isRiskGate === true);
 
-      // ── Directional capacity (added 2026-09-10) ──────────────────────────
-      // The composite counts ONLY directives that can emit a directional
-      // `signalClass`; a `directionBias: "neutral"` directive scores, is shown in
-      // the UI, and adds EXACTLY ZERO. A protocol can therefore declare a huge
-      // maxScore total and still be unable to reach its own threshold.
-      //
-      // This is not hypothetical: `ftse-speed-v1`, `dax-speed-v1` and
-      // `cac-speed-v1` each wrap ~815 points of neutral technical directives
-      // around a single 80-point directional one, so their all-time maximum
-      // composite is 31 against a `minComposite` of 65 — they had never cleared
-      // the gate once in their entire history. The fault was invisible because
-      // every individual directive looked healthy and scored in range.
-      let directionalCapacity = 0;
-      let neutralCapacity = 0;
+      // ── Directional capacity verdict — RETIRED 2026-09-21 (#906) ──────────
+      // A per-protocol "declared directional capacity" warning lived here. It was
+      // removed because the field it measured understates runtime behaviour: over
+      // 7 days, directives DECLARING `neutral` emitted thousands of directional
+      // hits (support-resistance-levels 11,129; macd-crossover 5,252), and the same
+      // config-based verdict was already tried and reverted once as a capacity rule
+      // (ADR-011 + SETTLED-DECISIONS row 9; guarded by
+      // directional-capacity-contract.spec.ts). It fired for 14 of 17 protocols —
+      // one structural cause, fourteen alarms — while the genuinely actionable cases
+      // sit above it as evidence: 'ceiling-below-threshold' from the measured-ceiling
+      // audit (auditMeasuredCeilings). Do not reintroduce a config-derived verdict
+      // here; measure outcomes instead.
 
       for (const group of config.groups as any[]) {
         const groupId: string = group.id;
         const directiveIds: string[] = group.directiveIds ?? [];
         const weight = Number(group.weight ?? 0);
-
-        // Gate groups are excluded from the signal by design, so their capacity
-        // is neither directional nor wasted.
-        const isGateGroup = group.isRiskGate === true;
 
         if (weight > 0 && directiveIds.length === 0) {
           issues.push({
@@ -137,42 +133,6 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
               severity: 'error',
               message: `Directive "${directiveId}" has no implementation registered — it will never score.`,
             });
-          } else if (!isGateGroup) {
-            // `directionBias` is the DECLARED capability. A directive that
-            // declares `neutral` may still emit a dynamic two-sided signalClass
-            // at runtime (speed-momentum does), so this is reported as a
-            // capacity SHORTFALL rather than asserted as a hard fact — but a
-            // protocol whose declared directional capacity cannot reach its
-            // threshold deserves a human look.
-            //
-            // ⚠️ MUST go through `classifyDirectiveInclusion` — the single
-            // source of truth for directionBias vs directionMode.
-            // Counting the raw `directionBias` here is exactly the drift that
-            // module's header warns about, and it made this check MISS its own
-            // motivating case: `ftse-speed-v1` is LONG_ONLY, so the bearish
-            // `rsi-overbought` (140) is silently excluded at runtime — yet a
-            // naive count credited it as directional capacity and pushed the
-            // protocol over the threshold, hiding the fault (2026-09-10).
-            const directionMode = (config as any).directionMode ?? 'LONG_ONLY';
-            const included = classifyDirectiveInclusion(
-              {
-                directionBias: (impl as any).directionBias,
-                readiness: (impl as any).readiness,
-              },
-              directionMode,
-            );
-            const maxScore = Number((impl as any).maxScore ?? 0);
-            if (included !== 'included') {
-              // Excluded by direction mode or alpha readiness. Not usable
-              // capacity — do not credit it to either side.
-              continue;
-            }
-            const bias = (impl as any).directionBias;
-            if (bias === 'bullish' || bias === 'bearish') {
-              directionalCapacity += maxScore;
-            } else {
-              neutralCapacity += maxScore;
-            }
           }
         }
       }
@@ -186,30 +146,6 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
         });
       }
 
-      // A protocol whose DECLARED directional capacity is a small minority of
-      // its total cannot reach a high threshold from declared signals alone.
-      //
-      // ⚠️ Reported at `warning` and worded as a prompt to verify, because the
-      // declared bias UNDERSTATES real capacity: several directives declare
-      // `neutral` and still emit bullish/bearish at runtime. `xau-speed-v1` sits
-      // at 15% declared-directional yet regularly clears 65. The check is a
-      // review trigger — "go and look at this protocol's measured ceiling" —
-      // not a verdict.
-      const totalCapacity = directionalCapacity + neutralCapacity;
-      if (totalCapacity > 0 && directionalCapacity < totalCapacity * 0.25) {
-        issues.push({
-          protocolId: slug,
-          kind: 'low-declared-directional-capacity',
-          severity: 'warning',
-          message:
-            `Only ${directionalCapacity} of ${totalCapacity} maxScore points sit on directives that ` +
-            `DECLARE a direction (${Math.round((directionalCapacity / totalCapacity) * 100)}%). ` +
-            `Directives that declare none may still emit a bullish/bearish reading at runtime, so ` +
-            `this is not proof the protocol is untradable — verify by comparing its measured ` +
-            `composite against its minComposite. The known failure case is a protocol whose ` +
-            `all-time maximum never reaches its own threshold.`,
-        });
-      }
     }
 
     this.lastIssues = issues;
@@ -223,10 +159,11 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
    *
    * WHY THIS EXISTS
    * ---------------
-   * `low-declared-directional-capacity` (above) reads config, and config
-   * understates real capacity — several directives declare `neutral` yet emit
-   * direction at runtime. So config alone cannot answer the question that
-   * actually matters: **can this bot ever trade?**
+   * Its predecessor, `low-declared-directional-capacity`, was RETIRED
+   * (#906, 2026-09-21) because it read config, and config understates real
+   * capacity — several directives declare `neutral` yet emit direction at
+   * runtime (measured). This audit replaced it: config alone cannot answer the
+   * question that actually matters: **can this bot ever trade?**
    *
    * This check answers it from evidence. For each active bot it takes the
    * protocol's highest composite ever recorded and compares it to the bot's own

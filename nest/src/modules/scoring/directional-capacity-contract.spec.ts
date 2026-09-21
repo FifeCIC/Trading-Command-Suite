@@ -130,3 +130,34 @@ describe('directional capacity contract (ADR-011, SETTLED-DECISIONS row 9)', () 
     expect(m).not.toBeNull();
   });
 });
+
+/**
+ * #906 (2026-09-21) — the SAME settled decision, enforced on the health service.
+ *
+ * `protocol-health.service.ts` used to emit a per-protocol
+ * `low-declared-directional-capacity` warning derived from `directionBias`
+ * config — the very config-derived verdict this file exists to keep reverted.
+ * It fired for 14 of 17 protocols: one structural cause, fourteen alarms,
+ * while its own text admitted the number understated what it claimed to
+ * measure. Retired; the evidence-based `ceiling-below-threshold` audit is the
+ * actionable replacement.
+ *
+ * ⚠️ IF THIS FAILS, SOMEONE IS REINTRODUCING A CONFIG-DERIVED CAPACITY VERDICT.
+ *    Do not "fix" the test — measure outcomes instead (auditMeasuredCeilings).
+ */
+describe('protocol-health must not re-derive a capacity verdict from config (#906)', () => {
+  const HEALTH_SERVICE = join(__dirname, 'protocol-health.service.ts');
+  const healthSource = readFileSync(HEALTH_SERVICE, 'utf8');
+  const healthCode = healthSource
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+
+  it('does not emit the retired per-protocol kind', () => {
+    expect(healthCode).not.toMatch(/low-declared-directional-capacity/);
+  });
+
+  it('keeps the retirement reasoning in-file', () => {
+    expect(healthSource).toMatch(/RETIRED 2026-09-21 \(#906\)/);
+    expect(healthSource).toMatch(/understates/i);
+  });
+});
