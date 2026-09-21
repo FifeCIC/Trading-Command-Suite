@@ -30,7 +30,6 @@ import { ScoringService } from './scoring.service';
 import { ScoreHistoryService } from './score-history.service';
 import { ScoreVelocityService } from './score-velocity.service';
 import { DirectiveImpactService } from './directive-impact.service';
-import { StrategyCompetitionService } from './strategy-competition.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SectorRotationService } from './sector-rotation.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
@@ -48,7 +47,6 @@ export class ScoringController {
     private readonly scoreHistoryService: ScoreHistoryService,
     private readonly scoreVelocityService: ScoreVelocityService,
     private readonly directiveImpactService: DirectiveImpactService,
-    private readonly competitionService: StrategyCompetitionService,
     private readonly outcomeTracker: OutcomeTrackerService,
     private readonly sectorRotation: SectorRotationService,
     private readonly degradationService: ProviderDegradationService,
@@ -299,17 +297,14 @@ export class ScoringController {
     return this.scoreHistoryService.getScoreBreakdown(ticker, protocol, runId);
   }
 
-  @Post('compete')
-  @ApiOperation({ summary: 'Run strategy competition — find best next move across all strategies' })
-  async compete(@Body() body: { symbols?: string[]; strategies?: string[]; limit?: number }) {
-    return this.competitionService.compete([], body);
-  }
-
-  @Get('compete/status')
-  @ApiOperation({ summary: 'Get competition status' })
-  getCompetitionStatus() {
-    return this.competitionService.getStatus();
-  }
+  // ── Strategy competition — DELETED 2026-09-21 (#918) ──────────────────────
+  // POST /api/scoring/compete + GET /api/scoring/compete/status removed with
+  // `strategy-competition.service.ts`. The service served FIVE invented strategies with hardcoded
+  // win rates, served over an always-empty signal array — measured: zero consumers anywhere in
+  // src/, docs/ or scripts/; the arena's injection of it was dead code (never called). Real
+  // per-bot performance lives in /api/trading/strategy-comparison and the #894 rating work.
+  // The class is now guarded: nest/scripts/validate-fabricated-stats.cjs fails the build on a
+  // non-zero literal winRate/totalTrades in production source.
 
   // ── Sector Rotation ──
 

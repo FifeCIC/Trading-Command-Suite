@@ -17,7 +17,6 @@
 
 import { Controller, Get, Post, Body, Query, Logger } from '@nestjs/common';
 import { ScoringService } from './scoring.service';
-import { StrategyCompetitionService } from './strategy-competition.service';
 import { ProtocolGatingService } from './protocol-gating.service';
 import { ProtocolConsensusService } from './protocol-consensus.service';
 import { ProtocolDbService } from './protocol-db.service';
@@ -141,7 +140,6 @@ export class ArenaController {
 
   constructor(
     private readonly scoringService: ScoringService,
-    private readonly competitionService: StrategyCompetitionService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly consensusService: ProtocolConsensusService,
     private readonly protocolDb: ProtocolDbService,
