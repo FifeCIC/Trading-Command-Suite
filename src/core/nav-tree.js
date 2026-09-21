@@ -148,11 +148,14 @@ export const NAV_TREE = {
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
+      // Moved out of the legacy block 2026-09-21: the journal reads the DB audit trail
+      // (/api/trading/trade-history) and is now the surface that names WHO closed a trade
+      // (#916 close attribution) — a first-class view, not a legacy page.
+      { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       { kind: 'section-header', id: 'legacy-strategies', label: '— Legacy Strategy Pages —', icon: '' },
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
       { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
-      { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
       { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },
       { id: 'trading-settings', label: 'Settings', icon: '⚙' },

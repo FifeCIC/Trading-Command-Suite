@@ -26,7 +26,7 @@ export const PAGE_DATA_STATUS = {
   'portfolio-events': { status: 'live', source: '/api/portfolio/events' },
   'trade-history': { status: 'live', source: 'DB' },
   'positions-monitor': { status: 'live', source: 'Alpaca + MT5 (promoted from Legacy #565)' },
-  'trade-journal': { status: 'live', source: '/api/journal/entries + stats' },
+  'trade-journal': { status: 'live', source: 'GET /api/trading/trade-history (DB audit trail; close reason + realised payoff surfaced 2026-09-21, #916)' },
   'market-context': { status: 'live', source: '/api/trading/sessions/market-context (MarketContextService)' },
   'trading-plans': { status: 'live', source: 'DB (promoted from Legacy #568)' },
   'mt5-connection-manager': { status: 'live', source: 'MT5 Bridge' },

@@ -27,6 +27,14 @@
 .tj-origin-external { background: #7c2d12; color: #fdba74; }
 .tj-origin-manual { background: #1e3a8a; color: #93c5fd; }
 .tj-origin-strategy { background: #14532d; color: #86efac; }
+/* Close-attribution chip (#916) — WHO closed the trade. Same palette family as the origin chip
+   so the eye reads both as "provenance"; colour separates the actor class, text names it. */
+.tj-closewhy { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: #1e293b; color: #cbd5e1; }
+.tj-closewhy-sl { background: #7f1d1d; color: #fca5a5; }
+.tj-closewhy-tp { background: #14532d; color: #86efac; }
+.tj-closewhy-system { background: #78350f; color: #fcd34d; }
+.tj-closewhy-app { background: #1e3a8a; color: #93c5fd; }
+.tj-closewhy-terminal { background: #3b0764; color: #d8b4fe; }
 .tj-pnl { font-weight: 700; margin-left: auto; }
 .tj-details { display: flex; gap: 1rem; font-size: 0.78rem; color: #94a3b8; flex-wrap: wrap; }
 .tj-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.4rem 0; }
