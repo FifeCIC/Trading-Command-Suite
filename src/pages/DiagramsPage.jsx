@@ -3,6 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import mermaid from 'mermaid';
 import { annotateSource, claimsFor, evaluateClaims, summarise } from '../core/diagram-claims';
+// Shell chrome is shared, not re-invented: the verdict block IS a notice, so it uses the
+// canonical notice stylesheet rather than a second colour recipe. See diagrams-page.css.
+import '../components/notice-block.css';
+import './diagrams-page.css';
 
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
@@ -1763,12 +1767,21 @@ export default function DiagramsPage() {
       <div className="pf-header">
         <div>
           <h1>System Diagrams</h1>
-          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>
-            ⚠️ CONCEPTUAL REFERENCE ONLY — these diagrams are brainstorming artifacts and many of their statements
-            are unchecked. Where a claim has a registered probe it is <strong>verified against the running system
-            when this page loads</strong> and the affected node is outlined in green or red; everything else may not
-            reflect the current implementation. For the canonical pipeline structure, see the META.Stack Pipeline Graph.
-          </p>
+          <div className="notice-block notice-block--compact notice-block--warning" style={{ marginTop: 10, maxWidth: '80ch' }}>
+            <div className="notice-head">
+              <span className="notice-title">⚠️ Conceptual reference only</span>
+            </div>
+            <p className="notice-message">
+              These diagrams are brainstorming artifacts — a claim with a registered probe is
+              <strong> verified against the running system when this page loads</strong> and its node is
+              outlined in green or red. Everything else is unchecked prose and may not reflect the current
+              implementation.
+            </p>
+            <p className="notice-detail">
+              <span className="notice-label">Canonical</span>
+              For the pipeline structure itself, see the META.Stack Pipeline Graph.
+            </p>
+          </div>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>⬡ Architecture Framework</a>
             <a href="/status/capability-map" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>
@@ -1777,22 +1790,14 @@ export default function DiagramsPage() {
       </div>
 
       {/* ── Diagram Tabs ───────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+      <div className="dg-tabs">
         {DIAGRAMS.map((d) => (
           <button
             key={d.id}
             type="button"
-            className={active === d.id ? 'cta' : ''}
+            className={`dg-tab${active === d.id ? ' dg-tab--active' : ''}`}
+            aria-pressed={active === d.id}
             onClick={() => setActive(d.id)}
-            style={{
-              padding: '0.35rem 0.7rem',
-              fontSize: '0.78rem',
-              borderRadius: '6px',
-              border: active === d.id ? 'none' : '1px solid var(--line)',
-              background: active === d.id ? 'var(--accent)' : 'var(--panel)',
-              color: active === d.id ? '#fff' : 'var(--ink-soft)',
-              cursor: 'pointer',
-            }}
           >
             {d.label}
           </button>
@@ -1800,9 +1805,9 @@ export default function DiagramsPage() {
       </div>
 
       {(active === 'sees-trading' || active === 'sees-automation') && live.loop !== undefined && (
-        <div style={{ display:'flex',gap:'1rem',flexWrap:'wrap',alignItems:'center',padding:'0.35rem 0.9rem',marginBottom:'0.5rem',background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'8px',fontSize:'0.7rem' }}>
-          <span style={{ fontWeight:600,color:'var(--accent)' }}>Live System</span>
-          <span>Loop: <strong style={{ color:live.loop?'#22c55e':'#ef4444' }}>{live.loop?'ON':'OFF'}</strong></span>
+        <div className="dg-live">
+          <span className="dg-live-label">Live System</span>
+          <span>Loop: <strong style={{ color: live.loop ? 'var(--color-profit)' : 'var(--danger)' }}>{live.loop ? 'ON' : 'OFF'}</strong></span>
           <span>Tick: <strong>{live.tick ?? '...'}</strong></span>
           <span>Strategies: <strong>{live.strats}</strong></span>
           <span>Protocols: <strong>{live.protos}</strong></span>
@@ -1810,16 +1815,7 @@ export default function DiagramsPage() {
       )}
 
       {/* ── Diagram Content ─────────────────────────────────── */}
-      <div
-        ref={containerRef}
-        style={{
-          background: 'var(--panel)',
-          border: '1px solid var(--line)',
-          borderRadius: '12px',
-          padding: '1rem 1.5rem',
-          overflowX: 'auto',
-        }}
-      >
+      <div ref={containerRef} className="dg-card">
         <div key={diagram.id} id={`mermaid-${diagram.id}`} style={{ minHeight: '200px' }} />
       </div>
 
@@ -1828,51 +1824,42 @@ export default function DiagramsPage() {
           nothing at all when a diagram has no claims — an empty panel and a panel saying
           "everything is fine" must not look the same. */}
       {claimsLoading && (
-        <p style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: 'var(--ink-soft)' }}>
-          Checking this diagram&apos;s claims against the running system…
-        </p>
+        <p className="dg-checking">Checking this diagram&apos;s claims against the running system…</p>
       )}
       {!claimsLoading && claimResults.length > 0 && (() => {
         const s = summarise(claimResults);
         const bad = s.failed > 0;
         return (
           <div
-            style={{
-              marginTop: '0.75rem',
-              border: `1px solid var(--notice-${bad ? 'critical' : 'success'}-border)`,
-              background: `var(--notice-${bad ? 'critical' : 'success'}-bg)`,
-              borderRadius: '10px',
-              padding: '0.6rem 0.9rem',
-            }}
+            className={`notice-block notice-block--compact dg-claims ${bad ? 'notice-block--critical' : 'notice-block--success'}`}
           >
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'baseline', flexWrap: 'wrap', fontSize: '0.78rem' }}>
-              <strong style={{ color: `var(--notice-${bad ? 'critical' : 'success'}-text)` }}>
+            <div className="notice-head">
+              <span className="notice-title">
                 {bad
                   ? `🛑 ${s.failed} claim${s.failed > 1 ? 's' : ''} conflict${s.failed > 1 ? '' : 's'} with the running system`
                   : `✅ all ${s.checked} checked claim${s.checked > 1 ? 's' : ''} agree with the running system`}
-              </strong>
-              <span style={{ color: 'var(--ink-soft)' }}>
-                {s.passed} of {s.checked} checked
-                {s.unverified ? ` · ${s.unverified} could not be checked` : ''}
-                {' · '}the remaining statements in this diagram are unchecked prose
               </span>
+              <code className="notice-code" title="Claims checked against the live API versus claims registered for this diagram.">
+                {s.passed}/{s.checked} checked
+              </code>
             </div>
-            <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.3rem' }}>
+            <p className="notice-detail">
+              <span className="notice-label">Scope</span>
+              {s.unverified ? `${s.unverified} could not be checked · ` : ''}
+              the remaining statements in this diagram are unchecked prose
+            </p>
+            <div className="dg-claim-list">
               {claimResults.map((r) => (
-                <div key={`${r.node}-${r.says}`} style={{ fontSize: '0.74rem', display: 'flex', gap: '0.5rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'monospace', color: 'var(--ink-soft)', minWidth: '4.5rem' }}>{r.node}</span>
-                  <span
-                    style={{
-                      color:
-                        r.ok === true ? 'var(--notice-success-text)'
-                          : r.ok === false ? 'var(--notice-critical-text)'
-                            : 'var(--ink-soft)',
-                    }}
-                  >
+                <div
+                  key={`${r.node}-${r.says}`}
+                  className={`dg-claim-row${r.ok === false ? ' dg-claim-row--bad' : r.ok === true ? ' dg-claim-row--ok' : ''}`}
+                >
+                  <span className="dg-claim-node">{r.node}</span>
+                  <span className="dg-claim-says">
                     {r.ok === true ? '✅' : r.ok === false ? '🛑' : '·'} {r.says}
                   </span>
                   {r.ok !== true && (
-                    <span style={{ color: 'var(--ink-soft)' }}>
+                    <span className="dg-claim-vals">
                       — diagram says <code>{String(r.expect)}</code>
                       {r.ok === false ? <>, live says <code>{String(r.actual)}</code></> : null}
                       {r.error ? <> · {r.error}</> : null}
