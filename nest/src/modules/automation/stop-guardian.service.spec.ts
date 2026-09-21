@@ -3,7 +3,6 @@ import {
   declaredStopDistance,
   trailDistanceFor,
   trailDistanceProblem,
-  stopInsideDeclaredBand,
 } from './stop-guardian.service';
 
 describe('Automation StopGuardianService', () => {
@@ -399,17 +398,6 @@ describe('#927 — a trail can never leave the stop inside the declared distance
     expect(trailDistanceProblem(0.06, 0)).toBeNull();       // nothing declared → nothing to enforce
   });
 
-  it('stopInsideDeclaredBand flags the measured damage shapes and not a healthy stop', () => {
-    const declared = declaredStopDistance(100, 1);
-    // EURCAD's live shape: stop −0.101% from entry against a declared −1%.
-    expect(stopInsideDeclaredBand({ side: 'BUY', stop: 99.899, entryPrice: 100, declaredDistance: declared })).toBe(true);
-    expect(stopInsideDeclaredBand({ side: 'SELL', stop: 100.05, entryPrice: 100, declaredDistance: declared })).toBe(true);
-    // A stop at (or outside) the declared distance is healthy.
-    expect(stopInsideDeclaredBand({ side: 'BUY', stop: 99, entryPrice: 100, declaredDistance: declared })).toBe(false);
-    expect(stopInsideDeclaredBand({ side: 'SELL', stop: 101, entryPrice: 100, declaredDistance: declared })).toBe(false);
-    expect(stopInsideDeclaredBand({ side: 'BUY', stop: null, entryPrice: 100, declaredDistance: declared })).toBe(false);
-  });
-
   it('THE CANARY — tiny ATR + flat price sends NO stop ~0.06 from price (the seven-close defect)', async () => {
     const { service, modifyCalls } = makeService({ bars: tinyAtrBars(), priceCurrent: 100, sl: 99 });
     try {
@@ -448,23 +436,6 @@ describe('#927 — a trail can never leave the stop inside the declared distance
       // 3×ATR = 3.0 > declared 1.0 → 103 − 3 = 100, exactly the ATR trail (the fix must not
       // disable the mechanism it bounds).
       expect(modifyCalls[0].body.sl).toBe(100);
-    } finally {
-      service.stop();
-    }
-  });
-
-  it('REPORTS a stop already inside the declared band without widening it', async () => {
-    // EURCAD's live shape: entry 100, stop 99.99 (−0.01% from entry vs declared −1%).
-    const { service, modifyCalls } = makeService({ bars: tinyAtrBars(), priceCurrent: 100, sl: 99.99 });
-    const warn = jest.spyOn((service as any).logger, 'warn');
-    try {
-      await service.tick();
-      // Not widened: the computed target (99) is BELOW the existing stop and "never loosen" clamps.
-      expect(modifyCalls).toHaveLength(0);
-      const bandWarning = warn.mock.calls.map((c) => String(c[0])).find((m) => m.includes('INSIDE the declared'));
-      expect(bandWarning).toBeTruthy();
-      expect(bandWarning).toContain('Not widened automatically');
-      expect(service.getState().guardedPositions).toHaveLength(1);
     } finally {
       service.stop();
     }

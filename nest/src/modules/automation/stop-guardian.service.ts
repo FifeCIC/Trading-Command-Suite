@@ -180,25 +180,6 @@ export function trailDistanceProblem(trailDistance: number, declaredDistance: nu
   );
 }
 
-/**
- * #927 — damage detector for a stop ALREADY in place: is it tighter to entry than the declared
- * distance (i.e. inside the band the strategy declared it would tolerate)? Used to REPORT, never
- * to repair — widening a live stop is a policy decision this service does not take alone.
- */
-export function stopInsideDeclaredBand(opts: {
-  side: 'BUY' | 'SELL';
-  stop: number | null | undefined;
-  entryPrice: number;
-  declaredDistance: number;
-}): boolean {
-  const { side, stop, entryPrice, declaredDistance } = opts;
-  if (!(declaredDistance > 0)) return false;
-  if (stop == null || !(stop > 0) || !(entryPrice > 0)) return false;
-  return side === 'BUY'
-    ? stop > entryPrice - declaredDistance
-    : stop < entryPrice + declaredDistance;
-}
-
 @Injectable()
 export class StopGuardianService {
   private readonly logger = new Logger(StopGuardianService.name);
@@ -252,12 +233,11 @@ export class StopGuardianService {
   private readonly THROTTLE_LOG_MS = 5 * 60_000;
 
   /**
-   * #927 — throttles the trail-refusal warning and the stop-inside-declared-band warning.
-   * The first is a property of the computation (global throttle); the second is a property of a
-   * POSITION (per-ticket, 30 min), because a damaged stop persists until it moves or closes.
+   * #927 — throttles the trail-refusal warning. It is a property of the COMPUTATION (global
+   * throttle), not of a position: with `trailDistanceFor` max()ing it should never fire, and if
+   * it does, that is "a guard caught something that should be impossible".
    */
   private lastTrailRefusalAt = 0;
-  private readonly bandWarningAt = new Map<number, number>();
 
   /**
    * ⚠️ #892 — deduplicates identical bridge refusals.
@@ -590,17 +570,6 @@ export class StopGuardianService {
           }
         }
 
-        // #927 — REPORT a stop already inside the declared band (pre-fix damage, or an
-        // unlock set elsewhere). It is NOT widened automatically: the loss it permits is real and
-        // widening a live stop is a policy decision. Silence is the defect; this makes the state
-        // visible with the numbers a decision needs.
-        if (
-          pos.sl != null && pos.sl > 0 &&
-          stopInsideDeclaredBand({ side, stop: pos.sl, entryPrice, declaredDistance })
-        ) {
-          this.warnStopInsideDeclaredBand(pos, side, entryPrice, declaredDistance);
-        }
-
         // 9. Execute modification — two-layer stops (#721 decision 6), with the #927 distance floor:
         //    (a) protective floor: an UNLOCKED position (SL=0) is an emergency
         //        — set a relaxed broker-side disaster stop immediately, exempt
@@ -810,31 +779,6 @@ export class StopGuardianService {
     if (now - this.lastTrailRefusalAt < this.THROTTLE_LOG_MS) return;
     this.lastTrailRefusalAt = now;
     this.logger.warn(`Trail tighten REFUSED for ${pos.symbol} #${pos.ticket} — ${problem}`);
-  }
-
-  /**
-   * #927 — makes a stop ALREADY inside the declared band visible, with its numbers.
-   * Per-ticket with a 30-minute window: the condition persists until the stop moves or the
-   * position closes, and the point is that a human can find it, not that it repeats every tick.
-   * It deliberately does not widen the stop — that changes the loss the position permits.
-   */
-  private warnStopInsideDeclaredBand(
-    pos: Mt5RawPosition,
-    side: 'BUY' | 'SELL',
-    entryPrice: number,
-    declaredDistance: number,
-  ): void {
-    const now = Date.now();
-    const last = this.bandWarningAt.get(pos.ticket) || 0;
-    if (now - last < 30 * 60_000) return;
-    this.bandWarningAt.set(pos.ticket, now);
-    const fromEntryPct = entryPrice > 0 ? (((pos.sl as number) - entryPrice) / entryPrice) * 100 : 0;
-    const declaredPct = entryPrice > 0 ? (declaredDistance / entryPrice) * 100 : 0;
-    this.logger.warn(
-      `Stop ${pos.symbol} #${pos.ticket} sits ${fromEntryPct.toFixed(3)}% from entry — INSIDE the ` +
-        `declared ${side} stop distance (${declaredPct.toFixed(3)}%). Not widened automatically ` +
-        `(#927); it will close on a pullback smaller than this position's own declared risk.`,
-    );
   }
 
   /**
