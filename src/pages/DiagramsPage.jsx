@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import mermaid from 'mermaid';
+import { annotateSource, claimsFor, evaluateClaims, summarise } from '../core/diagram-claims';
 
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
@@ -1703,18 +1704,59 @@ export default function DiagramsPage() {
   const protoQ = useQuery({ queryKey: ['diagram-proto'], queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => null), refetchInterval: 60000 });
   const live = { loop: autoQ.data?.loopEnabled, tick: autoQ.data?.tickCount, strats: autoQ.data?.activeStrategies?.length ?? 0, protos: protoQ.data?.count ?? protoQ.data?.protocols?.length ?? 0 };
 
+  /**
+   * Claim verification — the generalisation of the #493 live strip above.
+   *
+   * That strip DISPLAYS four live numbers for two hardcoded diagrams but compares them to
+   * nothing, so it cannot make a diagram wrong. This evaluates the machine-checkable claims
+   * registered in `src/core/diagram-claims.js` and feeds the result back into the rendering,
+   * so a node whose claim fails is stroked red IN the picture.
+   *
+   * Two deliberate behaviours:
+   *   • A claim whose probe cannot run stays UNVERIFIED. It is never shown as passing —
+   *     a check that inspects nothing must not render as a green tick.
+   *   • Only registered claims are checked. The panel reports "N of M" and says the rest of
+   *     the diagram is unchecked prose, rather than implying the whole picture is verified.
+   */
+  const [claimResults, setClaimResults] = useState([]);
+  const [claimsLoading, setClaimsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!claimsFor(diagram.id).length) {
+      setClaimResults([]);
+      setClaimsLoading(false);
+      return undefined;
+    }
+    setClaimsLoading(true);
+    setClaimResults([]);
+    evaluateClaims(diagram.id, diagram.code, apiGet)
+      .then((rows) => {
+        if (cancelled) return;
+        setClaimResults(rows);
+        setClaimsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setClaimResults([]);
+        setClaimsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [diagram]);
+
   useEffect(() => {
     if (!containerRef.current) return;
     const id = `mermaid-${diagram.id}`;
     const el = containerRef.current.querySelector(`#${id}`);
     if (!el) return;
-    // Always re-render on diagram switch (React key forces DOM remount so innerHTML is always fresh)
-    mermaid.render(`${id}-svg`, diagram.code).then(({ svg }) => {
+    // Always re-render on diagram switch (React key forces DOM remount so innerHTML is always fresh).
+    // The source is annotated with claim results first, so the diagram carries its own accuracy.
+    mermaid.render(`${id}-svg`, annotateSource(diagram.id, diagram.code, claimResults)).then(({ svg }) => {
       el.innerHTML = svg;
     }).catch(() => {
       el.innerHTML = '<p style="color:var(--ink-soft);padding:1rem">Diagram rendering failed. Check Mermaid syntax.</p>';
     });
-  }, [active, diagram]);
+  }, [active, diagram, claimResults]);
 
   return (
     <div className="pf-page" style={{ maxWidth: '100%' }}>
@@ -1722,7 +1764,10 @@ export default function DiagramsPage() {
         <div>
           <h1>System Diagrams</h1>
           <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>
-            ⚠️ CONCEPTUAL REFERENCE ONLY — These diagrams are brainstorming artifacts and may not reflect current implementation. For the canonical pipeline structure, see the META.Stack Pipeline Graph.
+            ⚠️ CONCEPTUAL REFERENCE ONLY — these diagrams are brainstorming artifacts and many of their statements
+            are unchecked. Where a claim has a registered probe it is <strong>verified against the running system
+            when this page loads</strong> and the affected node is outlined in green or red; everything else may not
+            reflect the current implementation. For the canonical pipeline structure, see the META.Stack Pipeline Graph.
           </p>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>⬡ Architecture Framework</a>
@@ -1777,6 +1822,68 @@ export default function DiagramsPage() {
       >
         <div key={diagram.id} id={`mermaid-${diagram.id}`} style={{ minHeight: '200px' }} />
       </div>
+
+      {/* ── Claim verification ──────────────────────────────────
+          The verdict for every claim registered in src/core/diagram-claims.js. Renders
+          nothing at all when a diagram has no claims — an empty panel and a panel saying
+          "everything is fine" must not look the same. */}
+      {claimsLoading && (
+        <p style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: 'var(--ink-soft)' }}>
+          Checking this diagram&apos;s claims against the running system…
+        </p>
+      )}
+      {!claimsLoading && claimResults.length > 0 && (() => {
+        const s = summarise(claimResults);
+        const bad = s.failed > 0;
+        return (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              border: `1px solid var(--notice-${bad ? 'critical' : 'success'}-border)`,
+              background: `var(--notice-${bad ? 'critical' : 'success'}-bg)`,
+              borderRadius: '10px',
+              padding: '0.6rem 0.9rem',
+            }}
+          >
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'baseline', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+              <strong style={{ color: `var(--notice-${bad ? 'critical' : 'success'}-text)` }}>
+                {bad
+                  ? `🛑 ${s.failed} claim${s.failed > 1 ? 's' : ''} conflict${s.failed > 1 ? '' : 's'} with the running system`
+                  : `✅ all ${s.checked} checked claim${s.checked > 1 ? 's' : ''} agree with the running system`}
+              </strong>
+              <span style={{ color: 'var(--ink-soft)' }}>
+                {s.passed} of {s.checked} checked
+                {s.unverified ? ` · ${s.unverified} could not be checked` : ''}
+                {' · '}the remaining statements in this diagram are unchecked prose
+              </span>
+            </div>
+            <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.3rem' }}>
+              {claimResults.map((r) => (
+                <div key={`${r.node}-${r.says}`} style={{ fontSize: '0.74rem', display: 'flex', gap: '0.5rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--ink-soft)', minWidth: '4.5rem' }}>{r.node}</span>
+                  <span
+                    style={{
+                      color:
+                        r.ok === true ? 'var(--notice-success-text)'
+                          : r.ok === false ? 'var(--notice-critical-text)'
+                            : 'var(--ink-soft)',
+                    }}
+                  >
+                    {r.ok === true ? '✅' : r.ok === false ? '🛑' : '·'} {r.says}
+                  </span>
+                  {r.ok !== true && (
+                    <span style={{ color: 'var(--ink-soft)' }}>
+                      — diagram says <code>{String(r.expect)}</code>
+                      {r.ok === false ? <>, live says <code>{String(r.actual)}</code></> : null}
+                      {r.error ? <> · {r.error}</> : null}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Description ─────────────────────────────────────── */}
       <div style={{ marginTop: '0.75rem', padding: '0.5rem 0' }}>

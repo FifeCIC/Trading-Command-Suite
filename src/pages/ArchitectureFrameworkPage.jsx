@@ -435,11 +435,13 @@ export default function ArchitectureFrameworkPage() {
           <p><strong>Role:</strong> active decision reference</p>
           <p><strong>Mode:</strong> {viewMode === 'roadmap' ? 'roadmap overlay' : 'framework'}</p>
           <div className="architecture-cross-nav arch-cross-nav-row">
-            {/* ⚠️ This was href="/builder/diagrams" until 2026-09-21 — a DEAD LINK.
-                `view-meta.js` declares exactly one /builder/* route (/builder/architecture-framework);
-                the diagrams page is registered at /lab/diagrams. The route guard (#867/#914) only
-                validates frontend→API calls, so an internal <a href> to a page route is invisible to
-                it — the chip simply did nothing. If this page ever moves, check view-meta.js, not nav-tree.js. */}
+            {/* ⚠️ This chip pointed at a DEAD route until 2026-09-21 — a /builder diagrams path
+                that view-meta.js never declared (it registers exactly one /builder/* route:
+                architecture-framework). The page actually lives at /lab/diagrams. Copied from the
+                architecture manifest, which carried the same wrong value; both are fixed.
+                The API route guard (#867/#914) validates frontend→API calls only, so an internal
+                page <a> is invisible to it — the chip silently did nothing. If this page moves,
+                check view-meta.js, not nav-tree.js. */}
             <a href="/lab/diagrams" className="architecture-chip-link arch-chip-link">▦ Diagrams</a>
             <a href="/status/capability-map" className="architecture-chip-link arch-chip-link">🗺️ Capability Map</a>
           </div>

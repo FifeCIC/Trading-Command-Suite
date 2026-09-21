@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ModeService } from '../../config/mode.service';
 import { PrismaService } from '../../database/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
+import { APP_VERSION } from '../../version';
 
 /**
  * Architecture Manifest — machine-readable system map for AI agents and developers.
@@ -67,10 +68,19 @@ export class ArchitectureManifestController {
       _meta: {
         description: 'Trading Command Suite — machine-readable architecture manifest for AI agents and developers.',
         generatedAt: new Date().toISOString(),
-        version: 'nest-0.1.0',
+        // ⚠️ Imported from src/version.ts, never a literal. This line read 'nest-0.1.0' until
+        // 2026-09-21 — a hardcoded value that never increased, so every AI agent reading this
+        // manifest was told the backend was 0.1.0 while the running app was 0.51.10. The handoff
+        // rule bans exactly this literal; this was one of the survivors age-statistics had missed.
+        version: APP_VERSION,
+        // ⚠️ Paths here must be ROUTES THAT EXIST in src/core/view-meta.js — agents follow them.
+        // `diagrams` was '/builder/diagrams' (a dead route: view-meta declares exactly one
+        // /builder/* route, architecture-framework). The diagrams page lives at /lab/diagrams.
+        // This wrong value was copy-pasted into ArchitectureFrameworkPage.jsx's nav chip, so one
+        // bad literal here produced a second dead link in the UI.
         uiPages: {
           architectureFramework: '/builder/architecture-framework',
-          diagrams: '/builder/diagrams',
+          diagrams: '/lab/diagrams',
           capabilityMap: '/status/capability-map',
         },
       },

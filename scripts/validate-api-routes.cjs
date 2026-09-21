@@ -273,6 +273,65 @@ if (calls.length === 0) {
   process.exit(1);
 }
 
+// ── 4b. Envelope must be called WITH a protocol ─────────────────────────────────────────────────
+//
+// WHY THIS EXISTS (2026-09-21, #925)
+// ---------------------------------
+// `GET /api/signals/envelope/:symbol` REFUSES to run unscoped — it returns
+// `400 TCS-SYS-002 "Scoring requires a protocol"`. THREE pages called it with no protocol and
+// rendered an empty card with no explanation, so the refusal was invisible:
+//
+//   src/pages/SymbolPage.jsx                 (empty Score card)
+//   src/pages/AutomationDashboardPage.jsx    (empty Why Panel)
+//   src/pages/ScoringActivityLogsPage.jsx    ("No directive data for X")
+//
+// The route-existence check above cannot catch this: the route EXISTS and the verb is right. The
+// defect is a MISSING REQUIRED PARAMETER, which is the same class as the two dead endpoints this
+// script was built for — a call that is syntactically fine and semantically refused.
+//
+// ⚠️ Scanned from SOURCE LINES, not from the captured URL. `urlVariants()` normalises and may drop
+// a query string, so relying on it here would make this check blind to exactly the thing it checks.
+// A guard that cannot see its own subject must not silently pass.
+//
+// The predicate is deliberately narrow: a line mentioning `signals/envelope` must also mention
+// `protocol=`. Anything stricter would invent rules the API does not have.
+const ENVELOPE = 'signals/envelope';
+// ⚠️ NARROW ON PURPOSE. A bare `line.includes('signals/envelope')` matches DOCUMENTATION as well
+// as callers — measured first run: 6 false positives, all of them prose (`view-meta.js` api lists,
+// `qa-checklist.js` procedures, `architecture-framework.data.js`, a `PipelineGraphLabPage` endpoint
+// array). A guard that cries wolf on its own docs gets allowlisted, and an allowlisted guard is
+// worse than none. So the predicate requires an actual CALL: the route AND one of the house
+// request helpers on the same line. Tighten this; never add an exemption list.
+const CALL_HELPER = /\b(apiGet|apiPost|apiPut|apiPatch|apiDelete)\s*\(/;
+const envelopeOffenders = [];
+for (const file of walk(FE_SRC, /\.(jsx?|mjs)$/)) {
+  let src;
+  try { src = fs.readFileSync(file, 'utf8'); } catch { continue; }
+  const lines = stripComments(src).split('\n');
+  const rel = path.relative(ROOT, file).replace(/\\/g, '/');
+  lines.forEach((line, i) => {
+    if (!line.includes(ENVELOPE)) return;
+    if (!CALL_HELPER.test(line)) return;   // documentation, not a call
+    if (!line.includes('protocol=')) {
+      envelopeOffenders.push(`${rel}:${i + 1}`);
+    }
+  });
+}
+
+if (envelopeOffenders.length) {
+  console.error(`❌ ${envelopeOffenders.length} call(s) to /api/signals/envelope WITHOUT \`?protocol=\`:`);
+  console.error('');
+  for (const o of envelopeOffenders) console.error(`   ${o}`);
+  console.error('');
+  console.error('   That endpoint refuses to run unscoped (400 TCS-SYS-002). Resolve the protocol');
+  console.error('   first with `useSymbolEnvelope(symbol)` from src/core/hooks/useSymbolEnvelope.js,');
+  console.error('   which reads /api/symbols/:ticker/focus — NOT /api/symbols/:ticker/protocols,');
+  console.error('   which is a dead endpoint that returns an empty list for every symbol (#926).');
+  console.error('');
+  process.exit(1);
+}
+console.log(`envelope calls      : ${envelopeOffenders.length} without ?protocol= (must be 0)`);
+
 if (missing.length === 0) {
   console.log(`✅ OK — all ${checkable.length} resolvable frontend calls match a declared route.`);
   console.log('   ⚠️ Static only: this proves the route is DECLARED, not that it responds.');
