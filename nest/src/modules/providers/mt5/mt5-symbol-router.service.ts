@@ -1,17 +1,100 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Mt5ConnectionManager } from './mt5-connection-manager.service';
+import { venueForSymbol } from '../../calendar/market-patterns';
 
 /** Result of resolving a symbol to a specific MT5 broker bridge. */
 export interface ResolvedSymbolRoute {
   /** MT5 account slot (2 = MetaQuotes :5000, 3 = Pepperstone :5001, …). */
   brokerId: number;
-  /** Bridge base URL for that broker. */
-  url: string;
+  /**
+   * Bridge base URL for that broker — **null when `mt5` is false**.
+   *
+   * ⚠️ #914. A route that targets a NON-MT5 broker (the four crypto rows: `provider=binance`,
+   * `brokerId 0`) has no bridge behind it. Returning the DEFAULT bridge's URL here is the lie
+   * that produced a BTC refusal quoting `Nasdaq\ETF\BTC`'s lot floor: `getUrl(0)` fell back to
+   * MetaQuotes because `0` is falsy, and the bare ticker matched an ETF. A caller holding a
+   * non-MT5 route must see `null` and refuse — never a URL to somebody else's bridge.
+   */
+  url: string | null;
   /** Broker-native symbol name to send to the bridge (falls back to the ticker). */
   brokerSymbol: string;
   /** True when the route came from an explicit symbol_route row (vs an asset default). */
   explicit: boolean;
+  /**
+   * True when the route targets an ACTIVE MT5 bridge (see `Mt5ConnectionManager.isBroker`).
+   * When false there is no bridge to call and the bare ticker must never be sent anywhere.
+   */
+  mt5: boolean;
+  /** Provider from the route row (`mt5`, `binance`, …); null when no explicit row exists. */
+  provider: string | null;
+}
+
+/**
+ * orderRouteProblems() — THE order-route integrity check (#903, unified #914).
+ * ====================================================================
+ *
+ * Answers one question: **may an ORDER travel this route to MT5?** Returns the list of reasons
+ * it may not (empty = allowed). It exists because MT5 resolves an order symbol BY NAME with
+ * fuzzy matching: the measured hazard is the bare ticker `BTC` selecting `Nasdaq\ETF\BTC`
+ * (~$35.86) — a different instrument that FILLS.
+ *
+ * ⚠️ ONE implementation, THREE call sites — do not fork it:
+ *   1. `ExecutionFeasibilityService.assess()` — both phases, so the card explains the refusal
+ *      BEFORE the click instead of the operator meeting it after.
+ *   2. `Mt5Adapter.placeOrder()` — the path used by manual trades and the automation loop.
+ *   3. `Mt5TradingService.placeOrder()` — the direct `/api/trading/mt5/order` path.
+ *
+ * `route === null` means the router itself is unavailable: crypto FAILS CLOSED (an unverifiable
+ * broker-native name must never reach MT5); every other symbol keeps its established identity
+ * mapping, because that fallback predates the hazard and is how single-bridge installs work.
+ *
+ * The non-MT5 check applies to EVERY asset class (a misroute is a misroute). The explicit-row
+ * and bare-ticker rules apply to CRYPTO only — non-crypto symbols have always travelled the
+ * bare ticker to their broker as the identity mapping.
+ */
+export function orderRouteProblems(
+  symbol: string,
+  route: ResolvedSymbolRoute | null,
+  activeBrokerIds: number[] = [],
+): string[] {
+  const ticker = (symbol || '').toUpperCase();
+  const isCrypto = venueForSymbol(ticker).kind === 'crypto';
+
+  if (!route) {
+    return isCrypto
+      ? ['the MT5 symbol router is unavailable, so the broker-native name cannot be verified']
+      : [];
+  }
+
+  const problems: string[] = [];
+
+  // ⚠️ Guarded on a non-empty registry: an empty list means "no multi-broker registry exists"
+  // (single-bridge installs, unit tests), where the route's brokerId IS the default bridge.
+  if (activeBrokerIds.length > 0 && !activeBrokerIds.includes(route.brokerId)) {
+    problems.push(
+      `the route targets broker ${route.brokerId}` +
+        `${route.provider ? ` (${route.provider})` : ''}, which is not an active MT5 bridge ` +
+        `(active: ${activeBrokerIds.join(', ') || 'none'})`,
+    );
+  }
+
+  if (isCrypto) {
+    if (route.explicit !== true) {
+      problems.push(`no explicit symbol_route row exists for ${ticker}`);
+    }
+    const brokerSymbol = String(route.brokerSymbol ?? '');
+    if (!brokerSymbol) {
+      problems.push('the symbol_route row carries no brokerSymbol');
+    } else if (brokerSymbol.toUpperCase() === ticker) {
+      problems.push(
+        `the route's brokerSymbol is the BARE ticker '${brokerSymbol}' — MT5 resolves names ` +
+          `fuzzily and '${brokerSymbol}' matches a different instrument (measured: '${brokerSymbol}' → Nasdaq\\ETF\\BTC, ~$35.86)`,
+      );
+    }
+  }
+
+  return problems;
 }
 
 /**
@@ -33,8 +116,8 @@ export interface ResolvedSymbolRoute {
 export class Mt5SymbolRouter implements OnModuleInit {
   private readonly logger = new Logger(Mt5SymbolRouter.name);
 
-  /** symbol(UPPER) → { brokerId, brokerSymbol } */
-  private readonly routes = new Map<string, { brokerId: number; brokerSymbol: string | null }>();
+  /** symbol(UPPER) → { brokerId, brokerSymbol, provider } */
+  private readonly routes = new Map<string, { brokerId: number; brokerSymbol: string | null; provider: string | null }>();
   /** assetType(lower) → brokerId */
   private readonly assetDefaults = new Map<string, number>();
   private loadedAt = 0;
@@ -68,7 +151,11 @@ export class Mt5SymbolRouter implements OnModuleInit {
       for (const r of rows) {
         const key = String(r.symbol).toUpperCase();
         if (!this.routes.has(key)) {
-          this.routes.set(key, { brokerId: Number(r.brokerId), brokerSymbol: r.brokerSymbol ?? null });
+          this.routes.set(key, {
+            brokerId: Number(r.brokerId),
+            brokerSymbol: r.brokerSymbol ?? null,
+            provider: r.provider != null ? String(r.provider) : null,
+          });
         }
       }
       this.loadedAt = Date.now();
@@ -118,11 +205,18 @@ export class Mt5SymbolRouter implements OnModuleInit {
     const key = (symbol || '').toUpperCase();
     const explicit = this.routes.get(key);
     const brokerId = this.getBrokerId(symbol, assetType);
+    // ⚠️ #914 — only an ACTIVE MT5 bridge may be addressed. This used to call getUrl(brokerId)
+    // unconditionally, and getUrl's `brokerId && …` test treated `0` (the crypto/binance rows)
+    // as "not specified", answering with the DEFAULT bridge. That is how a binance-routed BTC
+    // was measured against a Nasdaq ETF quoted on MetaQuotes.
+    const mt5 = this.conn.isBroker(brokerId);
     return {
       brokerId,
-      url: this.conn.getUrl(brokerId),
+      url: mt5 ? this.conn.getUrl(brokerId) : null,
       brokerSymbol: explicit?.brokerSymbol || symbol,
       explicit: explicit !== undefined,
+      mt5,
+      provider: explicit?.provider ?? null,
     };
   }
 
@@ -133,7 +227,15 @@ export class Mt5SymbolRouter implements OnModuleInit {
 
   /** Build a route for a specific broker — used by broker-level calls (e.g. /symbols). */
   routeForBroker(brokerId: number): ResolvedSymbolRoute {
-    return { brokerId, url: this.conn.getUrl(brokerId), brokerSymbol: '', explicit: false };
+    const mt5 = this.conn.isBroker(brokerId);
+    return {
+      brokerId,
+      url: mt5 ? this.conn.getUrl(brokerId) : null,
+      brokerSymbol: '',
+      explicit: false,
+      mt5,
+      provider: mt5 ? 'mt5' : null,
+    };
   }
 
   /** Diagnostics snapshot (for health/API surfaces). */

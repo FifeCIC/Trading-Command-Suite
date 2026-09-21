@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
-import { Mt5SymbolRouter } from '../providers/mt5/mt5-symbol-router.service';
+import { Mt5SymbolRouter, orderRouteProblems } from '../providers/mt5/mt5-symbol-router.service';
 import { DuplicateGuardService } from './duplicate-guard.service';
 import { GlobalDiversificationService } from '../diversification/global-diversification.service';
 import { PyramidPolicyService } from './pyramid-policy.service';
@@ -86,9 +86,11 @@ export class ExecutionFeasibilityService {
     positions?: any[];
     marketStatus?: { open: boolean; reason?: string | null } | null;
     /**
-     * Order size in lots. EXECUTION phase only — the ladder does not know which size it
-     * will be asked for, so generation-time calls omit it and the volume-floor check
-     * (which needs it) simply does not run in that phase.
+     * Order size in lots. Both phases now supply it: EXECUTION passes the size actually being
+     * placed, and GENERATION passes the persisted manual-trade default so the volume-floor check
+     * can appear on the card BEFORE the click. (It used to be omitted at generation, so
+     * `size-below-minimum` could never fire there — the operator always learned after committing,
+     * which inverted the two-phase design. #914.)
      */
     size?: number | null;
   }): Promise<FeasibilityResult> {
@@ -96,6 +98,36 @@ export class ExecutionFeasibilityService {
     const blockers: FeasibilityBlocker[] = [];
     const ticker = symbol.toUpperCase();
     const adapter = this.adapterFactory.create(brokerId);
+
+    // ── Route integrity — the FIRST question: can an order reach a broker at all? (#914) ──
+    //
+    // The checks below ask ONE bridge for its rules about this symbol. That question is only
+    // meaningful when the route actually targets an MT5 bridge. Measured 2026-09-20: a BTC
+    // manual trade was refused "0.1 lots is below BTC's 1-lot minimum on broker 0" — every part
+    // wrong. The route was `→ binance, brokerId 0, brokerSymbol NULL`; `getUrl(0)` returned the
+    // DEFAULT bridge because `0` is falsy; and the bare ticker matched `Nasdaq\ETF\BTC`, so a
+    // crypto position was measured against a US ETF's lot floor. The refusal named a broker that
+    // was never asked, with a "fix" (raise to 1 lot) that would have multiplied the position.
+    //
+    // ⚠️ Do NOT "loosen" this by skipping the check. The same problems are what
+    // `Mt5Adapter.placeOrder()` and `Mt5TradingService.placeOrder()` refuse on — one shared
+    // implementation (`orderRouteProblems`), so the card, the click and the broker agree.
+    const adapterId = (adapter as any)?.id;
+    const route = adapterId === 'mt5' ? (this.symbolRouter?.resolve(ticker) ?? null) : null;
+    const routedBrokerId = route?.brokerId;
+    const brokerSymbol = route?.brokerSymbol || ticker;
+    const routeProblems = adapterId === 'mt5'
+      ? orderRouteProblems(ticker, route, this.symbolRouter?.brokerIds?.() ?? [])
+      : [];
+    if (routeProblems.length > 0) {
+      blockers.push({
+        key: 'route-unverified',
+        message: `${ticker} cannot be ordered on MT5: ${routeProblems.join('; ')}`,
+        hint:
+          'No action available — this symbol can only be traded once its route targets an active ' +
+          'MT5 bridge and carries a verified broker-native symbol',
+      });
+    }
 
     // ── 1. Broker symbol availability (#719) — cached bridge symbol list ──
     // Check the broker that ACTUALLY serves this symbol (per symbol_route), not
@@ -105,56 +137,58 @@ export class ExecutionFeasibilityService {
     // ⚠️ LISTED ≠ TRADEABLE — see 1b below. These two checks are deliberately
     // separate: this one answers "does the broker quote it?", which is NOT enough to
     // justify offering a trade.
-    const adapterId = (adapter as any)?.id;
-    const routedBrokerId = adapterId === 'mt5' ? this.symbolRouter?.getBrokerId(ticker) : undefined;
-    const brokerSymbol = (adapterId === 'mt5' ? this.symbolRouter?.getBrokerSymbol(ticker) : ticker) || ticker;
-    try {
-      const raw = await (adapter as any)?.getSymbols?.(routedBrokerId);
-      const names: Set<string> | null = raw instanceof Set
-        ? raw
-        : Array.isArray(raw) ? new Set(raw.map((n: any) => String(n).toUpperCase())) : null;
-      if (names && names.size > 0 && !names.has(brokerSymbol.toUpperCase()) && !names.has(ticker)) {
-        blockers.push({
-          key: 'symbol-unavailable',
-          message: `Broker ${brokerId} has no ${ticker} instrument`,
-          hint: 'No action available — this symbol cannot trade on this broker',
-        });
+    //
+    // ⚠️ #914 — skipped entirely when the route failed integrity: asking the default bridge
+    // about a symbol it does not serve is how the fabrication happened.
+    if (routeProblems.length === 0) {
+      try {
+        const raw = await (adapter as any)?.getSymbols?.(routedBrokerId);
+        const names: Set<string> | null = raw instanceof Set
+          ? raw
+          : Array.isArray(raw) ? new Set(raw.map((n: any) => String(n).toUpperCase())) : null;
+        if (names && names.size > 0 && !names.has(brokerSymbol.toUpperCase()) && !names.has(ticker)) {
+          blockers.push({
+            key: 'symbol-unavailable',
+            message: `Broker ${brokerId} has no ${ticker} instrument`,
+            hint: 'No action available — this symbol cannot trade on this broker',
+          });
+        }
+      } catch {
+        /* unknown availability — do not block */
       }
-    } catch {
-      /* unknown availability — do not block */
-    }
 
-    // ── 1b. Broker TRADE MODE and VOLUME FLOOR — the /order pre-flight, mirrored ──
-    //
-    // The bridge refuses an order when `tradeMode !== 4` or `volume < volumeMin`, and it
-    // refuses BEFORE calling order_send. Neither fact was visible here, so a card could
-    // read fully actionable while the broker would reject the click. Measured 2026-09-15:
-    // US500 — listed on BOTH bridges, `tradeMode 0` (disabled) on MetaQuotes, 4 on
-    // Pepperstone, and `volumeMin 0.1` on both against a manual default of 0.01 lots.
-    //
-    // ⚠️ Unknown (broker unreachable → `null`) must NOT block: "we could not ask" is not
-    // evidence of untradeability, and the bridge still refuses safely at click time.
-    try {
-      const tradability = await (adapter as any)?.getSymbolTradability?.(routedBrokerId);
-      const info = tradability instanceof Map
-        ? (tradability.get(brokerSymbol.toUpperCase()) ?? tradability.get(ticker))
-        : undefined;
-      if (info && info.tradeMode !== SYMBOL_TRADE_MODE_FULL) {
-        blockers.push({
-          key: 'symbol-not-tradeable',
-          message: `Broker ${routedBrokerId ?? brokerId} reports ${ticker} as NOT tradeable (trade mode ${info.tradeMode})`,
-          hint: 'Route the symbol to a broker that reports it tradeable (symbol_route), or trade a symbol this broker accepts',
-        });
+      // ── 1b. Broker TRADE MODE and VOLUME FLOOR — the /order pre-flight, mirrored ──
+      //
+      // The bridge refuses an order when `tradeMode !== 4` or `volume < volumeMin`, and it
+      // refuses BEFORE calling order_send. Neither fact was visible here, so a card could
+      // read fully actionable while the broker would reject the click. Measured 2026-09-15:
+      // US500 — listed on BOTH bridges, `tradeMode 0` (disabled) on MetaQuotes, 4 on
+      // Pepperstone, and `volumeMin 0.1` on both against a manual default of 0.01 lots.
+      //
+      // ⚠️ Unknown (broker unreachable → `null`) must NOT block: "we could not ask" is not
+      // evidence of untradeability, and the bridge still refuses safely at click time.
+      try {
+        const tradability = await (adapter as any)?.getSymbolTradability?.(routedBrokerId);
+        const info = tradability instanceof Map
+          ? (tradability.get(brokerSymbol.toUpperCase()) ?? tradability.get(ticker))
+          : undefined;
+        if (info && info.tradeMode !== SYMBOL_TRADE_MODE_FULL) {
+          blockers.push({
+            key: 'symbol-not-tradeable',
+            message: `Broker ${routedBrokerId ?? brokerId} reports ${ticker} as NOT tradeable (trade mode ${info.tradeMode})`,
+            hint: 'Route the symbol to a broker that reports it tradeable (symbol_route), or trade a symbol this broker accepts',
+          });
+        }
+        if (info && info.volumeMin != null && params.size != null && params.size < info.volumeMin) {
+          blockers.push({
+            key: 'size-below-minimum',
+            message: `${params.size} lots is below ${brokerSymbol}'s ${info.volumeMin}-lot minimum on broker ${routedBrokerId ?? brokerId}`,
+            hint: `Raise the manual trade size to at least ${info.volumeMin} lots (Settings → manual trade defaults)`,
+          });
+        }
+      } catch {
+        /* unknown trade mode — do not block */
       }
-      if (info && info.volumeMin != null && params.size != null && params.size < info.volumeMin) {
-        blockers.push({
-          key: 'size-below-minimum',
-          message: `${params.size} lots is below ${brokerSymbol}'s ${info.volumeMin}-lot minimum on broker ${routedBrokerId ?? brokerId}`,
-          hint: `Raise the manual trade size to at least ${info.volumeMin} lots (Settings → manual trade defaults)`,
-        });
-      }
-    } catch {
-      /* unknown trade mode — do not block */
     }
 
     // ── 2. Market status (the score's own tradability state) ──

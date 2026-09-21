@@ -357,31 +357,52 @@ export class Mt5Controller {
   @Post('order')
   async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number; comment?: string }) {
     this.logger.warn(`DEPRECATED — POST /api/providers/mt5/order called for ${body.symbol}. Redirect to POST /api/trading/mt5/order.`);
+    // ⚠️ #914 (2026-09-21) — this endpoint used to be a RAW passthrough to the DEFAULT bridge:
+    // it resolved no route at all. Measured live during the #914 verification:
+    //
+    //   POST /api/providers/mt5/order {"symbol":"BTC","type":"BUY","volume":0.1}
+    //   → {"success":false,"error":"Volume 0.1 below BTC minimum (1.0)"}
+    //
+    // The order reached MetaQuotes, MT5 fuzzy-matched the bare ticker `BTC` to `Nasdaq\ETF\BTC`
+    // — and the ONLY thing that stopped the fill was that US ETF's own 1-lot floor. It also
+    // ignored symbol_route for every other asset, so a symbol routed to Pepperstone was ordered
+    // on MetaQuotes. Zero callers exist (frontend uses /api/trading/mt5/order; the architecture
+    // reference records the same audit), but a live endpoint that can buy the wrong instrument
+    // must not stay unguarded until its scheduled deletion under Epic #510.
+    //
+    // The order therefore travels the canonical executor — `Mt5Adapter.placeOrder()` — which
+    // resolves the route, applies the shared route-integrity guard (one implementation, shared
+    // with the feasibility library and Mt5TradingService) and persists the attempt.
+    const adapter = this.getMt5Adapter();
+    if (!adapter) {
+      return { success: false, error: 'MT5 adapter unavailable', _deprecated: true, _migrateTo: 'POST /api/trading/mt5/order' };
+    }
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
+      const result = await adapter.placeOrder({
+        symbol: body.symbol,
+        side: body.type?.toUpperCase() === 'SELL' ? 'SELL' : 'BUY',
+        quantity: body.volume,
+        sl: body.sl,
+        tp: body.tp,
+        comment: body.comment,
       });
-      const data = await res.json() as any;
 
-      // Record trade for traceability (#446)
-      if (data.success && this.prisma.isAvailable) {
-        const side = (body.type?.toUpperCase() === 'SELL') ? 'sell' : 'buy';
+      // Record trade for traceability (#446) — unchanged behaviour on a successful fill.
+      if (result.success && this.prisma.isAvailable) {
+        const side = body.type?.toUpperCase() === 'SELL' ? 'sell' : 'buy';
         try {
           await (this.prisma as any).trade.create({
             data: {
               symbol: body.symbol, side, quantity: body.volume,
-              entryPrice: data.price || 0, provider: 'mt5', status: 'open',
-              origin: 'user', ticket: data.ticket ?? null,
+              entryPrice: result.price || 0, provider: 'mt5', status: 'open',
+              origin: 'user', ticket: result.ticket ?? null,
               sl: body.sl ?? null, tp: body.tp ?? null,
               brokerComment: body.comment ?? null,
             },
           });
         } catch { /* non-critical */ }
       }
-      return { ...data, _deprecated: true, _migrateTo: 'POST /api/trading/mt5/order' };
+      return { ...result, _deprecated: true, _migrateTo: 'POST /api/trading/mt5/order' };
     } catch (err: any) {
       return { success: false, error: err.message || 'Bridge unreachable', _deprecated: true };
     }

@@ -35,7 +35,8 @@ import { NotificationService } from '../../notifications/notifications.service';
 import { BridgeEventService } from '../bridge-event.service';
 import { sanitizeMt5Comment } from '../mt5-comment.util';
 import { resolveMt5BridgeUrl } from '../mt5/mt5-bridge.config';
-import { Mt5SymbolRouter, ResolvedSymbolRoute } from '../mt5/mt5-symbol-router.service';
+import { Mt5SymbolRouter, ResolvedSymbolRoute, orderRouteProblems } from '../mt5/mt5-symbol-router.service';
+import { venueForSymbol } from '../../calendar/market-patterns';
 import { SystemLogService } from '../../system/log.service';
 
 interface BridgeQuoteResponse {
@@ -210,7 +211,10 @@ export class Mt5Adapter implements IProviderAdapter {
       return this.symbolRouter.resolve(symbol, assetType);
     }
     const brokerId = this.symbolRouter?.primaryBrokerId() ?? 2;
-    return { brokerId, url: this.bridgeUrl, brokerSymbol: symbol ?? '', explicit: false };
+    // No router (tests, single-bridge installs): the default bridge is the only bridge, and the
+    // canonical ticker is the established identity mapping. `mt5: true` is honest here — this
+    // route DOES address the default bridge.
+    return { brokerId, url: this.bridgeUrl, brokerSymbol: symbol ?? '', explicit: false, mt5: true, provider: null };
   }
 
   /** Env var for a given broker slot, e.g. MT5_ACCOUNT_3 / MT5_SERVER_3. */
@@ -293,6 +297,16 @@ export class Mt5Adapter implements IProviderAdapter {
   }
 
   private async bridgeGet<T>(path: string, route?: ResolvedSymbolRoute): Promise<T | null> {
+    // ⚠️ #914 — a route that does not target an MT5 bridge has NO bridge to ask. Falling back
+    // to the default bridge here is exactly the defect: it answered a binance-routed symbol on
+    // MetaQuotes. Refuse, loudly and cheaply, before any fetch.
+    if (route && !route.mt5) {
+      this.logger.warn(
+        `MT5: refusing GET ${path} — broker ${route.brokerId}` +
+          `${route.provider ? ` (${route.provider})` : ''} is not an active MT5 bridge (#914)`,
+      );
+      return null;
+    }
     const url = route?.url ?? this.bridgeUrl;
     const brokerId = route?.brokerId;
     // ⚠️ Per-broker breaker state (#846). Reading `this.tripped` here was the defect: it
@@ -757,6 +771,46 @@ export class Mt5Adapter implements IProviderAdapter {
     const safeComment = sanitizeMt5Comment(params.comment);
     // Route the order to the broker that serves this symbol (#747).
     const route = this.resolveRoute(params.symbol);
+
+    // ── ROUTE INTEGRITY (#914) — the same check the feasibility library and the direct
+    //    /api/trading/mt5/order path run, because THIS is the path manual trades and the
+    //    automation loop actually use. It refuses a route that does not reach an active MT5
+    //    bridge, and (for crypto) any route whose broker-native name is unverified — MT5
+    //    fuzzy-matches names, so the bare ticker `BTC` selects `Nasdaq\ETF\BTC` and FILLS.
+    //    Placing the refusal HERE means an auto-mode crypto bot has no path to that fill.
+    const routeProblems = orderRouteProblems(
+      params.symbol,
+      route,
+      this.symbolRouter?.brokerIds?.() ?? [],
+    );
+    if (routeProblems.length > 0) {
+      const error =
+        `Refusing to send ${params.symbol} to MT5: ${routeProblems.join('; ')}. ` +
+        "A symbol may only travel a route whose broker is an active MT5 bridge" +
+        (venueForSymbol(params.symbol).kind === 'crypto'
+          ? " and whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) — until the crypto" +
+            ' execution route is decided and verified, crypto stays score-only (#903)'
+          : '') +
+        '.';
+      this.logger.warn(error);
+      this.syslog?.warn('MT5Adapter', `ORDER REFUSED ${params.symbol} ${params.side} ×${params.quantity} — ${error}`, 'trading');
+      // The audit trail records the attempt — a refusal that never reaches the bridge is still
+      // a decision the operator should be able to find (#885 persists refusals).
+      this.prisma?.order.create({
+        data: {
+          symbol: params.symbol,
+          type: 'market',
+          side: params.side === 'BUY' ? 'buy' : 'sell',
+          quantity: params.quantity,
+          status: 'rejected',
+          provider: 'mt5',
+          error,
+          errorCode: 'TCS-RISK-001',
+        },
+      }).catch(() => {});
+      return { success: false, error, status: 'REJECTED', code: 'TCS-RISK-001' };
+    }
+
     const body = {
       symbol: route.brokerSymbol,
       type: params.side === 'BUY' ? 'buy' : 'sell',
@@ -990,6 +1044,14 @@ export class Mt5Adapter implements IProviderAdapter {
   }
 
   private async bridgePost<T>(path: string, body: unknown, route?: ResolvedSymbolRoute): Promise<T | null> {
+    // ⚠️ #914 — see bridgeGet. A non-MT5 route must never be answered by the default bridge.
+    if (route && !route.mt5) {
+      this.logger.warn(
+        `MT5: refusing POST ${path} — broker ${route.brokerId}` +
+          `${route.provider ? ` (${route.provider})` : ''} is not an active MT5 bridge (#914)`,
+      );
+      return null;
+    }
     const url = route?.url ?? this.bridgeUrl;
     const brokerId = route?.brokerId;
     // ⚠️ Per-broker breaker state (#846) — see the field comment on `breakers`.

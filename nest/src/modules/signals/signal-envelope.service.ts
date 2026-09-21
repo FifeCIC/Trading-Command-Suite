@@ -7,6 +7,7 @@ import { ScoreHistoryService } from '../scoring/score-history.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SignalQueueService, RoutableSignal } from './signal-queue.service';
 import { SignalOutcomeService } from './signal-outcome.service';
+import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
 import { selectBaseTimeframe, everyCadenceStale } from '../../common/utils/timeframe';
@@ -183,6 +184,11 @@ export class SignalEnvelopeService {
     private readonly signalOutcomes: SignalOutcomeService,
     private readonly feasibility: ExecutionFeasibilityService,
     private readonly outcomeTracker: OutcomeTrackerService,
+    /**
+     * #914 — read at generation so `size-below-minimum` can fire on the CARD. Optional only so
+     * unit tests can construct the service without it; production wiring always provides it.
+     */
+    private readonly tradeDefaults?: ManualTradeDefaultsService,
   ) {}
 
   /**
@@ -1268,6 +1274,12 @@ export class SignalEnvelopeService {
     // path re-runs. Uses the positions already fetched above + the cached
     // broker symbol list, so the card explains blockers before any click.
     try {
+      // ⚠️ #914 — the persisted manual-trade default SIZE is passed in, because it is one of
+      // the facts the assessment needs. Without it the volume-floor check short-circuits at
+      // generation, so `size-below-minimum` could only ever fire AFTER the click — the opposite
+      // of what this two-phase design is for. A failure to read settings degrades to "unknown",
+      // never to a fabricated number.
+      const tradeDefaults = await this.tradeDefaults?.getDefaults().catch(() => null);
       for (const env of scoredEnvelopes) {
         const side = signalToSide(env.signal);
         if (!side) {
@@ -1285,6 +1297,7 @@ export class SignalEnvelopeService {
           protocolId: env.protocolId,
           positions: mt5Positions,
           marketStatus: env.marketStatus,
+          size: tradeDefaults?.size ?? null,
         });
         env.executionBlockers = res.blockers;
       }

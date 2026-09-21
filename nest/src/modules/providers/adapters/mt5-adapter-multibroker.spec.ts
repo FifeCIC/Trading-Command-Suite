@@ -34,6 +34,9 @@ const router = (brokerIds: number[]) => ({
     url: `http://127.0.0.1:${5000 + brokerId - 2}`,
     brokerSymbol: '',
     explicit: true,
+    // #914 — these ids are active MT5 bridges; the field is required by ResolvedSymbolRoute.
+    mt5: true,
+    provider: 'mt5',
   }),
 });
 

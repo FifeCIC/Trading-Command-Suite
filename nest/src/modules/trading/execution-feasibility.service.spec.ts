@@ -44,7 +44,7 @@ function makeAdapter(opts: {
   };
 }
 
-function makeService(adapter: ReturnType<typeof makeAdapter>) {
+function makeService(adapter: ReturnType<typeof makeAdapter>, route: Record<string, unknown> = ROUTE_MT5) {
   const prisma = {
     trade: { findFirst: async () => null },
   } as any;
@@ -53,13 +53,24 @@ function makeService(adapter: ReturnType<typeof makeAdapter>) {
   const diversification = { checkPreTrade: async () => ({ blocked: false }) } as any;
   const pyramidPolicy = { evaluate: async () => ({ blockers: [], hasOpenPosition: false }) } as any;
   const symbolRouter = {
-    getBrokerId: () => 2,
+    resolve: () => route,
+    brokerIds: () => [2, 3],
+    getBrokerId: () => route.brokerId,
     getBrokerSymbol: (s: string) => s.toUpperCase(),
   } as any;
   return new ExecutionFeasibilityService(
     prisma, adapterFactory, duplicateGuard, diversification, pyramidPolicy, symbolRouter,
   );
 }
+
+/** A normal MT5-routed symbol — the restore direction for every #914 assertion. */
+const ROUTE_MT5 = { brokerId: 3, url: 'http://localhost:5001', brokerSymbol: 'US500', explicit: true, mt5: true, provider: 'mt5' };
+
+/**
+ * The measured #914 route: `symbol_route` row `BTC → binance, brokerId 0, brokerSymbol NULL`.
+ * `url` is null because there is no bridge behind it — resolving one is the defect.
+ */
+const ROUTE_BINANCE = { brokerId: 0, url: null, brokerSymbol: 'BTC', explicit: true, mt5: false, provider: 'binance' };
 
 const keysOf = (blockers: Array<{ key: string }>) => blockers.map((b) => b.key);
 
@@ -147,7 +158,7 @@ describe('ExecutionFeasibilityService — broker volume floor (#US500)', () => {
     expect(keysOf(res.blockers)).not.toContain('size-below-minimum');
   });
 
-  it('skips the floor check when no size is supplied (generation phase)', async () => {
+  it('skips the floor check when no size is supplied (execution phase omitted it)', async () => {
     const service = makeService(makeAdapter({
       tradability: { US500: { tradeMode: 4, volumeMin: 0.1 } },
     }));
@@ -155,5 +166,76 @@ describe('ExecutionFeasibilityService — broker volume floor (#US500)', () => {
     const res = await service.assess({ symbol: 'US500', side: 'BUY', brokerId: 'mt5' });
 
     expect(keysOf(res.blockers)).not.toContain('size-below-minimum');
+  });
+});
+
+/**
+ * #914 — ROUTE INTEGRITY, the canary for the fabricated refusal.
+ * =================================================================
+ * The incident: clicking Buy on a BTC signal produced
+ *
+ *   "0.1 lots is below BTC's 1-lot minimum on broker 0"
+ *
+ * ...every part wrong. The route was `→ binance, brokerId 0, brokerSymbol NULL`; `getUrl(0)`
+ * fell back to the DEFAULT bridge because `0` is falsy; and the bare ticker `BTC` matched
+ * `Nasdaq\ETF\BTC` on that bridge, so a crypto position was measured against a US ETF's floor.
+ *
+ * The canary is therefore TWO assertions, in both directions:
+ *   1. no `size-below-minimum` / `symbol-not-tradeable` may be produced from a non-MT5 route,
+ *      and the broker's symbol lists must not even be consulted for it;
+ *   2. the SAME adapter + tradability table still produces the genuine floor blocker when the
+ *      symbol IS routed to that MT5 broker.
+ */
+describe('ExecutionFeasibilityService — route integrity (#914)', () => {
+  it('never reads a lot floor for a symbol routed to a non-MT5 broker, and says why instead', async () => {
+    const adapter = makeAdapter({
+      // MetaQuotes really does list a 'BTC' — it is the Nasdaq ETF, with a 1-lot floor.
+      symbols: ['BTC'],
+      tradability: { BTC: { tradeMode: 4, volumeMin: 1 } },
+    });
+    const symbolsSpy = jest.spyOn(adapter, 'getSymbols');
+    const tradabilitySpy = jest.spyOn(adapter, 'getSymbolTradability');
+    const service = makeService(adapter, ROUTE_BINANCE);
+
+    const res = await service.assess({ symbol: 'BTC', side: 'BUY', brokerId: 'mt5', size: 0.1 });
+
+    expect(res.feasible).toBe(false);
+    const keys = keysOf(res.blockers);
+    // The honest blocker…
+    expect(keys).toContain('route-unverified');
+    // …and the fabricated ones are gone.
+    expect(keys).not.toContain('size-below-minimum');
+    expect(keys).not.toContain('symbol-not-tradeable');
+    // ⚠️ The strong form: the wrong broker is not consulted AT ALL.
+    expect(symbolsSpy).not.toHaveBeenCalled();
+    expect(tradabilitySpy).not.toHaveBeenCalled();
+  });
+
+  it('names the route that cannot take the order — not a broker that was never asked', async () => {
+    const service = makeService(makeAdapter({ symbols: ['BTC'] }), ROUTE_BINANCE);
+
+    const res = await service.assess({ symbol: 'BTC', side: 'BUY', brokerId: 'mt5', size: 0.1 });
+
+    const blocker = res.blockers.find((b) => b.key === 'route-unverified')!;
+    expect(blocker.message).toContain('broker 0');
+    expect(blocker.message).toContain('binance');
+    expect(blocker.message).toContain('not an active MT5 bridge');
+    // The remedy must not be the harmful one ("raise the size to 1 lot").
+    expect(blocker.hint).not.toContain('Raise the manual trade size');
+    expect(blocker.hint).toContain('No action available');
+  });
+
+  it('still reports the genuine floor for a symbol routed to that MT5 broker (restore direction)', async () => {
+    const service = makeService(
+      makeAdapter({ symbols: ['US500'], tradability: { US500: { tradeMode: 4, volumeMin: 0.1 } } }),
+      ROUTE_MT5,
+    );
+
+    const res = await service.assess({ symbol: 'US500', side: 'BUY', brokerId: 'mt5', size: 0.01 });
+
+    const blocker = res.blockers.find((b) => b.key === 'size-below-minimum')!;
+    // The broker named is the ROUTED broker (3), which is the one consulted.
+    expect(blocker.message).toContain('broker 3');
+    expect(keysOf(res.blockers)).not.toContain('route-unverified');
   });
 });

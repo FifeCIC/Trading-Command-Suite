@@ -113,22 +113,64 @@ export class Mt5ConnectionManager {
     return [...this.brokerIds];
   }
 
-  /** Get the bridge URL for a specific broker (defaults to first active) */
-  getUrl(brokerId?: number): string {
-    if (brokerId && this.brokerUrls.has(brokerId)) return this.brokerUrls.get(brokerId)!;
+  /**
+   * isBroker() — is this id an ACTIVE MT5 bridge slot?
+   *
+   * ⚠️ #914 — the `!= null` is the point of this method. `0` is a REAL broker id in
+   * `symbol_route` (the four crypto rows carry `brokerId 0` / `provider=binance`), and every
+   * `if (brokerId && …)` test in this file treated it as "not specified" — so a request for
+   * broker 0 silently became a request for the DEFAULT bridge (MetaQuotes :5000), where the
+   * bare ticker `BTC` matches `Nasdaq\ETF\BTC`. Distinguishing null/undefined from `0` is what
+   * stops a non-MT5 route from being answered by an MT5 bridge that was never asked.
+   */
+  isBroker(brokerId: number | null | undefined): brokerId is number {
+    return brokerId != null && this.brokerUrls.has(brokerId);
+  }
+
+  /**
+   * Get the bridge URL for a specific broker (defaults to first active).
+   *
+   * ⚠️ An EXPLICIT id that is not a registered bridge THROWS — it must never be answered by
+   * the default bridge (#914). Callers that may hold a non-MT5 route (see `Mt5SymbolRouter`)
+   * check `isBroker()` first; a thrown error here is a programming error, not a fallback case.
+   */
+  getUrl(brokerId?: number | null): string {
+    if (brokerId == null) return this.defaultUrl();
+    const url = this.brokerUrls.get(brokerId);
+    if (!url) {
+      throw new Error(
+        `Broker ${brokerId} is not an MT5 bridge (active: ${this.brokerIds.join(', ') || 'none'}) — ` +
+          'refusing to answer as the default bridge',
+      );
+    }
+    return url;
+  }
+
+  private defaultUrl(): string {
     return this.brokerUrls.get(this.defaultBrokerId!) || `http://localhost:${BASE_PORT}`;
   }
 
-  /** Resolve brokerId — returns the given ID if valid, otherwise the default */
-  private resolveBroker(brokerId?: number): number {
-    if (brokerId && this.brokerUrls.has(brokerId)) return brokerId;
+  /**
+   * Resolve brokerId for REPORTING — never for addressing (that is `getUrl`).
+   * A requested id is reported as-is: an unregistered id is a fact the caller needs to see,
+   * not something to paper over with the default (#914).
+   */
+  private resolveBroker(brokerId?: number | null): number {
+    if (brokerId != null) return brokerId;
     return this.defaultBrokerId!;
   }
 
   // ── Low-level fetch (broker-aware) ───────────────────────
 
   private async fetch(url: string, options?: RequestInit, brokerId?: number) {
-    const base = this.getUrl(brokerId);
+    let base: string;
+    try {
+      base = this.getUrl(brokerId);
+    } catch (err) {
+      // The requested broker is not an MT5 bridge — NOTHING was consulted, and we must not
+      // report a bridged answer under the default broker's id (#914).
+      return { ok: false, status: 0, data: { error: (err as Error).message }, brokerId: this.resolveBroker(brokerId) };
+    }
     try {
       const res = await fetch(`${base}${url}`, {
         ...options,

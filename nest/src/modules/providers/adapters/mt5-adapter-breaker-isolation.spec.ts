@@ -42,6 +42,9 @@ function routerStub() {
     url,
     brokerSymbol: symbol,
     explicit: true,
+    // #914 — both ids are ACTIVE MT5 bridges; the field is required by ResolvedSymbolRoute.
+    mt5: true,
+    provider: 'mt5',
   });
   return {
     resolve: (symbol: string) =>
