@@ -163,15 +163,15 @@ const GLOSSARY = [
   },
   {
     term: 'directional denominator',
-    definition: 'The maximum possible Signal Score — the sum of weights for directives that carry a direction (bullish/bearish). Because it counts only directional directives, it is smaller than the protocol\'s full weight.',
+    definition: 'The number a Signal Score percentage is measured against — the protocol\'s CONFIGURED directional capacity: the sum of max scores of the directives that carry a direction, fixed in configuration rather than by what happened to fire. Because it is configured, the same reading means the same thing on every tick and on every symbol (the stable-denominator invariant, 2026-09-15).',
     category: 'Scoring',
-    aliases: ['directional max', 'directional ceiling'],
+    aliases: ['directional max', 'directional ceiling', 'configured capacity'],
   },
   {
     term: 'dynamic denominator',
-    definition: 'The property of the Signal Score denominator that changes with which directional directives actually fire on a given symbol. When fewer directional directives fire, the denominator is smaller — so the percentage is measured against what actually fired, not the full directional ceiling. (Known refinement: a stable denominator would score against the full ceiling instead.)',
+    definition: 'A RETIRED scoring variant where the percentage was measured against only the directional directives that actually FIRED — so a quiet tick produced a smaller denominator and an inflated percentage. Superseded on 2026-09-15 by the configured-capacity denominator; the engine no longer scores this way. Kept here so older notes and A/B records can still be read correctly.',
     category: 'Scoring',
-    aliases: ['dynamic max', 'variable denominator'],
+    aliases: ['dynamic max', 'variable denominator', 'observed denominator'],
   },
 
   // ── Risk ──
@@ -428,6 +428,55 @@ const GLOSSARY = [
     definition: 'One component that does everything — the anti-pattern this architecture is built to avoid. A single script holding data, scoring, risk and execution cannot be tested in parts, cannot fail in parts, and cannot be reasoned about when it misbehaves; the failure is always "something in there is wrong".',
     category: 'Architecture & Pipeline',
     aliases: ['monolith', 'big ball of mud'],
+  },
+
+  // ── Vocabulary (#919) ────────────────────────────────────────────────
+  // Why these exist: "strategy" meant three different things across the codebase and none of
+  // them was defined here, so a sentence like "five strategies with hardcoded win rates" was
+  // unreadable. Each entry below states which layer it names, because that is the ambiguity.
+  // Authority: docs/trading-bot-model.md §1c (the owner's definition) and the
+  // stack-performance.service.ts header (the META.Stack definition).
+  {
+    term: 'strategy',
+    definition: 'The complete set of elements that make up a META.Stack — watchlist, protocol, scoring strategy and trading strategy together. Any difference at all is a DIFFERENT strategy: a different market, broker, direction role or execution setting all count, and two identical bots are a duplicate rather than one strategy. In this app, one bot\'s whole configuration = one strategy.',
+    category: 'Architecture & Pipeline',
+    aliases: ['strategies'],
+  },
+  {
+    term: 'MetaStack',
+    definition: 'The complete automation unit: Watchlist (what to watch) + Protocol (how it is scored) + Scoring Strategy (the gate and size policy) + Trading Strategy (the bot that can place orders). Also called a "strategy" — see the Strategy entry for how the four parts are counted.',
+    category: 'Architecture & Pipeline',
+    aliases: ['metastack', 'meta stack', 'meta.stack'],
+  },
+  {
+    term: 'protocol',
+    definition: 'The scored recipe: a named set of directives, weights and gates that turns market data into a Signal Score. A protocol is the trading THESIS — it does not trade on its own; bots subscribe to it and decide whether a signal becomes an order.',
+    category: 'Architecture & Pipeline',
+    aliases: ['protocols'],
+  },
+  {
+    term: 'scoring strategy',
+    definition: 'The policy record that pairs a Protocol with a Watchlist and holds the gate and sizing settings (mode, trade threshold, base size, SL/TP). It answers "should this protocol\'s signal be traded, and how big" — the automation loop reads these when deciding what to evaluate.',
+    category: 'Architecture & Pipeline',
+    aliases: ['scoring strategies'],
+  },
+  {
+    term: 'trading strategy',
+    definition: 'The executable identity — one Protocol subscription, one symbol, one broker and one direction role (long or short). This is the row that can place orders and the thing the Strategy Registry counts. Also called a BOT; the protocol is the thesis, the trading strategy is the execution.',
+    category: 'Architecture & Pipeline',
+    aliases: ['trading strategies'],
+  },
+  {
+    term: 'bot',
+    definition: 'A trading strategy — the executable part of a META.Stack that owns a protocol subscription and a direction role and can place orders. A bot is ONE of the four parts of a META.Stack, not the whole of it.',
+    category: 'Architecture & Pipeline',
+    aliases: ['bots'],
+  },
+  {
+    term: 'derived strategy',
+    definition: 'A strategy identity DERIVED from a bot\'s configuration — protocol + role + market + broker + execution policy — hashed into a stable key so the identity survives a rename. Two bots with identical configuration are reported as a DUPLICATE (a defect), never quietly merged into one row.',
+    category: 'Architecture & Pipeline',
+    aliases: ['derived strategies', 'strategy derivation'],
   },
 
   // ── AI-Assisted Systems ─────────────────────────────────────────────────
