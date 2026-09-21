@@ -1828,7 +1828,19 @@ model DecisionLog {
   symbol      String   @db.VarChar(20)
   decision    String   @db.VarChar(20)   // SCORED, SKIP, EXECUTED, FAILED, BLOCKED, QUEUED, HOLD
   reason      String?  @db.Text
-  composite   Float    @default(0)
+  /// Raw additive protocol score — the envelope-ladder and A/B writers (#909).
+  /// NEVER compare to a percentage threshold; this is the same number the protocol
+  /// capacity is measured against (e.g. 178 of 910).
+  compositeRaw Float?
+  /// Percentage of the protocol's CONFIGURED capacity, 0-100 — the queue-path writer (#909).
+  /// This is the number `minComposite` gates were calibrated for.
+  compositePct Float?
+  /// ⚠️ HISTORICAL ONLY (#909) — the column that held BOTH units above, unlabelled.
+  /// Nothing writes it any more; it is kept because 141k pre-split rows cannot be
+  /// classified with certainty (their writer era is not recoverable). Do NOT aggregate,
+  /// average or compare this column — its unit is unknown per row. Read `compositeRaw`
+  /// and `compositePct` instead; a reader that shows this must label it as untyped.
+  composite   Float?
   signal      String?  @db.VarChar(10)    // BUY, SELL, HOLD
   ticket      Int?
   price       Float?

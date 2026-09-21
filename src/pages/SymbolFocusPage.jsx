@@ -14,6 +14,7 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { timeAgo } from '../core/format-utils';
+import { decisionScore } from '../core/decision-score';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './symbol-focus.css';
@@ -212,7 +213,11 @@ export default function SymbolFocusPage() {
                     <div className="sf-decision-body">
                       {d.reason && <p className="sf-decision-reason">{d.reason}</p>}
                       <div className="sf-decision-meta">
-                        {d.composite > 0 && <span>Score: {d.composite}%</span>}
+                        {/* #909 — this used to read `Score: {d.composite}%`, which labelled a RAW
+                            score with '%'. The helper names the actual unit per row. */}
+                        {decisionScore(d).text && (
+                          <span title={decisionScore(d).title || undefined}>Score: {decisionScore(d).text}</span>
+                        )}
                         {d.signal && (
                           <span style={{ color: SIGNAL_COLORS[d.signal] || '#94a3b8' }}>{d.signal}</span>
                         )}

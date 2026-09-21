@@ -41,7 +41,8 @@ describe('AutomationLoopService.persistDecisions — order rows are attempts (#8
     symbol: 'XAUUSD',
     decision: 'FAILED',
     reason: 'Signal below 7% (6.5%) [style Position]',
-    composite: 6.5,
+    // #909 — the queue path's unit is the PERCENTAGE; the raw score is a different column.
+    compositePct: 6.5,
     signal: 'BUY',
     brokerId: 'mt5',
     ...over,
@@ -93,5 +94,87 @@ describe('AutomationLoopService.persistDecisions — order rows are attempts (#8
 
     expect(orderCreate).toHaveBeenCalledTimes(1);
     expect(orderCreate.mock.calls[0][0].data.symbol).toBe('EURUSD');
+  });
+});
+
+/**
+ * #909 — the unit lives in the COLUMN.
+ * ====================================
+ * `decision_log.composite` held BOTH a raw additive score (envelope ladder, A/B) and a 0-100
+ * percentage (queue path) under one name, so any average or colour threshold silently mixed two
+ * quantities — and the same bot could read as "clears its bar ten times over" (raw 165 vs bar 8)
+ * or "blocked at 7 < 8", depending on which writer the row came from.
+ *
+ * These tests pin the split in both directions, because a one-directional assertion cannot tell
+ * "the mapping works" from "the mapping is never exercised":
+ *   • a percentage row lands in `compositePct` and NOT in `compositeRaw`;
+ *   • a raw row lands in `compositeRaw` and NOT in `compositePct`;
+ *   • neither writes the legacy `composite` column — new rows must leave it NULL, since its
+ *     historical rows cannot be classified and a written value would re-create the ambiguity.
+ */
+describe('AutomationLoopService.persistDecisions — unit-explicit scores (#909)', () => {
+  function make() {
+    const svc = Object.create(AutomationLoopService.prototype) as AutomationLoopService;
+    const decisionCreateMany = jest.fn(() => Promise.resolve({ count: 1 }));
+    (svc as any).prisma = {
+      isAvailable: true,
+      order: { create: jest.fn(async () => ({})) },
+      decisionLog: { createMany: decisionCreateMany },
+    };
+    (svc as any).logger = { debug: jest.fn(), warn: jest.fn(), log: jest.fn() };
+    (svc as any).state = { decisionLogSuppressed: 0, decisionLogPersisted: 0 };
+    (svc as any).lastDecisionWrite = new Map();
+    return { svc, decisionCreateMany };
+  }
+
+  const flush = () => new Promise((r) => setImmediate(r));
+
+  it('a queue-path (percentage) decision writes compositePct and leaves compositeRaw null', async () => {
+    const { svc, decisionCreateMany } = make();
+    (svc as any).persistDecisions([{
+      timestamp: new Date().toISOString(), strategyId: 'bot-1', symbol: 'XAUUSD',
+      brokerId: 'mt5', decision: 'SKIP',
+      reason: '[QueueBot] XAUUSD composite 7 < minComposite 8 — stays queued',
+      compositePct: 7, signal: 'BUY',
+    }], 9);
+    await flush();
+
+    const row = decisionCreateMany.mock.calls[0][0].data[0];
+    expect(row.compositePct).toBe(7);
+    expect(row.compositeRaw).toBeNull();
+    // ⚠️ The canary: the legacy column is not written by new rows.
+    expect(row).not.toHaveProperty('composite');
+  });
+
+  it('a ladder (raw) decision writes compositeRaw and leaves compositePct null', async () => {
+    const { svc, decisionCreateMany } = make();
+    (svc as any).persistDecisions([{
+      timestamp: new Date().toISOString(), strategyId: '', symbol: 'BTC',
+      brokerId: 'mt5', decision: 'SCORED',
+      reason: 'btc-speed-v1: composite=178 signal=STRONG_BUY',
+      compositeRaw: 178, signal: 'STRONG_BUY',
+    }], 9);
+    await flush();
+
+    const row = decisionCreateMany.mock.calls[0][0].data[0];
+    expect(row.compositeRaw).toBe(178);
+    expect(row.compositePct).toBeNull();
+    expect(row).not.toHaveProperty('composite');
+  });
+
+  it('a decision with NO trustworthy score writes null in BOTH — never 0', async () => {
+    const { svc, decisionCreateMany } = make();
+    (svc as any).persistDecisions([{
+      timestamp: new Date().toISOString(), strategyId: 'bot-2', symbol: 'EURUSD',
+      brokerId: 'mt5', decision: 'BLOCKED',
+      reason: '[QueueBot] invalid score lineage or percentage unit',
+      compositePct: null, signal: 'BUY',
+    }], 9);
+    await flush();
+
+    const row = decisionCreateMany.mock.calls[0][0].data[0];
+    // A 0 would read as a real measurement in either unit; absence is the honest value.
+    expect(row.compositeRaw).toBeNull();
+    expect(row.compositePct).toBeNull();
   });
 });

@@ -11,6 +11,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { decisionScore } from '../core/decision-score';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './automation-overview.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -227,13 +228,17 @@ export default function AutomationOverviewPage() {
         <section className="ao-decisions">
           <h2>Recent Decisions (last tick)</h2>
           <div className="ao-decisions-grid">
-            {recentDecisions.slice(0, 20).map((d, i) => (
-              <div key={i} className={`ao-decision ao-decision-${d.decision?.toLowerCase()}`}>
-                <span className="ao-decision-symbol">{d.symbol}</span>
-                <span className="ao-decision-action">{d.decision} → {d.signal}</span>
-                <span className="ao-decision-composite">{d.composite || 0}</span>
-              </div>
-            ))}
+            {recentDecisions.slice(0, 20).map((d, i) => {
+              // #909 — unit-aware: '178 raw' vs '7.0%' vs '165?' (historical, unit unrecorded).
+              const score = decisionScore(d);
+              return (
+                <div key={i} className={`ao-decision ao-decision-${d.decision?.toLowerCase()}`}>
+                  <span className="ao-decision-symbol">{d.symbol}</span>
+                  <span className="ao-decision-action">{d.decision} → {d.signal}</span>
+                  <span className="ao-decision-composite" title={score.title || undefined}>{score.text || '—'}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

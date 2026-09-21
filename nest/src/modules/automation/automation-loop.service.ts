@@ -199,7 +199,21 @@ export interface TickDecision {
   brokerId: string;
   decision: 'SCORED' | 'SKIP' | 'SIGNAL' | 'QUEUED' | 'EXECUTED' | 'FAILED' | 'BLOCKED' | 'PYRAMID';
   reason: string;
-  composite: number;
+  /**
+   * #909 — the score behind this decision, IN THE UNIT THE WRITER ACTUALLY PRODUCED.
+   *
+   *   compositeRaw — the additive protocol score (envelope ladder + A/B writers). Compared
+   *                  against protocol capacity, NOT against a percentage bar.
+   *   compositePct — percentage of the protocol's CONFIGURED capacity, 0-100 (queue path).
+   *                  This is the number `minComposite` was calibrated for.
+   *
+   * ⚠️ They are different quantities. Do not compare, average or chart them as one series.
+   * Exactly one is set; BOTH NULL means "no score" — never 0, because a 0 reads as a real
+   * measurement in either unit (that is the defect this split removed: the old `composite`
+   * column held both units under one name).
+   */
+  compositeRaw?: number | null;
+  compositePct?: number | null;
   signal?: string;
   ticket?: string | number;
   price?: number;
@@ -301,7 +315,9 @@ export class AutomationLoopService implements OnModuleInit {
     symbol: string;
     brokerId: string;
     side: 'BUY' | 'SELL';
-    composite: number;
+    /** #909 — percentage of configured capacity (0-100). Its ONLY caller is the queue path,
+     *  where the value is `strategy_signal_queue.compositePct`. Named for its unit. */
+    compositePct: number;
     baseSize: number;
     slPct: number;
     tpPct: number;
@@ -311,12 +327,12 @@ export class AutomationLoopService implements OnModuleInit {
     executionId?: string;
     decisions: TickDecision[];
   }): Promise<void> {
-    const { strategyId, strategyName, symbol, brokerId, side, composite, baseSize, slPct, tpPct, entryPrice, mode, protocolId, executionId, decisions } = params;
+    const { strategyId, strategyName, symbol, brokerId, side, compositePct, baseSize, slPct, tpPct, entryPrice, mode, protocolId, executionId, decisions } = params;
 
     // #615 mandate: Trading layer OFF → signals still generated, never dispatched.
     if (!this.state.tradingEnabled) {
       this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, 'Trading layer disabled — dispatch blocked');
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: 'Trading layer disabled', composite, signal: side });
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: 'Trading layer disabled', compositePct: compositePct, signal: side });
       return;
     }
 
@@ -344,7 +360,7 @@ export class AutomationLoopService implements OnModuleInit {
       const first = pyramid.blockers[0];
       const reason = first?.message || 'Duplicate/scale-in policy block';
       this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, reason);
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason, composite, signal: side });
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason, compositePct, signal: side });
       return;
     }
 
@@ -356,7 +372,7 @@ export class AutomationLoopService implements OnModuleInit {
     const accountRisk = await this.strategyService.assessGlobalRiskLimits(baseSize, symbol);
     if (!accountRisk.allowed) {
       this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, accountRisk.reason);
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: accountRisk.reason, composite, signal: side });
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: accountRisk.reason, compositePct, signal: side });
       return;
     }
 
@@ -375,7 +391,7 @@ export class AutomationLoopService implements OnModuleInit {
     if (!feasibility.feasible) {
       const reason = feasibility.blockers.map(blocker => blocker.message).join('; ');
       this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, reason);
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason, composite, signal: side });
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason, compositePct, signal: side });
       return;
     }
 
@@ -388,13 +404,15 @@ export class AutomationLoopService implements OnModuleInit {
       const aid = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
       const action: PendingAction = {
         id: aid, strategyId, symbol, brokerId,
-        side, quantity: baseSize, composite, slPct, tpPct,
+        // `PendingAction.composite` is the pending_action table's own column (#909 is about
+        // decision_log only) — it receives the same queue-path percentage.
+        side, quantity: baseSize, composite: compositePct, slPct, tpPct,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 5*60000).toISOString(),
       };
       this.state.pendingActions.push(action);
       await this.persistPendingAction(action);
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', composite, signal: side, actionId: aid });
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', compositePct, signal: side, actionId: aid });
       return;
     }
 
@@ -433,7 +451,7 @@ export class AutomationLoopService implements OnModuleInit {
         this.capturePortfolioSnapshot(allPos, this.state.tickCount, 'trade');
       } catch { /* non-critical */ }
     }
-    decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite, signal: side, ticket: result.ticket, price: result.price, quantity: baseSize });
+    decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), compositePct, signal: side, ticket: result.ticket, price: result.price, quantity: baseSize });
   }
 
   state: LoopState = {
@@ -1216,7 +1234,9 @@ export class AutomationLoopService implements OnModuleInit {
             brokerId: 'mt5',
             decision: 'SCORED',
             reason: `${env.protocolId ?? 'any'}: composite=${env.composite} signal=${env.signal}`,
-            composite: env.composite ?? 0,
+            // #909 — `env.composite` is the RAW additive score (GatedScore.composite), NOT a
+            // percentage. `env.signalPct` is the percentage; this slot is the raw one.
+            compositeRaw: env.composite ?? null,
             signal: env.signal ?? 'HOLD',
           });
         }
@@ -1392,7 +1412,8 @@ export class AutomationLoopService implements OnModuleInit {
             brokerId,
             decision: 'SCORED',
             reason: `AB-${side} ${test.name}: composite=${score.composite} < threshold=${threshold}`,
-            composite: score.composite,
+            // `score` is a GatedScore — `composite` is the RAW additive score (#909).
+            compositeRaw: score.composite,
             signal: score.signal ?? 'HOLD',
           });
           return;
@@ -1410,7 +1431,7 @@ export class AutomationLoopService implements OnModuleInit {
             brokerId,
             decision: 'SKIP',
             reason: `AB-${side} ${test.name}: signal class "${score.signal}" has no derivable side`,
-            composite: score.composite,
+            compositeRaw: score.composite,
             signal: score.signal ?? 'HOLD',
           });
           return;
@@ -1438,7 +1459,7 @@ export class AutomationLoopService implements OnModuleInit {
           reason: result.success
             ? `AB-${side} ${test.name}: ${sideDir} @ ${entryPrice} (${result.ticket ?? 'recorded'})`
             : `AB-${side} ${test.name}: ${result.error ?? 'unknown'}`,
-          composite: score.composite,
+          compositeRaw: score.composite,
           signal: score.signal ?? 'BUY',
           ticket: result.ticket,
           price: result.price,
@@ -1532,7 +1553,7 @@ export class AutomationLoopService implements OnModuleInit {
    * caller.
    */
   private gateSkipNote(
-    strategy: any, symbol: string, gate: string, reason: string, composite = 0,
+    strategy: any, symbol: string, gate: string, reason: string, compositePct: number | null = null,
   ): Record<string, unknown> | null {
     const key = `${strategy?.id ?? ''}:${gate}`;
     const now = Date.now();
@@ -1547,7 +1568,7 @@ export class AutomationLoopService implements OnModuleInit {
       brokerId: strategy.brokerId || 'mt5',
       decision: 'SKIP',
       reason: `[QueueBot] held by ${gate} — ${reason}`,
-      composite,
+      compositePct,
       signal: 'HOLD',
     };
   }
@@ -1674,7 +1695,9 @@ export class AutomationLoopService implements OnModuleInit {
             strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
             decision: 'BLOCKED',
             reason: `[QueueBot] queue direction "${head.direction}" has no derivable side`,
-            composite: 0, signal: 'HOLD',
+            // #909 — no trustworthy score for this row; null, never 0 (0 would read as a
+            // real measurement in either unit).
+            compositePct: null, signal: 'HOLD',
           });
           continue;
         }
@@ -1685,7 +1708,7 @@ export class AutomationLoopService implements OnModuleInit {
             strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
             decision: 'BLOCKED',
             reason: '[QueueBot] invalid score lineage or percentage unit',
-            composite: 0, signal: side,
+            compositePct: null, signal: side,
           });
           continue;
         }
@@ -1717,7 +1740,7 @@ export class AutomationLoopService implements OnModuleInit {
             strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
             decision: 'SKIP',
             reason: `[QueueBot] ${symbol} composite ${gatePct} < minComposite ${minC} — stays queued`,
-            composite: gatePct, signal: side,
+            compositePct: gatePct, signal: side,
           });
           continue;
         }
@@ -1761,7 +1784,7 @@ export class AutomationLoopService implements OnModuleInit {
             strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
             decision: 'SKIP',
             reason: `[QueueBot] pacing — next trade in ${Math.ceil((delayMs - (Date.now() - lastBot)) / 60000)}m`,
-            composite: gatePct, signal: side,
+            compositePct: gatePct, signal: side,
           });
           continue;
         }
@@ -1807,7 +1830,7 @@ export class AutomationLoopService implements OnModuleInit {
             strategyId: strategy.id, symbol, brokerId,
             decision: 'SKIP',
             reason: `[QueueBot] ${side} ${symbol} captured as paper — ${why} — stays queued`,
-            composite: gatePct, signal: side,
+            compositePct: gatePct, signal: side,
           });
           continue;
         }
@@ -1820,7 +1843,7 @@ export class AutomationLoopService implements OnModuleInit {
           symbol,
           brokerId: strategy.brokerId || 'mt5',
           side,
-          composite: gatePct,
+          compositePct: gatePct,
           baseSize,
           slPct,
           tpPct,
@@ -2042,7 +2065,12 @@ export class AutomationLoopService implements OnModuleInit {
 
   /** Persist tick decisions to DB for audit trail survival across restarts.
    *  #704 — HOLD/SCORED rows are write-on-change: identical consecutive ticks
-   *  (same decision|signal|rounded composite) are suppressed and counted. */
+   *  (same decision|signal|rounded score) are suppressed and counted.
+   *
+   *  ⚠️ #909 — the score is written to `compositeRaw` or `compositePct` depending on which one
+   *  the producing site set (see TickDecision). The old `composite` column is left NULL for
+   *  every new row: it is HISTORICAL ONLY, because its 141k pre-split rows cannot be classified
+   *  with certainty. A reader that shows a NULL-typed row must say "unit not recorded". */
   private persistDecisions(decisions: TickDecision[], tickNumber: number) {
     if (!this.prisma.isAvailable) return;
 
@@ -2050,7 +2078,9 @@ export class AutomationLoopService implements OnModuleInit {
     const keep: TickDecision[] = [];
     for (const d of decisions) {
       const key = `${d.strategyId}|${d.symbol}`;
-      const sig = `${d.decision}|${d.signal ?? ''}|${Math.round(d.composite ?? 0)}`;
+      // Both typed slots in the signature: a unit that changes between ticks is a real change
+      // and must not be suppressed as a repeat.
+      const sig = `${d.decision}|${d.signal ?? ''}|${d.compositeRaw ?? ''}|${d.compositePct ?? ''}`;
       if (significant.has(d.decision) || this.lastDecisionWrite.get(key) !== sig) {
         this.lastDecisionWrite.set(key, sig);
         keep.push(d);
@@ -2068,7 +2098,10 @@ export class AutomationLoopService implements OnModuleInit {
       symbol: d.symbol,
       decision: d.decision,
       reason: d.reason?.slice(0, 500) ?? null,
-      composite: d.composite ?? 0,
+      // ⚠️ #909 — the unit lives in the COLUMN, exactly one of the two is set, and the legacy
+      // `composite` column stays NULL for new rows (it is historical-only).
+      compositeRaw: d.compositeRaw ?? null,
+      compositePct: d.compositePct ?? null,
       signal: d.signal ?? null,
       ticket: typeof d.ticket === 'number' ? d.ticket : (d.ticket ? parseInt(String(d.ticket), 10) || null : null),
       price: d.price ?? null,

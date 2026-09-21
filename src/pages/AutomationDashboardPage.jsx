@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import { formatTime } from '../core/format-utils';
+import { decisionScore } from '../core/decision-score';
 import { pnlColor } from '../core/signal-utils';
 import { isTradingStrategy, isScoringStrategy } from '../core/strategy-filters';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
@@ -529,15 +530,20 @@ export default function AutomationDashboardPage() {
               <EmptyState icon="📋" title="No decisions yet" description="Start the loop and click Run Now to trigger a tick." />
             ) : (
               <div className="ad-decision-list">
-                {recentDecisions.slice(0, 15).map((d, i) => (
+                {recentDecisions.slice(0, 15).map((d, i) => {
+                  // #909 — the score is rendered WITH its unit; a raw score and a percentage are
+                  // different quantities and must never look alike on the same surface.
+                  const score = decisionScore(d);
+                  return (
                   <div key={i} className={`ad-decision-row ad-decision-${d.decision?.toLowerCase()}`}>
                     <span className="ad-decision-symbol">{d.symbol}</span>
                     <span className="ad-decision-tag">{d.decision}</span>
-                    <span className="ad-decision-composite">{d.composite > 0 ? d.composite : ''}</span>
+                    <span className="ad-decision-composite" title={score.title || undefined}>{score.text}</span>
                     <span className="ad-decision-reason" title={d.reason}>{d.reason}</span>
                     <span className="ad-decision-time">{formatTime(d.timestamp)}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </motion.section>

@@ -203,7 +203,13 @@ export class AutomationController {
         events.push({
           id: d.id, type: 'decision', taskName: d.decision, status: d.decision === 'EXECUTED' ? 'success' : d.decision === 'FAILED' ? 'error' : 'info',
           detail: d.reason?.substring?.(0, 200) || '', symbol: d.symbol, tickNumber: d.tickNumber,
-          timestamp: d.timestamp, composite: d.composite, price: d.price,
+          timestamp: d.timestamp,
+          // #909 — the two units are separate fields. `compositeLegacy` is the pre-split value,
+          // whose unit was never recorded: a consumer must LABEL it, never compute with it.
+          compositeRaw: d.compositeRaw ?? null,
+          compositePct: d.compositePct ?? null,
+          compositeLegacy: d.composite ?? null,
+          price: d.price,
         });
       }
     } catch { /* table may not exist yet */ }

@@ -19,6 +19,7 @@ const EVENT_TYPE_STYLE = {
 };
 
 import { formatTime, formatDuration, timeAgo } from '../core/format-utils';
+import { decisionScore } from '../core/decision-score';
 
 /** Seconds until an ISO timestamp (for next-tick countdown). */
 function countdownTo(iso) {
@@ -82,7 +83,12 @@ function EventRow({ event }) {
           {event.status}
         </span>
         {event.durationMs > 0 && <span className="eq-event-dur">{formatDuration(event.durationMs)}</span>}
-        {event.composite > 0 && <span className="eq-event-composite">{event.composite?.toFixed(0)}</span>}
+        {/* #909 — unit-aware score (raw / percentage / historical-untyped), or nothing at all. */}
+        {decisionScore(event).text && (
+          <span className="eq-event-composite" title={decisionScore(event).title || undefined}>
+            {decisionScore(event).text}
+          </span>
+        )}
       </div>
     </motion.div>
   );

@@ -502,7 +502,10 @@ export class SymbolsService {
         strategyId: d.strategyId,
         decision: d.decision,
         reason: d.reason,
-        composite: d.composite,
+        // #909 — unit-explicit scores; `compositeLegacy` is the pre-split value (unit unrecorded).
+        compositeRaw: d.compositeRaw ?? null,
+        compositePct: d.compositePct ?? null,
+        compositeLegacy: d.composite ?? null,
         signal: d.signal,
         ticket: d.ticket,
         price: d.price,

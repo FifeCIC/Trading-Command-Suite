@@ -261,7 +261,11 @@ export class DecisionChainService {
       })),
       decisionLog: decisionLogs.map((d) => ({
         id: d.id, timestamp: d.timestamp.toISOString(), tickNumber: d.tickNumber,
-        decision: d.decision, reason: d.reason, composite: d.composite, signal: d.signal,
+        decision: d.decision, reason: d.reason, signal: d.signal,
+        // #909 — unit-explicit scores; `compositeLegacy` is the pre-split value (unit unrecorded).
+        compositeRaw: d.compositeRaw ?? null,
+        compositePct: d.compositePct ?? null,
+        compositeLegacy: d.composite ?? null,
         ticket: d.ticket, price: d.price, quantity: d.quantity,
       })),
       directiveBreakdown,

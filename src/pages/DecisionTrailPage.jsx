@@ -22,6 +22,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
+import { decisionScore } from '../core/decision-score';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './decision-trail.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -157,6 +158,13 @@ export default function DecisionTrailPage() {
           trails.map((trail, i) => {
             const isExpanded = expandedTrail === i;
             const decisionColor = trail.decision === 'EXECUTED' ? '#22c55e' : trail.decision === 'SCORED' ? '#3b82f6' : trail.decision === 'FAILED' ? '#ef4444' : '#f59e0b';
+            // #909 — the 1500/500 colour scale is a RAW-score scale. A percentage row can never
+            // clear it, and colouring one by it was reading the wrong units; pct rows and
+            // historical (unit-unrecorded) rows get the neutral colour instead.
+            const score = decisionScore(trail);
+            const scoreColor = score.kind !== 'raw'
+              ? 'var(--ink-soft)'
+              : score.value >= 1500 ? '#22c55e' : score.value >= 500 ? '#f59e0b' : 'var(--ink-soft)';
             return (
               <motion.div
                 key={trail.id || `${trail.ticket || trail.timestamp}-${i}`}
@@ -172,8 +180,8 @@ export default function DecisionTrailPage() {
                     <span className="dt-trail-decision" style={{ background: decisionColor + '22', color: decisionColor }}>
                       {trail.decision || '—'}
                     </span>
-                    <span className="dt-trail-composite" style={{ color: (trail.composite || 0) >= 1500 ? '#22c55e' : (trail.composite || 0) >= 500 ? '#f59e0b' : 'var(--ink-soft)' }}>
-                      {(trail.composite || 0).toFixed(0)}
+                    <span className="dt-trail-composite" title={score.title || undefined} style={{ color: scoreColor }}>
+                      {score.text}
                     </span>
                     {trail.ticket && <span className="dt-trail-ticket">#{trail.ticket}</span>}
                   </div>
