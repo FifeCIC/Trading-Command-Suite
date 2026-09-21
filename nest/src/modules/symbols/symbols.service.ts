@@ -462,6 +462,118 @@ export class SymbolsService {
       }
     }
 
+    // ── 5. Per-bot REALISED outcomes on this symbol (#921) ──
+    //
+    // WHY THIS EXISTS: the symbol views showed scores and decisions but never OUTCOMES. The
+    // comparison that matters — what a bot intends (slPct/tpPct) versus what it does (avg win vs
+    // avg loss) — was only obtainable by hand. #921 asks for it per bot, on one symbol.
+    //
+    // ⚠️⚠️ THE PHANTOM-CLOSE PREDICATE IS LOAD-BEARING. DO NOT SIMPLIFY IT TO `status='closed'`.
+    // Measured 2026-09-21 (#931): 99 of 206 trade rows are marked closed but have NO brokerTicket
+    // and NO exitPrice — residue of bulk reconciliation writes, with pnl = 0. 82 of those are
+    // correctly flagged `pnlInvalid = 1`, but **17 are marked VALID and are not caught by any
+    // existing flag**, so filtering on `pnlInvalid` is NOT sufficient.
+    //
+    // Consequence of getting this wrong, measured: USDCAD reads as "20 trades, 3 wins (15%)" when
+    // it is really **3 trades, 3 wins**. The 17 phantom rows with pnl = 0 were being counted as
+    // losses. `brokerTicket IS NOT NULL AND exitPrice IS NOT NULL` is the discriminator — a row
+    // that never had a fill and never had an exit is not a trade, whatever its status says.
+    const outcomeRows = (await this.prisma.$queryRawUnsafe(
+      `SELECT
+         scoringStrategyId                                        AS attribution,
+         COUNT(*)                                                 AS trades,
+         SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END)                 AS wins,
+         AVG(CASE WHEN pnl > 0 THEN pnl END)                      AS avgWin,
+         AVG(CASE WHEN pnl <= 0 THEN pnl END)                     AS avgLoss,
+         SUM(pnl)                                                 AS totalPnl,
+         MIN(closedAt)                                            AS firstClose,
+         MAX(closedAt)                                            AS lastClose
+       FROM trade
+       WHERE symbol = ?
+         AND status = 'closed'
+         AND brokerTicket IS NOT NULL
+         AND exitPrice IS NOT NULL
+       GROUP BY scoringStrategyId`,
+      upperTicker,
+    ).catch(() => [])) as any[];
+
+    // Close-reason breakdown per attribution — the exit mechanism, not a count (#921).
+    const reasonRows = (await this.prisma.$queryRawUnsafe(
+      `SELECT scoringStrategyId AS attribution, closeReason, COUNT(*) AS n
+         FROM trade
+        WHERE symbol = ?
+          AND status = 'closed'
+          AND brokerTicket IS NOT NULL
+          AND exitPrice IS NOT NULL
+        GROUP BY scoringStrategyId, closeReason`,
+      upperTicker,
+    ).catch(() => [])) as any[];
+
+    const reasonsByAttribution: Record<string, Record<string, number>> = {};
+    for (const r of reasonRows) {
+      const key = r.attribution ?? '(unattributed)';
+      if (!reasonsByAttribution[key]) reasonsByAttribution[key] = {};
+      // A NULL closeReason is stated, never omitted — rows predating 2026-09-14 may not have one.
+      reasonsByAttribution[key][r.closeReason ?? 'unrecorded'] = Number(r.n);
+    }
+
+    const botById: Record<string, any> = {};
+    for (const s of tradingStrategies) botById[s.id] = s;
+
+    const botOutcomes = outcomeRows.map((r) => {
+      const key = r.attribution ?? '(unattributed)';
+      const bot = botById[key] ?? null;
+      const trades = Number(r.trades);
+      const wins = Number(r.wins);
+      const avgWin = r.avgWin === null ? null : Number(r.avgWin);
+      const avgLoss = r.avgLoss === null ? null : Number(r.avgLoss);
+
+      // Realised payoff = avg win / |avg loss|. NULL when either side has no observations —
+      // which is INFORMATION (no losses yet, or no wins yet), not a payoff of zero.
+      const realisedPayoff =
+        avgWin !== null && avgLoss !== null && avgLoss !== 0
+          ? Number((avgWin / Math.abs(avgLoss)).toFixed(3))
+          : null;
+
+      const slPct = bot?.slPct === null || bot?.slPct === undefined ? null : Number(bot.slPct);
+      const tpPct = bot?.tpPct === null || bot?.tpPct === undefined ? null : Number(bot.tpPct);
+      const declaredPayoff = slPct && tpPct ? Number((tpPct / slPct).toFixed(2)) : null;
+
+      // Win rate needs a denominator. With 0 trades there is no rate — say so rather than 0%.
+      const winRate = trades > 0 ? Number(((wins / trades) * 100).toFixed(1)) : null;
+
+      return {
+        // ⚠️ `attribution` is whatever is in `scoringStrategyId`. It is USUALLY a bot UUID, but
+        // measured 2026-09-21 one USDCAD row holds the PROTOCOL SLUG `forex-session-v1` instead.
+        // `matchedBot` is false for those, so a consumer never silently attributes a protocol's
+        // trades to a bot. Do not "fix" this by dropping the row — it is real P&L and losing it
+        // would understate the symbol.
+        attribution: key,
+        matchedBot: bot !== null,
+        botName: bot?.name ?? null,
+        protocolId: bot?.protocolId ?? null,
+        brokerId: bot?.brokerId ?? null,
+        timeframe: bot?.timeframe ?? null,
+        minComposite: bot?.minComposite ?? null,
+        declared: { slPct, tpPct, declaredPayoff },
+        realised: { trades, wins, winRate, avgWin, avgLoss, realisedPayoff, totalPnl: Number(r.totalPnl ?? 0) },
+        closeReasons: reasonsByAttribution[key] ?? {},
+        firstClose: r.firstClose,
+        lastClose: r.lastClose,
+      };
+    }).sort((a, b) => b.realised.trades - a.realised.trades);
+
+    // Counted so the UI can state it. Without these the phantom exclusion is invisible and the
+    // numbers look like they simply do not add up.
+    const phantomRows = (await this.prisma
+      .$queryRawUnsafe(
+        `SELECT COUNT(*) AS n FROM trade
+          WHERE symbol = ? AND status = 'closed'
+            AND (brokerTicket IS NULL OR exitPrice IS NULL)`,
+        upperTicker,
+      )
+      .catch(() => [{ n: 0 }])) as any[];
+
     // ── 6. Build response ──
     return {
       ticker: upperTicker,
@@ -470,6 +582,21 @@ export class SymbolsService {
       type: dbSymbol.type,
       active: dbSymbol.active,
       protocols: protocolInfo,
+      botOutcomes,
+      outcomeCoverage: {
+        // `phasedOutRows` is what #931 found and this endpoint deliberately refuses to count.
+        excludedPhantomRows: Number(phantomRows[0]?.n ?? 0),
+        note:
+          'Rows marked closed with no brokerTicket and no exitPrice are excluded — they are bulk-write ' +
+          'residue with pnl 0, not trades (#931). 17 are NOT flagged pnlInvalid, so that column alone ' +
+          'cannot be used as the filter.',
+      },
+      // ⚠️ NOT YET AVAILABLE: `minComposite` is returned above, but the protocol's MEASURED CEILING
+      // is not exposed by any endpoint yet — `auditMeasuredCeilings()` lives inside a health payload
+      // (protocol-health.service.ts:256) with no route of its own. #905 owns deriving it. Stated
+      // explicitly so the UI shows "ceiling not available" rather than omitting the comparison and
+      // implying the bar is fine.
+      ceilingComparison: { available: false, blockedBy: '#905' },
       scoringStrategies: scoringForSymbol.map((s: any) => ({
         id: s.id,
         name: s.name,

@@ -127,6 +127,78 @@ const STOP_GUARDIAN_DIRECTIVES = new Set([
   'wick-filter',
 ]);
 
+/**
+ * #927 — THE TRAIL DISTANCE FLOOR.
+ * ==================================
+ *
+ * MEASURED DEFECT (2026-09-21): the trail target was `currentPrice − 3 × ATR(5m)` with "never
+ * loosen" as its only guard. On FX, `3 × ATR(5m)` is ~0.03–0.11% of price, while the strategy's
+ * declared stop distance (`slPct`) is ~1%. So as soon as the price was roughly flat, the trail
+ * moved the stop from 1% away to ~0.05% away — a ~20x reduction in one edit, with no minimum
+ * distance to stop it. Seven positions closed between 12:40 and 13:08 UTC, **every close price
+ * exactly a guardian-set stop** (`stop_adjustment`, oldSl → newSl): EURGBP −1.012% → −0.031%,
+ * NZDJPY −1.028% → **+0.058%**. A market pullback smaller than the position's own declared risk
+ * hit every one of them simultaneously because they were all trailed to the same tiny distance.
+ *
+ * THE RULE NOW: a trailing tighten may never leave the stop closer to price than the position's
+ * declared stop distance. `3 × ATR` can still WIDEN the trail (a genuinely volatile market
+ * deserves more room) but can never tighten it inside the declared risk. The declared distance is
+ * the strategy's own `slPct` from entry — the same number the protective floor uses, so the trail
+ * and the floor finally agree about what this position tolerates.
+ *
+ * Keeping these as exported pure functions is deliberate: the tick calls them, and the spec
+ * canaries them in both directions without a bridge, a position or a clock.
+ */
+export function declaredStopDistance(entryPrice: number, slPct: number): number {
+  const pct = Number(slPct);
+  const safePct = Number.isFinite(pct) && pct > 0 ? pct : 1;
+  const entry = Number(entryPrice);
+  if (!Number.isFinite(entry) || entry <= 0) return 0;
+  return Math.abs(entry * (safePct / 100));
+}
+
+/** The distance a trailing tighten must leave between price and the stop (price units). */
+export function trailDistanceFor(atrValue: number, declaredDistance: number): number {
+  const atr = Number(atrValue);
+  const atrTrail = Number.isFinite(atr) && atr > 0 ? 3 * atr : 0;
+  return Math.max(atrTrail, declaredDistance);
+}
+
+/**
+ * #927 — validation, not decoration. Returns a problem string when a proposed trail would leave
+ * the stop closer to price than the declared distance; the tick REFUSES the modify in that case.
+ * With `trailDistanceFor` max()ing, this should never fire — which is exactly why it exists: it
+ * makes the invariant checkable (and canaried) rather than implied by one `Math.max` nobody
+ * re-reads.
+ */
+export function trailDistanceProblem(trailDistance: number, declaredDistance: number): string | null {
+  if (!(declaredDistance > 0)) return null; // no declared distance → nothing to enforce
+  if (trailDistance + 1e-9 >= declaredDistance) return null;
+  return (
+    `trail distance ${trailDistance.toFixed(5)} is inside the declared stop distance ` +
+    `${declaredDistance.toFixed(5)} — refusing to place a stop tighter than the position's own risk (#927)`
+  );
+}
+
+/**
+ * #927 — damage detector for a stop ALREADY in place: is it tighter to entry than the declared
+ * distance (i.e. inside the band the strategy declared it would tolerate)? Used to REPORT, never
+ * to repair — widening a live stop is a policy decision this service does not take alone.
+ */
+export function stopInsideDeclaredBand(opts: {
+  side: 'BUY' | 'SELL';
+  stop: number | null | undefined;
+  entryPrice: number;
+  declaredDistance: number;
+}): boolean {
+  const { side, stop, entryPrice, declaredDistance } = opts;
+  if (!(declaredDistance > 0)) return false;
+  if (stop == null || !(stop > 0) || !(entryPrice > 0)) return false;
+  return side === 'BUY'
+    ? stop > entryPrice - declaredDistance
+    : stop < entryPrice + declaredDistance;
+}
+
 @Injectable()
 export class StopGuardianService {
   private readonly logger = new Logger(StopGuardianService.name);
@@ -178,6 +250,14 @@ export class StopGuardianService {
    */
   private lastThrottleLogAt = 0;
   private readonly THROTTLE_LOG_MS = 5 * 60_000;
+
+  /**
+   * #927 — throttles the trail-refusal warning and the stop-inside-declared-band warning.
+   * The first is a property of the computation (global throttle); the second is a property of a
+   * POSITION (per-ticket, 30 min), because a damaged stop persists until it moves or closes.
+   */
+  private lastTrailRefusalAt = 0;
+  private readonly bandWarningAt = new Map<number, number>();
 
   /**
    * ⚠️ #892 — deduplicates identical bridge refusals.
@@ -480,13 +560,25 @@ export class StopGuardianService {
         const opposingAvg = opposingCount > 0 ? opposingSum / opposingCount : 0;
         const stopConfidence = Math.max(0, Math.round(alignedAvg - opposingAvg));
 
-        // 8. ATR-based recommended SL
+        // 8. ATR-based recommended SL — with the #927 DISTANCE FLOOR
+        //
+        // ⚠️ The trail distance is `max(3 × ATR(5m), the declared stop distance)` — see the
+        // #927 docblock on `declaredStopDistance` for the seven closes that made this necessary.
+        // 3 × ATR may WIDEN the trail; it may never tighten it inside the declared risk.
         const atrValue = this.computeAtr(bars);
         const currentPrice = pos.priceCurrent;
+        const entryPrice = Number(pos.priceOpen) || 0;
+        const slPct = Number(strat?.slPct ?? 1) || 1;
+        const declaredDistance = declaredStopDistance(entryPrice, slPct);
+        const trailDistance = trailDistanceFor(atrValue, declaredDistance);
+        // Validation before use: refuse to place a stop closer than the declared distance.
+        const distanceProblem = trailDistanceProblem(trailDistance, declaredDistance);
+        if (distanceProblem) {
+          this.logTrailRefusal(pos, distanceProblem);
+        }
         let recommendedSl: number | null = null;
 
-        if (atrValue > 0) {
-          const trailDistance = 3 * atrValue;
+        if (atrValue > 0 && !distanceProblem) {
           if (side === 'BUY') {
             recommendedSl = currentPrice - trailDistance;
             if (pos.sl != null && pos.sl > 0 && recommendedSl < pos.sl)
@@ -498,11 +590,24 @@ export class StopGuardianService {
           }
         }
 
-        // 9. Execute modification — two-layer stops (#721 decision 6):
+        // #927 — REPORT a stop already inside the declared band (pre-fix damage, or an
+        // unlock set elsewhere). It is NOT widened automatically: the loss it permits is real and
+        // widening a live stop is a policy decision. Silence is the defect; this makes the state
+        // visible with the numbers a decision needs.
+        if (
+          pos.sl != null && pos.sl > 0 &&
+          stopInsideDeclaredBand({ side, stop: pos.sl, entryPrice, declaredDistance })
+        ) {
+          this.warnStopInsideDeclaredBand(pos, side, entryPrice, declaredDistance);
+        }
+
+        // 9. Execute modification — two-layer stops (#721 decision 6), with the #927 distance floor:
         //    (a) protective floor: an UNLOCKED position (SL=0) is an emergency
         //        — set a relaxed broker-side disaster stop immediately, exempt
-        //        from the cadence throttle.
-        //    (b) normal trailing: tighten toward the ATR stop, throttled.
+        //        from the cadence throttle. Distance = the strategy's own slPct from entry.
+        //    (b) normal trailing: tighten toward the ATR stop — but NEVER closer to price than the
+        //        declared distance, so a tighten can only ever improve WHERE the stop sits, never
+        //        reduce the risk distance the strategy declared.
         if (pos.sl == null || pos.sl <= 0) {
           const protective = this.protectiveSl(pos, side, strat);
           if (protective != null) {
@@ -526,7 +631,11 @@ export class StopGuardianService {
             await this.applyModify(
               pos,
               recommendedSl!,
-              `Consensus ${stopConfidence} | ATR=${atrValue.toFixed(5)} | Wick=${wickScore ?? 'n/a'}`,
+              // #927 — the distance is recorded as a PERCENTAGE of price so `stop_adjustment` can
+              // be read (and audited) without recomputing ATR from the price columns.
+              `Consensus ${stopConfidence} | ATR=${atrValue.toFixed(5)} | ` +
+                `dist=${currentPrice > 0 ? ((trailDistance / currentPrice) * 100).toFixed(3) : 'n/a'}% | ` +
+                `Wick=${wickScore ?? 'n/a'}`,
               stopConfidence,
               side,
               adjustments,
@@ -617,9 +726,21 @@ export class StopGuardianService {
   }
 
   /**
-   * Relaxed broker-side protective stop (#721 decision 6) — the disaster
-   * floor every position MUST carry, independent of the tighter app-managed
-   * trailing stop. Distance = the strategy's own slPct from entry.
+   * Relaxed broker-side protective stop (#721 decision 6) — the stop set when a position is
+   * found UNLOCKED (SL=0). Distance = the strategy's own slPct from entry.
+   *
+   * ⚠️ #927 (2026-09-21) — WHAT SURVIVES THE TRAIL, STATED EXACTLY.
+   *
+   * MT5 has ONE stop-loss field per position, so a trailing tighten REPLACES this value: the
+   * floor's NUMBER cannot persist, and the comment here used to claim it was "independent of the
+   * tighter app-managed trailing stop" — unimplementable as written. The gap that left was
+   * measured: stops trailed to 0.03–0.11% from entry against a declared ~1%, and 7 positions
+   * closed on those stops inside 28 minutes, every close at a guardian-set price.
+   *
+   * What the design guarantees instead is the DISTANCE: `trailDistanceFor()` never lets a tighten
+   * leave the stop closer to price than this declared distance, and `trailDistanceProblem()` makes
+   * that check explicit (the tick refuses the modify if it fails). The floor's number can be
+   * replaced by a trail; the floor's risk distance cannot be shrunk by one.
    */
   private protectiveSl(
     pos: Mt5RawPosition,
@@ -676,6 +797,44 @@ export class StopGuardianService {
     if (now - this.lastThrottleLogAt < this.THROTTLE_LOG_MS) return;
     this.lastThrottleLogAt = now;
     this.logger.warn(`Stop modify blocked: ${symbol} #${ticket} — ${reason}`);
+  }
+
+  /**
+   * #927 — throttles the "trail would violate the declared distance" warning.
+   * As a property of the computation (not of a position), it is throttled globally; with
+   * `trailDistanceFor` max()ing it should never fire, and if it ever does, once per 5 minutes is
+   * the right loudness for "a guard just caught something that should be impossible".
+   */
+  private logTrailRefusal(pos: Mt5RawPosition, problem: string): void {
+    const now = Date.now();
+    if (now - this.lastTrailRefusalAt < this.THROTTLE_LOG_MS) return;
+    this.lastTrailRefusalAt = now;
+    this.logger.warn(`Trail tighten REFUSED for ${pos.symbol} #${pos.ticket} — ${problem}`);
+  }
+
+  /**
+   * #927 — makes a stop ALREADY inside the declared band visible, with its numbers.
+   * Per-ticket with a 30-minute window: the condition persists until the stop moves or the
+   * position closes, and the point is that a human can find it, not that it repeats every tick.
+   * It deliberately does not widen the stop — that changes the loss the position permits.
+   */
+  private warnStopInsideDeclaredBand(
+    pos: Mt5RawPosition,
+    side: 'BUY' | 'SELL',
+    entryPrice: number,
+    declaredDistance: number,
+  ): void {
+    const now = Date.now();
+    const last = this.bandWarningAt.get(pos.ticket) || 0;
+    if (now - last < 30 * 60_000) return;
+    this.bandWarningAt.set(pos.ticket, now);
+    const fromEntryPct = entryPrice > 0 ? (((pos.sl as number) - entryPrice) / entryPrice) * 100 : 0;
+    const declaredPct = entryPrice > 0 ? (declaredDistance / entryPrice) * 100 : 0;
+    this.logger.warn(
+      `Stop ${pos.symbol} #${pos.ticket} sits ${fromEntryPct.toFixed(3)}% from entry — INSIDE the ` +
+        `declared ${side} stop distance (${declaredPct.toFixed(3)}%). Not widened automatically ` +
+        `(#927); it will close on a pullback smaller than this position's own declared risk.`,
+    );
   }
 
   /**

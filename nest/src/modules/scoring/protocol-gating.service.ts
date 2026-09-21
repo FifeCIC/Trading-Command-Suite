@@ -500,7 +500,17 @@ export class ProtocolGatingService {
     // that recreates the problem this guard fixes.
     if (!protocolId) {
       throw new BadRequestException(
-        'Scoring requires a protocol — unscoped default scoring was removed. Pass a protocolId.',
+        // ⚠️ Name every spelling the caller can actually set. This service is reached from routes
+        // with two different forms, and the old wording ("Pass a protocolId") was right for only
+        // one of them:
+        //   @Query('protocol') — scoring.controller.ts:72,296 · protocol-gating.controller.ts:678
+        //                        · signals.controller.ts:62,138 (GET /api/signals/envelope/:symbol)
+        //   body.protocolId    — POST /api/scoring/gated/batch
+        // A caller who followed the old message on a `?protocol=` route passed protocolId, got a
+        // SECOND 400 with the same text, and could not discover the right name from it. Measured
+        // 2026-09-21: envelope/XAUUSD?protocolId=xau-speed-1h -> 400,
+        //              envelope/XAUUSD?protocol=xau-speed-1h   -> 200.
+        'Scoring requires a protocol — unscoped default scoring was removed. Pass `?protocol=<slug>` on GET routes, or `protocolId` in the body for POST /api/scoring/gated/batch.',
       );
     }
     const protocolConfig = await this.protocolDb.findBySlug(protocolId);

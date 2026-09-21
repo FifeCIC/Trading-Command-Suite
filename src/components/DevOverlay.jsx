@@ -3,6 +3,22 @@ import { useUiStore } from '../stores/useUiStore';
 import { getViewMeta } from '../core/view-meta';
 
 /**
+ * componentName() — derive a React component name from a source path.
+ *
+ * `src/pages/SymbolPage.jsx`      -> `SymbolPage`
+ * `src/pages/ViewStrategyPage.jsx` -> `ViewStrategyPage`
+ *
+ * Returns `'unknown'` when there is no usable path, so the copied prompt says "unknown" rather
+ * than inventing a name. Used by the Copy View Info block above — see the comment there for why
+ * this is derived from `meta.file` instead of `meta.label`.
+ */
+function componentName(file) {
+  if (!file) return 'unknown';
+  const base = file.split('/').pop() || '';
+  return base.replace(/\.(jsx|js|tsx|ts)$/i, '') || 'unknown';
+}
+
+/**
  * Dev Overlay — primary panel for Admin + Status information.
  *
  * Always shows when devOverlayOpen is true. Admin/Status data is the
@@ -54,7 +70,13 @@ export default function DevOverlay({
       `File:       ${meta.file}`,
       `CSS:        ${meta.css}`,
       `API:        ${(meta.api || []).join(', ') || 'None'}`,
-      `Component:  <${meta.label.replace(/\s+/g, '')} />`,
+      // ⚠️ Derived from `meta.file`, NOT from `meta.label`. The previous version was
+      // `meta.label.replace(/\s+/g, '')`, which INVENTED a component name: the entry at
+      // `/research/symbol` is labelled "Symbol Detail" and renders `SymbolPage`, so the copied
+      // prompt claimed `<SymbolDetail />` — a component that does not exist. A plausible wrong
+      // answer is worse than no answer, and this block is pasted into an AI prompt as fact.
+      // Deriving from the real file path cannot drift from what actually renders.
+      `Component:  <${componentName(meta.file)} />`,
     ].join('\n');
     navigator.clipboard.writeText(text).then(() => {
       setCopiedMsg('View info copied!');

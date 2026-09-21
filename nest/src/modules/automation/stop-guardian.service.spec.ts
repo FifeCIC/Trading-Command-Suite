@@ -1,4 +1,10 @@
-import { StopGuardianService } from './stop-guardian.service';
+import {
+  StopGuardianService,
+  declaredStopDistance,
+  trailDistanceFor,
+  trailDistanceProblem,
+  stopInsideDeclaredBand,
+} from './stop-guardian.service';
 
 describe('Automation StopGuardianService', () => {
   beforeEach(() => jest.useFakeTimers());
@@ -281,3 +287,186 @@ describe('Automation StopGuardianService', () => {
       }
     });
   });
+
+/**
+ * #927 — THE TRAIL DISTANCE FLOOR.
+ * =================================
+ *
+ * MEASURED DEFECT (2026-09-21): the trail target was `currentPrice − 3 × ATR(5m)` with "never
+ * loosen" as its only guard. On FX that distance is ~0.03–0.11% of price against a declared
+ * `slPct` of ~1%, so a roughly-flat position had its stop moved ~20x closer to price in one
+ * edit. Seven positions closed between 12:40 and 13:08 UTC, **every close price exactly a
+ * guardian-set stop** (EURGBP −1.012% → −0.031%; NZDJPY −1.028% → +0.058%).
+ *
+ * ⚠️ CANARY DIRECTIONS, stated so the coverage can be checked rather than assumed:
+ *   • the "tiny ATR" tick test FAILS against the old arithmetic (which would have sent a stop
+ *     ~0.06 from price) — the defect direction;
+ *   • the "profit trails at the declared distance" and "wide ATR still widens" tests FAIL if the
+ *     floor is implemented by disabling trailing or by ignoring ATR — the restore direction.
+ */
+describe('#927 — a trail can never leave the stop inside the declared distance', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  /** ATR(5m) ≈ 0.02 — the measured FX shape: 3×ATR ≈ 0.06 against a declared 1.0. */
+  const tinyAtrBars = () =>
+    Array.from({ length: 30 }, () => ({
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      open: 100.01, high: 100.02, low: 100.0, close: 100.01, volume: 1000,
+    }));
+
+  /** ATR(5m) = 1.0 → 3×ATR = 3.0, genuinely wider than the declared 1.0. */
+  const wideAtrBars = () =>
+    Array.from({ length: 30 }, () => ({
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      open: 100, high: 100.5, low: 99.5, close: 100, volume: 1000,
+    }));
+
+  const bullishEvidence = () =>
+    new Map([
+      ['atr-trailing-stop', { score: 75, confidence: 0.7, signalClass: 'bullish', reason: 'x' }],
+      ['supertrend', { score: 75, confidence: 0.7, signalClass: 'bullish', reason: 'x' }],
+      ['chandelier-exit', { score: 80, confidence: 0.55, signalClass: 'bullish', reason: 'x' }],
+      ['wick-filter', { score: 80, confidence: 0.7, signalClass: 'bullish', reason: 'x', metadata: { isFakeout: false } }],
+    ]);
+
+  function makeService(opts: {
+    bars: any[];
+    priceCurrent: number;
+    sl: number;
+    priceOpen?: number;
+    slPct?: number;
+  }) {
+    const modifyCalls: Array<{ body: any }> = [];
+    const recordAdjustment = jest.fn();
+    (global as any).fetch = jest.fn(async (url: unknown, init?: any) => {
+      const u = String(url);
+      if (u.includes('/positions')) {
+        return {
+          ok: true,
+          json: async () => ({
+            positions: [
+              {
+                ticket: 7, symbol: 'XAUUSD', type: 'buy', volume: 1,
+                priceOpen: opts.priceOpen ?? 100, priceCurrent: opts.priceCurrent,
+                sl: opts.sl, tp: null, profit: 0, comment: 'TCS s1',
+              },
+            ],
+          }),
+        } as any;
+      }
+      if (u.includes('/candles')) return { ok: true, json: async () => ({ bars: opts.bars }) } as any;
+      if (u.includes('/order/modify')) {
+        modifyCalls.push({ body: init?.body ? JSON.parse(String(init.body)) : null });
+        return { ok: true, json: async () => ({ success: true }) } as any;
+      }
+      return { ok: false, json: async () => ({}) } as any;
+    });
+
+    const service = new StopGuardianService(
+      { findAll: jest.fn().mockResolvedValue([{ active: true, mode: 'auto', symbol: 'XAUUSD', id: 's1', name: 'S1', slPct: opts.slPct ?? 1 }]) } as any,
+      { runAll: jest.fn().mockResolvedValue(bullishEvidence()) } as any,
+      { getUrl: () => 'http://mt5.test' } as any,
+      { recordAdjustment } as any,
+    );
+    service.state.enabled = true;
+    return { service, modifyCalls, recordAdjustment };
+  }
+
+  it('declaredStopDistance is the strategy slPct in price units (the number both layers use)', () => {
+    expect(declaredStopDistance(100, 1)).toBeCloseTo(1.0, 9);
+    expect(declaredStopDistance(100, 2)).toBeCloseTo(2.0, 9);
+    expect(declaredStopDistance(0, 1)).toBe(0);                 // unreadable entry → nothing to declare
+    expect(declaredStopDistance(100, NaN)).toBeCloseTo(1.0, 9); // slPct fallback matches protectiveSl
+  });
+
+  it('3×ATR may WIDEN the trail but never tighten it inside the declared distance', () => {
+    const declared = declaredStopDistance(100, 1);
+    // The measured pathology: 3×ATR = 0.06 → the trail distance must be the declared 1.0.
+    expect(trailDistanceFor(0.02, declared)).toBe(1.0);
+    // A volatile market: 3×ATR = 4.5 → the ATR governs (restore direction).
+    expect(trailDistanceFor(1.5, declared)).toBeCloseTo(4.5, 9);
+  });
+
+  it('validation refuses a distance inside the declared one, and admits one at or above it', () => {
+    const declared = declaredStopDistance(100, 1);
+    expect(trailDistanceProblem(0.06, declared)).toContain('inside the declared stop distance');
+    expect(trailDistanceProblem(1.0, declared)).toBeNull(); // exactly at the floor is allowed
+    expect(trailDistanceProblem(4.5, declared)).toBeNull();
+    expect(trailDistanceProblem(0.06, 0)).toBeNull();       // nothing declared → nothing to enforce
+  });
+
+  it('stopInsideDeclaredBand flags the measured damage shapes and not a healthy stop', () => {
+    const declared = declaredStopDistance(100, 1);
+    // EURCAD's live shape: stop −0.101% from entry against a declared −1%.
+    expect(stopInsideDeclaredBand({ side: 'BUY', stop: 99.899, entryPrice: 100, declaredDistance: declared })).toBe(true);
+    expect(stopInsideDeclaredBand({ side: 'SELL', stop: 100.05, entryPrice: 100, declaredDistance: declared })).toBe(true);
+    // A stop at (or outside) the declared distance is healthy.
+    expect(stopInsideDeclaredBand({ side: 'BUY', stop: 99, entryPrice: 100, declaredDistance: declared })).toBe(false);
+    expect(stopInsideDeclaredBand({ side: 'SELL', stop: 101, entryPrice: 100, declaredDistance: declared })).toBe(false);
+    expect(stopInsideDeclaredBand({ side: 'BUY', stop: null, entryPrice: 100, declaredDistance: declared })).toBe(false);
+  });
+
+  it('THE CANARY — tiny ATR + flat price sends NO stop ~0.06 from price (the seven-close defect)', async () => {
+    const { service, modifyCalls } = makeService({ bars: tinyAtrBars(), priceCurrent: 100, sl: 99 });
+    try {
+      await service.tick();
+      // Old arithmetic: recommended = 100 − 0.06 = 99.94 → a tighten to 0.06% from price.
+      // New: distance = max(3×ATR, declared 1.0) = 1.0 → recommended 99 = the current stop.
+      expect(modifyCalls).toHaveLength(0);
+      expect(service.getState().recentAdjustments).toEqual([]);
+    } finally {
+      service.stop();
+    }
+  });
+
+  it('a profitable position trails at the DECLARED distance, and the reason records it as a %', async () => {
+    const { service, modifyCalls, recordAdjustment } = makeService({ bars: tinyAtrBars(), priceCurrent: 103, sl: 99 });
+    try {
+      await service.tick();
+      expect(modifyCalls).toHaveLength(1);
+      // 103 − declared 1.0 = 102 (locks +2% from a 100 entry). The old arithmetic sent 102.94.
+      expect(modifyCalls[0].body.sl).toBe(102);
+      expect(modifyCalls[0].body.sl).not.toBe(102.94);
+      // #927 acceptance box 4 — `stop_adjustment` can be read without recomputing ATR:
+      // 1 / 103 = 0.971%.
+      expect(recordAdjustment).toHaveBeenCalledTimes(1);
+      expect(recordAdjustment.mock.calls[0][0].reason).toContain('dist=0.971%');
+    } finally {
+      service.stop();
+    }
+  });
+
+  it('a genuinely volatile market still trails on the wider ATR distance (restore direction)', async () => {
+    const { service, modifyCalls } = makeService({ bars: wideAtrBars(), priceCurrent: 103, sl: 99 });
+    try {
+      await service.tick();
+      expect(modifyCalls).toHaveLength(1);
+      // 3×ATR = 3.0 > declared 1.0 → 103 − 3 = 100, exactly the ATR trail (the fix must not
+      // disable the mechanism it bounds).
+      expect(modifyCalls[0].body.sl).toBe(100);
+    } finally {
+      service.stop();
+    }
+  });
+
+  it('REPORTS a stop already inside the declared band without widening it', async () => {
+    // EURCAD's live shape: entry 100, stop 99.99 (−0.01% from entry vs declared −1%).
+    const { service, modifyCalls } = makeService({ bars: tinyAtrBars(), priceCurrent: 100, sl: 99.99 });
+    const warn = jest.spyOn((service as any).logger, 'warn');
+    try {
+      await service.tick();
+      // Not widened: the computed target (99) is BELOW the existing stop and "never loosen" clamps.
+      expect(modifyCalls).toHaveLength(0);
+      const bandWarning = warn.mock.calls.map((c) => String(c[0])).find((m) => m.includes('INSIDE the declared'));
+      expect(bandWarning).toBeTruthy();
+      expect(bandWarning).toContain('Not widened automatically');
+      expect(service.getState().guardedPositions).toHaveLength(1);
+    } finally {
+      service.stop();
+    }
+  });
+});

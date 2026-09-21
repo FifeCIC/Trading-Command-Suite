@@ -41,6 +41,32 @@ const VIEW_META = {
     css: 'src/pages/news-intel.css',
     api: ['GET /api/news/feed', 'GET /api/news/categories', 'GET /api/news/sentiment-summary', 'GET /api/news/import/last', 'POST /api/news/import/run'],
   },
+  // PARAMETERISED DETAIL ROUTE — /research/symbol/:ticker (e.g. /research/symbol/XAUUSD).
+  //
+  // The key is the PREFIX, with no `:ticker` in it. getViewMeta() (bottom of this file) falls
+  // back to a prefix match, longest key first, requiring `pathname.startsWith(key + '/')` — so
+  // this key resolves `/research/symbol/ANYTHING` without the parameter being declared here.
+  //
+  // ⚠️ It does NOT collide with `/research/symbols-browser` above, despite the shared string
+  // prefix. Measured, not assumed — and the FIRST mechanism credited here was wrong:
+  //   • what actually protects `symbols-browser` is the LONGEST-KEY-FIRST SORT. That key is 25
+  //     chars vs this one's 16, so it is tried first and wins outright.
+  //   • what the `+ '/'` protects is a path like `/research/symbolfoo` — a string prefix that is
+  //     not a child route. Without the slash that would wrongly resolve here.
+  // Weakening the matcher to `startsWith(route)` does NOT break `symbols-browser` (canary-tested).
+  // Scripts: scripts/verify-view-meta-routes.cjs, scripts/canary-view-meta-routes.cjs.
+  //
+  // ⚠️ There is deliberately NO nav-tree.js entry for this route, and this is the reason it kept
+  // being reported as "needs metadata" by three separate steps. A nav entry is `{ id, label,
+  // icon }` and resolves to `/{area}/{id}` — it cannot carry a parameter, so a detail route
+  // cannot have one. The component IS registered, as `'symbol'` in view-routes.jsx:307.
+  // ⚠️ `/trading/symbol/:ticker` renders the SAME component — see the mirror entry below.
+  '/research/symbol': {
+    label: 'Symbol Detail',
+    file: 'src/pages/SymbolPage.jsx',
+    css: 'src/pages/symbol-page.css',
+    api: ['GET /api/signals/envelope/:ticker', 'GET /api/symbols/:ticker/overview', 'GET /api/symbols/:ticker/protocols', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
+  },
   '/education/glossary': {
     label: 'Glossary',
     file: 'src/pages/GlossaryPage.jsx',
@@ -70,6 +96,28 @@ const VIEW_META = {
     file: 'src/pages/StrategyComparisonPage.jsx',
     css: 'src/pages/strategy-comparison.css',
     api: ['GET /api/trading/strategy-comparison'],
+  },
+  // PARAMETERISED DETAIL ROUTE — /trading/strategy/:strategyId (one BOT, not one derived strategy).
+  // The param is named `strategyId` because `trading_strategy` is the table; the UI name for that
+  // row is "bot" (nav-tree calls the list page "Trading Bots", and /trading/bot-create is
+  // "Create Bot"). Hence the label below.
+  // ⚠️ Prefix-matches `/trading/strategy/ANYTHING` only. `/trading/strategy-comparison`,
+  // `/trading/strategy-monitor` and `/trading/strategy-library` live above/below as their own
+  // exact keys and win first (exact match is tried before prefix match).
+  '/trading/strategy': {
+    label: 'Bot Detail',
+    file: 'src/pages/ViewStrategyPage.jsx',
+    css: 'src/pages/view-strategy.module.css',
+    api: ['GET /api/trading/strategies/:id', 'GET /api/trading/strategies/bot-rules', 'GET /api/trading/strategies/:id/protocols'],
+  },
+  // Same component as '/research/symbol' above — both routes render SymbolPage via the `'symbol'`
+  // view id that App.jsx derives from the `:ticker` param. Two URL prefixes, one page, so two
+  // keys: getViewMeta() is a keyed lookup on the pathname and cannot know they are the same view.
+  '/trading/symbol': {
+    label: 'Symbol Detail',
+    file: 'src/pages/SymbolPage.jsx',
+    css: 'src/pages/symbol-page.css',
+    api: ['GET /api/signals/envelope/:ticker', 'GET /api/symbols/:ticker/overview', 'GET /api/symbols/:ticker/protocols', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
   },
   '/trading/trading-bots': {
     label: 'Trading Bots',

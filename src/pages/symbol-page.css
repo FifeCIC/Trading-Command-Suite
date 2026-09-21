@@ -86,6 +86,60 @@
 .sym-proto-sig.neutral, .sym-proto-sig.watch, .sym-proto-sig.hold { background: rgba(245,158,11,0.12); color: var(--color-warning); }
 .sym-proto-meta { display: flex; gap: 0.75rem; font-size: 0.7rem; color: var(--ink-soft); margin-top: 0.2rem; }
 
+/* Protocol provenance — a score must name the protocol it came from.
+   A symbol normally scores under SEVERAL protocols (XAUUSD under five, measured 2026-09-21), so
+   an unlabelled composite is not attributable. See #926. */
+.sym-source {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.sym-source-line { margin: -0.15rem 0 0.5rem; }
+.sym-multi-note { margin-top: 0.45rem; }
+.sym-proto-unavailable { font-size: 0.7rem; font-weight: 600; color: var(--ink-soft); font-style: italic; }
+
+/* Per-bot outcomes (#921) — declared vs realised, per bot, on one symbol.
+   The alignment is a two-column key/value grid so the Intended and Realised rows sit directly
+   above each other: the comparison IS the content, and it is lost if they are not comparable. */
+.sym-outcomes { display: flex; flex-direction: column; gap: 0.5rem; }
+.sym-outcome { padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: 8px; }
+.sym-outcome-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
+.sym-outcome-head strong { font-size: 0.82rem; }
+.sym-outcome-warn {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.12);
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: help;
+}
+.sym-outcome-grid {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  align-items: baseline;
+}
+.sym-outcome-k { color: var(--ink-soft); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.sym-outcome-gap { color: var(--ink-soft); font-size: 0.7rem; }
+.sym-outcome-reason {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  margin-right: 0.25rem;
+  border-radius: 3px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
 /* News */
 .sym-news-list { display: flex; flex-direction: column; gap: 0.3rem; }
 .sym-news-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border-radius: 6px; text-decoration: none; color: var(--ink); font-size: 0.78rem; transition: background 0.15s; }
