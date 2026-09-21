@@ -10,6 +10,15 @@
  *
  * Bullish divergence = reversal signal (bearish trend weakening).
  * Bearish divergence = continuation warning (bullish trend weakening).
+ *
+ * The swing and divergence ALGORITHM is imported from ../utils/divergence — ONE copy,
+ * shared with macd- and obv-divergence. Only the strength CALIBRATION stays local.
+ *
+ * ⚠️ Before 2026-09-21 this file held a private block headed "Shared Divergence
+ * Utilities", with a comment claiming it was "extracted for reuse by MACD/OBV".
+ * Nothing imported it. Both other directives kept their own copies. A comment that
+ * describes a decision nobody made is worse than no comment, because the reader
+ * trusts it and stops looking.
  */
 
 import { Injectable } from '@nestjs/common';
@@ -19,16 +28,33 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
+import {
+  checkBearishDivergence,
+  checkBullishDivergence,
+  computeDivergenceStrength,
+  findSwingHighs,
+  findSwingLows,
+  type StrengthModel,
+} from '../utils/divergence';
 
 const RSI_PERIOD = 14;
 const SWING_LOOKBACK = 5; // Bars to confirm a swing point
 const MIN_BARS = RSI_PERIOD + SWING_LOOKBACK * 3 + 2;
 
-interface SwingPoint {
-  index: number;
-  price: number;
-  indicatorValue: number;
-}
+/**
+ * RSI is BOUNDED 0-100 by construction, so the indicator move is normalised by a
+ * CONSTANT 100 rather than by the value at the swing — the only one of the three that
+ * can do this. Carried across UNCHANGED from the local copy this file used to hold.
+ *
+ * ⚠️ The three models differ (RSI weights the indicator 2.0 vs MACD's 1.5; OBV uses
+ * 2.5/2.0). That was invisible while each lived in its own file. See StrengthModel in
+ * ../utils/divergence for the scale table.
+ */
+const STRENGTH_MODEL: StrengthModel = {
+  priceWeight: 3,
+  indWeight: 2,
+  indDenominator: () => 100,
+};
 
 @Injectable()
 export class RsiDivergenceDirective implements IDirective {
@@ -80,7 +106,7 @@ export class RsiDivergenceDirective implements IDirective {
 
     // ── Score ──
     if (bullDiv) {
-      const strength = computeDivergenceStrength(bullDiv);
+      const strength = computeDivergenceStrength(bullDiv, STRENGTH_MODEL);
       const score = 60 + strength * 40;
       return {
         score: Math.round(Math.min(score, this.maxScore)),
@@ -91,7 +117,7 @@ export class RsiDivergenceDirective implements IDirective {
     }
 
     if (bearDiv) {
-      const strength = computeDivergenceStrength(bearDiv);
+      const strength = computeDivergenceStrength(bearDiv, STRENGTH_MODEL);
       const score = 15 - strength * 12; // Low score = bearish for long-biased
       return {
         score: Math.round(Math.max(score, 0)),
@@ -122,104 +148,8 @@ export class RsiDivergenceDirective implements IDirective {
   }
 }
 
-// ── Shared Divergence Utilities ──
-// (Extracted for reuse by MACD/OBV divergence directives)
-
-interface DivergencePair {
-  price1: number;
-  price2: number;
-  ind1: number;
-  ind2: number;
-  /** Bar index of price2 (most recent swing) */
-  index: number;
-}
-
-function findSwingLows(
-  lows: number[],
-  lookback: number,
-  getIndicator: (idx: number) => number,
-): SwingPoint[] {
-  const swings: SwingPoint[] = [];
-  for (let i = lookback; i < lows.length - lookback; i++) {
-    const current = lows[i];
-    let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (lows[j] < current) {
-        isSwing = false;
-        break;
-      }
-    }
-    if (isSwing) {
-      swings.push({ index: i, price: current, indicatorValue: getIndicator(i) });
-    }
-  }
-  return swings;
-}
-
-function findSwingHighs(
-  highs: number[],
-  lookback: number,
-  getIndicator: (idx: number) => number,
-): SwingPoint[] {
-  const swings: SwingPoint[] = [];
-  for (let i = lookback; i < highs.length - lookback; i++) {
-    const current = highs[i];
-    let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (highs[j] > current) {
-        isSwing = false;
-        break;
-      }
-    }
-    if (isSwing) {
-      swings.push({ index: i, price: current, indicatorValue: getIndicator(i) });
-    }
-  }
-  return swings;
-}
-
-function checkBullishDivergence(swingLows: SwingPoint[]): DivergencePair | null {
-  if (swingLows.length < 2) return null;
-  // Compare last two swing lows
-  const prev = swingLows[swingLows.length - 2];
-  const last = swingLows[swingLows.length - 1];
-  // Bullish: price makes LOWER low but indicator makes HIGHER low
-  if (last.price < prev.price && last.indicatorValue > prev.indicatorValue) {
-    return {
-      price1: prev.price,
-      price2: last.price,
-      ind1: prev.indicatorValue,
-      ind2: last.indicatorValue,
-      index: last.index,
-    };
-  }
-  return null;
-}
-
-function checkBearishDivergence(swingHighs: SwingPoint[]): DivergencePair | null {
-  if (swingHighs.length < 2) return null;
-  const prev = swingHighs[swingHighs.length - 2];
-  const last = swingHighs[swingHighs.length - 1];
-  // Bearish: price makes HIGHER high but indicator makes LOWER high
-  if (last.price > prev.price && last.indicatorValue < prev.indicatorValue) {
-    return {
-      price1: prev.price,
-      price2: last.price,
-      ind1: prev.indicatorValue,
-      ind2: last.indicatorValue,
-      index: last.index,
-    };
-  }
-  return null;
-}
-
-function computeDivergenceStrength(div: DivergencePair): number {
-  // Price movement magnitude (normalized)
-  const priceMove = Math.abs(div.price2 - div.price1) / Math.max(Math.abs(div.price1), 0.01);
-  // Indicator divergence magnitude
-  const indMove = Math.abs(div.ind2 - div.ind1) / 100;
-  // Combined strength capped at 1.0
-  return Math.min(1.0, priceMove * 3 + indMove * 2);
-}
+// The block that used to sit here called itself "Shared Divergence Utilities" and
+// claimed it had been "extracted for reuse by MACD/OBV divergence directives". Nobody
+// imported it — this file was the one place it existed, and both other directives
+// carried their own private copies. The algorithm now lives in exactly one place:
+// ../utils/divergence, imported above.

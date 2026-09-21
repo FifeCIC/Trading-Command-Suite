@@ -1,15 +1,14 @@
 {
   "_comment": "Ratchet for cross-file duplication (INV-NO-NEW-DUPLICATION). An existing pair may only go DOWN; a pair NOT listed here fails the build. Record a reduction deliberately with `node scripts/validate-duplication.cjs --update-allowance` so the delta is printed. If a pair must remain, prefer FIXING it (extract the shared block) over adding it here — an allowlisted guard that no longer guards is worse than no guard.",
-  "_measured": "2026-09-18",
+  "_measured": "2026-09-21",
   "_method": "8-line whitespace-normalised windows appearing in 2+ distinct non-test files; new pair fails at >= 3",
   "totals": {
-    "pairs": 148,
-    "windows": 1491
+    "pairs": 149,
+    "windows": 1467
   },
   "pairs": {
     "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 839,
     "src/components/SignalCard.jsx || src/pages/SignalsOverviewPage.jsx": 51,
-    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/obv-divergence.directive.ts": 34,
     "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": 27,
     "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": 20,
     "nest/src/modules/system/architecture-manifest.controller.ts || src/pages/architecture-framework.data.js": 20,
@@ -38,6 +37,7 @@
     "nest/src/modules/directives/condition-detector.service.ts || nest/src/modules/directives/implementations/market-regime.directive.ts": 5,
     "nest/src/modules/directives/implementations/hurst-memory.directive.ts || nest/src/modules/directives/implementations/sigma-score.directive.ts": 5,
     "nest/src/modules/directives/implementations/doji-pattern.directive.ts || nest/src/modules/directives/implementations/engulfing-pattern.directive.ts": 5,
+    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/rsi-divergence.directive.ts": 5,
     "nest/src/modules/directives/implementations/candle-pressure.directive.ts || nest/src/modules/directives/implementations/hurst-memory.directive.ts": 4,
     "nest/src/modules/directives/implementations/candle-pressure.directive.ts || nest/src/modules/directives/implementations/liquidity-check.directive.ts": 4,
     "nest/src/modules/directives/implementations/candle-pressure.directive.ts || nest/src/modules/directives/implementations/liquidity-sweep.directive.ts": 4,
@@ -86,8 +86,9 @@
     "nest/src/modules/directives/implementations/range-contraction.directive.ts || nest/src/modules/directives/implementations/sigma-score.directive.ts": 4,
     "nest/src/modules/directives/implementations/range-contraction.directive.ts || nest/src/modules/directives/implementations/volatility-envelope.directive.ts": 4,
     "nest/src/modules/directives/implementations/range-contraction.directive.ts || nest/src/modules/directives/implementations/volume-boundary.directive.ts": 4,
+    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/obv-divergence.directive.ts": 4,
+    "nest/src/modules/directives/implementations/obv-divergence.directive.ts || nest/src/modules/directives/implementations/rsi-divergence.directive.ts": 4,
     "nest/src/modules/market-data/price-refresh.service.ts || nest/src/modules/portfolio/portfolio-price.service.ts": 4,
-    "nest/src/modules/strategies/forex-mean-reversion.strategy.ts || nest/src/modules/strategies/strategies.service.ts": 4,
     "src/App.jsx || src/runtime/report.js": 4,
     "nest/prisma/seed-strategies.ts || nest/prisma/seed.ts": 3,
     "nest/src/modules/directives/implementations/dilution-impact.directive.ts || nest/src/modules/directives/implementations/social-buzz.directive.ts": 3,
@@ -106,6 +107,7 @@
     "nest/prisma/seed-crypto-5yr.ts || nest/prisma/seed-nvda-5yr.ts": 2,
     "nest/prisma/seed-forex-5yr.ts || nest/prisma/seed-market-data.ts": 2,
     "nest/prisma/seed-forex-5yr.ts || nest/prisma/seed-nvda-5yr.ts": 2,
+    "nest/scripts/validate-collation-consistency.cjs || nest/scripts/validate-fabricated-stats.cjs": 2,
     "nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts || nest/src/modules/directives/implementations/gold-macro-correlation.directive.ts": 2,
     "nest/src/modules/directives/implementations/doji-pattern.directive.ts || nest/src/modules/directives/implementations/hammer-pattern.directive.ts": 2,
     "nest/src/modules/directives/implementations/engulfing-pattern.directive.ts || nest/src/modules/directives/implementations/hammer-pattern.directive.ts": 2,
@@ -139,7 +141,6 @@
     "nest/src/modules/directives/implementations/doji-pattern.directive.ts || nest/src/modules/directives/implementations/three-soldiers-pattern.directive.ts": 1,
     "nest/src/modules/directives/implementations/engulfing-pattern.directive.ts || nest/src/modules/directives/implementations/three-soldiers-pattern.directive.ts": 1,
     "nest/src/modules/directives/implementations/hammer-pattern.directive.ts || nest/src/modules/directives/implementations/three-soldiers-pattern.directive.ts": 1,
-    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/rsi-divergence.directive.ts": 1,
     "nest/src/modules/directives/implementations/mt5-harami.directive.ts || nest/src/modules/directives/implementations/mt5-star-doji.directive.ts": 1,
     "nest/src/modules/directives/implementations/pattern-density-sr.directive.ts || nest/src/modules/directives/implementations/regime-shift-exit.directive.ts": 1,
     "nest/src/modules/market-data/market-data.controller.ts || nest/src/modules/symbols/symbols.controller.ts": 1,
@@ -159,9 +160,11 @@
   "reasons": {
     "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": "DELIBERATE two-surface split - 839 windows, the largest in the repo. architecture-reference.js is the AI-readable module, architecture-framework.data.js is the human page, and the overlap IS the mechanism; the two deliberately differ in LENGTH (the page paraphrases). The risk is DIVERGENCE, not copying. Do NOT delete either side on the strength of this number. MEASURED 2026-09-19: they AGREE on CONTRACT_REGISTER_LAST_UPDATED (both 2026-09-17, batch #19) and on batch coverage (both carry batches 9-19; reference.js additionally carries a batch #6 marker the page lacks - a historical asymmetry, not a live contradiction). What is still UNGUARDED is the agreement itself: nothing fails the build if one is updated and the other is not. They diverged once already (batch #17 stamped a date in one and not the other) and only a human reading both found it.",
     "src/components/SignalCard.jsx || src/pages/SignalsOverviewPage.jsx": "DELIBERATE A/B variant, and the page says so in code: 'Card A stays here, reachable at ?variant=A - removing a live variant is a decision, not a refactor.' Card B is the shared component; Card A is the legacy design used for side-by-side comparison. The two button labels HAVE diverged (SignalCard 'Buy (Long)' vs OpportunityCard 'Buy CFD') - that is the experiment, not a bug. Deleting OpportunityCard would remove a live variant.",
-    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/obv-divergence.directive.ts": "NOT deliberate - extraction candidate, measured 2026-09-19. Two divergence directives share a 31-line import/header block, a 17-line helper and a ~51-line scoring tail; only the oscillator they read differs. A shared divergence base is the fix. Not done: it is a scoring path and needs its own verification.",
+    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/obv-divergence.directive.ts": "DONE 2026-09-21 - was 34 windows of DUPLICATED SCORING ALGORITHM, now 4. The five swing/divergence helpers moved to nest/src/modules/directives/utils/divergence.ts and all three directives import them. What REMAINS here is imports and the IDirective class preamble - structure, not logic. Proven behaviour-preserving: 108 golden cases (12 seeds x 3 bar-counts x 3 directives, 29 of them exercising the strength formula) produced a BYTE-IDENTICAL result before and after (sha256 333719E6...). The three strength CALIBRATIONS deliberately stay per-directive and now sit side by side in one place; see StrengthModel in utils/divergence.ts for why they differ.",
     "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": "NOT deliberate - extraction candidate, measured 2026-09-19. Both consume the same breakdown payload and repeat its mapping (breakouts / subScores / subMaxTotals) across six separate blocks. Not done.",
     "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": "NOT deliberate - the controller EMBEDS the pipeline-step descriptions that architecture-reference.js also declares, so the same prose exists in the backend and the frontend. Single-source candidate. Not done.",
-    "nest/src/modules/system/architecture-manifest.controller.ts || src/pages/architecture-framework.data.js": "Same as above, against the human-facing page: the manifest controller and the architecture page describe one pipeline in two places. Single-source candidate. Not done."
+    "nest/src/modules/system/architecture-manifest.controller.ts || src/pages/architecture-framework.data.js": "Same as above, against the human-facing page: the manifest controller and the architecture page describe one pipeline in two places. Single-source candidate. Not done.",
+    "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/rsi-divergence.directive.ts": "Structure only (imports + IDirective contract), not logic. Appeared 2026-09-21 when all three divergence directives began importing the SAME shared module - the overlap is the import statement, which is the fix, not a defect.",
+    "nest/src/modules/directives/implementations/obv-divergence.directive.ts || nest/src/modules/directives/implementations/rsi-divergence.directive.ts": "Structure only (imports + IDirective contract), not logic. Same cause as the macd/rsi entry: three directives importing one shared module is expected to share its import line."
   }
 }

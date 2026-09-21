@@ -4,8 +4,13 @@
  * Detects bullish divergence (price lower low, MACD histogram higher low)
  * and bearish divergence (price higher high, MACD histogram lower high).
  *
- * Uses the shared divergence utilities from rsi-divergence.directive.ts
- * but applies them to MACD histogram values instead of RSI.
+ * The swing and divergence ALGORITHM is imported from ../utils/divergence — ONE copy,
+ * shared with obv- and rsi-divergence. Only the strength CALIBRATION stays local,
+ * because the three indicators live on different scales.
+ *
+ * ⚠️ Before 2026-09-21 this file held its own copy of the algorithm while its header
+ * claimed it used the shared utilities from rsi-divergence. It did not. Three copies
+ * of a scoring path is how a fix lands in one of them.
  *
  * MACD divergence is considered stronger than RSI divergence because
  * MACD incorporates both trend and momentum.
@@ -18,6 +23,14 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { macd } from '../utils/indicators';
+import {
+  checkBearishDivergence,
+  checkBullishDivergence,
+  computeDivergenceStrength,
+  findSwingHighs,
+  findSwingLows,
+  type StrengthModel,
+} from '../utils/divergence';
 
 const MACD_FAST = 12;
 const MACD_SLOW = 26;
@@ -25,19 +38,18 @@ const MACD_SIGNAL = 9;
 const SWING_LOOKBACK = 5;
 const MIN_BARS = MACD_SLOW + MACD_SIGNAL + SWING_LOOKBACK * 3 + 2;
 
-interface SwingPoint {
-  index: number;
-  price: number;
-  indicatorValue: number;
-}
-
-interface DivergencePair {
-  price1: number;
-  price2: number;
-  ind1: number;
-  ind2: number;
-  index: number;
-}
+/**
+ * MACD histogram runs ~1e-3 to 1e-2, so the indicator denominator needs a floor far
+ * below that or the ratio explodes and every divergence reads as maximum strength.
+ * Carried across UNCHANGED from the local copy this file used to hold: an extraction
+ * that also recalibrates the formula would be a scoring change wearing a refactor's
+ * clothes.
+ */
+const STRENGTH_MODEL: StrengthModel = {
+  priceWeight: 3,
+  indWeight: 1.5,
+  indDenominator: (ind1) => Math.max(Math.abs(ind1), 0.0001),
+};
 
 @Injectable()
 export class MacdDivergenceDirective implements IDirective {
@@ -61,7 +73,8 @@ export class MacdDivergenceDirective implements IDirective {
 
     if (closes.length < MIN_BARS) {
       return {
-        score: 0, confidence: 0.1,
+        score: 0,
+        confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
         signalClass: 'neutral',
       };
@@ -70,7 +83,8 @@ export class MacdDivergenceDirective implements IDirective {
     const macdResult = macd(closes, MACD_FAST, MACD_SLOW, MACD_SIGNAL);
     if (macdResult.histogram.length < SWING_LOOKBACK * 2 + 2) {
       return {
-        score: 0, confidence: 0.1,
+        score: 0,
+        confidence: 0.1,
         reason: 'Not enough MACD histogram values.',
         signalClass: 'neutral',
       };
@@ -91,23 +105,23 @@ export class MacdDivergenceDirective implements IDirective {
     const bearDiv = checkBearishDivergence(swingHighs);
 
     if (bullDiv) {
-      const strength = computeDivergenceStrength(bullDiv);
+      const strength = computeDivergenceStrength(bullDiv, STRENGTH_MODEL);
       const score = 65 + strength * 40;
       return {
         score: Math.round(Math.min(score, this.maxScore)),
         confidence: Math.min(0.94, 0.6 + strength * 0.28),
-        reason: `Bullish MACD divergence: price lower low (${bullDiv.price1.toFixed(2)}→${bullDiv.price2.toFixed(2)}) but MACD histogram higher low (${bullDiv.ind1.toFixed(4)}→${bullDiv.ind2.toFixed(4)}). Strength: ${(strength*100).toFixed(0)}%.`,
+        reason: `Bullish MACD divergence: price lower low (${bullDiv.price1.toFixed(2)}→${bullDiv.price2.toFixed(2)}) but MACD histogram higher low (${bullDiv.ind1.toFixed(4)}→${bullDiv.ind2.toFixed(4)}). Strength: ${(strength * 100).toFixed(0)}%.`,
         signalClass: 'bullish',
       };
     }
 
     if (bearDiv) {
-      const strength = computeDivergenceStrength(bearDiv);
+      const strength = computeDivergenceStrength(bearDiv, STRENGTH_MODEL);
       const score = 12 - strength * 10;
       return {
         score: Math.round(Math.max(score, 0)),
         confidence: Math.min(0.94, 0.6 + strength * 0.28),
-        reason: `Bearish MACD divergence: price higher high (${bearDiv.price1.toFixed(2)}→${bearDiv.price2.toFixed(2)}) but MACD histogram lower high (${bearDiv.ind1.toFixed(4)}→${bearDiv.ind2.toFixed(4)}). Strength: ${(strength*100).toFixed(0)}%.`,
+        reason: `Bearish MACD divergence: price higher high (${bearDiv.price1.toFixed(2)}→${bearDiv.price2.toFixed(2)}) but MACD histogram lower high (${bearDiv.ind1.toFixed(4)}→${bearDiv.ind2.toFixed(4)}). Strength: ${(strength * 100).toFixed(0)}%.`,
         signalClass: 'bearish',
       };
     }
@@ -122,58 +136,7 @@ export class MacdDivergenceDirective implements IDirective {
   }
 }
 
-// ── Local copies of shared utilities (avoid cross-file imports) ──
-
-function findSwingLows(lows: number[], lookback: number, getInd: (i: number) => number): SwingPoint[] {
-  const swings: SwingPoint[] = [];
-  for (let i = lookback; i < lows.length - lookback; i++) {
-    const cur = lows[i];
-    let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (lows[j] < cur) { isSwing = false; break; }
-    }
-    if (isSwing) swings.push({ index: i, price: cur, indicatorValue: getInd(i) });
-  }
-  return swings;
-}
-
-function findSwingHighs(highs: number[], lookback: number, getInd: (i: number) => number): SwingPoint[] {
-  const swings: SwingPoint[] = [];
-  for (let i = lookback; i < highs.length - lookback; i++) {
-    const cur = highs[i];
-    let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (highs[j] > cur) { isSwing = false; break; }
-    }
-    if (isSwing) swings.push({ index: i, price: cur, indicatorValue: getInd(i) });
-  }
-  return swings;
-}
-
-function checkBullishDivergence(swingLows: SwingPoint[]): DivergencePair | null {
-  if (swingLows.length < 2) return null;
-  const prev = swingLows[swingLows.length - 2];
-  const last = swingLows[swingLows.length - 1];
-  if (last.price < prev.price && last.indicatorValue > prev.indicatorValue) {
-    return { price1: prev.price, price2: last.price, ind1: prev.indicatorValue, ind2: last.indicatorValue, index: last.index };
-  }
-  return null;
-}
-
-function checkBearishDivergence(swingHighs: SwingPoint[]): DivergencePair | null {
-  if (swingHighs.length < 2) return null;
-  const prev = swingHighs[swingHighs.length - 2];
-  const last = swingHighs[swingHighs.length - 1];
-  if (last.price > prev.price && last.indicatorValue < prev.indicatorValue) {
-    return { price1: prev.price, price2: last.price, ind1: prev.indicatorValue, ind2: last.indicatorValue, index: last.index };
-  }
-  return null;
-}
-
-function computeDivergenceStrength(div: DivergencePair): number {
-  const priceMove = Math.abs(div.price2 - div.price1) / Math.max(Math.abs(div.price1), 0.01);
-  const indMove = Math.abs(div.ind2 - div.ind1) / Math.max(Math.abs(div.ind1), 0.0001);
-  return Math.min(1.0, priceMove * 3 + indMove * 1.5);
-}
+// The swing/divergence algorithm that used to live here is now ONE copy in
+// ../utils/divergence, imported above. It was byte-identical to obv- and
+// rsi-divergence's copies apart from identifier names and brace placement, and it is
+// the kind of code where a fix in one copy silently misses the other two.

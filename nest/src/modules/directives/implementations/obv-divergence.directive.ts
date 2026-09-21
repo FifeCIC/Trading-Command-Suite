@@ -9,6 +9,10 @@
  * accumulation/distribution that contradicts price action.
  *
  * OBV divergence is rare but high-conviction when it appears.
+ *
+ * The swing and divergence ALGORITHM is imported from ../utils/divergence — ONE copy,
+ * shared with macd- and rsi-divergence. Only the strength CALIBRATION stays local,
+ * because OBV's scale is nothing like the other two (see STRENGTH_MODEL below).
  */
 
 import { Injectable } from '@nestjs/common';
@@ -18,23 +22,33 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { obv } from '../utils/indicators';
+import {
+  checkBearishDivergence,
+  checkBullishDivergence,
+  computeDivergenceStrength,
+  findSwingHighs,
+  findSwingLows,
+  type StrengthModel,
+} from '../utils/divergence';
 
 const SWING_LOOKBACK = 5;
 const MIN_BARS = SWING_LOOKBACK * 3 + 5;
 
-interface SwingPoint {
-  index: number;
-  price: number;
-  indicatorValue: number;
-}
-
-interface DivergencePair {
-  price1: number;
-  price2: number;
-  ind1: number;
-  ind2: number;
-  index: number;
-}
+/**
+ * ⚠️ OBV is CUMULATIVE VOLUME — it runs into the millions, and it can sit near zero,
+ * which is why the floor is 1 rather than MACD's 0.0001. Dividing an OBV move by a
+ * MACD-sized floor would make every divergence read as maximum strength, and dividing
+ * by MACD's ratio when OBV crosses zero would produce an infinity.
+ *
+ * Carried across UNCHANGED from the local copy this file used to hold. Note this
+ * differs from macd-divergence's model in ALL THREE constants — that is intentional
+ * and was invisible while the two sat in separate files.
+ */
+const STRENGTH_MODEL: StrengthModel = {
+  priceWeight: 2.5,
+  indWeight: 2.0,
+  indDenominator: (ind1) => Math.max(Math.abs(ind1), 1),
+};
 
 @Injectable()
 export class ObvDivergenceDirective implements IDirective {
@@ -59,7 +73,8 @@ export class ObvDivergenceDirective implements IDirective {
 
     if (closes.length < MIN_BARS) {
       return {
-        score: 0, confidence: 0.1,
+        score: 0,
+        confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
         signalClass: 'neutral',
       };
@@ -68,14 +83,16 @@ export class ObvDivergenceDirective implements IDirective {
     const obvValues = obv(closes, volumes);
     if (obvValues.length < SWING_LOOKBACK * 2 + 2) {
       return {
-        score: 0, confidence: 0.1,
+        score: 0,
+        confidence: 0.1,
         reason: 'Not enough OBV values.',
         signalClass: 'neutral',
       };
     }
 
     const getObv = (barIdx: number): number => {
-      if (barIdx < 0 || barIdx >= obvValues.length) return obvValues[obvValues.length - 1];
+      if (barIdx < 0 || barIdx >= obvValues.length)
+        return obvValues[obvValues.length - 1];
       return obvValues[barIdx];
     };
 
@@ -86,23 +103,23 @@ export class ObvDivergenceDirective implements IDirective {
     const bearDiv = checkBearishDivergence(swingHighs);
 
     if (bullDiv) {
-      const strength = computeDivergenceStrength(bullDiv);
+      const strength = computeDivergenceStrength(bullDiv, STRENGTH_MODEL);
       const score = 70 + strength * 40;
       return {
         score: Math.round(Math.min(score, this.maxScore)),
         confidence: Math.min(0.96, 0.65 + strength * 0.25),
-        reason: `Bullish OBV divergence — SMART MONEY: price lower low (${bullDiv.price1.toFixed(2)}→${bullDiv.price2.toFixed(2)}) but OBV higher low (accumulation). Strength: ${(strength*100).toFixed(0)}%.`,
+        reason: `Bullish OBV divergence — SMART MONEY: price lower low (${bullDiv.price1.toFixed(2)}→${bullDiv.price2.toFixed(2)}) but OBV higher low (accumulation). Strength: ${(strength * 100).toFixed(0)}%.`,
         signalClass: 'bullish',
       };
     }
 
     if (bearDiv) {
-      const strength = computeDivergenceStrength(bearDiv);
+      const strength = computeDivergenceStrength(bearDiv, STRENGTH_MODEL);
       const score = 10 - strength * 8;
       return {
         score: Math.round(Math.max(score, 0)),
         confidence: Math.min(0.96, 0.65 + strength * 0.25),
-        reason: `Bearish OBV divergence — DISTRIBUTION: price higher high (${bearDiv.price1.toFixed(2)}→${bearDiv.price2.toFixed(2)}) but OBV lower high (selling into strength). Strength: ${(strength*100).toFixed(0)}%.`,
+        reason: `Bearish OBV divergence — DISTRIBUTION: price higher high (${bearDiv.price1.toFixed(2)}→${bearDiv.price2.toFixed(2)}) but OBV lower high (selling into strength). Strength: ${(strength * 100).toFixed(0)}%.`,
         signalClass: 'bearish',
       };
     }
@@ -115,57 +132,6 @@ export class ObvDivergenceDirective implements IDirective {
     };
   }
 }
-
-function findSwingLows(lows: number[], lookback: number, getInd: (i: number) => number): SwingPoint[] {
-  const swings: SwingPoint[] = [];
-  for (let i = lookback; i < lows.length - lookback; i++) {
-    const cur = lows[i];
-    let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (lows[j] < cur) { isSwing = false; break; }
-    }
-    if (isSwing) swings.push({ index: i, price: cur, indicatorValue: getInd(i) });
-  }
-  return swings;
-}
-
-function findSwingHighs(highs: number[], lookback: number, getInd: (i: number) => number): SwingPoint[] {
-  const swings: SwingPoint[] = [];
-  for (let i = lookback; i < highs.length - lookback; i++) {
-    const cur = highs[i];
-    let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (highs[j] > cur) { isSwing = false; break; }
-    }
-    if (isSwing) swings.push({ index: i, price: cur, indicatorValue: getInd(i) });
-  }
-  return swings;
-}
-
-function checkBullishDivergence(swingLows: SwingPoint[]): DivergencePair | null {
-  if (swingLows.length < 2) return null;
-  const prev = swingLows[swingLows.length - 2];
-  const last = swingLows[swingLows.length - 1];
-  if (last.price < prev.price && last.indicatorValue > prev.indicatorValue) {
-    return { price1: prev.price, price2: last.price, ind1: prev.indicatorValue, ind2: last.indicatorValue, index: last.index };
-  }
-  return null;
-}
-
-function checkBearishDivergence(swingHighs: SwingPoint[]): DivergencePair | null {
-  if (swingHighs.length < 2) return null;
-  const prev = swingHighs[swingHighs.length - 2];
-  const last = swingHighs[swingHighs.length - 1];
-  if (last.price > prev.price && last.indicatorValue < prev.indicatorValue) {
-    return { price1: prev.price, price2: last.price, ind1: prev.indicatorValue, ind2: last.indicatorValue, index: last.index };
-  }
-  return null;
-}
-
-function computeDivergenceStrength(div: DivergencePair): number {
-  const priceMove = Math.abs(div.price2 - div.price1) / Math.max(Math.abs(div.price1), 0.01);
-  const indMove = Math.abs(div.ind2 - div.ind1) / Math.max(Math.abs(div.ind1), 1);
-  return Math.min(1.0, priceMove * 2.5 + indMove * 2.0);
-}
+// The swing/divergence algorithm that used to live here is now ONE copy in
+// ../utils/divergence, imported above — it was byte-identical to the other two
+// directives' copies apart from identifier names and brace placement.
