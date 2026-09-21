@@ -525,6 +525,18 @@ export const NOTICES = {
     params: ['operation', 'detail'],
     refs: ['#826'],
   },
+  'TCS-SYS-008': {
+    severity: 'error',
+    area: 'SYS',
+    title: 'Verification probe failed',
+    message: 'The claim could not be verified — the probe did not complete.',
+    cause: '{detail}',
+    action:
+      'Check the API is running, then re-run the check. An unprobed claim is reported as UNVERIFIED, ' +
+      'never as passing.',
+    params: ['detail'],
+    refs: ['#938'],
+  },
   'TCS-SIG-001': {
     severity: 'error',
     area: 'SIG',

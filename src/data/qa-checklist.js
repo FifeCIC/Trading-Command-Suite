@@ -4422,7 +4422,7 @@ const QA_CHECKLIST = [
       area: 'UI / Scoring',
       system: 'Score classification scale',
       name: 'Percent-of-capacity values classify on the live scale, not an impossible bar',
-      procedure: 'Open /trading/strategy-monitor and count `.scoreValue` colour classes; open /protocols/symbols-ladder and inspect a % cell\u2019s class; run `node nest/scripts/validate-threshold-sources.cjs`, then with a canary file containing `scoreClass(row.pct)`.',
+      procedure: 'Open /trading/strategy-monitor and count `.scoreValue` colour classes; open /protocols/symbols-ladder and inspect a % cell\u2019s class; run `node nest/scripts/validate-threshold-sources.cjs`, then with a canary file containing a `scoreClass` call on `row.pct`.',
       expected: 'Strategy Monitor 17 green / 1 amber / **0 red** (before: 11 red); ladder 9% → `pl-score-med` and the 45% opportunity cell → `pl-muted`; guard exit 0 clean, exit 1 with the canary, exit 0 restored. ⚠️ The legacy 65/40 helpers were being fed percentages whose scale tops out near 17, so GOOD values rendered as bad ones.',
       category: 'UI',
       priority: 'high',

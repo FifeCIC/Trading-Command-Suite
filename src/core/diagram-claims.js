@@ -49,6 +49,9 @@
  * reported as a conflict in its own right: the claim has outlived the shape it described.
  */
 
+// #826 Phase 5 — the probe failure surfaces as a REGISTRY CODE, never the raw error string.
+import { noticeFromError } from './notices/from-error.js';
+
 /** Read `a.b.c` out of a response without throwing on a missing branch. */
 export function pickPath(obj, path) {
   if (!path) return undefined;
@@ -272,7 +275,10 @@ export async function evaluateClaims(diagramId, source, getJson) {
     } catch (e) {
       // A probe that cannot run is NOT a pass — it is an unverifiable claim, and the
       // panel must say so rather than showing a green tick next to an unchecked number.
-      row.error = e?.message || 'probe failed to reach the API';
+      // The surface carries the registry CODE (TCS-SYS-008); the probe's own text
+      // survives as the notice `cause` rather than being discarded.
+      const n = noticeFromError(e, 'TCS-SYS-008');
+      row.error = `${n.code} ${n.message}${n.cause ? ` — ${n.cause}` : ''}`;
     }
 
     out.push(row);

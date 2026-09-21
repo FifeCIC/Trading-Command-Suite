@@ -43,6 +43,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-SYS-005` | error | SYS | API request exceeded its deadline |
 | `TCS-SYS-006` | error | SYS | Unexpected server error |
 | `TCS-SYS-007` | error | SYS | Action failed |
+| `TCS-SYS-008` | error | SYS | Verification probe failed |
 | `TCS-TRADE-001` | error | TRADE | Order rejected — unsupported filling mode |
 | `TCS-TRADE-002` | warning | TRADE | Order not sent — market closed |
 | `TCS-TRADE-003` | error | TRADE | Not enough margin at the broker |
@@ -61,7 +62,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-016` | error | TRADE | Blocked by the bridge size cap |
 | `TCS-TRADE-017` | error | TRADE | Blocked by the bridge position count |
 
-**39 codes** — 2 critical, 23 error, 9 warning, 1 info, 4 success.
+**40 codes** — 2 critical, 24 error, 9 warning, 1 info, 4 success.
 
 ## Codes by area
 
@@ -464,3 +465,13 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `operation`, `detail`
 - **Call:** `notice('TCS-SYS-007', { operation, detail })`
 - **Related:** #826
+
+#### `TCS-SYS-008` — Verification probe failed
+
+- **Severity:** error
+- **Message:** The claim could not be verified — the probe did not complete.
+- **Cause:** {detail}
+- **Action:** Check the API is running, then re-run the check. An unprobed claim is reported as UNVERIFIED, never as passing.
+- **Params:** `detail`
+- **Call:** `notice('TCS-SYS-008', { detail })`
+- **Related:** #938
