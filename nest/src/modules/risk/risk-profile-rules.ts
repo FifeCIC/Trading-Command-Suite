@@ -186,11 +186,18 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
     enforcedBy: null,
     settingKey: null,
     defaultValue: 0.03,
-    summary: 'Declared: profit at which the stop begins to trail.',
+    summary:
+      'NOT IMPLEMENTED — the profit at which the stop WOULD begin to trail if it were wired through ' +
+      'the Stop Guardian. The setting is documentation, not a control.',
     caveat:
-      '⚠️ Its only consumer, `updateTrailingStop()`, has NO CALLER outside its own spec — so the ' +
-      'trailing stop is described in three files and armed in none. Any position without a ' +
-      'broker-side trailing stop relies on slPct alone.',
+      '⚠️ RETIRED AS A DUPLICATE MECHANISM (2026-09-21, #913). Its only consumer, ' +
+      '`updateTrailingStop()`, was DELETED with this change — it had zero callers (not even its own ' +
+      'spec) while this register described a trailing stop that nothing armed. Post-entry stop ' +
+      'management has ONE implementation: `StopGuardianService` (#721), which trails open positions ' +
+      'on directive consensus every pass and records every move in `stop_adjustment` (129 rows ' +
+      'when this was written). The field stays declared so the profile shape is complete; if it is ' +
+      'ever to become real it must be wired THROUGH the guardian as its activation threshold — ' +
+      'never as a second trailing implementation.',
   },
 ];
 

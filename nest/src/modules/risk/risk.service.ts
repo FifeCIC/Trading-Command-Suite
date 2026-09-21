@@ -248,21 +248,16 @@ export class RiskService {
     return { allowed: true, reason: 'OK' };
   }
 
-  // ---- Trailing Stop ----
-
-  updateTrailingStop(
-    currentStop: number,
-    currentPrice: number,
-    entryPrice: number,
-    trailDistance: number,  // in ATR or percentage
-    trailActivated: boolean,
-    activationProfit: number,
-  ): { newStop: number; activated: boolean } {
-    const profit = (currentPrice - entryPrice) / entryPrice;
-    if (!trailActivated && profit < activationProfit) {
-      return { newStop: currentStop, activated: false };
-    }
-    const trailed = currentPrice * (1 - trailDistance);
-    return { newStop: Math.max(currentStop, trailed), activated: true };
-  }
+  // ── Trailing stop ────────────────────────────────────────────────────────────────────────
+  //
+  // ⚠️ `updateTrailingStop()` lived here and was DELETED 2026-09-21 (#913). It had ZERO callers —
+  // not even its own spec — yet `trailingStopAtProfit` was documented as its input, so the risk
+  // register described a trailing stop that no code armed.
+  //
+  // Post-entry stop management has ONE canonical implementation: `StopGuardianService` (#721),
+  // which trails on directive consensus (ATR / SuperTrend / chandelier / wick-filter) against the
+  // open positions every pass and records every move in `stop_adjustment` (129 rows at the time of
+  // this change). Wiring `trailingStopAtProfit` — if it is ever to be real — belongs THERE, as the
+  // guardian's activation threshold. A second trailing implementation is the most expensive kind of
+  // technical debt: both copies drift and only one gets the next fix.
 }
