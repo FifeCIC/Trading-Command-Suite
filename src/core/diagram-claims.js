@@ -60,6 +60,7 @@ export function countOf(data) {
   if (Array.isArray(data)) return data.length;
   if (!data || typeof data !== 'object') return null;
   if (Array.isArray(data.protocols)) return data.protocols.length;
+  if (Array.isArray(data.providers)) return data.providers.length;
   if (Array.isArray(data.strategies)) return data.strategies.length;
   if (typeof data.count === 'number') return data.count;
   if (typeof data.total === 'number') return data.total;
@@ -85,6 +86,81 @@ export function nodeExistsInSource(source, node) {
  * `note`   — what is actually true, when it differs (context for the reader)
  */
 export const DIAGRAM_CLAIMS = {
+  /**
+   * `scoring-gating` prints a SECOND, different stale scale for the same decision
+   * signal-state-machine describes. Two diagrams, two answers (65/35 vs 80/40), and
+   * the live value is a third (6/13). Recorded as three claims rather than one so the
+   * panel can stroke each offending boundary node separately.
+   */
+  'scoring-gating': [
+    {
+      node: 'N',
+      says: 'BUY at >= 65',
+      expect: 65,
+      probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
+      note: 'Live entry boundary is 6 (const ENTRY_THRESHOLD, protocol-gating.service.ts L345).',
+    },
+    {
+      node: 'O',
+      says: 'HOLD at >= 35',
+      expect: 35,
+      probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
+      note: 'The HOLD floor is the same ENTRY_THRESHOLD, currently 6.',
+    },
+    {
+      node: 'P',
+      says: 'SELL below 35',
+      expect: 35,
+      probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
+      note: 'The SELL boundary is ENTRY_THRESHOLD, currently 6.',
+    },
+  ],
+
+  'metastack-product': [
+    {
+      node: 'B',
+      says: '37 Protocols, 3 with directionMode: SHORT_ONLY',
+      expect: 37,
+      probe: { api: '/api/scoring/gated/protocols', count: true },
+      note: 'Live: 2 SHORT_ONLY of 45 via the API (47 rows in `protocol`). Four diagrams give four protocol counts — 32/32/37/42 — and none matches.',
+    },
+  ],
+
+  'data-flow-architecture': [
+    {
+      node: 'PG',
+      says: '32 Protocols / PROTOCOL_REGISTRY',
+      expect: 32,
+      probe: { api: '/api/scoring/gated/protocols', count: true },
+      note: 'Live: 45 via the API, 47 rows in `protocol`.',
+    },
+  ],
+
+  /**
+   * The adapter count is asserted FOUR times across the page and the page does not
+   * agree with itself: provider-adapters, provider-failover and data-flow-architecture
+   * say 8; data-arch and sees-research say 10. Live is 10 registrations — the two extra
+   * being capital.com and interactive-brokers (priority 10, "mock data only").
+   */
+  'provider-adapters': [
+    {
+      node: 'Registered',
+      says: 'Registered Adapters (8)',
+      expect: 8,
+      probe: { api: '/api/providers/health', count: true },
+      note: 'Live: 10 registered (providers.module.ts), confirmed by GET /api/providers/health. The two the diagram omits are capital.com and interactive-brokers (priority 10, "mock data only"). This diagram and provider-failover say 8 while data-arch and sees-research say 10 — the page contradicts itself.',
+    },
+  ],
+
+  'provider-failover': [
+    {
+      node: 'Registered',
+      says: '8 Registered (failoverPriority)',
+      expect: 8,
+      probe: { api: '/api/providers/health', count: true },
+      note: 'Live: 10 registrations in providers.module.ts. NOTE GET /api/providers/rate-limits returns {"adapters":[]} — the rate-limit surface the diagram describes is EMPTY, so nothing in the page or the API shows the tracker state this diagram draws.',
+    },
+  ],
   'signal-state-machine': [
     {
       node: 'PCT',
