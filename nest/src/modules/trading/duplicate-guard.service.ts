@@ -12,12 +12,15 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { isLivePosition } from '../../common/utils/position-freshness';
 
 export interface DuplicateCheckResult {
   blocked: boolean;
   reason?: string;
   existingPositions?: number;
   recentTrades?: number;
+  /** #745 — projection rows ignored because no sync refreshed them inside the live window. */
+  staleIgnoredPositions?: number;
   cooldownRemaining?: number; // seconds until cooldown expires
 }
 
@@ -49,6 +52,7 @@ export class DuplicateGuardService {
     const reasons: string[] = [];
     let existingPositions = 0;
     let recentTrades = 0;
+    let staleIgnoredPositions = 0;
 
     // Fail-closed: if the DB is unavailable we cannot verify duplicates, so we
     // BLOCK the trade rather than silently allowing duplicate positions.
@@ -63,15 +67,32 @@ export class DuplicateGuardService {
     }
 
     // 1. Check open positions for this symbol+broke
+    //
+    // ⚠️ LIVE ONLY (#745). `Position` is a PROJECTION of the broker, and a row a sync has stopped
+    // refreshing is not evidence that anything is open — it is evidence that the projection is
+    // stale. The old query counted every row for the symbol, so a frozen row blocked new trades
+    // indefinitely (observed: `DUPLICATE BLOCKED: XAUUSD — 1 open position(s) on MT5` after the
+    // position had closed at the broker). Freshness is the SHARED rule from #778 — imported, not
+    // re-implemented, so the durable copy cannot drift from the one risk/diversification use.
     if (this.prisma.isAvailable) {
       try {
         const positions = await this.prisma.position.findMany({
           where: { symbol: ticker, provider: brokerId },
-          select: { id: true, quantity: true },
+          select: { id: true, quantity: true, lastQuotedAt: true },
         });
-        existingPositions = positions.length;
+        const live = positions.filter((p: any) => isLivePosition(p.lastQuotedAt));
+        staleIgnoredPositions = positions.length - live.length;
+        existingPositions = live.length;
         if (existingPositions > 0) {
           reasons.push(`${existingPositions} open position(s) on ${brokerId.toUpperCase()}`);
+        }
+        if (staleIgnoredPositions > 0) {
+          // VISIBLE, not silent: ignoring rows is a decision, and a decision nobody can see is
+          // indistinguishable from a guard that stopped working.
+          this.logger.warn(
+            `Duplicate guard: ignored ${staleIgnoredPositions} stale position row(s) for ${ticker} on ${brokerId} ` +
+              '(not refreshed by a sync within the live window — they are not evidence of an open position)',
+          );
         }
       } catch (err) {
         this.logger.warn(`Position check failed for ${ticker}: ${(err as Error).message}`);
@@ -117,6 +138,7 @@ export class DuplicateGuardService {
       reason,
       existingPositions,
       recentTrades,
+      staleIgnoredPositions,
     };
   }
 
