@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { resolveEffectiveRole, directionAllowed } from '../../common/utils/signal-direction';
+// #882 — the ONE freshness bound, shared with the consumer gate (AutomationLoopService).
+import { getMaxSignalAgeMinutes } from '../../common/utils/signal-freshness';
 
 /** A per-protocol actionable signal record, ready for queue routing (#714). */
 export interface RoutableSignal {
@@ -140,6 +142,65 @@ export class SignalQueueService {
           pid, ...silent,
         );
         this.logger.log(`Queue void: ${pid} dropped non-signalling symbol(s) [${silent.join(', ')}]`);
+      }
+
+      // ── Expiry sweep (#882) — the void pass's missing counterpart ──────────────────────────
+      //
+      // The void pass above only sees pairs scored THIS run, so an entry whose pair stops being
+      // scored is never voided by it — it is IMMORTAL. On 2026-09-21 one such entry executed 120
+      // hours after it was first queued. Two rules close the hole. Both ARCHIVE
+      // (`status = 'expired'`), never delete: the row is evidence of what the pipeline saw, and
+      // a later re-signal resurrects it to `pending` through the existing upsert.
+      //
+      // ⚠️ The log MUST distinguish the two causes from each other and from 'Queue void':
+      //   void   = the protocol re-scored and did not signal;
+      //   expire = we stopped looking (stale) OR nothing can ever consume it (unconsumable).
+      // Conflating these is how this defect stayed invisible; do not merge the messages.
+      //
+      // No local `.catch` here on purpose: if the sweep cannot read or write, the OUTER handler
+      // logs `Signal queue sync failed` and a human can see it. A swallowed error would make the
+      // sweep a silent no-op — worse than no sweep, because the guard would appear to exist.
+      const maxAgeMin = getMaxSignalAgeMinutes();
+
+      // Rule 1 — STALENESS: last confirmation older than the bound. `updatedAt`, never
+      // `createdAt`: a live, re-signalling entry keeps a fresh `updatedAt` while its `createdAt`
+      // ages, and must NOT expire (see signal-freshness.ts for why the default is 360m).
+      const staleRows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT id, symbol, protocolId, TIMESTAMPDIFF(MINUTE, updatedAt, UTC_TIMESTAMP()) AS ageMin
+           FROM strategy_signal_queue
+          WHERE status = 'pending' AND updatedAt < UTC_TIMESTAMP() - INTERVAL ? MINUTE`,
+        maxAgeMin,
+      );
+      if (Array.isArray(staleRows) && staleRows.length > 0) {
+        await (this.prisma as any).$executeRawUnsafe(
+          `UPDATE strategy_signal_queue
+              SET status = 'expired', updatedAt = UTC_TIMESTAMP()
+            WHERE status = 'pending' AND updatedAt < UTC_TIMESTAMP() - INTERVAL ? MINUTE`,
+          maxAgeMin,
+        );
+        this.logger.log(
+          `Queue expire: ${staleRows.length} pending entry(ies) no longer observed — last confirmed > ${maxAgeMin}m ago ` +
+          `[${staleRows.map((r: any) => `${r.symbol} ${Math.round(Number(r.ageMin))}m`).join(', ')}]`,
+        );
+      }
+
+      // Rule 2 — UNCONSUMABLE: no active bot+subscription can EVER drain this entry (bot
+      // deactivated or its subscription removed). The consumer selects with `ts.active = 1`, so
+      // these rows are invisible to it forever — they expire regardless of age, same pass.
+      const unconsumable = await (this.prisma as any).$executeRawUnsafe(
+        `UPDATE strategy_signal_queue q
+            SET status = 'expired', updatedAt = UTC_TIMESTAMP()
+          WHERE q.status = 'pending'
+            AND NOT EXISTS (
+              SELECT 1 FROM trading_strategy ts
+              JOIN strategy_protocol sp ON sp.strategyId = ts.id
+              WHERE ts.id = q.strategyId AND ts.active = 1 AND sp.protocolId = q.protocolId
+            )`,
+      );
+      if (typeof unconsumable === 'number' && unconsumable > 0) {
+        this.logger.log(
+          `Queue expire: ${unconsumable} pending entry(ies) with no active bot subscription (bot/protocol deactivated)`,
+        );
       }
     } catch (err) {
       this.logger.warn(`Signal queue sync failed: ${(err as Error).message}`);

@@ -72,6 +72,9 @@ import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style
 // `score.signal === 'SELL'` misses `STRONG_SELL`, which dispatched a BUY on the strongest bearish
 // signal. See `signal-direction.ts`.
 import { signalToSide, directionToSide } from '../../common/utils/signal-direction';
+// ⚠️ #882 — the ONE freshness bound, shared with the queue sweep (signal-queue.service.ts).
+// The consumer gate must refuse what the sweep expires; a second literal here would drift.
+import { getMaxSignalAgeMinutes, signalAgeMinutes } from '../../common/utils/signal-freshness';
 import { computeMarketStatus } from '../directives/market-status';
 // #849 (2026-09-17) — the layer kill switches and bot-queue settings are declared settings now.
 // ⚠️ The DEFAULTS in settings-registry.ts are load-bearing: `automation.tradingEnabled` is false, and it
@@ -156,6 +159,24 @@ export interface BrokerLoopState {
   scoreIntervalMs: number;
   tradeThreshold: number;
   requireConfirmation: boolean;
+  /**
+   * Open positions held at this broker, as MEASURED on the last tick.
+   *
+   * ⚠️ THREE STATES — do not collapse them:
+   *   number → measured this tick
+   *   0      → measured, and the broker genuinely holds none
+   *   null   → NOT MEASURED (no adapter yet, the fetch threw, or no tick has run)
+   *
+   * WHY THIS FIELD IS SPELLED OUT AT ALL: `MarketTape` and the Automation Pulse widget both
+   * READ `brokerStates[*].positionCount`, but nothing ever WROTE it. `(b.positionCount || 0)`
+   * turned "not reported" into a confident `0`, so the header tape displayed "0 positions"
+   * permanently — while MT5 actually held five. A field that is read but never written looks
+   * exactly like a field that is always zero, and no error is raised either way.
+   *
+   * Every reader MUST render `null` as unknown (`?`), never as `0`.
+   * `MetaStackCockpitPage` already does this correctly — follow that.
+   */
+  positionCount?: number | null;
 }
 
 export interface PendingAction {
@@ -569,6 +590,7 @@ export class AutomationLoopService implements OnModuleInit {
         scoreIntervalMs: 300000,
         tradeThreshold: 3,
         requireConfirmation: true,
+        positionCount: null, // not measured until the first successful tick fetch
       };
       this.logger.log('Auto-created MT5 broker state (was missing after initBrokerStates)');
     }
@@ -614,6 +636,9 @@ export class AutomationLoopService implements OnModuleInit {
           scoreIntervalMs: 300000,
           tradeThreshold: getStyleThreshold(), // Per-protocol — updated when strategies load
           requireConfirmation: true,
+          // null = not measured yet. NOT 0 — no tick has run, so the count is unknown,
+          // not zero. See BrokerLoopState.positionCount for why this distinction is load-bearing.
+          positionCount: null,
         };
       }
     }
@@ -992,6 +1017,9 @@ export class AutomationLoopService implements OnModuleInit {
             `  ${brokerId}: NO ADAPTER INSTANCE — its positions were NOT fetched this tick ` +
             '(adapter not registered yet?)',
           );
+          // UNKNOWN, not zero — this broker's positions were never fetched. Setting 0 here
+          // is what made the tape claim "0 positions" with confidence it had not earned.
+          brokerState.positionCount = null;
           continue;
         }
         if (!adapter.supportsBrokerage || !adapter.getPositions) continue;
@@ -1002,6 +1030,9 @@ export class AutomationLoopService implements OnModuleInit {
             : { positions: await adapter.getPositions(), authoritative: false };
           const positions = snapshot.positions;
           this.logger.log(`  ${brokerId}: ${positions.length} positions`);
+          // MEASURED this tick. A literal 0 here is a real "holds none" and is distinct
+          // from the null above and below. This is the only place the count becomes known.
+          brokerState.positionCount = positions.length;
           allPositions.push(...positions);
 
           // Sync positions → DB (two-way data flow #470, broker-agnostic)
@@ -1038,6 +1069,10 @@ export class AutomationLoopService implements OnModuleInit {
           }));
           await this.positionSync.syncPositions(brokerId, normalised, { authoritative, accountId });
         } catch (err) {
+          // Measurement FAILED. Reset to unknown rather than leaving the previous tick's number —
+          // a stale count presented as current is worse than an admitted gap, because nothing
+          // downstream can tell it is out of date.
+          brokerState.positionCount = null;
           this.logger.warn(`  ${brokerId}: failed to fetch positions — ${(err as Error).message}`);
         }
       }
@@ -1644,12 +1679,17 @@ export class AutomationLoopService implements OnModuleInit {
         `SELECT q.id, q.strategyId, q.symbol, q.protocolId, q.direction, q.\`signal\`,
                 CAST(q.compositePct AS DECIMAL(10,4)) AS compositePct,
                 CAST(q.combinedStrength AS DECIMAL(10,4)) AS combinedStrength,
-                q.scoreId, q.createdAt
+                q.scoreId, q.createdAt, q.updatedAt
          FROM strategy_signal_queue q
          JOIN trading_strategy ts ON ts.id = q.strategyId
          WHERE q.status = 'pending' AND ts.active = 1
          ORDER BY COALESCE(q.combinedStrength, 0) DESC, q.createdAt ASC`,
       ).catch(() => []);
+      // ⚠️ `createdAt ASC` as the strength tiebreak was reviewed under #882 and KEPT: the
+      // freshness gate below guarantees every candidate is actively re-confirmed, so
+      // "longest-waiting live signal first" is FIFO among equals — fair, and no longer
+      // capable of preferring a dead entry. Before that gate it preferred the STALEST entry
+      // on every strength tie; if the freshness gate is ever removed, THIS ORDERING MUST GO.
       if (!Array.isArray(pendingRows) || pendingRows.length === 0) return;
 
       const stratById = new Map(strategies.map((s: any) => [s.id, s]));
@@ -1683,6 +1723,35 @@ export class AutomationLoopService implements OnModuleInit {
         // same number the retired scoring path compared. combinedStrength stays
         // for logs/display only.
         const gatePct = Number(head.compositePct ?? 0);
+
+        // ── FRESHNESS GATE (#882) — checked FIRST, before any other evaluation ──
+        //
+        // A pending entry whose last confirmation (`updatedAt`) is older than the shared bound
+        // is no longer being observed: the void pass cannot see it (its pair is not scored),
+        // and on 2026-09-21 one such entry executed 120 hours after insertion and an order was
+        // placed on a 20.6-hour-old score. Refused for the right reason, offered exactly once,
+        // then archived — the row survives, it just never gets another chance to be executed.
+        //
+        // `updatedAt`, NOT `createdAt`: a live session bot's entry is re-confirmed every
+        // scoring run and keeps a fresh `updatedAt` — that waiting is intended and must never
+        // expire (an earlier pass ordered by `createdAt` and overstated staleness 5 of 7 times).
+        const maxAgeMin = getMaxSignalAgeMinutes();
+        const ageMin = signalAgeMinutes(head.updatedAt);
+        if (ageMin > maxAgeMin) {
+          await (this.prisma as any).$executeRawUnsafe(
+            `UPDATE strategy_signal_queue SET status = 'expired', updatedAt = UTC_TIMESTAMP() WHERE id = ? AND status = 'pending'`,
+            head.id,
+          ).catch(() => {});
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'SKIP',
+            reason: `[QueueBot] expired — last confirmed ${ageMin}m ago (> ${maxAgeMin}m max): no longer observed, not executed`,
+            compositePct: gatePct, signal: 'HOLD',
+          });
+          continue;
+        }
+
         // ⚠️ Single authority for direction → side. This read
         // `head.direction === 'SHORT' ? 'SELL' : 'BUY'`, so ANY unrecognised direction silently
         // became a BUY. Combined with the router's `startsWith('SELL')` bug, a STRONG_SELL reached
@@ -1874,6 +1943,20 @@ export class AutomationLoopService implements OnModuleInit {
               `UPDATE strategy_signal_queue SET status = 'executed', updatedAt = UTC_TIMESTAMP() WHERE id = ? AND status = 'pending'`,
               head.id,
             ).catch(() => {});
+            // ── #882 — record HOW OLD the signal was when it became an order ──
+            //
+            // The number is freshness, not waiting time: minutes between the queue entry's
+            // LAST CONFIRMATION (its `updatedAt` before this write) and execution. A 120h-old
+            // entry and a 20.6h-old score were both discovered only by a bespoke query after
+            // the fact; this field makes staleness-at-execution answerable directly. NULL on
+            // every non-queue path — absence, not a zero. Best-effort: never blocks dispatch.
+            const executedTicket = typeof last.ticket === 'number' ? last.ticket : null;
+            if (executedTicket != null) {
+              await (this.prisma as any).$executeRawUnsafe(
+                `UPDATE trade SET signalAgeAtExecutionMinutes = ? WHERE provider = ? AND brokerTicket = ?`,
+                ageMin, strategy.brokerId || 'mt5', String(executedTicket),
+              ).catch(() => {});
+            }
           }
           this.lastBotTradeAt.set(strategy.id, Date.now());
           this.lastBotTradeAnyAt = Date.now();

@@ -891,6 +891,16 @@ model Trade {
   // honest: it says "the broker did it and did not say why" rather than guessing.
   closeReason       String?  @db.VarChar(60)
 
+  // ── Signal age at execution (#882) ───────────────────────────────────────
+  // ⚠️ FRESHNESS, not waiting time: minutes between the queue entry's LAST CONFIRMATION
+  // (`strategy_signal_queue.updatedAt`) and the moment it became an order. Writer:
+  // AutomationLoopService.processSignalQueues, best-effort UPDATE by provider+brokerTicket.
+  // NULL on every path that does not come from strategy_signal_queue (manual, paper,
+  // backtest) — absence, not a zero. WHY: a 120-hour-old queue entry executed on 2026-09-21
+  // and an order was placed on a 20.6-hour-old score, and NOTHING recorded how stale a
+  // signal was at execution — it was discoverable only by a bespoke reconstruction.
+  signalAgeAtExecutionMinutes Int?
+
   // ── P&L validity (bridge bug, pre-2026-09-10) ────────────────────────────
   // ⚠️ These four columns EXISTED IN THE DATABASE but were MISSING FROM THIS MODEL until
   // 2026-09-12, so Prisma could neither read nor write them. That omission is how a
