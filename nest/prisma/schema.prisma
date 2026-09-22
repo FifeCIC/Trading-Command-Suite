@@ -863,6 +863,12 @@ model Trade {
   tp                Float?   // Take-profit price
   magic             Int?     // MT5 magic number
   swap              Float?   // Accumulated swap
+  /// #777 cost model — persisted from the CLOSING DEALS at finalise time. NULL means "not captured
+  /// for this row" (closed before 2026-09-22), NEVER zero: a 0 would claim the broker charged
+  /// nothing, which is the fabrication class these columns exist to end. `grossPnl` in the
+  /// per-protocol view is computed only over rows that carry these values.
+  commission        Float?
+  fee               Float?
   brokerComment     String?  @db.VarChar(200) // MT5 position comment
 
   // ── WHY this trade closed ─────────────────────────────────────────────────

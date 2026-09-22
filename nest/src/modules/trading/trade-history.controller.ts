@@ -371,11 +371,15 @@ export class TradeHistoryController {
    *
    * "Absence must not become a number" — the same invariant as #766.
    *
-   * ⚠️ COSTS ARE NOT AVAILABLE AND THIS SAYS SO RATHER THAN REPORTING 0 (#777 criterion 2).
-   * Measured 2026-09-17: `trade.swap` is null on **0 of 129** having a value, and there is **no
-   * `commission` column at all**. So a `costs: 0` here would be a fabricated number of exactly the
-   * kind this issue exists to remove. `grossPnl` equals `netPnl` *because costs are unmeasured*, not
-   * because they are zero — the response states that explicitly so no reader can misread it.
+   * ⚠️ COSTS — the history, because the honest answer changed on 2026-09-22 (#777 criterion 2).
+   * Measured 2026-09-17: `trade.swap` was null on every row and there was **no `commission`
+   * column at all**, so the endpoint served `costs.available: false` and `grossPnl === netPnl`
+   * *because costs were unmeasured, NOT because they were zero*. That was the honest answer then.
+   * NOW: `position-sync.finalizeClosedPosition()` persists `commission` / `swap` / `fee` from the
+   * CLOSING DEALS (the same sums `pnl` is built from), so coverage grows with each close.
+   * `grossPnl` is served per protocol ONLY when every usable row in that protocol carries all
+   * three components — `null` otherwise, because a gross figure over a partially-costed sample is
+   * not a gross figure. `grossPnlCoverage` states which case each protocol is in.
    */
   @Get('protocol-profitability')
   async getProtocolProfitability() {
@@ -384,6 +388,9 @@ export class TradeHistoryController {
       select: {
         id: true, symbol: true, side: true, pnl: true, exitPrice: true,
         pnlInvalid: true, scoringStrategyId: true, openedAt: true, closedAt: true,
+        // #777 — the persisted cost components (from closing deals). NULL = not captured for
+        // that row (closed before 2026-09-22), never zero — see the `costs` block in the response.
+        commission: true, swap: true, fee: true,
       },
       orderBy: { closedAt: 'desc' },
       take: 5000,
@@ -470,6 +477,11 @@ export class TradeHistoryController {
       symbols: Set<string>;
       firstAt: Date | null;
       lastAt: Date | null;
+      costCommission: number;
+      costSwap: number;
+      costFee: number;
+      rowsWithCosts: number;
+      rowsWithoutCosts: number;
     };
     const buckets = new Map<string, Bucket>();
 
@@ -493,6 +505,7 @@ export class TradeHistoryController {
           protocolName: proto?.name ?? 'Not attributed to a protocol',
           usable: 0, wins: 0, losses: 0, flat: 0, netPnl: 0, winPnl: 0, lossPnl: 0,
           best: null, worst: null, holdMinutes: [], symbols: new Set(), firstAt: null, lastAt: null,
+          costCommission: 0, costSwap: 0, costFee: 0, rowsWithCosts: 0, rowsWithoutCosts: 0,
         });
       }
       const b = buckets.get(key)!;
@@ -500,6 +513,17 @@ export class TradeHistoryController {
 
       b.usable++;
       b.netPnl += pnl;
+      // Cost capture: a row counts as captured only when ALL THREE components are present.
+      // A partially-captured row would silently understate costs, which is the same shape of
+      // error as a missing cost reported as 0.
+      if (t.commission != null && t.swap != null && t.fee != null) {
+        b.costCommission += Number(t.commission);
+        b.costSwap += Number(t.swap);
+        b.costFee += Number(t.fee);
+        b.rowsWithCosts++;
+      } else {
+        b.rowsWithoutCosts++;
+      }
       b.symbols.add(t.symbol);
       if (pnl > 0) { b.wins++; b.winPnl += pnl; }
       else if (pnl < 0) { b.losses++; b.lossPnl += pnl; }
@@ -530,30 +554,51 @@ export class TradeHistoryController {
     /** ⚠️ Below this, a win rate is noise. Stated per protocol rather than implied. */
     const MIN_SAMPLE_FOR_VERDICT = 20;
 
-    const perProtocol = [...buckets.values()].map((b) => ({
-      protocolId: b.protocolId,
-      protocolSlug: b.protocolSlug,
-      protocolName: b.protocolName,
-      trades: b.usable,
-      netPnl: r2(b.netPnl),
-      // Equals netPnl BECAUSE COSTS ARE UNMEASURED — see the `costs` block below.
-      grossPnl: r2(b.netPnl),
-      wins: b.wins,
-      losses: b.losses,
-      flat: b.flat,
-      winRate: b.usable ? r2((b.wins / b.usable) * 100) : null,
-      avgWin: b.wins ? r2(b.winPnl / b.wins) : null,
-      avgLoss: b.losses ? r2(b.lossPnl / b.losses) : null,
-      bestTrade: b.best === null ? null : r2(b.best),
-      worstTrade: b.worst === null ? null : r2(b.worst),
-      medianHoldMinutes: median(b.holdMinutes) === null ? null : Math.round(median(b.holdMinutes)!),
-      symbolsTraded: b.symbols.size,
-      firstTradeAt: b.firstAt,
-      lastTradeAt: b.lastAt,
-      inconclusive: b.usable < MIN_SAMPLE_FOR_VERDICT,
-    })).sort((a, b) => b.trades - a.trades);
+    const perProtocol = [...buckets.values()].map((b) => {
+      const costsCaptured = b.rowsWithCosts === b.usable && b.usable > 0;
+      const costTotal = b.costCommission + b.costSwap + b.costFee;
+      return {
+        protocolId: b.protocolId,
+        protocolSlug: b.protocolSlug,
+        protocolName: b.protocolName,
+        trades: b.usable,
+        netPnl: r2(b.netPnl),
+        /**
+         * NET is `pnl` as stored — the broker's own sum (profit + commission + swap + fee).
+         * GROSS is served ONLY when EVERY usable row in this protocol carries captured costs;
+         * `null` otherwise, because a gross figure over a partially-costed sample is not a gross
+         * figure. `grossPnlCoverage` always states which case this is. (#777)
+         */
+        grossPnl: costsCaptured ? r2(b.netPnl - costTotal) : null,
+        grossPnlCoverage: { withCosts: b.rowsWithCosts, withoutCosts: b.rowsWithoutCosts },
+        costs: costsCaptured
+          ? {
+              // Signed as the broker charged them (costs are negative). Total is the amount that
+              // sits INSIDE netPnl, so grossPnl = netPnl - total, exactly.
+              commission: r2(b.costCommission),
+              swap: r2(b.costSwap),
+              fee: r2(b.costFee),
+              total: r2(costTotal),
+            }
+          : null,
+        wins: b.wins,
+        losses: b.losses,
+        flat: b.flat,
+        winRate: b.usable ? r2((b.wins / b.usable) * 100) : null,
+        avgWin: b.wins ? r2(b.winPnl / b.wins) : null,
+        avgLoss: b.losses ? r2(b.lossPnl / b.losses) : null,
+        bestTrade: b.best === null ? null : r2(b.best),
+        worstTrade: b.worst === null ? null : r2(b.worst),
+        medianHoldMinutes: median(b.holdMinutes) === null ? null : Math.round(median(b.holdMinutes)!),
+        symbolsTraded: b.symbols.size,
+        firstTradeAt: b.firstAt,
+        lastTradeAt: b.lastAt,
+        inconclusive: b.usable < MIN_SAMPLE_FOR_VERDICT,
+      };
+    }).sort((a, b) => b.trades - a.trades);
 
     const usableTotal = perProtocol.reduce((s, p) => s + p.trades, 0);
+    const usableWithCosts = perProtocol.reduce((s, p) => s + p.grossPnlCoverage.withCosts, 0);
 
     // ─────────────────────────────────────────────────────────────────────────────────────
     // DENOMINATION — measured 2026-09-17.
@@ -598,15 +643,21 @@ export class TradeHistoryController {
           'USD figures (or with a USD price difference) will be wrong by the FX rate.',
       },
       costs: {
-        available: false,
-        // ⚠️ NOT zero — UNMEASURED. A 0 here would be the exact fabrication this endpoint exists to
-        // prevent, and on 0.01-lot FX a few pence of spread decides whether a scalp is viable.
-        commission: null,
-        swap: null,
-        reason:
-          'Not captured on `trade`: `swap` is null on all strategy rows and there is no `commission` ' +
-          'column. The bridge returns commission and swap on closing deals but they are not ' +
-          'persisted. grossPnl === netPnl because costs are unmeasured, NOT because they are zero.',
+        available: usableWithCosts > 0,
+        /** Rows whose cost components are captured, out of all usable rows. */
+        coverage: { withCosts: usableWithCosts, usableTotal },
+        // ⚠️ NOT zero when absent — UNMEASURED. A 0 here would be the exact fabrication this
+        // endpoint exists to prevent, and on 0.01-lot FX a few pence of spread decides viability.
+        reason: usableWithCosts > 0
+          ? 'Persisted per trade from the CLOSING DEALS at finalise time (commission, swap, fee). ' +
+            'netPnl already contains them; grossPnl is served per protocol only when every usable ' +
+            'row in that protocol carries them. ⚠️ SPREAD IS NOT HERE: commission/swap/fee are deal ' +
+            'FIELDS, while spread lives inside the fill prices and cannot be recovered from a deal ' +
+            'list — so grossPnl is net PLUS itemised costs, not a spread-free figure.'
+          : 'Not yet captured on any usable row: rows closed before 2026-09-22 carry NULL costs. ' +
+            'The bridge returns commission/swap/fee on closing deals and position-sync now ' +
+            'persists them — coverage grows with each close. grossPnl is null until then; it is ' +
+            'explicitly NOT equal to netPnl by definition.',
       },
       threshold: { minSampleForVerdict: MIN_SAMPLE_FOR_VERDICT },
       /**

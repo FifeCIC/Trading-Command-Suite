@@ -193,7 +193,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
     expect(p.winRate).toBe(33.33);
   });
 
-  it('reports costs as UNMEASURED (null + available:false), never as zero', async () => {
+  it('reports costs as UNMEASURED (available:false, coverage 0, grossPnl null), never as zero', async () => {
     const { controller } = build({
       trades: [goodTrade({ pnl: 10 })],
       bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
@@ -203,11 +203,54 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
     const res: any = await controller.getProtocolProfitability();
 
     expect(res.costs.available).toBe(false);
-    expect(res.costs.commission).toBeNull();
-    expect(res.costs.swap).toBeNull();
-    // A 0 here would be the fabrication this endpoint exists to prevent.
-    expect(res.costs.commission).not.toBe(0);
-    expect(res.costs.swap).not.toBe(0);
+    expect(res.costs.coverage).toEqual({ withCosts: 0, usableTotal: 1 });
+    // ⚠️ #777 — grossPnl is null, NOT equal to netPnl: a gross figure over an uncosted sample
+    // is not a gross figure. A 0 anywhere here would be the fabrication this endpoint prevents.
+    expect(res.protocols[0].grossPnl).toBeNull();
+    expect(res.protocols[0].costs).toBeNull();
+    expect(res.protocols[0].grossPnlCoverage).toEqual({ withCosts: 0, withoutCosts: 1 });
+    expect(res.costs.commission).toBeUndefined();
+  });
+
+  it('computes grossPnl from CAPTURED costs, and states the coverage', async () => {
+    const { controller } = build({
+      trades: [
+        goodTrade({ id: 'a', pnl: -10, commission: -0.4, swap: -0.1, fee: 0 }),
+        goodTrade({ id: 'b', pnl: 4, commission: -0.4, swap: -0.1, fee: 0 }),
+      ],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      protocols: [PROTOCOL],
+    });
+
+    const res: any = await controller.getProtocolProfitability();
+    const p = res.protocols[0];
+
+    expect(res.costs.available).toBe(true);
+    expect(res.costs.coverage).toEqual({ withCosts: 2, usableTotal: 2 });
+    expect(p.costs).toEqual({ commission: -0.8, swap: -0.2, fee: 0, total: -1 });
+    // net −6, costs inside it −1.00 → gross −5.00. Exact, not estimated.
+    expect(p.netPnl).toBe(-6);
+    expect(p.grossPnl).toBe(-5);
+    expect(p.grossPnlCoverage).toEqual({ withCosts: 2, withoutCosts: 0 });
+  });
+
+  it('refuses a gross figure when costs cover only PART of the protocol — half-costed is not costed', async () => {
+    const { controller } = build({
+      trades: [
+        goodTrade({ id: 'a', pnl: -10, commission: -0.4, swap: -0.1, fee: 0 }),
+        goodTrade({ id: 'b', pnl: 4 }),
+      ],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      protocols: [PROTOCOL],
+    });
+
+    const res: any = await controller.getProtocolProfitability();
+    const p = res.protocols[0];
+
+    expect(p.grossPnl).toBeNull();
+    expect(p.grossPnlCoverage).toEqual({ withCosts: 1, withoutCosts: 1 });
+    // The net figure is still exact — it is the stored pnl either way.
+    expect(p.netPnl).toBe(-6);
   });
 
   it('labels the currency the money is in, and does not assume USD', async () => {

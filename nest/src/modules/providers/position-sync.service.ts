@@ -494,6 +494,10 @@ export class PositionSyncService {
     // `undefined` until the bridge is redeployed with the field; see close-reason.ts.
     let dealReason: number | undefined;
     let dealComment: string | undefined;
+    // #777 — the COST COMPONENTS of the close, from the same deals the net is summed from.
+    // NULL until (and unless) closing deals are found: "not captured" must be distinguishable
+    // from "charged nothing", because on 0.01-lot FX a few pence decides whether a scalp works.
+    let costComponents: { commission: number; swap: number; fee: number } | null = null;
     try {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
@@ -540,6 +544,13 @@ export class PositionSyncService {
             : Number(exitDeals[exitDeals.length - 1].price || 0);
           realizedPnl = exitDeals.reduce((sum: number, d: any) =>
             sum + Number(d.profit || 0) + Number(d.commission || 0) + Number(d.swap || 0) + Number(d.fee || 0), 0);
+          // `pnl` ALREADY includes these (it is profit + commission + swap + fee). Storing them
+          // separately is what makes `grossPnl` computable without inventing a spread model.
+          costComponents = {
+            commission: exitDeals.reduce((s: number, d: any) => s + Number(d.commission || 0), 0),
+            swap: exitDeals.reduce((s: number, d: any) => s + Number(d.swap || 0), 0),
+            fee: exitDeals.reduce((s: number, d: any) => s + Number(d.fee || 0), 0),
+          };
           // Prefer the broker's real close time over "now" (a reconciliation
           // pass can finalise a trade days after the broker closed it).
           const lastExitTime = exitDeals[exitDeals.length - 1]?.time;
@@ -583,15 +594,40 @@ export class PositionSyncService {
       // strategy that does not exist.
       const strategy = resolveStrategyForClose(trade.strategy, trade.brokerComment, dealComment);
 
+      // ── #777 — a close with NO price has NO result ─────────────────────────────
+      // The old write was `pnl: realizedPnl ?? trade.pnl ?? null`, and `realizedPnl` could be a
+      // last-snapshot profit of 0 — which is how SIX closed rows came to claim a break-even with
+      // no exit price at all (swept 2026-09-22: pnl -> NULL, quarantined with a reason). A stale
+      // snapshot is not a close result; an unknown stays unknown and is flagged, and the views
+      // exclude-and-count it. An EXISTING pnl is never erased — only an absent one stays absent.
+      const resolvedExit = exitPrice ?? trade.exitPrice ?? null;
+      const exitKnown = resolvedExit != null;
+      const pnlValue = exitKnown ? (realizedPnl ?? trade.pnl ?? null) : (trade.pnl ?? null);
+      const pnlUnknown = pnlValue == null;
+
       await this.prisma.trade.update({
         where: { id: trade.id },
         data: {
           status: 'closed',
-          exitPrice: exitPrice ?? trade.exitPrice ?? null,
-          pnl: realizedPnl ?? trade.pnl ?? null,
+          exitPrice: resolvedExit,
+          pnl: pnlValue,
           closedAt: closedAt ?? new Date(),
           closeReason,
           ...(strategy ? { strategy } : {}),
+          ...(costComponents
+            ? {
+                commission: Math.round(costComponents.commission * 100) / 100,
+                swap: Math.round(costComponents.swap * 100) / 100,
+                fee: Math.round(costComponents.fee * 100) / 100,
+              }
+            : {}),
+          ...(pnlUnknown
+            ? {
+                pnlInvalid: 1,
+                pnlInvalidReason:
+                  'exit-unknown: position vanished; no broker deal history and no last price',
+              }
+            : {}),
         },
       });
 
