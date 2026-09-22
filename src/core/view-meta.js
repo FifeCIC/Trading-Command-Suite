@@ -91,6 +91,12 @@ const VIEW_META = {
     css: 'src/pages/trading-strategies.css',
     api: ['GET /api/trading/strategies', 'GET /api/portfolio'],
   },
+  '/trading/ab-strategies': {
+    label: 'A/B Strategies',
+    file: 'src/pages/AbStrategiesPage.jsx',
+    css: 'src/pages/ab-strategies.module.css',
+    api: ['GET /api/scoring/strategies/derived', 'GET /api/scoring/strategy-registry'],
+  },
   '/trading/strategy-comparison': {
     label: 'Trading Strategy Comparison',
     file: 'src/pages/StrategyComparisonPage.jsx',

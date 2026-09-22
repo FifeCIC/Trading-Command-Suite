@@ -144,6 +144,10 @@ export const NAV_TREE = {
       // Placed directly under Trading Bots so the pair reads as "the execution policy" vs
       // "the combinations". Names/ids for these live in the #875 registry, not in this tree.
       { id: 'strategies-derived', label: 'Strategies', icon: '🧩' },
+      // A/B view for the same strategies (owner, 2026-09-22): two configurations side by side
+      // with every differing value marked. The pair is data (?pair=keyA,keyB), not a control —
+      // the same decision the A/B Ladder records.
+      { id: 'ab-strategies', label: 'A/B Strategies', icon: '🆚' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },

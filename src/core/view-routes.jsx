@@ -28,6 +28,7 @@ import ViewStrategyPage from '../pages/ViewStrategyPage.jsx';
 // #876 — STRATEGIES, derived from unique (protocol x treatment) combinations. Different from
 // `Trading Bots` above, which lists `trading_strategy` ROWS.
 import DerivedStrategiesPage from '../pages/DerivedStrategiesPage.jsx';
+import AbStrategiesPage from '../pages/AbStrategiesPage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
 import CalculatorsPage from '../pages/CalculatorsPage.jsx';
@@ -217,6 +218,8 @@ export const VIEW_COMPONENTS = {
   'strategy-detail': ViewStrategyPage,
   // #876 — the strategies themselves: one card per distinct (protocol x treatment).
   'strategies-derived': DerivedStrategiesPage,
+  // Two of those strategies side by side, diffs marked (owner, 2026-09-22).
+  'ab-strategies': AbStrategiesPage,
   // Trading — Legacy strategy pages (under review)
   'trading-strategies': TradingStrategiesPage,
   'strategy-comparison': StrategyComparisonPage,

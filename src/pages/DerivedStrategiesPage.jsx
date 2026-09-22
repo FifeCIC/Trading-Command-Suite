@@ -49,6 +49,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPatch } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error.js';
 import NoticeBlock from '../components/NoticeBlock';
+import TypeTag from '../components/TypeTag';
+import { StrategyBots, StrategyWarnings, DriftNote } from '../components/StrategyBits';
+import { useStrategyRegistry } from '../hooks/useStrategyRegistry';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import { useScrollReveal } from '../hooks/useScrollReveal';
@@ -134,7 +137,7 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
         <code className={styles.key} title="SHA-256 over protocol + role + market + broker + treatment.">
           {strategy.strategyKey}
         </code>
-        <span className={styles.protocol}>{strategy.protocolIds.join(' + ')}</span>
+        <span className={styles.protocol}>{strategy.protocolIds.join(' + ')}<TypeTag kind="proto" /></span>
         {strategy.protocolRoles.map((r) => (
           <span className={styles.role} key={r}>{r}</span>
         ))}
@@ -149,7 +152,7 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
       {/* #875 — the registered identity: a name + a stable id. NEVER the content key. */}
       {reg ? (
         <div className={styles.regBar}>
-          <span className={styles.regName}>{reg.name || 'Unnamed'}</span>
+          <span className={styles.regName}>{reg.name || 'Unnamed'}<TypeTag kind="strategy" /></span>
           <span
             className={styles.regBadge}
             title={reg.source === 'auto'
@@ -186,25 +189,9 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
 
       {/* #875 — drift: this card IS the current configuration of a registered strategy whose parts
           changed. The name survives (it is pinned to the id, not the key); the owner re-accepts or
-          edits the bot back. */}
-      {drift && (
-        <div className={styles.drift}>
-          <strong>Drift vs “{drift.name || drift.id.slice(0, 8)}”.</strong>{' '}
-          This configuration differs from the accepted definition.
-          {drift.changed?.length > 0 && (
-            <ul className={styles.driftList}>
-              {drift.changed.map((c) => (
-                <li key={c.field}>
-                  <code>{c.field}</code>: {c.from} → {c.to}
-                </li>
-              ))}
-            </ul>
-          )}
-          <button className={styles.regBtn} onClick={onReaccept} disabled={saving}>
-            Re-accept this configuration
-          </button>
-        </div>
-      )}
+          edits the bot back. Shared component — the A/B Strategies page renders the same note
+          READ-ONLY (it passes no onReaccept). */}
+      <DriftNote drift={drift} onReaccept={onReaccept} saving={saving} />
 
       <div className={styles.treatment}>
         {field('timeframe', t.timeframe, '—')}
@@ -221,26 +208,9 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
 
       <SymbolChips symbols={strategy.symbols} />
 
-      <div className={styles.bots}>
-        {strategy.botNames.join(' · ')}
-      </div>
+      <StrategyBots names={strategy.botNames} />
 
-      {duplicates.length > 0 && (
-        <span className={styles.warn}>
-          <strong>⚠️ Duplicate bots.</strong>{' '}
-          {duplicates.length} bots are identical on protocol, role, market, broker and treatment:{' '}
-          {duplicates.join(' == ')}. These should not both exist — one should be removed. (#876)
-        </span>
-      )}
-
-      {unreachable.length > 0 && (
-        <span className={styles.warn}>
-          <strong>⚠️ Can never trade.</strong>{' '}
-          {unreachable.length === 1 ? 'This bot has' : 'These bots have'} no{' '}
-          <code>strategy_protocol</code> subscription, so signal routing skips{' '}
-          {unreachable.length === 1 ? 'it' : 'them'} silently: {unreachable.join(', ')}. (#874)
-        </span>
-      )}
+      <StrategyWarnings botNames={strategy.botNames} unreachableBotNames={strategy.unreachableBotNames} />
     </li>
   );
 }
@@ -256,27 +226,10 @@ export default function DerivedStrategiesPage() {
 
   const strategies = useMemo(() => data?.strategies ?? [], [data]);
 
-  // #875 — the registry half. A failure here must NOT blank the derived list (identities are an
-  // overlay, not the data), so the error is swallowed into an empty overlay and cards simply
-  // show "Not registered".
-  const registryQuery = useQuery({
-    queryKey: ['strategies', 'registry'],
-    queryFn: () => apiGet(API_REGISTRY).catch(() => ({ strategies: [] })),
-    staleTime: 30_000,
-  });
-  const registry = useMemo(() => {
-    const rows = registryQuery.data?.strategies ?? [];
-    return {
-      rows,
-      byKey: new Map(rows.map((r) => [r.strategyKey, r])),
-      driftByCurrentKey: new Map(
-        rows
-          .filter((r) => r.status === 'drifted' && r.current?.strategyKey)
-          .map((r) => [r.current.strategyKey, r]),
-      ),
-      unmaterialised: rows.filter((r) => r.status === 'unmaterialised').length,
-    };
-  }, [registryQuery.data]);
+  // #875 — the registry half (shared hook: the A/B Strategies page reads the same overlay, so the
+  // two surfaces cannot disagree about a name or a drift status). A failure must NOT blank the
+  // derived list — the hook swallows it into an empty overlay and cards simply show "Not registered".
+  const registry = useStrategyRegistry();
 
   const queryClient = useQueryClient();
   const [editingKey, setEditingKey] = useState(null);

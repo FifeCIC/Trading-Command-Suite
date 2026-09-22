@@ -178,32 +178,17 @@
   margin-bottom: 12px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 74px;
-}
+/* ── Treatment field — SHARED primitive: components/strategy-common.module.css (single owner;
+   the A/B Strategies page composes the same rules — the duplication guard flagged the copies,
+   2026-09-22). ── */
 
-.fieldLabel {
-  font-size: 0.64rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-faint, var(--ink-soft));
-}
+.field { composes: field from '../components/strategy-common.module.css'; }
 
-.fieldValue {
-  font-size: 0.85rem;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
+.fieldLabel { composes: fieldLabel from '../components/strategy-common.module.css'; }
 
-/* NULL means "no limit" / "ungated" — a real value, NOT missing data. Rendered distinctly so it
-   is never read as a blank or a bug. */
-.fieldValueNull {
-  color: var(--ink-soft);
-  font-style: italic;
-}
+.fieldValue { composes: fieldValue from '../components/strategy-common.module.css'; }
+
+.fieldValueNull { composes: fieldValueNull from '../components/strategy-common.module.css'; }
 
 /* ── Symbols ────────────────────────────────────────────── */
 
@@ -228,30 +213,8 @@
   color: var(--ink-soft);
 }
 
-/* ── Bots + warnings ────────────────────────────────────── */
-
-.bots {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 0.78rem;
-  color: var(--ink-soft);
-}
-
-.warn {
-  display: block;
-  margin-top: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--risk-elevated);
-  border-radius: 8px;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--ink);
-}
-
-.warn strong {
-  color: var(--risk-elevated);
-}
+/* ── Bots line + warnings — rendered via StrategyBits; styles are owned by
+   components/strategy-common.module.css (extracted 2026-09-22). ── */
 
 /* ── States ─────────────────────────────────────────────── */
 
@@ -262,22 +225,9 @@
   font-size: 0.9rem;
 }
 
-.error {
-  padding: 16px 18px;
-  border: 1px solid var(--danger);
-  border-radius: 10px;
-  background: var(--bg-elev);
-  color: var(--ink);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
+.error { composes: error from '../components/strategy-common.module.css'; }
 
-.errorHint {
-  display: block;
-  margin-top: 6px;
-  font-size: 0.82rem;
-  color: var(--ink-soft);
-}
+.errorHint { composes: errorHint from '../components/strategy-common.module.css'; }
 
 /* ── #875 registry — naming, pinning, drift ─────────────────────────────────────────────── */
 .regBar {
@@ -305,18 +255,7 @@
   border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
   color: var(--ink-soft);
 }
-.regBtn {
-  font-size: 0.74rem;
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
-  background: transparent;
-  color: var(--ink, inherit);
-  cursor: pointer;
-}
-.regBtn:hover {
-  opacity: 0.85;
-}
+.regBtn { composes: regBtn from '../components/strategy-common.module.css'; }
 .regInput {
   font-size: 0.76rem;
   padding: 3px 8px;
@@ -326,15 +265,6 @@
   color: var(--ink, inherit);
   min-width: 140px;
 }
-.drift {
-  margin-top: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  font-size: 0.8rem;
-}
-.driftList {
-  margin: 6px 0 8px;
-  padding-left: 16px;
-}
+/* ── Drift note — rendered via StrategyBits' DriftNote; styles are owned by
+   components/strategy-common.module.css (extracted 2026-09-22). ── */
 

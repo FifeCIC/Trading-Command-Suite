@@ -1,0 +1,126 @@
+/**
+ * strategy-common.module.css — styles shared by the TWO strategy surfaces.
+ * =========================================================================
+ * Extracted 2026-09-22 when the A/B Strategies page was built: `ab-strategies.module.css` had
+ * copied eight rule blocks from `derived-strategies.module.css` (field trio, bots line, warning
+ * box, drift note, error box) and `validate-duplication.cjs` flagged the pair — the third time
+ * this repo has paid for a copied stylesheet. One owner: both page modules compose from here,
+ * and the shared components in `StrategyBits.jsx` style themselves from here directly.
+ *
+ * ⚠️ These are the SOURCE page's exact values (taken from `derived-strategies.module.css`
+ * 2026-09-22, not re-invented) so composing them changes nothing visually on either page.
+ *
+ * ⚠️ THEMED TOKENS ONLY — see the sibling modules' headers: static-only tokens pass the
+ * validator and still render wrong in every theme that does not define them.
+ */
+
+/* ── Treatment field: label above value, nulls stated in words ─────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 74px;
+}
+
+.fieldLabel {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint, var(--ink-soft));
+}
+
+.fieldValue {
+  font-size: 0.85rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* NULL means "no limit" / "ungated" — a real value, NOT missing data. Rendered distinctly so it
+   is never read as a blank or a bug. */
+.fieldValueNull {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ── Bots line ─────────────────────────────────────────────────────────── */
+
+.bots {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+/* ── Warning box (duplicate bots / unreachable bots) ───────────────────── */
+
+.warn {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--risk-elevated);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.warn strong {
+  color: var(--risk-elevated);
+}
+
+.warn code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  color: var(--ink-soft);
+}
+
+/* ── Drift note (#875) ─────────────────────────────────────────────────── */
+
+.drift {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  font-size: 0.8rem;
+}
+
+.driftList {
+  margin: 6px 0 8px;
+  padding-left: 16px;
+}
+
+/* The small action chip the drift note (and the registry bar) uses. */
+.regBtn {
+  font-size: 0.74rem;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
+  background: transparent;
+  color: var(--ink, inherit);
+  cursor: pointer;
+}
+
+.regBtn:hover {
+  opacity: 0.85;
+}
+
+/* ── Error box ─────────────────────────────────────────────────────────── */
+
+.error {
+  padding: 16px 18px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.errorHint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}

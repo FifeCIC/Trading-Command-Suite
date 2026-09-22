@@ -1,0 +1,245 @@
+/**
+ * ab-strategies.module.css — Styles for AbStrategiesPage.
+ *
+ * CSS MODULE (ui-standards Rule B, 2026-09-17 — new stylesheets are scoped modules). The sibling
+ * `derived-strategies.module.css` set the precedent and documents why: a shared prefix collided
+ * across six stylesheets and every property ended up overridden.
+ *
+ * ⚠️ THEMED TOKENS ONLY (same list the sibling module uses). Static tokens like
+ * `--panel-raised` exist only in theme/packs/slate.css and render wrong in every other theme —
+ * and both themed and static sets PASS validate-css-tokens.cjs, so the validator will not catch
+ * it. Pick from the themed list in ui-standards.instructions.md.
+ *
+ * Borders are FULL, not left-edge (owner's verbatim rule). The A/B sides are distinguished by the
+ * letter box and the header rule in their side colour — `--accent` (A) and `--color-accent-blue`
+ * (B), matching the A/B Ladder — NOT by tinting whole cards, which would read as two alerts.
+ */
+
+.page {
+  padding: 24px 32px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Two columns: A left, B right ────────────────────────── */
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.col {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elev);
+  padding: 14px 16px;
+}
+
+/* ── Column head: letter box + identity + state ─────────── */
+
+.colHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.colA .colHead {
+  border-bottom-color: var(--accent);
+}
+
+.colB .colHead {
+  border-bottom-color: var(--color-accent-blue);
+}
+
+/* The side letter — a boxed letter, same treatment on both sides, colour per SIDE. */
+.letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  min-height: 26px;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.colA .letter {
+  color: var(--accent);
+}
+
+.colB .letter {
+  color: var(--color-accent-blue);
+}
+
+.ident {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.source {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-elev-2);
+  align-self: flex-start;
+}
+
+.status {
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.statusOn {
+  border-color: var(--risk-normal);
+  color: var(--ink);
+}
+
+/* ── Drift note: rendered via StrategyBits' DriftNote — styles in strategy-common ── */
+
+/* ── Parts: protocol / role / broker / market ────────────── */
+
+.parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.partRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.partLabel {
+  flex: 0 0 74px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.partBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 0.9rem;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.chip {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  color: var(--ink);
+}
+
+.chipMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── Treatment: the field primitive is SHARED (components/strategy-common.module.css) ── */
+
+.treatmentHead {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.treatment {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px 14px;
+  margin-bottom: 12px;
+}
+
+.field { composes: field from '../components/strategy-common.module.css'; }
+
+.fieldLabel { composes: fieldLabel from '../components/strategy-common.module.css'; }
+
+.fieldValue {
+  composes: fieldValue from '../components/strategy-common.module.css';
+  overflow-wrap: anywhere;
+}
+
+.fieldValueNull { composes: fieldValueNull from '../components/strategy-common.module.css'; }
+
+/* ── The difference marker ───────────────────────────────── */
+
+/* ⚠️ Glyph first, tooltip second, colour last (and never alone — ui-standards). The title spells
+   out BOTH sides, so "what differs" needs no mental diff of the two columns. */
+.neq {
+  display: inline-block;
+  margin-right: 4px;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: help;
+}
+
+/* ── Bots line and warnings are rendered via StrategyBits — one owner: strategy-common ── */
+
+/* ── States ──────────────────────────────────────────────── */
+
+.error { composes: error from '../components/strategy-common.module.css'; }
+
+.errorHint { composes: errorHint from '../components/strategy-common.module.css'; }

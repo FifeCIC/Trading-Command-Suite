@@ -1,0 +1,12 @@
+/* type-tag.module.css — styles for TypeTag. Deliberately minimal: the tag must read as part of
+   the identifier it follows (same line, softer weight), never as a separate chip that competes
+   with it. Tokens only, per ui-standards. */
+
+.tag {
+  margin-left: 4px;
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}

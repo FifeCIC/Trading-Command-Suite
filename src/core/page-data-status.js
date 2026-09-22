@@ -20,6 +20,7 @@ export const PAGE_DATA_STATUS = {
   // "strategy" in the META.Stack sense. See docs/trading-bot-model.md §1 and §5.
   'bot-create': { status: 'live', source: 'Tabbed creation: form + wizard (#504)' },
   'trading-bots': { status: 'live', source: 'DB (canonical bot index, #504; surfaced 2026-09-18)' },    'strategies-derived': { status: 'live', source: 'GET /api/scoring/strategies/derived (#876 — derived per read, not stored)' },  'mt5-trading': { status: 'live', source: 'MT5 Bridge' },
+  'ab-strategies': { status: 'live', source: 'GET /api/scoring/strategies/derived + /api/scoring/strategy-registry (read-only A/B framing of two strategies; pair via ?pair=keyA,keyB)' },
   'calculators': { status: 'mock', note: 'Client-side only' },
   'stock-investigation': { status: 'live', source: '/api/research/investigations' },
   'portfolio-overview': { status: 'live', source: 'Alpaca + DB' },
