@@ -243,3 +243,100 @@
 .error { composes: error from '../components/strategy-common.module.css'; }
 
 .errorHint { composes: errorHint from '../components/strategy-common.module.css'; }
+
+/* ── Official A/B test (#929) — running line, test header, change block ─── */
+
+/* One muted line in pair mode, ONLY while a test is running: operational status, not teaching
+   text — and its start date is the anchor for "has it run long enough to judge?". */
+.official {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.official strong {
+  color: var(--ink);
+}
+
+.officialLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.officialLink:hover {
+  text-decoration: underline;
+}
+
+.testHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.testName {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.testMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+/* "What changed in B" — the DECLARED change (named keys + the author's note, i.e. the
+   hypothesis). The measured rows are the config grid below; a difference the log does not name
+   is flagged in .changeWarn — declaration and measurement are never merged. */
+.changeBlock {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-elev-2);
+}
+
+.changeTitle {
+  display: block;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.changeNote {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.changeList {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.changeList code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  color: var(--ink-soft);
+}
+
+.changeMeta {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.changeWarn {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--risk-elevated);
+}

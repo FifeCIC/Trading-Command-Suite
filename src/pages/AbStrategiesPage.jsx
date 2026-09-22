@@ -37,7 +37,7 @@
  */
 import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -50,6 +50,10 @@ import { usePersistentState } from '../hooks/usePersistentState';
 import styles from './ab-strategies.module.css';
 
 const API = '/api/scoring/strategies/derived';
+/** #929 — the official A/B test runner (see ab-test.controller.ts) + snapshot configs. */
+const API_TESTS = '/api/automation/ab-tests';
+const API_SNAPSHOTS = `${API_TESTS}/snapshots`;
+const API_METASTACKS = '/api/scoring/metastacks';
 
 /**
  * The treatment fields, in the source page's order first, then the four it omits — this page is
@@ -106,6 +110,30 @@ function resolveKey(input, strategies) {
   if (exact) return exact.strategyKey;
   const prefixed = strategies.filter((s) => s.strategyKey.toLowerCase().startsWith(t));
   return prefixed.length === 1 ? prefixed[0].strategyKey : null;
+}
+
+/** fmtDuration — "3d 4h" / "5h 12m" / "8m". The running age of a test, for the data-period question. */
+function fmtDuration(ms) {
+  if (ms == null || ms < 0) return '—';
+  const d = Math.floor(ms / 86_400_000);
+  const h = Math.floor((ms % 86_400_000) / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+/**
+ * fmtCfg — one snapshot-config value for display.
+ * ⚠️ `null` is a VALUE in these configs (an explicitly unset field), never a blank: it renders
+ * as `—` WITH a title saying so, so "unset" cannot be misread as "failed to load".
+ */
+function fmtCfg(v) {
+  if (v === undefined) return { text: '—', title: 'absent from this snapshot' };
+  if (v === null) return { text: '—', title: 'null — explicitly unset in this snapshot' };
+  if (typeof v === 'string') return { text: v, title: null };
+  if (typeof v === 'boolean' || typeof v === 'number') return { text: String(v), title: null };
+  return { text: JSON.stringify(v), title: null };
 }
 
 /** One side's column: identity, the strategy's parts, then the full treatment with diffs marked. */
@@ -229,6 +257,104 @@ function SideColumn({ side, strategy, reg, drift, peer }) {
   );
 }
 
+/**
+ * TestSide — one side of an OFFICIAL A/B test (#929): a MetaStack snapshot and its config, and,
+ * for the variant, the RECORDED change — "what was changed in B".
+ *
+ * ⚠️ DECLARATION VS MEASUREMENT. The change log is the AUTHOR's declaration (named keys + their
+ * note, which is the hypothesis). The two snapshot exports are the MEASUREMENT (the configs as
+ * they actually are, right now). Both are rendered, and a measured difference the log does not
+ * name is flagged — an unrecorded change is exactly the silent divergence this repo keeps
+ * paying for, so it is stated rather than smoothed over.
+ */
+function TestSide({ side, label, snap, change, cfg, actualDiffs, recordedKeys }) {
+  const isVariant = side === 'b';
+  const unrecorded = isVariant && actualDiffs
+    ? actualDiffs.filter((d) => !recordedKeys.includes(d.key))
+    : [];
+
+  return (
+    <article className={`${styles.col} ${side === 'a' ? styles.colA : styles.colB}`}>
+      <header className={styles.colHead}>
+        <span className={styles.letter} aria-hidden="true">{side.toUpperCase()}</span>
+        <div className={styles.ident}>
+          <span className={styles.name}>{cfg?.name || 'Unnamed'}</span>
+          {snap ? (
+            <>
+              <span className={styles.source}>
+                {label} · version {snap.version}{snap.createdBy ? ` · ${snap.createdBy}` : ''}
+              </span>
+              <code className={styles.key} title={`Snapshot id ${snap.id} · scoring strategy ${snap.scoringStrategyId}`}>
+                {String(snap.id).slice(0, 8)}
+              </code>
+            </>
+          ) : (
+            <span className={styles.source}>snapshot not found for this side</span>
+          )}
+        </div>
+      </header>
+
+      {isVariant && (
+        <div className={styles.changeBlock}>
+          <span className={styles.changeTitle}>What changed in B</span>
+          {change ? (
+            <>
+              {change.details?.note && <p className={styles.changeNote}>“{change.details.note}”</p>}
+              <ul className={styles.changeList}>
+                {(change.details?.changedKeys ?? []).map((k) => {
+                  const measured = actualDiffs?.find((d) => d.key === k);
+                  return (
+                    <li key={k}>
+                      <code>{k}</code>
+                      {measured
+                        ? <> — {measured.from} → <strong>{measured.to}</strong></>
+                        : ' — recorded, but the exports could not be compared'}
+                    </li>
+                  );
+                })}
+              </ul>
+              <span className={styles.changeMeta}>
+                {change.summary} · {new Date(change.createdAt).toLocaleString()}
+              </span>
+            </>
+          ) : (
+            <p className={styles.changeNote}>No change recorded for this snapshot.</p>
+          )}
+          {unrecorded.length > 0 && (
+            <p className={styles.changeWarn}>
+              ⚠️ {unrecorded.length} difference{unrecorded.length === 1 ? '' : 's'} not named in the
+              change log: {unrecorded.map((d) => d.key).join(', ')}.
+            </p>
+          )}
+        </div>
+      )}
+
+      {cfg ? (
+        <>
+          <div className={styles.treatmentHead}>snapshot config</div>
+          <div className={styles.treatment}>
+            {Object.keys(cfg).sort().map((k) => {
+              const value = fmtCfg(cfg[k]);
+              const diff = actualDiffs?.find((d) => d.key === k);
+              return (
+                <div className={styles.field} key={k}>
+                  <span className={styles.fieldLabel}>{k}</span>
+                  <span className={styles.fieldValue}>
+                    {diff && <Neq title={`${k} differs — A: ${diff.from} · B: ${diff.to}`} />}
+                    <span title={value.title ?? undefined}>{value.text}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <span className={styles.source}>config not loaded yet</span>
+      )}
+    </article>
+  );
+}
+
 export default function AbStrategiesPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['strategies', 'derived'],
@@ -283,6 +409,71 @@ export default function AbStrategiesPage() {
     if (a !== pair.a || b !== pair.b || seeded !== pair.seeded) setPair({ a, b, seeded });
   }, [strategies, pair, setPair]);
 
+  // ── Official A/B test mode (?test=<id>, #929). Read-only; every endpoint already exists. ──
+  const testIdParam = searchParams.get('test') || '';
+  const testsQuery = useQuery({
+    queryKey: ['ab-tests'],
+    queryFn: () => apiGet(API_TESTS),
+    staleTime: 30_000,
+  });
+  const tests = testsQuery.data ?? [];
+  // Exact id, or a unique prefix (same courtesy as ?pair=).
+  const test = testIdParam
+    ? (tests.find((t) => t.id === testIdParam)
+      ?? (tests.filter((t) => t.id.startsWith(testIdParam)).length === 1
+        ? tests.find((t) => t.id.startsWith(testIdParam))
+        : null))
+    : null;
+  const runningTest = tests.find((t) => t.status === 'running') ?? null;
+
+  const snapshotsQuery = useQuery({
+    queryKey: ['ab-test-snapshots'],
+    queryFn: () => apiGet(API_SNAPSHOTS),
+    staleTime: 30_000,
+    enabled: !!test,
+  });
+  const snapshots = snapshotsQuery.data ?? [];
+  const controlSnap = test ? snapshots.find((s) => s.id === test.controlStackId) ?? null : null;
+  const variantSnap = test ? snapshots.find((s) => s.id === test.variantStackId) ?? null : null;
+
+  // The AUTHORED "what changed in B" — #929 writes a named change-log entry for the variant
+  // (summary + changedKeys + the author's note, which is the hypothesis under test).
+  const versionsQuery = useQuery({
+    queryKey: ['metastack-versions', variantSnap?.scoringStrategyId],
+    queryFn: () => apiGet(`${API_METASTACKS}/${variantSnap.scoringStrategyId}/versions`),
+    staleTime: 30_000,
+    enabled: !!variantSnap,
+  });
+  const variantChange = variantSnap
+    ? (versionsQuery.data?.changeLogs ?? []).find((l) => l.toVersion === variantSnap.version) ?? null
+    : null;
+  const recordedKeys = variantChange?.details?.changedKeys ?? [];
+
+  // The MEASUREMENT — both snapshot exports, diffed key by key. Declaration vs reality: the log
+  // says what was INTENDED, these two say what IS. Disagreement is reported, not smoothed over.
+  const ctlExportQuery = useQuery({
+    queryKey: ['snapshot-export', controlSnap?.scoringStrategyId, controlSnap?.id],
+    queryFn: () => apiGet(`${API_METASTACKS}/${controlSnap.scoringStrategyId}/export/${controlSnap.id}`),
+    staleTime: 300_000,
+    enabled: !!controlSnap,
+  });
+  const varExportQuery = useQuery({
+    queryKey: ['snapshot-export', variantSnap?.scoringStrategyId, variantSnap?.id],
+    queryFn: () => apiGet(`${API_METASTACKS}/${variantSnap.scoringStrategyId}/export/${variantSnap.id}`),
+    staleTime: 300_000,
+    enabled: !!variantSnap,
+  });
+  const ctlCfg = ctlExportQuery.data?.snapshot ?? null;
+  const varCfg = varExportQuery.data?.snapshot ?? null;
+
+  const actualDiffs = useMemo(() => {
+    if (!ctlCfg || !varCfg) return null;
+    const keys = [...new Set([...Object.keys(ctlCfg), ...Object.keys(varCfg)])].sort();
+    return keys
+      .filter((k) => JSON.stringify(ctlCfg[k] ?? null) !== JSON.stringify(varCfg[k] ?? null))
+      .map((k) => ({ key: k, from: fmtCfg(ctlCfg[k]).text, to: fmtCfg(varCfg[k]).text }));
+  }, [ctlCfg, varCfg]);
+
   const strategyA = strategies.find((s) => s.strategyKey === pair.a) ?? null;
   const strategyB = strategies.find((s) => s.strategyKey === pair.b) ?? null;
 
@@ -319,12 +510,80 @@ export default function AbStrategiesPage() {
             execution policy) — side by side. A “≠” marks every value that differs, with both
             sides spelled out in its tooltip. The pair comes from the URL (?pair=keyA,keyB — the
             first 8 characters of each strategyKey are enough) or the last pair viewed; it is set
-            by whatever owns A/B pairing, not on this page.
+            by whatever owns A/B pairing, not on this page. An OFFICIAL test opens with
+            ?test=&lt;id&gt;: it shows when the test started, how long it has run, and what was
+            changed in B — both as the change log recorded it (with the author&apos;s note) and as
+            the two snapshot configs actually differ.
           </PageInfoPopover>
         </h1>
       </header>
 
-      {!strategyA || !strategyB ? (
+      {testIdParam ? (
+        !test ? (
+          <EmptyState
+            icon="🧪"
+            title="No such A/B test"
+            description={testsQuery.isLoading
+              ? 'Loading tests…'
+              : `No test matches “${testIdParam}”. Drop ?test= for strategy pairs, or pass a full id.`}
+          />
+        ) : (
+          <>
+            <div className={styles.testHead}>
+              <span className={styles.testName}>{test.name}</span>
+              <span className={`${styles.status} ${test.status === 'running' ? styles.statusOn : ''}`}>
+                {test.status}
+              </span>
+              <span className={styles.testMeta}>
+                {test.startAt ? `started ${new Date(test.startAt).toLocaleString()}` : 'not started'}
+                {test.startAt && !test.endAt
+                  ? ` · running ${fmtDuration(Date.now() - new Date(test.startAt).getTime())}`
+                  : ''}
+                {test.endAt ? ` · ended ${new Date(test.endAt).toLocaleString()}` : ''}
+              </span>
+              <span className={styles.testMeta}>
+                {(test.symbols ?? []).map((s) => (
+                  <span className={`${styles.chip} ${styles.chipMono}`} key={s}>{s}</span>
+                ))}
+              </span>
+            </div>
+            <div className={styles.columns}>
+              <TestSide
+                side="a"
+                label="control"
+                snap={controlSnap}
+                cfg={ctlCfg}
+                actualDiffs={actualDiffs}
+                recordedKeys={recordedKeys}
+              />
+              <TestSide
+                side="b"
+                label="variant"
+                snap={variantSnap}
+                change={variantChange}
+                cfg={varCfg}
+                actualDiffs={actualDiffs}
+                recordedKeys={recordedKeys}
+              />
+            </div>
+          </>
+        )
+      ) : (
+        <>
+          {runningTest && (
+            <div className={styles.official}>
+              <span aria-hidden="true">◉</span>{' '}
+              Official A/B test running: <strong>{runningTest.name}</strong>
+              {runningTest.startAt
+                ? ` · started ${new Date(runningTest.startAt).toLocaleDateString()} · ${fmtDuration(Date.now() - new Date(runningTest.startAt).getTime())} in`
+                : ''}
+              {' · '}
+              <Link className={styles.officialLink} to={`/trading/ab-strategies?test=${runningTest.id}`}>
+                view what changed in B →
+              </Link>
+            </div>
+          )}
+          {!strategyA || !strategyB ? (
         <EmptyState
           icon="🆚"
           title="No pair to show"
@@ -347,6 +606,8 @@ export default function AbStrategiesPage() {
             peer={strategyA}
           />
         </div>
+          )}
+        </>
       )}
     </div>
   );
