@@ -439,3 +439,11 @@ belongs to whoever is editing it. Whoever owns it: change the specifier to `'../
 Also in-flight and uncommitted at the same time (do not stage): `src/pages/AutomationDashboardPage.jsx`,
 `src/pages/ScoringActivityLogsPage.jsx`, `src/pages/automation-dashboard.css`,
 `src/pages/scoring-activity-logs.css`.
+
+---
+
+## 2026-09-22 - TCS-Dev - three A/B findings worth knowing (#929)
+
+1. **Stale July snapshots are a trap.** The 13 `metastack_snapshot` rows (2026-07-23..31) carry `tradeThreshold` 50-60 on the PRE-2026-09-15-rescale scale; live configs are 7-12. A control built from one CANNOT trade - an A/B that silently measures nothing. Always `POST /api/scoring/metastacks/:id/snapshot` first (control = current config).
+2. **`/api/automation/status` `nextTickAt` is a stale claim.** Computed once at loop start (`automation-loop.service.ts:848`) and never updated - it names a NEXT tick but holds the FIRST. Not fixed (display-only). Do not conclude 'the loop stopped' from it; check `tickCount`/`lastTickAt`.
+3. **A/B runner is API-only (0 UI surfaces)** - filed #952. `ABTestingPage.jsx` is a DIFFERENT feature (side-by-side protocol score comparison, #373) and the name collides.
