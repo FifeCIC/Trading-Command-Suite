@@ -14,19 +14,9 @@
 .ab-layout { display: flex; flex-direction: column; gap: 0.75rem; }
 
 /* Pair pickers/swap removed 2026-09-22 — the pair comes from the URL or persisted
-   state (see the page header). */
-
-/* ── Legend ──
-   Identity is text now, not shapes: the letter and the protocol name carry the meaning
-   (the ⬤/◆ markers were dropped — each element wears ONE letter, and a shape marker was
-   printing the same fact twice). */
-.ab-legend {
-  margin: 0; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
-  color: var(--ink-soft); font-size: 0.78rem;
-}
-.ab-legend-letter { font-weight: 800; }
-.ab-legend-letter--a { color: var(--accent); }
-.ab-legend-letter--b { color: var(--color-accent-blue); }
+   state. Legend and subtitle removed the same day (owner: visible teaching text is
+   screen clutter) — the ℹ popover carries the explanation. Do not re-add without
+   being asked. */
 
 /* ── Pair row: the shared ScoreCard and the strip as STRETCHED SIBLINGS ──
    `min-width: 0` on the card is load-bearing: without it the card's intrinsic width

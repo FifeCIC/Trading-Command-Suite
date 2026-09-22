@@ -29,8 +29,12 @@
  * integration point for the future A/B pairing config (anything that knows a pair
  * links straight here, and invalid ids are ignored so a stale link cannot blank the
  * view) — else the persisted `abladder:pair`, else a one-time seed of the first two
- * scoreable protocols so the page is never blank. The page header states which pair is
- * being compared: that is identity, not a control.
+ * scoreable protocols so the page is never blank. The pair is NOT stated prominently
+ * anywhere: every card names its protocol and every strip names its side, so the pairing
+ * is legible from the rows themselves (2026-09-22 — the owner removed BOTH the subtitle
+ * and the legend as screen clutter: "I don't like training to be highly visible it just
+ * creates screen clutter". Do not re-add either without being asked; the ℹ popover is
+ * where explanation lives).
  *
  * ⚠️ EVERY CARD IS ONE SIDE — THE PAIR IS A SCOPE, NOT A RANKING UNIT (2026-09-22,
  * owner's flaw report). The first version joined both sides into ONE row per symbol
@@ -290,8 +294,8 @@ export default function AbLadderPage() {
   const protoB = useMemo(() => selectableProtocols.find((p) => p.id === pair.b) || null, [selectableProtocols, pair.b]);
 
   // ── Build one row per SIDE (A-cards and B-cards both), then filter and rank ──
-  const { passing, excluded, bothScored, symbolCount } = useMemo(() => {
-    if (!protoA || !protoB) return { passing: [], excluded: [], bothScored: 0, symbolCount: 0 };
+  const { passing, excluded } = useMemo(() => {
+    if (!protoA || !protoB) return { passing: [], excluded: [] };
 
     const aEntries = buildScoreEntries([protoA], runs);
     const bEntries = buildScoreEntries([protoB], runs);
@@ -304,10 +308,6 @@ export default function AbLadderPage() {
       ...aEntries.map((e) => buildSideRow(e.symbol, 'a', e, 'b', bBySymbol.get(e.symbol), rankBy)),
       ...bEntries.map((e) => buildSideRow(e.symbol, 'b', e, 'a', aBySymbol.get(e.symbol), rankBy)),
     ];
-    // "Scored by both sides" is counted per SYMBOL (not per row): it is one fact about
-    // the pair however many cards the symbol produces.
-    const both = aEntries.filter((e) => e.hasScore && bBySymbol.get(e.symbol)?.hasScore).length;
-    const symbolCount = new Set(all.map((r) => r.symbol)).size;
 
     const marketList = marketFilter === 'all' ? all : all.filter((r) => marketMatches(r, marketFilter));
     const list = search.trim()
@@ -326,14 +326,14 @@ export default function AbLadderPage() {
 
     if (ageFilter === 'all') {
       list.sort(sorter);
-      return { passing: list, excluded: [], bothScored: both, symbolCount };
+      return { passing: list, excluded: [] };
     }
     const cutoff = Date.now() - Number(ageFilter) * 60_000;
     const pass = list.filter((r) => r.time && new Date(r.time).getTime() >= cutoff);
     const excl = list.filter((r) => !(r.time && new Date(r.time).getTime() >= cutoff));
     pass.sort(sorter);
     excl.sort(sorter);
-    return { passing: pass, excluded: excl, bothScored: both, symbolCount };
+    return { passing: pass, excluded: excl };
   }, [protoA, protoB, runs, rankBy, marketFilter, search, ageFilter]);
 
   useScrollReveal(cardsColRef, [passing, excluded]);
@@ -434,13 +434,6 @@ export default function AbLadderPage() {
               by design.
             </PageInfoPopover>
           </h1>
-          <p className="lad-subtitle">
-            {protoA && protoB ? `A: ${protoA.name ?? protoA.id} vs B: ${protoB.name ?? protoB.id} · ` : ''}
-            {passing.length} card{passing.length === 1 ? '' : 's'}
-            {' · '}{symbolCount} symbol{symbolCount === 1 ? '' : 's'}
-            {' · '}{bothScored} scored by both sides
-            {excluded.length > 0 ? ` · ${excluded.length} filtered` : ''}
-          </p>
         </div>
       </header>
 
@@ -453,17 +446,9 @@ export default function AbLadderPage() {
           searchAriaLabel="Search the A/B ladder by symbol, protocol, state or signal"
         />
 
-        {/* Generic by design (owner, 2026-09-22): the legend explains the CODING —
-            the pair's names belong in the header subtitle, not repeated per page. */}
-        {protoA && protoB && (
-          <p className="ab-legend">
-            <span className="ab-legend-letter ab-legend-letter--a">A</span> and
-            {' '}<span className="ab-legend-letter ab-legend-letter--b">B</span> are the two sides of the pair
-            {' · '}every card is one side&apos;s score, ranked as on the Ladder
-            {' · '}the strip is what the other side did on the same symbol
-            {' · '}&ldquo;B +4&rdquo; means B leads by 4 points, &ldquo;±0&rdquo; a tie, &ldquo;Δ n/a&rdquo; one side only
-          </p>
-        )}
+        {/* No legend and no subtitle here (owner, 2026-09-22): visible teaching text is
+            screen clutter. The strip names its side per row, the card names its protocol,
+            and the ℹ popover carries the explanation. Do not re-add without being asked. */}
 
         <main className="lad-cards-col" ref={cardsColRef}>
           {!protoA || !protoB ? (
