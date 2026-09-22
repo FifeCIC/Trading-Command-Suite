@@ -38,6 +38,7 @@ import {
   getNoticeLocale,
 } from './registry.js';
 import { AVAILABLE_LOCALES, applyNoticeLocale, registerBundledLocales } from './apply-locale.js';
+import { noticeFromError } from './from-error.js';
 import { tradeFailureNotice } from './trade-result.js';
 import de from './locales/de.js';
 
@@ -94,6 +95,34 @@ test('an undeclared placeholder is left VISIBLE rather than blanked (anti-silenc
   // An empty string counts as missing: "rejected " reads like a rendering bug, "rejected {symbol}" reports itself.
   assert.equal(renderTemplate('about {symbol}', { symbol: '' }), 'about {symbol}');
   assert.equal(renderTemplate('about {symbol}', { symbol: 'XAGUSD' }), 'about XAGUSD');
+});
+
+test('a failure with NO HTTP response never renders a template that needs a status', () => {
+  // The mirror of the test above: that one supplies every param; this one covers the INPUT the
+  // adapter chooses the code for. Owner report 2026-09-22 — /trading/strategies-derived showed the
+  // literal "(HTTP {status})" while the API was restarting, because a rejected fetch (no response
+  // at all) was rendered with TCS-SYS-002, whose message names a status that does not exist.
+  const noResponse = [
+    new TypeError('Failed to fetch'),
+    { message: 'NetworkError when attempting to fetch resource.' },
+    { status: undefined },
+  ];
+  for (const err of noResponse) {
+    const n = noticeFromError(err, 'TCS-SYS-002');
+    assert.equal(n.code, 'TCS-SYS-009', 'a no-response failure has its own code');
+    assert.ok(
+      !/\{\w+\}/.test([n.title, n.message, n.cause, n.action].join(' ')),
+      `a placeholder leaked: ${n.message} / ${n.cause}`,
+    );
+  }
+  // An OPERATION fallback is still kept — it describes what failed, not how it arrived.
+  const op = noticeFromError(new TypeError('Failed to fetch'), 'TCS-SYS-007', { operation: 'load the accounts' });
+  assert.equal(op.code, 'TCS-SYS-007');
+  assert.match(op.message, /load the accounts/);
+  // And a real HTTP response still uses the status-bearing code, with its status substituted.
+  const http = noticeFromError({ status: 502, message: 'Bad Gateway' }, 'TCS-SYS-002');
+  assert.equal(http.code, 'TCS-SYS-002');
+  assert.match(http.message, /502/);
 });
 
 test('an unknown code is never blank and names itself', () => {

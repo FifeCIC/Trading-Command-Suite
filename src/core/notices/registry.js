@@ -537,6 +537,23 @@ export const NOTICES = {
     params: ['detail'],
     refs: ['#938'],
   },
+  // No HTTP response AT ALL — not a status-bearing failure. Added 2026-09-22 after an owner report:
+  // /trading/strategies-derived showed the literal "(HTTP {status})" while the API was restarting,
+  // because the adapter's no-response branch rendered TCS-SYS-002, whose text names a status that
+  // does not exist in that case. See CODES_NEEDING_STATUS in from-error.js.
+  'TCS-SYS-009': {
+    severity: 'error',
+    area: 'SYS',
+    title: 'API did not respond',
+    message: 'The API did not respond — the request never reached it.',
+    cause:
+      'No HTTP response arrived at all: {detail}. A service restart, a stopped API or a dropped ' +
+      'connection looks exactly like this, and none of them produces a status code to report.',
+    action:
+      'Check the API is running, then retry. The view recovers on its own once the service answers.',
+    params: ['detail'],
+    refs: [],
+  },
   'TCS-SIG-001': {
     severity: 'error',
     area: 'SIG',

@@ -18,7 +18,9 @@
  *   2. A client timeout (`err.timedOut`)              → TCS-SYS-003
  *   3. A structured HTTP status (`err.status`)        → TCS-SYS-002
  *   4. The caller's `fallbackCode`, which must describe the OPERATION ("could not place the order"),
- *      never the transport, and always keeps the server's own text as `detail`.
+ *      never the transport, and always keeps the server's own text as `detail`. ⚠️ A transport
+ *      fallback that NAMES a status (TCS-SYS-002/006) cannot be rendered here — reaching this
+ *      branch means no response arrived — so it is replaced by TCS-SYS-009.
  *
  * ⚠️ The server's wording is ALWAYS preserved as `detail`. The code gives the message an identity;
  * it must never be the reason a specific broker message is lost.
@@ -33,6 +35,14 @@
 // module can be unit-tested and reached from `scripts/validators`, which is how the rest of the
 // codebase is now guarded. Do not "tidy" it back to './registry'.
 import { notice, isNoticeCode } from './registry.js';
+
+/**
+ * Transport codes whose templates NAME an HTTP status. They belong to branch 3, where a response
+ * WAS received and `err.status` exists. If one reaches branch 4 there is no status to name and the
+ * text would render the literal `{status}` — the defect an owner saw on /trading/strategies-derived
+ * on 2026-09-22 while the API was restarting. No-response failures get their own code instead.
+ */
+const CODES_NEEDING_STATUS = ['TCS-SYS-002', 'TCS-SYS-006'];
 
 /**
  * @param {unknown} err            the thrown value (Error, or anything)
@@ -60,9 +70,12 @@ export function noticeFromError(err, fallbackCode = 'TCS-SYS-002', params = {}) 
     });
   }
 
-  // 4. Anything else (network down, TypeError, a non-Error thrown): keep the caller's code so the
-  //    user learns which OPERATION failed, and keep the raw text visible rather than swallowing it.
-  return notice(fallbackCode, {
+  // 4. Anything else (network down, the API restarting, a TypeError, a non-Error thrown): there is
+  //    NO HTTP response here, so a transport code whose text names a status cannot describe it. An
+  //    OPERATION fallback (the caller's own code) is kept, because it says what failed rather than
+  //    how it was delivered; the raw text stays visible as `detail` either way.
+  const code = CODES_NEEDING_STATUS.includes(fallbackCode) ? 'TCS-SYS-009' : fallbackCode;
+  return notice(code, {
     ...params,
     detail: err?.detail || err?.message || String(err ?? ''),
   });
