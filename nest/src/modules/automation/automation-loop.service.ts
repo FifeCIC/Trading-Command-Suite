@@ -38,6 +38,8 @@ import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/c
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { PrismaService } from '../../database/prisma.service';
+// #929 — the runner consumes EVERY active test now (capacity >1); the type names the param.
+import type { AbTest } from '@prisma/client';
 // ⚠️ #908 — required by the data-readiness gate: `recommendedTimeframe` is FREE TEXT and
 // must reach bar queries through selectBaseTimeframe() (INV-SINGLE-CADENCE).
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
@@ -1385,14 +1387,22 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   /**
-   * A/B test runner (#482) — when an active test exists, evaluate BOTH MetaStack
-   * snapshots (control vs variant) on the test symbols and dispatch side-tagged
-   * trades. Uses the same gated-scoring path as step 3b for fairness.
+   * A/B test runner (#482) — evaluate EVERY active test each tick.
+   *
+   * ⚠️ #929 — this used to fetch a single active test (`getActiveTest()`). The capacity decision
+   * (recorded on #929, 2026-09-22) allows AB_MAX_ACTIVE concurrent tests, because one test ×
+   * 4 symbols accrued evidence too slowly to settle anything. The runner iterates; `runAbTest`
+   * is the unchanged single-test body. Uses the same gated-scoring path as step 3b for fairness.
    */
   private async evaluateAbTest(decisions: TickDecision[]): Promise<void> {
-    const test = await this.abTestService.getActiveTest();
-    if (!test) return;
+    const tests = await this.abTestService.getActiveTests();
+    for (const test of tests) {
+      await this.runAbTest(test, decisions);
+    }
+  }
 
+  /** One test — both snapshots scored on the test's symbols, side-tagged trades. */
+  private async runAbTest(test: AbTest, decisions: TickDecision[]): Promise<void> {
     const snapshots = await this.prisma.metaStackSnapshot.findMany({
       where: { id: { in: [test.controlStackId, test.variantStackId] } },
     });

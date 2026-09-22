@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import * as crypto from 'crypto';
 
@@ -80,6 +80,71 @@ export class MetaStackVersioningService {
 
     this.logger.log(`Snapshot ${nextVersion} created for strategy ${scoringStrategyId}`);
     return snapshot;
+  }
+
+  /**
+   * #929 — create a VARIANT: a new snapshot version that differs from its base by an explicit,
+   * named set of changes.
+   *
+   * ⚠️ WHY THIS IS THE UNLOCK. A/B has never run because every strategy has exactly one version
+   * — `createSnapshot` copies the CURRENT config, which can only produce an IDENTICAL v-next,
+   * and an A/B between two identical configs measures nothing. This is the missing instrument:
+   * base + declared change → a genuinely different version to compare.
+   *
+   * Guards, because a silent no-op here is the exact defect this method exists to fix:
+   *   - unknown keys are REJECTED (a typo like `tradThreshold` must fail, not create junk);
+   *   - a change that does not actually alter the snapshot is REJECTED (no diff = not a variant);
+   *   - the change-log entry names every changed key, so the hypothesis is on the record.
+   */
+  async cloneSnapshotWithChanges(
+    scoringStrategyId: string,
+    changes: Record<string, unknown>,
+    opts?: { note?: string; createdBy?: string; baseSnapshotId?: string },
+  ) {
+    const base = opts?.baseSnapshotId
+      ? await this.prisma.metaStackSnapshot.findUnique({ where: { id: opts.baseSnapshotId } })
+      : await this.prisma.metaStackSnapshot.findFirst({ where: { scoringStrategyId }, orderBy: { createdAt: 'desc' } });
+    if (!base) throw new NotFoundException(`No snapshot to base a variant on for strategy ${scoringStrategyId}`);
+
+    const baseJson = (base.snapshot ?? {}) as Record<string, unknown>;
+    const allowed = new Set(Object.keys(baseJson));
+    const unknown = Object.keys(changes).filter((k) => !allowed.has(k));
+    if (unknown.length > 0) {
+      throw new BadRequestException(`Unknown snapshot key(s): ${unknown.join(', ')} — valid keys: ${[...allowed].join(', ')}`);
+    }
+
+    const merged = { ...baseJson, ...changes };
+    const changedKeys = Object.keys(changes).filter(
+      (k) => JSON.stringify(baseJson[k]) !== JSON.stringify(merged[k]),
+    );
+    if (changedKeys.length === 0) {
+      throw new BadRequestException('changes do not alter the snapshot — a variant must differ from its base');
+    }
+
+    const nextVersion = this.bumpVersion(base.version);
+    const fingerprint = this.hashSnapshot(merged);
+    const snapshot = await this.prisma.metaStackSnapshot.create({
+      data: {
+        scoringStrategyId,
+        version: nextVersion,
+        snapshot: merged as any,
+        fingerprint,
+        createdBy: opts?.createdBy || 'system',
+      },
+    });
+    await this.prisma.metaStackChangeLog.create({
+      data: {
+        scoringStrategyId,
+        fromVersion: base.version,
+        toVersion: nextVersion,
+        summary: `Variant ${nextVersion} — changed: ${changedKeys.join(', ')}`,
+        details: { changes, changedKeys, note: opts?.note ?? null, baseVersion: base.version } as any,
+        author: opts?.createdBy || 'system',
+      },
+    });
+
+    this.logger.log(`Variant ${nextVersion} created for ${scoringStrategyId} (changed: ${changedKeys.join(', ')})`);
+    return { id: snapshot.id, version: nextVersion, changedKeys, baseVersion: base.version };
   }
 
   /** List all snapshots for a strategy with change log */

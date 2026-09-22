@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Logger, BadRequestException } from '@nestjs/common';
 import { MetaStackVersioningService } from './metastack-versioning.service';
 
 @Controller('scoring/metastacks')
@@ -17,6 +17,24 @@ export class MetaStackVersioningController {
     @Body('createdBy') createdBy?: string,
   ) {
     return this.versioning.createSnapshot(id, createdBy);
+  }
+
+  /**
+   * POST /api/scoring/metastacks/:id/variants
+   * Create a VARIANT version — base snapshot + named changes (#929). The A/B instrument: a
+   * variant that does not actually differ from its base is rejected rather than silently identical.
+   */
+  @Post(':id/variants')
+  async createVariant(
+    @Param('id') id: string,
+    @Body('changes') changes: Record<string, unknown>,
+    @Body('note') note?: string,
+    @Body('createdBy') createdBy?: string,
+  ) {
+    if (!changes || Object.keys(changes).length === 0) {
+      throw new BadRequestException('changes (non-empty object) is required');
+    }
+    return this.versioning.cloneSnapshotWithChanges(id, changes, { note, createdBy });
   }
 
   /**
