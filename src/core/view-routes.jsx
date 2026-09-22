@@ -45,6 +45,7 @@ import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
 import DirectiveViewerPage from '../pages/DirectiveViewerPage.jsx';
 import DirectiveImpactAuditPage from '../pages/DirectiveImpactAuditPage.jsx';
 import LadderPage from '../pages/LadderPage.jsx';
+import AbLadderPage from '../pages/AbLadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
@@ -242,6 +243,7 @@ export const VIEW_COMPONENTS = {
   'directive-viewer': DirectiveViewerPage,
   'directive-impact-audit': DirectiveImpactAuditPage,
   'live-ordering-stack': LadderPage,
+  'ab-ladder': AbLadderPage,
   'sees-arena': SeesArenaPage,
   'exit-signals': ExitSignalsPage,
   'scoring-activity-logs': ScoringActivityLogsPage,

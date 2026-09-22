@@ -14,47 +14,30 @@
  * @uses buildScoreDisplay() (src/core/score-display.js)
  * @uses SignalBadge         (src/components/SignalBadge.jsx)
  */
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import ScoreCard from '../components/ScoreCard';
-import { buildCardRef, matchesSearch } from '../core/score-card-view';
+import { LadderToolbar, LadderEmptyState, LadderExcludedDivider } from '../components/LadderPanels';
+import { matchesSearch } from '../core/score-card-view';
+import { AGE_OPTIONS, marketMatches } from '../core/score-card-filters';
 import { buildScoreEntries } from '../core/score-card-entries';
 import { useProtocolStatuses } from '../core/protocol-status';
 import { useProtocolData } from '../core/useProtocolData';
 import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSymbolLookups } from '../hooks/useSymbolLookups';
+import { useScoreDisplay } from '../hooks/useScoreDisplay';
+import { useCardCopy } from '../hooks/useCardCopy';
 import './ladder.css';
-
-const AGE_OPTIONS = ['1', '2', '3', '4', '5', '10', '15', '20', '30', '60'];
 
 const DIRECTION_OPTIONS = [
   ['all', 'BOTH'],
   ['long', 'LONG'],
   ['short', 'SHORT'],
 ];
-
-const MARKET_OPTIONS = [
-  ['open', 'Open'],
-  ['all', 'All'],
-  ['closed', 'Closed'],
-];
-
-/**
- * Does a card's market state match the market filter?
- * - 'open' (default): only symbols backed by an open market (marketStatus.open === true)
- * - 'closed': only symbols with a confirmed closed market
- * - 'all': everything (incl. unknown-market / unscored rows)
- */
-function marketMatches(e, filter) {
-  const open = e.vm.marketStatus?.open;
-  if (filter === 'open') return open === true;
-  if (filter === 'closed') return open === false;
-  return true;
-}
 
 /**
  * Is a protocol applicable to the given direction view?
@@ -67,12 +50,6 @@ function isDirectionApplicable(p, direction) {
   if (direction === 'long') return mode !== 'SHORT_ONLY';
   if (direction === 'short') return mode !== 'LONG_ONLY';
   return true;
-}
-
-/** Read the Screen Options "Score Display" preference (raw | percent | both). */
-function readScoreDisplay() {
-  try { return localStorage.getItem('lad-score-display') || 'both'; }
-  catch { return 'both'; }
 }
 
 /**
@@ -195,41 +172,12 @@ export default function LadderPage() {
     setSearchParams(next, { replace: true });
   };
 
-  // Screen Options: how to render each card's score (raw | percent | both).
-  const [scoreDisplay, setScoreDisplay] = useState(readScoreDisplay);
+  // Screen Options: how to render each card's score (raw | percent | both) — shared hook.
+  const scoreDisplay = useScoreDisplay();
 
-  // Poll localStorage for Screen Options changes (same-tab doesn't fire 'storage').
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setScoreDisplay((prev) => {
-        const current = readScoreDisplay();
-        return prev !== current ? current : prev;
-      });
-    }, 250);
-    return () => clearInterval(interval);
-  }, []);
-
-  // ── Copy-to-investigate (2026-09-16) ──
-  // Keyed by card, not a plain boolean: a single flag would flash the confirmation on
-  // whichever card happened to render first, which is worse than no feedback because it
-  // is confidently wrong. `ok` is tracked separately so a blocked clipboard says so
-  // instead of silently claiming success — the same "never report a success you did not
-  // observe" rule the pre-close checklist is built on.
-  const [copyState, setCopyState] = useState({ key: null, ok: false });
-  const copyTimer = useRef(null);
-  useEffect(() => () => clearTimeout(copyTimer.current), []);
-  const copyCardRef = async (e) => {
-    const key = `${e.protocolId}::${e.symbol}`;
-    let ok = true;
-    try {
-      await navigator.clipboard.writeText(buildCardRef(e, { label: 'TCS ladder card' }));
-    } catch {
-      ok = false; // clipboard blocked (insecure context / permission denied)
-    }
-    setCopyState({ key, ok });
-    clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopyState({ key: null, ok: false }), 1800);
-  };
+  // ── Copy-to-investigate — shared hook. Per-card feedback; a blocked clipboard
+  // reports FAILURE rather than silently claiming success (see useCardCopy). ──
+  const { copyState, copyCardRef } = useCardCopy({ label: 'TCS ladder card' });
 
   // Issue #667/#668 — opt-in "Details": company/stock facts + our own trading
   // stats on each card. DEFAULT OFF so the production ladder is unchanged
@@ -454,7 +402,13 @@ export default function LadderPage() {
         {/* Control row — spans BOTH columns so it has the full width for more controls.
             It is a grid sibling (not nested in either column), which is what lets it sit
             above the protocol list as well as the cards. */}
-        <div className="lad-toolbar">
+        <LadderToolbar
+          rankBy={rankBy} onRankBy={setRankBy}
+          ageFilter={ageFilter} onAgeFilter={setAgeFilter}
+          marketFilter={marketFilter} onMarketFilter={setMarketFilter}
+          search={search} onSearch={setSearch}
+          searchAriaLabel="Search ladder by symbol, protocol, state or signal"
+        >
           <div className="lad-direction" role="group" aria-label="Direction">
             {DIRECTION_OPTIONS.map(([val, label]) => (
               <button
@@ -467,48 +421,7 @@ export default function LadderPage() {
               </button>
             ))}
           </div>
-          <label className="lad-filter">
-            Score by:
-            <select value={rankBy} onChange={(e) => setRankBy(e.target.value)}>
-              <option value="signal">Signal</option>
-              <option value="opp">Opportunity</option>
-            </select>
-          </label>
-          <label className="lad-filter">
-            Score age:
-            <select value={ageFilter} onChange={(e) => setAgeFilter(e.target.value)}>
-              <option value="all">All</option>
-              {AGE_OPTIONS.map((m) => <option key={m} value={m}>≤ {m}m</option>)}
-            </select>
-          </label>
-          <label className="lad-filter">
-            Market:
-            <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
-              {MARKET_OPTIONS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
-            </select>
-          </label>
-          <label className="lad-search">
-            <span className="lad-search-icon" aria-hidden="true">⌕</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search symbol, protocol, state…"
-              aria-label="Search ladder by symbol, protocol, state or signal"
-            />
-            {search && (
-              <button
-                type="button"
-                className="lad-search-clear"
-                onClick={() => setSearch('')}
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </label>
-        </div>
+        </LadderToolbar>
 
         {/* Left — protocol selection list */}
         <aside className="lad-proto-col">
@@ -561,37 +474,11 @@ export default function LadderPage() {
               <p>Each protocol ranks its symbols by live SEES score; the cards stack in score order.</p>
             </div>
           ) : passing.length === 0 && excluded.length === 0 ? (
-            <div className="lad-empty">
-              {/* The search term must be named as the cause.
-                  Without this branch the panel claimed "none of the selected
-                  protocols have resolved symbols" while four protocols were
-                  selected and seven symbols were resolved — the search had hidden
-                  them. An empty result that misreports WHY is the exact failure
-                  this codebase warns about ("nothing happened, and nothing said
-                  why"), so search gets its own message and a one-click escape. */}
-              {search.trim() ? (
-                <>
-                  <p className="lad-empty-title">No cards match “{search.trim()}”.</p>
-                  <p>
-                    The selected protocols have resolved symbols, but none match the search.
-                    {' '}
-                    <button type="button" className="lad-empty-action" onClick={() => setSearch('')}>
-                      Clear search
-                    </button>
-                  </p>
-                </>
-              ) : marketFilter === 'open' ? (
-                <>
-                  <p className="lad-empty-title">No open-market symbols for the selected protocols.</p>
-                  <p>All matched cards are for a closed market. Switch the Market filter to All or Closed to see them.</p>
-                </>
-              ) : (
-                <>
-                  <p className="lad-empty-title">No symbols for the selected protocols.</p>
-                  <p>None of the selected protocols have resolved symbols to rank yet.</p>
-                </>
-              )}
-            </div>
+            <LadderEmptyState
+              search={search}
+              onClearSearch={() => setSearch('')}
+              marketFilter={marketFilter}
+            />
           ) : (
             <>
               {passing.length > 0 && (
@@ -603,12 +490,7 @@ export default function LadderPage() {
               )}
               {excluded.length > 0 && (
                 <>
-                  <div className="lad-divider">
-                    <span className="lad-divider-label">Not passing filters</span>
-                    <span className="lad-divider-note">
-                      {excluded.length} card{excluded.length === 1 ? '' : 's'} outside the selected score-age filter
-                    </span>
-                  </div>
+                  <LadderExcludedDivider count={excluded.length} />
                   <motion.div layout className="lad-stack">
                     <AnimatePresence mode="popLayout">
                       {excluded.map((e, i) => renderCard(e, i, true))}

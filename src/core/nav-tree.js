@@ -108,6 +108,7 @@ export const NAV_TREE = {
     label: 'Scoring',
     views: [
       { id: 'live-ordering-stack', label: 'Ladder', icon: '◉' },
+      { id: 'ab-ladder', label: 'A/B Ladder', icon: '⚖️' },
       { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
       { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },

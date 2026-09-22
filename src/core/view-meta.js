@@ -426,6 +426,12 @@ const VIEW_META = {
     css: 'src/pages/ladder.css',
     api: [],
   },
+  '/scoring/ab-ladder': {
+    label: 'A/B Ladder',
+    file: 'src/pages/AbLadderPage.jsx',
+    css: 'src/pages/ab-ladder.css',
+    api: [],
+  },
   '/scoring/scoring-activity-logs': {
     label: 'Scoring Activity Logs',
     file: 'src/pages/ScoringActivityLogsPage.jsx',
