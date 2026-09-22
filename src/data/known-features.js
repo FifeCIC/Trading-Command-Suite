@@ -471,4 +471,17 @@ export const KNOWN_FEATURES = {
   'Position Intent (trading-style classification)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
   'Weekend Defence Checklist (direction + exposure)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
   'Market Tape session countdown + accessible live region': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    // 2026-09-21/22 - Handoff Batch #21 (stop distance, trade-record truth, identity, build safety)
+    'Trail Distance Floor (#927)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Symbol Detail - stat row and evidence charts': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Protocol Health - evidence-based verdicts (#906)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Identity Wiring Map': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Phantom-Close Quarantine (#931)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'P&L Report - honest exclusions (#805)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Broker Position Count - three-state (automation pulse)': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Build Safety - failed gates preserve the serving dist (#946)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Signal Freshness - queue expiry and age at execution (#882)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Score-Unit Enforcement on decision rows (#909/#937)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Outcome Recording Integrity - identity dedup (#825)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Per-symbol Current and Historical P&L (Active Symbols)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
 };
