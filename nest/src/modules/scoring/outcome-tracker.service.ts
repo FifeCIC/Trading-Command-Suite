@@ -30,14 +30,23 @@ import { barLengthMs } from '../../common/utils/timeframe';
 //     filled / finalised counted separately so a fill-nothing sweep cannot report success).
 //
 // Set OUTCOME_TRACKING_ENABLED=false to disable all outcome recording.
-// OUTCOME_TRACKING_DEDUP_WINDOW_MS controls the dedup window (default 5 min).
-// These can be overridden via environment variables for production tuning.
+// ⚠️ There is no time-window dedup any more (#825). Duplication is determined by IDENTITY —
+// `strategyId::directiveId::symbol::predictedAt` — not by elapsed time. See the decision comment
+// in recordOutcomes() and DEDUP_IDENTITY_RETENTION_MS below.
 
 const OUTCOME_TRACKING_ENABLED =
   process.env.OUTCOME_TRACKING_ENABLED !== 'false'; // default true
-const OUTCOME_TRACKING_DEDUP_WINDOW_MS = process.env.OUTCOME_TRACKING_DEDUP_WINDOW_MS
-  ? parseInt(process.env.OUTCOME_TRACKING_DEDUP_WINDOW_MS, 10)
-  : 300_000; // 5 minutes
+
+/**
+ * How long a recorded IDENTITY is remembered for in-process dedup (#825).
+ *
+ * The identity includes `predictedAt`, which is stamped ONCE per scoring pass ("predictedAt IS
+ * THE DECISION TIME", #827). So this memory only ever collapses replays of the SAME pass — a
+ * retry, an overlapping run — which are seconds apart. One hour is ~30x the pass cadence: far
+ * beyond any legitimate replay, and small enough that the map stays trivial (a short string and
+ * a number per entry).
+ */
+const DEDUP_IDENTITY_RETENTION_MS = 60 * 60 * 1000;
 
 /**
  * Rows matured per sweep. The sweep is oldest-first, so a saturated batch means
@@ -122,7 +131,8 @@ const SYMBOL_ID_CACHE_TTL_MS = 10 * 60 * 1000;
 const HORIZON_MAX_FORWARD_MS = 72 * 60 * 60 * 1000;
 
 
-type DedupKey = string; // `${directiveId}::${symbol}`
+/** `${strategyId}::${directiveId}::${symbol}::${predictedAt.getTime()}` (#825 — identity, not a time window). */
+type DedupKey = string;
 
 /**
  * Canonicalise a timeframe label to the form stored on `MarketBar`.
@@ -149,8 +159,11 @@ export function canonicalTimeframe(timeframe: string): string {
 export class OutcomeTrackerService {
   private readonly logger = new Logger(OutcomeTrackerService.name);
 
-  /** Tracks last recorded timestamp per directive+symbol for dedup. */
-  private readonly lastRecorded = new Map<DedupKey, number>();
+  /**
+   * Identities recorded in this process (#825) — `DedupKey` → ms epoch of first recording.
+   * Bounded by DEDUP_IDENTITY_RETENTION_MS; pruned at the top of recordOutcomes().
+   */
+  private readonly recordedIdentity = new Map<DedupKey, number>();
 
   /**
    * Ticker → symbol.id cache (MST-012). `null` means "resolved, does not exist",
@@ -169,19 +182,20 @@ export class OutcomeTrackerService {
   private marketGapResolutions = 0;
 
   /**
-   * Cumulative drop counters for the observation filter (#825), split by REASON
-   * because the two mean different things:
-   *   - `zeroDropped`   — the directive scored 0/null. Nothing to track. Benign.
-   *   - `windowDropped` — a real observation discarded because the same key was
-   *                       written inside the dedup window. **This is the one that
-   *                       thins the sample**, and it is the reason accuracy figures
-   *                       taken before 2026-09-15 are not trustworthy.
+   * Cumulative drop counters for the observation filter (#825), split by REASON because the two
+   * mean different things:
+   *   - `zeroDropped`     — the directive scored 0/null. Nothing to track. Benign.
+   *   - `identityDropped` — an observation whose IDENTITY was already recorded in this process
+   *                         (a replay of the same pass). Under the identity rule this should
+   *                         trend to ~0; before #825 this counter was a time window and 3 of
+   *                         every 4 passes were dropped here, which is why accuracy figures
+   *                         taken before 2026-09-15 are a sample, not a record.
    *
-   * Reported as a running ratio rather than per-pass: a per-pass line fires on every
-   * scoring tick and becomes noise, which is how the original DEBUG line went unseen.
+   * The per-pass `Recorded ...` log line carries the same numbers; the WARN below is the
+   * running ratio, for the shape of the problem rather than the tick rate.
    */
   private zeroDropped = 0;
-  private windowDropped = 0;
+  private identityDropped = 0;
   private readonly recordedTotal = { n: 0 };
 
   constructor(private readonly prisma: PrismaService) {}
@@ -189,25 +203,46 @@ export class OutcomeTrackerService {
   /**
    * Report the running record:drop ratio (#825).
    *
-   * ⚠️ WHY A RATIO AND NOT A PER-PASS COUNT
-   * The old line fired on every pass at DEBUG and was therefore invisible. A ratio
-   * over a meaningful window is the smallest signal that would have exposed a ~75%
-   * silent drop, and it costs one log line per N observations instead of one per tick.
+   * Identity drops should be ~0 (the identity IS the observation; a drop means a replay of the
+   * same pass). Speak when they are numerous enough to matter, but keep the line proportional
+   * to the problem rather than to the tick rate.
    */
   private logDropRate(): void {
-    const dropped = this.windowDropped;
-    // Only speak once the sample is meaningful, and then only every 200 window-drops,
-    // so the line stays proportional to the problem rather than to the tick rate.
+    const dropped = this.identityDropped;
     if (dropped === 0 || dropped % 200 !== 0) return;
     const kept = this.recordedTotal.n;
     const considered = kept + dropped;
     const pct = considered > 0 ? Math.round((dropped / considered) * 100) : 0;
     this.logger.warn(
-      `Outcome filter: ${dropped} observations discarded by the ${OUTCOME_TRACKING_DEDUP_WINDOW_MS / 1000}s ` +
-      `dedup window, ${kept} recorded (${pct}% of candidates dropped). ` +
-      `Zero-score drops (benign): ${this.zeroDropped}. ` +
-      `A high ratio means outcome data is a SAMPLE, not a record — see #825.`,
+      `Outcome filter: ${dropped} duplicate-identity observation(s) skipped, ${kept} recorded ` +
+      `(${pct}% of candidates). Zero-score drops (benign): ${this.zeroDropped}. ` +
+      `Identity drops should trend to ~0 after #825 — a high ratio means replays are outnumbering ` +
+      `real observations.`,
     );
+  }
+
+  /**
+   * #825 acceptance — expose the recording record so every figure computed from this table can
+   * state the health of the recorder that produced its sample. Consumed by
+   * GET /api/scoring/accuracy (`recording` block) and by scripts/audit-outcome-recording.cjs,
+   * which FAILS when the identity-drop rate is high.
+   */
+  getRecordingStats() {
+    const recorded = this.recordedTotal.n;
+    const identity = this.identityDropped;
+    const zero = this.zeroDropped;
+    const considered = recorded + identity;
+    return {
+      recorded,
+      duplicateIdentitySkipped: identity,
+      zeroScoreSkipped: zero,
+      identityDropRatePct: considered > 0 ? Math.round((identity / considered) * 1000) / 10 : 0,
+      identityMemorySize: this.recordedIdentity.size,
+      note:
+        'Observations are recorded by IDENTITY (strategyId::directiveId::symbol::predictedAt), ' +
+        'never by a time window (#825). duplicateIdentitySkipped counts replays of the same pass ' +
+        'and should trend to ~0; a high rate means replays outnumber observations.',
+    };
   }
 
   /**
@@ -235,9 +270,9 @@ export class OutcomeTrackerService {
    * Store DirectiveOutcome records after a scoring run.
    * Called from the scoring pipeline after directives produce scores.
    *
-   * Deduplication: directive+symbol combos are only recorded once per
-   * OUTCOME_TRACKING_DEDUP_WINDOW_MS (default 5 min). Zero/null scores
-   * are skipped since they carry no signal to track.
+   * Deduplication: by IDENTITY — `strategyId::directiveId::symbol::predictedAt` — not by a time
+   * window (#825 decision; see the comment at the filter). Zero/null scores are skipped since
+   * they carry no signal to track, and are counted separately from identity skips.
    */
   async recordOutcomes(
     outcomes: {
@@ -274,31 +309,40 @@ export class OutcomeTrackerService {
     if (!this.prisma.isAvailable || outcomes.length === 0) return 0;
 
     const now = Date.now();
-    const windowMs = OUTCOME_TRACKING_DEDUP_WINDOW_MS;
 
-    // ── #825 — the dedup key MUST identify a strategy, and the drop reasons must be
-    // countable. Both were wrong, and both were silent.
+    // ── #825 — dedup by IDENTITY, not by elapsed time ──────────────────────────────────────
     //
-    // ⚠️ DEFECT 1 — the key was `${directiveId}::${symbol}`, with no strategy.
-    // A directive participates in MANY protocols — that is the normal case, and
-    // `strategyId` exists on the row precisely so those can be told apart (#821).
-    // Without it, a directive firing under protocol A suppressed the SAME directive
-    // under protocol B for five minutes. **One protocol's observation cancelled
-    // another's**, so per-protocol measurement was distorted in a way that depended
-    // on which protocol happened to score first.
+    // THE DECISION (recorded because the issue asked for the reasoning, not just the code):
+    //   A time window is a PROXY for identity, and a proxy that discards data is the wrong
+    //   shape for a measurement table. The window produced two measured defects:
+    //     1. the key omitted `strategyId`, so a directive firing under protocol A suppressed
+    //        the SAME directive under protocol B for five minutes — one protocol's observation
+    //        cancelled another's (partially fixed 2026-09-15);
+    //     2. 5-minute window vs ~2-minute cadence meant ~3 of every 4 passes were dropped even
+    //        with the key fixed — `directiveoutcome` was a SAMPLE, not a record.
+    //   RULE NOW: record what was observed; the IDENTITY determines duplication.
+    //     identity = strategyId :: directiveId :: symbol :: predictedAt
+    //   `predictedAt` is stamped ONCE per scoring pass (it is the decision time, #827), so this
+    //   collapses only replays of the SAME observation (retries, overlapping runs). A new pass
+    //   is a new observation and IS recorded — that is the whole point of the change.
     //
-    // ⚠️ DEFECT 2 — every drop logged at DEBUG and the counters were merged. Live
-    // log, every scoring pass: "All N outcomes filtered (dedup/zero-score)" at
-    // DEBUG. With a 300s window against a ~120s cadence, roughly 3 of every 4 passes
-    // per key were dropped — silently, at a level that is off in normal operation.
-    // A dropped observation is indistinguishable from a quiet market, which is why
-    // this survived.
+    // ⚠️ Enforced in-process (map + retention below). There is NO database unique constraint:
+    // the table holds 3 duplicate identities from before this rule, so adding one requires a
+    // decision on those rows first (see #825 close note — not done here).
     //
-    // Zero-score and window drops are now counted SEPARATELY: they mean different
-    // things ("no signal to record" vs "we chose not to record this one") and only
-    // the second is a measurement defect.
+    // Zero-score and identity drops are counted SEPARATELY: they mean different things
+    // ("no signal to record" vs "this exact observation was already recorded") and collapsing
+    // them is how the original defect stayed invisible.
     let zeroScoreDropped = 0;
-    let windowDropped = 0;
+    let identityDropped = 0;
+
+    // Prune identities older than the retention horizon — they cannot be replayed any more.
+    const pruneBefore = now - DEDUP_IDENTITY_RETENTION_MS;
+    if (this.recordedIdentity.size > 0) {
+      for (const [k, at] of this.recordedIdentity) {
+        if (at < pruneBefore) this.recordedIdentity.delete(k);
+      }
+    }
 
     const deduped = outcomes.filter((o) => {
       // Skip zero/null scores — no signal to track
@@ -307,30 +351,31 @@ export class OutcomeTrackerService {
         return false;
       }
 
-      // #825 — strategyId is part of the identity, not an optional extra.
-      const key: DedupKey = `${o.strategyId}::${o.directiveId}::${o.symbol}`;
-      const lastTs = this.lastRecorded.get(key);
-
-      // If recorded within dedup window, skip
-      if (lastTs !== undefined && (now - lastTs) < windowMs) {
-        windowDropped++;
+      // #825 — the identity IS the observation: strategy + directive + symbol + decision time.
+      const identity: DedupKey = `${o.strategyId}::${o.directiveId}::${o.symbol}::${o.predictedAt.getTime()}`;
+      if (this.recordedIdentity.has(identity)) {
+        identityDropped++;
         return false;
       }
-
-      // Mark as recorded (will be updated after successful DB write)
-      this.lastRecorded.set(key, now);
+      this.recordedIdentity.set(identity, now);
       return true;
     });
 
     if (deduped.length === 0) {
       this.zeroDropped += zeroScoreDropped;
-      this.windowDropped += windowDropped;
+      this.identityDropped += identityDropped;
+      // ⚠️ A pass where EVERYTHING was filtered must still SAY SO (#825). The old code returned 0
+      // in silence — indistinguishable from "nothing to record" — and that silence is exactly how
+      // a ~75% drop stayed invisible for weeks. One LOG line per pass, naming the breakdown.
+      this.logger.log(
+        `Recorded 0 directive outcomes (${identityDropped} duplicate identity skipped, ${zeroScoreDropped} zero-score skipped)`,
+      );
       this.logDropRate();
       return 0;
     }
 
     this.zeroDropped += zeroScoreDropped;
-    this.windowDropped += windowDropped;
+    this.identityDropped += identityDropped;
     this.logDropRate();
 
     try {
@@ -350,9 +395,14 @@ export class OutcomeTrackerService {
         })),
         skipDuplicates: true,
       });
+      // ⚠️ `skipDuplicates` is a NO-OP today: the model has no unique constraint for it to
+      // apply to (measured 2026-09-22, #825 close note — the table holds 3 duplicate identities
+      // from before the identity rule, so adding a constraint needs a dedup decision on those
+      // rows first). Kept so the day one is added the fast path is already correct.
       this.logger.log(
         `Recorded ${created.count} directive outcomes` +
-        (windowDropped > 0 ? ` (${windowDropped} held by the dedup window)` : ''),
+        (identityDropped > 0 ? ` (${identityDropped} duplicate identity skipped)` : '') +
+        (zeroScoreDropped > 0 ? ` (${zeroScoreDropped} zero-score skipped)` : ''),
       );
       this.recordedTotal.n += created.count;
       return created.count;
@@ -662,6 +712,9 @@ export class OutcomeTrackerService {
       accuracy: total > 0 ? Math.round((correct / total) * 1000) / 1000 : 0,
       byTimeframe,
       bySymbol,
+      // #825 acceptance — every accuracy figure must carry the health of the recorder that
+      // produced its sample. Without this, a silently-thinned table read as a quiet market.
+      recording: this.getRecordingStats(),
     };
   }
 
