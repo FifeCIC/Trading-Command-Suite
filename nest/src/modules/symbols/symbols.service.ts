@@ -8,6 +8,8 @@ import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { resolvePositionPnl } from '../../common/utils/position-pnl';
+// #854/#778 — the ONE definition of a broker-maintained ("live") position row.
+import { isLivePosition } from '../../common/utils/position-freshness';
 
 @Injectable()
 export class SymbolsService {
@@ -211,34 +213,13 @@ export class SymbolsService {
   }
 
   /**
-   * A stored Position row counts as a LIVE holding only when a broker sync refreshed its
-   * quote inside this window (#854).
-   *
-   * ⚠️ WHY FRESHNESS IS THE DISCRIMINATOR. The `position` table has two populations with
-   * sharply different writers:
-   *   - rows maintained by `PositionSyncService` on every loop tick — quote ages in MINUTES
-   *     (measured 2026-09-22: MT5 rows 07:45 → 10:41 across a morning);
-   *   - rows created once by the Trading 212 portfolio IMPORT and never touched again —
-   *     frozen at their import time (measured: 24 rows all quoted 2026-07-31 01:25, ~8 weeks).
-   * The old code returned every row with `hasPosition: true`, so 24 imported stocks rendered as
-   * current holdings with live P&L on the Symbols Browser — plausible numbers, no error (#854).
-   *
-   * 7 days sits between the two populations by design: sync-refreshed rows can never fall
-   * outside it (even through a long weekend plus days of machine downtime), and frozen import
-   * rows can never fall inside it. If syncs genuinely stop for a week, the rows ARE stale and
-   * saying so is the honest answer.
-   */
-  private static readonly POSITION_LIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-  /**
    * Current-holdings map from the stored Position table (DB-only — no external
    * provider calls, so it is safe for page render).
    *
-   * AUTHORITATIVE SOURCE for "an open position exists": a `position` row whose `lastQuotedAt`
-   * falls inside POSITION_LIVE_WINDOW_MS — i.e. a row an actual broker sync is maintaining.
-   * Rows outside it are NOT live positions and are returned separately as `staleHoldings`, so
-   * the exclusion is visible rather than silent (development-philosophy §7). Keyed for
-   * cross-referencing the Symbols Browser (match by uppercased ticker).
+   * AUTHORITATIVE SOURCE for "an open position exists": `isLivePosition` from
+   * `common/utils/position-freshness.ts` — the ONE shared definition of broker-maintained vs
+   * cached-import rows (#854, #778). Rows outside the live window are returned separately as
+   * `staleHoldings`, so the exclusion is visible rather than silent.
    */
   async getPositionMap() {
     if (!this.prisma.isAvailable) return { positions: [], staleHoldings: { count: 0, newestQuote: null, note: '' } };
@@ -247,12 +228,10 @@ export class SymbolsService {
         orderBy: { symbol: 'asc' },
       });
 
-      const cutoff = Date.now() - SymbolsService.POSITION_LIVE_WINDOW_MS;
       const live: typeof rows = [];
       const stale: typeof rows = [];
       for (const p of rows) {
-        const quoted = p.lastQuotedAt instanceof Date ? p.lastQuotedAt.getTime() : new Date(p.lastQuotedAt ?? 0).getTime();
-        (Number.isFinite(quoted) && quoted >= cutoff ? live : stale).push(p);
+        (isLivePosition(p.lastQuotedAt) ? live : stale).push(p);
       }
 
       const positions = live.map((p) => {

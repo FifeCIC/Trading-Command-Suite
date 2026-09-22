@@ -22,6 +22,8 @@ import {
 import { TradingGatesService, GateConfig } from '../trading-gates/trading-gates.service';
 import { MonteCarloService } from './monte-carlo.service';
 import { PrismaService } from '../../database/prisma.service';
+// #778 — the ONE definition of broker-maintained vs cached-import position rows.
+import { POSITION_LIVE_WINDOW_MS } from '../../common/utils/position-freshness';
 import { WeekendGapRiskService } from './weekend-gap-risk.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
@@ -275,12 +277,25 @@ export class RiskController {
 
   private async getPortfolioHealthReal() {
     try {
-      // Count positions
-      const positionCount = await this.prisma.position.count().catch(() => 0);
+      // ── #778 — exposure figures cover BROKER-MAINTAINED positions only ──
+      // The position table also holds cached portfolio-import rows (a one-off Trading 212
+      // import, quotes frozen at import time). Counting them here reported “33 positions,
+      // −1,021.77“ — the frozen rows outweighing the live book — and nothing errored. They are
+      // still REPORTED (cachedImportPositions below), never silently dropped.
+      const liveCutoff = new Date(Date.now() - POSITION_LIVE_WINDOW_MS);
+      const cachedWhere = { OR: [{ lastQuotedAt: { lt: liveCutoff } }, { lastQuotedAt: null }] };
+      const positionCount = await this.prisma.position.count({ where: { lastQuotedAt: { gte: liveCutoff } } }).catch(() => 0);
       const pnlAgg = await this.prisma.position.aggregate({
         _sum: { pnl: true },
+        where: { lastQuotedAt: { gte: liveCutoff } },
       }).catch(() => ({ _sum: { pnl: 0 } }));
       const totalPnlFromPositions = (pnlAgg as any)?._sum?.pnl ?? 0;
+      const cachedCount = await this.prisma.position.count({ where: cachedWhere }).catch(() => 0);
+      const cachedPnlAgg = await this.prisma.position.aggregate({
+        _sum: { pnl: true },
+        where: cachedWhere,
+      }).catch(() => ({ _sum: { pnl: 0 } }));
+      const cachedPnl = (cachedPnlAgg as any)?._sum?.pnl ?? 0;
 
       // Check recent trades for P&L
       const recentTrades: any[] = await this.prisma.trade.findMany({
@@ -304,6 +319,9 @@ export class RiskController {
       if (drawdown > 20) warnings.push(`Drawdown at ${drawdown.toFixed(1)}% — CRITICAL`);
       if (positionCount === 0) warnings.push('No tracked positions found');
       if (dailyPnl < -500) warnings.push('Daily P&L below -$500');
+      if (cachedCount > 0) {
+        warnings.push(`${cachedCount} cached portfolio-import position(s) excluded from exposure (not broker-maintained; #778)`);
+      }
 
       return {
         totalExposure: positionCount,
@@ -313,6 +331,8 @@ export class RiskController {
         dailyPnl,
         totalPnl: totalPnlFromPositions,
         positionCount,
+        /** #778 — kept VISIBLE: cached import rows and their stale P&L, excluded from the figures above. */
+        cachedImportPositions: { count: cachedCount, pnl: Math.round(cachedPnl * 100) / 100 },
         riskWarnings: warnings,
         timestamp: new Date().toISOString(),
       };

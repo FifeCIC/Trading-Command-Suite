@@ -14,6 +14,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { resolvePositionPnl } from '../../common/utils/position-pnl';
+// #778 — broker-maintained vs cached-import rows: the ONE shared definition.
+import { isLivePosition } from '../../common/utils/position-freshness';
 
 // ── Default Settings ───────────────────────────────────
 
@@ -73,6 +75,11 @@ export interface DiversificationSummary {
   globalExposures: GlobalExposure[];
   settings: Record<string, string>;
   warnings: string[];
+  /**
+   * #778 — rows excluded from every figure above because no broker sync maintains them
+   * (cached portfolio-import rows). Counted and dated so the exclusion is visible.
+   */
+  cachedImportPositions: { count: number; newestQuote: string | null; note: string };
 }
 
 export interface PreTradeCheckResult {
@@ -132,12 +139,41 @@ export class GlobalDiversificationService {
   // ── Position Aggregation ────────────────────────────
 
   /**
-   * Aggregate all open positions across all brokers from the DB.
-   * The Position table is the source of truth — all adapters write here.
+   * Aggregate open positions across all brokers from the DB — **broker-maintained rows only**.
+   *
+   * ⚠️ #778 — the Position table also holds cached portfolio-IMPORT rows (a one-off Trading 212
+   * import with quotes frozen at import time). They are NOT current holdings: counting them put
+   * ~99.98% of “portfolio value“ on an 8-week-old snapshot, and let a frozen row trip the
+   * pre-trade cross-broker duplicate guard. Only rows a broker sync maintains participate in
+   * diversification; excluded rows are counted, dated and reported via `cachedImportBlock()`.
    */
   async getAllPositions(): Promise<BrokerPositionSummary[]> {
-    if (!this.prisma.isAvailable) return [];
+    const { live } = await this.loadPositionRows();
+    return live;
+  }
 
+  /** #778 — the excluded rows, counted and dated (never silently dropped). */
+  private cachedImportBlock(cached: any[]): { count: number; newestQuote: string | null; note: string } {
+    if (cached.length === 0) return { count: 0, newestQuote: null, note: '' };
+    const newest = cached.reduce((a, b) =>
+      new Date(a.lastQuotedAt ?? 0).getTime() >= new Date(b.lastQuotedAt ?? 0).getTime() ? a : b,
+    );
+    const newestIso = newest.lastQuotedAt instanceof Date
+      ? newest.lastQuotedAt.toISOString()
+      : String(newest.lastQuotedAt ?? '');
+    const providers = [...new Set(cached.map((r) => r.provider))].join(', ');
+    return {
+      count: cached.length,
+      newestQuote: newestIso,
+      note:
+        `${cached.length} position row(s) are cached portfolio-import records (${providers}; newest quote ` +
+        `${newestIso.slice(0, 10)}) — not refreshed by any broker sync, excluded from diversification figures (#778).`,
+    };
+  }
+
+  /** One read of the position table, split by the shared freshness rule. */
+  private async loadPositionRows(): Promise<{ live: BrokerPositionSummary[]; cached: any[] }> {
+    if (!this.prisma.isAvailable) return { live: [], cached: [] };
     try {
       const rows = await this.prisma.position.findMany({
         orderBy: [{ provider: 'asc' }, { symbol: 'asc' }],
@@ -149,31 +185,35 @@ export class GlobalDiversificationService {
         isa: 'Stocks ISA',
       };
 
-      return rows.map((r) => {
-        // 2026-09-10 — side-aware P&L (short rows previously inverted here too).
-        const { pnl, pnlPct } = resolvePositionPnl({
-          side: r.side,
-          avgPrice: r.avgPrice,
-          currentPrice: r.currentPrice ?? r.avgPrice,
-          quantity: r.quantity,
-          brokerPnl: r.pnl,
+      const live = rows
+        .filter((r) => isLivePosition(r.lastQuotedAt))
+        .map((r) => {
+          // 2026-09-10 — side-aware P&L (short rows previously inverted here too).
+          const { pnl, pnlPct } = resolvePositionPnl({
+            side: r.side,
+            avgPrice: r.avgPrice,
+            currentPrice: r.currentPrice ?? r.avgPrice,
+            quantity: r.quantity,
+            brokerPnl: r.pnl,
+          });
+          return {
+            brokerId: r.provider,
+            brokerName: brokerNames[r.provider] || r.provider,
+            symbol: r.symbol,
+            quantity: r.quantity,
+            avgPrice: r.avgPrice,
+            currentPrice: r.currentPrice ?? 0,
+            marketValue: (r.currentPrice ?? r.avgPrice) * r.quantity,
+            unrealizedPnl: pnl ?? 0,
+            unrealizedPnlPct: pnlPct ?? 0,
+            currency: r.provider === 'mt5' ? 'GBP' : r.provider === 'trading212' ? 'USD' : 'GBP',
+          };
         });
-        return {
-          brokerId: r.provider,
-          brokerName: brokerNames[r.provider] || r.provider,
-          symbol: r.symbol,
-          quantity: r.quantity,
-          avgPrice: r.avgPrice,
-          currentPrice: r.currentPrice ?? 0,
-          marketValue: (r.currentPrice ?? r.avgPrice) * r.quantity,
-          unrealizedPnl: pnl ?? 0,
-          unrealizedPnlPct: pnlPct ?? 0,
-          currency: r.provider === 'mt5' ? 'GBP' : r.provider === 'trading212' ? 'USD' : 'GBP',
-        };
-      });
+
+      return { live, cached: rows.filter((r) => !isLivePosition(r.lastQuotedAt)) };
     } catch (err) {
       this.logger.warn(`Failed to fetch positions: ${(err as Error).message}`);
-      return [];
+      return { live: [], cached: [] };
     }
   }
 
@@ -280,7 +320,7 @@ export class GlobalDiversificationService {
 
   async getDiversificationSummary(): Promise<DiversificationSummary> {
     const settings = await this.getSettings();
-    const positions = await this.getAllPositions();
+    const { live: positions, cached } = await this.loadPositionRows();
 
     const totalValue = positions.reduce((s, p) => s + p.marketValue, 0);
     const crossBrokerDuplicates = this.findCrossBrokerDuplicates(positions);
@@ -313,6 +353,7 @@ export class GlobalDiversificationService {
       crossBrokerDuplicates,
       globalExposures,
       settings,
+      cachedImportPositions: this.cachedImportBlock(cached),
       warnings,
     };
   }
@@ -337,6 +378,7 @@ export class GlobalDiversificationService {
       return { allowed: true, blocked: false, severity: 'info' };
     }
 
+    // ⚠️ LIVE rows only — a cached import row must never gate a live trade (#778).
     const positions = await this.getAllPositions();
 
     // Find existing positions for this symbol

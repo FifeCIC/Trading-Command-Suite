@@ -1,4 +1,5 @@
 import { SymbolsService } from './symbols.service';
+import { POSITION_LIVE_WINDOW_MS } from '../../common/utils/position-freshness';
 
 /**
  * /api/symbols/positions — only sync-refreshed rows are holdings (#854).
@@ -26,9 +27,9 @@ describe('SymbolsService.getPositionMap — live vs stale holdings (#854)', () =
     pnl: 1, side: 'buy', lastQuotedAt: new Date(), ...over,
   });
 
-  // Read the ACTUAL window from the service — a test that mirrors the constant would drift
-  // silently the day someone tunes it.
-  const windowMs = (SymbolsService as any).POSITION_LIVE_WINDOW_MS as number;
+  // The window is the SHARED definition (common/utils/position-freshness) — a test that
+  // mirrored the constant would drift silently the day someone tunes it.
+  const windowMs = POSITION_LIVE_WINDOW_MS;
 
   it('returns ONLY sync-refreshed rows as positions — a frozen import row is not a holding', async () => {
     const { svc } = make([
