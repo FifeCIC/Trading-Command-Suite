@@ -588,8 +588,9 @@ export class SymbolsService {
         excludedPhantomRows: Number(phantomRows[0]?.n ?? 0),
         note:
           'Rows marked closed with no brokerTicket and no exitPrice are excluded — they are bulk-write ' +
-          'residue with pnl 0, not trades (#931). 17 are NOT flagged pnlInvalid, so that column alone ' +
-          'cannot be used as the filter.',
+          'residue with pnl 0, not trades (#931). The filter is structural rather than the pnlInvalid ' +
+          'column alone, because the original one-off quarantine used a date window and missed 17 rows ' +
+          '(quarantined 2026-09-22; guard: validate-trade-phantoms.cjs).',
       },
       // ⚠️ NOT YET AVAILABLE: `minComposite` is returned above, but the protocol's MEASURED CEILING
       // is not exposed by any endpoint yet — `auditMeasuredCeilings()` lives inside a health payload

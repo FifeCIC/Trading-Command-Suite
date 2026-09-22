@@ -214,7 +214,7 @@ export class AbTestService {
   /** Aggregate per-side PnL, win rate, and max drawdown from recorded trades. */
   private async computeResults(test: AbTest): Promise<any> {
     const trades = await this.prisma.trade.findMany({
-      where: { abTestId: test.id },
+      where: { abTestId: test.id, pnlInvalid: 0 }, // #931 — phantom closes are not results
       orderBy: { openedAt: 'asc' },
     });
 

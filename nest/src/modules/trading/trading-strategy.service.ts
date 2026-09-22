@@ -392,6 +392,7 @@ export class TradingStrategyService {
           scoringStrategyId: { in: strategies.map(s => s.id) },
           pnl: { not: null },
           status: 'closed',
+          pnlInvalid: 0, // #931 — phantom closes added 0 to totals but shifted first/last-trade days
         },
         select: { scoringStrategyId: true, pnl: true, openedAt: true },
       });

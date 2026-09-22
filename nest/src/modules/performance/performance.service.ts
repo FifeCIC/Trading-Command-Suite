@@ -69,7 +69,10 @@ export class PerformanceService {
 
   async getStrategyPerformance(strategyId: string): Promise<StrategyPerformance | null> {
     const trades = await this.prisma.trade.findMany({
-      where: { strategy: strategyId },
+      // #931 — phantom closes (no brokerTicket, no exitPrice) are not trades; count them
+      // in nothing. Without this they passed `status='closed' && pnl != null` and read
+      // as WINS (pnl 0 >= 0) in every win-rate computed below.
+      where: { strategy: strategyId, pnlInvalid: 0 },
       orderBy: { openedAt: 'asc' },
     }).catch(() => []);
 
@@ -82,7 +85,7 @@ export class PerformanceService {
 
   async getAllPerformance(): Promise<StrategyPerformance[]> {
     const trades = await this.prisma.trade.findMany({
-      where: { strategy: { not: null } },
+      where: { strategy: { not: null }, pnlInvalid: 0 }, // #931 — no phantom closes
       orderBy: { openedAt: 'asc' },
     }).catch(() => []);
 
@@ -107,6 +110,7 @@ export class PerformanceService {
         strategy: { not: null },
         closedAt: { gte: cutoff },
         pnl: { not: null },
+        pnlInvalid: 0, // #931 — no phantom closes
       },
       orderBy: { closedAt: 'asc' },
     }).catch(() => []);
