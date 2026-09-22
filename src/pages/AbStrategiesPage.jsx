@@ -31,6 +31,14 @@
  * shows the first 8 characters, so links should not need more). There is deliberately NO "last
  * pair" persistence: the index is the default view, so a stale pair must not hijack it.
  *
+ * ⚠️ LIST | TABLE (owner, 2026-09-22). The index renders as the grouped LIST or as a TABLE of one
+ * pair = two rows (A shaded `--bg-elev-2`, B plain) carrying each side's REALISED P&L from #894's
+ * bot-performance attribution, orderable by the profit difference (B − A) — *"to determine the
+ * best B out of ALL B's"* — and the same numbers a dashboard widget can later read. A profit cell
+ * is `—` when there is no attributed record, NEVER 0; a failed fetch is a THIRD state (notice +
+ * still `—`), and a pair whose sides are not both attributed has no Δ and sorts last in both
+ * directions — cannot-judge must never read as worst.
+ *
  * ⚠️ DIFFERENCE MARKING IS THE POINT. Treatment values and the protocol / role / broker / symbol
  * sets that differ between A and B carry a `≠` marker whose title spells out BOTH sides. The marker
  * is a GLYPH, never colour alone (ui-standards), so it survives colour-blind rendering.
@@ -48,7 +56,7 @@
  * ⚠️ Names live ONLY in the registry overlay — the derived payload reports `name: null` on every
  * row (measured 2026-09-22), so a page that skipped the registry would show no names at all.
  */
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
@@ -59,9 +67,15 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import TypeTag from '../components/TypeTag';
 import { StrategyBots, StrategyWarnings, DriftNote } from '../components/StrategyBits';
 import { useStrategyRegistry } from '../hooks/useStrategyRegistry';
+import { usePersistentChoice } from '../hooks/usePersistentState';
+import { pnlClass, pnlSign } from '../core/signal-utils.js';
+import NoticeBlock from '../components/NoticeBlock';
+import '../core/forms.css'; // canonical Form System (.ff-seg) — the List | Table toggle
 import styles from './ab-strategies.module.css';
 
 const API = '/api/scoring/strategies/derived';
+/** #894 — realised per-bot performance; its `strategyKeys` bridge attaches P&L to a strategy. */
+const API_BOT_PERF = '/api/trading/bot-performance';
 /** #929 — the official A/B test runner (see ab-test.controller.ts) + snapshot configs. */
 const API_TESTS = '/api/automation/ab-tests';
 const API_SNAPSHOTS = `${API_TESTS}/snapshots`;
@@ -357,6 +371,132 @@ function PairSide({ side, strategy, name }) {
 }
 
 /**
+ * PairTable — the index as a TABLE: one pair = TWO rows (A shaded, B plain) carrying each side's
+ * realised record, orderable by the profit difference (B − A). Owner, 2026-09-22: *"a table... all
+ * A and B rows together — two rows, slightly different shading"* + *"order by profit difference
+ * between the A's and the B's in order to determine the best B out of ALL B's"*.
+ *
+ * ⚠️ WHAT THE P&L COLUMNS ARE — AND ARE NOT. They are REALISED closes attributed to the strategy's
+ * bot by the SERVER (#894's `strategyKeys` bridge; records the server could not attribute to
+ * exactly one strategy are excluded, never guessed at). Every figure carries its own honesty:
+ *   - `—` NEVER means zero. "No attributed record" and "the fetch failed" are different states,
+ *     told apart by the tooltip (philosophy §7); the note under the table states the rule.
+ *   - Δ exists only when BOTH sides have a record. A half-comparable pair has no Δ and sorts LAST
+ *     — cannot-judge must never read as "worst".
+ *   - `n` sits beside every figure because it stops +$41.66 on ONE close reading like an edge —
+ *     every current record is `noise` by #894's own floor of 30 samples.
+ */
+function PairTable({ pairs, labelFor, sortDir, onToggleSort, perf, perfFailed }) {
+  const recTitle = (rec) => {
+    if (perfFailed) {
+      return 'Bot performance could not be loaded — this cell cannot be judged, which is not the same as zero.';
+    }
+    if (!rec) return 'No realised trades are attributed to this strategy yet — nothing to read, not a zero (#894).';
+    const parts = rec.entries.map((e) => (
+      `${e.name}: ${pnlSign(e.pnl)} over ${e.samples} closed trade(s) in ${e.days} day(s) · reliability ${e.reliability}`
+    ));
+    return parts.join(' · ')
+      + (rec.entries.length > 1 ? ` · sum of ${rec.entries.length} bot record(s)` : '');
+  };
+
+  const deltaTitle = (p) => {
+    if (perfFailed) return 'Bot performance could not be loaded — the difference cannot be judged.';
+    if (p.delta != null) return `B − A: ${pnlSign(p.bRec.pnl)} − ${pnlSign(p.aRec.pnl)} = ${pnlSign(p.delta)}`;
+    const missing = [!p.aRec ? 'A' : null, !p.bRec ? 'B' : null].filter(Boolean).join(' and ');
+    return `Not comparable yet — side ${missing} has no realised trades attributed, so there is no difference to read.`;
+  };
+
+  const sideRow = (side, pair, strategy, rec, deltaNode) => (
+    <tr className={side === 'a' ? styles.rowA : styles.rowB}>
+      <th scope="row" className={styles.symCell}>{pair.symbol}</th>
+      <td className={side === 'a' ? styles.sideA : styles.sideB}>
+        <span className={styles.sideLetter}>{side.toUpperCase()}</span>
+      </td>
+      <td>
+        <span className={styles.stratName}>{labelFor(strategy.strategyKey)}</span>{' '}
+        <code className={styles.stratKey} title={strategy.strategyKey}>
+          {strategy.strategyKey.slice(0, 8)}
+        </code>
+      </td>
+      <td className={styles.cellDim}>
+        {strategy.protocolIds.join(' + ')} · {(strategy.treatment ?? {}).timeframe ?? '—'}
+      </td>
+      <td className={styles.numCol} title={recTitle(rec)}>{rec ? rec.samples : '—'}</td>
+      <td className={styles.numCol} title={recTitle(rec)}>
+        {rec
+          ? <span className={pnlClass(rec.pnl)}>{pnlSign(rec.pnl)}</span>
+          : <span className="pl-muted">—</span>}
+      </td>
+      {deltaNode}
+    </tr>
+  );
+
+  return (
+    <>
+      {perfFailed && (
+        <div className={styles.tableAlert}>
+          <NoticeBlock
+            compact
+            notice={noticeFromError(perf.error, 'TCS-SYS-007', { operation: 'load realised bot performance' })}
+          />
+        </div>
+      )}
+      <div className={styles.tableWrap}>
+        <table className={styles.abTable}>
+          <thead>
+            <tr>
+              <th scope="col">Symbol</th>
+              <th scope="col">Side</th>
+              <th scope="col">Strategy</th>
+              <th scope="col">Protocol · TF</th>
+              <th scope="col" className={styles.numCol}>n</th>
+              <th scope="col" className={styles.numCol}>P&amp;L</th>
+              <th
+                scope="col"
+                className={styles.numCol}
+                aria-sort={sortDir === 'desc' ? 'descending' : 'ascending'}
+              >
+                <button
+                  type="button"
+                  className={styles.sortBtn}
+                  onClick={onToggleSort}
+                  title="Order the pairs by realised profit difference (B − A) — to find the B that beats its A by most"
+                >
+                  Δ (B−A) {sortDir === 'desc' ? '▾' : '▴'}
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {pairs.map((p) => (
+              <Fragment key={`${p.a.strategyKey}-${p.b.strategyKey}`}>
+                {sideRow('a', p, p.a, p.aRec, (
+                  <td
+                    rowSpan={2}
+                    className={`${styles.numCol} ${styles.deltaCell}`}
+                    title={deltaTitle(p)}
+                  >
+                    {p.delta != null
+                      ? <span className={pnlClass(p.delta)}>{pnlSign(p.delta)}</span>
+                      : <span className="pl-muted">—</span>}
+                  </td>
+                ))}
+                {sideRow('b', p, p.b, p.bRec, null)}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className={styles.tableNote}>
+        Realised P&amp;L per strategy, attributed by scoringStrategyId (#894), in account currency.{' '}
+        {perf.isLoading ? 'Loading realised P&L…' : perf.data?.populationNote}{' '}
+        A dash is “no realised trades attributed” — never a zero.
+      </p>
+    </>
+  );
+}
+
+/**
  * TestSide — one side of an OFFICIAL A/B test (#929): a MetaStack snapshot and its config, and,
  * for the variant, the RECORDED change — "what was changed in B".
  *
@@ -500,6 +640,40 @@ export default function AbStrategiesPage() {
     };
   }, [pairParam, strategies]);
 
+  // ── View mode + realised performance. `list` is the index; `table` is the busy-mode view the
+  // owner asked for (2026-09-22): a pair's two rows together (A shaded, B plain), each side's
+  // realised P&L beside it, orderable by the profit difference (B − A) to rank the Bs.
+  // The preference persists; the P&L fetch only runs while the table is open.
+  const [view, setView] = usePersistentChoice('abstrategies:view', 'list', ['list', 'table']);
+  const [deltaSort, setDeltaSort] = usePersistentChoice('abstrategies:sort', 'desc', ['desc', 'asc']);
+  const perfQuery = useQuery({
+    queryKey: ['bot-performance'],
+    queryFn: () => apiGet(API_BOT_PERF),
+    staleTime: 60_000,
+    enabled: view === 'table',
+  });
+  // ⚠️ "cannot judge" (fetch failed) and "no trades" (no attributed record) are DIFFERENT states
+  // — both render `—`, told apart by their tooltip; neither ever renders as 0.
+  const perfFailed = view === 'table' && perfQuery.isError;
+  // strategyKey → the bot records the SERVER attributed to it. Rows it could not attribute to
+  // exactly one strategy (strategyIdentity unknown/none/many) carry no keys and are never guessed
+  // at — #894: an attribution that cannot be justified would be worse than none.
+  const perfByKey = useMemo(() => {
+    const map = new Map();
+    for (const row of perfQuery.data?.bots ?? []) {
+      for (const key of row.strategyKeys ?? []) {
+        map.set(key, [...(map.get(key) ?? []), {
+          name: row.botName,
+          pnl: row.realised.totalPnl,
+          samples: row.realised.samples,
+          days: row.window.days,
+          reliability: row.realised.reliability,
+        }]);
+      }
+    }
+    return map;
+  }, [perfQuery.data]);
+
   // ── Official A/B test mode (?test=<id>, #929). Read-only; every endpoint already exists. ──
   const testIdParam = searchParams.get('test') || '';
   const testsQuery = useQuery({
@@ -570,6 +744,46 @@ export default function AbStrategiesPage() {
   const strategyA = strategies.find((s) => s.strategyKey === urlPair?.a) ?? null;
   const strategyB = strategies.find((s) => s.strategyKey === urlPair?.b) ?? null;
 
+  // ── Table view rows: each pair with each side's realised record, plus B − A ──
+  // `rec` is null when the strategy has no attributed record — rendered `—` WITH its reason,
+  // never 0. `delta` is null unless BOTH sides have one: a half-comparable pair is not a number.
+  const tablePairs = useMemo(() => {
+    const rec = (key) => {
+      const entries = perfByKey.get(key);
+      if (!entries) return null;
+      return {
+        entries,
+        pnl: entries.reduce((s, e) => s + e.pnl, 0),
+        samples: entries.reduce((s, e) => s + e.samples, 0),
+      };
+    };
+    return pairGroups.flatMap((g) => g.pairs.map((p) => {
+      const aRec = rec(p.a.strategyKey);
+      const bRec = rec(p.b.strategyKey);
+      return {
+        ...p,
+        symbol: g.symbol,
+        aRec,
+        bRec,
+        delta: aRec && bRec ? bRec.pnl - aRec.pnl : null,
+      };
+    }));
+  }, [pairGroups, perfByKey]);
+
+  const sortedPairs = useMemo(() => {
+    const arr = [...tablePairs];
+    arr.sort((x, y) => {
+      // Pairs that cannot be compared sort LAST in both directions — "cannot judge" must never
+      // masquerade as "worst" (#894, and the two-scales discipline in shared-core).
+      if (x.delta == null && y.delta == null) return x.symbol.localeCompare(y.symbol);
+      if (x.delta == null) return 1;
+      if (y.delta == null) return -1;
+      if (x.delta !== y.delta) return deltaSort === 'desc' ? y.delta - x.delta : x.delta - y.delta;
+      return x.symbol.localeCompare(y.symbol);
+    });
+    return arr;
+  }, [tablePairs, deltaSort]);
+
   // ── The index (default view): every eligible pair + the official tests. ──
   const listMode = (
     <>
@@ -587,11 +801,44 @@ export default function AbStrategiesPage() {
       ) : (
         <>
           <section className={styles.listSection}>
-            <h2 className={styles.listTitle}>Strategy pairs</h2>
+            <div className={styles.listHeadRow}>
+              <h2 className={styles.listTitle}>Strategy pairs</h2>
+              <div className="ff-seg" role="group" aria-label="Strategy pairs view">
+                <button
+                  type="button"
+                  className={`ff-seg-btn ${view === 'list' ? 'ff-seg-btn--active' : ''}`}
+                  aria-pressed={view === 'list'}
+                  onClick={() => setView('list')}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  className={`ff-seg-btn ${view === 'table' ? 'ff-seg-btn--active' : ''}`}
+                  aria-pressed={view === 'table'}
+                  onClick={() => setView('table')}
+                >
+                  Table
+                </button>
+              </div>
+            </div>
             <p className={styles.listMeta}>
               {totalPairs} eligible {totalPairs === 1 ? 'pair' : 'pairs'} · every pair trades ONE
-              symbol — the playbook is what may differ · closest matches first
+              symbol — the playbook is what may differ · {view === 'table'
+                ? 'ordered by realised profit difference (B − A) — click Δ to flip'
+                : 'closest matches first'}
             </p>
+            {view === 'table' ? (
+              <PairTable
+                pairs={sortedPairs}
+                labelFor={labelFor}
+                sortDir={deltaSort}
+                onToggleSort={() => setDeltaSort(deltaSort === 'desc' ? 'asc' : 'desc')}
+                perf={perfQuery}
+                perfFailed={perfFailed}
+              />
+            ) : (
+              <>
             {pairGroups.map((g) => (
               <div className={styles.pairGroup} key={g.symbol}>
                 <div className={styles.groupHead}>
@@ -619,6 +866,8 @@ export default function AbStrategiesPage() {
                 ))}
               </div>
             ))}
+              </>
+            )}
           </section>
 
           <section className={styles.listSection}>
@@ -693,11 +942,13 @@ export default function AbStrategiesPage() {
           <PageInfoPopover>
             Every A/B-eligible strategy pair — two strategies that trade the SAME symbol (the
             symbol is the constant; the playbook is what may differ) — grouped by symbol, closest
-            matches first. Open a pair to compare it value by value: A left, B right, and a “≠”
-            on every field that differs, with both sides spelled out in its tooltip. The pair is
-            set by the URL (?pair=keyA,keyB — the first 8 characters of each strategyKey are
-            enough); a link pairing two different symbols is refused rather than shown, because a
-            symbol comparison is not an A/B. An OFFICIAL test opens with
+            matches first. A List | Table toggle switches the index to a table: two rows per pair
+            (A shaded, B plain) with each side&apos;s REALISED P&L beside it, orderable by the
+            profit difference (B − A). Open a pair to compare it value by value: A left, B right,
+            and a “≠” on every field that differs, with both sides spelled out in its tooltip. The
+            pair is set by the URL (?pair=keyA,keyB — the first 8 characters of each strategyKey
+            are enough); a link pairing two different symbols is refused rather than shown,
+            because a symbol comparison is not an A/B. An OFFICIAL test opens with
             ?test=&lt;id&gt;: it shows when the test started, how long it has run, and what was
             changed in B — both as the change log recorded it (with the author&apos;s note) and as
             the two snapshot configs actually differ.
