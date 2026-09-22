@@ -43,6 +43,10 @@ import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 // ⚠️ #905 — the ceiling measurement behind the activation gate. ONE arithmetic basis shared
 // with the health audit: a REFUSAL here and an audit finding there can never disagree.
 import { ProtocolHealthService } from '../scoring/protocol-health.service';
+// ⚠️ A/B copy (2026-09-22): ProtocolDbService owns the protocol's structure (groups, entries,
+// symbol wiring), so the deep copy lives THERE rather than here — one implementation, not two.
+import { ProtocolDbService } from '../scoring/protocol-db.service';
+import { TcsNoticeException } from '../../common/notices/tcs-notice.exception';
 import { MarketBar } from '../directives/interfaces/directive.interface';
 // ⚠️ The CANONICAL session parser. Used to NORMALISE `sessionWindow` for display, because the
 // column is stored in two forms (`london` and `["london"]`) meaning the same gate. Do not
@@ -143,6 +147,7 @@ export class TradingStrategyService {
     private readonly protocolGating: ProtocolGatingService,
     private readonly settings: SettingsResolverService,
     private readonly protocolHealth: ProtocolHealthService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -464,6 +469,12 @@ export class TradingStrategyService {
     hotStockAllocation?: number;
     hotStockDetectionMode?: string;
     hotStockMaxHoldHours?: number;
+    // Added 2026-09-22 for the A/B copy path: three columns the form had never written through
+    // this method, plus the lineage pointer. All optional — existing callers are unchanged.
+    sessionWindow?: string | null;
+    maxHoldHours?: number | null;
+    maxPyramidTiers?: number;
+    duplicatedFromId?: string | null;
   }) {
     // Auto-create ScoringStrategy when watchlist is provided without a scoringStrategyId
     let scoringStrategyId = data.scoringStrategyId ?? null;
@@ -535,6 +546,10 @@ export class TradingStrategyService {
         hotStockAllocation: data.hotStockAllocation ?? null,
         hotStockDetectionMode: data.hotStockDetectionMode ?? null,
         hotStockMaxHoldHours: data.hotStockMaxHoldHours ?? null,
+        sessionWindow: data.sessionWindow ?? null,
+        maxHoldHours: data.maxHoldHours ?? null,
+        maxPyramidTiers: data.maxPyramidTiers ?? undefined,
+        duplicatedFromId: data.duplicatedFromId ?? null,
       },
     });
   }
@@ -560,8 +575,353 @@ export class TradingStrategyService {
     return this.prisma.tradingStrategy.update({ where: { id }, data });
   }
 
+  /**
+   * remove() — delete a bot, GUARDED, with the cleanup MyISAM cannot do for us (2026-09-22).
+   *
+   * ⚠️ REFUSES while the bot is active (TCS-TRADE-018, 409). This is not politeness: the queue
+   * and the execution loop both read `trading_strategy` rows, so removing an active one removes
+   * the configuration that live orders were about to be checked against. The remedy — deactivate
+   * first — costs one click and is always allowed.
+   *
+   * ⚠️ NO CASCADES EXIST. Every table in this database is MyISAM, so the `onDelete: Cascade`
+   * declared in schema.prisma is a DOCUMENT, not an enforcement. Children are therefore removed
+   * explicitly and counted into the returned report:
+   *   - `strategy_protocol`       — subscriptions (the reachability path, #874)
+   *   - `strategy_signal_queue`   — PENDING rows only; executed history is never touched
+   *   - `strategy_evaluation`     — this bot's decision telemetry
+   *   - `trading_strategy` copies — `duplicatedFromId` pointers to this bot are CLEARED, so a
+   *                                 surviving copy does not keep a dangling ancestor id
+   *   - `protocol` copies         — deleted ONLY when (a) the slug is a copy and (b) nothing else
+   *                                 references it. Checks the DB; does not assume.
+   *
+   * ⚠️ RETAINED DELIBERATELY: decision logs, scores, signals and trades. They are history, and
+   * a history row that outlives its configuration is an audit trail — not an orphan.
+   */
   async remove(id: string) {
-    return this.prisma.tradingStrategy.delete({ where: { id } });
+    const bot = await this.prisma.tradingStrategy.findUnique({
+      where: { id },
+      include: { protocols: true },
+    });
+    if (!bot) throw new BadRequestException('Strategy not found');
+
+    if (bot.active) {
+      throw new TcsNoticeException('TCS-TRADE-018', { name: bot.name }, {
+        detail: `active=true — bot "${bot.name}" (${bot.id}) must be deactivated before deletion`,
+      });
+    }
+
+    // 1. Child rows the bot owns. Any failure here is loud: a half-deleted bot is worse than
+    //    a refused one, because it looks gone while its subscriptions still route signals.
+    const subs = await (this.prisma as any).strategyProtocol.deleteMany({ where: { strategyId: id } });
+    const evals = await (this.prisma as any).strategyEvaluation.deleteMany({ where: { strategyId: id } });
+    let queueRows = 0;
+    try {
+      queueRows = await (this.prisma as any).$executeRawUnsafe(
+        `DELETE FROM strategy_signal_queue WHERE strategyId = ? AND status = 'pending'`,
+        id,
+      );
+    } catch (err) {
+      this.logger.warn(`Could not clear pending queue rows for ${id}: ${(err as Error).message}`);
+    }
+
+    // 2. Lineage — clear pointers held BY OTHER BOTS. (Any rows where THIS bot was copied FROM.)
+    const cleared = await this.prisma.tradingStrategy.updateMany({
+      where: { duplicatedFromId: id },
+      data: { duplicatedFromId: null },
+    });
+
+    // 3. The bot row itself.
+    await this.prisma.tradingStrategy.delete({ where: { id } });
+
+    // 4. Protocol copies that nothing else uses. The pattern test and the reference count are
+    //    BOTH required — a copy shared by a surviving sibling must stay.
+    const refs = new Set<string>();
+    for (const s of bot.protocols ?? []) refs.add(s.protocolId);
+    if (bot.protocolId) refs.add(bot.protocolId);
+    if (bot.shortProtocolId) refs.add(bot.shortProtocolId);
+
+    const removedProtocols: string[] = [];
+    const keptProtocols: Array<{ ref: string; reason: string }> = [];
+    for (const ref of refs) {
+      const row: any = await (this.prisma as any).protocol.findFirst({
+        where: { OR: [{ slug: ref }, { id: ref }] },
+        select: { id: true, slug: true },
+      });
+      if (!row) continue;
+      if (!/-copy(-\d+)?$/.test(row.slug)) {
+        keptProtocols.push({ ref: row.slug, reason: 'not a copy — original or shared protocol' });
+        continue;
+      }
+      const otherBots = await this.prisma.tradingStrategy.count({
+        where: {
+          OR: [
+            { protocolId: row.slug },
+            { protocolId: row.id },
+            { shortProtocolId: row.slug },
+            { shortProtocolId: row.id },
+          ],
+        },
+      });
+      const otherSubs = await (this.prisma as any).strategyProtocol.count({
+        where: { protocolId: { in: [row.slug, row.id] } },
+      });
+      if (otherBots > 0 || otherSubs > 0) {
+        keptProtocols.push({ ref: row.slug, reason: 'still referenced by another bot' });
+        continue;
+      }
+      await this.protocolDb.deleteCopyProtocol(row.slug);
+      removedProtocols.push(row.slug);
+    }
+
+    // 5. Scoring strategies that belong to the removed protocol copies. `create()` auto-creates
+    //    one per (protocolId, watchlistName), so a duplicate's scoring strategy is keyed to the
+    //    COPY's slug — unique to the copy, and an orphan once the protocol is gone. Matched by
+    //    protocolId, never by name: a name match could delete a shared configuration.
+    let removedScoringStrategies = 0;
+    if (removedProtocols.length) {
+      const ss = await (this.prisma as any).scoringStrategy.deleteMany({
+        where: { protocolId: { in: removedProtocols } },
+      });
+      removedScoringStrategies = ss.count;
+    }
+
+    const detail = [
+      `${subs.count} protocol subscription(s)`, `${queueRows} pending queue row(s)`,
+      `${evals.count} evaluation row(s)`,
+      removedProtocols.length
+        ? `${removedProtocols.length} protocol copy(ies) (${removedProtocols.join(', ')})`
+        : 'no protocol copies removed',
+      removedScoringStrategies ? `${removedScoringStrategies} scoring strategy(ies)` : null,
+      cleared.count ? `${cleared.count} copy pointer(s) cleared` : null,
+      keptProtocols.length
+        ? `kept: ${keptProtocols.map((k) => `${k.ref} (${k.reason})`).join('; ')}`
+        : null,
+      'decision history and trades are retained',
+    ].filter(Boolean).join('; ');
+    this.logger.log(`Deleted bot "${bot.name}" (${id}): ${detail}`);
+
+    return {
+      deleted: true,
+      botId: id,
+      name: bot.name,
+      symbol: bot.symbol,
+      removedSubscriptions: subs.count,
+      removedQueueRows: queueRows,
+      removedEvaluations: evals.count,
+      removedScoringStrategies,
+      clearedLineagePointers: cleared.count,
+      removedProtocols,
+      keptProtocols,
+      detail,
+    };
+  }
+
+  /** An unused `<base>` / `<base> (2)` / `<base> (3)` bot name — the copy is human-identifiable. */
+  private async uniqueBotName(base: string): Promise<string> {
+    const trimmed = base.length > 120 ? base.slice(0, 120) : base;
+    for (let n = 1; n < 100; n++) {
+      const candidate = n === 1 ? trimmed : `${trimmed} (${n})`;
+      const hit = await this.prisma.tradingStrategy.findFirst({
+        where: { name: candidate },
+        select: { id: true },
+      });
+      if (!hit) return candidate;
+    }
+    throw new BadRequestException(`Could not find a free copy name for "${base}"`);
+  }
+
+  /**
+   * duplicate() — copy a bot AND its protocol as the B of a new A/B pair (2026-09-22).
+   *
+   * OWNER'S MODEL, verbatim: *"the ability to easily get the required records, correct and
+   * complete, insert fresh records using the correct endpoints, and doing so should result in not
+   * only a new strategy but a connection maintained between A and B."* And on C/D: *"it really
+   * just makes B, A for the additional pair rather than a C"* — so every duplicate starts its OWN
+   * pair, and this method never tries to build a group of three.
+   *
+   * ⚠️ THE SYMBOL IS THE ONE THING THAT DOES NOT CHANGE. A/B is a comparison of TREATMENT on the
+   * same market — the copy inherits `symbol` exactly, and the page refuses to pair across symbols.
+   * Changing the symbol while copying is a strategy COMPARISON, not an A/B test, and it belongs to
+   * a separate feature (see the A/B Strategies page's cross-symbol refusal).
+   *
+   * THE LINKS MAINTAINED (two, not one):
+   *   - protocol copy → `Protocol.derivedFrom` = source protocol slug
+   *   - bot copy      → `TradingStrategy.duplicatedFromId` = source bot id
+   *
+   * ⚠️ THE COPY GETS A SUBSCRIPTION EVEN IF THE SOURCE HAD NONE. A legacy-only source (#874: no
+   * `strategy_protocol` row, so it can never trade) would otherwise produce a copy that is ALSO
+   * unreachable — a duplicate of a defect. B must be able to fire once activated.
+   *
+   * ⚠️ THE COPY STARTS INACTIVE. Both sides running the same playbook at once is not an A/B test;
+   * the operator edits B, then activates it deliberately.
+   *
+   * MyISAM has no transactions, so a failure mid-copy cleans up in reverse by hand — a partial
+   * copy that LOOKS complete is the failure mode this guards against.
+   */
+  async duplicate(id: string) {
+    const source = await this.prisma.tradingStrategy.findUnique({
+      where: { id },
+      include: { protocols: { orderBy: { sortOrder: 'asc' } } },
+    });
+    if (!source) throw new BadRequestException('Strategy not found');
+
+    // Protocol references: subscriptions are canonical (#874); the legacy columns are the
+    // fallback (#801 — the value may be a slug OR a uuid).
+    const links: Array<{ ref: string; role: string; legacyShort: boolean }> = [];
+    for (const sub of source.protocols ?? []) {
+      links.push({ ref: sub.protocolId, role: sub.role || 'long', legacyShort: false });
+    }
+    if (links.length === 0) {
+      if (source.protocolId) links.push({ ref: source.protocolId, role: 'long', legacyShort: false });
+      if (source.shortProtocolId) links.push({ ref: source.shortProtocolId, role: 'short', legacyShort: true });
+    }
+    if (links.length === 0) {
+      throw new BadRequestException(
+        `"${source.name}" has no protocol link, so there is no configuration to copy. ` +
+        `Subscribe a protocol to it first (#874).`,
+      );
+    }
+
+    const createdProtocols: Array<{ slug: string }> = [];
+    let copyBotId: string | null = null;
+
+    try {
+      // 1. Copy every protocol the source consumes, preserving weights exactly.
+      const copiedLinks: Array<{
+        sourceSlug: string; copySlug: string; role: string; legacyShort: boolean;
+        groups: number; entries: number; assignments: number;
+        watchlists: Array<{ id: string; name: string }>;
+      }> = [];
+      for (const link of links) {
+        const srcProtocol: any = await (this.prisma as any).protocol.findFirst({
+          where: { OR: [{ slug: link.ref }, { id: link.ref }] },
+          select: { id: true, slug: true, name: true },
+        });
+        if (!srcProtocol) {
+          throw new BadRequestException(
+            `Protocol "${link.ref}" referenced by "${source.name}" does not exist in the database, ` +
+            `so the copy was stopped before anything was written.`,
+          );
+        }
+        const copySlug = await this.protocolDb.uniqueCopySlug(srcProtocol.slug);
+        const result = await this.protocolDb.copyProtocol(srcProtocol.slug, {
+          slug: copySlug,
+          name: `${srcProtocol.name} (copy)`,
+        });
+        createdProtocols.push({ slug: result.protocol.slug });
+        copiedLinks.push({
+          sourceSlug: srcProtocol.slug,
+          copySlug: result.protocol.slug,
+          role: link.role,
+          legacyShort: link.legacyShort,
+          groups: result.groups,
+          entries: result.entries,
+          assignments: result.assignments,
+          watchlists: result.watchlists,
+        });
+      }
+
+      // The copy's own scoring strategy: prefer a watchlist the copy now OWNS (so B scores via
+      // its own symbols), else the source scoring strategy's watchlist name (symbols are a
+      // scope, not a treatment — sharing one is acceptable; sharing the config would not be).
+      let sourceWatchlistName: string | null = null;
+      if (source.scoringStrategyId) {
+        const ss: any = await (this.prisma as any).scoringStrategy
+          .findUnique({ where: { id: source.scoringStrategyId }, select: { watchlistName: true } })
+          .catch(() => null);
+        sourceWatchlistName = ss?.watchlistName ?? null;
+      }
+      const firstCopiedWatchlist = copiedLinks.flatMap((l) => l.watchlists)[0] ?? null;
+      const watchlistName = firstCopiedWatchlist?.name ?? sourceWatchlistName ?? undefined;
+
+      // 2. The bot. Treatment copied field-for-field; `active: false` is deliberate (see above).
+      const copyName = await this.uniqueBotName(`${source.name} (copy)`);
+      const bot = await this.create({
+        name: copyName,
+        description: source.description ?? undefined,
+        protocolId: copiedLinks[0].copySlug,
+        shortProtocolId: copiedLinks.find((l) => l.legacyShort)?.copySlug ?? undefined,
+        symbol: source.symbol,
+        brokerId: source.brokerId ?? undefined,
+        timeframe: source.timeframe ?? undefined,
+        minComposite: source.minComposite ?? undefined,
+        minRarityBand: source.minRarityBand ?? undefined,
+        requireDirection: source.requireDirection ?? undefined,
+        slPct: source.slPct ?? undefined,
+        tpPct: source.tpPct ?? undefined,
+        baseSize: source.baseSize ?? undefined,
+        useRaritySizing: source.useRaritySizing ?? undefined,
+        maxSize: source.maxSize ?? undefined,
+        maxPositions: source.maxPositions ?? undefined,
+        maxDailyLoss: source.maxDailyLoss ?? undefined,
+        cooldownMinutes: source.cooldownMinutes ?? undefined,
+        mode: source.mode ?? undefined,
+        sessionWindow: source.sessionWindow ?? null,
+        maxHoldHours: source.maxHoldHours ?? null,
+        maxPyramidTiers: source.maxPyramidTiers ?? undefined,
+        hotStockEnabled: source.hotStockEnabled ?? undefined,
+        hotStockAllocation: source.hotStockAllocation ?? undefined,
+        hotStockDetectionMode: source.hotStockDetectionMode ?? undefined,
+        hotStockMaxHoldHours: source.hotStockMaxHoldHours ?? undefined,
+        watchlistName,
+        active: false,
+        duplicatedFromId: source.id,
+      });
+      copyBotId = bot.id;
+
+      // 3. Subscriptions — the path the queue actually routes by (#874).
+      for (const link of copiedLinks) {
+        await this.addProtocolSubscription(bot.id, link.copySlug, link.role);
+      }
+
+      this.logger.log(
+        `Duplicated bot "${source.name}" (${source.id}) → "${bot.name}" (${bot.id}) — ` +
+        `protocol(s): ${copiedLinks.map((l) => `${l.sourceSlug}→${l.copySlug}`).join(', ')}; ` +
+        `${copiedLinks.length} subscription(s); starts INACTIVE`,
+      );
+
+      return {
+        created: true,
+        sourceBotId: source.id,
+        sourceName: source.name,
+        botId: bot.id,
+        name: bot.name,
+        symbol: bot.symbol,
+        active: bot.active,
+        duplicatedFromId: source.id,
+        subscriptions: copiedLinks.length,
+        protocols: copiedLinks.map((l) => ({
+          source: l.sourceSlug,
+          copy: l.copySlug,
+          role: l.role,
+          groups: l.groups,
+          entries: l.entries,
+          assignments: l.assignments,
+          watchlists: l.watchlists.map((w) => w.name),
+        })),
+        watchlistName: watchlistName ?? null,
+      };
+    } catch (err) {
+      // Reverse-order cleanup, best effort. MyISAM cannot roll back, so every created row is
+      // named here rather than left behind as a half-copy nobody can identify.
+      this.logger.error(`Duplicate of ${source.id} failed — cleaning up: ${(err as Error).message}`);
+      try {
+        if (copyBotId) {
+          await (this.prisma as any).strategyProtocol.deleteMany({ where: { strategyId: copyBotId } });
+          await this.prisma.tradingStrategy.delete({ where: { id: copyBotId } });
+        }
+      } catch (cleanupErr) {
+        this.logger.error(`  cleanup: failed to remove the partial bot copy ${copyBotId}: ${(cleanupErr as Error).message}`);
+      }
+      for (const p of createdProtocols) {
+        try {
+          await this.protocolDb.deleteCopyProtocol(p.slug);
+        } catch (cleanupErr) {
+          this.logger.error(`  cleanup: failed to remove the partial protocol copy ${p.slug}: ${(cleanupErr as Error).message}`);
+        }
+      }
+      throw err;
+    }
   }
 
   async toggle(id: string) {

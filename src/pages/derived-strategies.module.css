@@ -268,3 +268,53 @@
 /* ── Drift note — rendered via StrategyBits' DriftNote; styles are owned by
    components/strategy-common.module.css (extracted 2026-09-22). ── */
 
+/* ── A/B lineage + card actions (2026-09-22) ─────────────────────────────────────────────────
+   The pair is a symmetric fact shown on BOTH cards (copy → source, source → copy), so the tag
+   styling is deliberately identical in both directions: two different colours would imply a
+   hierarchy the data does not have. The link itself lives in the data (duplicatedFromId /
+   derivedFrom) — nothing here is inferred from a name. */
+.lineage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lineageTag {
+  font-size: 0.74rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev-2);
+  color: var(--ink);
+}
+
+.lineageTag strong {
+  font-weight: 600;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.actionBtn { composes: regBtn from '../components/strategy-common.module.css'; }
+.actionBtnGhost { composes: actionBtn; }
+
+/* The armed confirm — full danger border, because the next click REMOVES records. */
+.actionBtnDanger {
+  composes: actionBtn;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.cardActions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+

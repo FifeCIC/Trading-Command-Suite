@@ -62,8 +62,11 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-015` | warning | TRADE | Duplicate order suppressed |
 | `TCS-TRADE-016` | error | TRADE | Blocked by the bridge size cap |
 | `TCS-TRADE-017` | error | TRADE | Blocked by the bridge position count |
+| `TCS-TRADE-018` | error | TRADE | Bot is still active |
+| `TCS-TRADE-019` | success | TRADE | A/B copy created |
+| `TCS-TRADE-020` | info | TRADE | Bot deleted |
 
-**41 codes** — 2 critical, 25 error, 9 warning, 1 info, 4 success.
+**44 codes** — 2 critical, 26 error, 9 warning, 2 info, 5 success.
 
 ## Codes by area
 
@@ -236,6 +239,36 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Action:** Close a position, or raise the BRIDGE’s copy of the cap: MT5_MAX_OPEN_POSITIONS in nest/.env, then RESTART the MT5 bridges. The app setting (risk.maxOpenPositions) is enforced live by the backend, but it cannot move the bridge’s own cap — the lower of the two binds (#901).
 - **Params:** `open`, `maximum`
 - **Call:** `notice('TCS-TRADE-017', { open, maximum })`
+- **Related:** *none*
+
+#### `TCS-TRADE-018` — Bot is still active
+
+- **Severity:** error
+- **Message:** {name} is still active, so it was not deleted.
+- **Cause:** Deleting an active bot removes the configuration mid-flight: live orders can arrive with nothing left to receive them, and the queue would keep producing decisions for a row that no longer exists.
+- **Action:** Deactivate the bot first (the toggle on this page), then delete it. Deactivating never refuses.
+- **Params:** `name`
+- **Call:** `notice('TCS-TRADE-018', { name })`
+- **Related:** *none*
+
+#### `TCS-TRADE-019` — A/B copy created
+
+- **Severity:** success
+- **Message:** Created “{name}” as the B of this pair — a copy of the protocol and the bot.
+- **Cause:** The copy owns its own protocol, so editing either side cannot change the other.
+- **Action:** It starts INACTIVE. Edit B (its protocol and policy), then activate it when the pair is ready to run.
+- **Params:** `name`
+- **Call:** `notice('TCS-TRADE-019', { name })`
+- **Related:** *none*
+
+#### `TCS-TRADE-020` — Bot deleted
+
+- **Severity:** info
+- **Message:** Deleted {name}.
+- **Cause:** {detail}
+- **Action:** If it was part of a pair, the other side is untouched. Deletion never touches trades or history.
+- **Params:** `name`, `detail`
+- **Call:** `notice('TCS-TRADE-020', { name, detail })`
 - **Related:** *none*
 
 ### SCORE — Scoring and signals

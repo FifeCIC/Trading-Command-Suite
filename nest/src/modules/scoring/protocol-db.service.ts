@@ -402,6 +402,248 @@ export class ProtocolDbService implements OnModuleInit {
   }
 
   /**
+   * uniqueCopySlug() — an unused `…-copy` / `…-copy-N` slug for a cloned protocol.
+   *
+   * The suffix IS the recogniser: `deleteCopyProtocol()` refuses anything that does not match
+   * the same pattern, so a copy can always be told apart from an original. Keep the two
+   * patterns in step — they are a pair, and `validate-pipeline-contracts` does not cover this.
+   */
+  async uniqueCopySlug(sourceSlug: string): Promise<string> {
+    const base = `${sourceSlug}-copy`;
+    for (let n = 1; n < 100; n++) {
+      const candidate = n === 1 ? base : `${base}-${n}`;
+      const hit = await (this.prisma as any).protocol.findUnique({ where: { slug: candidate }, select: { id: true } });
+      if (!hit) return candidate;
+    }
+    throw new Error(`Could not find a free copy slug for "${sourceSlug}" after 99 attempts`);
+  }
+
+  /**
+   * copyProtocol() — the ONE write in this otherwise read-only service (2026-09-22).
+   *
+   * WHY IT LIVES HERE: copying a protocol is not a bot concern — it is a deep copy of the
+   * protocol's own structure (groups, entries, symbol wiring, watchlists) that has to stay
+   * exactly faithful, and this service is the single place that already knows that structure.
+   * A second implementation in the trading module would be the copy that drifts.
+   *
+   * WHAT IS COPIED VERBATIM: every directive group (weight, riskGate, multipliers, sortOrder)
+   * and every entry (directiveId, maxScore, active). maxScore is the per-directive WEIGHT — a
+   * copy that re-defaulted it to 100 would silently rescore the variant.
+   *
+   * WHAT IS DELIBERATELY NOT COPIED:
+   *   - `highestScore` / `adaptiveTarget*` — a fresh protocol has no history. Inheriting the
+   *     source's peak would make the copy claim a ceiling it never measured (and adaptiveTarget
+   *     is MONOTONIC by design — it must only ever grow from its own readings).
+   *   - `isDefault` — only one protocol may be the default.
+   *   - `derivedFrom` — is SET to the source slug: this is the A/B link the pair is read from.
+   *
+   * SYMBOL WIRING IS COPIED TOO, and that is not incidental: a copy with no symbols scores
+   * nothing, so activating its bot would produce zero signals with no error — the decorative-bot
+   * defect (#905) in a new coat. Both wiring paths are cloned:
+   *   - `symbol_protocol_assignment` rows → new rows pointing at the copy's UUID;
+   *   - `watchlist` rows linked by `protocolId` (Path 2 of resolveSymbols) → a new watchlist
+   *     named "<name> (B)" pointing at the copy's slug.
+   *
+   * Caller is responsible for the slug (`uniqueCopySlug`) and for cleaning up on failure
+   * (MyISAM — no transactions).
+   */
+  async copyProtocol(
+    sourceSlug: string,
+    opts: { slug: string; name?: string },
+  ): Promise<{
+    protocol: { id: string; slug: string };
+    name: string;
+    groups: number;
+    entries: number;
+    assignments: number;
+    watchlists: Array<{ id: string; name: string }>;
+  }> {
+    const source: any = await (this.prisma as any).protocol.findUnique({
+      where: { slug: sourceSlug },
+      include: {
+        directiveGroups: { orderBy: { sortOrder: 'asc' }, include: { directives: true } },
+      },
+    });
+    if (!source) throw new Error(`Cannot copy protocol "${sourceSlug}" — no such protocol row`);
+
+    const name = opts.name ?? `${source.name} (copy)`;
+    const created: any = await (this.prisma as any).protocol.create({
+      data: {
+        slug: opts.slug,
+        name,
+        description: source.description ?? null,
+        // ⚠️ `active` IS inherited. A copy of an active protocol must be able to score, or the
+        // variant bot wired to it can never produce a signal. The copy still cannot TRADE until
+        // its own bot is activated (copies start inactive).
+        active: source.active,
+        version: source.version ?? '1.0.0',
+        directionMode: source.directionMode ?? 'LONG_ONLY',
+        tradingStyle: source.tradingStyle ?? null,
+        recommendedTimeframe: source.recommendedTimeframe ?? null,
+        avgHoldTime: source.avgHoldTime ?? null,
+        winRateTarget: source.winRateTarget ?? null,
+        idealFor: source.idealFor ?? null,
+        note: source.note ?? null,
+        theory: source.theory ?? null,
+        // The A/B link. `derivedFrom` is the field the pair is read from — never omit it.
+        derivedFrom: source.slug,
+        isDefault: false,
+        seasonalAffinity: source.seasonalAffinity ?? undefined,
+        highestScore: null,
+        adaptiveTargetEnabled: source.adaptiveTargetEnabled ?? false,
+        adaptiveTargetMax: null,
+        adaptiveTargetSamples: 0,
+        adaptiveTargetSince: null,
+        directiveGroups: {
+          create: (source.directiveGroups ?? []).map((dg: any) => ({
+            groupId: dg.groupId,
+            name: dg.name,
+            description: dg.description ?? null,
+            weight: dg.weight,
+            isRiskGate: dg.isRiskGate,
+            minMultiplier: dg.minMultiplier,
+            maxMultiplier: dg.maxMultiplier,
+            sortOrder: dg.sortOrder,
+            directives: {
+              create: (dg.directives ?? []).map((e: any) => ({
+                directiveId: e.directiveId,
+                maxScore: e.maxScore,
+                active: e.active,
+              })),
+            },
+          })),
+        },
+      },
+      include: { directiveGroups: { include: { directives: true } } },
+    });
+
+    // Path 1 — explicit per-symbol assignments (protocolId is the protocol UUID here).
+    let assignments = 0;
+    try {
+      const rows: any[] = await (this.prisma as any).symbolProtocolAssignment.findMany({
+        where: { protocolId: source.id },
+        select: { symbol: true, priority: true },
+      });
+      for (const r of rows) {
+        await (this.prisma as any).symbolProtocolAssignment.create({
+          data: { symbol: r.symbol, protocolId: created.id, priority: r.priority },
+        });
+        assignments += 1;
+      }
+    } catch (err) {
+      this.logger.warn(`Copy ${opts.slug}: symbol assignments not copied — ${(err as Error).message}`);
+    }
+
+    // Path 2 — watchlists linked by `protocolId` (slug OR uuid; #763). Clone rather than share:
+    // the watchlist row carries `protocolId`, so sharing it would leave the ORIGINAL protocol's
+    // watchlist pointing at itself and the copy with nothing.
+    const watchlists: Array<{ id: string; name: string }> = [];
+    try {
+      const rows: any[] = await (this.prisma as any).watchlist.findMany({
+        where: { protocolId: { in: [source.slug, source.id] } },
+        select: { name: true, symbols: true, source: true, userId: true, kind: true },
+      });
+      for (const wl of rows) {
+        const wlName = `${wl.name} (B)`;
+        const createdWl: any = await (this.prisma as any).watchlist.create({
+          data: {
+            name: wlName,
+            symbols: wl.symbols,
+            source: wl.source ?? null,
+            protocolId: created.slug,
+            userId: wl.userId ?? null,
+            kind: wl.kind ?? 'user',
+            isDefault: false,
+          },
+          select: { id: true, name: true },
+        });
+        watchlists.push({ id: createdWl.id, name: createdWl.name });
+      }
+    } catch (err) {
+      this.logger.warn(`Copy ${opts.slug}: watchlists not copied — ${(err as Error).message}`);
+    }
+
+    // The copy must be visible to BOTH caches immediately: the tick cache is cleared, and the
+    // sync preload is refreshed in the background so a protocol written now is not invisible
+    // until the next restart.
+    this.clearCache();
+    void this.preloadAll().catch(() => { /* background refresh only */ });
+
+    const groups = created.directiveGroups?.length ?? 0;
+    const entries = (created.directiveGroups ?? []).reduce(
+      (n: number, dg: any) => n + (dg.directives?.length ?? 0), 0,
+    );
+
+    this.logger.log(
+      `Copied protocol "${source.slug}" → "${created.slug}" (${groups} group(s), ${entries} entry(ies), ` +
+      `${assignments} assignment(s), ${watchlists.length} watchlist(s)); derivedFrom=${source.slug}`,
+    );
+
+    return { protocol: { id: created.id, slug: created.slug }, name, groups, entries, assignments, watchlists };
+  }
+
+  /**
+   * deleteCopyProtocol() — remove a protocol COPY and every row the copy created.
+   *
+   * ⚠️ REFUSES a slug that is not a copy (`…-copy` / `…-copy-N`), whatever the caller believes.
+   * The recogniser lives here, next to `uniqueCopySlug` that mints it — a caller must not be
+   * the only thing standing between a shared original and a deleteMany.
+   *
+   * MyISAM has no FK enforcement, so children go first and explicitly: entries → groups → the
+   * protocol row. Symbol wiring (assignments + watchlists) is removed with it, because it was
+   * created for this copy alone.
+   *
+   * Caller is responsible for confirming nothing else references the copy. This method does not
+   * check that — it is the mechanical half; the guard is in TradingStrategyService.remove().
+   */
+  async deleteCopyProtocol(ref: string): Promise<{
+    slug: string;
+    entries: number;
+    groups: number;
+    assignments: number;
+    watchlists: number;
+  } | null> {
+    const row: any = await (this.prisma as any).protocol.findFirst({
+      where: { OR: [{ slug: ref }, { id: ref }] },
+      select: { id: true, slug: true },
+    });
+    if (!row) return null;
+    if (!/-copy(-\d+)?$/.test(row.slug)) {
+      throw new Error(`Refused: "${row.slug}" is not a copy (no -copy suffix) — refusing to delete it`);
+    }
+
+    const groups: any[] = await (this.prisma as any).protocolDirectiveGroup.findMany({
+      where: { protocolId: row.id },
+      select: { id: true },
+    });
+    const groupIds = groups.map((g) => g.id);
+    const entries = groupIds.length
+      ? await (this.prisma as any).protocolDirectiveEntry.deleteMany({ where: { groupId: { in: groupIds } } })
+      : { count: 0 };
+    const groupDel = await (this.prisma as any).protocolDirectiveGroup.deleteMany({ where: { protocolId: row.id } });
+    const assignments = await (this.prisma as any).symbolProtocolAssignment.deleteMany({ where: { protocolId: row.id } });
+    // Only the copy's own watchlists reference the copy slug, so this cannot remove a shared list.
+    const watchlists = await (this.prisma as any).watchlist.deleteMany({
+      where: { protocolId: { in: [row.slug, row.id] } },
+    });
+    await (this.prisma as any).protocol.delete({ where: { id: row.id } });
+
+    this.clearCache();
+    void this.preloadAll().catch(() => { /* background refresh only */ });
+    this.logger.log(
+      `Deleted protocol copy "${row.slug}" (${entries.count} entry(ies), ${groupDel.count} group(s), ` +
+      `${assignments.count} assignment(s), ${watchlists.count} watchlist(s))`,
+    );
+    return {
+      slug: row.slug,
+      entries: entries.count,
+      groups: groupDel.count,
+      assignments: assignments.count,
+      watchlists: watchlists.count,
+    };
+  }
+
+  /**
    * Get all protocol configs. DB-first, falls back to hardcoded registry.
    * Used by controllers that need to iterate all protocols.
    */

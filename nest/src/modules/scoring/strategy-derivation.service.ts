@@ -116,6 +116,16 @@ export interface DerivedStrategy {
    * table, so such a bot can never trade (see #874). Surfaced so it is visible, not silent.
    */
   unreachableBotNames: string[];
+  /**
+   * A/B LINEAGE (2026-09-22) — bot ids this strategy's bot(s) were copied FROM, via
+   * `POST /api/trading/strategies/:id/duplicate`.
+   *
+   * ⚠️ METADATA, NOT IDENTITY. It is deliberately NOT part of `strategyKey`: a copy is a
+   * different strategy because its PROTOCOL differs, never because of who its ancestor was.
+   * Adding this to the key would split or merge strategies on a fact that cannot change a trade.
+   * Consumers resolve the id to a name by finding the row whose `botIds` contains it.
+   */
+  copiedFromBotIds: string[];
 }
 
 export interface DerivedStrategiesResponse {
@@ -154,6 +164,8 @@ interface BotRow {
   maxDailyLoss: number | null;
   useRaritySizing: boolean;
   maxSize: number | null;
+  /** A/B lineage (2026-09-22) — the bot this one was copied from, or null. Not part of identity. */
+  duplicatedFromId: string | null;
   protocols?: Array<{ protocolId: string; role: string }>;
 }
 
@@ -179,6 +191,8 @@ export class StrategyDerivationService {
       treatment: StrategyTreatment;
       active: boolean;
       unreachableBotNames: Set<string>;
+      /** A/B lineage (2026-09-22) — bot ids the group's bot(s) were copied from. Not identity. */
+      copiedFromBotIds: Set<string>;
     }>();
 
     const orphans: string[] = [];
@@ -222,8 +236,7 @@ export class StrategyDerivationService {
             brokers: new Set(),
             treatment,
             active: false,
-            unreachableBotNames: new Set(),
-          };
+            unreachableBotNames: new Set(),            copiedFromBotIds: new Set(),          };
           groups.set(key, g);
         }
 
@@ -235,6 +248,7 @@ export class StrategyDerivationService {
         if (bot.scoringStrategyId) g.scoringStrategyIds.add(bot.scoringStrategyId);
         if (bot.active) g.active = true;
         if (link.legacy) g.unreachableBotNames.add(bot.name);
+        if (bot.duplicatedFromId) g.copiedFromBotIds.add(bot.duplicatedFromId);
       }
     }
 
@@ -269,6 +283,7 @@ export class StrategyDerivationService {
         active: g.active,
         duplicateBotNames: names,
         unreachableBotNames: [...g.unreachableBotNames].sort(),
+        copiedFromBotIds: [...g.copiedFromBotIds].sort(),
       };
     });
 

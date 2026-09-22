@@ -282,6 +282,39 @@ export const NOTICES = {
     params: ['open', 'maximum'],
     refs: [],
   },
+  // ── A/B copy + delete (2026-09-22, owner request: duplicate/delete on the Strategies page) ──
+  'TCS-TRADE-018': {
+    severity: 'error',
+    area: 'TRADE',
+    title: 'Bot is still active',
+    message: '{name} is still active, so it was not deleted.',
+    cause:
+      'Deleting an active bot removes the configuration mid-flight: live orders can arrive with nothing ' +
+      'left to receive them, and the queue would keep producing decisions for a row that no longer exists.',
+    action: 'Deactivate the bot first (the toggle on this page), then delete it. Deactivating never refuses.',
+    params: ['name'],
+    refs: [],
+  },
+  'TCS-TRADE-019': {
+    severity: 'success',
+    area: 'TRADE',
+    title: 'A/B copy created',
+    message: 'Created \u201c{name}\u201d as the B of this pair — a copy of the protocol and the bot.',
+    cause: 'The copy owns its own protocol, so editing either side cannot change the other.',
+    action: 'It starts INACTIVE. Edit B (its protocol and policy), then activate it when the pair is ready to run.',
+    params: ['name'],
+    refs: [],
+  },
+  'TCS-TRADE-020': {
+    severity: 'info',
+    area: 'TRADE',
+    title: 'Bot deleted',
+    message: 'Deleted {name}.',
+    cause: '{detail}',
+    action: 'If it was part of a pair, the other side is untouched. Deletion never touches trades or history.',
+    params: ['name', 'detail'],
+    refs: [],
+  },
 
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {

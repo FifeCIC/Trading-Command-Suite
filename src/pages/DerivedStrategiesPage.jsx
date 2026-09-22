@@ -46,8 +46,12 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPatch } from '../core/api/client';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error.js';
+// ⚠️ A SUCCESS is a notice too. A hard-coded "Copied!" string would have no code, no docs link
+// and no locale entry — the notices gate (`scripts/validate-notices.cjs`) fails the build on a
+// raw message render, and rightly: wording may change, a code must not.
+import { notice } from '../core/notices/registry.js';
 import NoticeBlock from '../components/NoticeBlock';
 import TypeTag from '../components/TypeTag';
 import { StrategyBots, StrategyWarnings, DriftNote } from '../components/StrategyBits';
@@ -102,11 +106,17 @@ function SymbolChips({ symbols }) {
   );
 }
 
-function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStart, onDraftChange, onCancel, onSave, onReaccept }) {
+function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStart, onDraftChange, onCancel, onSave, onReaccept, onDuplicate, onDelete, busy, copiedFromName, copiedToNames }) {
   const t = strategy.treatment ?? {};
   const unreachable = strategy.unreachableBotNames ?? [];
   // A group with more than one bot name is a DUPLICATION FAULT, never a merged strategy.
   const duplicates = strategy.botNames.length > 1 ? strategy.botNames : [];
+  // Actions address ONE bot. A duplicate group (>1 bot on one key) has no single subject, so it
+  // must be resolved first rather than guessing which bot the operator meant.
+  const botId = strategy.botIds.length === 1 ? strategy.botIds[0] : null;
+  // Two-step delete: the first click only arms the confirm. Nothing is removed until the second
+  // click names the bot explicitly — a destructive action should cost two deliberate clicks.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const nameEditor = (
     <>
@@ -193,6 +203,31 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
           READ-ONLY (it passes no onReaccept). */}
       <DriftNote drift={drift} onReaccept={onReaccept} saving={saving} />
 
+      {/* A/B LINEAGE (2026-09-22). Both directions are shown because the pair is a symmetric
+          fact: the COPY says who it came from, the SOURCE says what was copied from it. The
+          link is read from TradingStrategy.duplicatedFromId (bot level) and
+          Protocol.derivedFrom (protocol level) — never inferred from names. */}
+      {(copiedFromName || (copiedToNames?.length ?? 0) > 0) && (
+        <div className={styles.lineage}>
+          {copiedFromName && (
+            <span
+              className={styles.lineageTag}
+              title="This bot was copied from its pair partner (a new protocol, a new bot — nothing is shared)."
+            >
+              B of a pair — copy of <strong>{copiedFromName}</strong>
+            </span>
+          )}
+          {(copiedToNames?.length ?? 0) > 0 && (
+            <span
+              className={styles.lineageTag}
+              title="A copy of this strategy exists: its own protocol and bot, so editing either side cannot change the other."
+            >
+              A of a pair — copied to <strong>{copiedToNames.join(', ')}</strong>
+            </span>
+          )}
+        </div>
+      )}
+
       <div className={styles.treatment}>
         {field('timeframe', t.timeframe, '—')}
         {field('min comp', t.minComposite, '—')}
@@ -211,6 +246,51 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
       <StrategyBots names={strategy.botNames} />
 
       <StrategyWarnings botNames={strategy.botNames} unreachableBotNames={strategy.unreachableBotNames} />
+
+      {/* ACTIONS. Duplicate copies the BOT and the PROTOCOL (a complete, independent
+          configuration that starts INACTIVE); delete refuses while the bot is active. Both
+          address a single bot, so a duplicate group shows them disabled with the reason. */}
+      <div className={styles.cardActions}>
+        <button
+          className={styles.actionBtn}
+          disabled={!botId || busy}
+          title={botId
+            ? 'Copy this bot AND its protocol as the B of a new A/B pair. The copy starts inactive, so activating it is a deliberate step.'
+            : 'This key holds more than one bot (a duplication fault) — actions address one bot, so resolve the duplicate first.'}
+          onClick={() => onDuplicate(strategy)}
+        >
+          {busy ? 'Working…' : 'Duplicate as B'}
+        </button>
+        {confirmDelete ? (
+          <>
+            <button
+              className={styles.actionBtnDanger}
+              disabled={busy}
+              title="Removes the bot, its subscriptions, its protocol copy and any watchlist it owns. Trades and logs are kept."
+              onClick={() => {
+                setConfirmDelete(false);
+                onDelete(strategy);
+              }}
+            >
+              Confirm delete — {strategy.botNames[0]}
+            </button>
+            <button className={styles.actionBtn} disabled={busy} onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            className={styles.actionBtnGhost}
+            disabled={!botId || busy}
+            title={botId
+              ? 'Delete this bot. Refused while it is active — deactivate first.'
+              : 'This key holds more than one bot (a duplication fault) — actions address one bot, so resolve the duplicate first.'}
+            onClick={() => setConfirmDelete(true)}
+          >
+            Delete…
+          </button>
+        )}
+      </div>
     </li>
   );
 }
@@ -226,6 +306,39 @@ export default function DerivedStrategiesPage() {
 
   const strategies = useMemo(() => data?.strategies ?? [], [data]);
 
+  /**
+   * A/B lineage (2026-09-22) — resolve `copiedFromBotIds` BOTH ways from the SAME list, so a
+   * pair renders consistently on the two cards that form it.
+   *
+   * ⚠️ RESOLVED, NOT ASSUMED: a pointer whose source is gone (deleted, or filtered out) resolves
+   * to null rather than to a blank or a raw id. An orphan lineage claim would be worse than none
+   * — the delete flow clears pointers on the surviving side, and this is what a cleared one looks
+   * like on screen. The name shown IS the source strategy's current bot name, which is why the
+   * pair stays legible after a rename.
+   */
+  const lineage = useMemo(() => {
+    const byBotId = new Map();
+    for (const s of strategies) for (const id of s.botIds) byBotId.set(id, s);
+
+    const map = new Map();
+    for (const s of strategies) {
+      const from = (s.copiedFromBotIds ?? []).map((id) => byBotId.get(id)).filter(Boolean);
+      map.set(s.strategyKey, {
+        copiedFromName: from[0]?.botNames?.[0] ?? null,
+        copiedToNames: [],
+      });
+    }
+    // Reverse direction — "who was copied from me".
+    for (const s of strategies) {
+      for (const id of s.copiedFromBotIds ?? []) {
+        const source = byBotId.get(id);
+        const entry = source ? map.get(source.strategyKey) : null;
+        if (entry) entry.copiedToNames.push(s.botNames[0]);
+      }
+    }
+    return map;
+  }, [strategies]);
+
   // #875 — the registry half (shared hook: the A/B Strategies page reads the same overlay, so the
   // two surfaces cannot disagree about a name or a drift status). A failure must NOT blank the
   // derived list — the hook swallows it into an empty overlay and cards simply show "Not registered".
@@ -235,6 +348,9 @@ export default function DerivedStrategiesPage() {
   const [editingKey, setEditingKey] = useState(null);
   const [draft, setDraft] = useState('');
   const [savingKey, setSavingKey] = useState(null);
+  // ⚠️ SEPARATE from `savingKey`: a rename and a duplicate can be in flight on two different
+  // cards, and sharing one flag would freeze the wrong card's buttons.
+  const [busyKey, setBusyKey] = useState(null);
   // #875 — a NOTICE, not a string: the notices gate (scripts/validate-notices.cjs) fails the build
   // on a raw error render, and a hard-coded message cannot carry cause/action.
   const [actionNotice, setActionNotice] = useState(null);
@@ -274,6 +390,58 @@ export default function DerivedStrategiesPage() {
       setActionNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 're-accept the strategy definition' }));
     } finally {
       setSavingKey(null);
+    }
+  };
+
+  /**
+   * duplicate() — create the B of a new A/B pair.
+   *
+   * ONE call, because the SERVER owns the record set: it copies the protocol (groups, entries,
+   * symbol wiring, watchlist), creates the bot, subscribes it and links both lineage fields. A
+   * client-side sequence of requests could half-succeed and leave a copy with no protocol — the
+   * exact partial state the endpoint's own cleanup exists to prevent. See
+   * `POST /api/trading/strategies/:id/duplicate`.
+   */
+  const handleDuplicate = async (strategy) => {
+    const botId = strategy.botIds.length === 1 ? strategy.botIds[0] : null;
+    if (!botId) return;
+    setBusyKey(strategy.strategyKey);
+    setActionNotice(null);
+    try {
+      const res = await apiPost(`/api/trading/strategies/${botId}/duplicate`);
+      setActionNotice(notice('TCS-TRADE-019', { name: res?.name ?? strategy.botNames[0] }));
+      invalidate();
+    } catch (e) {
+      setActionNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'duplicate this strategy' }));
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  /**
+   * delete() — remove a bot, guarded server-side.
+   *
+   * ⚠️ An ACTIVE bot comes back as HTTP 409 with code TCS-TRADE-018, which `noticeFromError`
+   * renders from the server-supplied code (its first branch). That is the intended path: the
+   * refusal carries its own wording and its own remedy, so this handler must not pre-empt it with
+   * a client-side active check that could drift from the server's.
+   */
+  const handleDelete = async (strategy) => {
+    const botId = strategy.botIds.length === 1 ? strategy.botIds[0] : null;
+    if (!botId) return;
+    setBusyKey(strategy.strategyKey);
+    setActionNotice(null);
+    try {
+      const res = await apiDelete(`/api/trading/strategies/${botId}`);
+      setActionNotice(notice('TCS-TRADE-020', {
+        name: strategy.botNames[0],
+        detail: res?.detail ?? '',
+      }));
+      invalidate();
+    } catch (e) {
+      setActionNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'delete this strategy' }));
+    } finally {
+      setBusyKey(null);
     }
   };
 
@@ -389,6 +557,11 @@ export default function DerivedStrategiesPage() {
               }}
               onSave={() => handleSave(s, registry.byKey.get(s.strategyKey) ?? null)}
               onReaccept={() => handleReaccept(registry.driftByCurrentKey.get(s.strategyKey))}
+              onDuplicate={handleDuplicate}
+              onDelete={handleDelete}
+              busy={busyKey === s.strategyKey}
+              copiedFromName={lineage.get(s.strategyKey)?.copiedFromName ?? null}
+              copiedToNames={lineage.get(s.strategyKey)?.copiedToNames ?? []}
             />
           ))}
         </ul>

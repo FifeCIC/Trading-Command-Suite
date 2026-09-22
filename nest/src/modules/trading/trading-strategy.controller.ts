@@ -105,6 +105,18 @@ export class TradingStrategyController {
   @Post(':id/toggle')
   async toggle(@Param('id') id: string) { return this.service.toggle(id); }
 
+  /**
+   * POST /api/trading/strategies/:id/duplicate — copy a bot AND its protocol as the B of a pair.
+   *
+   * The copy is a complete, independent configuration: its own protocol (groups, entries,
+   * symbol wiring, watchlists), its own scoring strategy, and its own subscriptions. Nothing is
+   * shared with the source, so editing either side cannot change the other. It starts INACTIVE.
+   * Lineage: the copy's `duplicatedFromId` names the source bot, and the copied protocol's
+   * `derivedFrom` names the source protocol slug — the A/B link is read from those two fields.
+   */
+  @Post(':id/duplicate')
+  async duplicate(@Param('id') id: string) { return this.service.duplicate(id); }
+
   /** GET /api/trading/strategies/:id/protocols — subscription list (#712). */
   @Get(':id/protocols')
   async getProtocols(@Param('id') id: string) {

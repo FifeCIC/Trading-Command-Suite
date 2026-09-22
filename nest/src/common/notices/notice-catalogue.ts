@@ -71,6 +71,10 @@ export const SERVER_NOTICES: Record<string, ServerNotice> = {
   // feasibility refusal carries its identity instead of falling through to TCS-SYS-002.
   // 400, not the undeclared 500 fallback: a pre-trade gate refusal is client-actionable.
   'TCS-RISK-001': { httpStatus: 400, severity: 'warning', label: 'Trade blocked by a safety gate' },
+  // Emitted when a bot delete is refused because the row is still active (2026-09-22, A/B copy
+  // work). 409: the request conflicts with the resource's current state; the remedy is deactivate
+  // first. Declared here because the SERVER throws it; the client only renders it.
+  'TCS-TRADE-018': { httpStatus: 409, severity: 'error', label: 'Bot is still active' },
 };
 
 /** Fallback for a code that is not declared above. Deliberately loud rather than blank. */

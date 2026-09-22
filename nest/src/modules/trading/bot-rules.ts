@@ -92,7 +92,13 @@ export interface BotRule {
  * Columns that are NOT behavioural — structure and bookkeeping only.
  * Anything not in this list AND not in `BOT_RULES` fails the build.
  */
-export const NON_BEHAVIOURAL_COLUMNS = ['id', 'createdAt', 'updatedAt'] as const;
+// A/B pair lineage (2026-09-22): `duplicatedFromId` names the bot this one was copied from,
+// written by POST /api/trading/strategies/:id/duplicate. Identity metadata — no trade path
+// reads it, so it cannot shape a trade.
+// ⚠️ Keep this array on ONE line, quoted, with no comments inside: validate-bot-rules.cjs reads
+// it with a regex and splits on commas — prose in here parses as a column name and the gate
+// then fails claiming the real column is undeclared.
+export const NON_BEHAVIOURAL_COLUMNS = ['id', 'createdAt', 'updatedAt', 'duplicatedFromId'] as const;
 
 export const BOT_RULES: BotRule[] = [
   // ── identity ───────────────────────────────────────────────────────────────────────────────
