@@ -1,4 +1,4 @@
-import { sanitizeMt5Comment, extractStrategyFromComment } from './mt5-comment.util';
+import { sanitizeMt5Comment, extractStrategyFromComment, classifyMt5Comment, resolveStrategyForClose } from './mt5-comment.util';
 
 /**
  * extractStrategyFromComment — the ONE strategy-name parser (#884).
@@ -49,5 +49,43 @@ describe('extractStrategyFromComment — canonical parser (#884)', () => {
     // Sanity anchor — the parser handles legacy comments, the sanitizer prevents new ones.
     expect(sanitizeMt5Comment('TCS Gold Swing 1H | 119%')).not.toContain('|');
     expect(sanitizeMt5Comment('TCS Gold Swing 1H | 119%')).not.toContain('%');
+  });
+});
+
+/**
+ * #949 — the close-attribution half. These guard the differences that made four close paths
+ * disagree with each other and left 184 of 186 closed trades with no strategy at all.
+ */
+describe('classifyMt5Comment + resolveStrategyForClose (#949)', () => {
+  it('the legacy colon form yields the STRATEGY, not the protocol', () => {
+    expect(extractStrategyFromComment('TCS:xau-speed-m5:a')).toBe('a');
+    expect(classifyMt5Comment('TCS:xau-speed-m5:a')).toEqual({ kind: 'strategy', name: 'a' });
+  });
+
+  it('an origin stamp is an ACTOR, never a strategy', () => {
+    // #916 stamps these on the deals the app closes. `TCS:time-stop` has ONE colon — it must
+    // not be mistaken for the two-colon legacy form, and it must not become a strategy key.
+    expect(extractStrategyFromComment('TCS:time-stop')).toBeUndefined();
+    expect(extractStrategyFromComment('TCS:reconciled')).toBeUndefined();
+    expect(classifyMt5Comment('TCS:time-stop').kind).toBe('none');
+  });
+
+  it('`TCS manual …` is a HUMAN trade — no strategy, and the classifier says so', () => {
+    expect(extractStrategyFromComment('TCS manual forex-session-v1')).toBeUndefined();
+    expect(classifyMt5Comment('TCS manual forex-session-v1').kind).toBe('manual');
+  });
+
+  it('a foreign comment is still passed through unchanged (not ours to reinterpret)', () => {
+    expect(extractStrategyFromComment('manual note')).toBe('manual note');
+    expect(classifyMt5Comment('manual note').kind).toBe('none');
+  });
+
+  it('resolveStrategyForClose: existing value wins, then the row comment, then the deal comment', () => {
+    // 1. An existing tag is NEVER overwritten — a reconciler must not erase the open path's work.
+    expect(resolveStrategyForClose('Gold Swing 1H', 'TCS Other Bot 42', 'TCS:time-stop')).toBe('Gold Swing 1H');
+    // 2. The row's own comment (written by us at open) beats the closing deal's stamp.
+    expect(resolveStrategyForClose(null, 'TCS Gold Day-Trade M15', 'TCS:time-stop')).toBe('Gold Day-Trade M15');
+    // 3. Nothing anywhere → undefined. Untagged stays untagged; never an empty string.
+    expect(resolveStrategyForClose(null, 'Reconciled: no broker counterpart', 'TCS:time-stop')).toBeUndefined();
   });
 });

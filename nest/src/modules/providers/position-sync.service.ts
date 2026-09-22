@@ -23,6 +23,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { AdapterFactory } from './adapter-factory';
 import { CLOSE_REASONS, closeReasonFromComment, closeReasonFromDealReason } from '../../common/trading/close-reason';
+import { resolveStrategyForClose } from './mt5-comment.util';
 
 /** Normalised position shape — any broker adapter should map to this. */
 export interface BrokerPosition {
@@ -567,6 +568,21 @@ export class PositionSyncService {
       const derivedCloseReason = fromComment ?? closeReasonFromDealReason(dealReason);
       const closeReason = trade.closeReason ?? derivedCloseReason;
 
+      // ── WHAT it belonged to, not just why it closed (#949) ─────────────────
+      //
+      // This path finalises broker-closed rows (SL / terminal / anything the broker or the
+      // user did in MT5). It wrote `closeReason` but never `strategy`, so of 186 closed trades
+      // only TWO carried a strategy — and the Strategy Comparison page, the bot rating (#894)
+      // and every per-bot number had nothing to group by.
+      //
+      // Precedence (see `resolveStrategyForClose`): the row's EXISTING value first — the open
+      // or closing path may have written one and a reconciler must not erase it — then the
+      // row's own `brokerComment` (`TCS <name> <score>`, written by us at open), then the
+      // closing deal's comment. A deal comment is usually an origin stamp (`TCS:time-stop`,
+      // #916): those are ACTORS, and the parser yields nothing for them rather than tagging a
+      // strategy that does not exist.
+      const strategy = resolveStrategyForClose(trade.strategy, trade.brokerComment, dealComment);
+
       await this.prisma.trade.update({
         where: { id: trade.id },
         data: {
@@ -575,6 +591,7 @@ export class PositionSyncService {
           pnl: realizedPnl ?? trade.pnl ?? null,
           closedAt: closedAt ?? new Date(),
           closeReason,
+          ...(strategy ? { strategy } : {}),
         },
       });
 

@@ -1,4 +1,5 @@
-import { PositionTimeStopService, parseMaxHoldHours, parseCommentTarget } from './position-time-stop.service';
+import { PositionTimeStopService, parseMaxHoldHours } from './position-time-stop.service';
+import { classifyMt5Comment } from '../providers/mt5-comment.util';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
 
 /**
@@ -396,32 +397,32 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
    */
   describe('attribution parses the comment format that is ACTUALLY written', () => {
     it('parses the real name form and the score-suffixed form', () => {
-      expect(parseCommentTarget('TCS Gold Day-Trade M15'))
-        .toEqual({ kind: 'strategy', token: 'Gold Day-Trade M15' });
+      expect(classifyMt5Comment('TCS Gold Day-Trade M15'))
+        .toEqual({ kind: 'strategy', name: 'Gold Day-Trade M15' });
       // Real row: 'TCS Sydney AUDUSD Session | 65%'
-      expect(parseCommentTarget('TCS Sydney AUDUSD Session | 65%'))
-        .toEqual({ kind: 'strategy', token: 'Sydney AUDUSD Session' });
+      expect(classifyMt5Comment('TCS Sydney AUDUSD Session | 65%'))
+        .toEqual({ kind: 'strategy', name: 'Sydney AUDUSD Session' });
       // Real row: 'TCS Gold Day-Trade M15' with a trailing score
-      expect(parseCommentTarget('TCS London EURUSD Macro | 0%'))
-        .toEqual({ kind: 'strategy', token: 'London EURUSD Macro' });
+      expect(classifyMt5Comment('TCS London EURUSD Macro | 0%'))
+        .toEqual({ kind: 'strategy', name: 'London EURUSD Macro' });
     });
 
     it('treats `TCS manual <protocol>` as a human trade, not a bot', () => {
       // Real rows: 'TCS manual forex-session-v1', 'TCS manual xau-speed-v1 | 283e4397'
-      expect(parseCommentTarget('TCS manual forex-session-v1').kind).toBe('manual');
-      expect(parseCommentTarget('TCS manual xau-speed-v1 | 283e4397').kind).toBe('manual');
+      expect(classifyMt5Comment('TCS manual forex-session-v1').kind).toBe('manual');
+      expect(classifyMt5Comment('TCS manual xau-speed-v1 | 283e4397').kind).toBe('manual');
     });
 
     it('still honours the legacy documented form', () => {
-      expect(parseCommentTarget('TCS:xau-speed-m5:a')).toEqual({ kind: 'strategy', token: 'a' });
+      expect(classifyMt5Comment('TCS:xau-speed-m5:a')).toEqual({ kind: 'strategy', name: 'a' });
     });
 
     it('returns none for absent or non-TCS comments', () => {
       // Real rows: 'Reconciled: no broker counterpart (stranded row)'
-      expect(parseCommentTarget('').kind).toBe('none');
-      expect(parseCommentTarget(null).kind).toBe('none');
-      expect(parseCommentTarget(undefined).kind).toBe('none');
-      expect(parseCommentTarget('Reconciled: no broker counterpart').kind).toBe('none');
+      expect(classifyMt5Comment('').kind).toBe('none');
+      expect(classifyMt5Comment(null).kind).toBe('none');
+      expect(classifyMt5Comment(undefined).kind).toBe('none');
+      expect(classifyMt5Comment('Reconciled: no broker counterpart').kind).toBe('none');
     });
 
     /**

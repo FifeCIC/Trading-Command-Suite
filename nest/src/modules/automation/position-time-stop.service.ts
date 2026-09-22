@@ -53,6 +53,7 @@ import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.se
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
+import { classifyMt5Comment } from '../providers/mt5-comment.util';
 
 /** A position the bridge reports, plus the hold time we computed for it. */
 export interface TimedStopCandidate {
@@ -134,10 +135,12 @@ export function parseMaxHoldHours(raw: unknown): number | null {
 }
 
 /**
- * Extract the bot token from an MT5 order comment.
+ * HISTORICAL — this service's retired second parser (#949). Kept because it explains WHY the
+ * canonical `classifyMt5Comment()` must accept the real `TCS <name>` form AND the legacy colon form.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────
- * WHY THIS IS SEPARATE FROM `attributeToStrategy` (measured 2026-09-17)
+ * WHY THIS ONCE EXISTED SEPARATELY FROM `attributeToStrategy` (measured 2026-09-17) — and why
+ * keeping it separate was the wrong answer.
  * ─────────────────────────────────────────────────────────────────────────────────────
  *
  * The docs said the comment convention was `TCS:<protocol>:<strategy>`, and this service
@@ -167,30 +170,9 @@ export function parseMaxHoldHours(raw: unknown): number | null {
  * (`mt5_bridge_v2.py` /order) and ALL 5 live positions report 234000. The comment is the
  * only per-bot identity a position carries.
  *
- * Returns the token to match against a strategy id, slug, or NAME. `kind: 'manual'` is a
- * human trade — no bot owns it, so no bot's hold limit may be applied to it.
+ * ⚠️ RETIRED 2026-09-22 (#949). Parsing moved to `providers/mt5-comment.util.ts` —
+ * `classifyMt5Comment()`. One parser, one grouping key; this block is documentation only.
  */
-export function parseCommentTarget(
-  raw: unknown,
-): { kind: 'strategy' | 'manual' | 'none'; token: string | null } {
-  const comment = String(raw ?? '').trim();
-  if (!comment) return { kind: 'none', token: null };
-
-  // Legacy documented form, still honoured: `TCS:<protocol>:<strategy>`.
-  const legacy = /^TCS:([^:]+):([^\s|]+)/.exec(comment);
-  if (legacy) return { kind: 'strategy', token: legacy[2] };
-
-  // MEASURED real form: `TCS <name>` optionally followed by `| <score>%`.
-  const real = /^TCS\s+(.+)$/.exec(comment);
-  if (!real) return { kind: 'none', token: null };
-
-  const token = real[1].split('|')[0].trim();
-  if (!token) return { kind: 'none', token: null };
-  // `TCS manual <protocol>` — 4 such rows exist. A human trade must not be closed on the
-  // strength of a bot's configured limit.
-  if (/^manual\b/i.test(token)) return { kind: 'manual', token };
-  return { kind: 'strategy', token };
-}
 
 /** A position that could NOT be evaluated, and why. */
 export interface TimeStopSkip {
@@ -469,7 +451,15 @@ export class PositionTimeStopService {
         await this.prisma.trade
           .updateMany({
             where: { brokerTicket: String(c.ticket), status: 'open' },
-            data: { closeReason: CLOSE_REASONS.SYSTEM_TIME_STOP },
+            data: {
+              closeReason: CLOSE_REASONS.SYSTEM_TIME_STOP,
+              // #949 — WHAT it belonged to, not just why it closed. Without this the close path
+              // writes `closeReason` but not `strategy`, so the Strategy Comparison page and the
+              // bot rating (#894) have nothing to read for every time-stop exit.
+              // `strategyName` is resolved by `attributeToStrategy()` above — including the
+              // symbol-only case, where it is still the ONE strategy that trades this symbol.
+              ...(c.strategyName ? { strategy: c.strategyName } : {}),
+            },
           })
           .catch((err: any) => {
             // A missing attribution must not abort a close loop — the position IS closed, and
@@ -509,13 +499,13 @@ export class PositionTimeStopService {
     /** Why attribution succeeded or failed — surfaced in `state.skipped`. */
     reason: string;
   }> {
-    const parsed = parseCommentTarget(comment);
+    const parsed = classifyMt5Comment(comment);
     if (parsed.kind === 'manual') {
       // A human trade. Applying a bot's hold limit to it could close a position nobody
       // configured us to manage.
       return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'manual_trade' };
     }
-    const wanted = parsed.token;
+    const wanted = parsed.name ?? null;
 
     let strategies: any[] = [];
     try {
