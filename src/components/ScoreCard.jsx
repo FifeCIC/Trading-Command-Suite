@@ -143,6 +143,12 @@ const ScoreCard = forwardRef(function ScoreCard({
   // cockpit column). Otherwise EVERY column's first card is marked `lad-card--top`
   // and the "top" highlight stops meaning "the best opportunity".
   showTop = true,
+  // Optional corner badge — the A/B Ladder passes its side letter (A/B). Rendered as
+  // the LAST child of the card head: on that page the state chip is centred by scoped
+  // CSS, so the head's right corner is free and the badge lands in the slot the chip
+  // vacates (owner's layout, 2026-09-22). Null everywhere else — the Ladder and the
+  // cockpit pass nothing and their card is unchanged.
+  cornerBadge = null,
 }, ref) {
   return (
     <motion.div
@@ -193,6 +199,7 @@ const ScoreCard = forwardRef(function ScoreCard({
             {stateLabel(e.vm)}
           </span>
         </span>
+        {cornerBadge}
       </div>
       <div className="lad-card-foot">
         <div className="lad-card-scores">

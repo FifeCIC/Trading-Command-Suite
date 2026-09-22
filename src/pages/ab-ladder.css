@@ -1,8 +1,9 @@
 /* ── A/B Ladder — the delta on top of `ladder.css` ──────────────────────────────
    The page imports `ladder.css` for the page, header, toolbar, card and state-chip
    styling — that IS the ladder's visual identity, and the pair view must look like its
-   own ladder. This file adds only what does not exist there: the single-column layout,
-   the pair pickers, and the comparison strip.
+   own ladder. This file adds only what does not exist there: the comparison strip and
+   the SCOPED card re-dress (side letter top-right, state chip centred, copy
+   bottom-right — every rule prefixed `.ab-pair-row`).
 
    ⚠️ WHY NOT A COPIED CSS FILE. A full copy is the "second implementation" this repo
    has already paid for three times over (thresholds, position freshness, comment
@@ -12,82 +13,122 @@
 
 .ab-layout { display: flex; flex-direction: column; gap: 0.75rem; }
 
-/* Pair pickers ride inside the shared `.lad-filter` label treatment. */
-.ab-pair-pick select { min-width: 180px; }
-.ab-pair-glyph { color: var(--accent); font-size: 0.8rem; line-height: 1; }
+/* Pair pickers/swap removed 2026-09-22 — the pair comes from the URL or persisted
+   state (see the page header). */
 
-.ab-swap-btn {
-  border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft);
-  border-radius: 6px; min-height: 32px; padding: 0 0.55rem; cursor: pointer;
-  font-size: 0.95rem; line-height: 1;
-}
-.ab-swap-btn:hover { color: var(--accent); border-color: var(--accent); }
-.ab-swap-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* Legend — which protocol each side is, and the declared ordering basis. The glyph is
-   decorative (`aria-hidden` in the markup); the letter and the name carry the meaning. */
+/* ── Legend ──
+   Identity is text now, not shapes: the letter and the protocol name carry the meaning
+   (the ⬤/◆ markers were dropped — each element wears ONE letter, and a shape marker was
+   printing the same fact twice). */
 .ab-legend {
   margin: 0; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
   color: var(--ink-soft); font-size: 0.78rem;
 }
-.ab-legend .ab-side-glyph { color: var(--accent); }
+.ab-legend-letter { color: var(--accent); font-weight: 800; }
 
 /* ── Pair row: the shared ScoreCard and the strip as STRETCHED SIBLINGS ──
    `min-width: 0` on the card is load-bearing: without it the card's intrinsic width
    wins and the strip is pushed off the row. */
 .ab-pair-row { display: flex; align-items: stretch; gap: 0.5rem; }
-.ab-pair-row > .lad-card { flex: 1 1 auto; min-width: 0; }
+.ab-pair-row > .lad-card { flex: 1 1 auto; min-width: 0; position: relative; }
 
-/* ── The comparison strip ── */
+/* ── The card, re-dressed for the pair (ALL of this is scoped to .ab-pair-row — the
+   shared card on the Ladder and the cockpit is untouched by definition) ──
+   The head's right corner is RESERVED for the side letter, so the state chip (signal
+   badge + state) moves to the horizontal centre of the card, and the copy chip moves
+   to its own right-aligned row at the card's bottom — the owner's layout (2026-09-22):
+   letter top-right, state centred, copy bottom-right.
+   ⚠️ The chip is anchored to the HEAD ROW (not the card) on purpose: the card and its
+   `.lad-reveal` wrapper carry transforms (motion layout + reveal), and a transformed
+   ancestor becomes the containing block for absolutely positioned children — anchoring
+   to the card made the chip jump 14px when the reveal transition ended and
+   `transform: none` handed the containing block back to the card. The head row is
+   untransformed, so the chip's containing block never changes.
+   On a very narrow card the head can wrap under the chip. Accepted — the strip takes a
+   fixed column and the pair row leaves the card wide. */
+.ab-pair-row .lad-card-head { position: relative; }
+.ab-pair-row .lad-card-status {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  margin-left: 0;
+}
+.ab-pair-row .lad-copy-ref {
+  grid-row: 2; grid-column: 1 / -1;
+  justify-self: end; align-self: end;
+}
+
+/* The side letter — the card's identity badge. Accent marks the LEADER (this card);
+   the strip's letter is neutral ink because it is the runner-up. Not interactive, so
+   the 44px tap-target rule does not apply. */
+.ab-corner-badge {
+  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.9rem; min-height: 1.9rem;
+  border: 1px solid var(--accent); border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent); font-weight: 800; font-size: 0.95rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The comparison strip — the OTHER side ──
+   One side per element (owner's layout, 2026-09-22): the card IS the leading side, the
+   strip IS the other one, so neither side is printed twice. Widened from 118px to give
+   the strip the other side's TWO scores (Signal + Opp) the same label-above-value
+   rhythm its card uses. */
 .ab-strip {
-  flex: 0 0 118px; width: 118px;
+  flex: 0 0 158px; width: 158px;
   display: flex; flex-direction: column; gap: 0.3rem;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
   padding: 0.55rem 0.5rem;
 }
 /* The strip reveals with its card: `useScrollReveal` grants visibility to EVERY
    `.lad-reveal` inside the container, and an unrevealed one is `opacity: 0`. */
-.ab-strip > .lad-reveal { display: flex; flex-direction: column; gap: 0.3rem; height: 100%; }
+.ab-strip > .lad-reveal { display: flex; flex-direction: column; gap: 0.35rem; height: 100%; }
 
-.ab-side {
-  display: flex; flex-direction: column; gap: 0.1rem;
-  padding: 0.3rem 0.4rem; border: 1px solid transparent; border-radius: 8px;
-}
-/* FULL coloured border for the leading side — never a left stripe (owner's rule,
-   ui-standards). The lead is ALSO stated in words by the delta chip below. */
-.ab-side--lead { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.ab-side { display: flex; flex-direction: column; gap: 0.3rem; }
 .ab-side--none { opacity: 0.55; }
 
-.ab-side-id {
-  display: inline-flex; align-items: center; gap: 0.3rem;
-  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; color: var(--ink-soft);
-}
-.ab-side--lead .ab-side-id { color: var(--accent); }
-.ab-side-glyph { font-size: 0.66rem; line-height: 1; }
-
-/* The number is a comparison figure, so it is monospaced and tabular like every other
-   stat value (ui-standards: data/numbers use the mono stack). */
-.ab-side-score {
+/* Letter + signal word: the strip's identity line. Neutral ink for the letter — accent
+   marks the LEADER, and the leader is the card, not this side. */
+.ab-side-top { display: flex; align-items: baseline; gap: 0.4rem; }
+.ab-strip-letter {
+  font-weight: 800; font-size: 0.95rem; color: var(--ink);
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 1rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
 }
-.ab-side--none .ab-side-score { color: var(--ink-soft); }
-.ab-side-signal {
-  font-size: 0.6rem; letter-spacing: 0.04em; color: var(--ink-soft);
+.ab-side-word {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-soft);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* "B +27" — the winner stated in WORDS, not only in colour. `Δ n/a` (dimmed) appears
-   when only one side scored: a gap needs both denominators, and a fabricated one
-   would be worse than an admitted absence. */
+/* The other side's two scores — mirror of the card's blocks; the metric picked by
+   "Score by" is accent-highlighted exactly as on the card. */
+.ab-strip-scores { display: flex; flex-direction: column; gap: 0.22rem; }
+.ab-strip-score { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.ab-strip-score-label {
+  font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+/* Numbers are comparison figures — monospaced and tabular like every other stat value
+   (ui-standards). */
+.ab-strip-score-value {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.95rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.ab-strip-score--active .ab-strip-score-label,
+.ab-strip-score--active .ab-strip-score-value { color: var(--accent); }
+
+/* The gap — stated in WORDS, never colour alone. No letter on it: the card already says
+   which side is ahead, and the strip says which side these numbers belong to.
+   "+27" = the card side leads by 27 points of each protocol's own capacity; "±0" = tie;
+   "Δ n/a" = only one side scored, and a gap needs both denominators. */
 .ab-delta {
   margin-top: auto; text-align: center;
-  font-size: 0.68rem; font-weight: 700; color: var(--accent);
+  font-size: 0.72rem; font-weight: 800; color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
-.ab-delta--na { color: var(--ink-soft); font-weight: 600; }
+.ab-delta--na, .ab-delta--tie { color: var(--ink-soft); font-weight: 600; }
 
 @media (max-width: 760px) {
-  .ab-strip { flex-basis: 96px; width: 96px; padding: 0.45rem 0.4rem; }
-  .ab-side-score { font-size: 0.9rem; }
+  .ab-strip { flex-basis: 132px; width: 132px; padding: 0.45rem 0.4rem; }
+  .ab-strip-score-value { font-size: 0.85rem; }
 }

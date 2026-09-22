@@ -19,9 +19,26 @@
  *     comment parsing) — the visual identity comes from the same file.
  *
  * WHAT IS REMOVED FROM THE LADDER
- *   - `aside.lad-proto-col` — the pair pickers replace it; the pair IS the scope.
+ *   - `aside.lad-proto-col` — the pair IS the scope.
  *   - the direction view (BOTH/LONG/SHORT) — a pair comparison is direction-agnostic;
  *     each protocol's own applicability is unchanged by being compared.
+ *
+ * ⚠️ THE PAIR IS NOT CHOSEN ON THIS PAGE (2026-09-22, owner's call: the pair pickers
+ * "are strictly for the comparison of two selections" and read as clutter). The pair
+ * now comes from, in order: `?pair=<protocolId>,<protocolId>` in the URL — the
+ * integration point for the future A/B pairing config (anything that knows a pair
+ * links straight here, and invalid ids are ignored so a stale link cannot blank the
+ * view) — else the persisted `abladder:pair`, else a one-time seed of the first two
+ * scoreable protocols so the page is never blank. The legend still NAMES both sides:
+ * that is identity, not a control.
+ *
+ * ⚠️ ONE FULL CARD + ONE COMPACT STRIP — ONE LETTER EACH (2026-09-22).
+ * The card IS the leading side (it always was — `primary`) and now WEARS its letter
+ * (A/B) in the top-right corner, so the head's state chip moves to the card centre and
+ * the copy chip to the card's bottom-right. The strip IS the other side: its letter,
+ * its signal word, BOTH its scores (Signal and Opp — the metric chosen by "Score by"
+ * highlighted, mirroring the card's blocks) and the gap (+N / ±0 / Δ n/a). No side is
+ * printed twice: the eye reads "this card, versus that strip".
  *
  * ⚠️ TWO DECISIONS MADE EXPLICIT (they define what the ladder MEANS)
  *   1. ORDERING — ranked by the PAIR MAXIMUM: a row's rank value is the higher of the
@@ -53,6 +70,7 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
+import { useSearchParams } from 'react-router-dom';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import ScoreCard from '../components/ScoreCard';
@@ -71,13 +89,12 @@ import './ladder.css';
 import './ab-ladder.css';
 
 /**
- * Side identifiers — SHAPE first, colour second.
- * ⚠️ Shape + letter + written label, never colour alone: the lead is also stated in
- * words by the delta chip ("B +27"), so the comparison survives colour-blind rendering
- * and greyscale printing. `aria-hidden` on the glyph because the letter beside it
- * carries the same information for screen readers.
+ * Side letters — the ONLY side identity (the ⬤/◆ glyphs were dropped 2026-09-22: the
+ * card wears one letter and the strip the other, so a shape marker was printing the
+ * same fact twice). Colour is emphasis, never the sole differentiator: each side is a
+ * letter, and the gap is stated in words ("+27" / "±0" / "Δ n/a"), so the comparison
+ * survives colour-blind rendering and greyscale printing.
  */
-const SIDE_GLYPH = { a: '⬤', b: '◆' };
 
 /**
  * buildPairRow(aEntry, bEntry, rankBy) — join one symbol's two sides into a row.
@@ -104,6 +121,10 @@ function buildPairRow(symbol, aEntry, bEntry, rankBy) {
   const primary = lead === 'b' && bEntry ? bEntry : (aEntry || bEntry);
   const other = primary === aEntry ? bEntry : aEntry;
   const highest = Math.max(va ?? -1, vb ?? -1);
+  // Which SIDE the card shows and which the strip shows. `cardSide` wears the letter
+  // badge (top-right); `stripSide` is the other one — one letter per element.
+  const cardSide = primary === aEntry ? 'a' : 'b';
+  const stripSide = cardSide === 'a' ? 'b' : 'a';
 
   return {
     symbol,
@@ -114,6 +135,11 @@ function buildPairRow(symbol, aEntry, bEntry, rankBy) {
     primary,
     other,
     highest,
+    cardSide,
+    stripSide,
+    // A real tie (both sides scored, same value) is stated as ±0 rather than rendering
+    // nothing — an invisible gap reads as "no data", which is a different fact.
+    tie: va != null && vb != null && va === vb,
     hasScore: !!(aEntry?.hasScore || bEntry?.hasScore),
     primaryFrozen: !!primary?.vm?.frozen,
     // One vm for the page-level filters. The symbol's market is the same question on
@@ -132,32 +158,41 @@ function buildPairRow(symbol, aEntry, bEntry, rankBy) {
   };
 }
 
-/** One side of the comparison strip. */
-function SideBlock({ side, entry, winning, name }) {
+/**
+ * StripSide({ side, entry, name, rankBy }) — the compact half of the comparison: the
+ * side that is NOT on the card. Shows its letter, its signal word and BOTH its scores
+ * (Signal and Opp — the one picked by "Score by" highlighted, exactly like the card's
+ * blocks), so both sides of the pair are readable without re-deriving anything from
+ * the card. An unscored side states "no score" rather than rendering zeroes — a zero
+ * is a real score and must not be confusable with an absent one.
+ */
+function StripSide({ side, entry, name, rankBy }) {
   const has = !!entry?.hasScore;
   const vm = entry?.vm || {};
-  const pct = has ? vm.pct : null;
-  const raw = has && vm.score != null
-    ? `${vm.score}${vm.scoreMax ? ` / ${vm.scoreMax}` : ''}`
-    : null;
-  const signal = has ? (vm.signal ?? '—') : null;
+  const signalPct = has ? (vm.pct ?? null) : null;
+  const oppPct = has ? (vm.opportunityPct ?? null) : null;
+  const signalWord = has ? (vm.signal ?? null) : null;
 
   const detail = has
-    ? `Side ${side.toUpperCase()} — ${name}: ${signal ?? 'no signal'}, ${raw ?? 'no score'}`
-      + `${pct != null ? ` (${pct}%)` : ''}`
+    ? `Side ${side.toUpperCase()} — ${name}: ${signalWord ?? 'no signal'}, Signal ${signalPct ?? '—'}%, Opp ${oppPct ?? '—'}%`
     : `Side ${side.toUpperCase()} — ${name}: no score yet`;
 
   return (
-    <div
-      className={`ab-side ab-side--${side}${winning ? ' ab-side--lead' : ''}${has ? '' : ' ab-side--none'}`}
-      title={detail}
-    >
-      <span className="ab-side-id">
-        <span className="ab-side-glyph" aria-hidden="true">{SIDE_GLYPH[side]}</span>
-        {side.toUpperCase()}
+    <div className={`ab-side ab-side--${side}${has ? '' : ' ab-side--none'}`} title={detail}>
+      <span className="ab-side-top">
+        <span className="ab-strip-letter">{side.toUpperCase()}</span>
+        {has ? <span className="ab-side-word">{signalWord ?? '—'}</span> : <span className="ab-side-word">no score</span>}
       </span>
-      <span className="ab-side-score">{pct != null ? `${pct}%` : '—'}</span>
-      <span className="ab-side-signal">{has ? (signal ?? '—') : 'no score'}</span>
+      <span className="ab-strip-scores">
+        <span className={`ab-strip-score${rankBy === 'signal' ? ' ab-strip-score--active' : ''}`}>
+          <span className="ab-strip-score-label">Signal</span>
+          <span className="ab-strip-score-value">{signalPct != null ? `${signalPct}%` : '—'}</span>
+        </span>
+        <span className={`ab-strip-score${rankBy === 'opp' ? ' ab-strip-score--active' : ''}`}>
+          <span className="ab-strip-score-label">Opp</span>
+          <span className="ab-strip-score-value">{oppPct != null ? `${oppPct}%` : '—'}</span>
+        </span>
+      </span>
     </div>
   );
 }
@@ -169,8 +204,9 @@ export default function AbLadderPage() {
   const { positionBySymbol, symbolMeta } = useSymbolLookups();
 
   // The pair. Persisted so the view survives navigation; `seeded` marks the one-time
-  // default (first two scoreable protocols) so a deliberate choice is never overwritten —
-  // the same guard shape the Ladder's protocol selection needed (see LadderPage).
+  // default (first two scoreable protocols) so a deliberate choice — or a `?pair=` link —
+  // is never overwritten by the seed. The same guard shape the Ladder's protocol
+  // selection needed (see LadderPage).
   const [pair, setPair] = usePersistentState('abladder:pair', { a: null, b: null, seeded: false });
 
   const [ageFilter, setAgeFilter] = usePersistentChoice('abladder:ageFilter', 'all', ['all', ...AGE_OPTIONS]);
@@ -211,23 +247,25 @@ export default function AbLadderPage() {
     }
   }, [isLoading, selectableProtocols, pair, setPair]);
 
+  // The pair can also arrive in the URL — `?pair=<id>,<id>`. This is the integration
+  // point for the future A/B pairing config: anything that knows a pair (a pairing
+  // table, an issue, a bookmark) links straight to it, and this page needs no picker
+  // of its own (removed 2026-09-22). Invalid or unknown ids are ignored in silence on
+  // purpose — a stale link must not blank the view; the persisted pair stands.
+  const [searchParams] = useSearchParams();
+  const pairParam = searchParams.get('pair') || '';
+  useEffect(() => {
+    if (!pairParam || selectableProtocols.length === 0) return;
+    const [a, b] = pairParam.split(',').map((s) => s.trim());
+    if (!a || !b || a === b) return;
+    const ids = new Set(selectableProtocols.map((p) => p.id));
+    if (!ids.has(a) || !ids.has(b)) return;
+    if (pair.a === a && pair.b === b) return;
+    setPair({ a, b, seeded: true });
+  }, [pairParam, selectableProtocols, pair.a, pair.b, setPair]);
+
   const protoA = useMemo(() => selectableProtocols.find((p) => p.id === pair.a) || null, [selectableProtocols, pair.a]);
   const protoB = useMemo(() => selectableProtocols.find((p) => p.id === pair.b) || null, [selectableProtocols, pair.b]);
-
-  const picker = (which) => (
-    <select
-      value={pair[which] || ''}
-      onChange={(e) => setPair((prev) => ({ ...prev, [which]: e.target.value, seeded: true }))}
-      aria-label={`Protocol ${which.toUpperCase()} of the pair`}
-    >
-      <option value="">— none —</option>
-      {selectableProtocols.map((p) => (
-        <option key={p.id} value={p.id}>{p.name ?? p.id}</option>
-      ))}
-    </select>
-  );
-
-  const swapPair = () => setPair((prev) => ({ ...prev, a: prev.b, b: prev.a, seeded: true }));
 
   // ── Join both sides by symbol, then filter and rank ──
   const { passing, excluded, bothScored } = useMemo(() => {
@@ -283,8 +321,11 @@ export default function AbLadderPage() {
     const cardEntry = row.primary;
     if (!cardEntry) return null;
     const cardKey = `${cardEntry.protocolId}::${cardEntry.symbol}`;
+    const cardName = row.cardSide === 'a' ? (protoA?.name ?? pair.a) : (protoB?.name ?? pair.b);
+    const stripName = row.stripSide === 'a' ? (protoA?.name ?? pair.a) : (protoB?.name ?? pair.b);
     return (
       <div key={row.symbol} className="ab-pair-row">
+        {/* The LEADING side, full card, wearing its side letter — the corner badge. */}
         <ScoreCard
           entry={cardEntry}
           rank={i}
@@ -295,31 +336,42 @@ export default function AbLadderPage() {
           pos={positionBySymbol[String(row.symbol).toUpperCase()] || null}
           onCopyRef={copyCardRef}
           copied={copyState.key === cardKey ? copyState.ok : null}
+          cornerBadge={
+            <span
+              className="ab-corner-badge"
+              aria-hidden="true"
+              title={`Card side: ${row.cardSide.toUpperCase()} — ${cardName}`}
+            >
+              {row.cardSide.toUpperCase()}
+            </span>
+          }
         />
-        {/* The comparison strip — the reason this page exists. A SIBLING of the
-            shared card, so nothing here can alter the Ladder's or the cockpit's card. */}
+        {/* The OTHER side, compact: its letter, its signal word, BOTH its scores, and
+            the gap. A SIBLING of the shared card — nothing here can alter the Ladder's
+            or the cockpit's card. */}
         <div
           className="ab-strip"
           role="group"
-          aria-label={`A/B comparison for ${row.symbol}`}
+          aria-label={`A/B comparison for ${row.symbol} — card shows side ${row.cardSide.toUpperCase()}, strip shows side ${row.stripSide.toUpperCase()}`}
         >
           {/* Reveal with the card: an unrevealed `.lad-reveal` is opacity 0, and the
               scroll hook grants visibility to every one inside the container. */}
           <div className="lad-reveal">
-            <SideBlock side="a" entry={row.a} winning={row.lead === 'a'} name={protoA?.name ?? pair.a} />
-            <SideBlock side="b" entry={row.b} winning={row.lead === 'b'} name={protoB?.name ?? pair.b} />
-            {row.delta != null && row.lead && (
+            <StripSide side={row.stripSide} entry={row.other} name={stripName} rankBy={rankBy} />
+            {row.lead && row.delta != null && (
               <span
                 className="ab-delta"
-                title={
-                  `Signal-score gap: ${row.lead.toUpperCase()} leads by ${row.delta} percentage point` +
-                  `${row.delta === 1 ? '' : 's'} (of each protocol's own capacity)`
-                }
+                title={`${cardName} leads by ${row.delta} percentage point${row.delta === 1 ? '' : 's'} (of each protocol's own capacity)`}
               >
-                {row.lead.toUpperCase()} +{row.delta}
+                +{row.delta}
               </span>
             )}
-            {row.delta == null && !(row.a?.hasScore && row.b?.hasScore) && (
+            {!row.lead && row.tie && (
+              <span className="ab-delta ab-delta--tie" title="Tie — both sides score the same on the ranked metric">
+                ±0
+              </span>
+            )}
+            {row.delta == null && !row.lead && !row.tie && (
               <span className="ab-delta ab-delta--na" title="Only one side has scored this symbol — a gap needs both denominators">
                 Δ n/a
               </span>
@@ -345,13 +397,17 @@ export default function AbLadderPage() {
         <div>
           <h1>A/B Ladder
             <PageInfoPopover>
-              The Ladder, scoped to a protocol PAIR. Pick protocol A and protocol B, and every
-              symbol either side resolves is ranked as on the Ladder — with a strip beside each
-              card showing both sides&apos; scores ({SIDE_GLYPH.a} A / {SIDE_GLYPH.b} B) and which
-              is higher. Rows are ranked by the PAIR MAXIMUM (the higher of the two sides), and
-              the symbol set is the UNION of both sides — one-sided rows are shown, not hidden.
-              A running A/B test that changes only CONFIG (not protocol) cannot be shown here yet:
-              scoring is protocol-scoped, so those pairs render identical sides by design.
+              The Ladder, scoped to a protocol PAIR. Every symbol either side resolves is
+              ranked as on the Ladder. The higher side is a full card wearing its letter
+              (A or B, top-right); the other side rides beside it as a compact strip with
+              its letter, its Signal and Opp scores, and the gap (+N, ±0 for a tie,
+              Δ n/a when only one side scored). Rows are ranked by the PAIR MAXIMUM (the
+              higher of the two sides), and the symbol set is the UNION of both sides —
+              one-sided rows are shown, not hidden. The pair comes from the URL
+              (?pair=id,id) or the last-used pair — it is set by whatever owns A/B
+              pairing, not on this page. A running A/B test that changes only CONFIG
+              (not protocol) cannot be shown here yet: scoring is protocol-scoped, so
+              those pairs render identical sides by design.
             </PageInfoPopover>
           </h1>
           <p className="lad-subtitle">
@@ -369,28 +425,15 @@ export default function AbLadderPage() {
           marketFilter={marketFilter} onMarketFilter={setMarketFilter}
           search={search} onSearch={setSearch}
           searchAriaLabel="Search the A/B ladder by symbol, protocol, state or signal"
-        >
-          <label className="lad-filter ab-pair-pick">
-            <span className="ab-pair-glyph" aria-hidden="true">{SIDE_GLYPH.a}</span>
-            A:
-            {picker('a')}
-          </label>
-          <button type="button" className="ab-swap-btn" onClick={swapPair} title="Swap sides A and B" aria-label="Swap sides A and B">
-            ⇄
-          </button>
-          <label className="lad-filter ab-pair-pick">
-            <span className="ab-pair-glyph" aria-hidden="true">{SIDE_GLYPH.b}</span>
-            B:
-            {picker('b')}
-          </label>
-        </LadderToolbar>
+        />
 
         {protoA && protoB && (
           <p className="ab-legend">
-            <span className="ab-side-glyph" aria-hidden="true">{SIDE_GLYPH.a}</span> A = {protoA.name ?? protoA.id}
+            <span className="ab-legend-letter">A</span> = {protoA.name ?? protoA.id}
             {' · '}
-            <span className="ab-side-glyph" aria-hidden="true">{SIDE_GLYPH.b}</span> B = {protoB.name ?? protoB.id}
-            {' · '}ranked by the higher of the two sides
+            <span className="ab-legend-letter">B</span> = {protoB.name ?? protoB.id}
+            {' · '}the card wears the higher side&apos;s letter, the strip the other
+            {' · '}ranked by the pair maximum
             {rankBy === 'opp' ? ' (Opportunity)' : ' (Signal)'}
           </p>
         )}
@@ -398,8 +441,12 @@ export default function AbLadderPage() {
         <main className="lad-cards-col" ref={cardsColRef}>
           {!protoA || !protoB ? (
             <div className="lad-empty">
-              <p className="lad-empty-title">Pick two protocols to compare.</p>
-              <p>Side A and side B above — every symbol either side scores becomes a ranked row with a comparison strip.</p>
+              <p className="lad-empty-title">No pair to show yet.</p>
+              <p>
+                This view compares two scoring protocols; they are chosen by whatever owns
+                A/B pairing. A link such as ?pair=xau-speed-m15,xau-speed-1h selects a pair
+                directly.
+              </p>
             </div>
           ) : passing.length === 0 && excluded.length === 0 ? (
             <LadderEmptyState
