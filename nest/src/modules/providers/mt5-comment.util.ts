@@ -81,10 +81,10 @@ export function extractStrategyFromComment(comment: string | null | undefined): 
  * comment?" but "MAY A BOT'S RULE BE APPLIED TO IT?". A human trade must never be closed on the
  * strength of a bot's configured hold limit, so `manual` is its own answer, not an empty strategy.
  *
- * ⚠️ WHY THIS LIVES HERE. `position-time-stop.service.ts` used to own a second parser
- * (`parseCommentTarget`) with its own regexes. Two parsers for one format is the defect that
- * produced #884 — the writers and readers of a comment must not be able to disagree. Measured
- * 2026-09-17, that second parser matched ZERO of the 76 real comments because it waited for
+ * ⚠️ WHY THIS LIVES HERE. `position-time-stop.service.ts` used to own a second, separate comment
+ * parser of its own, with its own regexes. Two parsers for one format is the defect that produced
+ * #884 — the writers and readers of a comment must not be able to disagree. Measured 2026-09-17,
+ * that second parser matched ZERO of the 76 real comments because it waited for
  * `TCS:<protocol>:<strategy>`, a form nothing has ever produced (59 of 76 were `TCS <name>`).
  */
 export function classifyMt5Comment(
