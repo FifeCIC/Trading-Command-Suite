@@ -71,12 +71,14 @@
    comes from .ab-sideletter. */
 .ab-corner-badge { margin-left: auto; }
 
-/* ── The comparison strip — ALWAYS side B (sides are fixed; see the page header) ──
-   The card IS side A and the strip IS side B, so neither side is printed twice.
-   Widened from 118px to carry the strip's identity (symbol, protocol, boxed letter) and
-   the OTHER side's two scores as raw + percentage. */
+/* ── The comparison strip — the row's OTHER side ──
+   The card is one side of the pair and the strip is the other: on a row whose card is
+   side A the strip carries B, and on a B row it carries A (rows are per side — see the
+   page header). Widened 118 → 172px for the strip's identity (symbol, protocol, boxed
+   letter) and the other side's two scores as raw + percentage, then 172 → 224px at the
+   owner's request (2026-09-22: "30% wider and make the text in them a little larger"). */
 .ab-strip {
-  flex: 0 0 172px; width: 172px;
+  flex: 0 0 224px; width: 224px;
   display: flex; flex-direction: column; gap: 0.3rem;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
   padding: 0.55rem 0.5rem;
@@ -88,19 +90,25 @@
 .ab-side { display: flex; flex-direction: column; gap: 0.3rem; }
 .ab-side--none { opacity: 0.55; }
 
+/* Strip-side letter box — a touch larger than the card's corner badge (1.9rem), because
+   the strip's own type grew at the owner's request. Same treatment and same side
+   colours; only the size differs, and only here — the card head's alignment is
+   untouched. */
+.ab-strip .ab-sideletter { min-width: 2rem; min-height: 2rem; font-size: 1rem; }
+
 /* Identity line: the boxed side letter + the SYMBOL (a link, like the card's) — the
    owner asked for validating identity in the strip: you should not have to trust the
    card's framing to know what you are reading. */
 .ab-side-head { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
 .ab-strip-symbol {
-  font-weight: 800; font-size: 0.95rem; color: var(--ink); text-decoration: none;
+  font-weight: 800; font-size: 1.05rem; color: var(--ink); text-decoration: none;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ab-strip-symbol:hover { color: var(--accent); }
 /* Signal word + protocol name — the "who is this" line; the full text (including the
    scored age) is in the row title. */
 .ab-side-name {
-  font-size: 0.62rem; color: var(--ink-soft);
+  font-size: 0.68rem; color: var(--ink-soft);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -112,31 +120,31 @@
   display: grid; grid-template-columns: auto 1fr auto; gap: 0.4rem; align-items: baseline;
 }
 .ab-strip-score-label {
-  font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: 0.63rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--ink-soft);
 }
 /* Numbers are comparison figures — monospaced and tabular like every other stat value
    (ui-standards). */
 .ab-strip-score-raw {
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.6rem; color: var(--ink-soft); text-align: right;
+  font-size: 0.66rem; color: var(--ink-soft); text-align: right;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ab-strip-score-value {
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.95rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
+  font-size: 1.05rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
   text-align: right;
 }
 .ab-strip-score--active .ab-strip-score-label,
 .ab-strip-score--active .ab-strip-score-value { color: var(--accent); }
 
-/* The gap — stated in WORDS and tinted with the LEADING side's colour. Sides are FIXED
-   now, so the letter is back on it ("B +4" = B leads by 4 points of each protocol's own
-   capacity). "±0" = tie; "Δ n/a" = only one side scored, and a gap needs both
-   denominators. */
+/* The gap — stated in WORDS and tinted with the LEADING side's colour. The letter is on
+   it because EITHER side can lead on a row ("B +4" = B leads by 4 points of each
+   protocol's own capacity). "±0" = tie; "Δ n/a" = only one side scored, and a gap
+   needs both denominators. */
 .ab-delta {
   margin-top: auto; text-align: center;
-  font-size: 0.72rem; font-weight: 800;
+  font-size: 0.8rem; font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 .ab-delta--a { color: var(--accent); }
@@ -144,6 +152,6 @@
 .ab-delta--na, .ab-delta--tie { color: var(--ink-soft); font-weight: 600; }
 
 @media (max-width: 760px) {
-  .ab-strip { flex-basis: 152px; width: 152px; padding: 0.45rem 0.4rem; }
-  .ab-strip-score-value { font-size: 0.85rem; }
+  .ab-strip { flex-basis: 198px; width: 198px; padding: 0.45rem 0.4rem; }
+  .ab-strip-score-value { font-size: 0.95rem; }
 }
