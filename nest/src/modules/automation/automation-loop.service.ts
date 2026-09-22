@@ -213,34 +213,46 @@ export interface ScoringStrategy {
   tradingEnabled: boolean;
 }
 
-export interface TickDecision {
+/**
+ * #909 / #937 — the score slots, as a DISCRIMINATED CHOICE rather than two loose optionals.
+ *
+ *   compositeRaw — the additive protocol score (envelope ladder + A/B writers). Compared
+ *                  against protocol capacity, NOT against a percentage bar.
+ *   compositePct — percentage of the protocol's CONFIGURED capacity, 0-100 (queue path).
+ *                  This is the number `minComposite` was calibrated for.
+ *
+ * ⚠️ They are different quantities. Do not compare, average or chart them as one series.
+ * Exactly one is set; a BOTH-NULL pair means "no score" — never 0, because a 0 reads as a real
+ * measurement in either unit (the defect #909 removed: the old `composite` column held both
+ * units under one name).
+ *
+ * ⚠️ #937 — THE TYPE ENFORCES THIS; IT IS NOT A COMMENT. Both slots used to be independent
+ * optionals, so a writer could omit BOTH and persist an untyped row with nothing failing —
+ * the verifier's finding on #909 ("the build fails if a writer omits it") was not true. The
+ * union below makes the choice mandatory: `?: never` on the opposite arm means a literal that
+ * sets NEITHER slot, or BOTH, is a compile error at every push site — and because jest runs
+ * ts-jest with diagnostics, removing the unit from a scored write path fails a TEST, not just
+ * the build. To write "no score", say so: `compositePct: null`.
+ * The enforcement is itself guarded (automation-loop-decision-units.spec.ts), so reverting this
+ * union to two loose optionals also fails the suite.
+ */
+type TickDecisionScore =
+  | { compositeRaw: number | null; compositePct?: never }
+  | { compositePct: number | null; compositeRaw?: never };
+
+export type TickDecision = {
   timestamp: string;
   strategyId: string;
   symbol: string;
   brokerId: string;
   decision: 'SCORED' | 'SKIP' | 'SIGNAL' | 'QUEUED' | 'EXECUTED' | 'FAILED' | 'BLOCKED' | 'PYRAMID';
   reason: string;
-  /**
-   * #909 — the score behind this decision, IN THE UNIT THE WRITER ACTUALLY PRODUCED.
-   *
-   *   compositeRaw — the additive protocol score (envelope ladder + A/B writers). Compared
-   *                  against protocol capacity, NOT against a percentage bar.
-   *   compositePct — percentage of the protocol's CONFIGURED capacity, 0-100 (queue path).
-   *                  This is the number `minComposite` was calibrated for.
-   *
-   * ⚠️ They are different quantities. Do not compare, average or chart them as one series.
-   * Exactly one is set; BOTH NULL means "no score" — never 0, because a 0 reads as a real
-   * measurement in either unit (that is the defect this split removed: the old `composite`
-   * column held both units under one name).
-   */
-  compositeRaw?: number | null;
-  compositePct?: number | null;
   signal?: string;
   ticket?: string | number;
   price?: number;
   quantity?: number;
   actionId?: string;
-}
+} & TickDecisionScore;
 
 // ── Watchlist helpers ─────────────────────────────────
 // Phase A.4: DB-first with JSON file fallback.
