@@ -211,18 +211,51 @@ export class SymbolsService {
   }
 
   /**
+   * A stored Position row counts as a LIVE holding only when a broker sync refreshed its
+   * quote inside this window (#854).
+   *
+   * ⚠️ WHY FRESHNESS IS THE DISCRIMINATOR. The `position` table has two populations with
+   * sharply different writers:
+   *   - rows maintained by `PositionSyncService` on every loop tick — quote ages in MINUTES
+   *     (measured 2026-09-22: MT5 rows 07:45 → 10:41 across a morning);
+   *   - rows created once by the Trading 212 portfolio IMPORT and never touched again —
+   *     frozen at their import time (measured: 24 rows all quoted 2026-07-31 01:25, ~8 weeks).
+   * The old code returned every row with `hasPosition: true`, so 24 imported stocks rendered as
+   * current holdings with live P&L on the Symbols Browser — plausible numbers, no error (#854).
+   *
+   * 7 days sits between the two populations by design: sync-refreshed rows can never fall
+   * outside it (even through a long weekend plus days of machine downtime), and frozen import
+   * rows can never fall inside it. If syncs genuinely stop for a week, the rows ARE stale and
+   * saying so is the honest answer.
+   */
+  private static readonly POSITION_LIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+  /**
    * Current-holdings map from the stored Position table (DB-only — no external
-   * provider calls, so it is safe for page render). Every stored Position row is a
-   * current open position/holding; keyed for cross-referencing the Symbols Browser
-   * (match by uppercased ticker).
+   * provider calls, so it is safe for page render).
+   *
+   * AUTHORITATIVE SOURCE for "an open position exists": a `position` row whose `lastQuotedAt`
+   * falls inside POSITION_LIVE_WINDOW_MS — i.e. a row an actual broker sync is maintaining.
+   * Rows outside it are NOT live positions and are returned separately as `staleHoldings`, so
+   * the exclusion is visible rather than silent (development-philosophy §7). Keyed for
+   * cross-referencing the Symbols Browser (match by uppercased ticker).
    */
   async getPositionMap() {
-    if (!this.prisma.isAvailable) return [];
+    if (!this.prisma.isAvailable) return { positions: [], staleHoldings: { count: 0, newestQuote: null, note: '' } };
     try {
       const rows = await this.prisma.position.findMany({
         orderBy: { symbol: 'asc' },
       });
-      return rows.map((p) => {
+
+      const cutoff = Date.now() - SymbolsService.POSITION_LIVE_WINDOW_MS;
+      const live: typeof rows = [];
+      const stale: typeof rows = [];
+      for (const p of rows) {
+        const quoted = p.lastQuotedAt instanceof Date ? p.lastQuotedAt.getTime() : new Date(p.lastQuotedAt ?? 0).getTime();
+        (Number.isFinite(quoted) && quoted >= cutoff ? live : stale).push(p);
+      }
+
+      const positions = live.map((p) => {
         // 2026-09-10 — side-aware. This endpoint reported `pnl: +56.13` beside
         // `pnlPct: -1.70%` for a short XAUUSD position because the percentage was
         // computed long-only while the stored amount came from the broker.
@@ -243,11 +276,34 @@ export class SymbolsService {
           pnlPct,
           side: p.side ?? null,
           provider: p.provider,
+          /** When a broker sync last refreshed this row's quote — the claim behind `hasPosition`. */
+          lastQuotedAt: p.lastQuotedAt instanceof Date ? p.lastQuotedAt.toISOString() : p.lastQuotedAt,
         };
       });
+
+      let staleHoldings = { count: 0, newestQuote: null as string | null, note: '' };
+      if (stale.length > 0) {
+        const newest = stale.reduce((a, b) =>
+          new Date(a.lastQuotedAt ?? 0).getTime() >= new Date(b.lastQuotedAt ?? 0).getTime() ? a : b,
+        );
+        const newestIso = newest.lastQuotedAt instanceof Date
+          ? newest.lastQuotedAt.toISOString()
+          : String(newest.lastQuotedAt ?? '');
+        const providers = [...new Set(stale.map((p) => p.provider))].join(', ');
+        staleHoldings = {
+          count: stale.length,
+          newestQuote: newestIso,
+          note:
+            `${stale.length} holding row(s) are NOT refreshed by any broker sync (${providers}; newest quote) ` +
+            `${newestIso.slice(0, 10)} — they are portfolio-import records, not live positions, and are excluded ` +
+            `here. See #854.`,
+        };
+      }
+
+      return { positions, staleHoldings };
     } catch (error) {
       this.logger.warn(`Could not load positions for symbols browser: ${String(error)}`);
-      return [];
+      return { positions: [], staleHoldings: { count: 0, newestQuote: null, note: '' } };
     }
   }
 

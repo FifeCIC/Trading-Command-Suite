@@ -135,10 +135,15 @@ export class SymbolsController {
   }
 
   @Get('positions')
-  @ApiOperation({ summary: 'Current position/holdings map keyed by symbol (DB-only, for the Symbols Browser)' })
+  @ApiOperation({
+    summary:
+      'LIVE position/holdings map keyed by symbol (DB-only, for the Symbols Browser). ' +
+      'Live = a broker sync refreshed the row inside the live window; unrefreshed rows are ' +
+      'reported separately as `staleHoldings.count`, never as positions (#854).',
+  })
   async positions() {
-    const positions = await this.symbolsService.getPositionMap();
-    return { ...this.modeMeta(), positions };
+    const { positions, staleHoldings } = await this.symbolsService.getPositionMap();
+    return { ...this.modeMeta(), positions, staleHoldings };
   }
 
   @Get(':id')
