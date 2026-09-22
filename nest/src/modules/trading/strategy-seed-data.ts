@@ -186,7 +186,16 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     brokerId: 'mt5',
     mode: 'semi-auto',
     timeframe: '1h',
-    baseSize: 0.05,
+    // ⚠️ 0.05 -> 0.02 (2026-09-22), on the owner's instruction: "we moved to 0.01 because my
+    // real money will not afford 0.1 sized lots". The LOT NUMBER is not the risk — this is:
+    //
+    //     risk = lots x contractSize x price x slPct
+    //
+    // Measured at 0.05 with this 1.5% stop: **£245.22 per trade**, on a £1,376 account. At
+    // 0.02 it is £98.09, inside the owner's stated £100 ceiling. XAUUSD's floor is 0.01, so
+    // 0.02 is comfortably reachable. Full audit over all 26 active bots: only this bot and
+    // Gold Position 4H exceeded £100 — every FX, index, silver and VIX bot was already fine.
+    baseSize: 0.02,
     slPct: 1.5,
     tpPct: 3.0,
     minComposite: 9,
@@ -200,7 +209,16 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     brokerId: 'mt5',
     mode: 'semi-auto',
     timeframe: '4h',
-    baseSize: 0.1,
+    // ⚠️ 0.1 -> 0.01 (2026-09-22), owner instruction. At 0.1 with this 3% stop the measured
+    // risk was **£980.88 per trade — 71% of a £1,376 account in a single position.** That was
+    // the real exposure problem; the 0.1 lot number was only its symptom.
+    //
+    // At the XAUUSD floor of 0.01 it is £130.89 — still above the owner's £100 ceiling, and
+    // it CANNOT go lower because 0.01 is the broker's minimum volume. The only route under
+    // £100 on this bot is a tighter `slPct`, which is a STOP decision rather than a sizing
+    // one, so it is left untouched here deliberately. Flagged on the handoff rather than
+    // silently tightened.
+    baseSize: 0.01,
     slPct: 3.0,
     tpPct: 6.0,
     minComposite: 8,

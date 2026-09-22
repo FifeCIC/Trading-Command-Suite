@@ -171,10 +171,19 @@ export class DecisionChainService {
         .catch(() => null);
     }
 
-    // 3. Strategy evaluations that produced this ticket — only when the
-    // ticket is a real broker ticket (2147483647 is the MT5 placeholder and
-    // would match thousands of unrelated rows).
-    const isPlaceholderTicket = trade.ticket === 2147483647;
+    // 3. Strategy evaluations that produced this ticket — only when the ticket is a real one.
+    //
+    // 🛑 CORRECTED 2026-09-22. This previously read `trade.ticket === 2147483647` and described
+    // that value as "the MT5 placeholder". It is NOT a placeholder. It is the INT32 CLAMP
+    // artefact of a 12-digit ticket written into an `int` column on a non-strict MySQL, and
+    // reading it as intentional is why the score→evaluation link was quietly skipped rather
+    // than investigated. The column is BIGINT now, so new rows carry the true ticket; this
+    // check is retained ONLY for historical rows, which genuinely still hold the clamped value.
+    //
+    // ⚠️ Compare against a BigInt literal. Prisma returns a JS `BigInt` for a BIGINT column and
+    // `2147483647n === 2147483647` is FALSE — a number literal here would make the guard
+    // silently stop working while still looking correct in review.
+    const isPlaceholderTicket = trade.ticket === 2147483647n;
     const evaluations = !isPlaceholderTicket && trade.ticket != null
       ? await this.prisma.strategyEvaluation.findMany({
           where: { tradeTicket: trade.ticket },

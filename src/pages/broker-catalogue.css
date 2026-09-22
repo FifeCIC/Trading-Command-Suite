@@ -1,13 +1,21 @@
 /**
  * Broker Catalogue (#958) — scoped styles for BrokerCataloguePage.
  *
- * Tokens only (no literal colours) so the page follows the theme and passes
- * `scripts/validate-css-tokens.cjs` in the frontend build.
+ * ⚠️ TOKENS ONLY, and only tokens that EXIST. `scripts/validate-css-tokens.cjs` fails the build
+ * on an undefined custom property, because an undefined one is not a syntax error — the
+ * declaration is dropped or a fallback silently wins, and the element then ignores every theme
+ * pack. That is a silent failure, so the guard is strict.
+ *
+ * ⚠️ THE `create-new-page` SKILL LISTS WRONG NAMES. It documents `--text`, `--textDim`,
+ * `--textFaint`, `--riskHigh`, `--riskNormal` — none of which exist. The real tokens are
+ * kebab-case: `--ink` / `--ink-soft` / `--text-faint` / `--risk-high` / `--risk-normal`.
+ * Following the skill produced 26 dropped declarations in this file and failed the build.
+ * Use `node scripts/validate-css-tokens.cjs --tokens` as the source of truth.
  */
 
 .bc-page {
   padding: 20px;
-  color: var(--text);
+  color: var(--ink);
   background: var(--bg);
 }
 
@@ -18,7 +26,7 @@
 
 .bc-subtitle {
   margin: 0 0 18px;
-  color: var(--textDim);
+  color: var(--ink-soft);
   max-width: 78ch;
   line-height: 1.5;
 }
@@ -34,7 +42,7 @@
 
 .bc-broker {
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -42,7 +50,7 @@
 /* A broker that could not be reached must not look like a healthy one. */
 .bc-broker-unreachable,
 .bc-broker-error {
-  border-color: var(--riskHigh);
+  border-color: var(--risk-high);
 }
 
 .bc-broker-head {
@@ -63,25 +71,25 @@
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--textDim);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
 }
 
 .bc-state-ok {
-  border-color: var(--riskNormal);
-  color: var(--riskNormal);
+  border-color: var(--risk-normal);
+  color: var(--risk-normal);
 }
 
 .bc-state-unreachable,
 .bc-state-error {
-  border-color: var(--riskHigh);
-  color: var(--riskHigh);
+  border-color: var(--risk-high);
+  color: var(--risk-high);
 }
 
 .bc-broker-reason {
   margin: 0 0 8px;
   font-size: 0.8rem;
-  color: var(--textDim);
+  color: var(--ink-soft);
   line-height: 1.4;
 }
 
@@ -96,7 +104,7 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--textFaint);
+  color: var(--text-faint);
 }
 
 .bc-broker-stats dd {
@@ -113,12 +121,12 @@
 .bc-broker-meta {
   margin: 10px 0 0;
   font-size: 0.75rem;
-  color: var(--textFaint);
+  color: var(--text-faint);
 }
 
 .bc-totals {
   margin: 0 0 18px;
-  color: var(--textDim);
+  color: var(--ink-soft);
   font-size: 0.88rem;
 }
 
@@ -131,7 +139,7 @@
   gap: 12px;
   padding: 12px 14px;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 12px;
 }
@@ -151,14 +159,14 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--textFaint);
+  color: var(--text-faint);
 }
 
 .bc-field select,
 .bc-field input {
   background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
+  color: var(--ink);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 0.85rem;
@@ -169,7 +177,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
-  color: var(--textDim);
+  color: var(--ink-soft);
   padding-bottom: 6px;
 }
 
@@ -191,7 +199,7 @@
 
 .bc-sync-result {
   margin: 0 0 12px;
-  color: var(--textDim);
+  color: var(--ink-soft);
   font-size: 0.85rem;
 }
 
@@ -199,7 +207,7 @@
 
 .bc-table-wrap {
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   overflow-x: auto;
 }
@@ -213,26 +221,26 @@
 .bc-table th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--textFaint);
+  color: var(--text-faint);
   white-space: nowrap;
 }
 
 .bc-table td {
   padding: 7px 12px;
-  border-bottom: 1px solid var(--border);
-  color: var(--textDim);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
 }
 
 .bc-table tbody tr:hover td {
-  background: var(--bg);
+  background: var(--bg-elev);
 }
 
 .bc-ticker {
-  color: var(--text);
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -240,31 +248,31 @@
   display: inline-block;
   padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   font-size: 0.72rem;
   white-space: nowrap;
 }
 
 .bc-pill-ok {
-  border-color: var(--riskNormal);
-  color: var(--riskNormal);
+  border-color: var(--risk-normal);
+  color: var(--risk-normal);
 }
 
 .bc-pill-off {
-  color: var(--textFaint);
+  color: var(--text-faint);
 }
 
 /* ── States: loading / empty / error must never look alike ── */
 
 .bc-state {
   padding: 18px;
-  color: var(--textDim);
+  color: var(--ink-soft);
   font-size: 0.88rem;
   line-height: 1.5;
 }
 
 .bc-state-error {
-  color: var(--riskHigh);
+  color: var(--risk-high);
 }
 
 .bc-pager {
@@ -273,15 +281,15 @@
   justify-content: center;
   gap: 14px;
   padding: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   font-size: 0.82rem;
-  color: var(--textDim);
+  color: var(--ink-soft);
 }
 
 .bc-pager button {
   background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
+  color: var(--ink);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 5px 12px;
   cursor: pointer;

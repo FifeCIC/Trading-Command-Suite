@@ -12,6 +12,30 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { SlowRequestInterceptor } from './common/interceptors/slow-request.interceptor';
 import { NoticeExceptionFilter } from './common/notices/notice.filter';
 
+/**
+ * BigInt must be serialisable before anything can return one (2026-09-22).
+ *
+ * ⚠️ WHY THIS EXISTS. Four ticket columns were widened from `int` to `BIGINT` because MySQL
+ * runs non-strict here (`sql_mode` is empty) and was **silently clamping** real 12-digit MT5
+ * tickets to 2147483647 rather than rejecting them. Prisma returns a JS `BigInt` for a BIGINT
+ * column, and `JSON.stringify` THROWS on a BigInt:
+ *
+ *     TypeError: Do not know how to serialize a BigInt
+ *
+ * That failure would land at response time, in whichever endpoint happened to return a row
+ * containing a ticket — which is most of the trading surfaces. Registering `toJSON` once, here,
+ * converts that guaranteed 500 into a correct value: the ticket is an IDENTIFIER, never a
+ * quantity, so rendering it as a decimal string is the right shape and is lossless for
+ * 64-bit values that a JS `number` could not hold exactly anyway.
+ *
+ * This is deliberately global and additive. It changes no existing behaviour — a number is
+ * unaffected — and it removes a class of crash rather than one instance of it.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(BigInt.prototype as any).toJSON = function toJSON(this: bigint): string {
+  return this.toString();
+};
+
 const logger = new Logger('Bootstrap');
 
 async function bootstrap() {

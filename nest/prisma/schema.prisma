@@ -857,7 +857,13 @@ model Trade {
   closedAt          DateTime?
   createdAt         DateTime @default(now())
   // Broker traceability (#446, #470) — broker-agnostic
-  ticket           Int?     // Legacy MT5 ticket (kept for existing data)
+  /// ⚠️ BIGINT since 2026-09-22 — was `int`. A real MT5 ticket is 12 digits
+  /// (e.g. 152668901120), which does NOT fit in int32. MySQL runs non-strict here
+  /// (`sql_mode` is empty), so every out-of-range write was **silently clamped to
+  /// 2147483647** instead of erroring. 15 rows were lost this way and are NOT recoverable:
+  /// their `brokerTicket` is null, so the original value is gone. Contrast `brokerTicket`
+  /// (VARCHAR(100)), which was always correct — prefer it when both are present.
+  ticket           BigInt?  // Legacy MT5 ticket (kept for existing data)
   brokerTicket     String?  @db.VarChar(100) // Broker-specific order/position ID (MT5 ticket, T212 orderId, etc.)
   sl                Float?   // Stop-loss price
   tp                Float?   // Take-profit price
@@ -1328,6 +1334,10 @@ model TradingStrategy {
   protocolId    String?  @db.VarChar(36)
   shortProtocolId String? @db.VarChar(36)
   scoringStrategyId String? @db.VarChar(36) // soft link for versioning/performance only (#295)
+  // A/B pair lineage (2026-09-22, owner request): the bot this one was COPIED FROM via
+  // POST /api/trading/strategies/:id/duplicate. NULL = not a copy. Identity metadata only —
+  // it never shapes a trade (declared in bot-rules NON_BEHAVIOURAL_COLUMNS).
+  duplicatedFromId String? @db.VarChar(36)
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
@@ -1417,7 +1427,9 @@ model StrategyEvaluation {
   rarityPct     Float?
   direction     String?  @db.VarChar(10)
   traded        Boolean  @default(false)
-  tradeTicket   Int?
+  /// ⚠️ BIGINT since 2026-09-22 — was `int`; real tickets clamped to 2147483647.
+  /// See `DecisionLog.ticket` for the full explanation. 65 rows were affected.
+  tradeTicket   BigInt?
   tradeResult   String?  @db.Text
   evaluatedAt   DateTime @default(now())
 
@@ -1858,7 +1870,16 @@ model DecisionLog {
   /// and `compositePct` instead; a reader that shows this must label it as untyped.
   composite   Float?
   signal      String?  @db.VarChar(10)    // BUY, SELL, HOLD
-  ticket      Int?
+  /// ⚠️ BIGINT since 2026-09-22 — was `int`, and this is the column that proved the bug.
+  /// MySQL's `sql_mode` is empty (non-strict), so an out-of-range write is clamped rather
+  /// than rejected: `automation-loop.service.ts` passes a REAL 12-digit broker ticket here,
+  /// and 104 of 108 rows came back as 2147483647.
+  ///
+  /// 🛑 `2147483647` IS NOT A PLACEHOLDER — it is a symptom of the clamp. An earlier comment
+  /// in `decision-chain.service.ts` read it as a sentinel and skipped the join on that basis,
+  /// which means the score→evaluation link was quietly abandoned for every clamped trade.
+  /// Historical rows still hold the clamped value (unrecoverable); new rows are correct.
+  ticket      BigInt?
   price       Float?
   quantity    Float?
 
@@ -1898,7 +1919,9 @@ model DecisionTrail {
   reason          String?  @db.Text
   actionable      Boolean  @default(false)
   // Trade result (only if a trade executed)
-  tradeTicket     Int?
+  /// ⚠️ BIGINT since 2026-09-22 — was `int`; real tickets clamped to 2147483647.
+  /// See `DecisionLog.ticket` for the full explanation.
+  tradeTicket     BigInt?
   tradeVolume     Float?
   tradePrice      Float?
 
