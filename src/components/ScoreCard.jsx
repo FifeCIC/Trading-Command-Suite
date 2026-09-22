@@ -38,7 +38,7 @@ import SignalBadge from './SignalBadge';
 // here makes the card portable to any page; Vite dedupes the duplicate import.
 import '../pages/ladder.css';
 import { timeAgo } from '../core/format-utils';
-import { stateClass, stateLabel, fmtVal, fmtSigned } from '../core/score-card-view';
+import { stateClass, stateLabel, stateTitle, fmtVal, fmtSigned } from '../core/score-card-view';
 
 /**
  * One labeled score block — used for BOTH the Signal and Opportunity scores so
@@ -189,7 +189,7 @@ const ScoreCard = forwardRef(function ScoreCard({
               Unscored rows must NOT claim "Live" (that reads as a live tradable
               signal next to a blank score), so they get their own value here
               rather than swapping the markup out. */}
-          <span className={`lad-state ${stateClass(e.vm)}`}>
+          <span className={`lad-state ${stateClass(e.vm)}`} title={stateTitle(e.vm)}>
             {stateLabel(e.vm)}
           </span>
         </span>

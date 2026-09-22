@@ -45,8 +45,20 @@ export const STATE_CLASS = {
  */
 export function stateLabel(vm) {
   if (vm.state === 'unscored') return 'Not scored';
-  if (vm.frozen) return vm.state === 'stale' ? 'Stale' : 'Market closed';
+  if (vm.state === 'stale') return 'Data stale';
+  if (vm.frozen) return 'Market closed';
   return 'Live';
+}
+
+/**
+ * Tooltip for the state chip — carries the SERVER's reason rather than a re-derivation (#774).
+ * A closed market should say WHY it is closed (weekend / outside session) when the API knows.
+ */
+export function stateTitle(vm) {
+  if (vm.frozenTitle) return vm.frozenTitle;
+  if (vm.state === 'unscored') return 'No score has been produced for this row.';
+  const ms = vm.marketStatus;
+  return ms?.reason ? `Live — ${ms.reason}` : undefined;
 }
 
 /** CSS modifier for a card's state chip — the label/colour pair in one place. */

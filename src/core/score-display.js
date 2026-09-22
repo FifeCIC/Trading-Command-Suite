@@ -13,21 +13,33 @@
  *
  * @file src/core/score-display.js
  */
-import { signalTone, signalArrow } from './signal-utils';
+import { signalTone, signalArrow } from './signal-utils.js';
 
 /**
  * Tradeability state — the ONE place "is this a live tradable signal right
  * now" is decided. Every page renders the same way for the same state.
+ *
+ * ⚠️ TWO AXES, ONE WORD EACH (#774). `marketOpen` (a calendar fact) and `dataFresh`
+ * (is the feed keeping up) are INDEPENDENT questions, and this vocabulary keeps them apart:
+ *
+ *   LIVE       open + fresh          — a live tradable reading
+ *   PAUSED     calendar closed       — BENIGN and expected: weekend, outside session. Data age
+ *                                      while closed is ALSO expected and must NOT upgrade this
+ *                                      to STALE — that was the defect: a closed card could read
+ *                                      `STALE`, so a real feed failure looked like a quiet Sunday.
+ *   STALE      OPEN + data behind    — an INCIDENT: investigate. Only an open market can be stale.
+ *   UNSCORED   no reading at all     — never rendered as Live.
+ *
+ * ⚠️ FRESHNESS IS THE SERVER'S CALL. The old code re-derived staleness here from `asOf` and a
+ * local 30-minute constant — a second owner for a number `computeMarketStatus()` already owns,
+ * which drifts. The `stale` flag comes from the API; this file only maps it to a label.
  */
 export const SCORE_STATES = {
   LIVE: 'live',
-  PAUSED: 'paused',     // market closed → frozen at last close
-  STALE: 'stale',       // market open but data older than the freshness window
+  PAUSED: 'paused',     // market closed → frozen at last close (benign, expected)
+  STALE: 'stale',       // market OPEN but the feed is behind → investigate
   UNSCORED: 'unscored', // no score produced at all
 };
-
-/** Age (ms) beyond which an "open" market's data is treated as stale. */
-const STALE_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
  * ⚠️ THERE ARE DELIBERATELY NO FALLBACK THRESHOLD CONSTANTS HERE.
@@ -233,22 +245,23 @@ export function buildScoreDisplay(raw = {}) {
       ? Math.round((opportunityScore / opportunityMax) * 100)
       : null;
 
-  // Tradeability state — decided ONCE here, never in a page.
+  // Tradeability state — decided ONCE here, never in a page (#774).
+  //
+  // The four states are MUTUALLY EXCLUSIVE by construction: `open === false` short-circuits to
+  // PAUSED, so a closed market can never also be STALE, and only an open market consults the
+  // freshness flag. That is what stops the chip flipping between two words for one situation.
   let state = SCORE_STATES.UNSCORED;
   if (score != null) {
-    if (ms && ms.open === false) {
-      // `stale` distinguishes "market open but data stale" from "market closed"
-      // (#732) — the server sets it from the calendar + bar freshness.
-      state = ms.stale === true ? SCORE_STATES.STALE : SCORE_STATES.PAUSED;
-    } else if (ms && ms.open === true) {
-      const asOf = ms.asOf ? Date.parse(ms.asOf) : NaN;
-      state =
-        Number.isNaN(asOf) || Date.now() - asOf > STALE_MS
-          ? SCORE_STATES.STALE
-          : SCORE_STATES.LIVE;
-    } else {
-      // No marketStatus (legacy rows) — treat as live; classification still shown.
+    if (!ms) {
+      // No marketStatus (legacy rows) — classification still shown. Unchanged behaviour.
       state = SCORE_STATES.LIVE;
+    } else if (ms.open === false) {
+      // CALENDAR SAYS CLOSED → PAUSED, always. Data age while closed is expected, not an
+      // incident, so `ms.stale` must not demote this into the feed-alarm state.
+      state = SCORE_STATES.PAUSED;
+    } else {
+      // Open (or open unstated) → freshness is the SERVER's flag, never a local clock comparison.
+      state = ms.stale === true ? SCORE_STATES.STALE : SCORE_STATES.LIVE;
     }
   }
 
@@ -272,9 +285,19 @@ export function buildScoreDisplay(raw = {}) {
     opportunityMax,
     opportunityPct,
     marketStatus: ms,  // { open, asOf, reason } | null
-    // Human copy for frozen/closed rows — built once, reused everywhere.
+    /**
+     * True when the state is worth the operator's attention (open + feed behind). Benign states
+     * (closed market) are false — only one of the four is an incident, and the UI styles it apart.
+     */
+    needsAttention: state === SCORE_STATES.STALE,
+    // Human copy for frozen/closed rows — built once, reused everywhere. The SERVER's reason is
+    // surfaced when present ("calendar closed" vs "cadence indeterminate") rather than re-derived.
     frozenTitle: frozen
-      ? `Market ${state === SCORE_STATES.STALE ? 'stale' : 'closed'} — ${signal ?? 'signal'} (${score ?? '—'}/${scoreMax ?? '—'}) frozen at last close, not a live tradable signal.`
+      ? `${
+          state === SCORE_STATES.STALE
+            ? 'Market OPEN but data stale'
+            : 'Market closed'
+        }${ms?.reason ? ` (${ms.reason})` : ''} — ${signal ?? 'signal'} (${score ?? '—'}/${scoreMax ?? '—'}) frozen at last close, not a live tradable signal.`
       : undefined,
   };
 }
