@@ -71,9 +71,13 @@ function mockPrisma(opts: {
   counts?: [number, number, number];
   available?: boolean;
   failOn?: 'tradingStrategy' | 'protocol' | 'aggregate' | 'series';
+  /** Explicit derived strategies. Omitted = one strategy per bot, the normal case. */
+  derivedStrategies?: Array<{ strategyKey: string; botIds: string[] }>;
+  /** Make the derivation throw, so "could not read" can be distinguished from "no strategy". */
+  failDerivation?: boolean;
 } = {}) {
   const counts = opts.counts ?? [0, 0, 0];
-  return {
+  const api: any = {
     isAvailable: opts.available ?? true,
     $queryRawUnsafe: jest.fn(async (sql: string) => {
       // The ordered series query is the one that names closedAt in its SELECT list.
@@ -100,10 +104,32 @@ function mockPrisma(opts: {
     trade: {
       count: jest.fn(async () => counts.shift() ?? 0),
     },
+    /** Exposed so the harness can build a realistic derivation from the SAME bots. */
+    __bots: opts.bots ?? [],
+    __derived: opts.derivedStrategies,
+    __failDerivation: opts.failDerivation ?? false,
   };
+  return api;
 }
 
-const svc = (prisma: any) => new BotPerformanceService(prisma);
+/**
+ * Construct the service with a stand-in derivation.
+ *
+ * Default is ONE strategy per bot — the measured normal case (26 bots = 26 strategies, §1c). That
+ * matters: with an empty derivation every bot would read `strategyIdentity: 'none'`, so tests
+ * asserting only `toContain` would pass while exercising a state that does not occur.
+ */
+const svc = (prisma: any) =>
+  new BotPerformanceService(prisma, {
+    deriveAll: jest.fn(async () => {
+      if (prisma.__failDerivation) throw new Error('derivation unavailable');
+      return {
+        strategies:
+          prisma.__derived ??
+          prisma.__bots.map((b: any) => ({ strategyKey: `key-${b.id}`, botIds: [b.id] })),
+      };
+    }),
+  } as any);
 
 describe('BotPerformanceService — the query that defines a realised trade', () => {
   /**
@@ -505,6 +531,100 @@ describe('BotPerformanceService — failure must not look like emptiness', () =>
     expect(out.excluded.phantom).toBe(99);
     expect(out.excluded.phantomNotFlagged).toBe(17);
     expect(out.populationNote).toContain('17');
+  });
+});
+
+describe('BotPerformanceService — the strategyKey bridge (#876/#894)', () => {
+  /**
+   * ⚠️ THE JOIN THE WHOLE ISSUE TURNS ON. `strategyKey` is the settled identity; performance lives
+   * on `trade`. Without this field the Strategies page renders identity with no outcome and this
+   * report renders outcome with no strategy — two halves that never meet.
+   */
+  it('carries the canonical strategyKey for each bot', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B')],
+      aggregates: [agg('b1', { trades: 5, wins: 3, losses: 2 })],
+      derivedStrategies: [{ strategyKey: 'abc123def456abcd', botIds: ['b1'] }],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    expect(out.bots[0].strategyKeys).toEqual(['abc123def456abcd']);
+    expect(out.bots[0].strategyIdentity).toBe('one');
+    expect(out.bots[0].blockers).not.toContain('strategy_identity_ambiguous');
+  });
+
+  /**
+   * ⚠️ A bot with several protocol subscriptions resolves to several strategyKeys. Its blended
+   * record belongs to none of them, so rating it would rate the wrong thing.
+   */
+  it('flags a bot that spans several strategies as ambiguous', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B')],
+      aggregates: [agg('b1', { trades: 5, wins: 3, losses: 2 })],
+      derivedStrategies: [
+        { strategyKey: 'keyA', botIds: ['b1'] },
+        { strategyKey: 'keyB', botIds: ['b1'] },
+      ],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    expect(out.bots[0].strategyKeys).toEqual(['keyA', 'keyB']);
+    expect(out.bots[0].strategyIdentity).toBe('many');
+    expect(out.bots[0].blockers).toContain('strategy_identity_ambiguous');
+    expect(out.bots[0].rating).toBeNull();
+  });
+
+  /**
+   * ⚠️ A bot with no protocol link IS NOT A STRATEGY (an orphan). #874 is this case: a bot that
+   * exists, is visible, and can never trade.
+   */
+  it('flags a bot that belongs to no strategy', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'Orphan')],
+      aggregates: [agg('b1', { trades: 3, wins: 1, losses: 2 })],
+      derivedStrategies: [],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    expect(out.bots[0].strategyKeys).toEqual([]);
+    expect(out.bots[0].strategyIdentity).toBe('none');
+    expect(out.bots[0].blockers).toContain('strategy_identity_unresolved');
+  });
+
+  /**
+   * ⚠️⚠️ THE DISTINCTION THAT MATTERS MOST HERE. "This bot is in no strategy" and "we could not
+   * find out whether it is" are opposite conclusions. Collapsing them would tell an operator a
+   * configured bot is an orphan when the truth is that a read failed.
+   */
+  it('distinguishes an unreadable derivation from a bot that has no strategy', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B')],
+      aggregates: [agg('b1', { trades: 3, wins: 1, losses: 2 })],
+      failDerivation: true,
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    expect(out.bots[0].strategyIdentity).toBe('unknown');
+    expect(out.bots[0].strategyKeys).toEqual([]);
+    // The detail must say UNKNOWN, not "belongs to no strategy".
+    const detail = out.bots[0].blockersDetail.join(' ');
+    expect(detail).toMatch(/unknown/i);
+    expect(detail).not.toMatch(/belongs to NO derived strategy/);
+    // And the failure is named in the caveats rather than swallowed.
+    expect(out.caveats.join(' ')).toContain('derivation unavailable');
+  });
+
+  it('does not attach a strategyKey to a protocol-slug bucket', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B')],
+      protocols: [{ slug: 'forex-session-v1' }],
+      aggregates: [agg('forex-session-v1', { trades: 4, wins: 3, losses: 1 })],
+      derivedStrategies: [{ strategyKey: 'keyA', botIds: ['b1'] }],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    expect(out.bots[0].strategyKeys).toEqual([]);
+    expect(out.bots[0].strategyIdentity).toBe('unknown');
   });
 });
 

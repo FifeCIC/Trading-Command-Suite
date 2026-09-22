@@ -74,6 +74,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { bucket, PnlReliability } from '../scoring/pnl-statistics.service';
+// #876/#894 — the canonical strategy identity. Reused, never reimplemented: `strategyKey()`
+// hashes the WHOLE configuration and `canonicalise()` is private, so a second copy would be
+// both duplication AND a drift risk. See "THE BRIDGE" in the class header.
+import { StrategyDerivationService } from '../scoring/strategy-derivation.service';
 
 /**
  * The ONLY rows that count as a realised trade.
@@ -159,6 +163,8 @@ export interface BotWindow {
 export type RatingBlocker =
   | 'no_realised_trades'
   | 'attribution_unresolved'
+  | 'strategy_identity_unresolved'
+  | 'strategy_identity_ambiguous'
   | 'insufficient_samples'
   | 'window_too_short'
   | 'expectancy_indistinguishable_from_zero'
@@ -166,6 +172,22 @@ export type RatingBlocker =
   | 'drawdown_unverifiable'
   | 'drawdown_exceeds_limit'
   | 'no_allocation_basis';
+
+/**
+ * How many derived strategies this bot's record belongs to.
+ *
+ * ⚠️ `deriveAll()` keys on (protocol + role + market + broker + treatment) and loops over a bot's
+ * protocol SUBSCRIPTIONS. A bot with two subscriptions therefore resolves to **two** strategyKeys,
+ * and its blended realised record belongs to neither of them individually.
+ *
+ *  - `one`     — attributable. The normal case (measured 26 bots = 26 strategies).
+ *  - `none`    — the bot has no protocol link, so it IS NOT A STRATEGY (an orphan).
+ *  - `many`    — the bot spans several strategies; its record cannot be split between them.
+ *  - `unknown` — the derivation could not be read. NOT the same as `none`, and deliberately
+ *                distinct: "this bot is in no strategy" and "we could not find out" are opposite
+ *                conclusions that would otherwise render identically.
+ */
+export type StrategyIdentity = 'one' | 'none' | 'many' | 'unknown';
 
 export interface BotPerformance {
   /** `trading_strategy.id` when resolved, else null. */
@@ -179,6 +201,19 @@ export interface BotPerformance {
   declared: BotDeclared | null;
   realised: BotRealised;
   window: BotWindow;
+  /**
+   * ⚠️ THE BRIDGE (#876/#894) — the `strategyKey` identities this bot's record belongs to.
+   *
+   * This is what makes performance ATTACHABLE to a derived strategy. Without it, the 26 derived
+   * strategies render identity (protocol, market, treatment) and no outcome, while this report
+   * renders outcome and no strategy — two halves of one answer that never meet.
+   *
+   * Usually exactly one. Empty when the bot is not a strategy; more than one when the bot spans
+   * several — see `strategyIdentity`.
+   */
+  strategyKeys: string[];
+  /** How many strategies this record belongs to, and whether that could be determined at all. */
+  strategyIdentity: StrategyIdentity;
   /**
    * Peak-to-trough decline in the bot's CUMULATIVE REALISED P&L, in ACCOUNT CURRENCY.
    *
@@ -292,7 +327,10 @@ export const DEFAULT_RATING_POLICY: RatingPolicy = {
 export class BotPerformanceService {
   private readonly logger = new Logger(BotPerformanceService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly derivation: StrategyDerivationService,
+  ) {}
 
   /**
    * Portfolio-scope realised performance for every bot that has real closed trades.
@@ -400,6 +438,34 @@ export class BotPerformanceService {
         },
       }), lookupFailures);
     const botById = new Map<string, any>(bots.map((b: any) => [b.id, b]));
+
+    // ─────────────────────────────────────────────────────────────────────────────────
+    // 2b. THE BRIDGE — bot id → strategyKey, from the CANONICAL derivation (#876).
+    //
+    // ⚠️ `strategyKey` cannot be recomputed here. `StrategyDerivationService.strategyKey()` is a
+    // public method but `canonicalise()` is private, and the canonicalisation rules (toFixed(6),
+    // sorted keys, parseSessionWindow, null preserved) are exactly what stop two representations
+    // of one configuration hashing apart. A hand-rolled second hash would silently invent
+    // differences that do not exist. So this calls `deriveAll()` — one query with an include.
+    //
+    // ⚠️ A derivation failure must NOT read as "this bot is in no strategy". Those are opposite
+    // conclusions. `deriveFailed` keeps them distinct all the way to the response.
+    // ─────────────────────────────────────────────────────────────────────────────────
+    let deriveFailed = false;
+    const strategyKeysByBotId = new Map<string, string[]>();
+    try {
+      const derived = await this.derivation.deriveAll();
+      for (const s of derived.strategies) {
+        for (const botId of s.botIds) {
+          const arr = strategyKeysByBotId.get(botId) ?? [];
+          arr.push(s.strategyKey);
+          strategyKeysByBotId.set(botId, arr);
+        }
+      }
+    } catch (err) {
+      deriveFailed = true;
+      lookupFailures.push(`strategy derivation: ${(err as Error).message}`);
+    }
 
     const protocols = await readAll('protocol', () =>
       (this.prisma as any).protocol.findMany({ select: { slug: true } }), lookupFailures);
@@ -550,6 +616,20 @@ export class BotPerformanceService {
 
       const maxDrawdown = Number((drawdownByAttribution.get(key) ?? 0).toFixed(2));
 
+      // ── The strategy identity this record belongs to ──
+      // Sorted so the array is stable across calls; `deriveAll()` sorts its own strategies but a
+      // bot appearing in several would otherwise inherit that order rather than a defined one.
+      const strategyKeys = bot
+        ? (strategyKeysByBotId.get(bot.id) ?? []).slice().sort()
+        : [];
+      const strategyIdentity: StrategyIdentity = !bot || deriveFailed
+        ? 'unknown'
+        : strategyKeys.length === 0
+          ? 'none'
+          : strategyKeys.length === 1
+            ? 'one'
+            : 'many';
+
       // ─────────────────────────────────────────────────────────────────────────────
       // THE GATE. Every blocker is a REASON, and a non-empty blocker list is a result.
       // Order matters: the most fundamental reason reads first.
@@ -598,6 +678,33 @@ export class BotPerformanceService {
           `Expectancy is ${expectancy}/trade. A bot that does not make money per trade cannot be rated.`,
         );
       }
+
+      // ⚠️ A record that belongs to NO strategy, or to SEVERAL, cannot be rated as one.
+      // Only asserted when a bot was actually resolved: otherwise `attribution_unresolved` is the
+      // real blocker and a second, vaguer one would bury it.
+      if (bot && strategyIdentity === 'none') {
+        blockers.push('strategy_identity_unresolved');
+        blockersDetail.push(
+          'This bot belongs to NO derived strategy (it has no protocol link), so there is no ' +
+          'strategy for a rating to describe.',
+        );
+      }
+      if (bot && strategyIdentity === 'many') {
+        blockers.push('strategy_identity_ambiguous');
+        blockersDetail.push(
+          `This bot resolves to ${strategyKeys.length} strategies (${strategyKeys.join(', ')}) ` +
+          'because it holds several protocol subscriptions. Its blended record belongs to none of ' +
+          'them individually, so rating it would rate the wrong thing.',
+        );
+      }
+      if (bot && strategyIdentity === 'unknown') {
+        blockers.push('strategy_identity_unresolved');
+        blockersDetail.push(
+          'The strategy derivation could not be read, so this bot cannot be tied to a strategy. ' +
+          'This is NOT "belongs to no strategy" — the answer is unknown.',
+        );
+      }
+
       // ⚠️ THE DRAWDOWN CONDITION CANNOT BE EVALUATED, AND SAYING SO IS THE CORRECT BEHAVIOUR.
       //
       // #894: *"A drawdown condition is not optional. A rating that only counts wins and profit
@@ -655,6 +762,8 @@ export class BotPerformanceService {
           days,
           samplesPerDay: days > 0 ? Number((samples / days).toFixed(2)) : 0,
         },
+        strategyKeys,
+        strategyIdentity,
         maxDrawdown,
         maxDrawdownPct: null,
         realisedPct: null,
