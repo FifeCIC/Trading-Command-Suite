@@ -11,6 +11,8 @@ import { Mt5TradingService } from './mt5-trading.service';
 import { SwapCostService } from './swap-cost.service';
 import { WeekendDefenseService } from './weekend-defense.service';
 import { PositionSyncService } from '../providers/position-sync.service';
+// #894 — portfolio-scope per-bot realised performance, the data half of the bot rating.
+import { BotPerformanceService, DEFAULT_RATING_POLICY } from './bot-performance.service';
 // #884 — the ONE comment parser. The live-positions fallback below used to hand-roll its own.
 import { extractStrategyFromComment } from '../providers/mt5-comment.util';
 
@@ -25,6 +27,7 @@ export class TradeHistoryController {
     private readonly swapCost: SwapCostService,
     private readonly weekendDefense: WeekendDefenseService,
     private readonly positionSync: PositionSyncService,
+    private readonly botPerformance: BotPerformanceService,
   ) {}
 
   /**
@@ -284,6 +287,56 @@ export class TradeHistoryController {
       activeStrategies: showdown.length,
       totalStrategies: showdown.length,
     };
+  }
+
+  /**
+   * GET /api/trading/bot-performance
+   *
+   * "Which bots are actually working?" — per-bot realised performance at PORTFOLIO scope, with
+   * an explicit rating gate. The data half of #894 (bot rating); nothing here renders.
+   *
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * WHY A NEW ENDPOINT RATHER THAN REUSING `strategy-comparison`
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * `strategy-comparison` groups by `trade.strategy` — a NAME STRING — and that column is null
+   * on 184 of 186 closed trades (measured 2026-09-22, #949). A rating built on it would be a
+   * rating of two trades. It also groups by name, so two same-named bots merge and one renamed
+   * bot splits. A rating must key on IDENTITY. This resolves `scoringStrategyId` → bot instead,
+   * reporting `matched` and `attributionKind` so a protocol slug can never be mistaken for a bot.
+   *
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * ⚠️ `rating: null` WITH a populated `blockers` array IS A SUCCESSFUL RESPONSE
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * #894: *"Building a rating on top of these would produce a confident number that means
+   * nothing — which is worse than no rating, because an operator would act on it."*
+   *
+   * So this endpoint REFUSES to emit a rating it cannot justify, and says exactly what is
+   * missing per bot. Expect `rating: null` on every row today; that is the honest answer, not a
+   * fault. The UI must render `blockersDetail`, never an empty cell — an empty cell reads as
+   * "fine" (development-philosophy §7).
+   *
+   * `policy` is overridable via query params so "what would qualify under different thresholds?"
+   * is answerable without a restart — the recomputability #894 requires.
+   */
+  @Get('bot-performance')
+  async getBotPerformance(
+    @Query('minSamples') minSamples?: string,
+    @Query('minWindowDays') minWindowDays?: string,
+    @Query('maxDrawdownPct') maxDrawdownPct?: string,
+  ) {
+    // Only override what was actually supplied — a partially-parsed query must not silently
+    // reset an unmentioned threshold to 0 and award every bot a rating.
+    const policy: Partial<typeof DEFAULT_RATING_POLICY> = {};
+    if (minSamples !== undefined && Number.isFinite(Number(minSamples))) {
+      policy.minSamples = Number(minSamples);
+    }
+    if (minWindowDays !== undefined && Number.isFinite(Number(minWindowDays))) {
+      policy.minWindowDays = Number(minWindowDays);
+    }
+    if (maxDrawdownPct !== undefined && Number.isFinite(Number(maxDrawdownPct))) {
+      policy.maxDrawdownPct = Number(maxDrawdownPct);
+    }
+    return this.botPerformance.getBotPerformance({ policy });
   }
 
   // ── Protocol Profitability (#777) ─────────────────────

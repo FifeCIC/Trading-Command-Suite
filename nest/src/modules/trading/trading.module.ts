@@ -14,6 +14,7 @@ import { ExecutionFeasibilityService } from './execution-feasibility.service';
 import { PyramidPolicyService } from './pyramid-policy.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { TradeHistoryController } from './trade-history.controller';
+import { BotPerformanceService } from './bot-performance.service';
 import { SwapCostService } from './swap-cost.service';
 import { WeekendDefenseService } from './weekend-defense.service';
 import { DirectivesModule } from '../directives/directives.module';
@@ -28,7 +29,7 @@ import { ScoringModule } from '../scoring/scoring.module';
 @Module({
   imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule)],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
-  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService],
-  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService],
+  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],
+  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],
 })
 export class TradingModule {}
