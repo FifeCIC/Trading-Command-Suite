@@ -4,6 +4,68 @@ Items needing human attention. Agents: read this at session start. Append confir
 
 ---
 
+## 2026-09-22 (later)
+
+### ⚠️ Broker catalogue (#958) is BUILT and LIVE, but uncommitted — and it needs a version bump on commit
+
+- **What is live right now:** `broker_symbol` + `broker_symbol_sync` tables, `BrokerSymbolDiscoveryService`
+  (daily 06:00 cron + deferred sync-on-boot), `GET/POST /api/broker-symbols/*`, and the
+  `/research/broker-catalogue` page. Measured: **14,023 instruments catalogued, 13,015 tradeable,
+  218 onboarded, 12,805 never looked at.**
+- **Uncommitted files (mine, verified: tsc clean, 13/13 tests, `db:check` OK, frontend build clean):**
+  `nest/prisma/schema.prisma` · `nest/src/database/prisma.service.ts` ·
+  `nest/src/modules/providers/adapters/mt5.adapter.ts` ·
+  `nest/src/modules/symbols/broker-symbol-discovery.service.ts` ·
+  `nest/src/modules/symbols/broker-symbols.controller.ts` ·
+  `nest/src/modules/symbols/symbols.module.ts` ·
+  `nest/src/modules/symbols/broker-symbol-discovery.spec.ts` ·
+  `src/pages/BrokerCataloguePage.jsx` · `src/pages/broker-catalogue.css` ·
+  `src/core/nav-tree.js` · `src/core/view-meta.js` · `src/core/view-routes.jsx`
+- **The version was NOT bumped, deliberately.** `0.67.1` is another agent's bump from minutes earlier,
+  and the tree holds several agents' uncommitted work — a bump now would be attributed to whoever
+  commits next. **Whoever commits this should bump (minor — new capability) and rebuild.**
+- **`build:api` failed to restart the API AGAIN** — same defect as the 2026-09-18 entry below
+  (`!! API did not report healthy within 30s`, API genuinely down, `no listener on 3201`). Workaround
+  that worked immediately: `Start-Process -FilePath node -ArgumentList "dist/src/main.js"
+  -WorkingDirectory C:\wamp64\www\trading-command-suite\nest` → healthy in **4s**. **Do not rebuild
+  to "fix" it; the build itself was clean.**
+- **Agent:** Copilot (2026-09-22), landing #958.
+
+---
+
+## 2026-09-22
+
+### 5 source files are UNCOMMITTED, and 2 of the fixes are not in `dist` — the next build activates them
+
+- **Files modified in the working tree, not committed:** `nest/prisma/seed-symbol-onboarding.ts`,
+  `nest/src/modules/alerts/alert-trigger.service.ts`,
+  `nest/src/modules/automation/ab-test.service.ts`,
+  `nest/src/modules/automation/automation-loop.service.ts`,
+  `nest/src/modules/signals/signal-envelope.service.ts`
+- **Why it matters:** another agent is committing in this repo. A broad `git add -A` will sweep these
+  into an unrelated commit, and `git checkout`/`restore` would discard verified work.
+- **Compiled vs not (measured, not assumed):** `dist/src/main.js` was built **20:05:14**.
+  `automation-loop.service.ts` was edited **20:08:09** and `signal-envelope.service.ts` **21:18:54** —
+  both **after** the build, so **neither fix is live**. `alert-trigger.service.ts` (12:01:10) **is**
+  in `dist` (verified: `checkSymbolSilent` present).
+- **Consequence to expect:** the next successful build silently activates two behaviour changes —
+  the bot-envelope size fix and the A/B `recordedOnly` reporting. Neither is a surprise if you know;
+  both look like a regression if you do not.
+- **Do not** bump the version or write handoffs for these yet — uncommitted and uncompiled work is
+  not a delivered change. They are recorded on #929 and the new gating issue instead.
+- **Agent:** Copilot (2026-09-22)
+
+### 🔴 `metastack_snapshot.mode` holds `"score"` and is read as a trading mode — A/B cannot place orders
+
+- **Effect:** every metastack evaluates as "not auto" in `dispatchSideTrade()`, takes the
+  intent-only branch, and places nothing. A/B comparison therefore cannot currently prove anything.
+- **Evidence:** test "XAU M15 group vs maxscore weighting" from 12:19:37 — 10 rows reported
+  `EXECUTED` with `brokerTicket: NULL`, comment *"no broker counterpart (stranded row)"*, in 5 pairs.
+- **Owner:** the A/B work (#929). Reporting side fixed but **uncompiled** (see above).
+- **Agent:** Copilot (2026-09-22)
+
+---
+
 ## 2026-09-18
 
 ### `nest run build:api` reported a restart failure and left the API DOWN (verified, not diagnosed)

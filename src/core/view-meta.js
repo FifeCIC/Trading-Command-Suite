@@ -17,6 +17,21 @@ const VIEW_META = {
     css: 'src/pages/symbols-browser.css',
     api: ['GET /api/symbols', 'GET /api/market-data/freshness', 'GET /api/symbols/:ticker/snapshot', 'GET /api/symbols/positions'],
   },
+  // #958 — the BROKER's catalogue, not the app's onboarded set. Registered separately because the
+  // gap between them (offered vs onboarded) is the capability this page exists to surface; there
+  // is deliberately no "merge into Symbols Browser" here.
+  '/research/broker-catalogue': {
+    label: 'Broker Catalogue',
+    file: 'src/pages/BrokerCataloguePage.jsx',
+    css: 'src/pages/broker-catalogue.css',
+    api: [
+      'GET /api/broker-symbols/summary',
+      'GET /api/broker-symbols/classes',
+      'GET /api/broker-symbols',
+      'GET /api/broker-symbols/undiscovered',
+      'POST /api/broker-symbols/sync',
+    ],
+  },
   '/research/screener': {
     label: 'Screener',
     file: 'src/pages/ScreenerPage.jsx',
@@ -65,7 +80,14 @@ const VIEW_META = {
     label: 'Symbol Detail',
     file: 'src/pages/SymbolPage.jsx',
     css: 'src/pages/symbol-page.css',
-    api: ['GET /api/signals/envelope/:ticker', 'GET /api/symbols/:ticker/overview', 'GET /api/symbols/:ticker/protocols', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
+    // ⚠️ CORRECTED 2026-09-21. This listed `GET /api/symbols/:ticker/protocols`, which is a DEAD
+    // endpoint: getProtocols() filters on `config.symbols` | `config.symbolFocus` and no
+    // `strategy` row populates either (measured: 29 rows, `symbols=null` on every one), so it
+    // answers `{"protocols":[],"count":0}` for every symbol — an empty result and a broken one
+    // rendered identically (#926). The page switched to `/focus`, which is what it really calls.
+    // `/api/signals/envelope/:ticker` also REFUSES to run unscoped (400 TCS-SYS-002, "Pass a
+    // protocol"), so it is per-protocol: hence `?protocol=`.
+    api: ['GET /api/symbols/:ticker/focus', 'GET /api/signals/envelope/:ticker?protocol=', 'GET /api/symbols/:ticker/overview', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
   },
   '/education/glossary': {
     label: 'Glossary',
@@ -123,7 +145,8 @@ const VIEW_META = {
     label: 'Symbol Detail',
     file: 'src/pages/SymbolPage.jsx',
     css: 'src/pages/symbol-page.css',
-    api: ['GET /api/signals/envelope/:ticker', 'GET /api/symbols/:ticker/overview', 'GET /api/symbols/:ticker/protocols', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
+    // Kept in step with the '/research/symbol' entry above — same component, same endpoints.
+    api: ['GET /api/symbols/:ticker/focus', 'GET /api/signals/envelope/:ticker?protocol=', 'GET /api/symbols/:ticker/overview', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
   },
   '/trading/trading-bots': {
     label: 'Trading Bots',
@@ -558,6 +581,16 @@ const VIEW_META = {
     label: 'Component Lab',
     file: 'src/pages/ComponentLabPage.jsx',
     css: 'src/pages/component-lab.css',
+    api: [],
+  },
+  // Identity Map — TEMPORARY diagnostic (see IdentityMapLabPage.jsx). Data is a SNAPSHOT in
+  // src/data/identity-map.json, rebuilt by `node nest/scripts/identity-map.cjs`. `api: []` is
+  // accurate: the page makes no live call, so it cannot go stale against a dead backend —
+  // but it CAN go stale against a schema change. Re-run the script after schema edits.
+  '/lab/identity-map': {
+    label: 'Identity Map',
+    file: 'src/pages/IdentityMapLabPage.jsx',
+    css: 'src/pages/identity-map-lab.module.css',
     api: [],
   },
   '/lab/widget-library': {

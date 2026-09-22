@@ -143,9 +143,16 @@ function TopSignalsWidget() {
 }
 
 /* ── Automation Pulse ──────────────────────────────────────────
- * Reads /api/automation/status. Field names verified against the live
- * response: loopEnabled, tickIntervalMs, activeStrategies, brokerStates
- * (per-broker positionCount), globalRiskMultiplier, lastTickAt.
+ * Reads /api/automation/status: loopEnabled, tickIntervalMs, activeStrategies,
+ * globalRiskMultiplier, lastTickAt, brokerStates.
+ *
+ * ⚠️ CORRECTION (2026-09-22): this header previously claimed the field names were "verified
+ * against the live response", including "brokerStates (per-broker positionCount)". That was
+ * not true — `positionCount` did not exist on the payload at all, so the widget below read
+ * `undefined` and the `|| 0` turned it into a permanent, confident `0`. A comment asserting a
+ * verification that was never performed is worse than no comment: it is what stopped anyone
+ * looking. `positionCount` is genuinely populated now (see BrokerLoopState in
+ * automation-loop.service.ts) — null still means NOT MEASURED and must render as "?".
  */
 function AutomationPulseWidget() {
   const { data, isLoading } = useQuery({
@@ -158,9 +165,14 @@ function AutomationPulseWidget() {
   if (!data) return <p className="wb-muted">Automation status unavailable.</p>;
 
   const strategies = Array.isArray(data.activeStrategies) ? data.activeStrategies.length : 0;
-  const positions = data.brokerStates && typeof data.brokerStates === 'object'
-    ? Object.values(data.brokerStates).reduce((sum, b) => sum + (b?.positionCount || 0), 0)
-    : 0;
+  // null ≠ 0 — see the file header. Only total when every broker reported; otherwise the
+  // honest answer is "unknown", because a partial sum understates and a 0 is a fabrication.
+  const brokerStates = (data.brokerStates && typeof data.brokerStates === 'object')
+    ? Object.values(data.brokerStates) : [];
+  const counts = brokerStates.map((b) => b?.positionCount).filter((n) => typeof n === 'number');
+  const positions = brokerStates.length > 0 && counts.length === brokerStates.length
+    ? counts.reduce((sum, n) => sum + n, 0)
+    : null;
   const tickMinutes = data.tickIntervalMs ? Math.round(data.tickIntervalMs / 60_000) : null;
 
   return (
@@ -177,7 +189,7 @@ function AutomationPulseWidget() {
       </li>
       <li>
         <span>Positions</span>
-        <strong>{positions}</strong>
+        <strong>{positions == null ? '?' : positions}</strong>
       </li>
       <li>
         <span>Risk mult.</span>

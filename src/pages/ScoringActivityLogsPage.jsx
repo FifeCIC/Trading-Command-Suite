@@ -3,46 +3,84 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { useSymbolEnvelope } from '../core/hooks/useSymbolEnvelope';
+import { scoreBar, signalArrow, signalColor } from '../core/signal-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './scoring-activity-logs.css';
 
 function DirectiveTrace({ symbol, onClose }) {
-  const envQuery = useQuery({
-    queryKey: ['directive-trace', symbol],
-    queryFn: () => apiGet(`/api/signals/envelope/${symbol}`),
-    staleTime: 30000,
-  });
-  const env = envQuery.data;
+  // ⚠️ Called `/api/signals/envelope/${symbol}` with no protocol -> `400 TCS-SYS-002` every time,
+  // rendering "No directive data" as though the symbol had none (#925). The protocol must be
+  // resolved first; see the ⚠️ notes in useSymbolEnvelope.js.
+  const { envelope: env, protocolId, isLoading, isError, error } = useSymbolEnvelope(symbol, { limit: 1 });
 
-  if (envQuery.isLoading) return <p className="sal-trace-loading">Loading directive trace for {symbol}...</p>;
+  if (isLoading) return <p className="sal-trace-loading">Loading directive trace for {symbol}...</p>;
+  // A refusal is NOT the same as an empty result. The old code collapsed them, which is why the
+  // 400 was invisible for so long.
+  if (isError) {
+    const code = error?.code || 'TCS-SYS-002';
+    return (
+      <p className="sal-trace-empty">
+        Could not load the directive trace for {symbol} — {code}
+        {error?.detail ? `: ${error.detail}` : ''}
+      </p>
+    );
+  }
   if (!env || env.groups?.length === 0) return <p className="sal-trace-empty">No directive data for {symbol}.</p>;
 
   return (
     <div className="sal-trace">
       <div className="sal-trace-head">
         <span>{symbol}</span>
-        <span style={{ color: env.signal === 'BUY' ? '#22c55e' : env.signal === 'SELL' ? '#ef4444' : '#94a3b8', fontWeight: 800 }}>
+        {/* Which protocol this trace came from — REQUIRED, since several may score this symbol,
+            and an unlabelled trace is not attributable (#921, #926). */}
+        {protocolId && <span className="sal-trace-protocol">{protocolId}</span>}
+        {/* ⚠️ `signalArrow()` returns '—' for HOLD/unknown, and the separator here is also '—',
+            which produced "— 20 — HOLD". The arrow is only meaningful for a DIRECTION, so it is
+            rendered only when there is one. */}
+        <span style={{ color: signalColor(env.signal), fontWeight: 800 }}>
+          {signalArrow(env.signal) !== '—' && `${signalArrow(env.signal)} `}
           {env.composite.toFixed(0)} — {env.signal}
         </span>
         <button className="sal-trace-close" onClick={onClose}>✕</button>
       </div>
       <div className="sal-trace-groups">
-        {env.groups.map(g => (
-          <div key={g.groupId} className={`sal-trace-group ${g.isRisk ? 'sal-trace-risk' : ''}`}>
-            <div className="sal-trace-group-head">
-              <span>{g.groupName}</span>
-              <span style={{ color: g.score > 65 ? '#22c55e' : g.score < 35 ? '#ef4444' : '#94a3b8' }}>{g.score}</span>
-            </div>
-            {g.topDirectives.map(d => (
-              <div key={d.id} className={`sal-trace-dir sal-trace-${d.signalClass}`}>
-                <span className="sal-trace-dir-name">{d.name}</span>
-                <span className="sal-trace-dir-score">{d.normalized}</span>
-                <span className="sal-trace-dir-reason">{d.reason}</span>
+        {env.groups.map(g => {
+          // ⚠️ The bar and colour come from the CANONICAL helpers (`signal-utils`), not from a
+          // local threshold. A hand-rolled `score > 65 ? green : ...` is a second scale to drift,
+          // and this repo has already paid for that (see the ⚠️ in src/core/score-display.js).
+          const bar = scoreBar(g.score);
+          return (
+            <div key={g.groupId} className={`sal-trace-group ${g.isRisk ? 'sal-trace-risk' : ''}`}>
+              <div className="sal-trace-group-head">
+                <span className="sal-trace-group-name">{g.groupName}</span>
+                {g.weight != null && <span className="sal-trace-group-wt">{g.weight}%</span>}
+                <span className="sal-trace-group-score" style={{ color: bar.background }}>{g.score}</span>
               </div>
-            ))}
-          </div>
-        ))}
+              {/* The group's own 0-100, so the number has visual weight instead of being a digit
+                  you have to compare against a remembered scale. */}
+              <div className="sal-trace-bar" aria-hidden="true">
+                <span style={{ width: bar.width, background: bar.background }} />
+              </div>
+              <div className="sal-trace-dirs">
+                {g.topDirectives.map(d => (
+                  <div key={d.id} className={`sal-trace-dir sal-trace-${d.signalClass}`}>
+                    <div className="sal-trace-dir-row">
+                      <span className="sal-trace-dir-name" title={d.name}>{d.name}</span>
+                      <span className="sal-trace-dir-score">{d.normalized}</span>
+                    </div>
+                    {/* ⚠️ The REASON is the most informative part of the trace — "BB squeeze:
+                        bandwidth at 10th percentile (1.28%), base=56 +20 bonus". It was 0.58rem
+                        with nowrap+ellipsis, so it was both the smallest text AND truncated. It
+                        WRAPS now. Do not put it back behind an ellipsis. */}
+                    {d.reason && <div className="sal-trace-dir-reason">{d.reason}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
       {env.conflicts?.length > 0 && (
         <div className="sal-trace-conflicts">

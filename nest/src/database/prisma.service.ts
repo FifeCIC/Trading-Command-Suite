@@ -187,6 +187,41 @@ export class PrismaService
         updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_research_note_sortOrder (sortOrder)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // Broker symbol catalogue (#958) — what the BROKER OFFERS, as opposed to the ~257
+      // instruments the app has onboarded into `symbol`. Nothing imported this list, which is
+      // why a +539% move in an unregistered Nasdaq name was invisible rather than un-alerted.
+      `CREATE TABLE IF NOT EXISTS broker_symbol (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        brokerId INT NOT NULL,
+        name VARCHAR(64) NOT NULL,
+        path VARCHAR(200) NULL,
+        assetClass VARCHAR(40) NULL,
+        tradeMode INT NULL,
+        digits INT NULL,
+        volumeMin DOUBLE NULL,
+        volumeMax DOUBLE NULL,
+        registered TINYINT(1) NOT NULL DEFAULT 0,
+        firstSeenAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        lastSeenAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
+        UNIQUE KEY uq_broker_symbol_brokerId_name (brokerId, name),
+        INDEX idx_broker_symbol_class (brokerId, assetClass),
+        INDEX idx_broker_symbol_tradeMode (brokerId, tradeMode),
+        INDEX idx_broker_symbol_registered (brokerId, registered)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // Per-broker sync state (#958) — lets an empty catalogue be told apart from a broker
+      // that never answered. An absent row reads as 'never synced', never as 'ok'.
+      `CREATE TABLE IF NOT EXISTS broker_symbol_sync (
+        brokerId INT NOT NULL PRIMARY KEY,
+        state VARCHAR(30) NOT NULL,
+        reason TEXT NULL,
+        symbolCount INT NOT NULL DEFAULT 0,
+        tradeableCount INT NOT NULL DEFAULT 0,
+        registeredCount INT NOT NULL DEFAULT 0,
+        lastSyncAt DATETIME(3) NULL,
+        lastSuccessAt DATETIME(3) NULL,
+        updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {

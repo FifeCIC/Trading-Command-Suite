@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { useSymbolEnvelope } from '../core/hooks/useSymbolEnvelope';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import EmptyState from '../components/EmptyState';
@@ -86,41 +87,32 @@ export default function AutomationDashboardPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
-  // ── A/B Test Runner (#482) ──────────────────────────────
-  const [abForm, setAbForm] = useState({ name: '', controlStackId: '', variantStackId: '', symbols: '' });
-
-  const abTestsQuery = useQuery({
-    queryKey: ['automation', 'ab-tests'],
-    queryFn: () => apiGet('/api/automation/ab-tests').catch(() => []),
-    refetchInterval: 10000,
-  });
-
-  const abSnapshotsQuery = useQuery({
-    queryKey: ['automation', 'ab-snapshots'],
-    queryFn: () => apiGet('/api/automation/ab-tests/snapshots').catch(() => []),
-    staleTime: 60_000,
-  });
-
-  const createAbMutation = useMutation({
-    mutationFn: (body) => apiPost('/api/automation/ab-tests', body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automation', 'ab-tests'] });
-      setAbForm({ name: '', controlStackId: '', variantStackId: '', symbols: '' });
-    },
-  });
-
-  const startAbMutation = useMutation({
-    mutationFn: (id) => apiPost(`/api/automation/ab-tests/${id}/start`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'ab-tests'] }),
-  });
-
-  const stopAbMutation = useMutation({
-    mutationFn: (id) => apiPost(`/api/automation/ab-tests/${id}/stop`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'ab-tests'] }),
-  });
-
-  const abTests = abTestsQuery.data ?? [];
-  const abSnapshots = abSnapshotsQuery.data ?? [];
+  // ── A/B Test Runner — REMOVED 2026-09-21. Do not re-add without #929. ──────────────────
+  //
+  // ⚠️ THIS PANEL WAS REMOVED BECAUSE IT COULD NOT MEAN ANYTHING, NOT BECAUSE IT WAS UGLY.
+  // Measured on the live database when it was taken out:
+  //
+  //   metastack_snapshot : 13 rows across 13 DISTINCT bots, every one version "1.0.0"
+  //   bots with 2+ versions : 0
+  //   ab_test rows          : 0        <-- no test has ever been created through it
+  //
+  // A/B compares two VERSIONS OF THE SAME THING. With one version per bot, the "Control snapshot"
+  // and "Variant snapshot" dropdowns necessarily offered 13 UNRELATED BOTS, so selecting two would
+  // have tagged trades `AB-A`/`AB-B` as though they were variants of one bot. That is not a
+  // comparison, and a result from it would be an artefact.
+  //
+  // ⚠️ AND IT WAS NOT HARMLESS: `AbTestService.start()` sets status=running, and the automation
+  // loop then calls `evaluateAbTest()` -> `dispatchSideTrade()`. So creating a test from this panel
+  // would have opened REAL side positions to evaluate a comparison that cannot mean anything.
+  //
+  // The backend is untouched — `AbTestService`, `ab_test`, the endpoints and the loop wiring are
+  // all real and correct. What is missing is the ability to create a SECOND VERSION of a bot.
+  // That is #929, which owns making this functional. Restore the panel (from git history) as part
+  // of that work, once a bot genuinely has two versions to compare.
+  //
+  // ⚠️ If you are re-adding this, the predicate is not "is the panel hidden" — it is
+  // `SELECT COUNT(*) FROM metastack_snapshot GROUP BY scoringStrategyId HAVING COUNT(*) >= 2`
+  // returning at least one row. Until then, any A/B test is comparing different bots.
 
   const apiOnline = !statusQuery.isError;
   const scores = portfolioScoresQuery.data?.scores ?? [];
@@ -155,14 +147,20 @@ export default function AutomationDashboardPage() {
     return map[step] || '#94a3b8';
   };
 
-  // Directive breakdown for selected symbol
-  const envelopeQuery = useQuery({
-    queryKey: ['signals', 'envelope', selectedSymbol],
-    queryFn: () => apiGet(`/api/signals/envelope/${selectedSymbol}`),
-    enabled: !!selectedSymbol,
-    staleTime: 30000,
-  });
-  const envelope = envelopeQuery.data;
+  // Directive breakdown for the selected symbol.
+  //
+  // ⚠️ This previously called `/api/signals/envelope/${selectedSymbol}` with NO protocol and got
+  // `400 TCS-SYS-002` every time, so the card rendered empty and said nothing about why (#925).
+  // A symbol does not carry its protocol — it must be RESOLVED first, and the envelope endpoint
+  // REFUSES to run unscoped by design. `useSymbolEnvelope` does the resolve via `/focus` (not the
+  // dead `/symbols/:ticker/protocols` endpoint) and returns the protocol id alongside the data.
+  const {
+    envelope,
+    protocolId: envelopeProtocolId,
+    isLoading: envelopeLoading,
+    isError: envelopeIsError,
+    error: envelopeError,
+  } = useSymbolEnvelope(selectedSymbol, { limit: 1 });
 
   return (
     <div className="ad-page">
@@ -354,11 +352,14 @@ export default function AutomationDashboardPage() {
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <h2 className="ad-panel-title">🔍 Why Panel</h2>
             {selectedSymbol ? (
-              envelopeQuery.isLoading ? <LoadingSkeleton variant="card" count={1} /> :
+              envelopeLoading ? <LoadingSkeleton variant="card" count={1} /> :
               envelope ? (
               <div className="ad-why-panel">
                 <div className="ad-why-header">
                   <span className="ad-why-symbol">{selectedSymbol}</span>
+                  {/* The protocol is NAMED — a symbol usually has several, so a bare composite is
+                      not attributable (#921, #926). */}
+                  {envelopeProtocolId && <span className="ad-why-protocol">{envelopeProtocolId}</span>}
                   <span className="ad-why-composite" style={{ color: envelope.signal === 'BUY' ? '#22c55e' : envelope.signal === 'SELL' ? '#ef4444' : '#94a3b8' }}>
                     {envelope.composite.toFixed(0)} — {envelope.signal}
                   </span>
@@ -548,84 +549,11 @@ export default function AutomationDashboardPage() {
             )}
           </motion.section>
 
-          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <h2 className="ad-panel-title">🧪 A/B Tests</h2>
-            <div className="ab-test-create">
-              <input
-                className="ab-test-input"
-                placeholder="Test name"
-                value={abForm.name}
-                onChange={(e) => setAbForm({ ...abForm, name: e.target.value })}
-              />
-              <select
-                className="ab-test-input"
-                value={abForm.controlStackId}
-                onChange={(e) => setAbForm({ ...abForm, controlStackId: e.target.value })}
-              >
-                <option value="">Control snapshot…</option>
-                {abSnapshots.map((s) => (
-                  <option key={`c-${s.id}`} value={s.id}>{s.scoringStrategyId} v{s.version}</option>
-                ))}
-              </select>
-              <select
-                className="ab-test-input"
-                value={abForm.variantStackId}
-                onChange={(e) => setAbForm({ ...abForm, variantStackId: e.target.value })}
-              >
-                <option value="">Variant snapshot…</option>
-                {abSnapshots.map((s) => (
-                  <option key={`v-${s.id}`} value={s.id}>{s.scoringStrategyId} v{s.version}</option>
-                ))}
-              </select>
-              <input
-                className="ab-test-input"
-                placeholder="Symbols (comma-sep, max 4)"
-                value={abForm.symbols}
-                onChange={(e) => setAbForm({ ...abForm, symbols: e.target.value })}
-              />
-              <button
-                className="ad-btn ad-btn-run"
-                disabled={!abForm.name || !abForm.controlStackId || !abForm.variantStackId || !abForm.symbols.trim() || createAbMutation.isPending}
-                onClick={() => createAbMutation.mutate({
-                  name: abForm.name,
-                  controlStackId: abForm.controlStackId,
-                  variantStackId: abForm.variantStackId,
-                  symbols: abForm.symbols.split(',').map((s) => s.trim()).filter(Boolean),
-                })}
-              >
-                {createAbMutation.isPending ? '⏳' : '＋'} Create
-              </button>
-            </div>
-            {abTests.length === 0 ? (
-              <p className="ad-panel-hint">No A/B tests yet. Create one to compare two MetaStack snapshots side-by-side.</p>
-            ) : (
-              <div className="ab-test-list">
-                {abTests.slice(0, 8).map((t) => (
-                  <div key={t.id} className={`ab-test-row ab-test-${t.status}`}>
-                    <div className="ab-test-head">
-                      <span className="ab-test-name">{t.name}</span>
-                      <span className={`ab-test-status ab-test-status-${t.status}`}>{t.status}</span>
-                    </div>
-                    <div className="ab-test-meta">{Array.isArray(t.symbols) ? t.symbols.join(', ') : ''}</div>
-                    {t.results && (
-                      <div className="ab-test-results">
-                        <span>A: {t.results.control?.totalPnl ?? 0}</span>
-                        <span>B: {t.results.variant?.totalPnl ?? 0}</span>
-                      </div>
-                    )}
-                    <div className="ab-test-actions">
-                      {t.status === 'draft' && (
-                        <button className="ad-btn ad-btn-start" onClick={() => startAbMutation.mutate(t.id)} disabled={startAbMutation.isPending}>▶ Start</button>
-                      )}
-                      {t.status === 'running' && (
-                        <button className="ad-btn ad-btn-pause" onClick={() => stopAbMutation.mutate(t.id)} disabled={stopAbMutation.isPending}>■ Stop</button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.section>
+          {/* ⚠️ The "🧪 A/B Tests" panel was REMOVED 2026-09-21 — see the long note where its
+              queries used to be (~line 90). It offered "Control snapshot" and "Variant snapshot"
+              dropdowns over 13 unrelated bots all at v1.0.0, and creating a test would have opened
+              REAL side positions (`evaluateAbTest` -> `dispatchSideTrade`) to compare things that
+              are not variants of each other. Restore from git as part of #929. */}
         </div>
       </div>
     </div>

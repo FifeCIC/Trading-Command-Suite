@@ -1525,10 +1525,18 @@ export class AutomationLoopService implements OnModuleInit {
           strategyId: `ab-test:${side}`,
           symbol: sym,
           brokerId,
-          decision: result.success ? 'EXECUTED' : 'FAILED',
-          reason: result.success
-            ? `AB-${side} ${test.name}: ${sideDir} @ ${entryPrice} (${result.ticket ?? 'recorded'})`
-            : `AB-${side} ${test.name}: ${result.error ?? 'unknown'}`,
+          // ⚠️ `recordedOnly` is NOT a success (#929). `dispatchSideTrade` records an intent and
+          // returns success:true when the stack's `mode` is not 'auto' — no order is placed. This
+          // line said `result.success ? 'EXECUTED' : 'FAILED'`, so ten intents with no broker
+          // ticket were logged as EXECUTED on 2026-09-22. An intent is a SKIP, and the reason
+          // names why, because "EXECUTED" for a trade that does not exist is the exact defect
+          // class this repo keeps finding: plausible output, no error.
+          decision: result.recordedOnly ? 'SKIP' : result.success ? 'EXECUTED' : 'FAILED',
+          reason: result.recordedOnly
+            ? `AB-${side} ${test.name}: intent recorded, NO live order — stack mode is not 'auto'`
+            : result.success
+              ? `AB-${side} ${test.name}: ${sideDir} @ ${entryPrice} (${result.ticket ?? 'recorded'})`
+              : `AB-${side} ${test.name}: ${result.error ?? 'unknown'}`,
           compositeRaw: score.composite,
           signal: score.signal ?? 'BUY',
           ticket: result.ticket,

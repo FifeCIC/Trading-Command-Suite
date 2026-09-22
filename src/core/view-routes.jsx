@@ -110,6 +110,10 @@ import CacheMonitorPage from '../pages/CacheMonitorPage.jsx';
 import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
 import AddSymbolPage from '../pages/AddSymbolPage.jsx';
 import SymbolsBrowserPage from '../pages/SymbolsBrowserPage.jsx';
+// #958 — what the BROKERS offer (14,000+ instruments) versus what the app has onboarded (~218).
+// Distinct from Symbols Browser, which lists only the ONBOARDED set — the difference between the
+// two is the entire finding, so they must not be merged into one list.
+import BrokerCataloguePage from '../pages/BrokerCataloguePage.jsx';
 import ScreenerPage from '../pages/ScreenerPage.jsx';
 import SymbolDetailPage from '../pages/SymbolDetailPage.jsx';
 import ImportJobsPage from '../pages/ImportJobsPage.jsx';
@@ -169,6 +173,7 @@ import ThemeLabPopover from '../pages/ThemeLabPopover.jsx';
 import LabLandingPage from '../pages/LabLandingPage.jsx';
 import LabPage from '../pages/LabPage.jsx';
 import PipelineGraphLabPage from '../pages/PipelineGraphLabPage.jsx';
+import IdentityMapLabPage from '../pages/IdentityMapLabPage.jsx';
 import WidgetBoardLabPage from '../pages/WidgetBoardLabPage.jsx';
 import FeatureLabPage from '../pages/FeatureLabPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
@@ -307,6 +312,7 @@ export const VIEW_COMPONENTS = {
   'active-symbols': ActiveSymbolsPage,
   'add-symbol': AddSymbolPage,
   'symbols-browser': SymbolsBrowserPage,
+  'broker-catalogue': BrokerCataloguePage,
   'screener': ScreenerPage,
   'symbol-detail': SymbolDetailPage,
   'symbol': SymbolPage,
@@ -366,6 +372,9 @@ export const VIEW_COMPONENTS = {
   'theme-lab-popover': ThemeLabPopover,
   'lab-landing': LabLandingPage,
   'pipeline-graph-lab': PipelineGraphLabPage,
+  // Temporary diagnostic — see IdentityMapLabPage.jsx header. Remove once the identity
+  // question is settled, or promote it to a permanent System page.
+  'identity-map': IdentityMapLabPage,
   'lab': LabPage,
   'feature-lab': FeatureLabPage,
   'preference-lab': PreferenceLab,

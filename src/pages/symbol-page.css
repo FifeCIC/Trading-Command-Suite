@@ -1,5 +1,8 @@
 /* Symbol Page — ticker-based focused symbol view */
-.sym-page { max-width: 960px; margin: 0 auto; padding: 1.25rem 1.5rem; color: var(--ink); }
+/* ⚠️ Was `max-width: 960px`. ui-standards requires trading views to use `var(--page-max-width)`
+   (1400px default) so a dashboard page does not render as a narrow column on a wide screen — a
+   contributor to this page reading as sparse. */
+.sym-page { max-width: var(--page-max-width); margin: 0 auto; padding: 1.25rem 1.5rem 3rem; color: var(--ink); }
 
 /* Header */
 .sym-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -15,14 +18,26 @@
 
 /* Grid */
 .sym-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
-@media (max-width: 700px) { .sym-grid { grid-template-columns: 1fr; } }
+/* Responsive breakpoints for .sym-grid live in the ≤900px / ≤600px block at the end of this file. */
 
-/* Cards */
-.sym-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem; margin-bottom: 0.75rem; }
-.sym-card h2 { margin: 0 0 0.5rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
-.sym-card--score { border-color: var(--accent, #6366f1); }
-.sym-card--risk { border-left: 4px solid var(--color-loss); }
-.sym-card--earnings { border-left: 4px solid var(--color-warning); }
+/* Cards
+   ⚠️ FULL coloured borders, not left-hand stripes. The owner's words (2026-09-18): "which use left
+   hand coloured bordered cards which I very much dislike. I prefer ones we have in theme, full
+   coloured borders." So the tone lives on the whole card edge, and never on the body text — the
+   semantic tones do not meet WCAG AA as text on a panel. */
+.sym-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+.sym-card:hover { border-color: var(--border-strong); }
+.sym-card h2 { margin: 0 0 0.5rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+.sym-card--score { border-color: var(--accent); }
+.sym-card--risk { border-color: color-mix(in srgb, var(--risk-critical) 45%, var(--border)); }
+.sym-card--earnings { border-color: color-mix(in srgb, var(--risk-elevated) 45%, var(--border)); }
 .sym-muted { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }
 
 /* Score */
@@ -56,10 +71,14 @@
 .sym-group-name { font-weight: 700; font-size: 0.82rem; }
 .sym-group-score { font-weight: 800; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .sym-group-wt { font-size: 0.7rem; color: var(--ink-soft); }
-.sym-dir { display: flex; align-items: center; gap: 0.35rem; padding: 0.12rem 0.25rem; border-radius: 3px; font-size: 0.75rem; border-left: 3px solid transparent; }
-.sym-dir-bullish { border-left-color: rgba(34,197,94,0.3); }
-.sym-dir-bearish { border-left-color: rgba(239,68,68,0.3); }
-.sym-dir-neutral { border-left-color: rgba(148,163,184,0.2); }
+/* Directive rows.
+   ⚠️ Was a `border-left` stripe per signal class — the pattern the owner dislikes. The signal is
+   now a leading dot, which carries the same information without the stripe. */
+.sym-dir { display: flex; align-items: center; gap: 0.35rem; padding: 0.12rem 0.25rem; border-radius: 3px; font-size: 0.75rem; }
+.sym-dir::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--color-neutral); }
+.sym-dir-bullish::before { background: var(--color-profit); }
+.sym-dir-bearish::before { background: var(--color-loss); }
+.sym-dir-neutral::before { background: color-mix(in srgb, var(--color-neutral) 55%, transparent); }
 .sym-dir-name { min-width: 90px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sym-dir-score { font-weight: 700; min-width: 24px; text-align: right; font-variant-numeric: tabular-nums; }
 .sym-dir-reason { font-size: 0.7rem; color: var(--ink-soft); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -104,41 +123,155 @@
 .sym-proto-unavailable { font-size: 0.7rem; font-weight: 600; color: var(--ink-soft); font-style: italic; }
 
 /* Per-bot outcomes (#921) — declared vs realised, per bot, on one symbol.
-   The alignment is a two-column key/value grid so the Intended and Realised rows sit directly
-   above each other: the comparison IS the content, and it is lost if they are not comparable. */
-.sym-outcomes { display: flex; flex-direction: column; gap: 0.5rem; }
-.sym-outcome { padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: 8px; }
-.sym-outcome-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
-.sym-outcome-head strong { font-size: 0.82rem; }
+   REDESIGNED 2026-09-21. Was six key/value text rows, which made the reader hold "payoff 2" and
+   "payoff 0.264" in their head and subtract them. The comparison IS the content, so the two
+   payoffs are now paired bars on a SHARED scale, and the headline P&L — the one number that says
+   whether this bot made or lost money here — is lifted into the header instead of being the last
+   clause of the "Record" row. */
+.sym-outcomes { display: flex; flex-direction: column; gap: 0.6rem; }
+.sym-outcome {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(160deg, var(--bg-elev) 0%, var(--bg-elev-2) 100%);
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.sym-outcome:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.sym-outcome-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.sym-outcome-head strong { font-size: 0.85rem; }
+
+/* The headline figure. Monospace + tabular so a column of these lines up down the page. */
+.sym-outcome-pnl {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 0.1rem 0.5rem;
+  border-radius: 6px;
+}
+.sym-outcome-pnl.is-pos { color: var(--color-profit); background: color-mix(in srgb, var(--color-profit) 13%, transparent); }
+.sym-outcome-pnl.is-neg { color: var(--color-loss); background: color-mix(in srgb, var(--color-loss) 13%, transparent); }
+.sym-outcome-pnl.is-none { color: var(--text-faint); background: color-mix(in srgb, var(--color-neutral) 12%, transparent); font-size: 0.78rem; font-weight: 600; }
+
+.sym-outcome-config { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.55rem; }
+.sym-outcome-chip {
+  font-size: 0.66rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
 .sym-outcome-warn {
   font-size: 0.68rem;
   font-weight: 700;
-  color: var(--color-warning);
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--risk-elevated);
+  background: color-mix(in srgb, var(--risk-elevated) 14%, transparent);
   padding: 1px 6px;
   border-radius: 3px;
   cursor: help;
 }
-.sym-outcome-grid {
+
+/* Intended vs Realised — label | track | value, two rows, ONE shared scale. */
+.sym-outcome-payoff {
   display: grid;
-  grid-template-columns: 5.5rem 1fr;
-  gap: 0.15rem 0.6rem;
-  font-size: 0.75rem;
-  align-items: baseline;
+  grid-template-columns: 4.6rem 1fr auto;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  font-size: 0.74rem;
+  margin-bottom: 0.5rem;
 }
-.sym-outcome-k { color: var(--ink-soft); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; }
-.sym-outcome-gap { color: var(--ink-soft); font-size: 0.7rem; }
+.sym-outcome-payoff-k {
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sym-outcome-track {
+  position: relative;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.sym-outcome-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: left center;
+  animation: sym-grow 320ms ease-out both;
+}
+.sym-outcome-fill.is-intended { background: color-mix(in srgb, var(--accent) 70%, var(--border)); }
+.sym-outcome-fill.is-met { background: var(--color-profit); }
+.sym-outcome-fill.is-short { background: var(--color-loss); }
+.sym-outcome-payoff-v {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.sym-outcome-payoff-v em { font-style: normal; color: var(--text-faint); font-size: 0.68rem; }
+/* An unmeasurable or undeclared value says so — it is never drawn as a zero-length bar, which
+   would read as "measured, and it was nothing". */
+.sym-outcome-absent { color: var(--text-faint); font-style: italic; font-size: 0.72rem; }
+
+.sym-outcome-gap-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  margin: 0 0 0.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.sym-outcome-gap-badge.is-neg { color: var(--color-loss); background: color-mix(in srgb, var(--color-loss) 11%, transparent); }
+.sym-outcome-gap-badge.is-pos { color: var(--color-profit); background: color-mix(in srgb, var(--color-profit) 11%, transparent); }
+
+/* Win/loss proportion — the bar and the counts read together. */
+.sym-outcome-record { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+.sym-outcome-wl {
+  display: flex;
+  flex: 1 1 auto;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.sym-outcome-w { background: var(--color-profit); }
+.sym-outcome-l { background: var(--color-loss); }
+.sym-outcome-record-txt { font-size: 0.72rem; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sym-outcome-record-txt strong { color: var(--ink); }
+.sym-outcome-record-txt em { font-style: normal; color: var(--text-faint); }
+
+.sym-outcome-exits { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem; }
+.sym-outcome-k { color: var(--text-dim); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .sym-outcome-reason {
   display: inline-block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 0.68rem;
-  padding: 1px 5px;
-  margin-right: 0.25rem;
-  border-radius: 3px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  color: var(--ink-soft);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
 }
+/* Tones mirror the exit-stack chart, so the same reason reads the same colour in both places. */
+.sym-outcome-reason.sym-reason-stop {
+  color: var(--color-loss);
+  border-color: color-mix(in srgb, var(--color-loss) 35%, var(--border));
+  background: color-mix(in srgb, var(--color-loss) 10%, transparent);
+}
+.sym-outcome-reason.sym-reason-target {
+  color: var(--color-profit);
+  border-color: color-mix(in srgb, var(--color-profit) 35%, var(--border));
+  background: color-mix(in srgb, var(--color-profit) 10%, transparent);
+}
+
+.sym-outcome-foot { margin: 0.5rem 0 0; font-size: 0.66rem; color: var(--text-faint); }
 
 /* News */
 .sym-news-list { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -160,3 +293,229 @@
 .sym-empty h2 { font-size: 1.1rem; margin-bottom: 0.3rem; }
 .sym-empty p { color: var(--ink-soft); font-size: 0.82rem; max-width: 420px; margin: 0 auto 1rem; }
 .sym-back-link { color: var(--accent); font-weight: 600; font-size: 0.82rem; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STAT ROW + CHARTS
+   Added 2026-09-21. Every figure here was ALREADY being fetched by the page and
+   discarded — botOutcomes, tradingStrategies, overview.positions, freshness.
+   No new request was added; the page simply showed none of it.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Tone classes. Colour lives HERE, never as inline hex in the JSX — inline hex cannot follow the
+   theme and cannot be overridden by colour-blind mode, which works through the same tokens. */
+.sym-tone-good { color: var(--color-profit); }
+.sym-tone-bad  { color: var(--color-loss); }
+.sym-tone-warn { color: var(--color-warning); }
+.sym-tone-mid  { color: var(--color-neutral); }
+
+/* ── Stat row ── */
+.sym-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.sym-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: linear-gradient(160deg, var(--bg-elev) 0%, var(--bg-elev-2) 100%);
+  overflow: hidden;
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+/* Decorative corner wash. A pseudo-element, so it is never exposed to assistive tech and carries
+   no meaning — the tile's meaning is its label + value. */
+.sym-tile::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -60%;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+  pointer-events: none;
+}
+.sym-tile:hover { transform: translateY(-1px); border-color: var(--border-strong); }
+.sym-tile-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.sym-tile-value {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.sym-tile-sub { font-size: 0.66rem; color: var(--text-dim); }
+
+.sym-stats-note {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin: 0 0 0.9rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.sym-stats-note strong { color: var(--ink); }
+.sym-stats-note strong.sym-tone-good { color: var(--color-profit); }
+.sym-stats-note strong.sym-tone-bad { color: var(--color-loss); }
+
+/* ── Chart grid ── */
+.sym-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Proportional bars ── */
+.sym-chart { display: flex; flex-direction: column; gap: 0.45rem; }
+.sym-bar {
+  display: grid;
+  grid-template-columns: minmax(90px, 26%) 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+}
+.sym-bar-label { color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sym-bar-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.sym-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: sym-grow 320ms ease-out both;
+}
+.sym-bar-value {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+/* Fill tones — these set the BAR colour. Separate from the text `.sym-tone-*` classes, which set
+   `color`; a `.sym-tone-*` class on a fill would silently do nothing. */
+.sym-bar-fill.is-strong { background: var(--color-profit); }
+.sym-bar-fill.is-weak { background: var(--color-loss); }
+.sym-bar-fill.is-risk { background: var(--risk-elevated); }
+
+/* "no reading" is deliberately NOT a zero-length bar — the two look identical otherwise, and one
+   of them understates the symbol. */
+.sym-bar-nodata { font-size: 0.62rem; font-style: italic; color: var(--text-faint); padding-left: 0.45rem; line-height: 10px; }
+
+@keyframes sym-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ── Diverging P&L bars ── */
+.sym-diverge { display: flex; flex-direction: column; gap: 0.32rem; }
+.sym-diverge-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 30%) 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+}
+.sym-diverge-label { color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sym-diverge-warn { color: var(--color-warning); font-style: italic; font-size: 0.66rem; }
+.sym-diverge-track { position: relative; height: 12px; }
+.sym-diverge-axis {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--border-strong);
+}
+.sym-diverge-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; animation: sym-grow 320ms ease-out both; }
+.sym-diverge-fill.is-pos { left: 50%; transform-origin: left center; background: var(--color-profit); }
+.sym-diverge-fill.is-neg { right: 50%; transform-origin: right center; background: var(--color-loss); }
+.sym-diverge-value {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sym-diverge-value.is-pos { color: var(--color-profit); }
+.sym-diverge-value.is-neg { color: var(--color-loss); }
+.sym-diverge-meta { font-size: 0.68rem; color: var(--text-faint); white-space: nowrap; }
+
+/* ── Exit-reason stack ── */
+.sym-exits { display: flex; flex-direction: column; gap: 0.5rem; }
+.sym-exits-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.sym-exits-seg { transform-origin: left center; animation: sym-grow 320ms ease-out both; }
+.sym-exits-legend { display: flex; flex-wrap: wrap; gap: 0.7rem; font-size: 0.7rem; color: var(--text-dim); }
+.sym-exits-key { display: inline-flex; align-items: center; gap: 0.3rem; }
+.sym-exits-key strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.sym-exits-key em { font-style: normal; color: var(--text-faint); }
+.sym-exits-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.sym-exit-stop { background: var(--color-loss); }
+.sym-exit-target { background: var(--color-profit); }
+/* An unrecognised close reason reads as unclassified, NOT as a stop-out. */
+.sym-exit-neutral { background: var(--color-neutral); }
+
+/* ── Score card signal colouring (replaces the old inline hex map) ── */
+.sym-score-val.sym-sig--buy { color: var(--color-profit); }
+.sym-score-val.sym-sig--sell { color: var(--color-loss); }
+.sym-score-val.sym-sig--hold { color: var(--color-warning); }
+.sym-score-val.sym-sig--none { color: var(--text-faint); }
+.sym-score-signal.sym-sig--buy { color: var(--color-profit); background: color-mix(in srgb, var(--color-profit) 14%, transparent); }
+.sym-score-signal.sym-sig--sell { color: var(--color-loss); background: color-mix(in srgb, var(--color-loss) 14%, transparent); }
+.sym-score-signal.sym-sig--hold { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 14%, transparent); }
+.sym-score-signal.sym-sig--none { color: var(--text-dim); background: color-mix(in srgb, var(--color-neutral) 14%, transparent); }
+.sym-score-opp {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+
+/* The honest replacement for a fabricated "↑ 0.00%". */
+.sym-change--absent { font-size: 0.68rem; font-weight: 500; font-style: italic; color: var(--text-faint); cursor: help; }
+
+/* ── Responsive (ui-standards: breakpoints at ≤900px and ≤600px) ── */
+@media (max-width: 900px) {
+  .sym-stats { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
+  .sym-charts { grid-template-columns: 1fr; }
+  .sym-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .sym-grid { grid-template-columns: 1fr; }
+  /* Stack label above the bar so the track keeps usable width on a phone. */
+  .sym-bar { grid-template-columns: 1fr auto; }
+  .sym-bar-label { grid-column: 1 / -1; }
+  .sym-diverge-row { grid-template-columns: 1fr auto auto; }
+  .sym-diverge-label { grid-column: 1 / -1; }
+}
+
+/* Explicit reduced-motion guard for the animations added above. index.css already collapses
+   animation durations globally, but the transform on hover is a transition and needs its own rule. */
+@media (prefers-reduced-motion: reduce) {
+  .sym-bar-fill, .sym-diverge-fill, .sym-exits-seg, .sym-outcome-fill { animation: none; }
+  .sym-tile, .sym-outcome { transition: none; }
+  .sym-tile:hover, .sym-outcome:hover { transform: none; }
+}

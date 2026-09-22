@@ -36,7 +36,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const SYMBOLS: Array<{ ticker: string; name: string; type: string }> = [
+const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: string }> = [
   { ticker: 'UK100', name: 'FTSE 100 Index', type: 'index' },
   { ticker: 'GER40', name: 'DAX 40 Index', type: 'index' },
   { ticker: 'FRA40', name: 'CAC 40 Index', type: 'index' },
@@ -68,6 +68,53 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string }> = [
   { ticker: 'GBPCAD', name: 'British Pound vs Canadian Dollar', type: 'forex' },
   { ticker: 'GBPJPY', name: 'British Pound vs Japanese Yen', type: 'forex' },
   { ticker: 'NZDJPY', name: 'New Zealand Dollar vs Japanese Yen', type: 'forex' },
+  // ── The USD majors (2026-09-22) ─────────────────────────────────────────────
+  //
+  // ⚠️ THESE HAD NO SEED PATH AT ALL, and it is the same defect class as VIX and XAGUSD
+  // above — worse, because nothing looked wrong. The `symbol` rows have existed in the
+  // database since 2026-06-24 and bars are still fetched for them every cycle (audited
+  // 2026-09-22: AUDUSD 1,963 bars, last 07:18 that morning), so the ladder renders and the
+  // symbol appears entirely healthy. What was missing was the ASSIGNMENT — and with no
+  // `symbol_protocol_assignment` row, `resolveProtocolForSymbol()` fell through to its
+  // hardcoded `SYMBOL_PROTOCOL_MAP`, which happens to name a protocol for each of these.
+  //
+  // Measured consequence: all five stopped being SCORED on 2026-09-15 — the same day the
+  // eight FX crosses below were onboarded — and produced no score, no decision and no trade
+  // for a week, while their bots sat `active=1` in the UI and their markets were open.
+  // **No error was raised anywhere.** Diagnosed by the owner asking why nothing was trading.
+  //
+  // The lesson is the one this file already states twice: registering the symbol is the
+  // precondition for every other reference to it. Registering it is not enough — it must
+  // also be ASSIGNED, or it is a symbol the scanner cannot see.
+  { ticker: 'AUDUSD', name: 'Australian Dollar vs USD', type: 'forex' },
+  { ticker: 'EURUSD', name: 'Euro vs USD', type: 'forex' },
+  { ticker: 'GBPUSD', name: 'British Pound vs USD', type: 'forex' },
+  { ticker: 'USDCAD', name: 'US Dollar vs Canadian Dollar', type: 'forex' },
+  { ticker: 'USDCHF', name: 'US Dollar vs Swiss Franc', type: 'forex' },
+  { ticker: 'USDJPY', name: 'US Dollar vs Japanese Yen', type: 'forex' },
+  { ticker: 'NZDUSD', name: 'New Zealand Dollar vs USD', type: 'forex' },
+  // ── US small-cap equity — the opportunity-detection CASE STUDY (2026-09-22) ──
+  //
+  // GRML (Greenland Mines) is not a normal onboarding. It is registered as the
+  // reference case for a capability the app does NOT have: recognising that an
+  // UNREGISTERED instrument is moving. It went from 2.85 (close 2026-09-17) to an
+  // 18.21 high on 2026-09-21 — **+539% in two sessions** — on a volume step from
+  // 465 to 263,322 (566×). The app produced nothing, and could not have: with no
+  // `symbol` row no bars were ever fetched, so the move was not 'un-alerted', it
+  // was **unobservable**. See #956's sibling epic for the sprint.
+  //
+  // ⚠️ Verified on the bridge BEFORE adding this row (2026-09-22), so the claim is
+  // measured rather than assumed:
+  //   • `:5000` /symbol/GRML/info → present (digits 2, contractSize 1.0,
+  //     volumeMin 1.0, currencyProfit USD). Note: that endpoint does NOT report
+  //     `tradeMode`, so this seeder does **not** claim one. Do not add one without
+  //     measuring it.
+  //   • `:5000` /candles?symbol=GRML&timeframe=1d&limit=30 → 30 clean daily bars.
+  //   • `:5000` /quote?symbol=GRML → bid 0.0 / ask 0.0 / last 0.0 — **no live tick**.
+  //     Bars exist; a live quote does not. Anything reading a *quote* for GRML will
+  //     see zero, which looks like a price of zero. Read BARS for this symbol.
+  //   • `:5001` (Pepperstone) → 404. GRML is MetaQuotes-only. Do not add a :5001 route.
+  { ticker: 'GRML', name: 'Greenland Mines Inc', type: 'stock', exchange: 'MetaQuotes' },
 ];
 
 // Broker slot → bridge port is declared in MT5_ACTIVE_BROKERS order
@@ -132,6 +179,16 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
   // 1h bars; :5000 has no VIX at all and returns 0 bars. brokerSymbol is the
   // broker's exact ticker — verified against /symbols, NOT assumed. Four symbols
   // were once named wrong and silently delivered zero bars (#760 / INV-PROVIDER-REACHABLE).
+  // GRML — MetaQuotes-only (verified: :5000 serves 30 clean daily bars; :5001 returns
+  // 404). brokerSymbol is pinned because the canonical ticker and the broker ticker
+  // happen to match today, and an unpinned route is what lost VIX's ticker once.
+  {
+    symbol: 'GRML',
+    brokerId: 2,
+    brokerSymbol: 'GRML',
+    provider: 'mt5',
+    note: 'Greenland Mines — MetaQuotes-only. Verified 2026-09-22: :5000 has 30 clean daily bars (2.85 close 09-17 → 18.21 high 09-21); :5001 returns 404. ⚠️ No live QUOTE (bid/ask/last all 0.0) — read bars, not quotes, for this symbol.',
+  },
   {
     symbol: 'VIX',
     brokerId: 3,
@@ -173,9 +230,45 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string }> = [
   { symbol: 'GBPCAD', protocolSlug: 'forex-session-v1' },
   { symbol: 'GBPJPY', protocolSlug: 'forex-session-v1' },
   { symbol: 'NZDJPY', protocolSlug: 'forex-session-v1' },
+  // USD majors (2026-09-22) — see the block in SYMBOLS above. These were the five/six that
+  // went silent on 2026-09-15.
+  //
+  // ⚠️ `forex-session-v1` for ALL of them, deliberately — including USDCAD, whose hardcoded
+  // entry in `speed-scan.service.ts` says `usdcad-oil-v1`. That protocol is **active=0**, so
+  // following it would re-point the assignment at a disabled protocol and leave the symbol
+  // exactly as silent as it is now. The rule applied here: the assignment must name the same
+  // protocol the SYMBOL'S BOT subscribes to (`strategy_protocol`), or the bot waits for a
+  // signal from a protocol that is not the one scoring its symbol. Every one of these bots
+  // subscribes to `forex-session-v1`.
+  { symbol: 'AUDUSD', protocolSlug: 'forex-session-v1' },
+  { symbol: 'EURUSD', protocolSlug: 'forex-session-v1' },
+  { symbol: 'GBPUSD', protocolSlug: 'forex-session-v1' },
+  { symbol: 'USDCAD', protocolSlug: 'forex-session-v1' },
+  { symbol: 'USDCHF', protocolSlug: 'forex-session-v1' },
+  { symbol: 'USDJPY', protocolSlug: 'forex-session-v1' },
+  { symbol: 'NZDUSD', protocolSlug: 'forex-session-v1' },
   // VIX short assignment is deliberately NOT added yet. Per #772, nothing is
   // assigned until the first demo short has actually executed (Step 2), so the
   // short path is not spread across more protocols before it is proven once.
+
+  // ⚠️ GRML IS DELIBERATELY NOT ASSIGNED, and this is a decision rather than an omission.
+  //
+  // The assignment decides which PROTOCOL scores the symbol. There are 21 active protocols
+  // and **not one is suited to a US small-cap equity** — the stock-ish ones (`spy-speed-v1`,
+  // `spy-day-v1`, `qqq-speed-v1`, `qqq-day-v1`) are built for index ETFs, and their
+  // directives would run against a microcap that shares none of an index's behaviour.
+  //
+  // Assigning one anyway would produce the exact defect this repo keeps re-finding: a
+  // **plausible score with no error**. A number would appear on a ladder, look like a
+  // reading, and mean nothing. The owner's case study is about recognising that an
+  // instrument is MOVING, which is arithmetic on price and volume — not a protocol vote.
+  //
+  // Consequence to know while it stays unassigned: `bar-refresh` resolves
+  // ['positions','active-strategies','forex-floor','protocol-symbols'], and with no
+  // assignment GRML is in none of them, so **no bars are fetched for it**. Its price history
+  // is therefore reachable only on demand from the bridge
+  // (`/candles?symbol=GRML&timeframe=1d`), which is what `ReplayService.loadBars()` falls
+  // back to. Assign a protocol only when one actually fits the instrument.
 ];
 
 
@@ -191,15 +284,22 @@ async function main() {
         data: {
           ticker: s.ticker,
           name: s.name,
-          exchange: 'Xtrend',
+          exchange: s.exchange ?? 'Xtrend',
           type: s.type,
           // Tags are display/filter metadata. They must not claim a type the symbol is
           // not, or a filter on them silently lies about the instrument.
+          //
+          // ⚠️ The fallback branch is `metals/commodity`, so ANY new type silently inherits
+          // those tags. A `stock` had to be given its own branch for exactly that reason —
+          // without it GRML would have been tagged a commodity and every tag filter on the
+          // instrument would have lied about it.
           tags: (s.type === 'index'
             ? ['speed-trading', 'xtrend', 'index']
             : s.type === 'forex'
               ? ['speed-trading', 'xtrend', 'forex']
-              : ['speed-trading', 'xtrend', 'metals', 'commodity']) as any,
+              : s.type === 'stock'
+                ? ['metaquotes', 'stock']
+                : ['speed-trading', 'xtrend', 'metals', 'commodity']) as any,
         },
       });
       console.log(`  ✓ symbol ${s.ticker} (${s.type})`);

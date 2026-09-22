@@ -1,0 +1,302 @@
+/**
+ * Broker Catalogue (#958) — scoped styles for BrokerCataloguePage.
+ *
+ * Tokens only (no literal colours) so the page follows the theme and passes
+ * `scripts/validate-css-tokens.cjs` in the frontend build.
+ */
+
+.bc-page {
+  padding: 20px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.bc-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+}
+
+.bc-subtitle {
+  margin: 0 0 18px;
+  color: var(--textDim);
+  max-width: 78ch;
+  line-height: 1.5;
+}
+
+/* ── Per-broker cards ── */
+
+.bc-brokers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bc-broker {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+/* A broker that could not be reached must not look like a healthy one. */
+.bc-broker-unreachable,
+.bc-broker-error {
+  border-color: var(--riskHigh);
+}
+
+.bc-broker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bc-broker-id {
+  font-weight: 600;
+}
+
+.bc-broker-state {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--textDim);
+}
+
+.bc-state-ok {
+  border-color: var(--riskNormal);
+  color: var(--riskNormal);
+}
+
+.bc-state-unreachable,
+.bc-state-error {
+  border-color: var(--riskHigh);
+  color: var(--riskHigh);
+}
+
+.bc-broker-reason {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: var(--textDim);
+  line-height: 1.4;
+}
+
+.bc-broker-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.bc-broker-stats dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--textFaint);
+}
+
+.bc-broker-stats dd {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bc-stat-key dd {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.bc-broker-meta {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--textFaint);
+}
+
+.bc-totals {
+  margin: 0 0 18px;
+  color: var(--textDim);
+  font-size: 0.88rem;
+}
+
+/* ── Controls ── */
+
+.bc-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.bc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
+}
+
+.bc-field-grow {
+  flex: 1 1 160px;
+}
+
+.bc-field span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--textFaint);
+}
+
+.bc-field select,
+.bc-field input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.bc-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--textDim);
+  padding-bottom: 6px;
+}
+
+.bc-sync {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bc-sync:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bc-sync-result {
+  margin: 0 0 12px;
+  color: var(--textDim);
+  font-size: 0.85rem;
+}
+
+/* ── Table ── */
+
+.bc-table-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.bc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.bc-table th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--textFaint);
+  white-space: nowrap;
+}
+
+.bc-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--textDim);
+}
+
+.bc-table tbody tr:hover td {
+  background: var(--bg);
+}
+
+.bc-ticker {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.bc-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.bc-pill-ok {
+  border-color: var(--riskNormal);
+  color: var(--riskNormal);
+}
+
+.bc-pill-off {
+  color: var(--textFaint);
+}
+
+/* ── States: loading / empty / error must never look alike ── */
+
+.bc-state {
+  padding: 18px;
+  color: var(--textDim);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.bc-state-error {
+  color: var(--riskHigh);
+}
+
+.bc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--textDim);
+}
+
+.bc-pager button {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.bc-pager button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Focus visibility is a policy requirement, not a nicety. */
+.bc-page button:focus-visible,
+.bc-page select:focus-visible,
+.bc-page input:focus-visible,
+.bc-page a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client'
 import StarToggle from '../components/StarToggle'
 import { formatCurrency, formatPct } from '../core/format-utils'
 import { SB_COLUMNS, readSBColumnVisibility } from '../core/symbols-browser-columns'
+import { POSITIONS_QUERY_KEY, POSITIONS_REFETCH_MS, indexPositionsByTicker, positionForTicker } from '../core/symbol-positions'
 import './symbols-browser.css'
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex']
@@ -37,9 +38,9 @@ export default function SymbolsBrowserPage() {
   })
 
   const positions = useQuery({
-    queryKey: ['symbols-positions'],
+    queryKey: POSITIONS_QUERY_KEY,
     queryFn: () => apiGet('/api/symbols/positions'),
-    refetchInterval: 60000,
+    refetchInterval: POSITIONS_REFETCH_MS,
   })
 
   const s = symbols.data ?? {}
@@ -48,11 +49,15 @@ export default function SymbolsBrowserPage() {
   const freshes = Array.isArray(f.results) ? f.results : []
   const freshnessBySymbol = Object.fromEntries(freshes.map((r) => [r.symbolId, r]))
 
+  // Shared with ActiveSymbolsPage via `core/symbol-positions.js`.
+  // ⚠️ Do NOT reintroduce a local `Object.fromEntries(...map(p => p.symbol.toUpperCase()))` here.
+  // That duplication is exactly how this page and Active Symbols ended up reading two DIFFERENT
+  // endpoints for the same column and showing 32 vs 5 holdings. (measured 2026-09-22)
   const posData = positions.data ?? {}
   const posRows = Array.isArray(posData.positions) ? posData.positions : []
-  const positionByTicker = Object.fromEntries(posRows.map((p) => [p.symbol.toUpperCase(), p]))
+  const positionByTicker = indexPositionsByTicker(posRows)
   function positionFor(sym) {
-    return sym ? positionByTicker[sym.ticker.toUpperCase()] : null
+    return positionForTicker(positionByTicker, sym?.ticker)
   }
 
   const filtered = useMemo(() => {

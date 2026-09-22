@@ -521,6 +521,51 @@ export class Mt5Adapter implements IProviderAdapter {
     return (await this.loadSymbols(brokerId))?.tradability ?? null;
   }
 
+  /**
+   * listBrokerInstruments() — the FULL symbol list for CATALOGUING, not for validation (#958).
+   *
+   * ⚠️ WHY THIS DOES NOT REUSE `loadSymbols()`. That method projects each record down to
+   * `{name}` plus tradability and keeps the result in a 5-minute in-memory cache. It throws
+   * away `path` (the broker's own grouping — `Nasdaq\GRML`, `Forex\AUDCAD`) and `digits`, which
+   * are exactly the fields a catalogue needs to classify and filter 12,000+ instruments. Two
+   * callers wanting different projections is fine; one caller silently losing fields is not.
+   *
+   * ⚠️ RETURNS `null` WHEN THE BROKER CANNOT BE REACHED — never an empty array. The distinction
+   * is load-bearing: "the broker listed nothing" and "the broker never answered" lead to
+   * opposite conclusions, and a caller that collapses them will mark a live catalogue stale.
+   * `symbolsCacheByBroker` is deliberately NOT written here, so a catalogue sync cannot change
+   * what the availability gate (#723) sees.
+   */
+  async listBrokerInstruments(brokerId?: number): Promise<Array<{
+    name: string;
+    path: string | null;
+    tradeMode: number | null;
+    digits: number | null;
+    volumeMin: number | null;
+    volumeMax: number | null;
+  }> | null> {
+    const key = brokerId ?? this.symbolRouter?.primaryBrokerId() ?? 0;
+    try {
+      const route = this.symbolRouter?.routeForBroker(key);
+      const data = await this.bridgeGet<BridgeSymbolListResponse>('/symbols', route);
+      if (!data?.symbols?.length) {
+        this.logger.warn(`MT5: broker ${key} returned no symbol list (unreachable or empty)`);
+        return null;
+      }
+      return data.symbols.map((s) => ({
+        name: String(s.name).toUpperCase(),
+        path: s.path ? String(s.path) : null,
+        tradeMode: typeof s.tradeMode === 'number' ? s.tradeMode : null,
+        digits: typeof s.digits === 'number' ? s.digits : null,
+        volumeMin: typeof s.volumeMin === 'number' ? s.volumeMin : null,
+        volumeMax: typeof s.volumeMax === 'number' ? s.volumeMax : null,
+      }));
+    } catch (error) {
+      this.logger.warn(`MT5: symbol list for broker ${key} failed — ${(error as Error).message}`);
+      return null;
+    }
+  }
+
   async healthCheck(): Promise<boolean> {
     const data = await this.bridgeGet<BridgeHealthResponse>('/health');
     if (!data) return false;

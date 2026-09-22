@@ -74,32 +74,81 @@
   display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 700;
   margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(128,128,128,0.08);
 }
+/* Which protocol this trace came from. A symbol usually scores under SEVERAL protocols, so an
+   unlabelled trace is not attributable (#921, #926). Same visual language as `.sym-source`. */
+.sal-trace-protocol {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
 .sal-trace-close {
   margin-left: auto; background: none; border: 1px solid transparent; color: var(--ink-soft);
   cursor: pointer; font-size: 0.7rem; padding: 1px 4px; border-radius: 3px;
 }
-.sal-trace-close:hover { border-color: #ef4444; color: #ef4444; }
-.sal-trace-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.35rem; }
+.sal-trace-close:hover { border-color: var(--color-loss); color: var(--color-loss); }
+
+/* ── Directive trace groups ─────────────────────────────────────────────────────────────────────
+   Reworked 2026-09-21. The previous version was readable but flat, and it made the WRONG thing
+   smallest: `.sal-trace-dir-reason` — the actual reasoning ("BB squeeze: bandwidth at 10th
+   percentile (1.28%), base=56 +20 bonus") — was 0.58rem AND nowrap+ellipsis, so the most
+   informative line in the panel was both the tiniest and cut off. The reason now WRAPS.
+   ⚠️ Do not put it back behind an ellipsis or shrink it below the name.
+   Colours come from `scoreBar()`/`signalColor()` in src/core/signal-utils — no local thresholds. */
+.sal-trace-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.4rem; }
 .sal-trace-group {
-  border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem;
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.45rem 0.45rem;
+  background: var(--panel); display: flex; flex-direction: column;
 }
-.sal-trace-risk { background: rgba(239,68,68,0.02); }
+.sal-trace-risk { border-color: color-mix(in srgb, var(--color-loss) 35%, var(--line)); }
 .sal-trace-group-head {
-  display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 700;
-  margin-bottom: 0.15rem;
+  display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.25rem;
 }
+.sal-trace-group-name {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sal-trace-group-wt {
+  font-size: 0.6rem; color: var(--ink-soft); font-variant-numeric: tabular-nums;
+}
+.sal-trace-group-score { font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* The group's 0-100 as a bar, so the number has weight instead of needing a remembered scale. */
+.sal-trace-bar {
+  height: 3px; border-radius: 2px; overflow: hidden; margin-bottom: 0.4rem;
+  background: color-mix(in srgb, var(--ink-soft) 14%, transparent);
+}
+.sal-trace-bar > span { display: block; height: 100%; border-radius: 2px; transition: width 0.25s ease; }
+
+.sal-trace-dirs { display: flex; flex-direction: column; gap: 0.3rem; }
 .sal-trace-dir {
-  display: flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.2rem;
-  border-radius: 2px; font-size: 0.62rem; border-left: 3px solid transparent;
+  padding: 0.22rem 0.35rem; border-radius: 0 4px 4px 0; font-size: 0.68rem;
+  border-left: 3px solid transparent;
+  background: color-mix(in srgb, var(--ink-soft) 5%, transparent);
 }
-.sal-trace-bullish { border-left-color: rgba(34,197,94,0.3); }
-.sal-trace-bearish { border-left-color: rgba(239,68,68,0.3); }
-.sal-trace-neutral { border-left-color: rgba(148,163,184,0.2); }
-.sal-trace-dir-name { min-width: 85px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sal-trace-dir-score { font-weight: 700; min-width: 22px; text-align: right; }
-.sal-trace-dir-reason { font-size: 0.58rem; color: var(--ink-soft); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sal-trace-conflicts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 0.3rem; }
+/* Server-classified tone (`d.signalClass`) — the CLIENT never re-derives this from a number. */
+.sal-trace-bullish { border-left-color: var(--color-profit); }
+.sal-trace-bearish { border-left-color: var(--color-loss); }
+.sal-trace-neutral { border-left-color: var(--color-neutral); }
+.sal-trace-dir-row { display: flex; align-items: baseline; gap: 0.4rem; }
+.sal-trace-dir-name {
+  flex: 1; min-width: 0; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sal-trace-dir-score {
+  font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.sal-trace-dir-reason {
+  font-size: 0.63rem; line-height: 1.35; color: var(--ink-soft); margin-top: 0.12rem;
+}
+.sal-trace-conflicts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 0.4rem; }
 .sal-conflict-chip {
-  font-size: 0.6rem; color: #f59e0b; background: rgba(245,158,11,0.08);
-  padding: 1px 5px; border-radius: 3px;
+  font-size: 0.62rem; color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  padding: 2px 6px; border-radius: 4px;
 }

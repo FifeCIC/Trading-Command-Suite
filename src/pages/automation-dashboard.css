@@ -395,6 +395,18 @@
 .ad-why-panel { display: flex; flex-direction: column; gap: 0.5rem; }
 .ad-why-header { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .ad-why-symbol { font-size: 1rem; font-weight: 700; }
+/* Which protocol this reading came from. A symbol usually scores under SEVERAL protocols, so a
+   bare composite is not attributable (#921, #926). Same visual language as `.sym-source`. */
+.ad-why-protocol {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
 .ad-why-composite { font-weight: 800; font-size: 0.85rem; }
 .ad-why-confidence { font-size: 0.65rem; color: var(--ink-soft); }
 .ad-why-rarity { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }

@@ -664,6 +664,7 @@ export class AutomationController {
         scoreIntervalMs: 300000,
         tradeThreshold: BOT_BAR_DEFAULT,
         requireConfirmation: true,
+        positionCount: null, // unknown until a tick measures it — never default this to 0
       };
     }
     this.loop.state.brokerStates[target].enabled = body.enabled ?? !this.loop.state.brokerStates[target].enabled;
@@ -682,6 +683,7 @@ export class AutomationController {
         scoreIntervalMs: 300000,
         tradeThreshold: BOT_BAR_DEFAULT,
         requireConfirmation: true,
+        positionCount: null, // unknown until a tick measures it — never default this to 0
       };
     }
     const bs = this.loop.state.brokerStates[body.brokerId];

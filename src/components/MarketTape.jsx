@@ -296,13 +296,23 @@ export default function MarketTape() {
   if (userPrefs.tapeAuto && autoQuery.data) {
     const auto = autoQuery.data;
     const strategies = auto.activeStrategies?.length || 0;
-    const positions = (auto.brokerStates && typeof auto.brokerStates === 'object')
-      ? Object.values(auto.brokerStates).reduce((sum, b) => sum + (b.positionCount || 0), 0) : 0;
+    // ⚠️ null ≠ 0. `brokerStates[*].positionCount` is null until a tick has MEASURED it — no
+    // adapter yet, the fetch threw, or no tick has run. This previously read
+    // `sum + (b.positionCount || 0)`, collapsing "not reported" into a confident 0, so the tape
+    // displayed "0 positions" permanently while MT5 held five. Never default a measurement you
+    // did not take. MetaStackCockpitPage renders this field as "? count" — match that.
+    const brokerStates = (auto.brokerStates && typeof auto.brokerStates === 'object')
+      ? Object.values(auto.brokerStates) : [];
+    const counts = brokerStates.map((b) => b?.positionCount).filter((n) => typeof n === 'number');
+    // Only claim a total when EVERY broker reported. A partial sum silently understates.
+    const positions = brokerStates.length > 0 && counts.length === brokerStates.length
+      ? counts.reduce((sum, n) => sum + n, 0)
+      : null;
     const pulse = auto.loopEnabled ? 'Live' : 'Paused';
     const lastTick = auto.lastTickAt ? timeAgo(auto.lastTickAt) : '—';
     sections.push({
       key: 'auto', label: 'Auto',
-      content: `${pulse} · ${strategies} strategies · ${positions} positions · Last tick ${lastTick}`,
+      content: `${pulse} · ${strategies} strategies · ${positions == null ? '? positions' : `${positions} positions`} · Last tick ${lastTick}`,
       color: auto.loopEnabled ? 'var(--market-open, #22c55e)' : 'var(--ink-soft, #64748b)',
     });
   }

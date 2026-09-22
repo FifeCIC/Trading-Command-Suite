@@ -1,0 +1,4830 @@
+{
+ "generatedAt": "2026-09-21T21:35:24.418Z",
+ "headline": {
+  "referenceColumns": 182,
+  "enforced": 1,
+  "unenforced": 181,
+  "ambiguous": 5,
+  "matchesNothingKnown": 100
+ },
+ "families": [
+  {
+   "key": "protocol",
+   "label": "Protocol",
+   "columns": 25,
+   "tables": 22
+  },
+  {
+   "key": "strategy",
+   "label": "Strategy / bot",
+   "columns": 23,
+   "tables": 22
+  },
+  {
+   "key": "symbol",
+   "label": "Symbol",
+   "columns": 75,
+   "tables": 66
+  },
+  {
+   "key": "broker",
+   "label": "Broker / account",
+   "columns": 12,
+   "tables": 11
+  },
+  {
+   "key": "other",
+   "label": "Other",
+   "columns": 47,
+   "tables": 40
+  }
+ ],
+ "spaces": {
+  "protocol.id": 47,
+  "protocol.slug": 47,
+  "trading_strategy.id": 27,
+  "scoring_strategy.id": 27,
+  "symbol.id": 254,
+  "symbol.ticker": 254
+ },
+ "spineEvidence": [
+  {
+   "table": "protocol",
+   "note": "47 rows. Has BOTH `id` (UUID) and `slug` — two identities for one protocol."
+  },
+  {
+   "table": "trading_strategy",
+   "note": "27 rows. protocolId varchar(36) = UUID width; scoringStrategyId varchar(36) is a THIRD protocol-ish column."
+  },
+  {
+   "table": "scoring_strategy",
+   "note": "27 rows. protocolId varchar(100) = slug width. Same NAME as trading_strategy.protocolId, different space likely."
+  },
+  {
+   "table": "strategy_protocol",
+   "note": "26 rows. protocolId varchar(100). This is the table queue routing actually reads."
+  }
+ ],
+ "nameConflicts": [
+  {
+   "column": "symbol",
+   "types": [
+    "varchar(20)",
+    "varchar(32)"
+   ],
+   "tables": 40,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "analyst_target",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "automation_event",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 34
+      }
+     ]
+    },
+    {
+     "table": "chartsnapshot",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "companymetric",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 184
+      }
+     ]
+    },
+    {
+     "table": "decision_log",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 77
+      }
+     ]
+    },
+    {
+     "table": "decision_trail",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "directive_audit_run",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "directiveoutcome",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 24
+      }
+     ]
+    },
+    {
+     "table": "earnings_analysis",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 4
+      }
+     ]
+    },
+    {
+     "table": "earnings_event",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 7
+      }
+     ]
+    },
+    {
+     "table": "insidertransaction",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 123
+      }
+     ]
+    },
+    {
+     "table": "marketsnapshot",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "newsarticle",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 144
+      }
+     ]
+    },
+    {
+     "table": "newsmeta",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "order",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 23
+      }
+     ]
+    },
+    {
+     "table": "paper_trade",
+     "type": "varchar(32)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 4
+      }
+     ]
+    },
+    {
+     "table": "pending_action",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "planstep",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 3
+      }
+     ]
+    },
+    {
+     "table": "portfolio_snapshot_position",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "position",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 30
+      }
+     ]
+    },
+    {
+     "table": "position_intent",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 1
+      }
+     ]
+    },
+    {
+     "table": "position_ts_backup_20260910",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 24
+      }
+     ]
+    },
+    {
+     "table": "score_snapshot",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 142
+      }
+     ]
+    },
+    {
+     "table": "signal_dismissal",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "signal_outcome_log",
+     "type": "varchar(32)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 39
+      }
+     ]
+    },
+    {
+     "table": "signal_rank_snapshot",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 29
+      }
+     ]
+    },
+    {
+     "table": "socialmention",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "stock_investigation",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 1
+      }
+     ]
+    },
+    {
+     "table": "stop_adjustment",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 10
+      }
+     ]
+    },
+    {
+     "table": "strategy_evaluation",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 18
+      }
+     ]
+    },
+    {
+     "table": "strategy_signal_queue",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 17
+      }
+     ]
+    },
+    {
+     "table": "symbol_protocol_assignment",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 22
+      }
+     ]
+    },
+    {
+     "table": "symbol_route",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 11
+      }
+     ]
+    },
+    {
+     "table": "symbolcalibration",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "symbolprotocolaffinity",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 1
+      }
+     ]
+    },
+    {
+     "table": "timelineevent",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    },
+    {
+     "table": "trade",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 23
+      }
+     ]
+    },
+    {
+     "table": "trade_ts_backup_20260910",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 10
+      }
+     ]
+    },
+    {
+     "table": "trading_strategy",
+     "type": "varchar(20)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 23
+      }
+     ]
+    },
+    {
+     "table": "watchlistmeta",
+     "type": "varchar(20)",
+     "drawsFrom": []
+    }
+   ]
+  },
+  {
+   "column": "protocolId",
+   "types": [
+    "varchar(100)",
+    "varchar(64)",
+    "varchar(36)",
+    "varchar(50)"
+   ],
+   "tables": 20,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "backtestrun",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "paper_trade",
+     "type": "varchar(64)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 6
+      }
+     ]
+    },
+    {
+     "table": "protocol_directive_group",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.id",
+       "n": 45
+      }
+     ]
+    },
+    {
+     "table": "protocol_directive_group_backup_761",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.id",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "protocol_score_status",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 21
+      }
+     ]
+    },
+    {
+     "table": "protocolrun",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "score_snapshot",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 42
+      },
+      {
+       "space": "protocol.id",
+       "n": 5
+      }
+     ]
+    },
+    {
+     "table": "scoring_strategy",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 15
+      }
+     ]
+    },
+    {
+     "table": "signal_dismissal",
+     "type": "varchar(50)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "signal_outcome_log",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 25
+      }
+     ]
+    },
+    {
+     "table": "signal_rank_snapshot",
+     "type": "varchar(50)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 19
+      }
+     ]
+    },
+    {
+     "table": "strategy_protocol",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 13
+      }
+     ]
+    },
+    {
+     "table": "strategy_signal_queue",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 6
+      }
+     ]
+    },
+    {
+     "table": "symbol_protocol_assignment",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.id",
+       "n": 10
+      }
+     ]
+    },
+    {
+     "table": "symbolprotocolaffinity",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "timelineevent",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "trading_strategy",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 14
+      }
+     ]
+    },
+    {
+     "table": "watchlist",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.id",
+       "n": 26
+      }
+     ]
+    },
+    {
+     "table": "watchlist_backup_763",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.id",
+       "n": 3
+      }
+     ]
+    },
+    {
+     "table": "watchlist_backup_764",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.id",
+       "n": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "column": "strategyId",
+   "types": [
+    "varchar(36)",
+    "varchar(64)"
+   ],
+   "tables": 15,
+   "enforcedAnywhere": true,
+   "uses": [
+    {
+     "table": "automation_event",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "trading_strategy.id",
+       "n": 23
+      },
+      {
+       "space": "scoring_strategy.id",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "decision_log",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "trading_strategy.id",
+       "n": 24
+      },
+      {
+       "space": "scoring_strategy.id",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "decision_trail",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "directive",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "directiveoutcome",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 20
+      }
+     ]
+    },
+    {
+     "table": "paper_trade",
+     "type": "varchar(64)",
+     "drawsFrom": [
+      {
+       "space": "trading_strategy.id",
+       "n": 7
+      }
+     ]
+    },
+    {
+     "table": "pending_action",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "protocolversion",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "score",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 27
+      }
+     ]
+    },
+    {
+     "table": "signal",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "strategy_evaluation",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "trading_strategy.id",
+       "n": 21
+      }
+     ]
+    },
+    {
+     "table": "strategy_protocol",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "trading_strategy.id",
+       "n": 26
+      }
+     ]
+    },
+    {
+     "table": "strategy_signal_queue",
+     "type": "varchar(36)",
+     "drawsFrom": [
+      {
+       "space": "trading_strategy.id",
+       "n": 18
+      }
+     ]
+    },
+    {
+     "table": "strategymeta",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "strategyperformance",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    }
+   ]
+  },
+  {
+   "column": "symbols",
+   "types": [
+    "json",
+    "varchar(200)"
+   ],
+   "tables": 7,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "ab_test",
+     "type": "json",
+     "drawsFrom": []
+    },
+    {
+     "table": "news_item",
+     "type": "varchar(200)",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 12
+      }
+     ]
+    },
+    {
+     "table": "protocolrun",
+     "type": "json",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 1
+      }
+     ]
+    },
+    {
+     "table": "tradingplan",
+     "type": "json",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 2
+      }
+     ]
+    },
+    {
+     "table": "watchlist",
+     "type": "json",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 15
+      }
+     ]
+    },
+    {
+     "table": "watchlist_backup_763",
+     "type": "json",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 5
+      }
+     ]
+    },
+    {
+     "table": "watchlist_backup_764",
+     "type": "json",
+     "drawsFrom": [
+      {
+       "space": "symbol.ticker",
+       "n": 6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "column": "brokerId",
+   "types": [
+    "varchar(50)",
+    "int"
+   ],
+   "tables": 6,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "automationconfig",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    },
+    {
+     "table": "pending_action",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    },
+    {
+     "table": "scoring_strategy",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    },
+    {
+     "table": "symbol_route",
+     "type": "int",
+     "drawsFrom": []
+    },
+    {
+     "table": "timelineevent",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    },
+    {
+     "table": "trading_strategy",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    }
+   ]
+  },
+  {
+   "column": "userId",
+   "types": [
+    "varchar(50)",
+    "varchar(36)",
+    "varchar(100)"
+   ],
+   "tables": 5,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "userpreferences",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    },
+    {
+     "table": "userstar",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "watchlist",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "watchlist_backup_763",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "watchlist_backup_764",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    }
+   ]
+  },
+  {
+   "column": "groupId",
+   "types": [
+    "varchar(36)",
+    "varchar(50)"
+   ],
+   "tables": 4,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "protocol_directive_entry",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "protocol_directive_entry_backup_761",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    },
+    {
+     "table": "protocol_directive_group",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    },
+    {
+     "table": "protocol_directive_group_backup_761",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    }
+   ]
+  },
+  {
+   "column": "shortProtocolId",
+   "types": [
+    "varchar(100)",
+    "varchar(36)"
+   ],
+   "tables": 3,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "decision_trail",
+     "type": "varchar(100)",
+     "drawsFrom": []
+    },
+    {
+     "table": "scoring_strategy",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 1
+      }
+     ]
+    },
+    {
+     "table": "trading_strategy",
+     "type": "varchar(36)",
+     "drawsFrom": []
+    }
+   ]
+  },
+  {
+   "column": "slug",
+   "types": [
+    "varchar(100)",
+    "varchar(50)"
+   ],
+   "tables": 2,
+   "enforcedAnywhere": false,
+   "uses": [
+    {
+     "table": "protocol",
+     "type": "varchar(100)",
+     "drawsFrom": [
+      {
+       "space": "protocol.slug",
+       "n": 47
+      }
+     ]
+    },
+    {
+     "table": "sources",
+     "type": "varchar(50)",
+     "drawsFrom": []
+    }
+   ]
+  }
+ ],
+ "columns": [
+  {
+   "table": "automationconfig",
+   "column": "brokerId",
+   "type": "varchar(50)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "order",
+   "column": "accountId",
+   "type": "varchar(100)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 2412,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "order",
+   "column": "providerId",
+   "type": "varchar(100)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 2412,
+   "nonNull": 926,
+   "distinctSampled": 127,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 127,
+   "sample": [
+    "152338541426",
+    "152338549245",
+    "152338568799",
+    "152338577712",
+    "152338722983",
+    "152341368087"
+   ]
+  },
+  {
+   "table": "orderexecution",
+   "column": "providerOrderId",
+   "type": "varchar(100)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "pending_action",
+   "column": "brokerId",
+   "type": "varchar(50)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "position",
+   "column": "accountId",
+   "type": "varchar(100)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 30,
+   "nonNull": 30,
+   "distinctSampled": 3,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "10011309743",
+    "62135531",
+    "trading212-demo"
+   ]
+  },
+  {
+   "table": "position_ts_backup_20260910",
+   "column": "accountId",
+   "type": "varchar(100)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 24,
+   "nonNull": 24,
+   "distinctSampled": 2,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 2,
+   "sample": [
+    "trading212-demo",
+    "10011309743"
+   ]
+  },
+  {
+   "table": "scoring_strategy",
+   "column": "brokerId",
+   "type": "varchar(50)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 27,
+   "nonNull": 27,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "mt5"
+   ]
+  },
+  {
+   "table": "symbol_route",
+   "column": "brokerId",
+   "type": "int",
+   "family": "broker",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 11,
+   "nonNull": 7,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "3"
+   ]
+  },
+  {
+   "table": "timelineevent",
+   "column": "brokerId",
+   "type": "varchar(50)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "trade",
+   "column": "accountId",
+   "type": "varchar(100)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 211,
+   "nonNull": 7,
+   "distinctSampled": 2,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 2,
+   "sample": [
+    "10011309743",
+    "62135531"
+   ]
+  },
+  {
+   "table": "trading_strategy",
+   "column": "brokerId",
+   "type": "varchar(50)",
+   "family": "broker",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 27,
+   "nonNull": 27,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "mt5"
+   ]
+  },
+  {
+   "table": "ab_test",
+   "column": "controlStackId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "ab_test",
+   "column": "variantStackId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "apicredentials",
+   "column": "valid",
+   "type": "tinyint(1)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "architecture_entry",
+   "column": "sectionId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 15,
+   "nonNull": 15,
+   "distinctSampled": 2,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 2,
+   "sample": [
+    "29844724-d962-418a-96d7-c4a37a0fbeb8",
+    "2c9201eb-fefc-407e-b348-6fefbbf3b453"
+   ]
+  },
+  {
+   "table": "architecture_revision",
+   "column": "entryId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "articlesample",
+   "column": "sourceId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "backtesttrade",
+   "column": "runId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 391,
+   "nonNull": 391,
+   "distinctSampled": 9,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 9,
+   "sample": [
+    "0ea3dcae-0f2c-4562-8604-3c4aeca6c2b4",
+    "21d1dfe4-8655-4fdb-8bc0-638c24063a6f",
+    "5b14aca8-7217-4faa-a0e5-5c77ca3f54d7",
+    "78bbcc10-eb34-42a2-b730-ac51103c0d76",
+    "97aaf025-a7c1-4ee2-97c3-2c24e7a8c0d6",
+    "9e618cb0-c239-45fc-a13c-b38daecf57c1"
+   ]
+  },
+  {
+   "table": "decision_trail",
+   "column": "scoreSnapshotId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "decision_trail",
+   "column": "tradeId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "directive",
+   "column": "parentId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 104,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "directiveoutcome",
+   "column": "directiveId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 12200,
+   "nonNull": 12200,
+   "distinctSampled": 16,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 16,
+   "sample": [
+    "analyst-adjustments",
+    "btc-halving-cycle",
+    "cci",
+    "ema-structure",
+    "gold-round-numbers",
+    "macd-crossover"
+   ]
+  },
+  {
+   "table": "earnings_analysis",
+   "column": "batch_id",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 26,
+   "nonNull": 26,
+   "distinctSampled": 5,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 5,
+   "sample": [
+    "1d25da02-20d8-4025-8d71-de262104e5f5",
+    "3bdd1112-76f5-476b-a12b-07347c18e73f",
+    "b493116d-2104-4d6f-998f-e352123b3b5b",
+    "e0a4c95a-3acb-4283-8b15-f281c1655751",
+    "f8ff65a0-2c0f-429b-ba11-c9865f1494b0"
+   ]
+  },
+  {
+   "table": "earnings_analysis",
+   "column": "source_id",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 26,
+   "nonNull": 26,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "11111111-1111-4111-8111-111111111111"
+   ]
+  },
+  {
+   "table": "earnings_analysis_batch",
+   "column": "source_id",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 6,
+   "nonNull": 6,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "11111111-1111-4111-8111-111111111111"
+   ]
+  },
+  {
+   "table": "marketbar",
+   "column": "recordingSessionId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 555394,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "marketbar_future_orphan_backup_780",
+   "column": "recordingSessionId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 226,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "newsarticle",
+   "column": "sourceId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 15086,
+   "nonNull": 15086,
+   "distinctSampled": 7,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 7,
+   "sample": [
+    "804b699a-0f0f-4c8b-8452-8efc7c321c92",
+    "817e6c36-a1b4-415a-8b25-8e531fad88db",
+    "93bbaf84-da5c-4f6c-941f-4f7a94757116",
+    "94b2fcea-baba-4c27-9fb2-ea44aaed98d7",
+    "d832e9ae-d1fa-4e49-921b-9e989309350e",
+    "ef69fd21-7c31-4e19-a991-06c47d1ec468"
+   ]
+  },
+  {
+   "table": "newsimportrun",
+   "column": "tierId",
+   "type": "varchar(50)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 1135,
+   "nonNull": 1074,
+   "distinctSampled": 4,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 4,
+   "sample": [
+    "active-protocols",
+    "macro",
+    "positions",
+    "sector"
+   ]
+  },
+  {
+   "table": "orderexecution",
+   "column": "orderId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "planstep",
+   "column": "planId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 5,
+   "nonNull": 5,
+   "distinctSampled": 4,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 4,
+   "sample": [
+    "45cb5e2b-cbe5-4c7d-aad4-17dbc2a8f202",
+    "b44cfa85-cda0-4158-91a3-4e478f358614",
+    "deb6f3f3-6569-4684-b652-fb107ea4b8f9",
+    "eaf22fe9-6e33-419f-a1b2-32cb85e26b8b"
+   ]
+  },
+  {
+   "table": "portfolio_snapshot_position",
+   "column": "snapshotId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "processmeta",
+   "column": "pid",
+   "type": "int",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "protocol",
+   "column": "slug",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 47,
+   "nonNull": 47,
+   "distinctSampled": 47,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 47
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d",
+    "btc-scalp-v1",
+    "btc-speed-v1",
+    "cac-speed-v1",
+    "china-speed-v1",
+    "commodity-pairs-v1"
+   ]
+  },
+  {
+   "table": "protocol_directive_entry",
+   "column": "directiveId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 419,
+   "nonNull": 419,
+   "distinctSampled": 68,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 68,
+   "sample": [
+    "gold-macro-correlation",
+    "gold-session-profile",
+    "analyst-adjustments",
+    "spy-qqq-relative-strength",
+    "bollinger-band-squeeze",
+    "micro-sr-levels"
+   ]
+  },
+  {
+   "table": "protocol_directive_entry",
+   "column": "groupId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 419,
+   "nonNull": 419,
+   "distinctSampled": 130,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 130,
+   "sample": [
+    "001556dc-1575-44ea-8824-7a10aa5df123",
+    "0037cff2-44f9-4663-a539-e6a1e3cfb76a",
+    "009bcabb-6405-43ca-abc0-15a620e2a997",
+    "02e7ed10-c2b5-44a8-8609-e4f50d3a7fd0",
+    "05464f84-2801-405a-8084-30299d123f09",
+    "06786673-4b9e-4977-b87f-d9d265fdadb4"
+   ]
+  },
+  {
+   "table": "protocol_directive_entry_backup_761",
+   "column": "directiveId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 18,
+   "nonNull": 18,
+   "distinctSampled": 11,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 11,
+   "sample": [
+    "liquidity-check",
+    "session-open-effect",
+    "bollinger-band-squeeze",
+    "rsi-overbought",
+    "rsi-oversold",
+    "speed-momentum"
+   ]
+  },
+  {
+   "table": "protocol_directive_entry_backup_761",
+   "column": "groupId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 18,
+   "nonNull": 18,
+   "distinctSampled": 4,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 4,
+   "sample": [
+    "3704d5fc-b9c7-4c08-87dc-2529409cdd0b",
+    "02e7ed10-c2b5-44a8-8609-e4f50d3a7fd0",
+    "08bcaab0-3e19-409e-8527-f45d18766850",
+    "37052cae-51e8-49b3-a53c-1bbe56541466"
+   ]
+  },
+  {
+   "table": "protocol_directive_group",
+   "column": "groupId",
+   "type": "varchar(50)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 134,
+   "nonNull": 134,
+   "distinctSampled": 13,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 13,
+   "sample": [
+    "risk",
+    "sentiment",
+    "technical",
+    "oil-macro",
+    "macro",
+    "short-risk"
+   ]
+  },
+  {
+   "table": "protocol_directive_group_backup_761",
+   "column": "groupId",
+   "type": "varchar(50)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 6,
+   "nonNull": 6,
+   "distinctSampled": 3,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "risk",
+    "sentiment",
+    "technical"
+   ]
+  },
+  {
+   "table": "publishingpattern",
+   "column": "sourceId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "roadmap_card",
+   "column": "columnId",
+   "type": "varchar(40)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 700,
+   "nonNull": 700,
+   "distinctSampled": 17,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 17,
+   "sample": [
+    "discussion",
+    "meta-stack-build",
+    "next-sprint",
+    "phase-1",
+    "phase-2",
+    "phase-3"
+   ]
+  },
+  {
+   "table": "signal_outcome_log",
+   "column": "scoreId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 3537,
+   "nonNull": 3537,
+   "distinctSampled": 200,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 200,
+   "sample": [
+    "0005ea8f-8c42-4db0-ac79-7d570c669e1f",
+    "00186f09-24ad-4b09-a887-be8569d53e65",
+    "001dd278-b5ef-455a-8655-5af31ac370e9",
+    "0048f8d5-f66d-4741-a2ac-4988300f168e",
+    "004d6aa1-c615-4a5b-9907-f36d1e997c97",
+    "0086a930-e917-4925-925f-b1f6bd5ae815"
+   ]
+  },
+  {
+   "table": "signal_outcome_meta",
+   "column": "logId",
+   "type": "varchar(64)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 9426,
+   "nonNull": 9426,
+   "distinctSampled": 200,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 200,
+   "sample": [
+    "ol-1788438559671-3efuc0",
+    "ol-1788438559676-uqyx5f",
+    "ol-1788438559679-wcl04s",
+    "ol-1788441666351-cbezu6",
+    "ol-1788441666358-r8i1bb",
+    "ol-1788441785610-h722im"
+   ]
+  },
+  {
+   "table": "signal_rank_snapshot",
+   "column": "scoreId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 696,
+   "nonNull": 696,
+   "distinctSampled": 200,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 200,
+   "sample": [
+    "b70eaaab-806c-4aae-97cf-905207c586d2",
+    "e1943fad-5bfc-4742-b0e9-864fd7f62a5b",
+    "52ba962b-ebf9-4ace-8080-7ee48490655a",
+    "52350804-b49d-4c1f-ba9c-84a63168db45",
+    "4043dbe8-98b6-4759-b09b-a31a5fd598a7",
+    "ea7a77cd-052a-4ddd-ab3c-d3166f26a1ca"
+   ]
+  },
+  {
+   "table": "sources",
+   "column": "slug",
+   "type": "varchar(50)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 1,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "earnings-whispers"
+   ]
+  },
+  {
+   "table": "strategy_signal_queue",
+   "column": "scoreId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 18,
+   "nonNull": 18,
+   "distinctSampled": 18,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 18,
+   "sample": [
+    "cb4a7d8e-c87b-4f78-a6e5-6d688d54400f",
+    "60fccf28-9e81-46cb-bb9d-2080afd9272e",
+    "10121fa0-5ac6-4b18-8c6c-50bb969beb48",
+    "21eb682f-a5eb-46ff-b3c5-036e8a7bb5eb",
+    "71ffc7f5-657e-4a1b-8560-a1a5c92d5e09",
+    "dbfd87c9-0fba-401a-b8c8-11a8904365fa"
+   ]
+  },
+  {
+   "table": "symbolcalibration",
+   "column": "directiveId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "trade",
+   "column": "abTestId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 211,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "trade",
+   "column": "pnlInvalid",
+   "type": "tinyint(1)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 211,
+   "nonNull": 82,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "1"
+   ]
+  },
+  {
+   "table": "trade_ts_backup_20260910",
+   "column": "abTestId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 140,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "userpreferences",
+   "column": "userId",
+   "type": "varchar(50)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 52,
+   "nonNull": 52,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "default"
+   ]
+  },
+  {
+   "table": "userstar",
+   "column": "itemId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "userstar",
+   "column": "userId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist",
+   "column": "userId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 42,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist_backup_763",
+   "column": "userId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 23,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist_backup_764",
+   "column": "userId",
+   "type": "varchar(100)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 19,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist_item",
+   "column": "screenerHitId",
+   "type": "varchar(36)",
+   "family": "other",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "backtestrun",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 11,
+   "nonNull": 11,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "default"
+   ]
+  },
+  {
+   "table": "decision_trail",
+   "column": "longProtocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "decision_trail",
+   "column": "shortProtocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "paper_trade",
+   "column": "protocolId",
+   "type": "varchar(64)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 44,
+   "nonNull": 44,
+   "distinctSampled": 6,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 6
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "forex-session-v1",
+    "xau-speed-v1",
+    "xau-speed-1h",
+    "xau-speed-4h",
+    "xau-speed-m5",
+    "xau-speed-m15"
+   ]
+  },
+  {
+   "table": "protocol_directive_group",
+   "column": "protocolId",
+   "type": "varchar(36)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 134,
+   "nonNull": 134,
+   "distinctSampled": 45,
+   "drawsFrom": [
+    {
+     "space": "protocol.id",
+     "n": 45
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "1b70c296-e49f-403d-9816-6e2ed84d1d7a",
+    "248c5bc8-19f4-4bfb-a98e-2cab84ef0465",
+    "2980c6cd-fc1e-422c-aee1-dc49fcb69290",
+    "2b5f903a-020a-4c72-b6a5-f67fb52856db",
+    "2c88956e-81af-48ce-b941-270a891c8276",
+    "329baa1e-bd8b-4bb5-a954-9fa988ccdc57"
+   ]
+  },
+  {
+   "table": "protocol_directive_group_backup_761",
+   "column": "protocolId",
+   "type": "varchar(36)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 6,
+   "nonNull": 6,
+   "distinctSampled": 2,
+   "drawsFrom": [
+    {
+     "space": "protocol.id",
+     "n": 2
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "1b70c296-e49f-403d-9816-6e2ed84d1d7a",
+    "d95731a9-edfb-42b6-ad2b-ac4bb045f499"
+   ]
+  },
+  {
+   "table": "protocol_score_status",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 21,
+   "nonNull": 21,
+   "distinctSampled": 21,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 21
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "cac-speed-v1",
+    "china-speed-v1",
+    "dax-speed-v1",
+    "ftse-speed-v1",
+    "hourly-3dir-v1",
+    "qqq-speed-v1"
+   ]
+  },
+  {
+   "table": "protocolrun",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 7,
+   "nonNull": 7,
+   "distinctSampled": 3,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "mean-reversion",
+    "momentum-short",
+    "swing-long"
+   ]
+  },
+  {
+   "table": "score_snapshot",
+   "column": "protocolId",
+   "type": "varchar(36)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 311350,
+   "nonNull": 311350,
+   "distinctSampled": 50,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 42
+    },
+    {
+     "space": "protocol.id",
+     "n": 5
+    }
+   ],
+   "ambiguous": true,
+   "unmatched": 3,
+   "sample": [
+    "060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d",
+    "1b70c296-e49f-403d-9816-6e2ed84d1d7a",
+    "42f2ec59-706b-41f5-af96-3cb4db76649e",
+    "9f480543-ed29-464a-93fc-bd9e7f623ba8",
+    "b64287c1-9e3a-46ac-9ebe-0a35079a1c72",
+    "btc-scalp-v1"
+   ]
+  },
+  {
+   "table": "scoring_strategy",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 27,
+   "nonNull": 27,
+   "distinctSampled": 16,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 15
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "mt5-technical-core-v1",
+    "060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d",
+    "spy-speed-v1",
+    "forex-session-v1",
+    "cad-sniper-v1",
+    "xau-speed-v1"
+   ]
+  },
+  {
+   "table": "scoring_strategy",
+   "column": "shortProtocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 27,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 1
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "vix-short-v1"
+   ]
+  },
+  {
+   "table": "scoring_strategy_protocol",
+   "column": "protocolSlug",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 16,
+   "nonNull": 16,
+   "distinctSampled": 4,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 2
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 2,
+   "sample": [
+    "built-in-default",
+    "mt5-technical-core-v1",
+    "060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d",
+    "built-in-short"
+   ]
+  },
+  {
+   "table": "signal_dismissal",
+   "column": "protocolId",
+   "type": "varchar(50)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 2,
+   "nonNull": 2,
+   "distinctSampled": 2,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 2
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "forex-session-v1",
+    "vix-short-v1"
+   ]
+  },
+  {
+   "table": "signal_outcome_log",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 3537,
+   "nonNull": 3537,
+   "distinctSampled": 25,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 25
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "btc-scalp-v1",
+    "btc-speed-v1",
+    "cac-speed-v1",
+    "china-speed-v1",
+    "dax-speed-v1",
+    "dow-speed-v1"
+   ]
+  },
+  {
+   "table": "signal_rank_snapshot",
+   "column": "protocolId",
+   "type": "varchar(50)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 696,
+   "nonNull": 696,
+   "distinctSampled": 19,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 19
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "forex-session-v1",
+    "btc-scalp-v1",
+    "btc-speed-v1",
+    "china-speed-v1",
+    "hourly-3dir-v1",
+    "cac-speed-v1"
+   ]
+  },
+  {
+   "table": "strategy_protocol",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 26,
+   "nonNull": 26,
+   "distinctSampled": 13,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 13
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "btc-speed-v1",
+    "cac-speed-v1",
+    "dax-speed-v1",
+    "eurusd-macro-v1",
+    "forex-session-v1",
+    "ftse-speed-v1"
+   ]
+  },
+  {
+   "table": "strategy_signal_queue",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 18,
+   "nonNull": 18,
+   "distinctSampled": 6,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 6
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "cac-speed-v1",
+    "dax-speed-v1",
+    "forex-session-v1",
+    "ftse-speed-v1",
+    "xau-speed-m15",
+    "xau-speed-m5"
+   ]
+  },
+  {
+   "table": "symbol_protocol_assignment",
+   "column": "protocolId",
+   "type": "varchar(36)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 22,
+   "nonNull": 22,
+   "distinctSampled": 10,
+   "drawsFrom": [
+    {
+     "space": "protocol.id",
+     "n": 10
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "ea3dac2a-d8a7-425e-b9ef-9baa70711beb",
+    "b64287c1-9e3a-46ac-9ebe-0a35079a1c72",
+    "d6386512-acfc-11f1-951d-9c6b00b28963",
+    "ff3cea34-acfc-11f1-951d-9c6b00b28963",
+    "9f480543-ed29-464a-93fc-bd9e7f623ba8",
+    "1b70c296-e49f-403d-9816-6e2ed84d1d7a"
+   ]
+  },
+  {
+   "table": "symbolprotocolaffinity",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 1,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "mean-reversion"
+   ]
+  },
+  {
+   "table": "timelineevent",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "trading_strategy",
+   "column": "protocolId",
+   "type": "varchar(36)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 27,
+   "nonNull": 27,
+   "distinctSampled": 14,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 14
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "forex-session-v1",
+    "xau-speed-1h",
+    "xau-speed-4h",
+    "hourly-3dir-v1",
+    "xau-speed-m5",
+    "xau-speed-m15"
+   ]
+  },
+  {
+   "table": "trading_strategy",
+   "column": "shortProtocolId",
+   "type": "varchar(36)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 27,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 42,
+   "nonNull": 26,
+   "distinctSampled": 26,
+   "drawsFrom": [
+    {
+     "space": "protocol.id",
+     "n": 26
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "86a8d1fa-8ac5-4d16-aff4-2f864fee02f7",
+    "d6386512-acfc-11f1-951d-9c6b00b28963",
+    "c6b03791-a75b-4891-9038-b3c4c75817ba",
+    "ff3cea34-acfc-11f1-951d-9c6b00b28963",
+    "2b5f903a-020a-4c72-b6a5-f67fb52856db",
+    "fa93292e-3229-4493-9397-156953cd71ef"
+   ]
+  },
+  {
+   "table": "watchlist_backup_763",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 23,
+   "nonNull": 3,
+   "distinctSampled": 3,
+   "drawsFrom": [
+    {
+     "space": "protocol.id",
+     "n": 3
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "d6386512-acfc-11f1-951d-9c6b00b28963",
+    "c6b03791-a75b-4891-9038-b3c4c75817ba",
+    "ff3cea34-acfc-11f1-951d-9c6b00b28963"
+   ]
+  },
+  {
+   "table": "watchlist_backup_764",
+   "column": "protocolId",
+   "type": "varchar(100)",
+   "family": "protocol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 19,
+   "nonNull": 4,
+   "distinctSampled": 4,
+   "drawsFrom": [
+    {
+     "space": "protocol.id",
+     "n": 4
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "d6386512-acfc-11f1-951d-9c6b00b28963",
+    "c6b03791-a75b-4891-9038-b3c4c75817ba",
+    "ff3cea34-acfc-11f1-951d-9c6b00b28963",
+    "2980c6cd-fc1e-422c-aee1-dc49fcb69290"
+   ]
+  },
+  {
+   "table": "automation_event",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 176228,
+   "nonNull": 27714,
+   "distinctSampled": 37,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 23
+    },
+    {
+     "space": "scoring_strategy.id",
+     "n": 2
+    }
+   ],
+   "ambiguous": true,
+   "unmatched": 12,
+   "sample": [
+    "05fe3c0c-80ad-11f1-bac6-9c6b00b28963",
+    "0f6b949a-db61-4dd6-8b13-ac8fcf028331",
+    "10e91b87-4ecf-480b-b759-acc05fb3efd6",
+    "11e9515a-ddbc-47b4-8c94-c42079292291",
+    "14fab974-b9e0-4294-b736-af4bbf610edc",
+    "1fb2fd0c-586e-4eed-9ced-3487be047848"
+   ]
+  },
+  {
+   "table": "decision_log",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 224004,
+   "nonNull": 129888,
+   "distinctSampled": 50,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 24
+    },
+    {
+     "space": "scoring_strategy.id",
+     "n": 2
+    }
+   ],
+   "ambiguous": true,
+   "unmatched": 24,
+   "sample": [
+    "05fe3c0c-80ad-11f1-bac6-9c6b00b28963",
+    "0f6b949a-db61-4dd6-8b13-ac8fcf028331",
+    "104e7d12-08b2-43b4-bd71-44b8a1abcbb2",
+    "10e91b87-4ecf-480b-b759-acc05fb3efd6",
+    "11b12543-9bff-437a-abd0-7ac01d362444",
+    "11e9515a-ddbc-47b4-8c94-c42079292291"
+   ]
+  },
+  {
+   "table": "decision_trail",
+   "column": "strategyEvalId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "decision_trail",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "directive",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 104,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "directiveoutcome",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 12200,
+   "nonNull": 12200,
+   "distinctSampled": 20,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 20
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "qqq-day-v1",
+    "dax-speed-v1",
+    "cac-speed-v1",
+    "vix-short-v1",
+    "xau-speed-4h",
+    "xau-speed-1h"
+   ]
+  },
+  {
+   "table": "metastack_change_log",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 13,
+   "nonNull": 13,
+   "distinctSampled": 13,
+   "drawsFrom": [
+    {
+     "space": "scoring_strategy.id",
+     "n": 12
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "ss-1783120270854",
+    "ss-1785454827668",
+    "ss-1785454827730",
+    "ss-1785454827762",
+    "ss-1785454827794",
+    "ss-1785454834875"
+   ]
+  },
+  {
+   "table": "metastack_snapshot",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 13,
+   "nonNull": 13,
+   "distinctSampled": 13,
+   "drawsFrom": [
+    {
+     "space": "scoring_strategy.id",
+     "n": 12
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "ss-1783120270854",
+    "ss-1785454827668",
+    "ss-1785454827730",
+    "ss-1785454827762",
+    "ss-1785454827794",
+    "ss-1785454834875"
+   ]
+  },
+  {
+   "table": "paper_trade",
+   "column": "strategyId",
+   "type": "varchar(64)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 44,
+   "nonNull": 44,
+   "distinctSampled": 7,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 7
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "1fb2fd0c-586e-4eed-9ced-3487be047848",
+    "346046f5-8a9c-486a-98da-6f311205f917",
+    "8daec833-f6bf-4435-afd2-a11b6b300855",
+    "8fcdfbcd-8074-4667-a2dd-48650390db7f",
+    "9b2a1e22-a7fc-4db2-8c8e-bd1503acb250",
+    "b1c361b5-d6f0-4371-bbc2-2b270a973a09"
+   ]
+  },
+  {
+   "table": "pending_action",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "protocolversion",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "score",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 8414,
+   "nonNull": 8414,
+   "distinctSampled": 27,
+   "drawsFrom": [
+    {
+     "space": "protocol.slug",
+     "n": 27
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "btc-scalp-v1",
+    "btc-speed-v1",
+    "cac-speed-v1",
+    "china-speed-v1",
+    "dax-speed-v1",
+    "dow-speed-v1"
+   ]
+  },
+  {
+   "table": "scoring_strategy_protocol",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 16,
+   "nonNull": 16,
+   "distinctSampled": 15,
+   "drawsFrom": [
+    {
+     "space": "scoring_strategy.id",
+     "n": 4
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 11,
+   "sample": [
+    "ss-1783120270854",
+    "ss-1783120277546",
+    "ss-1783121267358",
+    "ss-1783121314793",
+    "ss-1783121859956",
+    "ss-1783363569157"
+   ]
+  },
+  {
+   "table": "signal",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "stack_performance",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "strategy_evaluation",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": true,
+   "nullable": false,
+   "totalRows": 10274,
+   "nonNull": 10274,
+   "distinctSampled": 21,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 21
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "11e9515a-ddbc-47b4-8c94-c42079292291",
+    "14fab974-b9e0-4294-b736-af4bbf610edc",
+    "1fb2fd0c-586e-4eed-9ced-3487be047848",
+    "24f317dc-9c77-4c3b-889a-bd39dfb0c70f",
+    "346046f5-8a9c-486a-98da-6f311205f917",
+    "34ac0946-db7b-44ca-9121-e1eff293f05d"
+   ]
+  },
+  {
+   "table": "strategy_protocol",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 26,
+   "nonNull": 26,
+   "distinctSampled": 26,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 26
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "11e9515a-ddbc-47b4-8c94-c42079292291",
+    "14fab974-b9e0-4294-b736-af4bbf610edc",
+    "1fb2fd0c-586e-4eed-9ced-3487be047848",
+    "24f317dc-9c77-4c3b-889a-bd39dfb0c70f",
+    "346046f5-8a9c-486a-98da-6f311205f917",
+    "34ac0946-db7b-44ca-9121-e1eff293f05d"
+   ]
+  },
+  {
+   "table": "strategy_signal_queue",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 18,
+   "nonNull": 18,
+   "distinctSampled": 18,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 18
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "14fab974-b9e0-4294-b736-af4bbf610edc",
+    "24f317dc-9c77-4c3b-889a-bd39dfb0c70f",
+    "346046f5-8a9c-486a-98da-6f311205f917",
+    "34ac0946-db7b-44ca-9121-e1eff293f05d",
+    "4d392a8a-b153-438c-9c0c-1ee547d05572",
+    "5fa8a69a-6ab8-4ba6-9b82-e3b798bb5a68"
+   ]
+  },
+  {
+   "table": "strategymeta",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "strategyperformance",
+   "column": "strategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "trade",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 211,
+   "nonNull": 183,
+   "distinctSampled": 36,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 20
+    },
+    {
+     "space": "protocol.slug",
+     "n": 8
+    }
+   ],
+   "ambiguous": true,
+   "unmatched": 8,
+   "sample": [
+    "0f6b949a-db61-4dd6-8b13-ac8fcf028331",
+    "10e91b87-4ecf-480b-b759-acc05fb3efd6",
+    "11e9515a-ddbc-47b4-8c94-c42079292291",
+    "14fab974-b9e0-4294-b736-af4bbf610edc",
+    "1fb2fd0c-586e-4eed-9ced-3487be047848",
+    "24f317dc-9c77-4c3b-889a-bd39dfb0c70f"
+   ]
+  },
+  {
+   "table": "trade_ts_backup_20260910",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 140,
+   "nonNull": 112,
+   "distinctSampled": 16,
+   "drawsFrom": [
+    {
+     "space": "trading_strategy.id",
+     "n": 5
+    },
+    {
+     "space": "protocol.slug",
+     "n": 3
+    }
+   ],
+   "ambiguous": true,
+   "unmatched": 8,
+   "sample": [
+    "b687682d-2b9d-43d9-8ef7-42b37aabbea2",
+    "10e91b87-4ecf-480b-b759-acc05fb3efd6",
+    "0f6b949a-db61-4dd6-8b13-ac8fcf028331",
+    "4a1612f0-c191-4e71-aab6-d8e7408fb3b4",
+    "b5b6a97a-80ae-11f1-bac6-9c6b00b28963",
+    "b5132eec-80ae-11f1-bac6-9c6b00b28963"
+   ]
+  },
+  {
+   "table": "trading_strategy",
+   "column": "scoringStrategyId",
+   "type": "varchar(36)",
+   "family": "strategy",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 27,
+   "nonNull": 23,
+   "distinctSampled": 11,
+   "drawsFrom": [
+    {
+     "space": "scoring_strategy.id",
+     "n": 11
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "192a0888-cc58-4036-8746-fefed7435d77",
+    "251059e2-fcd4-487d-9b32-be81b7b40244",
+    "auto-forex-session-v1",
+    "auto-xau-speed-v1",
+    "ss-1785454834875",
+    "ss-1785454844642"
+   ]
+  },
+  {
+   "table": "ab_test",
+   "column": "symbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "alert",
+   "column": "ticker",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "unreadable": true,
+   "nullable": true,
+   "totalRows": null,
+   "nonNull": null,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": null,
+   "sample": []
+  },
+  {
+   "table": "analyst_target",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "automation_event",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 176228,
+   "nonNull": 161855,
+   "distinctSampled": 35,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 34
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "—",
+    "AIR",
+    "AUDJPY",
+    "AUDUSD",
+    "CRWV",
+    "EEE"
+   ]
+  },
+  {
+   "table": "backtestrun",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 11,
+   "nonNull": 11,
+   "distinctSampled": 4,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 4
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "0f219819-4534-48dd-ab2a-f13826c63fb4",
+    "4faa248b-9ac5-4349-8a88-35676da9a4e5",
+    "a09301d9-7cb5-421d-a94c-62e53e3a7de8",
+    "aafe160c-4b86-4450-9904-7cada275d84d"
+   ]
+  },
+  {
+   "table": "backtesttrade",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 391,
+   "nonNull": 391,
+   "distinctSampled": 4,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 4
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "0f219819-4534-48dd-ab2a-f13826c63fb4",
+    "4faa248b-9ac5-4349-8a88-35676da9a4e5",
+    "a09301d9-7cb5-421d-a94c-62e53e3a7de8",
+    "aafe160c-4b86-4450-9904-7cada275d84d"
+   ]
+  },
+  {
+   "table": "chartsnapshot",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "companymetric",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 187,
+   "nonNull": 187,
+   "distinctSampled": 187,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 184
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "AAON",
+    "AAPL",
+    "ABBN",
+    "ACHR",
+    "ACIC",
+    "ACM"
+   ]
+  },
+  {
+   "table": "correlation_pair",
+   "column": "symbol_a",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 14708,
+   "nonNull": 14708,
+   "distinctSampled": 200,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 197
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "AAON",
+    "AAPL",
+    "ABB",
+    "ABBN",
+    "ACHR",
+    "ACIC"
+   ]
+  },
+  {
+   "table": "correlation_pair",
+   "column": "symbol_b",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 14708,
+   "nonNull": 14708,
+   "distinctSampled": 200,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 197
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "ABB",
+    "ABBN",
+    "ACM",
+    "ALB",
+    "AUDJPY",
+    "AWK"
+   ]
+  },
+  {
+   "table": "decision_log",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 224004,
+   "nonNull": 224004,
+   "distinctSampled": 78,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 77
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "AAPL",
+    "ACHR",
+    "ADSK",
+    "AIR",
+    "AM",
+    "AMAT"
+   ]
+  },
+  {
+   "table": "decision_trail",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "decodeddocument",
+   "column": "extractedSymbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "directive_audit_run",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 9,
+   "nonNull": 9,
+   "distinctSampled": 3,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 2
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "VIX",
+    "XAUUSD",
+    "XAUUSD,EURUSD"
+   ]
+  },
+  {
+   "table": "directiveoutcome",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 12200,
+   "nonNull": 12200,
+   "distinctSampled": 24,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 24
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "BTC",
+    "VIX",
+    "AUDJPY"
+   ]
+  },
+  {
+   "table": "earnings_analysis",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 26,
+   "nonNull": 26,
+   "distinctSampled": 11,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 4
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 7,
+   "sample": [
+    "CRM",
+    "CRWD",
+    "INTU",
+    "IREN",
+    "KSS",
+    "MRVL"
+   ]
+  },
+  {
+   "table": "earnings_event",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 10107,
+   "nonNull": 10107,
+   "distinctSampled": 200,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 7
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 193,
+   "sample": [
+    "A",
+    "AA",
+    "AACB",
+    "AACG",
+    "AADX",
+    "AAL"
+   ]
+  },
+  {
+   "table": "importrun",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 10,
+   "nonNull": 10,
+   "distinctSampled": 10,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 10
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "0ddc04de-942a-4f35-8688-f178832afe7a",
+    "1c799ba2-c663-4173-a185-ef244af36ac5",
+    "5f95cdf1-f616-4878-9622-d87913165460",
+    "8a7219c7-b8a7-45e9-a225-cea6c9825a5a",
+    "8ff1423a-0d7f-4043-9464-27847ced147d",
+    "950648bd-9b9f-4b18-b901-940b4267dfff"
+   ]
+  },
+  {
+   "table": "insidertransaction",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 2209,
+   "nonNull": 2209,
+   "distinctSampled": 123,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 123
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AAON",
+    "AAPL",
+    "ACHR",
+    "ACIC",
+    "ACM",
+    "ADSK"
+   ]
+  },
+  {
+   "table": "marketbar",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 555394,
+   "nonNull": 555394,
+   "distinctSampled": 114,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 108
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 6,
+   "sample": [
+    "07b9940a-9c8c-497b-b7b0-ea82049d869a",
+    "0b8673b9-ac9f-41c6-aa50-947ff63954c1",
+    "0c0a6472-af7b-4603-b883-15d31485e55e",
+    "0c773a86-84fe-43ab-96c0-01e2dd79046d",
+    "0ddc04de-942a-4f35-8688-f178832afe7a",
+    "0f219819-4534-48dd-ab2a-f13826c63fb4"
+   ]
+  },
+  {
+   "table": "marketbar_future_orphan_backup_780",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 226,
+   "nonNull": 226,
+   "distinctSampled": 16,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 16
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "ae9e3780-1d9f-484e-8746-bd78862e9fd0",
+    "8750f498-734e-4102-a694-b7f94fc2a4c1",
+    "797dddc5-962e-4dd6-98c2-64ab6f52bac3",
+    "df508e1c-3497-41ce-ab0d-4edc4d0c35e7",
+    "ae10397f-ad0c-11f1-951d-9c6b00b28963",
+    "0c773a86-84fe-43ab-96c0-01e2dd79046d"
+   ]
+  },
+  {
+   "table": "marketbar_ts_backup_20260910",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 195391,
+   "nonNull": 195391,
+   "distinctSampled": 185,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 185
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "77743170-7d02-49ec-a6cd-46bb71e6e53b",
+    "df508e1c-3497-41ce-ab0d-4edc4d0c35e7",
+    "365b8860-f87a-4b29-a4c9-aef068a98188",
+    "0c773a86-84fe-43ab-96c0-01e2dd79046d",
+    "9b8e89ce-e6e6-4d99-a92d-b44c4cc81605",
+    "c92b3457-0e39-479c-89b9-8b96e1a3b833"
+   ]
+  },
+  {
+   "table": "marketsnapshot",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "news_item",
+   "column": "symbols",
+   "type": "varchar(200)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 9274,
+   "nonNull": 8281,
+   "distinctSampled": 31,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 12
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 19,
+   "sample": [
+    "DIA",
+    "BAC",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN"
+   ]
+  },
+  {
+   "table": "newsarticle",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 15086,
+   "nonNull": 15086,
+   "distinctSampled": 191,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 144
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 47,
+   "sample": [
+    "A",
+    "AAON",
+    "AAPL",
+    "ACHR",
+    "ACM",
+    "ADBE"
+   ]
+  },
+  {
+   "table": "newsimportrun",
+   "column": "symbolsCount",
+   "type": "int",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 1135,
+   "nonNull": 1135,
+   "distinctSampled": 29,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 29,
+   "sample": [
+    "41",
+    "42",
+    "155",
+    "253",
+    "264",
+    "273"
+   ]
+  },
+  {
+   "table": "newsmeta",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "order",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 2412,
+   "nonNull": 2412,
+   "distinctSampled": 23,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 23
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDJPY",
+    "AUDUSD",
+    "BTC",
+    "EURCAD",
+    "EURCHF",
+    "EURGBP"
+   ]
+  },
+  {
+   "table": "paper_trade",
+   "column": "symbol",
+   "type": "varchar(32)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 44,
+   "nonNull": 44,
+   "distinctSampled": 4,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 4
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDUSD",
+    "USDCHF",
+    "USDJPY",
+    "XAUUSD"
+   ]
+  },
+  {
+   "table": "pending_action",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "planstep",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 5,
+   "nonNull": 5,
+   "distinctSampled": 3,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 3
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "SOUN",
+    "XAUUSD",
+    "USDCAD"
+   ]
+  },
+  {
+   "table": "portfolio_snapshot_position",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "position",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 30,
+   "nonNull": 30,
+   "distinctSampled": 30,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 30
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "3NVD",
+    "8XP",
+    "ACIC",
+    "AMZN",
+    "AUDJPY",
+    "BRWM"
+   ]
+  },
+  {
+   "table": "position",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 30,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "position_intent",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 1,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 1
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "EURGBP"
+   ]
+  },
+  {
+   "table": "position_ts_backup_20260910",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 24,
+   "nonNull": 24,
+   "distinctSampled": 24,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 24
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "EEE",
+    "3NVD",
+    "R3NK",
+    "METC",
+    "SOUN",
+    "RBLX"
+   ]
+  },
+  {
+   "table": "position_ts_backup_20260910",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 24,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "protocol_score_status",
+   "column": "symbolsResolved",
+   "type": "int",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 21,
+   "nonNull": 20,
+   "distinctSampled": 4,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 4,
+   "sample": [
+    "3",
+    "1",
+    "8",
+    "2"
+   ]
+  },
+  {
+   "table": "protocol_score_status",
+   "column": "symbolsScored",
+   "type": "int",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 21,
+   "nonNull": 7,
+   "distinctSampled": 3,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 3,
+   "sample": [
+    "3",
+    "1",
+    "2"
+   ]
+  },
+  {
+   "table": "protocolrun",
+   "column": "symbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 7,
+   "nonNull": 7,
+   "distinctSampled": 2,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 1
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "NVDA,AAPL",
+    "NVDA"
+   ]
+  },
+  {
+   "table": "score",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 8414,
+   "nonNull": 8414,
+   "distinctSampled": 41,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 41
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "022d695c-bb7b-41ec-8ce7-ee5a891d47fb",
+    "0b8673b9-ac9f-41c6-aa50-947ff63954c1",
+    "0c773a86-84fe-43ab-96c0-01e2dd79046d",
+    "0f219819-4534-48dd-ab2a-f13826c63fb4",
+    "15f408b7-d309-41f9-9c51-2996372ef7c0",
+    "236bc5ca-cc44-4b9e-a779-75dfa4e0aa06"
+   ]
+  },
+  {
+   "table": "score_snapshot",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 311350,
+   "nonNull": 311350,
+   "distinctSampled": 146,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 142
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 4,
+   "sample": [
+    "AAPL",
+    "ACHR",
+    "ADSK",
+    "AIR",
+    "ALP",
+    "AM"
+   ]
+  },
+  {
+   "table": "scoring_strategy",
+   "column": "watchlistId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 27,
+   "nonNull": 4,
+   "distinctSampled": 2,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 2,
+   "sample": [
+    "b97902b4-230f-45c1-b799-f0edb2350785",
+    "primary"
+   ]
+  },
+  {
+   "table": "screener_hit",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 19958,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "screener_hit",
+   "column": "ticker",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 19958,
+   "nonNull": 19958,
+   "distinctSampled": 200,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 7
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 193,
+   "sample": [
+    "A",
+    "AA",
+    "AACB",
+    "AACG",
+    "AADX",
+    "AAL"
+   ]
+  },
+  {
+   "table": "signal",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "signal_dismissal",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 2,
+   "nonNull": 2,
+   "distinctSampled": 2,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 2
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "EURCAD",
+    "VIX"
+   ]
+  },
+  {
+   "table": "signal_outcome_log",
+   "column": "symbol",
+   "type": "varchar(32)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 3537,
+   "nonNull": 3537,
+   "distinctSampled": 39,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 39
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDJPY",
+    "AUDUSD",
+    "AVGO",
+    "BTC",
+    "CHINA50",
+    "COIN"
+   ]
+  },
+  {
+   "table": "signal_rank_snapshot",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 696,
+   "nonNull": 696,
+   "distinctSampled": 29,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 29
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDJPY",
+    "AUDUSD",
+    "BTC",
+    "CHINA50",
+    "ETH",
+    "EURCAD"
+   ]
+  },
+  {
+   "table": "socialmention",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "stock_investigation",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 1,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 1
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "NVDA"
+   ]
+  },
+  {
+   "table": "stop_adjustment",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 199,
+   "nonNull": 199,
+   "distinctSampled": 10,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 10
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDJPY",
+    "EURCAD",
+    "EURCHF",
+    "EURGBP",
+    "EURJPY",
+    "GBPCAD"
+   ]
+  },
+  {
+   "table": "strategy_evaluation",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 10274,
+   "nonNull": 10274,
+   "distinctSampled": 18,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 18
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDUSD",
+    "GBPUSD",
+    "USDJPY",
+    "USDCAD",
+    "NZDUSD",
+    "USDCHF"
+   ]
+  },
+  {
+   "table": "strategy_signal_queue",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 18,
+   "nonNull": 18,
+   "distinctSampled": 17,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 17
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "FRA40",
+    "GER40",
+    "AUDJPY",
+    "AUDUSD",
+    "EURCAD",
+    "EURCHF"
+   ]
+  },
+  {
+   "table": "symbol",
+   "column": "ticker",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 254,
+   "nonNull": 254,
+   "distinctSampled": 200,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 200
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "3AMZ",
+    "3BA",
+    "3BAB",
+    "3BBE",
+    "3CHI",
+    "3LNV"
+   ]
+  },
+  {
+   "table": "symbol_protocol_assignment",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 22,
+   "nonNull": 22,
+   "distinctSampled": 22,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 22
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDJPY",
+    "BTC",
+    "ETH",
+    "EURCAD",
+    "EURCHF",
+    "EURGBP"
+   ]
+  },
+  {
+   "table": "symbol_route",
+   "column": "brokerSymbol",
+   "type": "varchar(50)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 11,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 1
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "VIX"
+   ]
+  },
+  {
+   "table": "symbol_route",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 11,
+   "nonNull": 11,
+   "distinctSampled": 11,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 11
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "BTC",
+    "DOGE",
+    "ETH",
+    "FRA40",
+    "GER40",
+    "SOL"
+   ]
+  },
+  {
+   "table": "symbolcalibration",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "symbolprotocolaffinity",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 1,
+   "nonNull": 1,
+   "distinctSampled": 1,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 1
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "NVDA"
+   ]
+  },
+  {
+   "table": "symboltechnical",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "tickrecordingsession",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 21,
+   "nonNull": 21,
+   "distinctSampled": 3,
+   "drawsFrom": [
+    {
+     "space": "symbol.id",
+     "n": 3
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "0c773a86-84fe-43ab-96c0-01e2dd79046d",
+    "0f219819-4534-48dd-ab2a-f13826c63fb4",
+    "ae9e3780-1d9f-484e-8746-bd78862e9fd0"
+   ]
+  },
+  {
+   "table": "timelineevent",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "trade",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 211,
+   "nonNull": 211,
+   "distinctSampled": 23,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 23
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "AUDJPY",
+    "AUDUSD",
+    "EURCAD",
+    "EURCHF",
+    "EURGBP",
+    "EURJPY"
+   ]
+  },
+  {
+   "table": "trade_ts_backup_20260910",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 140,
+   "nonNull": 140,
+   "distinctSampled": 10,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 10
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "XPOA",
+    "HOOD",
+    "EURUSD",
+    "AUDUSD",
+    "XAUUSD",
+    "USDCAD"
+   ]
+  },
+  {
+   "table": "trading_strategy",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 27,
+   "nonNull": 27,
+   "distinctSampled": 23,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 23
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": [
+    "GBPUSD",
+    "EURCHF",
+    "XAUUSD",
+    "GBPJPY",
+    "AUDUSD",
+    "EURCAD"
+   ]
+  },
+  {
+   "table": "tradingplan",
+   "column": "symbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 3,
+   "nonNull": 3,
+   "distinctSampled": 3,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 2
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 1,
+   "sample": [
+    "NVDA,3NVD,3LNV,MSTR,EEEl,SOUN,METC,PTGEF,ACIC,R3NK,8XP,RTP,RBLX,XIACY,AIR",
+    "XAUUSD",
+    "USDCAD"
+   ]
+  },
+  {
+   "table": "watchlist",
+   "column": "symbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 42,
+   "nonNull": 42,
+   "distinctSampled": 31,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 15
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 16,
+   "sample": [
+    "3AMZ,3BA,3BAB,3BAN,3BBE,3CHI,3COP,3FIN,3GLD,3GOS,3LAI,3LBR,3LBT,3LCH,3LCL,3LCY,3LDA,3LEN,3LEU,3LEV,3LGE,3LHE,3LIN,3LJP,3LME,3LMI,3LNA,3LON,3LPA,3LRE,3LRO,3LSE,3LTE,3LUS,3LUT,3NGS,3OIL,3OIS,3SBA,3SBR,3SCH,3SDA,3SEN,3SEU,3SFI,3SHE,3SIL,3SIS,3SJP,3SNA,3SRE,3SSE,3STE,3SUS,AAP3,AMD3,ARM3,BP3,COI3,FNGD,GOO3,INT3,JPM3,KWE3,MET3,MSF3,NVD3,PAL3,PLT3,SHE3,SOXS,SPXS,SQQQ,SRTY,TECS,TES3,TSM3,UBE3,YANG",
+    "NVDA,MSTR,PLTR,TSLA,AVGO,COIN,MARA,RIOT,HOOD,RKLB,ASTS,SOFI",
+    "FRA40",
+    "UK100",
+    "GER40",
+    "639,AMRQ,BRK.B,DAGB,GS2C,IFX,LSEG,NCYT,PLSR,QQ,R3NK,RHM,SGBX,URND,VUAG"
+   ]
+  },
+  {
+   "table": "watchlist_backup_763",
+   "column": "symbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 23,
+   "nonNull": 23,
+   "distinctSampled": 23,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 5
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 18,
+   "sample": [
+    "[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]",
+    "[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]",
+    "3AMZ,3BA,3BAB,3BAN,3BBE,3CHI,3COP,3FIN,3GLD,3GOS,3LAI,3LBR,3LBT,3LCH,3LCL,3LCY,3LDA,3LEN,3LEU,3LEV,3LGE,3LHE,3LIN,3LJP,3LME,3LMI,3LNA,3LON,3LPA,3LRE,3LRO,3LSE,3LTE,3LUS,3LUT,3NGS,3OIL,3OIS,3SBA,3SBR,3SCH,3SDA,3SEN,3SEU,3SFI,3SHE,3SIL,3SIS,3SJP,3SNA,3SRE,3SSE,3STE,3SUS,AAP3,AMD3,ARM3,BP3,COI3,FNGD,GOO3,INT3,JPM3,KWE3,MET3,MSF3,NVD3,PAL3,PLT3,SHE3,SOXS,SPXS,SQQQ,SRTY,TECS,TES3,TSM3,UBE3,YANG",
+    "NVDA,MSTR,PLTR,TSLA,AVGO,COIN,MARA,RIOT,HOOD,RKLB,ASTS,SOFI",
+    "FRA40",
+    "UK100"
+   ]
+  },
+  {
+   "table": "watchlist_backup_764",
+   "column": "symbols",
+   "type": "json",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 19,
+   "nonNull": 19,
+   "distinctSampled": 19,
+   "drawsFrom": [
+    {
+     "space": "symbol.ticker",
+     "n": 6
+    }
+   ],
+   "ambiguous": false,
+   "unmatched": 13,
+   "sample": [
+    "3AMZ,3BA,3BAB,3BAN,3BBE,3CHI,3COP,3FIN,3GLD,3GOS,3LAI,3LBR,3LBT,3LCH,3LCL,3LCY,3LDA,3LEN,3LEU,3LEV,3LGE,3LHE,3LIN,3LJP,3LME,3LMI,3LNA,3LON,3LPA,3LRE,3LRO,3LSE,3LTE,3LUS,3LUT,3NGS,3OIL,3OIS,3SBA,3SBR,3SCH,3SDA,3SEN,3SEU,3SFI,3SHE,3SIL,3SIS,3SJP,3SNA,3SRE,3SSE,3STE,3SUS,AAP3,AMD3,ARM3,BP3,COI3,FNGD,GOO3,INT3,JPM3,KWE3,MET3,MSF3,NVD3,PAL3,PLT3,SHE3,SOXS,SPXS,SQQQ,SRTY,TECS,TES3,TSM3,UBE3,YANG",
+    "[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]",
+    "FRA40",
+    "UK100",
+    "GER40",
+    "[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]"
+   ]
+  },
+  {
+   "table": "watchlist_item",
+   "column": "symbolId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist_item",
+   "column": "ticker",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlist_item",
+   "column": "watchlistId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": true,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlistmeta",
+   "column": "symbol",
+   "type": "varchar(20)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  },
+  {
+   "table": "watchlistmeta",
+   "column": "watchlistId",
+   "type": "varchar(36)",
+   "family": "symbol",
+   "enforced": false,
+   "nullable": false,
+   "totalRows": 0,
+   "nonNull": 0,
+   "distinctSampled": 0,
+   "drawsFrom": [],
+   "ambiguous": false,
+   "unmatched": 0,
+   "sample": []
+  }
+ ]
+}

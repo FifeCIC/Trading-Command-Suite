@@ -58,6 +58,10 @@ export class AlertTriggerService implements OnModuleInit {
     // threshold is HOURS here (the only trigger that is): a real broker offset is at
     // most ±14h, so anything larger means the measurement itself is broken.
     'bridge-clock-skew': { enabled: true, cooldownSeconds: 3600, severity: 'high', threshold: 14 },      // 14h
+    // threshold is MINIMUM SCORES in 24h — see checkSymbolSilent(). 20 is deliberately low:
+    // a symbol scoring 20+ times a day is being evaluated continuously, so producing zero
+    // executions is a signal about the PATH, not about the market being quiet.
+    'symbol-silent':     { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 20 },
   };
 
   constructor(
@@ -107,6 +111,7 @@ export class AlertTriggerService implements OnModuleInit {
         case 'weekend-gap-risk':   condition = await this.checkWeekendGapRisk(cfg); break;
         case 'earnings-proximity': condition = await this.checkEarningsProximity(cfg); break;
         case 'bridge-clock-skew':  condition = await this.checkBridgeClockSkew(cfg); break;
+        case 'symbol-silent':      condition = await this.checkSymbolSilent(cfg); break;
       }
 
       if (condition?.triggered) {
@@ -400,6 +405,131 @@ export class AlertTriggerService implements OnModuleInit {
   }
 
   // ── Helpers ─────────────────────────────────────────
+
+  /**
+   * checkSymbolSilent() — A SYMBOL THAT IS BEING SCORED AND NEVER TRADES (#946).
+   *
+   * ---------------------------------------------------------------------------------
+   * WHY THIS TRIGGER EXISTS
+   * ---------------------------------------------------------------------------------
+   * ⚠️ VOCABULARY, because getting it wrong here is how it drifts into the code:
+   *   a PROTOCOL scores a symbol. A BOT consumes the score and decides whether to trade.
+   *   Bots do not score. `score` rows are written per (symbol, protocol) — never per bot —
+   *   so every count in this method is a count for the SYMBOL, not for any one bot.
+   *
+   * Measured 2026-09-22: five USD majors (AUDUSD, EURUSD, GBPUSD, USDCAD, USDCHF) each had
+   * an `active=1` auto bot, live prices and live bars, and their SYMBOLS produced **no score,
+   * no decision and no trade for a week** — because nothing had assigned them a protocol, so
+   * no protocol was scoring them. No error was raised anywhere. the only reason it was found is that the owner asked why nothing was
+   * trading.
+   *
+   * VIX is the second instance: its SYMBOL was scored 5–190 times a day by its protocols, and
+   * its trades were refused 82 times in 24h with `price is 0 (no quote for VIX)`. Again: no
+   * alert, no error surface — just a log line and a silent symbol.
+   *
+   * ⚠️ THIS IS A SYMPTOM TRIGGER, DELIBERATELY. It does not care WHY a symbol is silent.
+   * The two known instances have *different* causes (a missing assignment vs a quote
+   * resolved against the wrong bridge), and neither cause would have been expressible as a
+   * check when this was written. A cause trigger would need the theory to be right; this one
+   * fires on the observable outcome instead, which is the property that makes it worth having.
+   *
+   * ---------------------------------------------------------------------------------
+   * WHY THE BLOCK REASON IS IN THE MESSAGE
+   * ---------------------------------------------------------------------------------
+   * `scores but never executes` is a symptom; the operator needs the NEXT STEP. So the
+   * trigger carries the dominant BLOCKED reason for each symbol — the difference between
+   * "VIX is silent" (unactionable) and "VIX refused 82× on price is 0" (a lead).
+   *
+   * ⚠️ ONE ALERT FOR ALL SILENT SYMBOLS, not one each. The cooldown in fireAlert() is keyed
+   * per TRIGGER, so per-symbol alerts would collide and only the first would survive — and
+   * five single-symbol alerts is how an alert channel stops being read. One alert listing
+   * them is both cheaper and more complete.
+   */
+  private async checkSymbolSilent(
+    cfg: TriggerConfig,
+  ): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity } | null> {
+    try {
+      const minScores = cfg.threshold ?? 20;
+
+      // Only symbols the app is actually TRYING to trade. A manual-mode bot never
+      // executes by design, and alerting on it would be a false positive on day one.
+      // NOTE: this selects the SYMBOLS that have an active bot. The counts below are the
+      // symbol's, not the bot's — a symbol may carry up to four bots and still have one
+      // shared score series.
+      const bots = await this.prisma.tradingStrategy.findMany({
+        where: { active: true, mode: { not: 'manual' } },
+        select: { symbol: true },
+      });
+      const botSymbols = [...new Set(bots.map((b) => String(b.symbol || '').toUpperCase()).filter(Boolean))];
+      if (botSymbols.length === 0) return { triggered: false, title: '', message: '' };
+
+      // ⚠️ UTC_TIMESTAMP(), not NOW(). `score.timestamp` and `decision_log.timestamp` are
+      // stored in UTC while the MySQL session runs in local time (BST here), so a window
+      // built from NOW() is an hour out and silently reports nothing. Cost an hour of
+      // misreading on 2026-09-22 before it was spotted.
+      const scores = await this.prisma.$queryRawUnsafe<Array<{ sym: string; n: bigint }>>(
+        `SELECT UPPER(s.ticker) sym, COUNT(*) n
+           FROM score sc JOIN symbol s ON s.id = sc.symbolId
+          WHERE sc.timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
+          GROUP BY UPPER(s.ticker)`,
+      );
+      const executed = await this.prisma.$queryRawUnsafe<Array<{ sym: string; n: bigint }>>(
+        `SELECT UPPER(symbol) sym, COUNT(*) n FROM decision_log
+          WHERE decision = 'EXECUTED' AND timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
+          GROUP BY UPPER(symbol)`,
+      );
+      const blocked = await this.prisma.$queryRawUnsafe<Array<{ sym: string; n: bigint; reason: string }>>(
+        `SELECT UPPER(symbol) sym, COUNT(*) n, MIN(LEFT(reason, 120)) reason FROM decision_log
+          WHERE decision = 'BLOCKED' AND timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
+          GROUP BY UPPER(symbol)`,
+      );
+
+      const toMap = <T extends { sym: string }>(rows: T[]) =>
+        Object.fromEntries(rows.map((r) => [String(r.sym).toUpperCase(), r]));
+      const S = toMap(scores);
+      const E = toMap(executed);
+      const B = toMap(blocked);
+
+      const silent = botSymbols
+        .map((sym) => ({
+          sym,
+          scores: Number(S[sym]?.n ?? 0),
+          executed: Number(E[sym]?.n ?? 0),
+          blocked: Number(B[sym]?.n ?? 0),
+          reason: B[sym]?.reason ?? null,
+        }))
+        .filter((x) => x.scores >= minScores && x.executed === 0)
+        .sort((a, b) => b.scores - a.scores);
+
+      if (silent.length === 0) return { triggered: false, title: '', message: '' };
+
+      const detail = silent
+        .slice(0, 6)
+        .map((x) =>
+          `${x.sym} (${x.scores} scores, ${x.executed} trades${x.blocked ? `, blocked ${x.blocked}× — ${x.reason}` : ', never blocked'})`,
+        )
+        .join('; ');
+
+      return {
+        triggered: true,
+        title: `${silent.length} Symbol(s) Scoring But Never Trading`,
+        message:
+          `Scored ${minScores}+ times in 24h and produced ZERO executions: ${detail}` +
+          (silent.length > 6 ? `; +${silent.length - 6} more` : '') +
+          '. A symbol that is scored continuously and never trades is usually a broken PATH, not a quiet market.',
+        severity: 'warning' as AlertSeverity,
+      };
+    } catch (err) {
+      // An unreadable count must NOT read as "no silent symbols" — that is the defect this
+      // whole trigger exists to catch, pointed the other way. Surface it as a trigger.
+      return {
+        triggered: true,
+        title: 'Symbol-silent check could not run',
+        message: `The silent-symbol probe failed: ${(err as Error).message}. Absence of this alert cannot be taken as evidence that every symbol is trading.`,
+        severity: 'high' as AlertSeverity,
+      };
+    }
+  }
 
   private fireAlert(key: string, cfg: TriggerConfig, title: string, message: string, severity: AlertSeverity) {
     const now = Date.now();

@@ -89,6 +89,18 @@ export interface PnlReport {
   bySource: PnlBucket[];
   /** Attribution — which strategy tag. */
   byStrategy: PnlBucket[];
+  /**
+   * Attribution — per SYMBOL realised P/L.
+   *
+   * WHY THIS LIVES HERE AND NOT IN THE FRONTEND: a per-symbol P/L column needs the
+   * `pnlInvalid` exclusion and the small-sample `reliability` gate below. Computing it in a
+   * component would be a SECOND implementation of the rule that produces the least
+   * trustworthy number in the app — and only one copy would get the next fix. (#933 follow-up)
+   *
+   * ⚠️ Most symbols will come back with `reliability: 'noise'` (n < 20). That is the point:
+   * a 1-trade +£0 is not evidence of anything, and the bucket says so.
+   */
+  bySymbol: PnlBucket[];
   caveats: string[];
 }
 
@@ -111,6 +123,7 @@ export class PnlStatisticsService {
       bySide: [],
       bySource: [],
       byStrategy: [],
+      bySymbol: [],
       caveats: [reason],
     });
 
@@ -123,11 +136,11 @@ export class PnlStatisticsService {
     const where: any = { closedAt: { not: null, gte: since }, pnl: { not: null } };
     if (params.symbol) where.symbol = params.symbol;
 
-    let trades: Array<{ pnl: number | null; side: string; source: string | null; strategy: string | null; closedAt: Date | null; pnlInvalid: number | null }>;
+    let trades: Array<{ pnl: number | null; side: string; source: string | null; strategy: string | null; symbol: string; closedAt: Date | null; pnlInvalid: number | null }>;
     try {
       trades = await this.prisma.trade.findMany({
         where,
-        select: { pnl: true, side: true, source: true, strategy: true, closedAt: true, pnlInvalid: true },
+        select: { pnl: true, side: true, source: true, strategy: true, symbol: true, closedAt: true, pnlInvalid: true },
       });
     } catch (err) {
       return empty(`Trade query failed: ${(err as Error).message}`);
@@ -176,6 +189,7 @@ export class PnlStatisticsService {
       bySide: groupBy(rows, (r) => r.side).map(([label, list]) => bucket(label, list)),
       bySource: groupBy(rows, (r) => r.source ?? '(unspecified)').map(([label, list]) => bucket(label, list)),
       byStrategy: groupBy(rows, (r) => r.strategy ?? '(untagged)').map(([label, list]) => bucket(label, list)),
+      bySymbol: groupBy(rows, (r) => r.symbol ?? '(unknown)').map(([label, list]) => bucket(label, list)),
       caveats: caveatsFor(rows.length, distinctDays),
     };
   }

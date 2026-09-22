@@ -19,7 +19,303 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './symbol-page.css';
 
-const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
+/**
+ * Signal → CSS class. Determines colour from the THEME, not from JSX.
+ *
+ * ⚠️ This replaced a hardcoded hex map (`{ BUY: '#22c55e', SELL: '#ef4444', … }`) applied through
+ * inline `style={{ color: … }}`. Two problems with that: inline hex bypasses the theme entirely
+ * (so it cannot follow light/dark), and it bypasses colour-blind mode, which works by overriding
+ * the `--color-profit` / `--color-loss` tokens.
+ *
+ * ⚠️ Uses `includes`, NOT `startsWith`. `'STRONG_SELL'.startsWith('SELL') === false`, so a
+ * startsWith test silently mis-classifies every STRONG_* signal — that exact bug shipped once
+ * already (see the 2026-09-17 note in the handoff store). `includes` catches STRONG_BUY/STRONG_SELL
+ * and is checked against the `NO_DATA` / `PAUSED` sentinels first so they never read as a signal.
+ */
+const signalClass = (signal) => {
+  const s = String(signal || '').toUpperCase();
+  if (!s || s === 'NO_DATA' || s === 'PAUSED' || s === 'UNKNOWN') return 'sym-sig--none';
+  if (s.includes('BUY')) return 'sym-sig--buy';
+  if (s.includes('SELL')) return 'sym-sig--sell';
+  return 'sym-sig--hold';
+};
+
+/**
+ * Maps a close reason to a tone class.
+ * ⚠️ Reasons that do not match stay `neutral` — they are NOT defaulted to "stop". The server's
+ * own strings are `broker:sl` / `broker:terminal`; a fifth reason appearing later must read as
+ * unclassified rather than be silently counted as a stop-out.
+ */
+const exitTone = (why) => {
+  const w = String(why || '').toLowerCase();
+  if (w.includes('sl') || w.includes('stop')) return 'stop';
+  if (w.includes('tp') || w.includes('target') || w.includes('limit')) return 'target';
+  return 'neutral';
+};
+
+/** One figure in the stat row. Tone is a CSS class — never an inline colour. */
+function StatTile({ label, value, sub, tone = '', title }) {
+  return (
+    <div className={`sym-tile ${tone}`} title={title}>
+      <span className="sym-tile-label">{label}</span>
+      <span className="sym-tile-value">{value}</span>
+      {sub ? <span className="sym-tile-sub">{sub}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * A labelled proportional bar.
+ * `pct === null` renders as an explicit "no reading" marker rather than a zero-length bar — a
+ * zero-length bar is indistinguishable from a genuine 0 and would understate the symbol.
+ */
+function BarRow({ label, pct, display, tone = '', stagger = 0 }) {
+  const hasReading = typeof pct === 'number' && Number.isFinite(pct);
+  return (
+    <div className="sym-bar">
+      <span className="sym-bar-label" title={label}>{label}</span>
+      <span className="sym-bar-track" role="img" aria-label={`${label}: ${display}`}>
+        {hasReading ? (
+          <span
+            className={`sym-bar-fill ${tone}`}
+            style={{
+              width: `${Math.max(0, Math.min(100, pct))}%`,
+              animationDelay: `${Math.min(stagger, 12) * 0.04}s`,
+            }}
+          />
+        ) : (
+          <span className="sym-bar-nodata">no reading</span>
+        )}
+      </span>
+      <span className="sym-bar-value">{display}</span>
+    </div>
+  );
+}
+
+/**
+ * Diverging P&L bars: gains grow right from the centre line, losses left.
+ * ⚠️ A bot with no trades gets an explicit "no trades" label, not a zero-length bar — the two
+ * mean different things ("did not trade" vs "traded and broke even").
+ */
+function PnlBars({ rows, maxAbs }) {
+  if (!rows.length) return <p className="sym-muted">No per-bot outcomes recorded for this symbol yet.</p>;
+  return (
+    <div className="sym-diverge">
+      {rows.map((b, i) => {
+        const pct = maxAbs > 0 ? Math.min(100, (Math.abs(b.pnl) / maxAbs) * 100) : 0;
+        const positive = b.pnl >= 0;
+        return (
+          <div className="sym-diverge-row" key={`${b.label}-${i}`}>
+            <span className="sym-diverge-label" title={b.label}>
+              {b.label}
+              {!b.attributed && b.label !== 'unattributed' && (
+                <em className="sym-diverge-warn"> · unattributed</em>
+              )}
+            </span>
+            <span
+              className="sym-diverge-track"
+              role="img"
+              aria-label={`${b.label}: ${b.trades} trades, net P&L ${b.pnl.toFixed(2)}`}
+            >
+              <span className="sym-diverge-axis" aria-hidden="true" />
+              {b.trades > 0 && (
+                <span
+                  className={`sym-diverge-fill ${positive ? 'is-pos' : 'is-neg'}`}
+                  style={{ width: `${pct / 2}%`, animationDelay: `${Math.min(i, 12) * 0.04}s` }}
+                />
+              )}
+            </span>
+            <span className={`sym-diverge-value ${positive ? 'is-pos' : 'is-neg'}`}>
+              {b.pnl >= 0 ? '+' : ''}{b.pnl.toFixed(2)}
+            </span>
+            <span className="sym-diverge-meta">{b.trades === 0 ? 'no trades' : `${b.wins}/${b.trades}`}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Exit-reason breakdown: one stacked bar plus a legend.
+ * ⚠️ Reason strings are shown as the server stores them (`broker:sl`). Prettifying them in the UI
+ * would make the display disagree with the value #476's ledger records, which is how a reader ends
+ * up unable to reconcile the two.
+ */
+function ExitStack({ rows, total }) {
+  if (!rows.length || !total) {
+    return <p className="sym-muted">No close reasons recorded for this symbol — nothing has closed yet, or the reason was not captured.</p>;
+  }
+  return (
+    <div className="sym-exits">
+      <div
+        className="sym-exits-bar"
+        role="img"
+        aria-label={`Exit reasons: ${rows.map(([w, n]) => `${w} ${n}`).join(', ')}`}
+      >
+        {rows.map(([why, n], i) => (
+          <span
+            key={why}
+            className={`sym-exits-seg sym-exit-${exitTone(why)}`}
+            style={{ width: `${(n / total) * 100}%`, animationDelay: `${Math.min(i, 8) * 0.04}s` }}
+          />
+        ))}
+      </div>
+      <div className="sym-exits-legend">
+        {rows.map(([why, n]) => (
+          <span key={why} className="sym-exits-key">
+            <i className={`sym-exits-dot sym-exit-${exitTone(why)}`} aria-hidden="true" />
+            {why} <strong>{n}</strong> <em>· {Math.round((n / total) * 100)}%</em>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * BotOutcomeCard — one bot's INTENDED vs REALISED record on one symbol (#921).
+ *
+ * BEFORE this was six key/value text rows, so the reader had to hold "payoff 2" and "payoff 0.264"
+ * in their head and subtract them. The comparison IS the content, so the two payoffs are now
+ * paired bars on a SHARED scale, directly above/below each other, with the gap stated once.
+ *
+ * ⚠️ Three states are kept DISTINCT and must never collapse into each other:
+ *   • `no trades`        — the bot never opened on this symbol
+ *   • `not measurable`   — trades exist but only wins OR only losses, so a payoff cannot be formed
+ *   • measurable         — both sides exist; a payoff and a gap can be stated
+ * Rendering the middle case as "payoff 0" would assert break-even where nothing is known.
+ *
+ * ⚠️ The headline P&L is lifted into the header deliberately. It was previously the last clause of
+ * the "Record" row — the single number that says whether this bot made or lost money here was the
+ * hardest one to find.
+ */
+function BotOutcomeCard({ o }) {
+  const r = o.realised ?? {};
+  const declared = o.declared ?? {};
+  const hasDeclared = declared.declaredPayoff !== null && declared.declaredPayoff !== undefined;
+  const hasRealised = r.realisedPayoff !== null && r.realisedPayoff !== undefined;
+  const gap = hasDeclared && hasRealised
+    ? Number((r.realisedPayoff - declared.declaredPayoff).toFixed(2))
+    : null;
+
+  // ONE scale for both bars — that is the whole point of pairing them. Two independently-scaled
+  // bars would each look full and the comparison would be lost.
+  const scale = Math.max(hasDeclared ? declared.declaredPayoff : 0, hasRealised ? r.realisedPayoff : 0, 0.01);
+  const pct = (v) => Math.max(0, Math.min(100, (v / scale) * 100));
+
+  const measurable = r.avgWin !== null && r.avgLoss !== null && r.avgWin !== undefined && r.avgLoss !== undefined;
+  const trades = r.trades ?? 0;
+  const wins = r.wins ?? 0;
+  const losses = trades - wins;
+  const winPct = trades > 0 ? (wins / trades) * 100 : 0;
+  const exitEntries = Object.entries(o.closeReasons || {});
+
+  return (
+    <div className="sym-outcome">
+      <div className="sym-outcome-head">
+        <strong>{o.botName || o.attribution}</strong>
+        <span className="sym-source">{o.protocolId || o.attribution}</span>
+        {!o.matchedBot && (
+          <span className="sym-outcome-warn" title="scoringStrategyId holds a protocol slug, not a bot id — attribution is unresolved for this row">
+            ⚠ attribution unresolved
+          </span>
+        )}
+        <span className={`sym-outcome-pnl ${trades === 0 ? 'is-none' : r.totalPnl >= 0 ? 'is-pos' : 'is-neg'}`}>
+          {trades === 0 ? 'no trades' : `${r.totalPnl >= 0 ? '+' : ''}${r.totalPnl.toFixed(2)}`}
+        </span>
+      </div>
+
+      <div className="sym-outcome-config">
+        {[o.brokerId, o.timeframe].filter(Boolean).map((v) => (
+          <span key={v} className="sym-outcome-chip">{v}</span>
+        ))}
+        {o.minComposite != null && <span className="sym-outcome-chip">min {o.minComposite}</span>}
+      </div>
+
+      {/* Intended vs Realised — paired, shared scale, gap stated once. */}
+      <div className="sym-outcome-payoff">
+        <span className="sym-outcome-payoff-k">Intended</span>
+        {hasDeclared ? (
+          <>
+            <span className="sym-outcome-track" role="img" aria-label={`Intended payoff ${declared.declaredPayoff}`}>
+              <span className="sym-outcome-fill is-intended" style={{ width: `${pct(declared.declaredPayoff)}%` }} />
+            </span>
+            <span className="sym-outcome-payoff-v">
+              {declared.declaredPayoff}
+              {declared.slPct != null && declared.tpPct != null && (
+                <em> SL {declared.slPct}% / TP {declared.tpPct}%</em>
+              )}
+            </span>
+          </>
+        ) : (
+          <span className="sym-outcome-absent">not declared</span>
+        )}
+
+        <span className="sym-outcome-payoff-k">Realised</span>
+        {measurable ? (
+          <>
+            <span className="sym-outcome-track" role="img" aria-label={`Realised payoff ${r.realisedPayoff}`}>
+              <span
+                className={`sym-outcome-fill ${gap !== null && gap < 0 ? 'is-short' : 'is-met'}`}
+                style={{ width: `${pct(r.realisedPayoff)}%` }}
+              />
+            </span>
+            <span className="sym-outcome-payoff-v">
+              {r.realisedPayoff}
+              <em> win {r.avgWin.toFixed(2)} / loss {r.avgLoss.toFixed(2)}</em>
+            </span>
+          </>
+        ) : (
+          <span className="sym-outcome-absent">
+            {trades === 0
+              ? 'no trades on this symbol'
+              : r.avgLoss === null
+                ? `${trades} trade${trades === 1 ? '' : 's'}, no losses yet — payoff not measurable`
+                : `${trades} trade${trades === 1 ? '' : 's'}, no wins yet — payoff not measurable`}
+          </span>
+        )}
+      </div>
+
+      {gap !== null && (
+        <p className={`sym-outcome-gap-badge ${gap < 0 ? 'is-neg' : 'is-pos'}`}>
+          {gap < 0 ? '▼' : '▲'} {gap > 0 ? '+' : ''}{gap} vs intended
+          {gap < 0 && ' — realised reward per unit risk is below what the bot was configured for'}
+        </p>
+      )}
+
+      {/* Win/loss as a proportion. A rate without its denominator is not a rate, so `n` is shown. */}
+      {trades > 0 && (
+        <div className="sym-outcome-record">
+          <span className="sym-outcome-wl" role="img" aria-label={`${wins} wins, ${losses} losses`}>
+            <span className="sym-outcome-w" style={{ width: `${winPct}%` }} />
+            <span className="sym-outcome-l" style={{ width: `${100 - winPct}%` }} />
+          </span>
+          <span className="sym-outcome-record-txt">
+            <strong>{wins}W</strong> / <strong>{losses}L</strong>
+            {r.winRate !== null && r.winRate !== undefined && <> · {r.winRate}% <em>(n={trades})</em></>}
+          </span>
+        </div>
+      )}
+
+      <div className="sym-outcome-exits">
+        <span className="sym-outcome-k">Exits</span>
+        {exitEntries.length === 0 ? (
+          <em className="sym-outcome-absent">no close reasons recorded</em>
+        ) : (
+          exitEntries.map(([why, n]) => (
+            <span key={why} className={`sym-outcome-reason sym-reason-${exitTone(why)}`}>{why} ×{n}</span>
+          ))
+        )}
+      </div>
+
+      {/* An absent ceiling must LOOK absent — never omitted silently. */}
+      <p className="sym-outcome-foot">
+        Bar set at minComposite {o.minComposite ?? '—'} · protocol ceiling not available yet (#905)
+      </p>
+    </div>
+  );
+}
 
 /**
  * SymbolPage — one symbol, every protocol that actually scores it.
@@ -114,6 +410,72 @@ export default function SymbolPage() {
   }));
   const scoredProtocols = protocolScores.filter((p) => p.env);
 
+  // ── Stat row + chart inputs ─────────────────────────────────────────────
+  // ⚠️ Every number below comes from data this page ALREADY fetched and previously never
+  // rendered: `botOutcomes`, `tradingStrategies`, `overview.positions` and `overview.freshness`.
+  // No additional request is made — the page was simply discarding most of what it received.
+  //
+  // ⚠️ Unattributed outcome rows are KEPT and labelled, never dropped. They are real trades
+  // (measured on XAUUSD: 3 of 5 rows carry no bot name), and silently dropping them would shrink
+  // every total on this page while still looking authoritative.
+  const outcomeRows = (botOutcomes || []).map((o) => o.realised || {});
+  const aggTrades = outcomeRows.reduce((n, r) => n + (r.trades || 0), 0);
+  const aggWins = outcomeRows.reduce((n, r) => n + (r.wins || 0), 0);
+  const aggLosses = aggTrades - aggWins;
+  const aggPnl = outcomeRows.reduce((n, r) => n + (r.totalPnl || 0), 0);
+  const aggWinRate = aggTrades > 0 ? Math.round((aggWins / aggTrades) * 1000) / 10 : null;
+
+  // Exit reasons pooled across bots — the only window into WHY trades closed.
+  const exitTotals = {};
+  for (const o of botOutcomes || []) {
+    for (const [why, n] of Object.entries(o.closeReasons || {})) {
+      exitTotals[why] = (exitTotals[why] || 0) + n;
+    }
+  }
+  const exitRows = Object.entries(exitTotals).sort((a, b) => b[1] - a[1]);
+  const exitTotal = exitRows.reduce((n, [, c]) => n + c, 0);
+
+  const perBot = (botOutcomes || []).map((o) => ({
+    label: o.botName || o.protocolId || 'unattributed',
+    attributed: !!o.matchedBot,
+    pnl: o.realised?.totalPnl ?? 0,
+    trades: o.realised?.trades ?? 0,
+    wins: o.realised?.wins ?? 0,
+  }));
+  const botsWithTrades = perBot.filter((b) => b.trades > 0);
+  const bestBot = botsWithTrades.length ? botsWithTrades.reduce((a, b) => (b.pnl > a.pnl ? b : a)) : null;
+  const worstBot = botsWithTrades.length ? botsWithTrades.reduce((a, b) => (b.pnl < a.pnl ? b : a)) : null;
+
+  // Only readings with a real composite count as "scored" — a NO_DATA envelope must not be
+  // averaged in as a zero, which would drag the strongest-reading stat toward nothing.
+  const liveScores = protocolScores.filter(
+    (p) => typeof p.env?.composite === 'number' && String(p.env.signal).toUpperCase() !== 'NO_DATA',
+  );
+  const bestScore = liveScores.length
+    ? liveScores.reduce((a, b) => (b.env.composite > a.env.composite ? b : a))
+    : null;
+
+  // Directive evidence for the highlighted protocol, flattened across its groups and sorted.
+  // ⚠️ Bars `normalized`, NOT `score`. `normalized` is 0-100 (measured 2026-09-21:
+  // bollinger-band-squeeze 100, gold-round-numbers 60, volume-confirmation 38, volatility-tools 32,
+  // rsi-oversold 22). `score` is out of a PER-DIRECTIVE `maxScore` that varies (90, 25, 100, 90,
+  // 140), so barring it directly would make a 90/140 directive look stronger than a 25/25 one.
+  const evidenceRows = (scoredProtocols[0]?.env?.groups || [])
+    .flatMap((g) => (g.topDirectives || []).map((d) => ({ ...d, groupName: g.groupName, isRisk: g.isRisk })))
+    .filter((d) => typeof d.normalized === 'number')
+    .sort((a, b) => b.normalized - a.normalized);
+  const evidenceTone = (n) => (n >= 65 ? 'is-strong' : n < 35 ? 'is-weak' : '');
+
+  const openPositions = Array.isArray(overview?.positions) ? overview.positions : [];
+  const openPnl = openPositions.reduce((n, p) => n + (typeof p.pnl === 'number' ? p.pnl : 0), 0);
+  const tradingStrategies = focus?.tradingStrategies || [];
+  const freshness = overview?.freshness || null;
+  const excludedRows = focus?.outcomeCoverage?.excludedPhantomRows ?? null;
+
+  // Chart geometry — plain values, no d3, no chart library (SVG <100 nodes, per ui-standards).
+  const maxAbsPnl = perBot.length ? Math.max(...perBot.map((b) => Math.abs(b.pnl)), 1) : 1;
+  const stale = freshness?.status && freshness.status !== 'fresh';
+
   // ⚠️ Resolve the gate on `overview` and `focus`, NOT on an envelope. The envelope is per-protocol
   // and can legitimately fail for one protocol while another succeeds, so gating the whole page on
   // it (as this page used to) turned a single refusal into an apparently empty page.
@@ -149,9 +511,25 @@ export default function SymbolPage() {
   const price = typeof priceObj === 'number' ? priceObj
     : (priceObj && typeof priceObj === 'object' && typeof priceObj.last === 'number') ? priceObj.last
     : (typeof overview?.latestPrice === 'number' ? overview.latestPrice : null);
+  // ⚠️ `changePct` IS PRESENT BUT NEVER POPULATED — measured 2026-09-21 across XAUUSD, SPY,
+  // EURUSD, GBPCAD and USTEC: every one returned `change: 0, changePct: 0` while `last` held a
+  // real price (AAPL returned no price at all). Rendering that as "↑ 0.00%" asserts the symbol
+  // closed FLAT, which the data never said — it says the change was not computed. Absence must not
+  // become a number (development-philosophy §7). So the move renders only when a non-zero figure
+  // exists; otherwise the header says the provider did not report one.
   const changeRaw = overview?.changePercent ?? overview?.change ?? priceObj?.changePct ?? null;
-  const change = typeof changeRaw === 'number' ? changeRaw : null;
+  const change = typeof changeRaw === 'number' && Number.isFinite(changeRaw) ? changeRaw : null;
+  const hasRealChange = change !== null && change !== 0;
   const symMeta = overview?.symbol;
+
+  // Price precision from the symbol's OWN type, not a length heuristic.
+  // ⚠️ The previous rule was `symbol.length === 6 && !symbol.includes('-') ? 5 : 2`, which gave
+  // XAUUSD **five** decimals — rendered as `4345.20000` (observed in the browser 2026-09-21).
+  // `/api/symbols/:ticker/overview` returns `symbol.type` ("commodity" for XAUUSD), so use it.
+  const symType = String(symMeta?.type || '').toLowerCase();
+  const priceDp = symType === 'forex'
+    ? (symbol.endsWith('JPY') ? 3 : 5)   // JPY crosses quote to 3dp
+    : 2;                                  // commodity / stock / index / crypto
   const companyName = symMeta?.name ?? overview?.companyName ?? focus?.name ?? symbol;
   const symId = overview?.symbolId ?? symMeta?.id ?? '';
 
@@ -173,18 +551,115 @@ export default function SymbolPage() {
         <div className="sym-header-right">
           {price != null && (
             <span className="sym-price">
-              {price.toFixed(symbol.length === 6 && !symbol.includes('-') ? 5 : 2)}
+              {price.toFixed(priceDp)}
             </span>
           )}
-          {change != null && (
+          {hasRealChange ? (
             <span className={`sym-change ${change >= 0 ? 'sym-up' : 'sym-down'}`}>
               {change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
+            </span>
+          ) : (
+            /* Deliberately NOT "↑ 0.00%". See the note on `hasRealChange` above. */
+            <span
+              className="sym-change sym-change--absent"
+              title="The price provider returned no change value for this symbol, so there is no move to report."
+            >
+              change not reported
             </span>
           )}
           {symMeta?.exchange && <span className="sym-chip">{symMeta.exchange}</span>}
           {symMeta?.type && <span className="sym-chip">{symMeta.type}</span>}
         </div>
       </motion.header>
+
+      {/* ── Stat row ── totals, drawn from data this page already had ──
+          ⚠️ Every tile states its SOURCE. `aggPnl` pools the per-bot outcomes below and `openPnl`
+          is the live broker position; they are DIFFERENT measurements and are never summed into
+          one "P&L" figure. */}
+      <motion.section
+        className="sym-stats"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.02 }}
+        aria-label={`Key figures for ${symbol}`}
+      >
+        <StatTile
+          label="Best reading"
+          value={bestScore ? `${bestScore.env.composite}` : '—'}
+          sub={bestScore ? `of ${bestScore.env.maxPossible} · ${bestScore.protocolId}` : `${liveScores.length} of ${protocolIds.length} protocols live`}
+          tone={bestScore ? signalClass(bestScore.env.signal) : 'sym-sig--none'}
+          title="Highest raw composite among protocols returning a live reading. Composite is a SUM of directive scores, not a percentage — the percentage is shown in Protocol Strength below."
+        />
+        <StatTile
+          label="Win rate"
+          value={aggWinRate === null ? '—' : `${aggWinRate}%`}
+          sub={aggTrades ? `${aggWins}W / ${aggLosses}L` : 'no closed trades'}
+          tone={aggWinRate === null ? '' : aggWinRate >= 50 ? 'sym-tone-good' : 'sym-tone-bad'}
+          title={`Closed trades for ${symbol} across every bot. Source: bot outcomes (excludes ${excludedRows ?? 0} phantom rows).`}
+        />
+        <StatTile
+          label="Net P&L"
+          value={aggTrades ? `${aggPnl >= 0 ? '+' : ''}${aggPnl.toFixed(2)}` : '—'}
+          sub={aggTrades ? `${aggTrades} trade${aggTrades === 1 ? '' : 's'}` : 'no closed trades'}
+          tone={aggTrades ? (aggPnl >= 0 ? 'sym-tone-good' : 'sym-tone-bad') : ''}
+          title="Sum of realised P&L over closed trades attributed to this symbol."
+        />
+        <StatTile
+          label="Open position"
+          value={openPositions.length ? `${openPnl >= 0 ? '+' : ''}${openPnl.toFixed(2)}` : 'none'}
+          sub={openPositions.length
+            ? openPositions.map((p) => `${String(p.side || '').toUpperCase()} ${p.quantity}`).join(' · ')
+            : 'flat on this symbol'}
+          tone={openPositions.length ? (openPnl >= 0 ? 'sym-tone-good' : 'sym-tone-bad') : ''}
+          title="Live broker exposure on this symbol. This is NOT part of the Net P&L tile — that one is realised, closed trades only."
+        />
+        <StatTile
+          label="Bots"
+          value={`${tradingStrategies.filter((b) => b.active).length}/${tradingStrategies.length}`}
+          sub="active / total"
+          title="Trading strategies (bots) targeting this symbol."
+        />
+        <StatTile
+          label="Protocols"
+          value={`${liveScores.length}/${protocolIds.length}`}
+          sub="returned a reading"
+          tone={protocolIds.length && liveScores.length === 0 ? 'sym-tone-warn' : ''}
+          title="How many of the protocols covering this symbol returned a live score. A protocol can be subscribed and still return NO_DATA — those are counted as not live, never as zero."
+        />
+        <StatTile
+          label="Data"
+          value={freshness?.status ? freshness.status : '—'}
+          sub={freshness?.lastBar ? `last bar ${new Date(freshness.lastBar).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : (freshness?.timeframe || 'unknown')}
+          tone={freshness?.status === 'fresh' ? 'sym-tone-good' : stale ? 'sym-tone-warn' : ''}
+          title="Bar freshness for this symbol, as reported by the API. Stale bars mean the score describes an older market."
+        />
+        <StatTile
+          label="Excluded rows"
+          value={excludedRows === null ? '—' : `${excludedRows}`}
+          sub="phantom closes"
+          tone={excludedRows ? 'sym-tone-warn' : ''}
+          title={`Rows marked closed with no broker ticket and no exit price — bulk-write residue, not trades (#931). They are excluded from every figure above.`}
+        />
+      </motion.section>
+
+      {/* The derivation, shown rather than left as a surprise: a winning record that loses money is
+          the single most useful thing this data can say, and it is invisible in the tiles alone. */}
+      {aggTrades > 0 && aggWinRate !== null && (
+        <motion.p
+          className="sym-stats-note"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.04 }}
+        >
+          <strong>{aggWins}W / {aggLosses}L</strong> ({aggWinRate}% win rate) over{' '}
+          <strong>{aggTrades}</strong> closed trade{aggTrades === 1 ? '' : 's'}, net{' '}
+          <strong className={aggPnl >= 0 ? 'sym-tone-good' : 'sym-tone-bad'}>
+            {aggPnl >= 0 ? '+' : ''}{aggPnl.toFixed(2)}
+          </strong>.
+          {aggWinRate >= 50 && aggPnl < 0 && ' A winning record that still loses money — the average loss outweighs the average win.'}
+          {aggWinRate < 50 && aggPnl >= 0 && ' A losing record that still makes money — the average win outweighs the average loss.'}
+        </motion.p>
+      )}
 
       <div className="sym-grid">
         {/* ── Score Card ──
@@ -199,13 +674,17 @@ export default function SymbolPage() {
           {scoredProtocols.length > 0 ? (
             <>
               <div className="sym-score-row">
-                <span className="sym-score-val" style={{ color: SIGNAL_COLORS[primaryEnv.signal] || '#94a3b8' }}>
+                <span className={`sym-score-val ${signalClass(primaryEnv.signal)}`}>
                   {primaryEnv.composite.toFixed(0)}
                 </span>
-                <span
-                  className="sym-score-signal"
-                  style={{ background: (SIGNAL_COLORS[primaryEnv.signal] || '#94a3b8') + '22', color: SIGNAL_COLORS[primaryEnv.signal] }}
-                >{primaryEnv.signal}</span>
+                <span className={`sym-score-signal ${signalClass(primaryEnv.signal)}`}>
+                  {primaryEnv.signal}
+                </span>
+                {typeof primaryEnv.opportunityPct === 'number' && (
+                  <span className="sym-score-opp" title="Opportunity — pre-gate directional strength against the protocol's configured capacity. Shown because the gated composite above can read 0 while this does not.">
+                    opp {primaryEnv.opportunityPct.toFixed(0)}%
+                  </span>
+                )}
               </div>
               {/* ⚠️ The protocol is NAMED. A bare composite is not attributable when the symbol
                   scores under several protocols — which is the normal case here. */}
@@ -298,6 +777,89 @@ export default function SymbolPage() {
         </motion.section>
       </div>
 
+      {/* ── Charts ── inline SVG/CSS, no chart library (ui-standards: SVG <100 nodes) ── */}
+      <div className="sym-charts">
+        {/* Directive evidence — the one place on this page carrying real spread when the protocol
+            composite reads NO_DATA. XAUUSD's xau-speed-1h groups all sit at exactly 50, but its
+            directives range 22-100, so the detail is where the information is. */}
+        {evidenceRows.length > 0 && (
+          <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.105 }}>
+            <h2>Directive Evidence</h2>
+            <p className="sym-muted sym-source-line">
+              Strongest directives inside <strong>{scoredProtocols[0]?.protocolId}</strong>, as a share of each directive's own maximum.
+            </p>
+            <div className="sym-chart">
+              {evidenceRows.map((d, i) => (
+                <BarRow
+                  key={`${d.groupName}-${d.id}`}
+                  label={d.name || d.id}
+                  pct={d.normalized}
+                  display={`${d.normalized}`}
+                  tone={evidenceTone(d.normalized)}
+                  stagger={i}
+                />
+              ))}
+            </div>
+            <p className="sym-muted sym-multi-note">
+              {evidenceRows.filter((d) => d.isRisk).length} of {evidenceRows.length} are risk-gate directives.
+            </p>
+          </motion.section>
+        )}
+
+        <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.11 }}>
+          <h2>Protocol Strength</h2>
+          {/* ⚠️ The bar is `signalPct`, NOT `composite`.
+              Measured 2026-09-21: gold-macro-v1 returns composite=99 with maxPossible=795, and the
+              four xau-speed-* protocols return composite=0 with maxPossible=0. `composite` is a SUM
+              of directive scores, so using it as a 0-100 bar width would have drawn 99 as a
+              near-full bar when it is 12% of capacity — wrong by ~8x. `signalPct` is already the
+              stable-denominator percentage (INV-STABLE-DENOMINATOR). */}
+          <p className="sym-muted sym-source-line">
+            Composite is a raw sum of directive scores; the bar is its share of capacity.
+            A protocol with no live reading says so rather than showing 0.
+          </p>
+          <div className="sym-chart">
+            {protocolScores.map(({ protocolId, meta, env: e, query }, i) => {
+              const noReading = !e || String(e.signal).toUpperCase() === 'NO_DATA';
+              return (
+                <BarRow
+                  key={protocolId}
+                  label={meta.name || protocolId}
+                  pct={noReading ? null : e.signalPct}
+                  display={
+                    !e
+                      ? (query?.isError ? 'unavailable' : 'loading')
+                      : noReading
+                        ? '—'
+                        : `${e.composite} / ${e.maxPossible} · ${Number(e.signalPct).toFixed(0)}%`
+                  }
+                  tone={noReading ? '' : signalClass(e.signal)}
+                  stagger={i}
+                />
+              );
+            })}
+          </div>
+        </motion.section>
+
+        <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+          <h2>Net P&L per Bot</h2>
+          <p className="sym-muted sym-source-line">Realised, closed trades on {symbol}. Right = profit, left = loss, scaled to the largest move.</p>
+          <PnlBars rows={perBot} maxAbs={maxAbsPnl} />
+          {bestBot && worstBot && bestBot !== worstBot && (
+            <p className="sym-muted sym-multi-note">
+              Best <strong className="sym-tone-good">{bestBot.label}</strong> {bestBot.pnl >= 0 ? '+' : ''}{bestBot.pnl.toFixed(2)}
+              {' · '}worst <strong className="sym-tone-bad">{worstBot.label}</strong> {worstBot.pnl >= 0 ? '+' : ''}{worstBot.pnl.toFixed(2)}
+            </p>
+          )}
+        </motion.section>
+
+        <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.13 }}>
+          <h2>How Trades Ended</h2>
+          <p className="sym-muted sym-source-line">Pooled across every bot trading {symbol}.</p>
+          <ExitStack rows={exitRows} total={exitTotal} />
+        </motion.section>
+      </div>
+
       {/* ── Directive Drilldown ── */}
       {primaryEnv?.groups?.length > 0 && (
         <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
@@ -308,7 +870,7 @@ export default function SymbolPage() {
               <div key={g.groupId} className={`sym-group ${g.isRisk ? 'sym-group-risk' : ''}`}>
                 <div className="sym-group-head">
                   <span className="sym-group-name">{g.groupName}</span>
-                  <span className="sym-group-score" style={{ color: g.score > 65 ? '#22c55e' : g.score < 35 ? '#ef4444' : '#94a3b8' }}>{g.score}</span>
+                  <span className={`sym-group-score ${g.score > 65 ? 'sym-tone-good' : g.score < 35 ? 'sym-tone-bad' : 'sym-tone-mid'}`}>{g.score}</span>
                   <span className="sym-group-wt">({g.weight}%)</span>
                 </div>
                 {g.topDirectives.map(d => (
@@ -386,85 +948,9 @@ export default function SymbolPage() {
         <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
           <h2>Bot Outcomes on {symbol}</h2>
           <div className="sym-outcomes">
-            {botOutcomes.map((o) => {
-              const r = o.realised;
-              const payoffGap =
-                o.declared.declaredPayoff !== null && r.realisedPayoff !== null
-                  ? Number((r.realisedPayoff - o.declared.declaredPayoff).toFixed(2))
-                  : null;
-              return (
-                <div key={o.attribution} className="sym-outcome">
-                  <div className="sym-outcome-head">
-                    <strong>{o.botName || o.attribution}</strong>
-                    <span className="sym-source">{o.protocolId || o.attribution}</span>
-                    {!o.matchedBot && (
-                      <span className="sym-outcome-warn" title="scoringStrategyId holds a protocol slug, not a bot id — attribution is unresolved for this row">
-                        ⚠ attribution unresolved
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="sym-outcome-grid">
-                    <span className="sym-outcome-k">Config</span>
-                    <span>{[o.brokerId, o.timeframe].filter(Boolean).join(' · ') || '—'}</span>
-
-                    <span className="sym-outcome-k">Intended</span>
-                    <span>
-                      {o.declared.slPct !== null && o.declared.tpPct !== null
-                        ? `SL ${o.declared.slPct}% / TP ${o.declared.tpPct}% → payoff ${o.declared.declaredPayoff}`
-                        : <em>not declared</em>}
-                    </span>
-
-                    <span className="sym-outcome-k">Realised</span>
-                    <span>
-                      {r.avgWin !== null && r.avgLoss !== null ? (
-                        <>
-                          win {r.avgWin.toFixed(2)} / loss {r.avgLoss.toFixed(2)} → payoff{' '}
-                          <strong style={{ color: payoffGap !== null && payoffGap < 0 ? 'var(--color-loss)' : 'var(--color-profit)' }}>
-                            {r.realisedPayoff}
-                          </strong>
-                          {payoffGap !== null && (
-                            <em className="sym-outcome-gap"> ({payoffGap > 0 ? '+' : ''}{payoffGap} vs intended)</em>
-                          )}
-                        </>
-                      ) : (
-                        /* ⚠️ A missing side is a FINDING, not a zero. "No losses yet" and
-                           "payoff 0" are different statements and must not render alike. */
-                        <em>
-                          {r.trades === 0
-                            ? 'no trades on this symbol'
-                            : r.avgLoss === null
-                              ? `${r.trades} trade${r.trades === 1 ? '' : 's'}, no losses yet → payoff not measurable`
-                              : `${r.trades} trade${r.trades === 1 ? '' : 's'}, no wins yet → payoff not measurable`}
-                        </em>
-                      )}
-                    </span>
-
-                    <span className="sym-outcome-k">Record</span>
-                    <span>
-                      {r.trades} trade{r.trades === 1 ? '' : 's'} · {r.wins} win{r.wins === 1 ? '' : 's'}
-                      {r.winRate !== null && <> · {r.winRate}% (n={r.trades})</>} · P&L {r.totalPnl >= 0 ? '+' : ''}{r.totalPnl.toFixed(2)}
-                    </span>
-
-                    <span className="sym-outcome-k">Exits</span>
-                    <span>
-                      {Object.keys(o.closeReasons).length === 0
-                        ? <em>no close reasons recorded</em>
-                        : Object.entries(o.closeReasons).map(([why, n]) => (
-                            <span key={why} className="sym-outcome-reason">{why} ×{n}</span>
-                          ))}
-                    </span>
-
-                    <span className="sym-outcome-k">Bar</span>
-                    <span>
-                      minComposite {o.minComposite ?? '—'}
-                      {/* Never omit the comparison silently — an absent ceiling must LOOK absent. */}
-                      <em className="sym-outcome-gap"> · protocol ceiling not available yet (#905)</em>
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+            {botOutcomes.map((o) => (
+              <BotOutcomeCard key={o.attribution} o={o} />
+            ))}
           </div>
           <p className="sym-muted sym-multi-note">
             Excludes <strong>{focus?.outcomeCoverage?.excludedPhantomRows ?? 0}</strong> row(s) marked closed

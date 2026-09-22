@@ -2404,3 +2404,64 @@ model StrategyRegistry {
   @@index([name])
   @@map("strategy_registry")
 }
+  /// What a BROKER OFFERS — the catalogue, not what the app trades (#958).
+  ///
+  /// ⚠️ THIS IS NOT `Symbol`, AND CONFLATING THEM IS THE DEFECT THIS TABLE EXISTS TO AVOID.
+  /// `symbol` is the ONBOARDED set (257 rows) — instruments the app can see, score and route.
+  /// This table is the opposite: everything the broker lists, including instruments the app has
+  /// never heard of. Writing 12,373 broker rows into `symbol` would make `getTopMovers`, the tier
+  /// resolver and every symbol picker enumerate instruments with no protocol, no route and no bars.
+  ///
+  /// Measured 2026-09-22 on the MetaQuotes bridge: 12,373 offered, 11,448 at `tradeMode: 4`
+  /// (full access), 12,211 of them Nasdaq equities — while the app could see 11. That gap is why
+  /// GRML's +539% was invisible: nothing imports this list.
+  ///
+  /// `registered` is DERIVED at sync time (does a `symbol` row with this ticker exist). It is the
+  /// promotion queue: `registered = false` is the discovery backlog, which makes the gap a number
+  /// rather than a claim.
+  model BrokerSymbol {
+    id          String   @id @default(uuid()) @db.VarChar(36)
+    brokerId    Int
+    name        String   @db.VarChar(64)
+    /// Broker's own grouping, e.g. `Nasdaq\GRML`, `Forex\AUDCAD`. First segment is the class.
+    path        String?  @db.VarChar(200)
+    /// Derived from `path`'s first segment. Denormalised so a filter avoids a LIKE scan.
+    assetClass  String?  @db.VarChar(40)
+    /// MT5 SYMBOL_TRADE_MODE: 4 = FULL, 0 = DISABLED. NULL = the bridge did not report it.
+    tradeMode   Int?
+    digits      Int?
+    volumeMin   Float?
+    volumeMax   Float?
+    registered  Boolean  @default(false)
+    firstSeenAt DateTime @default(now()) @db.DateTime(3)
+    /// ⚠️ The staleness field. A symbol absent from the latest SUCCESSFUL sync carries a
+    /// `lastSeenAt` older than `lastSuccessAt` — the only honest way to say "no longer offered".
+    lastSeenAt  DateTime @default(now()) @db.DateTime(3)
+    updatedAt   DateTime @default(now()) @updatedAt @db.DateTime(3)
+
+    @@unique([brokerId, name])
+    @@index([brokerId, assetClass])
+    @@index([brokerId, tradeMode])
+    @@index([brokerId, registered])
+    @@map("broker_symbol")
+  }
+
+  /// Sync state per broker — distinguishes "the broker has nothing" from "the broker never
+  /// answered". Without it an empty catalogue reads as success, which is the same defect class
+  /// as a check that inspects nothing and reports OK.
+  model BrokerSymbolSync {
+    brokerId        Int       @id
+    /// never | ok | unreachable | error
+    state           String    @db.VarChar(30)
+    reason          String?   @db.Text
+    symbolCount     Int       @default(0)
+    tradeableCount  Int       @default(0)
+    registeredCount Int       @default(0)
+    lastSyncAt      DateTime? @db.DateTime(3)
+    /// Only advances on a sync that actually read a NON-EMPTY list. `lastSeenAt` is compared
+    /// against THIS, so a failed or empty sync can never mark the whole catalogue stale.
+    lastSuccessAt   DateTime? @db.DateTime(3)
+    updatedAt       DateTime  @default(now()) @updatedAt @db.DateTime(3)
+
+    @@map("broker_symbol_sync")
+  }

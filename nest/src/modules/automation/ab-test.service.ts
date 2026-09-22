@@ -182,7 +182,7 @@ export class AbTestService {
     tpPct: number;
     entryPrice: number;
     mode: string;
-  }): Promise<{ success: boolean; error?: string; ticket?: number; price?: number }> {
+  }): Promise<{ success: boolean; error?: string; ticket?: number; price?: number; recordedOnly?: boolean }> {
     const { test, side, symbol, brokerId, sideDir, quantity, slPct, tpPct, entryPrice, mode } = params;
     const comment = sanitizeMt5Comment(`TCS ${side === 'A' ? SIDE_A_TAG : SIDE_B_TAG} ${test.name}`, 27);
 
@@ -191,6 +191,21 @@ export class AbTestService {
 
     if (mode !== 'auto') {
       // Manual/semi-auto: record intent only — no live order.
+      //
+      // ⚠️ `recordedOnly: true` IS LOAD-BEARING, NOT DECORATION (#929, 2026-09-22).
+      //
+      // This branch returns `success: true` because the RECORD succeeded. The caller read that
+      // as "the trade executed" and wrote `decision: 'EXECUTED'` to decision_log — so ten rows
+      // with `brokerTicket: NULL` and comment "Reconciled: no broker counterpart (stranded row)"
+      // were reported as executions in a 7-hour window on 2026-09-22. Nothing was ever sent to
+      // a broker. The false claim was only found because the owner questioned the word "running".
+      //
+      // ⚠️ WHY `mode` WAS 'score': `metastack_snapshot.snapshot` carries a `mode` field holding
+      // `"score"` — a description of WHAT THE STACK IS. This method reads `mode` as HOW TO TRADE
+      // ('auto' | 'manual' | 'semi-auto'). One field, two meanings, so every snapshot reads as
+      // "not auto" and A/B can record intents forever without ever placing an order. That
+      // overloading is #951's defect class (a name asserting something it does not mean) and is
+      // filed there; this flag makes the outcome honest in the meantime, whatever `mode` says.
       await this.tradeRecorder.record({
         symbol,
         side: sideDir.toLowerCase() as 'buy' | 'sell',
@@ -206,7 +221,7 @@ export class AbTestService {
         tp,
         brokerComment: comment,
       });
-      return { success: true };
+      return { success: true, recordedOnly: true };
     }
 
     const adapter = this.adapterFactory.create(brokerId);

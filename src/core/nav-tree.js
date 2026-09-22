@@ -70,6 +70,7 @@ export const NAV_TREE = {
     label: 'Research',
     views: [
       { id: 'symbols-browser', label: 'Symbols Browser', icon: '🔍' },
+      { id: 'broker-catalogue', label: 'Broker Catalogue', icon: '🌐' },
       { id: 'screener', label: 'Screener', icon: '🧲' },
       { id: 'research-notes', label: 'Notes', icon: '📝' },
       { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '📅' },
@@ -220,6 +221,7 @@ export const NAV_TREE = {
       // ── Engineering Tools ──
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
+      { id: 'identity-map', label: 'Identity Map', icon: '🧭' },
       { id: 'widget-library', label: 'Widget Library', icon: '⬚' },
       { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },

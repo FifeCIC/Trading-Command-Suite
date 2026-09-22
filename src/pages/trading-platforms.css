@@ -396,6 +396,85 @@
   font-size: 0.85rem;
 }
 
+/* ── Current position / Historical P/L cells (Active Symbols) ──────────────────────────────────
+ * Two-line cells: an identifier line (broker, or the sample size) over a number line.
+ *
+ * ⚠️ THEMED TOKENS, NOT HEX. `symbols-browser.css` hardcodes `#22c55e` / `#ef4444` for its own
+ * `.pnl--pos` / `.pnl--neg`. That does not follow the active theme and was deliberately NOT copied
+ * here — the same P/L value should not be two different greens on two pages.
+ *
+ * ⚠️ `.is-pos` / `.is-neg` are only ever applied when a value EXISTS. Absence renders as
+ * `.tp-pos-none` (muted), never as a zero-styled cell — "no reading" and "zero" are different.
+ */
+.tp-pos-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.3;
+}
+
+.tp-pos-provider {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.tp-pos-pnl {
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-pos-pnl.is-pos { color: var(--color-profit); }
+.tp-pos-pnl.is-neg { color: var(--color-loss); }
+
+.tp-pos-pct {
+  margin-left: 5px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.tp-pos-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-pos-none { color: var(--ink-soft); }
+
+/* Reliability band on realised P&L. Always rendered when the sample is too small to trust —
+ * `noise` means fewer than 20 trades, and a 7-trade reading must not read as a proven edge. */
+.tp-rel {
+  font-style: normal;
+  padding: 0 4px;
+  border: 1px solid;
+  border-radius: 3px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tp-rel--noise {
+  color: var(--risk-high);
+  border-color: color-mix(in srgb, var(--risk-high) 45%, transparent);
+  background: color-mix(in srgb, var(--risk-high) 10%, transparent);
+}
+
+.tp-rel--weak {
+  color: var(--risk-watch);
+  border-color: color-mix(in srgb, var(--risk-watch) 45%, transparent);
+  background: color-mix(in srgb, var(--risk-watch) 10%, transparent);
+}
+
+@media (max-width: 600px) {
+  .tp-pos-pct { display: block; margin-left: 0; }
+}
+
 /* ── Filter chips (active state) ────────────────────────── */
 
 .tp-chip--active {

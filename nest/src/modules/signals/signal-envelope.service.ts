@@ -1254,20 +1254,38 @@ export class SignalEnvelopeService {
     // Resolve the executing bot (TradingStrategy) per symbol+protocol, so the
     // UI can distinguish "protocol" (signal thesis) from "bot" (execution
     // policy). Best-effort: a signal without a matching bot stays null.
-    const botByKey = new Map<string, string>();
+    //
+    // ⚠️ `baseSize` IS CARRIED HERE, AND IT IS LOAD-BEARING (#972, 2026-09-22).
+    //
+    // The feasibility assessment below used to size EVERY envelope from
+    // `signals.manualTrade.size` — the SIGNALS-CARD default for a human click. That is the wrong
+    // number for a bot-driven envelope: the bot has its own `baseSize`, and it is the bot's size
+    // the broker floor applies to when it trades. Measured: `signals.manualTrade.size` was lowered
+    // 0.1 -> 0.01 on 2026-09-22 and VIX immediately became unroutable — its Pepperstone floor is
+    // **0.1**, so `0.01 < 0.1` raised a `size-below-minimum` execution blocker on a signal the bot
+    // would have placed at 0.1. The blocker is not decoration: `isRouteable()` requires
+    // `executionBlockers.length === 0`, so VIX could never be queued and never traded — from a
+    // setting that has nothing to do with it. One value doing duty for another is the same defect
+    // as the two-sources problems filed today (#948, #951); here it silently disabled a symbol.
+    const botByKey = new Map<string, { name: string; baseSize: number | null }>();
     try {
       const bots = await this.prisma.tradingStrategy.findMany({
         where: { active: true },
-        select: { name: true, protocolId: true, symbol: true },
+        select: { name: true, protocolId: true, symbol: true, baseSize: true },
       });
       for (const b of bots) {
-        if (b.protocolId) botByKey.set(`${b.protocolId}|${b.symbol.toUpperCase()}`, b.name);
+        if (b.protocolId) {
+          botByKey.set(`${b.protocolId}|${b.symbol.toUpperCase()}`, {
+            name: b.name,
+            baseSize: b.baseSize ?? null,
+          });
+        }
       }
     } catch {
       /* bot lookup is best-effort */
     }
     for (const env of scoredEnvelopes) {
-      env.botName = botByKey.get(`${env.protocolId}|${env.symbol.toUpperCase()}`) ?? null;
+      env.botName = botByKey.get(`${env.protocolId}|${env.symbol.toUpperCase()}`)?.name ?? null;
     }
 
     // #723 — feasibility at generation: the SAME assessment the execution
@@ -1297,7 +1315,11 @@ export class SignalEnvelopeService {
           protocolId: env.protocolId,
           positions: mt5Positions,
           marketStatus: env.marketStatus,
-          size: tradeDefaults?.size ?? null,
+          // ⚠️ The size that will ACTUALLY BE TRADED, not a proxy for it (#972).
+          // A bot envelope is sized by its bot; only a signal with no executing bot falls back to
+          // the manual default, because only then does a human click the card. Sizing a bot's
+          // envelope from the manual default made a 0.1-floor symbol unroutable at 0.01.
+          size: botByKey.get(`${env.protocolId}|${env.symbol.toUpperCase()}`)?.baseSize ?? tradeDefaults?.size ?? null,
         });
         env.executionBlockers = res.blockers;
       }
