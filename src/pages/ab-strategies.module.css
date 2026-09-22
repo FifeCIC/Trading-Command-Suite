@@ -244,6 +244,36 @@
 
 .errorHint { composes: errorHint from '../components/strategy-common.module.css'; }
 
+/* ── Refused pair — a cross-symbol link is NOT an A/B (owner's rule, 2026-09-22) ──
+   Informational, not an error: nothing failed — the link simply is not an A/B pair, so the A/B
+   columns are NOT rendered. Two symbols shown as "A vs B" would claim a copy lineage that does not
+   exist (the symbol is the constant in an A/B). The panel states the fact and points at the pair
+   that IS eligible. */
+.refused {
+  max-width: 760px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg-elev);
+}
+
+.refusedTitle {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.refusedBody {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.refusedBody:last-child {
+  margin-bottom: 0;
+}
+
 /* ── Official A/B test (#929) — running line, test header, change block ─── */
 
 /* One muted line in pair mode, ONLY while a test is running: operational status, not teaching

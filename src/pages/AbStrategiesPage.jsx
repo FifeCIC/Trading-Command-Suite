@@ -11,12 +11,22 @@
  * this page answers one question — "what exactly is different between these two configurations?" —
  * so the diff is the product, not a nicety.
  *
+ * ⚠️ THE SYMBOL IS THE CONSTANT (owner, 2026-09-22): *"A/B testing of strategies is not meant to be
+ * different symbols... The symbol is the one thing that isn't to change when we copy a strategy for
+ * A/B testing."* A pair must therefore trade the SAME market: what varies between a strategy and
+ * its copy is the playbook (protocol / timeframe / execution policy), never the symbol. Two
+ * strategies on DIFFERENT symbols are independent — framing them as "A vs B" would claim a copy
+ * lineage that does not exist — so a cross-symbol link is REFUSED with the reason, never silently
+ * swapped for another pair and never rendered as one. Measured 2026-09-22 on the DERIVED payload
+ * (the set this page reads): 27 strategies, and exactly two symbols carry more than one — XAUUSD,
+ * four live Gold strategies (m5 / m15 / 1h / 4h), and EURUSD, whose only second strategy is an
+ * inactive control with no routing subscription (#874). The seed prefers a same-symbol pair where
+ * BOTH sides are active.
+ *
  * ⚠️ THE PAIR IS DATA, NOT A CONTROL (same rule as the A/B Ladder). No pickers live here: the pair
  * arrives via `?pair=<keyA>,<keyB>` (full `strategyKey` or an 8+ character PREFIX — the UI only
  * ever shows the first 8 characters, so links should not need more), else the persisted last pair,
- * else a seed. The seed deliberately prefers two strategies that SHARE a protocol — the
- * `forex-session-v1` family resolves 14 treatments of one protocol, and comparing two of those is
- * exactly what this page exists for.
+ * else a same-symbol seed.
  *
  * ⚠️ DIFFERENCE MARKING IS THE POINT. Treatment values and the protocol / role / broker / symbol
  * sets that differ between A and B carry a `≠` marker whose title spells out BOTH sides. The marker
@@ -110,6 +120,33 @@ function resolveKey(input, strategies) {
   if (exact) return exact.strategyKey;
   const prefixed = strategies.filter((s) => s.strategyKey.toLowerCase().startsWith(t));
   return prefixed.length === 1 ? prefixed[0].strategyKey : null;
+}
+
+/** sameSymbolSet — the A/B invariant: both sides trade the same market(s). */
+function sameSymbolSet(a, b) {
+  if (!a?.symbols?.length || !b?.symbols?.length) return false;
+  return listKey(a.symbols) === listKey(b.symbols);
+}
+
+/**
+ * pickSeedPair — the default pair. The invariant is the symbol; given that, the seed prefers a
+ * group with two ACTIVE strategies — a pair you could actually run — before falling back to the
+ * first same-symbol group, then to null when no symbol carries two strategies at all.
+ * Measured 2026-09-22: XAUUSD has four live Gold strategies, so it seeds; EURUSD's only second
+ * strategy is an inactive control that can never trade (#874).
+ */
+function pickSeedPair(strategies) {
+  const groups = new Map();
+  for (const s of strategies) {
+    const g = listKey(s.symbols);
+    groups.set(g, [...(groups.get(g) ?? []), s]);
+  }
+  const multi = [...groups.values()].filter((g) => g.length > 1);
+  const group = multi.find((g) => g.filter((s) => s.active).length > 1) ?? multi[0];
+  if (!group) return null;
+  const pool = group.filter((s) => s.active).length > 1 ? group.filter((s) => s.active) : group;
+  const sorted = [...pool].sort((x, y) => x.strategyKey.localeCompare(y.strategyKey));
+  return { a: sorted[0].strategyKey, b: sorted[1].strategyKey };
 }
 
 /** fmtDuration — "3d 4h" / "5h 12m" / "8m". The running age of a test, for the data-period question. */
@@ -217,6 +254,8 @@ function SideColumn({ side, strategy, reg, drift, peer }) {
         <div className={styles.partRow}>
           <span className={styles.partLabel}>
             market
+            {/* market cannot differ for an ACCEPTED pair (same-symbol invariant, 2026-09-22) —
+                the ≠ is kept as a guard so a later pairing-rule change cannot silently hide one. */}
             {partDiff(strategy.symbols, peer.symbols) && (
               <Neq title={partTitle('market', strategy.symbols, peer.symbols)} />
             )}
@@ -367,47 +406,65 @@ export default function AbStrategiesPage() {
   // A failure there must not blank this page: names are an overlay, not the data.
   const registry = useStrategyRegistry();
 
-  // ── The pair: URL → persisted → seed (same resolution order as the A/B Ladder) ──
+  // The seed is also the "open this pair instead" pointer when a cross-symbol link is refused.
+  const seed = useMemo(() => pickSeedPair(strategies), [strategies]);
+
+  /** labelFor — best available human name for a strategyKey (registry name, else its first bot). */
+  const labelFor = (key) => registry.byKey.get(key)?.name
+    ?? strategies.find((s) => s.strategyKey === key)?.botNames?.[0]
+    ?? key.slice(0, 8);
+
+  // ── The pair: URL → persisted → same-symbol seed (same resolution order as the A/B Ladder) ──
   const [pair, setPair] = usePersistentState('abstrategies:pair', { a: null, b: null, seeded: false });
 
   const [searchParams] = useSearchParams();
   const pairParam = searchParams.get('pair') || '';
-  useEffect(() => {
-    if (!pairParam || strategies.length === 0) return;
+
+  // The URL pair, resolved once. Unknown / ambiguous keys stay ignored in SILENCE (a stale link
+  // must not blank the view) — but a pair that resolves onto DIFFERENT symbols is a third case:
+  // it is a symbol comparison, not an A/B, so it is kept here and refused OUT LOUD in the render.
+  const urlPair = useMemo(() => {
+    if (!pairParam || strategies.length === 0) return null;
     const [rawA, rawB] = pairParam.split(',').map((s) => s.trim());
     const a = resolveKey(rawA, strategies);
     const b = resolveKey(rawB, strategies);
-    // Unknown or ambiguous keys are ignored in silence — a stale link must not blank the view.
-    if (!a || !b || a === b) return;
-    if (pair.a === a && pair.b === b) return;
-    setPair({ a, b, seeded: true });
-  }, [pairParam, strategies, pair.a, pair.b, setPair]);
+    if (!a || !b || a === b) return null;
+    const sa = strategies.find((s) => s.strategyKey === a);
+    const sb = strategies.find((s) => s.strategyKey === b);
+    return {
+      a,
+      b,
+      sameSymbol: sameSymbolSet(sa, sb),
+      symbolsA: sa.symbols ?? [],
+      symbolsB: sb.symbols ?? [],
+    };
+  }, [pairParam, strategies]);
+
+  useEffect(() => {
+    // Only a same-symbol pair is adopted as THE pair; a cross-symbol link never becomes one.
+    if (!urlPair?.sameSymbol) return;
+    if (pair.a === urlPair.a && pair.b === urlPair.b) return;
+    setPair({ a: urlPair.a, b: urlPair.b, seeded: true });
+  }, [urlPair, pair.a, pair.b, setPair]);
 
   useEffect(() => {
     if (strategies.length < 2) return;
-    const keys = new Set(strategies.map((s) => s.strategyKey));
-    let a = keys.has(pair.a) ? pair.a : null;
-    let b = keys.has(pair.b) ? pair.b : null;
-    let seeded = pair.seeded;
-    if (!seeded) {
-      // Prefer two strategies that SHARE a protocol (e.g. the forex-session-v1 family) — the
-      // comparison this page exists for — before falling back to the first two rows.
-      const byProtocol = new Map();
-      for (const s of strategies) {
-        const g = s.protocolIds.join('+');
-        byProtocol.set(g, [...(byProtocol.get(g) ?? []), s]);
-      }
-      const shared = [...byProtocol.values()].find((g) => g.length > 1);
-      const [first, second] = shared ?? strategies;
-      a = a ?? first.strategyKey;
-      b = b ?? (second.strategyKey !== a
-        ? second.strategyKey
-        : strategies.find((s) => s.strategyKey !== a)?.strategyKey ?? null);
-      seeded = true;
+    const byKey = new Map(strategies.map((s) => [s.strategyKey, s]));
+    let a = byKey.get(pair.a) ?? null;
+    let b = byKey.get(pair.b) ?? null;
+    // Reconcile against THE ONE INVARIANT: a valid pair trades the same symbol. This also replaces
+    // a pair persisted before the rule existed — the old seed paired by shared protocol, so
+    // AUDJPY vs AUDUSD (a symbol comparison) could be stored as "the pair".
+    if (!(a && b && sameSymbolSet(a, b))) {
+      a = seed ? byKey.get(seed.a) ?? null : null;
+      b = seed ? byKey.get(seed.b) ?? null : null;
     }
-    if (a && a === b) b = strategies.find((s) => s.strategyKey !== a)?.strategyKey ?? null;
-    if (a !== pair.a || b !== pair.b || seeded !== pair.seeded) setPair({ a, b, seeded });
-  }, [strategies, pair, setPair]);
+    const keyA = a?.strategyKey ?? null;
+    const keyB = b?.strategyKey ?? null;
+    if (keyA !== pair.a || keyB !== pair.b || pair.seeded !== true) {
+      setPair({ a: keyA, b: keyB, seeded: true });
+    }
+  }, [strategies, seed, pair, setPair]);
 
   // ── Official A/B test mode (?test=<id>, #929). Read-only; every endpoint already exists. ──
   const testIdParam = searchParams.get('test') || '';
@@ -474,8 +531,10 @@ export default function AbStrategiesPage() {
       .map((k) => ({ key: k, from: fmtCfg(ctlCfg[k]).text, to: fmtCfg(varCfg[k]).text }));
   }, [ctlCfg, varCfg]);
 
-  const strategyA = strategies.find((s) => s.strategyKey === pair.a) ?? null;
-  const strategyB = strategies.find((s) => s.strategyKey === pair.b) ?? null;
+  // Which pair renders: a VALID url pair wins immediately (the columns must never flash the
+  // persisted pair first); a refused cross-symbol link is handled by its own branch below.
+  const strategyA = strategies.find((s) => s.strategyKey === (urlPair?.sameSymbol ? urlPair.a : pair.a)) ?? null;
+  const strategyB = strategies.find((s) => s.strategyKey === (urlPair?.sameSymbol ? urlPair.b : pair.b)) ?? null;
 
   if (isLoading) {
     return (
@@ -508,9 +567,12 @@ export default function AbStrategiesPage() {
           <PageInfoPopover>
             Two strategies — a bot&apos;s whole configuration (protocol + role + market + broker +
             execution policy) — side by side. A “≠” marks every value that differs, with both
-            sides spelled out in its tooltip. The pair comes from the URL (?pair=keyA,keyB — the
-            first 8 characters of each strategyKey are enough) or the last pair viewed; it is set
-            by whatever owns A/B pairing, not on this page. An OFFICIAL test opens with
+            sides spelled out in its tooltip. A pair must trade ONE symbol — the symbol is the
+            constant in an A/B (what changes between a strategy and its copy is the playbook, not
+            the market) — so a link pairing two different symbols is refused rather than shown. The
+            pair comes from the URL (?pair=keyA,keyB — the first 8 characters of each strategyKey
+            are enough) or the last pair viewed; it is set by whatever owns A/B pairing, not on
+            this page. An OFFICIAL test opens with
             ?test=&lt;id&gt;: it shows when the test started, how long it has run, and what was
             changed in B — both as the change log recorded it (with the author&apos;s note) and as
             the two snapshot configs actually differ.
@@ -583,11 +645,33 @@ export default function AbStrategiesPage() {
               </Link>
             </div>
           )}
-          {!strategyA || !strategyB ? (
+          {urlPair && !urlPair.sameSymbol ? (
+            <div className={styles.refused}>
+              <strong className={styles.refusedTitle}>
+                Not an A/B pair — A trades {urlPair.symbolsA.join(', ')} · B trades {urlPair.symbolsB.join(', ')}.
+              </strong>
+              <p className={styles.refusedBody}>
+                An A/B pair holds the symbol constant: what changes between a strategy and its copy
+                is the playbook (protocol, timeframe, execution policy), never the market. Two
+                strategies on different symbols are independent — reading them as “A vs B” would
+                claim a copy link that does not exist.
+              </p>
+              {seed && (
+                <p className={styles.refusedBody}>
+                  Open the {strategies.find((s) => s.strategyKey === seed.a)?.symbols.join(', ')} A/B pair:{' '}
+                  <Link className={styles.officialLink} to={`/trading/ab-strategies?pair=${seed.a},${seed.b}`}>
+                    {labelFor(seed.a)} vs {labelFor(seed.b)} →
+                  </Link>
+                </p>
+              )}
+            </div>
+          ) : !strategyA || !strategyB ? (
         <EmptyState
           icon="🆚"
           title="No pair to show"
-          description="This page compares two derived strategies. A link such as ?pair=<keyA>,<keyB> — the first 8 characters of each strategyKey — selects a pair directly."
+          description={seed
+            ? 'This page compares two derived strategies. A link such as ?pair=<keyA>,<keyB> — the first 8 characters of each strategyKey — selects a pair directly.'
+            : 'No two strategies trade the same symbol, and an A/B pair holds the symbol constant — so there is nothing to pair yet. Copy a strategy and change something other than the symbol to create one.'}
         />
       ) : (
         <div className={styles.columns}>
