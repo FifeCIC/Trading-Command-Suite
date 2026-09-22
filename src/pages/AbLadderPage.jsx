@@ -32,13 +32,26 @@
  * scoreable protocols so the page is never blank. The legend still NAMES both sides:
  * that is identity, not a control.
  *
- * ⚠️ ONE FULL CARD + ONE COMPACT STRIP — ONE LETTER EACH (2026-09-22).
- * The card IS the leading side (it always was — `primary`) and now WEARS its letter
- * (A/B) in the top-right corner, so the head's state chip moves to the card centre and
- * the copy chip to the card's bottom-right. The strip IS the other side: its letter,
- * its signal word, BOTH its scores (Signal and Opp — the metric chosen by "Score by"
- * highlighted, mirroring the card's blocks) and the gap (+N / ±0 / Δ n/a). No side is
- * printed twice: the eye reads "this card, versus that strip".
+ * ⚠️ FIXED SIDES — THE CARD IS ALWAYS SIDE A (2026-09-22, owner: "A's should be in
+ * the ladder and the card on the right will be B"). The earlier model showed the
+ * LEADING side as the full card, which hid A's detail on every row B was winning.
+ * Now the left card is always A and the strip is always B — A is the reference you
+ * read, B the challenger beside it — and `lead`/`delta` state who is ahead (the delta
+ * wears the leading side's letter and colour: "B +4", "A +4", "±0", "Δ n/a").
+ * Each element states the side it REALLY is; the one fallback is a symbol A does not
+ * resolve at all (the union can produce one), where the card is B and its badge says
+ * so. The card head keeps the layout from the same review: side-letter box top-right,
+ * state chip centred, copy chip bottom-right.
+ *
+ * ⚠️ THE STRIP CARRIES IDENTITY, NOT JUST NUMBERS (owner, 2026-09-22 — "include more
+ * data as a way of validating and building trust over what we're looking at"). It
+ * states the SYMBOL (a link, like the card's), the protocol name and the RAW scores
+ * beside their percentages, so the strip can be checked without trusting the card's
+ * framing; the row title also carries the scored age.
+ * ⚠️ Side letter boxes are ONE treatment with ONE colour per side (A = --accent,
+ * B = --color-accent-blue): the card corner badge and the strip letter are the same
+ * box, tinted by SIDE (not by who leads — the sides are fixed). The letter is always
+ * text, so colour is never the sole differentiator (ui-standards).
  *
  * ⚠️ TWO DECISIONS MADE EXPLICIT (they define what the ladder MEANS)
  *   1. ORDERING — ranked by the PAIR MAXIMUM: a row's rank value is the higher of the
@@ -70,12 +83,13 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import ScoreCard from '../components/ScoreCard';
 import { LadderToolbar, LadderEmptyState, LadderExcludedDivider } from '../components/LadderPanels';
 import { matchesSearch } from '../core/score-card-view';
+import { timeAgo } from '../core/format-utils';
 import { AGE_OPTIONS, marketMatches } from '../core/score-card-filters';
 import { buildScoreEntries } from '../core/score-card-entries';
 import { useProtocolStatuses } from '../core/protocol-status';
@@ -91,9 +105,10 @@ import './ab-ladder.css';
 /**
  * Side letters — the ONLY side identity (the ⬤/◆ glyphs were dropped 2026-09-22: the
  * card wears one letter and the strip the other, so a shape marker was printing the
- * same fact twice). Colour is emphasis, never the sole differentiator: each side is a
- * letter, and the gap is stated in words ("+27" / "±0" / "Δ n/a"), so the comparison
- * survives colour-blind rendering and greyscale printing.
+ * same fact twice). Each SIDE owns a colour (A = --accent, B = --color-accent-blue),
+ * applied wherever that side appears; the letter is text above all, and the gap is
+ * stated in words ("B +27" / "±0" / "Δ n/a"), so the comparison survives colour-blind
+ * rendering and greyscale printing.
  */
 
 /**
@@ -118,11 +133,16 @@ function buildPairRow(symbol, aEntry, bEntry, rankBy) {
   } else if (va != null) lead = 'a';
   else if (vb != null) lead = 'b';
 
-  const primary = lead === 'b' && bEntry ? bEntry : (aEntry || bEntry);
+  // ── FIXED SIDES (owner, 2026-09-22): the card is ALWAYS side A, the strip ALWAYS
+  // side B — the previous model showed the LEADING side as the card, which hid A's
+  // full detail on every row B was winning ("make sure we're not hiding A's from the
+  // left hand ladder"). A is the reference you read; B is the challenger beside it;
+  // `lead`/`delta` below still state who is ahead. The badge always tells the truth
+  // about which side the card IS — the one fallback is a symbol A does not resolve at
+  // all (the union can produce one), where the card is B and says so.
+  const primary = aEntry || bEntry;
   const other = primary === aEntry ? bEntry : aEntry;
   const highest = Math.max(va ?? -1, vb ?? -1);
-  // Which SIDE the card shows and which the strip shows. `cardSide` wears the letter
-  // badge (top-right); `stripSide` is the other one — one letter per element.
   const cardSide = primary === aEntry ? 'a' : 'b';
   const stripSide = cardSide === 'a' ? 'b' : 'a';
 
@@ -159,37 +179,59 @@ function buildPairRow(symbol, aEntry, bEntry, rankBy) {
 }
 
 /**
- * StripSide({ side, entry, name, rankBy }) — the compact half of the comparison: the
- * side that is NOT on the card. Shows its letter, its signal word and BOTH its scores
- * (Signal and Opp — the one picked by "Score by" highlighted, exactly like the card's
- * blocks), so both sides of the pair are readable without re-deriving anything from
- * the card. An unscored side states "no score" rather than rendering zeroes — a zero
+ * StripSide({ side, entry, name, rankBy, symbol }) — the compact half of the comparison:
+ * ALWAYS the side that is not on the card (side B, unless A has no entry for the symbol).
+ * Carries IDENTITY as well as numbers — the boxed side letter, the symbol (a link, like
+ * the card's), the signal word and protocol name, and BOTH scores as raw beside their
+ * percentage (so the percentage can be recomputed, not trusted), with the metric picked
+ * by "Score by" highlighted exactly like the card's blocks. The row title carries the
+ * scored age. An unscored side states "no score" rather than rendering zeroes — a zero
  * is a real score and must not be confusable with an absent one.
  */
-function StripSide({ side, entry, name, rankBy }) {
+function StripSide({ side, entry, name, rankBy, symbol }) {
   const has = !!entry?.hasScore;
   const vm = entry?.vm || {};
   const signalPct = has ? (vm.pct ?? null) : null;
   const oppPct = has ? (vm.opportunityPct ?? null) : null;
+  const signalRaw = has && vm.score != null
+    ? `${vm.score.toLocaleString()}${vm.scoreMax ? ` / ${vm.scoreMax.toLocaleString()}` : ''}`
+    : null;
+  const oppRaw = has && vm.opportunityScore != null
+    ? `${vm.opportunityScore.toLocaleString()}${vm.opportunityMax ? ` / ${vm.opportunityMax.toLocaleString()}` : ''}`
+    : null;
   const signalWord = has ? (vm.signal ?? null) : null;
 
   const detail = has
-    ? `Side ${side.toUpperCase()} — ${name}: ${signalWord ?? 'no signal'}, Signal ${signalPct ?? '—'}%, Opp ${oppPct ?? '—'}%`
-    : `Side ${side.toUpperCase()} — ${name}: no score yet`;
+    ? `${symbol} · Side ${side.toUpperCase()} — ${name}: ${signalWord ?? 'no signal'}, Signal ${signalRaw ?? '—'}${signalPct != null ? ` (${signalPct}%)` : ''}, Opp ${oppRaw ?? '—'}${oppPct != null ? ` (${oppPct}%)` : ''}`
+      + (entry?.time ? ` · scored ${timeAgo(entry.time)}` : '')
+    : `${symbol} · Side ${side.toUpperCase()} — ${name}: no score yet`;
 
   return (
     <div className={`ab-side ab-side--${side}${has ? '' : ' ab-side--none'}`} title={detail}>
-      <span className="ab-side-top">
-        <span className="ab-strip-letter">{side.toUpperCase()}</span>
-        {has ? <span className="ab-side-word">{signalWord ?? '—'}</span> : <span className="ab-side-word">no score</span>}
+      <span className="ab-side-head">
+        <span className={`ab-strip-letter ab-sideletter ab-sideletter--${side}`} aria-hidden="true">
+          {side.toUpperCase()}
+        </span>
+        <Link
+          className="ab-strip-symbol"
+          to={`/research/symbol/${encodeURIComponent(symbol)}`}
+          title={`Open ${symbol}`}
+        >
+          {symbol}
+        </Link>
+      </span>
+      <span className="ab-side-name">
+        {has ? `${signalWord ?? '—'} · ${name}` : `no score · ${name}`}
       </span>
       <span className="ab-strip-scores">
         <span className={`ab-strip-score${rankBy === 'signal' ? ' ab-strip-score--active' : ''}`}>
           <span className="ab-strip-score-label">Signal</span>
+          <span className="ab-strip-score-raw">{signalRaw ?? ''}</span>
           <span className="ab-strip-score-value">{signalPct != null ? `${signalPct}%` : '—'}</span>
         </span>
         <span className={`ab-strip-score${rankBy === 'opp' ? ' ab-strip-score--active' : ''}`}>
           <span className="ab-strip-score-label">Opp</span>
+          <span className="ab-strip-score-raw">{oppRaw ?? ''}</span>
           <span className="ab-strip-score-value">{oppPct != null ? `${oppPct}%` : '—'}</span>
         </span>
       </span>
@@ -323,6 +365,7 @@ export default function AbLadderPage() {
     const cardKey = `${cardEntry.protocolId}::${cardEntry.symbol}`;
     const cardName = row.cardSide === 'a' ? (protoA?.name ?? pair.a) : (protoB?.name ?? pair.b);
     const stripName = row.stripSide === 'a' ? (protoA?.name ?? pair.a) : (protoB?.name ?? pair.b);
+    const leadName = row.lead === 'a' ? (protoA?.name ?? pair.a) : (protoB?.name ?? pair.b);
     return (
       <div key={row.symbol} className="ab-pair-row">
         {/* The LEADING side, full card, wearing its side letter — the corner badge. */}
@@ -338,7 +381,7 @@ export default function AbLadderPage() {
           copied={copyState.key === cardKey ? copyState.ok : null}
           cornerBadge={
             <span
-              className="ab-corner-badge"
+              className={`ab-corner-badge ab-sideletter ab-sideletter--${row.cardSide}`}
               aria-hidden="true"
               title={`Card side: ${row.cardSide.toUpperCase()} — ${cardName}`}
             >
@@ -357,13 +400,13 @@ export default function AbLadderPage() {
           {/* Reveal with the card: an unrevealed `.lad-reveal` is opacity 0, and the
               scroll hook grants visibility to every one inside the container. */}
           <div className="lad-reveal">
-            <StripSide side={row.stripSide} entry={row.other} name={stripName} rankBy={rankBy} />
+            <StripSide side={row.stripSide} entry={row.other} name={stripName} rankBy={rankBy} symbol={row.symbol} />
             {row.lead && row.delta != null && (
               <span
-                className="ab-delta"
-                title={`${cardName} leads by ${row.delta} percentage point${row.delta === 1 ? '' : 's'} (of each protocol's own capacity)`}
+                className={`ab-delta ab-delta--${row.lead}`}
+                title={`${leadName} leads by ${row.delta} percentage point${row.delta === 1 ? '' : 's'} (of each protocol's own capacity)`}
               >
-                +{row.delta}
+                {row.lead.toUpperCase()} +{row.delta}
               </span>
             )}
             {!row.lead && row.tie && (
@@ -397,17 +440,17 @@ export default function AbLadderPage() {
         <div>
           <h1>A/B Ladder
             <PageInfoPopover>
-              The Ladder, scoped to a protocol PAIR. Every symbol either side resolves is
-              ranked as on the Ladder. The higher side is a full card wearing its letter
-              (A or B, top-right); the other side rides beside it as a compact strip with
-              its letter, its Signal and Opp scores, and the gap (+N, ±0 for a tie,
-              Δ n/a when only one side scored). Rows are ranked by the PAIR MAXIMUM (the
-              higher of the two sides), and the symbol set is the UNION of both sides —
-              one-sided rows are shown, not hidden. The pair comes from the URL
-              (?pair=id,id) or the last-used pair — it is set by whatever owns A/B
-              pairing, not on this page. A running A/B test that changes only CONFIG
-              (not protocol) cannot be shown here yet: scoring is protocol-scoped, so
-              those pairs render identical sides by design.
+              The Ladder, scoped to a protocol PAIR. Side A is the full card on the left,
+              wearing its letter in the corner; side B rides beside it as a compact strip —
+              its letter, the symbol, the protocol, and its raw and percentage scores for
+              Signal and Opp. The gap states who is ahead: “B +4” means B leads by 4 points,
+              “±0” is a tie, “Δ n/a” means only one side scored. Rows are ranked by the PAIR
+              MAXIMUM (the higher of the two sides) and the symbol set is the UNION of both
+              sides — one-sided rows are shown, not hidden. The pair comes from the URL
+              (?pair=id,id) or the last-used pair; it is set by whatever owns A/B pairing,
+              not on this page. A running A/B test that changes only CONFIG (not protocol)
+              cannot be shown here yet: scoring is protocol-scoped, so those pairs render
+              identical sides by design.
             </PageInfoPopover>
           </h1>
           <p className="lad-subtitle">
@@ -429,10 +472,10 @@ export default function AbLadderPage() {
 
         {protoA && protoB && (
           <p className="ab-legend">
-            <span className="ab-legend-letter">A</span> = {protoA.name ?? protoA.id}
+            <span className="ab-legend-letter ab-legend-letter--a">A</span> = {protoA.name ?? protoA.id}
             {' · '}
-            <span className="ab-legend-letter">B</span> = {protoB.name ?? protoB.id}
-            {' · '}the card wears the higher side&apos;s letter, the strip the other
+            <span className="ab-legend-letter ab-legend-letter--b">B</span> = {protoB.name ?? protoB.id}
+            {' · '}the card is side A, the strip side B
             {' · '}ranked by the pair maximum
             {rankBy === 'opp' ? ' (Opportunity)' : ' (Signal)'}
           </p>

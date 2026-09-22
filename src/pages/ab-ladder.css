@@ -24,7 +24,9 @@
   margin: 0; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
   color: var(--ink-soft); font-size: 0.78rem;
 }
-.ab-legend-letter { color: var(--accent); font-weight: 800; }
+.ab-legend-letter { font-weight: 800; }
+.ab-legend-letter--a { color: var(--accent); }
+.ab-legend-letter--b { color: var(--color-accent-blue); }
 
 /* ── Pair row: the shared ScoreCard and the strip as STRETCHED SIBLINGS ──
    `min-width: 0` on the card is load-bearing: without it the card's intrinsic width
@@ -56,27 +58,35 @@
   justify-self: end; align-self: end;
 }
 
-/* The side letter — the card's identity badge. Accent marks the LEADER (this card);
-   the strip's letter is neutral ink because it is the runner-up. Not interactive, so
-   the 44px tap-target rule does not apply. */
-.ab-corner-badge {
-  margin-left: auto;
+/* ── Side letter boxes — ONE treatment, ONE colour per side ──
+   A = --accent, B = --color-accent-blue. The card's corner badge and the strip's
+   letter are the same box, tinted by SIDE (not by who leads — the sides are FIXED:
+   card = A, strip = B; see the page header). The letter is always text, so colour is
+   never the sole differentiator (ui-standards). Not interactive — the 44px tap-target
+   rule applies to controls, and this is an indicator. */
+.ab-sideletter {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 1.9rem; min-height: 1.9rem;
-  border: 1px solid var(--accent); border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent); font-weight: 800; font-size: 0.95rem;
+  border: 1px solid currentColor; border-radius: 8px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: var(--accent);
+  font-weight: 800; font-size: 0.95rem; line-height: 1;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-variant-numeric: tabular-nums;
 }
+.ab-sideletter--a { color: var(--accent); }
+.ab-sideletter--b { color: var(--color-accent-blue); }
 
-/* ── The comparison strip — the OTHER side ──
-   One side per element (owner's layout, 2026-09-22): the card IS the leading side, the
-   strip IS the other one, so neither side is printed twice. Widened from 118px to give
-   the strip the other side's TWO scores (Signal + Opp) the same label-above-value
-   rhythm its card uses. */
+/* Corner badge = its layout slot only (top-right of the card head); the box itself
+   comes from .ab-sideletter. */
+.ab-corner-badge { margin-left: auto; }
+
+/* ── The comparison strip — ALWAYS side B (sides are fixed; see the page header) ──
+   The card IS side A and the strip IS side B, so neither side is printed twice.
+   Widened from 118px to carry the strip's identity (symbol, protocol, boxed letter) and
+   the OTHER side's two scores as raw + percentage. */
 .ab-strip {
-  flex: 0 0 158px; width: 158px;
+  flex: 0 0 172px; width: 172px;
   display: flex; flex-direction: column; gap: 0.3rem;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
   padding: 0.55rem 0.5rem;
@@ -88,47 +98,62 @@
 .ab-side { display: flex; flex-direction: column; gap: 0.3rem; }
 .ab-side--none { opacity: 0.55; }
 
-/* Letter + signal word: the strip's identity line. Neutral ink for the letter — accent
-   marks the LEADER, and the leader is the card, not this side. */
-.ab-side-top { display: flex; align-items: baseline; gap: 0.4rem; }
-.ab-strip-letter {
-  font-weight: 800; font-size: 0.95rem; color: var(--ink);
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+/* Identity line: the boxed side letter + the SYMBOL (a link, like the card's) — the
+   owner asked for validating identity in the strip: you should not have to trust the
+   card's framing to know what you are reading. */
+.ab-side-head { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.ab-strip-symbol {
+  font-weight: 800; font-size: 0.95rem; color: var(--ink); text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ab-side-word {
-  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-soft);
+.ab-strip-symbol:hover { color: var(--accent); }
+/* Signal word + protocol name — the "who is this" line; the full text (including the
+   scored age) is in the row title. */
+.ab-side-name {
+  font-size: 0.62rem; color: var(--ink-soft);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* The other side's two scores — mirror of the card's blocks; the metric picked by
-   "Score by" is accent-highlighted exactly as on the card. */
+/* The other side's two scores — RAW beside the percentage, the same pair the card
+   shows, so the percentage can be recomputed rather than trusted. The metric picked
+   by "Score by" is accent-highlighted exactly as on the card. */
 .ab-strip-scores { display: flex; flex-direction: column; gap: 0.22rem; }
-.ab-strip-score { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.ab-strip-score {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 0.4rem; align-items: baseline;
+}
 .ab-strip-score-label {
   font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--ink-soft);
 }
 /* Numbers are comparison figures — monospaced and tabular like every other stat value
    (ui-standards). */
+.ab-strip-score-raw {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.6rem; color: var(--ink-soft); text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .ab-strip-score-value {
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 0.95rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 .ab-strip-score--active .ab-strip-score-label,
 .ab-strip-score--active .ab-strip-score-value { color: var(--accent); }
 
-/* The gap — stated in WORDS, never colour alone. No letter on it: the card already says
-   which side is ahead, and the strip says which side these numbers belong to.
-   "+27" = the card side leads by 27 points of each protocol's own capacity; "±0" = tie;
-   "Δ n/a" = only one side scored, and a gap needs both denominators. */
+/* The gap — stated in WORDS and tinted with the LEADING side's colour. Sides are FIXED
+   now, so the letter is back on it ("B +4" = B leads by 4 points of each protocol's own
+   capacity). "±0" = tie; "Δ n/a" = only one side scored, and a gap needs both
+   denominators. */
 .ab-delta {
   margin-top: auto; text-align: center;
-  font-size: 0.72rem; font-weight: 800; color: var(--accent);
+  font-size: 0.72rem; font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+.ab-delta--a { color: var(--accent); }
+.ab-delta--b { color: var(--color-accent-blue); }
 .ab-delta--na, .ab-delta--tie { color: var(--ink-soft); font-weight: 600; }
 
 @media (max-width: 760px) {
-  .ab-strip { flex-basis: 132px; width: 132px; padding: 0.45rem 0.4rem; }
+  .ab-strip { flex-basis: 152px; width: 152px; padding: 0.45rem 0.4rem; }
   .ab-strip-score-value { font-size: 0.85rem; }
 }
