@@ -840,6 +840,123 @@ const VIEW_META = {
     css: 'src/pages/add-symbol.css',
     api: [],
   },
+
+  // ── REGISTERED 2026-09-22 — the NAV-LEAF METADATA GAP ─────────────────────────────────────────
+  // Every sidebar link resolves to `/area/viewId` and the Dev Overlay reports "No metadata
+  // registered for this route" when the lookup misses. Measured 2026-09-22 (after the owner hit
+  // /trading/strategies-derived): 14 of 125 nav leaves had NO entry — this block registers them
+  // all, and `scripts/verify-view-meta-routes.cjs` now ENFORCES coverage, so the next nav link
+  // added without metadata fails the verifier instead of landing on the user.
+  '/research/research-notes': {
+    label: 'Notes',
+    file: 'src/pages/ResearchNotesPage.jsx',
+    css: 'src/pages/research-notes.css',
+    api: [
+      'GET /api/research/notes',
+      'POST /api/research/notes',
+      'PUT /api/research/notes/reorder',
+      'GET /api/symbols',
+    ],
+  },
+  '/research/events-calendar': {
+    label: 'Events Calendar',
+    file: 'src/pages/EventsCalendarPage.jsx',
+    css: 'src/pages/events-calendar.css',
+    api: [
+      'GET /api/research/earnings/calendar',
+      'GET /api/automation/timeline?lookahead=240',
+      'GET /api/portfolio',
+    ],
+  },
+  '/research/stock-investigation': {
+    label: 'Stock Investigation',
+    file: 'src/pages/StockInvestigationPage.jsx',
+    css: 'src/pages/stock-investigation.css',
+    api: ['GET /api/research/investigations?limit=30', 'POST /api/research/investigations'],
+  },
+  '/research/market-correlations': {
+    label: 'Market Correlations',
+    file: 'src/pages/MarketCorrelationsPage.jsx',
+    css: 'src/pages/market-correlations.css',
+    api: ['GET /api/portfolio/correlation'],
+  },
+  '/research/recently-analysed-symbols': {
+    label: 'Recently Analysed',
+    file: 'src/pages/RecentlyAnalysedSymbolsPage.jsx',
+    css: 'src/pages/recently-analysed.css',
+    api: ['GET /api/scoring/recently-analysed?limit=50'],
+  },
+  '/research/analyse-symbol': {
+    label: 'Analyse Symbol',
+    file: 'src/pages/AnalyseSymbolPage.jsx',
+    css: 'src/pages/analyse-symbol.css',
+    api: ['GET /api/symbols', 'GET /api/scoring/ranked?limit=50'],
+  },
+  '/protocols/protocol-builder': {
+    label: 'Protocol Builder',
+    file: 'src/pages/CreateProtocolsPage.jsx',
+    css: 'src/pages/create-protocols.css',
+    api: ['GET /api/directives', 'GET /api/scoring/protocols', 'POST /api/scoring/protocols'],
+  },
+  '/protocols/directive-viewer': {
+    label: 'Directive Viewer',
+    file: 'src/pages/DirectiveViewerPage.jsx',
+    css: 'src/pages/directive-viewer.css',
+    api: ['GET /api/directives/:id/viewer'],
+  },
+  '/protocols/dual-protocol-inspector': {
+    // The nav label is "Dual-Protocol Inspector"; the component file keeps its lab name.
+    label: 'Dual-Protocol Inspector',
+    file: 'src/pages/ScoringDebugLab.jsx',
+    css: 'src/pages/scoring-debug-lab.css',
+    api: ['GET /api/scoring/gated/:symbol?protocol&bars&timeframe'],
+  },
+  '/trading/strategies-derived': {
+    label: 'Strategies',
+    file: 'src/pages/DerivedStrategiesPage.jsx',
+    css: 'src/pages/derived-strategies.module.css',
+    api: [
+      'GET /api/scoring/strategies/derived',
+      'GET /api/scoring/strategy-registry',
+      'PATCH /api/scoring/strategy-registry/:id',
+      'POST /api/scoring/strategy-registry',
+      'POST /api/scoring/strategy-registry/:id/reaccept',
+    ],
+  },
+  '/education/settings-education': {
+    label: 'Education Settings',
+    file: 'src/pages/SettingsEducationPage.jsx',
+    css: 'src/pages/settings.css',
+    api: [],
+  },
+  '/status/architecture-framework': {
+    label: 'Architecture',
+    file: 'src/pages/ArchitectureFrameworkPage.jsx',
+    css: 'src/pages/architecture-framework.css',
+    api: [
+      'GET /api/architecture/index',
+      'GET /api/providers/health',
+      'GET /api/health',
+      'GET /api/imports/runs?limit=5',
+      'GET /api/alerts/count',
+      'GET /api/calibrations',
+    ],
+  },
+  // INLINE VIEW — rendered by `App.jsx` renderMainContent() (INLINE_VIEWS: demos, use-cases,
+  // analytics, about). It has no page component and no stylesheet of its own; `file` names the
+  // shell that renders it so the overlay's component name and "open view file" stay truthful.
+  '/status/analytics': {
+    label: 'Analytics',
+    file: 'src/App.jsx',
+    css: 'src/index.css',
+    api: [],
+  },
+  '/lab/position-lifecycle': {
+    label: 'Position Lifecycle',
+    file: 'src/pages/PositionLifecyclePage.jsx',
+    css: 'src/pages/position-lifecycle.css',
+    api: ['GET /api/trading/position-lifecycle'],
+  },
 };
 
 /** Get view metadata from current URL path */

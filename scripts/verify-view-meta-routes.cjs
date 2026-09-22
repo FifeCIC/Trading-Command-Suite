@@ -24,6 +24,13 @@
  * thing you are guarding is not a guard — it is a second implementation that drifts, and the
  * canary proved it by reporting MISSED while the real matcher was broken. Do not reintroduce a
  * local `getViewMeta` here; import the shipped one or the script is worthless.
+ *
+ * TWO HALVES — they fail differently, so both are asserted here:
+ *   1. MATCHER (the CASES below): a registered path must resolve to the RIGHT key.
+ *   2. COVERAGE (the nav sweep below): every sidebar link must resolve to SOME key. On
+ *      2026-09-22, 14 of 125 nav leaves had no key at all — every matcher case still passed
+ *      while the user standing on /trading/strategies-derived saw "No metadata registered".
+ *      `scripts/canary-view-meta-routes.cjs` Direction 4 proves the coverage half can fail.
  */
 
 const path = require('node:path');
@@ -53,6 +60,24 @@ try {
 
 if (typeof getViewMeta !== 'function' || !VIEW_META || typeof VIEW_META !== 'object') {
   console.error('FATAL: view-meta.js did not expose both `VIEW_META` and `getViewMeta`.');
+  process.exit(1);
+}
+
+// ── Coverage half: evaluate the REAL nav tree ────────────────────────────────────────────────
+// Paths are derived EXACTLY as the shell navigates them: `navigate(`/${area}/${view.id}`)`
+// (App.jsx onPrimarySelect / onSecondarySelect). nav-tree's only import is `isNavVisible`, which
+// is stubbed — if that stops being true, the evaluation throws and this script fails loudly.
+const NAV_FILE = path.join(__dirname, '..', 'src', 'core', 'nav-tree.js');
+let NAV_TREE;
+try {
+  const navBody = fs.readFileSync(NAV_FILE, 'utf8')
+    .replace(/^export\s+default\s+/gm, 'const __defaultExport = ')
+    .replace(/^export\s+/gm, '')
+    .replace(/^import\s+.*$/gm, '');
+  // eslint-disable-next-line no-new-func
+  NAV_TREE = new Function(`const isNavVisible = () => true;\n${navBody}\nreturn NAV_TREE;`)();
+} catch (e) {
+  console.error('FATAL: could not evaluate nav-tree.js —', e.message);
   process.exit(1);
 }
 
@@ -93,9 +118,28 @@ for (const [pathname, expectedKey] of CASES) {
   );
 }
 
+// ── Coverage: every sidebar link must have metadata ─────────────────────────────────────────
+const missing = [];
+let navLeaves = 0;
+for (const [area, def] of Object.entries(NAV_TREE)) {
+  for (const view of def.views ?? []) {
+    // A section header is a LABEL with an id but no page (App.jsx skips them the same way).
+    if (view.kind === 'section-header' || !view.id) continue;
+    navLeaves += 1;
+    const route = `/${area}/${view.id}`;
+    if (!getViewMeta(route)) missing.push(`${route}   (${view.label})`);
+  }
+}
+
+console.log(`\nCoverage — ${navLeaves} nav leaf route(s), ${missing.length} without metadata:`);
+for (const m of missing) console.log(`  FAIL  MISSING METADATA  ${m}`);
+
 console.log();
-if (failures) {
-  console.error(`${failures} of ${CASES.length} route(s) resolved incorrectly.`);
+if (failures || missing.length) {
+  if (failures) console.error(`${failures} of ${CASES.length} route(s) resolved incorrectly.`);
+  if (missing.length) {
+    console.error(`${missing.length} nav route(s) would show "No metadata registered". Add a VIEW_META entry for each.`);
+  }
   process.exit(1);
 }
-console.log(`All ${CASES.length} routes resolved to the expected metadata.`);
+console.log(`All ${CASES.length} routes resolved correctly; all ${navLeaves} nav leaves have metadata.`);

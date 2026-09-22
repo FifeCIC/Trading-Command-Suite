@@ -18,8 +18,10 @@
  * reported MISSED. Weakening the matcher changed nothing, because the longest-key-first SORT
  * already puts the 25-char `symbols-browser` key ahead of the 16-char `symbol` key. The original
  * comment in view-meta.js credited the wrong mechanism. Direction 2 now tests what the `+ '/'`
- * actually does, and Direction 3 tests the sort.
- */
+ * actually does, and Direction 3 tests the sort. *
+ * Direction 4 (2026-09-22) covers the verifier's COVERAGE half: renaming a key that a NAV LEAF
+ * points at leaves the matcher correct and the user-facing route broken — only the nav sweep
+ * catches it. */
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -72,6 +74,14 @@ const BREAKAGES = [
         )
         .replace('Object.keys(VIEW_META).sort((a, b) => b.length - a.length)', 'Object.keys(VIEW_META)'),
     expectLine: /FAIL.*\/research\/symbol\/XAUUSD/,
+  },
+  {
+    // The COVERAGE half. No matcher case names `/trading/strategies-derived`, so only the nav
+    // sweep can catch its key going missing — i.e. the exact defect that reached the user on
+    // 2026-09-22 (14 nav leaves had no metadata while every matcher case passed).
+    name: "Direction 4 — rename the '/trading/strategies-derived' key (a nav leaf)",
+    apply: (s) => s.replace("'/trading/strategies-derived': {", "'/trading/strategies-derived-REMOVED': {"),
+    expectLine: /FAIL.*MISSING METADATA.*\/trading\/strategies-derived\b/,
   },
 ];
 
