@@ -953,6 +953,57 @@ export class AutomationLoopService implements OnModuleInit {
     return [...priorityItems, ...remaining];
   }
 
+  /**
+   * runWeekendDefenseCheck() — the Wed (triple-swap) / Fri (weekend-gap) check, extracted so a test
+   * can FORCE the day. (#869 Finding A)
+   *
+   * ⚠️ WHY THIS IS A METHOD AND NOT AN INLINE `if`. The original block read `allPositions` ~25 lines
+   * BEFORE the portfolio fetch filled it, so `mt5Positions.length` was always 0 and the block — with
+   * its own log line — never executed. A check that cannot log its own absence is indistinguishable
+   * from one that is working, so the guard is a test that forces day 5 and asserts the log line, and
+   * one that forces day 2 and asserts silence.
+   *
+   * `day` is a parameter rather than a `new Date()` read inside, for exactly that reason.
+   */
+  private async runWeekendDefenseCheck(day: number, allPositions: any[]): Promise<void> {
+    if (day !== 3 && day !== 5) return;
+    const mt5Positions = allPositions.filter((p: any) => p.symbol);
+    if (mt5Positions.length === 0) return;
+    try {
+      const checklist = await this.weekendDefense.buildChecklist(
+        mt5Positions.map((p: any) => ({
+          symbol: p.symbol,
+          ticket: p.brokerTicket ?? p.ticket ?? '',
+          side: p.side,
+          volume: p.quantity ?? p.volume ?? 0,
+          openPrice: p.avgCost ?? p.avgPrice ?? 0,
+          currentPrice: p.currentPrice ?? 0,
+          profit: p.unrealizedPnl ?? p.pnl ?? 0,
+          marketValue: p.marketValue ?? null,
+        }))
+      );
+      const toClose = checklist.positions.filter(p => p.recommendation === 'CLOSE');
+      const toReduce = checklist.positions.filter(p => p.recommendation === 'REDUCE');
+      if (toClose.length > 0) {
+        this.logger.warn(`⚠️ Weekend Defense: ${toClose.length} position(s) should be CLOSED — ${toClose.map(p => p.symbol).join(', ')}`);
+      }
+      if (toReduce.length > 0) {
+        this.logger.log(`🟡 Weekend Defense: ${toReduce.length} position(s) should be REDUCED — ${toReduce.map(p => p.symbol).join(', ')}`);
+      }
+      // The basis is logged, not assumed. "$X" on a total that is not money is the defect
+      // this line exists to make visible (#869 Finding C).
+      this.logger.log(
+        `Weekend Defense: ${checklist.summary.totalPositions} positions, ` +
+        `$${checklist.totalSwapCostTonight.toFixed(2)} swap tonight, ` +
+        `$${checklist.totalGapRisk.toFixed(2)} gap risk, exposure ${checklist.totalExposure.toFixed(2)} ` +
+        `(${checklist.totalExposureBasis})` +
+        (checklist.unknownSideCount > 0 ? `, ⚠️ ${checklist.unknownSideCount} position(s) with UNSTATED direction` : '')
+      );
+    } catch (err) {
+      this.logger.warn(`Weekend defense check skipped: ${(err as Error).message}`);
+    }
+  }
+
   setIntervalMs(ms: number): void {
     this.state.tickIntervalMs = Math.max(15000, Math.min(3600000, ms)); // 15s - 60m
     if (this.timer) {
@@ -1100,45 +1151,7 @@ export class AutomationLoopService implements OnModuleInit {
       // `marketValue` is passed because it is ALREADY money — preferred over volume × contract size,
       // which `BrokerPosition` does not carry. When neither is available the service reports the
       // basis as `not-money` instead of returning a ratio that reads like a currency amount.
-      const today = new Date().getUTCDay();
-      if (today === 3 || today === 5) {
-        const mt5Positions = allPositions.filter((p: any) => p.symbol);
-        if (mt5Positions.length > 0) {
-          try {
-            const checklist = await this.weekendDefense.buildChecklist(
-              mt5Positions.map((p: any) => ({
-                symbol: p.symbol,
-                ticket: p.brokerTicket ?? p.ticket ?? '',
-                side: p.side,
-                volume: p.quantity ?? p.volume ?? 0,
-                openPrice: p.avgCost ?? p.avgPrice ?? 0,
-                currentPrice: p.currentPrice ?? 0,
-                profit: p.unrealizedPnl ?? p.pnl ?? 0,
-                marketValue: p.marketValue ?? null,
-              }))
-            );
-            const toClose = checklist.positions.filter(p => p.recommendation === 'CLOSE');
-            const toReduce = checklist.positions.filter(p => p.recommendation === 'REDUCE');
-            if (toClose.length > 0) {
-              this.logger.warn(`⚠️ Weekend Defense: ${toClose.length} position(s) should be CLOSED — ${toClose.map(p => p.symbol).join(', ')}`);
-            }
-            if (toReduce.length > 0) {
-              this.logger.log(`🟡 Weekend Defense: ${toReduce.length} position(s) should be REDUCED — ${toReduce.map(p => p.symbol).join(', ')}`);
-            }
-            // The basis is logged, not assumed. "$X" on a total that is not money is the defect
-            // this line exists to make visible (#869 Finding C).
-            this.logger.log(
-              `Weekend Defense: ${checklist.summary.totalPositions} positions, ` +
-              `$${checklist.totalSwapCostTonight.toFixed(2)} swap tonight, ` +
-              `$${checklist.totalGapRisk.toFixed(2)} gap risk, exposure ${checklist.totalExposure.toFixed(2)} ` +
-              `(${checklist.totalExposureBasis})` +
-              (checklist.unknownSideCount > 0 ? `, ⚠️ ${checklist.unknownSideCount} position(s) with UNSTATED direction` : '')
-            );
-          } catch (err) {
-            this.logger.warn(`Weekend defense check skipped: ${(err as Error).message}`);
-          }
-        }
-      }
+      await this.runWeekendDefenseCheck(new Date().getUTCDay(), allPositions);
 
       // 2b. Discover active TradingStrategy records from DB
       let activeStrategies: any[] = [];
