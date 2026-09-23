@@ -93,7 +93,7 @@ export default function RiskControlsPage() {
       {/* ── Top Gauges ── */}
       <motion.div className="rc-gauges" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Gauge value={health.drawdown || 0} max={prefs.riskMaxDrawdown} label="Drawdown" color={drawdownColor} icon="📉" />
-        <Gauge value={health.totalExposure || 0} max={prefs.riskMaxPositions} label="Exposure" color={health.totalExposure > prefs.riskMaxPositions ? '#ef4444' : '#22c55e'} icon="📊" />
+        <Gauge value={health.positionCount || 0} max={prefs.riskMaxPositions} label="Open positions" color={health.positionCount > prefs.riskMaxPositions ? '#ef4444' : '#22c55e'} icon="📊" />
         <Gauge value={health.dailyPnl || 0} max={1000} label="Daily P&L" color={health.dailyPnl >= 0 ? '#22c55e' : '#ef4444'} icon="💵" />
 
         {/* Circuit Breaker */}

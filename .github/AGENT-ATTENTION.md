@@ -5,7 +5,14 @@ Items needing human attention. Agents: read this at session start. Append confir
 ---
 
 ## 2026-09-23
+### 🚧 `prebuild` blocked for ALL agents while one agent's WIP file fails notices
 
+- `src/pages/StrategyLibraryPage.jsx` (uncommitted, mid-edit) renders an undeclared raw error →
+  `validate-notices.cjs` fails `prebuild` → **no agent can produce a new backend build** until it
+  lands (`build:api` correctly leaves the API stopped; start it from `dist/src/main.js` meanwhile).
+- Backend fixes that landed in source today (e.g. #852) are type-checked + spec-verified but their
+  live demonstrations wait on a buildable tree. Nobody should "fix" the WIP file for the other agent.
+- **Agent:** Copilot (2026-09-23), during the requires:pro burn-down.
 ### �️ `build:api` was failing THREE ways — fixed; here is the new contract
 
 - **Found live** while closing #933: two `build:api` runs stalled with the API down for 12+ minutes.
@@ -27,6 +34,33 @@ Items needing human attention. Agents: read this at session start. Append confir
   No crash trace in either log. If you are the agent cycling builds, expect your run to stop the API —
   that is normal; a restart that FAILS is what this script now reports loudly.
 - **Agent:** Copilot (2026-09-23), closing #953 + #933.
+
+### 🔴 THE A/B RUNNER NOW PLACES REAL ORDERS — a running test is no longer inert
+
+- **What changed (#929, NOT closed):** `POST /api/automation/ab-tests/:id/start` used to succeed and
+  then do nothing, because the runner compared `snapshot.mode` (`'score'` — a SCORING style) against
+  the trading mode `'auto'` — a comparison that is **false for every snapshot in existence**. The
+  order branch was unreachable. It is now reachable: **two real XAUUSD orders were placed
+  2026-09-23 09:57:50** (tickets `152671260359` / `152671260371`).
+- **⚠️ Consequence for every agent:** a `running` A/B test now SENDS ORDERS to the broker on its
+  symbols (tagged `TCS AB-A` / `TCS AB-B` in the comment). **But on this account they are NETTED into
+  the bot's own position, not held as side positions** — measured: three XAUUSD orders (bot 0.02 +
+  side A 0.01 + side B 0.01) became ONE position of vol 0.04 under the last-written comment. So an
+  A/B test does **not** currently produce a measurable result: the side tickets vanish, and the sync
+  records them `exit-unknown` with `pnl = NULL` 48 seconds later. **An A/B verdict is not achievable
+  until the account mode is settled — do not cite an A/B result as evidence for anything yet.**
+- **The mode comes from the BOT, never a snapshot.** `resolveTradeAuthority(snapshotId)` walks
+  snapshot -> `scoringStrategyId` -> `trading_strategy`. `null` means **cannot judge** and is refused
+  — never defaulted. Enforced by `nest/scripts/validate-ab-inputs.cjs` (prebuild, canaried).
+- **The cadence comes from the PROTOCOL.** `runAbTest` read a literal `'5m'`; it now uses the
+  canonical `selectBaseTimeframe(protocol.recommendedTimeframe)` like every other scoring path.
+  Measured on one protocol in one second: 15m bars -> `94/BUY`; 5m bars -> `15/HOLD`. The runner was
+  measuring a configuration that does not exist in production — **any verdict it had produced would
+  have been about the wrong system.**
+- **A/B attribution is `trade.abTestSide`, not a parsed comment.** The stranded-trade reaper
+  overwrites `brokerComment`, which silently removed all 14 A/B rows from the verdict (`0 vs 0`, no
+  error). An `unattributed` count now separates "cannot attribute" from "has not traded yet".
+- **Agent:** Copilot (2026-09-23). Handoff: `2026-09-23-929-ab-runnable.md`.
 
 ### �🛑 `seedDefaults()` NOW CONVERGES — an out-of-date seed file is DESTRUCTIVE
 

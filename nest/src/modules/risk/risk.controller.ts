@@ -278,13 +278,20 @@ export class RiskController {
       );
     }
 
-    // ⚠️ `totalExposure` on this health object is a COUNT (#778), not a notional. The old line
-    // compared a count against 80 under the label "Exposure > 80%" — the count/notional/percent
-    // class. Compare it to the cap it actually corresponds to.
+    // ── Position cap (#852) ────────────────────────────────────────────────────
+    // ⚠️ UNIT HISTORY: this health object once exposed the position COUNT under the name
+    // `totalExposure`, and the line here compared it against 80 under the label "Exposure >
+    // 80%" — a count wearing a percentage's name, unreachable by 16×. `totalExposure` is gone
+    // from this payload (the weekend checklist keeps its notional meaning under the same name,
+    // disambiguated by `totalExposureBasis` there). Here the value is `positionCount`.
+    //
+    // BOUNDARY (settled #852): EXCLUSIVE — fires when the enforced cap has been BREACHED
+    // (count > cap), not when the book is merely full. Exactly-at-cap is the normal steady
+    // state (the cap gate refuses new entries); a breaker that reads TRIPPED through normal
+    // operation is the alarm-fatigue defect class from #950.
     const maxPos = Number(limits?.maxPositions ?? 5);
-    if (Number(health.positionCount ?? 0) > maxPos) {
-      triggers.push(`${health.positionCount} positions > risk.maxOpenPositions (${maxPos})`);
-    }
+    const capBreach = positionCapBreach(health.positionCount, maxPos);
+    if (capBreach) triggers.push(capBreach);
 
     const state = triggers.length > 0 ? 'TRIPPED' : 'READY';
     return {
@@ -362,7 +369,6 @@ export class RiskController {
       }
 
       return {
-        totalExposure: positionCount,
         totalPositionPnl: totalPnlFromPositions,
         tradeTotalPnl,
         /**
@@ -384,7 +390,7 @@ export class RiskController {
     } catch (err) {
       this.logger.warn(`Portfolio health query failed: ${(err as Error).message}`);
       return {
-        totalExposure: 0, totalPositionPnl: 0, tradeTotalPnl: 0,
+        totalPositionPnl: 0, tradeTotalPnl: 0,
         drawdown: null, drawdownDetail: null,
         dailyPnl: 0,
         totalPnl: 0, positionCount: 0, riskWarnings: ['Unable to query portfolio data'],
@@ -512,6 +518,31 @@ export interface DrawdownDetail {
   trades: number;
   peakAt: string | null;
   troughAt: string | null;
+}
+
+/**
+ * positionCapBreach() — the position-cap trigger for the risk circuit breaker (#852).
+ * ==================================================================================================
+ * Returns the TRIGGER MESSAGE or null, rather than a boolean, so the comparison and the text it
+ * produces can never drift apart — and so the boundary is testable without constructing a whole
+ * controller (the same extraction pattern as computeDrawdownDetail below).
+ *
+ * ⚠️ UNIT: `count` is a NUMBER OF POSITIONS; `maxPos` is the same unit (`risk.maxOpenPositions`).
+ * The predecessor of this function compared a count against `80` under the label "Exposure >
+ * 80%" — the count/notional/percentage collision (#852). If this ever needs to compare money,
+ * the money needs its own function with "notional" in its name.
+ *
+ * BOUNDARY: EXCLUSIVE (`> cap`). At exactly the cap the book is FULL — the normal steady state,
+ * since the cap gate refuses new entries there. The breaker fires when the cap has been BREACHED
+ * (e.g. manual entries pushed the book past it), which is the state worth halting on.
+ *
+ * "Cannot judge" (null/undefined/NaN — a failed count) also returns null: an unreadable value is
+ * not a breach, and must never be rendered as one (nor as a clean zero).
+ */
+export function positionCapBreach(count: number | null | undefined, maxPos: number): string | null {
+  if (typeof count !== 'number' || !Number.isFinite(count)) return null;
+  if (count > maxPos) return `${count} positions > risk.maxOpenPositions (${maxPos})`;
+  return null;
 }
 
 /**
