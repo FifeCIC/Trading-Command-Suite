@@ -1064,7 +1064,7 @@ are filtered out when DXY is strongly rising.
     difficulty: 'Intermediate',
     timeframe: '4H / Daily',
     status: 'supported',
-    tcsProtocol: 'xau-macro-v1',
+    tcsProtocol: 'gold-macro-v1',
 
     overview: `
 Trade gold on the 4H and daily timeframes using the three macro drivers
