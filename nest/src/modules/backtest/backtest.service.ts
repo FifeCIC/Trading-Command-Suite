@@ -666,6 +666,10 @@ export class BacktestService {
             // sample its own metric rests on. Without it, a comparison could only bar on trades
             // while `winRate`/`sharpeRatio` were computed over an unrecorded signal population.
             totalSignals: entrySignals.length,
+            // #965 item 4 — the bot AND its live lot size, so a pair comparison can check whether
+            // its two sides were even sized the same before crediting a difference to the protocol.
+            botId: resolved.drivenBy?.botId ?? null,
+            botBaseSize: resolved.drivenBy?.baseSize ?? null,
             winRate: Number(winRate.toFixed(4)),
             totalPnl: Number(totalPnl.toFixed(4)),
             profitFactor: Number((grossProfit / grossLoss).toFixed(4)),
@@ -883,6 +887,11 @@ export class BacktestService {
       requiredPerSide: number;
       /** The comparison method, named whenever a winner is named. Null otherwise. */
       metric: string | null;
+      /**
+       * #965 item 4 — set when the sides are NOT comparable as a like-for-like pair, so a difference
+       * cannot be credited to the protocol. Null means the sizes agree (or no bot was involved).
+       */
+      sizeWarning: string | null;
       note: string;
     };
   }> {
@@ -927,6 +936,10 @@ export class BacktestService {
         tradeWinRatePct:
           tradesCounted > 0 ? Math.round((wins / tradesCounted) * 10000) / 100 : null,
         totalSignals,
+        /** The bot that produced this run. NULL = hand-assembled request. */
+        botId: r.botId ?? null,
+        /** That bot's LIVE lot size at run time. NULL = NOT RECORDED — never read as equal. */
+        botBaseSize: r.botBaseSize ?? null,
         // The ONLY field that needs the fraction→percent conversion.
         signalWinRatePct: Math.round(r.winRate * 10000) / 100,
         totalPnl: Number(r.totalPnl.toFixed(4)),
@@ -950,6 +963,7 @@ export class BacktestService {
           n: {},
           requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
           metric: null,
+          sizeWarning: null,
           note:
             'No runs matched the supplied ids, so there is nothing to compare. This is NOT ' +
             '"the runs are equal" — no data was read.',
@@ -979,6 +993,34 @@ export class BacktestService {
       .filter((f) => f.totalTrades !== f.tradesCounted)
       .map((f) => `${f.protocolId} @${f.timeframe}: stored ${f.totalTrades}, found ${f.tradesCounted}`);
 
+    // ── LIKE-FOR-LIKE (#965 item 4) ────────────────────────────────────────────────────────────
+    // Measured on the real XAU pair: the two sides are driven by bots sized 0.01 and 0.02 lots, and
+    // this backtester cannot reproduce a lot size (#843). So a comparison across them must say that
+    // a difference is not attributable to the protocol alone. An UNKNOWN size is named as unknown —
+    // it must not be quietly treated as "equal to the others", which is the same defect class as a
+    // null reading as zero.
+    const sizeWarning = ((): string | null => {
+      const unknown = formatted
+        .filter((f) => f.botBaseSize === null)
+        .map((f) => `${f.protocolId} @${f.timeframe}`);
+      if (unknown.length > 0) {
+        return (
+          ` ⚠️ NOT LIKE-FOR-LIKE — the bots' LOT SIZE is UNKNOWN for ${unknown.join(', ')} ` +
+          '(no bot recorded on the run, or a run made before the size was persisted), so the two ' +
+          "sides' sizes cannot be compared. Unknown is not the same as equal."
+        );
+      }
+      const sizes = [...new Set(formatted.map((f) => f.botBaseSize as number))];
+      if (sizes.length > 1) {
+        return (
+          ` ⚠️ NOT LIKE-FOR-LIKE — the sides were driven by bots sized ${sizes.join(' vs ')} lots, ` +
+          'while this backtest sizes them in per-unit shares (#843). A difference between these runs ' +
+          'cannot be credited to the protocol alone.'
+        );
+      }
+      return null;
+    })();
+
     if (refusals.length > 0) {
       return {
         runs: formatted,
@@ -988,11 +1030,13 @@ export class BacktestService {
           n,
           requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
           metric: null,
+          sizeWarning,
           note:
             `${tradeAssessment.note} ${signalAssessment.note}` +
             (disagreements.length
               ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
-              : ''),
+              : '') +
+            (sizeWarning ?? ''),
         },
       };
     }
@@ -1011,6 +1055,7 @@ export class BacktestService {
         n,
         requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
         metric: 'sharpeRatio',
+        sizeWarning,
         note:
           `Winner named by sharpeRatio (${bestRow.protocolId} @${bestRow.timeframe}), over ` +
           `${bestRow.totalSignals} entry signals and ${bestRow.tradesCounted} bracketed trades. ` +
@@ -1019,7 +1064,8 @@ export class BacktestService {
           'the winner is the largest of these runs, not a proven difference.' +
           (disagreements.length
             ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
-            : ''),
+            : '') +
+          (sizeWarning ?? ''),
       },
     };
   }

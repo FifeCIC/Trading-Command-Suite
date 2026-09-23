@@ -235,6 +235,14 @@ model BacktestRun {
   // rest on an unrecorded population. NULL = NOT RECORDED (runs before this column), deliberately
   // distinct from 0 = no signals.
   totalSignals Int?
+  // ⚠️ ADDED 2026-09-23 (#965 item 4) — WHAT produced this run, so a comparison can check
+  // like-for-like before anyone reads a difference as a result. The two Gold bots in the XAU pair
+  // are sized 0.01 and 0.02 lots, and this backtester cannot reproduce a lot size (#843: it sizes
+  // in per-unit shares while the live path sizes in lots) — so without these two columns a
+  // difference between two runs could be attributed to the PROTOCOL when the SIZES differed.
+  // NULL = a hand-assembled request, or a run made before the column existed. Never read as "equal".
+  botId        String?  @db.VarChar(36)
+  botBaseSize  Float?
   winRate      Float
   totalPnl     Float
   profitFactor Float

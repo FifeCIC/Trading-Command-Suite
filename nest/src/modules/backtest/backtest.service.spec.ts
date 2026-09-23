@@ -240,6 +240,78 @@ describe('BacktestService.compareRuns — units and populations (#965 item 2)', 
 
     expect(out.runs[0].tradeWinRatePct).toBeNull();
   });
+
+  /**
+   * ⚠️ #965 item 4 — LIKE-FOR-LIKE. Measured on the real XAU pair: its two sides are driven by bots
+   * sized 0.01 and 0.02 lots, and this backtester cannot reproduce a lot size (#843). A comparison
+   * across them must not let the difference be credited to the protocol alone.
+   */
+  it('says NOT LIKE-FOR-LIKE when the two sides were sized differently', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { protocolId: 'xau-speed-m5', totalTrades: 40, totalSignals: 200, botId: 'bot-a', botBaseSize: 0.01 }),
+        run('r-b', { protocolId: 'xau-speed-m15', totalTrades: 40, totalSignals: 200, botId: 'bot-b', botBaseSize: 0.02 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.sizeWarning).not.toBeNull();
+    expect(out.verdict.sizeWarning).toMatch(/NOT LIKE-FOR-LIKE/);
+    expect(out.verdict.sizeWarning).toMatch(/0\.01 vs 0\.02 lots/);
+    // It travels on the verdict note too, where a reader actually looks.
+    expect(out.verdict.note).toMatch(/NOT LIKE-FOR-LIKE/);
+    expect(out.runs[0].botBaseSize).not.toBeNull();
+  });
+
+  it('stays silent when both sides were sized alike', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { totalTrades: 40, totalSignals: 200, botId: 'bot-a', botBaseSize: 0.01 }),
+        run('r-b', { totalTrades: 40, totalSignals: 200, botId: 'bot-b', botBaseSize: 0.01 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.sizeWarning).toBeNull();
+    expect(out.verdict.note).not.toMatch(/NOT LIKE-FOR-LIKE/);
+  });
+
+  /**
+   * ⚠️ UNKNOWN IS NOT EQUAL. A run with no recorded bot size (legacy, or hand-assembled) must be
+   * named as unknown rather than assumed to match the others — the same rule as null-vs-zero.
+   */
+  it('names an UNKNOWN bot size rather than assuming the sides match', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { totalTrades: 40, totalSignals: 200, botId: null, botBaseSize: null }),
+        run('r-b', { totalTrades: 40, totalSignals: 200, botId: 'bot-b', botBaseSize: 0.02 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.sizeWarning).toMatch(/LOT SIZE is UNKNOWN/);
+    expect(out.verdict.sizeWarning).toMatch(/Unknown is not the same as equal/);
+  });
+});
+
+describe('run() with a botId — an unresolvable bot must not run', () => {
+  /**
+   * ⚠️ The defect this guards: falling back to an unscoped run would MEASURE a configuration nobody
+   * asked for while reporting the bot that was requested. It throws, and it throws before reading
+   * any market data.
+   */
+  it('refuses an unknown bot id instead of measuring something else', async () => {
+    const prisma = mockPrisma({ bot: null });
+
+    await expect(svc(prisma).run({ botId: 'does-not-exist' })).rejects.toThrow(
+      /No bot with id does-not-exist/,
+    );
+    // And it refused BEFORE touching bars — no market read happened.
+    expect(prisma.backtestRun.findMany).not.toHaveBeenCalled();
+  });
 });
 
 describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () => {
@@ -314,19 +386,3 @@ describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () 
   });
 });
 
-describe('run() with a botId — an unresolvable bot must not run', () => {
-  /**
-   * ⚠️ The defect this guards: falling back to an unscoped run would MEASURE a configuration nobody
-   * asked for while reporting the bot that was requested. It throws, and it throws before reading
-   * any market data.
-   */
-  it('refuses an unknown bot id instead of measuring something else', async () => {
-    const prisma = mockPrisma({ bot: null });
-
-    await expect(svc(prisma).run({ botId: 'does-not-exist' })).rejects.toThrow(
-      /No bot with id does-not-exist/,
-    );
-    // And it refused BEFORE touching bars — no market read happened.
-    expect(prisma.backtestRun.findMany).not.toHaveBeenCalled();
-  });
-});
