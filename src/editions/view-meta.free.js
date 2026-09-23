@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 41 of 135 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 40 of 135 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -24,7 +24,7 @@ export const VIEW_META = {
   },
   "/research/symbols-browser": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Symbols Browser",
     file: "src/pages/SymbolsBrowserPage.jsx",
     css: "src/pages/symbols-browser.css",
@@ -37,7 +37,7 @@ export const VIEW_META = {
   },
   "/research/screener": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Screener",
     file: "src/pages/ScreenerPage.jsx",
     css: "src/pages/screener.css",
@@ -48,7 +48,7 @@ export const VIEW_META = {
   },
   "/research/earnings-calendar": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Earnings Calendar",
     file: "src/pages/EarningsCalendarPage.jsx",
     css: "src/pages/earnings-calendar.css",
@@ -58,7 +58,7 @@ export const VIEW_META = {
   },
   "/research/news-intel": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "News Intel",
     file: "src/pages/NewsIntelPage.jsx",
     css: "src/pages/news-intel.css",
@@ -367,7 +367,7 @@ export const VIEW_META = {
   },
   "/research/research-notes": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Notes",
     file: "src/pages/ResearchNotesPage.jsx",
     css: "src/pages/research-notes.css",
@@ -380,7 +380,7 @@ export const VIEW_META = {
   },
   "/research/events-calendar": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Events Calendar",
     file: "src/pages/EventsCalendarPage.jsx",
     css: "src/pages/events-calendar.css",
@@ -390,20 +390,9 @@ export const VIEW_META = {
       "GET /api/portfolio",
     ],
   },
-  "/research/stock-investigation": {
-    tier: "free",
-    review: "pending",
-    label: "Stock Investigation",
-    file: "src/pages/StockInvestigationPage.jsx",
-    css: "src/pages/stock-investigation.css",
-    api: [
-      "GET /api/research/investigations?limit=30",
-      "POST /api/research/investigations",
-    ],
-  },
   "/research/market-correlations": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Market Correlations",
     file: "src/pages/MarketCorrelationsPage.jsx",
     css: "src/pages/market-correlations.css",
@@ -413,7 +402,7 @@ export const VIEW_META = {
   },
   "/research/recently-analysed-symbols": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Recently Analysed",
     file: "src/pages/RecentlyAnalysedSymbolsPage.jsx",
     css: "src/pages/recently-analysed.css",

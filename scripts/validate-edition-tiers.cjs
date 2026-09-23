@@ -148,9 +148,16 @@ if (freeNotApproved.length) {
 }
 
 // Freshness — delegate to the generators so there is ONE builder per artefact, not two.
-// The MAP generator matters as much as the manifest: a stale filtered copy would ship premium ids,
-// labels, source paths and API endpoints in the free bundle.
-for (const gen of ['generate-free-manifest.cjs', 'generate-free-map.cjs']) {
+// ALL THREE belong here. On 2026-09-23 a free->premium move regenerated the manifest and the map but
+// not the REGISTRY, so `StockInvestigationPage.jsx` stayed imported in view-routes.free.jsx and the
+// page code shipped in the free bundle. Only the post-build bundle guard caught it — this chain did
+// not, because the registry was missing from it. A tier change is what all three derive from, so a
+// tier change is what must make all three fail when stale.
+for (const gen of [
+  'generate-free-manifest.cjs',
+  'generate-free-registry.cjs',
+  'generate-free-map.cjs',
+]) {
   try {
     execFileSync(process.execPath, [path.join(__dirname, gen), '--check'], { stdio: 'inherit' });
   } catch {

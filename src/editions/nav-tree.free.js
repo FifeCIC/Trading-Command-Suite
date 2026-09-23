@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 10 of 15 areas · 43 of 130 nav entries (premium ids AND labels removed)
+ * 10 of 15 areas · 42 of 130 nav entries (premium ids AND labels removed)
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -87,11 +87,6 @@ export const NAV_TREE = {
         id: "events-calendar",
         label: "Events Calendar",
         icon: "🗓️",
-      },
-      {
-        id: "stock-investigation",
-        label: "Stock Investigation",
-        icon: "🕵️",
       },
       {
         id: "market-correlations",

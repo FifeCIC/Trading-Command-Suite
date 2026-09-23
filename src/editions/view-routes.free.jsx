@@ -6,7 +6,7 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 39 view(s) · 36 component(s) · 126 premium entry(ies) excluded.
+ * 38 view(s) · 35 component(s) · 125 premium entry(ies) excluded.
  */
 
 // ── Free pages ──
@@ -35,7 +35,6 @@ import ScreenerPage from '../pages/ScreenerPage.jsx';
 import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
 import SetupWizardPage from '../pages/SetupWizardPage.jsx';
-import StockInvestigationPage from '../pages/StockInvestigationPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import SymbolsBrowserPage from '../pages/SymbolsBrowserPage.jsx';
 import T212ISAPage from '../pages/T212ISAPage.jsx';
@@ -77,7 +76,6 @@ export const VIEW_COMPONENTS = {
   'settings': SettingsPage,
   'settings-education': SettingsEducationPage,
   'setup': SetupWizardPage,
-  'stock-investigation': StockInvestigationPage,
   'symbol': SymbolPage,
   'symbols-browser': SymbolsBrowserPage,
   't212-isa': T212ISAPage,
