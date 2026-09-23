@@ -29,6 +29,9 @@ import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 // record). The rejection contract below is also asserted to still hold with this in place — a
 // refusal must reach the user even if the alert write is what failed.
 import { AlertsService } from '../alerts/alerts.service';
+// ⚠️ #945 — the manual path now runs the portfolio risk gate (assessGlobalRiskLimits). The
+// refusal contract below must hold when THAT gate refuses too, not only feasibility.
+import { TradingStrategyService } from '../trading/trading-strategy.service';
 
 /** The real blocker shape, taken from `execution-feasibility.service.ts` (size-below-minimum). */
 const SIZE_BLOCKER = {
@@ -77,6 +80,13 @@ function buildModule(feasibilityResult: unknown) {
     addAlert: jest.fn().mockResolvedValue({ id: 'alert-1' }),
   };
 
+  // ⚠️ #945 — defaults to ALLOWED so every existing test above keeps its meaning; the gate
+  // tests below override it with a refusal. Defaulting to `allowed: false` would make this
+  // suite pass for the wrong reason everywhere.
+  const strategyService = {
+    assessGlobalRiskLimits: jest.fn().mockResolvedValue({ allowed: true, reason: '' }),
+  };
+
   return Test.createTestingModule({
     providers: [
       SignalActionsService,
@@ -86,6 +96,7 @@ function buildModule(feasibilityResult: unknown) {
       { provide: ExecutionFeasibilityService, useValue: feasibility },
       { provide: ManualTradeDefaultsService, useValue: tradeDefaults },
       { provide: AlertsService, useValue: alerts },
+      { provide: TradingStrategyService, useValue: strategyService },
     ],
   }).compile();
 }
@@ -225,5 +236,69 @@ describe('SignalActionsService.placeManualTrade — rejection contract', () => {
     } as any);
     expect(res?.success).toBe(true);
     expect(placeOrder).toHaveBeenCalledTimes(1);
+  });
+
+  // ── #945 — the portfolio risk gate on the manual path ─────────────────────────────────────
+  describe('portfolio risk gate (#945)', () => {
+    const GATE_REFUSAL = {
+      allowed: false,
+      reason: 'Position size 5 exceeds risk.maxPositionSize (1)',
+    };
+
+    it('⭐ CANARY — refuses BEFORE the broker when the gate refuses, carrying the gate reason', async () => {
+      const moduleRef = await buildModule({ feasible: true, blockers: [] });
+      const service = moduleRef.get(SignalActionsService);
+      const placeOrder = jest.fn();
+      (service as any).adapterFactory.create.mockReturnValue({
+        getQuote: jest.fn().mockResolvedValue({ last: 100 }),
+        placeOrder,
+      });
+      (service as any).strategyService.assessGlobalRiskLimits.mockResolvedValue(GATE_REFUSAL);
+
+      let thrown: any;
+      try {
+        await service.placeManualTrade('sig-1', { side: 'BUY' } as any);
+      } catch (e) {
+        thrown = e;
+      }
+
+      // The whole point of #945: the broker is never reached on a gate refusal...
+      expect(placeOrder).not.toHaveBeenCalled();
+      // ...and the refusal is CODED, naming the cap and the number (the #826 pattern).
+      expect(thrown.code).toBe('TCS-RISK-001');
+      expect(thrown.params.reason).toBe(GATE_REFUSAL.reason);
+    });
+
+    it('calls the gate with the size and symbol actually being ordered — wiring canary', async () => {
+      const moduleRef = await buildModule({ feasible: true, blockers: [] });
+      const service = moduleRef.get(SignalActionsService);
+      const placeOrder = jest.fn().mockResolvedValue({ success: true, ticket: 1 });
+      (service as any).adapterFactory.create.mockReturnValue({
+        getQuote: jest.fn().mockResolvedValue({ last: 100 }),
+        placeOrder,
+      });
+
+      await service.placeManualTrade('sig-1', { side: 'BUY' } as any);
+
+      // Fails if the call is dropped again (the #945 defect): the gate must see the REAL order
+      // (0.1 from the defaults fixture, BTC from the signal), not a placeholder.
+      expect((service as any).strategyService.assessGlobalRiskLimits).toHaveBeenCalledWith(0.1, 'BTC');
+      expect(placeOrder).toHaveBeenCalledTimes(1); // a passing gate must not impede trading
+    });
+
+    it('the gate refusal survives a failing alert write — the refusal must not depend on it', async () => {
+      const moduleRef = await buildModule({ feasible: true, blockers: [] });
+      const service = moduleRef.get(SignalActionsService);
+      (service as any).adapterFactory.create.mockReturnValue({
+        getQuote: jest.fn(),
+        placeOrder: jest.fn(),
+      });
+      (service as any).strategyService.assessGlobalRiskLimits.mockResolvedValue(GATE_REFUSAL);
+      (moduleRef.get(AlertsService) as any).addAlert.mockRejectedValueOnce(new Error('alerts down'));
+
+      await expect(
+        service.placeManualTrade('sig-1', { side: 'BUY' } as any),
+      ).rejects.toMatchObject({ code: 'TCS-RISK-001' });
+    });
   });
 });

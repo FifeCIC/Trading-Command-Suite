@@ -6,6 +6,11 @@ import { AlertsService } from '../alerts/alerts.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
+// ⚠️ #945 — the manual path runs the SAME portfolio risk gate as the bot path
+// (`assessGlobalRiskLimits`). Without this import the header comment below was a claim the code
+// did not honour: measured 2026-09-21, 0.1 lots of gold — 23.6× the account balance — reached
+// broker.placeOrder() with all six portfolio caps unasked.
+import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { SignalPlanDto } from './dto/signal-plan.dto';
@@ -17,9 +22,21 @@ export type BotActionState = 'none' | 'pending' | 'filled';
  *
  * Signals are the "best of" opportunities surfaced for action. This service:
  *   1. Reports whether the trading bot has already acted on a signal.
- *   2. Places a MANUAL trade for a signal through the SAME safety chain the
- *      bot uses (duplicate guard, diversification, cooldown) — never bypassing
- *      the risk controls.
+ *   2. Places a MANUAL trade for a signal through the SAME pre-trade chain the bot uses:
+ *      `feasibility.assess()` (#723 — duplicate guard, diversification, cooldown, size
+ *      floors) AND `assessGlobalRiskLimits()` (#945 — the six portfolio caps).
+ *
+ *   ⚠️ WHAT THIS PATH DOES NOT RUN, stated on purpose (#945): an inaccurate safety claim is
+ *   worse than none — this comment used to read "...never bypassing the risk controls" while
+ *   `assessGlobalRiskLimits` had no caller here AT ALL, and 0.1 lots of gold (23.6× the
+ *   account) reached `broker.placeOrder()` with every cap skipped.
+ *     · The automation loop's DECISION gates (score thresholds, direction authority, session
+ *       gate) — those run upstream of any order in the bot flow; a manual click IS the
+ *       operator overriding them deliberately.
+ *     · The sizing/notional PREVIEW (showing resolved margin before the click) — tracked as
+ *       the remaining half of #945.
+ *     · The bot's stop-guardian registration — identical behaviour for manual positions is
+ *       unverified, not assumed.
  *
  * Signal identity: a signal is a Score row (the runs API exposes `s.id` as the
  * run/signal id). Bot actions are correlated via decision_log (EXECUTED/QUEUED)
@@ -33,6 +50,9 @@ export class SignalActionsService {
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
     private readonly feasibility: ExecutionFeasibilityService,
+    // #945 — the portfolio risk gate. Same call the bot path makes (automation-loop L407/L2100,
+    // evaluateAndTrade). Its refusal is a TCS-RISK-001 notice naming the cap and the number.
+    private readonly strategyService: TradingStrategyService,
     private readonly tradeRecorder: TradeRecorderService,
     private readonly tradeDefaults: ManualTradeDefaultsService,
     private readonly alerts: AlertsService,
@@ -223,6 +243,32 @@ export class SignalActionsService {
         { reason },
         first.key ? { detail: `blocker: ${first.key}` } : {},
       );
+    }
+
+    // ── Portfolio risk gate (#945) ───────────────────────────────────────────────────────────
+    // The SAME gate the bot path runs before any order (automation-loop L407/L2100,
+    // evaluateAndTrade L1623). Measured 2026-09-21: a manual gold buy at 0.1 lots — 23.6× the
+    // £1,376 account — reached broker.placeOrder() with all six caps unasked, because this call
+    // did not exist on this path. It does now. A refusal must NOT depend on the alert write (the
+    // feasibility refusal above set that precedent): a failing alerts table produces the coded
+    // refusal, never a 500.
+    const riskGate = await this.strategyService.assessGlobalRiskLimits(quantity, ticker);
+    if (!riskGate.allowed) {
+      try {
+        await this.alerts.addAlert(
+          'trading',
+          `Trade blocked: ${ticker}`,
+          `${riskGate.reason} (portfolio risk gate #945)`,
+          'warning',
+          ticker,
+        );
+      } catch (err) {
+        this.logger.warn(`Could not record the blocked trade as an alert: ${(err as Error).message}`);
+      }
+      // TCS-RISK-001's message is `The trade was blocked: {reason}` — the gate's own reason
+      // already NAMES the cap and the number (e.g. "Position size 5 exceeds risk.maxPositionSize
+      // (1)"), which is exactly the #826 requirement: a coded refusal the client can render.
+      throw new TcsNoticeException('TCS-RISK-001', { reason: riskGate.reason });
     }
 
     let entryPrice: number | null = null;
