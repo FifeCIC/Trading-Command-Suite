@@ -9,7 +9,21 @@ import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 
 export interface BacktestRunRequest {
-  symbol: string;
+  /**
+   * Optional ONLY when `botId` is supplied — a bot-driven run takes the symbol from the bot, so
+   * "backtest this bot" is one call rather than a hand-assembled request (#965 item 3).
+   */
+  symbol?: string;
+  /**
+   * #965 item 3 — "backtest this bot" as ONE call. When set, the bot's OWN configuration is
+   * resolved (protocol, symbol, timeframe, stop, target) so a caller does not hand-assemble a
+   * request that quietly differs from the bot it means to test.
+   *
+   * ⚠️ PRECEDENCE: an explicit field ALWAYS wins over the bot's, so "this bot, but with a tighter
+   * stop" stays one call. `drivenBy.overridden` records which fields the caller replaced, because a
+   * run must be able to say what it actually measured.
+   */
+  botId?: string;
   days?: number;
   timeframe?: string;
   protocolId?: string;
@@ -63,6 +77,119 @@ export interface EntrySignal {
   wasProfitable: boolean;
 }
 
+/**
+ * What a bot-driven run resolved (#965 item 3).
+ *
+ * ⚠️ `baseSize` is the LIVE path's size in LOTS, carried here because it is the number the result's
+ * caveat compares against — the run must be able to say "the bot trades N lots, this measured
+ * something else" without the reader going to look it up.
+ */
+export interface BotDriven {
+  botId: string;
+  botName: string;
+  /** The BOT's symbol. The run's `symbol` differs from it when the caller overrode it. */
+  symbol: string;
+  protocolId: string | null;
+  /** LOTS. NULL = unset — the live loop would default it to 0.01. */
+  baseSize: number | null;
+  mode: string;
+  active: boolean;
+  /** Fields the caller supplied that differ from the bot's, i.e. what this run ACTUALLY measured. */
+  overridden: string[];
+}
+
+/** The bot fields this resolution reads — structural, so the logic is testable without Prisma. */
+export interface BotForBacktest {
+  id: string;
+  name: string;
+  symbol: string;
+  protocolId: string | null;
+  timeframe?: string | null;
+  slPct?: number | null;
+  tpPct?: number | null;
+  baseSize?: number | null;
+  mode: string;
+  active: boolean;
+}
+
+/**
+ * mergeBotConfig() — the pure half of a bot-driven backtest (#965 item 3).
+ *
+ * SEPARATE FROM THE LOADING so precedence and the caveats can be tested without a database or the
+ * scoring stack. It is the part that decides what the run MEASURES; the caller supplies the bot.
+ *
+ * ⚠️ PRECEDENCE: an explicit request field ALWAYS wins over the bot's, and every field it replaced
+ * is recorded in `overridden` — because a run must be able to say what it actually measured rather
+ * than what the caller asked for.
+ *
+ * ⚠️ THE SIZING CAVEAT IS NOT DECORATION (#843). The live path sizes every trade in lots from
+ * `trading_strategy.baseSize` (`automation-loop.service.ts`: `strategy.baseSize ?? 0.01` passed
+ * straight into `placeOrder({ quantity })`), while this backtester sizes in per-unit shares from an
+ * equity model. They cannot agree today, so a bot-driven run says so, with the bot's own lot size in
+ * the sentence. Without it, the numbers read as a forecast of the bot's P&L and they are not.
+ */
+export function mergeBotConfig(
+  request: BacktestRunRequest,
+  bot: BotForBacktest,
+): { request: BacktestRunRequest; drivenBy: BotDriven; caveats: string[] } {
+  const overridden: string[] = [];
+  const pick = <T>(
+    given: T | undefined,
+    fromBot: T | null | undefined,
+    label: string,
+  ): T | undefined => {
+    if (given !== undefined) {
+      if (given !== fromBot) overridden.push(label);
+      return given;
+    }
+    return fromBot ?? undefined;
+  };
+
+  const merged: BacktestRunRequest = {
+    ...request,
+    symbol: request.symbol || bot.symbol,
+    timeframe: pick(request.timeframe, bot.timeframe, 'timeframe'),
+    protocolId: pick(request.protocolId, bot.protocolId, 'protocolId'),
+    slPct: pick(request.slPct, bot.slPct, 'slPct'),
+    tpPct: pick(request.tpPct, bot.tpPct, 'tpPct'),
+  };
+
+  const baseSize = bot.baseSize ?? null;
+  const sizing = merged.positionModel ?? 'fixedPercent';
+  const caveats: string[] = [
+    `⚠️ POSITION SIZING DOES NOT MATCH THE LIVE PATH (#843). This bot trades ` +
+      `${
+        baseSize === null
+          ? 'an UNSET baseSize (the live loop would use its 0.01 default)'
+          : `${baseSize} lot(s)`
+      } per trade, while this run sizes in per-unit shares via '${sizing}'. A different size means a ` +
+      `different risk per trade, so this run's P&L, drawdown and Sharpe do NOT transfer to the live ` +
+      'bot — they describe its ENTRY LOGIC at another size. Read it as a study of the signal until ' +
+      '#843 lands one shared sizing function.',
+    ...(merged.protocolId
+      ? []
+      : [
+          '⚠️ This bot has NO protocolId, so canonical META.Stack scoring cannot be used and the run ' +
+            'will be rejected rather than measured against a default.',
+        ]),
+  ];
+
+  return {
+    request: merged,
+    drivenBy: {
+      botId: bot.id,
+      botName: bot.name,
+      symbol: bot.symbol,
+      protocolId: bot.protocolId ?? null,
+      baseSize,
+      mode: bot.mode,
+      active: bot.active,
+      overridden,
+    },
+    caveats,
+  };
+}
+
 export interface BacktestResult {
   id: string;
   symbol: string;
@@ -72,6 +199,16 @@ export interface BacktestResult {
   timeframe: string;
   entrySignals: EntrySignal[];
   trades?: TradeRecord[];
+  /**
+   * Present ONLY on a bot-driven run (#965 item 3): the configuration that was resolved from the
+   * bot, and which of its fields the caller overrode.
+   */
+  drivenBy?: BotDriven;
+  /**
+   * ⚠️ What this run CANNOT claim, stated with the numbers rather than left to the reader.
+   * A bot-driven run carries the sizing-divergence warning (#843) here.
+   */
+  caveats?: string[];
   /** News exclusion mode used (#105) */
   newsExclusion?: string;
   /** Number of news dates found for this symbol/period */
@@ -124,7 +261,55 @@ export class BacktestService {
     private readonly protocolGating: ProtocolGatingService,
   ) {}
 
+  /**
+   * Resolve a bot-driven request (#965 item 3): "backtest this bot" as ONE call.
+   *
+   * ⚠️ WHY THE CAVEAT TRAVELS WITH THE RESULT. The live path sizes every trade in **lots** from
+   * `trading_strategy.baseSize` (`automation-loop.service.ts`: `strategy.baseSize ?? 0.01`, passed
+   * straight into `placeOrder({ quantity })`). This backtester sizes in **per-unit shares** from an
+   * equity model — `fixedPercent`, `atrEqualRisk`, Kelly — and the two cannot agree today (#843).
+   * So the run is honest about what it is: a study of the ENTRY LOGIC at a different size. Without
+   * that sentence, a bot-driven backtest reads as a forecast of the bot's P&L, and it is not.
+   *
+   * ⚠️ An unresolvable `botId` THROWS rather than falling back to an unscoped run: measuring a
+   * different configuration while reporting the requested one is the defect this item exists to stop.
+   */
+  private async resolveBotDrivenRequest(request: BacktestRunRequest): Promise<{
+    request: BacktestRunRequest;
+    drivenBy: BotDriven | null;
+    caveats: string[];
+  }> {
+    if (!request.botId) return { request, drivenBy: null, caveats: [] };
+
+    if (!this.prisma.isAvailable) {
+      throw new Error(
+        'A bot-driven backtest must read the bot first, and the database is unavailable. ' +
+          'Refusing to run rather than measure an unresolved configuration.',
+      );
+    }
+    const bot = await this.prisma.tradingStrategy.findUnique({ where: { id: request.botId } });
+    if (!bot) {
+      throw new Error(
+        `No bot with id ${request.botId}. Refusing to run: an unresolvable bot id would silently ` +
+          'measure a configuration nobody asked for.',
+      );
+    }
+
+    // The decision itself is a PURE function (`mergeBotConfig`, above) so precedence and the
+    // caveats are testable without a database or the scoring stack. This method's job is only to
+    // load the bot and to refuse when it cannot be loaded.
+    const merged = mergeBotConfig(request, bot);
+    this.logger.log(
+      `Bot-driven backtest: ${bot.name} (${bot.id}) -> protocol=${merged.request.protocolId ?? 'NONE'} ` +
+        `symbol=${merged.request.symbol} tf=${merged.request.timeframe ?? '(default)'} ` +
+        `overridden=[${merged.drivenBy.overridden.join(', ') || 'none'}]`,
+    );
+    return merged;
+  }
+
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
+    // ── #965 item 3 — resolve a BOT-DRIVEN request before anything is defaulted ──────────────
+    const resolved = await this.resolveBotDrivenRequest(request);
     const {
       symbol,
       days = 365,
@@ -147,7 +332,13 @@ export class BacktestService {
       atrMultiplier = 1.5,
       // ── Kelly criterion (#269) ──
       kellyCapPct = 25,
-    } = request;
+    } = resolved.request;
+
+    // ⚠️ A symbol is still required — from the request or from the bot. Stated rather than defaulted,
+    // because a defaulted symbol would measure a market nobody asked for.
+    if (!symbol) {
+      throw new Error('Backtest requires a symbol, or a botId whose bot declares one.');
+    }
 
     // 2026-09-08: unscoped and custom-weight backtests previously fell into a
     // second scoring implementation. Require the canonical protocol identity.
@@ -401,6 +592,11 @@ export class BacktestService {
       id: `${symbol}-${Date.now()}`,
       symbol: symbol.toUpperCase(),
       protocolId: protocolId ?? 'unscoped',
+      // #965 item 3 / #843 — a bot-driven run says WHICH bot it resolved and what this run cannot
+      // claim (the sizing divergence). Absent on a hand-assembled request, because then there is
+      // no bot to have diverged from.
+      drivenBy: resolved.drivenBy ?? undefined,
+      caveats: resolved.caveats,
       period: `${bars[windowSize].timestamp.toISOString().split('T')[0]} to ${bars[bars.length - 1].timestamp.toISOString().split('T')[0]}`,
       totalDays: days,
       timeframe,

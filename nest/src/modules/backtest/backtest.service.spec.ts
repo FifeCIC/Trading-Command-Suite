@@ -19,7 +19,7 @@
  * A guard that has never been observed to fail is a decoration — every one of these was canaried
  * in both directions when it was written (see the issue comment for the observed failures).
  */
-import { BacktestService } from './backtest.service';
+import { BacktestService, mergeBotConfig, BotForBacktest } from './backtest.service';
 
 /** One stored run, shaped as `findMany` returns it (symbol included). */
 function run(id: string, over: Record<string, unknown> = {}) {
@@ -50,12 +50,16 @@ function run(id: string, over: Record<string, unknown> = {}) {
  * counted populations (all trades, winners) can be driven independently of the STORED counts —
  * which is what makes the disagreement test possible.
  */
-function mockPrisma(opts: { runs?: any[]; trades?: Array<[string, number, number]> } = {}) {
+function mockPrisma(opts: { runs?: any[]; trades?: Array<[string, number, number]>; bot?: any } = {}) {
   const trades = opts.trades ?? [];
   return {
     isAvailable: true,
     backtestRun: {
       findMany: jest.fn(async () => opts.runs ?? []),
+    },
+    tradingStrategy: {
+      // #965 item 3 — a bot-driven run reads the bot before anything else.
+      findUnique: jest.fn(async () => opts.bot ?? null),
     },
     backtestTrade: {
       // Two groupBy calls: all trades, then winners only (the service passes `pnl: { gt: 0 }`).
@@ -235,5 +239,94 @@ describe('BacktestService.compareRuns — units and populations (#965 item 2)', 
     const out = await svc(prisma).compareRuns(['r-4']);
 
     expect(out.runs[0].tradeWinRatePct).toBeNull();
+  });
+});
+
+describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () => {
+  const bot = (over: Partial<BotForBacktest> = {}): BotForBacktest => ({
+    id: 'bot-1',
+    name: 'EURCAD Macro Session',
+    symbol: 'EURCAD',
+    protocolId: 'forex-session-v1',
+    timeframe: '5m',
+    slPct: 1,
+    tpPct: 1,
+    baseSize: 0.01,
+    mode: 'auto',
+    active: true,
+    ...over,
+  });
+
+  it('takes the bot\'s own configuration when the caller supplies only a botId', () => {
+    const out = mergeBotConfig({ botId: 'bot-1' }, bot());
+
+    expect(out.request.symbol).toBe('EURCAD');
+    expect(out.request.protocolId).toBe('forex-session-v1');
+    expect(out.request.timeframe).toBe('5m');
+    expect(out.request.slPct).toBe(1);
+    expect(out.request.tpPct).toBe(1);
+    expect(out.drivenBy.botName).toBe('EURCAD Macro Session');
+    // Nothing was replaced, so nothing is claimed to have been.
+    expect(out.drivenBy.overridden).toEqual([]);
+  });
+
+  /**
+   * ⚠️ The run must say what it MEASURED, not what was asked for. A caller tightening the stop is
+   * running a different configuration, and the record has to carry that.
+   */
+  it('lets an explicit field win, and records that it overrode the bot', () => {
+    const out = mergeBotConfig({ botId: 'bot-1', slPct: 0.5, symbol: 'XAUUSD' }, bot());
+
+    expect(out.request.slPct).toBe(0.5);
+    expect(out.request.symbol).toBe('XAUUSD');
+    expect(out.drivenBy.overridden).toContain('slPct');
+    // The bot's own value is still reported, so the two can be compared.
+    expect(out.drivenBy.protocolId).toBe('forex-session-v1');
+  });
+
+  /**
+   * ⚠️ #843 — the caveat must be present on EVERY bot-driven run, with the bot's own lot size in
+   * it. This is what stops the result reading as a forecast of the bot's P&L.
+   */
+  it('states the sizing divergence with the bot\'s own lot size (#843)', () => {
+    const out = mergeBotConfig({ botId: 'bot-1' }, bot());
+
+    expect(out.caveats.join(' ')).toMatch(/POSITION SIZING DOES NOT MATCH THE LIVE PATH/);
+    expect(out.caveats.join(' ')).toMatch(/0\.01 lot/);
+    expect(out.caveats.join(' ')).toMatch(/ENTRY LOGIC/);
+    expect(out.drivenBy.baseSize).toBe(0.01);
+  });
+
+  /** NULL is not 0: the live loop would substitute its own default, and the caveat says which. */
+  it('reports an UNSET baseSize as the live default rather than as zero', () => {
+    const out = mergeBotConfig({ botId: 'bot-1' }, bot({ baseSize: null }));
+
+    expect(out.drivenBy.baseSize).toBeNull();
+    expect(out.caveats.join(' ')).toMatch(/UNSET baseSize/);
+    expect(out.caveats.join(' ')).toMatch(/0\.01 default/);
+  });
+
+  it('warns when the bot has no protocolId, rather than measuring against a default', () => {
+    const out = mergeBotConfig({ botId: 'bot-1' }, bot({ protocolId: null }));
+
+    expect(out.request.protocolId).toBeUndefined();
+    expect(out.caveats.join(' ')).toMatch(/NO protocolId/);
+  });
+});
+
+describe('run() with a botId — an unresolvable bot must not run', () => {
+  /**
+   * ⚠️ The defect this guards: falling back to an unscoped run would MEASURE a configuration nobody
+   * asked for while reporting the bot that was requested. It throws, and it throws before reading
+   * any market data.
+   */
+  it('refuses an unknown bot id instead of measuring something else', async () => {
+    const prisma = mockPrisma({ bot: null });
+
+    await expect(svc(prisma).run({ botId: 'does-not-exist' })).rejects.toThrow(
+      /No bot with id does-not-exist/,
+    );
+    // And it refused BEFORE touching bars — no market read happened.
+    expect(prisma.backtestRun.findMany).not.toHaveBeenCalled();
   });
 });
