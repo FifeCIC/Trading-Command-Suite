@@ -437,6 +437,36 @@ export const CURRENT_SLICE = [
     'THE A/B LADDER (/scoring/ab-ladder, 2026-09-22) — the Ladder scoped to a protocol PAIR, so two protocol variants can be compared on the same symbols. Its row model was wrong first and was corrected by the owner: rows were joined per symbol and ranked by the PAIR MAXIMUM, which meant a row whose card showed 4% sat at number one because the OTHER side had scored 8% — the rank described something the card did not show. Rows are now PER SIDE, each ranked at its OWN score exactly as on the Ladder, with the strip showing what the counterpart did on the same symbol, so a symbol both sides score appears twice. Sides are then FIXED: the card is always side A, because making the card follow the leader hid A detail on every B-led row. SUPERSEDED DESIGN: a generic legend and a header subtitle were added and then REMOVED on owner instruction (training being highly visible just creates screen clutter) — explanation lives only in the info popover, and neither the legend nor the subtitle exists. Versions 0.60.0 to 0.63.1 in one evening across five review passes.',
     'A/B STRATEGIES (/trading/ab-strategies, 2026-09-22) — the Strategies page scoped to a pair, showing each strategy whole configuration (protocol + role + broker + market + the full 14-field execution policy) with EVERY DIFFERING VALUE MARKED. It is now the INDEX of all A/B-eligible pairs: same-symbol groups, closest matches first, each row opening a one-pair comparison, plus an Official tests section. Three modes: index (default), pair detail, test detail. THE SYMBOL IS THE CONSTANT — an A/B pair trades ONE symbol, so a link pairing two different symbols is REFUSED with the reason rather than rendered as a pair (the old seed paired AUDJPY with AUDUSD, which is a symbol comparison, not an A/B). A List/Table toggle ranks pairs by realised profit difference (B minus A) from the bot-performance attribution, showing an em dash and sorting LAST when either side has no record. Also introduced TypeTag — the (proto) / (bot) / (strategy) suffix that makes a string say what kind of thing it is. Version 0.64.0 to 0.68.0.',
 
+      /* ── batch #23 — 2026-09-22 23:51 to 09-23 15:52 (fabrication removed, and honest absence in its place) ── */
+      'BROKER TICKETS WERE BEING CLAMPED (2026-09-22) — a 12-digit MT5 ticket stored in a 32-bit column was silently rewritten to 2147483647, the MySQL int32 ceiling, so the link from a trade back to the score that produced it broke and the constant read as an intentional placeholder. The four ticket columns are now BigInt. The 123 rows already clamped are NOT repairable — their real tickets are gone.',
+      'A BOT CAN BE COPIED AS THE B OF AN A/B PAIR, AND DELETED SAFELY (2026-09-22, #874) — POST /api/trading/strategies/:id/duplicate deep-copies a bot and its protocol subscription as an inactive copy linked back to its source both ways; DELETE now refuses a bot that is still active (409) and performs explicit cleanup, rather than removing a bot that is trading.',
+      'THE ALERT BELL NOW COUNTS WHAT IT SHOWS (2026-09-23) — the popup said "All clear — no notifications" while its badge counted 12,865 undismissed rows, because the count ran a consecutive-dedupe hack and the list used a different predicate. One recurring condition is now one row with a repeat count ("seen 2x"), and the badge, the count endpoint and the list all read the same predicate.',
+      'A DRIFTED BOT IS REPAIRED, NOT SKIPPED (2026-09-23, #833) — re-running the bot seeder now converges every declared field on an existing bot and recreates a missing queue subscription, instead of leaving a drifted row alone. It supports ?dryRun=true, which reports which field would change without writing. ⚠️ Convergence runs seed to database only, so an out-of-date seed file now REVERTS deliberate database-only edits — it did exactly that on its first run: five bots auto to semi-auto, four time-stops written null.',
+      'THE A/B TESTING PAGE SAID WHY IT COULD NOT COMPARE (2026-09-23, #953) — the page presented itself as comparable while silently scoring nothing, because it read its symbol list from a watchlist endpoint that returns only a symbol count, and four catch-to-empty-array calls swallowed the failure. It now renders an explicit "Comparison unavailable" state with a coded notice and a working Retry.',
+      'THE API RESTART SCRIPT COULD STALL SILENTLY (2026-09-23, #933) — build:api now verifies the API answers /api/version after restarting it and reports a dead API instead of hanging with no output. Its own failure path is canaried (-SelfTest, which asserts a dead API on a port nothing listens on).',
+      'THE A/B TEST RUNNER COULD NEVER PLACE AN ORDER (2026-09-23, #929) — dispatchSideTrade() read the mode field of metastack_snapshot, which holds the scoring STYLE ("score"), and compared it against the trading modes auto/manual/semi-auto; every stack therefore evaluated as "not auto" and took the intent-only branch. Ten rows reported EXECUTED with a NULL broker ticket, as if traded. The mode is now read from the right place, a hardcoded 5m cadence is gone, and trade.abTestSide records which side an order belongs to instead of parsing it back out of the broker comment string.',
+      'THE SYMBOL LIST NO LONGER INVENTS AN EXCHANGE (2026-09-23, #959) — 29 of 30 symbols carried the exchange "Xtrend", which is not a broker and has no adapter; it was a default literal standing in for a missing value, and it reached both the screen and the CSV export. The column is now nullable and GET /api/symbols serves a sources list naming the provider that actually delivered each symbol. Absence is representable, which is what stops the next default literal.',
+      'A/B NOW MEANS ONE THING (2026-09-23, #962/#963) — the term meant six different things: a scoring strategy, a config snapshot, a page design toggle, a ladder pair, a bot pair, and a research label. A page design toggle is now "Old / New" (variant=A/B); a config snapshot is a snapshot, not a test; and A/B means one LOCKED PAIR. Settled as decisions 24 and 25 in docs/SETTLED-DECISIONS.md.',
+      'A FAILED DATABASE READ NO LONGER RENDERS AS AN EMPTY LIST (2026-09-23, #959/#964) — the symbol list asserted "0 symbols total, 0 active, 0 inactive" as a claim about an empty registry when the query had actually thrown. The error now propagates as an HTTP error. The frontend half needed a second fix: TanStack PAUSES queries while the app is offline, so the isError branch in 66 files was unreachable — a paused query fires zero requests and can never report a failure.',
+      'THE RISK BREAKER NOW STATES ONLY WHAT IT CAN PROVE (2026-09-23, #852/#848) — the position-cap trigger used an inclusive comparison so it fired one position LATE; a count and a currency notional shared the field name totalExposure and the count was compared against a percentage label; and the drawdown peak could be seeded from an unreadable account. The cap is now exclusive, the count is named positionCount, and an unreadable account no longer seeds a peak.',
+      'DRAWDOWN AS A PERCENTAGE IS STATED ONLY WHEN IT IS POSSIBLE (2026-09-23, #954) — the breaker TRIPPED on a 1,611.5% drawdown ratio produced by a denominator that was not a capital base, and the warning claimed the balance "never rose above zero" while the peak was +3.83. A ratio is now stated only when the fall cannot exceed the peak, and the warning names the true cause. Settled as row 26 of docs/SETTLED-DECISIONS.md.',
+      'AN A/B PAIR HAS A LIFECYCLE (2026-09-23, #963) — a pair (incumbent plus variant) can be resolved, started, stopped and activated together, with a running comparison refusing edits. State lives in a new ab_pair table (draft / running / complete / abandoned) instead of being inferred from the active flag, and an unpaired bot returns paired:false with no reason — an independent bot is a valid answer, not an error — while moving an unresolvable pair returns 400 naming why.',
+      'EVERY MARKET ORDER SENDS THE FILLING MODE THE BROKER ALLOWS (2026-09-23, #824) — a demo broker rejected orders with retcode 10030 (unsupported filling mode) because the bridge sent FOK regardless of what the symbol allows. Every order now applies the broker\'s declared modes per symbol, and a rejection names the symbol, the retcode and the modes the broker allows. This closed a missing live-acceptance run; the implementation had already landed.',
+      'THE STRATEGY COMPARISON PAGE NOW COMPARES WHAT STRATEGIES ARE (2026-09-23, #884) — rebuilt as a matrix with one column per strategy, best-first and the worst last, showing protocol, directives, recent scores and recent trades rather than only earnings. ⚠️ The old page\'s identity join matched trade names against protocol names by coincidence — 4 of 32 — which would have blanked 88% of rows while still appearing to work.',
+      'A MANUAL TRADE RUNS THE SAME PORTFOLIO RISK CAPS AS A BOT (2026-09-23, #945) — a trade placed by hand reached the broker without the position-size, exposure or daily-loss checks a bot must pass. It now runs the same gate, refusing with a coded reason that names the limit, and raising a "Trade blocked" alert. Three ungated order paths remain: the raw MT5 bridge endpoint, speed-scan dispatch, and A/B dispatch.',
+      'APPLE WAS SHOWN AS A 4.53 MILLION DOLLAR COMPANY (2026-09-23) — two providers supplied market capitalisation in different units (absolute USD from one, trillions from another) into one variable, producing a factor-of-one-million error. The value is normalised to absolute USD and served as marketCapUsd. The same batch hid single-symbol watchlists from the Watchlists page by default (19 of 42 shown, with a count saying so) and gave the Screener sortable columns self-explaining tooltips.',
+      'EVERY LIBRARY ENTRY DRAWS ITS DECISION PATH, AND RED MEANS A REAL DISAGREEMENT (2026-09-23, #960) — the Strategy Library draws each strategy theory as a Mermaid path built from its own directive mappings, with every node checked against the live bot that runs its protocol. Six of ten entries previously drew nothing because they name no protocol; they now draw, with the bot-side checks marked "not checked" rather than failed. The one genuine red: Gold Scalp says gold while its only bot trades silver.',
+      'A PROTOCOL NAME THAT POINTS AT NOTHING NOW FAILS THE BUILD (2026-09-23, #960) — the library entry for Gold Macro Regime declared the protocol "xau-macro-v1", which existed in no table and in no seed file; the real slug is gold-macro-v1. It survived because the field was only ever PRINTED as a display fallback and never resolved as a reference. A build-time guard now fails when a declared protocol is not a seeded one.',
+      'A BOT DETAIL PAGE SHOWS WHERE IN A TRADE IT CANNOT ACT (2026-09-23) — the page draws the six stages a trade passes through (scope, routing, entry, sizing, risk, exit) and strokes a stage red when no rule in it is live, or when a value in it is set to something the engine ignores. It surfaced that VIX Spike Short\'s maxDailyLoss and maxPositions are both declared legacy-only — a daily-loss cap the automation loop does not read.',
+      'A BOT SHOWS ITS REALISED RECORD WITH ITS SAMPLE SIZE (2026-09-23, #894) — the bot detail page renders realised performance together with the number of closes behind it, or says why a rating is withheld. On the largest sample in the app — 8 closes against a floor of 30 — the rating is unsatisfiable by design: the gate is working, not broken. The rating\'s drawdown condition is now measured against a per-bot capital allowance rather than a declared figure with nothing to compare against.',
+      'EVERY SYMBOL SCORE IS FETCHED PER PROTOCOL AND LABELLED (2026-09-23, #925) — a score request was unscoped, so a symbol\'s cards mixed protocols. Each caller now passes the protocol and the response names its own protocolId, so four labelled cards render where one ambiguous set did. A build-time guard counts the callers, and canaries itself in both directions.',
+      'A DELETED BOT SUBSCRIPTION IS RECREATED BY THE SEEDER (2026-09-23, #874) — a bot with no strategy_protocol row never receives a signal and never trades, silently, while appearing configured. The seeder now recreates a missing subscription and the audit names the fault class. ⚠️ A seed comment claiming one bot\'s subscription is "intentionally absent" contradicts the seeder — flagged, not fixed.',
+      'FOUR STYLESHEETS SHARED ONE CSS PREFIX (2026-09-23) — the screener, strategy-create, server-controls and startup-checklist stylesheets all used the prefix "sc-", so pages inherited each other\'s rules whenever both loaded. Each is now anchored to its own file name. No build guard exists for the convention, so prefix N+1 can still be reintroduced.',
+      'THE FREE EDITION NO LONGER PUBLISHES THE APP MAP (2026-09-23) — the free build shipped the modules that enumerate the app (the nav tree, the view metadata and the premium route list), which together tell a reader every page the paid edition has. Those three are now filtered copies, and a build guard asserts premium page code is physically absent from the free bundle by reading the source maps. 16 premium view names are still reachable in 9 modules and hard-fail only under --strict.',
+      'A THIN BACKTEST CANNOT NAME A WINNER (2026-09-23, #965) — the comparison endpoint named a winner from any number of trades, so a 3-trade run could "win". It now requires 30 trades AND 30 signals on every side, returns verdict "sample-unknown" with the bar stated when it cannot judge, and serves each figure in a named unit (signalWinRatePct versus tradeWinRatePct) instead of one ambiguous multiply-by-100.',
+      'BACKTESTING A BOT IS NOW ONE CALL (2026-09-23, #965) — POST /api/backtest/run accepts a botId and resolves that bot\'s own symbol, protocol, timeframe and stop levels, instead of requiring the caller to restate them. Each run records which bot produced it (backtestrun.botId) and the live lot size it used, and a pair comparison warns when the two sides were sized differently rather than comparing unlike trades.',
+      'A LADDER OBSERVATION IS NO LONGER RECORDED AS A TRADEABLE SIGNAL (2026-09-23, #971) — the speed-scan ladder wrote decision SCORED, the same value a bot\'s tradeable signal carries, for rows no bot reads; 539 of 577 scored rows in one day had no consumer and were indistinguishable from real signals. A row with no consumer now records OBSERVED. No backfill: 706 historical no-bot rows keep the old value.',
+
   ]
 
 export const DECISION_WORKFLOW = [
@@ -705,9 +735,139 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-22 (batch #22: 22 handoffs — POSITION FRESHNESS (#854/#778/#745): two populations lived in one table and 99.4% of the reported position P&L was a frozen Trading 212 import, while the duplicate guard blocked orders for positions already closed at the broker. One shared liveness rule, imported never copied, with the excluded set counted and named rather than dropped. A/B TESTING CAN RUN (#929): a variant is DECLARED against a base, capacity 2x8, and no verdict below 30 trades per side. BOT PERFORMANCE + strategyKey BRIDGE (#894/#876): a realised record joined to a derived strategy, refusing a rating it cannot justify. DRAWDOWN DEFINED (#950). PER-PROTOCOL NET vs GROSS (#777): costs persisted, gross refused on partial coverage. WEEKEND DEFENCE verified against bridge truth (#869). BROKER CATALOGUE (#958): 14,023 instruments known instead of 257, with onboarding deliberately NOT automatic. TCS-SYS-009 for a failure that never reached the API. Two new comparison pages: A/B Ladder (protocols) and A/B Strategies (configurations). Latest version 0.68.0) — previous: 2026-09-22 (batch #21: 12 handoffs — the trail may never tighten a stop inside the position declared distance #927 (7 closes at guardian-set stops 0.03-0.11% from entry against a declared ~1%); queue entries now have THREE exits #882 (a 120h-old entry had executed); the trade record is structurally honest — 99 of 206 rows are phantoms #931 and the P&L report computes over the 86 that remain #805; decision-row units are a compile error #937, a guard #909 claimed and never built; outcome dedup is by IDENTITY not elapsed time #825 (the 5-minute window dropped ~3 of every 4 passes); the market tape can no longer say "0 positions" about a field nothing writes; Active Symbols was blind to 24 Trading212 holdings; the Identity Map measures that 181 of 182 reference columns have NO foreign key; config-derived capacity verdicts retired #906; and a failing build gate no longer deletes the serving dist #946) — previous: 2026-09-21 (batch #20: bot identity DERIVED from protocol+role+market+broker #876 with a stable registry #875; risk caps declared once and movable live #865/#863, divergence between app and bridge DETECTED #901, per-symbol exposure made aggregate #899, naked-stop and book-at-risk pre-trade gates #900; Stop Guardian repaired from INERT - 3 of 4 directives unregistered, both refusal exits silent, closed-market retry backed off #888/#890/#892/#893 and updateTrailingStop retired #913; multi-broker reconciliation #883/#889 and close attribution #916; fabricated Strategy Comparison #884 and the invented competition DELETED #918; venue-aware standby + crypto unblocked #891) — previous: 2026-09-17 (batch #19: settings source of truth #849 — declared registry, provenance resolver, create-only seeder, key families covering 443 keys, access guard as a ratchet, scoring config fully migrated; time axes — one bar-length owner, real DST sessions, 113 column defaults to UTC, market patterns; feed freshness — stale symbols not scored, stale sets rejected, starved-symbol visibility, creation-time ceiling warning; trading path — strongest sell routed as a buy, time-stop parsing a format nothing emits, fabricated drawdown peak, per-protocol profitability attributed; build gates — CSS tokens, generated facts, endpoint latency budgets, route order #856, bot rule registry) — previous: 2026-09-15 (batch #18: notice registry end-to-end, threshold single-source + ADR-011 rescale, bar open-stamp contract, outcome attribution/horizon/dedup, broker tradability gate) — previous: 2026-09-13 (batch #17 documentation triage), 2026-09-12 (batch #16)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-23 (batch #23: 30 handoffs — FABRICATION REMOVED and HONEST ABSENCE put in its place: broker tickets clamped to the int32 ceiling, a bell that said all clear while counting 12,865, an A/B runner reporting EXECUTED with no ticket, an invented exchange on 29 symbols, a failed read rendering as an empty list, a 1,611% drawdown from a denominator that was not capital, a factor-of-one-million market-cap error, and a ladder observation written as a tradeable signal. Plus the mirror: allocation_not_set, totalSignals NULL, decision OBSERVED, claim ok:null)';
 
 export const CURRENT_ROUTE_CONTRACTS = [
+      /* — batch #23 — new/changed endpoints (2026-09-22 23:51 to 09-23 15:52) — */
+      {
+        route: 'POST /api/trading/strategies/:id/duplicate',
+        method: 'POST',
+        permission: 'Write access',
+        owner: 'TradingStrategyService',
+        contract: 'NEW (#874). Deep-copies a bot and its protocol subscription as an INACTIVE copy linked back to its source both ways (duplicatedFromId), so an A/B pair has a B without hand-editing rows.',
+        status: 'active',
+      },
+      {
+        route: 'DELETE /api/trading/strategies/:id',
+        method: 'DELETE',
+        permission: 'Write access',
+        owner: 'TradingStrategyService',
+        contract: 'CHANGED (#874). Now REFUSES a bot that is still active (409, TCS-TRADE-018) and performs explicit cleanup of the rows it owns. Deleting a bot that is trading was previously accepted.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/alerts/count',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'AlertsService',
+        contract: 'CHANGED (2026-09-23). Now uses the SAME predicate as the alert list. It previously ran a consecutive-dedupe hack and shipped 12,865 rows, so the bell badge counted something the popup never showed.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/alerts/active',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'AlertsService',
+        contract: 'CHANGED (2026-09-23). Ordered by lastSeenAt DESC, top 100, so the freshest condition leads instead of insertion order.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/alerts/history',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'AlertsService',
+        contract: 'CHANGED (2026-09-23). Returns real historical rows. It returned an empty array by construction for weeks, which is why "no history" was never investigated.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies/seed',
+        method: 'POST',
+        permission: 'Write access',
+        owner: 'TradingStrategyService',
+        contract: 'CHANGED (#833). Now CONVERGES every declared bot field and recreates a missing queue subscription instead of skipping an existing row. Supports ?dryRun=true, which reports which field would change without writing.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/trading/strategies/:id/pair',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'TradingStrategyService',
+        contract: 'NEW (#963). Resolves an A/B pair: incumbent, variant and comparison state. Returns paired:false with no reason for an independent bot — that is a valid answer, not an error.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies/:id/pair/active',
+        method: 'POST',
+        permission: 'Write access',
+        owner: 'TradingStrategyService',
+        contract: 'NEW (#963). Moves BOTH sides of a pair together. Returns 400 naming the reason when the pair cannot be resolved, rather than a silent no-op or a half-applied pair.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies/:id/pair/start',
+        method: 'POST',
+        permission: 'Write access',
+        owner: 'TradingStrategyService',
+        contract: 'NEW (#963). Starts a comparison — activates both sides in one transaction — and REFUSES without a declared change, so a pair cannot be run with no hypothesis.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies/:id/pair/stop',
+        method: 'POST',
+        permission: 'Write access',
+        owner: 'TradingStrategyService',
+        contract: 'NEW (#963). Deactivates both sides together and records endedAt, so a stopped comparison is distinguishable from one that was never started.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/trading/strategy-comparison',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'StrategyComparisonService',
+        contract: 'EXTENDED (#884). Adds protocol, directives, recentScores, recentTrades, pnlByDay and excluded, so the page compares what strategies ARE, not only what they earned. ⚠️ The old identity join matched trade names against protocol names by coincidence (4 of 32).',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/symbols',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'SymbolsService',
+        contract: 'CHANGED (#959). Now serves a sources list per symbol — the provider that actually delivered it. The page column is relabelled Source and the CSV carries it. The symbol.exchange column is nullable so absence is representable.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/symbols/:ticker/snapshot',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'SymbolsService',
+        contract: 'CHANGED (2026-09-23). Company profile is normalised to absolute USD and returned as marketCapUsd. Two providers with different units previously fed one variable, rendering Apple as a 4.53-million-dollar company.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/trading/bot-performance',
+        method: 'GET',
+        permission: 'Authenticated',
+        owner: 'BotPerformanceService',
+        contract: 'EXTENDED (#894). Now serves allocationAmount and the two percentages the rating is based on, and applies the 25% drawdown condition (exclusive) instead of leaving it declared-but-unapplicable. allocation_not_set replaces no_allocation_basis and drawdown_unverifiable.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated',
+        owner: 'BacktestService',
+        contract: 'CHANGED (#965). Now accepts botId and resolves that bot\'s own symbol, protocol, timeframe and stop levels, so backtesting a bot is one call. Records backtestrun.botId and the live lot size it used.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/runs/compare',
+        method: 'POST',
+        permission: 'Authenticated',
+        owner: 'BacktestService',
+        contract: 'REBUILT (#965). Requires 30 trades AND 30 signals per side before naming a winner; returns verdict "sample-unknown" with the bar stated when it cannot judge; serves each figure in a named unit (signalWinRatePct / tradeWinRatePct) instead of one multiply-by-100.',
+        status: 'active',
+      },
+
     /* —— batch #22 — new/changed endpoints (2026-09-22) —— */
     {
       route: 'GET /api/trading/bot-performance',
@@ -2704,9 +2864,20 @@ export const KNOWN_GAPS = [
     '2026-09-22: The A/B Ladder was redesigned five times in one evening and the earlier descriptions are SUPERSEDED. A generic legend and a header subtitle were added and then REMOVED on owner instruction — neither element exists. Earlier handoffs in this batch describe them. If a reader finds "the legend is generic" anywhere, it is out of date.',
     '2026-09-22: A verdict refuses below 30 closed trades per side. At current trade rates that bar may take a long time to clear, so an experiment can run indefinitely without becoming decidable — the verdict will correctly say insufficient-data rather than pretend. Worth knowing before a tuning decision waits on one.',
     '2026-09-22: The broker catalogue adds a SECOND notion of "symbol" and the boundary between them is manual. broker_symbol is what a broker offers (14,023); symbol is what the app has onboarded (218). Nothing promotes automatically, and symbol_route has exactly one seeder. Confusing the two would suggest the pipeline can score instruments it has never onboarded.',
+      '── Added 2026-09-23 (handoff batch #23 — fabrication removed, and the honest absence that replaces it) ──',
+      '123 broker tickets were already clamped to 2147483647 before the column was widened (2026-09-22). Their real tickets are gone; those trades can no longer be linked back to the score that produced them. The repair is impossible, not pending.',
+      'Seed convergence runs seed to database only, so an out-of-date seed file REVERTS deliberate database-only changes (2026-09-23, #833). It did exactly that on its first live run: five bots auto to semi-auto, four gold time-stops written null. A convergent seeder is destructive in one direction, and that direction is now the live one.',
+      'The trading-strategy create path creates a bot WITHOUT a strategy_protocol subscription and does not refuse (2026-09-23, #874). duplicate() does subscribe its copy. A bot created by that path appears configured and silently never trades.',
+      'The A/B test runner now places orders, but the account NETS the two sides (2026-09-23, #929). A/B cannot measure by design while both sides are held in one account — an owner decision is needed (hedging, sequential, or paper sides), not a code fix.',
+      'Company profile data has one hardcoded provider, swallows its failures, and an Interactive Brokers adapter that fabricates a sector and industry value (2026-09-23). The companyMetric table is stale: 187 rows all fetched 2026-07-03, sharesOutstanding zero.',
+      'The free-edition bundle still names 16 premium views across 9 modules (2026-09-23). The guard passes by default and hard-fails only under --strict. The EditionNotice render has never been observed end to end.',
+      'Three order paths remain ungated by the portfolio risk caps that manual trades and bots now pass through (2026-09-23, #945): the raw MT5 bridge endpoint, speed-scan dispatch, and A/B dispatch.',
+      'No build guard exists for the CSS prefix convention (2026-09-23). The shared "sc-" prefix was fixed for four stylesheets, but prefix N+1 can be reintroduced with every gate green.',
+
 ]
 
 export const REVISION_LOG = [
+      '2026-09-23: Handoff batch #23 — 30 handoffs, and the batch has a single subject: FABRICATION REMOVED, and honest absence put where a confident number used to be. Broker tickets were clamped to the int32 ceiling so a trade could not be linked to its score; the alert bell said "All clear" while its badge counted 12,865 undismissed rows; the A/B runner reported 10 rows EXECUTED with a NULL ticket; 29 of 30 symbols carried an invented exchange name; a failed database read rendered as "0 symbols total"; the drawdown breaker tripped on a 1,611% ratio built from a denominator that was not a capital base; and two providers in different units rendered Apple as a 4.53-million-dollar company. The mirror arrived with it — allocation_not_set, totalSignals NULL, decision OBSERVED, claim ok:null — each stating an ABSENCE rather than a zero, because a zero is a claim and an absence is not.',
     '2026-09-22: Handoff batch #22 — 22 handoffs, and the batch has a single subject: the app was reporting numbers whose SOURCE it had not checked. 99.4% of the position P&L came from 24 rows frozen seven weeks earlier; the duplicate guard blocked orders for positions already closed at the broker; drawdown read 1557.8% CRITICAL permanently; the weekend check had been running against an empty array for four days; gross P&L equalled net P&L only because costs had never been measured. The recurring fix is the same shape — ONE shared definition of "live", imported rather than copied, with the excluded set COUNTED AND NAMED rather than silently dropped. The batch also unlocked A/B testing, which existed and could never run; gave a bot realised record an identity to attach to; and added two comparison surfaces (protocols on the Ladder, configurations on A/B Strategies) that both refuse an invalid pairing rather than rendering it. WARNING — 13 new gaps recorded. The sharpest: the bot rating is UNSATISFIABLE BY DESIGN today and correctly refuses rather than guesses; 18 phantom rows carry no flag and will mislead any consumer filtering on the flag alone; and the running API may serve code older than the committed source, which is how the strategyKeys bridge sat missing from dist until someone asked why a column was empty.',
     '2026-09-22: Handoff batch #21 — 12 handoffs. The batch is about MEASUREMENT HONESTY at the boundary between a number and the thing it claims: the trail (a stop pulled ~20x closer than declared, seven closes proving it), the queue (a 120-hour-old entry executed), the trade record (99 of 206 rows are phantoms that three win-rate consumers counted as wins), the recorder (a 5-minute window silently dropping 3 of every 4 scoring passes), the market tape (a field read by two components and written by nothing, so it said 0 positions while five were open), Active Symbols (blind to 24 Trading212 holdings because it asked only MT5), and the Identity Map (181 of 182 reference columns have no foreign key, so a column name is the only contract). #937 matters most procedurally: it is the guard #909 CLAIMED existed at closure and did not — found by a separate verifier, not by the author. Two things were also DECIDED rather than left open: the fabricated trade rows are declared LOST (no fill ever existed, so there is nothing to re-import) and stay flagged, never deleted; and a failing build gate no longer deletes the serving `dist`, which had taken the backend down twice. ⚠️ 12 new gaps recorded, the sharpest being that the trail floor does NOT repair stops already damaged on open positions, and that two canonical implementations of the "is this row usable" rule currently disagree.',    '2026-09-21: Handoff batch #20 — 51 handoffs processed (the largest batch yet). BOT IDENTITY: a "strategy" was whatever `scoring_strategy` held, so 14 FX bots collapsed into ONE blended rating — the thing being rated was not the thing doing the trading. Derived `strategyKey` now gives 26 bots / 26 strategies, REPORTS duplicate groups rather than merging them, and a registry pins an id to a key so a strategy can be named across config edits. RISK CAPS: `maxPerSymbol: 0.25` was a literal in five places across four files with NO setting and blocked 78 trades in one day; six keys are now declared once behind a build gate and movable live. The cap also exists in the bridge process, where a silent divergence caused 38 refusals/day — now DETECTED and named (TCS-TRADE-016). Exposure became aggregate (three bots could each pass 25% and total 60% on one symbol), a position without a stop now blocks new entries, and the allocation estimate finally accounts for contract size per instrument. STOP GUARDIAN, repaired from INERT: it evaluated 101 directives to read 4 results; three of those four were NEVER REGISTERED and `Map.get()` returns undefined silently, so stopConfidence blended 1 of 4 inputs; both exits from applyModify were silent so "0 adjusted" hid a 100% refusal rate; and the retry ran every tick into a closed market. A NOTE showed the trailing write can OVERWRITE the strategy declared floor, so `broker:sl` does not prove the stop was reached. RECONCILIATION: one bridge was queried while two were running, so position-sync CLOSED the other broker live trades (now every broker, tagged, authoritative only if all answered); ticketed orphans stayed open forever; the first tick after a restart skipped syncPositions silently; and a prose cadence held three bots at pending_bars for 44 hours. ATTRIBUTION: no row of 148 closed trades could say WHY it closed — closeReason now records the closer, and the Trade Journal names it per trade (payoff 0.60, expectancy −0.016%). FABRICATION REMOVED: Strategy Comparison had been comparing strategies on fabricated `pnl: 0` rows written on the REJECT path, and `POST /api/scoring/compete` served five INVENTED strategies over an always-empty array — deleted, with a build gate on typed non-zero stat literals. ⚠️ 14 new gaps recorded, the sharpest being that nothing renders closeReason, that the trailing-write/floor conflict has NO fix, and that the Stop Guardian chain only looked healthy because each layer hid the next.',
     '2026-09-17: Handoff batch #19 \u2014 36 handoffs processed (the largest single batch). SETTINGS BECOME A DECLARED SYSTEM (#849): four stores with no owner and ~20 sites inventing their own fallback became a declared registry with a provenance resolver, a CREATE-ONLY seeder (an upsert carrying a default would revert a user change on every boot), KEY FAMILIES giving 443 of 462 keys an owner without 443 declarations (a family is forbidden a default, so seeding can never invent an install value), a build gate that is ABSOLUTE for migrated env vars and a SHRINKING RATCHET for raw table access (23 \u2192 20 across 10 \u2192 9 files, and the tool refuses to record a regression), and the last raw file \u2014 scoring directive/protocol config \u2014 fully migrated to 0. TIME AXES: one bar-length owner replaced FOUR answers (a weekly bar was 168\u00d7 wrong) and the DST guess that is wrong 37 days a year was deleted; 113 column defaults across 104 tables stopped writing the server-local clock and 21 tables were normalised to one collation; market-open decisions moved from a single hardcoded US calendar to named per-venue patterns. FEED FRESHNESS: a symbol stale on every cadence is no longer scored and its outcome rows no longer claim a prediction made before the data existed; a stale bar set is rejected AFTER the fallback rather than before it; the starved-symbol list that was computed and never rendered now has a panel that keeps "no bars" and "query failed" distinct. TRADING PATH: the strongest sell class was being routed LONG/BUY by a substring test that is false for it; the time-stop parsed a comment format nothing emits and matched 0 of 76 real rows while reporting success; the drawdown gate seeded its peak from a fabricated fallback so an unreadable account read as an 86% drawdown; per-protocol profitability turned out to be an attribution chain wrong in BOTH hops and now resolves 26 of 26; and the largest entry blocker was measured to be a broken INPUT (margin utilisation used as leverage) rather than a policy. BUILD GATES, each closing a CLASS: undefined CSS tokens, generated doc numbers with drift detection, endpoint latency budgets measured cold and warm, route order (seven literal routes were unreachable, two returning fabricated numbers), and per-column bot rule enforcement. Also: the score card extracted and shared, the cockpit turned into a pipeline board, the settings area regrouped by META.Stack layer, a POST-only endpoint polled with GET that rendered a broken request as an empty market, and the glossary grown 56 \u2192 92 with the deterministic-core framing written down. \u26a0\ufe0f 13 new gaps recorded, chief among them that NOTHING IS DEPLOYED \u2014 this entire batch is unverified in the running process.',
