@@ -24,6 +24,9 @@
  */
 const fs = require('fs');
 const path = require('path');
+// Shared walk/load/self-test blocks — extracted 2026-09-23 (the duplication validator failed on
+// three blocks this guard shared with scripts/validate-envelope-callers.cjs).
+const { loadTree, runSelfTest } = require('../../scripts/lib/validator-helpers.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
@@ -87,26 +90,8 @@ function analyse(files) {
   return { errors, exempted };
 }
 
-function walk(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(full, out);
-    else if (/\.ts$/.test(entry.name)) out.push(full);
-  }
-  return out;
-}
-
-function loadTree() {
-  const files = new Map();
-  for (const full of walk(SRC)) {
-    const rel = path.relative(SRC, full);
-    files.set(rel.split(path.sep).join('/'), fs.readFileSync(full, 'utf8'));
-  }
-  return files;
-}
-
-function selfTest() {
-  const cases = [
+if (process.argv.includes('--self-test')) {
+  runSelfTest([
     ['a call WITHOUT the gate fails', () => {
       const r = analyse(new Map([['x.ts', 'await broker.placeOrder({});']]));
       return r.errors.length === 1 && /x\.ts/.test(r.errors[0]);
@@ -127,22 +112,10 @@ function selfTest() {
       const r = analyse(new Map([['x.spec.ts', 'await broker.placeOrder({});']]));
       return r.errors.length === 0;
     }],
-  ];
-  let fail = 0;
-  for (const [name, fn] of cases) {
-    let ok = false;
-    try { ok = fn(); } catch { ok = false; }
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}`);
-    if (!ok) fail++;
-  }
-  if (fail) { console.log(`\nSELFTEST FAILED — ${fail} case(s)`); process.exit(1); }
-  console.log('\nSELFTEST PASSED — both directions proven on fixtures');
-  process.exit(0);
+  ]);
 }
 
-if (process.argv.includes('--self-test')) selfTest();
-
-const { errors, exempted } = analyse(loadTree());
+const { errors, exempted } = analyse(loadTree(SRC, /\.ts$/));
 
 console.log(`[manual-trade-gate] ${exempted.length} exempt path(s):`);
 for (const e of exempted.sort((a, b) => a.rel.localeCompare(b.rel))) {

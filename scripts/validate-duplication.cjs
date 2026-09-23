@@ -100,7 +100,12 @@ const MIN_NEW_PAIR_WINDOWS = 3;
 const EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.cjs', '.mjs', '.css', '.py']);
 
 /** Build output, data, and anything else that is not hand-written source. */
-const SKIP_DIR = /(^|[\\/])(node_modules|dist|build|\.git|\.vite|coverage|logs|backups|data|archived|\.next)([\\/]|$)/;
+// ⚠️ Build OUTPUTS of every flavour are skipped. The pattern used to match the exact segment
+// `dist` only, so the edition builds (`dist-free`, `dist-full-check`, added with the free-edition
+// work on 2026-09-23) were scanned as SOURCES: 200+ "new duplicate" pairs appeared by comparing
+// compiled CSS against the source files it was compiled from, and every agent's prebuild failed.
+// Build artefacts are derived — the whole `dist*` family belongs here, not just `dist`.
+const SKIP_DIR = /(^|[\\/])(node_modules|dist(-[^\\/]+)?|build|\.git|\.vite|coverage|logs|backups|data|archived|\.next)([\\/]|$)/;
 
 // ── Source discovery ────────────────────────────────────────────────────────
 
