@@ -4,207 +4,42 @@
  * Generated from the entry's own directive mappings and checked against the running bot.
  * See src/core/strategy-diagram.js for the generator and the claim semantics.
  *
- * ── THE INTERACTIVE RENDERING ───────────────────────────────────────────────────────────
- * Hand-built SVG + absolutely-positioned nodes, the same technique as
- * `/lab/pipeline-graph-lab` (see pipeline-graph-lab.css). It is affordable here because a
- * decision path is a LINEAR CHAIN: no positions file, no port maths, no pan/zoom.
+ * ── THE DIAGRAM IS MERMAID, AND MERMAID IS THEMED ───────────────────────────────────────
+ * The picture is rendered by Mermaid from a generated source, so the styling that matters is
+ * Mermaid's OWN — and that is configured in `src/core/mermaid-theme.js`, not here. This file
+ * styles the frame around it (the summary, the claim table, the unverifiable list).
  *
- * The one detail that makes it interactive at all: each edge has a WIDE TRANSPARENT HIT PATH
- * (`stroke-width: 20`) behind the 2px visible line. A 2px target is un-hoverable in practice,
- * and the glow never fires without it.
+ * ⚠️ Do not set Mermaid's colours from CSS. Two reasons, both measured:
+ *   • `mermaid.initialize()` is GLOBAL state — two pages configuring it means whichever mounted
+ *     last wins, so a diagram can silently render in another page's palette.
+ *   • Mermaid runs every colour through its own parser, and a CSS custom property reference
+ *     throws `Unsupported color format`. The values must be real colours read from the live
+ *     theme in JS — see `readTokens()` in that module.
  *
- * ⚠️ The pipeline graph's stylesheet was the reference for the TECHNIQUE, not for the colours.
- * It hardcodes hex throughout and mixes themes; this file uses tokens only, so the picture
- * follows the user's theme (accessibility-policy / ui-standards). Tints come from `color-mix()`
- * rather than hand-picked rgba, which is the same approach the Diagrams page uses.
+ * ── ⚠️ THEMED vs STATIC TOKENS — the reason the first attempt did not match the app ──────
+ * `useThemeRuntime` writes `--bg / --panel / --line / --ink / --ink-soft / --accent` per theme
+ * pack. `--color-panel` and `--color-border` are written ONCE in index.css and never updated,
+ * so a section styled with them stays on the default palette while the page around it follows
+ * the user's choice. Everything structural here uses the THEMED tokens.
  *
- * ── THREE STATES, VISUALLY DISTINCT ON PURPOSE ──────────────────────────────────────────
- *   matched    → --color-profit
- *   disagreed  → --color-loss
- *   unchecked  → --color-warning
- *   no claim   → --color-muted   (no claim was made; NOT the same as one that failed to run)
- * Conflating the last two is the failure this whole mechanism exists to prevent.
- * Every state ALSO carries its word in the status pill, so the meaning does not rest on colour.
+ * Status colours (`--color-profit / loss / warning`) are static BY DESIGN — a pass and a failure
+ * should look the same in every theme — and every state also carries its WORD, so the meaning
+ * never rests on colour alone.
  */
 
-/* ── The chain ─────────────────────────────────────────────── */
-.sdp {
-  position: relative;
-  margin-bottom: 0.7rem;
-}
-
-.sdp-links {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.sdp-edge {
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.sdp-edge-hit {
-  stroke: transparent;
-  stroke-width: 20;
-  pointer-events: auto;
-}
-
-.sdp-edge-line {
-  stroke: var(--color-border);
-  stroke-width: 2;
-  stroke-dasharray: 5 4;
-  transition: stroke 0.2s, stroke-width 0.2s;
-}
-
-/* The spine carries the colour of the stage it feeds, so the flow itself shows state. */
-.sdp-edge--ok .sdp-edge-line { stroke: color-mix(in srgb, var(--color-profit) 55%, transparent); }
-.sdp-edge--bad .sdp-edge-line { stroke: color-mix(in srgb, var(--color-loss) 65%, transparent); }
-.sdp-edge--unknown .sdp-edge-line { stroke: color-mix(in srgb, var(--color-warning) 55%, transparent); }
-
-.sdp-edge:hover .sdp-edge-line,
-.sdp-edge--lit .sdp-edge-line {
-  stroke: var(--accent);
-  stroke-width: 3;
-  stroke-dasharray: 7 3;
-}
-
-/* ── A stage node ──────────────────────────────────────────── */
-.sdp-node {
-  position: absolute;
-  left: 44px;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0 0.7rem;
-  background: var(--color-panel);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-muted);
-  border-radius: 8px;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-}
-
-.sdp-node--ok { border-left-color: var(--color-profit); }
-.sdp-node--bad { border-left-color: var(--color-loss); }
-.sdp-node--unknown { border-left-color: var(--color-warning); }
-.sdp-node--none { border-left-color: var(--color-muted); }
-
-.sdp-node--lit {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: color-mix(in srgb, var(--accent) 6%, var(--color-panel));
-}
-
-.sdp-node--bad.sdp-node--lit {
-  border-color: color-mix(in srgb, var(--color-loss) 55%, transparent);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--color-loss) 22%, transparent);
-}
-
-/* Stage-family dot. Three meanings only, so the eye is not asked to learn eight colours:
-   detect (blue) / filter (accent) / execute (neutral — these stages come from the BOT,
-   not from the library entry, and neutral says so). */
-.sdp-dot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-muted);
-}
-.sdp-dot--signal,
-.sdp-dot--confirm { background: var(--color-accent-blue); }
-.sdp-dot--level,
-.sdp-dot--macro,
-.sdp-dot--session { background: var(--accent); }
-.sdp-dot--gate,
-.sdp-dot--risk,
-.sdp-dot--exit { background: var(--ink-soft); }
-
-.sdp-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.sdp-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.sdp-row--sub { margin-top: 2px; }
-
-.sdp-stage {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  flex-shrink: 0;
-}
-
-.sdp-dirs {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.72rem;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sdp-status {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
-}
-.sdp-status--ok { color: var(--color-profit); background: color-mix(in srgb, var(--color-profit) 14%, transparent); }
-.sdp-status--bad { color: var(--color-loss); background: color-mix(in srgb, var(--color-loss) 14%, transparent); }
-.sdp-status--unknown { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 14%, transparent); }
-.sdp-status--none { color: var(--color-muted); background: color-mix(in srgb, var(--color-muted) 14%, transparent); }
-
-.sdp-role {
-  font-size: 0.68rem;
-  color: var(--ink-soft);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sdp-live {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.68rem;
-}
-.sdp-live--ok { color: var(--color-profit); }
-.sdp-live--bad { color: var(--color-loss); font-weight: 700; }
-.sdp-live--unknown { color: var(--color-warning); }
-
-/* ── The retained Mermaid source ───────────────────────────── */
-.sd-source {
-  margin-top: 0.7rem;
-  font-size: 0.72rem;
-  color: var(--ink-soft);
-}
-
-.sd-source summary {
-  cursor: pointer;
-  color: var(--color-muted);
-}
-
-.sd-source pre {
-  margin: 0.5rem 0 0;
-  padding: 0.6rem 0.75rem;
-  background: var(--color-panel);
+/* ── The Mermaid host ──────────────────────────────────────── */
+.sd-diagram {
+  background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 10px;
+  padding: 0.75rem;
+  margin-bottom: 0.6rem;
   overflow-x: auto;
-  font-size: 0.68rem;
-  line-height: 1.5;
-  color: var(--ink-soft);
+}
+
+.sd-diagram svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* ── Summary strip ─────────────────────────────────────────── */
@@ -284,7 +119,7 @@
 
 .sd-claims td {
   padding: 0.4rem 0.5rem 0.4rem 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--line);
   vertical-align: top;
   color: var(--ink-soft);
   line-height: 1.5;
@@ -294,7 +129,7 @@
 .sd-row--bad .sd-cell-actual { color: var(--color-loss); font-weight: 600; }
 
 .sd-cell-node {
-  color: var(--color-muted);
+  color: var(--ink-soft);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   white-space: nowrap;
 }
@@ -315,7 +150,7 @@
 
 .sd-cell-note {
   margin-top: 0.25rem;
-  color: var(--color-muted);
+  color: var(--ink-soft);
   font-size: 0.68rem;
   font-weight: 400;
   max-width: 42ch;
@@ -323,7 +158,7 @@
 
 /* ── Parameters the app cannot store ────────────────────────── */
 .sd-unverifiable {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
   background: color-mix(in srgb, var(--color-warning) 6%, transparent);

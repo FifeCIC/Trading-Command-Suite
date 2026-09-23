@@ -223,16 +223,23 @@ export function claimsFor(diagramId) {
  * Colour the diagram from its own verification result.
  * Appends mermaid classDef/class lines so the node a failed claim is about is stroked
  * in the conflict colour — the failure is visible IN the picture, not only beside it.
+ *
+ * @param colors — `{ ok, bad }`, read from the live theme by `core/mermaid-theme`. The caller
+ *   passes them because MERMAID CANNOT RESOLVE `var(--token)`: its colour parser throws
+ *   `Unsupported color format` (verified 2026-09-23). The defaults keep this function usable
+ *   without a theme, so the existing call sites cannot break.
  */
-export function annotateSource(diagramId, source, results) {
+export function annotateSource(diagramId, source, results, colors = {}) {
   if (!results || !results.length) return source;
+  const okColor = colors.ok || '#22c55e';
+  const badColor = colors.bad || '#ef4444';
   const bad = [...new Set(results.filter((r) => r.ok === false).map((r) => r.node))];
   const ok = [...new Set(results.filter((r) => r.ok === true).map((r) => r.node))].filter(
     (n) => !bad.includes(n),
   );
   let out = source;
-  out += '\n  classDef claimOk stroke:#22c55e,stroke-width:3px';
-  out += '\n  classDef claimBad stroke:#ef4444,stroke-width:3px,stroke-dasharray:5 3';
+  out += `\n  classDef claimOk stroke:${okColor},stroke-width:3px`;
+  out += `\n  classDef claimBad stroke:${badColor},stroke-width:3px,stroke-dasharray:5 3`;
   for (const n of bad) out += `\n  class ${n} claimBad`;
   for (const n of ok) out += `\n  class ${n} claimOk`;
   return out;

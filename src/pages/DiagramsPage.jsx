@@ -3,12 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import mermaid from 'mermaid';
 import { annotateSource, claimsFor, evaluateClaims, summarise } from '../core/diagram-claims';
+import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
 // Shell chrome is shared, not re-invented: the verdict block IS a notice, so it uses the
 // canonical notice stylesheet rather than a second colour recipe. See diagrams-page.css.
 import '../components/notice-block.css';
 import './diagrams-page.css';
 
-mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
+// ⚠️ Mermaid is configured by `core/mermaid-theme`, NOT here.
+// `mermaid.initialize()` sets a GLOBAL singleton, so a second call on another page silently
+// overrides this one. The theme hook re-applies the config on every theme change and returns
+// `themeKey`, which the render effect depends on so the diagram is redrawn with the new palette.
 
 const DIAGRAMS = [
   {
@@ -1703,6 +1707,11 @@ export default function DiagramsPage() {
 
   const diagram = DIAGRAMS.find((d) => d.id === active) || DIAGRAMS[0];
 
+  // The shared Mermaid config. `themeKey` changes on every theme switch, which re-runs the
+  // render effect below so the SVG is redrawn from theme-derived colours rather than cached
+  // with the previous pack's palette.
+  const { themeKey } = useThemedMermaid();
+
   // Live data queries for dynamic diagram verification (#493)
   const autoQ = useQuery({ queryKey: ['diagram-auto'], queryFn: () => apiGet('/api/automation/status').catch(() => null), refetchInterval: 30000 });
   const protoQ = useQuery({ queryKey: ['diagram-proto'], queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => null), refetchInterval: 60000 });
@@ -1755,12 +1764,16 @@ export default function DiagramsPage() {
     if (!el) return;
     // Always re-render on diagram switch (React key forces DOM remount so innerHTML is always fresh).
     // The source is annotated with claim results first, so the diagram carries its own accuracy.
-    mermaid.render(`${id}-svg`, annotateSource(diagram.id, diagram.code, claimResults)).then(({ svg }) => {
+    // `readStatusColors()` is read here, not at module scope, because the theme can change.
+    const src = annotateSource(diagram.id, diagram.code, claimResults, readStatusColors());
+    mermaid.render(`${id}-svg`, src).then(({ svg }) => {
       el.innerHTML = svg;
     }).catch(() => {
       el.innerHTML = '<p style="color:var(--ink-soft);padding:1rem">Diagram rendering failed. Check Mermaid syntax.</p>';
     });
-  }, [active, diagram, claimResults]);
+    // `themeKey` is in the list on purpose: a theme change must redraw the SVG, which otherwise
+    // keeps the previous pack's palette baked into its inline styles.
+  }, [active, diagram, claimResults, themeKey]);
 
   return (
     <div className="pf-page" style={{ maxWidth: '100%' }}>
