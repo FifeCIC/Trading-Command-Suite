@@ -18,8 +18,15 @@ import { TradingStrategyService } from './trading-strategy.service';
  * measurement failure must ALLOW the activation. The defect fixed here is a false GREEN; the
  * fix must not become a false RED that blocks new protocols from being tried.
  *
- * Harness note: only `prisma` and `protocolHealth` are touched by these paths, so the
- * prototype is borrowed and those two are stubbed (same pattern as the venue-standby spec).
+ * Harness note: only `prisma`, `protocolHealth` and `abPair` are touched by these paths, so the
+ * prototype is borrowed and those are stubbed (same pattern as the venue-standby spec).
+ *
+ * ⚠️ `abPair` added 2026-09-23 (#963). `update()` now asks whether the bot is inside a RUNNING A/B
+ * comparison before it touches anything — invariant 6 of SETTLED-DECISIONS #25. `findFirst`
+ * returning null means "no running comparison", which is the world these tests describe, so their
+ * intent is unchanged. The stub is REQUIRED: without it every one of these tests failed with
+ * `Cannot read properties of undefined (reading 'findFirst')`, which is how the dependency was
+ * found at all — `update()` now genuinely needs the comparison table to answer.
  */
 describe('TradingStrategyService — activation ceiling gate (#905)', () => {
   const doomedCeiling = { slug: 'xau-speed-1h', ceilingPct: 7.69, ceilingRaw: 70, capacity: 910, samples: 457 };
@@ -32,6 +39,8 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
         findUnique: jest.fn(async () => opts.strategy ?? null),
         update,
       },
+      // No running A/B comparison — see the harness note above (#963).
+      abPair: { findFirst: jest.fn(async () => null), findUnique: jest.fn(async () => null) },
     };
     (svc as any).protocolHealth = {
       measureProtocolCeiling: jest.fn(async () => opts.ceiling ?? null),

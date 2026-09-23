@@ -2,7 +2,7 @@
 
 .bg-card {
   background: linear-gradient(135deg, rgba(14,165,166,0.06), rgba(59,130,246,0.04));
-  border: 1px solid var(--accent, #0ea5a6);
+  border: 1px solid var(--accent, var(--accent));
   border-radius: 10px;
   margin-bottom: 1rem;
   overflow: hidden;
@@ -23,14 +23,14 @@
 .bg-title {
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   flex: 1;
 }
 .bg-badge {
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
   padding: 2px 7px;
   border-radius: 4px;
@@ -71,7 +71,7 @@
 }
 
 .bg-intro {
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.85rem;
   margin: 0 0 0.75rem;
 }
@@ -81,7 +81,7 @@
 }
 .bg-block h4 {
   font-size: 0.75rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   margin: 0 0 0.3rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -112,7 +112,7 @@
 
 .bg-quote {
   background: rgba(0,0,0,0.2);
-  border-left: 3px solid var(--accent, #0ea5a6);
+  border-left: 3px solid var(--accent, var(--accent));
   padding: 0.4rem 0.65rem;
   border-radius: 0 6px 6px 0;
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
@@ -141,7 +141,7 @@
   line-height: 1.55;
 }
 .bg-tips li { margin-bottom: 0.25rem; }
-.bg-tips strong { color: var(--ink, #e2e8f0); }
+.bg-tips strong { color: var(--ink, var(--ink)); }
 
 /* ── Directive Meta Block (parameters + scoring zones) ── */
 .bg-meta {
@@ -151,7 +151,7 @@
 }
 .bg-meta h4 {
   font-size: 0.73rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 0.4rem;
@@ -171,7 +171,7 @@
   font-weight: 500;
 }
 .bg-meta-param-val {
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-weight: 600;
   text-align: right;
   font-family: 'SF Mono', 'Cascadia Code', monospace;
@@ -196,12 +196,12 @@
 .bg-meta-zone-range {
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 .bg-meta-zone-score {
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   white-space: nowrap;
   font-family: 'SF Mono', 'Cascadia Code', monospace;
 }

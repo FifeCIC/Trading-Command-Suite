@@ -146,7 +146,7 @@
 }
 
 .dc-toggle input:checked + .dc-toggle-track {
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
 }
 
 .dc-toggle-thumb {
@@ -241,7 +241,7 @@
   height: 6px;
   appearance: none;
   -webkit-appearance: none;
-  background: #e2e8f0;
+  background: var(--ink);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -253,7 +253,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   cursor: pointer;
   border: 2px solid #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
@@ -263,7 +263,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   cursor: pointer;
   border: 2px solid #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);

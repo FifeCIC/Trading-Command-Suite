@@ -54,7 +54,7 @@
 
 .cockpit-btn-launch {
   padding: 0.6rem 1.5rem;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -161,7 +161,7 @@
 
 /* Slot accent borders */
 .cockpit-slot-left { border-color: var(--color-accent-blue, #3b82f6); }
-.cockpit-slot-center { border-color: var(--accent, #0ea5a6); }
+.cockpit-slot-center { border-color: var(--accent, var(--accent)); }
 .cockpit-slot-right { border-color: var(--color-warning, #f59e0b); }
 
 /* ── Notes ──────────────────────────────────────────── */
@@ -315,7 +315,7 @@
 
 /* Panel accent borders */
 .cockpit-panel-left { border-top: 2px solid var(--color-accent-blue, #3b82f6); }
-.cockpit-panel-center { border-top: 2px solid var(--accent, #0ea5a6); }
+.cockpit-panel-center { border-top: 2px solid var(--accent, var(--accent)); }
 .cockpit-panel-right { border-top: 2px solid var(--color-warning, #f59e0b); }
 
 /* ── In-page (non-fullscreen) column area ──────────────────────────────────────

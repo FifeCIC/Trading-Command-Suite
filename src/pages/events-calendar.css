@@ -41,7 +41,7 @@
   display: inline-block;
   margin-top: 0.3rem;
   font-size: 0.7rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   text-decoration: none;
   font-weight: 600;
 }

@@ -50,7 +50,7 @@
 }
 
 .ac-period-tab:hover:not(.active) {
-  color: #e2e8f0;
+  color: var(--ink);
   background: #232840;
 }
 
@@ -82,7 +82,7 @@
 .ac-summary-value {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 .ac-summary-value.ac-danger { color: #ef4444; }
@@ -114,7 +114,7 @@
 .ac-section h2 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
   margin: 0 0 12px;
 }
 
@@ -164,7 +164,7 @@
   flex-shrink: 0;
 }
 
-.ac-feature-cost { font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+.ac-feature-cost { font-size: 0.78rem; font-weight: 700; color: var(--ink); }
 .ac-feature-calls { font-size: 0.62rem; color: #64748b; }
 
 /* Controls */
@@ -195,7 +195,7 @@
   border-radius: 6px;
   border: 1px solid #2d3040;
   background: #111318;
-  color: #e2e8f0;
+  color: var(--ink);
   font-size: 0.85rem;
   text-align: center;
 }
@@ -205,7 +205,7 @@
   border-radius: 6px;
   border: 1px solid #2d3040;
   background: #111318;
-  color: #e2e8f0;
+  color: var(--ink);
   font-size: 0.82rem;
 }
 

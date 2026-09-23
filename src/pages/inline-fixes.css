@@ -80,7 +80,7 @@
 .arch-chip-ml { margin-left: 6px; font-size: 9px; }
 
 /* ─── AlertCenterPage ─── */
-.ac-page { max-width: 800px; margin: 0 auto; padding: 20px; color: #e2e8f0; }
+.ac-page { max-width: 800px; margin: 0 auto; padding: 20px; color: var(--ink); }
 .ac-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .ac-tabs-row { display: flex; gap: 8px; margin-bottom: 16px; }
 .ac-alert-list { display: flex; flex-direction: column; gap: 8px; }

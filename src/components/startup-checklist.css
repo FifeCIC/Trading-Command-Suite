@@ -23,7 +23,7 @@
 .checklist-icon { font-size: 0.95rem; }
 .checklist-title {
   font-weight: 600;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -83,7 +83,7 @@
 
 .checklist-item-label {
   font-weight: 600;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.78rem;
 }
 .checklist-item--error .checklist-item-label { color: #ef4444; }
@@ -114,8 +114,8 @@
   transition: all 0.12s;
 }
 .checklist-btn-copy:hover {
-  border-color: var(--accent, #0ea5a6);
-  color: var(--ink, #e2e8f0);
+  border-color: var(--accent, var(--accent));
+  color: var(--ink, var(--ink));
 }
 
 .checklist-btn-dismiss {
@@ -127,7 +127,7 @@
   cursor: pointer;
   border-radius: 4px;
 }
-.checklist-btn-dismiss:hover { color: var(--ink, #e2e8f0); background: rgba(255,255,255,0.05); }
+.checklist-btn-dismiss:hover { color: var(--ink, var(--ink)); background: rgba(255,255,255,0.05); }
 
 @media (max-width: 600px) {
   .checklist-banner { margin: 0 0.75rem 0.5rem; }

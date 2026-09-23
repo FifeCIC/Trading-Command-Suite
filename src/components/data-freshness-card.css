@@ -71,7 +71,7 @@
 .dfs-row-label {
   flex: 1;
   font-size: 0.68rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-weight: 500;
 }
 .dfs-row-detail {

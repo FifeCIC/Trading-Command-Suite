@@ -36,7 +36,7 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .ts-toggle input:checked + .ts-slider {
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
 }
 .ts-toggle input:checked + .ts-slider::before {
   transform: translateX(16px);

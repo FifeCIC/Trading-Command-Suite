@@ -8,7 +8,7 @@
   background: rgba(14,165,166,0.1);
   border: 1px solid rgba(14,165,166,0.3);
   border-radius: 6px;
-  color: #0ea5a6;
+  color: var(--accent);
   font-size: 0.8rem;
   cursor: pointer;
 }
@@ -55,7 +55,7 @@
 
 .ad-card--live { border-color: #22c55e; }
 .ad-card--live.ad-card--active { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3); }
-.ad-card--isa { border-color: #0ea5a6; }
+.ad-card--isa { border-color: var(--accent); }
 .ad-card--demo { border-color: #64748b; opacity: 0.85; }
 .ad-card--demo.ad-card--active { border-color: #22c55e; opacity: 1; box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3); }
 
@@ -87,13 +87,13 @@
 .ad-card-name {
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .ad-card-balance {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .ad-card-currency {
@@ -136,7 +136,7 @@
   text-align: left;
 }
 
-.ad-toggle-btn:hover { color: var(--ink, #e2e8f0); }
+.ad-toggle-btn:hover { color: var(--ink, var(--ink)); }
 
 /* Totals */
 .ad-totals { margin-top: 1rem; }
@@ -154,10 +154,10 @@
 .ad-total-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
-.ad-total-all { font-size: 1.3rem; color: #0ea5a6; }
+.ad-total-all { font-size: 1.3rem; color: var(--accent); }
 
 .ad-since-last {
   font-size: 0.72rem;
@@ -183,7 +183,7 @@
 .ad-isa-status {
   border: 1px solid rgba(14, 165, 166, 0.35);
   border-radius: 4px;
-  color: #0ea5a6;
+  color: var(--accent);
   font-size: 0.72rem;
   font-weight: 700;
   padding: 0.15rem 0.45rem;
@@ -212,7 +212,7 @@
 }
 
 .ad-isa-metrics strong {
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 1rem;
 }
 
@@ -232,7 +232,7 @@
 .ad-isa-warning {
   border: 1px solid rgba(14, 165, 166, 0.28);
   border-radius: 4px;
-  color: #0ea5a6;
+  color: var(--accent);
   font-size: 0.72rem;
   padding: 0.2rem 0.45rem;
 }

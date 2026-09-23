@@ -152,17 +152,34 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     style: 'Tick Scalp',
   },
   {
+    // ═══════════════════════════════════════════════════════════════════════════════════════
+    // ⚠️ THE GOLD GROUP `mode` AND `maxHoldHours` WERE DB-ONLY. THIS FILE WAS BEHIND REALITY.
+    //
+    // All four gold bots ran as `mode: 'auto'` and held a time-stop, but this file said
+    // `semi-auto` and declared no `maxHoldHours`. That is #833's drift, and it BIT on 2026-09-23:
+    // the moment `seedDefaults()` learned to converge, the first live re-seed
+    //   • flipped five bots to `semi-auto`, which stops them dispatching at all
+    //     (`automation-loop.service.ts` Gate 2 — "auto bots only; manual/semi-auto stay for the
+    //     UI buttons"), and
+    //   • wrote `null` over four gold time-stops and Tokyo USDJPY's, removing the slot-releasing
+    //     control #773 exists to provide.
+    //
+    // Both were reverted by hand and are now recorded HERE, because convergence is only safe in
+    // one direction: seed → database. Enabling it while the seed lagged simply deleted the
+    // deliberate changes. **Reconcile the seed to reality BEFORE trusting a convergent seeder.**
+    // ═══════════════════════════════════════════════════════════════════════════════════════
     name: 'Gold Scalp M5',
     symbol: 'XAUUSD',
     protocolId: 'xau-speed-m5',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    mode: 'auto',
     timeframe: '5m',
     baseSize: 0.01,
     slPct: 0.3,
     tpPct: 0.5,
     minComposite: 9,
     sessionWindow: null,
+    maxHoldHours: 4,
     style: 'Scalp',
   },
   {
@@ -170,13 +187,14 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'XAUUSD',
     protocolId: 'xau-speed-m15',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    mode: 'auto',
     timeframe: '15m',
     baseSize: 0.02,
     slPct: 0.5,
     tpPct: 1.0,
     minComposite: 10,
     sessionWindow: null,
+    maxHoldHours: 24,
     style: 'Day Trade',
   },
   {
@@ -184,7 +202,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'XAUUSD',
     protocolId: 'xau-speed-1h',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    mode: 'auto', // DB-only value — see the block note above 'Gold Scalp M5'
     timeframe: '1h',
     // ⚠️ 0.05 -> 0.02 (2026-09-22), on the owner's instruction: "we moved to 0.01 because my
     // real money will not afford 0.1 sized lots". The LOT NUMBER is not the risk — this is:
@@ -200,6 +218,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     tpPct: 3.0,
     minComposite: 9,
     sessionWindow: null,
+    maxHoldHours: 72,
     style: 'Swing',
   },
   {
@@ -207,7 +226,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'XAUUSD',
     protocolId: 'xau-speed-4h',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    mode: 'auto', // DB-only value — see the block note above 'Gold Scalp M5'
     timeframe: '4h',
     // ⚠️ 0.1 -> 0.01 (2026-09-22), owner instruction. At 0.1 with this 3% stop the measured
     // risk was **£980.88 per trade — 71% of a £1,376 account in a single position.** That was
@@ -223,6 +242,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     tpPct: 6.0,
     minComposite: 8,
     sessionWindow: null,
+    maxHoldHours: 120,
     style: 'Position',
   },
 
@@ -232,13 +252,15 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'USDJPY',
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    // `mode: auto` and `maxHoldHours` were DB-only — see the block note above 'Gold Scalp M5'.
+    mode: 'auto',
     timeframe: '1h',
     baseSize: 0.05,
     slPct: 1.5,
     tpPct: 3.0,
     minComposite: 10,
     sessionWindow: ['asian'],
+    maxHoldHours: 12,
     style: 'Swing',
   },
   {

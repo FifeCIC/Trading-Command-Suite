@@ -134,7 +134,7 @@ export default function SymbolsLadderPage() {
   // Deep-linkable filter state (#631, Option D) — variant B (default) reads
   // the filters from the URL and keeps them in sync so any ladder scope is
   // bookmarkable/shareable. Variant A (`?variant=A`) is the legacy ladder:
-  // filters stay in local state only, URL untouched. Toggle via ABSwitcher.
+  // filters stay in local state only, URL untouched. Toggle via VariantSwitcher (Old|New).
   const [searchParams, setSearchParams] = useSearchParams();
   const isVariantA = searchParams.get('variant') === 'A';
   const urlInit = (key) => (isVariantA ? null : searchParams.get(key));

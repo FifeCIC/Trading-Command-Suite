@@ -24,7 +24,7 @@
 }
 
 .auto-refresh-note {
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   font-weight: 600;
   font-size: 0.82rem;
 }
@@ -110,7 +110,7 @@
   flex: 1;
   max-width: 260px;
   padding: 0.45rem 0.75rem;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--ink));
   border-radius: 6px;
   font-size: 0.9rem;
   background: var(--panel);
@@ -120,12 +120,12 @@
 }
 
 .trigger-input:focus {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 0 2px rgba(14, 165, 166, 0.15);
 }
 
 .trigger-btn {
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -170,7 +170,7 @@
 
 .import-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, var(--ink));
   border-radius: 8px;
 }
 

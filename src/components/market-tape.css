@@ -148,7 +148,7 @@
   opacity: 0.5;
   transition: opacity 0.15s;
 }
-.mkt-tape-gear:hover { opacity: 1; color: var(--accent, #0ea5a6); }
+.mkt-tape-gear:hover { opacity: 1; color: var(--accent, var(--accent)); }
 
 /* NOTE (2026-09-11): the inline preferences popover was REMOVED — its rules
    (.mkt-tape-backdrop / .mkt-tape-prefs / .mkt-tape-pref-row) are gone with it.

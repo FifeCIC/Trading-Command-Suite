@@ -47,7 +47,7 @@
 
 .ph-refresh-btn:hover:not(:disabled) {
   background: color-mix(in srgb, var(--ink) 8%, transparent);
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 .ph-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -110,8 +110,8 @@
 }
 
 .ph-card:hover {
-  border-color: var(--accent, #0ea5a6);
-  box-shadow: 0 0 0 1px var(--accent, #0ea5a6) inset;
+  border-color: var(--accent, var(--accent));
+  box-shadow: 0 0 0 1px var(--accent, var(--accent)) inset;
 }
 
 .ph-card--active {

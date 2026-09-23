@@ -4,10 +4,10 @@
 .ob-header { margin-bottom: 16px; }
 .ob-header h1 { margin: 0 0 4px; font-size: 1.3rem; }
 .ob-subtitle { margin: 0; color: var(--ink-soft, #94a3b8); font-size: 0.85rem; }
-.ob-count { color: var(--accent, #0ea5a6); font-weight: 600; }
+.ob-count { color: var(--accent, var(--accent)); font-weight: 600; }
 
 .ob-actions { display: flex; gap: 10px; margin-bottom: 14px; }
-.ob-add-btn { padding: 7px 16px; background: var(--accent, #0ea5a6); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+.ob-add-btn { padding: 7px 16px; background: var(--accent, var(--accent)); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
 .ob-add-btn:hover { opacity: 0.85; }
 .ob-seed-btn { padding: 7px 16px; background: var(--panel, #1a1d2e); color: var(--ink, #e5e7eb); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
 
@@ -17,7 +17,7 @@
 .ob-input-sm { flex: 0 0 130px; }
 .ob-select { padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--line); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; }
 .ob-textarea { width: 100%; padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--line); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; resize: vertical; margin-bottom: 10px; box-sizing: border-box; }
-.ob-submit-btn { padding: 8px 18px; background: var(--accent, #0ea5a6); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.ob-submit-btn { padding: 8px 18px; background: var(--accent, var(--accent)); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 .ob-submit-btn:disabled { opacity: 0.5; }
 
 .ob-grid { display: flex; flex-direction: column; gap: 20px; }
@@ -37,7 +37,7 @@
 .ob-card-title { font-weight: 600; flex: 1; font-size: 0.9rem; }
 .ob-card-badges { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .ob-status-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
-.ob-priority-badge { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: var(--accent, #0ea5a6); color: #fff; margin-right: 6px; vertical-align: middle; }
+.ob-priority-badge { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: var(--accent, var(--accent)); color: #fff; margin-right: 6px; vertical-align: middle; }
 .ob-phase-badge { font-size: 0.62rem; padding: 2px 7px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 .ob-phase--demo { background: rgba(59,130,246,0.12); color: #60a5fa; }
 .ob-phase--live { background: rgba(239,68,68,0.1); color: #ef4444; }
@@ -59,13 +59,13 @@
 .ob-criteria-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted, #64748b); }
 .ob-criteria-count { font-size: 0.65rem; color: var(--ink-soft, #94a3b8); font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 .ob-criteria-progress { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
-.ob-criteria-fill { height: 100%; background: var(--accent, #0ea5a6); border-radius: 2px; transition: width 0.25s; }
+.ob-criteria-fill { height: 100%; background: var(--accent, var(--accent)); border-radius: 2px; transition: width 0.25s; }
 .ob-criteria-list { display: flex; flex-direction: column; gap: 3px; }
 .ob-criteria-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px; border-radius: 4px; cursor: pointer; font-size: 0.78rem; color: var(--ink-soft, #94a3b8); transition: background 0.1s, color 0.1s; }
 .ob-criteria-item:hover { background: rgba(255,255,255,0.03); }
 .ob-criteria-done { color: var(--color-muted, #64748b); }
 .ob-criteria-done .ob-criteria-text { text-decoration: line-through; }
-.ob-criteria-check { flex-shrink: 0; margin-top: 2px; accent-color: var(--accent, #0ea5a6); cursor: pointer; }
+.ob-criteria-check { flex-shrink: 0; margin-top: 2px; accent-color: var(--accent, var(--accent)); cursor: pointer; }
 .ob-criteria-text { line-height: 1.45; }
 
 .ob-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }

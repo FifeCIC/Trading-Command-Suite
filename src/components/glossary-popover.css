@@ -4,15 +4,15 @@
   font-weight: 600;
   text-decoration: underline;
   text-decoration-style: dotted;
-  text-decoration-color: var(--accent, #0ea5a6);
+  text-decoration-color: var(--accent, var(--accent));
   text-underline-offset: 3px;
   cursor: help;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   transition: color 0.15s;
 }
 .glossary-term:hover,
 .glossary-term:focus {
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   outline: none;
 }
 
@@ -21,7 +21,7 @@
   z-index: 10000;
   max-width: 300px;
   background: var(--panel, #1e293b);
-  border: 1px solid var(--accent, #0ea5a6);
+  border: 1px solid var(--accent, var(--accent));
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
@@ -38,7 +38,7 @@
 .glossary-popover-term {
   font-weight: 700;
   font-size: 0.8rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   margin-bottom: 0.3rem;
 }
 
@@ -50,7 +50,7 @@
 
 .glossary-popover-cat {
   font-size: 0.65rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   margin-top: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;

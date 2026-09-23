@@ -3,7 +3,7 @@
 .nav-dashboard {
   width: 100%;
   padding: 1.5rem 2rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   background: var(--bg, #0f172a);
   min-height: 100vh;
 }
@@ -43,7 +43,7 @@
 }
 .nd-topbar-btn:hover {
   background: var(--panel, #1e293b);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   border-color: var(--line, #334155);
 }
 .nd-topbar-sep {
@@ -391,7 +391,7 @@
 }
 
 .nd-tips li strong {
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 /* ── Responsive ───────────────────────────────────────────── */
@@ -419,7 +419,7 @@
 .dash-card-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .dash-stat { display: flex; flex-direction: column; gap: 0.1rem; min-width: 90px; }
 .dash-stat-label { font-size: 0.7rem; color: var(--ink-soft, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
-.dash-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--ink, #e2e8f0); }
+.dash-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--ink, var(--ink)); }
 .dash-stat-value.ok { color: var(--color-profit, #22c55e); }
 .dash-stat-value.err { color: var(--danger, #ef4444); }
 
@@ -453,7 +453,7 @@
   min-width: 140px;
 }
 .dash-broker-icon { font-size: 1rem; }
-.dash-broker-name { font-weight: 600; font-size: 0.82rem; color: #e2e8f0; }
+.dash-broker-name { font-weight: 600; font-size: 0.82rem; color: var(--ink); }
 .dash-broker-badge {
   font-size: 0.58rem;
   font-weight: 700;
@@ -488,7 +488,7 @@
 .dash-broker-mval {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 .dash-broker-mval.ok { color: #22c55e; }
 .dash-broker-mval.err { color: #ef4444; }
@@ -580,7 +580,7 @@
   display: inline-block;
   margin-top: 0.6rem;
   font-size: 0.8rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   text-decoration: none;
   font-weight: 500;
   min-height: 44px;
@@ -599,7 +599,7 @@
 
 .dash-hint { font-size: 0.78rem; color: #64748b; margin: 0.25rem 0 0; }
 .dash-link {
-  background: none; border: none; color: var(--accent, #0ea5a6);
+  background: none; border: none; color: var(--accent, var(--accent));
   cursor: pointer; font-size: 0.78rem; padding: 0; font-family: inherit;
   text-decoration: underline;
 }
@@ -640,7 +640,7 @@
   border: 1px solid var(--line, #334155);
   border-radius: 10px;
   background: var(--panel, #1e293b);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.78rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   min-width: 200px;
@@ -656,7 +656,7 @@
   margin-bottom: 0.5rem;
   padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--line, #334155);
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 .dash-session-pop-row {
   display: flex;
@@ -666,7 +666,7 @@
   color: #94a3b8;
 }
 .dash-session-pop-row span:last-child {
-  color: #e2e8f0;
+  color: var(--ink);
   font-weight: 500;
 }
 
@@ -679,7 +679,7 @@
   font-size: 0.8rem;
 }
 .dash-news-dot { font-size: 0.65rem; flex-shrink: 0; }
-.dash-news-name { font-weight: 600; color: #e2e8f0; }
+.dash-news-name { font-weight: 600; color: var(--ink); }
 .dash-news-status { margin-left: auto; font-size: 0.7rem; font-weight: 600; text-transform: capitalize; }
 .dash-news-summary { margin-top: 0.4rem; font-size: 0.7rem; color: #64748b; }
 
@@ -715,7 +715,7 @@
 .dash-hp-ticker {
   font-weight: 700;
   font-size: 0.85rem;
-  color: #e2e8f0;
+  color: var(--ink);
   flex: 1;
 }
 
@@ -736,7 +736,7 @@
   padding: 0.3rem 0;
   background: none;
   border: none;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;

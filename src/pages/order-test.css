@@ -14,15 +14,15 @@
   background: transparent;
   border: 1px solid var(--line, #334155);
   border-radius: 6px;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.82rem;
   cursor: pointer;
 }
 
 .ot-account-btn--active {
   background: rgba(14,165,166,0.15);
-  border-color: #0ea5a6;
-  color: #0ea5a6;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .ot-table {
@@ -58,7 +58,7 @@
 }
 
 .ot-method--GET { background: rgba(34,197,94,0.12); color: #22c55e; }
-.ot-method--POST { background: rgba(14,165,166,0.12); color: #0ea5a6; }
+.ot-method--POST { background: rgba(14,165,166,0.12); color: var(--accent); }
 .ot-method--DELETE { background: rgba(239,68,68,0.12); color: #ef4444; }
 
 .ot-path {
@@ -89,7 +89,7 @@
   padding: 0.4rem 0.6rem;
   cursor: pointer;
   font-size: 0.82rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .ot-pre {

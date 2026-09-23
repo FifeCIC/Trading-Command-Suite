@@ -5,7 +5,7 @@
 
 .pl-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 1.25rem; }
 .pl-stat { padding: 0.6rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; text-align: center; }
-.pl-stat-num { display: block; font-size: 1.15rem; font-weight: 700; color: #e2e8f0; }
+.pl-stat-num { display: block; font-size: 1.15rem; font-weight: 700; color: var(--ink); }
 .pl-stat-time { font-size: 0.8rem !important; }
 .pl-stat span:last-child { font-size: 0.7rem; color: #64748b; }
 
@@ -17,7 +17,7 @@
 .pl-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .pl-table th { text-align: left; padding: 0.4rem 0.6rem; color: #64748b; font-weight: 600; border-bottom: 1px solid #1e2030; }
 .pl-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #161b22; }
-.pl-symbol { font-weight: 700; color: #e2e8f0; }
+.pl-symbol { font-weight: 700; color: var(--ink); }
 .pl-mono { font-family: ui-monospace, monospace; color: #93c5fd; }
 .pl-muted { color: #94a3b8; }
 .pl-green { color: #22c55e; }

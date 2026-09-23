@@ -30,8 +30,8 @@
 }
 .so-gear-btn:hover {
   opacity: 1;
-  color: var(--accent, #0ea5a6);
-  border-color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
+  border-color: var(--accent, var(--accent));
 }
 .so-gear-btn:active { transform: scale(0.95); }
 .so-bookmarked {
@@ -45,8 +45,8 @@
   border-color: #fbbf24;
 }
 .so-gear-active {
-  color: var(--accent, #0ea5a6);
-  border-color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
+  border-color: var(--accent, var(--accent));
   background: rgba(14,165,166,0.1);
 }
 
@@ -59,10 +59,10 @@
   width: 320px;
   max-width: calc(100vw - 80px);
   padding: 1rem;
-  border: 1px solid var(--notice-info-border, #0ea5a6);
+  border: 1px solid var(--notice-info-border, var(--accent));
   border-radius: 10px;
   background: var(--notice-info-bg, rgba(14,165,166,0.08));
-  color: var(--notice-info-text, #e2e8f0);
+  color: var(--notice-info-text, var(--ink));
   font-size: 0.8rem;
   line-height: 1.5;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
@@ -73,8 +73,8 @@
   font-size: 0.85rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--notice-info-border, #0ea5a6);
-  color: var(--accent, #0ea5a6);
+  border-bottom: 1px solid var(--notice-info-border, var(--accent));
+  color: var(--accent, var(--accent));
 }
 .so-info-pop-text { margin: 0; color: var(--ink-soft, #94a3b8); }
 .so-info-pop-close {
@@ -90,7 +90,7 @@
   border-radius: 4px;
   line-height: 1;
 }
-.so-info-pop-close:hover { background: rgba(255,255,255,0.08); color: var(--ink, #e2e8f0); }
+.so-info-pop-close:hover { background: rgba(255,255,255,0.08); color: var(--ink, var(--ink)); }
 
 /* Backdrop (used by Calculators/Glossary panels — Screen Options panel is backdrop-less) */
 .so-backdrop {
@@ -219,13 +219,13 @@
   cursor: pointer;
   transition: border-color 0.15s;
 }
-.so-radio-option:hover { border-color: var(--accent, #0ea5a6); }
+.so-radio-option:hover { border-color: var(--accent, var(--accent)); }
 .so-radio-selected {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   background: rgba(14,165,166,0.08);
 }
 .so-radio-option input[type="radio"] {
-  accent-color: var(--accent, #0ea5a6);
+  accent-color: var(--accent, var(--accent));
   cursor: pointer;
   flex-shrink: 0;
   width: 14px;
@@ -304,7 +304,7 @@
   padding: 6px 20px;
   border: none;
   border-radius: 6px;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
   font-size: 0.82rem;
   font-weight: 600;

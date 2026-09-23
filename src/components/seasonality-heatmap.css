@@ -16,7 +16,7 @@
 }
 .sh-header:hover { background: #11182740; }
 .sh-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
-.sh-badge { display: inline-block; margin-left: 6px; background: #0ea5a620; color: #0ea5a6; padding: 0 6px; border-radius: 8px; font-size: 0.62rem; font-weight: 700; }
+.sh-badge { display: inline-block; margin-left: 6px; background: var(--accent)20; color: var(--accent); padding: 0 6px; border-radius: 8px; font-size: 0.62rem; font-weight: 700; }
 .sh-toggle { color: #64748b; font-size: 0.8rem; }
 
 .sh-body { padding: 0 12px 10px; }
@@ -46,7 +46,7 @@
 }
 .sh-cell:hover { transform: scale(1.3); z-index: 2; }
 .sh-cell.current { box-shadow: 0 0 0 2px #f59e0b; z-index: 1; }
-.sh-cell.selected { box-shadow: 0 0 0 2px #0ea5a6; z-index: 1; }
+.sh-cell.selected { box-shadow: 0 0 0 2px var(--accent); z-index: 1; }
 .sh-cell.low-conf { opacity: 0.4; }
 
 .sh-now {

@@ -863,6 +863,18 @@ model Trade {
   origin            String   @default("user") @db.VarChar(20)
   source            String?  @db.VarChar(30)  // Pipeline: meta-stack | speed-scanner | manual | backtest | directive-direct
   abTestId          String?  @db.VarChar(36)  // A/B test pairing reference
+  /// WHICH SIDE of an A/B test this trade belongs to — `'A'` (control) or `'B'` (variant).
+  ///
+  /// ⚠️ Added 2026-09-23 (#929). `computeResults` used to attribute a side by PARSING
+  /// `brokerComment` for the `AB-A` / `AB-B` tag. That string is not immutable: the
+  /// stranded-trade reaper (`position-sync.service.ts`) OVERWRITES it with
+  /// `'Reconciled: no broker counterpart (stranded row)'`, so any reaped A/B trade silently
+  /// lost its side and VANISHED from the verdict — measured 2026-09-23: 14 of 14 A/B rows
+  /// had `brokerComment` rewritten and attributed 0 to each side.
+  ///
+  /// A verdict must not depend on a mutable display string. This column is the attribution.
+  /// NULL means "not an A/B trade" (or a row written before this column existed).
+  abTestSide        String?  @db.VarChar(1)
   openedAt          DateTime @default(now())
   closedAt          DateTime?
   createdAt         DateTime @default(now())
@@ -2344,6 +2356,39 @@ model ScheduledJob {
 }
 
 // A/B Test Runner (#482) — run two MetaStack snapshots side-by-side.
+/// A/B PAIR REGISTRATION (#963, SETTLED-DECISIONS #25).
+///
+/// ⚠️ WHY A TABLE AND NOT A COLUMN ON `trading_strategy`.
+///
+/// `duplicatedFromId` already records the LINK (copy → source). A comparison needs more than a
+/// link: WHICH single field is under test, WHY (the falsification test, #944), and whether the
+/// comparison is currently RUNNING. That last one is the whole reason this exists — it **cannot**
+/// be inferred from the two bots' `active` flags, because a freshly duplicated pair is
+/// deliberately `incumbent active / variant inactive` (see `duplicate()`), which is byte-identical
+/// to a pair that has drifted out of sync. Inferring it would eventually lock an operator out of
+/// a legitimate edit.
+///
+/// `state`: `draft | running | complete | abandoned`.
+/// ⚠️ `variantId` is UNIQUE on purpose — a bot is the variant of at most ONE pair, which is what
+/// stops a GROUP (two copies of one source) from being silently treated as two pairs.
+model AbPair {
+  id             String    @id @default(uuid()) @db.VarChar(36)
+  incumbentId    String    @db.VarChar(36)
+  variantId      String    @db.VarChar(36)
+  state          String    @default("draft") @db.VarChar(16)
+  declaredChange String?   @db.VarChar(120)
+  falsification  String?   @db.Text
+  startedAt      DateTime? @db.DateTime(3)
+  endedAt        DateTime? @db.DateTime(3)
+  createdAt      DateTime  @default(now()) @db.DateTime(3)
+  updatedAt      DateTime  @updatedAt @db.DateTime(3)
+
+  @@unique([variantId])
+  @@index([incumbentId])
+  @@index([state])
+  @@map("ab_pair")
+}
+
 model AbTest {
   id             String    @id @default(uuid()) @db.VarChar(36)
   name           String    @db.VarChar(200)

@@ -564,7 +564,7 @@ export default function SignalsOverviewPage() {
   const [showDismissed, setShowDismissed] = useState(false);
   const dismissHours = readDismissHours();
 
-  // A/B design test (#card). B (no ?variant) is the redesigned card; A = legacy
+  // Old|New design variant (#card). New (no ?variant) is the redesigned card; Old is the legacy one
   // card reachable via ?variant=A for side-by-side comparison.
   const [searchParams] = useSearchParams();
   const isVariantA = searchParams.get('variant') === 'A';

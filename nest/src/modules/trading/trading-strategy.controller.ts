@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Logger, Query } from '@nestjs/common';
 import { TradingStrategyService } from './trading-strategy.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { DEFAULT_TRADING_STRATEGIES } from './strategy-seed-data';
@@ -20,12 +20,24 @@ export class TradingStrategyController {
   async getAllQueues() { return this.service.getAllQueues(); }
 
   /**
-   * POST /api/trading/strategies/seed — idempotent seed of default strategies.
-   * Creates scoring strategies + trading strategies for all session pairs.
+   * POST /api/trading/strategies/seed — CONVERGENT seed of default strategies (#833).
+   *
+   * Creates missing bots and **brings existing ones back to the declared config** — it used to
+   * skip anything that already existed, so a seed edit had no effect on a live bot and a drifted
+   * value could not be repaired by re-seeding. It also repairs a missing `strategy_protocol`
+   * subscription, without which a bot can never receive a queued signal.
+   *
+   * ⚠️ Optional fields are only written when the seed entry DECLARES them. An absent
+   * `active` / `maxHoldHours` / `sessionWindow` means "no opinion" and is left alone — otherwise a
+   * re-seed would re-enable a deliberately-disabled bot and wipe its time-stop.
+   *
+   * Returns what moved: `changes: [{ bot, fields[] }]`, plus `subscriptionsRepaired`.
    */
   @Post('seed')
-  async seedDefaults() {
-    return this.service.seedDefaults(DEFAULT_TRADING_STRATEGIES);
+  async seedDefaults(@Query('dryRun') dryRun?: string) {
+    return this.service.seedDefaults(DEFAULT_TRADING_STRATEGIES, {
+      dryRun: dryRun === 'true' || dryRun === '1',
+    });
   }
 
   /**
@@ -116,6 +128,60 @@ export class TradingStrategyController {
    */
   @Post(':id/duplicate')
   async duplicate(@Param('id') id: string) { return this.service.duplicate(id); }
+
+  /**
+   * GET /api/trading/strategies/:id/pair — resolve this bot's A/B pairing (#963).
+   *
+   * Returns the incumbent (the treatment in production) and the variant (the candidate), plus
+   * `inSync`. The pairing has always been RECORDED by `duplicate()` via `duplicatedFromId`; this
+   * is the first thing that READS it back, so "are these two actually a pair?" stops being an
+   * inference from two ids the operator has to hold in their head.
+   *
+   * ⚠️ `paired: false` WITH a `reason` is a real answer, not an empty one. A bot with two or more
+   * copies is a GROUP, not a pair — and neither "compare the first two" nor an empty result would
+   * tell the truth about that. See `SETTLED-DECISIONS.md` #25.
+   */
+  @Get(':id/pair')
+  async getPair(@Param('id') id: string) { return this.service.getPairStatus(id); }
+
+  /**
+   * POST /api/trading/strategies/:id/pair/active — move BOTH sides together (#963, decision 25).
+   *
+   * Body `{ active: boolean }`. Refuses — rather than half-applies — when the pair cannot be
+   * resolved, and reverts both sides if the second write fails (MyISAM has no transactions, so a
+   * pair that LOOKS synchronised but is not is the failure mode this exists to prevent).
+   */
+  @Post(':id/pair/active')
+  async setPairActive(@Param('id') id: string, @Body() body: { active?: boolean }) {
+    return this.service.setPairActive(id, Boolean(body?.active));
+  }
+
+  /**
+   * POST /api/trading/strategies/:id/pair/start — BEGIN a registered comparison (#963).
+   *
+   * Body `{ declaredChange: string, falsification?: string }`. `declaredChange` is **mandatory**:
+   * a comparison must name the ONE field it is testing, or the result cannot be attributed to
+   * anything. Both sides are activated in ONE transaction and frozen until `stop`.
+   *
+   * ⚠️ From here, `PATCH :id` on either side is REFUSED for any behavioural field while the
+   * comparison runs — editing one side mid-comparison invalidates the method, not just the number.
+   */
+  @Post(':id/pair/start')
+  async startPair(
+    @Param('id') id: string,
+    @Body() body: { declaredChange?: string; falsification?: string },
+  ) {
+    return this.service.startPair(id, body ?? {});
+  }
+
+  /**
+   * POST /api/trading/strategies/:id/pair/stop — END a comparison (#963).
+   *
+   * Deactivates BOTH sides together and records `endedAt`. Promoting the winner is a separate,
+   * deliberate act.
+   */
+  @Post(':id/pair/stop')
+  async stopPair(@Param('id') id: string) { return this.service.stopPair(id); }
 
   /** GET /api/trading/strategies/:id/protocols — subscription list (#712). */
   @Get(':id/protocols')

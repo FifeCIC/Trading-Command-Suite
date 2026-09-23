@@ -116,7 +116,7 @@
   border-radius: 4px 4px 0 0;
   background: linear-gradient(
     180deg,
-    var(--accent, #0ea5a6) 0%,
+    var(--accent, var(--accent)) 0%,
     var(--line, #d9e2ec) 100%
   );
   opacity: 0.35;

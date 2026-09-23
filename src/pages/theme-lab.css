@@ -4,7 +4,7 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .tl-header {
@@ -48,11 +48,11 @@
   cursor: pointer;
   text-align: left;
   transition: border-color 0.2s, background 0.2s, transform 0.15s;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .tl-lab-card:hover {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   background: rgba(14,165,166,0.06);
   transform: translateY(-1px);
 }
@@ -87,7 +87,7 @@
 }
 
 .tl-lab-arrow {
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   font-size: 1rem;
   flex-shrink: 0;
 }
@@ -100,7 +100,7 @@
 .tl-section h2 {
   font-size: 1.05rem;
   margin: 0 0 0.6rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 .tl-hint {
@@ -160,11 +160,11 @@
 }
 
 .tl-shade-card:hover {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 .tl-shade-card.tl-active {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 8px rgba(14, 165, 166, 0.15);
 }
 
@@ -244,7 +244,7 @@
 .tl-card-header h3 {
   margin: 0;
   font-size: 0.85rem;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 .tl-card-header code {

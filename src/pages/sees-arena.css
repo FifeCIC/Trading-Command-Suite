@@ -38,7 +38,7 @@
   user-select: none;
 }
 .sa-autorun-toggle input[type="checkbox"] {
-  accent-color: var(--accent, #0ea5a6);
+  accent-color: var(--accent, var(--accent));
   width: 14px;
   height: 14px;
 }

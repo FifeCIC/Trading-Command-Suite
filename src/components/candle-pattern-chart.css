@@ -22,7 +22,7 @@
 }
 
 .pattern-legend .legend-title {
-  color: #e2e8f0;
+  color: var(--ink);
   font-weight: 600;
   white-space: nowrap;
 }

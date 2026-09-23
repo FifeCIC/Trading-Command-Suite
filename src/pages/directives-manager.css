@@ -446,7 +446,7 @@
 
 /* ── Category & Complexity badges (mirror directives-status styling) ── */
 .directives-table td:nth-child(2) { /* Category */
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
   font-weight: 600;
   font-size: 0.78rem;
 }

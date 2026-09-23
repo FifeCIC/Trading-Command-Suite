@@ -37,6 +37,13 @@ export interface TradeRecord {
   source?: 'meta-stack' | 'speed-scanner' | 'manual' | 'backtest' | 'directive-direct';
   /** A/B test pairing reference */
   abTestId?: string;
+  /**
+   * Which side of that A/B test: `'A'` (control) or `'B'` (variant) — #929.
+   *
+   * ⚠️ STRUCTURAL, not derived from `brokerComment`. The comment is overwritten by the
+   * stranded-trade reaper, which silently removed reaped A/B trades from the verdict.
+   */
+  abTestSide?: 'A' | 'B';
   openedAt?: Date;
   /** MT5 broker fields for traceability */
   ticket?: number;
@@ -82,6 +89,7 @@ export class TradeRecorderService {
           origin: trade.origin || 'user',
           source: trade.source ?? null,
           abTestId: trade.abTestId ?? null,
+          abTestSide: trade.abTestSide ?? null,
           openedAt: trade.openedAt || new Date(),
           closedAt: trade.status === 'closed' ? new Date() : null,
           // MT5 traceability (#446, #616)

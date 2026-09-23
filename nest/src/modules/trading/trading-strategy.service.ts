@@ -27,6 +27,10 @@ import { ConditionDetectorService } from '../directives/condition-detector.servi
 // plausible reason, and never trade. No error anywhere. See #839, and the guard that now
 // enforces this: `nest/scripts/validate-threshold-sources.cjs`.
 import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
+// ⚠️ #963 — the canonical definition of "a behavioural field". `NON_BEHAVIOURAL_COLUMNS` is the
+// ONLY list of columns that cannot shape a trade, and `BOT_RULES` is the declared field set
+// (gated by validate-bot-rules.cjs). A second hand-written list here would drift from both.
+import { BOT_RULES, NON_BEHAVIOURAL_COLUMNS } from './bot-rules';
 import { resolveEffectiveRole } from '../../common/utils/signal-direction';
 import { RiskService } from '../risk/risk.service';
 import { buildRiskProfile } from '../risk/risk-profile-rules';
@@ -562,6 +566,11 @@ export class TradingStrategyService {
     const existing = await this.prisma.tradingStrategy.findUnique({ where: { id } });
     if (!existing) throw new BadRequestException('Strategy not found');
 
+    // ⚠️ #963 / decision 25 invariant 6 — a RUNNING comparison freezes both sides. This is FIRST,
+    // before the ceiling gate, because it is about the validity of an in-flight measurement
+    // rather than the viability of the bot.
+    await this.assertPairAllowsEdit(id, data);
+
     // #905 — gate only the transitions that matter: activating, or changing the bar/protocol
     // of an ACTIVE bot. A rename of an already-active impossible bot is still allowed — the
     // health audit surfaces it — so operators are never locked out of editing a stranded bot.
@@ -587,8 +596,13 @@ export class TradingStrategyService {
    * the configuration that live orders were about to be checked against. The remedy — deactivate
    * first — costs one click and is always allowed.
    *
-   * ⚠️ NO CASCADES EXIST. Every table in this database is MyISAM, so the `onDelete: Cascade`
-   * declared in schema.prisma is a DOCUMENT, not an enforcement. Children are therefore removed
+   * ⚠️ NO CASCADES EXIST — the explicit cleanup below is the reason.
+   *
+   * ⚠️ The JUSTIFICATION was corrected 2026-09-23. It read *"every table in this database is
+   * MyISAM"*, which is **false**: measured **28 InnoDB / 100 MyISAM**, and `trading_strategy` is
+   * InnoDB — so `onDelete: Cascade` may genuinely fire for some children. The explicit deletes
+   * stay anyway, for a better reason than the original one: they **COUNT** what they removed and
+   * return it, while a cascade is silent. An unobservable cleanup is the defect. Children are therefore removed
    * explicitly and counted into the returned report:
    *   - `strategy_protocol`       — subscriptions (the reachability path, #874)
    *   - `strategy_signal_queue`   — PENDING rows only; executed history is never touched
@@ -941,6 +955,398 @@ export class TradingStrategyService {
       where: { id },
       data: { active: nextActive },
     });
+  }
+
+  /**
+   * getPair() — resolve a bot's A/B pairing (#963, SETTLED-DECISIONS #25).
+   *
+   * ⚠️ WHY THIS EXISTS. `duplicate()` has always RECORDED the pairing — it sets
+   * `duplicatedFromId` on the copy and preserves both lineage links — but nothing ever READ it
+   * back. A recorded relationship that nothing can resolve is a buried ability: the operator has
+   * two bots and no way to see that they are a pair. This is the read.
+   *
+   * The DIRECTION matters and is the reason the copy carries the pointer and the source does not:
+   * the source is the **incumbent** (the treatment currently in production), the copy is the
+   * **variant** (the candidate). "Which of these two is the one I am changing?" is otherwise
+   * unanswerable from the rows alone.
+   *
+   * ⚠️ A GROUP IS NOT A PAIR. Two or more copies of one bot is a group, and a group has no single
+   * comparison — `duplicate()`'s own comment says *"this method never tries to build a group of
+   * three"*. Rather than pick one arbitrarily (which would silently compare the wrong two
+   * things), this returns `paired: false` WITH the reason. Cannot-judge is a result.
+   */
+  async getPair(id: string): Promise<{
+    paired: boolean;
+    incumbent: { id: string; name: string; active: boolean; symbol: string } | null;
+    variant: { id: string; name: string; active: boolean; symbol: string } | null;
+    inSync: boolean;
+    reason?: string;
+  }> {
+    const bot = await this.prisma.tradingStrategy.findUnique({ where: { id } });
+    if (!bot) throw new BadRequestException('Strategy not found');
+
+    const shape = (b: any) => ({
+      id: b.id,
+      name: b.name,
+      active: Boolean(b.active),
+      symbol: b.symbol,
+    });
+    const none = { paired: false, incumbent: null, variant: null, inSync: true };
+
+    // ⚠️ ORDER MATTERS — the CHILD pair wins over the PARENT one.
+    //
+    // Owner point, 2026-09-23: *"B can be duplicated and thus becomes A in a new pair."* So a bot
+    // in the MIDDLE of a chain is BOTH the variant of its parent's pair AND the incumbent of its
+    // own. `B` (copied from `A`, and since copied to `B'`) must resolve to the **B & B'** pair,
+    // because that is the live comparison.
+    //
+    // ⚠️ THIS WAS A REAL DEFECT. Checking `duplicatedFromId` FIRST made `getPair(B)` report the
+    // STALE A & B pair, so `startPair(B)` would have started the wrong comparison and
+    // `getPairStatus(B)` would have read the wrong `ab_pair` row — both silently, on exactly the
+    // workflow the owner described as needing no extra work.
+    //
+    // A bot WITH copies is therefore an INCUMBENT; only a bot with NO copies falls back to being
+    // its parent's variant.
+    const copies = await this.prisma.tradingStrategy.findMany({ where: { duplicatedFromId: id } });
+
+    if (copies.length > 1) {
+      return {
+        ...none,
+        incumbent: shape(bot),
+        reason:
+          `${copies.length} bots were copied from "${bot.name}" ` +
+          `(${copies.map((c) => c.name).join(', ')}) — that is a GROUP, not a pair, and a group ` +
+          `has no single comparison`,
+      };
+    }
+    if (copies.length === 1) {
+      return {
+        paired: true,
+        incumbent: shape(bot),
+        variant: shape(copies[0]),
+        inSync: Boolean(bot.active) === Boolean(copies[0].active),
+      };
+    }
+
+    // No copies at all: this bot is the VARIANT of its parent's pair — if it has a parent.
+    if (bot.duplicatedFromId) {
+      const incumbent = await this.prisma.tradingStrategy.findUnique({
+        where: { id: bot.duplicatedFromId },
+      });
+      if (!incumbent) {
+        return {
+          ...none,
+          incumbent: null,
+          variant: shape(bot),
+          reason:
+            `duplicatedFromId ${bot.duplicatedFromId} does not exist — the lineage is DANGLING, ` +
+            `so this pair cannot be judged`,
+        };
+      }
+      return {
+        paired: true,
+        incumbent: shape(incumbent),
+        variant: shape(bot),
+        inSync: Boolean(incumbent.active) === Boolean(bot.active),
+      };
+    }
+
+    return none;
+  }
+
+  /**
+   * setPairActive() — activate or deactivate BOTH sides together (#963, decision 25).
+   *
+   * Owner's words: *"ensuring they are activate/deactivated together."* That is the whole method.
+   *
+   * ⚠️ WHY IT IS A SEPARATE OPERATION rather than a rule inferred inside `update()`. `active`
+   * CANNOT distinguish "the comparison has not started yet" from "the pair has drifted out of
+   * sync" — a freshly duplicated pair is deliberately `A active / B inactive` (*"both sides
+   * running the same playbook at once is not an A/B test"*), which is byte-identical to a broken
+   * pair. A guard inferred from the two flags alone would therefore be WRONG in one direction and
+   * would eventually lock an operator out of a legitimate edit. So the togetherness is an
+   * EXPLICIT operator action here, and the declared comparison state that would make it inferable
+   * is recorded as the remaining work on #963.
+   *
+   * ⚠️ CORRECTED 2026-09-23. This paragraph used to say "MyISAM has no transactions". **"Every
+   * table is MyISAM" is false** — measured: **28 InnoDB, 100 MyISAM**, and `trading_strategy` is
+   * **InnoDB**. That is why `startPair()`/`stopPair()` above use a real `$transaction` instead of a
+   * hand-rolled revert. The best-effort revert below is retained because it is tested and cannot
+   * hurt, but it is now the **second** atomicity mechanism in this file, and consolidating it onto
+   * `$transaction` is the known follow-up (#963).
+   *
+   * ⚠️ The #905 ceiling gate is applied per side being ACTIVATED. Going through the pair must
+   * never be a way to bypass it.
+   */
+  async setPairActive(id: string, active: boolean) {
+    const pair = await this.getPair(id);
+    if (!pair.paired || !pair.incumbent || !pair.variant) {
+      throw new BadRequestException(
+        `"${id}" is not a resolvable A/B pair: ` +
+          (pair.reason ?? 'the bot has no copy and no duplicatedFromId pointer'),
+      );
+    }
+
+    // Ceiling gate for each side that would transition inactive → active (#905).
+    if (active) {
+      for (const side of [pair.incumbent, pair.variant]) {
+        if (side.active) continue; // already active — nothing is being activated
+        const row = await this.prisma.tradingStrategy.findUnique({ where: { id: side.id } });
+        if (row) await this.assertCeilingAllowsActivation(row.protocolId, row.minComposite, row.name);
+      }
+    }
+
+    const incumbentId = pair.incumbent.id;
+    const variantId = pair.variant.id;
+    // ⚠️ Record the value BEFORE each write, and restore THAT — not `!active`.
+    //
+    // The first version of this reverted only when `Boolean(row.active) !== active`, which asks
+    // "is this row not at the target?" — so a row that HAD just been moved to the target was
+    // skipped by the very check meant to catch it, and a half-applied pair was left looking
+    // synchronised. The spec's REVERTS test failed with "expected false, received true".
+    const applied: Array<{ id: string; name: string; was: boolean }> = [];
+
+    try {
+      for (const sideId of [incumbentId, variantId]) {
+        const row = await this.prisma.tradingStrategy.findUnique({ where: { id: sideId } });
+        if (!row) throw new BadRequestException(`Pair member ${sideId} disappeared mid-operation`);
+        if (Boolean(row.active) === active) continue;
+        await this.prisma.tradingStrategy.update({ where: { id: sideId }, data: { active } });
+        applied.push({ id: sideId, name: row.name, was: Boolean(row.active) });
+      }
+    } catch (err) {
+      // Reverse what landed, newest first, so the pair is left exactly as it was found.
+      for (const a of [...applied].reverse()) {
+        try {
+          await this.prisma.tradingStrategy.update({ where: { id: a.id }, data: { active: a.was } });
+        } catch {
+          /* best-effort; the throw below is the loud part */
+        }
+      }
+      throw new BadRequestException(
+        `Refused: the pair could not be moved together — ${(err as Error).message}. ` +
+          `Any change that landed was reverted; verify with GET /api/trading/strategies/${id}/pair.`,
+      );
+    }
+
+    const changed = applied.map((a) => a.name);
+
+    this.logger.log(
+      `A/B pair ${active ? 'ACTIVATED' : 'DEACTIVATED'} together — ` +
+        `incumbent "${pair.incumbent.name}" + variant "${pair.variant.name}" ` +
+        `(${changed.length ? changed.join(', ') : 'already in step'})`,
+    );
+
+    return {
+      pair: await this.getPair(id),
+      requested: active,
+      changed,
+      alreadyInStep: changed.length === 0,
+    };
+  }
+
+  /**
+   * getPairStatus() — the pair PLUS its registered comparison (#963, decision 25).
+   *
+   * `getPair()` answers "who is paired with whom". This answers "and what is the comparison
+   * doing" — which is a RECORDED fact, not an inference (see the `AbPair` model).
+   *
+   * ⚠️ `paired: true` with `registered: false` is a normal, meaningful state: the bots are a
+   * pair, but no comparison has been declared or started yet. That is a different fact from
+   * `paired: false` (they are not a pair at all), and the two must not render the same.
+   */
+  async getPairStatus(id: string) {
+    const pair = await this.getPair(id);
+    const row = await this.prisma.abPair.findUnique({ where: { variantId: pair.variant?.id ?? '' } });
+    return {
+      ...pair,
+      comparison: row
+        ? {
+            registered: true,
+            id: row.id,
+            state: row.state,
+            declaredChange: row.declaredChange,
+            falsification: row.falsification,
+            startedAt: row.startedAt,
+            endedAt: row.endedAt,
+          }
+        : { registered: false, state: 'unregistered' as const },
+    };
+  }
+
+  /**
+   * startPair() — BEGIN a comparison, and make it a RECORDED fact (#963, decision 25).
+   *
+   * Owner's words: *"protocols will have A/B testing in a way that locks both protocols to ensure
+   * that activity matches"*. This is the lock. From here both sides are active, and neither can be
+   * edited until the comparison stops — so the two sides are measured over the SAME period with
+   * the SAME configuration they started with.
+   *
+   * ⚠️ A DECLARED CHANGE IS MANDATORY (invariant 4). Without it a result has nothing to be
+   * attributed to, and "something changed and the number moved" is not a finding — it is the
+   * observation that A/B exists to replace.
+   */
+  async startPair(id: string, input: { declaredChange?: string; falsification?: string } = {}) {
+    const pair = await this.getPair(id);
+    if (!pair.paired || !pair.incumbent || !pair.variant) {
+      throw new BadRequestException(
+        `"${id}" is not a resolvable A/B pair: ` +
+          (pair.reason ?? 'the bot has no copy and no duplicatedFromId pointer'),
+      );
+    }
+
+    const declaredChange = (input.declaredChange ?? '').trim();
+    if (!declaredChange) {
+      throw new BadRequestException(
+        'Refused: a comparison must declare the ONE field it is testing (#963). Without it the ' +
+          'result cannot be attributed to anything, and "something changed and the number moved" ' +
+          'is not a finding.',
+      );
+    }
+
+    const alreadyRunning = await this.prisma.abPair.findFirst({
+      where: { state: 'running', OR: [{ incumbentId: id }, { variantId: id }] },
+    });
+    if (alreadyRunning) {
+      throw new BadRequestException(
+        `Refused: this pair is ALREADY running (testing "${alreadyRunning.declaredChange ?? 'undeclared'}"). ` +
+          `Stop it before starting another — one running comparison per pair (#963).`,
+      );
+    }
+
+    // Ceiling gate per side being activated (#905) — the pair is not a way to bypass it.
+    for (const side of [pair.incumbent, pair.variant]) {
+      if (side.active) continue;
+      const row = await this.prisma.tradingStrategy.findUnique({ where: { id: side.id } });
+      if (row) await this.assertCeilingAllowsActivation(row.protocolId, row.minComposite, row.name);
+    }
+
+    const incumbentId = pair.incumbent.id;
+    const variantId = pair.variant.id;
+    const now = new Date();
+    const existingRow = await this.prisma.abPair.findUnique({ where: { variantId } });
+
+    // ⚠️ ONE TRANSACTION, and that is possible HERE. `trading_strategy` and `ab_pair` are both
+    // InnoDB (measured 2026-09-23: 28 tables InnoDB, 100 MyISAM). `duplicate()` cannot use one
+    // because it spans the MyISAM `protocol` table; this path touches only InnoDB, so a
+    // half-started comparison is simply not possible rather than merely unlikely.
+    const ops: any[] = [
+      this.prisma.tradingStrategy.update({ where: { id: incumbentId }, data: { active: true } }),
+      this.prisma.tradingStrategy.update({ where: { id: variantId }, data: { active: true } }),
+      existingRow
+        ? this.prisma.abPair.update({
+            where: { variantId },
+            data: {
+              state: 'running',
+              declaredChange: declaredChange.slice(0, 120),
+              falsification: input.falsification?.trim() || null,
+              startedAt: now,
+              endedAt: null,
+            },
+          })
+        : this.prisma.abPair.create({
+            data: {
+              incumbentId,
+              variantId,
+              state: 'running',
+              declaredChange: declaredChange.slice(0, 120),
+              falsification: input.falsification?.trim() || null,
+              startedAt: now,
+            },
+          }),
+    ];
+    const results: any[] = await this.prisma.$transaction(ops);
+    const registered = results[2];
+
+    this.logger.log(
+      `A/B comparison STARTED — "${pair.incumbent.name}" vs "${pair.variant.name}", ` +
+        `testing "${declaredChange}". Both sides are now active and frozen.`,
+    );
+
+    return {
+      started: true,
+      comparisonId: registered?.id ?? null,
+      declaredChange,
+      pair: await this.getPairStatus(id),
+    };
+  }
+
+  /**
+   * stopPair() — END a comparison and take both sides out together (#963).
+   *
+   * Deactivates BOTH, so the pair is never left half-live. Promoting the winner is a separate,
+   * deliberate act — this only stops the measurement.
+   */
+  async stopPair(id: string) {
+    const pair = await this.getPair(id);
+    if (!pair.paired || !pair.incumbent || !pair.variant) {
+      throw new BadRequestException(
+        `"${id}" is not a resolvable A/B pair: ` +
+          (pair.reason ?? 'the bot has no copy and no duplicatedFromId pointer'),
+      );
+    }
+
+    const row = await this.prisma.abPair.findUnique({ where: { variantId: pair.variant.id } });
+    if (!row || row.state !== 'running') {
+      throw new BadRequestException(
+        'Refused: there is no RUNNING comparison for this pair, so there is nothing to stop (#963). ' +
+          `Current state: ${row?.state ?? 'unregistered'}.`,
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.tradingStrategy.update({ where: { id: pair.incumbent.id }, data: { active: false } }),
+      this.prisma.tradingStrategy.update({ where: { id: pair.variant.id }, data: { active: false } }),
+      this.prisma.abPair.update({
+        where: { variantId: pair.variant.id },
+        data: { state: 'complete', endedAt: new Date() },
+      }),
+    ]);
+
+    this.logger.log(
+      `A/B comparison STOPPED — "${pair.incumbent.name}" vs "${pair.variant.name}" ` +
+        `(testing "${row.declaredChange ?? 'undeclared'}"). Both sides deactivated.`,
+    );
+
+    return { stopped: true, declaredChange: row.declaredChange, pair: await this.getPairStatus(id) };
+  }
+
+  /**
+   * assertPairAllowsEdit() — INVARIANT 6: a RUNNING comparison freezes both sides (#963).
+   *
+   * ⚠️ WHY THIS IS A GUARD AND NOT A WARNING. Editing one side mid-comparison does not corrupt a
+   * number — it invalidates the whole METHOD. The two sides would then have been measured under
+   * different configurations, so the result describes neither, and nothing in the output looks
+   * wrong. Refusing is the only outcome that keeps the measurement honest.
+   *
+   * ⚠️ "Behavioural" comes from the CANONICAL lists (`BOT_RULES` minus `NON_BEHAVIOURAL_COLUMNS`),
+   * not from a second hand-written list. A field added to `BOT_RULES` is therefore covered
+   * automatically — the failure mode this avoids is a new field silently escaping the freeze.
+   *
+   * Fail-OPEN on anything it cannot classify: an unknown key is ignored rather than refused, so a
+   * future non-behavioural column cannot lock the app. The freeze must not become a trap.
+   */
+  private async assertPairAllowsEdit(botId: string, data: Record<string, any>): Promise<void> {
+    const keys = Object.keys(data ?? {}).filter((k) => data[k] !== undefined);
+    if (keys.length === 0) return;
+
+    const nonBehavioural = new Set<string>(NON_BEHAVIOURAL_COLUMNS as readonly string[]);
+    const declared = new Set<string>(BOT_RULES.map((r) => r.field));
+    const behavioural = keys.filter((k) => !nonBehavioural.has(k) && declared.has(k));
+    if (behavioural.length === 0) return;
+
+    const running = await this.prisma.abPair.findFirst({
+      where: { state: 'running', OR: [{ incumbentId: botId }, { variantId: botId }] },
+    });
+    if (!running) return;
+
+    throw new BadRequestException(
+      `Refused: this bot is in a RUNNING A/B comparison testing ` +
+        `"${running.declaredChange ?? 'an undeclared change'}". Changing ${behavioural.join(', ')} now ` +
+        `would apply to a DIFFERENT configuration than the one being measured, so the result would ` +
+        `describe neither side. Stop the comparison first ` +
+        `(POST /api/trading/strategies/${botId}/pair/stop) (#963).`,
+    );
   }
 
   /**
@@ -1849,8 +2255,28 @@ export class TradingStrategyService {
 
   /**
    * Seed default trading strategies from seed data.
-   * Idempotent — skips strategies that already exist by name+symbol.
-   * Creates scoring strategies automatically if they don't exist.
+   *
+   * ⚠️ CONVERGENT, NOT CREATE-ONLY (#833, fixed 2026-09-23).
+   *
+   * This used to `continue` past any bot that already existed, so the seeder could only ever
+   * INITIALISE a database, never repair one. The measured consequences:
+   *   • a seed edit had **no effect on a live bot** — correcting four sizes and five modes
+   *     required 13 hand-made `PATCH /api/trading/strategies/:id` calls, and editing
+   *     `strategy-seed-data.ts` alone changed nothing at all;
+   *   • a deliberately wrong value **survived** a re-seed (`{"created":0,"skipped":27}`),
+   *     reproduced live on `Gold Swing 1H baseSize = 0.99`;
+   *   • 8 `forex-session-v1` bots exist **only in the database** ("DB activation only, no code
+   *     change") and would be lost on a reinstall with no way to re-seed them.
+   *
+   * The seed file is the durable artefact — it is in git, the database is not. So the seeder's job
+   * is to bring the database BACK to the seed, not merely to populate an empty one.
+   *
+   * It also REPAIRS queue routing: `SignalQueueService.syncQueues()` routes by `strategy_protocol`,
+   * never by `trading_strategy`, so a bot that has lost its subscription can receive no signal and
+   * can never trade while still looking active in the UI. The create path has always written one;
+   * this path now does too, or a re-seed could not revive a bot it had itself described.
+   *
+   * Idempotent: converging an already-correct row writes nothing and is reported as `unchanged`.
    */
   async seedDefaults(strategies: Array<{
     name: string; symbol: string; protocolId: string;
@@ -1879,19 +2305,163 @@ export class TradingStrategyService {
      * that silently dropped it would re-create the strand.
      */
     maxHoldHours?: number | null;
-  }>): Promise<{ created: number; skipped: number; scoringCreated: number }> {
+  }>, opts?: {
+    /**
+     * Report drift but write NOTHING (#833 acceptance criterion 3).
+     *
+     * This is the read-only half of convergence, and it exists so a scheduled or CI check can ask
+     * "does the database still match `strategy-seed-data.ts`?" without mutating it. Without this,
+     * the only way to detect drift was to repair it — which is why drift went unnoticed.
+     */
+    dryRun?: boolean;
+  }): Promise<{
+    /** Dry-run only: what WOULD have been written. Always empty on a real run — see `counts`. */
+    dryRun: boolean;
+    created: number;
+    /** Rows whose declared config differed and were converged back to the seed. */
+    updated: number;
+    /** Rows already matching the seed — no write was needed. */
+    unchanged: number;
+    /** Create attempts that threw. Never silently folded into `unchanged`. */
+    failed: number;
+    scoringCreated: number;
+    /** Bots that existed with NO `strategy_protocol` row and were given one. */
+    subscriptionsRepaired: number;
+    /** Bots whose subscription role was wrong (e.g. a short bot routed as 'long'). */
+    rolesCorrected: number;
+    /** Which fields moved, per bot — so a re-seed says WHAT it changed, not just how many. */
+    changes: Array<{ bot: string; fields: string[] }>;
+  }> {
     if (!this.prisma.isAvailable) {
-      return { created: 0, skipped: strategies.length, scoringCreated: 0 };
+      this.logger.warn('Seed skipped — database unavailable. This is NOT a successful seed.');
+      return {
+        dryRun: !!opts?.dryRun,
+        created: 0, updated: 0, unchanged: 0, failed: strategies.length,
+        scoringCreated: 0, subscriptionsRepaired: 0, rolesCorrected: 0, changes: [],
+      };
     }
 
-    let created = 0, skipped = 0, scoringCreated = 0;
+    const dryRun = !!opts?.dryRun;
+
+    let created = 0, updated = 0, unchanged = 0, failed = 0, scoringCreated = 0;
+    let subscriptionsRepaired = 0, rolesCorrected = 0;
+    const changes: Array<{ bot: string; fields: string[] }> = [];
 
     for (const s of strategies) {
-      // Check if already exists
       const existing = await (this.prisma as any).tradingStrategy.findFirst({
         where: { name: s.name, symbol: s.symbol },
       });
-      if (existing) { skipped++; continue; }
+
+      // ── ALREADY EXISTS → CONVERGE TO THE SEED ───────────────────────────────────────────
+      if (existing) {
+        // ⚠️ REQUIRED FIELDS — always declared, so always converged.
+        const desired: Record<string, unknown> = {
+          protocolId: s.protocolId,
+          brokerId: s.brokerId,
+          mode: s.mode,
+          timeframe: s.timeframe,
+          baseSize: s.baseSize,
+          slPct: s.slPct,
+          tpPct: s.tpPct,
+          minComposite: s.minComposite,
+        };
+
+        // ⚠️ OPTIONAL FIELDS — ABSENT MEANS "NO OPINION", NEVER "SET TO NULL".
+        //
+        // 🛑 THIS IS NOT STYLE, IT IS A MEASURED REGRESSION. The first version of this fix wrote
+        // `maxHoldHours: (s as any).maxHoldHours ?? null` for EVERY bot. The seeder declares
+        // `maxHoldHours` for the FX session bots but OMITS it for the gold bots — so the first
+        // live re-seed wrote **null** over four gold time-stops (72h, 120h, 4h, 24h) and Tokyo
+        // USDJPY's (12h), silently removing the slot-releasing control that #773 exists to
+        // provide. It also flipped five bots from `auto` to `semi-auto`, which stops them
+        // dispatching at all (`automation-loop.service.ts` Gate 2: "auto bots only").
+        //
+        // Both were caught by re-reading the rows, not by a test. The tests below now cover the
+        // absent-field case, because "the seed did not mention it" and "the seed says null" are
+        // different statements and only `'x' in s` can tell them apart.
+        // Both ABSENT and explicitly `undefined` mean "no opinion" — only a real value (including
+        // an explicit `null`) is a declaration worth writing. `'x' in s` is NOT equivalent here:
+        // it is true for a key that exists holding `undefined`, which is exactly the shape a
+        // spread produces (`{ ...entry, maxHoldHours: undefined }`), so it would clear the field.
+        if (s.sessionWindow !== undefined) {
+          // `s.sessionWindow && ...` — an entry may legitimately declare `sessionWindow: null`
+          // (ungated), and `null.length` throws. That mistake was caught by these tests.
+          desired.sessionWindow =
+            s.sessionWindow && s.sessionWindow.length ? JSON.stringify(s.sessionWindow) : null;
+        }
+        if ((s as any).requireDirection !== undefined) {
+          desired.requireDirection = (s as any).requireDirection;
+        }
+        if ((s as any).maxHoldHours !== undefined) {
+          desired.maxHoldHours = (s as any).maxHoldHours;
+        }
+        if ((s as any).active !== undefined) {
+          desired.active = (s as any).active;
+        }
+
+        const differing = Object.keys(desired).filter(
+          (k) => !seedFieldMatches((existing as any)[k], desired[k]),
+        );
+
+        if (differing.length) {
+          if (!dryRun) {
+            await (this.prisma as any).tradingStrategy.update({
+              where: { id: existing.id },
+              data: desired,
+            });
+          }
+          updated++;
+          changes.push({ bot: `${s.name} (${s.symbol})`, fields: differing });
+        } else {
+          unchanged++;
+        }
+
+        // Queue routing requires a protocol SUBSCRIPTION — see the method header.
+        const wantRole =
+          resolveEffectiveRole(null, (s as any).requireDirection) ??
+          (/-short|short-/i.test(s.protocolId) ? 'short' : 'long');
+        const sub = await (this.prisma as any).strategyProtocol.findFirst({
+          where: { strategyId: existing.id, protocolId: s.protocolId },
+        });
+        if (!sub) {
+          if (dryRun) {
+            subscriptionsRepaired++;
+          } else {
+            try {
+              await (this.prisma as any).strategyProtocol.create({
+                data: {
+                  strategyId: existing.id,
+                  protocolId: s.protocolId,
+                  role: wantRole,
+                  sortOrder: 0,
+                },
+              });
+              subscriptionsRepaired++;
+            } catch (subErr) {
+              this.logger.warn(
+                `Could not subscribe ${s.name} to ${s.protocolId}: ${(subErr as Error).message}`,
+              );
+            }
+          }
+        } else if (sub.role !== wantRole) {
+          if (dryRun) {
+            rolesCorrected++;
+          } else {
+            try {
+              await (this.prisma as any).strategyProtocol.update({
+                where: { id: sub.id },
+                data: { role: wantRole },
+              });
+              rolesCorrected++;
+            } catch (roleErr) {
+              this.logger.warn(
+                `Could not correct role for ${s.name}: ${(roleErr as Error).message}`,
+              );
+            }
+          }
+        }
+        continue;
+      }
 
       // Create or find scoring strategy
       let scoringId: string | null = null;
@@ -1980,13 +2550,55 @@ export class TradingStrategyService {
         created++;
       } catch (err) {
         this.logger.warn(`Could not create trading strategy ${s.name}: ${(err as Error).message}`);
-        skipped++;
+        failed++;
       }
     }
 
-    this.logger.log(`Seed complete: ${created} created, ${skipped} skipped, ${scoringCreated} scoring auto-created`);
-    return { created, skipped, scoringCreated };
+    this.logger.log(
+      `Seed ${dryRun ? 'DRY RUN ' : ''}complete: ${created} created, ${updated} updated, ` +
+        `${unchanged} unchanged, ${failed} failed, ${scoringCreated} scoring auto-created`,
+    );
+    if (subscriptionsRepaired || rolesCorrected) {
+      this.logger.warn(
+        `Seed repaired queue routing: ${subscriptionsRepaired} subscription(s) created, ` +
+          `${rolesCorrected} role(s) corrected — without these the affected bots could never trade`,
+      );
+    }
+    // Say WHAT moved, not just how many rows — a bare count is unauditable.
+    for (const c of changes) {
+      this.logger.log(`  converged ${c.bot}: ${c.fields.join(', ')}`);
+    }
+    return {
+      dryRun,
+      created, updated, unchanged, failed, scoringCreated,
+      subscriptionsRepaired, rolesCorrected, changes,
+    };
   }
+}
+
+/**
+ * Compare a stored value against a seed-declared value for convergence (#833).
+ *
+ * ⚠️ WHY NOT `===`. Prisma returns numbers for `Float`/`Int`, but a seed literal can arrive as a
+ * numeric string, and `0.01 !== '0.01'` would report a change on EVERY run — making the seeder
+ * rewrite all 26 rows forever and drowning the real diffs. Floats also need a tolerance, since
+ * `baseSize` round-trips through MySQL's DOUBLE. Null and undefined are treated as the same
+ * "no value" so an absent optional field does not flap between runs.
+ */
+function seedFieldMatches(stored: unknown, desired: unknown): boolean {
+  if (stored === desired) return true;
+  if (stored == null && desired == null) return true;
+  if (typeof stored === 'boolean' || typeof desired === 'boolean') {
+    return Boolean(stored) === Boolean(desired);
+  }
+  if (typeof stored === 'number' || typeof desired === 'number') {
+    if (stored == null || desired == null) return false;
+    const a = Number(stored);
+    const b = Number(desired);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    return Math.abs(a - b) < 1e-9;
+  }
+  return String(stored) === String(desired);
 }
 
 function rarityBandRank(band: string): number {

@@ -34,7 +34,7 @@
 
 .mt5u-account-selector { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
 .mt5u-account-selector label { font-size: 0.7rem; color: var(--ink-soft, #64748b); text-transform: uppercase; }
-.mt5u-account-selector select { padding: 0.3rem 0.5rem; border: 1px solid var(--line, #334155); border-radius: 5px; background: var(--panel, #0f172a); color: var(--ink, #e2e8f0); font-size: 0.78rem; }
+.mt5u-account-selector select { padding: 0.3rem 0.5rem; border: 1px solid var(--line, #334155); border-radius: 5px; background: var(--panel, #0f172a); color: var(--ink, var(--ink)); font-size: 0.78rem; }
 .mt5u-remove-btn { background: none; border: 1px solid transparent; border-radius: 4px; color: var(--ink-soft, #64748b); cursor: pointer; font-size: 0.65rem; padding: 0.4rem 0.5rem; line-height: 1; min-height: 44px; min-width: 44px; }
 .mt5u-remove-btn:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.08); }
 
@@ -147,7 +147,7 @@
 
 /* ── Trade Panel ── */
 .mt5u-trade-panel { background: var(--panel, #1e293b); border: 1px solid var(--line, #334155); border-radius: 10px; padding: 0.9rem; }
-.mt5u-trade-panel h3 { margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--ink, #e2e8f0); }
+.mt5u-trade-panel h3 { margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--ink, var(--ink)); }
 
 /* ── Positions Area ── */
 .mt5u-positions-area { background: var(--panel, #1e293b); border: 1px solid var(--line, #334155); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
@@ -172,7 +172,7 @@
   background: none; color: var(--ink-soft, #94a3b8); font-size: 0.7rem;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.mt5u-layout-btn:hover { border-color: var(--accent, #3b82f6); color: var(--ink, #e2e8f0); }
+.mt5u-layout-btn:hover { border-color: var(--accent, #3b82f6); color: var(--ink, var(--ink)); }
 .mt5u-layout-btn.active {
   background: rgba(59,130,246,0.15); color: var(--accent, #3b82f6);
   border-color: var(--accent, #3b82f6);

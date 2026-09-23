@@ -31,7 +31,7 @@
   border: 1px solid color-mix(in srgb, var(--rg-bar, #22c55e) 25%, transparent);
 }
 .rg-compact-emoji { font-size: 0.75rem; }
-.rg-compact-label { font-weight: 600; color: var(--ink, #e2e8f0); }
+.rg-compact-label { font-weight: 600; color: var(--ink, var(--ink)); }
 .rg-compact-pct { color: #94a3b8; font-variant-numeric: tabular-nums; }
 
 /* Header */
@@ -133,7 +133,7 @@
   padding: 2px 6px;
   border-radius: 4px;
 }
-.rg-info-btn:hover { color: var(--ink, #e2e8f0); background: rgba(255,255,255,0.04); }
+.rg-info-btn:hover { color: var(--ink, var(--ink)); background: rgba(255,255,255,0.04); }
 
 /* Explainer */
 .rg-explainer {

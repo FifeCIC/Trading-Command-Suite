@@ -101,7 +101,7 @@
 }
 .sf-protocol-item:last-child { border-bottom: none; padding-bottom: 0; }
 .sf-protocol-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem; }
-.sf-protocol-name { font-weight: 600; font-size: 0.85rem; color: #e2e8f0; }
+.sf-protocol-name { font-weight: 600; font-size: 0.85rem; color: var(--ink); }
 .sf-protocol-id { font-size: 0.62rem; color: #64748b; font-family: monospace; }
 .sf-protocol-desc { font-size: 0.75rem; color: #94a3b8; margin: 0.15rem 0; }
 .sf-protocol-meta { display: flex; gap: 0.6rem; font-size: 0.68rem; color: #64748b; align-items: center; }
@@ -127,7 +127,7 @@
 .sf-strat-item.sf-strat-trading { border-color: #22c55e; }
 .sf-strat-item.sf-strat-active { border-color: #3b82f6; }
 .sf-strat-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
-.sf-strat-name { font-weight: 600; font-size: 0.82rem; color: #e2e8f0; }
+.sf-strat-name { font-weight: 600; font-size: 0.82rem; color: var(--ink); }
 .sf-mode-badge {
   font-size: 0.55rem;
   font-weight: 800;
@@ -187,7 +187,7 @@
 .sf-eval-item.sf-eval-traded { border-color: #22c55e; }
 .sf-eval-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem; }
 .sf-eval-signal { font-weight: 700; font-size: 0.78rem; }
-.sf-eval-composite { font-weight: 700; font-size: 0.78rem; color: #e2e8f0; }
+.sf-eval-composite { font-weight: 700; font-size: 0.78rem; color: var(--ink); }
 .sf-eval-time { font-size: 0.62rem; color: #64748b; margin-left: auto; }
 .sf-eval-details { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.68rem; }
 .sf-rarity-band { color: #a855f7; font-weight: 500; }

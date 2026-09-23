@@ -55,7 +55,7 @@
 }
 
 .db-mode-btn:hover:not(.active) {
-  color: #e2e8f0;
+  color: var(--ink);
   background: #232840;
 }
 
@@ -87,7 +87,7 @@
 .db-snap-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 .db-snap-value.up { color: #22c55e; }
@@ -105,7 +105,7 @@
 .db-section h2 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
   margin: 0 0 12px;
 }
 
@@ -182,7 +182,7 @@
 .db-mover-ticker {
   flex: 1;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
   text-decoration: none;
 }
 .db-mover-ticker:hover { color: var(--accent, #14b8b9); }
@@ -260,7 +260,7 @@
   white-space: nowrap;
 }
 
-.db-tier-chip:hover { color: #e2e8f0; border-color: #64748b; }
+.db-tier-chip:hover { color: var(--ink); border-color: #64748b; }
 .db-tier-chip.active {
   color: #fff;
   background: var(--accent, #14b8b9);
@@ -308,7 +308,7 @@
 .db-brief-symbol {
   flex: 1;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
   font-size: 0.88rem;
 }
 
@@ -360,7 +360,7 @@
 }
 
 .db-brief-action:hover {
-  color: #e2e8f0;
+  color: var(--ink);
   border-color: var(--accent, #14b8b9);
 }
 
@@ -386,7 +386,7 @@
 
 .db-brief-metrics strong {
   font-size: 0.85rem;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 .db-brief-note {

@@ -4,7 +4,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .ti-header h1 {
@@ -19,7 +19,7 @@
 }
 
 .ti-subtitle strong {
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 /* ── Controls ─────────────────────────────────────────────── */
@@ -46,7 +46,7 @@
 
 .ti-field select {
   background: var(--panel, #141a2e);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   border: 1px solid var(--line, #1e2a45);
   border-radius: 6px;
   padding: 0.4rem 0.65rem;
@@ -72,14 +72,14 @@
 }
 
 .ti-cat-tab:hover {
-  border-color: var(--accent, #0ea5a6);
-  color: var(--ink, #e2e8f0);
+  border-color: var(--accent, var(--accent));
+  color: var(--ink, var(--ink));
 }
 
 .ti-cat-active {
   background: rgba(14, 165, 166, 0.15);
-  border-color: var(--accent, #0ea5a6);
-  color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
+  color: var(--accent, var(--accent));
 }
 
 /* ── Section ──────────────────────────────────────────────── */
@@ -104,14 +104,14 @@
 }
 
 .ti-card:hover {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 12px rgba(14, 165, 166, 0.07);
   transform: translateY(-1px);
 }
 
 .ti-card.ti-expanded {
   grid-column: 1 / -1;
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 18px rgba(14, 165, 166, 0.12);
 }
 
@@ -166,7 +166,7 @@
 
 .ti-value-bar {
   height: 100%;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   border-radius: 4px;
   transition: width 0.3s ease;
   min-width: 2px;
@@ -184,7 +184,7 @@
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 .ti-value-bar-label--muted {
@@ -212,7 +212,7 @@
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 .ti-period {

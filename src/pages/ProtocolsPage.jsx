@@ -9,7 +9,7 @@ import { noticeFromError } from '../core/notices/from-error.js';
 import './protocols-page.css';
 
 export default function ProtocolsPage() {
-  // A/B testing: Page B is the default. Page A (original) available at ?variant=A
+  // Two DESIGNS of this page: New is the default. Old is available at ?variant=A
   const [searchParams] = useSearchParams();
   const isVariantA = searchParams.get('variant') === 'A';
 

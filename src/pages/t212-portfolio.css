@@ -4,7 +4,7 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .t212p-header { margin-bottom: 1.5rem; }
@@ -79,7 +79,7 @@
 .t212p-grand-value {
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 /* ── Category + account toggles ── */
@@ -115,7 +115,7 @@
   user-select: none;
 }
 .t212p-cat-toggle input[type="checkbox"] {
-  accent-color: var(--accent, #0ea5a6);
+  accent-color: var(--accent, var(--accent));
   cursor: pointer;
   width: 13px;
   height: 13px;
@@ -130,7 +130,7 @@
   margin-left: auto;
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 .t212p-account-list {
   display: flex;
@@ -148,7 +148,7 @@
 .t212p-account-row:last-child { border-bottom: none; }
 .t212p-account-row:hover { background: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%); }
 .t212p-account-row input[type="checkbox"] {
-  accent-color: var(--accent, #0ea5a6);
+  accent-color: var(--accent, var(--accent));
   cursor: pointer;
   width: 13px;
   height: 13px;
@@ -160,7 +160,7 @@
   display: inline;
 }
 .t212p-account-row.disconnected { opacity: 0.55; cursor: not-allowed; }
-.t212p-account-name { font-size: 0.72rem; font-weight: 600; color: var(--ink, #e2e8f0); }
+.t212p-account-name { font-size: 0.72rem; font-weight: 600; color: var(--ink, var(--ink)); }
 .t212p-account-state {
   font-size: 0.55rem;
   font-weight: 700;
@@ -185,7 +185,7 @@
   margin-left: auto;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-variant-numeric: tabular-nums;
 }
 

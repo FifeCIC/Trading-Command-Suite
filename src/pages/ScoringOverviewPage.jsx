@@ -153,7 +153,7 @@ export default function ScoringOverviewPage() {
           className="so-table-style-picker"
           value={prefs.tableStyle || 'default'}
           onChange={e => set('tableStyle', e.target.value)}
-          title="Table style for A/B testing"
+          title="Table style"
         >
           {TABLE_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>

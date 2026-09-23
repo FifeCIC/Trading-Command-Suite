@@ -40,7 +40,7 @@
   padding: 14px 18px;
   background: none;
   border: none;
-  color: #e2e8f0;
+  color: var(--ink);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -105,7 +105,7 @@
   border: 1px solid #334155;
   border-radius: 6px;
   background: #0f1117;
-  color: #e2e8f0;
+  color: var(--ink);
   font-size: 0.9rem;
   font-family: inherit;
 }
@@ -138,7 +138,7 @@
 }
 
 .calc-result-row strong {
-  color: #e2e8f0;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -295,7 +295,7 @@
 }
 .calc-history-val strong {
   font-size: 0.82rem;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 /* ── Screen Options Disc ── */
@@ -329,7 +329,7 @@
 .calc-options-btn:hover,
 .calc-options-active {
   border-color: var(--accent, #14b8b9);
-  color: #e2e8f0;
+  color: var(--ink);
   background: #232840;
 }
 

@@ -6,7 +6,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .cl-header {
@@ -54,7 +54,7 @@
   border-radius: 5px; background: none; color: var(--ink-soft, var(--color-neutral));
   font-size: 0.72rem; cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.cl-scale-btn:hover { border-color: var(--accent, var(--color-accent-blue)); color: var(--ink, #e2e8f0); }
+.cl-scale-btn:hover { border-color: var(--accent, var(--color-accent-blue)); color: var(--ink, var(--ink)); }
 .cl-scale-btn.active {
   background: rgba(59,130,246,0.15); color: var(--accent, var(--color-accent-blue));
   border-color: var(--accent, var(--color-accent-blue));
@@ -70,7 +70,7 @@
 .cl-section h2 {
   font-size: 1.05rem;
   margin: 0 0 0.5rem;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 .cl-hint {
@@ -101,8 +101,8 @@
 
 .cl-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.08);
-  color: var(--ink, #e2e8f0);
-  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, var(--ink));
+  border-color: var(--accent, var(--accent));
 }
 
 /* ── Patterns ─────────────────────────────────────────────── */
@@ -177,7 +177,7 @@
 
 .cl-sym {
   font-weight: 600;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .cl-up {
@@ -224,7 +224,7 @@
 
 .cl-signal-row.cl-expanded {
   background: rgba(255, 255, 255, 0.05);
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 .cl-signal-header {
@@ -350,7 +350,7 @@
 .cl-health-label {
   flex: 1;
   font-size: 0.78rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 /* ── Sparkline ────────────────────────────────────────────── */

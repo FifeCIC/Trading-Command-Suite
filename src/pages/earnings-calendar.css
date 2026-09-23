@@ -1,6 +1,6 @@
 /* ── Earnings Calendar ─────────────────────────────────────── */
 
-.ec-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem; color: var(--ink, #e2e8f0); }
+.ec-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .ec-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
 .ec-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
 
@@ -17,8 +17,8 @@
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
   border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
 }
-.ec-chip:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
-.ec-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
+.ec-chip:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
+.ec-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
 
 /* ── Table highlights ────────────────────────────────────── */
 .ec-row-today { background: rgba(14,165,166,0.08) !important; }
@@ -54,15 +54,15 @@
 .ec-input {
   padding: 0.4rem 0.55rem; font-size: 0.8rem;
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
-  border-radius: 6px; color: var(--ink, #e2e8f0); width: 100%; box-sizing: border-box;
+  border-radius: 6px; color: var(--ink, var(--ink)); width: 100%; box-sizing: border-box;
 }
 .ec-settings-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .ec-btn {
   padding: 0.42rem 0.9rem; font-size: 0.78rem; border-radius: 6px; cursor: pointer;
-  background: rgba(255,255,255,0.06); border: 1px solid var(--line, #1e2a45); color: var(--ink, #e2e8f0);
+  background: rgba(255,255,255,0.06); border: 1px solid var(--line, #1e2a45); color: var(--ink, var(--ink));
 }
-.ec-btn:hover { border-color: var(--accent, #0ea5a6); }
-.ec-btn-primary { background: var(--accent, #0ea5a6); border-color: var(--accent, #0ea5a6); color: #04151a; font-weight: 600; }
+.ec-btn:hover { border-color: var(--accent, var(--accent)); }
+.ec-btn-primary { background: var(--accent, var(--accent)); border-color: var(--accent, var(--accent)); color: #04151a; font-weight: 600; }
 .ec-btn-primary:hover { filter: brightness(1.1); }
 .ec-btn-danger { border-color: #b45309; color: #fdba74; }
 .ec-btn-danger:hover { border-color: #f59e0b; color: #fcd34d; }
@@ -72,7 +72,7 @@
   background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: 8px; padding: 0.6rem 0.9rem; margin-bottom: 1rem;
 }
-.ec-settings-msg { font-size: 0.75rem; color: var(--accent, #0ea5a6); }
+.ec-settings-msg { font-size: 0.75rem; color: var(--accent, var(--accent)); }
 .ec-import-status {
   grid-column: 1 / -1;
   font-size: 0.72rem; color: var(--ink-soft, #94a3b8);
@@ -101,13 +101,13 @@
   text-transform: inherit; letter-spacing: inherit;
   cursor: pointer; white-space: nowrap;
 }
-.ec-th-sort:hover { color: var(--accent, #0ea5a6); }
-.ec-th-sort.ec-sort-active { color: var(--accent, #0ea5a6); }
+.ec-th-sort:hover { color: var(--accent, var(--accent)); }
+.ec-th-sort.ec-sort-active { color: var(--accent, var(--accent)); }
 .ec-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .ec-table tbody tr { cursor: pointer; transition: background 0.15s; }
 .ec-table tbody tr:hover { background: rgba(255,255,255,0.03); }
 .ec-row-expanded { background: rgba(14,165,166,0.06) !important; }
-.ec-sym { font-weight: 700; color: var(--accent, #0ea5a6); }
+.ec-sym { font-weight: 700; color: var(--accent, var(--accent)); }
 .ec-right { text-align: right; }
 .ec-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
 .ec-muted { color: var(--ink-soft, #94a3b8); font-size: 0.72rem; }
@@ -115,7 +115,7 @@
 .ec-time-badge {
   font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px;
 }
-.ec-time-pm { background: rgba(14,165,166,0.15); color: var(--accent, #0ea5a6); }
+.ec-time-pm { background: rgba(14,165,166,0.15); color: var(--accent, var(--accent)); }
 .ec-time-am { background: rgba(245,158,11,0.15); color: #f59e0b; }
 
 /* ── Surprise history ────────────────────────────────────── */

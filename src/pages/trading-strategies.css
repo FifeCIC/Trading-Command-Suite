@@ -350,7 +350,7 @@
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
   background: var(--panel, #1e293b);
-  border: 1px solid var(--accent, #0ea5a6);
+  border: 1px solid var(--accent, var(--accent));
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   font-size: 0.72rem;

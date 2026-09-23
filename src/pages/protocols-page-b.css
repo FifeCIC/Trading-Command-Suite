@@ -153,7 +153,7 @@
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.65;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   white-space: pre-line;
 }
 .prb-detail-title h2 { margin: 0; font-size: 1.05rem; color: var(--ink); }
@@ -178,7 +178,7 @@
 .prb-recent-label { font-size: 0.68rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; }
 .prb-recent-value { display: flex; align-items: baseline; gap: 0.2rem; }
 .prb-recent-num { font-size: 1.3rem; font-weight: 700; color: var(--color-profit, #22c55e); }
-.prb-recent-num-opp { color: var(--accent, #0ea5a6); }
+.prb-recent-num-opp { color: var(--accent, var(--accent)); }
 .prb-recent-max { font-size: 0.72rem; color: var(--ink-soft); }
 .prb-recent-meta { display: flex; gap: 0.5rem; align-items: center; }
 .prb-recent-symbol { font-size: 0.75rem; font-weight: 600; color: var(--ink); }

@@ -4,7 +4,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .mm-header h1 {
@@ -39,14 +39,14 @@
 }
 
 .mm-cat-tab:hover {
-  border-color: var(--accent, #0ea5a6);
-  color: var(--ink, #e2e8f0);
+  border-color: var(--accent, var(--accent));
+  color: var(--ink, var(--ink));
 }
 
 .mm-cat-active {
   background: rgba(14,165,166,0.15);
-  border-color: var(--accent, #0ea5a6);
-  color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
+  color: var(--accent, var(--accent));
 }
 
 /* ── Risk bar ─────────────────────────────────────────────── */
@@ -104,13 +104,13 @@
 }
 
 .mm-card:hover {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 12px rgba(14,165,166,0.06);
 }
 
 .mm-card.mm-expanded {
   grid-column: 1 / -1;
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 /* ── Card header ──────────────────────────────────────────── */
@@ -207,7 +207,7 @@
 
 .mm-next {
   font-weight: 500;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 /* ── Expanded body ────────────────────────────────────────── */

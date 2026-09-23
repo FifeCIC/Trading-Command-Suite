@@ -4,7 +4,7 @@
   max-width: var(--page-max-width, 1400px);
   margin: 0 auto;
   padding: 20px 16px;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 .pm-header h1 {
@@ -33,7 +33,7 @@
 
 .pm-tab:hover { color: var(--color-neutral); }
 .pm-tab.pm-active {
-  color: #e2e8f0;
+  color: var(--ink);
   border-bottom-color: var(--color-accent-blue);
 }
 
@@ -285,7 +285,7 @@
 .pm-summary-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--ink);
 }
 
 /* Sort controls */

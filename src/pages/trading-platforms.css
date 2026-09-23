@@ -680,7 +680,7 @@
 }
 
 .pc-provider-head {
-  color: var(--accent, #0ea5a6) !important;
+  color: var(--accent, var(--accent)) !important;
   min-width: 100px;
 }
 
@@ -730,7 +730,7 @@
   border: 1px solid var(--line, #334155);
   border-radius: 6px;
   background: var(--bg, #0f172a);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.9rem;
 }
 
@@ -775,7 +775,7 @@
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--line, #334155);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   cursor: pointer;
   text-align: left;
   font-size: 0.82rem;
@@ -798,8 +798,8 @@
 
 .as-in-db {
   display: inline-block;
-  background: color-mix(in srgb, var(--accent, #0ea5a6) 20%, transparent);
-  color: var(--accent, #0ea5a6);
+  background: color-mix(in srgb, var(--accent, var(--accent)) 20%, transparent);
+  color: var(--accent, var(--accent));
   font-size: 0.6rem;
   font-weight: 600;
   padding: 0.1rem 0.35rem;
@@ -832,11 +832,11 @@
 /* ── Backtest priority rows ─────────────────────────────── */
 
 .bt-priority-row {
-  background: color-mix(in srgb, var(--accent, #0ea5a6) 4%, var(--panel, #1a1a2e));
+  background: color-mix(in srgb, var(--accent, var(--accent)) 4%, var(--panel, #1a1a2e));
 }
 
 .bt-priority-row:hover {
-  background: color-mix(in srgb, var(--accent, #0ea5a6) 8%, var(--panel, #1a1a2e)) !important;
+  background: color-mix(in srgb, var(--accent, var(--accent)) 8%, var(--panel, #1a1a2e)) !important;
 }
 
 .bt-priority-sep td {

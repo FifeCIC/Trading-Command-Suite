@@ -4,7 +4,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .t212c-header { margin-bottom: 1.5rem; }
@@ -23,7 +23,7 @@
   text-align: center;
 }
 .t212c-placeholder-icon { font-size: 3rem; margin-bottom: 0.75rem; }
-.t212c-placeholder h2 { margin: 0 0 0.75rem; font-size: 1.15rem; color: var(--ink, #e2e8f0); }
+.t212c-placeholder h2 { margin: 0 0 0.75rem; font-size: 1.15rem; color: var(--ink, var(--ink)); }
 .t212c-placeholder p { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; line-height: 1.5; margin: 0 0 0.75rem; }
 
 .t212c-feature-list {

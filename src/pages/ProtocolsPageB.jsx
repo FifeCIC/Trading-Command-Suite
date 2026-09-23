@@ -1,5 +1,5 @@
 /**
- * Protocols Registry — Page B (A/B variant)
+ * Protocols Registry — the New design
  * ===========================================
  * Theme-synced redesign of ProtocolsPage. Changes vs Page A:
  * - Dropdown menu filter instead of chip buttons

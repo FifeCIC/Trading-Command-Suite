@@ -5,7 +5,7 @@
   width: 100%;
   margin: 0;
   padding: 0.5rem 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .cm-header {
@@ -43,7 +43,7 @@
   display: block;
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 .cm-summary-label {
@@ -132,7 +132,7 @@
   padding: 0.85rem 1rem;
   background: none;
   border: none;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   cursor: pointer;
   font-family: inherit;
   text-align: left;
@@ -303,7 +303,7 @@
   background: rgba(14,165,166,0.06);
   border: 1px solid var(--line, #1e2a45);
 }
-.cm-qa-note a { color: var(--accent, #0ea5a6); }
+.cm-qa-note a { color: var(--accent, var(--accent)); }
 
 .cm-qa-th { width: 40px; text-align: center; }
 .cm-qa-td { text-align: center; }
@@ -318,7 +318,7 @@
   line-height: 1;
   transition: background 0.15s, border-color 0.15s;
 }
-.cm-qa-checkbox:hover { border-color: var(--accent, #0ea5a6); background: rgba(14,165,166,0.06); }
+.cm-qa-checkbox:hover { border-color: var(--accent, var(--accent)); background: rgba(14,165,166,0.06); }
 .cm-qa-checked-box { border-color: #22c55e; background: rgba(34,197,94,0.08); }
 
 tr.cm-qa-checked td:first-child { color: var(--ink-soft, #94a3b8); }

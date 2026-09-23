@@ -1,6 +1,6 @@
 /* ── Market Correlations ───────────────────────────────────── */
 
-.mc-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, #e2e8f0); }
+.mc-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .mc-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
 .mc-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
 
@@ -15,8 +15,8 @@
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
   border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
 }
-.mc-tf-tab:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
-.mc-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
+.mc-tf-tab:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
+.mc-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
 
 /* ── Heatmap ──────────────────────────────────────────────── */
 .mc-heatmap-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; margin-bottom: 0.5rem; }
@@ -40,7 +40,7 @@
 .mc-field { display: flex; flex-direction: column; gap: 0.3rem; }
 .mc-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
 .mc-field select {
-  background: var(--panel, #141a2e); color: var(--ink, #e2e8f0);
+  background: var(--panel, #141a2e); color: var(--ink, var(--ink));
   border: 1px solid var(--line, #1e2a45); border-radius: 6px; padding: 0.4rem 0.65rem; font-size: 0.82rem;
 }
 

@@ -13,7 +13,16 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
     const svc = Object.create(AbTestService.prototype) as AbTestService;
     (svc as any).prisma = {
       trade: { findMany: jest.fn(async () => trades) },
-      metaStackSnapshot: { findMany: jest.fn(async () => [{ id: 'c' }, { id: 'v' }]) },
+      metaStackSnapshot: {
+        findMany: jest.fn(async () => [{ id: 'c' }, { id: 'v' }]),
+        // #929 — `start()` now resolves the trade authority from the snapshot's scoring strategy,
+        // so the harness must answer that lookup. The 'auto' bot below is what makes a test
+        // startable at all; without it `start()` refuses, which is the point of the fix.
+        findUnique: jest.fn(async (args: any) => ({ id: args.where.id, scoringStrategyId: 'ss-1' })),
+      },
+      tradingStrategy: {
+        findMany: jest.fn(async () => [{ id: 'b1', name: 'Harness Bot', mode: 'auto', active: 1 }]),
+      },
       abTest: {
         findMany: jest.fn(async () => running),
         findFirst: jest.fn(async () => running[0] ?? null),
@@ -27,8 +36,44 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
     return { svc };
   }
 
+  // ⚠️ #929 — the side is `abTestSide`, NOT the `AB-A`/`AB-B` tag inside `brokerComment`.
+  // The comment is mutable (the stranded-trade reaper overwrites it), so a reaped trade used to
+  // lose its side and disappear from the verdict in silence. The comment is still set here on
+  // purpose: it proves the split ignores it.
   const t = (side: 'AB-A' | 'AB-B', pnl: number) => ({
-    status: 'closed', pnl, brokerComment: `TCS ${side} test`, openedAt: new Date(),
+    status: 'closed',
+    pnl,
+    abTestSide: side === 'AB-A' ? 'A' : 'B',
+    brokerComment: `TCS ${side} test`,
+    openedAt: new Date(),
+  });
+
+  it('attributes a REAPED row whose brokerComment was overwritten (#929)', async () => {
+    // Measured 2026-09-23: 14 of 14 A/B rows had their comment rewritten by the reaper, and the
+    // old comment-parsing split attributed 0 to each side — `0 vs 0` for a test full of trades.
+    const reaped = [
+      { status: 'closed', pnl: 12, abTestSide: 'A', brokerComment: 'Reconciled: no broker counterpart (stranded row)' },
+      { status: 'closed', pnl: -3, abTestSide: 'B', brokerComment: 'Reconciled: no broker counterpart (stranded row)' },
+    ];
+    const { svc } = make(reaped as any);
+    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+
+    expect(res.control.closedTrades).toBe(1);
+    expect(res.variant.closedTrades).toBe(1);
+    expect(res.unattributed).toBe(0);
+  });
+
+  it('REPORTS rows it cannot attribute instead of presenting "0 vs 0" (#929)', async () => {
+    const orphan = [
+      { status: 'closed', pnl: 5, abTestSide: null, brokerComment: 'Reconciled: no broker counterpart (stranded row)' },
+    ];
+    const { svc } = make(orphan as any);
+    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+
+    // "no trades yet" and "trades we cannot attribute" must not render the same.
+    expect(res.unattributed).toBe(1);
+    expect(res.verdict.unattributed).toBe(1);
+    expect(res.verdict.note).toContain('do NOT read this as "no trades yet"');
   });
 
   it('REFUSES a verdict below 30 closed trades per side — and says the counts', async () => {

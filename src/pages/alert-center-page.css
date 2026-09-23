@@ -44,8 +44,8 @@
 .ac-config-btn:hover { background: rgba(255,255,255,0.06); }
 .ac-config-active {
   background: rgba(14,165,166,0.1);
-  border-color: #0ea5a6;
-  color: #0ea5a6;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ── Sections ─────────────────────────────────────────────── */
@@ -265,7 +265,7 @@
   transition: 0.2s;
 }
 
-.ac-toggle input:checked + .ac-toggle-slider { background: #0ea5a6; }
+.ac-toggle input:checked + .ac-toggle-slider { background: var(--accent); }
 .ac-toggle input:checked + .ac-toggle-slider::before { transform: translateX(16px); background: #fff; }
 
 /* ── History ───────────────────────────────────────────────── */

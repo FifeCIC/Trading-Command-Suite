@@ -71,14 +71,14 @@
 }
 
 .ps-type-tab:hover {
-  border-color: var(--accent, #0ea5a6);
-  color: var(--ink, #e2e8f0);
+  border-color: var(--accent, var(--accent));
+  color: var(--ink, var(--ink));
 }
 
 .ps-type-active {
   background: rgba(14, 165, 166, 0.15);
-  border-color: var(--accent, #0ea5a6);
-  color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
+  color: var(--accent, var(--accent));
 }
 
 /* ── Sections ─────────────────────────────────────────────── */
@@ -126,13 +126,13 @@
 }
 
 .ps-card:hover {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 12px rgba(14,165,166,0.06);
 }
 
 .ps-card.ps-expanded {
   grid-column: 1 / -1;
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 /* ── Card top ─────────────────────────────────────────────── */

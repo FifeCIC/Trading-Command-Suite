@@ -39,6 +39,20 @@ const SIDE_A_TAG = 'AB-A';
 const SIDE_B_TAG = 'AB-B';
 
 /**
+ * Who is allowed to decide HOW an A/B side trades (#929).
+ *
+ * `mode: null` means **cannot judge** — never a default. See `resolveTradeAuthority()`.
+ */
+export interface AbTradeAuthority {
+  /** `'auto'` to place live orders; anything else cannot produce a measurable result. */
+  mode: string | null;
+  botId: string | null;
+  botName: string | null;
+  /** Populated only when `mode` is null — the cause, so it is never a mystery. */
+  reason?: string;
+}
+
+/**
  * A/B Test Runner (#482) — run two MetaStack snapshots (control vs variant)
  * side-by-side on the same symbols and compare real trading results.
  *
@@ -103,7 +117,26 @@ export class AbTestService {
 
     await this.assertSnapshotsExist(test.controlStackId, test.variantStackId);
 
-    this.logger.log(`A/B test "${test.name}" started (${Array.isArray(test.symbols) ? test.symbols.length : 0} symbols)`);
+    // ⚠️ #929 — REFUSE A TEST THAT CANNOT MEASURE ANYTHING.
+    //
+    // If the owning bot does not trade live, no order is ever placed, so no trade ever closes and
+    // no result can ever be computed. Starting it anyway is how this issue spent a day accruing
+    // ten phantom rows that were reported as executions. The honest output is a refusal that names
+    // the bot and its mode — see `resolveTradeAuthority()`.
+    const authority = await this.resolveTradeAuthority(test.controlStackId);
+    if (authority.mode !== 'auto') {
+      throw new BadRequestException(
+        `A/B test "${test.name}" cannot produce a result: ` +
+          (authority.reason ??
+            `owning bot "${authority.botName}" is '${authority.mode}', not 'auto'`) +
+          `. A/B compares OUTCOMES, so it needs live orders — set the bot to 'auto' first (#929).`,
+      );
+    }
+
+    this.logger.log(
+      `A/B test "${test.name}" started (${Array.isArray(test.symbols) ? test.symbols.length : 0} symbols) ` +
+        `— trade authority: bot "${authority.botName}" (${authority.mode})`,
+    );
     return this.prisma.abTest.update({
       where: { id },
       data: { status: 'running', startAt: new Date(), endAt: null, results: null },
@@ -132,12 +165,24 @@ export class AbTestService {
     return this.prisma.abTest.update({ where: { id }, data: { status: 'cancelled' } });
   }
 
-  /** Get a test plus its current results (computed live if running). */
-  async getResults(id: string): Promise<{ test: AbTest; results: any }> {
+  /**
+   * Get a test plus its current results (computed live if running).
+   *
+   * ⚠️ `tradeAuthority` is returned deliberately (#929) — a BURIED ABILITY given a surface.
+   *
+   * The verdict depends on WHERE the orders came from, and that used to be invisible: the runner
+   * read its trading mode off a SCORING field, so a test that CANNOT trade and a test that simply
+   * has not traded yet both rendered as `0 vs 0`. Returning the resolved bot makes the difference
+   * a fact in the payload instead of an inference the reader has to make.
+   */
+  async getResults(id: string): Promise<{ test: AbTest; tradeAuthority: AbTradeAuthority; results: any }> {
     const test = await this.prisma.abTest.findUnique({ where: { id } });
     if (!test) throw new NotFoundException(`A/B test ${id} not found`);
-    const results = test.status === 'complete' ? (test.results ?? {}) : await this.computeResults(test);
-    return { test, results };
+    const [tradeAuthority, results] = await Promise.all([
+      this.resolveTradeAuthority(test.controlStackId),
+      test.status === 'complete' ? Promise.resolve(test.results ?? {}) : this.computeResults(test),
+    ]);
+    return { test, tradeAuthority, results };
   }
 
   /** The first running test (null if none). ⚠️ Prefer getActiveTests() — capacity is >1 (#929). */
@@ -148,6 +193,83 @@ export class AbTestService {
   /** Every running test (capacity: MAX_AB_ACTIVE). The loop evaluates all of them each tick (#929). */
   async getActiveTests(): Promise<AbTest[]> {
     return this.prisma.abTest.findMany({ where: { status: 'running' }, orderBy: { startAt: 'asc' } });
+  }
+
+  /**
+   * resolveTradeAuthority() — WHO decides HOW an A/B side trades? (#929)
+   *
+   * ⚠️ THIS IS THE FIX FOR AN UNREACHABLE ORDER PATH, NOT A REFACTOR.
+   *
+   * `dispatchSideTrade` used to read its `mode` from the SNAPSHOT (`controlCfg.mode`). That field
+   * is written from `scoringStrategy.mode` (`metastack-versioning.service.ts` L42) and therefore
+   * holds the SCORING style. Measured on the live database 2026-09-23:
+   *
+   *     scoring_strategy.mode  ->  'score' x18 | 'semi-auto' x7 | 'manual' x2 | 'auto' x0
+   *     trading_strategy.mode  ->  'auto'  x25 | 'manual' x2
+   *
+   * The runner compared the first against the TRADING modes `'auto'|'manual'|'semi-auto'`, so
+   * `mode !== 'auto'` was true for **every stack that has ever existed** and the order branch was
+   * unreachable. A/B ran for a day without placing a single order — the ten `EXECUTED` rows it
+   * produced were intents with `brokerTicket: NULL`.
+   *
+   * One field name, two meanings. The trading authority is the BOT, because the bot is what
+   * actually dispatches orders (Gate 2, `automation-loop.service.ts`). The snapshot is a frozen
+   * CONFIG being compared; it is not an authority on how to trade.
+   *
+   * Resolution: snapshot -> `scoringStrategyId` -> every `trading_strategy` referencing it.
+   *   - no active bot        -> cannot judge (never a silent default)
+   *   - bots disagree        -> cannot judge
+   *   - all agree on a mode  -> that mode
+   */
+  async resolveTradeAuthority(snapshotId: string): Promise<AbTradeAuthority> {
+    const snapshot = await this.prisma.metaStackSnapshot.findUnique({ where: { id: snapshotId } });
+    if (!snapshot) {
+      return { mode: null, botId: null, botName: null, reason: `snapshot ${snapshotId} not found` };
+    }
+    return this.resolveAuthorityForScoringStrategy(snapshot.scoringStrategyId);
+  }
+
+  /** The body of `resolveTradeAuthority`, keyed on the scoring strategy a snapshot froze. */
+  private async resolveAuthorityForScoringStrategy(scoringStrategyId: string): Promise<AbTradeAuthority> {
+    const bots = await this.prisma.tradingStrategy.findMany({
+      where: { scoringStrategyId },
+      select: { id: true, name: true, mode: true, active: true },
+    });
+
+    if (bots.length === 0) {
+      return {
+        mode: null,
+        botId: null,
+        botName: null,
+        reason: `no trading_strategy row references scoring strategy ${scoringStrategyId}`,
+      };
+    }
+
+    const isActive = (v: unknown) => v === true || Number(v) === 1;
+    const active = bots.filter((b) => isActive(b.active));
+    if (active.length === 0) {
+      return {
+        mode: null,
+        botId: null,
+        botName: null,
+        reason: `every bot on ${scoringStrategyId} is inactive (${bots.map((b) => b.name).join(', ')})`,
+      };
+    }
+
+    const distinct = [...new Set(active.map((b) => String(b.mode)))];
+    if (distinct.length > 1) {
+      return {
+        mode: null,
+        botId: null,
+        botName: null,
+        reason:
+          `bots on ${scoringStrategyId} disagree on mode (` +
+          `${active.map((b) => `${b.name}=${b.mode}`).join(', ')}) — ` +
+          `a test on an ambiguous authority would compare two things at once`,
+      };
+    }
+
+    return { mode: distinct[0], botId: active[0].id, botName: active[0].name };
   }
 
   /** List recent A/B tests (newest first). */
@@ -181,47 +303,49 @@ export class AbTestService {
     slPct: number;
     tpPct: number;
     entryPrice: number;
-    mode: string;
-  }): Promise<{ success: boolean; error?: string; ticket?: number; price?: number; recordedOnly?: boolean }> {
-    const { test, side, symbol, brokerId, sideDir, quantity, slPct, tpPct, entryPrice, mode } = params;
+    /**
+     * Resolved from the owning BOT via `resolveTradeAuthority()` — NEVER from a snapshot.
+     * `null` means "cannot judge" and is a refusal, not a fallback to 'manual'.
+     */
+    tradeMode: string | null;
+    /** Human name of the bot whose mode this is, for the refusal message. */
+    tradeModeSource?: string;
+    /** Why `tradeMode` is null, when it is. */
+    tradeModeReason?: string;
+  }): Promise<{ success: boolean; error?: string; ticket?: number; price?: number; refused?: boolean }> {
+    const {
+      test, side, symbol, brokerId, sideDir, quantity, slPct, tpPct, entryPrice,
+      tradeMode, tradeModeSource, tradeModeReason,
+    } = params;
     const comment = sanitizeMt5Comment(`TCS ${side === 'A' ? SIDE_A_TAG : SIDE_B_TAG} ${test.name}`, 27);
 
     const sl = sideDir === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100);
     const tp = sideDir === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100);
 
-    if (mode !== 'auto') {
-      // Manual/semi-auto: record intent only — no live order.
-      //
-      // ⚠️ `recordedOnly: true` IS LOAD-BEARING, NOT DECORATION (#929, 2026-09-22).
-      //
-      // This branch returns `success: true` because the RECORD succeeded. The caller read that
-      // as "the trade executed" and wrote `decision: 'EXECUTED'` to decision_log — so ten rows
-      // with `brokerTicket: NULL` and comment "Reconciled: no broker counterpart (stranded row)"
-      // were reported as executions in a 7-hour window on 2026-09-22. Nothing was ever sent to
-      // a broker. The false claim was only found because the owner questioned the word "running".
-      //
-      // ⚠️ WHY `mode` WAS 'score': `metastack_snapshot.snapshot` carries a `mode` field holding
-      // `"score"` — a description of WHAT THE STACK IS. This method reads `mode` as HOW TO TRADE
-      // ('auto' | 'manual' | 'semi-auto'). One field, two meanings, so every snapshot reads as
-      // "not auto" and A/B can record intents forever without ever placing an order. That
-      // overloading is #951's defect class (a name asserting something it does not mean) and is
-      // filed there; this flag makes the outcome honest in the meantime, whatever `mode` says.
-      await this.tradeRecorder.record({
-        symbol,
-        side: sideDir.toLowerCase() as 'buy' | 'sell',
-        quantity,
-        entryPrice,
-        provider: (brokerId as any) || 'mt5',
-        strategy: `AB-${side} ${test.name}`,
-        status: 'open',
-        origin: 'strategy',
-        source: 'meta-stack',
-        abTestId: test.id,
-        sl,
-        tp,
-        brokerComment: comment,
-      });
-      return { success: true, recordedOnly: true };
+    // ⚠️ #929 — A REFUSAL WRITES NO `trade` ROW, AND IS NOT A FAILURE.
+    //
+    // The previous branch recorded a `trade` row for an order that was never placed and returned
+    // `success: true`. The caller logged those as `EXECUTED` — ten rows with `brokerTicket: NULL`
+    // in a 7-hour window on 2026-09-22 ("Reconciled: no broker counterpart (stranded row)").
+    //
+    // Two things were wrong, and only the second was the real fault:
+    //   1. an intent is not a trade, and `computeResults` reads `trade WHERE abTestId` — so a
+    //      phantom row is a lie in the very table the verdict is computed from;
+    //   2. the `mode` it branched on came from the SNAPSHOT, which carries the SCORING style.
+    //      `'auto'` is not a value `scoring_strategy.mode` has ever held, so the order branch was
+    //      UNREACHABLE. See `resolveTradeAuthority()`.
+    //
+    // `refused` is a THIRD outcome, distinct from success and failure: nothing went wrong, the
+    // configuration simply does not trade live. Collapsing it into `FAILED` would report a
+    // non-event as an error, and the evidence that a signal fired is already in `decision_log`.
+    if (tradeMode !== 'auto') {
+      return {
+        success: false,
+        refused: true,
+        error: tradeMode === null
+          ? `cannot determine how to trade: ${tradeModeReason ?? 'trade authority unresolved'}`
+          : `${tradeModeSource ?? 'owning bot'} is '${tradeMode}' — no live order (A/B needs 'auto')`,
+      };
     }
 
     const adapter = this.adapterFactory.create(brokerId);
@@ -250,6 +374,11 @@ export class AbTestService {
       origin: 'strategy',
       source: 'meta-stack',
       abTestId: test.id,
+      // ⚠️ #929 — the side is stored STRUCTURALLY. `computeResults` used to recover it by
+      // parsing `brokerComment` for the `AB-A`/`AB-B` tag, but the stranded-trade reaper
+      // overwrites that string, so a reaped A/B trade lost its side and vanished from the
+      // verdict with no error. Measured 2026-09-23: 14 of 14 A/B rows attributed to 0 sides.
+      abTestSide: side,
       brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
       sl,
       tp,
@@ -266,8 +395,23 @@ export class AbTestService {
       orderBy: { openedAt: 'asc' },
     });
 
-    const sideA = trades.filter((t) => t.brokerComment?.includes(SIDE_A_TAG));
-    const sideB = trades.filter((t) => t.brokerComment?.includes(SIDE_B_TAG));
+    // ⚠️ #929 — attribute by `abTestSide`, NOT by parsing `brokerComment`.
+    //
+    // This read `t.brokerComment?.includes('AB-A')`. `brokerComment` is NOT immutable: the
+    // stranded-trade reaper (`position-sync.service.ts` `reapStrandedOpenTrades`) OVERWRITES it
+    // with 'Reconciled: no broker counterpart (stranded row)'. Any A/B trade that got reaped
+    // therefore matched NEITHER side and was dropped from both totals in silence — measured
+    // 2026-09-23: 14 A/B rows, `side_A = 0`, `side_B = 0`, `0 vs 0` reported.
+    //
+    // A verdict must never depend on a mutable display string. `trade.abTestSide` is the record.
+    const sideA = trades.filter((t) => t.abTestSide === 'A');
+    const sideB = trades.filter((t) => t.abTestSide === 'B');
+
+    // ⚠️ Rows tagged to this test that carry NO side are REPORTED, never dropped in silence.
+    // They were traded before `abTestSide` existed, or written by a path that forgot it. A test
+    // that says `0 vs 0` while holding rows nobody can attribute is the misleading output; a
+    // count of those rows is the honest one (see development-philosophy §7, “make silence visible”).
+    const unattributed = trades.filter((t) => t.abTestSide !== 'A' && t.abTestSide !== 'B').length;
 
     // Live unrealized P&L from MT5 positions tagged with the A/B comment.
     let liveBySide: Record<'A' | 'B', number> = { A: 0, B: 0 };
@@ -313,12 +457,13 @@ export class AbTestService {
     const result = {
       control: summarize(sideA, liveBySide.A),
       variant: summarize(sideB, liveBySide.B),
+      unattributed,
       symbols: test.symbols,
       computedAt: new Date().toISOString(),
     };
     // #929 — a result without a stated verdict is not a result. The verdict REFUSES to name a
     // winner below the per-side sample bar, and names its method when it does.
-    return { ...result, verdict: this.buildVerdict(result.control, result.variant) };
+    return { ...result, verdict: this.buildVerdict(result.control, result.variant, unattributed) };
   }
 
   /**
@@ -327,17 +472,26 @@ export class AbTestService {
    * this returns `insufficient-data` WITH the counts; above, it runs a two-proportion z-test on
    * win rates and reports the PnL-per-trade difference, both named.
    */
-  private buildVerdict(control: any, variant: any): Record<string, unknown> {
+  private buildVerdict(control: any, variant: any, unattributed = 0): Record<string, unknown> {
     const nA = control.closedTrades ?? 0;
     const nB = variant.closedTrades ?? 0;
+    // ⚠️ #929 — an unattributable row is named here, because `0 vs 0` reads as "no trades yet"
+    // when it can equally mean "trades exist that we cannot attribute". Those are different
+    // facts and must not render the same.
+    const unattributedNote = unattributed
+      ? ` ⚠️ ${unattributed} row(s) are tagged to this test but carry NO side and are in neither ` +
+        `total — do NOT read this as "no trades yet".`
+      : '';
     if (nA < AB_MIN_TRADES_FOR_VERDICT || nB < AB_MIN_TRADES_FOR_VERDICT) {
       return {
         verdict: 'insufficient-data',
         n: { control: nA, variant: nB },
+        unattributed,
         requiredPerSide: AB_MIN_TRADES_FOR_VERDICT,
         note:
           `Refusing to name a winner: ${nA} vs ${nB} closed trades (need ≥${AB_MIN_TRADES_FOR_VERDICT} per side). ` +
-          `A verdict on a smaller sample is noise wearing a result's clothes (#929).`,
+          `A verdict on a smaller sample is noise wearing a result's clothes (#929).` +
+          unattributedNote,
       };
     }
     const pA = control.winRate ?? 0;

@@ -21,6 +21,55 @@ on work that has no value yet, and stop reverting fixes that were deliberate.
 
 ---
 
+## 🎛️ Operating Mode — read this before deciding how much to report
+
+> **Added 2026-09-23 at the owner's request.** *"I am in full development mode with no expectations
+> of success or profit during this period… agentic AI does not feel the need to be cautious about
+> current trading or report interruptions which is just more for me to read. In a mode where I'm
+> asking agentic AI to examine live activity then I would understand a fuller report."*
+
+There are **two modes**. Development is the default. If it is ever unclear which you are in, ask in
+one line rather than guessing.
+
+### Mode 1 — DEVELOPMENT (the default)
+
+The app is a machine under construction, not a service. Trading is **always demo**, always
+pre-release, and **current trading results are not evidence of anything**.
+
+| Do | Don't |
+|---|---|
+| Change behaviour freely — restart, rebuild, converge, re-seed, drop and recreate | Treat a disturbed run as an incident |
+| Report a **defect you found** — one line, with the command that shows it | Narrate liveness ("the API flapped", "the bridge was down") unless asked |
+| File the issue and add the test, then say so in one line | Preface findings with caution about "the live app" |
+| Assume the owner reads diffs and evidence | Report what you *might* have broken before measuring whether you did |
+
+**Dev activity disturbing the running app is expected, not news.** Restarting the API mid-tick,
+re-seeding over a live row, running a migration — none of these need a warning paragraph.
+
+### Mode 2 — EXAMINATION (only when invoked)
+
+When the owner asks you to **look at observed live activity** — *"why did these positions close?"*,
+*"is there a mechanism that closed them?"*, *"what happened overnight?"* — a **fuller report is
+wanted**: what the data shows, what it does not, the commands with their output, and an explicit
+statement of what you could not determine.
+
+**The trigger is the question, not the fact that you happened to read live data while working.**
+
+### What does NOT change in either mode
+
+**A defect is still a defect.** The four gates in `change-completion.instructions.md` still apply to
+the work. Honest-partial reporting still applies. This rule calibrates **volume and
+caution-language for dev-induced disturbance** — it is not permission to conceal a real fault, and
+"we're in dev mode" never licenses skipping a check on anything that can move money.
+
+**Findings are always wanted — compactly.** One line each:
+
+```
+Found: <what> — <command that shows it> — <issue # if filed>.
+```
+
+---
+
 ## What "no users" means for engineering decisions
 
 ### Do — the fast path is the correct path

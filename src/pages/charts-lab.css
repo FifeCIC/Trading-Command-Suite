@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg, #0a0e17);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   overflow-y: auto;
 }
 
@@ -38,11 +38,11 @@
   padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.72rem; cursor: pointer;
   transition: all 0.15s;
 }
-.clab-tf-btn:hover, .clab-engine-btn:hover { border-color: var(--accent, #0ea5a6); color: var(--ink); }
+.clab-tf-btn:hover, .clab-engine-btn:hover { border-color: var(--accent, var(--accent)); color: var(--ink); }
 .clab-tf-btn.active, .clab-engine-btn.active {
-  background: var(--accent, #0ea5a6); color: #fff; border-color: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent)); color: #fff; border-color: var(--accent, var(--accent));
 }
-.clab-control-group input[type=range] { width: 80px; accent-color: var(--accent, #0ea5a6); }
+.clab-control-group input[type=range] { width: 80px; accent-color: var(--accent, var(--accent)); }
 
 /* Indicator toggles */
 .clab-indicator-row {

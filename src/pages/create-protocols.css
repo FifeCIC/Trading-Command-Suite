@@ -294,7 +294,7 @@
   background: var(--panel, #1e293b); border: 1px solid var(--line, #334155);
   border-radius: 8px; padding: 0.75rem 1rem; transition: border-color 0.15s;
 }
-.cp-group-card.cp-group-gated { border-color: var(--accent, #0ea5a6); }
+.cp-group-card.cp-group-gated { border-color: var(--accent, var(--accent)); }
 .cp-group-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
 .cp-group-info { display: flex; flex-direction: column; gap: 0.15rem; }
 .cp-group-name { font-size: 0.9rem; color: var(--ink); }

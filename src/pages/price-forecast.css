@@ -1,6 +1,6 @@
 /* ── Price Forecast ────────────────────────────────────────── */
 
-.pf-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, #e2e8f0); }
+.pf-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .pf-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
 .pf-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
 
@@ -26,8 +26,8 @@
 .pf-row-expanded { background: rgba(14,165,166,0.06) !important; }
 
 .pf-sortable { cursor: pointer; user-select: none; }
-.pf-sortable:hover { color: var(--accent, #0ea5a6); }
-.pf-sym { font-weight: 700; color: var(--accent, #0ea5a6); }
+.pf-sortable:hover { color: var(--accent, var(--accent)); }
+.pf-sym { font-weight: 700; color: var(--accent, var(--accent)); }
 .pf-right { text-align: right; }
 .pf-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
 .pf-muted { color: var(--ink-soft, #94a3b8); }
@@ -35,7 +35,7 @@
 .pf-consensus { font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; }
 
 .pf-up-high { color: #22c55e; font-weight: 700; }
-.pf-up-mid  { color: var(--accent, #0ea5a6); font-weight: 600; }
+.pf-up-mid  { color: var(--accent, var(--accent)); font-weight: 600; }
 .pf-up-low  { color: var(--ink-soft, #94a3b8); }
 
 /* ── Expanded target bar ──────────────────────────────────── */
@@ -57,11 +57,11 @@
 }
 .pf-target-current {
   position: absolute; top: -3px; width: 4px; height: 14px;
-  background: var(--ink, #e2e8f0); border-radius: 2px; transform: translateX(-50%);
+  background: var(--ink, var(--ink)); border-radius: 2px; transform: translateX(-50%);
 }
 .pf-target-avg {
   position: absolute; top: -4px; width: 4px; height: 16px;
-  background: var(--accent, #0ea5a6); border-radius: 2px; transform: translateX(-50%);
+  background: var(--accent, var(--accent)); border-radius: 2px; transform: translateX(-50%);
 }
 .pf-target-meta {
   display: flex; gap: 1rem; font-size: 0.68rem; color: var(--ink-soft, #94a3b8);

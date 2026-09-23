@@ -116,7 +116,7 @@
    ⚠️ These previously used `--surface-2` and `--text`, neither of which is defined anywhere
    (`index.css :root` publishes `--bg/--ink/--panel/--line/--accent/--danger`; the theme adapters
    publish `--panel/--border/--bg-elev/…`). An undefined custom property is NOT a build error — the
-   fallback silently wins — so the notice was pinned to hardcoded hex (`#1e293b`/`#e2e8f0`) and
+   fallback silently wins — so the notice was pinned to hardcoded hex (`#1e293b`/`var(--ink)`) and
    ignored the active theme pack entirely. That is the same defect that made NoticeBlock look dark
    (#826 styling report). The tokens below all resolve. */
 .screencockpit-notice {

@@ -41,7 +41,7 @@
 .sdp-symbol {
   font-weight: 700;
   font-size: 0.9rem;
-  color: #e2e8f0;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 

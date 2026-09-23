@@ -1430,15 +1430,51 @@ export class AutomationLoopService implements OnModuleInit {
     const variantCfg = (variant.snapshot ?? {}) as any;
     const symbols = (Array.isArray(test.symbols) ? test.symbols : []) as string[];
 
+    // ⚠️ #929 — the TRADING authority is resolved from the BOT, once per test, and NEVER from
+    // `controlCfg.mode`. That field holds the SCORING style (`'score'`), which the runner used to
+    // compare against `'auto'` — a comparison that is false for every snapshot in existence, so
+    // no A/B order was ever placed. `null` means cannot-judge and is refused, not defaulted.
+    const authority = await this.abTestService.resolveTradeAuthority(control.id);
+    if (authority.mode !== 'auto') {
+      this.logger.warn(
+        `A/B test "${test.name}": no live orders will be placed — ` +
+          (authority.reason ?? `owning bot "${authority.botName}" is '${authority.mode}'`),
+      );
+    }
+
     for (const sym of symbols) {
       const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
       if (!dbSym) continue;
 
+      // ⚠️ #929 — the CADENCE comes from the protocol, via the canonical `selectBaseTimeframe()`.
+      //
+      // These two lines read `'5m'` as a LITERAL. Every other scoring path in the system resolves
+      // the cadence through `selectBaseTimeframe(protocol.recommendedTimeframe)` — the envelope
+      // (#908, `signal-envelope.service.ts`), the protocol runner, consensus, and the main loop
+      // above. The A/B runner was the ONLY exception, and because an M15 protocol scored on
+      // 5-minute bars reads completely differently, it was measuring a configuration that does
+      // not exist. Measured 2026-09-23, XAUUSD, same protocol (`xau-speed-m15`), same second:
+      //
+      //     real pipeline (15m bars) : composite 94, signal BUY  -> bot EXECUTED (ticket ...5422)
+      //     A/B runner   ( 5m bars) : composite 15, signal HOLD -> SKIP — no order, ever
+      //
+      // A `'5m'` literal does not type-error and does not log. It just silently compares the
+      // wrong two things, which is why the first 'runnable' A/B placed no orders at all.
+      const controlTf = selectBaseTimeframe(this.protocolDb.getCached(controlCfg.protocolId)?.recommendedTimeframe);
+      const variantTf = selectBaseTimeframe(this.protocolDb.getCached(variantCfg.protocolId)?.recommendedTimeframe);
+      if (controlTf !== variantTf) {
+        // Named, not silently resolved: a test whose two sides are scored on different cadences
+        // is comparing two things at once, which is the one thing this path must not do.
+        this.logger.warn(
+          `A/B test "${test.name}": control cadence ${controlTf} != variant cadence ${variantTf} — ` +
+            `scoring on the control's (${controlTf})`,
+        );
+      }
       const requiredBars = Math.max(
-        this.protocolDb.getRequiredBars(controlCfg.protocolId)?.['5m'] ?? 100,
-        this.protocolDb.getRequiredBars(variantCfg.protocolId)?.['5m'] ?? 100,
+        this.protocolDb.getRequiredBars(controlCfg.protocolId)?.[controlTf] ?? 100,
+        this.protocolDb.getRequiredBars(variantCfg.protocolId)?.[variantTf] ?? 100,
       );
-      const bars = await this.marketData.getBars(dbSym.id, '5m', requiredBars);
+      const bars = await this.marketData.getBars(dbSym.id, controlTf, requiredBars);
       if (!bars || bars.length < 20) continue;
 
       // Score both stacks against the same symbol + bars.
@@ -1460,7 +1496,6 @@ export class AutomationLoopService implements OnModuleInit {
       ]);
 
       const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;
-      const mode = (controlCfg.mode ?? variantCfg.mode ?? 'manual') as string;
 
       const evalSide = async (side: 'A' | 'B', cfg: any, score: any): Promise<void> => {
         if (!score || score.composite === undefined) return;
@@ -1517,7 +1552,9 @@ export class AutomationLoopService implements OnModuleInit {
           slPct: cfg.slPct ?? 1.0,
           tpPct: cfg.tpPct ?? 1.0,
           entryPrice,
-          mode,
+          tradeMode: authority.mode,
+          tradeModeSource: authority.botName ? `bot "${authority.botName}"` : undefined,
+          tradeModeReason: authority.reason,
         });
 
         decisions.push({
@@ -1525,15 +1562,18 @@ export class AutomationLoopService implements OnModuleInit {
           strategyId: `ab-test:${side}`,
           symbol: sym,
           brokerId,
-          // ⚠️ `recordedOnly` is NOT a success (#929). `dispatchSideTrade` records an intent and
-          // returns success:true when the stack's `mode` is not 'auto' — no order is placed. This
-          // line said `result.success ? 'EXECUTED' : 'FAILED'`, so ten intents with no broker
-          // ticket were logged as EXECUTED on 2026-09-22. An intent is a SKIP, and the reason
-          // names why, because "EXECUTED" for a trade that does not exist is the exact defect
-          // class this repo keeps finding: plausible output, no error.
-          decision: result.recordedOnly ? 'SKIP' : result.success ? 'EXECUTED' : 'FAILED',
-          reason: result.recordedOnly
-            ? `AB-${side} ${test.name}: intent recorded, NO live order — stack mode is not 'auto'`
+          // ⚠️ #929 — THREE outcomes, deliberately kept distinct:
+          //   EXECUTED  an order reached the broker and a ticket came back;
+          //   SKIP      a REFUSAL — the owning bot is not 'auto', so nothing was attempted.
+          //             Nothing went wrong, which is why it must not read as an error;
+          //   FAILED    the attempt was made and the adapter returned an error.
+          // This line previously read `result.success ? 'EXECUTED' : 'FAILED'` while a "success"
+          // could mean only that an intent was recorded — ten rows with no broker ticket were
+          // therefore logged as EXECUTED on 2026-09-22. Collapsing refusal into either of the
+          // other two is the defect class this repo keeps finding: plausible output, no error.
+          decision: result.refused ? 'SKIP' : result.success ? 'EXECUTED' : 'FAILED',
+          reason: result.refused
+            ? `AB-${side} ${test.name}: refused — ${result.error ?? 'trade authority is not auto'}`
             : result.success
               ? `AB-${side} ${test.name}: ${sideDir} @ ${entryPrice} (${result.ticket ?? 'recorded'})`
               : `AB-${side} ${test.name}: ${result.error ?? 'unknown'}`,

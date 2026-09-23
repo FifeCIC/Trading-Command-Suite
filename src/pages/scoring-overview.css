@@ -294,7 +294,7 @@
 }
 
 .so-max-score {
-  color: #0ea5a6;
+  color: var(--accent);
   font-size: 1rem;
 }
 
@@ -479,7 +479,7 @@
 }
 .los-select {
   background: var(--panel, #1e293b);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   border: 1px solid var(--line, #334155);
   border-radius: 8px;
   padding: 0.45rem 0.65rem;
@@ -494,7 +494,7 @@
   align-self: flex-end;
   padding-bottom: 0.1rem;
 }
-.los-select:focus { border-color: var(--accent, #0ea5a6); outline: none; }
+.los-select:focus { border-color: var(--accent, var(--accent)); outline: none; }
 .los-auto-btn {
   background: var(--panel, #1e293b);
   color: var(--ink-soft, var(--color-neutral));

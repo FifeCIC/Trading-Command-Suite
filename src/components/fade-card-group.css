@@ -59,7 +59,7 @@
 .fc-label {
   font-weight: 700;
   font-size: 0.82rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .fc-desc {

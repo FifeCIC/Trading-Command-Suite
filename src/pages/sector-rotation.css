@@ -1,6 +1,6 @@
 /* ── Sector Rotation ──────────────────────────────────────── */
 
-.sr2-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, #e2e8f0); }
+.sr2-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .sr2-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
 .sr2-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
 
@@ -22,8 +22,8 @@
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
   border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
 }
-.sr2-tf-tab:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
-.sr2-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
+.sr2-tf-tab:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
+.sr2-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
 
 /* ── Table ────────────────────────────────────────────────── */
 .sr2-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }
@@ -34,12 +34,12 @@
   padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
   background: rgba(0,0,0,0.12); white-space: nowrap;
 }
-.sr2-table th.sr2-sorted { color: var(--accent, #0ea5a6); }
+.sr2-table th.sr2-sorted { color: var(--accent, var(--accent)); }
 .sr2-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .sr2-table tbody tr:hover { background: rgba(255,255,255,0.03); }
 .sr2-rank { color: var(--ink-soft, #94a3b8); font-size: 0.72rem; width: 30px; }
 .sr2-name { font-weight: 600; }
-.sr2-etf { color: var(--accent, #0ea5a6); font-weight: 600; font-size: 0.76rem; }
+.sr2-etf { color: var(--accent, var(--accent)); font-weight: 600; font-size: 0.76rem; }
 .sr2-right { text-align: right; }
 .sr2-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
 .sr2-up-strong { color: #22c55e; font-weight: 700; }

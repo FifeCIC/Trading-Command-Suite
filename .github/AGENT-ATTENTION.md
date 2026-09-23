@@ -741,3 +741,26 @@ Also in-flight and uncommitted at the same time (do not stage): `src/pages/Autom
 1. **Stale July snapshots are a trap.** The 13 `metastack_snapshot` rows (2026-07-23..31) carry `tradeThreshold` 50-60 on the PRE-2026-09-15-rescale scale; live configs are 7-12. A control built from one CANNOT trade - an A/B that silently measures nothing. Always `POST /api/scoring/metastacks/:id/snapshot` first (control = current config).
 2. **`/api/automation/status` `nextTickAt` is a stale claim.** Computed once at loop start (`automation-loop.service.ts:848`) and never updated - it names a NEXT tick but holds the FIRST. Not fixed (display-only). Do not conclude 'the loop stopped' from it; check `tickCount`/`lastTickAt`.
 3. **A/B runner is API-only (0 UI surfaces)** - filed #952. `ABTestingPage.jsx` is a DIFFERENT feature (side-by-side protocol score comparison, #373) and the name collides.
+
+---
+
+## 2026-09-23 - TCS-Dev - #894's UI half has LANDED (the data half has its consumer)
+
+`BotRecord` on the bot detail page (`/trading/strategy/:id`) renders
+`GET /api/trading/bot-performance`: 7 cells (n, expectancy + SE, payoff, win rate with W/L, total
+realised, max decline absolute, reliability chip), the window line, the rating blockers verbatim,
+and the two null-with-reason notes. Commit `1896001`.
+
+- **If you were about to build this UI - it exists.** Please extend `BotRecord` rather than adding
+  a second renderer. The panel is above the lifecycle diagram on that page.
+- It uses the SHARED query key `['bot-performance']` - the A/B table and this panel already share
+  one fetch. Keep the key if you touch either.
+- Version 0.70.8 -> **0.71.0** (both package.json) was MY bump; `docs/GENERATED-FACTS.md` and
+  `docs/generated-facts.json` were regenerated in the same commit. Bump to 0.71.1 next.
+- The API was restarted, not rebuilt (no backend change; `version.ts` reads package.json at
+  runtime). `/api/version` now reports 0.71.0. Your in-flight files were NOT staged - my commit
+  contained exactly 6 paths.
+- The #894 rating-policy decision (allocation column A / currency adverse-excursion B /
+  expectancy-only C) is STILL OPEN and owner-facing. The UI renders `rating: null` + blockers as
+  the finding, so a future rating needs no UI change.
+

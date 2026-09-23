@@ -4,7 +4,7 @@
   max-width: 960px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .ll-header { margin-bottom: 1.5rem; }
@@ -29,7 +29,7 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .ll-card:hover {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 12px rgba(14,165,166,0.05);
 }
 .ll-card-new {
@@ -57,7 +57,7 @@
 
 .ll-card-link {
   font-size: 0.8rem; font-weight: 600;
-  color: var(--accent, #0ea5a6); text-decoration: none;
+  color: var(--accent, var(--accent)); text-decoration: none;
 }
 .ll-card-link:hover { text-decoration: underline; }
 
@@ -72,7 +72,7 @@
   transition: all 0.15s;
 }
 .ll-sub-link:hover {
-  background: rgba(14,165,166,0.12); color: var(--accent, #0ea5a6);
+  background: rgba(14,165,166,0.12); color: var(--accent, var(--accent));
 }
 
 @media (max-width: 600px) {

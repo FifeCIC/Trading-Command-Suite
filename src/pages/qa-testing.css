@@ -1,7 +1,7 @@
 /* QA Testing Page — font sizes bumped for readability */
 .qa-page { padding: 1.25rem; max-width: 1100px; margin: 0 auto; }
 .qa-header { margin-bottom: 1.25rem; }
-.qa-header h1 { font-size: 1.65rem; margin: 0 0 0.25rem; color: var(--ink, #e2e8f0); }
+.qa-header h1 { font-size: 1.65rem; margin: 0 0 0.25rem; color: var(--ink, var(--ink)); }
 .qa-subtitle { font-size: 0.95rem; color: var(--ink-soft, #94a3b8); margin: 0; line-height: 1.5; }
 
 /* Progress */
@@ -23,7 +23,7 @@
   border-radius: 6px;
   border: 1px solid var(--line, #334155);
   background: var(--panel, #1e293b);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.82rem;
   font-family: inherit;
   cursor: pointer;
@@ -40,7 +40,7 @@
 .qa-item-left { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
 .qa-item-id { font-size: 0.72rem; font-weight: 700; color: var(--ink-soft, #94a3b8); font-family: monospace; flex-shrink: 0; }
 .qa-item-info { display: flex; flex-direction: column; min-width: 0; }
-.qa-item-name { font-size: 0.95rem; font-weight: 600; color: var(--ink, #e2e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qa-item-name { font-size: 0.95rem; font-weight: 600; color: var(--ink, var(--ink)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qa-item-system { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); }
 .qa-item-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
 
@@ -59,7 +59,7 @@
 .qa-feedback-existing p { font-size: 0.82rem; color: var(--ink-soft, #cbd5e1); background: rgba(99,102,241,0.08); padding: 0.4rem 0.6rem; border-radius: 6px; margin: 0; }
 
 .qa-feedback-form { display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap; }
-.qa-feedback-input { flex: 1; min-width: 200px; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--line, #334155); background: rgba(0,0,0,0.2); color: var(--ink, #e2e8f0); font-size: 0.82rem; font-family: inherit; resize: vertical; }
+.qa-feedback-input { flex: 1; min-width: 200px; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--line, #334155); background: rgba(0,0,0,0.2); color: var(--ink, var(--ink)); font-size: 0.82rem; font-family: inherit; resize: vertical; }
 .qa-feedback-input:focus { border-color: #6366f1; outline: none; }
 .qa-feedback-btn { padding: 0.4rem 0.8rem; border-radius: 6px; border: none; background: #6366f1; color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .qa-feedback-btn:hover { background: #5558e6; }

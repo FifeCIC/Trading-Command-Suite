@@ -1,10 +1,10 @@
 /* Feature Lab Page */
 
-.fl-page { max-width: 960px; margin: 0 auto; padding: 1.5rem; color: var(--ink, #e2e8f0); }
+.fl-page { max-width: 960px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .fl-header { margin-bottom: 1.5rem; }
 .fl-title { margin: 0 0 0.3rem; font-size: 1.4rem; }
 .fl-desc { color: var(--ink-soft, #94a3b8); font-size: 0.85rem; margin: 0; }
-.fl-back-link { font-size: var(--text-sm, 0.78rem); color: var(--accent, #0ea5a6); }
+.fl-back-link { font-size: var(--text-sm, 0.78rem); color: var(--accent, var(--accent)); }
 .fl-section-head { font-size: 1rem; margin: 1.25rem 0 0.6rem; color: var(--ink-soft, #94a3b8); }
 .fl-section-head-last { margin-top: 1.5rem; }
 .fl-list { display: flex; flex-direction: column; gap: 0.75rem; }

@@ -30,7 +30,7 @@
 .de-card-header h2 {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .de-desc {

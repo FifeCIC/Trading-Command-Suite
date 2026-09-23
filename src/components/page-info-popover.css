@@ -24,16 +24,16 @@
 }
 .pip-trigger:hover,
 .pip-trigger:focus-visible {
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, #0ea5a6) 40%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, var(--accent)) 40%, transparent);
   transform: scale(1.15);
   outline: none;
 }
 
 .pip-popover {
   background: var(--panel, #1e293b);
-  border: 1px solid var(--accent, #0ea5a6);
+  border: 1px solid var(--accent, var(--accent));
   border-radius: 10px;
   padding: 0.75rem 1rem;
   max-width: 400px;

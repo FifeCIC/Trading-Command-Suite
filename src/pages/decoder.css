@@ -3,7 +3,7 @@
 .decoder-page {
   max-width: none;
   padding: 1.5rem 1.5rem 3rem;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .decoder-header {
@@ -57,7 +57,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.65rem;
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -76,7 +76,7 @@
   border: 1px solid var(--line, #334155);
   border-radius: 8px;
   background: var(--panel, #1a1a2e);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
   font-size: 0.78rem;
   line-height: 1.5;
@@ -85,7 +85,7 @@
 
 .decoder-textarea:focus {
   outline: none;
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
   box-shadow: 0 0 0 2px rgba(14, 165, 166, 0.15);
 }
 
@@ -108,7 +108,7 @@
   border: 1px solid var(--line, #334155);
   border-radius: 6px;
   background: var(--panel, #1a1a2e);
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -116,13 +116,13 @@
 }
 
 .decoder-btn:hover:not(:disabled) {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 .decoder-btn--primary {
-  background: var(--accent, #0ea5a6);
+  background: var(--accent, var(--accent));
   color: #fff;
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent, var(--accent));
 }
 
 .decoder-btn--primary:hover:not(:disabled) {
@@ -154,8 +154,8 @@
 
 .decoder-ai-placeholder {
   padding: 0.75rem 1rem;
-  background: color-mix(in srgb, var(--accent, #0ea5a6) 6%, var(--panel, #1a1a2e));
-  border: 1px dashed var(--accent, #0ea5a6);
+  background: color-mix(in srgb, var(--accent, var(--accent)) 6%, var(--panel, #1a1a2e));
+  border: 1px dashed var(--accent, var(--accent));
   border-radius: 8px;
   font-size: 0.78rem;
   color: var(--ink-soft, #94a3b8);
@@ -219,7 +219,7 @@
   margin: 0 0 0.5rem;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 .decoder-fields-table {
@@ -244,18 +244,18 @@
 }
 
 .decoder-field-value {
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .decoder-tag {
   display: inline-block;
   padding: 0.1rem 0.4rem;
   margin: 0.1rem 0.2rem;
-  background: color-mix(in srgb, var(--accent, #0ea5a6) 12%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--accent)) 12%, transparent);
   border-radius: 3px;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--accent, #0ea5a6);
+  color: var(--accent, var(--accent));
 }
 
 /* ─── Generic Stats ─────────────────────────────────────── */
@@ -278,7 +278,7 @@
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 .decoder-stat-label {
@@ -304,7 +304,7 @@
   line-height: 1.5;
   overflow-x: auto;
   white-space: pre-wrap;
-  color: var(--ink, #e2e8f0);
+  color: var(--ink, var(--ink));
 }
 
 /* ─── AI Analysis Panel ────────────────────────────────── */

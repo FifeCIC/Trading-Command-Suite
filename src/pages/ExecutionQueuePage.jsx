@@ -41,7 +41,7 @@ const LOOP_STEPS = [
   { n: '2', label: 'Fetch portfolios', desc: 'All enabled brokers → position sync' },
   { n: '2b', label: 'Discover strategies', desc: 'Active bots + data-readiness + priority reorder' },
   { n: '3', label: 'One scoring line', desc: 'buildBestLadder → signal records → bot queues' },
-  { n: '3c', label: 'A/B test', desc: 'Score both snapshots when a test is active' },
+  { n: '3c', label: 'Snapshot trial', desc: 'Score both snapshots when a trial is active' },
   { n: '4', label: 'Process signal queues', desc: 'Queue heads → gates → dispatchTrade' },
 ];
 

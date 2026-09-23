@@ -4,12 +4,12 @@
 .fd-header p { margin: 0; color: #94a3b8; font-size: 0.85rem; }
 .fd-disclaimer { padding: 0.5rem 1rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; font-size: 0.78rem; color: #94a3b8; margin-bottom: 1.5rem; }
 .fd-section { margin-bottom: 1.5rem; }
-.fd-section h3 { font-size: 1rem; color: #e2e8f0; margin: 0 0 0.75rem; }
+.fd-section h3 { font-size: 1rem; color: var(--ink); margin: 0 0 0.75rem; }
 .fd-summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
 .fd-summary-card { padding: 0.75rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; text-align: center; }
 .fd-summary-card.reliable { border-color: #065f46; }
 .fd-summary-card.fluffy { border-color: #7f1d1d; }
-.fd-summary-num { display: block; font-size: 1.4rem; font-weight: 700; color: #e2e8f0; }
+.fd-summary-num { display: block; font-size: 1.4rem; font-weight: 700; color: var(--ink); }
 .fd-summary-label { font-size: 0.72rem; color: #64748b; }
 .fd-table-wrap { overflow-x: auto; }
 .fd-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -17,7 +17,7 @@
 .fd-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #1e2030; }
 .fd-row { cursor: pointer; transition: background 0.15s; }
 .fd-row:hover { background: #1e293b33; }
-.fd-source-name { font-weight: 600; color: #e2e8f0; }
+.fd-source-name { font-weight: 600; color: var(--ink); }
 .fd-score-text { font-size: 0.78rem; color: #94a3b8; margin-left: 0.5rem; }
 .fd-bar-wrap { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: #1e293b; vertical-align: middle; margin-right: 0.3rem; }
 .fd-bar-fill { display: block; height: 100%; border-radius: 3px; transition: width 0.3s; }

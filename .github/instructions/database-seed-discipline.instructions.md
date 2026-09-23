@@ -133,6 +133,40 @@ in the UI and produces no queue entries, with no error anywhere.
 
 ---
 
+## 🔍 "Why isn't this bot trading?" — use these two, in this order
+
+```powershell
+# 1. WHY can this bot not trade? Names the specific fault, per bot.
+node nest/scripts/audit-bot-activation.cjs
+#    reports: NO-BARS | NO-SUBSCRIPTION | BELOW-FLOOR | NOT-TRADEABLE-HERE | INACTIVE
+
+# 2. Has the DATABASE drifted from the SEED? Read-only — writes nothing.
+curl.exe -s -X POST "http://localhost:3201/api/trading/strategies/seed?dryRun=true"
+```
+
+**`nest/scripts/audit-bot-activation.cjs` is the entry point for "why can't this bot trade".**
+It exists because the US500 incident (2026-09-15) produced a bot that looked perfectly configured
+in the UI while the bridge refused every order — three separate faults, all invisible.
+
+**`?dryRun=true`** is the second question, and it is different: the audit asks whether a bot *can*
+trade, this asks whether the **configuration still matches `strategy-seed-data.ts`**. It reports
+`changes: [{ bot, fields[] }]` without writing, so it is safe to run any time — and running it is
+how you find out that a bot's size, mode or time-stop was changed in the database and never put
+back into the seed.
+
+### ⚠️ Convergence is only safe in ONE direction: seed → database
+
+`seedDefaults()` converges as of 2026-09-23 (#833). That means **an out-of-date seed file is now
+destructive**: it will revert deliberate database-only changes. It did exactly that on the first
+run — flipping five bots `auto` → `semi-auto` (which stops them dispatching) and writing `null`
+over four gold time-stops.
+
+**Before trusting a convergent seeder, reconcile the seed to reality.** Run the dry run, read
+`changes`, and for each field ask "is the seed or the database right?" — then fix the one that is
+wrong. Fields the seed **omits** are left alone on purpose; only declared fields are converged.
+
+---
+
 ## Related
 
 - **#791** — protocol seed is stale; `dump-protocol-seed.cjs` was deleted 2026-07-26, so it cannot be regenerated
