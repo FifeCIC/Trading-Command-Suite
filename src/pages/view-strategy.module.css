@@ -326,3 +326,18 @@
 .link {
   color: var(--accent);
 }
+
+/* ── Realised record (#894) ────────────────────────────────────────────────────────────────────
+   The blockers for a withheld rating, and the reasons the two percentage fields are null. Muted
+   like every auxiliary note on this page — the fact that a rating is withheld is not an error,
+   and must not be styled as one. */
+.blockerList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  line-height: 1.5;
+}

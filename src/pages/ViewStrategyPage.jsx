@@ -67,6 +67,12 @@ import {
 } from '../core/bot-stage-path';
 import { annotateSource, summarise } from '../core/diagram-claims';
 import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
+// Shared formatters — the app's ONE P&L sign/class pair and the number/currency/date helpers.
+// ⚠️ `formatPct` takes ALREADY-PERCENT values (it toFixed()s and appends '%', it does NOT ×100),
+// and it always signs positives — right for a delta, wrong for a rate. `winRate` is a FRACTION
+// (0.625), so a rate is rendered as `formatNumber(winRate * 100) + '%'` on purpose.
+import { pnlClass, pnlSign } from '../core/signal-utils.js';
+import { formatCurrency, formatDateTime, formatNumber } from '../core/format-utils.js';
 import styles from './view-strategy.module.css';
 import './strategy-decision-path.css';
 
@@ -74,6 +80,8 @@ import './strategy-decision-path.css';
 // GLOBAL singleton, so a second call on another page silently overrides this one.
 
 const TRADING = '/api/trading/strategies';
+// The realised record (#894). NOT under TRADING's prefix — it is a portfolio-scope endpoint.
+const BOT_PERF = '/api/trading/bot-performance';
 
 /**
  * The four enforcement levels, in the badge's own words.
@@ -244,6 +252,163 @@ function BotLifecyclePath({ bot, rules }) {
   );
 }
 
+/**
+ * BotRecord() — the bot's REALISED record, from `GET /api/trading/bot-performance` (#894).
+ * BEFORE: the configuration headline above says what this bot is ALLOWED to do.
+ * THIS:   what it has ACTUALLY done — every figure carries its `n`, so a record is read with its
+ *         sample size attached rather than as a bare average.
+ * NEXT:   the rating policy turns this record into a risk unlock once a sample floor is met.
+ *
+ * ⚠️ `rating: null` WITH a non-empty `blockers` list is a VALID state, not an error. The policy
+ * (30 samples / 14 days / expectancy distinguishable from its own error bars / a risk condition)
+ * withholds a stamp until the data supports one — the blockers ARE the finding. Never render this
+ * as a failure and never substitute an invented verdict.
+ *
+ * ⚠️ Three states that must never look alike:
+ *   - the read FAILED        -> "could not be read" + the error, explicitly NOT a zero
+ *   - no row for this botId  -> a real zero (nothing attributed)
+ *   - row with n = 0         -> also a real zero, shown with its counts
+ *
+ * ⚠️ `realisedPct` / `maxDrawdownPct` are null BY DESIGN: `trading_strategy` has no
+ * capital-allocation column, so a percentage has no denominator. They are rendered with the
+ * reason, never as `0.0%` — an invented denominator is how a 1780% drawdown shipped on the data
+ * layer (the service's own regression note).
+ */
+function BotRecord({ query, row }) {
+  const r = row?.realised || null;
+
+  return (
+    <section className={styles.group}>
+      <h2 className={styles.groupHead}>
+        Realised record
+        <span className={styles.groupCount}>
+          {r
+            ? `${formatNumber(r.samples)} closes${row.window ? ` · ${row.window.days} day(s)` : ''}`
+            : 'priced, attributed closes'}
+        </span>
+      </h2>
+
+      {query.isLoading && (
+        <p className={styles.sectionNote}>Reading the bot’s close history…</p>
+      )}
+
+      {query.isError && (
+        <div className={styles.errorBox}>
+          <p className={styles.summaryText}>
+            The realised record could not be read ({String(query.error?.message || 'request failed')}).
+            This is a READ failure, not an empty record — the numbers are unknown, not zero.
+          </p>
+        </div>
+      )}
+
+      {!query.isLoading && !query.isError && !r && (
+        <p className={styles.sectionNote}>
+          No closed trades are attributed to this bot yet — a real zero (n = 0), not a failed read.
+          Only closes carrying a broker ticket AND an exit price are counted, so reconciled phantom
+          rows can never inflate this record.
+        </p>
+      )}
+
+      {r && (
+        <>
+          <div className={styles.summary}>
+            <div className={styles.summaryCell}>
+              <span className={styles.summaryValue}>{formatNumber(r.samples)}</span>
+              <span className={styles.summaryLabel}>priced closes (n)</span>
+            </div>
+            <div className={styles.summaryCell}>
+              <span className={`${styles.summaryValue} ${pnlClass(r.expectancy)}`}>
+                {pnlSign(r.expectancy)}
+              </span>
+              <span className={styles.summaryLabel}>
+                expectancy / trade
+                {Number.isFinite(r.standardError) ? ` · SE ${r.standardError.toFixed(2)}` : ''}
+              </span>
+            </div>
+            <div className={styles.summaryCell}>
+              <span className={styles.summaryValue}>
+                {r.payoff == null ? '—' : r.payoff.toFixed(2)}
+              </span>
+              <span className={styles.summaryLabel}>payoff · avg win ÷ |avg loss|</span>
+            </div>
+            <div className={styles.summaryCell}>
+              <span className={styles.summaryValue}>
+                {r.winRate == null ? '—' : `${formatNumber(r.winRate * 100)}%`}
+              </span>
+              <span className={styles.summaryLabel}>
+                {`${r.wins}W · ${r.losses}L${r.breakEven ? ` · ${r.breakEven} scratch` : ''}`}
+              </span>
+            </div>
+            <div className={styles.summaryCell}>
+              <span className={`${styles.summaryValue} ${pnlClass(r.totalPnl)}`}>
+                {pnlSign(r.totalPnl)}
+              </span>
+              <span className={styles.summaryLabel}>total realised</span>
+            </div>
+            <div className={styles.summaryCell}>
+              <span className={styles.summaryValue}>
+                {formatCurrency(row.maxDrawdown, { abs: true })}
+              </span>
+              <span className={styles.summaryLabel}>max decline · absolute</span>
+            </div>
+            <div className={styles.summaryCell}>
+              <span
+                className={`${styles.chip} ${r.reliability === 'noise' ? styles.chipNone : styles.chipLegacy}`}
+              >
+                {r.reliability}
+              </span>
+              <span className={styles.summaryLabel}>evidence grade at this n</span>
+            </div>
+          </div>
+
+          <p className={styles.sectionNote}>
+            {row.window
+              ? `${formatDateTime(row.window.firstClose)} → ${formatDateTime(row.window.lastClose)} · ${row.window.days} day(s) · ${row.window.samplesPerDay}/day`
+              : 'Window unknown.'}
+            {row.attributionKind && row.attributionKind !== 'bot'
+              ? ` · attributed as “${row.attributionKind}”`
+              : ''}
+            {row.strategyIdentity && row.strategyIdentity !== 'one'
+              ? ` · attribution spans ${row.strategyKeys?.length ?? 'several'} variant(s)`
+              : ''}
+          </p>
+
+          <p className={styles.sectionNote}>
+            {row.rating
+              ? `Rating: ${row.rating.isGold === false ? 'measured, not yet gold' : 'GOLD'}`
+              : `Rating withheld — ${(row.blockers || []).length} unmet condition(s):`}
+          </p>
+
+          {!row.rating && (row.blockersDetail?.length || row.blockers?.length) ? (
+            <ul className={styles.blockerList}>
+              {(row.blockersDetail?.length ? row.blockersDetail : row.blockers).map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {(row.realisedPct == null || row.maxDrawdownPct == null) && (
+            <p className={styles.sectionNote}>
+              Return % and drawdown % are null: <code>trading_strategy</code> has no
+              capital-allocation column, so a percentage has no denominator. Absolute figures are
+              served instead — a percentage would be invented.
+            </p>
+          )}
+
+          {(query.data?.caveats || []).map((c, i) => (
+            <p key={i} className={styles.sectionNote}>
+              {c}
+            </p>
+          ))}
+          {query.data?.populationNote && (
+            <p className={styles.sectionNote}>{query.data.populationNote}</p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function ViewStrategyPage() {
   const { strategyId } = useParams();
   const navigate = useNavigate();
@@ -272,6 +437,16 @@ export default function ViewStrategyPage() {
     refetchInterval: 30_000,
   });
 
+  // The realised record (#894). `['bot-performance']` is the SAME key the A/B page's table uses,
+  // so both surfaces share ONE fetch. Slower refetch than the bot row: this is a portfolio-wide
+  // aggregation that only changes when a trade closes.
+  const perfQuery = useQuery({
+    queryKey: ['bot-performance'],
+    queryFn: () => apiGet(BOT_PERF),
+    enabled: Boolean(strategyId),
+    refetchInterval: 60_000,
+  });
+
   const bot = botQuery.data || null;
   const rules = useMemo(
     () => (Array.isArray(rulesQuery.data?.all) ? rulesQuery.data.all : []),
@@ -279,6 +454,13 @@ export default function ViewStrategyPage() {
   );
   const counts = rulesQuery.data?.counts || null;
   const subs = Array.isArray(subsQuery.data) ? subsQuery.data : [];
+
+  // Match by `botId`, NEVER by name — a name match is a guess, and #894's own rule is that an
+  // attribution which cannot be justified is worse than none. A missing row is a real zero
+  // (nothing attributed), which is a DIFFERENT state from a failed read (see BotRecord).
+  const perfRow = Array.isArray(perfQuery.data?.bots)
+    ? perfQuery.data.bots.find((r) => r.botId === strategyId) || null
+    : null;
 
   /**
    * The headline number: rules set to a value that expresses an intention the engine ignores.
@@ -446,6 +628,11 @@ export default function ViewStrategyPage() {
           </p>
         )}
       </section>
+
+      {/* The REALISED record — what the bot has actually done, from its own closed trades.
+          Sits between the configuration headline and the lifecycle picture so the two halves of
+          "is this bot trustworthy" are adjacent: what it is ALLOWED to do, then what it DID. */}
+      <BotRecord query={perfQuery} row={perfRow} />
 
       {/* The lifecycle picture. Sits directly under the headline because it is the index to the
           grouped list below: a stage with nothing declared shows as a bare node here, and the
