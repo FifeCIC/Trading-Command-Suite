@@ -87,6 +87,40 @@ export class Mt5TradingService {
     return this.mt5Connection.getUrl();
   }
 
+  /**
+   * urlFor() — the bridge that actually SERVES this symbol (#972).
+   *
+   * ⚠️ WHY THIS EXISTS. `getUrl()` with no argument returns the PRIMARY broker (`:5000`). Orders
+already route correctly — `placeOrder()` resolves `route!.url` before posting — but every READ
+looked only at the primary. Measured 2026-09-23: `GER40` and `VIX` are routed to broker 3
+(`:5001`, Pepperstone) and **404 on `:5000`**, so the risk estimate received no spec and no
+price, `price` came back `0`, and the per-symbol cap refused:
+   *
+   *   BLOCKED  Cannot evaluate the per-symbol cap for GER40: price is 0 (no quote)   ×35
+   *   BLOCKED  Cannot evaluate the per-symbol cap for VIX:   price is 0 (no quote)   ×23
+   *
+   * The refusal was CORRECT — a cap that cannot be evaluated must not be passed. The fault was
+   * that it was never evaluable, because the wrong broker was asked. GER40 and VIX are precisely
+   * the two routed symbols absent from `:5000`; the other routed symbols exist on both bridges
+   * and never produced this error, which is what identified the cause.
+   *
+   * ⚠️ FAIL-SAFE, falling back to the primary. A read that cannot resolve a route must behave as
+   * it did before rather than throw — an unreadable route is not a reason to lose a price lookup,
+   * and the caller's own `null` handling already turns a failed read into a refusal.
+   *
+   * ⚠️ Not the same rule as `getUrl()`, which THROWS on an explicit unregistered id (#914). Here
+   * the id comes from a ROUTE, and a route to a non-MT5 broker (`0` = the crypto rows) must fall
+   * back rather than throw.
+   */
+  private urlFor(symbol?: string): string {
+    if (!symbol || !this.symbolRouter) return this.bridgeUrl;
+    try {
+      const brokerId = this.symbolRouter.getBrokerId(symbol);
+      if (this.mt5Connection.isBroker(brokerId)) return this.mt5Connection.getUrl(brokerId);
+    } catch { /* unresolved route — fall through to the primary */ }
+    return this.bridgeUrl;
+  }
+
   async getAccount(): Promise<Mt5Account | null> {
     try {
       const res = await fetch(`${this.bridgeUrl}/account`);
@@ -146,7 +180,7 @@ export class Mt5TradingService {
   async getSymbolInfo(symbol: string): Promise<Mt5SymbolInfo | null> {
     try {
       const res = await fetch(
-        `${this.bridgeUrl}/symbol/${encodeURIComponent(symbol)}/info`,
+        `${this.urlFor(symbol)}/symbol/${encodeURIComponent(symbol)}/info`,
         { signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) return null;
@@ -176,7 +210,7 @@ export class Mt5TradingService {
   async getQuote(symbol: string): Promise<{ bid: number; ask: number; last: number } | null> {
     try {
       const res = await fetch(
-        `${this.bridgeUrl}/quote?symbol=${encodeURIComponent(symbol)}`,
+        `${this.urlFor(symbol)}/quote?symbol=${encodeURIComponent(symbol)}`,
         { signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) return null;
@@ -188,7 +222,9 @@ export class Mt5TradingService {
 
   /** Fetch candles from MT5 bridge for on-demand scoring (Sprint 2026-07-04) */
   async getCandles(symbol: string, timeframe = '1h', limit = 200): Promise<Array<{ timestamp: Date; open: number; high: number; low: number; close: number; volume: number }>> {    try {
-      const res = await fetch(`${this.bridgeUrl}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`);
+      // ⚠️ #972 — bars come from the SAME routed broker as the symbol. A GER40 candle fetched from
+      // the primary bridge returns nothing, which reads as "no data" rather than "wrong broker".
+      const res = await fetch(`${this.urlFor(symbol)}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`);
       if (!res.ok) return [];
       const data = await res.json();
       if (!data?.bars?.length) return [];

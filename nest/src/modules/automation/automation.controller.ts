@@ -9,6 +9,10 @@ import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../../database/prisma.service';
 import { RequireAuthGuard } from '../auth/guards/require-auth.guard';
 import { PositionSyncService } from '../providers/position-sync.service';
+// ⚠️ #984 — per-BROKER bridge visibility. `Mt5ConnectionManager` owns the broker→bridge URL map
+// (built from `MT5_ACTIVE_BROKERS`), so it is the only component that can answer "is my second
+// broker reachable, and at which port?". Exported by ProvidersModule (already imported here).
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 // ⚠️ SINGLE SOURCE for the bot strength bar — see validate-threshold-sources.cjs (#839).
 // The literals here were `60`, a pre-rescale value the new scale can never clear.
 import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
@@ -30,6 +34,7 @@ export class AutomationController {
     private readonly auditLog: AuditLogService,
     private readonly positionSync: PositionSyncService,
     private readonly positionTimeStop: PositionTimeStopService,
+    private readonly mt5: Mt5ConnectionManager,
   ) {}
 
   // ── Cache endpoints ─────────────────────────────────
@@ -429,6 +434,30 @@ export class AutomationController {
         suppressed: loopState.decisionLogSuppressed ?? 0,
       },
       brokerStates: loopState.brokerStates,
+      // ── Registered MT5 bridges, ONE ENTRY PER CONFIGURED BROKER (#984) ───────────────────────
+      //
+      // ⚠️ WHY THIS EXISTS: `brokerStates` above is keyed by PROVIDER (the literal `'mt5'`), so with
+      // `MT5_ACTIVE_BROKERS=2,3` the two bridge instances COLLAPSE into a single entry. Measured
+      // 2026-09-23: the endpoint reported one `mt5` bucket with `positionCount: 8` — exactly
+      // MetaQuotes' count — while Pepperstone (`:5001`, broker 3) held none, and nothing in the
+      // response could say whether broker 3 was registered, reachable, or being skipped. A symbol
+      // routed to broker 3 silently stopped dispatching for over an hour and this endpoint could
+      // not show it. That is the fault this field closes.
+      //
+      // `mt5Bridges` (not `brokers`) deliberately: the NAME must not be confusable with
+      // `brokerStates`, which is provider-keyed. Different key space, so a different word.
+      //
+      // ⚠️ BUDGET: each entry costs one `/health` call per bridge, issued CONCURRENTLY
+      // (`getAllBrokerHealths` → `Promise.all`) with a 10s timeout per call. Normal case is tens of
+      // milliseconds; if a bridge is DOWN this endpoint can take up to ~10s. That is accepted for a
+      // diagnostic endpoint — a bridge being down is exactly when the answer matters — but do NOT
+      // add this field to anything on a hot polling path.
+      //
+      // ⚠️ STILL NOT PER-BROKER: the TRADING FLAG. `brokerTradingEnabled` above is provider-keyed
+      // for the same reason as `brokerStates`. So `mt5Bridges[*].reachable: true` means "the bridge
+      // answers", NOT "this broker is allowed to trade". A per-broker trading flag does not exist
+      // in the loop state — do not read the provider flag as proof that a specific broker can trade.
+      mt5Bridges: await this.mt5.getAllBrokerHealths(),
       activeStrategies,
       pendingActions: loopState.pendingActions,
       activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),

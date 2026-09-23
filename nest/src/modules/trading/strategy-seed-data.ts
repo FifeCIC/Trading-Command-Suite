@@ -669,4 +669,153 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     requireDirection: 'BUY',
     style: 'Monitor / Position',
   },
+
+  // ── Tech Giants — US cash session (2026-09-23) ────────────────────────────────────────────
+  //
+  // Owner request: "get the tech giants in a Tech Giants watchlist, registered with a suitable
+  // protocol and bot … ready to trade on installation."
+  //
+  // The pieces, and what each one already had:
+  //   watchlist  `src/data/watchlists/tech-giants.json` — NEW; picked up by seed-watchlists.ts,
+  //              which reads every JSON in that directory. No seeder change was needed.
+  //   protocol   `momentum-stock-v1` — ALREADY existed and already names NVDA in its `idealFor`.
+  //              It was seeded INACTIVE, so nothing could use it. Now declares `active: true`.
+  //   bot        these entries — one per symbol, because `trading_strategy.symbol` is what
+  //              SCOPES ROUTING (`signal-queue.service.ts` only writes a queue entry whose
+  //              symbol matches), so a single bot cannot cover a watchlist.
+  //
+  // ⚠️ ONE BOT PER SYMBOL IS NOT A PREFERENCE — it is how routing works today.
+  //
+  // ⚠️ `baseSize: 1` IS THE BROKER FLOOR, NOT A PREFERENCE. Measured 2026-09-23 against the live
+  // bridge: MetaQuotes reports `volumeMin 1` for NVDA / AAPL / TSLA. Equities are quoted PER
+  // SHARE, not per lot, so the FX-style 0.01 makes the order IMPOSSIBLE — the identical defect
+  // that left the FTSE bot unable to trade (0.01 against a 0.1 floor). Check the floor before
+  // changing this.
+  //
+  // ⚠️ `sessionWindow: ['us']` IS DECLARED, NOT NULL. A NULL window means "ungated", which is
+  // indistinguishable from "nobody filled it in" (#982) — the fault that let three bots named
+  // for a session trade outside it. US cash session = 13:30–20:00 UTC.
+  //
+  // ⚠️ `requireDirection: 'BUY'` — `momentum-stock-v1` is LONG_ONLY. Declared so the
+  // subscription role comes from a statement rather than the protocol-name heuristic.
+  //
+  // ⚠️ `maxHoldHours: 24` — a slot-releasing control (#773). With `maxPositions` effectively one
+  // per bot, an unbounded equity hold blocks the symbol for as long as it lasts.
+  //
+  // ⚠️ NOT VERIFIED YET: whether these symbols can actually be PRICED by the scoring path.
+  // `symbol_route` has no row for any of them, so they resolve to the PRIMARY broker
+  // (MetaQuotes), which is the correct one — it is the only bridge that quotes them. That is
+  // deliberate, not an omission. See the note on ordering in the handoff.
+  {
+    name: 'Tech Giants - NVDA',
+    symbol: 'NVDA',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
+  {
+    name: 'Tech Giants - MSFT',
+    symbol: 'MSFT',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
+  {
+    name: 'Tech Giants - AAPL',
+    symbol: 'AAPL',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
+  {
+    name: 'Tech Giants - AMZN',
+    symbol: 'AMZN',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
+  {
+    name: 'Tech Giants - GOOGL',
+    symbol: 'GOOGL',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
+  {
+    name: 'Tech Giants - TSLA',
+    symbol: 'TSLA',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
+  {
+    name: 'Tech Giants - AVGO',
+    symbol: 'AVGO',
+    protocolId: 'momentum-stock-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '15m',
+    baseSize: 1,
+    slPct: 3.0,
+    tpPct: 6.0,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    requireDirection: 'BUY',
+    maxHoldHours: 24,
+    style: 'Swing / Momentum',
+  },
 ];

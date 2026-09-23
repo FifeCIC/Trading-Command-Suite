@@ -1,0 +1,4 @@
+{
+  "symbols": ["NVDA", "MSFT", "AAPL", "AMZN", "GOOGL", "TSLA", "AVGO"],
+  "protocolId": "momentum-stock-v1"
+}
