@@ -803,3 +803,12 @@ convergence treats an **omitted** key as "no opinion", so only one bot declares 
 Two of my own defects were caught while verifying and are in the close checklist: a caveat that read
 **"22 of 18 bot(s)"**, and a raw `error.message` render the notices ratchet flagged from my PREVIOUS commit.
 
+### 4. ⚠️ `import-bars-alignment.spec.ts` is ORDER-DEPENDENT (2 failures in the full suite, 0 alone)
+
+Measured 2026-09-23 while gating the #894 change: `npm --prefix nest test --silent` → **1 failed suite, 2 failed**
+(`common/utils/import-bars-alignment.spec.ts:216`, the `:45` cohort assertion); the same spec run alone →
+**exit 0**, no failures. It imports only `PrismaService` and `./timeframe`, and it self-gates on `if (!dbUp) return;`,
+so it is reading live state that other specs (or the running app) can move under it. **Do not attribute a failure of
+this spec to your change without re-running it alone** — it is a guard that reports on the environment as much as on
+the code, which is the shape `change-completion.instructions.md` warns about for guards.
+
