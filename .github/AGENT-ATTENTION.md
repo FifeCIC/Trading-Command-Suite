@@ -760,7 +760,46 @@ and the two null-with-reason notes. Commit `1896001`.
 - The API was restarted, not rebuilt (no backend change; `version.ts` reads package.json at
   runtime). `/api/version` now reports 0.71.0. Your in-flight files were NOT staged - my commit
   contained exactly 6 paths.
-- The #894 rating-policy decision (allocation column A / currency adverse-excursion B /
-  expectancy-only C) is STILL OPEN and owner-facing. The UI renders `rating: null` + blockers as
-  the finding, so a future rating needs no UI change.
+- The #894 rating-policy decision was SETTLED on 2026-09-23: the owner chose A
+  (*"What do you recommend? I was thinking A based on the working of the Note"*), agreed with the unit
+  corrected to **currency**. Recorded as row 28 of `docs/SETTLED-DECISIONS.md`. See the next entry.
+
+---
+
+## 2026-09-23 (later) - TCS-Dev - the build gate is RED for two untracked edition files, plus a codegen gotcha
+
+### 1. 🛑 `prebuild` FAILS because of two UNTRACKED files (free-edition work, not mine)
+
+```
+[duplication] ✖ 2 violation(s) of INV-NO-NEW-DUPLICATION:
+  ✖ NEW pair shares 14 block(s): src/core/view-meta.js || src/editions/view-meta.free.js
+  ✖ NEW pair shares 6 block(s):  src/core/nav-tree.js   || src/editions/nav-tree.free.js
+```
+
+Both `src/editions/*.free.js` are **untracked** in the tree at the time of writing, and `src/core/nav-tree.js` still
+shows as modified. So `npm --prefix nest run build` and `build:api` fail for everyone until that pair is either
+**extracted** (`src/core` is the shared source, so a copy under `editions/` is exactly the duplication the guard
+exists to catch) or deliberately **banked** with `node scripts/validate-duplication.cjs --update-allowance`.
+
+I did **not** touch those files and did **not** raise the allowance. To verify my own change I compiled with
+`npx nest build` and launched manually, and said so in the handoff rather than pretending the chain was green.
+
+### 2. ⚠️ A schema column is NOT live until `prisma generate` runs — and `tsc` cannot see it
+
+Adding `trading_strategy.allocationAmount` passed `db:check`, `tsc`, `nest build` and `validate-bot-rules`, then the
+first write failed: `Invalid this.prisma.tradingStrategy.update() invocation` naming `allocationAmount`. The generated
+client predated the field, and **both** Prisma call sites reach the client through `as any`, so the type checker is
+blind to a stale client. `npx prisma generate` fixed it. **If you edit `schema.prisma`, generate before you test —
+`npx nest build` does not.** Filed as **#976**; validators run *before* generate in the chain, so the check cannot
+live with them.
+
+### 3. What landed: #894 (commit `b369096`, v0.72.0) — the rating's risk base
+
+`trading_strategy.allocationAmount` (account currency) is the denominator for `realisedPct` / `maxDrawdownPct`, and
+the drawdown limit is now **applied** (`> 25%` fails — exclusive) instead of declared-but-unapplicable.
+`no_allocation_basis` + `drawdown_unverifiable` are replaced by **`allocation_not_set`**. The column is declared in
+`bot-rules.ts` — keep `enforcement: 'display-only'` if you touch it (it shapes a RATING, not a trade). Seed
+convergence treats an **omitted** key as "no opinion", so only one bot declares a value. UI setter filed as **#977**.
+Two of my own defects were caught while verifying and are in the close checklist: a caveat that read
+**"22 of 18 bot(s)"**, and a raw `error.message` render the notices ratchet flagged from my PREVIOUS commit.
 
