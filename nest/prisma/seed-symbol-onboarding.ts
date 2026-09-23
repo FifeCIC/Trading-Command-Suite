@@ -114,7 +114,7 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
   //     Bars exist; a live quote does not. Anything reading a *quote* for GRML will
   //     see zero, which looks like a price of zero. Read BARS for this symbol.
   //   • `:5001` (Pepperstone) → 404. GRML is MetaQuotes-only. Do not add a :5001 route.
-  { ticker: 'GRML', name: 'Greenland Mines Inc', type: 'stock', exchange: 'MetaQuotes' },
+  { ticker: 'GRML', name: 'Greenland Mines Inc', type: 'stock', /* exchange removed — see below */ },
 ];
 
 // Broker slot → bridge port is declared in MT5_ACTIVE_BROKERS order
@@ -284,7 +284,20 @@ async function main() {
         data: {
           ticker: s.ticker,
           name: s.name,
-          exchange: s.exchange ?? 'Xtrend',
+          // ⚠️ NO DEFAULT. This was `?? 'Xtrend'` and it fabricated a broker name into an
+          // `exchange` column on **29 of the 30** symbols in this file — every entry here leaves
+          // `exchange` unset except one. Measured 2026-09-23: the owner read the Active Symbols
+          // page and asked *"Xtrend shows in exchange for many symbols — this cannot be
+          // correct"*. It was not: there is no Xtrend exchange and no Xtrend adapter.
+          //
+          // These are MT5 CFDs (FX pairs, indices, metals, energy, vol). A CFD has no exchange —
+          // the instrument cannot answer the question. NULL is the honest value, and it renders
+          // as a blank rather than as a confident-looking lie (#959).
+          //
+          // ⚠️ For the real provenance use `GET /api/symbols` → `sources[]`, which reports
+          // `marketbar.provider` — the AUTHORITATIVE field. Do not repopulate this column with a
+          // provider name as a convenience: that is what made it dual-meaning in the first place.
+          exchange: s.exchange ?? null,
           type: s.type,
           // Tags are display/filter metadata. They must not claim a type the symbol is
           // not, or a filter on them silently lies about the instrument.

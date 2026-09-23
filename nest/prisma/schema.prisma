@@ -48,7 +48,17 @@ model Symbol {
   id        String   @id @default(uuid()) @db.VarChar(36)
   ticker    String   @unique @db.VarChar(20)
   name      String   @db.VarChar(200)
-  exchange  String   @db.VarChar(50)
+  // ⚠️ NULLABLE since 2026-09-23 (#959). It was `NOT NULL`, which forced a value to be invented
+  // for a symbol that has no exchange — and the onboarding seeder supplied `'Xtrend'` on 29 rows.
+  // There is no Xtrend exchange and no Xtrend adapter; the label was fabricated. Measured 12% of
+  // rows carried a value that could not be true (`Xtrend`, `MetaQuotes`, `Unknown`).
+  //
+  // ⚠️ This column is a SOURCE LABEL, not an exchange. It holds `Yahoo`, `Trading212`, `Binance`
+  // from the import paths, and `mt5`/`binance` after #959 reconciled it to `marketbar.provider` —
+  // the AUTHORITATIVE field. It is NOT `symbol_route.provider` (a different table; see
+  // docs/symbol-data-coverage-audit.md). Absence is a real state: an MT5 CFD has no exchange, and
+  // a symbol that has never delivered a bar has no source either.
+  exchange  String?  @db.VarChar(50)
   type      String   @db.VarChar(50)
   tags      Json     @default("[]")
   aliases   Json     @default("{}")

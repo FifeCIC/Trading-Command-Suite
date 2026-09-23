@@ -288,7 +288,33 @@ export default function ActiveSymbolsPage() {
           <button
             type="button"
             className="btn"
-            onClick={() => exportCsv(filtered, ['ticker', 'name', 'exchange', 'type'], 'active-symbols.csv')}
+            onClick={() =>
+              // ⚠️ #959 — export the RESOLVED source, not the raw `exchange` column.
+              //
+              // That column is an ORIGIN label (Yahoo / Trading212), and the CSV previously carried
+              // it verbatim — including the fabricated `'Xtrend'` on 29 rows. A CSV is the artefact
+              // most likely to be trusted and least likely to be checked, so the lie was exported
+              // as well as displayed.
+              //
+              // `sourceState` is exported on purpose: "never delivered" and "lookup failed" render
+              // identically as a blank cell, and collapsing them would state a fact about a symbol
+              // that was never established.
+              exportCsv(
+                filtered.map((s) => {
+                  const delivered = (s.sources ?? [])[0];
+                  return {
+                    ...s,
+                    source: delivered?.provider ?? s.exchange ?? '',
+                    sourceBars: delivered?.bars ?? 0,
+                    sourceState: s.sources === null
+                      ? 'unknown (lookup failed)'
+                      : delivered ? 'delivered' : 'never delivered',
+                  };
+                }),
+                ['ticker', 'name', 'source', 'sourceBars', 'sourceState', 'type'],
+                'active-symbols.csv',
+              )
+            }
           >
             Export CSV
           </button>
@@ -342,7 +368,22 @@ export default function ActiveSymbolsPage() {
                 {cols.current && <th onClick={() => toggleSort('currentPnl')} style={{ cursor: 'pointer' }} title="Current holding — broker, unrealised P&L and P&L%. Sorts by P&L; symbols with no open position sort last.">Current{sortIcon('currentPnl')}</th>}
                 {cols.pnl && <th onClick={() => toggleSort('histPnl')} style={{ cursor: 'pointer' }} title="Realised P&L from closed trades. Excludes quarantined rows (exit price never captured). Sample size and reliability are shown in the cell.">Historical P/L{sortIcon('histPnl')}</th>}
                 {cols.protocols && <th>Protocols</th>}
-                {cols.exchange && <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>}
+                {/*
+                  ⚠️ HEADER SAYS "Source", NOT "Exchange" (#959).
+
+                  The column rendered `symbol.exchange`, which held `Yahoo`, `Trading212` and `Binance`
+                  — those are PUBLISHERS, not venues. Calling it "Exchange" invited the reader to
+                  believe `Xtrend` was a venue, which is how the owner found this: 29 rows carried an
+                  onboarding-seeder DEFAULT of `'Xtrend'`, and there is no Xtrend exchange at all.
+
+                  The cell now prefers the AUTHORITATIVE source (`marketbar.provider` — what actually
+                  delivered bars) and falls back to the stored origin label. Both are true statements
+                  about provenance; only the label was false.
+
+                  ⚠️ The column KEY stays `exchange` deliberately — it is persisted in saved column
+                  preferences, so renaming it would silently drop everyone's setting.
+                */}
+                {cols.exchange && <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }} title="Where this symbol came from. Preferred: the provider that actually delivered bars (marketbar.provider). Fallback: the origin label recorded at import. Sort uses the stored label.">Source{sortIcon('exchange')}</th>}
                 {cols.type && <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortIcon('type')}</th>}
                 <th>Status</th>
                 <th>Action</th>
@@ -445,7 +486,38 @@ export default function ActiveSymbolsPage() {
                         <span className="tp-chip tp-chip--neutral">{protoCount}</span>
                       </td>
                     )}
-                    {cols.exchange && <td>{sym.exchange}</td>}
+                    {cols.exchange && (
+                      <td>
+                        {/*
+                          Authoritative first, origin as fallback. See the header comment.
+
+                          ⚠️ THREE STATES, RENDERED DIFFERENTLY ON PURPOSE:
+                            bar count present  -> show the delivering provider (the truth)
+                            `[]` (empty list)  -> no provider has EVER delivered. Fall back to the
+                                                  stored origin label; if there is none either,
+                                                  a plain dash -- not a guess.
+                            `null`            -> the source lookup FAILED. Say "unknown" rather than
+                                                  letting it read as "no source", because those
+                                                  are opposite conclusions (development-philosophy §7).
+                        */}
+                        {(() => {
+                          if (sym.sources === null) {
+                            return <span style={{ color: 'var(--ink-soft)' }} title="The data-source lookup failed. This is NOT the same as 'no source' — the answer is unknown.">unknown</span>;
+                          }
+                          const delivered = (sym.sources ?? [])[0];
+                          if (delivered) {
+                            return (
+                              <span title={`Delivered ${Number(delivered.bars).toLocaleString()} bar(s)${delivered.lastBarAt ? ` · newest ${new Date(delivered.lastBarAt).toLocaleString()}` : ''}`}>
+                                {delivered.provider}
+                              </span>
+                            );
+                          }
+                          return sym.exchange
+                            ? <span title="Origin label recorded at import. No provider has delivered bars for this symbol.">{sym.exchange}</span>
+                            : <span style={{ color: 'var(--ink-soft)' }} title="No origin recorded and no provider has delivered bars.">—</span>;
+                        })()}
+                      </td>
+                    )}
                     {cols.type && <td><span className="tp-chip tp-chip--neutral">{sym.type}</span></td>}
                     <td>
                       <span className={`tp-chip ${isActive ? 'tp-chip--ok' : 'tp-chip--warn'}`}>

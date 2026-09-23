@@ -55,17 +55,93 @@ export class SymbolsService {
           { name: { contains: search.trim() } },
         ];
       }
-      return await this.prisma.symbol.findMany({
-        where,
-        orderBy: [{ ticker: 'asc' }],
-        take: search ? 10 : undefined,
-      });
+      return await this.withDataSources(
+        await this.prisma.symbol.findMany({
+          where,
+          orderBy: [{ ticker: 'asc' }],
+          take: search ? 10 : undefined,
+        }),
+      );
     } catch (error) {
       this.logger.warn(
         `Database unavailable while listing symbols: ${String(error)}`,
       );
       return [];
     }
+  }
+
+  /**
+   * withDataSources() — attach the AUTHORITATIVE provider(s) to each symbol (#959).
+   *
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * ⚠️ WHY THIS EXISTS — the `exchange` column was a FABRICATED label
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * The Active Symbols page had one provenance field: `symbol.exchange`. Measured 2026-09-23,
+   * **31 of 258 rows (12%) carried a value that could not be true**:
+   *   `Xtrend`     29 — an onboarding-seeder DEFAULT (`s.exchange ?? 'Xtrend'`); there is no
+   *                     Xtrend exchange and no Xtrend adapter anywhere in this codebase
+   *   `MetaQuotes`  1 — the MT5 PLATFORM, declared by hand on GRML
+   *   `Unknown`     1 — an adapter fallback (`x || 'Unknown'` appears in five adapters)
+   *
+   * The owner read the page and asked why a non-existent exchange appeared on most rows. That is
+   * the failure mode: a value that LOOKS like an answer is worse than a blank, because nobody
+   * checks it. The seeder now writes NULL, and the 31 rows were reconciled.
+   *
+   * ⚠️ THE COLUMN IS A SOURCE LABEL, NOT AN EXCHANGE. It holds `Yahoo`, `Trading212`, `Binance`
+   * from the import paths — those are providers. So rather than repopulate it with something
+   * pretend-accurate, the real provenance is served BESIDE it.
+   *
+   * ⚠️ `marketbar.provider` is the AUTHORITATIVE field — it records what ACTUALLY DELIVERED bars.
+   * It is **NOT** `symbol_route.provider`, which is a different table describing what is
+   * *configured*. `docs/symbol-data-coverage-audit.md` warns about exactly this confusion:
+   * *"Do not assume `symbol_route.provider` is the same quantity — it is a different table."*
+   *
+   * ⚠️ `[]` AND `null` ARE DIFFERENT AND MUST STAY SO (development-philosophy §7):
+   *   `[]`   — no provider has EVER delivered a bar for this symbol. INFORMATION.
+   *   `null` — the lookup FAILED. The absence of information.
+   *   Collapsing them would state "this symbol has no data source" when the truth is "we could not
+   *   find out", which are opposite conclusions that would render identically.
+   */
+  private async withDataSources<T extends { id: string }>(
+    symbols: T[],
+  ): Promise<Array<T & { sources: Array<{ provider: string; bars: number; lastBarAt: string | null }> | null }>> {
+    type Source = { provider: string; bars: number; lastBarAt: string | null };
+    const decorated = symbols.map((s) => ({ ...s, sources: [] as Source[] | null }));
+    if (symbols.length === 0) return decorated;
+
+    try {
+      // ONE grouped query for the whole page — not one per symbol.
+      const grouped = (await (this.prisma as any).marketBar.groupBy({
+        by: ['symbolId', 'provider'],
+        where: { symbolId: { in: symbols.map((s) => s.id) } },
+        _count: { _all: true },
+        _max: { timestamp: true },
+      })) as any[];
+
+      const byId = new Map<string, Source[]>();
+      for (const g of grouped) {
+        const list = byId.get(g.symbolId) ?? [];
+        list.push({
+          provider: g.provider,
+          bars: g._count?._all ?? 0,
+          lastBarAt: g._max?.timestamp ? new Date(g._max.timestamp).toISOString() : null,
+        });
+        byId.set(g.symbolId, list);
+      }
+      for (const d of decorated) {
+        const list = byId.get(d.id);
+        // Largest delivery first, so the dominant provider leads. An absent entry stays `[]`.
+        if (list) d.sources = list.sort((a, b) => b.bars - a.bars);
+      }
+    } catch (err) {
+      // The symbols are still returned — only the provenance is unknown, and it says so.
+      this.logger.warn(
+        `Data-source lookup failed; symbol list intact but sources set to null (lookup unknown, ` +
+          `NOT "no provider"): ${String(err)}`,
+      );
+      for (const d of decorated) d.sources = null;
+    }
+    return decorated;
   }
 
   /** Find symbols that have a specific tag in their JSON tags array. */
