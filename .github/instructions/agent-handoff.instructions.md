@@ -26,6 +26,25 @@ Write a handoff file to **`G:\My Drive\Project Management\Live\Trading-Command-S
 
 Rule of thumb: if the change would not belong on the Capability Map or Architecture Framework, it does not need a handoff.
 
+## ✅ TWO SHAPES — decide which BEFORE you start writing
+
+> **Added 2026-09-23, from measurement.** 206 handoffs, 1.29 MB, median **6.1 KB (~1,556 tokens)**.
+> **62% land in one 4–8 KB band and none of 86 was under 2 KB** — the signature of a template
+> setting the length rather than the change (`bugfix` averaged 4.6 KB against `feature` at 6.3 KB).
+> The cause was two clauses fighting: *"skip it if it would not belong on the Capability Map"*
+> against *"every handoff MUST carry all three entries"*. **Once you decided to write one, the
+> second clause forced a full write-up — so a borderline bugfix could only skip it or pad it.**
+> This section gives it a third option.
+
+| | **Full handoff** | **Note** |
+|---|---|---|
+| **Use when** | a feature, a trackable capability, or any change to data flow / ordering / a contract / a boundary | a bugfix, small refactor, test or docs change with **no shape change** |
+| **Sections** | frontmatter + What Changed + Files + Diagram + all three page entries | frontmatter + What Changed + Files + **QA Test Entry only** |
+| **Size** | aim under 8 KB | aim under 2 KB |
+
+⚠️ **The QA entry is the one thing a Note keeps**, and it is not ceremony: a bugfix with no
+reproducible procedure is one nobody can re-verify. It is also the cheapest section — two lines.
+
 ## ⚠️ Retention — GitHub Issues are the durable record (2026-09-13)
 
 A handoff is **working material**, not a permanent local document. It carries reasoning from the
@@ -174,7 +193,8 @@ Include the issue number in the slug where one exists so the handoff is greppabl
 > **Added 2026-09-17 at the project owner's request:** *"please ensure handoffs ask for strong
 > documentation, diagrams, architecture, capabilities (those three pages)."*
 
-Every handoff **MUST** carry all three entries, filled properly:
+Every **full handoff** MUST carry all three entries, filled properly. A **Note** carries the QA
+entry only — see the two shapes above.
 
 | Page | Entry | Filled how |
 |---|---|---|
@@ -182,8 +202,8 @@ Every handoff **MUST** carry all three entries, filled properly:
 | **QA Testing page** | `## QA Test Entry` | A **procedure someone else can execute** plus the result that proves it. Not "it works" |
 | **Architecture Framework** | `## Architecture Framework Entry` | The SLICE: what exists, why, key files, endpoint names |
 
-**A handoff missing any of the three is incomplete and the Librarian should reject it rather than
-silently infer the content.**
+**A full handoff missing any of the three is incomplete and the Librarian should reject it rather
+than silently infer the content.** A Note missing its QA entry is equally incomplete.
 
 ## 📊 DIAGRAMS — REQUIRED WHEN DATA FLOW CHANGES
 
@@ -216,8 +236,48 @@ glance. That is the entire argument for the rule.
 
 ## Required Format
 
-Write exactly this structure. Keep prose terse — the Librarian only needs the facts — but do **not**
-omit the three page entries or the diagram:
+Write exactly the structure for the shape you chose. Keep prose terse — the Librarian only needs
+the facts.
+
+### Note — bugfix / small refactor / test / docs, no shape change
+
+```markdown
+---
+date: {ISO date}
+area: {scoring|trading|automation|ui|data|risk|infra|docs}
+type: {bugfix|refactor|test|docs}
+---
+
+## What Changed
+
+{One sentence.}
+
+## Files Changed
+
+- {path/to/file.ts} — {brief reason}
+```
+
+→ then the shared **QA Test Entry** below.
+
+### The QA Test Entry — BOTH shapes end with this
+
+Written **once** here rather than repeated inside each template, because this file is read as a set
+of rules and a block appearing twice reads as corruption. It is the one section both shapes share,
+and it is not ceremony: a change with no reproducible procedure is one nobody can re-verify.
+
+```markdown
+## QA Test Entry
+
+- **area:** {System Area}
+- **name:** {Test name}
+- **procedure:** {How to test — 1-2 sentences, executable by someone else}
+- **expected:** {What result proves it works}
+```
+
+### Full handoff — feature / trackable capability / shape change
+
+Do **not** omit the three page entries, and include the diagram when the change touches flow,
+ordering, a contract or a boundary:
 
 ```markdown
 ---
@@ -253,18 +313,13 @@ flowchart LR
 - **pipeline:** {scoring|trading|both|none}
 - **completion:** {complete|partial}
 
-## QA Test Entry
-
-- **area:** {System Area}
-- **name:** {Test name}
-- **procedure:** {How to test — 1-2 sentences, executable by someone else}
-- **expected:** {What result proves it works}
-
 ## Architecture Framework Entry
 
 - **section:** {status|routes|data|directives|protocols}
 - **summary:** {One-line SLICE entry — what exists, why, key files}
 ```
+
+→ then the shared **QA Test Entry** from above.
 
 ## Example (filled)
 
@@ -337,7 +392,21 @@ version never appeared to increase.)
 
 ## Why This Exists
 
-This file costs ~200-400 tokens to write. If the agent self-updated the QA page, Capability Map, and Architecture Framework directly, it would cost ~60K tokens (reading 3 large files). When 5 features are batched, the Librarian processes all handoffs in one run — 66K tokens vs 325K (78% savings).
+This file costs **~1,556 tokens to write** (measured median: 6.1 KB). If the agent self-updated the
+QA page, Capability Map, and Architecture Framework directly, it would cost ~60K tokens (reading 3
+large files). When 5 features are batched, the Librarian processes all handoffs in one run —
+~74K tokens vs ~325K (**77% savings**).
+
+> ⚠️ **Corrected 2026-09-23.** This section claimed *"~200-400 tokens to write"* (~1 KB) and
+> *"66K vs 325K (78%)"*. The saving still holds — the Librarian's cost is dominated by reading the
+> three large pages, which the handoff size does not change — but **the authoring figure was 4-8×
+> too low**. A rationale that wrong misleads whoever next decides how much to economise, which is
+> exactly what this document is for.
+
+⚠️ **Size cap: if a handoff passes ~8 KB, the reasoning belongs in the ISSUE, not the handoff.**
+The handoff carries what the Librarian needs to write the three pages; the argument, the alternative
+considered and the measurement detail are durable in the closed issue, which is the searchable
+record. Measured 2026-09-23: the two largest were 9.9 KB and 22.8 KB.
 
 ## What the Librarian Does
 
