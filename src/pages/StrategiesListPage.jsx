@@ -223,100 +223,145 @@ export default function StrategiesListPage() {
         <EmptyState icon="🎯" title="No bots" description="Nothing matches this filter." />
       )}
 
-      <div className={styles.grid}>
-        {filtered.map((s, i) => {
-          const isActive = isActiveStrategy(s);
-          const isTrading = isTradingStrategy(s);
-          const isScoring = isScoringStrategy(s);
-          const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
-          const typeColor = isTrading ? 'var(--accent)' : isScoring ? 'var(--risk-watch)' : 'var(--ink-soft)';
-          const posCount = posBySymbol[s.symbol?.toUpperCase()] || 0;
+      {/* ── ONE bot table, plus a sticky sidebar for the selected row ───────────────────────────────
+          This replaced an accordion grid. Selecting a card expanded it IN PLACE, which pushed every
+          row below it down the page and made two bots impossible to compare — the shape the owner
+          asked to change on 2026-09-23 ("lets change this view to a table").
 
-          return (
-            <motion.div
-              key={s.id}
-              className={`${styles.card} ${selectedId === s.id ? styles.cardSelected : ''}`}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
-            >
-              <div className={styles.cardTop}>
-                <span className={styles.cardDot} style={{ background: isActive ? STATUS_COLORS.active : STATUS_COLORS.disabled }} />
-                <strong className={styles.cardName}>{s.name}</strong>
-                <span className={styles.cardType} style={{ background: `color-mix(in srgb, ${typeColor} 12%, transparent)`, color: 'var(--ink)', borderColor: typeColor }}>
-                  {typeLabel}
-                </span>
-              </div>
+          ⚠️ THE CLASSES ARE MODULE-SCOPED ON PURPOSE, and that is the point of this rewrite rather
+          than a copy. The layout being adopted lived in `trading-strategies.css` under a SHARED
+          `ts-*` namespace, which had ALREADY caused two pages to style each other. Measured
+          2026-09-17: `/trading/trading-strategies` `.ts-header` reported `display:flex` and
+          `border-bottom:1px` that its own stylesheet never declares, because `MetaStackCockpitPage`
+          also uses `ts-header`. All page CSS is bundled globally, so a plain class name is a global
+          namespace. A CSS module hashes the name and that collision cannot recur here. */}
+      <div className={styles.split}>
+        <div className={styles.tablePane}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col" className={styles.thRank}>#</th>
+                <th scope="col">Bot</th>
+                <th scope="col">Type</th>
+                <th scope="col">Symbol</th>
+                <th scope="col">Watchlist</th>
+                <th scope="col">Protocols</th>
+                <th scope="col" className={styles.thNum}>Broker</th>
+                <th scope="col" className={styles.thNum}>Score</th>
+                <th scope="col" className={styles.thNum}>Pos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => {
+                const isActive = isActiveStrategy(s);
+                const isTrading = isTradingStrategy(s);
+                const isScoring = isScoringStrategy(s);
+                const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
+                const typeColor = isTrading ? 'var(--accent)' : isScoring ? 'var(--risk-watch)' : 'var(--ink-soft)';
+                const posCount = posBySymbol[s.symbol?.toUpperCase()] || 0;
 
-              <div className={styles.cardMeta}>
-                {s.symbol && <span className={styles.chip}>{s.symbol}</span>}
-                {s.watchlistName && <span className={`${styles.chip} ${styles.chipWl}`}>{s.watchlistName}</span>}
-                <ProtocolChips strategies={s} />
-                <span className={`${styles.chip} ${styles.chipBroker}`}>{s.brokerId || '—'}</span>
-              </div>
-
-              {s.lastComposite != null && (
-                <div className={styles.cardScore}>
-                  <span className={styles.scoreLabel}>Last Score</span>
-                  <span className={styles.scoreValue} style={{ color: s.lastComposite >= 60 ? 'var(--risk-normal)' : s.lastComposite >= 40 ? 'var(--risk-elevated)' : 'var(--risk-critical)' }}>
-                    {s.lastComposite}
-                  </span>
-                </div>
-              )}
-
-              {posCount > 0 && (
-                <div className={styles.cardPositions}>
-                  {posCount} open position{posCount !== 1 ? 's' : ''}
-                </div>
-              )}
-
-              <StrategyFaultBadge strategy={s} className={styles.cardWarning} />
-
-              {/* Expanded detail */}
-              {selectedId === s.id && (
-                <div className={styles.cardDetail}>
-                  {s.description && <p className={styles.detailDesc}>{s.description}</p>}
-                  <div className={styles.detailGrid}>
-                    <span>Mode: <strong>{s.mode || '—'}</strong></span>
-                    <span>Base Size: <strong>{s.baseSize || '—'}</strong></span>
-                    <span>SL: <strong>{s.slPct != null ? s.slPct + '%' : '—'}</strong></span>
-                    <span>TP: <strong>{s.tpPct != null ? s.tpPct + '%' : '—'}</strong></span>
-                    <span>Min Composite: <strong>{s.minComposite || '—'}</strong></span>
-                    <span>Timeframe: <strong>{s.timeframe || '—'}</strong></span>
-                  </div>
-                  <label className={styles.toggleRow} onClick={e => e.stopPropagation()}>
-                    <span>Active</span>
-                    <ToggleSwitch checked={isActive} onChange={() => handleToggle(s.id)} />
-                  </label>
-
-                  {/* Hand-off to the per-bot truth view (#864). The 6 fields above are hand-picked;
-                      that page shows all 29 declared rules with each one's ENFORCEMENT status, so
-                      a field like Max Positions reads here as a working cap when the live cap is
-                      actually the global risk.maxOpenPositions setting. */}
-                  <button
-                    type="button"
-                    className={styles.truthBtn}
-                    onClick={(e) => { e.stopPropagation(); navigate(`/trading/strategy/${s.id}`); }}
+                return (
+                  <tr
+                    key={s.id}
+                    className={`${styles.row} ${selectedId === s.id ? styles.rowSelected : ''}`}
+                    onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
                   >
-                    Truth view — all 29 rules + enforcement →
-                  </button>
+                    <td className={styles.tdRank}>{i + 1}</td>
+                    <td>
+                      <span className={styles.nameCell}>
+                        <span className={styles.cardDot} style={{ background: isActive ? STATUS_COLORS.active : STATUS_COLORS.disabled }} />
+                        <strong>{s.name}</strong>
+                      </span>
+                      <StrategyFaultBadge strategy={s} className={styles.rowFault} />
+                    </td>
+                    <td>
+                      <span className={styles.cardType} style={{ background: `color-mix(in srgb, ${typeColor} 12%, transparent)`, color: 'var(--ink)', borderColor: typeColor }}>
+                        {typeLabel}
+                      </span>
+                    </td>
+                    <td><strong>{s.symbol || '—'}</strong></td>
+                    <td className={styles.tdMuted}>{s.watchlistName || '—'}</td>
+                    <td><ProtocolChips strategies={s} /></td>
+                    <td className={styles.tdNum}>{s.brokerId || '—'}</td>
+                    <td className={styles.tdNum}>
+                      {s.lastComposite != null ? (
+                        <span style={{ color: s.lastComposite >= 60 ? 'var(--risk-normal)' : s.lastComposite >= 40 ? 'var(--risk-elevated)' : 'var(--risk-critical)', fontWeight: 700 }}>
+                          {s.lastComposite}
+                        </span>
+                      ) : (
+                        <span className={styles.tdMuted}>—</span>
+                      )}
+                    </td>
+                    <td className={styles.tdNum}>
+                      {posCount > 0 ? <span className={styles.posChip}>{posCount}</span> : <span className={styles.tdMuted}>—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-                  {/* #985 §2 — the SECOND path to the SAME view, settings only. The owner's words:
-                      "it could even be on the same view, but with a url parameter that displays a
-                      simplified version for focusing on the configuration of the bot." A url
-                      parameter rather than a second page, so there is ONE view to keep correct. */}
-                  <button
-                    type="button"
-                    className={styles.truthBtn}
-                    onClick={(e) => { e.stopPropagation(); navigate(`/trading/strategy/${s.id}?view=settings`); }}
-                  >
-                    Settings only — configuration without the audit →
-                  </button>
+        {/* The sidebar. It shows the SELECTED bot and nothing else, so the table never moves when a
+            selection changes — which is the whole reason for the two-pane shape.
+            `aria-live="polite"` announces the change: a screen-reader user gets no visual cue that
+            clicking a row altered something else on the page. */}
+        <aside className={styles.sidebar} aria-live="polite">
+          {(() => {
+            const sel = strategies.find((s) => s.id === selectedId) || null;
+            if (!sel) {
+              return (
+                <p className={styles.sidebarEmpty}>
+                  Select a bot to see its configuration, and to open the full rules view.
+                </p>
+              );
+            }
+            return (
+              <>
+                <h2 className={styles.sidebarTitle}>{sel.name}</h2>
+                <p className={styles.sidebarSub}>
+                  {sel.symbol || 'no symbol'} · {sel.mode || 'mode unset'} · broker {sel.brokerId || '—'}
+                </p>
+                {sel.description && <p className={styles.detailDesc}>{sel.description}</p>}
+
+                <div className={styles.detailGrid}>
+                  <span>Base Size: <strong>{sel.baseSize || '—'}</strong></span>
+                  <span>SL: <strong>{sel.slPct != null ? sel.slPct + '%' : '—'}</strong></span>
+                  <span>TP: <strong>{sel.tpPct != null ? sel.tpPct + '%' : '—'}</strong></span>
+                  <span>Min Composite: <strong>{sel.minComposite || '—'}</strong></span>
+                  <span>Timeframe: <strong>{sel.timeframe || '—'}</strong></span>
+                  <span>Last Score: <strong>{sel.lastComposite ?? '—'}</strong></span>
                 </div>
-              )}
-            </motion.div>
-          );
-        })}
+
+                <label className={styles.toggleRow}>
+                  <span>Active</span>
+                  <ToggleSwitch checked={isActiveStrategy(sel)} onChange={() => handleToggle(sel.id)} />
+                </label>
+
+                {/* Hand-off to the per-bot truth view (#864). The fields above are hand-picked; that
+                    page shows all 29 declared rules with each one's ENFORCEMENT status, so a field
+                    like Max Positions reads here as a working cap when the live cap is actually the
+                    global risk.maxOpenPositions setting. */}
+                <button
+                  type="button"
+                  className={styles.truthBtn}
+                  onClick={() => navigate(`/trading/strategy/${sel.id}`)}
+                >
+                  Truth view — all 29 rules + enforcement →
+                </button>
+
+                {/* #985 §2 — the SECOND path to the SAME view, settings only. */}
+                <button
+                  type="button"
+                  className={styles.truthBtn}
+                  onClick={() => navigate(`/trading/strategy/${sel.id}?view=settings`)}
+                >
+                  Settings only — configuration without the audit →
+                </button>
+              </>
+            );
+          })()}
+        </aside>
       </div>
     </div>
   );

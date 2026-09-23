@@ -167,5 +167,103 @@
 /* Clickable chips + score links on monitor cards - keep chip look */
 .chipLink { cursor: pointer; text-decoration: none; }
 .chipLink:hover { text-decoration: none; filter: brightness(1.4); }
+
+/* ── Table + sticky sidebar (2026-09-23) ──────────────────────────────────────────────────────
+   Adopted from the layout that lived in `trading-strategies.css`, but MODULE-SCOPED rather than
+   copied into the global `ts-*` namespace. See the note in StrategiesListPage.jsx for the measured
+   collision that namespace caused.
+
+   `align-items: start` is load-bearing: without it the sidebar stretches to the grid row height
+   and `position: sticky` has no room to travel, so it scrolls away with the table. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.tablePane { overflow-x: auto; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.table th {
+  padding: var(--space-sm);
+  text-align: left;
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table tbody tr { background: var(--panel); }
+
+.row { cursor: pointer; }
+.row:hover { background: var(--line); }
+
+/* The selected row is marked by OUTLINE + BORDER, not by colour alone — the same reason the mode
+   switch on the bot page carries `aria-pressed`. */
+.rowSelected {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.thRank { width: 2.5rem; }
+.tdRank { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.thNum, .tdNum { text-align: right; font-variant-numeric: tabular-nums; }
+.tdMuted { color: var(--ink-soft); }
+.nameCell { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.rowFault { display: inline-flex; margin-left: var(--space-xs); }
+
+/* `color-mix`, not `--accent-soft`: that token is a translucent BACKGROUND tint and using it as a
+   text colour renders washed out in light mode. */
+.posChip {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 1px var(--space-xs);
+  font-weight: var(--weight-bold);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.sidebar {
+  position: sticky;
+  top: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: calc(100vh - 7rem);
+  overflow-y: auto;
+  padding: var(--space-md);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.sidebarTitle { margin: 0; font-size: var(--text-md); font-weight: var(--weight-bold); }
+.sidebarSub { margin: 0; font-size: var(--text-xs); color: var(--ink-soft); }
+.sidebarEmpty { margin: 0; font-size: var(--text-sm); color: var(--ink-soft); }
+
+/* Below the width where the sidebar fits, the two panes STACK rather than squeezing the table into
+   an unreadable column. The sidebar stops being sticky when stacked — sticky inside a short
+   single-column flow just makes it jump. */
+@media (max-width: 1100px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: static; max-height: none; }
+}
 a.scoreValue { text-decoration: none; }
 a.scoreValue:hover { text-decoration: underline; }
