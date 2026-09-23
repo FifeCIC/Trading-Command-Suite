@@ -27,9 +27,11 @@
  * nothing, and that is the single easiest way to get a plausible wrong number here.
  *
  * KNOWN LIMITATION, stated not implied: pctOfPeak remains a percentage of peak P&L for the cases
- * where it is bounded. The stronger form — no percentage until a genuine capital base (equity)
- * exists — is tracked on #954/#894 (`no_allocation_basis`); it would make the risk breaker's ratio
- * branch unreachable, which is its own decision and must not happen silently.
+ * where it is bounded. ⚠️ As of 2026-09-23 a per-bot capital base DOES exist — #894 added
+ * `trading_strategy.allocationAmount` — so percentage-of-peak is no longer the only available
+ * form: the RATING expresses drawdown against the allocation (bot-performance.service.ts), and
+ * only the risk breaker's ratio branch still uses pctOfPeak. Prefer the allocation as a
+ * denominator in any new consumer; do not read this function's ratio as a capital percentage.
  */
 
 export interface DrawdownDetail {

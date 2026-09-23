@@ -2305,6 +2305,16 @@ export class TradingStrategyService {
      * that silently dropped it would re-create the strand.
      */
     maxHoldHours?: number | null;
+    /**
+     * Capital the bot may use, in account currency (#894) — the base for the rating's
+     * risk condition. null/absent = NOT SET.
+     *
+     * ⚠️ ABSENT MEANS "NO OPINION", so a bot that omits it keeps whatever an operator set.
+     * That is deliberate: a rating base is an operator decision, and a seeder that stamped a
+     * default over it would rate every bot against a number nobody chose. Only bots that
+     * declare a value here are converged.
+     */
+    allocationAmount?: number | null;
   }>, opts?: {
     /**
      * Report drift but write NOTHING (#833 acceptance criterion 3).
@@ -2394,6 +2404,11 @@ export class TradingStrategyService {
         }
         if ((s as any).maxHoldHours !== undefined) {
           desired.maxHoldHours = (s as any).maxHoldHours;
+        }
+        // #894 — the rating's risk base. Optional like the rest: a bot that does not declare it
+        // keeps its current value, and there is no default to fall back to on purpose.
+        if ((s as any).allocationAmount !== undefined) {
+          desired.allocationAmount = (s as any).allocationAmount;
         }
         if ((s as any).active !== undefined) {
           desired.active = (s as any).active;
@@ -2513,6 +2528,9 @@ export class TradingStrategyService {
             // defaulted here so every existing entry keeps its behaviour.
             maxHoldHours: (s as any).maxHoldHours ?? null,
             active: (s as any).active ?? true,
+            // #894 — NULL, never a substituted default: "no allocation set" is a state the
+            // rating reports by name (`allocation_not_set`) rather than a number to invent.
+            allocationAmount: (s as any).allocationAmount ?? null,
           },
         });
 

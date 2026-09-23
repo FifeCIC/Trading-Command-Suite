@@ -351,10 +351,11 @@ describe('BotPerformanceService — the rating gate', () => {
    * cannot exceed 100%, so the figure was self-evidently wrong — but it was produced without
    * error, which is the whole defect class this repo keeps re-finding.
    *
-   * `maxDrawdownPct` must therefore stay null and `maxDrawdown` must stay ABSOLUTE. If someone
-   * reintroduces a percentage here, this test is what stops it reaching an operator.
+   * The fix was never "ban percentages" — it was "get a real capital base". That base is now
+   * `trading_strategy.allocationAmount` (#894), so this test pins the NO-BASE case (null with a
+   * stated reason) and the next test pins the arithmetic of the real one.
    */
-  it('never reports a drawdown percentage — only an absolute decline', async () => {
+  it('serves no drawdown percentage when there is no base, and the absolute decline always', async () => {
     const prisma = mockPrisma({
       bots: [bot('b1', 'B')],
       aggregates: [agg('b1', { trades: 2, wins: 1, losses: 1, avgWin: 0.1, avgLoss: -1.68, totalPnl: -1.58 })],
@@ -372,9 +373,31 @@ describe('BotPerformanceService — the rating gate', () => {
     //   after trade 2: cum = -1.58, peak = +0.10, decline 1.68  <= peak-to-trough
     // (Not 1.78 — declining from a peak is not the same as summing the moves.)
     expect(out.bots[0].maxDrawdown).toBe(1.68);
-    // The defect produced 1780; nothing here may ever be expressed as a percentage.
     expect(out.bots[0].maxDrawdown).toBeLessThan(100);
-    expect(out.bots[0].blockers).toContain('drawdown_unverifiable');
+    // Null means NO BASE, and the reason is named rather than implied.
+    expect(out.bots[0].blockers).toContain('allocation_not_set');
+  });
+
+  /**
+   * The 1780% defect was an INVENTED DENOMINATOR. Re-run the identical series with the real base
+   * and the figure must land at 1.68% of 100 — small, bounded, and checkable by hand. If someone
+   * ever reintroduces peak-P&L as the divisor, this fails with 1780 in the message.
+   */
+  it('a drawdown percentage is of the ALLOCATION, never of peak P&L (the 1780% defect)', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B', { allocationAmount: 100 })],
+      aggregates: [agg('b1', { trades: 2, wins: 1, losses: 1, avgWin: 0.1, avgLoss: -1.68, totalPnl: -1.58 })],
+      series: [
+        { attribution: 'b1', pnl: 0.1, closedAt: new Date('2026-01-01T00:00:00Z') },
+        { attribution: 'b1', pnl: -1.68, closedAt: new Date('2026-01-02T00:00:00Z') },
+      ],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    // decline 1.68 of a 100 allocation = 1.68%  (the defect gave 1780)
+    expect(out.bots[0].maxDrawdownPct).toBe(1.68);
+    expect(out.bots[0].maxDrawdown).toBe(1.68);
+    expect(out.bots[0].blockers).not.toContain('allocation_not_set');
   });
 
   it('computes drawdown over the ordered series, not the aggregate', async () => {
@@ -433,7 +456,7 @@ describe('BotPerformanceService — the rating gate', () => {
     });
     const out = await svc(prisma).getBotPerformance();
 
-    expect(out.bots[0].blockers).toContain('drawdown_unverifiable');
+    expect(out.bots[0].blockers).toContain('allocation_not_set');
     expect(out.bots[0].rating).toBeNull();
   });
 
@@ -452,12 +475,13 @@ describe('BotPerformanceService — the rating gate', () => {
   });
 
   /**
-   * ⚠️ THE SCHEMA-GAP ASSERTION. `trading_strategy` has no capital-allocation column, so
-   * realised return as a PERCENTAGE has no denominator. The service must say so rather than
-   * invent one. If an allocation field is ever added, this test SHOULD fail — and that is the
-   * signal to implement the percentage properly rather than delete the test.
+   * ⚠️ THIS TEST USED TO ASSERT A SCHEMA GAP, and its own note said: *"If an allocation field is
+   * ever added, this test SHOULD fail — and that is the signal to implement the percentage
+   * properly rather than delete the test."* The field was added 2026-09-23 (#894), so the signal
+   * fired and the test below is the implemented form: an allocation that is ABSENT still serves
+   * null WITH its reason, because "no base" must never render as 0.0%.
    */
-  it('serves realisedPct as an explicit null with a stated reason', async () => {
+  it('serves realisedPct as an explicit null with a stated reason when no allocation is set', async () => {
     const prisma = mockPrisma({
       bots: [bot('b1', 'B')],
       aggregates: [agg('b1', { trades: 50, wins: 30, losses: 20, totalPnl: 400 })],
@@ -465,8 +489,74 @@ describe('BotPerformanceService — the rating gate', () => {
     const out = await svc(prisma).getBotPerformance();
 
     expect(out.bots[0].realisedPct).toBeNull();
-    expect(out.bots[0].blockers).toContain('no_allocation_basis');
-    expect(out.bots[0].blockersDetail.join(' ')).toMatch(/allocation/i);
+    expect(out.bots[0].blockers).toContain('allocation_not_set');
+    expect(out.bots[0].blockersDetail.join(' ')).toMatch(/No capital allocation is set/);
+    // Served, not hidden — the absolute figure is still there to reason with.
+    expect(out.bots[0].realised.totalPnl).toBe(400);
+  });
+
+  /** The positive case: with a base, BOTH percentages are computed and #894's shape is complete. */
+  it('expresses return and drawdown as a percentage of the allocation when one is set', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B', { allocationAmount: 200 })],
+      aggregates: [agg('b1', { trades: 50, wins: 30, losses: 20, totalPnl: 40 })],
+      series: [{ attribution: 'b1', pnl: 40, closedAt: new Date('2026-01-01T00:00:00Z') }],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    // 40 of a 200 allowance = +20%; the series never falls below its peak, so decline 0%.
+    expect(out.bots[0].realisedPct).toBe(20);
+    expect(out.bots[0].maxDrawdownPct).toBe(0);
+    expect(out.bots[0].declared.allocationAmount).toBe(200);
+    expect(out.bots[0].blockers).not.toContain('allocation_not_set');
+  });
+
+  /**
+   * ⚠️ THE LIMIT IS EXCLUSIVE, and the boundary is asserted in BOTH directions. "<= 25%" and
+   * "< 25%" differ by exactly the bot that sits on the line; leaving that to whoever reads the
+   * operator is how a boundary becomes accidental.
+   */
+  it('applies the drawdown limit when an allocation is set — exclusive at the boundary', async () => {
+    const withDecline = (decline: number) =>
+      mockPrisma({
+        bots: [bot('b1', 'B', { allocationAmount: 100 })],
+        aggregates: [agg('b1', {
+          trades: 100, wins: 60, losses: 40, totalPnl: 500,
+          firstClose: '2026-01-01T00:00:00Z', lastClose: '2026-09-01T00:00:00Z',
+        })],
+        series: [
+          { attribution: 'b1', pnl: 500, closedAt: new Date('2026-01-01T00:00:00Z') },
+          { attribution: 'b1', pnl: -decline, closedAt: new Date('2026-06-01T00:00:00Z') },
+        ],
+      });
+
+    const over = await svc(withDecline(30)).getBotPerformance(); // 30 of 100 = 30% > 25%
+    expect(over.bots[0].maxDrawdownPct).toBe(30);
+    expect(over.bots[0].blockers).toContain('drawdown_exceeds_limit');
+    expect(over.bots[0].blockersDetail.join(' ')).toMatch(/EXCLUSIVE/);
+    expect(over.bots[0].rating).toBeNull();
+
+    const onTheLine = await svc(withDecline(25)).getBotPerformance(); // exactly 25% PASSES
+    expect(onTheLine.bots[0].maxDrawdownPct).toBe(25);
+    expect(onTheLine.bots[0].blockers).not.toContain('drawdown_exceeds_limit');
+  });
+
+  /**
+   * A typo is not the same as "unset", and it must not divide into anything. 0 or a negative is
+   * named as the offending VALUE, so an operator can see the typo rather than hunt for a field
+   * that looks unset in the UI.
+   */
+  it('treats a zero allocation as NOT SET rather than dividing by it', async () => {
+    const prisma = mockPrisma({
+      bots: [bot('b1', 'B', { allocationAmount: 0 })],
+      aggregates: [agg('b1', { trades: 10, totalPnl: 5 })],
+    });
+    const out = await svc(prisma).getBotPerformance();
+
+    expect(out.bots[0].realisedPct).toBeNull();
+    expect(out.bots[0].maxDrawdownPct).toBeNull();
+    expect(out.bots[0].blockers).toContain('allocation_not_set');
+    expect(out.bots[0].blockersDetail.join(' ')).toMatch(/allocation is 0/);
   });
 
   it('honours an overridden policy so the rating stays recomputable', async () => {

@@ -118,6 +118,14 @@ export interface BotDeclared {
   active: boolean | null;
   /** Position size cap. Used ONLY to describe the bot — it is not a capital allocation. */
   maxPositions: number | null;
+  /**
+   * Capital this bot may use (account currency, #894). The denominator for `realisedPct` and
+   * `maxDrawdownPct`. NULL = not set, which is a NAMED state (`allocation_not_set`), not a zero.
+   *
+   * ⚠️ Not a position-size cap: `maxPositions` is a COUNT and this is MONEY. Conflating the two
+   * units is a defect this repo has already had once — put the unit in the name, not in a label.
+   */
+  allocationAmount: number | null;
 }
 
 /** A bot's realised record — what it DID. Every figure is over `samples` real trades. */
@@ -172,9 +180,14 @@ export type RatingBlocker =
   | 'window_too_short'
   | 'expectancy_indistinguishable_from_zero'
   | 'expectancy_negative'
-  | 'drawdown_unverifiable'
   | 'drawdown_exceeds_limit'
-  | 'no_allocation_basis';
+  // ⚠️ `drawdown_unverifiable` and `no_allocation_basis` were REPLACED by this name (2026-09-23,
+  // #894). Both were consequences of ONE missing input — no capital base — so both were
+  // unsatisfiable for every row and neither could ever tell two bots apart. `trading_strategy`
+  // `allocationAmount` now exists, so the base is either present or absent: one name for its
+  // absence, and the drawdown condition itself when it is present. A missing base still BLOCKS
+  // the rating rather than skipping the condition.
+  | 'allocation_not_set';
 
 /**
  * How many derived strategies this bot's record belongs to.
@@ -237,27 +250,27 @@ export interface BotPerformance {
    */
   maxDrawdown: number;
   /**
-   * ⚠️ ALWAYS NULL TODAY — same cause as `realisedPct`: no capital base exists.
+   * Realised peak-to-trough decline as a PERCENTAGE OF THE BOT'S ALLOCATION (#894).
    *
-   * A drawdown PERCENTAGE needs an allocation to divide by, and `trading_strategy` has no such
-   * column. Expressed as an explicit null WITH the `drawdown_unverifiable` blocker so a
-   * consumer renders "cannot be measured" rather than `0%` — which would read as a clean record
-   * and is the most dangerous possible misreading of this particular field.
+   * ⚠️ NULL MEANS "NO BASE", NEVER "NO DRAWDOWN". A consumer must render the reason, not `0%`:
+   * zero reads as a clean record and is the most dangerous possible misreading of this field. A
+   * null here always travels with the `allocation_not_set` blocker.
+   *
+   * ⚠️ The denominator is the ALLOCATION — money the bot was allowed to use — and NOT the peak of
+   * its own P&L series. That denominator produced **1780%** for a real bot (peak +0.10 falling to
+   * -1.68), which is arithmetically impossible for a drawdown and is the regression this service
+   * carries a test for. The allocation is positive by construction, so a percentage here cannot
+   * be larger than the bot's loss relative to its allowance.
    */
-  maxDrawdownPct: null;
+  maxDrawdownPct: number | null;
   /**
-   * ⚠️ ALWAYS NULL TODAY, and the reason is a schema gap, not a bug — see `blockers`.
+   * Realised P&L as a PERCENTAGE OF THE BOT'S ALLOCATION — #894's "vs the bot's own starting
+   * allocation". NULL when no allocation is set; see `maxDrawdownPct` for why null is not 0.
    *
-   * #894's proposed shape includes `realisedPct` ("vs the bot's own starting allocation").
-   * `trading_strategy` has NO capital-allocation column — the only field with "allocation" in
-   * the name is `hotStockAllocation`, which is a separate % for hot-stock trades. There is
-   * therefore no denominator, and inventing one (account equity? notional? baseSize x price?)
-   * would put a confident-looking percentage on the page with nothing behind it.
-   *
-   * Served as an explicit null WITH the `no_allocation_basis` blocker so the UI can say
-   * "no allocation configured" rather than render 0.0%.
+   * ⚠️ No conversion is attempted: `allocationAmount` is in the same unit as `trade.pnl`. A
+   * currency CODE would duplicate `fund_allocation.currency` and drift against it.
    */
-  realisedPct: null;
+  realisedPct: number | null;
   /** 'gold' only when every gate passes AND every blocker is cleared. */
   rating: 'gold' | null;
   /** Why the rating is absent. Empty ONLY when `rating` is set. */
@@ -438,6 +451,8 @@ export class BotPerformanceService {
           id: true, name: true, protocolId: true, shortProtocolId: true, symbol: true,
           brokerId: true, timeframe: true, slPct: true, tpPct: true, mode: true,
           active: true, maxPositions: true,
+          // #894 — the rating's risk condition has no base without this.
+          allocationAmount: true,
         },
       }), lookupFailures);
     const botById = new Map<string, any>(bots.map((b: any) => [b.id, b]));
@@ -612,6 +627,9 @@ export class BotPerformanceService {
             mode: bot.mode ?? null,
             active: bot.active ?? null,
             maxPositions: bot.maxPositions ?? null,
+            // ⚠️ `?? null` and never `?? 0`: an unset allocation is ABSENT, and a 0 would divide
+            // into the return/drawdown percentages on the way to a risk decision.
+            allocationAmount: bot.allocationAmount ?? null,
           }
         : null;
 
@@ -706,32 +724,47 @@ export class BotPerformanceService {
         );
       }
 
-      // ⚠️ THE DRAWDOWN CONDITION CANNOT BE EVALUATED, AND SAYING SO IS THE CORRECT BEHAVIOUR.
+      // ── THE RISK CONDITION (#894) ─────────────────────────────────────────────────────────────
       //
       // #894: *"A drawdown condition is not optional. A rating that only counts wins and profit
       // awards the gold stamp to exactly the bots that took the most risk to get there."*
       //
-      // The policy wants a PERCENTAGE limit. A percentage needs a capital base, and
-      // `trading_strategy` has none — so the check is impossible, not passed. Reporting the
-      // absence as 'drawdown_unverifiable' is the only honest option: silently omitting it
-      // would let a bot be rated with no risk condition applied at all, which is precisely the
-      // outcome that sentence warns against.
-      blockers.push('drawdown_unverifiable');
-      blockersDetail.push(
-        `Realised drawdown is ${maxDrawdown} in account currency. A drawdown PERCENTAGE needs a ` +
-        'capital base and no per-bot allocation exists, so the required risk condition cannot be ' +
-        'applied. The absolute figure is served; `drawdown_exceeds_limit` becomes checkable the ' +
-        'day an allocation column exists.',
-      );
-      // ⚠️ NO BOT CAN CLEAR THIS TODAY. There is no per-bot allocation column, so `realisedPct`
-      // cannot be expressed, so the "X% of allocation" leg of #894's shape is unsatisfiable.
-      // Stated as a blocker rather than quietly dropped: the day an allocation field exists,
-      // this line is what tells the implementer the gate has a missing input.
-      blockers.push('no_allocation_basis');
-      blockersDetail.push(
-        '`trading_strategy` has no capital-allocation column, so a realised return ' +
-        'PERCENTAGE has no denominator. Absolute P&L is served instead; a percentage would be invented.',
-      );
+      // The condition is `maxDrawdownPct <= policy.maxDrawdownPct`, where the base is the bot's
+      // ALLOCATION — money it was allowed to use — never the peak of its own P&L series.
+      //
+      // ⚠️ An absent (or non-positive) allocation does NOT skip the condition — it blocks the
+      // rating with `allocation_not_set`. Skipping would award a stamp with no risk condition
+      // evaluated at all, which is the precise outcome that sentence warns against.
+      const allocation = bot?.allocationAmount ?? null;
+      const allocationUsable = allocation !== null && Number(allocation) > 0;
+      const realisedPct = allocationUsable
+        ? Number(((totalPnl / (allocation as number)) * 100).toFixed(2))
+        : null;
+      const maxDrawdownPct = allocationUsable
+        ? Number(((maxDrawdown / (allocation as number)) * 100).toFixed(2))
+        : null;
+
+      if (!allocationUsable) {
+        blockers.push('allocation_not_set');
+        blockersDetail.push(
+          allocation === null
+            ? 'No capital allocation is set for this bot, so its required risk condition cannot ' +
+              'be applied: both a return PERCENTAGE and a drawdown PERCENTAGE need an amount to ' +
+              `divide by. Absolute figures are served instead (realised ${totalPnl}, decline ` +
+              `${maxDrawdown}, account currency). Setting the allocation makes both computable.`
+            : `The allocation is ${allocation}, which is not a usable base (a POSITIVE amount in ` +
+              'account currency is required). It is treated as not set, so the risk condition ' +
+              'cannot be applied and the rating is withheld. Absolute figures are served ' +
+              `(realised ${totalPnl}, decline ${maxDrawdown}, account currency).`,
+        );
+      } else if (maxDrawdownPct !== null && maxDrawdownPct > policy.maxDrawdownPct) {
+        blockers.push('drawdown_exceeds_limit');
+        blockersDetail.push(
+          `Realised drawdown is ${maxDrawdownPct}% of this bot's ${allocation} allocation — over ` +
+          `the ${policy.maxDrawdownPct}% limit. ⚠️ The comparison is EXCLUSIVE: exactly ` +
+          `${policy.maxDrawdownPct}% passes, anything above it fails.`,
+        );
+      }
 
       return {
         botId: bot?.id ?? null,
@@ -766,8 +799,8 @@ export class BotPerformanceService {
         strategyKeys,
         strategyIdentity,
         maxDrawdown,
-        maxDrawdownPct: null,
-        realisedPct: null,
+        maxDrawdownPct,
+        realisedPct,
         rating: blockers.length === 0 ? 'gold' : null,
         blockers,
         blockersDetail,
@@ -834,11 +867,25 @@ export class BotPerformanceService {
       );
     }
 
-    if (bots.some((b) => b.blockers.includes('no_allocation_basis'))) {
+    // ⚠️ The COUNT is stated, not merely the existence of the state: "3 of 18" tells an operator
+    // the rating is one field away from being reachable, while "some bots" tells them nothing.
+    //
+    // ⚠️ BOTH sides of that fraction must count the SAME population. The first version filtered
+    // the numerator on the blocker alone and the denominator on `attributionKind === 'bot'`, so
+    // the live output read **"22 of 18 bot(s)"** — a count larger than its own denominator, which
+    // is the "plausible number, no error" class this file exists to avoid. The numerator is now
+    // restricted to bot rows too.
+    const botRows = bots.filter((b) => b.attributionKind === 'bot').length;
+    const noAllocation = bots.filter(
+      (b) => b.attributionKind === 'bot' && b.blockers.includes('allocation_not_set'),
+    ).length;
+    if (noAllocation > 0) {
       out.push(
-        '⚠️ No bot can be fully rated while `trading_strategy` has no capital-allocation column: ' +
-        'a return PERCENTAGE has no denominator. Absolute P&L and sample counts are the honest ' +
-        'figures available today.',
+        `⚠️ ${noAllocation} of ${botRows} bot(s) have NO capital allocation set, so their required ` +
+        'risk condition cannot be applied and they cannot be rated (`allocation_not_set`) — a ' +
+        'drawdown PERCENTAGE has no denominator without one. The allocation lives on ' +
+        '`trading_strategy.allocationAmount`, in account currency; setting it makes both the ' +
+        'return and drawdown percentages computable. There is deliberately no default.',
       );
     }
 
@@ -852,13 +899,14 @@ export class BotPerformanceService {
 
     out.push(
       `Policy in force: >= ${policy.minSamples} realised trades over >= ${policy.minWindowDays} ` +
-      `days, expectancy distinguishable from zero, realised drawdown <= ${policy.maxDrawdownPct}%. ` +
-      '⚠️ The drawdown limit is DECLARED BUT NOT APPLICABLE — see `drawdown_unverifiable`.',
+      `days, expectancy distinguishable from zero, realised drawdown <= ${policy.maxDrawdownPct}% ` +
+      "OF THE BOT'S ALLOCATION. ⚠️ The drawdown limit is applied only to a bot that has an " +
+      'allocation set; for any other bot it is reported as `allocation_not_set` rather than skipped.',
     );
     out.push(
-      'Drawdown is served as an ABSOLUTE decline in account currency. A percentage needs a ' +
-      'capital base and no per-bot allocation exists — so the required risk condition cannot be ' +
-      'applied, and that is reported as a blocker rather than skipped.',
+      'Drawdown is served BOTH ways: as an absolute decline in account currency, and — when an ' +
+      'allocation is set — as a percentage of that allocation. ⚠️ It is never a percentage of the ' +
+      "bot's own peak P&L: that denominator produced 1780% for a live bot.",
     );
     out.push(
       'Drawdown covers REALISED P&L only. A bot holding an open loser right now will show a ' +

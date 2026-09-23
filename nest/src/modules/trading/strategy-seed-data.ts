@@ -60,6 +60,15 @@ export interface SeedTradingStrategy {
    */
   maxHoldHours?: number | null;
   /**
+   * Capital the bot may use, in account currency (#894) — the base for the rating's risk
+   * condition (drawdown <= 25% OF THIS), and the denominator for its realised return.
+   *
+   * ⚠️ Optional, and ABSENT MEANS "NOT SET", which is a real state: a bot with no allocation
+   * cannot be rated, and that is reported as `allocation_not_set` rather than papered over with
+   * a default. Only ONE entry below declares a value — see its comment for why.
+   */
+  allocationAmount?: number | null;
+  /**
    * Whether the bot starts ENABLED. Absent = true (the historical behaviour).
    *
    * Exists so a deliberately-inactive bot (the `hourly-3dir-v1` A/B control) can be
@@ -549,6 +558,21 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
+    // ── THE ONE SEEDED ALLOCATION (#894) ────────────────────────────────────────────────────────
+    //
+    // This bot carries an allocation so the rating's risk condition is EXERCISABLE end to end:
+    // with no value set anywhere, `realisedPct`/`maxDrawdownPct` are null for every bot and the
+    // mechanism cannot be demonstrated or measured against live data at all.
+    //
+    // Why THIS bot: it holds the largest realised sample in the table (8 priced closes when this
+    // was written), so it is the first that could ever reach the policy floor.
+    //
+    // Why 100: the same order as this bot's own numbers — `baseSize` 0.01 with a 1% stop, and
+    // realised closes of roughly ±1 — so the percentages it produces are readable rather than
+    // absurd. It is NOT a recommendation for any other bot: every other entry OMITS this key
+    // deliberately, which the seeder treats as "no opinion", so an operator's value is never
+    // overwritten. A guessed default applied to all 27 bots would rate them against a fiction.
+    allocationAmount: 100,
   },
   {
     name: 'GBPCAD Macro Session',

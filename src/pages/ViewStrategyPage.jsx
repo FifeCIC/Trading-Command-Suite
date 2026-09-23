@@ -73,6 +73,12 @@ import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
 // (0.625), so a rate is rendered as `formatNumber(winRate * 100) + '%'` on purpose.
 import { pnlClass, pnlSign } from '../core/signal-utils.js';
 import { formatCurrency, formatDateTime, formatNumber } from '../core/format-utils.js';
+// ⚠️ A failure is rendered through the notice REGISTRY, never as `error.message`. The raw form was
+// caught by the notices ratchet (`scripts/validate-notices.cjs`) and it was right to catch it: raw
+// wording discards the status, the code and the remedy, which is how a broker's bare sentence once
+// reached a user (#824). `TCS-SYS-002` carries the status and the action; the wording is preserved
+// inside the notice as its cause.
+import { noticeFromError } from '../core/notices/from-error.js';
 import styles from './view-strategy.module.css';
 import './strategy-decision-path.css';
 
@@ -294,9 +300,10 @@ function BotRecord({ query, row }) {
 
       {query.isError && (
         <div className={styles.errorBox}>
+          {/* The registry's own message (status + identity) rather than the thrown wording. */}
           <p className={styles.summaryText}>
-            The realised record could not be read ({String(query.error?.message || 'request failed')}).
-            This is a READ failure, not an empty record — the numbers are unknown, not zero.
+            {noticeFromError(query.error, 'TCS-SYS-002').message} The realised record could not be
+            read. This is a READ failure, not an empty record — the numbers are unknown, not zero.
           </p>
         </div>
       )}
@@ -345,12 +352,42 @@ function BotRecord({ query, row }) {
               </span>
               <span className={styles.summaryLabel}>total realised</span>
             </div>
+            {/* The BASE for the two percentages beside it (#894). "not set" is a STATE, not a
+                zero: with no allowance the rating's required risk condition cannot be applied at
+                all, which is why the panel names it rather than printing a figure. */}
+            <div className={styles.summaryCell}>
+              <span className={styles.summaryValue}>
+                {row.declared?.allocationAmount == null
+                  ? 'not set'
+                  : formatCurrency(row.declared.allocationAmount)}
+              </span>
+              <span className={styles.summaryLabel}>capital allowance · base for %</span>
+            </div>
             <div className={styles.summaryCell}>
               <span className={styles.summaryValue}>
                 {formatCurrency(row.maxDrawdown, { abs: true })}
               </span>
               <span className={styles.summaryLabel}>max decline · absolute</span>
             </div>
+            {/* ⚠️ Rendered ONLY when an allowance exists. A null here means "no base", and a
+                `0%` would read as a clean risk record — the most dangerous misreading of a
+                drawdown figure. The null case is explained in the notes below instead. */}
+            {row.realisedPct != null && (
+              <div className={styles.summaryCell}>
+                <span className={`${styles.summaryValue} ${pnlClass(row.realisedPct)}`}>
+                  {formatNumber(row.realisedPct)}%
+                </span>
+                <span className={styles.summaryLabel}>return · % of allowance</span>
+              </div>
+            )}
+            {row.maxDrawdownPct != null && (
+              <div className={styles.summaryCell}>
+                <span className={styles.summaryValue}>
+                  {formatNumber(row.maxDrawdownPct)}%
+                </span>
+                <span className={styles.summaryLabel}>decline · % of allowance</span>
+              </div>
+            )}
             <div className={styles.summaryCell}>
               <span
                 className={`${styles.chip} ${r.reliability === 'noise' ? styles.chipNone : styles.chipLegacy}`}
@@ -389,9 +426,10 @@ function BotRecord({ query, row }) {
 
           {(row.realisedPct == null || row.maxDrawdownPct == null) && (
             <p className={styles.sectionNote}>
-              Return % and drawdown % are null: <code>trading_strategy</code> has no
-              capital-allocation column, so a percentage has no denominator. Absolute figures are
-              served instead — a percentage would be invented.
+              Return % and drawdown % are not shown: this bot has no capital allowance set, so a
+              percentage has no denominator — <code>trading_strategy.allocationAmount</code> is the
+              base, and the rating's required risk condition cannot be applied without it. Absolute
+              figures are served instead. A percentage would be invented.
             </p>
           )}
 

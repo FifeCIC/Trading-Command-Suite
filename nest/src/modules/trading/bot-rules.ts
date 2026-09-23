@@ -205,6 +205,19 @@ export const BOT_RULES: BotRule[] = [
     summary: 'Per-bot realised-loss stop for the trading day.',
     caveat: '⚠️ Legacy path only. The live stop is the GLOBAL `risk.maxDailyLoss` setting.' },
 
+  { field: 'allocationAmount', label: 'Capital allocation', stage: 'risk', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/trading/bot-performance.service.ts',
+    summary:
+      'Capital this bot may use, in account currency — the denominator for its realised return ' +
+      'and drawdown percentages.',
+    caveat:
+      '⚠️ It cannot shape a trade today. It is read by the RATING gate (#894), which is what makes ' +
+      'a drawdown PERCENTAGE computable at all: with no allocation the risk condition has no base ' +
+      'and the rating is withheld as `allocation_not_set`. There is deliberately NO default — a ' +
+      'guessed amount would rate every bot against a fiction. The rating is meant to UNLOCK risk ' +
+      '(#773); when it does, this becomes trade-shaping and that change needs an A/B copy, not an ' +
+      'edit (maths-change-requires-ab).' },
+
   // ── exit ───────────────────────────────────────────────────────────────────────────────────
   { field: 'slPct', label: 'Stop loss %', stage: 'exit', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',

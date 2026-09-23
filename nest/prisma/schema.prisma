@@ -1381,6 +1381,18 @@ model TradingStrategy {
   maxPositions  Int      @default(1)
   maxPyramidTiers Int    @default(1)  // #344 pyramid averaging — moved from ScoringStrategy (2026-08-27)
   maxDailyLoss  Float?
+  // Capital this bot may use, in account CURRENCY — the same unit as `trade.pnl`. No conversion
+  // is attempted, and a currency CODE column would duplicate `fund_allocation.currency` and drift.
+  //
+  // #894: the denominator for `realisedPct` and `maxDrawdownPct`. The rating's required risk
+  // condition (drawdown <= 25%) is unverifiable without it, so a NULL here is reported as the
+  // `allocation_not_set` blocker rather than skipped — a rating with no risk condition applied is
+  // exactly what #894 forbids. NULL = not set, deliberately: there is no honest default.
+  //
+  // ⚠️ This is NOT a position-size cap. `maxPositions` is a COUNT of positions and this is MONEY.
+  // Declared in `bot-rules.ts` (enforcement `display-only` — it shapes a RATING, not a trade) and
+  // policed by `nest/scripts/validate-bot-rules.cjs`, which fails the build on an undeclared column.
+  allocationAmount Float?
   cooldownMinutes Int    @default(5)
   // Session gate (2026-09-10) — declared market session(s) this bot may act in.
   // JSON array or comma list of tags: 'asian' | 'london' | 'us' (see session-window.ts).
