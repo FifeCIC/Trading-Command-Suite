@@ -279,9 +279,13 @@ model BacktestTrade {
   exitReason String   @db.VarChar(20)  // TP | SL | EOD
   entryScore Float
   signal     String   @db.VarChar(20)
-  // Execution realism (#50)
-  positionSize Float?  // number of shares/contracts
-  commission   Float?  // commission deducted ($)
+    // #R14 — the levels the exit was measured against. Nullable because runs made before this
+    // recorded only the REASON, and "not recorded" must never render as 0.
+    stopLoss   Float?
+    takeProfit Float?
+    // Execution realism (#50)
+    positionSize Float?  // number of shares/contracts
+    commission   Float?  // commission deducted ($)
 
   run    BacktestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 

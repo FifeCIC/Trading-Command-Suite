@@ -46,6 +46,9 @@ export interface BacktestReplay {
     exitTime: string;
     exitPrice: number;
     exitReason: string;
+    /** #R14 — null means this run predates level recording. Null is "not recorded", never 0. */
+    stopLoss: number | null;
+    takeProfit: number | null;
     positionSize: number | null;
     pnl: number;
     pnlPct: number;
@@ -111,6 +114,13 @@ export interface TradeRecord {
   pnl: number;
   pnlPct: number;
   exitReason: 'TP' | 'SL' | 'EOD';  // Take-profit, Stop-loss, End-of-data
+  /**
+   * #R14 — the stop and target the trade was measured against, or `undefined` for a run made
+   * before they were recorded. Optional on purpose: an old run has no levels and must be able to
+   * say **"not recorded"** rather than 0.
+   */
+  stopLoss?: number;
+  takeProfit?: number;
   score: number;
   signal: string;
   protocolId: string;
@@ -611,6 +621,11 @@ export class BacktestService {
             pnl: Number(netPnl.toFixed(4)),
             pnlPct: Number(pnlPct.toFixed(2)),
             exitReason,
+            // ⚠️ #R14 — RECORD THE LEVELS WITH THE TRADE. The engine already used them to decide
+            // the exit and then threw the numbers away, so every run could say that a stop was hit
+            // but not where it was — "not recorded" wearing the face of "not applicable".
+            stopLoss: Number(slPrice.toFixed(5)),
+            takeProfit: Number(tpPrice.toFixed(5)),
             score: Number(score.toFixed(1)),
             signal,
             protocolId: protocolId ?? 'unscoped',
@@ -749,6 +764,9 @@ export class BacktestService {
               entryPrice: t.entryPrice,
               exitDate: new Date(t.exitDate),
               exitPrice: t.exitPrice,
+                // #R14 — null when the engine set no level (an unbracketed run), never 0.
+                stopLoss: t.stopLoss ?? null,
+                takeProfit: t.takeProfit ?? null,
               direction: t.direction,
               pnl: t.pnl,
               pnlPct: t.pnlPct,
@@ -822,6 +840,9 @@ export class BacktestService {
     const bars = barsTruncated ? barsRaw.slice(0, REPLAY_BAR_CAP) : barsRaw;
 
     const caveats: string[] = [];
+    // #R14 — levels are captured per trade from this change onward, so a run either has them or
+    // predates them. Say WHICH: a blanket "not recorded" became false the moment this shipped.
+    const levelsRecorded = trades.some((t) => t.stopLoss !== null || t.takeProfit !== null);
     const allAtMidnight = trades.length > 0 && trades.every((t) => isMidnight(t.entryDate));
     if (allAtMidnight) {
       caveats.push(
@@ -849,8 +870,10 @@ export class BacktestService {
         'trade was taken, and the tick grid is the bars. A decision that took no trade has no row.',
     );
     caveats.push(
-      'Stop and target levels are not persisted per trade, so only the exit REASON is shown ' +
-        '(SL / TP / EOD). Not recorded is not the same as zero.',
+      levelsRecorded
+        ? 'Stop and target levels ARE recorded for this run, so the replay draws them.'
+        : 'Stop and target levels are NOT recorded for this run (it predates their capture), so ' +
+          'only the exit REASON is shown (SL / TP / EOD). Not recorded is not the same as zero.',
     );
     caveats.push(
       'pnlPct is stored rounded to 2 decimal places, so a very small loss can read as 0.00 — ' +
@@ -884,6 +907,8 @@ export class BacktestService {
         exitTime: t.exitDate.toISOString(),
         exitPrice: Number(t.exitPrice),
         exitReason: t.exitReason,
+        stopLoss: t.stopLoss === null ? null : Number(t.stopLoss),
+        takeProfit: t.takeProfit === null ? null : Number(t.takeProfit),
         positionSize: t.positionSize === null ? null : Number(t.positionSize),
         pnl: Number(t.pnl),
         pnlPct: Number(t.pnlPct),

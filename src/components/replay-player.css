@@ -75,6 +75,10 @@
 .rp-price { fill: none; stroke: var(--ink-soft); stroke-width: 0.4; vector-effect: non-scaling-stroke; }
 .rp-mark-entry { fill: #22c55e; }
 .rp-mark-exit { fill: #ef4444; }
+/* #R14 — the stop/target of the most recent revealed trade, drawn the way chart packages do. */
+.rp-level { stroke-width: 0.35; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.rp-level-sl { stroke: #ef4444; }
+.rp-level-tp { stroke: #22c55e; }
 .rp-axis {
   display: flex;
   justify-content: space-between;

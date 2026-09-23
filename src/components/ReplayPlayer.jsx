@@ -139,6 +139,12 @@ export default function ReplayPlayer({ runId }) {
   const x = (i) => (bars.length <= 1 ? 0 : (i / (bars.length - 1)) * 100);
   const y = (c) => 100 - ((c - minClose) / range) * 100;
   const revealed = built.events.slice(0, cursor);
+  // #R14 — the most recent trade that HAS levels: its stop/target get drawn as guide lines, which
+  // is how a reader of any charting package expects to see them. Old runs have no levels, so this
+  // is simply absent rather than drawn at zero.
+  const lastWithLevels = [...revealed]
+    .reverse()
+    .find((e) => e.kind === 'entry' && e.trade.stopLoss !== null && e.trade.stopLoss !== undefined);
 
   return (
     <section className="rp-panel" aria-label="Backtest replay">
@@ -277,6 +283,16 @@ export default function ReplayPlayer({ runId }) {
               className="rp-price"
               points={bars.map((b, i) => `${x(i)},${y(b.close)}`).join(' ')}
             />
+            {lastWithLevels && (
+              <>
+                <line className="rp-level rp-level-sl" x1="0" x2="100"
+                      y1={y(lastWithLevels.trade.stopLoss)} y2={y(lastWithLevels.trade.stopLoss)} />
+                {lastWithLevels.trade.takeProfit !== null && lastWithLevels.trade.takeProfit !== undefined && (
+                  <line className="rp-level rp-level-tp" x1="0" x2="100"
+                        y1={y(lastWithLevels.trade.takeProfit)} y2={y(lastWithLevels.trade.takeProfit)} />
+                )}
+              </>
+            )}
             {revealed.map((e, i) => {
               const bi = barIndexFor(bars, e.kind === 'entry' ? e.trade.entryTime : e.trade.exitTime);
               if (bi === null) return null;
@@ -314,6 +330,8 @@ export default function ReplayPlayer({ runId }) {
               <th>Score</th>
               <th>Signal</th>
               <th>Entry</th>
+              <th>SL</th>
+              <th>TP</th>
               <th>Exit</th>
               <th>Exit</th>
               <th>Size</th>
@@ -324,7 +342,7 @@ export default function ReplayPlayer({ runId }) {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="rp-hint">
+                <td colSpan={12} className="rp-hint">
                   {total === 0
                     ? 'No trade events to replay for this filter.'
                     : 'Press Play (or Step) to reveal the run.'}
@@ -338,6 +356,12 @@ export default function ReplayPlayer({ runId }) {
                   <td className="rp-mono">{trade.entryScore === null ? '—' : trade.entryScore}</td>
                   <td>{trade.signal}</td>
                   <td className="rp-mono">{trade.entryPrice}</td>
+                  <td className="rp-mono">
+                    {trade.stopLoss === null || trade.stopLoss === undefined ? '—' : trade.stopLoss}
+                  </td>
+                  <td className="rp-mono">
+                    {trade.takeProfit === null || trade.takeProfit === undefined ? '—' : trade.takeProfit}
+                  </td>
                   <td className="rp-mono">{exited ? trade.exitPrice : '—'}</td>
                   <td>
                     {exited ? (
