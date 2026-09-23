@@ -43,6 +43,33 @@ asserts the file set matches — because a command reporting success is a claim,
 file list is the evidence, and (3) reports anything staged that it is deliberately skipping. A named
 file with **no changes is refused**: naming a file claims it changed.
 
+### Commit cadence — one commit per logical change, and do not narrate it
+
+**Measured 2026-09-23:** 41 commits in 4.5 hours across all agents; **18** of them ≤2 minutes
+apart; 10 touched a single file. That is not agent indiscipline — three instruction files each
+*independently* force a commit (`change-completion` says land the code; the handoff rule said bump
+the version on every handoff; the close checklist says comment). One logical change therefore
+emitted six artefacts.
+
+**The cost is the owner's attention, and attention is the safety net here.** Every rule in this repo
+rests on a human reading the evidence. A commit every 3 minutes trains that reader to skim — and a
+skimmed evidence trail is the same as no evidence trail. **Noise is a correctness problem here, not
+a cosmetic one.**
+
+| Do | Don't |
+|---|---|
+| **One commit per logical change** — the files that only make sense together | A commit per file edit, or per green test |
+| Commit when the change is **complete and gated** | Commit intermediate states "to be safe" |
+| Commit **quietly** — report the SHA once, in the final summary | Echo `git log` / `git status` / `git show` output into the transcript |
+| Let the **closed issue + handoff** carry the narrative | Re-tell the same change in commit body, chat, and handoff |
+
+**The one exception — commit early if another agent must build on it.** A file that does not compile
+makes the shared build red for everyone and blocks a concurrent agent from starting. If you commit
+mid-change for that reason, say so in one line.
+
+⚠️ **Committing often is not the same as committing safely.** A commit is evidence that the change
+was gated — it is not a substitute for gating it (`change-completion.instructions.md`).
+
 ⚠️ **Never `git commit -a`, and never a bare `git commit`.** If you do commit by mistake and it is
 not pushed, `git reset --mixed HEAD~1` unwinds it — that moves HEAD and the index and touches no
 working file. If it **is** pushed, leave it and report instead of rewriting shared history.
