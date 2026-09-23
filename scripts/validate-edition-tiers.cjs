@@ -102,13 +102,15 @@ if (problems.length) {
   process.exit(1);
 }
 
-// Freshness — delegate to the generator so there is ONE manifest builder, not two.
-try {
-  execFileSync(process.execPath, [path.join(__dirname, 'generate-free-manifest.cjs'), '--check'], {
-    stdio: 'inherit',
-  });
-} catch {
-  process.exit(1);
+// Freshness — delegate to the generators so there is ONE builder per artefact, not two.
+// The MAP generator matters as much as the manifest: a stale filtered copy would ship premium ids,
+// labels, source paths and API endpoints in the free bundle.
+for (const gen of ['generate-free-manifest.cjs', 'generate-free-map.cjs']) {
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, gen), '--check'], { stdio: 'inherit' });
+  } catch {
+    process.exit(1);
+  }
 }
 
 console.log(`validate-edition-tiers: OK — ${total} entries classified (${free} free, ${total - free} premium).`);

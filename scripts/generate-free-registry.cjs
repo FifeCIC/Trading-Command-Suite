@@ -21,23 +21,10 @@
  */
 const path = require('node:path');
 const fs = require('node:fs');
+const { ROOT, loadViewMeta } = require('./lib/view-meta-loader.cjs');
 
-const ROOT = path.join(__dirname, '..');
 const REGISTRY_FILE = path.join(ROOT, 'src', 'core', 'view-routes.jsx');
-const META_FILE = path.join(ROOT, 'src', 'core', 'view-meta.js');
 const OUT_FILE = path.join(ROOT, 'src', 'editions', 'view-routes.free.jsx');
-
-/** Evaluate the shipped ESM view-meta source and return VIEW_META. */
-function loadViewMeta() {
-  const src = fs
-    .readFileSync(META_FILE, 'utf8')
-    .replace(/^export\s+default\s+/gm, 'const __defaultExport = ')
-    .replace(/^export\s+/gm, '');
-  const factory = new Function(`${src}\nreturn { VIEW_META };`);
-  const { VIEW_META } = factory();
-  if (!VIEW_META || typeof VIEW_META !== 'object') throw new Error('VIEW_META not exposed');
-  return VIEW_META;
-}
 
 /** Normalise a relative import specifier (from src/core/) to a repo-relative posix path. */
 function normaliseFromCore(spec) {

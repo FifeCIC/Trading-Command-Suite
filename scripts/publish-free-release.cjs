@@ -53,7 +53,9 @@ run('node_modules\\.bin\\vite.cmd', ['build', '--mode', 'free', '--outDir', 'dis
 // ── 2. guards — never publish on a failed guard ─────────────────────────────────────────────
 console.log('[2/4] running edition guards...');
 run('node', ['scripts/validate-edition-tiers.cjs']);
-run('node', ['scripts/validate-free-bundle.cjs', 'dist-free', '--mode', 'free']);
+// --strict: the release gate. The remaining premium NAME references (§9.14 strip pass) are reported
+// on a normal run; a release must not ship with them, so the gate refuses.
+run('node', ['scripts/validate-free-bundle.cjs', 'dist-free', '--mode', 'free', '--strict']);
 
 // ── 3. package (a map-free build; the guard above ran against the sourcemap build) ─────────
 console.log('[3/4] packaging...');

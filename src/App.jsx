@@ -41,8 +41,7 @@ import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 // Edition (free spinoff): compile-time flag + nav filtering + view-meta key lookup — the free
 // build must never OFFER or RENDER a premium view (FREE-EDITION-PLAN.md §3). In the full build
 // everything here is an identity/compile-time constant.
-import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition, editionAllowsKey } from './core/edition-nav.js';
-import { getViewMetaKey } from './core/view-meta.js';
+import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition } from './core/edition-nav.js';
 import EditionNotice from './components/EditionNotice.jsx';
 
 // Edition-filtered once at module scope: the free build hides premium views from the sidebar.
@@ -474,13 +473,14 @@ function AppShell() {
   }
 
   function renderMainContent() {
-    // ── Edition guard (FREE build only; compile-time false and dropped in the full build) ──
-    // A stale bookmark or typed URL for a premium view must say so plainly rather than hit
-    // the generic "no page" fallback. Unregistered paths (key === null) fall through as before.
-    if (APP_EDITION === 'free') {
-      const key = getViewMetaKey(location.pathname);
-      if (key && !editionAllowsKey(key)) return <EditionNotice />;
-    }
+    // ── Edition guard — the decision now lives in the LAST RESORT branch at the bottom ──
+    // ⚠️ The free build deliberately carries NO list of premium routes (2026-09-23). The first
+    // version of this guard asked `getViewMetaKey()` whether the path was a known premium view —
+    // which meant the free bundle had to ship every premium path to answer the question. Measured:
+    // all 95 premium paths appeared as string literals in dist-free/assets/index-*.js. The map is
+    // the thing the free edition must not contain, so the guard moved to where "no page" is
+    // decided. Deliberate consequence: in the free build a typo'd URL and a premium URL read the
+    // same, because telling them apart is exactly what the removed list was for.
 
     // ── Component map lookup (handles ~90 simple views) ──
     const Component = VIEW_COMPONENTS[secondaryView];
@@ -581,7 +581,15 @@ function AppShell() {
     // reachable only as this fallback, so it was never a page — it was a disguised error state.
     //
     // Reaching here means `VIEW_COMPONENTS[secondaryView]`, `PLUGIN_TAB_SKELETONS[secondaryView]` and
-    // every inline branch above all missed. Say that, and NAME the view so it is reportable.
+    // every inline branch above all missed.
+    //
+    // FREE BUILD: that is the edition guard. Nothing in this bundle knows which routes are premium
+    // (see the note at the top of renderMainContent), so "no page here" IS the not-in-this-edition
+    // answer — say so plainly rather than naming a nav entry, which would be false for a URL the
+    // free edition never had.
+    if (APP_EDITION === 'free') return <EditionNotice />;
+
+    // Say that, and NAME the view so it is reportable.
     return (
       <section className="intro-panel">
         <h2>This view has no page</h2>

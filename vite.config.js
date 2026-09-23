@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
+import path from 'node:path';
+import fs from 'node:fs';
 
 /**
  * Free-edition registry (GENERATED — scripts/generate-free-registry.cjs).
@@ -17,6 +19,44 @@ const freeRegistryPath = fileURLToPath(
 const freeDirectPagesPath = fileURLToPath(
   new URL('./src/editions/direct-pages.free.jsx', import.meta.url),
 );
+
+/** Directory holding every generated free-edition module. */
+const EDITIONS_DIR = fileURLToPath(new URL('./src/editions/', import.meta.url));
+
+/**
+ * Free-edition variants of the APP MAP modules (GENERATED — scripts/generate-free-map.cjs).
+ *
+ * These three files enumerate every view in the app: nav-tree (ids + labels), view-meta (labels +
+ * source file paths + API endpoints) and view-explanations (prose describing the scoring method).
+ * The free edition must not carry the map, so each is swapped for a filtered copy.
+ *
+ * A `resolve.alias` entry CANNOT do this job here. Consumers import these at different depths
+ * (`./core/nav-tree` from src/App.jsx, `../core/nav-tree` from src/components/Breadcrumbs.jsx), so
+ * the match has to be a regex on the specifier TAIL — and this repo builds with rolldown, whose
+ * alias does NOT expand `$1` in `replacement`. The first attempt returned a literal
+ * `$1core/nav-tree.free.js`, and the build failed with "The system cannot find the file specified."
+ * An explicit `resolveId` hook has no such ambiguity: it resolves to an absolute path and can say
+ * loudly when the generated file is missing.
+ *
+ * ⚠️ A miss is not silent: validate-free-bundle.cjs fails if an unfiltered map module reaches the
+ * bundle's module list.
+ */
+const freeMapPlugin = () => ({
+  name: 'free-edition-map',
+  enforce: 'pre',
+  resolveId(source) {
+    const m = /(^|\/)core\/(nav-tree|view-meta|view-explanations)(\.jsx?)?$/.exec(source);
+    if (!m) return null;
+    const target = path.join(EDITIONS_DIR, `${m[2]}.free.js`);
+    if (!fs.existsSync(target)) {
+      this.error(
+        `${m[2]}.free.js is missing — the free build would ship the unfiltered map. ` +
+          `Run: node scripts/generate-free-map.cjs`,
+      );
+    }
+    return target;
+  },
+});
 
 /** Local dev API/intranet proxy — shared by the dev server and `vite preview`. */
 const localProxy = {
@@ -65,6 +105,7 @@ export default defineConfig(({ mode }) => {
     proxy: localProxy,
   },
   plugins: [
+    ...(isFreeEdition ? [freeMapPlugin()] : []),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

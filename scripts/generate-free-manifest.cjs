@@ -18,24 +18,9 @@
  */
 const path = require('node:path');
 const fs = require('node:fs');
+const { ROOT, loadViewMeta } = require('./lib/view-meta-loader.cjs');
 
-const ROOT = path.join(__dirname, '..');
-const META_FILE = path.join(ROOT, 'src', 'core', 'view-meta.js');
 const OUT_FILE = path.join(ROOT, 'src', 'editions', 'free.manifest.js');
-
-/** Evaluate the shipped ESM source and return its real VIEW_META binding. */
-function loadViewMeta() {
-  const src = fs
-    .readFileSync(META_FILE, 'utf8')
-    .replace(/^export\s+default\s+/gm, 'const __defaultExport = ')
-    .replace(/^export\s+/gm, '');
-  const factory = new Function(`${src}\nreturn { VIEW_META };`);
-  const { VIEW_META } = factory();
-  if (!VIEW_META || typeof VIEW_META !== 'object') {
-    throw new Error('view-meta.js did not expose VIEW_META');
-  }
-  return VIEW_META;
-}
 
 function build() {
   const meta = loadViewMeta();
@@ -66,9 +51,12 @@ export const FREE_MANIFEST = {
   freeViews: [
 ${free.map((k) => `    '${k}',`).join('\n')}
   ],
-  premiumViews: [
-${premium.map((k) => `    '${k}',`).join('\n')}
-  ],
+  // ⚠️ The premium PATH LIST is deliberately NOT emitted here (2026-09-23). This file is imported
+  // by src/core/edition-nav.js, which the free bundle contains — so a premium route list here means
+  // the free build ships the map of the app. Measured before the change: all 95 premium paths were
+  // present as string literals in dist-free/assets/index-*.js. Only the COUNT stays; anything that
+  // genuinely needs the premium list derives it from view-meta.js, which never ships.
+  premiumCount: ${premium.length},
 };
 
 /** True when a view-meta key ships in the free edition. */
