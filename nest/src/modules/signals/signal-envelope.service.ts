@@ -3,6 +3,9 @@ import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService, GatedScore, DirectiveBreakout } from '../scoring/protocol-gating.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
+// #R13 — the SAME predicate the dispatch path uses for feasibility, so "closed" means one thing
+// in this system rather than two.
+import { computeMarketStatus } from '../directives/market-status';
 import { ScoreHistoryService } from '../scoring/score-history.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SignalQueueService, RoutableSignal } from './signal-queue.service';
@@ -126,6 +129,13 @@ export interface SignalLadder {
     conflictCount: number;
     severity: 'low' | 'medium' | 'high';
   }>;
+  /**
+   * #R13 — symbols this ladder did NOT score, and why. Present so a skip is a FACT a caller can
+   * render: a symbol that quietly disappears from a ladder is indistinguishable from a broken
+   * feed, and "not scored because the market is closed" must never read the same as "scored and
+   * held" (the visible-as-a-skip rule #956 asks for).
+   */
+  skipped?: Array<{ symbol: string; reason: string }>;
 }
 
 /** Multi-protocol comparison result — one ladder per protocol + comparison matrix */
@@ -194,6 +204,34 @@ export class SignalEnvelopeService {
   /**
    * Build a full signal ladder for a set of symbols.
    */
+  /**
+   * #R13 — the reason the LIVE ladder should not score this symbol, or `null` to go ahead.
+   *
+   * Owner, 2026-09-23: *"if the market is closed there is not meant to be new data for those
+   * symbols so why score?"* — ruled a **development decision**, not a policy or A/B change, so
+   * there is deliberately no copied configuration behind it.
+   *
+   * Measured before the gate (24h): **840 of 5,756** `score` rows were produced while
+   * `marketStatus.open === false`.
+   *
+   * ⚠️ FAILS OPEN. If the status cannot be computed this returns `null` and scoring proceeds: a
+   * status check must never silently stop the pipeline's work, and "we could not tell" is not "the
+   * market is closed" — the exact distinction #732 was fixed for.
+   */
+  private async closedMarketSkipReason(ticker: string): Promise<string | null> {
+    try {
+      const symbolRow = await this.prisma.symbol.findFirst({ where: { ticker } });
+      if (!symbolRow) return null; // unknown symbol — the envelope path reports that properly
+      const bars = await this.marketData.getBars(symbolRow.id, '5m', 20);
+      if (!bars || bars.length === 0) return null; // no bars is a FEED problem, not a closure
+      const status = computeMarketStatus(bars);
+      if (status.open) return null;
+      return `market closed (${status.reason ?? 'no reason reported'})`;
+    } catch {
+      return null; // fail open, deliberately
+    }
+  }
+
   async buildLadder(
     symbols: string[],
     protocolId?: string,
@@ -215,15 +253,36 @@ export class SignalEnvelopeService {
     }
 
     const envelopes: SignalEnvelope[] = [];
+    // #R13 — symbols NOT scored because their market is closed.
+    const skipped: Array<{ symbol: string; reason: string }> = [];
 
     for (const ticker of symbols) {
       try {
+        // ⚠️ #R13 — DO NOT SPEND SCORING ON A CLOSED MARKET.
+        //
+        // The owner's own reasoning, and it is the whole argument: no new data can arrive for a
+        // symbol whose market is shut, so a score taken then can never become a trade. The only
+        // value it has is planning (#640 — which uses the ON-DEMAND path, untouched here) and
+        // diagnostics (#732 — `computeMarketStatus` itself is untouched, so "closed" and "stale
+        // feed" remain distinguishable).
+        const closed = await this.closedMarketSkipReason(ticker);
+        if (closed) {
+          skipped.push({ symbol: ticker, reason: closed });
+          continue;
+        }
         const envelope = await this.buildEnvelope(ticker, protocolId);
         envelopes.push(envelope);
       } catch (err) {
         this.logger.warn(`Skipping ${ticker}: ${(err as Error).message}`);
         envelopes.push(this.emptyEnvelope(ticker));
       }
+    }
+
+    if (skipped.length > 0) {
+      this.logger.log(
+        `#R13 — not scored, market closed: ${skipped.length}/${symbols.length} symbol(s) ` +
+          `(${skipped.slice(0, 5).map((s) => s.symbol).join(', ')}${skipped.length > 5 ? ' +' + (skipped.length - 5) : ''})`,
+      );
     }
 
     // Sort by composite descending
@@ -269,6 +328,7 @@ export class SignalEnvelopeService {
       holdCount,
       envelopes,
       topConflicts,
+      skipped,
     };
   }
 
