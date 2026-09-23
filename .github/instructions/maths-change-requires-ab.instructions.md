@@ -36,7 +36,7 @@ divergence without touching the incumbent.
 | Directive `maxScore` / weights | Gate thresholds (`ENTRY_THRESHOLD`, `STRONG_PCT`) |
 | Style thresholds (`style-thresholds.ts`) | Sizing (`baseSize`, risk %), risk multipliers |
 | SL / TP percentages | Bands, percentiles, rarity cut-offs |
-| A cadence that changes how many scores are produced | Anything read by the scoring, gating, or execution path |
+| A cadence that changes how many scores are produced **for symbols that can trade** | Anything read by the scoring, gating, or execution path |
 
 ## What is NOT the maths — do not slow down for these
 
@@ -77,6 +77,25 @@ counterpart (stranded row)"*, in 5 identical pairs.
 without an A/B — the exact thing the rule forbids.
 
 ---
+
+## ⚠️ NOT the maths — the owner's own correction (2026-09-23)
+
+> *"No this is not a policy change in an active app this is a development decision. We can't duplicate
+> protocols or strategies because I decide something needs changed."*
+
+A change that **stops work which cannot become a trade** — not scoring a symbol while its market is
+closed, not scoring a symbol no bot is subscribed to — is a **development decision**, not an A/B maths
+change. It needs no copied configuration:
+
+- Nothing with performance history is **overwritten** — no weight, threshold, gate or size moves.
+- There is **no alternative to compare** — the alternative is doing work whose output no consumer can act on.
+- Requiring a duplicate here inverts the point: a copy exists to protect a *measurement*, and there is
+  no measurement to protect.
+
+⚠️ **An agent raising "this is a maths change, so I need an A/B copy" for a cadence reduction was wrong
+once already** (2026-09-23, #956). If the change only *removes untradeable work*, decide it and record
+why. **Still maths, unchanged:** anything that alters what a *scored, tradeable* symbol scores, or how
+much it trades.
 
 ## Related
 

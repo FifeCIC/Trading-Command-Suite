@@ -1,27 +1,22 @@
 # 📋 Review Queue — the ONE list every agent adds to
 
-**Purpose:** the things the owner must look at or decide, so no agent has to be asked twice and the
-owner never has to read six handoffs to find what is waiting.
+**Purpose:** the things the owner must look at or decide. **How to answer:** the row id and a word. 🎯
 
-**How to answer:** reply with the row id and a word or two. Prose is not needed. 🎯
+**Rules for agents** (full text: `.github/instructions/agent-environment.instructions.md`)
 
-**Rules for agents — the short version** (full rules: `.github/instructions/agent-environment.instructions.md`)
-
-| | |
+| ✅ A row | 🛑 not a row |
 |---|---|
-| ✅ A row is a **technical fork** the agent cannot settle by measuring, **where a new input belongs**, a **policy number** with no clear winner, or **permission to spend effort** | 🛑 **Not** "do you like this?", **not** layout/colour/wording of an existing surface (the owner reviews the UI and replies), **not** anything with a clear logical advantage (decide it, record it in DONE) |
-| ONE concern per row · question ≤ 40 words · ≤ 3 numbers | If it does not fit → it is an **explainer** (Lab / variant / mockup), not a row |
+| A **technical fork** with no clear winner, **where a new input belongs**, a **policy number**, or **permission to spend effort** | "Do you like this?" · layout/colour/wording of an existing surface (the owner reviews it and replies) · anything with a clear logical advantage (decide it, record it in DONE) |
+
+**Limits:** ONE concern per row · question ≤ 40 words · ≤ 3 numbers · if it doesn't fit it's an
+**explainer** (table / Lab / Old-New variant / mockup), not a row.
 
 ---
 
 ## OPEN
 
-| id | the decision, in one breath | where | question |
-|---|---|---|---|
-| **R12** | Shall I build an **Old/New variant** of the Decision Trail so you can SEE the three ways to handle observations, instead of reading a description? | Decision Trail (`/decisions`) — the page now labels a no-consumer row `OBSERVED` with a "no consumer" chip | Yes / no. (If yes: build it, and tell you when it's ready to look at.) |
-| **R13** | **Gate live scoring when the market is closed** — your reasoning ("no new data for those symbols, so why score?"). ⚠️ By policy a cadence change ships as an **A/B copy**, not an in-place edit | #956 · evidence: 840 of 5,756 score rows in 24h were produced while `marketStatus.open = false` | A/B copy (policy default) 🟢, or stop scoring outright? |
-| **R14** | Persist **SL/TP** per backtest trade (2 nullable columns) so the replay shows the levels, not just `SL`/`TP`/`EOD`. Small, additive, old runs say "not recorded" | #819 · `backtesttrade` · the replay's named gap | Build now? |
-| **R15** | Persist a **per-tick decision stream** per backtest run (new table + engine write path) — the only way "all ticks" and "why did it NOT trade here" become answerable. Large | #819 · would make the sprint's `signal only vs all ticks` filter possible | Build now, or after #606? |
+*(Nothing open.)* The four rows from earlier today were all answered — see below — and the work is
+in flight. New rows appear when there is **something to look at or a genuine fork**, not before.
 
 ---
 
@@ -29,22 +24,24 @@ owner never has to read six handoffs to find what is waiting.
 
 | id | verdict / what happened |
 |---|---|
-| **R1** | **No change requested.** Owner: *"I don't want to be asked such specific UI questions. I prefer to review a UI and I will send the results to agent AI."* → the bot-detail panel stays as built; surfaces are for reviewing, not for asking about. |
-| **R2** | **DECIDED — build it, two places.** (a) Setters **on the bot page** `…/trading/strategy/debe2fa7-8f19-42c6-9656-f2e8d2f3b650` so the input shows *where it belongs in the algorithm*; (b) a **simplified "Truth view"** reached from the existing `Truth view — all 29 rules + enforcement →` button on `/trading/trading-bots` — same view, **URL parameter**, **settings only**, not the full information. ⚠️ Owner note: *this* kind of UI question is welcome (placing a new input). → issue |
-| **R3** | **DECIDED — 5%.** Owner expects ≥10 bots per account, so the allowance baseline is **5%**, plus a **toggle between percentage and a set amount**. |
-| **R4** | **Settled by building it** — #819 Phase 1 shipped (replay: transport, timeline, filters, summary). |
-| **R5** | **DECIDED — import bars, and add a NAMED period.** General market time is fine for some symbols, but the owner wants a **specific from/to window**, **named** and **noted** (their example: *"the 300% surge of Greenland Mining when Trump signed a deal, over just 2 days"*), captured once by a manual tool and **reused across many tests**. → issue |
-| **R6** | **DECIDED — rename.** Owner: *"If you think it will be clearer to rename it then go for it."* → agent's call, done under #980. |
-| **R7** | **APPROVED** — sprint proposal #930 stands. |
-| **R8** | **Tabled into R12.** Owner could not usefully decide from the description: *"complex — this is an example of when I want to see a mockup"*. Two durable rules came out of it: for a COMPLEX UI change, offer a **variant or mockup** instead of a question; and **ask first** — never for every change. |
-| **R9** | **Split, and mostly decided — see R13.** The owner called *"stop scoring symbols that cannot trade"* sensible, asked for far fewer numbers and a better layout, and asked a counter-question I must ANSWER, not ask: **what is "sibling"?** → SPY (the ETF) and US500 (the CFD) are two different instruments with two different contracts; the live bot is on US500, so the SPY score has no consumer — the sibling question was whether a bot on one should count as a consumer for the other. **Decided: no** — a consumer must be subscribed to the same symbol *and* protocol. |
-| **R10** | **DECIDED 🟢 Option A**, one line: give a directive an **optional `portfolio` input**; when it is absent (a backtest, a replay) the directive reports *unmeasurable* rather than voting — so history is never judged with today's book. |
-| **R11** | **Split.** The *"what shape should the replay be"* question is **withdrawn** — the owner reviews the replay and decides. The two **technical** forks survive as **R14** and **R15**. |
+| **R1** | No change requested. *"I don't want to be asked such specific UI questions."* Surfaces are for reviewing, not for asking about. |
+| **R2** | **Build it, two places.** Setters on the bot page (where they belong in the algorithm) + a **settings-only** Truth view under the existing button on `/trading/trading-bots`, as a URL parameter. → **#985** |
+| **R3** | **5%** baseline (≥10 bots per account) + a **%/amount toggle**. → **#985** (stored unit stays currency, decision row 28) |
+| **R4** | Settled by building it — #819 Phase 1 shipped. |
+| **R5** | **Import bars + a NAMED, NOTED period** you reuse ("the 300% surge of Greenland Mining…"). → **#986** |
+| **R6** | **Rename approved** — agent's call, under #980. |
+| **R7** | **APPROVED** — sprint #930 stands (comment posted). |
+| **R8** | Tabled into R12. Two lasting rules: complex UI gets a **variant or mockup**, and **ask first**. |
+| **R9** | Split and closed — see R13. The counter-question was answered, not asked back: **SPY (ETF) and US500 (CFD) are different instruments**, so a bot on one is not a consumer for the other; a consumer must match **symbol *and* protocol**. |
+| **R10** | **Decided 🟢 Option A** — an optional `portfolio` input on a directive; absent ⇒ *unmeasurable*, never a vote. |
+| **R11** | The *shape* question was **withdrawn** (the owner reviews the replay and decides). The two technical forks became R14 and R15. |
+| **R12** | ✅ **YES — build the variant**, *with a notice on it saying it is a variant to be decided on*. |
+| **R13** | 🛑 **NOT a policy/A-B question — a development decision.** Owner: *"We can't duplicate protocols or strategies because I decide something needs changed."* The gate is a plain change. ⚠️ The owner asked for the counter-argument, so it was given: the **only** benefits of scoring a closed market are planning and diagnostics, never trading. Recorded in `maths-change-requires-ab.instructions.md`. |
+| **R14** | ✅ **YES** — show SL/TP levels. *"make it interesting and fun, but also close to what people are used to on other chart software"*, and **compare the packaged charting libraries** so the owner can judge the technology *and* how easy each is for an agent to work with. ⚠️ Only `lightweight-charts` is installed; adding more must be **lazy-loaded** or the bundle-budget guard fails. |
+| **R15** | ✅ **NOW** — per-tick decision stream for backtest runs. |
 
----
+## 📚 Archived
 
-### 📚 Archived
-
-`archive/REVIEW-QUEUE-2026-09-23-batch1.md` — the first batch (R1–R11 as written), kept because the
-rows are the audit of what was raised, and because the batch's *size* is the evidence for the limits
-above.
+- `archive/REVIEW-QUEUE-2026-09-23-batch1.md` — R1–R11 as first written. Kept because the batch's
+  **size** is the measurement that produced the current limits.
+- `archive/REVIEW-QUEUE-2026-09-23-batch2.md` — the 4-row rebuild the owner answered above.
