@@ -532,7 +532,7 @@ function HotPicksWidget() {
           </a>
         ))}
       </div>
-      <button className="dash-hp-link" onClick={() => navigate('/lab/hot-stock-picks')}>
+      <button className="dash-hp-link" onClick={() => navigate('/development/hot-stock-picks')}>
         View all picks{isFetching ? ' ⟳' : ''} →
       </button>
     </>

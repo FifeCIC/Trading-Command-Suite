@@ -212,8 +212,8 @@ export default function MetaStackPipelinePage() {
           </h1>
           <p className="msp-subtitle">
             Every numbered step exists in code today. The two amber steps are configuration, not code: bind a trading strategy, and opt in to trading. Directive-level gates are research (#657/#658).
-            {' '}<a href="/lab/pipeline-graph-lab" style={{ color: 'var(--accent)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Detailed Node View</a>
-            {' '}<a href="/lab/diagrams" style={{ color: 'var(--ink-soft)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Conceptual Diagrams</a>
+            {' '}<a href="/development/pipeline-graph-lab" style={{ color: 'var(--accent)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Detailed Node View</a>
+            {' '}<a href="/development/diagrams" style={{ color: 'var(--ink-soft)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Conceptual Diagrams</a>
           </p>
         </div>
         <label className="msp-toggle">

@@ -1,5 +1,5 @@
 /**
- * diagram-claims.js — machine-checkable assertions about the diagrams on /lab/diagrams.
+ * diagram-claims.js — machine-checkable assertions about the diagrams on /development/diagrams.
  *
  * ── THE PROBLEM ──────────────────────────────────────────────────────────────
  * Every diagram on that page is a set of CLAIMS about the running system: this

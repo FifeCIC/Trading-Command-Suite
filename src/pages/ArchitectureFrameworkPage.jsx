@@ -442,7 +442,7 @@ export default function ArchitectureFrameworkPage() {
                 The API route guard (#867/#914) validates frontend→API calls only, so an internal
                 page <a> is invisible to it — the chip silently did nothing. If this page moves,
                 check view-meta.js, not nav-tree.js. */}
-            <a href="/lab/diagrams" className="architecture-chip-link arch-chip-link">▦ Diagrams</a>
+            <a href="/development/diagrams" className="architecture-chip-link arch-chip-link">▦ Diagrams</a>
             <a href="/status/capability-map" className="architecture-chip-link arch-chip-link">🗺️ Capability Map</a>
           </div>
         </div>

@@ -100,7 +100,7 @@ export default function ThemeLabPage() {
               key={s.id}
               type="button"
               className="tl-lab-card"
-              onClick={() => navigate(`/lab/${s.id}`)}
+              onClick={() => navigate(`/development/${s.id}`)}
             >
               <span className="tl-lab-icon">{s.icon}</span>
               <div className="tl-lab-info">

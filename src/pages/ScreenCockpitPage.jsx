@@ -1,5 +1,5 @@
 /**
- * Screen Assignment — /lab/screen-assignment (epic #746, phase 3)
+ * Screen Assignment — /development/screen-assignment (epic #746, phase 3)
  * ========================================================
  * Assign a widget board to each physical monitor, then open that board on the
  * monitor it belongs to. This is the multi-screen half of the widget epic: the

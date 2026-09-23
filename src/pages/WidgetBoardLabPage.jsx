@@ -1,11 +1,11 @@
 /**
- * Widget Library — /lab/widget-library
+ * Widget Library — /development/widget-library
  * ====================================
  * Prototype surface for the widget-based dashboard (epic #746, phase 1).
  *
  * ⚠️ RENAMED from "Widget Board" / `/lab/widget-board` (2026-09-17). The old name
  * collided with the widget *registry* vocabulary and, worse, with a BOARD label: the
- * board picker on /lab/screen-assignment listed one board as "Widget Board (Lab)" and
+ * board picker on /development/screen-assignment listed one board as "Widget Board (Lab)" and
  * another as "Cockpit", so the picker read as though it were a page chooser. See
  * `src/core/board-defaults.js` — board labels now name the SCREEN, not the page.
  *

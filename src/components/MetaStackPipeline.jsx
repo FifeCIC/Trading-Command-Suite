@@ -14,7 +14,7 @@
  *   showHeader  — set false when embedding inside a page that has its own header
  *                 (keeps the META.Stack selector visible)
  *
- * Route: embedded in /lab/meta-stack-cockpit (was the standalone /lab/metastack-display)
+ * Route: embedded in /development/meta-stack-cockpit (was the standalone /lab/metastack-display)
  * Data:  GET /api/scoring/metastacks/ratings, GET /api/scoring/protocols,
  *        GET /api/watchlists, GET /api/speed/scan
  */

@@ -1,6 +1,6 @@
 /**
  * IdentityMapLabPage — "which column holds which identity?", laid out in one place.
- * Route: /lab/identity-map
+ * Route: /development/identity-map
  *
  * ⚠️ TEMPORARY / DIAGNOSTIC. Reads a SNAPSHOT: src/data/identity-map.json, produced by
  *    `node nest/scripts/identity-map.cjs`. Re-run that script after schema or data changes.

@@ -272,7 +272,7 @@ export const VIEW_META = {
     css: "src/pages/setup-wizard.css",
     api: [],
   },
-  "/lab/mt5-trading": {
+  "/development/mt5-trading": {
     tier: "free",
     review: "pending",
     label: "MT5 Trading (Lab)",

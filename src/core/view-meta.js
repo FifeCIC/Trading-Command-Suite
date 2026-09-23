@@ -447,7 +447,7 @@ const VIEW_META = {
     css: 'src/pages/architecture-framework.css',
     api: ['GET /api/architecture/index', 'GET /api/architecture/section/:key'],
   },
-  '/lab/hot-stock-picks': {
+  '/development/hot-stock-picks': {
     tier: 'premium',
     review: 'pending',
     label: 'Hot Stock Picks',
@@ -455,7 +455,7 @@ const VIEW_META = {
     css: 'src/pages/hot-stock-picks-page.css',
     api: ['GET /api/scoring/ranked'],
   },
-  '/lab/theme-lab': {
+  '/development/theme-lab': {
     tier: 'premium',
     review: 'pending',
     label: 'Theme Lab',
@@ -611,7 +611,7 @@ const VIEW_META = {
     css: 'src/pages/mt5-trading-page.css',
     api: [],
   },
-  '/education/backtest': {
+  '/lab/backtest': {
     tier: 'premium',
     review: 'pending',
     label: 'Backtest Engine',
@@ -687,7 +687,7 @@ const VIEW_META = {
     css: 'src/pages/trading-timeline-page.css',
     api: [],
   },
-  '/lab/mt5-trading': {
+  '/development/mt5-trading': {
     tier: 'free',
     review: 'pending',
     label: 'MT5 Trading (Lab)',
@@ -695,7 +695,7 @@ const VIEW_META = {
     css: 'src/pages/mt5-trading-page.css',
     api: [],
   },
-  '/lab/strategy-wizard': {
+  '/development/strategy-wizard': {
     tier: 'premium',
     review: 'pending',
     label: 'Strategy Wizard',
@@ -719,7 +719,7 @@ const VIEW_META = {
     css: 'src/pages/speed-cockpit.css',
     api: [],
   },
-  '/lab/diagrams': {
+  '/development/diagrams': {
     tier: 'premium',
     review: 'pending',
     label: 'Diagrams',
@@ -735,7 +735,7 @@ const VIEW_META = {
     css: 'src/pages/meta-stack-explorer.css',
     api: [],
   },
-  '/lab/component-lab': {
+  '/development/component-lab': {
     tier: 'premium',
     review: 'pending',
     label: 'Component Lab',
@@ -747,7 +747,7 @@ const VIEW_META = {
   // src/data/identity-map.json, rebuilt by `node nest/scripts/identity-map.cjs`. `api: []` is
   // accurate: the page makes no live call, so it cannot go stale against a dead backend —
   // but it CAN go stale against a schema change. Re-run the script after schema edits.
-  '/lab/identity-map': {
+  '/development/identity-map': {
     tier: 'premium',
     review: 'pending',
     label: 'Identity Map',
@@ -755,7 +755,7 @@ const VIEW_META = {
     css: 'src/pages/identity-map-lab.module.css',
     api: [],
   },
-  '/lab/widget-library': {
+  '/development/widget-library': {
     tier: 'premium',
     review: 'pending',
     label: 'Widget Library',
@@ -763,7 +763,7 @@ const VIEW_META = {
     css: 'src/components/widget-board.css',
     api: ['/api/health', '/api/signals/best', '/api/symbols/positions', '/api/trading/sessions/market-context'],
   },
-  '/lab/screen-assignment': {
+  '/development/screen-assignment': {
     tier: 'premium',
     review: 'pending',
     label: 'Screen Assignment',
@@ -771,7 +771,7 @@ const VIEW_META = {
     css: 'src/pages/screen-cockpit.css',
     api: [],
   },
-  '/lab/responsive-layout-lab': {
+  '/development/responsive-layout-lab': {
     tier: 'premium',
     review: 'pending',
     label: 'Responsive Layout Lab',
@@ -787,7 +787,7 @@ const VIEW_META = {
     css: 'src/pages/charts-lab.css',
     api: [],
   },
-  '/lab/theme-lab-motion': {
+  '/development/theme-lab-motion': {
     tier: 'premium',
     review: 'pending',
     label: 'Motion Lab',
@@ -795,7 +795,7 @@ const VIEW_META = {
     css: 'src/pages/theme-lab-motion.css',
     api: [],
   },
-  '/lab/theme-lab-transitions': {
+  '/development/theme-lab-transitions': {
     tier: 'premium',
     review: 'pending',
     label: 'Transitions Lab',
@@ -803,7 +803,7 @@ const VIEW_META = {
     css: 'src/pages/theme-lab-transitions.css',
     api: [],
   },
-  '/lab/theme-lab-scroll': {
+  '/development/theme-lab-scroll': {
     tier: 'premium',
     review: 'pending',
     label: 'Scroll Animations',
@@ -811,7 +811,7 @@ const VIEW_META = {
     css: 'src/pages/theme-lab-scroll.css',
     api: [],
   },
-  '/lab/theme-lab-popover': {
+  '/development/theme-lab-popover': {
     tier: 'premium',
     review: 'pending',
     label: 'Popover API',
@@ -827,7 +827,7 @@ const VIEW_META = {
     css: 'src/pages/lab-landing.css',
     api: [],
   },
-  '/lab/pipeline-graph-lab': {
+  '/development/pipeline-graph-lab': {
     tier: 'premium',
     review: 'pending',
     label: 'Pipeline Graph',
@@ -835,7 +835,7 @@ const VIEW_META = {
     css: 'src/pages/pipeline-graph-lab.css',
     api: [],
   },
-  '/lab/lab': {
+  '/development/lab': {
     tier: 'premium',
     review: 'pending',
     label: 'Lab Sandbox',
@@ -843,7 +843,7 @@ const VIEW_META = {
     css: 'src/pages/lab.css',
     api: [],
   },
-  '/lab/feature-lab': {
+  '/development/feature-lab': {
     tier: 'premium',
     review: 'pending',
     label: 'Feature Lab',
@@ -859,7 +859,7 @@ const VIEW_META = {
     css: 'src/pages/snapshot-replay.css',
     api: [],
   },
-  '/lab/meta-stack-cockpit': {
+  '/development/meta-stack-cockpit': {
     tier: 'premium',
     review: 'pending',
     label: 'META.Stack Cockpit',
@@ -867,7 +867,7 @@ const VIEW_META = {
     css: 'src/pages/metastack-cockpit.css',
     api: [],
   },
-  '/lab/daily-briefing': {
+  '/development/daily-briefing': {
     tier: 'premium',
     review: 'pending',
     label: 'Daily Briefing',
@@ -883,7 +883,7 @@ const VIEW_META = {
     css: 'src/pages/ab-testing.css',
     api: [],
   },
-  '/lab/ai-costs': {
+  '/development/ai-costs': {
     tier: 'premium',
     review: 'pending',
     label: 'AI Costs',
@@ -891,7 +891,7 @@ const VIEW_META = {
     css: 'src/pages/ai-costs.css',
     api: [],
   },
-  '/lab/daily-summary-report': {
+  '/development/daily-summary-report': {
     tier: 'premium',
     review: 'pending',
     label: 'Daily Summary Report',

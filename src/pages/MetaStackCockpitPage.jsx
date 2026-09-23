@@ -25,7 +25,7 @@ import './metastack-cockpit.css';
  */
 const COCKPIT_CHANNEL = 'tcs:meta-stack-cockpit';
 const COCKPIT_WINDOW_NAME = 'tcs-meta-stack-cockpit';
-const COCKPIT_ROUTE = '/lab/meta-stack-cockpit';
+const COCKPIT_ROUTE = '/development/meta-stack-cockpit';
 const COCKPIT_MODE = 'cockpit';
 
 export default function MetaStackCockpitPage() {
