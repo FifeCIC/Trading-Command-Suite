@@ -143,6 +143,19 @@ export class BacktestController {
     return this.backtestService.getEquityCurve(runId);
   }
 
+  /**
+   * #819 — the replay payload: the run's trades in order, the bars they sit on, and an explicit
+   * `caveats[]` naming what the run cannot show (no per-tick decision stream, no stored SL/TP,
+   * pre-fix runs whose timestamps are all midnight). Read-only.
+   */
+  @Get('replay/:runId')
+  @ApiOperation({ summary: 'Get a backtest run as a replayable trade list + bar timeline (#819)' })
+  async getReplay(@Param('runId') runId: string) {
+    const replay = await this.backtestService.getReplay(runId);
+    if (!replay) return { error: 'Run not found' };
+    return replay;
+  }
+
   /** Per-directive coverage: backtest every directive individually */
   @Post('coverage')
   @ApiOperation({ summary: 'Run every directive individually against historical data and report per-directive performance' })

@@ -16,14 +16,21 @@
  * both get edited, only one gets the next fix. This script is the guard that makes the drift
  * visible instead of silent.
  *
- * ⚠️ ON DEMAND, NOT IN PREBUILD — deliberately.
- * A prose-style divergence should not fail the build for a change that has nothing to do with
- * reply formatting. A gate that fires for reasons unrelated to the work in hand is a gate that
- * gets allowlisted, and an allowlisted gate is worse than none. Run this after editing either copy.
+ * ⚠️ ADVISORY IN THE BUILD, STRICT ON DEMAND — the owner's decision, 2026-09-23.
+ * Wired into `prebuild` as `--report`, where it PRINTS and always exits 0. A prose divergence
+ * should be LOUD, not FATAL: a gate that reds the build for a reason unrelated to the work in
+ * hand gets allowlisted or switched off, and `validate-agent-docs.cjs` already sets that
+ * precedent for its documentation checks ("a gate that fails on day one gets switched off").
+ * Run it directly, with no flag, and it IS strict — exit 1 on drift.
  *
  * USAGE
- *   node scripts/validate-output-style-sync.cjs          # report drift; exit 1 if drifted
- *   node scripts/validate-output-style-sync.cjs --sync   # copy the source body into the mirror
+ *   node scripts/validate-output-style-sync.cjs            # strict: exit 1 when drifted
+ *   node scripts/validate-output-style-sync.cjs --report   # advisory: always exit 0 (prebuild)
+ *   node scripts/validate-output-style-sync.cjs --sync     # copy the source body into the mirror
+ *
+ * ⚠️ THREE OUTCOMES, NEVER COLLAPSED — OK (matches), DRIFT (differs), UNVERIFIED (the source is
+ * not on this machine, so NOTHING WAS COMPARED). An unreadable input must never render as OK;
+ * that is the silent-empty failure this repo keeps re-finding.
  *
  * THE MARKERS ARE THE MECHANISM
  * -----------------------------
@@ -72,30 +79,50 @@ function extractMirrorBody(text) {
 
 function main() {
   const sync = process.argv.includes('--sync');
+  const report = process.argv.includes('--report');
   const src = sourcePath();
+
+  // `--report` is the prebuild mode: print, and ALWAYS exit 0. `--sync` WRITES files, so it has no
+  // business running inside a build — combining the two is a misuse, not a preference, and stays
+  // fatal whatever the flags say.
+  if (sync && report) {
+    console.error('[style-sync] ✖ --sync and --report are mutually exclusive (--sync writes files)');
+    process.exit(2);
+  }
+
+  /** Advisory (exit 0) in report mode, fatal otherwise. `hard` marks a misuse, never advisory. */
+  const stop = (code, lines, hard) => {
+    const emit = hard || !report ? console.error : console.log;
+    for (const line of [].concat(lines)) emit(line);
+    process.exit(hard || !report ? code : 0);
+  };
 
   const sourceText = readOrNull(src);
   const mirrorText = readOrNull(MIRROR);
 
-  // A check that cannot read its input must ERROR, never pass. Silently reporting OK when the
-  // source is missing is the defect this whole file exists to avoid.
+  // A check that cannot read its input must ERROR, never pass — and the WORDS must match the
+  // state. A missing source prints UNVERIFIED, never OK: this repo may legitimately be built on a
+  // machine without the owner's prompt folder, but "nothing was compared" is not "matches".
   if (sourceText === null) {
-    console.error(`[style-sync] ✖ source not found — cannot verify anything: ${src}`);
-    console.error('[style-sync]   If VS Code moved, update sourcePath() in this script.');
-    process.exit(2);
+    stop(2, [
+      '[style-sync] ⚠ UNVERIFIED — the portable source is not on this machine, so nothing was compared:',
+      `[style-sync]     ${src}`,
+      '[style-sync]   This is NOT a pass. On the owner\'s machine, the likely cause is VS Code',
+      '[style-sync]   having moved — update sourcePath() in this script.',
+    ]);
   }
   if (mirrorText === null) {
-    console.error(`[style-sync] ✖ mirror not found: ${path.relative(REPO_ROOT, MIRROR)}`);
-    process.exit(2);
+    stop(2, `[style-sync] ✖ mirror not found: ${path.relative(REPO_ROOT, MIRROR)}`);
   }
 
   const expected = norm(sourceText).replace(/\n+$/, '\n');
   const actual = extractMirrorBody(mirrorText);
 
   if (actual === null) {
-    console.error(`[style-sync] ✖ the mirror has no ${BEGIN} / ${END} markers.`);
-    console.error('[style-sync]   Without them the sync cannot be checked at all.');
-    process.exit(2);
+    stop(2, [
+      `[style-sync] ✖ the mirror has no ${BEGIN} / ${END} markers.`,
+      '[style-sync]   Without them the sync cannot be checked at all.',
+    ]);
   }
 
   if (actual === expected) {
@@ -125,14 +152,17 @@ function main() {
     process.exit(0);
   }
 
-  console.error('[style-sync] ✖ DRIFT — the mirror and the portable source disagree.');
-  console.error(`[style-sync]   source: ${src}`);
-  console.error(`[style-sync]   mirror: ${path.relative(REPO_ROOT, MIRROR)}`);
-  console.error(`[style-sync]   first difference at line ${line + 1} of the mirrored region:`);
-  console.error(`[style-sync]     mirror: ${JSON.stringify(a[line] ?? '<end of file>')}`);
-  console.error(`[style-sync]     source: ${JSON.stringify(b[line] ?? '<end of file>')}`);
-  console.error('[style-sync]   Repair with:  node scripts/validate-output-style-sync.cjs --sync');
-  process.exit(1);
+  stop(1, [
+    report
+      ? '[style-sync] ⚠ DRIFT (advisory — this does NOT block the build)'
+      : '[style-sync] ✖ DRIFT — the mirror and the portable source disagree.',
+    `[style-sync]   source: ${src}`,
+    `[style-sync]   mirror: ${path.relative(REPO_ROOT, MIRROR)}`,
+    `[style-sync]   first difference at line ${line + 1} of the mirrored region:`,
+    `[style-sync]     mirror: ${JSON.stringify(a[line] ?? '<end of file>')}`,
+    `[style-sync]     source: ${JSON.stringify(b[line] ?? '<end of file>')}`,
+    '[style-sync]   Repair with:  node scripts/validate-output-style-sync.cjs --sync',
+  ]);
 }
 
 main();

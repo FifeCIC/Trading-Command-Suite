@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="view-transition" content="same-origin" />
+    <meta name="description" content="Algorithmic trading analysis and portfolio management" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TradeCS" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Trading Command Suite" />
+    <meta name="msapplication-TileColor" content="#0f172a" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <!-- No manifest link here on purpose: vite-plugin-pwa injects it into the
+         built HTML from vite.config.js. A manual one duplicated it in dist/ and
+         404'd in dev (the plugin only emits the manifest at build time). -->
+    <link rel="apple-touch-icon" href="/tcs-icon.PNG" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/tcs-icon.PNG" sizes="512x512" />
+    <link rel="icon" type="image/png" href="/tcs-icon.PNG" />
+    <title>Trading Command Suite</title>
+    <script type="module" crossorigin src="/assets/index-8sRG0Inl.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DnxNX90M.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Catch module-load errors before React mounts — prevents white screen
+      window.addEventListener('error', function(e) {
+        var root = document.getElementById('root');
+        if (root && !root.children.length) {
+          root.innerHTML = '<div style="background:#2d0000;border:2px solid #f44;border-radius:8px;padding:1.5rem;margin:2rem;font-family:monospace;color:#f66"><h2 style="margin:0 0 .5rem">App Failed to Load</h2><p style="margin:0 0 .5rem;color:#f88">' + (e.error?.message || e.message || 'Unknown error') + '</p><pre style="font-size:.7rem;color:#f99;overflow:auto;max-height:150px">' + ((e.error?.stack||'').slice(0,800)) + '</pre><p style="margin:.5rem 0 0;font-size:.8rem;color:#f88">Check browser console (F12) for full stack trace.</p></div>';
+        }
+      });
+    </script>
+  </body>
+</html>

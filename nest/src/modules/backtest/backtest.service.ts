@@ -8,6 +8,58 @@ import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interf
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 
+/**
+ * #819 — how many bars the replay endpoint returns in one call. Capped because a 5m window over
+ * a month is ~8,600 bars; the cap is REPORTED in the payload (`barsCap`, and a caveat when it
+ * bites) rather than silently shortening the timeline.
+ */
+export const REPLAY_BAR_CAP = 3000;
+
+/**
+ * #819 — the replay payload. `caveats` is not decoration: it carries the things the run cannot
+ * answer, so the view never renders "not recorded" as an empty list. See getReplay().
+ */
+export interface BacktestReplay {
+  run: {
+    id: string;
+    symbol: string;
+    protocolId: string;
+    timeframe: string;
+    botId: string | null;
+    botBaseSize: number | null;
+    from: string;
+    to: string;
+    totalDays: number;
+    tradesStored: number;
+    totalTrades: number;
+    totalSignals: number | null;
+    winRatePct: number;
+    totalPnl: number;
+  };
+  trades: Array<{
+    id: string;
+    direction: string;
+    signal: string;
+    entryScore: number | null;
+    entryTime: string;
+    entryPrice: number;
+    exitTime: string;
+    exitPrice: number;
+    exitReason: string;
+    positionSize: number | null;
+    pnl: number;
+    pnlPct: number;
+  }>;
+  bars: Array<{ time: string; open: number; high: number; low: number; close: number }>;
+  barsCap: number;
+  caveats: string[];
+}
+
+/** A trade stamped exactly at 00:00:00.000 UTC predates the #819 timestamp fix. */
+function isMidnight(d: Date): boolean {
+  return d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+}
+
 export interface BacktestRunRequest {
   /**
    * Optional ONLY when `botId` is supplied — a bot-driven run takes the symbol from the bot, so
@@ -458,7 +510,13 @@ export class BacktestService {
 
           let exitPrice = currentClose;
           let exitReason: TradeRecord['exitReason'] = 'EOD';
-          let exitDate = currentBar.timestamp.toISOString().split('T')[0];
+          // ⚠️ #819 — this is an INSTANT, not a day bucket. It used to be
+          // `...toISOString().split('T')[0]`, which forced EVERY persisted trade to 00:00:00 —
+          // measured 2026-09-23: 556 of 556 trades at midnight, and on 5m runs entry == exit
+          // (117 of 117). A replay cannot place a marker on a price timeline from a date alone,
+          // and a chart that *looks* right while every marker sits at midnight is the
+          // plausible-output-no-error defect class this repo keeps paying for.
+          let exitDate = currentBar.timestamp.toISOString();
 
           // Walk forward through remaining bars to check SL/TP
           for (let future = day + 1; future < bars.length; future++) {
@@ -468,13 +526,13 @@ export class BacktestService {
             if (fb.low <= slPrice) {
               exitPrice = slPrice;
               exitReason = 'SL';
-              exitDate = fb.timestamp.toISOString().split('T')[0];
+              exitDate = fb.timestamp.toISOString();
               break;
             }
             if (fb.high >= tpPrice) {
               exitPrice = tpPrice;
               exitReason = 'TP';
-              exitDate = fb.timestamp.toISOString().split('T')[0];
+              exitDate = fb.timestamp.toISOString();
               break;
             }
           }
@@ -544,7 +602,8 @@ export class BacktestService {
           const pnlPct = (netPnl / (entryCost * positionSize)) * 100;
 
           trades.push({
-            entryDate: currentBar.timestamp.toISOString().split('T')[0],
+            // Same instant-not-day-bucket rule as `exitDate` above (#819).
+            entryDate: currentBar.timestamp.toISOString(),
             entryPrice: Number(entryCost.toFixed(5)),
             exitDate,
             exitPrice: Number(exitCost.toFixed(5)),
@@ -718,6 +777,127 @@ export class BacktestService {
     });
     if (!run) return null;
     return this.formatRunResult(run);
+  }
+
+  /**
+   * getReplay() — the payload for the replay view (#819).
+   *
+   * ⚠️ WHAT THIS CANNOT SHOW, AND SAYS SO. Three gaps are real and are returned as `caveats`
+   * rather than as empty arrays, because "an empty list and a failed query must never render the
+   * same" — and neither must "no trade happened" and "we do not record that":
+   *
+   *   1. **No per-tick decision stream is persisted.** A run stores its TRADES. The tick grid the
+   *      view plays over is the BARS, so a decision that took no trade has no row. The view must
+   *      not imply "nothing was decided" from that.
+   *   2. **No per-trade stop or target.** The engine uses SL/TP to decide exits (`exitReason` is
+   *      `SL` / `TP` / `EOD`) but never persists the levels, so the replay shows the exit REASON
+   *      and not the levels. Not zero — not recorded.
+   *   3. **Runs made before the timestamp fix cannot be replayed.** Measured 2026-09-23: every
+   *      trade written before it sat at `00:00:00`, so a marker cannot be placed on a timeline.
+   *      It is detected here per run and stated, instead of drawn at midnight.
+   */
+  async getReplay(runId: string): Promise<BacktestReplay | null> {
+    const run = await this.prisma.backtestRun.findUnique({
+      where: { id: runId },
+      include: { symbol: true },
+    });
+    if (!run) return null;
+
+    const trades = await this.prisma.backtestTrade.findMany({
+      where: { runId },
+      orderBy: { entryDate: 'asc' },
+    });
+
+    // The tick grid. Capped, and the cap is REPORTED rather than silent.
+    const barsRaw = await this.prisma.marketBar.findMany({
+      where: {
+        symbolId: run.symbolId,
+        timeframe: run.timeframe,
+        timestamp: { gte: run.startDate, lte: run.endDate },
+      },
+      orderBy: { timestamp: 'asc' },
+      take: REPLAY_BAR_CAP + 1,
+    });
+    const barsTruncated = barsRaw.length > REPLAY_BAR_CAP;
+    const bars = barsTruncated ? barsRaw.slice(0, REPLAY_BAR_CAP) : barsRaw;
+
+    const caveats: string[] = [];
+    const allAtMidnight = trades.length > 0 && trades.every((t) => isMidnight(t.entryDate));
+    if (allAtMidnight) {
+      caveats.push(
+        'Every trade in this run is stamped 00:00:00 — it predates the #819 timestamp fix, so its ' +
+          'markers cannot be placed on the price timeline. Re-run it to replay it.',
+      );
+    }
+    if (trades.length === 0) {
+      caveats.push('This run took no trades. That is a result, not a missing query.');
+    }
+    if (bars.length === 0) {
+      caveats.push(
+        `No ${run.timeframe} bars are stored for ${run.symbol?.ticker ?? 'this symbol'} in ` +
+          `${run.startDate.toISOString()} → ${run.endDate.toISOString()}, so there is no price ` +
+          'timeline to replay against. The trade rows are still listed.',
+      );
+    } else if (barsTruncated) {
+      caveats.push(
+        `Only the first ${REPLAY_BAR_CAP} bars of the window are returned (the window holds more). ` +
+          'Trades after the last returned bar cannot be positioned on the timeline.',
+      );
+    }
+    caveats.push(
+      'A backtest run persists TRADES, not a per-tick decision stream: rows below are where a ' +
+        'trade was taken, and the tick grid is the bars. A decision that took no trade has no row.',
+    );
+    caveats.push(
+      'Stop and target levels are not persisted per trade, so only the exit REASON is shown ' +
+        '(SL / TP / EOD). Not recorded is not the same as zero.',
+    );
+    caveats.push(
+      'pnlPct is stored rounded to 2 decimal places, so a very small loss can read as 0.00 — ' +
+        'pnl (4dp, account currency) is the value that did not get rounded away.',
+    );
+
+    return {
+      run: {
+        id: run.id,
+        symbol: run.symbol?.ticker ?? '',
+        protocolId: run.protocolId,
+        timeframe: run.timeframe,
+        botId: run.botId,
+        botBaseSize: run.botBaseSize,
+        from: run.startDate.toISOString(),
+        to: run.endDate.toISOString(),
+        totalDays: run.totalDays,
+        tradesStored: trades.length,
+        totalTrades: run.totalTrades,
+        totalSignals: run.totalSignals,
+        winRatePct: Number(run.winRate),
+        totalPnl: Number(run.totalPnl),
+      },
+      trades: trades.map((t) => ({
+        id: t.id,
+        direction: t.direction,
+        signal: t.signal,
+        entryScore: t.entryScore === null ? null : Number(t.entryScore),
+        entryTime: t.entryDate.toISOString(),
+        entryPrice: Number(t.entryPrice),
+        exitTime: t.exitDate.toISOString(),
+        exitPrice: Number(t.exitPrice),
+        exitReason: t.exitReason,
+        positionSize: t.positionSize === null ? null : Number(t.positionSize),
+        pnl: Number(t.pnl),
+        pnlPct: Number(t.pnlPct),
+      })),
+      bars: bars.map((b) => ({
+        time: b.timestamp.toISOString(),
+        open: Number(b.open),
+        high: Number(b.high),
+        low: Number(b.low),
+        close: Number(b.close),
+      })),
+      barsCap: REPLAY_BAR_CAP,
+      caveats,
+    };
   }
 
   async getSummary(symbol: string): Promise<{ symbol: string; runs: { id: string; date: string; signals: number; winRate: number }[] }> {
