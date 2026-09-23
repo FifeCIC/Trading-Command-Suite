@@ -12,6 +12,47 @@
 .wl-header h2 { margin: 0; font-size: 1.1rem; }
 .wl-subtitle { margin: 0.15rem 0 0; font-size: 0.72rem; color: #64748b; }
 
+/* ── Filter toolbar — hide/show single-symbol lists ──
+   Sits above the split so it governs both panes. Theme tokens rather than hex (the older rules
+   in this file predate the token migration — do not copy their style, copy this one). */
+.wl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 10px);
+}
+
+.wl-singles-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  /* ≥44px so the control clears WCAG 2.5.5 even though the visible box is native-sized. */
+  min-height: 44px;
+  padding-right: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.wl-singles-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Not decoration: this states HOW MANY rows the filter is removing. A filter that silently
+   hides half a list is indistinguishable from data having gone missing. */
+.wl-toolbar-count {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  margin-left: auto;
+}
+
 .wl-card {
   background: #0f1419;
   border: 1px solid #1e293b;
@@ -191,6 +232,31 @@
 }
 .wl-detail-header-row h3 { margin: 0; font-size: 1.05rem; color: var(--ink); }
 .wl-detail-content h3 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--ink); }
+
+/* Single-symbol indicator in the detail header.
+   An INDICATOR, not a control: its state is derived from symbolCount and cannot be set, so it is
+   `readOnly` (kept in the a11y tree) rather than `disabled` (removed from it and announced as
+   unavailable). Muted when unchecked so the eye lands only on the lists that ARE singles. */
+.wl-single-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  margin-right: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  cursor: help;
+  white-space: nowrap;
+}
+.wl-single-flag input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: help;
+}
+.wl-single-flag:has(input:checked) {
+  color: var(--accent);
+}
 .wl-proto-badge {
   display: inline-block; margin-bottom: 0.5rem;
   padding: 0.2rem 0.55rem; border-radius: 4px;

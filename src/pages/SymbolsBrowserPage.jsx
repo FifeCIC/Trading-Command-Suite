@@ -10,20 +10,46 @@ import './symbols-browser.css'
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex']
 
-/** marketCap is stored in millions → render as $X.XXB / $X.XXM. */
-function fmtMarketCap(mc) {
-  if (mc == null || Number.isNaN(mc)) return '—'
-  if (mc >= 1000) return `$${(mc / 1000).toFixed(2)}B`
-  if (mc >= 1) return `$${mc.toFixed(2)}M`
-  return `$${mc.toFixed(2)}M`
+/**
+ * Market capitalisation, in ABSOLUTE USD.
+ *
+ * ⚠️ 2026-09-23 — this formatter was wrong by 1,000,000×. It read a field called `marketCap`
+ * under the comment "marketCap is stored in millions" and divided it, so it labelled the value in
+ * MILLIONS — but the endpoint was returning TRILLIONS (AAPL 4.53, NVDA 4.71, MSFT 2.9, all
+ * plausible as $T and absurd as $M). Apple was displayed as a **$4.53M** company: a plausible
+ * number, no error, exactly the failure signature this codebase keeps re-finding.
+ *
+ * The API now returns `marketCapUsd` — the unit is in the field name, so this cannot recur by
+ * someone guessing again. If you rename it, keep the unit in the name.
+ */
+function fmtMarketCap(usd) {
+  if (usd == null || Number.isNaN(usd)) return '—'
+  if (usd >= 1e12) return `$${(usd / 1e12).toFixed(2)}T`
+  if (usd >= 1e9) return `$${(usd / 1e9).toFixed(2)}B`
+  if (usd >= 1e6) return `$${(usd / 1e6).toFixed(2)}M`
+  if (usd > 0) return `$${Math.round(usd).toLocaleString()}`
+  // A literal 0 means the source reported no cap — NOT that the company is worth nothing.
+  return '—'
 }
 
 export default function SymbolsBrowserPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('all')
-  const [sortKey, setSortKey] = useState('ticker')
-  const [sortDir, setSortDir] = useState('asc')
+  /**
+   * DEFAULT SORT = held symbols first (owner's request, 2026-09-23: "this views table needs to
+   * default to being ordered by POSITION column so that held symbols are at the top").
+   *
+   * `position` is a 1/0 accessor — 1 when a broker position exists for the ticker — so `desc`
+   * puts the 1s first. The comparator treats nulls as "sort last", but this accessor never
+   * returns null, so a symbol with NO position sorts as a real 0 rather than as unknown.
+   *
+   * ⚠️ Do not "simplify" this to `sortKey='ticker'`, which is what it was: the page then opened
+   * on a largely alphabetical list in which the few symbols the user actually holds were scattered
+   * through it. Ties within the held group fall back to ticker order via the stable sort.
+   */
+  const [sortKey, setSortKey] = useState('position')
+  const [sortDir, setSortDir] = useState('desc')
 
   const symbols = useQuery({
     queryKey: ['symbols-browser'],
@@ -353,7 +379,7 @@ export default function SymbolsBrowserPage() {
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Market Cap</span>
-                  <span className="detail-value">{fmtMarketCap(company.marketCap)}</span>
+                  <span className="detail-value">{fmtMarketCap(company.marketCapUsd)}</span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Price</span>

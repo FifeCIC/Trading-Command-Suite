@@ -521,6 +521,37 @@ export class SymbolsService {
       if (metric?.marketCap) marketCap = Number(metric.marketCap);
     } catch { /* no company metric */ }
 
+    /**
+     * ⚠️⚠️ UNIT NORMALISATION — MEASURED 2026-09-23. DO NOT REMOVE.
+     *
+     * The two sources above return `marketCap` in DIFFERENT UNITS, and until this block existed
+     * the response silently carried whichever one answered last:
+     *
+     *   • `adapter.getProfile()` (finnhub) → ABSOLUTE USD. The adapter multiplies Finnhub's
+     *     `marketCapitalization` (which is in MILLIONS) by 1e6, so it already arrives as dollars.
+     *   • `companyMetric.marketCap` (DB)   → TRILLIONS. Measured, not assumed: AAPL 4.53,
+     *     NVDA 4.71, TSLA 1.48, MSFT 2.9, GOOGL 4.38, NFLX 0.33, JBL 0.04 — every one of those is
+     *     plausible as $T and absurd as $M, and the DB rows are all `source='finnhub'`, fetched
+     *     2026-07-03, with `sharesOutstanding = 0`.
+     *
+     * Both are normalised to ABSOLUTE USD below and returned as `marketCapUsd` — a name that
+     * states its unit, so a future reader cannot guess wrong (there is no `marketCap` key left to
+     * misinterpret).
+     *
+     * The consumer was off by **1,000,000×**: `SymbolsBrowserPage`'s formatter is commented
+     * "marketCap is stored in millions" and rendered Apple as **"$4.53M"**. No error, no warning,
+     * a plausible-looking number — the signature failure of this codebase.
+     */
+    const marketCapUsd =
+      marketCap == null
+        ? null
+        : // DB rows are trillions; the profile path is already dollars. Disambiguated by
+          // magnitude: nothing real is worth < $1T in the trillions column while ALSO being a
+          // plausible dollar figure (a $4.53 trillion company cannot be a $4.53 company).
+          marketCap < 1000
+          ? marketCap * 1e12
+          : marketCap;
+
     // Day + historical ranges from stored daily bars
     let price: number | null = null;
     let dayHigh: number | null = null;
@@ -555,9 +586,18 @@ export class SymbolsService {
         name: symbol.name,
         exchange: symbol.exchange,
         type: symbol.type,
+        // ⚠️ `sector` and `industry` both carry Finnhub's `finnhubIndustry` classification, so they
+        // are IDENTICAL on every populated row (measured: Technology/Technology,
+        // Semiconductors/Semiconductors, Media/Media, Electrical Equipment/Electrical Equipment).
+        // The value is an INDUSTRY label — "Media" and "Electrical Equipment" are not sectors —
+        // so `sector` is misnamed. Left as-is here because the rename is a data-semantics decision
+        // with other readers of `sector`; reported rather than silently changed.
         sector,
         industry,
-        marketCap,
+        // ⚠️ Unit is in the NAME. Absolute USD. See the normalisation block above — the previous
+        // bare `marketCap` carried trillions from one source and dollars from the other, and the
+        // consumer rendered Apple as "$4.53M".
+        marketCapUsd,
       },
       price,
       ranges: { dayHigh, dayLow, historicalHigh, historicalLow },

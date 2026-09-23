@@ -11,6 +11,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
+import { usePersistentState } from '../hooks/usePersistentState';
 import './watchlists.css';
 
 /** Clean watchlist label: strip timestamp suffixes */
@@ -22,6 +23,20 @@ function cleanLabel(label) {
     .trim();
 }
 
+/**
+ * A watchlist that holds exactly ONE symbol.
+ *
+ * WHY THIS EXISTS: protocols built for a single symbol do not need a watchlist at all, but the
+ * system creates one anyway — measured 2026-09-23, **23 of 42 watchlists hold exactly 1 symbol**
+ * and almost all are `kind: 'system'` with a protocol slug as the label (`xau-speed-v1`,
+ * `gold-macro-index`). They are real rows with a real purpose, so the answer is to keep them in
+ * the database and let the user hide them from the list — not to delete them.
+ *
+ * A zero-symbol list is deliberately NOT a single: it is empty, which is a different state and
+ * one the user may still want to see (and clean up).
+ */
+const isSingleSymbolList = (wl) => wl?.symbolCount === 1;
+
 export default function UserWatchlistsPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -29,6 +44,19 @@ export default function UserWatchlistsPage() {
   const [creatingNew, setCreatingNew] = useState(false);
   const [newName, setNewName] = useState('');
   const [newSymbols, setNewSymbols] = useState('');
+  /**
+   * ⚠️ ADDED 2026-09-23 (outside the five requested items — flagged in the summary, revert if
+   * unwanted). This replaced `catch (e) { /* error handled silently *\/ }`. A failed watchlist
+   * creation closed nothing, cleared nothing and said nothing: the form stayed open with the
+   * entered name still in it, so the user could not tell a rejected name from a dead API. This is
+   * the same class as #964 — a failure rendering as "nothing happened".
+   */
+  const [createError, setCreateError] = useState(null);
+  // View state, not a user setting — hence usePersistentState (tcs:view-state:) rather than
+  // usePreferences (tcs:preferences). DEFAULT IS `true` (hidden): the point of the control is to
+  // de-clutter the list, and the toolbar states the count so a hidden list is never invisible in
+  // the sense that matters — the user can always see HOW MANY are hidden and reveal them.
+  const [hideSingles, setHideSingles] = usePersistentState('watchlists:hideSingles', true);
   const queryClient = useQueryClient();
 
   const { data: watchlists, isLoading, error } = useQuery({
@@ -37,6 +65,23 @@ export default function UserWatchlistsPage() {
     staleTime: 30_000,
     retry: 1,
   });
+
+  /**
+   * The hide-singles filter. Everything below reads `visibleWatchlists`; the counts are kept so
+   * the page can always say how many it is NOT showing rather than quietly shrinking the list
+   * (development-philosophy §7 — distinguish "fine" from "cannot judge", and never let a
+   * removal look like it never existed).
+   *
+   * ⚠️ Declared HERE, above every consumer. It is read by the auto-select effect further down,
+   * and `const` is not hoisted — placing it after that effect throws a temporal-dead-zone
+   * ReferenceError and blanks the whole page.
+   */
+  const singleCount = watchlists?.filter(isSingleSymbolList).length ?? 0;
+  const visibleWatchlists = useMemo(() => {
+    if (!watchlists) return watchlists;
+    return hideSingles ? watchlists.filter((w) => !isSingleSymbolList(w)) : watchlists;
+  }, [watchlists, hideSingles]);
+  const visibleSymbols = visibleWatchlists?.reduce((s, w) => s + (w.symbolCount || 0), 0) || 0;
 
   const { data: detail } = useQuery({
     queryKey: ['watchlist-symbols', selectedId],
@@ -129,10 +174,18 @@ export default function UserWatchlistsPage() {
   // Auto-select the default watchlist on first load
   useEffect(() => {
     if (!selectedId && watchlists?.length > 0) {
-      const defaultWl = watchlists.find(w => w.isDefault) ?? watchlists[0];
-      setSelectedId(defaultWl.id);
+      // ⚠️ Must respect the hide-singles filter. Without the `visibleWatchlists` fallback this
+      // picked `watchlists[0]`, which is frequently a single-symbol system list — so the detail
+      // pane would open on a row the user cannot see in the list beside it, and the selection
+      // would look like it came from nowhere.
+      const preferred = watchlists.find(w => w.isDefault)
+        ?? visibleWatchlists?.find(w => !isSingleSymbolList(w))
+        ?? watchlists[0];
+      setSelectedId(preferred.id);
     }
-  }, [watchlists, selectedId]);
+    // `visibleWatchlists` is derived from `watchlists` + `hideSingles`; listed explicitly so the
+    // effect re-runs when the filter changes and no visible list is selected yet.
+  }, [watchlists, selectedId, visibleWatchlists]);
 
   // Sync Trading212 Portfolio when selected (once per mount)
   const syncAttempted = useRef(false);
@@ -169,17 +222,21 @@ export default function UserWatchlistsPage() {
     if (!newName.trim()) return;
     const symbols = newSymbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
     try {
+      setCreateError(null);
       await apiPost('/api/watchlists', { name: newName.trim(), symbols });
       setNewName('');
       setNewSymbols('');
       setCreatingNew(false);
       queryClient.invalidateQueries({ queryKey: ['watchlists'] });
-    } catch (e) {
-      // error handled silently
+    } catch (err) {
+      // Kept the name and symbols in the form on purpose — the user should not have to retype
+      // them to retry. Only the reason was missing, and that is what is now shown.
+      setCreateError(noticeFromError(err, 'TCS-SYS-007', { operation: 'create the watchlist' }));
     }
   }
 
   const totalSymbols = watchlists?.reduce((s, w) => s + (w.symbolCount || 0), 0) || 0;
+  const selectedIsSingle = isSingleSymbolList(selectedWl);
 
   function renderWatchlistItem(wl, i) {
     return (
@@ -214,6 +271,27 @@ export default function UserWatchlistsPage() {
   return (
     <div className="wl-page">
 
+      {/* ── Filter toolbar ──
+          Above the split, so it governs BOTH panes. The count beside it is load-bearing: a filter
+          that hides 23 of 42 rows without saying so is indistinguishable from data loss. */}
+      {!isLoading && !error && watchlists?.length > 0 && (
+        <div className="wl-toolbar">
+          <label className="wl-singles-toggle">
+            <input
+              type="checkbox"
+              checked={hideSingles}
+              onChange={(e) => setHideSingles(e.target.checked)}
+            />
+            <span>Hide single-symbol lists</span>
+          </label>
+          <span className="wl-toolbar-count">
+            {hideSingles && singleCount > 0
+              ? `Showing ${visibleWatchlists.length} of ${watchlists.length} · ${singleCount} single-symbol list${singleCount === 1 ? '' : 's'} hidden`
+              : `${watchlists.length} watchlist${watchlists.length === 1 ? '' : 's'} · ${totalSymbols} symbol${totalSymbols === 1 ? '' : 's'}${singleCount > 0 ? ` · ${singleCount} hold a single symbol` : ''}`}
+          </span>
+        </div>
+      )}
+
       {isLoading && <p className="wl-loading">Loading…</p>}
 
       {error && (
@@ -236,16 +314,20 @@ export default function UserWatchlistsPage() {
           {/* ── Left: Accordion List ── */}
           <div className="wl-list-pane">
             {/* Built-in Watchlists */}
-            {watchlists.some(w => w.kind === 'built-in') && (
+            {visibleWatchlists.some(w => w.kind === 'built-in') && (
               <div className="wl-group">
                 <div className="wl-group-label">Built-in Watchlists</div>
-                {watchlists.filter(w => w.kind === 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
+                {visibleWatchlists.filter(w => w.kind === 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               </div>
             )}
             {/* Watchlists */}
             <div className="wl-group">
-              <div className="wl-group-label">{isLoading ? 'Loading…' : `${watchlists?.length || 0} watchlists · ${totalSymbols} total symbols`}</div>
-              {watchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
+              <div className="wl-group-label">
+                {isLoading
+                  ? 'Loading…'
+                  : `${visibleWatchlists.length} watchlist${visibleWatchlists.length === 1 ? '' : 's'} · ${visibleSymbols} total symbols`}
+              </div>
+              {visibleWatchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               {/* Inline "Create New Watchlist" entry */}
               <motion.div
                 className={`wl-list-item wl-create-new ${creatingNew ? 'wl-selected' : ''}`}
@@ -297,10 +379,15 @@ export default function UserWatchlistsPage() {
                     >
                       Create Watchlist
                     </button>
-                    <button className="btn" onClick={() => { setCreatingNew(false); setNewName(''); setNewSymbols(''); }}>
+                    <button className="btn" onClick={() => { setCreatingNew(false); setNewName(''); setNewSymbols(''); setCreateError(null); }}>
                       Cancel
                     </button>
                   </div>
+                  {createError && (
+                    <div className="wl-error" role="alert">
+                      <NoticeBlock notice={createError} />
+                    </div>
+                  )}
                 </div>
               </div>
             ) : !selectedWl ? (
@@ -311,6 +398,29 @@ export default function UserWatchlistsPage() {
               <div className="wl-detail-content">
                 <div className="wl-detail-header-row">
                   <h3>{cleanLabel(selectedWl.label)}</h3>
+                  {/* Single-symbol indicator.
+                      ⚠️ `readOnly` + `aria-readonly`, NOT `disabled`: a disabled input is removed
+                      from the tab order and announced as unavailable, so the state would be
+                      invisible to a screen reader. It is a STATEMENT about the list, not a
+                      control — the check state is derived from symbolCount and cannot be set. */}
+                  <label
+                    className="wl-single-flag"
+                    title={
+                      selectedIsSingle
+                        ? 'This list holds exactly one symbol — it exists to back a single-symbol protocol, which does not need a watchlist at all.'
+                        : 'This list holds more than one symbol.'
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIsSingle}
+                      readOnly
+                      aria-readonly="true"
+                      tabIndex={-1}
+                      aria-label="Single-symbol list"
+                    />
+                    <span>Single-symbol</span>
+                  </label>
                   {!selectedWl.isDefault && (
                     <button
                       className="wl-delete-btn"

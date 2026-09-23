@@ -1,4 +1,25 @@
-/* Glossary Page — glossary-page.css */
+/* Glossary Page — glossary-page.css
+ *
+ * ⚠️ TOKEN MIGRATION 2026-09-23 — the whole file moved off the stale `--color-*` family.
+ *
+ * It previously used `--color-panel`, `--color-border` and `--color-grid`, which are part of the
+ * ORIGINAL pre-theme palette and are NOT redefined by a theme. Measured on the running app:
+ *
+ *     --color-panel   = #1a1d2e   (stale, theme-independent)
+ *     --panel         = #0f1b2e   (LIVE — what every other card in the app uses)
+ *     --color-border  = #2d3040   (stale)
+ *     --line          = rgba(0, 217, 255, 0.3)   (LIVE)
+ *
+ * So glossary cards rendered a DIFFERENT background colour from every other card on screen
+ * (rgb(26,29,46) vs the theme's panel), and the category pills were hardcoded purple
+ * (`#a78bfa` on `rgba(139,92,246,0.15)`) — a colour that exists in no theme at all.
+ *
+ * The canonical theme-aware tokens are: --bg, --panel, --line, --ink, --ink-soft, --accent.
+ * Hardcoded hex and rgba values are also an accessibility-policy violation on their own
+ * ("No hardcoded hex values in page/component CSS") — they survive a theme change and can fail
+ * contrast on a light theme. Use the tokens, and put NO fallback value behind them: a fallback
+ * silently substitutes a colour instead of revealing that the token is missing.
+ */
 
 .glossary-page {
   max-width: 900px;
@@ -15,7 +36,7 @@
 }
 .glossary-header p {
   margin: 0;
-  color: var(--ink-soft, #8891a5);
+  color: var(--ink-soft);
   font-size: 0.92rem;
 }
 
@@ -27,15 +48,15 @@
   width: 100%;
   padding: 0.6rem 0.9rem;
   border-radius: 8px;
-  border: 1px solid var(--color-border, #2d3040);
-  background: var(--color-panel, #1a1d2e);
-  color: var(--ink, #e0e0e0);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
   font-size: 0.92rem;
   outline: none;
   transition: border-color 0.2s;
 }
 .glossary-search:focus {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent);
 }
 
 /* Category pills */
@@ -48,27 +69,29 @@
 .glossary-cat {
   padding: 0.3rem 0.7rem;
   border-radius: 20px;
-  border: 1px solid var(--color-border, #2d3040);
-  background: var(--color-panel, #1a1d2e);
-  color: var(--ink-soft, #8891a5);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
   font-size: 0.78rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
 .glossary-cat:hover {
-  border-color: var(--accent, #0ea5a6);
-  color: var(--ink, #e0e0e0);
+  border-color: var(--accent);
+  color: var(--ink);
 }
+/* Dark ink on the accent fill. The app's accent is a BRIGHT cyan (#00d9ff), so white text on it
+   would be a contrast failure — `--bg` is the readable choice and matches the app's active states. */
 .glossary-cat.active {
-  background: var(--accent, #0ea5a6);
-  color: #fff;
-  border-color: var(--accent, #0ea5a6);
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
 }
 
 /* Count */
 .glossary-count {
   font-size: 0.82rem;
-  color: var(--ink-soft, #8891a5);
+  color: var(--ink-soft);
   margin: 0 0 0.75rem;
 }
 
@@ -81,17 +104,17 @@
 }
 
 .glossary-entry {
-  border: 1px solid var(--color-border, #2d3040);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--color-panel, #1a1d2e);
+  background: var(--panel);
   overflow: hidden;
   transition: border-color 0.15s;
 }
 .glossary-entry:hover {
-  border-color: var(--accent-soft, rgba(14,165,166,0.3));
+  border-color: var(--accent);
 }
 .glossary-entry.expanded {
-  border-color: var(--accent, #0ea5a6);
+  border-color: var(--accent);
 }
 
 .glossary-entry-header {
@@ -102,20 +125,20 @@
   padding: 0.55rem 0.75rem;
   background: none;
   border: none;
-  color: var(--ink, #e0e0e0);
+  color: var(--ink);
   cursor: pointer;
   font-size: 0.9rem;
   text-align: left;
   line-height: 1.4;
 }
 .glossary-entry-header:hover {
-  background: rgba(255,255,255,0.03);
+  background: var(--color-input-bg);
 }
 
 .glossary-entry-arrow {
   flex-shrink: 0;
   font-size: 0.65rem;
-  color: var(--ink-soft, #8891a5);
+  color: var(--ink-soft);
   width: 14px;
   text-align: center;
 }
@@ -125,18 +148,21 @@
   flex-shrink: 0;
 }
 .glossary-entry-term mark {
-  background: rgba(14,165,166,0.25);
-  color: var(--accent, #0ea5a6);
+  background: var(--color-input-bg);
+  color: var(--accent);
   border-radius: 2px;
   padding: 0 2px;
 }
 
+/* Was hardcoded purple (#a78bfa on rgba(139,92,246,0.15)) — a colour in no theme. Now a muted
+   accent-tinted tag, so it survives a theme pack and the High Contrast Text preference. */
 .glossary-entry-cat {
   font-size: 0.7rem;
   padding: 0.1rem 0.45rem;
   border-radius: 10px;
-  background: rgba(139,92,246,0.15);
-  color: #a78bfa;
+  background: var(--color-input-bg);
+  color: var(--accent);
+  border: 1px solid var(--line);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -152,17 +178,17 @@
 
 .glossary-entry-body {
   padding: 0.5rem 0.75rem 0.75rem 2rem;
-  border-top: 1px solid var(--color-border, #2d3040);
+  border-top: 1px solid var(--line);
 }
 .glossary-entry-body p {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.6;
-  color: var(--ink-soft, #a1a9b5);
+  color: var(--ink-soft);
 }
 .glossary-entry-body mark {
-  background: rgba(14,165,166,0.25);
-  color: var(--accent, #0ea5a6);
+  background: var(--color-input-bg);
+  color: var(--accent);
   border-radius: 2px;
   padding: 0 2px;
 }
@@ -170,7 +196,7 @@
 .glossary-empty {
   text-align: center;
   padding: 3rem 1rem;
-  color: var(--ink-soft, #8891a5);
+  color: var(--ink-soft);
 }
 .glossary-empty p {
   margin: 0.25rem 0;

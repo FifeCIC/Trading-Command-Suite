@@ -8,6 +8,59 @@ import './screener.css'
 const SOURCES = ['all', 'news', 'earnings']
 const TOP_PICK_CHOICES = ['5', '10', '15', '20', '25']
 
+/**
+ * COLUMN_HELP — what each screener column MEANS and HOW the number is derived.
+ *
+ * WHY THIS EXISTS (owner's report, 2026-09-23): *"Hovering over values on the screen table doesn't
+ * explain what the value is and how we get it."* A bare `94` in a column headed "Strength" is
+ * unreadable — the reader cannot tell whether it is a percentage, a count, a rank, or how close to
+ * the ceiling it is. Applied to BOTH the `<th>` and the value `<td>` so the explanation is
+ * available wherever the eye already is.
+ *
+ * ⚠️ Every formula below is quoted from the implementation, not inferred from the column name:
+ * `nest/src/modules/screener/screener.service.ts` — `screenerRawWeight()`, `screenerRecency()`,
+ * `normalizeAttentionWeights()` and the per-ticker aggregation loop. If that service changes, these
+ * strings are wrong and must change with it. Two of them are genuinely counter-intuitive:
+ *
+ *   • Strength and Reliab. are MAXIMUMS across the ticker's hits, NOT averages.
+ *   • Attention is RELATIVE — normalised against the strongest row in the current set, so the top
+ *     row is 100 by construction and the number is only meaningful against its neighbours. It is
+ *     not an absolute score and comparing it across two different loads is meaningless.
+ */
+const COLUMN_HELP = {
+  ticker: 'The symbol itself, as recorded in the catalyst hits.',
+  catalyst: 'Which kinds of catalyst produced this row — news, earnings, or both.',
+  source: 'Which providers contributed hits for this symbol.',
+  lean:
+    'Direction the attached news stories lean. COUNTED from the stories: LONG if more lean LONG ' +
+    'than SHORT, SHORT if the reverse, NEUTRAL on a tie. “—” means no stories are attached, which ' +
+    'is not the same as a neutral view.',
+  strength:
+    'Strength of this symbol\u2019s STRONGEST catalyst, 0–100. ' +
+    'HOW: max(catalystStrength) over every hit for the ticker — deliberately the MAXIMUM, not the ' +
+    'average, so one strong earnings date is not buried by a dozen minor news mentions.',
+  reliability:
+    'Reliability of the BEST source that reported on this symbol, 0–100. ' +
+    'HOW: max(sourceReliability) over every hit. A hit whose source states no reliability is ' +
+    'counted as 50 — the neutral default of the underlying column — so 50 may mean "unknown".',
+  attention:
+    'How much this symbol stands out RELATIVE to the strongest row in the list currently loaded. ' +
+    'HOW: strength × reliability × recency, then rescaled so the highest raw weight in the set ' +
+    'becomes 100. \u26a0\ufe0f The top row therefore always reads 100 — the number is only meaningful ' +
+    'beside its neighbours in the same load, NOT as an absolute score and NOT across two loads.',
+  when:
+    'The next FUTURE event date if one exists, otherwise how long ago the latest hit arrived. ' +
+    'Recency weighting uses this: future events score 1/(1+daysAway); past items decay by half ' +
+    'every 24 hours.',
+  hits: 'How many catalyst hits this symbol has on record — a COUNT of rows, not a score.',
+};
+
+/** Tooltip for a column: “Label — meaning”. Falls back to undefined (no tooltip) if unknown. */
+function helpFor(key, label) {
+  const help = COLUMN_HELP[key];
+  return help ? `${label} — ${help}` : undefined;
+}
+
 /** Top-picks count — Screen Options setting (same key as the registry). */
 function readTopPicks() {
   try {
@@ -394,16 +447,16 @@ export default function ScreenerPage() {
             <thead>
               <tr>
                 <th className="sc-col-pick">🎯</th>
-                <th className="sc-th-sortable" onClick={() => toggleSort('ticker')}>Ticker{sortIcon('ticker')}</th>
-                {cols.catalyst && <th className="sc-th-sortable" onClick={() => toggleSort('catalyst')}>Catalyst{sortIcon('catalyst')}</th>}
-                {cols.source && <th className="sc-th-sortable" onClick={() => toggleSort('source')}>Source{sortIcon('source')}</th>}
-                {cols.lean && <th className="sc-th-sortable" onClick={() => toggleSort('lean')}>Lean{sortIcon('lean')}</th>}
+                <th className="sc-th-sortable" title={helpFor('ticker', 'Ticker')} onClick={() => toggleSort('ticker')}>Ticker{sortIcon('ticker')}</th>
+                {cols.catalyst && <th className="sc-th-sortable" title={helpFor('catalyst', 'Catalyst')} onClick={() => toggleSort('catalyst')}>Catalyst{sortIcon('catalyst')}</th>}
+                {cols.source && <th className="sc-th-sortable" title={helpFor('source', 'Source')} onClick={() => toggleSort('source')}>Source{sortIcon('source')}</th>}
+                {cols.lean && <th className="sc-th-sortable" title={helpFor('lean', 'Lean')} onClick={() => toggleSort('lean')}>Lean{sortIcon('lean')}</th>}
                 <th className="sc-col-action">Action</th>
-                {cols.strength && <th className="sc-th-sortable" onClick={() => toggleSort('strength')}>Strength{sortIcon('strength')}</th>}
-                {cols.reliability && <th className="sc-th-sortable" onClick={() => toggleSort('reliability')}>Reliab.{sortIcon('reliability')}</th>}
-                <th className="sc-th-sortable" onClick={() => toggleSort('attention')}>Attention{sortIcon('attention')}</th>
-                {cols.when && <th className="sc-th-sortable" onClick={() => toggleSort('when')}>When{sortIcon('when')}</th>}
-                {cols.hits && <th className="sc-th-sortable" onClick={() => toggleSort('hits')}>Hits{sortIcon('hits')}</th>}
+                {cols.strength && <th className="sc-th-sortable" title={helpFor('strength', 'Strength')} onClick={() => toggleSort('strength')}>Strength{sortIcon('strength')}</th>}
+                {cols.reliability && <th className="sc-th-sortable" title={helpFor('reliability', 'Reliab.')} onClick={() => toggleSort('reliability')}>Reliab.{sortIcon('reliability')}</th>}
+                <th className="sc-th-sortable" title={helpFor('attention', 'Attention')} onClick={() => toggleSort('attention')}>Attention{sortIcon('attention')}</th>
+                {cols.when && <th className="sc-th-sortable" title={helpFor('when', 'When')} onClick={() => toggleSort('when')}>When{sortIcon('when')}</th>}
+                {cols.hits && <th className="sc-th-sortable" title={helpFor('hits', 'Hits')} onClick={() => toggleSort('hits')}>Hits{sortIcon('hits')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -460,18 +513,18 @@ export default function ScreenerPage() {
                       </button>
                     )}
                   </td>
-                  {cols.strength && <td>{r.strength}</td>}
-                  {cols.reliability && <td>{r.reliability}</td>}
+                  {cols.strength && <td title={helpFor('strength', `Strength ${r.strength}`)}>{r.strength}</td>}
+                  {cols.reliability && <td title={helpFor('reliability', `Reliability ${r.reliability}`)}>{r.reliability}</td>}
                   <td>
-                    <div className="sc-attn-cell">
+                    <div className="sc-attn-cell" title={helpFor('attention', `Attention ${r.attentionWeight}`)}>
                       <span className="sc-attn-num">{r.attentionWeight}</span>
                       <span className="sc-attn-bar">
                         <span className="sc-attn-fill" style={{ width: `${Math.min(100, Math.max(0, r.attentionWeight))}%` }} />
                       </span>
                     </div>
                   </td>
-                  {cols.when && <td className="sc-when">{fmtWhen(r.nextEventAt, r.latestTimestamp)}</td>}
-                  {cols.hits && <td>{r.hitCount}</td>}
+                  {cols.when && <td className="sc-when" title={helpFor('when', 'When')}>{fmtWhen(r.nextEventAt, r.latestTimestamp)}</td>}
+                  {cols.hits && <td title={helpFor('hits', `${r.hitCount} hit(s)`)}>{r.hitCount}</td>}
                 </motion.tr>
               ))}
             </tbody>
