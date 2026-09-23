@@ -73,7 +73,7 @@
 }
 
 .dw-grip {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.85rem;
   line-height: 1;
   flex-shrink: 0;
@@ -91,7 +91,7 @@
 
 .dw-subtitle {
   font-size: 0.7rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -115,12 +115,12 @@
 }
 
 .dw-status-on {
-  background: #22c55e;
+  background: var(--color-profit);
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
 }
 
 .dw-status-off {
-  background: #64748b;
+  background: var(--color-muted);
 }
 
 /* ── Icon buttons ────────────────────────────────────────── */
@@ -133,7 +133,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.85rem;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -149,7 +149,7 @@
 
 .dw-btn-close:hover {
   background: rgba(239, 68, 68, 0.18);
-  color: #ef4444;
+  color: var(--color-loss);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
@@ -176,7 +176,7 @@
   justify-content: flex-end;
   background: rgba(0, 0, 0, 0.1);
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 /* ── Floating overlay ────────────────────────────────────── */
@@ -223,8 +223,8 @@
   background: linear-gradient(
     135deg,
     transparent 40%,
-    var(--ink-soft, #94a3b8) 40%,
-    var(--ink-soft, #94a3b8) 50%,
+    var(--ink-soft, var(--ink-soft)) 40%,
+    var(--ink-soft, var(--ink-soft)) 50%,
     transparent 50%
   );
   opacity: 0.3;

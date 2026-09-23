@@ -15,8 +15,8 @@
 .sn-score-wrap { text-align: center; margin: 0.5rem 0; }
 .sn-score { font-size: 2rem; font-weight: 800; }
 .sn-card-footer { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--ink-soft); }
-.sn-card-footer .up { color: #22c55e; }
-.sn-card-footer .down { color: #ef4444; }
+.sn-card-footer .up { color: var(--color-profit); }
+.sn-card-footer .down { color: var(--color-loss); }
 .sn-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
 .sn-empty-hint { font-size: 0.8rem; margin-top: 0.75rem; }
 .sn-empty-hint code { background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 0.75rem; }

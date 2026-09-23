@@ -13,7 +13,7 @@
 }
 
 .sr-subtitle {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.88rem;
   margin: 0 0 1rem;
 }
@@ -37,7 +37,7 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .sr-field select {
@@ -60,7 +60,7 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 6px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -95,7 +95,7 @@
   background: rgba(255,255,255,0.06);
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 /* ── Chart ────────────────────────────────────────────────── */
@@ -130,15 +130,15 @@
 }
 
 .sr-level-card.sr-resist {
-  border-color: #ef4444;
+  border-color: var(--color-loss);
 }
 
 .sr-level-card.sr-support {
-  border-color: #22c55e;
+  border-color: var(--color-profit);
 }
 
 .sr-level-card.sr-pivot {
-  border-color: #f59e0b;
+  border-color: var(--color-warning);
 }
 
 .sr-level-label {
@@ -146,7 +146,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .sr-level-price {
@@ -155,9 +155,9 @@
   font-weight: 600;
 }
 
-.sr-resist .sr-level-price { color: #ef4444; }
-.sr-support .sr-level-price { color: #22c55e; }
-.sr-pivot .sr-level-price { color: #f59e0b; }
+.sr-resist .sr-level-price { color: var(--color-loss); }
+.sr-support .sr-level-price { color: var(--color-profit); }
+.sr-pivot .sr-level-price { color: var(--color-warning); }
 
 /* ── Extras ───────────────────────────────────────────────── */
 .sr-extras {
@@ -176,7 +176,7 @@
 .sr-extra-block h3 {
   font-size: 0.82rem;
   margin: 0 0 0.5rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .sr-round-list {
@@ -204,7 +204,7 @@
 
 .sr-ma-label {
   font-size: 0.78rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .sr-ma-val {

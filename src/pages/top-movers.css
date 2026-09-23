@@ -27,8 +27,8 @@
   background: var(--panel); border: 1px solid var(--line);
   border-radius: 10px; padding: 1rem;
 }
-.tm-gainers h2 { color: #22c55e; font-size: 1rem; margin: 0 0 0.75rem; }
-.tm-losers h2 { color: #ef4444; font-size: 1rem; margin: 0 0 0.75rem; }
+.tm-gainers h2 { color: var(--color-profit); font-size: 1rem; margin: 0 0 0.75rem; }
+.tm-losers h2 { color: var(--color-loss); font-size: 1rem; margin: 0 0 0.75rem; }
 
 /* ── Table ── */
 .tm-table-wrap { overflow-x: auto; }
@@ -50,8 +50,8 @@
 
 /* ── Change ── */
 .tm-change { font-weight: 700; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
-.tm-change-up { color: #22c55e; }
-.tm-change-down { color: #ef4444; }
+.tm-change-up { color: var(--color-profit); }
+.tm-change-down { color: var(--color-loss); }
 
 .tm-price { font-weight: 600; font-variant-numeric: tabular-nums; }
 .tm-price-prev { color: var(--ink-soft); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
@@ -62,7 +62,7 @@
   font-size: 0.65rem; font-weight: 700; margin-left: 0.35rem;
   vertical-align: middle;
 }
-.tm-badge-volume { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.tm-badge-volume { background: rgba(245,158,11,0.15); color: var(--color-warning); }
 
 /* ── States ── */
 .tm-loading { color: var(--ink-soft); font-size: 0.85rem; padding: 1rem 0; }

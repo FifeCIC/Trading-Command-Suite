@@ -149,7 +149,7 @@
   font-weight: var(--weight-bold, 700);
   color: var(--ink);
 }
-.settings-limit-value.settings-limit-danger { color: var(--danger, #ef4444); }
+.settings-limit-value.settings-limit-danger { color: var(--danger, var(--color-loss)); }
 
 /* ── Hint / description text ── */
 .settings-hint-text {

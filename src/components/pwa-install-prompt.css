@@ -52,7 +52,7 @@
 .pwa-install-sub {
   display: block;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ink-soft);
   margin-top: 2px;
 }
 
@@ -87,7 +87,7 @@
 
 .pwa-install-dismiss {
   background: transparent;
-  color: #64748b;
+  color: var(--color-muted);
   border: none;
   border-radius: 8px;
   padding: 8px;

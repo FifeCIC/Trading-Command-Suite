@@ -3,19 +3,19 @@
 .fl-page { max-width: 960px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .fl-header { margin-bottom: 1.5rem; }
 .fl-title { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.fl-desc { color: var(--ink-soft, #94a3b8); font-size: 0.85rem; margin: 0; }
+.fl-desc { color: var(--ink-soft, var(--ink-soft)); font-size: 0.85rem; margin: 0; }
 .fl-back-link { font-size: var(--text-sm, 0.78rem); color: var(--accent, var(--accent)); }
-.fl-section-head { font-size: 1rem; margin: 1.25rem 0 0.6rem; color: var(--ink-soft, #94a3b8); }
+.fl-section-head { font-size: 1rem; margin: 1.25rem 0 0.6rem; color: var(--ink-soft, var(--ink-soft)); }
 .fl-section-head-last { margin-top: 1.5rem; }
 .fl-list { display: flex; flex-direction: column; gap: 0.75rem; }
 .fl-list-last { margin-bottom: 1.5rem; }
 .fl-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
 .fl-card-title { margin: 0; font-size: 0.95rem; }
 .fl-card-title-sm { margin: 0; font-size: 0.9rem; }
-.fl-card-desc { font-size: var(--text-sm, 0.78rem); color: var(--ink-soft, #94a3b8); margin: 0; }
-.fl-expand-arrow { margin-left: auto; font-size: 12px; color: var(--ink-soft, #94a3b8); }
+.fl-card-desc { font-size: var(--text-sm, 0.78rem); color: var(--ink-soft, var(--ink-soft)); margin: 0; }
+.fl-expand-arrow { margin-left: auto; font-size: 12px; color: var(--ink-soft, var(--ink-soft)); }
 .fl-expanded { padding: 0 1rem 1rem; }
-.fl-badge-live { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill, 999px); background: rgba(34,197,94,0.2); color: #22c55e; }
-.fl-badge-planned { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill, 999px); background: rgba(255,255,255,0.05); color: var(--ink-soft, #94a3b8); }
-.fl-dd-desc { font-size: var(--text-sm, 0.75rem); color: var(--ink-soft, #94a3b8); margin: 0 0 0.75rem; }
+.fl-badge-live { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill, 999px); background: rgba(34,197,94,0.2); color: var(--color-profit); }
+.fl-badge-planned { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: var(--radius-pill, 999px); background: rgba(255,255,255,0.05); color: var(--ink-soft, var(--ink-soft)); }
+.fl-dd-desc { font-size: var(--text-sm, 0.75rem); color: var(--ink-soft, var(--ink-soft)); margin: 0 0 0.75rem; }
 .fl-icon { font-size: 1rem; }

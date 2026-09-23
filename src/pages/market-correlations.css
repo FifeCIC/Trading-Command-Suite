@@ -2,18 +2,18 @@
 
 .mc-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .mc-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.mc-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
+.mc-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0 0 1rem; }
 
 .mc-section { margin-bottom: 2rem; }
 .mc-section h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-.mc-tf-label { font-size: 0.7rem; font-weight: 400; color: var(--ink-soft, #94a3b8); }
+.mc-tf-label { font-size: 0.7rem; font-weight: 400; color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── TF tabs ──────────────────────────────────────────────── */
 .mc-tf-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.5rem; }
 .mc-tf-tab {
   padding: 0.3rem 0.7rem; font-size: 0.74rem;
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
-  border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
+  border-radius: 6px; color: var(--ink-soft, var(--ink-soft)); cursor: pointer; transition: all 0.15s;
 }
 .mc-tf-tab:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
 .mc-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
@@ -25,29 +25,29 @@
   padding: 0.25rem 0.35rem; text-align: center; white-space: nowrap;
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
 }
-.mc-heatmap th { color: var(--ink-soft, #94a3b8); font-weight: 500; font-size: 0.58rem; }
+.mc-heatmap th { color: var(--ink-soft, var(--ink-soft)); font-weight: 500; font-size: 0.58rem; }
 .mc-heatmap tbody th { text-align: left; }
 .mc-cell { border-radius: 2px; min-width: 40px; transition: opacity 0.15s; }
 .mc-cell:hover { opacity: 0.85; }
-.mc-diag { color: var(--ink-soft, #94a3b8) !important; }
+.mc-diag { color: var(--ink-soft, var(--ink-soft)) !important; }
 
 .mc-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.65rem; }
-.mc-legend-label { color: var(--ink-soft, #94a3b8); }
+.mc-legend-label { color: var(--ink-soft, var(--ink-soft)); }
 .mc-legend-swatch { padding: 0.1rem 0.4rem; border-radius: 3px; color: #fff; font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.6rem; }
 
 /* ── Pair comparison ──────────────────────────────────────── */
 .mc-pair-select { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 0.75rem; }
 .mc-field { display: flex; flex-direction: column; gap: 0.3rem; }
-.mc-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
+.mc-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, var(--ink-soft)); }
 .mc-field select {
   background: var(--panel, #141a2e); color: var(--ink, var(--ink));
   border: 1px solid var(--line, #1e2a45); border-radius: 6px; padding: 0.4rem 0.65rem; font-size: 0.82rem;
 }
 
 .mc-corr-display { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.3rem 0; }
-.mc-corr-label { font-size: 0.68rem; color: var(--ink-soft, #94a3b8); }
+.mc-corr-label { font-size: 0.68rem; color: var(--ink-soft, var(--ink-soft)); }
 .mc-corr-value { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 1.5rem; font-weight: 700; }
-.mc-corr-desc { font-size: 0.7rem; color: var(--ink-soft, #94a3b8); }
+.mc-corr-desc { font-size: 0.7rem; color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Scatter plot ─────────────────────────────────────────── */
 .mc-scatter-wrap {

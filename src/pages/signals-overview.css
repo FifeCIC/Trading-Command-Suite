@@ -129,7 +129,7 @@
   letter-spacing: 0.06em;
   padding: 2px 7px;
   border-radius: 4px;
-  color: #64748b;
+  color: var(--color-muted);
   background: rgba(100, 116, 139, 0.12);
   border: 1px solid rgba(100, 116, 139, 0.35);
 }
@@ -175,7 +175,7 @@
 .sig-opp-bar-fill {
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #22c55e));
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--color-profit)));
   transition: width 0.5s ease;
 }
 
@@ -397,7 +397,7 @@
 /* Conflict detail (#716) — directive names + descriptions */
 .sig-opp-conflicts {
   display: flex; flex-direction: column; gap: 2px;
-  font-size: 0.64rem; color: #f59e0b;
+  font-size: 0.64rem; color: var(--color-warning);
   border-left: 2px solid rgba(245, 158, 11, 0.4);
   padding: 2px 0 2px 8px; margin: 2px 0 4px;
 }
@@ -477,7 +477,7 @@
  * inside this track. Keep them together.
  */
 .sig-b-row-track { position: relative; height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 10%, transparent); overflow: hidden; }
-.sig-b-row-fill { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--accent) 55%, #22c55e); transition: width 0.4s ease; }
+.sig-b-row-fill { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--accent) 55%, var(--color-profit)); transition: width 0.4s ease; }
 .sig-b-row-fill--accent { background: var(--accent); }
 .sig-b-row-fill--conf { background: #38bdf8; }
 /*
@@ -527,8 +527,8 @@
   border-radius: 3px;
   white-space: nowrap;
 }
-.sig-b-row-standing--strong { color: #052e16; background: #22c55e; }
-.sig-b-row-standing--entry { color: #052e16; background: color-mix(in srgb, #22c55e 62%, var(--accent)); }
+.sig-b-row-standing--strong { color: #052e16; background: var(--color-profit); }
+.sig-b-row-standing--entry { color: #052e16; background: color-mix(in srgb, var(--color-profit) 62%, var(--accent)); }
 .sig-b-row-standing--below { color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 12%, transparent); }
 
 /*
@@ -561,7 +561,7 @@
   overflow: hidden;
 }
 .sig-b-notice--critical { color: #f87171; background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.28); }
-.sig-b-notice--warning { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); }
+.sig-b-notice--warning { color: var(--color-warning); background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); }
 .sig-b-notice--info { color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 6%, transparent); border-color: var(--line); }
 /* Stable notice code (#826) — monospace so it is copyable and unmistakable, muted so it never
    competes with the message it identifies. */

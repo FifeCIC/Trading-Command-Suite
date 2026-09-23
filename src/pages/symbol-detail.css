@@ -35,8 +35,8 @@
 
 /* ── Trade & Portfolio ── */
 .sd-card--trade { margin-top: 1rem; }
-.sd-positive { color: #22c55e; }
-.sd-negative { color: #ef4444; }
+.sd-positive { color: var(--color-profit); }
+.sd-negative { color: var(--color-loss); }
 .sd-position { margin-bottom: 1rem; }
 .sd-pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
 .sd-pos-label { font-size: 0.8rem; color: var(--ink-soft); }
@@ -117,15 +117,15 @@
 .sd-protocol-type { font-size: 0.62rem; color: var(--ink-soft); }
 .sd-protocol-score { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
 .sd-score-badge { font-size: 1.1rem; font-weight: 800; padding: 0.1rem 0.5rem; border-radius: 6px; }
-.sd-score-badge.entry { background: rgba(34,197,94,0.12); color: #22c55e; }
-.sd-score-badge.watch { background: rgba(245,158,11,0.12); color: #f59e0b; }
-.sd-score-badge.exit { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sd-score-badge.entry { background: rgba(34,197,94,0.12); color: var(--color-profit); }
+.sd-score-badge.watch { background: rgba(245,158,11,0.12); color: var(--color-warning); }
+.sd-score-badge.exit { background: rgba(239,68,68,0.12); color: var(--color-loss); }
 .sd-signal { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 999px; }
-.sd-signal.entry { background: rgba(34,197,94,0.15); color: #22c55e; }
-.sd-signal.watch { background: rgba(245,158,11,0.15); color: #f59e0b; }
-.sd-signal.exit { background: rgba(239,68,68,0.15); color: #ef4444; }
+.sd-signal.entry { background: rgba(34,197,94,0.15); color: var(--color-profit); }
+.sd-signal.watch { background: rgba(245,158,11,0.15); color: var(--color-warning); }
+.sd-signal.exit { background: rgba(239,68,68,0.15); color: var(--color-loss); }
 .sd-sparkline { display: flex; align-items: flex-end; gap: 2px; height: 30px; margin: 0.4rem 0; }
 .sd-spark-bar { flex: 1; background: var(--accent); border-radius: 1px; opacity: 0.5; min-height: 2px; }
 .sd-protocol-meta { display: flex; gap: 0.75rem; font-size: 0.65rem; color: var(--ink-soft); }
-.sd-protocol-meta .rising { color: #22c55e; }
-.sd-protocol-meta .falling { color: #ef4444; }
+.sd-protocol-meta .rising { color: var(--color-profit); }
+.sd-protocol-meta .falling { color: var(--color-loss); }

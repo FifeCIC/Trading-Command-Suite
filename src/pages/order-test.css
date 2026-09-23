@@ -35,7 +35,7 @@
   text-align: left;
   padding: 0.4rem 0.5rem;
   border-bottom: 2px solid var(--line, var(--line));
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.72rem;
   text-transform: uppercase;
 }
@@ -57,14 +57,14 @@
   text-transform: uppercase;
 }
 
-.ot-method--GET { background: rgba(34,197,94,0.12); color: #22c55e; }
+.ot-method--GET { background: rgba(34,197,94,0.12); color: var(--color-profit); }
 .ot-method--POST { background: rgba(14,165,166,0.12); color: var(--accent); }
-.ot-method--DELETE { background: rgba(239,68,68,0.12); color: #ef4444; }
+.ot-method--DELETE { background: rgba(239,68,68,0.12); color: var(--color-loss); }
 
 .ot-path {
   font-family: 'Consolas', monospace;
   font-size: 0.75rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .ot-badge {
@@ -75,9 +75,9 @@
   white-space: nowrap;
 }
 
-.ot-badge--ok { background: rgba(34,197,94,0.1); color: #22c55e; }
-.ot-badge--fail { background: rgba(239,68,68,0.1); color: #ef4444; }
-.ot-badge--idle { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.ot-badge--ok { background: rgba(34,197,94,0.1); color: var(--color-profit); }
+.ot-badge--fail { background: rgba(239,68,68,0.1); color: var(--color-loss); }
+.ot-badge--idle { background: rgba(148,163,184,0.1); color: var(--ink-soft); }
 
 .ot-detail {
   margin-bottom: 0.5rem;
@@ -98,7 +98,7 @@
   background: rgba(0,0,0,0.2);
   font-size: 0.72rem;
   font-family: 'Consolas', monospace;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   max-height: 300px;
   overflow: auto;
   white-space: pre-wrap;

@@ -9,7 +9,7 @@
 
 .t212c-header { margin-bottom: 1.5rem; }
 .t212c-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.t212c-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0; }
+.t212c-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0; }
 
 .t212c-section { margin-bottom: 1.5rem; }
 .t212c-section h2 { font-size: 1rem; margin: 0 0 0.6rem; color: var(--accent, #22d3ee); }
@@ -24,7 +24,7 @@
 }
 .t212c-placeholder-icon { font-size: 3rem; margin-bottom: 0.75rem; }
 .t212c-placeholder h2 { margin: 0 0 0.75rem; font-size: 1.15rem; color: var(--ink, var(--ink)); }
-.t212c-placeholder p { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; line-height: 1.5; margin: 0 0 0.75rem; }
+.t212c-placeholder p { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; line-height: 1.5; margin: 0 0 0.75rem; }
 
 .t212c-feature-list {
   text-align: left;
@@ -36,13 +36,13 @@
 .t212c-feature-list li {
   padding: 0.25rem 0;
   font-size: 0.85rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
-.t212c-feature-list li::before { content: '✓ '; color: #22c55e; }
+.t212c-feature-list li::before { content: '✓ '; color: var(--color-profit); }
 
 .t212c-note {
   font-size: 0.78rem !important;
-  color: #f59e0b !important;
+  color: var(--color-warning) !important;
   font-style: italic;
 }
 
@@ -63,7 +63,7 @@
 }
 .t212c-stat-label {
   font-size: 0.68rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

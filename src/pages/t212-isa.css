@@ -7,11 +7,11 @@
   color: var(--ink, var(--ink));
 }
 
-.t212i-loading { color: var(--ink-soft, #94a3b8); text-align: center; padding: 3rem; }
+.t212i-loading { color: var(--ink-soft, var(--ink-soft)); text-align: center; padding: 3rem; }
 
 .t212i-header { margin-bottom: 1.5rem; }
 .t212i-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.t212i-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0; }
+.t212i-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0; }
 
 /* ── Sections ── */
 .t212i-section { margin-bottom: 1.5rem; }
@@ -28,7 +28,7 @@
 }
 .t212i-allowance-fill {
   height: 100%;
-  background: linear-gradient(90deg, #22c55e, #16a34a);
+  background: linear-gradient(90deg, var(--color-profit), #16a34a);
   border-radius: 14px;
   display: flex;
   align-items: center;
@@ -63,15 +63,15 @@
 }
 .t212i-stat-label {
   font-size: 0.68rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .t212i-stat-value { font-size: 0.95rem; font-weight: 700; }
 .t212i-stat-small { font-size: 0.78rem; font-weight: 400; color: var(--ink-soft); }
 
-.t212i-profit { color: #22c55e; }
-.t212i-loss   { color: #ef4444; }
+.t212i-profit { color: var(--color-profit); }
+.t212i-loss   { color: var(--color-loss); }
 
 /* ── FX Card ── */
 .t212i-fx-card {
@@ -92,7 +92,7 @@
   border: 1px solid rgba(245,158,11,0.25);
   border-radius: 6px;
   font-size: 0.82rem;
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 /* ── Table ── */
@@ -105,7 +105,7 @@
 .t212i-table th {
   text-align: left;
   padding: 0.4rem 0.6rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-weight: 600;
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -117,7 +117,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .t212i-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
-.t212i-empty { color: var(--ink-soft, #64748b); font-size: 0.85rem; font-style: italic; }
+.t212i-empty { color: var(--ink-soft, var(--color-muted)); font-size: 0.85rem; font-style: italic; }
 
 /* ── Placeholder (not connected state) ── */
 .t212i-placeholder {
@@ -129,13 +129,13 @@
 }
 .t212i-placeholder-icon { font-size: 3rem; margin-bottom: 0.75rem; }
 .t212i-placeholder h2 { margin: 0 0 0.75rem; font-size: 1.15rem; color: var(--ink, var(--ink)); }
-.t212i-placeholder p { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; line-height: 1.5; margin: 0 0 0.75rem; }
+.t212i-placeholder p { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; line-height: 1.5; margin: 0 0 0.75rem; }
 
 .t212i-feature-list {
   text-align: left;
   max-width: 400px;
   margin: 0 auto 0.5rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.85rem;
   line-height: 1.7;
 }

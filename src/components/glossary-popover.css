@@ -44,7 +44,7 @@
 
 .glossary-popover-def {
   font-size: 0.75rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   line-height: 1.5;
 }
 

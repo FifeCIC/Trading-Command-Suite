@@ -44,7 +44,7 @@
 .cockpit-subtitle {
   margin: 0.2rem 0 0;
   font-size: 0.78rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 .cockpit-header-actions {
   display: flex;
@@ -67,7 +67,7 @@
 
 .cockpit-btn-close {
   padding: 0.35rem 0.75rem;
-  background: var(--danger, #ef4444);
+  background: var(--danger, var(--color-loss));
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -79,8 +79,8 @@
   font-size: 0.75rem;
   font-weight: 600;
 }
-.cockpit-status.ready { color: var(--color-profit, #22c55e); }
-.cockpit-status.waiting { color: var(--color-warning, #f59e0b); }
+.cockpit-status.ready { color: var(--color-profit, var(--color-profit)); }
+.cockpit-status.waiting { color: var(--color-warning, var(--color-warning)); }
 
 /* Screen info bar */
 .cockpit-screen-info {
@@ -93,7 +93,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   flex-wrap: wrap;
 }
 .cockpit-screen-detail {
@@ -139,12 +139,12 @@
   padding: 0.1rem 0.4rem;
   background: rgba(255,255,255,0.06);
   border-radius: 4px;
-  color: var(--color-muted, #64748b);
+  color: var(--color-muted, var(--color-muted));
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 .cockpit-slot-desc {
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 0.75rem;
 }
 .cockpit-slot-placeholder {
@@ -156,13 +156,13 @@
   border: 1px dashed var(--line);
   border-radius: 6px;
   font-size: 0.7rem;
-  color: var(--color-muted, #64748b);
+  color: var(--color-muted, var(--color-muted));
 }
 
 /* Slot accent borders */
-.cockpit-slot-left { border-color: var(--color-accent-blue, #3b82f6); }
+.cockpit-slot-left { border-color: var(--color-accent-blue, var(--color-accent-blue)); }
 .cockpit-slot-center { border-color: var(--accent, var(--accent)); }
-.cockpit-slot-right { border-color: var(--color-warning, #f59e0b); }
+.cockpit-slot-right { border-color: var(--color-warning, var(--color-warning)); }
 
 /* ── Notes ──────────────────────────────────────────── */
 .cockpit-notes {
@@ -172,7 +172,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 .cockpit-notes h4 { margin: 0 0 0.3rem; font-size: 0.82rem; }
 .cockpit-notes ol { margin: 0; padding-left: 1.2rem; }
@@ -300,23 +300,23 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: var(--color-muted, #64748b);
+  color: var(--color-muted, var(--color-muted));
 }
 .cockpit-placeholder-icon { font-size: 2.5rem; opacity: 0.3; }
 .cockpit-placeholder-label {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 .cockpit-placeholder-desc {
   font-size: 0.72rem;
-  color: var(--color-muted, #64748b);
+  color: var(--color-muted, var(--color-muted));
 }
 
 /* Panel accent borders */
-.cockpit-panel-left { border-top: 2px solid var(--color-accent-blue, #3b82f6); }
+.cockpit-panel-left { border-top: 2px solid var(--color-accent-blue, var(--color-accent-blue)); }
 .cockpit-panel-center { border-top: 2px solid var(--accent, var(--accent)); }
-.cockpit-panel-right { border-top: 2px solid var(--color-warning, #f59e0b); }
+.cockpit-panel-right { border-top: 2px solid var(--color-warning, var(--color-warning)); }
 
 /* ── In-page (non-fullscreen) column area ──────────────────────────────────────
    ⚠️ `.cockpit-columns` is `height: 100%`, which is right for the fullscreen pop-out but

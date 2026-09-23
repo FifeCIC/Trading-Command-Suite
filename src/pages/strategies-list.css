@@ -14,7 +14,7 @@
 }
 .sl-filter-chip:hover { border-color: var(--accent); color: var(--ink); }
 .sl-filter-active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.sl-filter-active.sl-filter-faulty { background: #ef4444; color: #fff; border-color: #ef4444; }
+.sl-filter-active.sl-filter-faulty { background: var(--color-loss); color: #fff; border-color: var(--color-loss); }
 
 .sl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
 
@@ -47,10 +47,10 @@
 .sl-score-label { font-size: 0.65rem; color: var(--ink-soft); }
 .sl-score-value { font-size: 1.1rem; font-weight: 800; }
 
-.sl-card-positions { font-size: 0.65rem; color: #3b82f6; margin-top: 0.2rem; }
+.sl-card-positions { font-size: 0.65rem; color: var(--color-accent-blue); margin-top: 0.2rem; }
 .sl-card-warning {
   font-size: 0.62rem; padding: 3px 8px; border-radius: 4px; margin-top: 0.3rem;
-  background: rgba(239,68,68,0.08); color: #ef4444;
+  background: rgba(239,68,68,0.08); color: var(--color-loss);
 }
 
 .sl-card-detail { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
@@ -61,7 +61,7 @@
 .sl-toggle-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }
 
 /* A kill-switch failure. Colour on the BORDER, text stays `--ink`: the semantic tones are tuned for
-   a dark background and #ef4444 as body text fails AA on a light panel. */
+   a dark background and var(--color-loss) as body text fails AA on a light panel. */
 .sl-toggle-error {
   margin-bottom: 0.75rem; padding: 0.5rem 0.8rem;
   font-size: 0.78rem; color: var(--ink);
@@ -83,15 +83,15 @@
   display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
   padding: 0.55rem 1rem; margin-bottom: 0.75rem;
   background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
-  border-radius: 8px; font-size: 0.8rem; color: #ef4444;
+  border-radius: 8px; font-size: 0.8rem; color: var(--color-loss);
 }
 .sl-faulty-banner-btn {
   padding: 3px 10px; border: 1px solid rgba(239,68,68,0.3); border-radius: 14px;
-  background: transparent; color: #ef4444; cursor: pointer; font-size: 0.7rem;
+  background: transparent; color: var(--color-loss); cursor: pointer; font-size: 0.7rem;
   white-space: nowrap; font-family: inherit;
   transition: background 0.15s, color 0.15s;
 }
-.sl-faulty-banner-btn:hover { background: #ef4444; color: #fff; }
+.sl-faulty-banner-btn:hover { background: var(--color-loss); color: #fff; }
 
 /* Clickable chips + score links on monitor cards — keep chip look */
 .sl-chip-link { cursor: pointer; text-decoration: none; }

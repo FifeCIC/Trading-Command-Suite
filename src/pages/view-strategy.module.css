@@ -18,7 +18,7 @@
  * light mode. `useThemeRuntime.js` writes the themed set onto `:root` per mode.
  *
  * ⚠️ ENFORCEMENT COLOUR GOES ON THE CHIP, NEVER THE TEXT. The semantic colour tokens are tuned for
- * a BLACK background (`--color-profit` is #22c55e ≈ 2.4:1 on a light panel, failing WCAG AA for
+ * a BLACK background (`--color-profit` is var(--color-profit) ≈ 2.4:1 on a light panel, failing WCAG AA for
  * text). Colouring the chip's border/background keeps the label legible in every theme, and the
  * badge carries its meaning in a WORD as well — so it survives greyscale and colour-blind rendering.
  */

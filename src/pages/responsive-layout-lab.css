@@ -75,9 +75,9 @@
   font-size: 0.6rem; font-weight: 700; padding: 1px 6px; border-radius: 3px;
   text-transform: uppercase;
 }
-.rll-sig-buy { background: rgba(34,197,94,0.12); color: #22c55e; }
-.rll-sig-sell { background: rgba(239,68,68,0.12); color: #ef4444; }
-.rll-sig-hold { background: rgba(148,163,184,0.12); color: #94a3b8; }
+.rll-sig-buy { background: rgba(34,197,94,0.12); color: var(--color-profit); }
+.rll-sig-sell { background: rgba(239,68,68,0.12); color: var(--color-loss); }
+.rll-sig-hold { background: rgba(148,163,184,0.12); color: var(--ink-soft); }
 .rll-scroll-indicator {
   text-align: center; font-size: 0.6rem; color: var(--ink-soft); padding: 0.2rem;
   display: none;
@@ -176,7 +176,7 @@
 
 /* ── Fixed-width, left-aligned variant ── */
 .rll-fixed-container {
-  border: 2px dashed var(--color-profit, #22c55e); border-radius: 8px;
+  border: 2px dashed var(--color-profit, var(--color-profit)); border-radius: 8px;
   padding: 0.4rem; background: rgba(34,197,94,0.04);
   /* Anchor left — no centering */
 }

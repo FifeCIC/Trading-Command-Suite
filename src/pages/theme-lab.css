@@ -17,7 +17,7 @@
 }
 
 .tl-subtitle {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.88rem;
   margin: 0;
   line-height: 1.5;
@@ -83,7 +83,7 @@
 
 .tl-lab-info span {
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .tl-lab-arrow {
@@ -104,7 +104,7 @@
 }
 
 .tl-hint {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.82rem;
   margin: 0 0 0.5rem;
 }
@@ -132,7 +132,7 @@
 .tl-principle p {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 @media (max-width: 600px) {
@@ -249,7 +249,7 @@
 
 .tl-card-header code {
   font-size: 0.65rem;
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 .tl-sample-card > p {
@@ -395,7 +395,7 @@
   padding: 0.65rem 0.85rem;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2px solid var(--line, var(--panel));
@@ -437,7 +437,7 @@
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 0.75rem;
 }
 
@@ -452,7 +452,7 @@
   padding: 0.5rem 0.75rem;
   cursor: pointer;
   font-size: 0.78rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-weight: 600;
 }
 
@@ -461,7 +461,7 @@
   padding: 0.75rem;
   font-size: 0.7rem;
   line-height: 1.6;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   background: rgba(0,0,0,0.3);
   border-top: 1px solid var(--line, var(--line));
   overflow-x: auto;

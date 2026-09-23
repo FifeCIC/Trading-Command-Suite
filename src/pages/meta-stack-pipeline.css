@@ -59,7 +59,7 @@
   position: absolute; top: 4px; right: 6px;
   font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
   padding: 1px 5px; border-radius: 3px;
-  background: rgba(245,158,11,0.15); color: #f59e0b;
+  background: rgba(245,158,11,0.15); color: var(--color-warning);
 }
 .msp-node-critical .msp-node-label { padding-left: 20px; }
 .msp-step {
@@ -74,7 +74,7 @@
   position: absolute; bottom: 4px; right: 6px;
   font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
   padding: 1px 5px; border-radius: 3px;
-  background: rgba(245,158,11,0.2); color: #f59e0b;
+  background: rgba(245,158,11,0.2); color: var(--color-warning);
 }
 
 /* Arrows */
@@ -91,8 +91,8 @@
   font-size: 0.6rem; text-transform: uppercase; padding: 1px 6px; border-radius: 3px;
   vertical-align: middle;
 }
-.msp-detail-badge.implemented { background: rgba(34,197,94,0.12); color: #22c55e; }
-.msp-detail-badge.planned { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.msp-detail-badge.implemented { background: rgba(34,197,94,0.12); color: var(--color-profit); }
+.msp-detail-badge.planned { background: rgba(245,158,11,0.12); color: var(--color-warning); }
 .msp-detail-desc { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.75rem; }
 .msp-detail-section { margin-bottom: 0.5rem; }
 .msp-detail-section strong { display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }

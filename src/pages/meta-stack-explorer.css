@@ -72,7 +72,7 @@
 }
 .mse-action-btn:hover { border-color: var(--accent); color: var(--accent); }
 .mse-action-btn:first-of-type { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-.mse-action-reset:hover { border-color: #ef4444; color: #ef4444; }
+.mse-action-reset:hover { border-color: var(--color-loss); color: var(--color-loss); }
 
 /* Controls */
 .mse-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
@@ -173,8 +173,8 @@
 }
 .mse-confirm-badge:hover { border-color: var(--accent); }
 .mse-confirm-badge.mse-confirmed {
-  background: color-mix(in srgb, #22c55e 12%, transparent);
-  border-color: #22c55e; color: #22c55e; font-weight: 600;
+  background: color-mix(in srgb, var(--color-profit) 12%, transparent);
+  border-color: var(--color-profit); color: var(--color-profit); font-weight: 600;
 }
 
 /* Stage description */
@@ -190,8 +190,8 @@
 .mse-check-fail { background: rgba(239,68,68,0.06); }
 .mse-check-pending { background: transparent; }
 .mse-check-icon { font-weight: 700; font-size: 0.8rem; min-width: 18px; text-align: center; }
-.mse-check-pass .mse-check-icon { color: #22c55e; }
-.mse-check-fail .mse-check-icon { color: #ef4444; }
+.mse-check-pass .mse-check-icon { color: var(--color-profit); }
+.mse-check-fail .mse-check-icon { color: var(--color-loss); }
 .mse-check-pending .mse-check-icon { color: var(--ink-soft); }
 .mse-check-label { font-weight: 600; }
 .mse-check-detail { font-size: 0.73rem; color: var(--ink-soft); margin-left: auto; }
@@ -272,17 +272,17 @@
 .mse-signal-banner {
   padding: 0.75rem 1rem; border: 2px solid; border-radius: 12px; text-align: center;
 }
-.mse-signal-buy { border-color: #22c55e; background: color-mix(in srgb, #22c55e 8%, transparent); }
-.mse-signal-sell { border-color: #ef4444; background: color-mix(in srgb, #ef4444 8%, transparent); }
-.mse-signal-hold { border-color: #f59e0b; background: color-mix(in srgb, #f59e0b 8%, transparent); }
+.mse-signal-buy { border-color: var(--color-profit); background: color-mix(in srgb, var(--color-profit) 8%, transparent); }
+.mse-signal-sell { border-color: var(--color-loss); background: color-mix(in srgb, var(--color-loss) 8%, transparent); }
+.mse-signal-hold { border-color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 8%, transparent); }
 .mse-signal-banner.mse-signal-verified {
-  box-shadow: 0 0 24px color-mix(in srgb, #22c55e 25%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-profit) 25%, transparent);
   position: relative;
 }
 .mse-signal-banner.mse-signal-verified::before {
   content: '✓ Pipeline Verified';
   position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-  background: #22c55e; color: #fff; font-size: 0.65rem; font-weight: 700;
+  background: var(--color-profit); color: #fff; font-size: 0.65rem; font-weight: 700;
   padding: 2px 10px; border-radius: 4px; white-space: nowrap;
   letter-spacing: 0.03em;
 }
@@ -292,9 +292,9 @@
   font-size: 0.9rem; font-weight: 800; color: #fff; padding: 2px 12px; border-radius: 6px;
   text-transform: uppercase; letter-spacing: 0.06em;
 }
-.mse-signal-badge-buy { background: #22c55e; }
-.mse-signal-badge-sell { background: #ef4444; }
-.mse-signal-badge-hold { background: #f59e0b; }
+.mse-signal-badge-buy { background: var(--color-profit); }
+.mse-signal-badge-sell { background: var(--color-loss); }
+.mse-signal-badge-hold { background: var(--color-warning); }
 .mse-signal-composite { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mse-signal-meta { display: flex; gap: 1rem; justify-content: center; margin-top: 0.35rem; font-size: 0.72rem; color: var(--ink-soft); flex-wrap: wrap; }
 .mse-impact-link { color: var(--accent); text-decoration: none; font-weight: 600; white-space: nowrap; }

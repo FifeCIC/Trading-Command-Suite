@@ -65,7 +65,7 @@
 .dm-table-label { font-size: 0.72rem; color: var(--ink-soft); }
 
 .dm-row-count { font-weight: 600; font-variant-numeric: tabular-nums; }
-.dm-count-large { color: #f59e0b; }
+.dm-count-large { color: var(--color-warning); }
 
 .dm-cell-date { font-size: 0.8rem; color: var(--ink-soft); white-space: nowrap; }
 .dm-cell-age { font-size: 0.7rem; opacity: 0.7; }

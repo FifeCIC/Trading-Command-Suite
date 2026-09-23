@@ -36,7 +36,7 @@
 .rc-circuit-state { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
 .rc-circuit-label { font-size: 0.6rem; color: var(--ink-soft); text-transform: uppercase; }
 .rc-circuit-triggers { display: flex; flex-direction: column; gap: 2px; margin-top: 0.2rem; }
-.rc-trigger-tag { font-size: 0.58rem; color: #ef4444; background: rgba(239,68,68,0.1); padding: 1px 6px; border-radius: 3px; }
+.rc-trigger-tag { font-size: 0.58rem; color: var(--color-loss); background: rgba(239,68,68,0.1); padding: 1px 6px; border-radius: 3px; }
 
 /* Sections */
 .rc-section {
@@ -56,7 +56,7 @@
 
 /* Warnings */
 .rc-warnings { display: flex; flex-direction: column; gap: 2px; }
-.rc-warning-row { font-size: 0.72rem; color: #f59e0b; padding: 0.2rem 0; }
+.rc-warning-row { font-size: 0.72rem; color: var(--color-warning); padding: 0.2rem 0; }
 
 /* Limits */
 .rc-limits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
@@ -68,11 +68,11 @@
 .rc-limit-val { font-weight: 700; }
 
 /* Gates */
-.rc-badge-on { font-size: 0.6rem; background: rgba(34,197,94,0.12); color: #22c55e; padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+.rc-badge-on { font-size: 0.6rem; background: rgba(34,197,94,0.12); color: var(--color-profit); padding: 1px 6px; border-radius: 4px; font-weight: 700; }
 .rc-badge-off { font-size: 0.6rem; background: rgba(107,114,128,0.12); color: #6b7280; padding: 1px 6px; border-radius: 4px; font-weight: 700; }
 .rc-gates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 .rc-gate-card {
-  border: 1px solid var(--line); border-top: 3px solid #22c55e;
+  border: 1px solid var(--line); border-top: 3px solid var(--color-profit);
   border-radius: 8px; padding: 0.6rem; background: rgba(128,128,128,0.01);
 }
 .rc-gate-title { margin: 0 0 0.4rem; font-size: 0.75rem; }
@@ -88,7 +88,7 @@
 .rc-empty { color: var(--ink-soft); font-size: 0.75rem; margin: 0; }
 .rc-kill-log { display: flex; flex-direction: column; gap: 0.3rem; }
 .rc-kill-event { display: flex; gap: 0.5rem; padding: 0.4rem 0.5rem; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.6); border-radius: 4px; font-size: 0.72rem; }
-.rc-kill-time { font-weight: 600; color: #ef4444; white-space: nowrap; }
+.rc-kill-time { font-weight: 600; color: var(--color-loss); white-space: nowrap; }
 .rc-kill-reason { color: var(--ink-soft); }
 
 @media (max-width: 760px) {

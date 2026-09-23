@@ -36,7 +36,7 @@
 .pattern-detail-panel .close-btn {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--ink-soft);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -62,7 +62,7 @@
 }
 
 .pattern-detail-panel .detail-row .label {
-  color: #94a3b8;
+  color: var(--ink-soft);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -74,9 +74,9 @@
   font-size: 0.9rem;
 }
 
-.pattern-detail-panel .value.direction-bullish { color: #22c55e; }
-.pattern-detail-panel .value.direction-bearish { color: #ef4444; }
-.pattern-detail-panel .value.direction-neutral { color: #94a3b8; }
+.pattern-detail-panel .value.direction-bullish { color: var(--color-profit); }
+.pattern-detail-panel .value.direction-bearish { color: var(--color-loss); }
+.pattern-detail-panel .value.direction-neutral { color: var(--ink-soft); }
 
 .pattern-detail-panel .confidence-bar {
   display: flex;
@@ -88,7 +88,7 @@
 
 .pattern-detail-panel .confidence-fill {
   height: 6px;
-  background: linear-gradient(90deg, #ef4444, #eab308, #22c55e);
+  background: linear-gradient(90deg, var(--color-loss), #eab308, var(--color-profit));
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -110,7 +110,7 @@
 .pattern-detail-panel .accuracy-section h4 {
   margin: 0 0 8px;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -124,6 +124,6 @@
 
 .pattern-detail-panel .accuracy-note {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--color-muted);
   font-style: italic;
 }

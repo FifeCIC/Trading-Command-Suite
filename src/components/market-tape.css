@@ -30,7 +30,7 @@
   font-size: 0.78rem;
   font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
   line-height: 1.4;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   will-change: transform;
 }
 
@@ -67,13 +67,13 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 0.68rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   margin-right: 2px;
 }
 
 .mkt-tape-label::after {
   content: ':';
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
 }
 
 .mkt-tape-sep {
@@ -137,10 +137,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--panel, #1a1d2e);
+  background: var(--panel, var(--panel));
   border: 1px solid var(--line, var(--line));
   border-radius: 6px;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-size: 0.85rem;
   padding: 2px 8px;
   cursor: pointer;

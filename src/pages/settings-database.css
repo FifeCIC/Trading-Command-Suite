@@ -24,7 +24,7 @@
 
 .sdb-result-ok {
   margin-top: 0.75rem;
-  border-color: var(--color-profit, #22c55e);
+  border-color: var(--color-profit, var(--color-profit));
 }
 
 .sdb-result-err {
@@ -33,7 +33,7 @@
 }
 
 .sdb-result-ok p:first-child {
-  color: var(--color-profit, #22c55e);
+  color: var(--color-profit, var(--color-profit));
   margin: 0 0 0.35rem;
   font-weight: 600;
 }

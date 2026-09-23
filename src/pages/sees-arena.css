@@ -32,7 +32,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.78rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -57,35 +57,35 @@
 .sa-compare-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.08); text-align: center; }
 .sa-compare-table td.sa-td-symbol { text-align: left; font-weight: 700; }
 .sa-score-cell { font-weight: 700; border-radius: 4px; }
-.sa-score-high { background: rgba(34,197,94,0.15); color: #22c55e; }
-.sa-score-med { background: rgba(245,158,11,0.12); color: #f59e0b; }
-.sa-score-low { background: rgba(239,68,68,0.1); color: #ef4444; }
+.sa-score-high { background: rgba(34,197,94,0.15); color: var(--color-profit); }
+.sa-score-med { background: rgba(245,158,11,0.12); color: var(--color-warning); }
+.sa-score-low { background: rgba(239,68,68,0.1); color: var(--color-loss); }
 .sa-score-gated { background: rgba(107,114,128,0.08); color: #6b7280; }
 
 /* ── Signal Badges ── */
 .sa-sig-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.6rem; font-weight: 700; }
-.sa-sig-BUY { background: rgba(34,197,94,0.15); color: #22c55e; }
-.sa-sig-SELL { background: rgba(239,68,68,0.12); color: #ef4444; }
-.sa-sig-HOLD { background: rgba(148,163,184,0.12); color: #94a3b8; }
+.sa-sig-BUY { background: rgba(34,197,94,0.15); color: var(--color-profit); }
+.sa-sig-SELL { background: rgba(239,68,68,0.12); color: var(--color-loss); }
+.sa-sig-HOLD { background: rgba(148,163,184,0.12); color: var(--ink-soft); }
 .sa-sig-STRONG_BUY { background: rgba(34,197,94,0.25); color: #16a34a; }
 .sa-sig-STRONG_SELL { background: rgba(239,68,68,0.22); color: var(--color-loss); }
 
 /* ── Market state (canonical buildScoreDisplay state) ── */
 .sa-state { display: inline-block; margin-left: 4px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; padding: 1px 4px; border-radius: 3px; }
-.sa-state-paused { background: rgba(148,163,184,0.15); color: #94a3b8; }
-.sa-state-stale { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.sa-state-paused { background: rgba(148,163,184,0.15); color: var(--ink-soft); }
+.sa-state-stale { background: rgba(245,158,11,0.15); color: var(--color-warning); }
 
 /* ── Consensus ── */
 .sa-consensus { font-weight: 700; font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
-.sa-con-strong_buy { background: rgba(34,197,94,0.2); color: #22c55e; }
+.sa-con-strong_buy { background: rgba(34,197,94,0.2); color: var(--color-profit); }
 .sa-con-buy { background: rgba(34,197,94,0.1); color: #4ade80; }
-.sa-con-mixed { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.sa-con-mixed { background: rgba(245,158,11,0.1); color: var(--color-warning); }
 .sa-con-sell { background: rgba(239,68,68,0.1); color: #fca5a5; }
-.sa-con-strong_sell { background: rgba(239,68,68,0.2); color: #ef4444; }
+.sa-con-strong_sell { background: rgba(239,68,68,0.2); color: var(--color-loss); }
 
 /* ── Divergence ── */
 .sa-divergence { font-size: 0.72rem; font-variant-numeric: tabular-nums; }
-.sa-div-high { color: #f59e0b; font-weight: 700; }
+.sa-div-high { color: var(--color-warning); font-weight: 700; }
 .sa-div-low { color: var(--ink-soft); }
 
 /* ── Summary Row ── */
@@ -139,6 +139,6 @@
   font-size: 0.7rem; color: var(--ink-soft);
 }
 .sl-ladder-signal { font-size: 0.68rem; font-weight: 700; }
-.sl-ladder-signal.buy { color: #22c55e; }
-.sl-ladder-signal.sell { color: #ef4444; }
-.sl-ladder-signal.hold { color: #94a3b8; }
+.sl-ladder-signal.buy { color: var(--color-profit); }
+.sl-ladder-signal.sell { color: var(--color-loss); }
+.sl-ladder-signal.hold { color: var(--ink-soft); }

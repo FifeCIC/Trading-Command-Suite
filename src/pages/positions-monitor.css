@@ -358,12 +358,12 @@
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
   font-size: 0.8rem;
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 /* Deep-link highlight from Signals placed orders */
 .pm-pos-card--highlight {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-accent-blue);
   outline-offset: 2px;
   box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
 }

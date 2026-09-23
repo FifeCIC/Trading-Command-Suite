@@ -5,9 +5,9 @@
  * It previously used `--color-panel`, `--color-border` and `--color-grid`, which are part of the
  * ORIGINAL pre-theme palette and are NOT redefined by a theme. Measured on the running app:
  *
- *     --color-panel   = #1a1d2e   (stale, theme-independent)
+ *     --color-panel   = var(--panel)   (stale, theme-independent)
  *     --panel         = #0f1b2e   (LIVE — what every other card in the app uses)
- *     --color-border  = #2d3040   (stale)
+ *     --color-border  = var(--line)   (stale)
  *     --line          = rgba(0, 217, 255, 0.3)   (LIVE)
  *
  * So glossary cards rendered a DIFFERENT background colour from every other card on screen

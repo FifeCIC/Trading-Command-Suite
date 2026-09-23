@@ -17,7 +17,7 @@
  *   `src/theme/useThemeRuntime.js` writes `--bg`, `--panel`, `--line`, `--ink`, `--ink-soft`,
  *   `--accent` and `--danger` onto `:root` for light / dark / black mode. The `--color-*` set is
  *   declared once in `index.css` and NEVER CHANGES — so a card built on it renders dark navy
- *   (`--color-panel: #1a1d2e`) even in light mode. Measured 2026-09-17: that is exactly why the
+ *   (`--color-panel: var(--panel)`) even in light mode. Measured 2026-09-17: that is exactly why the
  *   cockpit's columns looked dark against the current theme.
  */
 
@@ -76,7 +76,7 @@
 /* Badge tones.
    ⚠️ The TEXT stays `--ink` (from `.badge`) and only the border/background take the colour.
    The semantic tokens are tuned for a BLACK background — `--color-profit` / `--color-buy` are
-   `#22c55e`, which is only ≈2.4:1 on a light panel and fails WCAG AA for text. Colouring the
+   `var(--color-profit)`, which is only ≈2.4:1 on a light panel and fails WCAG AA for text. Colouring the
    chip instead of the text keeps the badge legible in every theme AND keeps the meaning in the
    badge's own word ("LONG", "SHORT"), so it survives colour-blind rendering and grayscale. */
 .long { border-color: var(--color-buy); background: color-mix(in srgb, var(--color-buy) 14%, transparent); }

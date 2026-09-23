@@ -315,7 +315,7 @@
   background: rgba(255,255,255,0.05);
 }
 .tp-col-option input[type="checkbox"] {
-  accent-color: var(--accent, #3b82f6);
+  accent-color: var(--accent, var(--color-accent-blue));
   opacity: 0.55;
 }
 .tp-col-option input[type="checkbox"]:checked {
@@ -399,7 +399,7 @@
 /* ── Current position / Historical P/L cells (Active Symbols) ──────────────────────────────────
  * Two-line cells: an identifier line (broker, or the sample size) over a number line.
  *
- * ⚠️ THEMED TOKENS, NOT HEX. `symbols-browser.css` hardcodes `#22c55e` / `#ef4444` for its own
+ * ⚠️ THEMED TOKENS, NOT HEX. `symbols-browser.css` hardcodes `var(--color-profit)` / `var(--color-loss)` for its own
  * `.pnl--pos` / `.pnl--neg`. That does not follow the active theme and was deliberately NOT copied
  * here — the same P/L value should not be two different greens on two pages.
  *
@@ -639,7 +639,7 @@
 
 .pc-table thead th {
   background: var(--panel, var(--panel));
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-weight: 600;
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -737,12 +737,12 @@
 .as-searching {
   display: block;
   font-size: 0.75rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   margin-top: 0.3rem;
 }
 
 .as-no-results {
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-size: 0.82rem;
   padding-top: 0.3rem;
 }
@@ -759,7 +759,7 @@
 
 .as-results-header {
   font-size: 0.72rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   padding: 0.4rem 0.65rem;
   border-bottom: 1px solid var(--line, var(--line));
   background: var(--bg, var(--bg));
@@ -809,7 +809,7 @@
 }
 
 .as-result-name {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.78rem;
   flex: 1;
   white-space: nowrap;
@@ -824,7 +824,7 @@
 
 .as-results-more {
   font-size: 0.7rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   padding: 0.4rem 0.65rem;
   border-top: 1px solid var(--line, var(--line));
 }
@@ -850,7 +850,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
 }
 
 /* ── Broker Platform Comparison ──────────────────────────── */
@@ -918,6 +918,6 @@
   color: var(--accent) !important;
   font-weight: 700;
 }
-.pc-cell--ok { color: #22c55e; }
-.pc-cell--warn { color: #ef4444; }
+.pc-cell--ok { color: var(--color-profit); }
+.pc-cell--warn { color: var(--color-loss); }
 .pc-cell--neutral { color: var(--ink-soft); }

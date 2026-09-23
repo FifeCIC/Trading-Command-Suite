@@ -18,7 +18,7 @@
 }
 
 .cm-subtitle {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.82rem;
   margin: 0;
 }
@@ -49,7 +49,7 @@
 .cm-summary-label {
   display: block;
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 0.2rem;
@@ -109,7 +109,7 @@
   color: var(--ink-soft);
   text-align: center;
 }
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -145,7 +145,7 @@
 .cm-section-chevron {
   font-size: 0.7rem;
   transition: transform 0.2s;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   flex-shrink: 0;
 }
 
@@ -157,7 +157,7 @@
 
 .cm-section-summary {
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .cm-section-body {
@@ -213,18 +213,18 @@
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--line, #1e2a45);
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .cm-directive-chip.implemented {
   border-color: rgba(34,197,94,0.3);
-  color: #22c55e;
+  color: var(--color-profit);
   background: rgba(34,197,94,0.06);
 }
 
 .cm-directive-chip.planned {
   border-color: rgba(148,163,184,0.2);
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 /* ── Tables ── */
@@ -244,7 +244,7 @@
 .cm-table th {
   text-align: left;
   padding: 0.4rem 0.5rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -287,7 +287,7 @@
   list-style: none;
   font-size: 0.68rem;
   font-family: monospace;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -296,7 +296,7 @@
 /* ── QA Checkboxes ── */
 .cm-qa-note {
   font-size: 0.7rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 0.5rem;
   padding: 0.4rem 0.6rem;
   border-radius: 6px;
@@ -319,6 +319,6 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .cm-qa-checkbox:hover { border-color: var(--accent, var(--accent)); background: rgba(14,165,166,0.06); }
-.cm-qa-checked-box { border-color: #22c55e; background: rgba(34,197,94,0.08); }
+.cm-qa-checked-box { border-color: var(--color-profit); background: rgba(34,197,94,0.08); }
 
-tr.cm-qa-checked td:first-child { color: var(--ink-soft, #94a3b8); }
+tr.cm-qa-checked td:first-child { color: var(--ink-soft, var(--ink-soft)); }

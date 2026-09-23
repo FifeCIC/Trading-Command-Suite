@@ -130,7 +130,7 @@
 .toggleRow { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }
 
 /* A kill-switch failure. Colour on the BORDER, text stays `--ink`: the semantic tones are tuned for
-   a dark background and #ef4444 as body text fails AA on a light panel. */
+   a dark background and var(--color-loss) as body text fails AA on a light panel. */
 .toggleError {
   margin-bottom: 0.75rem; padding: 0.5rem 0.8rem;
   font-size: 0.78rem; color: var(--ink);

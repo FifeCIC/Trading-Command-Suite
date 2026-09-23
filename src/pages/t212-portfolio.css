@@ -9,11 +9,11 @@
 
 .t212p-header { margin-bottom: 1.5rem; }
 .t212p-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.t212p-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0; }
+.t212p-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0; }
 
 .t212p-mode { font-weight: 700; }
-.t212p-mode--live { color: #22c55e; }
-.t212p-mode--demo { color: #f59e0b; }
+.t212p-mode--live { color: var(--color-profit); }
+.t212p-mode--demo { color: var(--color-warning); }
 
 /* ── Sections ── */
 .t212p-section {
@@ -42,7 +42,7 @@
 }
 .t212p-stat-label {
   font-size: 0.7rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -57,7 +57,7 @@
   align-items: center;
   gap: 0.75rem;
 }
-.t212p-hint { font-size: 0.78rem; color: var(--ink-soft, #64748b); }
+.t212p-hint { font-size: 0.78rem; color: var(--ink-soft, var(--color-muted)); }
 
 /* ── Grand total ── */
 .t212p-grand-total {
@@ -72,7 +72,7 @@
 }
 .t212p-grand-label {
   font-size: 0.65rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -110,7 +110,7 @@
   align-items: center;
   gap: 0.2rem;
   font-size: 0.62rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   user-select: none;
 }
@@ -170,16 +170,16 @@
   border-radius: 5px;
 }
 .t212p-account-row.on .t212p-account-state {
-  color: #22c55e;
+  color: var(--color-profit);
   background: rgba(34, 197, 94, 0.12);
 }
 .t212p-account-row.off .t212p-account-state {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   background: rgba(100, 116, 139, 0.15);
 }
 .t212p-account-positions {
   font-size: 0.62rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 .t212p-account-value {
   margin-left: auto;
@@ -196,12 +196,12 @@
   border: 1px solid rgba(34,197,94,0.25);
   border-radius: 6px;
   font-size: 0.82rem;
-  color: #22c55e;
+  color: var(--color-profit);
 }
 .t212p-sync-err {
   background: rgba(239,68,68,0.1);
   border-color: rgba(239,68,68,0.25);
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 /* ── Table ── */
@@ -214,7 +214,7 @@
 .t212p-table th {
   text-align: left;
   padding: 0.45rem 0.6rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-weight: 600;
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -226,11 +226,11 @@
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .t212p-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
-.t212p-account-cell { font-size: 0.7rem; color: var(--ink-soft, #64748b); }
-.t212p-profit { color: #22c55e; }
-.t212p-loss   { color: #ef4444; }
+.t212p-account-cell { font-size: 0.7rem; color: var(--ink-soft, var(--color-muted)); }
+.t212p-profit { color: var(--color-profit); }
+.t212p-loss   { color: var(--color-loss); }
 .t212p-empty {
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-size: 0.85rem;
   font-style: italic;
 }

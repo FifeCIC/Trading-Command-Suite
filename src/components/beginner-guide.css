@@ -39,7 +39,7 @@
 .bg-toggle {
   background: none;
   border: none;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.65rem;
   cursor: pointer;
   padding: 2px 6px;
@@ -50,7 +50,7 @@
 .bg-dismiss {
   background: none;
   border: none;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.7rem;
   cursor: pointer;
   padding: 2px 6px;
@@ -58,7 +58,7 @@
   line-height: 1;
   transition: color 0.15s;
 }
-.bg-dismiss:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+.bg-dismiss:hover { color: var(--color-loss); background: rgba(239,68,68,0.1); }
 
 .bg-body {
   padding: 0 0.85rem 0.85rem;
@@ -66,7 +66,7 @@
 
 .bg-content {
   font-size: 0.8rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   line-height: 1.6;
 }
 
@@ -101,7 +101,7 @@
 }
 .bg-cat-hint {
   font-size: 0.73rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 0.4rem;
 }
 
@@ -117,7 +117,7 @@
   border-radius: 0 6px 6px 0;
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
   font-size: 0.74rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0.35rem 0;
 }
 
@@ -130,14 +130,14 @@
 }
 .bg-tips h4 {
   font-size: 0.75rem;
-  color: #f59e0b;
+  color: var(--color-warning);
   margin: 0 0 0.4rem;
 }
 .bg-tips ul {
   margin: 0;
   padding-left: 1.1rem;
   font-size: 0.73rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   line-height: 1.55;
 }
 .bg-tips li { margin-bottom: 0.25rem; }
@@ -167,7 +167,7 @@
   border-bottom: 1px solid var(--line, rgba(255,255,255,0.04));
 }
 .bg-meta-param-key {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-weight: 500;
 }
 .bg-meta-param-val {
@@ -207,7 +207,7 @@
 }
 .bg-meta-zone-meaning {
   font-size: 0.7rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   line-height: 1.5;
   margin: 0;
 }
@@ -216,7 +216,7 @@
 }
 .bg-meta-interpretation p {
   font-size: 0.73rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   line-height: 1.55;
   margin: 0;
 }

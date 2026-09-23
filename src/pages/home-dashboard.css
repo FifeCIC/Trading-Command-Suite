@@ -33,7 +33,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 5px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.72rem;
   padding: 0.25rem 0.55rem;
   cursor: pointer;
@@ -83,7 +83,7 @@
 
 .nd-hero-subtitle {
   margin: 0 0 1.5rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-size: 1.05rem;
 }
 
@@ -96,7 +96,7 @@
   border-radius: 8px;
   padding: 8px 20px;
   font-size: 0.9rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin-bottom: 1.5rem;
 }
 
@@ -111,7 +111,7 @@
 
 .nd-hero-enter {
   padding: 0.7rem 2rem;
-  background: linear-gradient(135deg, var(--accent, #3b82f6), #6366f1);
+  background: linear-gradient(135deg, var(--accent, var(--color-accent-blue)), #6366f1);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -123,7 +123,7 @@
 }
 .nd-hero-enter:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent, #3b82f6) 35%, transparent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent, var(--color-accent-blue)) 35%, transparent);
 }
 
 /* ── Status (centered on landing) ──────────────────────────── */
@@ -138,7 +138,7 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 1rem;
 }
 
@@ -160,7 +160,7 @@
 
 .nd-status-label {
   font-size: 0.78rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
 }
 
 .nd-status-value {
@@ -168,9 +168,9 @@
   font-size: 0.82rem;
 }
 
-.nd-status-value.ok { color: var(--color-profit, #22c55e); }
-.nd-status-value.warn { color: var(--color-warning, #f59e0b); }
-.nd-status-value.err { color: var(--danger, #ef4444); }
+.nd-status-value.ok { color: var(--color-profit, var(--color-profit)); }
+.nd-status-value.warn { color: var(--color-warning, var(--color-warning)); }
+.nd-status-value.err { color: var(--danger, var(--color-loss)); }
 
 /* ── Setup (backend offline) ───────────────────────────────── */
 
@@ -186,12 +186,12 @@
 
 .nd-setup h2 {
   font-size: 1rem;
-  color: var(--danger, #ef4444);
+  color: var(--danger, var(--color-loss));
   margin: 0 0 0.5rem;
 }
 
 .nd-setup-text {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.9rem;
   margin: 0 0 0.75rem;
 }
@@ -222,12 +222,12 @@
 }
 
 .nd-restart-msg {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.8rem;
 }
 
 .nd-setup-hint {
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-size: 0.75rem;
   margin: 0.5rem 0 0;
 }
@@ -248,14 +248,14 @@
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 1rem;
 }
 
 .nd-section-label {
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 0.75rem 0;
@@ -289,7 +289,7 @@
   gap: 0.3rem;
   background: var(--panel, var(--panel));
   border: 1px solid var(--line, var(--line));
-  border-top: 2px solid var(--accent, #3b82f6);
+  border-top: 2px solid var(--accent, var(--color-accent-blue));
   border-radius: 10px;
   padding: 0.85rem 0.6rem;
   cursor: pointer;
@@ -312,7 +312,7 @@
 .nd-nav-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border-color: var(--accent, #3b82f6);
+  border-color: var(--accent, var(--color-accent-blue));
 }
 
 .nd-nav-card-primary:hover {
@@ -339,34 +339,34 @@
 
 .nd-nav-count {
   font-size: 0.65rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
 }
 
 .nd-status-label {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 .nd-status-value {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 .nd-status-value.ok {
-  color: #22c55e;
+  color: var(--color-profit);
 }
 
 .nd-status-value.warn {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .nd-status-value.err {
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 .nd-status-value.mt5 {
-  color: var(--accent, #3b82f6);
+  color: var(--accent, var(--color-accent-blue));
 }
 
 /* ── Tips ─────────────────────────────────────────────────── */
@@ -386,7 +386,7 @@
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   line-height: 1.5;
 }
 
@@ -418,18 +418,18 @@
 
 .dash-card-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .dash-stat { display: flex; flex-direction: column; gap: 0.1rem; min-width: 90px; }
-.dash-stat-label { font-size: 0.7rem; color: var(--ink-soft, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.dash-stat-label { font-size: 0.7rem; color: var(--ink-soft, var(--color-muted)); text-transform: uppercase; letter-spacing: 0.04em; }
 .dash-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--ink, var(--ink)); }
-.dash-stat-value.ok { color: var(--color-profit, #22c55e); }
-.dash-stat-value.err { color: var(--danger, #ef4444); }
+.dash-stat-value.ok { color: var(--color-profit, var(--color-profit)); }
+.dash-stat-value.err { color: var(--danger, var(--color-loss)); }
 
 /* ── Session dot (theme-aware) ───────────────────────────── */
-.dash-session-dot-open { background: var(--color-profit, #22c55e); }
-.dash-session-dot-closed { background: var(--danger, #ef4444); }
+.dash-session-dot-open { background: var(--color-profit, var(--color-profit)); }
+.dash-session-dot-closed { background: var(--danger, var(--color-loss)); }
 
 /* ── News dot (theme-aware) ──────────────────────────────── */
-.dash-news-dot-active { color: var(--color-profit, #22c55e); }
-.dash-news-dot-muted { color: var(--ink-soft, #64748b); }
+.dash-news-dot-active { color: var(--color-profit, var(--color-profit)); }
+.dash-news-dot-muted { color: var(--ink-soft, var(--color-muted)); }
 
 /* ── P&L by Broker Card ─────────────────────────────────── */
 .dash-broker-grid {
@@ -462,7 +462,7 @@
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
 }
-.dash-broker-badge.badge-live { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.dash-broker-badge.badge-live { background: rgba(34, 197, 94, 0.15); color: var(--color-profit); }
 .dash-broker-badge.badge-practice { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .dash-broker-badge.badge-off { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 .dash-broker-metrics {
@@ -481,7 +481,7 @@
 }
 .dash-broker-mlabel {
   font-size: 0.6rem;
-  color: #64748b;
+  color: var(--color-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -490,11 +490,11 @@
   font-weight: 700;
   color: var(--ink);
 }
-.dash-broker-mval.ok { color: #22c55e; }
-.dash-broker-mval.err { color: #ef4444; }
+.dash-broker-mval.ok { color: var(--color-profit); }
+.dash-broker-mval.err { color: var(--color-loss); }
 .dash-broker-sub {
   font-size: 0.6rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 /* Total row */
@@ -519,8 +519,8 @@
   margin-left: 0.5rem;
   vertical-align: middle;
 }
-.mode-strict { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.mode-warn { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.mode-strict { background: rgba(239, 68, 68, 0.15); color: var(--color-loss); }
+.mode-warn { background: rgba(245, 158, 11, 0.15); color: var(--color-warning); }
 .mode-off { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
 
 .dash-div-dupes {
@@ -529,7 +529,7 @@
 
 .dash-div-warn {
   font-size: 0.82rem;
-  color: #f59e0b;
+  color: var(--color-warning);
   margin: 0 0 0.5rem;
 }
 
@@ -547,7 +547,7 @@
 
 .dash-div-dupe-symbol {
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .dash-div-dupe-brokers {
@@ -572,7 +572,7 @@
 
 .dash-div-warn-msg {
   font-size: 0.78rem;
-  color: #f59e0b;
+  color: var(--color-warning);
   margin: 0.15rem 0;
 }
 
@@ -597,7 +597,7 @@
   .dash-broker-metric { align-items: flex-start; }
 }
 
-.dash-hint { font-size: 0.78rem; color: #64748b; margin: 0.25rem 0 0; }
+.dash-hint { font-size: 0.78rem; color: var(--color-muted); margin: 0.25rem 0 0; }
 .dash-link {
   background: none; border: none; color: var(--accent, var(--accent));
   cursor: pointer; font-size: 0.78rem; padding: 0; font-family: inherit;
@@ -607,13 +607,13 @@
 /* ── Positions Table ────────────────────────────────────── */
 .dash-table-wrap { overflow-x: auto; }
 .dash-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.dash-table th { text-align: left; padding: 0.35rem 0.5rem; color: #64748b; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line); }
+.dash-table th { text-align: left; padding: 0.35rem 0.5rem; color: var(--color-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line); }
 .dash-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(51,65,85,0.4); }
-.dash-buy { color: #22c55e; font-weight: 600; }
-.dash-sell { color: #ef4444; font-weight: 600; }
-.dash-profit { color: #22c55e; font-weight: 600; }
-.dash-loss { color: #ef4444; font-weight: 600; }
-.dash-time { color: #64748b; font-size: 0.72rem; white-space: nowrap; }
+.dash-buy { color: var(--color-profit); font-weight: 600; }
+.dash-sell { color: var(--color-loss); font-weight: 600; }
+.dash-profit { color: var(--color-profit); font-weight: 600; }
+.dash-loss { color: var(--color-loss); font-weight: 600; }
+.dash-time { color: var(--color-muted); font-size: 0.72rem; white-space: nowrap; }
 
 /* ── Market Sessions ────────────────────────────────────── */
 .dash-sessions { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -625,8 +625,8 @@
 .dash-session-open { background: rgba(34,197,94,0.06); }
 .dash-session-closed { background: rgba(100,116,139,0.04); }
 .dash-session-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dash-session-status { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: #64748b; }
-.dash-session-open .dash-session-status { color: #22c55e; }
+.dash-session-status { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: var(--color-muted); }
+.dash-session-open .dash-session-status { color: var(--color-profit); }
 
 /* ── Session Hover Popover ── */
 .dash-session-hoverable { position: relative; }
@@ -663,7 +663,7 @@
   justify-content: space-between;
   gap: 1.5rem;
   padding: 0.15rem 0;
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 .dash-session-pop-row span:last-child {
   color: var(--ink);
@@ -681,7 +681,7 @@
 .dash-news-dot { font-size: 0.65rem; flex-shrink: 0; }
 .dash-news-name { font-weight: 600; color: var(--ink); }
 .dash-news-status { margin-left: auto; font-size: 0.7rem; font-weight: 600; text-transform: capitalize; }
-.dash-news-summary { margin-top: 0.4rem; font-size: 0.7rem; color: #64748b; }
+.dash-news-summary { margin-top: 0.4rem; font-size: 0.7rem; color: var(--color-muted); }
 
 /* ── Hot Picks Widget ───────────────────────────────────── */
 .dash-hp-list {
@@ -708,7 +708,7 @@
 .dash-hp-rank {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--color-muted);
   min-width: 22px;
 }
 

@@ -11,9 +11,9 @@
 .ec-event-header { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
 .ec-event-icon { font-size: 0.9rem; }
 .ec-impact { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 999px; }
-.ec-impact-high { background: rgba(239,68,68,0.1); color: #ef4444; }
-.ec-impact-medium { background: rgba(245,158,11,0.1); color: #f59e0b; }
-.ec-impact-low { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.ec-impact-high { background: rgba(239,68,68,0.1); color: var(--color-loss); }
+.ec-impact-medium { background: rgba(245,158,11,0.1); color: var(--color-warning); }
+.ec-impact-low { background: rgba(148,163,184,0.1); color: var(--ink-soft); }
 .ec-event-meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.72rem; color: var(--ink-soft); }
 .ec-countdown { font-weight: 600; }
 .ec-countdown-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; }
@@ -32,7 +32,7 @@
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
   background: rgba(34,197,94,0.12);
-  color: #22c55e;
+  color: var(--color-profit);
   white-space: nowrap;
 }
 

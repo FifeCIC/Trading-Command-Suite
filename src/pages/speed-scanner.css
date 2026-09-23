@@ -9,12 +9,12 @@
   display: inline-flex; align-items: center; gap: 5px;
   margin-left: 12px; padding: 2px 10px;
   background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3);
-  border-radius: 999px; font-size: 0.7rem; font-weight: 600; color: #22c55e;
+  border-radius: 999px; font-size: 0.7rem; font-weight: 600; color: var(--color-profit);
   cursor: help; vertical-align: middle;
 }
 .ss-live-dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: #22c55e;
+  background: var(--color-profit);
   animation: ss-pulse 2s infinite;
 }
 @keyframes ss-pulse {
@@ -32,12 +32,12 @@
 .ss-summary-item { display: flex; flex-direction: column; }
 .ss-summary-label { font-size: 0.65rem; color: var(--text-faint); text-transform: uppercase; }
 .ss-summary-value { font-size: 1.05rem; font-weight: 700; }
-.ss-trending .ss-summary-value { color: #22c55e; }
-.ss-sideways .ss-summary-value { color: #ef4444; }
-.ss-tradeable .ss-summary-value { color: #3b82f6; }
+.ss-trending .ss-summary-value { color: var(--color-profit); }
+.ss-sideways .ss-summary-value { color: var(--color-loss); }
+.ss-tradeable .ss-summary-value { color: var(--color-accent-blue); }
 
 .ss-next-best { padding: 8px 14px; background: var(--panel); border: 1px dashed var(--border); border-radius: 6px; margin-bottom: 12px; font-size: 0.8rem; }
-.ss-switch-hint { color: #ef4444; }
+.ss-switch-hint { color: var(--color-loss); }
 .ss-next-hint { color: var(--text-dim); }
 .ss-next-best strong { color: var(--accent); }
 
@@ -96,7 +96,7 @@
 .ss-rec-col { min-width: 130px; display: flex; flex-direction: column; gap: 2px; }
 .ss-rec-reason { font-size: 0.6rem; color: var(--text-faint); line-height: 1.2; }
 
-.ss-sideways-warn { width: 100%; font-size: 0.65rem; color: #ef4444; padding-top: 4px; border-top: 1px solid var(--border); margin-top: 4px; }
+.ss-sideways-warn { width: 100%; font-size: 0.65rem; color: var(--color-loss); padding-top: 4px; border-top: 1px solid var(--border); margin-top: 4px; }
 
 .ss-skipped { margin-top: 12px; font-size: 0.72rem; color: var(--text-faint); }
 .ss-skipped ul { margin: 4px 0 0; padding-left: 16px; }
@@ -125,11 +125,11 @@
 }
 .ss-trade-success {
   background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3);
-  color: #22c55e;
+  color: var(--color-profit);
 }
 .ss-trade-error {
   background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 /* Trade button column */

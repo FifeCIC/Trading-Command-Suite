@@ -128,17 +128,17 @@
 
 .hsp-signal-entry {
   background: rgba(34, 197, 94, 0.12);
-  color: #22c55e;
+  color: var(--color-profit);
 }
 
 .hsp-signal-watch {
   background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .hsp-signal-neutral {
   background: rgba(100, 116, 139, 0.12);
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 /* ── Score bar ── */
@@ -164,15 +164,15 @@
 }
 
 .hsp-score-high {
-  background: linear-gradient(90deg, #22c55e, #4ade80);
+  background: linear-gradient(90deg, var(--color-profit), #4ade80);
 }
 
 .hsp-score-mid {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(90deg, var(--color-warning), #fbbf24);
 }
 
 .hsp-score-low {
-  background: linear-gradient(90deg, #ef4444, #f87171);
+  background: linear-gradient(90deg, var(--color-loss), #f87171);
 }
 
 .hsp-score-value {
@@ -276,7 +276,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.72rem;
-  color: #f59e0b;
+  color: var(--color-warning);
   font-weight: 600;
 }
 
@@ -292,7 +292,7 @@
 }
 
 .hsp-priority-remove:hover {
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 .hsp-no-strategy {

@@ -62,8 +62,8 @@
 }
 
 .es-pnl { font-size: 0.92rem; font-weight: 700; }
-.es-pnl.positive { color: #22c55e; }
-.es-pnl.negative { color: #ef4444; }
+.es-pnl.positive { color: var(--color-profit); }
+.es-pnl.negative { color: var(--color-loss); }
 
 .es-urgency-badge {
   font-size: 0.78rem;

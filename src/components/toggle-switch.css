@@ -48,4 +48,4 @@
 /* Disabled */
 .ts-disabled { opacity: 0.5; cursor: not-allowed; }
 /* Label */
-.ts-label { font-size: 0.8rem; color: var(--ink-soft, #94a3b8); }
+.ts-label { font-size: 0.8rem; color: var(--ink-soft, var(--ink-soft)); }

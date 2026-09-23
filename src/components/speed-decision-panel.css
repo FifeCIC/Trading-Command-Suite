@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #94a3b8;
+  color: var(--ink-soft);
   font-size: 0.8rem;
 }
 
@@ -68,12 +68,12 @@
 
 .sdp-composite--sell {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 .sdp-composite--hold {
   background: rgba(100, 116, 139, 0.15);
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 /* ── Sections ────────────────────────────────────────── */
@@ -90,7 +90,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--color-muted);
   min-width: 36px;
 }
 
@@ -106,7 +106,7 @@
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 .sdp-dot {
@@ -149,7 +149,7 @@
 
 .sdp-level-label {
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--ink-soft);
   min-width: 12px;
 }
 
@@ -190,11 +190,11 @@
 }
 
 .sdp-bias--sell {
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 .sdp-bias--hold {
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 /* ── Detail row ──────────────────────────────────────── */
@@ -207,7 +207,7 @@
   padding-top: 6px;
   border-top: 1px solid var(--panel);
   font-size: 0.68rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 .sdp-rarity {

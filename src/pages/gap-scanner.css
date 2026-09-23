@@ -111,9 +111,9 @@
   font-weight: 700;
   text-transform: uppercase;
 }
-.gs-sig-bullish { background: #22c55e20; color: #22c55e; }
-.gs-sig-bearish { background: #ef444420; color: #ef4444; }
-.gs-sig-neutral { background: #94a3b820; color: #94a3b8; }
+.gs-sig-bullish { background: var(--color-profit)20; color: var(--color-profit); }
+.gs-sig-bearish { background: var(--color-loss)20; color: var(--color-loss); }
+.gs-sig-neutral { background: var(--ink-soft)20; color: var(--ink-soft); }
 
 .gs-reason {
   font-size: 0.64rem;

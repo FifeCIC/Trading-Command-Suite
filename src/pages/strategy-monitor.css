@@ -31,7 +31,7 @@
 
 .sm-mt5-banner {
   padding: 6px 12px; border-radius: 6px; margin-bottom: 0.75rem;
-  background: rgba(34,197,94,0.08); color: #22c55e; font-size: 0.72rem; font-weight: 600;
+  background: rgba(34,197,94,0.08); color: var(--color-profit); font-size: 0.72rem; font-weight: 600;
 }
 
 /* Strategy cards */
@@ -55,8 +55,8 @@
 }
 .sm-compare-stats { display: flex; flex-direction: column; gap: 2px; margin-top: 0.3rem; font-size: 0.72rem; color: var(--ink-soft); }
 .sm-pnl-badge { font-weight: 700; }
-.sm-pnl-up { color: #22c55e; }
-.sm-pnl-down { color: #ef4444; }
+.sm-pnl-up { color: var(--color-profit); }
+.sm-pnl-down { color: var(--color-loss); }
 
 .sm-monitor-note { font-size: 0.72rem; color: var(--ink-soft, #999); }
 
@@ -75,7 +75,7 @@
 }
 .smq-list { display: flex; flex-direction: column; gap: 0.4rem; }
 .smq-bot { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.smq-bot--open { border-color: #3b82f655; }
+.smq-bot--open { border-color: var(--color-accent-blue)55; }
 .smq-bot-row {
   display: flex; align-items: center; gap: 0.5rem; width: 100%;
   background: none; border: none; color: var(--ink); text-align: left;
@@ -90,7 +90,7 @@
   font-size: 0.6rem; padding: 1px 6px; border-radius: 3px;
   background: rgba(139,92,246,0.12); color: #8b5cf6; font-weight: 600;
 }
-.smq-depth { margin-left: auto; font-size: 0.68rem; font-weight: 700; color: #3b82f6; white-space: nowrap; }
+.smq-depth { margin-left: auto; font-size: 0.68rem; font-weight: 700; color: var(--color-accent-blue); white-space: nowrap; }
 .smq-entries { border-top: 1px solid var(--line); }
 .smq-entry {
   display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
@@ -100,8 +100,8 @@
 .smq-entry:last-child { border-bottom: none; }
 .smq-entry-symbol { font-weight: 700; min-width: 64px; }
 .smq-entry-dir { font-size: 0.62rem; font-weight: 800; padding: 1px 7px; border-radius: 3px; }
-.smq-entry-dir--long { background: rgba(34,197,94,0.14); color: #22c55e; }
-.smq-entry-dir--short { background: rgba(239,68,68,0.14); color: #ef4444; }
+.smq-entry-dir--long { background: rgba(34,197,94,0.14); color: var(--color-profit); }
+.smq-entry-dir--short { background: rgba(239,68,68,0.14); color: var(--color-loss); }
 .smq-entry-proto { color: var(--ink-soft); font-size: 0.7rem; }
 .smq-entry-scores { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-size: 0.72rem; }
 .smq-entry-scores i { font-style: normal; color: var(--ink-soft); font-size: 0.55rem; font-weight: 600; }

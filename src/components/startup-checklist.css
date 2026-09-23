@@ -28,10 +28,10 @@
   align-items: center;
   gap: 0.4rem;
 }
-.checklist-count { margin-left: auto; color: var(--ink-soft, #94a3b8); font-size: 0.72rem; }
+.checklist-count { margin-left: auto; color: var(--ink-soft, var(--ink-soft)); font-size: 0.72rem; }
 .checklist-chevron {
   font-size: 0.7rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin-left: 0.25rem;
 }
 
@@ -43,7 +43,7 @@
 }
 .checklist-badge-warn {
   background: rgba(239, 68, 68, 0.18);
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 /* ── Body ── */
@@ -77,20 +77,20 @@
   margin-top: 0.35rem;
   flex-shrink: 0;
 }
-.checklist-dot--error   { background: #ef4444; }
-.checklist-dot--warning { background: #f59e0b; }
-.checklist-dot--info    { background: #3b82f6; }
+.checklist-dot--error   { background: var(--color-loss); }
+.checklist-dot--warning { background: var(--color-warning); }
+.checklist-dot--info    { background: var(--color-accent-blue); }
 
 .checklist-item-label {
   font-weight: 600;
   color: var(--ink, var(--ink));
   font-size: 0.78rem;
 }
-.checklist-item--error .checklist-item-label { color: #ef4444; }
+.checklist-item--error .checklist-item-label { color: var(--color-loss); }
 
 .checklist-item-detail {
   font-size: 0.7rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin-top: 0.1rem;
   line-height: 1.35;
 }
@@ -108,7 +108,7 @@
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 5px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.12s;
@@ -123,7 +123,7 @@
   font-size: 0.7rem;
   background: none;
   border: none;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   border-radius: 4px;
 }

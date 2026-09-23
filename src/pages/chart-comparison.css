@@ -20,9 +20,9 @@
 .cc-metric-card { padding: 0.6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); display: flex; flex-direction: column; gap: 0.2rem; }
 .cc-metric-label { font-size: 0.6rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
 .cc-metric-value { font-size: 0.78rem; font-weight: 700; }
-.cc-metric-value.buy { color: #22c55e; }
-.cc-metric-value.sell { color: #ef4444; }
-.cc-metric-value.div { color: #f59e0b; }
+.cc-metric-value.buy { color: var(--color-profit); }
+.cc-metric-value.sell { color: var(--color-loss); }
+.cc-metric-value.div { color: var(--color-warning); }
 
 @media (max-width: 860px) {
   .cc-dual-grid { grid-template-columns: 1fr; }

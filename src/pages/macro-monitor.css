@@ -13,7 +13,7 @@
 }
 
 .mm-subtitle {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.88rem;
   margin: 0 0 1rem;
   line-height: 1.5;
@@ -33,7 +33,7 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 6px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -72,7 +72,7 @@
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .mm-risk-value {
@@ -80,7 +80,7 @@
   font-weight: 700;
 }
 
-.mm-risk-on { color: #22c55e; }
+.mm-risk-on { color: var(--color-profit); }
 
 /* ── Section ──────────────────────────────────────────────── */
 .mm-section {
@@ -137,7 +137,7 @@
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .mm-impact-badge {
@@ -150,9 +150,9 @@
   flex-shrink: 0;
 }
 
-.mm-impact-high   { background: rgba(239,68,68,0.18); color: #ef4444; }
-.mm-impact-medium { background: rgba(245,158,11,0.18); color: #f59e0b; }
-.mm-impact-low    { background: rgba(100,116,139,0.18); color: #94a3b8; }
+.mm-impact-high   { background: rgba(239,68,68,0.18); color: var(--color-loss); }
+.mm-impact-medium { background: rgba(245,158,11,0.18); color: var(--color-warning); }
+.mm-impact-low    { background: rgba(100,116,139,0.18); color: var(--ink-soft); }
 
 /* ── Values ───────────────────────────────────────────────── */
 .mm-values {
@@ -171,7 +171,7 @@
 .mm-current small {
   font-size: 0.7rem;
   font-weight: 500;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin-left: 0.15rem;
 }
 
@@ -181,9 +181,9 @@
   font-weight: 600;
 }
 
-.mm-up   { color: #22c55e; }
-.mm-down { color: #ef4444; }
-.mm-flat { color: var(--ink-soft, #94a3b8); }
+.mm-up   { color: var(--color-profit); }
+.mm-down { color: var(--color-loss); }
+.mm-flat { color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Sparkline ────────────────────────────────────────────── */
 .mm-sparkline {
@@ -202,7 +202,7 @@
 
 .mm-source, .mm-next {
   font-size: 0.62rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .mm-next {
@@ -248,7 +248,7 @@
 
 .mm-meta-row span {
   font-size: 0.7rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }

@@ -70,7 +70,7 @@
 }
 
 .mt5-disconnected .mt5-status-dot {
-  background: #ef4444;
+  background: var(--color-loss);
 }
 
 @keyframes mt5-pulse {
@@ -94,7 +94,7 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: var(--ink-soft);
   font-weight: 600;
 }
 
@@ -130,7 +130,7 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: var(--ink-soft);
   font-weight: 600;
   margin-bottom: 0.25rem;
 }
@@ -144,7 +144,7 @@
 .mt5-no-data {
   padding: 2rem;
   text-align: center;
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 .mt5-no-data p {
@@ -182,7 +182,7 @@
 }
 
 .mt5-log-empty {
-  color: #94a3b8;
+  color: var(--ink-soft);
   text-align: center;
   padding: 1rem;
 }
@@ -198,7 +198,7 @@
 }
 
 .mt5-log-time {
-  color: #94a3b8;
+  color: var(--ink-soft);
   white-space: nowrap;
   width: 70px;
 }
@@ -231,7 +231,7 @@
 }
 
 .mt5-diag-label {
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 .mt5-diag-value {

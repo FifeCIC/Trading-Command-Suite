@@ -2,20 +2,20 @@
 
 .pf-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .pf-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.pf-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
+.pf-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0 0 1rem; }
 
 /* ── Summary chips ────────────────────────────────────────── */
 .pf-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .pf-summary-chip { font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 999px; }
-.pf-cons-pos { background: rgba(34,197,94,0.15); color: #22c55e; }
-.pf-cons-neu { background: rgba(245,158,11,0.15); color: #f59e0b; }
-.pf-cons-neg { background: rgba(239,68,68,0.15); color: #ef4444; }
+.pf-cons-pos { background: rgba(34,197,94,0.15); color: var(--color-profit); }
+.pf-cons-neu { background: rgba(245,158,11,0.15); color: var(--color-warning); }
+.pf-cons-neg { background: rgba(239,68,68,0.15); color: var(--color-loss); }
 
 /* ── Table ────────────────────────────────────────────────── */
 .pf-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; margin-bottom: 1rem; }
 .pf-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .pf-table th {
-  text-align: left; font-weight: 500; color: var(--ink-soft, #94a3b8);
+  text-align: left; font-weight: 500; color: var(--ink-soft, var(--ink-soft));
   font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
   padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
   background: rgba(0,0,0,0.12); white-space: nowrap;
@@ -30,13 +30,13 @@
 .pf-sym { font-weight: 700; color: var(--accent, var(--accent)); }
 .pf-right { text-align: right; }
 .pf-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
-.pf-muted { color: var(--ink-soft, #94a3b8); }
+.pf-muted { color: var(--ink-soft, var(--ink-soft)); }
 
 .pf-consensus { font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; }
 
-.pf-up-high { color: #22c55e; font-weight: 700; }
+.pf-up-high { color: var(--color-profit); font-weight: 700; }
 .pf-up-mid  { color: var(--accent, var(--accent)); font-weight: 600; }
-.pf-up-low  { color: var(--ink-soft, #94a3b8); }
+.pf-up-low  { color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Expanded target bar ──────────────────────────────────── */
 .pf-expanded {
@@ -45,14 +45,14 @@
 }
 .pf-target-bar-labels {
   display: flex; justify-content: space-between; margin-bottom: 0.4rem;
-  font-size: 0.65rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.65rem; color: var(--ink-soft, var(--ink-soft));
 }
 .pf-target-bar {
   position: relative; height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; margin-bottom: 0.4rem;
 }
 .pf-target-range {
   position: absolute; top: 0; height: 100%;
-  background: linear-gradient(90deg, #ef444433, #f59e0b33, #22c55e33);
+  background: linear-gradient(90deg, var(--color-loss)33, var(--color-warning)33, var(--color-profit)33);
   border-radius: 999px;
 }
 .pf-target-current {
@@ -64,24 +64,24 @@
   background: var(--accent, var(--accent)); border-radius: 2px; transform: translateX(-50%);
 }
 .pf-target-meta {
-  display: flex; gap: 1rem; font-size: 0.68rem; color: var(--ink-soft, #94a3b8);
+  display: flex; gap: 1rem; font-size: 0.68rem; color: var(--ink-soft, var(--ink-soft));
 }
 
 @media (max-width: 700px) { .pf-table { font-size: 0.72rem; } .pf-table th, .pf-table td { padding: 0.3rem 0.4rem; } }
 
 /* ── States ──────────────────────────────────────────────── */
 .pf-loading {
-  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
   font-size: 0.92rem;
 }
 .pf-error {
-  text-align: center; padding: 3rem 1rem; color: #ef4444;
+  text-align: center; padding: 3rem 1rem; color: var(--color-loss);
   background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
   margin-top: 1rem;
 }
-.pf-error-detail { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin-top: 0.3rem; }
+.pf-error-detail { font-size: 0.78rem; color: var(--ink-soft, var(--ink-soft)); margin-top: 0.3rem; }
 .pf-empty {
-  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
   border: 1px dashed var(--line, #1e2a45); border-radius: 8px;
   margin-bottom: 1rem;
 }

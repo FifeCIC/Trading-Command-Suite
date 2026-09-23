@@ -177,7 +177,7 @@
 
 .ts-missing {
   font-size: 0.8rem;
-  color: #ef4444;
+  color: var(--color-loss);
 }
 .ts-col-search:focus { outline: none; border-color: var(--accent); }
 .ts-col-search::placeholder { color: var(--ink-soft); opacity: 0.5; }
@@ -337,8 +337,8 @@
   cursor: pointer;
   font-family: inherit;
 }
-.ts-chip-ok { background: rgba(34,197,94,0.12); color: #22c55e; border-color: rgba(34,197,94,0.3); }
-.ts-chip-warn { background: rgba(245,158,11,0.12); color: #f59e0b; border-color: rgba(245,158,11,0.3); }
+.ts-chip-ok { background: rgba(34,197,94,0.12); color: var(--color-profit); border-color: rgba(34,197,94,0.3); }
+.ts-chip-warn { background: rgba(245,158,11,0.12); color: var(--color-warning); border-color: rgba(245,158,11,0.3); }
 
 /* ── TF Column Popover ── */
 .ts-tf-header,
@@ -354,7 +354,7 @@
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   white-space: nowrap;
   z-index: 100;
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
@@ -493,12 +493,12 @@
 }
 
 .ts-no-fallback {
-  color: #ef4444;
+  color: var(--color-loss);
   font-size: 0.72rem;
   margin-top: 0.3rem !important;
 }
 .ts-has-fallback {
-  color: #22c55e;
+  color: var(--color-profit);
   font-size: 0.72rem;
   margin-top: 0.3rem !important;
 }
@@ -635,7 +635,7 @@
   cursor: pointer;
   padding: 0 0.1rem;
 }
-.ts-sub-remove:hover { color: #ef4444; }
+.ts-sub-remove:hover { color: var(--color-loss); }
 .ts-sub-add { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
 .ts-sub-select {
   flex: 1;

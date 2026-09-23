@@ -68,7 +68,7 @@
 }
 
 .ff-hint-warn {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 /* ── Fieldset ── */
@@ -204,20 +204,20 @@
 
 /* ── Error/success ── */
 .ff-error {
-  color: #ef4444;
+  color: var(--color-loss);
   font-size: 0.82rem;
   padding: 0.5rem 0.75rem;
-  background: #ef444410;
-  border: 1px solid #ef444430;
+  background: var(--color-loss)10;
+  border: 1px solid var(--color-loss)30;
   border-radius: 6px;
 }
 
 .ff-success {
-  color: #22c55e;
+  color: var(--color-profit);
   font-size: 0.82rem;
   padding: 0.5rem 0.75rem;
-  background: #22c55e10;
-  border: 1px solid #22c55e30;
+  background: var(--color-profit)10;
+  border: 1px solid var(--color-profit)30;
   border-radius: 6px;
 }
 
@@ -353,17 +353,17 @@
 .ff-field--error .ff-textarea,
 .ff-field--error select.ff-select,
 .ff-field--error .ff-seg {
-  border-color: #ef4444;
+  border-color: var(--color-loss);
 }
 .ff-field-error {
   font-size: 0.72rem;
-  color: #ef4444;
+  color: var(--color-loss);
   line-height: 1.4;
 }
 .ff-field--success .ff-input,
 .ff-field--success .ff-select,
 .ff-field--success .ff-textarea {
-  border-color: #22c55e;
+  border-color: var(--color-profit);
 }
 
 /* ── Touch / coarse pointers — restore full 44px targets ── */

@@ -64,8 +64,8 @@
   font-size: 0.78rem;
   color: var(--ink-soft);
 }
-.sh-best { color: #22c55e; font-weight: 600; }
-.sh-worst { color: #ef4444; font-weight: 600; }
+.sh-best { color: var(--color-profit); font-weight: 600; }
+.sh-worst { color: var(--color-loss); font-weight: 600; }
 
 /* ── Heatmap grid ── */
 .sh-heatmap-wrap {

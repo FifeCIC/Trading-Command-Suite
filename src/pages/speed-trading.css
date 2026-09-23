@@ -432,7 +432,7 @@
 .st-chart-offline-badge {
   font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
   padding: 1px 6px; border-radius: 3px;
-  background: #f59e0b22; color: #f59e0b;
+  background: var(--color-warning)22; color: var(--color-warning);
 }
 .st-chart-offline-price { margin-top: 0.25rem; }
 .st-chart-offline-bid { font-size: 1.5rem; font-weight: 700; color: var(--ink); }

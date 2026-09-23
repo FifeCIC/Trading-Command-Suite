@@ -36,8 +36,8 @@
 .so-gear-btn:active { transform: scale(0.95); }
 .so-bookmarked {
   opacity: 0.85;
-  color: #f59e0b;
-  border-color: #f59e0b;
+  color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 .so-bookmarked:hover {
   opacity: 1;
@@ -76,14 +76,14 @@
   border-bottom: 1px solid var(--notice-info-border, var(--accent));
   color: var(--accent, var(--accent));
 }
-.so-info-pop-text { margin: 0; color: var(--ink-soft, #94a3b8); }
+.so-info-pop-text { margin: 0; color: var(--ink-soft, var(--ink-soft)); }
 .so-info-pop-close {
   position: absolute;
   top: 6px;
   right: 8px;
   background: none;
   border: none;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
   font-size: 1.1rem;
   cursor: pointer;
   padding: 2px 6px;
@@ -325,7 +325,7 @@
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-muted, #64748b);
+  color: var(--color-muted, var(--color-muted));
   margin: 0 0 4px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--line);

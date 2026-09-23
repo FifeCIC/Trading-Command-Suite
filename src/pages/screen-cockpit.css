@@ -242,7 +242,7 @@
 }
 
 .screencockpit-dot--on {
-  background: #22c55e;
+  background: var(--color-profit);
 }
 
 .screencockpit-empty {

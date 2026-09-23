@@ -14,9 +14,9 @@
   padding: 0.85rem 1rem;
 }
 
-.de-card--complete { border-color: #22c55e; }
-.de-card--partial { border-color: #f59e0b; }
-.de-card--unavailable { border-color: #ef4444; }
+.de-card--complete { border-color: var(--color-profit); }
+.de-card--partial { border-color: var(--color-warning); }
+.de-card--unavailable { border-color: var(--color-loss); }
 
 .de-card-header {
   display: flex;
@@ -35,7 +35,7 @@
 
 .de-desc {
   font-size: 0.8rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 0.5rem;
   line-height: 1.4;
 }
@@ -46,7 +46,7 @@
 }
 
 .de-req strong {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   display: block;
   margin-bottom: 0.2rem;
 }
@@ -54,7 +54,7 @@
 .de-req ul {
   margin: 0;
   padding-left: 1.2rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
 }
 
 .de-req li { margin-bottom: 0.15rem; }
@@ -73,13 +73,13 @@
   text-transform: uppercase;
 }
 
-.de-badge--complete { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
-.de-badge--partial { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
-.de-badge--unavailable { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.de-badge--complete { background: rgba(34, 197, 94, 0.12); color: var(--color-profit); }
+.de-badge--partial { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+.de-badge--unavailable { background: rgba(239, 68, 68, 0.12); color: var(--color-loss); }
 
 .de-coverage {
   font-size: 0.75rem;
-  color: var(--ink-soft, #64748b);
+  color: var(--ink-soft, var(--color-muted));
 }
 
 @media (max-width: 768px) {

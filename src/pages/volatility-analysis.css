@@ -13,7 +13,7 @@
 }
 
 .va-subtitle {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.88rem;
   margin: 0 0 1rem;
 }
@@ -37,7 +37,7 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .va-field select {
@@ -60,7 +60,7 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 6px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -104,22 +104,22 @@
 }
 
 .va-metric-card.va-high {
-  border-color: #ef4444;
+  border-color: var(--color-loss);
 }
 
 .va-metric-card.va-mid {
-  border-color: #f59e0b;
+  border-color: var(--color-warning);
 }
 
 .va-metric-card.va-low {
-  border-color: #22c55e;
+  border-color: var(--color-profit);
 }
 
 .va-metric-label {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .va-metric-value {
@@ -128,13 +128,13 @@
   font-weight: 700;
 }
 
-.va-high .va-metric-value { color: #ef4444; }
-.va-mid .va-metric-value { color: #f59e0b; }
-.va-low .va-metric-value { color: #22c55e; }
+.va-high .va-metric-value { color: var(--color-loss); }
+.va-mid .va-metric-value { color: var(--color-warning); }
+.va-low .va-metric-value { color: var(--color-profit); }
 
 .va-metric-hint {
   font-size: 0.68rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 /* ── Chart ────────────────────────────────────────────────── */
@@ -167,7 +167,7 @@
 .va-table th {
   text-align: left;
   font-weight: 500;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;

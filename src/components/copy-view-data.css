@@ -10,7 +10,7 @@
   border-radius: 50%;
   border: 1px solid var(--line, var(--line));
   background: var(--panel, var(--panel));
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -30,7 +30,7 @@
 .cvd-feedback {
   font-size: 0.58rem;
   font-weight: 700;
-  color: #22c55e;
+  color: var(--color-profit);
   white-space: nowrap;
   line-height: 1;
 }

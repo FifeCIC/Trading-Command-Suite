@@ -7,7 +7,7 @@
 .cpg-mode-switch { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 2px; }
 .cpg-mode-btn { padding: 0.35rem 0.7rem; border: none; border-radius: 4px; background: transparent; color: var(--ink-soft); font-size: 0.75rem; cursor: pointer; font-family: inherit; }
 .cpg-mode-btn-active { background: var(--accent); color: #fff; }
-.cpg-count { font-size: var(--text-xs, 0.72rem); color: #64748b; margin-left: auto; }
+.cpg-count { font-size: var(--text-xs, 0.72rem); color: var(--color-muted); margin-left: auto; }
 .cpg-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .cpg-card-btn { width: 100%; text-align: left; padding: 0.75rem 1rem; background: none; border: none; color: var(--ink); cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 0.75rem; }
 .cpg-card-icon { flex-shrink: 0; font-size: 1.5rem; }

@@ -92,7 +92,7 @@
 }
 
 .ew-error {
-  color: #ef4444;
+  color: var(--color-loss);
   font-size: 0.82rem;
   margin: 0.5rem 0 0;
 }
@@ -138,13 +138,13 @@
 
 .ew-saved-badge {
   border-color: rgba(34, 197, 94, 0.4);
-  color: #22c55e;
+  color: var(--color-profit);
   background: rgba(34, 197, 94, 0.08);
 }
 
 .ew-preview-badge {
   border-color: rgba(245, 158, 11, 0.4);
-  color: #f59e0b;
+  color: var(--color-warning);
   background: rgba(245, 158, 11, 0.08);
 }
 

@@ -9,7 +9,7 @@
 
 .ll-header { margin-bottom: 1.5rem; }
 .ll-header h1 { margin: 0 0 0.3rem; font-size: 1.5rem; }
-.ll-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.85rem; margin: 0; }
+.ll-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.85rem; margin: 0; }
 
 /* ── Card grid ── */
 .ll-grid {
@@ -51,7 +51,7 @@
 }
 
 .ll-card-desc {
-  font-size: 0.78rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.78rem; color: var(--ink-soft, var(--ink-soft));
   margin: 0; line-height: 1.45; flex: 1;
 }
 
@@ -68,7 +68,7 @@
 .ll-sub-link {
   font-size: 0.7rem; padding: 0.15rem 0.5rem;
   background: rgba(255,255,255,0.04); border-radius: 999px;
-  color: var(--ink-soft, #94a3b8); text-decoration: none;
+  color: var(--ink-soft, var(--ink-soft)); text-decoration: none;
   transition: all 0.15s;
 }
 .ll-sub-link:hover {

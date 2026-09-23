@@ -2,7 +2,7 @@
 
 .ec-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem; color: var(--ink, var(--ink)); }
 .ec-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.ec-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
+.ec-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0 0 1rem; }
 
 /* ── Filters ────────────────────────────────────────────────
    The main filter toolbar (Horizon/Sector/Time/Session/Cap/Estimates) uses the
@@ -10,12 +10,12 @@
    The rules below (.ec-field / .ec-chip*) remain for the collapsible
    Import-settings card, which still uses chip buttons for scope/time-of-day/schedule. */
 .ec-field { display: flex; flex-direction: column; gap: 0.3rem; }
-.ec-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
+.ec-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, var(--ink-soft)); }
 .ec-chip-tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 .ec-chip {
   padding: 0.3rem 0.65rem; font-size: 0.74rem;
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
-  border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
+  border-radius: 6px; color: var(--ink-soft, var(--ink-soft)); cursor: pointer; transition: all 0.15s;
 }
 .ec-chip:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
 .ec-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
@@ -26,7 +26,7 @@
 .ec-delta { font-size: 0.68rem; }
 .ec-delta-up { color: #3ecf8e; }
 .ec-delta-down { color: #f06c6c; }
-.ec-cap { color: var(--ink-soft, #94a3b8); }
+.ec-cap { color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Import settings card ─────────────────────────────────── */
 .ec-settings-card {
@@ -42,7 +42,7 @@
   user-select: none; list-style: none;
 }
 .ec-settings-summary::-webkit-details-marker { display: none; }
-.ec-settings-current { font-weight: 400; font-size: 0.72rem; color: var(--ink-soft, #94a3b8); }
+.ec-settings-current { font-weight: 400; font-size: 0.72rem; color: var(--ink-soft, var(--ink-soft)); }
 .ec-settings-body {
   border-top: 1px solid var(--line, #1e2a45);
   padding: 1rem;
@@ -50,7 +50,7 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.9rem;
 }
-.ec-field-hint { font-size: 0.68rem; color: var(--ink-soft, #94a3b8); margin: 0.15rem 0 0; line-height: 1.35; }
+.ec-field-hint { font-size: 0.68rem; color: var(--ink-soft, var(--ink-soft)); margin: 0.15rem 0 0; line-height: 1.35; }
 .ec-input {
   padding: 0.4rem 0.55rem; font-size: 0.8rem;
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
@@ -65,31 +65,31 @@
 .ec-btn-primary { background: var(--accent, var(--accent)); border-color: var(--accent, var(--accent)); color: #04151a; font-weight: 600; }
 .ec-btn-primary:hover { filter: brightness(1.1); }
 .ec-btn-danger { border-color: #b45309; color: #fdba74; }
-.ec-btn-danger:hover { border-color: #f59e0b; color: #fcd34d; }
+.ec-btn-danger:hover { border-color: var(--color-warning); color: #fcd34d; }
 .ec-cap-notice {
   display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
-  font-size: 0.78rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.78rem; color: var(--ink-soft, var(--ink-soft));
   background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: 8px; padding: 0.6rem 0.9rem; margin-bottom: 1rem;
 }
 .ec-settings-msg { font-size: 0.75rem; color: var(--accent, var(--accent)); }
 .ec-import-status {
   grid-column: 1 / -1;
-  font-size: 0.72rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.72rem; color: var(--ink-soft, var(--ink-soft));
   border-top: 1px dashed var(--line, #1e2a45); padding-top: 0.6rem;
 }
-.ec-stored-count { color: var(--ink-soft, #94a3b8); }
+.ec-stored-count { color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Week sections ────────────────────────────────────────── */
 .ec-week { margin-bottom: 1.5rem; }
 .ec-week-label { font-size: 0.95rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-.ec-count { font-size: 0.7rem; font-weight: 500; background: rgba(255,255,255,0.06); padding: 0.15rem 0.5rem; border-radius: 999px; color: var(--ink-soft, #94a3b8); }
+.ec-count { font-size: 0.7rem; font-weight: 500; background: rgba(255,255,255,0.06); padding: 0.15rem 0.5rem; border-radius: 999px; color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Table ────────────────────────────────────────────────── */
 .ec-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }
 .ec-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .ec-table th {
-  text-align: left; font-weight: 500; color: var(--ink-soft, #94a3b8);
+  text-align: left; font-weight: 500; color: var(--ink-soft, var(--ink-soft));
   font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
   padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
   background: rgba(0,0,0,0.12);
@@ -110,47 +110,47 @@
 .ec-sym { font-weight: 700; color: var(--accent, var(--accent)); }
 .ec-right { text-align: right; }
 .ec-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
-.ec-muted { color: var(--ink-soft, #94a3b8); font-size: 0.72rem; }
+.ec-muted { color: var(--ink-soft, var(--ink-soft)); font-size: 0.72rem; }
 
 .ec-time-badge {
   font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px;
 }
 .ec-time-pm { background: rgba(14,165,166,0.15); color: var(--accent, var(--accent)); }
-.ec-time-am { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.ec-time-am { background: rgba(245,158,11,0.15); color: var(--color-warning); }
 
 /* ── Surprise history ────────────────────────────────────── */
 .ec-expanded {
   padding: 0.6rem 0.75rem; margin-top: 0.4rem;
   background: rgba(0,0,0,0.1); border: 1px solid var(--line, #1e2a45); border-radius: 8px;
 }
-.ec-surprise-label { font-size: 0.7rem; color: var(--ink-soft, #94a3b8); display: block; margin-bottom: 0.35rem; }
+.ec-surprise-label { font-size: 0.7rem; color: var(--ink-soft, var(--ink-soft)); display: block; margin-bottom: 0.35rem; }
 .ec-surprise-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .ec-surprise-chip {
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
   font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px;
 }
-.ec-surp-pos { background: rgba(34,197,94,0.15); color: #22c55e; }
-.ec-surp-neg { background: rgba(239,68,68,0.15); color: #ef4444; }
+.ec-surp-pos { background: rgba(34,197,94,0.15); color: var(--color-profit); }
+.ec-surp-neg { background: rgba(239,68,68,0.15); color: var(--color-loss); }
 
 @media (max-width: 600px) { .ec-table { font-size: 0.72rem; } .ec-table th, .ec-table td { padding: 0.3rem 0.4rem; } }
 
 /* ── States ──────────────────────────────────────────────── */
 .ec-loading {
-  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
   font-size: 0.92rem;
 }
 .ec-error {
-  text-align: center; padding: 3rem 1rem; color: #ef4444;
+  text-align: center; padding: 3rem 1rem; color: var(--color-loss);
   background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
   margin-top: 1rem;
 }
-.ec-error-detail { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin-top: 0.3rem; }
+.ec-error-detail { font-size: 0.78rem; color: var(--ink-soft, var(--ink-soft)); margin-top: 0.3rem; }
 .ec-empty {
-  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
   border: 1px dashed var(--line, #1e2a45); border-radius: 8px;
   margin-top: 1rem;
 }
 .ec-empty-hint { font-size: 0.78rem; margin-top: 0.3rem; }
-.ec-time-na { background: rgba(148,163,184,0.1); color: var(--ink-soft, #94a3b8); }
+.ec-time-na { background: rgba(148,163,184,0.1); color: var(--ink-soft, var(--ink-soft)); }
 .ec-source { font-weight: 400; font-size: 0.72rem; opacity: 0.7; }
 .ec-time-badge { font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px; }

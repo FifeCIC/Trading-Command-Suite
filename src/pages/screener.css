@@ -127,7 +127,7 @@
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-.screener-chip--news { border-color: rgba(59, 130, 246, 0.4); color: #3b82f6; }
+.screener-chip--news { border-color: rgba(59, 130, 246, 0.4); color: var(--color-accent-blue); }
 .screener-chip--earnings { border-color: rgba(139, 92, 246, 0.4); color: #8b5cf6; }
 
 /* --- Table --- */
@@ -202,7 +202,7 @@
   border: 1px solid rgba(34, 197, 94, 0.4);
   font-size: 0.58rem;
   font-weight: 700;
-  color: #22c55e;
+  color: var(--color-profit);
   vertical-align: middle;
   cursor: help;
 }
@@ -269,7 +269,7 @@
 .screener-promote-confirm:disabled { opacity: 0.6; cursor: default; }
 
 .screener-promote-err {
-  color: #ef4444;
+  color: var(--color-loss);
   font-size: 0.75rem;
   margin: 0.4rem 0 0;
 }
@@ -389,8 +389,8 @@
   white-space: nowrap;
 }
 
-.screener-lean--long { border-color: rgba(34, 197, 94, 0.4); color: #22c55e; }
-.screener-lean--short { border-color: rgba(239, 68, 68, 0.4); color: #ef4444; }
+.screener-lean--long { border-color: rgba(34, 197, 94, 0.4); color: var(--color-profit); }
+.screener-lean--short { border-color: rgba(239, 68, 68, 0.4); color: var(--color-loss); }
 .screener-lean--neutral { border-color: var(--line); color: var(--ink-soft); }
 
 .screener-table tbody tr { cursor: pointer; }

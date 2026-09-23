@@ -3,7 +3,7 @@
 
 [data-theme-pack='slate'] {
   /* Blue-indigo accent gradient — matches dashboard hero button */
-  --accent-gradient: linear-gradient(135deg, #3b82f6, #6366f1);
+  --accent-gradient: linear-gradient(135deg, var(--color-accent-blue), #6366f1);
 
   /* Slightly lighter panel tint for card depth on Slate bg */
   --panel-raised: #233049;
@@ -12,19 +12,19 @@
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35);
 
   /* Semantic tokens — match dashboard's status colors */
-  --color-profit: #22c55e;
-  --color-loss: #ef4444;
-  --color-buy: #3b82f6;
-  --color-sell: #ef4444;
-  --color-warning: #f59e0b;
-  --color-neutral: #94a3b8;
-  --color-muted: #64748b;
+  --color-profit: var(--color-profit);
+  --color-loss: var(--color-loss);
+  --color-buy: var(--color-accent-blue);
+  --color-sell: var(--color-loss);
+  --color-warning: var(--color-warning);
+  --color-neutral: var(--ink-soft);
+  --color-muted: var(--color-muted);
 }
 
 /* Button overrides — blue gradient accent */
 [data-theme-pack='slate'] .btn-primary,
 [data-theme-pack='slate'] .app-btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, var(--color-accent-blue), #6366f1);
   border: none;
 }
 

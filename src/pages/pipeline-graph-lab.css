@@ -23,7 +23,7 @@
 .pg-header h1 { margin: 0; font-size: 1.35rem; font-weight: 600; }
 .pg-badge-live {
   font-size: 0.62rem;
-  background: #22c55e;
+  background: var(--color-profit);
   color: #000;
   padding: 2px 8px;
   border-radius: 4px;
@@ -33,7 +33,7 @@
   letter-spacing: 0.5px;
   font-weight: 700;
 }
-.pg-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.85rem; margin: 4px 0 0; }
+.pg-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.85rem; margin: 4px 0 0; }
 
 /* ── Stack Ratings Bar ──────────────────────────────────── */
 .pg-stack-ratings-bar {
@@ -66,19 +66,19 @@
   cursor: default;
   transition: border-color 0.2s;
 }
-.pg-sr-item:hover { border-color: var(--accent, #3b82f6); }
+.pg-sr-item:hover { border-color: var(--accent, var(--color-accent-blue)); }
 .pg-sr-stars { font-size: 0.75rem; letter-spacing: 1px; }
 .pg-sr-stars.pg-sr-untested { opacity: 0.4; }
 .pg-sr-name { color: var(--ink, #e5e7eb); }
 .pg-sr-meta { color: var(--ink-soft); font-size: 0.7rem; }
 .pg-sr-more { color: var(--ink-soft); font-size: 0.72rem; font-style: italic; }
 
-.pg-legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--ink-soft, #94a3b8); align-items: center; }
+.pg-legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--ink-soft, var(--ink-soft)); align-items: center; }
 .pg-mode-btn {
   padding: 4px 10px;
-  border: 1px solid #2d3040;
-  background: #1a1d2e;
-  color: #94a3b8;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.7rem;
@@ -86,8 +86,8 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .pg-mode-btn:hover { background: #252840; color: #e5e7eb; }
-.pg-mode-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-.pg-legend-sep { width: 1px; height: 18px; background: #2d3040; }
+.pg-mode-btn.active { background: var(--color-accent-blue); color: #fff; border-color: var(--color-accent-blue); }
+.pg-legend-sep { width: 1px; height: 18px; background: var(--line); }
 .pg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 
 /* ── Canvas ─────────────────────────────────────────────── */
@@ -159,7 +159,7 @@
   width: 220px;
   min-height: 140px;
   background: var(--panel, #0a0a0a);
-  border: 1.5px solid #2d3040;
+  border: 1.5px solid var(--line);
   border-radius: 14px;
   padding: 16px;
   cursor: pointer;
@@ -224,7 +224,7 @@
 .pg-node-subtype {
   display: block;
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin-top: 3px;
 }
 
@@ -247,7 +247,7 @@
   padding: 3px 0;
 }
 .pg-stat-key {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
@@ -266,9 +266,9 @@
   pointer-events: none;
   opacity: 0;
 }
-.pulse-green  { animation: pg-pulse 2.5s ease-out infinite; border-color: #22c55e; }
-.pulse-amber  { animation: pg-pulse 3s ease-out infinite; border-color: #f59e0b; }
-.pulse-red    { animation: pg-pulse 1.5s ease-out infinite; border-color: #ef4444; }
+.pulse-green  { animation: pg-pulse 2.5s ease-out infinite; border-color: var(--color-profit); }
+.pulse-amber  { animation: pg-pulse 3s ease-out infinite; border-color: var(--color-warning); }
+.pulse-red    { animation: pg-pulse 1.5s ease-out infinite; border-color: var(--color-loss); }
 
 @keyframes pg-pulse {
   0%   { opacity: 0.6; transform: scale(1); }
@@ -318,7 +318,7 @@
 .pg-conn-arrow {
   font-size: 0.6rem;
   text-transform: uppercase;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   font-weight: 600;
   letter-spacing: 0.3px;
 }
@@ -331,7 +331,7 @@
 }
 .pg-conn-flow {
   font-size: 0.68rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 6px;
   line-height: 1.4;
 }
@@ -349,7 +349,7 @@
   padding: 8px 24px;
   border-top: 1px solid var(--line, #1a1a1a);
   font-size: 0.65rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   flex-shrink: 0;
 }
 
@@ -387,7 +387,7 @@
   top: 16px; right: 16px;
   background: rgba(255,255,255,0.06);
   border: 1px solid var(--line, #1a1a1a);
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   width: 32px; height: 32px;
   border-radius: 8px;
   font-size: 16px;
@@ -409,7 +409,7 @@
 }
 .pg-overlay-head h2 { margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--ink, #e5e7eb); }
 .pg-overlay-health { font-size: 0.72rem; font-weight: 500; }
-.pg-overlay-desc { color: var(--ink-soft, #94a3b8); font-size: 0.8rem; line-height: 1.5; margin-bottom: 16px; }
+.pg-overlay-desc { color: var(--ink-soft, var(--ink-soft)); font-size: 0.8rem; line-height: 1.5; margin-bottom: 16px; }
 
 .pg-overlay-alert {
   padding: 10px 14px;
@@ -418,12 +418,12 @@
   margin-bottom: 14px;
   background: rgba(239,68,68,0.08);
   border: 1px solid rgba(239,68,68,0.15);
-  color: #ef4444;
+  color: var(--color-loss);
 }
 .pg-overlay-alert--warn {
   background: rgba(245,158,11,0.08);
   border-color: rgba(245,158,11,0.15);
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .pg-overlay-grid {
@@ -437,7 +437,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
   margin: 0 0 8px;
   font-weight: 600;
 }
@@ -453,7 +453,7 @@
   background: rgba(255,255,255,0.04);
   padding: 1px 6px;
   border-radius: 4px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--ink-soft));
 }
 
 .pg-overlay-section { margin-bottom: 16px; }
@@ -488,4 +488,4 @@
   text-align: center;
 }
 .pg-overlay-stat-val { display: block; font-size: 0.95rem; font-weight: 700; color: var(--ink, #e5e7eb); }
-.pg-overlay-stat-key { display: block; font-size: 0.6rem; color: var(--ink-soft, #94a3b8); text-transform: uppercase; margin-top: 2px; }
+.pg-overlay-stat-key { display: block; font-size: 0.6rem; color: var(--ink-soft, var(--ink-soft)); text-transform: uppercase; margin-top: 2px; }

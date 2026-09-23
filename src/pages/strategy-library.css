@@ -120,8 +120,8 @@
 /* Bullet lists */
 .sl-bullet-list { margin: 0; padding-left: 1.2rem; font-size: 0.78rem; color: var(--ink-soft); line-height: 1.6; }
 .sl-bullet-list li { margin-bottom: 0.25rem; }
-.sl-bullet-list--pro li::marker { color: #22c55e; }
-.sl-bullet-list--con li::marker { color: #ef4444; }
+.sl-bullet-list--pro li::marker { color: var(--color-profit); }
+.sl-bullet-list--con li::marker { color: var(--color-loss); }
 
 /* Config grid */
 .sl-config-grid {

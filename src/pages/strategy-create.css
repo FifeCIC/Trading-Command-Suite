@@ -54,7 +54,7 @@
 }
 
 .stratcreate-compat { padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; }
-.stratcreate-compat-ok { background: rgba(34,197,94,0.08); color: #22c55e; }
+.stratcreate-compat-ok { background: rgba(34,197,94,0.08); color: var(--color-profit); }
 .stratcreate-compat-warn { background: rgba(245,158,11,0.08); color: #d97706; }
 
 .stratcreate-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
@@ -67,8 +67,8 @@
 .stratcreate-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .stratcreate-msg { font-size: 0.75rem; font-weight: 600; }
-.stratcreate-msg-ok { color: #22c55e; }
-.stratcreate-msg-err { color: #ef4444; }
+.stratcreate-msg-ok { color: var(--color-profit); }
+.stratcreate-msg-err { color: var(--color-loss); }
 
 /* ── Advanced Settings Toggle ── */
 .stratcreate-section-toggle {

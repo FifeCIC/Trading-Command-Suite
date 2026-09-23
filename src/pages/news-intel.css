@@ -8,7 +8,7 @@
 }
 
 .ni-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.ni-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
+.ni-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0 0 1rem; }
 
 /* ── Filters ──────────────────────────────────────────────── */
 .ni-filters {
@@ -16,7 +16,7 @@
   margin-bottom: 1rem; align-items: flex-end;
 }
 .ni-field { display: flex; flex-direction: column; gap: 0.3rem; }
-.ni-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
+.ni-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, var(--ink-soft)); }
 .ni-field select {
   background: var(--panel, #141a2e); color: var(--ink, var(--ink));
   border: 1px solid var(--line, #1e2a45); border-radius: 6px; padding: 0.4rem 0.65rem; font-size: 0.82rem;
@@ -25,7 +25,7 @@
 .ni-chip {
   padding: 0.3rem 0.65rem; font-size: 0.74rem;
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
-  border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
+  border-radius: 6px; color: var(--ink-soft, var(--ink-soft)); cursor: pointer; transition: all 0.15s;
 }
 .ni-chip:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
 .ni-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
@@ -36,10 +36,10 @@
   margin-top: 0.45rem;
   font-size: 0.72rem;
 }
-.ni-summary-label { color: var(--ink-soft, #94a3b8); font-weight: 600; }
+.ni-summary-label { color: var(--ink-soft, var(--ink-soft)); font-weight: 600; }
 .ni-summary-val { font-weight: 600; }
-.ni-sent-pos { color: #22c55e; } .ni-sent-neg { color: #ef4444; } .ni-sent-neu { color: #f59e0b; }
-.ni-summary-total { margin-left: auto; color: var(--ink-soft, #94a3b8); }
+.ni-sent-pos { color: var(--color-profit); } .ni-sent-neg { color: var(--color-loss); } .ni-sent-neu { color: var(--color-warning); }
+.ni-summary-total { margin-left: auto; color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Error banner ── */
 .ni-error-banner {
@@ -70,29 +70,29 @@
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
   gap: 0.4rem; margin-bottom: 0.35rem;
 }
-.ni-article-meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.65rem; color: var(--ink-soft, #94a3b8); }
+.ni-article-meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.65rem; color: var(--ink-soft, var(--ink-soft)); }
 .ni-sentiment-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ni-sentiment-dot.ni-sent-positive { background: #22c55e; }
-.ni-sentiment-dot.ni-sent-negative { background: #ef4444; }
-.ni-sentiment-dot.ni-sent-neutral  { background: #f59e0b; }
+.ni-sentiment-dot.ni-sent-positive { background: var(--color-profit); }
+.ni-sentiment-dot.ni-sent-negative { background: var(--color-loss); }
+.ni-sentiment-dot.ni-sent-neutral  { background: var(--color-warning); }
 .ni-source { font-weight: 600; color: var(--ink, var(--ink)); }
 .ni-impact-badge { font-size: 0.58rem; font-weight: 700; padding: 0.08rem 0.35rem; border-radius: 999px; text-transform: uppercase; }
-.ni-impact-high   { background: rgba(239,68,68,0.18); color: #ef4444; }
-.ni-impact-medium { background: rgba(245,158,11,0.18); color: #f59e0b; }
-.ni-impact-low    { background: rgba(100,116,139,0.18); color: #94a3b8; }
+.ni-impact-high   { background: rgba(239,68,68,0.18); color: var(--color-loss); }
+.ni-impact-medium { background: rgba(245,158,11,0.18); color: var(--color-warning); }
+.ni-impact-low    { background: rgba(100,116,139,0.18); color: var(--ink-soft); }
 
 .ni-symbol-tags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
 .ni-sym-tag {
   font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem;
-  border-radius: 999px; background: rgba(255,255,255,0.05); color: var(--ink-soft, #94a3b8);
+  border-radius: 999px; background: rgba(255,255,255,0.05); color: var(--ink-soft, var(--ink-soft));
 }
 .ni-sym-active { background: rgba(14,165,166,0.2); color: var(--accent, var(--accent)); }
 
 .ni-headline { font-size: 0.85rem; font-weight: 600; margin: 0; line-height: 1.35; }
 
 .ni-expanded-body { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--line, #1e2a45); }
-.ni-snippet { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin: 0 0 0.4rem; line-height: 1.5; }
-.ni-expanded-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--ink-soft, #94a3b8); }
+.ni-snippet { font-size: 0.78rem; color: var(--ink-soft, var(--ink-soft)); margin: 0 0 0.4rem; line-height: 1.5; }
+.ni-expanded-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--ink-soft, var(--ink-soft)); }
 
 .ni-header-top {
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -102,7 +102,7 @@
   display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;
 }
 .ni-last-import {
-  font-size: 0.65rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.65rem; color: var(--ink-soft, var(--ink-soft));
 }
 .ni-import-btn {
   padding: 0.4rem 0.85rem; font-size: 0.78rem; font-weight: 600;
@@ -119,7 +119,7 @@
 .ni-cat-tab {
   padding: 0.3rem 0.7rem; font-size: 0.73rem; font-weight: 500;
   background: rgba(255,255,255,0.03); border: 1px solid var(--line, #1e2a45);
-  border-radius: 999px; color: var(--ink-soft, #94a3b8); cursor: pointer;
+  border-radius: 999px; color: var(--ink-soft, var(--ink-soft)); cursor: pointer;
   transition: all 0.15s;
 }
 .ni-cat-tab:hover { border-color: var(--accent, var(--accent)); color: var(--ink, var(--ink)); }
@@ -130,7 +130,7 @@
 
 /* ── Empty State ── */
 .ni-empty {
-  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
 }
 .ni-empty p { margin: 0 0 1rem; font-size: 0.9rem; }
 
@@ -141,5 +141,5 @@
   text-transform: capitalize;
 }
 .ni-reliability {
-  font-size: 0.58rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.58rem; color: var(--ink-soft, var(--ink-soft));
 }

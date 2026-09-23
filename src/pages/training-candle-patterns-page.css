@@ -24,7 +24,7 @@
 .page-header .subtitle {
   margin: 4px 0 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 .pattern-counter {
@@ -44,12 +44,12 @@
 .pattern-counter .counter-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #22c55e;
+  color: var(--color-profit);
 }
 
 .pattern-counter .counter-label {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--ink-soft);
 }
 
 .controls-bar {
@@ -72,7 +72,7 @@
 
 .control-group label {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--color-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -94,7 +94,7 @@
 
 .mode-btn {
   background: var(--bg);
-  color: #94a3b8;
+  color: var(--ink-soft);
   border: 1px solid var(--line);
   padding: 6px 14px;
   font-size: 0.8rem;
@@ -111,9 +111,9 @@
 }
 
 .mode-btn.active {
-  background: #3b82f6;
+  background: var(--color-accent-blue);
   color: white;
-  border-color: #3b82f6;
+  border-color: var(--color-accent-blue);
 }
 
 .refresh-btn {
@@ -172,7 +172,7 @@
 }
 
 .no-patterns {
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 0.85rem;
   font-style: italic;
 }
@@ -200,9 +200,9 @@
   background: rgba(51, 65, 85, 0.5);
 }
 
-.pattern-item.direction-bullish { border-color: #22c55e; }
-.pattern-item.direction-bearish { border-color: #ef4444; }
-.pattern-item.direction-neutral { border-left: 3px solid #94a3b8; }
+.pattern-item.direction-bullish { border-color: var(--color-profit); }
+.pattern-item.direction-bearish { border-color: var(--color-loss); }
+.pattern-item.direction-neutral { border-left: 3px solid var(--ink-soft); }
 
 .pattern-item .pattern-icon {
   font-size: 0.9rem;
@@ -215,14 +215,14 @@
 }
 
 .pattern-item .pattern-score {
-  color: #94a3b8;
+  color: var(--ink-soft);
   font-size: 0.8rem;
   min-width: 30px;
   text-align: right;
 }
 
 .pattern-item .pattern-time {
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 0.75rem;
   min-width: 50px;
   text-align: right;

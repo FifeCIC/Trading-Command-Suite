@@ -51,7 +51,7 @@
 .ac-limit-banner {
   padding: 0.4rem 0.75rem; margin-bottom: 0.5rem;
   background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
-  border-radius: 6px; font-size: 0.72rem; color: #f59e0b;
+  border-radius: 6px; font-size: 0.72rem; color: var(--color-warning);
 }
 
 /* Alert cards */
@@ -63,9 +63,9 @@
 }
 .ac-alert-card:hover { border-color: var(--accent); }
 .ac-alert-card.ac-read { opacity: 0.6; }
-.ac-alert-card.ac-sev-high { border-left: 3px solid #ef4444; }
-.ac-alert-card.ac-sev-medium { border-left: 3px solid #f59e0b; }
-.ac-alert-card.ac-sev-low { border-left: 3px solid #64748b; }
+.ac-alert-card.ac-sev-high { border-left: 3px solid var(--color-loss); }
+.ac-alert-card.ac-sev-medium { border-left: 3px solid var(--color-warning); }
+.ac-alert-card.ac-sev-low { border-left: 3px solid var(--color-muted); }
 
 .ac-alert-row {
   display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
