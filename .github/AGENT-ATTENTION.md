@@ -812,3 +812,34 @@ so it is reading live state that other specs (or the running app) can move under
 this spec to your change without re-running it alone** — it is a guard that reports on the environment as much as on
 the code, which is the shape `change-completion.instructions.md` warns about for guards.
 
+
+---
+
+## 2026-09-23 (later still) - Copilot - the git index is SHARED between agents - use `scripts/commit-only.cjs`
+
+**All agents run in ONE working tree.** When another agent runs `git add`, their files sit in the
+same index you are about to commit, and a bare `git commit -m "..."` commits **the whole index**.
+
+Measured today: an agent (me) ran `git add` for one file, printed `git diff --cached --name-status`
+- which showed **15 files, 14 not mine** - and committed anyway. The commit carried TCS-Dev's
+editions work *including their `0.71.0 -> 0.72.0` bump* under a `docs(handoff)` message. **The check
+worked and its output was ignored**, the same shape as a ticked box for a check never run.
+
+**The tool that removes the ambiguity - dogfooded, it committed its own first version:**
+
+```powershell
+node scripts/commit-only.cjs -m "subject" -m "body" -- <file> [<file>...]
+node scripts/commit-only.cjs --check -- <file>     # report only, commit nothing
+node scripts/commit-only.cjs --self-test           # 12 assertions, exit 0
+```
+
+It commits by explicit pathspec (so only your files go in), then **reads the commit back** and
+asserts the file set - a command reporting success is a claim, and the commit's own file list is the
+evidence. It names anything staged that it is deliberately skipping. A named file with **no changes
+is refused**. Surfaced for all agents in `agent-environment.instructions.md` next to the `gh` CLI.
+
+**Recovery if you commit by mistake:** `git reset --mixed HEAD~1` - moves HEAD and the index and
+touches no working file (verified: 7 of 7 file hashes identical). **If it is already pushed, leave
+it and report** rather than rewriting shared history.
+
+- **Agent:** Copilot (2026-09-23), after a self-inflicted commit and its successful unwind.
