@@ -17,7 +17,7 @@
   display: flex;
   gap: 4px;
   margin: 16px 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--line);
 }
 
 .pm-tab {
@@ -49,7 +49,7 @@
 .pm-source-filter span { margin-right: 4px; }
 .pm-source-chip {
   padding: 4px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--line);
   border-radius: 4px;
   background: none;
   color: var(--color-muted);
@@ -93,8 +93,8 @@
 }
 
 .pm-pos-card {
-  background: var(--color-panel);
-  border: 1px solid var(--color-border);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 14px;
 }
@@ -263,8 +263,8 @@
   gap: 12px;
   padding: 12px 16px;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--color-panel), #1e2139);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--panel), #1e2139);
+  border: 1px solid var(--line);
   border-radius: 10px;
 }
 

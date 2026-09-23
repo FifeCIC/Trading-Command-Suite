@@ -16,8 +16,8 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--color-border, #2d3040);
-  background: var(--color-panel, #1a1d2e);
+  border: 1px solid var(--line);
+  background: var(--panel);
   color: var(--color-neutral, #a1a9b5);
   font-size: 1.1rem;
   cursor: pointer;
@@ -328,7 +328,7 @@
   color: var(--color-muted, #64748b);
   margin: 0 0 4px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--color-border, #2d3040);
+  border-bottom: 1px solid var(--line);
 }
 .so-view-section {
   margin-top: 10px;

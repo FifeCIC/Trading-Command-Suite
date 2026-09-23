@@ -9,14 +9,14 @@
 .ob-actions { display: flex; gap: 10px; margin-bottom: 14px; }
 .ob-add-btn { padding: 7px 16px; background: var(--accent, #0ea5a6); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
 .ob-add-btn:hover { opacity: 0.85; }
-.ob-seed-btn { padding: 7px 16px; background: var(--panel, #1a1d2e); color: var(--ink, #e5e7eb); border: 1px solid var(--color-border, #2d3040); border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
+.ob-seed-btn { padding: 7px 16px; background: var(--panel, #1a1d2e); color: var(--ink, #e5e7eb); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
 
-.ob-form { background: var(--panel, #1a1d2e); border: 1px solid var(--color-border, #2d3040); border-radius: 8px; padding: 14px; margin-bottom: 16px; overflow: hidden; }
+.ob-form { background: var(--panel, #1a1d2e); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px; overflow: hidden; }
 .ob-form-row { display: flex; gap: 10px; margin-bottom: 10px; }
-.ob-input { flex: 1; padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--color-border, #2d3040); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; }
+.ob-input { flex: 1; padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--line); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; }
 .ob-input-sm { flex: 0 0 130px; }
-.ob-select { padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--color-border, #2d3040); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; }
-.ob-textarea { width: 100%; padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--color-border, #2d3040); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; resize: vertical; margin-bottom: 10px; box-sizing: border-box; }
+.ob-select { padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--line); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; }
+.ob-textarea { width: 100%; padding: 8px 10px; background: var(--bg, #000000); border: 1px solid var(--line); border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.85rem; resize: vertical; margin-bottom: 10px; box-sizing: border-box; }
 .ob-submit-btn { padding: 8px 18px; background: var(--accent, #0ea5a6); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 .ob-submit-btn:disabled { opacity: 0.5; }
 
@@ -25,7 +25,7 @@
 .ob-cat-items { display: flex; flex-direction: column; gap: 6px; }
 
 /* Card */
-.ob-card { background: var(--panel, #1a1d2e); border: 1px solid var(--color-border, #2d3040); border-radius: 8px; overflow: hidden; transition: border-color 0.15s; }
+.ob-card { background: var(--panel, #1a1d2e); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; transition: border-color 0.15s; }
 .ob-card.ob-expanded { border-color: rgba(14,165,166,0.25); }
 .ob-status-achieved { opacity: 0.7; }
 .ob-status-abandoned { opacity: 0.45; }
@@ -44,7 +44,7 @@
 .ob-phase--planning { background: rgba(100,116,139,0.1); color: #94a3b8; }
 
 /* Card body */
-.ob-card-body { padding: 0 14px 14px; border-top: 1px solid var(--color-border, #2d3040); padding-top: 12px; }
+.ob-card-body { padding: 0 14px 14px; border-top: 1px solid var(--line); padding-top: 12px; }
 .ob-card-desc { margin: 0 0 12px; font-size: 0.82rem; color: var(--ink-soft, #94a3b8); }
 
 .ob-progress-section { margin-bottom: 12px; }
@@ -72,7 +72,7 @@
 .ob-tag { font-size: 0.68rem; padding: 2px 8px; background: rgba(255,255,255,0.04); border-radius: 4px; color: var(--color-muted, #64748b); }
 
 .ob-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.ob-action-btn { padding: 5px 12px; border: 1px solid var(--color-border, #2d3040); border-radius: 5px; background: none; color: var(--ink-soft, #94a3b8); font-size: 0.72rem; cursor: pointer; transition: background 0.15s; }
+.ob-action-btn { padding: 5px 12px; border: 1px solid var(--line); border-radius: 5px; background: none; color: var(--ink-soft, #94a3b8); font-size: 0.72rem; cursor: pointer; transition: background 0.15s; }
 .ob-action-btn:hover { background: rgba(255,255,255,0.04); }
 .ob-achieve { border-color: rgba(34,197,94,0.3); color: #22c55e; }
 .ob-achieve:hover { background: rgba(34,197,94,0.06); }

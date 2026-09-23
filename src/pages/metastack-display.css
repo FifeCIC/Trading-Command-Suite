@@ -7,13 +7,13 @@
 .msd-subtitle { margin: 4px 0 0; font-size: 0.88rem; color: var(--ink-soft, #94a3b8); }
 .msd-header-right { display: flex; align-items: center; gap: 10px; }
 .msd-stack-select {
-  padding: 8px 14px; background: var(--panel, #1a1d2e); border: 1px solid var(--color-border, #2d3040);
+  padding: 8px 14px; background: var(--panel, #1a1d2e); border: 1px solid var(--line);
   border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.88rem; min-width: 220px;
 }
 .msd-loading-text { font-size: 0.85rem; color: var(--color-muted, #64748b); }
 
 /* ── Scroll container ────────────────────────────────── */
-.msd-scroll { overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: var(--color-border, #2d3040) transparent; }
+.msd-scroll { overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
 /* ── Row labels ──────────────────────────────────────── */
 .msd-row-label {
@@ -22,7 +22,7 @@
 }
 .msd-row-label-tech {
   color: var(--color-muted, #64748b); margin-top: 28px; padding-top: 16px;
-  border-top: 1px solid var(--color-border, #2d3040);
+  border-top: 1px solid var(--line);
 }
 
 /* ── Rows ────────────────────────────────────────────── */
@@ -34,7 +34,7 @@
 /* ── Cards ───────────────────────────────────────────── */
 .msd-card {
   width: 268px; flex-shrink: 0;
-  background: var(--panel, #1a1d2e); border: 1px solid var(--color-border, #2d3040);
+  background: var(--panel, #1a1d2e); border: 1px solid var(--line);
   border-radius: 10px; overflow: hidden;
   display: flex; flex-direction: column;
 }
