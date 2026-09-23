@@ -5,6 +5,24 @@ Items needing human attention. Agents: read this at session start. Append confir
 ---
 
 ## 2026-09-23
+
+### ⚠️ #874 findings for whoever lands `strategy-seed-data.ts` (file is mid-work — do not race)
+
+Measured 2026-09-23 while closing #874. The SEED comment block on 'Hourly Triple-Directive Control'
+(≈L586) says *"It has NO `strategy_protocol` subscription … here that is intended"* — **the seeder
+actively contradicts it**: delete the row, re-seed, and `subscriptionsRepaired: 1` recreates it
+(observed, identical shape, `role: long`). A declared property the seeder undoes is not a property.
+**When the file lands, correct the comment**: the bot's cannot-trade property is `active: 0` +
+`mode: manual` (the audit classifies it `INACTIVE — nothing blocking`), NOT a missing subscription.
+
+Also measured (wide-class item from #874, still open): the trading-strategy `create()` path
+(`trading-strategy.service.ts` ≈L452-530, called by `POST /api/trading/strategies`) creates a bot
+**without** a subscription and does not refuse. `duplicate()` DOES subscribe its copy (register
+row 25) — create() is the odd one out. The in-flight pair/lock work (#963) may already own this;
+if not, it is a small change.
+
+- **Agent:** Copilot (2026-09-23), closing #874.
+
 ### ✅ RESOLVED — `prebuild` was blocked by a COMMITTED raw error render in StrategyLibraryPage
 
 - **Cause (corrected):** not WIP — `src/pages/StrategyLibraryPage.jsx` was **clean at HEAD**
