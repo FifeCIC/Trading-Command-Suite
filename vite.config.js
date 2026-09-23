@@ -1,11 +1,45 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
-  css: {
-    lightningcss: false,
-  },
+/**
+ * Free-edition registry (GENERATED — scripts/generate-free-registry.cjs).
+ * `vite build --mode free` swaps `src/core/view-routes.jsx` for this file, so premium page
+ * code is PHYSICALLY ABSENT from the bundle — not hidden (the shipped JS is readable).
+ * Source of truth: the `tier` field in src/core/view-meta.js. Plan: FREE-EDITION-PLAN.md §3/§4.
+ */
+const freeRegistryPath = fileURLToPath(
+  new URL('./src/editions/view-routes.free.jsx', import.meta.url),
+);
+
+/** Free-edition variant of the direct-route page imports (App.jsx literal routes). */
+const freeDirectPagesPath = fileURLToPath(
+  new URL('./src/editions/direct-pages.free.jsx', import.meta.url),
+);
+
+export default defineConfig(({ mode }) => {
+  const isFreeEdition = mode === 'free';
+  return {
+    // Compile-time edition flag — dead-code elimination can rely on it.
+    define: {
+      'import.meta.env.VITE_EDITION': JSON.stringify(isFreeEdition ? 'free' : 'full'),
+    },
+    resolve: isFreeEdition
+      ? {
+          alias: [
+            // Only consumer today is App.jsx (`import { VIEW_COMPONENTS } from './core/view-routes.jsx'`).
+            { find: './core/view-routes.jsx', replacement: freeRegistryPath },
+            { find: 'src/core/view-routes.jsx', replacement: freeRegistryPath },
+            // Direct-route pages (App.jsx literal routes) — nulls out premium pages.
+            { find: './core/direct-pages.jsx', replacement: freeDirectPagesPath },
+            { find: 'src/core/direct-pages.jsx', replacement: freeDirectPagesPath },
+          ],
+        }
+      : {},
+    css: {
+      lightningcss: false,
+    },
   build: {
     cssMinify: false, // lightningcss is too strict — disable CSS minification for now
   },
@@ -98,4 +132,5 @@ export default defineConfig({
       }
     })
   ]
+  };
 });

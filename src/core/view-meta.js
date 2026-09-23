@@ -365,7 +365,9 @@ const VIEW_META = {
   '/development/qa-testing': {
     tier: 'premium',
     label: 'QA Testing',
-    file: 'src/pages/QaTestingPage.jsx',
+    // ⚠️ Case matters to the bundle guard (scripts/validate-free-bundle.cjs) and to any
+    // Linux/CI tooling: the file on disk is `QATestingPage.jsx`, not `QaTestingPage.jsx`.
+    file: 'src/pages/QATestingPage.jsx',
     css: 'src/pages/qa-testing.css',
     api: [],
   },

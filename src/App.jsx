@@ -12,11 +12,16 @@ import { apiGet } from './core/api/client';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import HomeDashboard from './pages/HomeDashboard';
-import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
-import DataManagementPage from './pages/DataManagementPage';
-import TopMoversPage from './pages/TopMoversPage';
-import SystemHealthPage from './pages/SystemHealthPage';
+// Direct-route pages live behind ONE import surface so the free build can swap them out
+// (src/editions/direct-pages.free.jsx — FREE-EDITION-PLAN.md §3/§4). A `null` export means the
+// page is premium: the route below is skipped and the page code is absent from the bundle.
+import {
+  PlatformComparisonsPage,
+  DataManagementPage,
+  TopMoversPage,
+  SystemHealthPage,
+} from './core/direct-pages.jsx';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ScreenOptions from './components/ScreenOptions';
 import PageInfoPopover from './components/PageInfoPopover';
@@ -1028,10 +1033,11 @@ export default function App() {
               than left to `/:area/:view`, which matches two segments and would not reach it. */}
           <Route path="/trading/strategy/:strategyId" element={<AppShell />} />
           <Route path="/symbol/:ticker" element={<SymbolRedirect />} />
-          <Route path="/settings/data-management" element={<DataManagementPage />} />
-          <Route path="/lab/top-movers" element={<TopMoversPage />} />
-          <Route path="/settings/health-check" element={<SystemHealthPage />} />
-          <Route path="/lab/platform-comparisons" element={<PlatformComparisonsPage />} />
+          {/* Direct-route pages — guarded by `null` in the free build (src/core/direct-pages.jsx). */}
+          {DataManagementPage && <Route path="/settings/data-management" element={<DataManagementPage />} />}
+          {TopMoversPage && <Route path="/lab/top-movers" element={<TopMoversPage />} />}
+          {SystemHealthPage && <Route path="/settings/health-check" element={<SystemHealthPage />} />}
+          {PlatformComparisonsPage && <Route path="/lab/platform-comparisons" element={<PlatformComparisonsPage />} />}
           <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
           <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
           <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
