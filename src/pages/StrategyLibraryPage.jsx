@@ -108,10 +108,19 @@ function StrategyDecisionPath({ strategy, bots, botsNotice, directives }) {
     <section className="sl-section">
       <h3>Decision Path</h3>
       <p className="sl-hint">
-        Generated from this entry's own directive mappings, then checked against the bot that
-        runs <strong>{strategy.tcsProtocol}</strong>. A node outlined in green matched;
-        <strong> red dashed</strong> did not; unoutlined was not checked. Drawn in the active
-        theme.
+        Generated from this entry's own directive mappings
+        {strategy.tcsProtocol ? (
+          <>
+            , then checked against the bot that runs <strong>{strategy.tcsProtocol}</strong>.
+          </>
+        ) : (
+          <>
+            . This entry names <strong>no protocol</strong>, so there is no bot to compare
+            against — the directive claims are still checked, the bot-side ones are not.
+          </>
+        )}{' '}
+        A node outlined in green matched; <strong>red dashed</strong> did not; unoutlined was
+        not checked. Drawn in the active theme.
       </p>
 
       <div className="sd-diagram" ref={hostRef} role="img"
@@ -334,9 +343,22 @@ export default function StrategyLibraryPage() {
                     </section>
                   )}
 
-                  {/* Decision Path — only where the entry names a protocol; a concept entry has
-                      nothing live to check, and drawing a path for it would imply otherwise. */}
-                  {strategy.tcsProtocol && (
+                  {/* Decision Path — for any entry that maps directives, whether or not it names a
+                      protocol.
+
+                      ⚠️ This gate used to be `strategy.tcsProtocol &&`, on the reasoning that a
+                      concept entry "has nothing live to check, and drawing a path for it would
+                      imply otherwise". The implication was real and it came from the RESOLVER, not
+                      from the diagram: with no protocol, `protocol-resolves` set `ok = false`, so
+                      every concept entry would have rendered a red "disagreed" pill reading
+                      "the library entry may be stale".
+
+                      The resolver now treats an undeclared protocol as an ABSENCE (`ok: null`,
+                      "not checked"), so the path can be drawn for all 10 entries and still mean
+                      exactly one thing by red. The directive-registration claims resolve either
+                      way — that is the half of this panel a concept entry can answer, and it is
+                      the half that was previously not shown at all. */}
+                  {strategy.directiveMappings?.length > 0 && (
                     <StrategyDecisionPath
                       strategy={strategy}
                       bots={bots}

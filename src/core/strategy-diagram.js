@@ -205,13 +205,23 @@ export function strategyClaims(strategy, path) {
   }
 
   // 1. The link itself — the field the whole idea rests on.
+  //
+  // ⚠️ EMITTED EVEN WHEN NO PROTOCOL IS DECLARED, and the wording changes to say so. A concept
+  // entry has nothing to resolve, but the reader still needs to be told THAT rather than left to
+  // infer it from a missing row. The resolver marks it `ok: null` (unverified) — see the note
+  // there. Marking it false would render a red "disagreed" pill on an entry that is not wrong
+  // about anything, which is the fabricated-failure failure this whole module avoids.
   claims.push({
     node: nodeFor('signal') || path.nodes[0].id,
-    says: 'the library entry names a protocol, and a bot runs it',
+    says: protocol
+      ? 'the library entry names a protocol, and a bot runs it'
+      : 'this entry names no protocol, so nothing is wired to run it',
     expect: protocol || '(no tcsProtocol declared)',
     protocol,
     kind: 'protocol-resolves',
-    note: 'A library entry is documentation until a bot runs its protocol.',
+    note: protocol
+      ? 'A library entry is documentation until a bot runs its protocol.'
+      : 'Nothing to resolve yet. The directive claims below are still checked — that is what this entry is made of.',
   });
 
   // 2. The market the theory is about.
@@ -334,6 +344,23 @@ export function evaluateStrategyClaims(claims, ctx = {}) {
 
     switch (claim.kind) {
       case 'protocol-resolves': {
+        // ⚠️ NO PROTOCOL DECLARED IS AN ABSENCE, NOT A DISAGREEMENT.
+        //
+        // This case set `ok = mine.length > 0` unconditionally, which reads correctly only while
+        // every entry reaching it declares a protocol. Lifting the page's
+        // `strategy.tcsProtocol &&` gate so the 5 concept entries could show a decision path
+        // would have made every one of them render a RED "disagreed" pill carrying the text
+        // "no bot references this protocol. The library entry may be stale…" — a failure the
+        // entry had not committed, on a theory that is merely unwired.
+        //
+        // `false` must keep meaning "something was declared and reality differs", because that
+        // is the only reading that makes the red pill worth looking at.
+        if (!proto) {
+          row.error =
+            'not checked — this entry declares no tcsProtocol, so there is no protocol to ' +
+            'resolve. Not a disagreement: an absence.';
+          break;
+        }
         row.actual = mine.length ? `${mine.length} bot${mine.length === 1 ? '' : 's'}` : 'no bot';
         row.ok = mine.length > 0;
         if (!row.ok) {
