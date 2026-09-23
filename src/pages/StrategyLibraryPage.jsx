@@ -6,10 +6,9 @@
  *
  * Route: /trading/strategy-library
  */
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import mermaid from 'mermaid';
 import { apiGet } from '../core/api/client';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
 import {
@@ -18,15 +17,11 @@ import {
   evaluateStrategyClaims,
   unverifiableSchemaKeys,
 } from '../core/strategy-diagram';
-import { annotateSource, summarise } from '../core/diagram-claims';
+import { summarise } from '../core/diagram-claims';
 import { noticeFromError } from '../core/notices/from-error';
 import './strategy-library.css';
 import './strategy-decision-path.css';
 import PageInfoPopover from '../components/PageInfoPopover';
-
-// Same initialisation the developer Diagrams page uses — one theme, one security level,
-// so a strategy diagram and a system diagram cannot render differently by accident.
-mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
 const DIFFICULTY_COLORS = {
   Beginner: '#22c55e',
@@ -55,56 +50,172 @@ const READINESS_STYLES = {
 };
 
 /**
- * The decision path for one library entry, drawn from the entry's own data and checked
- * against the bot that runs its protocol.
- *
- * ⚠️ WHICH BOT IS READ, and why it is not "the first active one": the claims resolve against
- * bots whose `protocolId` equals THIS entry's `tcsProtocol`. Two library entries can name the
- * same protocol (`forex-session-trading` and `forex-session-cable` both name
- * `forex-session-v1`), so they will legitimately show identical live values. That is a
- * property of the current model, not a bug in this component — see the sprint record.
+ * Worst status across a node's claims.
+ * Disagreement outranks unverified outranks matched — the reader is shown the thing that needs
+ * attention, not the first claim that happened to pass.
  */
-function StrategyDecisionPath({ strategy, bots, botsNotice }) {
+function worstStatus(rows) {
+  if (rows.some((r) => r.ok === false)) return 'bad';
+  if (rows.some((r) => r.ok === null)) return 'unknown';
+  if (rows.some((r) => r.ok === true)) return 'ok';
+  return 'none';
+}
+
+/**
+ * Layout for the decision path. A LINEAR CHAIN needs no layout engine.
+ *
+ * ⚠️ This is why the interactive version is cheap HERE. `/lab/pipeline-graph-lab` is 624 lines of
+ * JSX plus 491 of CSS because it draws an ARBITRARY graph — positions from a JSON file, ports
+ * computed per side, pan and zoom. A strategy decision path is n1 → n2 → … → n8: one column, so
+ * every node's position is `index * pitch` and every edge is a straight segment of known length.
+ * No measurement, no ResizeObserver, no positions file.
+ */
+const SDP = { spineX: 20, nodeLeft: 44, nodeH: 72, gap: 28, pitch: 100 };
+
+function StrategyDecisionPath({ strategy, bots, botsNotice, directives }) {
   const path = useMemo(() => buildDecisionPath(strategy), [strategy]);
   const claims = useMemo(() => strategyClaims(strategy, path), [strategy, path]);
   const rows = useMemo(
-    () => evaluateStrategyClaims(claims, { bots, error: botsNotice?.message ?? null, protocol: strategy.tcsProtocol }),
-    [claims, bots, botsNotice, strategy.tcsProtocol],
+    () =>
+      evaluateStrategyClaims(claims, {
+        bots,
+        directives,
+        error: botsNotice?.message ?? null,
+        protocol: strategy.tcsProtocol,
+      }),
+    [claims, bots, directives, botsNotice, strategy.tcsProtocol],
   );
   const summary = useMemo(() => summarise(rows), [rows]);
-  const hostRef = useRef(null);
-
-  useEffect(() => {
-    if (!hostRef.current) return undefined;
-    let cancelled = false;
-    // The source is annotated with the claim results FIRST, so a node whose claim failed is
-    // stroked in the picture rather than only described beside it.
-    mermaid
-      .render(`sd-${strategy.id}-svg`, annotateSource(strategy.id, path.source, rows))
-      .then(({ svg }) => {
-        if (!cancelled && hostRef.current) hostRef.current.innerHTML = svg;
-      })
-      .catch(() => {
-        if (!cancelled && hostRef.current) {
-          hostRef.current.innerHTML = '<p class="sl-hint">The decision path could not be rendered.</p>';
-        }
-      });
-    return () => { cancelled = true; };
-  }, [strategy.id, path.source, rows]);
-
+  const [lit, setLit] = useState(null);
   const notCheckable = unverifiableSchemaKeys(strategy);
+
+  const claimsOf = (nodeId) => rows.filter((r) => r.node === nodeId);
+  const statusOf = (nodeId) => worstStatus(claimsOf(nodeId));
+  const height = path.nodes.length * SDP.pitch - SDP.gap;
+  const glowId = `sdp-glow-${strategy.id}`;
+
+  // One stub from the spine into each node, plus one segment per gap between stages.
+  // `a`/`b` are the node indices the edge sits between, so hovering either endpoint lights it.
+  const edges = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < path.nodes.length; i++) {
+      const cy = i * SDP.pitch + SDP.nodeH / 2;
+      out.push({ key: `stub-${i}`, d: `M${SDP.spineX},${cy} L${SDP.nodeLeft},${cy}`, a: i, b: i });
+      if (i < path.nodes.length - 1) {
+        const y1 = i * SDP.pitch + SDP.nodeH;
+        const y2 = (i + 1) * SDP.pitch;
+        out.push({ key: `seg-${i}`, d: `M${SDP.spineX},${y1} L${SDP.spineX},${y2}`, a: i, b: i + 1 });
+      }
+    }
+    return out;
+  }, [path.nodes.length]);
+
+  const isLit = (e) => {
+    if (!lit) return false;
+    if (lit.type === 'edge') return lit.key === e.key;
+    if (lit.type === 'node') return e.a === lit.index || e.b === lit.index;
+    return false;
+  };
 
   return (
     <section className="sl-section">
       <h3>Decision Path</h3>
       <p className="sl-hint">
         Generated from this entry's own directive mappings, then checked against the bot that
-        runs <strong>{strategy.tcsProtocol}</strong>. A node outlined in
-        green matched; <strong>red dashed</strong> did not; unoutlined was not checked.
+        runs <strong>{strategy.tcsProtocol}</strong>. Hover a stage to trace its connections —
+        the path lights up. Green matched, <strong>red</strong> disagreed, amber could not be
+        checked.
       </p>
 
-      <div className="sd-diagram" ref={hostRef} role="img"
-        aria-label={`Decision path for ${strategy.name}`} />
+      {/* aria-hidden: the table below carries the same information as real table semantics.
+          Exposing the interactive decoration as well would duplicate it for screen readers. */}
+      <div className="sdp" style={{ height }} aria-hidden="true">
+        <svg className="sdp-links" width="100%" height={height}>
+          <defs>
+            <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          {edges.map((e) => {
+            const on = isLit(e);
+            const st = statusOf(path.nodes[e.b]?.id);
+            return (
+              <g
+                key={e.key}
+                className={`sdp-edge sdp-edge--${st}${on ? ' sdp-edge--lit' : ''}`}
+                onMouseEnter={() => setLit({ type: 'edge', key: e.key })}
+                onMouseLeave={() => setLit(null)}
+              >
+                {/* A 2px line is nearly impossible to hover — the wide transparent path is what
+                    makes the connection interactive at all. Same trick as the pipeline graph. */}
+                <path d={e.d} className="sdp-edge-hit" fill="none" />
+                <path
+                  d={e.d}
+                  className="sdp-edge-line"
+                  fill="none"
+                  filter={on ? `url(#${glowId})` : undefined}
+                />
+              </g>
+            );
+          })}
+        </svg>
+
+        {path.nodes.map((n, i) => {
+          const st = statusOf(n.id);
+          const mine = claimsOf(n.id);
+          // ⚠️ Show the claim that DECIDED the status, not simply the first one.
+          // The first draft used `find(r => r.ok !== null)`, so the signal node read
+          // "disagreed" beside a passing value ("speed-momentum → ready") while the actual
+          // disagreement — XAU versus XAGUSD — was a different claim on the same node.
+          // A badge and a value that contradict each other are worse than no value at all.
+          // The order below mirrors `worstStatus` exactly, so the two can never disagree.
+          const live =
+            mine.find((r) => r.ok === false) ??
+            mine.find((r) => r.ok === null) ??
+            mine.find((r) => r.ok === true) ??
+            mine[0];
+          return (
+            <div
+              key={n.id}
+              className={`sdp-node sdp-node--${st}${lit?.type === 'node' && lit.index === i ? ' sdp-node--lit' : ''}`}
+              style={{ top: i * SDP.pitch, height: SDP.nodeH }}
+              onMouseEnter={() => setLit({ type: 'node', index: i })}
+              onMouseLeave={() => setLit(null)}
+            >
+              <span className={`sdp-dot sdp-dot--${n.stage}`} />
+              <div className="sdp-main">
+                <div className="sdp-row">
+                  <span className="sdp-stage">{n.stage}</span>
+                  <span className="sdp-dirs">
+                    {n.mappings.length
+                      ? n.mappings.map((m) => m.directiveId).join(' + ')
+                      : 'from the bot'}
+                  </span>
+                  <span className={`sdp-status sdp-status--${st}`}>
+                    {st === 'ok' ? 'matched'
+                      : st === 'bad' ? 'disagreed'
+                        : st === 'unknown' ? 'unchecked'
+                          : 'no claim'}
+                  </span>
+                </div>
+                <div className="sdp-row sdp-row--sub">
+                  <span className="sdp-role">{n.mappings[0]?.role || n.label}</span>
+                  {live && (
+                    <span
+                      className={`sdp-live sdp-live--${live.ok === false ? 'bad' : live.ok === null ? 'unknown' : 'ok'}`}
+                    >
+                      {Array.isArray(live.expect) ? live.expect.join('/') : String(live.expect)}
+                      {' → '}
+                      {live.actual == null ? '—' : String(live.actual)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="sd-summary">
         <span className="sd-summary-count">
@@ -166,6 +277,13 @@ function StrategyDecisionPath({ strategy, bots, botsNotice }) {
           </ul>
         </div>
       )}
+
+      {/* The generated Mermaid source is kept visible rather than deleted: it is the portable
+          form of this picture (pasteable into an issue or a doc) and nothing else produces it. */}
+      <details className="sd-source">
+        <summary>Generated Mermaid source</summary>
+        <pre>{path.source}</pre>
+      </details>
     </section>
   );
 }
@@ -326,7 +444,12 @@ export default function StrategyLibraryPage() {
                   {/* Decision Path — only where the entry names a protocol; a concept entry has
                       nothing live to check, and drawing a path for it would imply otherwise. */}
                   {strategy.tcsProtocol && (
-                    <StrategyDecisionPath strategy={strategy} bots={bots} botsNotice={botsNotice} />
+                    <StrategyDecisionPath
+                      strategy={strategy}
+                      bots={bots}
+                      botsNotice={botsNotice}
+                      directives={directivesQuery.data}
+                    />
                   )}
 
                   {/* Directive Mappings */}

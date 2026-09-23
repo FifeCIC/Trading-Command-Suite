@@ -185,6 +185,25 @@ export function strategyClaims(strategy, path) {
   // the rest. An explicit field cannot be misread by the next person.
   const protocol = strategy.tcsProtocol || null;
 
+  // 0. EVERY mapped directive must actually exist in the registry.
+  //
+  // This is the claim that makes the whole path checkable. Without it the Confirmation,
+  // Level and Macro stages carry no claim at all — a stage that asserts a directive which
+  // was renamed or deleted would render as an ordinary, healthy node. The directive list is
+  // already fetched for the readiness badges on this page, so this costs no extra request.
+  for (const n of path.nodes) {
+    for (const m of n.mappings) {
+      claims.push({
+        node: n.id,
+        says: `${m.directiveId} is a registered directive`,
+        expect: m.directiveId,
+        protocol,
+        kind: 'directive-registered',
+        note: `Role in this strategy: ${m.role}.`,
+      });
+    }
+  }
+
   // 1. The link itself — the field the whole idea rests on.
   claims.push({
     node: nodeFor('signal') || path.nodes[0].id,
@@ -268,7 +287,7 @@ export function strategyClaims(strategy, path) {
  * truth is that nothing was measured. Same rule as `diagram-claims.js`.
  */
 export function evaluateStrategyClaims(claims, ctx = {}) {
-  const { bots, error } = ctx;
+  const { bots, directives, error } = ctx;
   const rows = [];
 
   for (const claim of claims) {
@@ -285,7 +304,29 @@ export function evaluateStrategyClaims(claims, ctx = {}) {
       continue;
     }
 
-    // Every claim below is about THE BOT THAT RUNS THIS PROTOCOL. There is deliberately no
+    // ── Directive registration does NOT depend on a bot. It is answered from the directive
+    // registry, so it stays checkable even when no bot runs the protocol at all — which is
+    // exactly when a reader most needs to know the difference between "not wired yet" and
+    // "wired to something that no longer exists".
+    if (claim.kind === 'directive-registered') {
+      if (!Array.isArray(directives)) {
+        row.error = 'not checked — the directive registry was not read';
+        rows.push(row);
+        continue;
+      }
+      const d = directives.find((x) => x.id === claim.expect);
+      row.ok = Boolean(d);
+      row.actual = d ? (d.readiness || 'registered') : 'not registered';
+      if (!d) {
+        row.error =
+          `no directive called "${claim.expect}" is registered. The library entry maps a ` +
+          'directive the app does not have — either it was renamed, or it was never built.';
+      }
+      rows.push(row);
+      continue;
+    }
+
+    // Every remaining claim is about THE BOT THAT RUNS THIS PROTOCOL. There is deliberately no
     // fallback to "any bot" — a claim checked against an unrelated bot is worse than an
     // unchecked one, because it renders a confident answer about the wrong thing.
     const proto = claim.protocol ?? ctx.protocol;
