@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -45,7 +45,16 @@ export class BacktestController {
       return await this.backtestService.run(body);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return { error: true, message: message || 'Backtest failed — check symbol, days range, or data availability' };
+      // ⚠️ A FAILURE MUST BE A FAILURE. This used to `return { error: true, message }`, which Nest
+      // sends as **HTTP 201 Created** — so the browser saw SUCCESS, read `data.id` as undefined and
+      // rendered nothing, while the API had answered correctly. Measured 2026-09-23: clicking “Run
+      // Backtest” posted a valid request, received
+      // `201 {"error":true,"message":"Backtest requires protocolId for canonical META.Stack scoring."}`
+      // and the page showed NO error, because there was no HTTP error to show. The owner reported it
+      // as “the button does not work”, which is exactly what it looked like from outside.
+      throw new BadRequestException(
+        message || 'Backtest failed — check symbol, days range, or data availability',
+      );
     }
   }
 

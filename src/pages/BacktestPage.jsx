@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import ReplayPlayer from '../components/ReplayPlayer';
 import { apiGet, apiPost } from '../core/api/client';
@@ -46,6 +46,12 @@ export default function BacktestPage() {
   const [days, setDays] = useState(30);
   const [runId, setRunId] = useState('');
   const [showChart, setShowChart] = useState(false);
+  // ⚠️ R-BT — the engine needs a PROTOCOL for canonical META.Stack scoring, and this form had no
+  // way to supply one. A symbol-only run came back `Backtest requires protocolId…` — and because the
+  // API sent that as HTTP 201, the page showed NOTHING (owner: "Run Backtest does not work yet").
+  // A bot carries protocol + symbol + levels, and "backtest this bot" is ONE call (#965 item 3), so
+  // it is the default path here.
+  const [botId, setBotId] = useState('');
   const [newsExclusion, setNewsExclusion] = useState('none');
   const [showExecution, setShowExecution] = useState(false);
 
@@ -73,8 +79,24 @@ export default function BacktestPage() {
     setActivePreset(key);
   };
 
+  const botsQuery = useQuery({
+    queryKey: ['bt-bots'],
+    queryFn: () => apiGet('/api/trading/strategies').catch(() => null),
+  });
+  const bots = useMemo(() => {
+    const raw = botsQuery.data;
+    if (!raw) return [];
+    const list = Array.isArray(raw) ? raw : (raw.strategies ?? []);
+    return Array.isArray(list) ? list.filter((b) => b && b.id) : [];
+  }, [botsQuery.data]);
+  // Default to a real bot so the button works on first click, rather than failing on a rule the
+  // form never showed the user.
+  useEffect(() => {
+    if (!botId && bots.length > 0) setBotId(bots[0].id);
+  }, [bots, botId]);
+
   const runMutation = useMutation({
-    mutationFn: () => apiPost('/api/backtest/run', {
+    mutationFn: () => apiPost('/api/backtest/run', botId ? { botId, days } : {
       symbol,
       days,
       timeframe: '1d',
@@ -119,6 +141,17 @@ export default function BacktestPage() {
       <p className="bt-sub">Run the Conviction Dip Accumulation strategy against historical data and measure entry signal outcomes.</p>
 
       <div className="bt-form">
+        <label>
+          Bot
+          <select value={botId} onChange={(e) => setBotId(e.target.value)}>
+            <option value="">— none (ad-hoc symbol run) —</option>
+            {bots.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}{b.symbol ? ` · ${b.symbol}` : ''}{b.protocolId ? ` · ${b.protocolId}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           Symbol
           <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())} placeholder="NVDA" />
