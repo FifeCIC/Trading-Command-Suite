@@ -43,16 +43,35 @@
  *   GET /api/trading/strategies/:id/protocols  — subscriptions; `role` lives HERE, not on the bot
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import mermaid from 'mermaid';
 import { apiGet } from '../core/api/client';
 // The app's ONE reveal-on-scroll mechanism (Theme Lab -> Scroll Animations). `.lad-reveal` is
 // `opacity: 0` in `ladder.css`, and this hook is the only thing that adds `lad-reveal--show`, so a
 // `.lad-reveal` element WITHOUT the hook stays invisible. Reusing the hook rather than writing a
 // second IntersectionObserver is deliberate - a second implementation drifts.
 import { useScrollReveal } from '../hooks/useScrollReveal';
+// The lifecycle vocabulary and the dormancy rule. These were defined in THIS file until the
+// lifecycle diagram became a second consumer; they now live in one place so the list and the
+// picture cannot disagree about which stage a column belongs to, or which values are ignored.
+import {
+  STAGE_LABEL,
+  buildBotStagePath,
+  botStageClaims,
+  evaluateBotStageClaims,
+  groupRulesByStage,
+  isConfigured,
+  isDormant,
+} from '../core/bot-stage-path';
+import { annotateSource, summarise } from '../core/diagram-claims';
+import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
 import styles from './view-strategy.module.css';
+import './strategy-decision-path.css';
+
+// ⚠️ Mermaid is configured by `core/mermaid-theme`, NOT here — `mermaid.initialize()` sets a
+// GLOBAL singleton, so a second call on another page silently overrides this one.
 
 const TRADING = '/api/trading/strategies';
 
@@ -88,17 +107,8 @@ const ENFORCEMENT = {
   },
 };
 
-/** Stages in the order a trade passes through them, so the page reads as the lifecycle. */
-const STAGE_ORDER = ['identity', 'scope', 'routing', 'entry', 'sizing', 'risk', 'exit'];
-const STAGE_LABEL = {
-  identity: 'Identity',
-  scope: 'Scope',
-  routing: 'Routing',
-  entry: 'Entry',
-  sizing: 'Sizing',
-  risk: 'Risk',
-  exit: 'Exit',
-};
+// STAGE_ORDER / STAGE_LABEL moved to `core/bot-stage-path.js` — the lifecycle diagram needs the
+// same order, and two copies would drift.
 
 /**
  * Format a stored value.
@@ -116,41 +126,123 @@ function formatValue(v) {
   return { text: String(v) };
 }
 
-/** A value counts as configured when it is set to something, `false` and `0` included. */
-const isConfigured = (v) => v !== null && v !== undefined && v !== '';
-
-/**
- * Does this rule hold a value that expresses an INTENTION the engine is ignoring?
- *
- * This drives the headline count only. Every rule row still reports configured-vs-unset honestly
- * (AC6); this is the narrower question "which of these did somebody set up believing it would
- * work?", because a headline that lists `name` next to `maxPositions` trains the reader to skim it.
- *
- * Measured on the VIX bot 2026-09-18, which is why both exclusions exist:
- *
- *   `name` / `version`  — declared `display-only`, and genuinely do nothing to a trade. But they are
- *                         LABELS. `name` is the MT5 order comment body and `version` tags A/B
- *                         snapshots. Nothing about them is dormant or surprising, so flagging them
- *                         is noise. `stage: 'identity'` already marks them — the declaration knows.
- *
- *   `hotStockEnabled: false` — a boolean set to `false` says "off". An unread field that is off is
- *                         behaving exactly as configured, so nothing is being silently ignored.
- *                         `true` on the same field IS the dangerous case: a feature switched on
- *                         with no reader. So booleans count only when true.
- *
- * ⚠️ This does NOT second-guess the declaration. `enforcement` is the single source of truth for
- * whether a rule applies — the only judgement here is presentation weighting.
- */
-function isDormant(rule, raw) {
-  if (rule.enforcement === 'live') return false;
-  if (rule.stage === 'identity') return false; // labels, not rules
-  if (!isConfigured(raw)) return false;
-  if (raw === false) return false; // "off" — consistent with being unread
-  return true;
-}
+// `isConfigured` and `isDormant` moved to `core/bot-stage-path.js` — the lifecycle diagram applies
+// the same rule, and a second copy would let the list and the picture disagree about which values
+// are being ignored. The reasoning behind both exclusions (`identity` labels, booleans set false)
+// travelled with the function.
 
 /** Columns on the row that are structure and bookkeeping, not behaviour. */
 const NON_RULE_FIELDS = new Set(['id', 'createdAt', 'updatedAt', 'evaluations']);
+
+/**
+ * The lifecycle diagram for one bot — every stage a trade passes through, and what this bot has
+ * declared at each.
+ *
+ * ⚠️ WHY THIS EXISTS NEXT TO A LIST THAT SAYS THE SAME THING.
+ * The grouped list below is accurate and nobody reads it in order. A bot with `sizing` and `risk`
+ * declared but nothing at `routing` or `entry` looks perfectly configured in a list of rules — the
+ * gap is only visible as an ABSENCE, and absences are what prose hides best. The picture draws all
+ * seven stages whether or not each has rules, so a missing one looks missing.
+ *
+ * Every claim here is resolved from ONE OF TWO SOURCES, and the difference is deliberate:
+ *   - "this stage has a rule the engine can act on" — from the DECLARATIONS alone, so it stays
+ *     readable even when the bot row itself failed to load.
+ *   - "nothing here is set and ignored" — needs the bot's VALUES, so it is `ok: null` (unverified)
+ *     without them. Nothing is measured, so nothing is asserted; red is reserved for a real
+ *     disagreement.
+ * ⚠️ NO ERROR PROP, DELIBERATELY. The page EARLY-RETURNS on `rulesQuery.isError` (and on an empty
+ * rules list) before this component is reached, so a `rulesError` prop here was dead code that
+ * could never fire — and it was the one thing pushing a raw `.message` into the render, which the
+ * notices ratchet (`scripts/validate-notices.cjs`) correctly refused. Do not add it back; if the
+ * page ever stops early-returning, give the failure a CODE rather than passing a message through.
+ */
+function BotLifecyclePath({ bot, rules }) {
+  const path = useMemo(() => buildBotStagePath(bot, rules), [bot, rules]);
+  const rows = useMemo(
+    () => evaluateBotStageClaims(botStageClaims(bot, path), { bot, rules }),
+    [bot, path, rules],
+  );
+  const summary = useMemo(() => summarise(rows), [rows]);
+  // A stage with nothing declared is an ABSENCE, not a failure, so it earns neither a red node nor
+  // a red pill. It is still worth counting and stating: in this picture an undeclared stage is
+  // drawn as a bare node precisely so the gap is visible, and this line says how many there are.
+  const stagesWithoutRules = useMemo(
+    () => path.nodes.filter((n) => n.tally.declared === 0).length,
+    [path],
+  );
+  const hostRef = useRef(null);
+  // The shared Mermaid config. `themeKey` changes on every theme switch, so the effect redraws
+  // instead of leaving the previous pack's palette cached in the DOM.
+  const { themeKey } = useThemedMermaid();
+  const diagramId = `bl-${bot?.id ?? 'unloaded'}`;
+
+  useEffect(() => {
+    if (!hostRef.current) return undefined;
+    let cancelled = false;
+    // The source is annotated FIRST, so a stage whose claim failed is stroked in the picture.
+    const src = annotateSource(diagramId, path.source, rows, readStatusColors());
+    mermaid
+      .render(`${diagramId}-svg`, src)
+      .then(({ svg }) => {
+        if (!cancelled && hostRef.current) hostRef.current.innerHTML = svg;
+      })
+      .catch(() => {
+        if (!cancelled && hostRef.current) {
+          hostRef.current.innerHTML =
+            '<p class="sl-hint">The lifecycle diagram could not be rendered.</p>';
+        }
+      });
+    return () => { cancelled = true; };
+  }, [diagramId, path.source, rows, themeKey]);
+
+  return (
+    <section className={styles.group}>
+      <h2 className={styles.groupHead}>
+        Lifecycle — where this bot can act
+        <span className={styles.groupCount}>{path.nodes.length} stages</span>
+      </h2>
+
+      <div className="sd-diagram" ref={hostRef} role="img"
+        aria-label={`Trade lifecycle stages for ${bot?.name ?? 'this bot'}`} />
+
+      <div className="sd-summary">
+        <span className="sd-summary-count">
+          {summary.checked} of {summary.total} checks answered
+        </span>
+        <span className="sd-pill sd-pill--ok">{summary.passed} hold</span>
+        <span className="sd-pill sd-pill--bad">{summary.failed} broken</span>
+        <span className="sd-pill sd-pill--unknown">{summary.unverified} not checked</span>
+      </div>
+
+      {stagesWithoutRules > 0 && (
+        <p className="sd-note">
+          {stagesWithoutRules} stage(s) declare no rules at all — shown as bare nodes above rather
+          than omitted, so a gap in the lifecycle reads as a gap.
+        </p>
+      )}
+
+      <table className="sd-claims">
+        <thead>
+          <tr><th>Stage</th><th>Check</th><th>Expects</th><th>This bot</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className={r.ok === false ? 'sd-row--bad' : r.ok === true ? 'sd-row--ok' : ''}>
+              <td className="sd-cell-node">{r.node}</td>
+              <td>{r.says}</td>
+              <td className="sd-cell-expect">{r.expect}</td>
+              <td className="sd-cell-actual">
+                {r.actual == null ? <em>not checked</em> : String(r.actual)}
+                {r.error && <div className="sd-cell-error">{r.error}</div>}
+                {!r.error && r.note && <div className="sd-cell-note">{r.note}</div>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
 
 export default function ViewStrategyPage() {
   const { strategyId } = useParams();
@@ -206,19 +298,13 @@ export default function ViewStrategyPage() {
     [rules, bot],
   );
 
-  const groups = useMemo(() => {
-    const byStage = new Map();
-    for (const rule of rules) {
-      const stage = STAGE_ORDER.includes(rule.stage) ? rule.stage : 'other';
-      if (!byStage.has(stage)) byStage.set(stage, []);
-      byStage.get(stage).push(rule);
-    }
-    return [...byStage.entries()].sort((a, b) => {
-      const ia = STAGE_ORDER.indexOf(a[0]);
-      const ib = STAGE_ORDER.indexOf(b[0]);
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-    });
-  }, [rules]);
+  // One grouping implementation, shared with the lifecycle diagram (`bot-stage-path.js`). This was
+  // inlined here while the page was the only consumer; two copies would agree today and drift at
+  // the next fix, and the diagram's node order depends on this being the same order.
+  const groups = useMemo(
+    () => groupRulesByStage(rules).map((g) => [g.stage, g.rules]),
+    [rules],
+  );
 
   // ⚠️ Declared with the other hooks, ABOVE the early returns below - a hook after a conditional
   // return breaks the Rules of Hooks.
@@ -360,6 +446,14 @@ export default function ViewStrategyPage() {
           </p>
         )}
       </section>
+
+      {/* The lifecycle picture. Sits directly under the headline because it is the index to the
+          grouped list below: a stage with nothing declared shows as a bare node here, and the
+          reader can see WHICH stage is missing before scrolling to look for it. */}
+      <BotLifecyclePath
+        bot={bot}
+        rules={rules}
+      />
 
       {/* Role — the direction permission. It lives on the SUBSCRIPTION, not on the bot row, which
           is why a per-bot page rendering only `trading_strategy` columns misses it entirely. It was
