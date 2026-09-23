@@ -30,7 +30,44 @@
   padding: var(--space-lg);
   color: var(--ink);
 }
+/* ── Mode switch — ONE view, TWO modes (#985 §2) ─────────────────────────────────────────────
+   Owner direction: "it could even be on the same view, but with a url parameter that displays a
+   simplified version for focusing on the configuration of the bot." */
 
+.modeSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.modeBtn {
+  /* 44px minimum: `accessibility-policy.instructions.md` sets the tap-target floor, and these are
+     the page's primary mode control on a touch device. */
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.modeBtn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+/* The active mode is carried by BORDER + WEIGHT + `aria-pressed`, not by colour alone. Colour as
+   the only signal fails the moment the theme moves or the reader is colour-blind; the weight
+   difference survives a greyscale screenshot. */
+.modeBtnOn {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
 /* ── Header ────────────────────────────────────────────────────────────────────────────────── */
 
 .header {

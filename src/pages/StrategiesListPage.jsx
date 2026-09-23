@@ -300,6 +300,18 @@ export default function StrategiesListPage() {
                   >
                     Truth view — all 29 rules + enforcement →
                   </button>
+
+                  {/* #985 §2 — the SECOND path to the SAME view, settings only. The owner's words:
+                      "it could even be on the same view, but with a url parameter that displays a
+                      simplified version for focusing on the configuration of the bot." A url
+                      parameter rather than a second page, so there is ONE view to keep correct. */}
+                  <button
+                    type="button"
+                    className={styles.truthBtn}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/trading/strategy/${s.id}?view=settings`); }}
+                  >
+                    Settings only — configuration without the audit →
+                  </button>
                 </div>
               )}
             </motion.div>

@@ -36,6 +36,24 @@
  * — a truthiness check would misreport `useRaritySizing: false` as "not configured" when it is in
  * fact configured and nothing reads it.
  *
+ * MODES — ONE VIEW, TWO OF THEM (#985 §2, owner direction 2026-09-23)
+ * ---------------------------------------------------------------
+ * > *"for viewing the settings only and not the full information, it could even be on the same
+ * > view, but with a url parameter that displays a simplified version for focusing on the
+ * > configuration of the bot."*
+ *
+ * So this is NOT two pages. `?view=settings` renders the configuration; the default renders the
+ * full audit. The parameter is OPT-IN because the full view is the SAFE default: a bookmark or an
+ * inbound link from anywhere else must keep showing the enforcement verdicts, and silently dropping
+ * them for a reader who did not ask would hide the exact defect this page exists to expose.
+ *
+ * ⚠️ WHAT SETTINGS MODE HIDES IS PROSE AND TALLY, NEVER A VERDICT. The per-row chip still states
+ * whether each setting applies, and `rule.summary` still explains what the setting does. What goes
+ * is the audit furniture — the enforcement tally, the per-row explanations, the lifecycle
+ * completeness picture, the realised record and the undeclared-column check. A reader tuning a bot
+ * must still be able to see that a field they just set is ignored; that is the one fact this page
+ * cannot afford to make harder to find.
+ *
  * DATA
  * ----
  *   GET /api/trading/strategies/:id            — the bot's values (the row)
@@ -44,7 +62,7 @@
  */
 
 import { useMemo, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import mermaid from 'mermaid';
 import { apiGet } from '../core/api/client';
@@ -449,6 +467,17 @@ function BotRecord({ query, row }) {
 
 export default function ViewStrategyPage() {
   const { strategyId } = useParams();
+  // ── One view, two modes (#985 §2) ─────────────────────────────────────────────────────────────
+  // ⚠️ DECLARED HERE, WITH THE OTHER HOOKS — NOT DOWN BY THE RENDER. This component returns early
+  // for the no-id / loading / error / not-found states, so a hook placed below those returns is
+  // called CONDITIONALLY. eslint caught exactly that (`react-hooks/rules-of-hooks`), and React
+  // would then have thrown "Rendered more hooks than during the previous render" on the loading →
+  // loaded transition — i.e. on every successful load of this page.
+  //
+  // Default is `full`. The parameter is opt-in so an inbound link or a bookmark keeps the complete
+  // record — see the MODES note in the file header for why that default is the safe one.
+  const [searchParams] = useSearchParams();
+  const settingsOnly = searchParams.get('view') === 'settings';
   const navigate = useNavigate();
 
   // The bot's values.
@@ -615,7 +644,13 @@ export default function ViewStrategyPage() {
   return (
     <main className={styles.page} ref={revealRef}>
       <header className={styles.header}>
-        <button type="button" className={styles.back} onClick={() => navigate('/trading/strategy-monitor')}>
+        {/* ⚠️ THE LABEL AND THE DESTINATION NOW AGREE, and the DESTINATION was the wrong half.
+            This button read "Back to bots" while navigating to `/trading/strategy-monitor` — a
+            reader who arrived from Trading Bots landed somewhere the button had not promised.
+            Bot Detail is reached from `trading-bots` ("Truth view — all 29 rules + enforcement"),
+            and `docs/trading-bot-model.md` §1b rule 3 names Trading Bots as the execution layer,
+            so this is where "back to bots" belongs. */}
+        <button type="button" className={styles.back} onClick={() => navigate('/trading/trading-bots')}>
           ← Back to bots
         </button>
 
@@ -633,10 +668,43 @@ export default function ViewStrategyPage() {
           {bot.symbol} · broker {bot.brokerId} · tf {bot.timeframe} · v{bot.version}
           {bot.description ? ` · ${bot.description}` : ''}
         </p>
+
+        {/* The switch lives IN the view, and both sides are real links rather than a toggle, so
+            the URL is always the truth of what is on screen and either mode can be shared.
+            `aria-pressed` carries the state for a screen reader — the accent border alone would
+            make the active mode a colour-only signal. */}
+        <div className={styles.modeSwitch} role="group" aria-label="View mode">
+          <button
+            type="button"
+            className={`${styles.modeBtn} ${settingsOnly ? '' : styles.modeBtnOn}`}
+            aria-pressed={!settingsOnly}
+            onClick={() => navigate(`/trading/strategy/${strategyId}`)}
+          >
+            Full — rules + enforcement
+          </button>
+          <button
+            type="button"
+            className={`${styles.modeBtn} ${settingsOnly ? styles.modeBtnOn : ''}`}
+            aria-pressed={settingsOnly}
+            onClick={() => navigate(`/trading/strategy/${strategyId}?view=settings`)}
+          >
+            Settings only
+          </button>
+        </div>
+
+        {settingsOnly && (
+          <p className={styles.identity}>
+            Showing <strong>what this bot is configured to do</strong>. The full view adds the
+            enforcement tally, the per-row reasoning, the lifecycle picture, the realised record
+            and the undeclared-column check.
+          </p>
+        )}
       </header>
 
       {/* The headline. Read before a single rule — this is the number that decides whether the
-          bot's configuration can be trusted. */}
+          bot's configuration can be trusted. AUDIT ONLY: settings mode keeps the per-row chip, so
+          the fact survives without the tally. */}
+      {!settingsOnly && (
       <section className={`${styles.summary} ${dormant.length === 0 ? styles.summaryClean : ''}`}>
         <div className={styles.summaryCell}>
           <span className={styles.summaryValue}>{liveCount}</span>
@@ -666,19 +734,19 @@ export default function ViewStrategyPage() {
           </p>
         )}
       </section>
+      )}
 
       {/* The REALISED record — what the bot has actually done, from its own closed trades.
           Sits between the configuration headline and the lifecycle picture so the two halves of
-          "is this bot trustworthy" are adjacent: what it is ALLOWED to do, then what it DID. */}
-      <BotRecord query={perfQuery} row={perfRow} />
+          "is this bot trustworthy" are adjacent: what it is ALLOWED to do, then what it DID.
+          AUDIT ONLY: a record of PAST OUTCOMES is not configuration. */}
+      {!settingsOnly && <BotRecord query={perfQuery} row={perfRow} />}
 
       {/* The lifecycle picture. Sits directly under the headline because it is the index to the
           grouped list below: a stage with nothing declared shows as a bare node here, and the
-          reader can see WHICH stage is missing before scrolling to look for it. */}
-      <BotLifecyclePath
-        bot={bot}
-        rules={rules}
-      />
+          reader can see WHICH stage is missing before scrolling to look for it.
+          AUDIT ONLY: it reports which stages are MISSING, which is a completeness finding. */}
+      {!settingsOnly && <BotLifecyclePath bot={bot} rules={rules} />}
 
       {/* Role — the direction permission. It lives on the SUBSCRIPTION, not on the bot row, which
           is why a per-bot page rendering only `trading_strategy` columns misses it entirely. It was
@@ -771,13 +839,16 @@ export default function ViewStrategyPage() {
 
                   {/* The enforcement hint is ALWAYS shown for a non-live rule — never only on
                       hover. A tooltip is invisible to a reader who does not go looking, and the
-                      whole defect is a rule that reads as applied. */}
-                  {isNotLive && <p className={styles.caveat}>{meta.hint}</p>}
+                      whole defect is a rule that reads as applied.
+                      ⚠️ SUPPRESSED IN SETTINGS MODE, and the chip is NOT: the verdict stays on
+                      screen, only the explanation goes. Removing the chip too would leave someone
+                      tuning a bot believing every field they set is applied. */}
+                  {!settingsOnly && isNotLive && <p className={styles.caveat}>{meta.hint}</p>}
 
-                  {rule.caveat && <p className={styles.caveat}>{rule.caveat}</p>}
+                  {!settingsOnly && rule.caveat && <p className={styles.caveat}>{rule.caveat}</p>}
 
                   {/* AC6 — the two states named explicitly, beside the value. */}
-                  {configured && isNotLive && (
+                  {!settingsOnly && configured && isNotLive && (
                     <p className={styles.caveat}>
                       ⚠️ This field IS set on this bot, and the automation loop does not apply it.
                     </p>
@@ -792,7 +863,7 @@ export default function ViewStrategyPage() {
       {/* Columns on the row that no declaration covers. Should be empty — the backend build fails
           if a behavioural column is undeclared. Shown when it is NOT empty, because that is a real
           finding: a column that reached the database with no declared enforcement status. */}
-      {(() => {
+      {!settingsOnly && (() => {
         const declared = new Set(rules.map((r) => r.field));
         const undeclared = Object.keys(bot).filter((k) => !declared.has(k) && !NON_RULE_FIELDS.has(k));
         if (undeclared.length === 0) return null;
