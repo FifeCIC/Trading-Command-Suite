@@ -42,6 +42,7 @@ export class AlertTriggerService implements OnModuleInit {
   private readonly logger = new Logger(AlertTriggerService.name);
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastFired = new Map<string, number>(); // triggerKey → timestamp
+  private lastHousekeepingAt = 0; // → autoDismissStale(), at most hourly
   private readonly POLL_INTERVAL_MS = 60_000; // 60 seconds
 
   // Default trigger configs
@@ -94,6 +95,18 @@ export class AlertTriggerService implements OnModuleInit {
       .filter(([, cfg]) => cfg.enabled)
       .map(([key, cfg]) => this.evaluateTrigger(key, cfg));
     await Promise.allSettled(promises);
+
+    // Housekeeping (2026-09-23) — enforce the DECLARED autoDismissDays.
+    //
+    // `autoDismissDays: 3` has been in the notification settings (and on the Settings page) since
+    // the beginning, while nothing enforced it: condition alerts fired for months and nothing
+    // aged them out (12,865 undismissed rows, 9,818 "runs"). The rule lives in
+    // AlertsService.autoDismissStale() — ONE owner — and this loop only decides WHEN to run it.
+    // First run happens on the evaluation 10s after boot, so the setting takes effect live.
+    if (Date.now() - this.lastHousekeepingAt > 3_600_000) {
+      this.lastHousekeepingAt = Date.now();
+      void this.alerts.autoDismissStale();
+    }
   }
 
   private async evaluateTrigger(key: string, cfg: TriggerConfig) {
@@ -137,7 +150,11 @@ export class AlertTriggerService implements OnModuleInit {
       }
       if (down.length > 0) {
         const servers = down.map((b) => b.server).join(', ');
-        return { triggered: true, title: `${down.length} MT5 Bridge(s) Down`, message: `${servers} unreachable. Only ${brokers.length - down.length}/${brokers.length} active.`, severity: 'warning' };
+        // ⚠️ TITLE MUST NOT CARRY THE COUNT (2026-09-23). The title is the collapse key for
+        // `collapseOrCreateAlert()` — "1 MT5 Bridge(s) Down" and "2 MT5 Bridge(s) Down" were two
+        // DIFFERENT keys for ONE condition, so the row fractured every time the number moved.
+        // The counts stay in the message, where a human still reads them.
+        return { triggered: true, title: 'MT5 Bridge(s) Down', message: `${servers} unreachable. Only ${brokers.length - down.length}/${brokers.length} active.`, severity: 'warning' };
       }
       return { triggered: false, title: '', message: '' };
     } catch {
@@ -152,7 +169,9 @@ export class AlertTriggerService implements OnModuleInit {
       const degraded = Array.isArray(data) ? data.filter((p: any) => p.status === 'degraded' || p.status === 'failed') : [];
       if (degraded.length > 0) {
         const names = degraded.map((p: any) => p.name || p.id).join(', ');
-        return { triggered: true, title: `${degraded.length} Provider(s) Degraded`, message: `${names} — scoring may be affected.`, severity: degraded.some((p: any) => p.status === 'failed') ? 'critical' : 'warning' };
+        // ⚠️ STABLE TITLE — see the note on the MT5 title above. `${degraded.length} Provider(s)`
+        // was a collapse key that changed whenever the set of degraded providers changed size.
+        return { triggered: true, title: 'Provider(s) Degraded', message: `${degraded.length} degraded: ${names} — scoring may be affected.`, severity: degraded.some((p: any) => p.status === 'failed') ? 'critical' : 'warning' };
       }
       return { triggered: false, title: '', message: '' };
     } catch {
@@ -512,7 +531,9 @@ export class AlertTriggerService implements OnModuleInit {
 
       return {
         triggered: true,
-        title: `${silent.length} Symbol(s) Scoring But Never Trading`,
+        // ⚠️ STABLE TITLE — `${silent.length} Symbol(s)…` fractured into separate rows for 8, 9 and
+        // 10 silent symbols (all one condition). The count is in the message below.
+        title: 'Symbols Scoring But Never Trading',
         message:
           `Scored ${minScores}+ times in 24h and produced ZERO executions: ${detail}` +
           (silent.length > 6 ? `; +${silent.length - 6} more` : '') +

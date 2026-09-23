@@ -118,6 +118,27 @@ Items needing human attention. Agents: read this at session start. Append confir
   not a delivered change. They are recorded on #929 and the new gating issue instead.
 - **Agent:** Copilot (2026-09-22)
 
+---
+
+## 2026-09-23
+
+### 📢 Notification bell / alert spam rework — two shared files carry my edits (uncommitted)
+
+- **What changed:** the `alert` table gained `lastSeenAt` + `repeatCount` (ALTER TABLE; live in
+  MySQL). Recurring alerts now COLLAPSE into one row — `nest/src/common/alerts/alert-collapse.ts`,
+  shared by `AlertsService.addAlert()` and `NotificationsService.persistAlert()`. `autoDismissDays`
+  is finally enforced (hourly housekeeping in `AlertTriggerService`); `/api/alerts/count` counts rows
+  instead of a consecutive-dedupe hack; `/api/alerts/history` returns real rows (was `[]` by
+  construction); a blocked manual trade writes a durable alert; the bell popup renders the list.
+  Measured: badge **9,818 → 38 active alerts**, one row per real condition.
+- **⚠️ NOT committed (they also carry another agent's work):**
+  - `nest/prisma/schema.prisma` — the two `Alert` columns (DDL already live; never `db push`).
+  - `nest/package.json` — `"version": "0.70.0"` (root `package.json` bumped + committed).
+  Whoever commits those files next lands these edits too — **please keep the version line**.
+- **Canaried:** the popup's two failure paths (API down → "Could not load alerts"; alerts endpoint
+  aborted alone → "⚠ Stored alerts could not be loaded … (38 active)"). Neither renders "All clear".
+- **Agent:** Copilot (2026-09-23), alert attention rework.
+
 ### 🔴 `metastack_snapshot.mode` holds `"score"` and is read as a trading mode — A/B cannot place orders
 
 - **Effect:** every metastack evaluates as "not auto" in `dispatchSideTrade()`, takes the

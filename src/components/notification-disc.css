@@ -137,6 +137,45 @@
   flex: 1;
 }
 
+/* Popup footer (2026-09-23) — "+N more" and the way out to the Alert Center. The popup shows
+   the top few; the Alert Center is where the full list and the dismiss lifecycle live. */
+.notif-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 9px 14px;
+  border-top: 1px solid #2d3040;
+  flex-shrink: 0;
+}
+
+.notif-more {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+/* Mixed state: derived items rendered, but the stored alerts failed to load. Shown even when the
+   list above has content — a failure must never be silent just because something else rendered. */
+.notif-load-error {
+  padding: 8px 14px;
+  font-size: 0.72rem;
+  color: #f59e0b;
+  border-top: 1px solid #2d3040;
+  flex-shrink: 0;
+}
+
+.notif-footer-link {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent, #14b8b9);
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.notif-footer-link:hover {
+  text-decoration: underline;
+}
+
 .notif-item {
   display: flex;
   align-items: flex-start;

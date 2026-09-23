@@ -12,8 +12,9 @@ export class AlertsController {
     return this.alertsService.getActiveAsync();
   }
 
+  /** GET /api/alerts/history — dismissed/aged-out alerts, newest first (DB-backed since 2026-09-23). */
   @Get('history')
-  getHistory(@Query('limit') limit?: string): Alert[] {
+  async getHistory(@Query('limit') limit?: string): Promise<Alert[]> {
     return this.alertsService.getHistory(Number(limit) || 50);
   }
 

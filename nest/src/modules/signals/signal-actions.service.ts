@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { TcsNoticeException } from '../../common/notices/tcs-notice.exception';
+// ⚠️ A blocked trade writes a durable alert (2026-09-23) — see the refusal in placeManualTrade().
+import { AlertsService } from '../alerts/alerts.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
@@ -33,6 +35,7 @@ export class SignalActionsService {
     private readonly feasibility: ExecutionFeasibilityService,
     private readonly tradeRecorder: TradeRecorderService,
     private readonly tradeDefaults: ManualTradeDefaultsService,
+    private readonly alerts: AlertsService,
   ) {}
 
   /** Load a signal (Score row) or throw. */
@@ -191,11 +194,33 @@ export class SignalActionsService {
       // throw sites cannot disagree about what the same condition means. 400 preserves what
       // this endpoint has always returned — a pre-trade refusal is client-actionable.
       const first = feas.blockers[0];
+      const reason = [first.message, first.hint].filter(Boolean).join(' · ');
+
+      // ⚠️ A BLOCK MUST OUTLIVE THE TOAST (2026-09-23). The refusal below is rendered by the
+      // client, read once, dismissed — and then NOTHING recorded that a trade was refused.
+      // Measured: a FRA40 manual buy blocked by the 0.1-lot broker floor left no trace anywhere
+      // except a transient panel. This writes it through addAlert(), so a repeated refusal of
+      // the same symbol + reason COLLAPSES into one alert with a repeat count instead of
+      // flooding the bell (see AlertsService.addAlert).
+      //
+      // ⚠️ The refusal must NOT depend on this write. `addAlert` swallows its own errors, but the
+      // call site defends too: a failing alerts table cannot become a 500 instead of the refusal
+      // (spec: "still refuses correctly when the alert write itself fails").
+      try {
+        await this.alerts.addAlert(
+          'trading',
+          `Trade blocked: ${ticker}`,
+          `${reason}${first.key ? ` (${first.key})` : ''}`,
+          'warning',
+          ticker,
+        );
+      } catch (err) {
+        this.logger.warn(`Could not record the blocked trade as an alert: ${(err as Error).message}`);
+      }
+
       throw new TcsNoticeException(
         'TCS-RISK-001',
-        {
-          reason: [first.message, first.hint].filter(Boolean).join(' · '),
-        },
+        { reason },
         first.key ? { detail: `blocker: ${first.key}` } : {},
       );
     }

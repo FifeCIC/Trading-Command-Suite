@@ -11,6 +11,9 @@ import { WindowsChannel } from './channels/windows.channel';
 import { TelegramChannel } from './channels/telegram.channel';
 import { DiscordChannel } from './channels/discord.channel';
 import { PrismaService } from '../../database/prisma.service';
+// ⚠️ Alert rows are COLLAPSED, not inserted (2026-09-23) — one shared rule with
+// AlertsService.addAlert(). See common/alerts/alert-collapse.ts for why.
+import { collapseOrCreateAlert } from '../../common/alerts/alert-collapse';
 
 export type NotificationChannel = 'email' | 'windows' | 'telegram' | 'discord';
 export type NotificationEvent =
@@ -176,6 +179,14 @@ export class NotificationService {
    * events survive restarts and appear in the Alert Center. Only mapped
    * events are persisted — high-frequency events (entry-signal, daily-summary)
    * are intentionally excluded to avoid flooding.
+   *
+   * ⚠️ COLLAPSED, not inserted (2026-09-23). A trailing stop that creeps every cadence window
+   * produced 50 `Stop adjusted — EURCAD` rows in two days; the same shape across symbols put
+   * hundreds of undismissed rows in the bell. `collapseOrCreateAlert()` folds a repeat into the
+   * existing row (`lastSeenAt`, `repeatCount`, latest detail). The per-event record is NOT lost:
+   * closes live in the `trade` table, adjustments in `stop_adjustment`, and both are untouched.
+   * The real-time channels (windows/telegram/discord) still fire on EVERY event — only the
+   * attention row collapses.
    */
   private async persistAlert(msg: NotificationMessage): Promise<void> {
     const map = ALERT_EVENT_MAP[msg.event];
@@ -188,15 +199,13 @@ export class NotificationService {
       if (Number.isFinite(pnl)) severity = pnl >= 0 ? 'success' : 'warning';
     }
 
-    await this.prisma.alert.create({
-      data: {
-        type: map.type,
-        title: msg.title,
-        detail: msg.body,
-        severity,
-        ticker: msg.symbol ?? null,
-        link: map.link ?? null,
-      },
+    await collapseOrCreateAlert(this.prisma, {
+      type: map.type,
+      title: msg.title,
+      detail: msg.body,
+      severity,
+      ticker: msg.symbol ?? null,
+      link: map.link ?? null,
     }).catch((err) => {
       this.logger.debug(`Alert persist failed: ${(err as Error).message}`);
     });

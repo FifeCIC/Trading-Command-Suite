@@ -17,6 +17,9 @@ import EmptyState from './EmptyState';
 import GlossaryPage from '../pages/GlossaryPage';
 import { SB_OPTIONAL_COLUMNS, sbColumnKey } from '../core/symbols-browser-columns';
 import { SCR_OPTIONAL_COLUMNS, scrColumnKey } from '../core/screener-columns';
+// ⚠️ Alert rows arrive in TWO column layouts (legacy rows were written with shifted positional
+// args) — read them through normaliseAlert(), never straight off `title`/`severity`.
+import { normaliseAlert, ALERT_LEVEL_WEIGHT } from '../core/alerts';
 import '../core/forms.css';
 import './notification-disc.css';
 import './screen-options.css';
@@ -432,6 +435,24 @@ function readRegistryValues(registry) {
   return initial;
 }
 
+/**
+ * relTime(iso) — "4m ago" / "2h ago" / "3d ago" for the notification popup.
+ *
+ * The popup answers "is this happening NOW?", so age is the useful form of the timestamp; a raw
+ * ISO string would make the reader subtract. The raw value stays available via `title`.
+ */
+function relTime(iso) {
+  if (!iso) return '';
+  var ms = Date.now() - new Date(iso).getTime();
+  if (!isFinite(ms) || ms < 0) return '';
+  var m = Math.floor(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
 export default function ScreenOptions({ activeView, area, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {
   var { prefs, set: setPref } = usePreferences();
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
@@ -458,6 +479,16 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
     queryKey: ['so-notif-alerts'],
     queryFn: () => apiGet('/api/alerts/count').catch(() => ({ active: 0, critical: 0 })),
     refetchInterval: 30_000,
+  });
+  // The ACTUAL alerts (2026-09-23). The badge read /count while the popup rendered ONLY the
+  // health-derived list — two unconnected sources behind one bell, so it could show 9,818 on the
+  // badge and "All clear" in the panel at the same moment. Both now read this list (plus the
+  // derived items), and /count uses the same predicate, so the three can no longer disagree.
+  // ⚠️ `.catch(() => null)`: `null` means COULD NOT LOAD, which must never render as "no alerts".
+  var alertListQuery = useQuery({
+    queryKey: ['so-notif-list'],
+    queryFn: () => apiGet('/api/alerts/active').catch(() => null),
+    refetchInterval: 60_000,
   });
 
   // ── Portfolio account toggles (view-specific) ──
@@ -512,6 +543,54 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
   var alertActive = alertsQuery.data?.active || 0;
   var alertCritical = alertsQuery.data?.critical || 0;
   var totalUnread = visible.length + alertActive;
+
+  // ── The popup's items (2026-09-23) ──
+  //
+  // ONE list from TWO sources: the live health/automation items computed above, PLUS the stored
+  // alerts the badge had always counted but the panel never fetched. Highest severity first, then
+  // most recently observed — the order is the answer to "what needs me right now".
+  //
+  // ⚠️ `listState` distinguishes THREE states that must never collapse into one: loading,
+  // failed-to-load, and genuinely empty. "All clear" is a CLAIM; a failed fetch cannot make it.
+  var listState = alertListQuery.isLoading
+    ? 'loading'
+    : (alertListQuery.data === null ? 'failed' : 'ok');
+  var popupItems = [];
+  visible.forEach(function(n) {
+    popupItems.push({
+      id: n.id,
+      level: n.severity === 'critical' ? 'critical' : 'warning',
+      title: n.title, detail: n.detail, at: n.timestamp, ticker: null, repeatCount: 1,
+    });
+  });
+  if (Array.isArray(alertListQuery.data)) {
+    alertListQuery.data.forEach(function(a) {
+      var n = normaliseAlert(a);
+      popupItems.push({
+        id: 'db-' + n.id,
+        level: n.level,
+        title: n.title,
+        detail: n.message,
+        at: n.lastSeenAt || n.createdAt,
+        ticker: n.ticker || null,
+        repeatCount: Number(n.repeatCount) || 1,
+      });
+    });
+  }
+  popupItems.sort(function(a, b) {
+    var d = (ALERT_LEVEL_WEIGHT[b.level] || 0) - (ALERT_LEVEL_WEIGHT[a.level] || 0);
+    return d !== 0 ? d : String(b.at || '').localeCompare(String(a.at || ''));
+  });
+  var POPUP_LIMIT = 8;
+  var popupShown = popupItems.slice(0, POPUP_LIMIT);
+  var popupHidden = popupItems.length - popupShown.length;
+
+  var handleDismissAll = function() {
+    apiPost('/api/alerts/dismiss-all').then(function() {
+      alertListQuery.refetch();
+      alertsQuery.refetch();
+    }).catch(function() {});
+  };
 
   // Read current global preference values
   var displayMode = prefs.displayMode || 'focused';
@@ -647,7 +726,7 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
         <div className="notif-disc">
           <button
             type="button"
-            className={`notif-bell ${notifOpen ? 'active' : ''} ${criticalCount > 0 ? 'has-critical' : ''}`}
+            className={`notif-bell ${notifOpen ? 'active' : ''} ${criticalCount + alertCritical > 0 ? 'has-critical' : ''}`}
             onClick={function() { setNotifOpen(function(v) { return !v; }); }}
             aria-label={'Notifications - ' + totalUnread + ' unread'}
             title={totalUnread + ' notification' + (totalUnread !== 1 ? 's' : '')}
@@ -666,11 +745,76 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
               <div className="notif-dropdown">
                 <div className="notif-header">
                   <h3>Notifications</h3>
+                  {totalUnread > 0 && (
+                    <button
+                      type="button"
+                      className="notif-dismiss-all"
+                      title="Dismiss every active alert. Rows move to history — they are not deleted, and a condition that recurs will surface again as a new alert."
+                      onClick={handleDismissAll}
+                    >
+                      Dismiss all
+                    </button>
+                  )}
                 </div>
-                {visible.length === 0 ? (
-                  <p className="notif-empty">All clear - no notifications.</p>
+                {popupShown.length === 0 ? (
+                  // ⚠️ THREE states, and only one of them is "All clear". A failed fetch and an
+                  // empty list must never render the same — the badge may still show a count
+                  // (it comes from a different endpoint), and "All clear" under a non-zero badge
+                  // is exactly the contradiction this rewrite exists to remove.
+                  listState === 'failed' ? (
+                    <p className="notif-empty">
+                      Could not load alerts —{' '}
+                      <a className="notif-footer-link" href="/automation/alert-center">open the Alert Center</a>.
+                      {alertActive > 0 && <> {alertActive} alert(s) are still recorded as active.</>}
+                    </p>
+                  ) : listState === 'loading' ? (
+                    <p className="notif-empty">Loading alerts…</p>
+                  ) : (
+                    <p className="notif-empty">All clear — no active alerts.</p>
+                  )
                 ) : (
-                  <div className="notif-list">{visible.length} notification(s)</div>
+                  <>
+                    <div className="notif-list">
+                      {popupShown.map(function(n) {
+                        var urgency = n.level === 'critical' || n.level === 'high'
+                          ? '🔴'
+                          : n.level === 'warning' || n.level === 'medium' ? '🟠' : '🔵';
+                        return (
+                          <div className="notif-item" key={n.id}>
+                            <div className="notif-item-left">
+                              <span className="notif-severity-dot" aria-hidden="true">{urgency}</span>
+                              <div className="notif-item-body">
+                                <span className="notif-item-title">{n.title}</span>
+                                {n.detail && (
+                                  <span className="notif-item-detail" title={n.detail}>{n.detail}</span>
+                                )}
+                                <span className="notif-item-time" title={n.at || ''}>
+                                  {relTime(n.at)}
+                                  {(n.repeatCount || 1) > 1 ? ' · seen ' + n.repeatCount + '×' : ''}
+                                  {n.ticker ? ' · ' + n.ticker : ''}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* ⚠️ MIXED-STATE GAP (2026-09-23): derived items can render while the STORED
+                        alerts failed to load — the badge still counts them (separate query), so
+                        silently omitting them here is the same mismatch this rewrite removed.
+                        A fetch that fails must SAY so, even when something else rendered fine. */}
+                    {listState === 'failed' && (
+                      <div className="notif-load-error">
+                        ⚠ Stored alerts could not be loaded —{' '}
+                        <a className="notif-footer-link" href="/automation/alert-center">open the Alert Center</a>
+                        {alertActive > 0 && <> ({alertActive} active)</>}
+                      </div>
+                    )}
+                    <div className="notif-footer">
+                      {popupHidden > 0 && <span className="notif-more">+{popupHidden} more</span>}
+                      <a className="notif-footer-link" href="/automation/alert-center">Open Alert Center →</a>
+                    </div>
+                  </>
                 )}
               </div>
             </>

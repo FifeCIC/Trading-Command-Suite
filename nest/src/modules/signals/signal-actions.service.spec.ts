@@ -25,6 +25,10 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
 import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
+// ⚠️ Injectable since 2026-09-23: a BLOCKED trade writes a durable alert (the toast is not a
+// record). The rejection contract below is also asserted to still hold with this in place — a
+// refusal must reach the user even if the alert write is what failed.
+import { AlertsService } from '../alerts/alerts.service';
 
 /** The real blocker shape, taken from `execution-feasibility.service.ts` (size-below-minimum). */
 const SIZE_BLOCKER = {
@@ -69,6 +73,10 @@ function buildModule(feasibilityResult: unknown) {
     getDefaults: jest.fn().mockResolvedValue({ size: 0.1, slPct: 2, tpPct: 4 }),
   };
 
+  const alerts = {
+    addAlert: jest.fn().mockResolvedValue({ id: 'alert-1' }),
+  };
+
   return Test.createTestingModule({
     providers: [
       SignalActionsService,
@@ -77,6 +85,7 @@ function buildModule(feasibilityResult: unknown) {
       { provide: TradeRecorderService, useValue: tradeRecorder },
       { provide: ExecutionFeasibilityService, useValue: feasibility },
       { provide: ManualTradeDefaultsService, useValue: tradeDefaults },
+      { provide: AlertsService, useValue: alerts },
     ],
   }).compile();
 }
@@ -146,6 +155,39 @@ describe('SignalActionsService.placeManualTrade — rejection contract', () => {
     // A pre-trade refusal is client-actionable; a 500 would say "server fault".
     expect(thrown.getStatus()).toBe(400);
     expect(thrown.noticeHttpStatus).toBe(400);
+  });
+
+  it('persists the refusal as a durable alert — the toast is not the record', async () => {
+    // WHY THIS EXISTS: a blocked manual trade used to leave NO trace anywhere. The refusal was
+    // rendered, dismissed, and gone — measured on a FRA40 buy blocked by the 0.1-lot floor. The
+    // alert below is what makes "why did my trade not go through an hour ago?" answerable.
+    const moduleRef = await buildModule({ feasible: false, blockers: [SIZE_BLOCKER] });
+    const service = moduleRef.get(SignalActionsService);
+    const alerts = moduleRef.get(AlertsService) as any;
+
+    await expect(
+      service.placeManualTrade('sig-1', { side: 'BUY' } as any),
+    ).rejects.toMatchObject({ code: 'TCS-RISK-001' });
+
+    expect(alerts.addAlert).toHaveBeenCalledWith(
+      'trading',
+      'Trade blocked: BTC',
+      expect.stringContaining('size-below-minimum'),
+      'warning',
+      'BTC',
+    );
+  });
+
+  it('still refuses correctly when the alert write itself fails', async () => {
+    // The refusal must never depend on the alert write: a broken alerts table cannot become a
+    // reason that a blocked trade silently proceeds OR that the user gets a different error.
+    const moduleRef = await buildModule({ feasible: false, blockers: [SIZE_BLOCKER] });
+    const service = moduleRef.get(SignalActionsService);
+    (moduleRef.get(AlertsService) as any).addAlert.mockRejectedValueOnce(new Error('alerts down'));
+
+    await expect(
+      service.placeManualTrade('sig-1', { side: 'BUY' } as any),
+    ).rejects.toMatchObject({ code: 'TCS-RISK-001' });
   });
 
   it('uses the FIRST blocker, and reports that one', async () => {

@@ -12,9 +12,12 @@ import { DatabaseModule } from '../../database/database.module';
 import { TradingModule } from '../trading/trading.module';
 import { DiversificationModule } from '../diversification/diversification.module';
 import { ProvidersModule } from '../providers/providers.module';
+// AlertsModule — SignalActionsService writes a durable alert when a manual trade is blocked
+// (2026-09-23). No cycle: AlertsModule imports only Calendar + Providers.
+import { AlertsModule } from '../alerts/alerts.module';
 
 @Module({
-  imports: [ScoringModule, MarketDataModule, DatabaseModule, TradingModule, DiversificationModule, ProvidersModule],
+  imports: [ScoringModule, MarketDataModule, DatabaseModule, TradingModule, DiversificationModule, ProvidersModule, AlertsModule],
   controllers: [SignalsController],
   providers: [SignalsService, SignalEnvelopeService, SignalActionsService, SignalQueueService, SignalOutcomeService, ManualTradeDefaultsService],
   exports: [SignalsService, SignalEnvelopeService, SignalActionsService, SignalQueueService, SignalOutcomeService, ManualTradeDefaultsService],
