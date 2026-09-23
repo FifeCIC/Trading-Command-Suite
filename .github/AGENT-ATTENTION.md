@@ -4,6 +4,66 @@ Items needing human attention. Agents: read this at session start. Append confir
 
 ---
 
+## 2026-09-23
+
+### �️ `build:api` was failing THREE ways — fixed; here is the new contract
+
+- **Found live** while closing #933: two `build:api` runs stalled with the API down for 12+ minutes.
+  The process tree ended in **`Notepad.exe` holding `npm.ps1`** — the old restart ran
+  `Start-Process -FilePath 'npm'`, which on this machine resolved the `npm.ps1` wrapper *as a
+  document*, opened the editor, and left the script blocked behind it. The other two causes were
+  `nest start` rebuilding first (**measured 10:30:51 → 10:33:34** — longer than the old 30s health
+  window) and the wording *"did not report healthy within 30s"*, which reads as **slow**, not dead.
+- **Fixed in 960003f** (`scripts/build-api.ps1`): restart is now `node dist/src/main.js`; the check
+  answers a real `GET /api/version` for up to 60s and stops early if the child exits; on failure it
+  prints **`API IS DOWN`** with the observed state (exited / not listening / listening-not-answering)
+  and the tails of `logs/api-out.log` + `logs/api-err.log`, then exits non-zero. `-SelfTest` canaries
+  the failure path deterministically (dead port 39991; refuses rather than claim a pass it did not
+  establish).
+- **For every agent:** if the script says `API IS DOWN`, it IS down — do not assume "slow". Prefer
+  this script over hand-rolled `npm run start` restarts (both hazards above live in that path).
+- **Observed, unexplained:** the API was found dead twice more during the afternoon (≈10:30 and
+  ≈10:45) while parallel build cycles were in flight; each recovered by starting `dist/src/main.js`.
+  No crash trace in either log. If you are the agent cycling builds, expect your run to stop the API —
+  that is normal; a restart that FAILS is what this script now reports loudly.
+- **Agent:** Copilot (2026-09-23), closing #953 + #933.
+
+### �🛑 `seedDefaults()` NOW CONVERGES — an out-of-date seed file is DESTRUCTIVE
+
+- **What changed (#833, closed):** `POST /api/trading/strategies/seed` no longer skips bots that
+  already exist. It now compares each seeded field and **writes the seed's value over the database**.
+  That is the point of the fix — but it means **the seed file silently wins over the live database.**
+- **It already bit, on the first live run.** The seed lagged reality and convergence reverted
+  deliberate changes:
+  - **5 bots flipped `auto` → `semi-auto`.** `automation-loop.service.ts` Gate 2 dispatches **auto
+    bots only**, so this **stopped them dispatching**. Four were gold.
+  - **4 gold time-stops + Tokyo USDJPY's were written to `null`**, removing the slot-releasing
+    control #773 provides. Cause: the seed declares `maxHoldHours` for the FX bots but OMITS it for
+    the gold bots, and the code treated "absent" as "set to null".
+  Both were reverted by hand and the seed now declares the real values.
+- **Rule for every agent:** before running a seed, run it in **dry-run** and read `changes`:
+  ```powershell
+  curl.exe -s -X POST "http://localhost:3201/api/trading/strategies/seed?dryRun=true"
+  ```
+  For each reported field, ask *"is the seed or the database right?"* and fix the **wrong one**.
+  Fields the seed **omits** are left alone deliberately; only declared fields are converged.
+- **Optional fields are only written when DECLARED.** Absent and `undefined` mean "no opinion";
+  explicit `null` is a declaration. Tests cover all four cases for `active`, `maxHoldHours`,
+  `sessionWindow`.
+- **Full rules now in** `.github/instructions/database-seed-discipline.instructions.md`
+  → *"Convergence is only safe in ONE direction: seed → database."*
+- **Agent:** Copilot (2026-09-23), closing #833 (Tier 0 of sprint #960).
+
+### ⚠️ `docs-facts` fails the build after ANY version bump
+
+- Regenerate before building: `node scripts/docs-facts.cjs --write`.
+- `prebuild` runs `npx rimraf dist` before most guards, so this failure leaves the API **down**.
+  Start it detached: `Start-Process -FilePath node -ArgumentList "dist/src/main.js"
+  -WorkingDirectory …\nest -WindowStyle Hidden` — healthy in ~5-8s.
+- **Agent:** Copilot (2026-09-23)
+
+---
+
 ## 2026-09-22 (evening)
 
 ### 🔴 BUILD BLOCKED by `trading_strategy.duplicatedFromId` — another agent's IN-FLIGHT work. Do not "fix" it.
