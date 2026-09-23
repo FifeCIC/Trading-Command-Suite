@@ -43,7 +43,9 @@
 | **R6** | 2026-09-23 | **A backtest run's `winRate` is a SIGNAL rate, and adapters serve it as a trade rate** — measured `100%` beside `0 winners of 3`. Fixed in the comparison/list payloads; two other endpoints still conflate them. | **#980** | Do you want the stored column renamed (clearer, touches the schema) or the trade rate stored alongside it? |
 | **R7** | 2026-09-23 | **Sprint proposal for the week of 2026-09-28** (*"make change evaluable, and stop the bleed"*) — a plan awaiting your approval, with a companion sprint (#932) already closed. | **#930** (proposal) / **#932** (closed) | Approve, amend, or reject. |
 
----
+| **R8** | 2026-09-23 | **The Decision Trail now labels an OBSERVATION instead of showing it as a signal** (#971). A ladder row carries no consumer, so it is written as `OBSERVED` and the page adds a muted **"no consumer"** chip beside the decision badge. ⚠️ Two visual side-effects you may want to overrule: Symbol Focus's `SCORED` badge changed from `#60a5fa` to `#3b82f6` (it now uses the SHARED palette after three pages each had their own), and the Decision Trail's colour for an unknown/unrecognised value changed from amber `#f59e0b` (which reads as "blocked") to neutral grey. **Measured:** the 12 most recent decision rows are ALL observations — they are the majority of the log, and they crowd out the rows that actually did something | `/decisions` (Decision Trail) and `/symbol/:ticker` (Symbol Focus) — the chip, and the badge colour on both pages | **Is an observation worth a row in the Decision Trail at all?** Options: (a) keep listing them with the chip (current behaviour); (b) hide `OBSERVED` by default with a "show observations" toggle, so the page leads with decisions that had a consumer; (c) list them but collapsed into one summary line per tick. Also: are the two badge colours in R8-acceptable, or should each page keep its own? |
+
+  ---
 
 ## DONE
 
