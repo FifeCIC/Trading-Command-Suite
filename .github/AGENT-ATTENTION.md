@@ -5,13 +5,16 @@ Items needing human attention. Agents: read this at session start. Append confir
 ---
 
 ## 2026-09-23
-### 🚧 `prebuild` blocked for ALL agents while one agent's WIP file fails notices
+### ✅ RESOLVED — `prebuild` was blocked by a COMMITTED raw error render in StrategyLibraryPage
 
-- `src/pages/StrategyLibraryPage.jsx` (uncommitted, mid-edit) renders an undeclared raw error →
-  `validate-notices.cjs` fails `prebuild` → **no agent can produce a new backend build** until it
-  lands (`build:api` correctly leaves the API stopped; start it from `dist/src/main.js` meanwhile).
-- Backend fixes that landed in source today (e.g. #852) are type-checked + spec-verified but their
-  live demonstrations wait on a buildable tree. Nobody should "fix" the WIP file for the other agent.
+- **Cause (corrected):** not WIP — `src/pages/StrategyLibraryPage.jsx` was **clean at HEAD**
+  (introduced by `5c2cd9a`). The notices ratchet counts raw `error.message` renders in `src/**`; that
+  file had one, undeclared, so **no agent could build** until it was migrated.
+- **Fixed** the validator's own way — migrated the render to the notice registry
+  (`noticeFromError(…, 'TCS-SYS-009')`, renders the code + registry message, never the raw text).
+  `node scripts/validate-notices.cjs` → OK (9 declared = 9 actual). The ratchet total did not rise.
+- **Lesson:** a raw render reaching `main` fails EVERY agent's build. Build-time is late for a fix
+  with this blast radius — worth a pre-commit hook if it recurs.
 - **Agent:** Copilot (2026-09-23), during the requires:pro burn-down.
 ### �️ `build:api` was failing THREE ways — fixed; here is the new contract
 
@@ -34,6 +37,27 @@ Items needing human attention. Agents: read this at session start. Append confir
   No crash trace in either log. If you are the agent cycling builds, expect your run to stop the API —
   that is normal; a restart that FAILS is what this script now reports loudly.
 - **Agent:** Copilot (2026-09-23), closing #953 + #933.
+
+### 🛑 VOCABULARY — "A/B" means ONE thing now. Six things used to be called that
+
+- **Owner direction today.** "A/B" is a **LOCKED PAIR** — two protocols, or two bots, **both active
+  together**, same symbol, **exactly one declared difference**, compared on outcomes
+  (`SETTLED-DECISIONS.md` **#25** → **#963**). Nothing else is "A/B".
+- **A page design is NOT A/B.** It is a **design variant**, and the two are **Old** and **New**.
+  `ABSwitcher` → **`VariantSwitcher`**, classes `ab-btn` → `variant-btn`, buttons `A`/`B` → `Old`/`New`
+  (renamed today). The URL param stays `?variant=A` — several pages read it and it carries no "A/B"
+  wording. **When you add a design toggle, do not call it A/B.**
+- **A snapshot is an ANALYSIS artefact, not a test, and it does not trade.** `metastack_snapshot`
+  freezes a scoring config with a fingerprint — for version comparison and drift detection.
+  The `ab_test` table + `AbTestService` + the `TCS AB-A`/`TCS AB-B` broker tags are the **snapshot
+  TRIAL**, being **renamed out of "A/B"** (**#962**).
+- ⚠️ **Do not blind-replace "ab-test".** 87 references across 30 files, and **two different things
+  share the substring**: `/lab/ab-testing` is the **protocol comparison page** (#373), `ab_test` is
+  the snapshot trial. ~22 references are historical docs/changelog and must **not** be rewritten.
+- **Why this matters:** a search for the app's real A/B work used to match page styling, tier labels
+  (`Tier A/B symbols`), phase labels (`#638 Phases A/B/C`) and a lineage column. Six meanings, one
+  string — in a system that is already complex. Full split: `SETTLED-DECISIONS.md` **#23**.
+- **Agent:** Copilot (2026-09-23).
 
 ### 🔴 THE A/B RUNNER NOW PLACES REAL ORDERS — a running test is no longer inert
 

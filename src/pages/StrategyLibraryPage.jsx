@@ -19,6 +19,7 @@ import {
   unverifiableSchemaKeys,
 } from '../core/strategy-diagram';
 import { annotateSource, summarise } from '../core/diagram-claims';
+import { noticeFromError } from '../core/notices/from-error';
 import './strategy-library.css';
 import './strategy-decision-path.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -63,12 +64,12 @@ const READINESS_STYLES = {
  * `forex-session-v1`), so they will legitimately show identical live values. That is a
  * property of the current model, not a bug in this component — see the sprint record.
  */
-function StrategyDecisionPath({ strategy, bots, botsError }) {
+function StrategyDecisionPath({ strategy, bots, botsNotice }) {
   const path = useMemo(() => buildDecisionPath(strategy), [strategy]);
   const claims = useMemo(() => strategyClaims(strategy, path), [strategy, path]);
   const rows = useMemo(
-    () => evaluateStrategyClaims(claims, { bots, error: botsError, protocol: strategy.tcsProtocol }),
-    [claims, bots, botsError, strategy.tcsProtocol],
+    () => evaluateStrategyClaims(claims, { bots, error: botsNotice?.message ?? null, protocol: strategy.tcsProtocol }),
+    [claims, bots, botsNotice, strategy.tcsProtocol],
   );
   const summary = useMemo(() => summarise(rows), [rows]);
   const hostRef = useRef(null);
@@ -114,9 +115,10 @@ function StrategyDecisionPath({ strategy, bots, botsError }) {
         <span className="sd-pill sd-pill--unknown">{summary.unverified} unverified</span>
       </div>
 
-      {botsError && (
+      {botsNotice && (
         <p className="sd-note sd-note--warn">
-          The strategies endpoint could not be read ({botsError}). Every claim below is
+          The strategies endpoint could not be read ({botsNotice.code}) — {botsNotice.message} Every
+          claim below is
           <strong> unverified</strong> — that is not a pass, and nothing here says the theory is
           wrong. The diagram shows the intended path only.
         </p>
@@ -185,8 +187,8 @@ export default function StrategyLibraryPage() {
    * The live bots, for the decision-path claims.
    * Fetched ONCE for the whole page rather than per card — there are ~27 bots, and the
    * strategy list can have ten entries open in sequence.
-   * ⚠️ The failure is carried as a value (`botsError`), not swallowed. A swallowed error here
-   * would render every claim as "unverified" with no explanation, which reads as a data gap
+   * ⚠️ The failure is carried as a CODED NOTICE (`botsNotice`), not swallowed. A swallowed error
+   * here would render every claim as "unverified" with no explanation, which reads as a data gap
    * rather than an outage — the exact confusion this report exists to avoid.
    */
   const botsQuery = useQuery({
@@ -197,7 +199,13 @@ export default function StrategyLibraryPage() {
   const bots = Array.isArray(botsQuery.data)
     ? botsQuery.data
     : botsQuery.data?.strategies;
-  const botsError = botsQuery.isError ? (botsQuery.error?.message || 'request failed') : null;
+  // #826 Phase 5 — the failure is carried as a CODED notice, never as a raw `error.message`
+  // render. The ratchet in scripts/validate-notices.cjs counts raw renders and cannot tell "the
+  // API did not respond" from a broker refusal — a code can. TCS-SYS-009 is the no-response
+  // fallback; noticeFromError upgrades it to the status-bearing code when a response existed.
+  const botsNotice = botsQuery.isError
+    ? noticeFromError(botsQuery.error, 'TCS-SYS-009', { operation: 'read the strategies endpoint' })
+    : null;
 
   const readinessMap = useMemo(() => {
     const map = {};
@@ -318,7 +326,7 @@ export default function StrategyLibraryPage() {
                   {/* Decision Path — only where the entry names a protocol; a concept entry has
                       nothing live to check, and drawing a path for it would imply otherwise. */}
                   {strategy.tcsProtocol && (
-                    <StrategyDecisionPath strategy={strategy} bots={bots} botsError={botsError} />
+                    <StrategyDecisionPath strategy={strategy} bots={bots} botsNotice={botsNotice} />
                   )}
 
                   {/* Directive Mappings */}
