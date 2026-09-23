@@ -1,6 +1,6 @@
-.pl-page { padding: 1.5rem; color: #d1d5db; max-width: 1100px; }
+.pl-page { padding: 1.5rem; color: var(--ink); max-width: 1100px; }
 .pl-header { margin-bottom: 1rem; }
-.pl-header h2 { margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1.3rem; }
+.pl-header h2 { margin: 0 0 0.25rem; color: var(--ink); font-size: 1.3rem; }
 .pl-sub { margin: 0; color: #94a3b8; font-size: 0.85rem; }
 
 .pl-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 1.25rem; }
@@ -27,7 +27,7 @@
 .pl-side-buy { background: #064e3b44; color: #6ee7b7; }
 .pl-side-sell { background: #7f1d1d44; color: #fca5a5; }
 
-.pl-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: #1e293b; color: #cbd5e1; }
+.pl-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: #cbd5e1; }
 .pl-origin-external { background: #7c2d12; color: #fdba74; }
 .pl-origin-manual { background: #1e3a8a; color: #93c5fd; }
 .pl-origin-strategy { background: #14532d; color: #86efac; }

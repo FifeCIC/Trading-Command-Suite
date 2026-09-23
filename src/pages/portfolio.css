@@ -16,7 +16,7 @@
 .pf-alloc-label { font-size: 0.88rem; color: var(--ink); }
 .pf-alloc-track { height: 12px; background: var(--line); border-radius: 5px; overflow: hidden; }
 .pf-alloc-bar { height: 100%; border-radius: 5px; min-width: 2px; }
-.pf-bar-up { background: #10b981; }
+.pf-bar-up { background: var(--color-profit); }
 .pf-bar-down { background: var(--color-loss); }
 .pf-bar-cash { background: var(--line); }
 .pf-alloc-pct { font-size: 0.82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }

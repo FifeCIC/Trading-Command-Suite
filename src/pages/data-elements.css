@@ -8,8 +8,8 @@
 }
 
 .de-card {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 10px;
   padding: 0.85rem 1rem;
 }

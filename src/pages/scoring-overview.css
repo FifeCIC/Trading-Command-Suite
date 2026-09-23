@@ -179,7 +179,7 @@
 .so-bucket--low { background: var(--color-text-dim); }
 .so-bucket--watch { background: var(--color-warning); }
 .so-bucket--mid { background: var(--color-accent-blue); }
-.so-bucket--entry { background: #10b981; }
+.so-bucket--entry { background: var(--color-profit); }
 .so-bucket--strong { background: #8b5cf6; }
 
 /* ---- Freshness ---- */
@@ -259,7 +259,7 @@
   border: 1px solid;
 }
 
-.so-signal--entry { border-color: #10b981; color: #10b981; }
+.so-signal--entry { border-color: var(--color-profit); color: var(--color-profit); }
 .so-signal--watch { border-color: var(--color-warning); color: var(--color-warning); }
 .so-signal--defensive { border-color: var(--color-loss); color: var(--color-loss); }
 .so-signal--unknown { border-color: var(--color-text-dim); color: var(--color-text-dim); }
@@ -478,9 +478,9 @@
   color: var(--ink-soft);
 }
 .los-select {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink, var(--ink));
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.45rem 0.65rem;
   font-family: inherit;
@@ -496,9 +496,9 @@
 }
 .los-select:focus { border-color: var(--accent, var(--accent)); outline: none; }
 .los-auto-btn {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink-soft, var(--color-neutral));
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
   font-family: inherit;

@@ -42,7 +42,7 @@
   display: flex; align-items: center; gap: 8px;
 }
 .gold-live-dot, .btc-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-muted); }
-.gold-live-dot.live, .btc-live-dot.live { background: #10b981; animation: cockpit-pulse 1.5s infinite; }
+.gold-live-dot.live, .btc-live-dot.live { background: var(--color-profit); animation: cockpit-pulse 1.5s infinite; }
 @keyframes cockpit-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* ── TF buttons ──────────────────────────────────────── */
@@ -71,7 +71,7 @@
   transition: transform 0.1s, box-shadow 0.15s;
 }
 .gold-action-btn:active, .btc-action-btn:active { transform: scale(0.96); }
-.gold-buy, .btc-buy { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+.gold-buy, .btc-buy { background: linear-gradient(135deg, var(--color-profit), #059669); color: #fff; }
 .gold-buy:hover, .btc-buy:hover { box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
 .gold-buy.flash, .btc-buy.flash { box-shadow: 0 0 24px rgba(16, 185, 129, 0.7); }
 .gold-sell, .btc-sell { background: var(--color-loss); color: #fff; }
@@ -104,10 +104,10 @@
 }
 .gold-price-symbol, .btc-price-symbol { font-weight: 700; font-size: 0.85rem; color: var(--cockpit-accent); }
 .gold-price-mid, .btc-price-mid { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
-.gold-price-mid.up, .btc-price-mid.up { color: #10b981; }
+.gold-price-mid.up, .btc-price-mid.up { color: var(--color-profit); }
 .gold-price-mid.down, .btc-price-mid.down { color: var(--color-loss); }
 .gold-price-bid, .btc-price-bid { font-size: 0.72rem; color: var(--color-loss); }
-.gold-price-ask, .btc-price-ask { font-size: 0.72rem; color: #10b981; }
+.gold-price-ask, .btc-price-ask { font-size: 0.72rem; color: var(--color-profit); }
 .btc-price-spread { font-size: 0.68rem; color: var(--ink-soft); }
 .gold-sparkline, .btc-sparkline { width: 80px; height: 20px; margin-left: auto; }
 
@@ -147,10 +147,10 @@
 .gold-scan-rank, .btc-scan-rank { color: var(--ink-soft); font-weight: 600; min-width: 24px; }
 .gold-scan-symbol, .btc-scan-symbol { font-weight: 600; color: var(--ink); min-width: 70px; }
 .gold-scan-score, .btc-scan-score { font-weight: 700; font-size: 0.85rem; }
-.gold-scan-score.strong, .btc-scan-score.strong { color: #10b981; }
+.gold-scan-score.strong, .btc-scan-score.strong { color: var(--color-profit); }
 .gold-scan-score.weak, .btc-scan-score.weak { color: var(--color-loss); }
 .gold-scan-signal, .btc-scan-signal { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
-.gold-scan-signal.buy, .btc-scan-signal.buy { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.gold-scan-signal.buy, .btc-scan-signal.buy { background: rgba(16, 185, 129, 0.15); color: var(--color-profit); }
 .gold-scan-signal.sell, .btc-scan-signal.sell { background: rgba(239, 68, 68, 0.15); color: var(--color-loss); }
 .gold-scan-signal.hold, .btc-scan-signal.hold { background: rgba(100, 116, 139, 0.15); color: var(--color-neutral); }
 .gold-scan-error, .btc-scan-error { color: var(--color-loss); font-size: 0.75rem; padding: 4px; }

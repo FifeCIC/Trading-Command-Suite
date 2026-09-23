@@ -23,9 +23,9 @@
   gap: 0.75rem;
   flex-wrap: wrap;
 }
-.sf-ticker { font-size: 1.6rem; font-weight: 800; margin: 0; color: #f1f5f9; letter-spacing: -0.02em; }
+.sf-ticker { font-size: 1.6rem; font-weight: 800; margin: 0; color: var(--ink); letter-spacing: -0.02em; }
 .sf-name { font-size: 0.95rem; color: #94a3b8; }
-.sf-exchange { font-size: 0.75rem; color: #64748b; background: #1e293b; padding: 0.15rem 0.5rem; border-radius: 4px; }
+.sf-exchange { font-size: 0.75rem; color: #64748b; background: var(--panel); padding: 0.15rem 0.5rem; border-radius: 4px; }
 .sf-type-badge {
   font-size: 0.65rem;
   font-weight: 700;
@@ -65,8 +65,8 @@
 
 /* ── Cards ── */
 .sf-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.85rem 1rem;
 }
@@ -122,7 +122,7 @@
   padding: 0.5rem 0.6rem;
   border: 1px solid rgba(51,65,85,0.5);
   border-radius: 6px;
-  border-left: 3px solid #334155;
+  border-left: 3px solid var(--line);
 }
 .sf-strat-item.sf-strat-trading { border-color: #22c55e; }
 .sf-strat-item.sf-strat-active { border-color: #3b82f6; }
@@ -175,7 +175,7 @@
 .sf-decision-body { }
 .sf-decision-reason { font-size: 0.72rem; color: #cbd5e1; margin: 0 0 0.2rem; }
 .sf-decision-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.65rem; color: #64748b; }
-.sf-decision-tick { color: #475569; font-family: monospace; }
+.sf-decision-tick { color: var(--color-muted); font-family: monospace; }
 
 /* ── Evaluations ── */
 .sf-eval-list { display: flex; flex-direction: column; gap: 0.35rem; max-height: 400px; overflow-y: auto; }

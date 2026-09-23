@@ -65,7 +65,7 @@
 }
 
 .summary-value.failed {
-  color: #dc2626;
+  color: var(--color-loss);
 }
 
 .summary-value-sm {
@@ -157,7 +157,7 @@
 }
 
 .trigger-status--error {
-  color: #dc2626;
+  color: var(--color-loss);
 }
 
 /* ─── Runs Table ──────────────────────────────────────────── */
@@ -220,7 +220,7 @@
 }
 
 .run-row--failed {
-  border-color: #dc2626;
+  border-color: var(--color-loss);
 }
 
 .run-row--queued {
@@ -261,7 +261,7 @@
 }
 
 .error-text {
-  color: #dc2626;
+  color: var(--color-loss);
   font-size: 0.8rem;
   cursor: help;
 }
@@ -322,7 +322,7 @@
 }
 
 .import-error {
-  color: #dc2626;
+  color: var(--color-loss);
   border-color: #fca5a5;
 }
 

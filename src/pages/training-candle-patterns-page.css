@@ -18,7 +18,7 @@
 .page-header h1 {
   margin: 0;
   font-size: 1.5rem;
-  color: #f1f5f9;
+  color: var(--ink);
 }
 
 .page-header .subtitle {
@@ -31,10 +31,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #1e293b;
+  background: var(--panel);
   padding: 10px 16px;
   border-radius: 8px;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
 }
 
 .pattern-counter .counter-icon {
@@ -57,11 +57,11 @@
   gap: 12px;
   align-items: flex-end;
   padding: 12px 16px;
-  background: #1e293b;
+  background: var(--panel);
   border-radius: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
 }
 
 .control-group {
@@ -78,9 +78,9 @@
 }
 
 .control-group select {
-  background: #0f172a;
+  background: var(--bg);
   color: var(--ink);
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 0.85rem;
@@ -93,9 +93,9 @@
 }
 
 .mode-btn {
-  background: #0f172a;
+  background: var(--bg);
   color: #94a3b8;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   padding: 6px 14px;
   font-size: 0.8rem;
   cursor: pointer;
@@ -117,9 +117,9 @@
 }
 
 .refresh-btn {
-  background: #334155;
+  background: var(--line);
   color: var(--ink);
-  border: 1px solid #475569;
+  border: 1px solid var(--color-muted);
   border-radius: 6px;
   padding: 6px 16px;
   font-size: 0.85rem;
@@ -128,7 +128,7 @@
 }
 
 .refresh-btn:hover:not(:disabled) {
-  background: #475569;
+  background: var(--color-muted);
 }
 
 .refresh-btn:disabled {
@@ -138,9 +138,9 @@
 
 .chart-area {
   position: relative;
-  background: #0f172a;
+  background: var(--bg);
   border-radius: 8px;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   margin-bottom: 16px;
   overflow: hidden;
 }
@@ -159,10 +159,10 @@
 }
 
 .pattern-summary {
-  background: #1e293b;
+  background: var(--panel);
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
 }
 
 .pattern-summary h3 {

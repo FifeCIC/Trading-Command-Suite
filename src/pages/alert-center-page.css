@@ -19,7 +19,7 @@
 .ac-header h1 {
   margin: 0 0 0.25rem;
   font-size: 1.4rem;
-  color: var(--ink, #f1f5f9);
+  color: var(--ink, var(--ink));
 }
 
 .ac-subtitle {
@@ -31,9 +31,9 @@
 .ac-config-btn {
   padding: 0.45rem 1rem;
   background: transparent;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
-  color: var(--ink, #f1f5f9);
+  color: var(--ink, var(--ink));
   font-size: 0.85rem;
   cursor: pointer;
   min-height: 40px;
@@ -74,13 +74,13 @@
   display: flex;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-color: #64748b;
   border-radius: 8px;
 }
 
-.ac-sev-critical { border-color: #dc2626; }
+.ac-sev-critical { border-color: var(--color-loss); }
 .ac-sev-high { border-color: #ea580c; }
 .ac-sev-warning { border-color: #f59e0b; }
 .ac-sev-info { border-color: #3b82f6; }
@@ -120,7 +120,7 @@
 .ac-title {
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--ink, #f1f5f9);
+  color: var(--ink, var(--ink));
   flex: 1;
 }
 
@@ -146,7 +146,7 @@
 .ac-action-btn {
   padding: 0.3rem 0.65rem;
   font-size: 0.75rem;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 5px;
   background: transparent;
   color: var(--ink-soft, #94a3b8);
@@ -155,9 +155,9 @@
   transition: all 0.15s;
 }
 
-.ac-action-btn:hover { color: var(--ink, #f1f5f9); background: rgba(255,255,255,0.05); }
+.ac-action-btn:hover { color: var(--ink, var(--ink)); background: rgba(255,255,255,0.05); }
 .ac-snooze:hover { border-color: #f59e0b; color: #f59e0b; }
-.ac-dismiss:hover { border-color: #dc2626; color: #dc2626; }
+.ac-dismiss:hover { border-color: var(--color-loss); color: var(--color-loss); }
 
 /* ── Empty / Loading ──────────────────────────────────────── */
 
@@ -184,8 +184,8 @@
 /* ── Config Panel ─────────────────────────────────────────── */
 
 .ac-config-panel {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 10px;
   padding: 1rem;
 }
@@ -208,7 +208,7 @@
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
   background: rgba(255,255,255,0.02);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
 }
 
@@ -217,7 +217,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: var(--ink, #f1f5f9);
+  color: var(--ink, var(--ink));
 }
 
 .ac-sev-tag {
@@ -248,7 +248,7 @@
 .ac-toggle-slider {
   position: absolute;
   inset: 0;
-  background: var(--line, #334155);
+  background: var(--line, var(--line));
   border-radius: 10px;
   transition: 0.2s;
 }
@@ -290,7 +290,7 @@
 
 .ac-history-icon { font-size: 0.85rem; }
 .ac-history-time { color: var(--ink-soft, #64748b); min-width: 140px; font-size: 0.78rem; }
-.ac-history-title { flex: 1; color: var(--ink, #f1f5f9); }
+.ac-history-title { flex: 1; color: var(--ink, var(--ink)); }
 .ac-history-status { font-size: 0.7rem; padding: 0.1rem 0.35rem; border-radius: 3px; text-transform: capitalize; }
 .ac-status-active { background: rgba(245,158,11,0.15); color: #fde68a; }
 .ac-status-acknowledged { background: rgba(59,130,246,0.15); color: #93c5fd; }

@@ -61,7 +61,7 @@
   flex-shrink: 0;
 }
 .dfs-dot.on  { background: #22c55e; box-shadow: 0 0 3px rgba(34,197,94,0.5); }
-.dfs-dot.off { background: #475569; }
+.dfs-dot.off { background: var(--color-muted); }
 
 .dfs-row-icon {
   font-size: 0.62rem;

@@ -55,7 +55,7 @@
 .sd-btn:hover:not(:disabled) { opacity: 0.85; }
 .sd-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .sd-btn-buy { background: #065f46; border-color: #059669; color: #6ee7b7; }
-.sd-btn-sell { background: #7f1d1d; border-color: #dc2626; color: #fca5a5; }
+.sd-btn-sell { background: #7f1d1d; border-color: var(--color-loss); color: #fca5a5; }
 
 .sd-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .sd-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; }

@@ -1,8 +1,8 @@
 /* SetupBanner — first-run onboarding card */
 .sb-banner {
   margin: 0 0 1.5rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent, var(--accent)) 8%, var(--panel, #1e293b)), var(--panel, #1e293b));
-  border: 1px solid color-mix(in srgb, var(--accent, var(--accent)) 20%, var(--line, #334155));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent, var(--accent)) 8%, var(--panel, var(--panel))), var(--panel, var(--panel)));
+  border: 1px solid color-mix(in srgb, var(--accent, var(--accent)) 20%, var(--line, var(--line)));
   border-radius: 14px;
   overflow: hidden;
 }
@@ -18,8 +18,8 @@
   display: flex; flex-direction: column; gap: 0.15rem;
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
-  border: 1px solid var(--line, #334155);
-  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, var(--line));
+  background: var(--panel, var(--panel));
   text-decoration: none;
   transition: all 0.2s ease;
   animation: sb-fade-in 0.3s ease both;

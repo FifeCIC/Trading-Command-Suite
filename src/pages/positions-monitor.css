@@ -153,7 +153,7 @@
 }
 
 .pm-price-entry { color: var(--color-muted); }
-.pm-price-arrow { color: #475569; }
+.pm-price-arrow { color: var(--color-muted); }
 .pm-price-current { font-weight: 600; }
 
 .pm-pos-details {
@@ -200,7 +200,7 @@
   position: relative;
   height: 16px;
   max-width: 260px;
-  background: var(--line, #334155);
+  background: var(--line, var(--line));
   border-radius: 8px;
   overflow: hidden;
   margin-top: 0.25rem;
@@ -302,7 +302,7 @@
 .pm-freshness {
   margin-left: auto;
   font-size: 0.6rem;
-  color: #475569;
+  color: var(--color-muted);
   white-space: nowrap;
 }
 
@@ -310,13 +310,13 @@
 .pm-empty {
   text-align: center;
   padding: 40px;
-  color: #475569;
+  color: var(--color-muted);
   font-size: 0.9rem;
 }
 .pm-empty-sub {
   margin-top: 8px;
   font-size: 0.75rem;
-  color: #334155;
+  color: var(--line);
 }
 
 /* Responsive */

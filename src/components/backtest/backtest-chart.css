@@ -49,7 +49,7 @@
   border: 1px solid #374151;
   border-radius: 6px;
   background: var(--color-input-bg);
-  color: #d1d5db;
+  color: var(--ink);
   font-size: 12px;
   cursor: pointer;
 }
@@ -96,7 +96,7 @@
   border: 1px solid #374151;
   border-radius: 6px;
   background: var(--color-input-bg);
-  color: #d1d5db;
+  color: var(--ink);
   font-size: 12px;
 }
 
@@ -120,7 +120,7 @@
 
 .bt-tf-btn:hover {
   border-color: #4b5563;
-  color: #d1d5db;
+  color: var(--ink);
 }
 
 .bt-tf-active {
@@ -141,7 +141,7 @@
 
 .bt-fs-btn:hover {
   border-color: #4b5563;
-  color: #d1d5db;
+  color: var(--ink);
 }
 
 /* Fullscreen mode */
@@ -218,7 +218,7 @@
 /* Chart section heading */
 .bt-chart-heading {
   font-size: 1rem;
-  color: #d1d5db;
+  color: var(--ink);
   margin: 0 0 0.5rem;
 }
 
@@ -256,7 +256,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   font-family: monospace;
-  color: #d1d5db;
+  color: var(--ink);
 }
 
 .bt-equity-chart {

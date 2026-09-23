@@ -47,7 +47,7 @@
 
 /* Fallback banner */
 .st-fallback-banner {
-  background: #1e293b;
+  background: var(--panel);
   color: var(--color-neutral);
   text-align: center;
   padding: 4px 8px;
@@ -62,7 +62,7 @@
   justify-content: space-between;
   padding: 0.5rem 1rem;
   background: var(--panel, #111827);
-  border-bottom: 1px solid var(--line, #1e293b);
+  border-bottom: 1px solid var(--line, var(--panel));
   gap: 12px;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -72,9 +72,9 @@
 .st-controls-right { display: flex; align-items: center; gap: 8px; }
 
 .st-select {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink, var(--ink));
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
   padding: 4px 8px;
   font-family: inherit;
@@ -86,9 +86,9 @@
 .st-pos-label { font-size: 0.75rem; color: var(--color-neutral); }
 
 .st-symbol-search {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink, var(--ink));
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
   padding: 4px 8px;
   font-family: inherit;
@@ -100,7 +100,7 @@
 .st-cat-row { display: flex; gap: 3px; }
 .st-cat-btn {
   background: transparent;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 4px;
   padding: 3px 7px;
   font-size: 0.75rem;
@@ -115,7 +115,7 @@
 .st-rec-btn {
   margin-left: auto;
   font-weight: 600;
-  border-color: var(--line, #334155);
+  border-color: var(--line, var(--line));
 }
 .st-rec-btn.recording {
   background: var(--color-loss);
@@ -132,9 +132,9 @@
 
 .st-tf-row { display: flex; gap: 4px; align-items: center; }
 .st-tf-btn {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--color-neutral);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 4px;
   padding: 2px 8px;
   font-family: inherit;
@@ -162,11 +162,11 @@
 .st-action-btn:active { transform: scale(0.95); }
 .st-buy { background: #059669; color: #fff; }
 .st-sell { background: var(--color-loss); color: #fff; }
-.st-flash-green { box-shadow: 0 0 16px #10b981; }
+.st-flash-green { box-shadow: 0 0 16px var(--color-profit); }
 .st-flash-red { box-shadow: 0 0 16px var(--color-loss); }
 .st-meta-btn {
   background: none;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
   color: var(--color-neutral);
   cursor: pointer;
@@ -188,7 +188,7 @@
   min-width: 220px;
   max-width: 280px;
   background: var(--panel, #0a0e17);
-  border-right: 1px solid var(--line, #1e293b);
+  border-right: 1px solid var(--line, var(--panel));
   overflow-y: auto;
   padding: 10px;
   display: flex;
@@ -198,7 +198,7 @@
 
 .st-dir-header {
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--line, #1e293b);
+  border-bottom: 1px solid var(--line, var(--panel));
 }
 
 .st-dir-protocol-name {
@@ -239,7 +239,7 @@
 
 .st-dir-group {
   background: var(--panel, #111827);
-  border: 1px solid var(--line, #1e293b);
+  border: 1px solid var(--line, var(--panel));
   border-radius: 6px;
   padding: 8px;
 }
@@ -326,7 +326,7 @@
   padding: 0.15rem 0.5rem;
   background: rgba(15,20,25,0.85);
   backdrop-filter: blur(6px);
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--panel);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.78rem;
   pointer-events: none;
@@ -336,17 +336,17 @@
 .st-price-mid.up { color: var(--color-profit); }
 .st-price-mid.down { color: var(--color-loss); }
 .st-price-bid { color: var(--color-loss); font-size: 0.72rem; }
-.st-price-bid::before { content: 'B '; color: #475569; font-size: 0.73rem; }
+.st-price-bid::before { content: 'B '; color: var(--color-muted); font-size: 0.73rem; }
 .st-price-ask { color: var(--color-profit); font-size: 0.72rem; }
-.st-price-ask::before { content: 'A '; color: #475569; font-size: 0.73rem; }
-.st-price-spread { color: #475569; font-size: 0.78rem; }
+.st-price-ask::before { content: 'A '; color: var(--color-muted); font-size: 0.73rem; }
+.st-price-spread { color: var(--color-muted); font-size: 0.78rem; }
 .st-price-spread::before { content: 'Δ '; }
 .st-sparkline { width: 80px; height: 18px; flex-shrink: 0; }
 
 .st-chart {
   flex: 5;
   display: flex;
-  border-right: 1px solid var(--line, #1e293b);
+  border-right: 1px solid var(--line, var(--panel));
   position: relative;
 }
 
@@ -359,7 +359,7 @@
 
 .st-chart-mode-btn {
   background: transparent;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 4px;
   color: var(--color-muted);
   cursor: pointer;
@@ -451,15 +451,15 @@
   pointer-events: none;
 }
 .st-chart-legend-item { opacity: 0.8; }
-.st-chart-legend-sep { color: #334155; }
+.st-chart-legend-sep { color: var(--line); }
 .st-chart-legend-symbol { color: var(--ink); font-weight: 700; }
 .st-chart-legend-tf { color: var(--color-muted); font-size: 0.7rem; }
 
 /* OHLC tooltip on hover */
 .st-chart-tooltip {
   position: absolute;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 0.75rem;
@@ -481,8 +481,8 @@
   position: absolute;
   bottom: 6px;
   right: 6px;
-  background: #1e293b99;
-  border: 1px solid #334155;
+  background: var(--panel)99;
+  border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--color-neutral);
   cursor: pointer;
@@ -505,7 +505,7 @@
 }
 .st-chart-settings-modal {
   background: #111827;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0;
   min-width: 260px;
@@ -516,7 +516,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--panel);
 }
 .st-chart-settings-header h3 { margin: 0; font-size: 0.85rem; color: var(--ink); }
 .st-chart-settings-header button {
@@ -541,9 +541,9 @@
   width: 16px; height: 16px;
 }
 .st-chart-setting select {
-  background: #1e293b;
+  background: var(--panel);
   color: var(--ink);
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 0.7rem;
@@ -551,11 +551,11 @@
 }
 .st-chart-settings-footer {
   padding: 8px 14px;
-  border-top: 1px solid #1e293b;
+  border-top: 1px solid var(--panel);
 }
 .st-chart-settings-footer button {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--color-neutral);
   cursor: pointer;
@@ -634,7 +634,7 @@
   padding: 6px 12px;
   font-size: 0.7rem;
   color: var(--color-muted);
-  border-top: 1px solid var(--line, #1e293b);
+  border-top: 1px solid var(--line, var(--panel));
 }
 
 /* Order Panel */
@@ -660,8 +660,8 @@
 .st-btn {
   padding: 6px 14px;
   border-radius: 6px;
-  border: 1px solid var(--line, #334155);
-  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, var(--line));
+  background: var(--panel, var(--panel));
   color: var(--ink, var(--ink));
   cursor: pointer;
   font-family: inherit;
@@ -676,8 +676,8 @@
 .st-size-btn {
   padding: 4px 10px;
   border-radius: 4px;
-  border: 1px solid var(--line, #334155);
-  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, var(--line));
+  background: var(--panel, var(--panel));
   color: var(--color-neutral);
   cursor: pointer;
   font-family: inherit;
@@ -697,7 +697,7 @@
 .st-log {
   height: 100px;
   background: var(--panel, #0a0e17);
-  border-top: 1px solid var(--line, #1e293b);
+  border-top: 1px solid var(--line, var(--panel));
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -737,7 +737,7 @@
 }
 .st-overlay-box {
   background: var(--panel, #111827);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 12px;
   padding: 24px;
   max-width: 500px;
@@ -761,11 +761,11 @@
 }
 .st-shortcut-table td {
   padding: 5px 8px;
-  border-bottom: 1px solid var(--line, #1e293b);
+  border-bottom: 1px solid var(--line, var(--panel));
 }
 .st-shortcut-table kbd {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 4px;
   padding: 1px 6px;
   font-family: inherit;
@@ -775,8 +775,8 @@
   margin-top: 16px;
   padding: 6px 16px;
   border-radius: 6px;
-  border: 1px solid var(--line, #334155);
-  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, var(--line));
+  background: var(--panel, var(--panel));
   color: var(--ink, var(--ink));
   cursor: pointer;
   font-family: inherit;
@@ -806,7 +806,7 @@
 
 .st-autopilot {
   background: var(--panel, #0a0e17);
-  border-top: 1px solid var(--line, #1e293b);
+  border-top: 1px solid var(--line, var(--panel));
   padding: 8px 12px;
   flex-shrink: 0;
 }
@@ -833,7 +833,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: #334155;
+  background: var(--line);
   border-radius: 11px;
   transition: background 0.2s;
 }
@@ -899,7 +899,7 @@
 
 .st-scan-panel {
   background: var(--panel, #0a0e17);
-  border-top: 1px solid var(--line, #1e293b);
+  border-top: 1px solid var(--line, var(--panel));
   flex-shrink: 0;
   transition: max-height 0.2s;
 }
@@ -963,8 +963,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 4px 10px;
   cursor: pointer;

@@ -84,8 +84,8 @@
   font-size: 0.72rem;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--ink);
+  color: var(--color-muted);
 }
 
 .dc-category-chip {
@@ -114,7 +114,7 @@
 
 .dc-summary {
   font-size: 0.84rem;
-  color: var(--ink-soft, #334155);
+  color: var(--ink-soft, var(--line));
   margin: 0 0 0.75rem;
   line-height: 1.45;
 }

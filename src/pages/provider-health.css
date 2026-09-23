@@ -33,9 +33,9 @@
 
 .ph-refresh-btn {
   padding: 0.4rem 0.9rem;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--border, var(--line));
   border-radius: 6px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink);
   font-family: inherit;
   font-size: 0.78rem;
@@ -69,9 +69,9 @@
 }
 
 .ph-summary-total {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink-soft);
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--border, var(--line));
 }
 
 /* ── Services row ── */
@@ -102,8 +102,8 @@
 }
 
 .ph-card {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--border, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--border, var(--line));
   border-radius: 8px;
   padding: 0.85rem;
   transition: border-color 0.2s, box-shadow 0.2s;

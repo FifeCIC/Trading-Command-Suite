@@ -64,7 +64,7 @@
 }
 
 .mt5-connected .mt5-status-dot {
-  background: #10b981;
+  background: var(--color-profit);
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
   animation: mt5-pulse 2s ease-in-out infinite;
 }

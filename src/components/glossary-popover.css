@@ -20,7 +20,7 @@
   position: fixed;
   z-index: 10000;
   max-width: 300px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   border: 1px solid var(--accent, var(--accent));
   border-radius: 8px;
   padding: 0.65rem 0.85rem;

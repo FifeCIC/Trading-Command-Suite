@@ -21,9 +21,9 @@
 
 .mc-refresh-btn {
   padding: 0.35rem 0.8rem;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--border, var(--line));
   border-radius: 6px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink);
   font-family: inherit;
   font-size: 0.84rem;
@@ -91,8 +91,8 @@
 
 /* ── Panels ── */
 .mc-panel {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--border, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--border, var(--line));
   border-radius: 8px;
   padding: 0.85rem;
 }
@@ -112,7 +112,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.4rem 0;
-  border-bottom: 1px solid var(--border, #33415522);
+  border-bottom: 1px solid var(--border, var(--line)22);
 }
 .mc-session-row:last-child { border-bottom: none; }
 .mc-session-active { background: #22c55e08; margin: 0 -0.5rem; padding: 0.4rem 0.5rem; border-radius: 6px; }

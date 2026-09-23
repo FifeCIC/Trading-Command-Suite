@@ -21,9 +21,9 @@
 
 .sh-input {
   padding: 0.45rem 0.7rem;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--border, var(--line));
   border-radius: 6px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink);
   font-family: 'Source Code Pro', 'Consolas', monospace;
   font-size: 0.88rem;
@@ -49,9 +49,9 @@
 .sh-btn:hover:not(:disabled) { opacity: 0.85; }
 .sh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .sh-btn-secondary {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink);
-  border-color: var(--border, #334155);
+  border-color: var(--border, var(--line));
   padding: 0.45rem 0.6rem;
 }
 
@@ -125,7 +125,7 @@
 }
 
 .sh-cell-empty {
-  background: var(--panel, #1e293b) !important;
+  background: var(--panel, var(--panel)) !important;
   opacity: 0.5 !important;
 }
 
@@ -148,7 +148,7 @@
 }
 
 .sh-tooltip {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   border: 1px solid var(--accent, var(--accent));
   border-radius: 8px;
   padding: 0.5rem 0.7rem;
@@ -177,7 +177,7 @@
   width: 20px;
   height: 14px;
   border-radius: 2px;
-  border: 1px solid var(--border, #33415533);
+  border: 1px solid var(--border, var(--line)33);
 }
 
 /* ── Empty state ── */

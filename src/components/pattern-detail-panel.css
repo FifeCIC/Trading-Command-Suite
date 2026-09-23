@@ -4,8 +4,8 @@
   right: 0;
   width: 320px;
   max-height: 100%;
-  background: #1e293b;
-  border-left: 1px solid #334155;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
   border-radius: 0 8px 8px 0;
   overflow-y: auto;
   z-index: 10;
@@ -23,8 +23,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid #334155;
-  background: #0f172a;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
 }
 
 .pattern-detail-panel .panel-header h3 {
@@ -103,7 +103,7 @@
 .pattern-detail-panel .accuracy-section {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #334155;
+  border-top: 1px solid var(--line);
 }
 
 .pattern-detail-panel .description-section h4,

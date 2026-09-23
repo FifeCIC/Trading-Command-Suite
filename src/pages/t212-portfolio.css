@@ -32,8 +32,8 @@
   gap: 0.6rem;
 }
 .t212p-stat {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
   display: flex;
@@ -66,9 +66,9 @@
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
   margin-bottom: 0.5rem;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
 }
 .t212p-grand-label {
   font-size: 0.65rem;
@@ -85,9 +85,9 @@
 /* ── Category + account toggles ── */
 .t212p-category {
   margin-bottom: 0.6rem;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   overflow: hidden;
 }
 .t212p-category-head {
@@ -95,7 +95,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.3rem 0.5rem;
-  border-bottom: 1px solid var(--line, #334155);
+  border-bottom: 1px solid var(--line, var(--line));
 }
 .t212p-category-head h2 {
   margin: 0;
@@ -219,7 +219,7 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  border-bottom: 1px solid var(--line, #334155);
+  border-bottom: 1px solid var(--line, var(--line));
 }
 .t212p-table td {
   padding: 0.4rem 0.6rem;

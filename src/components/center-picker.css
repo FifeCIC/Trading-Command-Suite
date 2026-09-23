@@ -17,7 +17,7 @@
   overflow: hidden;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
 }
 
 /* ── Track (scroll container) ── */

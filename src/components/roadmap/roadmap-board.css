@@ -274,7 +274,7 @@
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
   font-size: 0.66rem;
-  color: #dc2626;
+  color: var(--color-loss);
   background: rgba(220, 38, 38, 0.08);
   border: 1px solid rgba(220, 38, 38, 0.35);
 }

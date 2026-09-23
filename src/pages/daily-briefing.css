@@ -18,7 +18,7 @@
 .db-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--ink);
   margin: 0 0 4px;
 }
 
@@ -282,7 +282,7 @@
   transition: border-color 0.15s;
 }
 
-.db-brief-card:hover { border-color: #475569; }
+.db-brief-card:hover { border-color: var(--color-muted); }
 .db-brief-card.expanded { border-color: var(--accent, #14b8b9); }
 
 .db-brief-row {
@@ -400,7 +400,7 @@
 .db-footer {
   text-align: center;
   font-size: 0.72rem;
-  color: #475569;
+  color: var(--color-muted);
   margin-top: 8px;
 }
 

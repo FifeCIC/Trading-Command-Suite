@@ -3,9 +3,9 @@
 .market-tape {
   width: 100%;
   overflow: hidden;
-  background: var(--panel, #0f172a);
-  border-top: 1px solid var(--line, #1e293b);
-  border-bottom: 1px solid var(--line, #1e293b);
+  background: var(--panel, var(--bg));
+  border-top: 1px solid var(--line, var(--panel));
+  border-bottom: 1px solid var(--line, var(--panel));
   padding: 6px 0;
   position: relative;
   z-index: 10;
@@ -78,7 +78,7 @@
 
 .mkt-tape-sep {
   display: inline;
-  color: var(--line, #334155);
+  color: var(--line, var(--line));
   padding: 0 6px;
   user-select: none;
 }
@@ -138,7 +138,7 @@
   align-items: center;
   justify-content: center;
   background: var(--panel, #1a1d2e);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
   color: var(--ink-soft, #64748b);
   font-size: 0.85rem;

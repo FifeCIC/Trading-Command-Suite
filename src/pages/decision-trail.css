@@ -203,7 +203,7 @@
   margin-bottom: 4px;
 }
 .dt-timeline-dot.present { background: #22c55e; color: #fff; }
-.dt-timeline-dot.missing { background: var(--line, #334155); color: var(--ink-soft, #64748b); }
+.dt-timeline-dot.missing { background: var(--line, var(--line)); color: var(--ink-soft, #64748b); }
 
 .dt-timeline-line {
   position: absolute;
@@ -253,7 +253,7 @@
 
 /* Footer */
 .dt-footer {
-  text-align: center; font-size: 0.7rem; color: #475569; margin-top: 12px;
+  text-align: center; font-size: 0.7rem; color: var(--color-muted); margin-top: 12px;
 }
 .dt-refresh-link {
   background: none; border: none;

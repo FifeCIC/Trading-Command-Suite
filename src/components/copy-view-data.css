@@ -8,8 +8,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--line, #334155);
-  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, var(--line));
+  background: var(--panel, var(--panel));
   color: var(--ink-soft, #94a3b8);
   cursor: pointer;
   display: flex;

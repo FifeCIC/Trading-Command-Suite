@@ -165,7 +165,7 @@
   justify-content: center;
   transition: all 0.15s;
 }
-.so-close-btn:hover { background: var(--bg, #0f172a); color: var(--ink); }
+.so-close-btn:hover { background: var(--bg, var(--bg)); color: var(--ink); }
 
 /* Body */
 .so-body {

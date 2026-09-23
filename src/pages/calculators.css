@@ -13,7 +13,7 @@
 .calc-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--ink);
   margin: 0 0 4px;
 }
 
@@ -102,7 +102,7 @@
 .calc-input-group input,
 .calc-input-group select {
   padding: 8px 12px;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: #0f1117;
   color: var(--ink);
@@ -159,7 +159,7 @@
 .calc-avg-bar {
   position: relative;
   height: 24px;
-  background: #1e293b;
+  background: var(--panel);
   border-radius: 4px;
   margin-bottom: 4px;
 }
@@ -184,7 +184,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.65rem;
-  color: #475569;
+  color: var(--color-muted);
 }
 
 /* ── Note field ── */
@@ -193,7 +193,7 @@
   font-size: 0.82rem;
 }
 .calc-note-field input::placeholder {
-  color: #475569;
+  color: var(--color-muted);
   font-style: italic;
 }
 
@@ -201,7 +201,7 @@
 .calc-save-btn {
   margin-top: 4px;
   padding: 8px 14px;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: rgba(59,130,246,0.1);
   color: #60a5fa;
@@ -233,7 +233,7 @@
 }
 .calc-clear-btn {
   padding: 5px 12px;
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 5px;
   background: none;
   color: #94a3b8;
@@ -363,7 +363,7 @@
 }
 
 .calc-options-toggle:hover {
-  color: #f1f5f9;
+  color: var(--ink);
 }
 
 .calc-options-toggle input[type="checkbox"] {

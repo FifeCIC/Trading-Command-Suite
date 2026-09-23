@@ -121,7 +121,7 @@
   border-radius: 4px;
 }
 .sig-opp-dir--long { color: #16a34a; background: rgba(22, 163, 74, 0.12); border: 1px solid rgba(22, 163, 74, 0.35); }
-.sig-opp-dir--short { color: #dc2626; background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(220, 38, 38, 0.35); }
+.sig-opp-dir--short { color: var(--color-loss); background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(220, 38, 38, 0.35); }
 .sig-opp-dir--both { color: #7c3aed; background: rgba(124, 58, 237, 0.12); border: 1px solid rgba(124, 58, 237, 0.35); }
 .sig-opp-closed {
   font-size: 0.62rem;
@@ -210,7 +210,7 @@
   cursor: help;
 }
 .sig-opp-chip--bullish { color: #16a34a; border-color: rgba(22, 163, 74, 0.35); }
-.sig-opp-chip--bearish { color: #dc2626; border-color: rgba(220, 38, 38, 0.35); }
+.sig-opp-chip--bearish { color: var(--color-loss); border-color: rgba(220, 38, 38, 0.35); }
 
 .sig-opp-warnings, .sig-opp-blockers {
   font-size: 0.7rem;
@@ -219,7 +219,7 @@
   border-radius: 6px;
 }
 .sig-opp-warnings { color: #d97706; background: rgba(217, 119, 6, 0.09); }
-.sig-opp-blockers { color: #dc2626; background: rgba(220, 38, 38, 0.09); }
+.sig-opp-blockers { color: var(--color-loss); background: rgba(220, 38, 38, 0.09); }
 
 .sig-opp-actions { display: flex; gap: 0.5rem; margin-top: auto; }
 .sig-opp-btn {
@@ -235,7 +235,7 @@
 .sig-opp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sig-opp-btn--buy { background: #16a34a; }
 .sig-opp-btn--buy:hover { background: #15803d; }
-.sig-opp-btn--sell { background: #dc2626; }
+.sig-opp-btn--sell { background: var(--color-loss); }
 .sig-opp-btn--sell:hover { background: #b91c1c; }
 .sig-opp-btn--confirm { background: #d97706; }
 .sig-opp-btn--confirm:hover { background: #b45309; }

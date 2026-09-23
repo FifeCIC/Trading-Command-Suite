@@ -20,8 +20,8 @@
 /* ── Allowance Bar ── */
 .t212i-allowance-bar {
   height: 28px;
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 14px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -53,8 +53,8 @@
   gap: 0.6rem;
 }
 .t212i-stat {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.5rem 0.7rem;
   display: flex;
@@ -75,8 +75,8 @@
 
 /* ── FX Card ── */
 .t212i-fx-card {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.6rem 0.8rem;
   font-size: 0.85rem;
@@ -110,7 +110,7 @@
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  border-bottom: 1px solid var(--line, #334155);
+  border-bottom: 1px solid var(--line, var(--line));
 }
 .t212i-table td {
   padding: 0.35rem 0.6rem;
@@ -121,8 +121,8 @@
 
 /* ── Placeholder (not connected state) ── */
 .t212i-placeholder {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 12px;
   padding: 2rem;
   text-align: center;

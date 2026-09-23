@@ -2,7 +2,7 @@
 
 .sh-panel {
   background: var(--panel, #0a0e17);
-  border-top: 1px solid var(--line, #1e293b);
+  border-top: 1px solid var(--line, var(--panel));
   flex-shrink: 0;
 }
 

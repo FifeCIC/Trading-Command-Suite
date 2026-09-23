@@ -71,7 +71,7 @@
   border-radius: 8px;
   border: 1px solid rgba(220, 38, 38, 0.4);
   background: rgba(220, 38, 38, 0.08);
-  color: #dc2626;
+  color: var(--color-loss);
   font-size: 0.78rem;
   margin-bottom: 1rem;
 }

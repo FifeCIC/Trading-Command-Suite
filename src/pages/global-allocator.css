@@ -58,8 +58,8 @@
 
 .stat-warn { border-color: #f59e0b; }
 .stat-warn .stat-value { color: #f59e0b; }
-.stat-ok { border-color: #10b981; }
-.stat-ok .stat-value { color: #10b981; }
+.stat-ok { border-color: var(--color-profit); }
+.stat-ok .stat-value { color: var(--color-profit); }
 
 /* ── Grid Layout ───────────────────────────────────────── */
 
@@ -171,7 +171,7 @@
 }
 
 .badge-mt5 { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.badge-t212 { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.badge-t212 { background: rgba(16, 185, 129, 0.15); color: var(--color-profit); }
 .badge-isa { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
 
 .broker-alloc {
@@ -192,7 +192,7 @@
   letter-spacing: 0.03em;
 }
 
-.badge-auto { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.badge-auto { background: rgba(16, 185, 129, 0.15); color: var(--color-profit); }
 .badge-semi { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .badge-manual { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
 
@@ -205,7 +205,7 @@
   border-radius: 50%;
 }
 
-.dot-active { background: #10b981; }
+.dot-active { background: var(--color-profit); }
 .dot-inactive { background: #6b7280; }
 
 /* ── Strategy Table ────────────────────────────────────── */

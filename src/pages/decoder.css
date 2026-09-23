@@ -73,7 +73,7 @@
   width: 100%;
   min-height: 260px;
   padding: 0.75rem;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   background: var(--panel, #1a1a2e);
   color: var(--ink, var(--ink));
@@ -105,7 +105,7 @@
 
 .decoder-btn {
   padding: 0.5rem 1.25rem;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
   background: var(--panel, #1a1a2e);
   color: var(--ink, var(--ink));
@@ -147,7 +147,7 @@
   font-size: 0.65rem;
   padding: 0.1rem 0.4rem;
   background: var(--panel, #1a1a2e);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 4px;
   color: var(--ink-soft, #94a3b8);
 }
@@ -196,7 +196,7 @@
   font-size: 0.82rem;
   padding: 1rem;
   text-align: center;
-  border: 1px dashed var(--line, #334155);
+  border: 1px dashed var(--line, var(--line));
   border-radius: 8px;
 }
 
@@ -210,7 +210,7 @@
 
 .decoder-company-card {
   background: var(--panel, #1a1a2e);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 1rem;
 }
@@ -230,7 +230,7 @@
 
 .decoder-fields-table td {
   padding: 0.3rem 0.5rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line, #334155) 50%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line, var(--line)) 50%, transparent);
   vertical-align: top;
 }
 
@@ -268,7 +268,7 @@
 
 .decoder-stat {
   background: var(--panel, #1a1a2e);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.75rem;
   text-align: center;
@@ -296,7 +296,7 @@
 .decoder-json-preview,
 .decoder-raw {
   background: var(--panel, #1a1a2e);
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.75rem;
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;

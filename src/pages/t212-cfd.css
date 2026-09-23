@@ -16,8 +16,8 @@
 
 /* ── Placeholder ── */
 .t212c-placeholder {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 12px;
   padding: 2rem;
   text-align: center;
@@ -53,8 +53,8 @@
   gap: 0.6rem;
 }
 .t212c-stat {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.5rem 0.7rem;
   display: flex;

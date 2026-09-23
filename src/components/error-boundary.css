@@ -70,9 +70,9 @@
 /* ---- Severity variants ---- */
 
 .ed--error {
-  border-color: color-mix(in srgb, var(--danger, #dc2626) 40%, var(--line, #d9e2ec));
-  background: color-mix(in srgb, var(--danger, #dc2626) 6%, var(--panel, #fff));
-  color: var(--danger, #dc2626);
+  border-color: color-mix(in srgb, var(--danger, var(--color-loss)) 40%, var(--line, #d9e2ec));
+  background: color-mix(in srgb, var(--danger, var(--color-loss)) 6%, var(--panel, #fff));
+  color: var(--danger, var(--color-loss));
 }
 
 .ed--warning {

@@ -55,7 +55,7 @@
 
 .wl-card {
   background: #0f1419;
-  border: 1px solid #1e293b;
+  border: 1px solid var(--panel);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   margin-bottom: 0.75rem;
@@ -70,7 +70,7 @@
 /* Inputs */
 .wl-input, .wl-textarea {
   width: 100%;
-  background: #1e293b; color: var(--ink); border: 1px solid #334155;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line);
   padding: 0.35rem 0.5rem; border-radius: 4px; font-size: 0.8rem;
   box-sizing: border-box;
 }
@@ -104,10 +104,10 @@
 }
 .wl-chip {
   display: inline-block; padding: 0.1rem 0.4rem;
-  background: #1e293b; border: 1px solid #334155; border-radius: 3px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
   font-size: 0.68rem; font-family: monospace; color: #94a3b8;
 }
-.wl-chip-seed { background: #0f172a; border-color: #1e3a5f; color: #60a5fa; }
+.wl-chip-seed { background: var(--bg); border-color: #1e3a5f; color: #60a5fa; }
 .wl-more { background: transparent; border: none; color: #64748b; font-style: italic; }
 
 /* ── Split Layout ── */
@@ -142,9 +142,9 @@
 }
 .wl-detail-pane {
   position: sticky; top: 10px;
-  border: 1px solid var(--line, #1e293b);
+  border: 1px solid var(--line, var(--panel));
   border-radius: 10px;
-  background: var(--panel, #0f172a);
+  background: var(--panel, var(--bg));
   min-height: 300px;
   max-height: calc(100vh - 140px);
   overflow-y: auto;
@@ -152,7 +152,7 @@
 
 /* Saved list items */
 .wl-list-item {
-  border: 1px solid var(--line, #1e293b); border-radius: 8px; margin-bottom: 0.4rem; overflow: hidden;
+  border: 1px solid var(--line, var(--panel)); border-radius: 8px; margin-bottom: 0.4rem; overflow: hidden;
   transition: border-color 0.15s;
 }
 .wl-list-item.wl-selected { border-color: var(--accent, var(--accent)); }
@@ -187,7 +187,7 @@
 .wl-list-detail {
   padding: 0.6rem 0.75rem;
   background: rgba(0,0,0,0.1);
-  border-top: 1px solid var(--line, #1e293b);
+  border-top: 1px solid var(--line, var(--panel));
   overflow: hidden;
   display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;
 }
@@ -200,7 +200,7 @@
   padding: 0.25rem 0.5rem; border: 1px solid var(--line); border-radius: 4px;
   background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.72rem;
 }
-.wl-list-date { font-size: 0.68rem; color: #475569; }
+.wl-list-date { font-size: 0.68rem; color: var(--color-muted); }
 .wl-list-date-row {
   padding: 0.25rem 0.75rem 0.5rem;
   display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;
@@ -281,7 +281,7 @@
   justify-content: center;
   padding: 0.45rem 0.75rem;
   min-width: 56px;
-  border: 1px solid var(--line, #1e293b);
+  border: 1px solid var(--line, var(--panel));
   border-radius: 8px;
   text-decoration: none;
   transition: border-color 0.15s, background 0.15s;

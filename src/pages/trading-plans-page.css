@@ -149,7 +149,7 @@
 .plan-signal-context {
   background: var(--bg-elev);
   border: 1px solid var(--line);
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--color-profit);
   border-radius: 6px;
   padding: 12px 14px;
   margin-bottom: 16px;

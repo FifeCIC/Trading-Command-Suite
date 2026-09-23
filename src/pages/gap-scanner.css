@@ -20,9 +20,9 @@
 
 .gs-refresh-btn {
   padding: 0.35rem 0.8rem;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--border, var(--line));
   border-radius: 6px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink);
   font-family: inherit;
   font-size: 0.76rem;
@@ -38,9 +38,9 @@
 .gs-input {
   flex: 1;
   padding: 0.45rem 0.7rem;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--border, var(--line));
   border-radius: 6px;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink);
   font-family: 'Source Code Pro', Consolas, monospace;
   font-size: 0.82rem;

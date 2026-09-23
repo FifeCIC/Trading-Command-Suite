@@ -292,8 +292,8 @@
   right: 0;
   top: 100%;
   margin-top: 4px;
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
   padding: 0.5rem;
   min-width: 160px;
@@ -308,7 +308,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.82rem;
-  color: var(--ink, #d1d5db);
+  color: var(--ink, var(--ink));
   white-space: nowrap;
 }
 .tp-col-option:hover {
@@ -612,7 +612,7 @@
 .pc-scroll-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 8px;
 }
 
@@ -632,13 +632,13 @@
 .pc-table th,
 .pc-table td {
   padding: 0.45rem 0.55rem;
-  border-bottom: 1px solid var(--line, #334155);
+  border-bottom: 1px solid var(--line, var(--line));
   white-space: nowrap;
   text-align: center;
 }
 
 .pc-table thead th {
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   color: var(--ink-soft, #94a3b8);
   font-weight: 600;
   font-size: 0.72rem;
@@ -659,7 +659,7 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
   text-align: left !important;
   font-weight: 600;
   min-width: 200px;
@@ -668,11 +668,11 @@
 
 .pc-table thead .pc-sticky-col {
   z-index: 3;
-  background: var(--panel, #1e293b);
+  background: var(--panel, var(--panel));
 }
 
 .pc-table tbody .pc-sticky-col {
-  background: var(--bg, #0f172a);
+  background: var(--bg, var(--bg));
 }
 
 .pc-table tbody tr:nth-child(even) .pc-sticky-col {
@@ -727,9 +727,9 @@
 .as-search-input-wrap input {
   width: 100%;
   padding: 0.55rem 0.75rem;
-  border: 1px solid var(--line, #334155);
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
-  background: var(--bg, #0f172a);
+  background: var(--bg, var(--bg));
   color: var(--ink, var(--ink));
   font-size: 0.9rem;
 }
@@ -751,8 +751,8 @@
   flex: 1;
   min-width: 200px;
   max-width: 400px;
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
+  background: var(--panel, var(--panel));
+  border: 1px solid var(--line, var(--line));
   border-radius: 6px;
   overflow: hidden;
 }
@@ -761,8 +761,8 @@
   font-size: 0.72rem;
   color: var(--ink-soft, #64748b);
   padding: 0.4rem 0.65rem;
-  border-bottom: 1px solid var(--line, #334155);
-  background: var(--bg, #0f172a);
+  border-bottom: 1px solid var(--line, var(--line));
+  background: var(--bg, var(--bg));
 }
 
 .as-result-item {
@@ -774,7 +774,7 @@
   padding: 0.45rem 0.65rem;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--line, #334155);
+  border-bottom: 1px solid var(--line, var(--line));
   color: var(--ink, var(--ink));
   cursor: pointer;
   text-align: left;
@@ -826,7 +826,7 @@
   font-size: 0.7rem;
   color: var(--ink-soft, #64748b);
   padding: 0.4rem 0.65rem;
-  border-top: 1px solid var(--line, #334155);
+  border-top: 1px solid var(--line, var(--line));
 }
 
 /* ── Backtest priority rows ─────────────────────────────── */
@@ -842,7 +842,7 @@
 .bt-priority-sep td {
   padding: 0.35rem 0.7rem !important;
   background: var(--panel, #1a1a2e);
-  border-bottom: 2px solid var(--line, #334155) !important;
+  border-bottom: 2px solid var(--line, var(--line)) !important;
 }
 
 .bt-sep-label {
