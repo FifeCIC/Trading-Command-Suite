@@ -38,8 +38,20 @@ import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
+// Edition (free spinoff): compile-time flag + nav filtering + view-meta key lookup — the free
+// build must never OFFER or RENDER a premium view (FREE-EDITION-PLAN.md §3). In the full build
+// everything here is an identity/compile-time constant.
+import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition, editionAllowsKey } from './core/edition-nav.js';
+import { getViewMetaKey } from './core/view-meta.js';
+import EditionNotice from './components/EditionNotice.jsx';
 
-const NAV_STRUCTURE = getNavStructure();
+// Edition-filtered once at module scope: the free build hides premium views from the sidebar.
+// (Full build = identity; see src/core/edition-nav.js.)
+const NAV_STRUCTURE = filterNavStructureByEdition(getNavStructure());
+// The TOP navigation bar enumerates NAV_TREE directly, so it needs the same filter — measured
+// live 2026-09-23: without this, the free build still offered Protocols/Scoring/Signals/Planner/
+// Development in the top bar while the sidebar was correctly filtered.
+const EDITION_NAV_TREE = filterNavTreeByEdition(NAV_TREE);
 
 /**
  * Views the SHELL renders inline, with access to App's own state.
@@ -462,6 +474,14 @@ function AppShell() {
   }
 
   function renderMainContent() {
+    // ── Edition guard (FREE build only; compile-time false and dropped in the full build) ──
+    // A stale bookmark or typed URL for a premium view must say so plainly rather than hit
+    // the generic "no page" fallback. Unregistered paths (key === null) fall through as before.
+    if (APP_EDITION === 'free') {
+      const key = getViewMetaKey(location.pathname);
+      if (key && !editionAllowsKey(key)) return <EditionNotice />;
+    }
+
     // ── Component map lookup (handles ~90 simple views) ──
     const Component = VIEW_COMPONENTS[secondaryView];
     if (Component) return <Component />;
@@ -635,7 +655,7 @@ function AppShell() {
           </div>
           <nav className="topbar-area-nav" aria-label="Main navigation">
             {/* Primary hubs — Dashboard + Accounts left of separator */}
-            {Object.entries(NAV_TREE)
+            {Object.entries(EDITION_NAV_TREE)
               .filter(([id]) => ['dashboard', 'trading212'].includes(id))
               .map(([id, area]) => (
                 <button
@@ -651,7 +671,7 @@ function AppShell() {
             {/* Separator between primary hubs and area nav */}
             <span className="topbar-nav-sep" aria-hidden="true" />
             {/* Area navigation */}
-            {Object.entries(NAV_TREE)
+            {Object.entries(EDITION_NAV_TREE)
               .filter(([id]) => !['dashboard', 'trading212', 'development'].includes(id))
               .map(([id, area]) => (
                 <button
@@ -666,7 +686,7 @@ function AppShell() {
               ))}
             {/* Developer tooling — separated on the right */}
             <span className="topbar-nav-sep" aria-hidden="true" />
-            {Object.entries(NAV_TREE)
+            {Object.entries(EDITION_NAV_TREE)
               .filter(([id]) => id === 'development')
               .map(([id, area]) => (
                 <button

@@ -18,6 +18,18 @@ const freeDirectPagesPath = fileURLToPath(
   new URL('./src/editions/direct-pages.free.jsx', import.meta.url),
 );
 
+/** Local dev API/intranet proxy — shared by the dev server and `vite preview`. */
+const localProxy = {
+  '/intranet': {
+    target: 'http://localhost',
+    changeOrigin: true,
+  },
+  '/api': {
+    target: 'http://localhost:3201',
+    changeOrigin: true,
+  },
+};
+
 export default defineConfig(({ mode }) => {
   const isFreeEdition = mode === 'free';
   return {
@@ -44,16 +56,13 @@ export default defineConfig(({ mode }) => {
     cssMinify: false, // lightningcss is too strict — disable CSS minification for now
   },
   server: {
-    proxy: {
-      '/intranet': {
-        target: 'http://localhost',
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'http://localhost:3201',
-        changeOrigin: true,
-      },
-    },
+    proxy: localProxy,
+  },
+  // `vite preview` (serving a BUILT edition locally) needs the same proxy — without it the
+  // built app's /api calls hit CORS (the API only allows the dev-server origin) and the setup
+  // guard redirects everything to /status/setup, making local verification useless.
+  preview: {
+    proxy: localProxy,
   },
   plugins: [
     react(),

@@ -1097,19 +1097,25 @@ const VIEW_META = {
   },
 };
 
-/** Get view metadata from current URL path */
-export function getViewMeta(pathname) {
+/** Resolve a URL path to the VIEW_META KEY (exact, then longest-prefix match), or null. */
+export function getViewMetaKey(pathname) {
   // Try exact match first
-  if (VIEW_META[pathname]) return VIEW_META[pathname];
+  if (VIEW_META[pathname]) return pathname;
 
   // Try prefix match for sub-routes (e.g. /trading/strategy/123 → /trading/strategy)
   // Sort by route length descending so longer (more specific) routes match first
   const routes = Object.keys(VIEW_META).sort((a, b) => b.length - a.length);
   for (const route of routes) {
-    if (pathname.startsWith(route + '/')) return VIEW_META[route];
+    if (pathname.startsWith(route + '/')) return route;
   }
 
   return null;
+}
+
+/** Get view metadata from current URL path */
+export function getViewMeta(pathname) {
+  const key = getViewMetaKey(pathname);
+  return key ? VIEW_META[key] : null;
 }
 
 /** Format view metadata as a copyable string */
