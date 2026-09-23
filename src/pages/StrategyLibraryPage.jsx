@@ -6,13 +6,26 @@
  *
  * Route: /trading/strategy-library
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import mermaid from 'mermaid';
 import { apiGet } from '../core/api/client';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
+import {
+  buildDecisionPath,
+  strategyClaims,
+  evaluateStrategyClaims,
+  unverifiableSchemaKeys,
+} from '../core/strategy-diagram';
+import { annotateSource, summarise } from '../core/diagram-claims';
 import './strategy-library.css';
+import './strategy-decision-path.css';
 import PageInfoPopover from '../components/PageInfoPopover';
+
+// Same initialisation the developer Diagrams page uses — one theme, one security level,
+// so a strategy diagram and a system diagram cannot render differently by accident.
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
 const DIFFICULTY_COLORS = {
   Beginner: '#22c55e',
@@ -40,6 +53,121 @@ const READINESS_STYLES = {
   alpha:  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA', title: 'Mock, stub, or placeholder' },
 };
 
+/**
+ * The decision path for one library entry, drawn from the entry's own data and checked
+ * against the bot that runs its protocol.
+ *
+ * ⚠️ WHICH BOT IS READ, and why it is not "the first active one": the claims resolve against
+ * bots whose `protocolId` equals THIS entry's `tcsProtocol`. Two library entries can name the
+ * same protocol (`forex-session-trading` and `forex-session-cable` both name
+ * `forex-session-v1`), so they will legitimately show identical live values. That is a
+ * property of the current model, not a bug in this component — see the sprint record.
+ */
+function StrategyDecisionPath({ strategy, bots, botsError }) {
+  const path = useMemo(() => buildDecisionPath(strategy), [strategy]);
+  const claims = useMemo(() => strategyClaims(strategy, path), [strategy, path]);
+  const rows = useMemo(
+    () => evaluateStrategyClaims(claims, { bots, error: botsError, protocol: strategy.tcsProtocol }),
+    [claims, bots, botsError, strategy.tcsProtocol],
+  );
+  const summary = useMemo(() => summarise(rows), [rows]);
+  const hostRef = useRef(null);
+
+  useEffect(() => {
+    if (!hostRef.current) return undefined;
+    let cancelled = false;
+    // The source is annotated with the claim results FIRST, so a node whose claim failed is
+    // stroked in the picture rather than only described beside it.
+    mermaid
+      .render(`sd-${strategy.id}-svg`, annotateSource(strategy.id, path.source, rows))
+      .then(({ svg }) => {
+        if (!cancelled && hostRef.current) hostRef.current.innerHTML = svg;
+      })
+      .catch(() => {
+        if (!cancelled && hostRef.current) {
+          hostRef.current.innerHTML = '<p class="sl-hint">The decision path could not be rendered.</p>';
+        }
+      });
+    return () => { cancelled = true; };
+  }, [strategy.id, path.source, rows]);
+
+  const notCheckable = unverifiableSchemaKeys(strategy);
+
+  return (
+    <section className="sl-section">
+      <h3>Decision Path</h3>
+      <p className="sl-hint">
+        Generated from this entry's own directive mappings, then checked against the bot that
+        runs <strong>{strategy.tcsProtocol}</strong>. A node outlined in
+        green matched; <strong>red dashed</strong> did not; unoutlined was not checked.
+      </p>
+
+      <div className="sd-diagram" ref={hostRef} role="img"
+        aria-label={`Decision path for ${strategy.name}`} />
+
+      <div className="sd-summary">
+        <span className="sd-summary-count">
+          {summary.checked} of {summary.total} claims checked
+        </span>
+        <span className="sd-pill sd-pill--ok">{summary.passed} matched</span>
+        <span className="sd-pill sd-pill--bad">{summary.failed} disagreed</span>
+        <span className="sd-pill sd-pill--unknown">{summary.unverified} unverified</span>
+      </div>
+
+      {botsError && (
+        <p className="sd-note sd-note--warn">
+          The strategies endpoint could not be read ({botsError}). Every claim below is
+          <strong> unverified</strong> — that is not a pass, and nothing here says the theory is
+          wrong. The diagram shows the intended path only.
+        </p>
+      )}
+
+      <table className="sd-claims">
+        <thead>
+          <tr><th>Stage</th><th>Claim</th><th>Theory says</th><th>Running system</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className={r.ok === false ? 'sd-row--bad' : r.ok === true ? 'sd-row--ok' : ''}>
+              <td className="sd-cell-node">{r.node}</td>
+              <td>{r.says}</td>
+              <td className="sd-cell-expect">
+                {Array.isArray(r.expect) ? r.expect.join(' / ') : String(r.expect)}
+              </td>
+              <td className="sd-cell-actual">
+                {r.actual == null ? <em>not checked</em> : String(r.actual)}
+                {r.error && <div className="sd-cell-error">{r.error}</div>}
+                {!r.error && r.note && <div className="sd-cell-note">{r.note}</div>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {notCheckable.length > 0 && (
+        <div className="sd-unverifiable">
+          <div className="sd-unverifiable-head">
+            {notCheckable.length} of {Object.keys(strategy.configSchema || {}).length} declared
+            parameters have no home in the running system
+          </div>
+          <p className="sd-unverifiable-why">
+            These cannot be checked now or later as things stand, because a bot stores a
+            percentage where this entry declares pips, a named session where it declares clock
+            times, and has no column at all for the rest. They are shown rather than hidden:
+            a theory asking for something the app cannot store is a capability gap, not a
+            diagram problem.
+          </p>
+          <ul className="sd-unverifiable-list">
+            {notCheckable.map((u) => (
+              <li key={u.key}><code>{u.key}</code> — {u.why}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function StrategyLibraryPage() {
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState(null);
@@ -52,6 +180,24 @@ export default function StrategyLibraryPage() {
     queryFn: () => apiGet('/api/directives'),
     staleTime: 60_000,
   });
+
+  /**
+   * The live bots, for the decision-path claims.
+   * Fetched ONCE for the whole page rather than per card — there are ~27 bots, and the
+   * strategy list can have ten entries open in sequence.
+   * ⚠️ The failure is carried as a value (`botsError`), not swallowed. A swallowed error here
+   * would render every claim as "unverified" with no explanation, which reads as a data gap
+   * rather than an outage — the exact confusion this report exists to avoid.
+   */
+  const botsQuery = useQuery({
+    queryKey: ['trading', 'strategies', 'for-diagrams'],
+    queryFn: () => apiGet('/api/trading/strategies'),
+    staleTime: 60_000,
+  });
+  const bots = Array.isArray(botsQuery.data)
+    ? botsQuery.data
+    : botsQuery.data?.strategies;
+  const botsError = botsQuery.isError ? (botsQuery.error?.message || 'request failed') : null;
 
   const readinessMap = useMemo(() => {
     const map = {};
@@ -167,6 +313,12 @@ export default function StrategyLibraryPage() {
                         ))}
                       </div>
                     </section>
+                  )}
+
+                  {/* Decision Path — only where the entry names a protocol; a concept entry has
+                      nothing live to check, and drawing a path for it would imply otherwise. */}
+                  {strategy.tcsProtocol && (
+                    <StrategyDecisionPath strategy={strategy} bots={bots} botsError={botsError} />
                   )}
 
                   {/* Directive Mappings */}

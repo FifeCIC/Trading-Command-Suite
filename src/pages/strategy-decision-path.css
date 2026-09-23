@@ -1,0 +1,182 @@
+/**
+ * Strategy decision path — the section appended to a Strategy Library card.
+ * =======================================================================
+ * Generated from the entry's own directive mappings and checked against the running bot.
+ * See src/core/strategy-diagram.js for the generator and the claim semantics.
+ *
+ * ⚠️ Colour rule: tokens only, no hex literals (accessibility-policy.instructions.md).
+ * Tints are mixed from tokens with `color-mix()` rather than an rgba() literal, which is the
+ * same approach the Diagrams page uses — a hand-picked rgba is a second colour recipe that
+ * drifts from the token it was meant to match.
+ *
+ * Three states, and they are visually DISTINCT on purpose — a reader must be able to tell
+ * "matched" from "disagreed" from "not checked" at a glance, because conflating the last two
+ * is the failure this whole mechanism exists to prevent:
+ *   matched    → --color-profit
+ *   disagreed  → --color-loss
+ *   unverified → --color-warning  (never green, and never red)
+ */
+
+.sd-diagram {
+  background: var(--color-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem;
+  margin-bottom: 0.6rem;
+  overflow-x: auto;
+}
+
+.sd-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Summary strip ─────────────────────────────────────────── */
+.sd-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.sd-summary-count {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  margin-right: 0.2rem;
+}
+
+.sd-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.sd-pill--ok {
+  color: var(--color-profit);
+  background: color-mix(in srgb, var(--color-profit) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-profit) 35%, transparent);
+}
+
+.sd-pill--bad {
+  color: var(--color-loss);
+  background: color-mix(in srgb, var(--color-loss) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-loss) 35%, transparent);
+}
+
+.sd-pill--unknown {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+/* ── "could not be read" notice ─────────────────────────────── */
+.sd-note {
+  font-size: 0.75rem;
+  line-height: 1.55;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  margin: 0 0 0.6rem;
+}
+
+.sd-note--warn {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
+/* ── Claim table ───────────────────────────────────────────── */
+.sd-claims {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.73rem;
+  margin-bottom: 0.7rem;
+}
+
+.sd-claims th {
+  text-align: left;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 0.5rem 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sd-claims td {
+  padding: 0.4rem 0.5rem 0.4rem 0;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.sd-row--ok .sd-cell-actual { color: var(--color-profit); font-weight: 600; }
+.sd-row--bad .sd-cell-actual { color: var(--color-loss); font-weight: 600; }
+
+.sd-cell-node {
+  color: var(--color-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+}
+
+.sd-cell-expect {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+}
+
+.sd-cell-error {
+  margin-top: 0.25rem;
+  color: var(--color-loss);
+  font-size: 0.7rem;
+  font-weight: 400;
+  max-width: 42ch;
+}
+
+.sd-cell-note {
+  margin-top: 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 400;
+  max-width: 42ch;
+}
+
+/* ── Parameters the app cannot store ────────────────────────── */
+.sd-unverifiable {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: color-mix(in srgb, var(--color-warning) 6%, transparent);
+}
+
+.sd-unverifiable-head {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-warning);
+  margin-bottom: 0.3rem;
+}
+
+.sd-unverifiable-why {
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0 0 0.45rem;
+  max-width: 78ch;
+}
+
+.sd-unverifiable-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.sd-unverifiable-list code {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
