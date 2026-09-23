@@ -105,10 +105,23 @@ export class SymbolsService {
         }),
       );
     } catch (error) {
-      this.logger.warn(
-        `Database unavailable while listing symbols: ${String(error)}`,
+      // ⚠️⚠️ DO NOT RETURN []. A failed read and an empty table are OPPOSITE CONCLUSIONS, and
+      // returning [] here made them identical: HTTP 200, `symbols: []`, and the page rendered
+      // "0 symbols total" as though the registry were genuinely empty.
+      //
+      // Measured 2026-09-23: a schema drift between the database and the generated Prisma client
+      // made `symbol.findMany` throw on EVERY call. This catch turned that into a clean, confident
+      // empty page — no error, no warning the reader would see, and the defect stayed invisible
+      // for as long as nobody counted the rows.
+      //
+      // ⚠️ The `!isAvailable` early return ABOVE is different and STAYS: fallback mode is a known
+      // state that `modeMeta()` reports as `mode: 'fallback'`. This branch is an unexpected
+      // failure, so it must reach the client AS one — the page has an `isError` branch (and
+      // TCS-SYS-002) waiting for exactly this.
+      this.logger.error(
+        `Symbol list read FAILED — propagating rather than returning an empty list: ${String(error)}`,
       );
-      return [];
+      throw error;
     }
   }
 
