@@ -227,6 +227,14 @@ model BacktestRun {
   endDate      DateTime
   totalDays    Int
   totalTrades  Int
+  // ⚠️ ADDED 2026-09-23 (#965 item 1). `winRate` on this row is a SIGNAL rate
+  // (`profitable / entrySignals`) while `totalTrades` is a TRADE count — two populations on one
+  // row, and the DENOMINATOR of `winRate` was never persisted, so the sample that `winRate` (and
+  // `sharpeRatio`, computed from the same entry signals) rests on could not be stated at all.
+  // A verdict must name its sample: a bar on trades alone would still let the verdict's own metric
+  // rest on an unrecorded population. NULL = NOT RECORDED (runs before this column), deliberately
+  // distinct from 0 = no signals.
+  totalSignals Int?
   winRate      Float
   totalPnl     Float
   profitFactor Float

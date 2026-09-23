@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// #965 item 1 — the sample bar is shared with the live snapshot trial's verdict rather than
+// re-declared here. See the module header for the measurement that produced it.
+import { assessSamples, MIN_SAMPLES_FOR_VERDICT } from '../../common/trading/verdict-bar';
 import { DirectivesService } from '../directives/directives.service';
 import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
@@ -463,6 +466,10 @@ export class BacktestService {
             endDate: bars[bars.length - 1].timestamp,
             totalDays: days,
             totalTrades: trades.length,
+            // ⚠️ #965 item 1 — the DENOMINATOR of `winRate`, persisted so a verdict can state the
+            // sample its own metric rests on. Without it, a comparison could only bar on trades
+            // while `winRate`/`sharpeRatio` were computed over an unrecorded signal population.
+            totalSignals: entrySignals.length,
             winRate: Number(winRate.toFixed(4)),
             totalPnl: Number(totalPnl.toFixed(4)),
             profitFactor: Number((grossProfit / grossLoss).toFixed(4)),
@@ -541,12 +548,39 @@ export class BacktestService {
     });
   }
 
-  /** List all backtest runs with optional filters */
+  /**
+   * List all backtest runs with optional filters.
+   *
+   * ⚠️ UNITS ARE IN THE IDENTIFIER DELIBERATELY (#965 item 2). The previous formatter applied one
+   * `* 10000 / 100` (a ×100 fraction→percent conversion) to three fields that do NOT share a unit.
+   * Measured against the live table 2026-09-23:
+   *   • `maxDrawdown` is ALREADY a percent — it is `min(return10d)`, and `return10d` is
+   *     `(future10 - currentClose) / currentClose * 100`. A real 0.27% drawdown was served as
+   *     **27**, and −14.47% as **−1447**.
+   *   • `avgTradePnl` is ALREADY a percent (mean of `pnlPct`) — same 100× error: −0.1767 → −17.67.
+   *   • `winRate` IS a fraction (0..1), so ×100 was right for IT — which is how one formatter came
+   *     to be applied to three different units.
+   *   • `totalPnl` is CURRENCY: 2dp rounding turned a real −0.0009 into **0.00** — a loss rendered
+   *     as nothing. It is served at its stored precision (4dp) instead.
+   */
   async listAllRuns(opts?: { symbol?: string; protocolId?: string; limit?: number }): Promise<{
     runs: Array<{
       id: string; symbol: string; protocolId: string; timeframe: string;
-      period: string; totalTrades: number; winRate: number; totalPnl: number;
-      sharpeRatio: number; maxDrawdown: number; createdAt: string;
+      period: string;
+      /** Bracket TRADE count — the population the P&L metrics are computed over. */
+      totalTrades: number;
+      /** Entry SIGNAL count — the population `signalWinRatePct` and `sharpeRatio` rest on. NULL = not recorded. */
+      totalSignals: number | null;
+      /** Percent of entry SIGNALS that were profitable. NOT a trade win rate. */
+      signalWinRatePct: number;
+      /** Account currency, 4dp (stored precision — never rounded to a misleading 0.00). */
+      totalPnl: number;
+      sharpeRatio: number;
+      /** Percent of the worst rolling 10-day return. NOT currency. */
+      maxDrawdownPct: number;
+      /** Percent per trade. NOT currency. */
+      avgTradePnlPct: number;
+      createdAt: string;
     }>;
     total: number;
   }> {
@@ -575,25 +609,86 @@ export class BacktestService {
         timeframe: r.timeframe,
         period: `${r.startDate.toISOString().split('T')[0]} → ${r.endDate.toISOString().split('T')[0]}`,
         totalTrades: r.totalTrades,
-        winRate: Math.round(r.winRate * 10000) / 100,
-        totalPnl: Math.round(r.totalPnl * 100) / 100,
+        // ⚠️ TYPED access, not `(r as any)`: a stale generated Prisma client must fail the type
+        // check rather than throw at runtime — see #976, which is this exact failure class found
+        // on a different column.
+        totalSignals: r.totalSignals ?? null,
+        // ⚠️ `winRate` is a FRACTION and is the only field here that needs ×100. The two percent
+        // fields below are served as stored — see the method header.
+        signalWinRatePct: Math.round(r.winRate * 10000) / 100,
+        totalPnl: Number(r.totalPnl.toFixed(4)),
         sharpeRatio: Math.round(r.sharpeRatio * 100) / 100,
-        maxDrawdown: Math.round(r.maxDrawdown * 10000) / 100,
+        maxDrawdownPct: Number(r.maxDrawdown.toFixed(4)),
+        avgTradePnlPct: Number(r.avgTradePnl.toFixed(4)),
         createdAt: r.createdAt.toISOString(),
       })),
       total,
     };
   }
 
-  /** Compare multiple backtest runs side-by-side */
+  /**
+   * Compare multiple backtest runs side-by-side, and refuse to name a winner on a thin sample.
+   *
+   * ⚠️ #965 ITEM 1 — THE SAMPLE BAR. Measured 2026-09-23, before this change:
+   *
+   *     xau-speed-m15   totalTrades: 3   winRate: 100   sharpeRatio: 42.31
+   *     xau-speed-m5    totalTrades: 0   winRate: 0
+   *     best: { id: <m15>, metric: "sharpeRatio", value: 42.31 }
+   *
+   * A winner on THREE trades was served identically to one from three hundred. The live snapshot
+   * trial already had a bar for this (`MIN_SAMPLES_FOR_VERDICT`, shared via `verdict-bar.ts`);
+   * this comparison had none. `best` is now null unless EVERY side clears the bar, and the verdict
+   * names the counts either way.
+   *
+   * ⚠️ TWO POPULATIONS, KEPT APART. `winRate` on the stored row is a SIGNAL rate
+   * (`profitable / entrySignals`), while `totalTrades` is a TRADE count — and the denominator of
+   * the rate was never persisted. Measured: run `0dd94ddd` serves `winRate: 100` beside
+   * `totalTrades: 3`, while its own `backtesttrade` rows are **0 winners of 3**. Served side by
+   * side and read as ONE record, that is a fabricated-looking result. So:
+   *   • `signalWinRatePct` keeps the rate and names its population,
+   *   • `tradeWinRatePct` is counted from the trades table — the rate that matches `totalTrades`,
+   *   • `totalSignals` is persisted as of this change, so the sample behind `sharpeRatio` can be
+   *     STATED rather than assumed (NULL = not recorded on runs made before the column existed).
+   *
+   * ⚠️ UNITS. The old formatter applied one ×100 (`* 10000 / 100`) to `winRate` (a fraction),
+   * `maxDrawdown` (already a percent: `min(return10d)`) and `avgTradePnl` (already a percent), so
+   * a 0.27% drawdown was served as **27** and −14.47% as **−1447**. That is item 2 of the sprint,
+   * and it is why the compare view disagreed with the run it was comparing. Fields are now named
+   * for their unit and served at their stored scale; `totalPnl` keeps its 4dp, because 2dp turned
+   * a real −0.0009 into **0.00**.
+   */
   async compareRuns(runIds: string[]): Promise<{
     runs: Array<{
-      id: string; symbol: string; protocolId: string;
-      totalTrades: number; winRate: number; totalPnl: number;
-      profitFactor: number; sharpeRatio: number; maxDrawdown: number;
-      avgTradePnl: number;
+      id: string; symbol: string; protocolId: string; timeframe: string;
+      /** Bracket TRADE count — the population the P&L metrics are computed over. */
+      totalTrades: number;
+      /** Trades actually FOUND for this run. A disagreement with `totalTrades` is reported. */
+      tradesCounted: number;
+      /** Winners / trades counted. NULL when no trades exist — never a fabricated 0%. */
+      tradeWinRatePct: number | null;
+      /** Entry SIGNALS, the sample `signalWinRatePct` and `sharpeRatio` rest on. NULL = not recorded. */
+      totalSignals: number | null;
+      /** Percent of entry SIGNALS that were profitable. NOT a trade win rate. */
+      signalWinRatePct: number;
+      /** Account currency, 4dp. */
+      totalPnl: number;
+      profitFactor: number;
+      sharpeRatio: number;
+      /** Percent. NOT currency, and NOT scaled — see the method header. */
+      maxDrawdownPct: number;
+      /** Percent per trade. NOT currency. */
+      avgTradePnlPct: number;
     }>;
-    best: { id: string; metric: string; value: number } | null;
+    /** Null unless every side cleared the sample bar. `sample` travels with the name. */
+    best: { id: string; metric: string; value: number; sample: number } | null;
+    verdict: {
+      verdict: 'winner' | 'insufficient-data' | 'sample-unknown' | 'no-runs';
+      n: Record<string, number | null>;
+      requiredPerSide: number;
+      /** The comparison method, named whenever a winner is named. Null otherwise. */
+      metric: string | null;
+      note: string;
+    };
   }> {
     const runs = await this.prisma.backtestRun.findMany({
       where: { id: { in: runIds } },
@@ -601,27 +696,136 @@ export class BacktestService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const formatted = runs.map(r => ({
-      id: r.id,
-      symbol: (r as any).symbol?.ticker || 'unknown',
-      protocolId: r.protocolId,
-      totalTrades: r.totalTrades,
-      winRate: Math.round(r.winRate * 10000) / 100,
-      totalPnl: Math.round(r.totalPnl * 100) / 100,
-      profitFactor: Math.round(r.profitFactor * 100) / 100,
-      sharpeRatio: Math.round(r.sharpeRatio * 100) / 100,
-      maxDrawdown: Math.round(r.maxDrawdown * 10000) / 100,
-      avgTradePnl: Math.round(r.avgTradePnl * 10000) / 100,
-    }));
+    // ⚠️ Counted from the TRADES, not taken from the stored column: the P&L metrics are computed
+    // over trades, so the sample a verdict rests on must be the rows that exist. If the two
+    // disagree, that is a finding and it is surfaced below rather than smoothed over.
+    const [counted, countedWins] = await Promise.all([
+      this.prisma.backtestTrade.groupBy({
+        by: ['runId'],
+        where: { runId: { in: runIds } },
+        _count: { _all: true },
+      }),
+      this.prisma.backtestTrade.groupBy({
+        by: ['runId'],
+        where: { runId: { in: runIds }, pnl: { gt: 0 } },
+        _count: { _all: true },
+      }),
+    ]);
+    const countedByRun = new Map(counted.map((c) => [c.runId, c._count._all]));
+    const winsByRun = new Map(countedWins.map((c) => [c.runId, c._count._all]));
 
-    // Find best by Sharpe ratio
-    let best: { id: string; metric: string; value: number } | null = null;
-    if (formatted.length > 0) {
-      const bestBySharpe = formatted.reduce((a, b) => a.sharpeRatio > b.sharpeRatio ? a : b);
-      best = { id: bestBySharpe.id, metric: 'sharpeRatio', value: bestBySharpe.sharpeRatio };
+    const formatted = runs.map((r) => {
+      const tradesCounted = countedByRun.get(r.id) ?? 0;
+      const wins = winsByRun.get(r.id) ?? 0;
+      // ⚠️ TYPED when a verdict could rest on it (#976): `as any` here would let a stale client
+      // silently read `undefined` and the bar would then refuse every comparison for the WRONG
+      // reason, blaming the data instead of the build.
+      const totalSignals = r.totalSignals ?? null;
+      return {
+        id: r.id,
+        symbol: (r as any).symbol?.ticker || 'unknown',
+        protocolId: r.protocolId,
+        timeframe: r.timeframe,
+        totalTrades: r.totalTrades,
+        tradesCounted,
+        tradeWinRatePct:
+          tradesCounted > 0 ? Math.round((wins / tradesCounted) * 10000) / 100 : null,
+        totalSignals,
+        // The ONLY field that needs the fraction→percent conversion.
+        signalWinRatePct: Math.round(r.winRate * 10000) / 100,
+        totalPnl: Number(r.totalPnl.toFixed(4)),
+        profitFactor: Math.round(r.profitFactor * 100) / 100,
+        sharpeRatio: Math.round(r.sharpeRatio * 100) / 100,
+        // ⚠️ 4dp — the STORED precision, deliberately not 2dp. These are small numbers (a real
+        // `avgTradePnl` is −0.1767); rounding them to 2dp would serve −0.18, i.e. formatting
+        // would invent a figure the run never produced. Same reason `totalPnl` keeps its 4dp.
+        // A UI is free to display 2dp; the API must not discard the value first.
+        maxDrawdownPct: Number(r.maxDrawdown.toFixed(4)),
+        avgTradePnlPct: Number(r.avgTradePnl.toFixed(4)),
+      };
+    });
+
+    if (formatted.length === 0) {
+      return {
+        runs: [],
+        best: null,
+        verdict: {
+          verdict: 'no-runs',
+          n: {},
+          requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
+          metric: null,
+          note:
+            'No runs matched the supplied ids, so there is nothing to compare. This is NOT ' +
+            '"the runs are equal" — no data was read.',
+        },
+      };
     }
 
-    return { runs: formatted, best };
+    // ── THE BAR ────────────────────────────────────────────────────────────────────────────────
+    // Both populations are assessed, because the winner metric (`sharpeRatio`) is computed over
+    // entry SIGNALS while the P&L figures are computed over TRADES. A bar on trades alone would
+    // still let the verdict's own metric rest on an unstated sample.
+    const tradeAssessment = assessSamples(
+      formatted.map((f) => ({ label: `${f.protocolId} @${f.timeframe} trades`, n: f.tradesCounted })),
+      { what: 'bracketed trades' },
+    );
+    const signalAssessment = assessSamples(
+      formatted.map((f) => ({ label: `${f.protocolId} @${f.timeframe} signals`, n: f.totalSignals })),
+      { what: 'entry signals (the sample `sharpeRatio` is computed over)' },
+    );
+
+    const refusals: Array<'insufficient-data' | 'sample-unknown'> = [];
+    if (tradeAssessment.outcome !== 'ok') refusals.push(tradeAssessment.outcome);
+    if (signalAssessment.outcome !== 'ok') refusals.push(signalAssessment.outcome);
+
+    const n = { ...tradeAssessment.n, ...signalAssessment.n };
+    const disagreements = formatted
+      .filter((f) => f.totalTrades !== f.tradesCounted)
+      .map((f) => `${f.protocolId} @${f.timeframe}: stored ${f.totalTrades}, found ${f.tradesCounted}`);
+
+    if (refusals.length > 0) {
+      return {
+        runs: formatted,
+        best: null,
+        verdict: {
+          verdict: refusals.includes('sample-unknown') ? 'sample-unknown' : 'insufficient-data',
+          n,
+          requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
+          metric: null,
+          note:
+            `${tradeAssessment.note} ${signalAssessment.note}` +
+            (disagreements.length
+              ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
+              : ''),
+        },
+      };
+    }
+
+    const bestRow = formatted.reduce((a, b) => (a.sharpeRatio > b.sharpeRatio ? a : b));
+    return {
+      runs: formatted,
+      best: {
+        id: bestRow.id,
+        metric: 'sharpeRatio',
+        value: bestRow.sharpeRatio,
+        sample: bestRow.tradesCounted,
+      },
+      verdict: {
+        verdict: 'winner',
+        n,
+        requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
+        metric: 'sharpeRatio',
+        note:
+          `Winner named by sharpeRatio (${bestRow.protocolId} @${bestRow.timeframe}), over ` +
+          `${bestRow.totalSignals} entry signals and ${bestRow.tradesCounted} bracketed trades. ` +
+          `Both clear the ≥${MIN_SAMPLES_FOR_VERDICT} bar. ` +
+          '⚠️ The bar means "big enough to speak about", NOT "statistically significant" — ' +
+          'the winner is the largest of these runs, not a proven difference.' +
+          (disagreements.length
+            ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
+            : ''),
+      },
+    };
   }
 
   /** Delete a backtest run and its trades */

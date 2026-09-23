@@ -4,6 +4,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { sanitizeMt5Comment } from '../providers/mt5-comment.util';
+// #965 — the verdict bar moved to ONE shared module when the backtest comparison needed the same
+// rule. It was private here; a second private copy there would agree today and drift at the first
+// tuning. Aliased to the local name so every use site (and this service's spec) is unchanged.
+import { MIN_SAMPLES_FOR_VERDICT as AB_MIN_TRADES_FOR_VERDICT } from '../../common/trading/verdict-bar';
 
 /**
  * Symbols allowed in a single A/B test. Default 8 — env-overridable via AB_MAX_SYMBOLS (#929).
@@ -28,11 +32,13 @@ const MAX_AB_ACTIVE = (() => {
 })();
 
 /**
- * Closed trades PER SIDE required before any winner is named. 30 matches the repo's n≥30
- * threshold language (#805's edge controller). Below it the result says `insufficient-data`
- * WITH the current n — refusing to answer is the honest output, not a tie.
+ * Closed trades PER SIDE required before any winner is named — see
+ * `nest/src/common/trading/verdict-bar.ts` for the definition and the measurement behind it.
+ *
+ * 30 matches the repo's n≥30 threshold language (#805's edge controller). Below it the result
+ * says `insufficient-data` WITH the current n — refusing to answer is the honest output, not a tie.
  */
-const AB_MIN_TRADES_FOR_VERDICT = 30;
+// (value now imported above as AB_MIN_TRADES_FOR_VERDICT — do not re-declare it here.)
 
 /** Side tags used in the broker comment so results can be attributed. */
 const SIDE_A_TAG = 'AB-A';
