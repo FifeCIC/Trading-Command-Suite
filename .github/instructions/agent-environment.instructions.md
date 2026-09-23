@@ -74,6 +74,27 @@ was gated — it is not a substitute for gating it (`change-completion.instructi
 not pushed, `git reset --mixed HEAD~1` unwinds it — that moves HEAD and the index and touches no
 working file. If it **is** pushed, leave it and report instead of rewriting shared history.
 
+## 📋 Review Queue — one list, shared by all agents (owner instruction, 2026-09-23)
+
+> *"Store things I need to review and when I prompt for a review list give it to me — all agents
+> could share the same list."*
+
+**The queue is `.github/REVIEW-QUEUE.md`.** It is the one place a review item is recorded, so the
+owner does not have to read six handoffs and an attention board to find what is waiting for them.
+
+| When | Do |
+|---|---|
+| The owner says **"review list"**, "show me the review queue", "what needs me?" | **Print the OPEN table from `.github/REVIEW-QUEUE.md` in full, in the chat.** Do not summarise it, do not re-derive it from GitHub, do not tell them to open the file — that sentence is the whole point of the file |
+| Your work creates something a **human** must look at or decide | **Append a row**: new/changed UI surface, policy or threshold choice, naming/terminology call, a thing you deliberately did NOT do, a visual check you cannot perform |
+| The row is settled | Mark it `DONE (date)` with one line of what happened. Rows are never silently deleted — the list is the audit of *"did anyone tell the owner?"* |
+
+⚠️ **A row without a decision is noise.** Each row names **where to look** and **the decision
+needed** — and every link in it must have been verified, because a wrong bot id or path costs the
+owner the time the row was meant to save.
+
+⚠️ **Not for technical follow-ups.** Those are GitHub issues. If an agent can settle it by
+measuring, it does not belong in the queue.
+
 ## Shell Commands
 
 The user has granted full permission to run shell commands, read/write files, and execute scripts without asking for confirmation. Never prompt the user to approve a command — just run it.
