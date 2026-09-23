@@ -269,14 +269,232 @@ export class TradeHistoryController {
       this.prisma.trade.count({ where: { status: 'closed', exitPrice: null } }),
     ]).catch(() => [0, 0, 0] as number[]);
 
+    // ── 3. Comparison context — WHAT the strategies ARE, not just what they earned ──
+    //
+    // The comparison page must show what DIFFERS between strategies (protocol, directives) and
+    // what they've been DOING recently (scores, trades, daily P&L), not only the P&L totals.
+    //
+    // ⚠️⚠️ THE IDENTITY CHAIN, MEASURED 2026-09-23 — read this before changing any join here.
+    // `trade.strategy` is a **BOT NAME STRING**, not a protocol id. Measured against live data:
+    //
+    //     trade.strategy  →  trading_strategy.name          21 of 32 distinct names match
+    //     trade.strategy  →  protocol.name                   4 of 32  ← coincidental only
+    //
+    // Those 4 are the XAU bots, whose names happen to equal their protocol names. Joining
+    // `trade.strategy` to `protocol.name` would look like it works while silently blanking
+    // 88% of rows — the "plausible output, no error" failure this repo keeps re-finding.
+    //
+    // The real chain, and the key type at each hop:
+    //
+    //     trade.strategy ──name──▶ trading_strategy ──strategyId──▶ strategy_protocol
+    //                                                                      │
+    //                                          protocolId is a **SLUG**, not a uuid
+    //                                          ('forex-session-v1', 'xau-speed-1h')
+    //                                                                      ▼
+    //                                                                 protocol.slug
+    //                                                                      │  (id, uuid)
+    //                                                                      ▼
+    //                                                     protocol_directive_group
+    //                                                                      │  (id)
+    //                                                                      ▼
+    //                                                     protocol_directive_entry  → directiveId, maxScore
+    //
+    // ⚠️ `strategy_protocol.protocolId` is VarChar(100) and holds a SLUG; `protocol.id` is a uuid.
+    // Joining them directly returns NULL for every row. Measured: 0 of 27 unmatched when joined on
+    // `slug`. `signal_rank_snapshot.protocolId` holds the SAME slug (0 of 19 unmatched).
+    //
+    // ⚠️ `trading_strategy.protocolId` is a SEPARATE VarChar(36) column and is NOT used here — see
+    // #801 (slug-or-UUID in one column). `strategy_protocol` is the verified subscription table.
+    // It is also the table a bot created via `POST /api/trading/strategies` does NOT get a row in,
+    // so `identity.unlinked` below is a real, reportable state — not a bug in this join.
+    const names = showdown.map((s) => s.strategy);
+
+    const bots = await (this.prisma as any).tradingStrategy
+      .findMany({ where: { name: { in: names } } })
+      .catch(() => [] as any[]);
+    const botByName = new Map<string, any>(bots.map((b: any) => [b.name, b]));
+    const botIds = bots.map((b: any) => b.id);
+
+    const subs = botIds.length
+      ? await (this.prisma as any).strategyProtocol
+          .findMany({ where: { strategyId: { in: botIds } } })
+          .catch(() => [] as any[])
+      : [];
+    const slugByBotId = new Map<string, string>(subs.map((s: any) => [s.strategyId, s.protocolId]));
+    const linkedSlugs = Array.from(new Set(Array.from(slugByBotId.values())));
+
+    const protocols = linkedSlugs.length
+      ? await this.prisma.protocol
+          .findMany({ where: { slug: { in: linkedSlugs } } })
+          .catch(() => [] as any[])
+      : [];
+    const protocolBySlug = new Map<string, any>(protocols.map((p: any) => [p.slug, p]));
+
+    // Directives, via the group table (a protocol's directives are per-GROUP, and the group
+    // carries the weight — so an entry is only meaningful together with its group).
+    const protocolIds = protocols.map((p: any) => p.id);
+    const groups = protocolIds.length
+      ? await (this.prisma as any).protocolDirectiveGroup
+          .findMany({ where: { protocolId: { in: protocolIds } }, orderBy: { sortOrder: 'asc' } })
+          .catch(() => [] as any[])
+      : [];
+    const groupIds = groups.map((g: any) => g.id);
+    const entries = groupIds.length
+      ? await (this.prisma as any).protocolDirectiveEntry
+          .findMany({ where: { groupId: { in: groupIds } } })
+          .catch(() => [] as any[])
+      : [];
+    const groupById = new Map<string, any>(groups.map((g: any) => [g.id, g]));
+    const directivesByProtocolId = new Map<string, any[]>();
+    const groupIdsByProtocolId = new Map<string, string[]>();
+    for (const g of groups) {
+      if (!groupIdsByProtocolId.has(g.protocolId)) groupIdsByProtocolId.set(g.protocolId, []);
+      groupIdsByProtocolId.get(g.protocolId)!.push(g.id);
+    }
+    for (const e of entries) {
+      const g = groupById.get(e.groupId);
+      if (!g) continue;
+      if (!directivesByProtocolId.has(g.protocolId)) directivesByProtocolId.set(g.protocolId, []);
+      directivesByProtocolId.get(g.protocolId)!.push({
+        directiveId: e.directiveId,
+        maxScore: e.maxScore,
+        active: e.active,
+        group: g.groupId,
+        groupName: g.name,
+        groupWeight: g.weight,
+        isRiskGate: g.isRiskGate,
+      });
+    }
+
+    // Recent scores — `signal_rank_snapshot.protocolId` is the same SLUG (measured: 0 of 19
+    // unmatched). Fetched newest-first across all linked protocols in ONE query, then capped per
+    // protocol here, so the row count stays bounded however many strategies are compared.
+    const scores = linkedSlugs.length
+      ? await this.prisma.signalRankSnapshot
+          .findMany({
+            where: { protocolId: { in: linkedSlugs } },
+            orderBy: { runAt: 'desc' },
+            take: 600,
+          })
+          .catch(() => [] as any[])
+      : [];
+    const scoresBySlug = new Map<string, any[]>();
+    for (const s of scores) {
+      const list = scoresBySlug.get(s.protocolId) ?? [];
+      if (list.length < 10) {
+        list.push({
+          symbol: s.symbol,
+          direction: s.direction,
+          // ⚠️ Two scales — combinedStrength is the 0-100 score; signalPct is percent of
+          // configured capacity (ADR-011). Both are reported; the page must not pass signalPct
+          // to scoreClass() (see shared-core.instructions.md).
+          combinedStrength: s.combinedStrength,
+          signalPct: s.signalPct,
+          runAt: s.runAt,
+        });
+      }
+      scoresBySlug.set(s.protocolId, list);
+    }
+
+    // Recent trades + daily P&L, computed from `closedTrades` — already the exact population the
+    // showdown aggregates (closed, priced, strategy-tagged, newest first), so reusing it avoids
+    // two more queries AND guarantees the two views cannot disagree about what counts.
+    const RECENT_TRADES_PER_STRATEGY = 10;
+    const DAYS = 14;
+    const pnlDays: string[] = [];
+    for (let i = DAYS - 1; i >= 0; i--) {
+      pnlDays.push(new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10));
+    }
+    const pnlDayIndex = new Map<string, number>(pnlDays.map((d, i) => [d, i]));
+
+    const recentByStrategy = new Map<string, any[]>();
+    const byStrategyDay = new Map<string, number[]>();
+    for (const t of closedTrades) {
+      const key = t.strategy || 'unknown';
+
+      const list = recentByStrategy.get(key) ?? [];
+      if (list.length < RECENT_TRADES_PER_STRATEGY) {
+        list.push({
+          symbol: t.symbol,
+          side: t.side,
+          quantity: t.quantity,
+          entryPrice: t.entryPrice,
+          exitPrice: t.exitPrice,
+          pnl: t.pnl,
+          closedAt: t.closedAt,
+          openedAt: t.openedAt,
+        });
+      }
+      recentByStrategy.set(key, list);
+
+      const day = t.closedAt ? new Date(t.closedAt).toISOString().slice(0, 10) : null;
+      const idx = day === null ? undefined : pnlDayIndex.get(day);
+      if (idx !== undefined) {
+        if (!byStrategyDay.has(key)) byStrategyDay.set(key, new Array(DAYS).fill(0));
+        byStrategyDay.get(key)![idx] += t.pnl ?? 0;
+      }
+    }
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const withContext = showdown.map((row) => {
+      const bot = botByName.get(row.strategy);
+      const slug = bot ? slugByBotId.get(bot.id) : undefined;
+      const protocol = slug ? protocolBySlug.get(slug) : undefined;
+      const daily = byStrategyDay.get(row.strategy) ?? new Array(DAYS).fill(0);
+      // Running total across the window — "prior days P/L" as a trend, not just daily bars.
+      let running = 0;
+      const cumulative = daily.map((v) => (running = round2(running + v)));
+
+      return {
+        ...row,
+        // ⚠️ WHAT WE COULD NOT RESOLVE IS STATED, not left blank. A blank protocol cell would read
+        // as "this strategy has no protocol"; `unlinked` reads as "we cannot tell from the data".
+        identity: bot
+          ? { kind: 'bot', botId: bot.id, symbol: bot.symbol, mode: bot.mode, active: bot.active }
+          : { kind: 'name_only', botId: null, symbol: null, mode: null, active: null },
+        protocol: protocol
+          ? {
+              slug: protocol.slug,
+              name: protocol.name,
+              timeframe: protocol.recommendedTimeframe,
+              tradingStyle: protocol.tradingStyle,
+              directionMode: protocol.directionMode,
+              winRateTarget: protocol.winRateTarget,
+              avgHoldTime: protocol.avgHoldTime,
+            }
+          : null,
+        derivedFrom: protocol?.derivedFrom ?? null,
+        directives: protocol ? directivesByProtocolId.get(protocol.id) ?? [] : [],
+        directiveMaxTotal: protocol
+          ? (directivesByProtocolId.get(protocol.id) ?? [])
+              .filter((d: any) => d.active)
+              .reduce((sum: number, d: any) => sum + d.maxScore, 0)
+          : null,
+        recentScores: slug ? scoresBySlug.get(slug) ?? [] : [],
+        recentTrades: recentByStrategy.get(row.strategy) ?? [],
+        pnlByDay: daily.map(round2),
+        pnlCumulative: cumulative,
+      };
+    });
+
     return {
       generatedAt: new Date().toISOString(),
       liveSource,
-      showdown,
+      pnlDays,
+      showdown: withContext,
       excluded: {
         totalClosed,
         noStrategy: noStrategyCount,
         unpriced: unpricedCount,
+        // ⚠️ Strategy names that resolve to NO bot row — the comparison cannot show a protocol or
+        // directives for these, and says so rather than rendering an empty protocol column.
+        unresolvedNames: withContext.filter((s) => s.identity.kind !== 'bot').map((s) => s.strategy),
+        // Bots that HAVE a name-match but no `strategy_protocol` subscription. A bot in this set
+        // can never trade (see database-seed-discipline.instructions.md) — it is a different and
+        // more serious state than "unresolved name", so it is counted separately.
+        noSubscription: withContext
+          .filter((s) => s.identity.kind === 'bot' && !s.protocol)
+          .map((s) => s.strategy),
       },
       livePositions: Array.from(liveByStrategy.entries()).map(([strategy, positions]) => ({
         strategy,

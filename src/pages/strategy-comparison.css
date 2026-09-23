@@ -1,77 +1,409 @@
-.sc-page { max-width: none; margin: 0; padding: 1rem 1.5rem; color: var(--ink); }
+/**
+ * Strategy Comparison — /trading/strategy-comparison
+ * =================================================
+ * The horizontal comparison matrix: one COLUMN per strategy, one ROW per criterion.
+ *
+ * ⚠️⚠️ PREFIX RENAMED `sc-` → `strategycmp-` (2026-09-23). This file previously shared `sc-`
+ * with FIVE other stylesheets — screener.css (74 selectors), strategy-create.css (37),
+ * server-controls-page.css (36) and startup-checklist.css (28) — and all page CSS is bundled
+ * into ONE global stylesheet, so the LAST rule loaded won on EVERY page. `screencockpit.css`
+ * escaped the same collision by renaming to a file-anchored prefix; this file had not, so its
+ * page rule was competing with four other rules of the same name. The prefix is anchored to the
+ * FILENAME so it survives a display-label change.
+ *
+ * ⚠️ COLOUR-BLIND MODE (src/index.css) injects a ▲/▼ pseudo-element on any class name
+ * CONTAINING `up`, `down`, `buy`, `sell`, `win` or `lose` — it is a substring match, not a word
+ * match. That is why the direction classes here are `--pos` / `--neg` (the old file used a
+ * direction suffix on its P&L badge, which was affected), and why the section-header row class
+ * is `strategycmp-band` and NOT "group": `gro-up` contains `up` and would have been given a
+ * spurious ▲. Check any new class name against that list before adding it.
+ *
+ * ⚠️ No hardcoded hex — colours come from the tokens in `index.css :root` so a theme pack and
+ * the High Contrast Text preference restyle this page with everything else.
+ * WCAG 2.2 AA: tap targets ≥44px, focus-visible is global, motion respects prefers-reduced-motion.
+ */
 
-.sc-header { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
-.sc-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
-.sc-subtitle { color: var(--ink-soft); font-size: 0.75rem; margin: 0; }
-.sc-clock { font-size: 0.7rem; color: var(--ink-soft); white-space: nowrap; }
-
-.sc-section {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-  padding: 0.75rem 1rem; margin-bottom: 0.6rem;
+.strategycmp-page {
+  max-width: none;
+  margin: 0;
+  padding: 1rem 1.5rem 3rem;
+  color: var(--ink);
 }
-.sc-section h2 { margin: 0 0 0.5rem; font-size: 0.85rem; }
 
-/* Table */
-.sc-table-wrap { overflow-x: auto; }
-.sc-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
-.sc-table th {
-  text-align: left; padding: 0.35rem 0.5rem; background: rgba(128,128,128,0.04);
-  color: var(--ink-soft); font-weight: 600; font-size: 0.62rem;
-  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line);
+.strategycmp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-.sc-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.05); white-space: nowrap; }
-.sc-row-best { background: rgba(34,197,94,0.03); }
-.sc-table tbody tr:hover { background: rgba(14,165,166,0.04); }
-.sc-up { color: var(--color-profit); }
-.sc-down { color: var(--color-loss); }
 
-/* PnL Badge */
-.sc-pnl-badge { font-weight: 700; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
-.sc-pnl-up { color: var(--color-profit); }
-.sc-pnl-down { color: var(--color-loss); }
+/* ── Header ── */
 
-/* Best/Worst */
-.sc-best-worst { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
-.sc-best-card, .sc-worst-card {
-  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem;
-  border-radius: 8px; font-size: 0.75rem;
+.strategycmp-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
-.sc-best-card { border: 1px solid rgba(34,197,94,0.2); background: rgba(34,197,94,0.04); }
-.sc-worst-card { border: 1px solid rgba(239,68,68,0.2); background: rgba(239,68,68,0.04); }
-.sc-bw-label { font-weight: 700; }
-.sc-bw-meta { font-size: 0.65rem; color: var(--ink-soft); margin-left: auto; }
 
-/* Live Positions */
-.sc-live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 0.5rem; }
-.sc-live-card {
-  border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem;
-  background: rgba(128,128,128,0.01);
+.strategycmp-header h1 {
+  margin: 0 0 0.15rem;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
-.sc-live-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(128,128,128,0.08); }
-.sc-live-strategy { font-weight: 700; font-size: 0.78rem; }
-.sc-live-count { font-size: 0.62rem; color: var(--ink-soft); background: rgba(128,128,128,0.06); padding: 1px 6px; border-radius: 3px; }
-.sc-live-positions { display: flex; flex-direction: column; gap: 2px; }
-.sc-live-pos { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; padding: 0.12rem 0; }
-.sc-lp-symbol { font-weight: 600; min-width: 60px; }
-.sc-lp-side { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-.sc-buy { color: var(--color-profit); }
-.sc-sell { color: var(--color-loss); }
-.sc-lp-qty { color: var(--ink-soft); }
-.sc-lp-entry { font-family: monospace; font-size: 0.62rem; color: var(--ink-soft); }
 
-.sc-empty { text-align: center; padding: 2rem; color: var(--ink-soft); font-size: 0.78rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 0.6rem; }
-.sc-empty-text { color: var(--ink-soft); font-size: 0.75rem; }
-.sc-source-note { color: var(--ink-soft); font-size: 0.7rem; font-style: italic; margin-bottom: 0.5rem; }
+.strategycmp-subtitle {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  margin: 0;
+}
 
-@media (max-width: 768px) {
-  .sc-best-worst { grid-template-columns: 1fr; }
-  .sc-live-grid { grid-template-columns: 1fr; }
-  .sc-table { font-size: 0.72rem; }
-  .sc-table th, .sc-table td { padding: 6px 8px; }
+/* ── Notes & banners ── */
+
+.strategycmp-banner {
+  margin-bottom: 0.75rem;
 }
-@media (max-width: 500px) {
-  .sc-page { padding: 12px 8px; }
-  .sc-summary { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .sc-header h1 { font-size: 1.15rem; }
+
+.strategycmp-note {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
 }
+
+.strategycmp-note--warn {
+  color: var(--color-warning);
+}
+
+/* ── Order-by toggles ── */
+
+.strategycmp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.strategycmp-controls-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  margin-right: 0.25rem;
+}
+
+/* ≥44px tall so the control meets WCAG 2.5.5 on touch. */
+.strategycmp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  padding: 0 0.7rem;
+  font-size: 0.72rem;
+  font-family: inherit;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.strategycmp-toggle:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.strategycmp-toggle--on {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.strategycmp-toggle-dir {
+  font-size: 0.6rem;
+}
+
+/* ── The matrix ──
+   `overflow-x: auto` is the point of the page: scroll RIGHT to walk down the ranking. The
+   first `th` of every row (the criterion label) sticks to the left edge and the header row
+   sticks to the top, so neither the criterion nor the strategy identity is ever lost. */
+
+.strategycmp-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.strategycmp-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.72rem;
+}
+
+.strategycmp-table th,
+.strategycmp-table td {
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+/* Criterion column — sticky left, fixed width, its own background so the columns scrolling
+   underneath it do not show through. */
+.strategycmp-table tbody th,
+.strategycmp-table thead th.strategycmp-corner {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 150px;
+  width: 150px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Strategy header row — sticky top. */
+.strategycmp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg);
+  border-bottom: 1px solid var(--accent);
+}
+
+.strategycmp-table thead th.strategycmp-corner {
+  z-index: 4;
+}
+
+.strategycmp-colhead {
+  min-width: 186px;
+  width: 186px;
+  display: table-cell;
+}
+
+.strategycmp-rank {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.strategycmp-name {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.strategycmp-meta {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--ink-soft);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 0.15rem;
+}
+
+.strategycmp-band th {
+  background: var(--color-grid);
+  color: var(--accent);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  padding-top: 0.5rem;
+  padding-bottom: 0.35rem;
+}
+
+.strategycmp-table tbody tr:hover td,
+.strategycmp-table tbody tr:hover th {
+  background: var(--color-input-bg);
+}
+
+.strategycmp-muted {
+  color: var(--color-muted);
+}
+
+/* ── Values ── */
+
+.strategycmp-pnl {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.strategycmp-pos {
+  color: var(--color-profit);
+}
+
+.strategycmp-neg {
+  color: var(--color-loss);
+}
+
+/* ── P&L by day bars ──
+   Height is set inline per bar from the value; the box supplies the baseline. */
+.strategycmp-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 34px;
+  min-width: 120px;
+}
+
+.strategycmp-bar {
+  flex: 1 1 0;
+  min-width: 3px;
+  border-radius: 1px;
+  opacity: 0.85;
+}
+
+.strategycmp-bar.strategycmp-pos {
+  background: var(--color-profit);
+}
+
+.strategycmp-bar.strategycmp-neg {
+  background: var(--color-loss);
+}
+
+/* ── Per-column lists (directives, recent trades, recent scores) ── */
+
+.strategycmp-dirlist,
+.strategycmp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.strategycmp-dirlist li,
+.strategycmp-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.66rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.strategycmp-dirname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.strategycmp-listsym {
+  font-weight: 600;
+  min-width: 48px;
+}
+
+.strategycmp-listtime {
+  margin-left: auto;
+  font-size: 0.6rem;
+}
+
+/* ── Live positions ── */
+
+.strategycmp-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.strategycmp-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.strategycmp-live {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 0.5rem;
+}
+
+.strategycmp-livecard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.strategycmp-livehead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.strategycmp-livehead .strategycmp-name {
+  display: inline;
+  font-size: 0.78rem;
+}
+
+/* ── Empty state ── */
+
+.strategycmp-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 0.6rem;
+}
+
+/* ── Responsive ──
+   The matrix keeps its horizontal scroll at every width (that is its purpose); only the fixed
+   label column and the padding shrink, so the criterion column never eats the viewport. */
+
+@media (max-width: 900px) {
+  .strategycmp-page {
+    padding: 0.75rem 0.75rem 2rem;
+  }
+
+  .strategycmp-table tbody th,
+  .strategycmp-table thead th.strategycmp-corner {
+    min-width: 112px;
+    width: 112px;
+  }
+
+  .strategycmp-colhead {
+    min-width: 160px;
+    width: 160px;
+  }
+}
+
+@media (max-width: 600px) {
+  .strategycmp-header h1 {
+    font-size: 1.05rem;
+  }
+
+  .strategycmp-live {
+    grid-template-columns: 1fr;
+  }
+}
+
