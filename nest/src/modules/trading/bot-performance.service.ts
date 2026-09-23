@@ -73,6 +73,9 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// ⚠️ #954 — ONE drawdown definition. This service and risk/risk.controller.ts used to carry
+// separate implementations with opposite conclusions about the percentage. Both call this now.
+import { computeDrawdownDetail } from '../../common/trading/drawdown';
 import { bucket, PnlReliability } from '../scoring/pnl-statistics.service';
 // #876/#894 — the canonical strategy identity. Reused, never reimplemented: `strategyKey()`
 // hashes the WHOLE configuration and `canonicalise()` is private, so a second copy would be
@@ -493,27 +496,25 @@ export class BotPerformanceService {
 
     const drawdownByAttribution = new Map<string, number>();
     {
-      const cumByAttribution = new Map<string, number>();
-      const peakByAttribution = new Map<string, number>();
-      // Rows arrive ordered; the loop is the ordering guarantee. Do not sort inside.
+      // ⚠️ #954 — borrowed, not re-implemented. Group the ORDERED series per attribution and run
+      // the shared function (it expects NEWEST-FIRST, so each group is reversed here; the grouping
+      // loop preserves the query's per-bot ordering guarantee). The 0-baseline rule and the
+      // bounded-ratio rule live in that one file, with the canary — if they change, both this bot
+      // metric and the risk surface change together rather than drifting apart.
+      const seriesByAttribution = new Map<string, Array<{ pnl: number | null; closedAt: Date | null }>>();
       for (const r of series) {
         const key = r.attribution ?? '(none)';
-        const pnl = Number(r.pnl ?? 0);
-        const cum = (cumByAttribution.get(key) ?? 0) + pnl;
-        cumByAttribution.set(key, cum);
-
-        // ⚠️ The peak starts at 0, not at the first trade's P&L. A bot that opens with a loss
-        // has a genuine decline from 0, and starting the peak at that loss would report the
-        // worst possible case as no drawdown at all.
-        const peak = Math.max(peakByAttribution.get(key) ?? 0, cum);
-        peakByAttribution.set(key, peak);
-
+        // ⚠️ `$queryRawUnsafe` rows are untyped — NUMBER, never trust the cast (a string "5" would
+        // make the shared cumulative sum concatenate).
+        const row = { pnl: Number(r.pnl ?? 0), closedAt: r.closedAt };
+        const group = seriesByAttribution.get(key);
+        if (group) group.push(row);
+        else seriesByAttribution.set(key, [row]);
+      }
+      for (const [key, group] of seriesByAttribution) {
         // ABSOLUTE decline, in account currency — a figure that needs no denominator and
         // therefore cannot be wrong the way the percentage version was. See `maxDrawdown`.
-        const dd = peak - cum;
-        if (dd > (drawdownByAttribution.get(key) ?? 0)) {
-          drawdownByAttribution.set(key, dd);
-        }
+        drawdownByAttribution.set(key, computeDrawdownDetail(group.slice().reverse()).currency);
       }
     }
 

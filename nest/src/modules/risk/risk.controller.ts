@@ -24,6 +24,10 @@ import { MonteCarloService } from './monte-carlo.service';
 import { PrismaService } from '../../database/prisma.service';
 // #778 — the ONE definition of broker-maintained vs cached-import position rows.
 import { POSITION_LIVE_WINDOW_MS } from '../../common/utils/position-freshness';
+// ⚠️ #954 — ONE drawdown definition. The implementation moved to common/trading/drawdown.ts when
+// this file and trading/bot-performance.service.ts were found to disagree about whether a
+// percentage is stated at all. Do not reintroduce a local copy.
+import { computeDrawdownDetail } from '../../common/trading/drawdown';
 import { WeekendGapRiskService } from './weekend-gap-risk.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
@@ -345,12 +349,24 @@ export class RiskController {
       const markPct = Number((await this.readRiskCapValues()).maxDrawdown ?? 0.25) * 100;
       const criticalPct = markPct * 2; // tier policy: 'twice the cap' — stated, not hidden
       if (dd.pctOfPeak === null && dd.currency > 0) {
-        // Cannot state a percentage: the window never rose above zero, so there is no denominator.
-        // Reported as what IS known, never as 0% (which would read as 'no drawdown').
-        warnings.push(
-          `Cumulative P&L is ${dd.currency.toFixed(2)} below its peak over the last ${dd.trades} closed trades ` +
-            `— no percentage: the window never rose above zero, so risk.maxDrawdown cannot be applied`,
-        );
+        // TWO different causes produce a null ratio, and they are NOT the same claim (#954):
+        //   (a) peak <= 0 — the window never rose above zero; there is no denominator at all.
+        //   (b) peak > 0 but currency > peak — a fall larger than the peak itself; a percentage of
+        //       it would exceed 100%, which means the denominator is not a capital base.
+        // Reporting (b) as "never rose above zero" is a wrong claim about real data — measured
+        // live 2026-09-23 the text said exactly that while `peak` was +3.83.
+        if (dd.peak > 0) {
+          warnings.push(
+            `Cumulative P&L is ${dd.currency.toFixed(2)} below its peak of ${dd.peak.toFixed(2)} over the ` +
+              `last ${dd.trades} closed trades — the fall exceeds the peak itself, so a percentage of it ` +
+              `would exceed 100% and is not stated (#954). The currency figure is the true drawdown.`,
+          );
+        } else {
+          warnings.push(
+            `Cumulative P&L is ${dd.currency.toFixed(2)} below its peak over the last ${dd.trades} closed ` +
+              `trades — no percentage: the window never rose above zero, so risk.maxDrawdown cannot be applied`,
+          );
+        }
       } else if (dd.pctOfPeak !== null && dd.pctOfPeak > criticalPct) {
         warnings.push(
           `Peak-to-trough over the last ${dd.trades} closed trades: ${dd.pctOfPeak.toFixed(1)}% of peak ` +
@@ -504,21 +520,10 @@ export class RiskController {
 }
 
 /**
- * DrawdownDetail — the DEFINED drawdown figure (#950).
+ * DrawdownDetail / computeDrawdownDetail live in `common/trading/drawdown.ts` (#954) — one
+ * definition, two callers (this controller and bot-performance). Do not reintroduce a local copy:
+ * the two implementations once disagreed about whether a percentage is stated at all.
  */
-export interface DrawdownDetail {
-  /** Peak-to-trough fall of the cumulative P&L, in P&L units (>= 0). Always true when measured. */
-  currency: number;
-  /** The fall as a % of the peak. NULL when the window never rose above zero — no denominator, no claim. */
-  pctOfPeak: number | null;
-  /** Cumulative P&L at the high-water point of the window. */
-  peak: number;
-  /** Cumulative P&L at the lowest point after that peak. */
-  trough: number;
-  trades: number;
-  peakAt: string | null;
-  troughAt: string | null;
-}
 
 /**
  * positionCapBreach() — the position-cap trigger for the risk circuit breaker (#852).
@@ -545,85 +550,5 @@ export function positionCapBreach(count: number | null | undefined, maxPos: numb
   return null;
 }
 
-/**
- * computeDrawdownDetail() — DEFINED: peak-to-trough of the CUMULATIVE realised P&L over the window.
- * ==================================================================================================
- * ⚠️ WHAT THIS IS NOT. It is not portfolio drawdown — there is no equity series here, only the
- * running sum of the last N closed trades' P&L. Measured 2026-09-22 the old version reported
- * "Drawdown at 1557.8%": the window peaked at a tiny cumulative value and fell well below it, and
- * the ratio was taken against that peak. A percentage of a cumulative sum that can sit near zero is
- * unbounded — and on a RISK surface an absurd number trains the reader to ignore the warning
- * entirely (#950).
- *
- * ⚠️ AND THE OPPOSITE DEFECT, which the old version had too: `peak` started at 0, so a window that
- * lost from its very first trade never set a peak and reported ZERO drawdown — "all good" and
- * "never measured" rendering identically. The peak now starts at the FIRST cumulative value.
- *
- * Input is expected NEWEST-FIRST (that is how the caller queries it) and is walked chronologically.
- */
-export function computeDrawdownDetail(
-  trades: Array<{ pnl: number | null; closedAt: Date | null | string }>,
-): DrawdownDetail {
-  const empty: DrawdownDetail = {
-    currency: 0, pctOfPeak: null, peak: 0, trough: 0, trades: 0, peakAt: null, troughAt: null,
-  };
-  if (!trades.length) return empty;
-
-  const chrono = [...trades].reverse();
-  let cum = 0;
-  let peak = Number.NEGATIVE_INFINITY;
-  let peakAt: string | null = null;
-  let trough = Number.POSITIVE_INFINITY;
-  let troughAt: string | null = null;
-  let best: DrawdownDetail = empty;
-
-  for (const t of chrono) {
-    cum += t.pnl || 0;
-    const at = t.closedAt ? new Date(t.closedAt).toISOString() : null;
-    if (cum > peak) {
-      peak = cum;
-      peakAt = at;
-      trough = cum;
-      troughAt = at;
-    } else if (cum < trough) {
-      trough = cum;
-      troughAt = at;
-    }
-    const fall = peak - trough;
-    if (fall > best.currency) {
-      best = {
-        currency: fall,
-        pctOfPeak: null,
-        peak,
-        trough,
-        trades: chrono.length,
-        peakAt,
-        troughAt,
-      };
-    }
-  }
-
-  const round2 = (n: number) => Math.round(n * 100) / 100;
-  // ⚠️ A window that PEAKED and never fell has no drawdown to report, but it still has a peak.
-  // Without this, `best` stays the placeholder and `peak: 0` claims "no high-water at all" —
-  // "peaked at +8 and never fell" must not read as "never rose above zero".
-  if (best.currency === 0) {
-    best = {
-      currency: 0,
-      pctOfPeak: null,
-      peak: peak === Number.NEGATIVE_INFINITY ? 0 : peak,
-      trough: trough === Number.POSITIVE_INFINITY ? 0 : trough,
-      trades: chrono.length,
-      peakAt,
-      troughAt,
-    };
-  }
-  best.currency = round2(best.currency);
-  best.peak = round2(best.peak === Number.NEGATIVE_INFINITY ? 0 : best.peak);
-  best.trough = round2(best.trough === Number.POSITIVE_INFINITY ? 0 : best.trough);
-  best.trades = chrono.length;
-  // The ratio is stated ONLY when the peak is a positive number to divide by. Zero or negative
-  // peaks get `null` — a fabricated 100% would be a claim about a base that does not exist.
-  best.pctOfPeak = best.peak > 0 ? Math.round((best.currency / best.peak) * 1000) / 10 : null;
-  return best;
-}
+// computeDrawdownDetail() + DrawdownDetail moved to `common/trading/drawdown.ts` (#954). The
+// bounded-ratio rule (null when currency > peak) and the 0-baseline live there, with the canary.
