@@ -2247,7 +2247,7 @@ export const DATABASE_SCHEMA = {
     {
       table: 'Symbol',
       description: 'Trading symbols and company data',
-      fields: ['id (PK)', 'ticker (unique)', 'name', 'exchange', 'type', 'active', 'createdAt', 'updatedAt'],
+      fields: ['id (PK)', 'ticker (unique)', 'name', 'exchange', 'type', 'active', 'createdAt', 'updatedAt', 'exchange (NULLABLE, 2026-09-23)'],
       relationships: [
         '→ Score (one-to-many)',
         '→ Signal (one-to-many)',
@@ -2495,7 +2495,7 @@ export const DATABASE_SCHEMA = {
     {
       table: 'TradingStrategy',
       description: 'Trading strategy definitions with broker binding',
-      fields: ['id (PK)', 'name', 'protocolId', 'symbol', 'brokerId (new)', 'timeframe', 'mode (manual/semi-auto/auto)', 'active', 'minComposite', 'slPct', 'tpPct', 'baseSize', 'maxSize', 'cooldownMinutes (new)', 'maxPositions (new)', 'maxDailyTrades (new)', 'pauseOnEvents (new)', 'earningsGateHours (new)', 'useSeasonality (new)', 'createdAt', 'updatedAt'],
+      fields: ['id (PK)', 'name', 'protocolId', 'symbol', 'brokerId (new)', 'timeframe', 'mode (manual/semi-auto/auto)', 'active', 'minComposite', 'slPct', 'tpPct', 'baseSize', 'maxSize', 'cooldownMinutes (new)', 'maxPositions (new)', 'maxDailyTrades (new)', 'pauseOnEvents (new)', 'earningsGateHours (new)', 'useSeasonality (new)', 'createdAt', 'updatedAt', 'duplicatedFromId (varchar 36, 2026-09-22)', 'allocationAmount (double, 2026-09-23)'],
       relationships: [
         '→ StrategyEvaluation (one-to-many)',
       ],
@@ -2587,9 +2587,38 @@ export const DATABASE_SCHEMA = {
     {
       table: 'Trade',
       description: 'Completed trade records',
-      fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'entryPrice', 'exitPrice', 'quantity', 'realizedPnL', 'entryTime', 'exitTime', 'duration'],
+      fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'entryPrice', 'exitPrice', 'quantity', 'realizedPnL', 'entryTime', 'exitTime', 'duration', 'abTestSide (varchar 1, 2026-09-23)'],
       relationships: ['← Symbol (many-to-one)', '← Strategy (many-to-one)'],
     },
+      {
+        table: 'Alert',
+        description: 'Operator-facing alert conditions — one row per CONDITION, not per occurrence (2026-09-23)',
+        fields: ['id (PK)', 'type', 'severity', 'symbol', 'message', 'lastSeenAt (2026-09-23)', 'repeatCount (2026-09-23)', 'dismissedAt'],
+        relationships: [],
+        note: 'lastSeenAt + repeatCount were added because one row per repeat made the bell badge count 12,865 undismissed rows while the popup said "All clear".',
+      },
+      {
+        table: 'backtestrun',
+        description: 'One backtest execution — whose configuration produced it, and on what population (2026-09-23)',
+        fields: ['id (PK)', 'botId (2026-09-23)', 'botBaseSize (2026-09-23)', 'totalSignals (Int?, 2026-09-23)', 'symbol', 'timeframe', 'totalTrades'],
+        relationships: [],
+        note: 'botId + botBaseSize record which bot produced a run and the live lot size it used, so a pair comparison can name a size mismatch. totalSignals is the population the winner metric rests on — NULL means not recorded, never zero.',
+      },
+      {
+        table: 'ab_pair',
+        description: 'An A/B comparison as a first-class object — incumbent plus variant, with its own lifecycle (NEW 2026-09-23)',
+        fields: ['id (PK)', 'incumbentId (FK)', 'variantId (FK, UNIQUE)', 'state (draft|running|complete|abandoned)', 'declaredChange', 'falsification', 'startedAt', 'endedAt'],
+        relationships: ['← TradingStrategy (incumbent, many-to-one)', '← TradingStrategy (variant, many-to-one)'],
+        note: 'NEW. Comparison state was previously INFERRED from the active flag on two rows. declaredChange and falsification are required to start a run, so a pair cannot be compared with no hypothesis.',
+      },
+      {
+        table: 'DecisionLog',
+        description: 'Persistent automation tick decisions — one row per strategy evaluation per tick (ticket WIDENED 2026-09-22)',
+        fields: ['id (PK)', 'timestamp', 'tickNumber', 'strategyId', 'symbol', 'decision', 'ticket (BigInt, 2026-09-22)'],
+        relationships: [],
+        note: 'The ticket column was widened Int -> BigInt. A 12-digit MT5 ticket in a 32-bit column was silently rewritten to 2147483647, the MySQL int32 ceiling, so the link from a trade back to the score that produced it broke — and the constant read as an intentional placeholder. Listed here for arch-ref, whose table list did not previously carry this table.',
+      },
+
   ],
   keyRelationships: [
     'Symbol is the central entity - connects to scores, signals, market data, and imports',
