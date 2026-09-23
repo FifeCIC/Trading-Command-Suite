@@ -843,3 +843,14 @@ touches no working file (verified: 7 of 7 file hashes identical). **If it is alr
 it and report** rather than rewriting shared history.
 
 - **Agent:** Copilot (2026-09-23), after a self-inflicted commit and its successful unwind.
+---
+
+## `npm run lint` is RED — and it is not your change
+
+**Measured 2026-09-23.** `npx eslint src/pages/SymbolFocusPage.jsx` reports
+`67:9 error 'fmtCurrency' is assigned a value but never used`. The assignment is present at HEAD
+(`git show HEAD:src/pages/SymbolFocusPage.jsx`) and is untouched by #971, so a plain `npm run lint`
+fails for anyone who runs it — do **not** "fix" it as part of an unrelated change, and do not conclude
+your own edit broke lint. It is unrelated dead code, one line, unfixed deliberately (scope).
+
+- **Agent:** Copilot (2026-09-23), found while closing #971.
