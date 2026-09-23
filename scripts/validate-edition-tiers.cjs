@@ -9,7 +9,10 @@
  *   1. COVERAGE   — every VIEW_META entry carries `tier: 'free' | 'premium'`.
  *                   A new page cannot ship unclassified.
  *   2. VALIDITY   — tiers are only the two legal values.
- *   3. FRESHNESS  — `src/editions/free.manifest.js` matches the tier state
+ *   3. REVIEW     — every entry carries `review: 'approved' | 'pending'` (coverage is strict), and
+ *                   a FREE view should be approved. The free-view half is ADVISORY by default and
+ *                   FAILS under --strict (the release gate) while the UI review (§13) is in flight.
+ *   4. FRESHNESS  — `src/editions/free.manifest.js` matches the tier state
  *                   (delegates to the ONE generator — no second implementation here).
  *
  * The --self-test mode mutates the SOURCE TEXT IN MEMORY (never the file) to prove the
@@ -42,6 +45,8 @@ function checkSource(src) {
   const entries = Object.entries(meta);
   if (entries.length === 0) problems.push('no VIEW_META entries found');
   let free = 0;
+  let approved = 0;
+  const freeNotApproved = [];
   for (const [key, entry] of entries) {
     const tier = entry.tier;
     if (tier === undefined) {
@@ -51,11 +56,24 @@ function checkSource(src) {
     } else if (tier === 'free') {
       free++;
     }
+
+    // Review state (FREE-EDITION-PLAN.md §13.2). C7 — “excluded until complete” — was a hand-kept
+    // list until 2026-09-23; this makes it a recorded field, so “finished enough to publish” is
+    // answered from data instead of memory.
+    const review = entry.review;
+    if (review === undefined) {
+      problems.push(`MISSING REVIEW: '${key}' has no review field — add 'approved' or 'pending'`);
+    } else if (review !== 'approved' && review !== 'pending') {
+      problems.push(`INVALID REVIEW: '${key}' has review ${JSON.stringify(review)}`);
+    } else if (review === 'approved') {
+      approved++;
+    }
+    if (tier === 'free' && review !== 'approved') freeNotApproved.push(key);
   }
   if (free === 0 && problems.length === 0) {
     problems.push('NO FREE VIEWS: the manifest would be empty — check the tier assignments');
   }
-  return { problems, total: entries.length, free };
+  return { problems, total: entries.length, free, approved, freeNotApproved };
 }
 
 // ── self-test: prove the checks CAN fail (mutations in memory, file never touched) ──────────
@@ -78,6 +96,16 @@ if (process.argv.includes('--self-test')) {
   const r3 = checkSource(original).problems.length === 0;
   results.push(['pristine source passes', r3]);
 
+  // Direction 4: strip ONE review line → review coverage must fail.
+  const noReview = original.replace(/^[ \t]{4}review: '[^']*',\r?\n/m, '');
+  const r4 = checkSource(noReview).problems.some((p) => p.startsWith('MISSING REVIEW'));
+  results.push(['review coverage fails when a review line is removed', r4]);
+
+  // Direction 5: a FREE view set to pending must be reported as not approved (the §13.2 gate).
+  const pendingFree = original.replace(/^([ \t]{4})tier: 'free',$\r?\n([ \t]{4})review: 'approved',$/m, "$1tier: 'free',$1\n$2review: 'pending',");
+  const r5 = checkSource(pendingFree).freeNotApproved.length > 0;
+  results.push(['a free view left pending is flagged', r5]);
+
   let ok = true;
   for (const [label, passed] of results) {
     console.log(`  ${passed ? 'ok  ' : 'FAIL'}  ${label}`);
@@ -93,13 +121,30 @@ if (process.argv.includes('--self-test')) {
 }
 
 // ── the real check ─────────────────────────────────────────────────────────────────────────
+const STRICT = process.argv.includes('--strict');
 const src = fs.readFileSync(META_FILE, 'utf8');
-const { problems, total, free } = checkSource(src);
+const { problems, total, free, approved, freeNotApproved } = checkSource(src);
 
 for (const p of problems) console.error(`✗ ${p}`);
 if (problems.length) {
   console.error(`\nvalidate-edition-tiers: ${problems.length} problem(s) across ${total} entries.`);
   process.exit(1);
+}
+
+// The review gate (§13.2). ADVISORY by default, FAILING under --strict — the same shape the owner
+// chose for the style-guide sync check, and for the same reason: the review is mid-flight, so a
+// hard failure on day one would be red for every agent and would get switched off. The release
+// publisher passes --strict, so nothing unreviewed can ship.
+if (freeNotApproved.length) {
+  const msg =
+    `${freeNotApproved.length} of ${free} free view(s) not review-approved yet ` +
+    `(UI review 0.7 — ${approved} of ${total} entries approved)`;
+  if (STRICT) {
+    console.error(`✗ REVIEW GATE: ${msg}`);
+    console.error('  Approve the view in src/core/view-meta.js (review: \'approved\') or move it off the free tier.');
+    process.exit(1);
+  }
+  console.warn(`⚠ ${msg} — advisory until the review completes; --strict fails on this.`);
 }
 
 // Freshness — delegate to the generators so there is ONE builder per artefact, not two.
@@ -113,4 +158,4 @@ for (const gen of ['generate-free-manifest.cjs', 'generate-free-map.cjs']) {
   }
 }
 
-console.log(`validate-edition-tiers: OK — ${total} entries classified (${free} free, ${total - free} premium).`);
+console.log(`validate-edition-tiers: OK — ${total} entries classified (${free} free, ${total - free} premium); review approved ${approved}/${total}.`);

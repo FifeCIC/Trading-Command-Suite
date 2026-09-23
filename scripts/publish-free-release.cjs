@@ -52,7 +52,9 @@ run('node_modules\\.bin\\vite.cmd', ['build', '--mode', 'free', '--outDir', 'dis
 
 // ── 2. guards — never publish on a failed guard ─────────────────────────────────────────────
 console.log('[2/4] running edition guards...');
-run('node', ['scripts/validate-edition-tiers.cjs']);
+// --strict on both: a release must not ship an unreviewed free view (§13.2) or a premium-only
+// view NAME (§9.14). Both are advisory in day-to-day use while the review is in flight.
+run('node', ['scripts/validate-edition-tiers.cjs', '--strict']);
 // --strict: the release gate. The remaining premium NAME references (§9.14 strip pass) are reported
 // on a normal run; a release must not ship with them, so the gate refuses.
 run('node', ['scripts/validate-free-bundle.cjs', 'dist-free', '--mode', 'free', '--strict']);

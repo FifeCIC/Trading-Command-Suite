@@ -12,6 +12,7 @@
 export const VIEW_META = {
   "/dashboard": {
     tier: "free",
+    review: "pending",
     label: "Dashboard",
     file: "src/pages/DashboardPage.jsx",
     css: "src/pages/home-dashboard.css",
@@ -23,6 +24,7 @@ export const VIEW_META = {
   },
   "/research/symbols-browser": {
     tier: "free",
+    review: "pending",
     label: "Symbols Browser",
     file: "src/pages/SymbolsBrowserPage.jsx",
     css: "src/pages/symbols-browser.css",
@@ -35,6 +37,7 @@ export const VIEW_META = {
   },
   "/research/screener": {
     tier: "free",
+    review: "pending",
     label: "Screener",
     file: "src/pages/ScreenerPage.jsx",
     css: "src/pages/screener.css",
@@ -45,6 +48,7 @@ export const VIEW_META = {
   },
   "/research/earnings-calendar": {
     tier: "free",
+    review: "pending",
     label: "Earnings Calendar",
     file: "src/pages/EarningsCalendarPage.jsx",
     css: "src/pages/earnings-calendar.css",
@@ -54,6 +58,7 @@ export const VIEW_META = {
   },
   "/research/news-intel": {
     tier: "free",
+    review: "pending",
     label: "News Intel",
     file: "src/pages/NewsIntelPage.jsx",
     css: "src/pages/news-intel.css",
@@ -67,6 +72,7 @@ export const VIEW_META = {
   },
   "/research/symbol": {
     tier: "free",
+    review: "pending",
     label: "Symbol Detail",
     file: "src/pages/SymbolPage.jsx",
     css: "src/pages/symbol-page.css",
@@ -80,6 +86,7 @@ export const VIEW_META = {
   },
   "/education/glossary": {
     tier: "free",
+    review: "pending",
     label: "Glossary",
     file: "src/pages/GlossaryPage.jsx",
     css: "src/pages/glossary-page.css",
@@ -87,6 +94,7 @@ export const VIEW_META = {
   },
   "/trading/market-context": {
     tier: "free",
+    review: "pending",
     label: "Market Context",
     file: "src/pages/MarketContextPage.jsx",
     css: "src/pages/market-context.css",
@@ -98,6 +106,7 @@ export const VIEW_META = {
   },
   "/trading/positions-monitor": {
     tier: "free",
+    review: "pending",
     label: "Positions Monitor",
     file: "src/pages/PositionsMonitorPage.jsx",
     css: "src/pages/positions-monitor.css",
@@ -108,6 +117,7 @@ export const VIEW_META = {
   },
   "/trading/symbol": {
     tier: "free",
+    review: "pending",
     label: "Symbol Detail",
     file: "src/pages/SymbolPage.jsx",
     css: "src/pages/symbol-page.css",
@@ -121,6 +131,7 @@ export const VIEW_META = {
   },
   "/trading/trade-journal": {
     tier: "free",
+    review: "pending",
     label: "Trade Journal",
     file: "src/pages/TradeJournalPage.jsx",
     css: "src/pages/trade-journal-page.css",
@@ -131,6 +142,7 @@ export const VIEW_META = {
   },
   "/trading/calculators": {
     tier: "free",
+    review: "pending",
     label: "Calculators",
     file: "src/pages/CalculatorsPage.jsx",
     css: "src/pages/calculators.css",
@@ -138,6 +150,7 @@ export const VIEW_META = {
   },
   "/trading/accounts-dashboard": {
     tier: "free",
+    review: "pending",
     label: "Accounts Dashboard",
     file: "src/pages/AccountsDashboardPage.jsx",
     css: "src/pages/accounts-dashboard.css",
@@ -149,6 +162,7 @@ export const VIEW_META = {
   },
   "/automation/alert-center": {
     tier: "free",
+    review: "pending",
     label: "Alert Center",
     file: "src/pages/AlertCenterPage.jsx",
     css: "src/pages/alert-center.css",
@@ -159,6 +173,7 @@ export const VIEW_META = {
   },
   "/watchlists/active-symbols": {
     tier: "free",
+    review: "pending",
     label: "Active Symbols",
     file: "src/pages/ActiveSymbolsPage.jsx",
     css: "src/pages/trading-platforms.css",
@@ -170,6 +185,7 @@ export const VIEW_META = {
   },
   "/watchlists/user-watchlists": {
     tier: "free",
+    review: "pending",
     label: "Watchlists",
     file: "src/pages/UserWatchlistsPage.jsx",
     css: "src/pages/watchlists.css",
@@ -180,6 +196,7 @@ export const VIEW_META = {
   },
   "/trading/trading-plans": {
     tier: "free",
+    review: "pending",
     label: "Trading Plans",
     file: "src/pages/TradingPlansPage.jsx",
     css: "src/pages/trading-plans-page.css",
@@ -187,6 +204,7 @@ export const VIEW_META = {
   },
   "/trading/performance-lab": {
     tier: "free",
+    review: "pending",
     label: "Trading Performance",
     file: "src/pages/PerformanceLabPage.jsx",
     css: "src/pages/performance-lab.css",
@@ -194,6 +212,7 @@ export const VIEW_META = {
   },
   "/trading/trading-settings": {
     tier: "free",
+    review: "pending",
     label: "Trading",
     file: "src/pages/TradingSettingsPage.jsx",
     css: "src/pages/settings.css",
@@ -207,6 +226,7 @@ export const VIEW_META = {
   },
   "/trading212/t212-portfolio": {
     tier: "free",
+    review: "approved",
     label: "Portfolio",
     file: "src/pages/T212PortfolioPage.jsx",
     css: "src/pages/t212-portfolio.css",
@@ -214,6 +234,7 @@ export const VIEW_META = {
   },
   "/trading212/t212-isa": {
     tier: "free",
+    review: "approved",
     label: "Stocks ISA",
     file: "src/pages/T212ISAPage.jsx",
     css: "src/pages/t212-isa.css",
@@ -221,6 +242,7 @@ export const VIEW_META = {
   },
   "/education/mt5-demo-trading": {
     tier: "free",
+    review: "pending",
     label: "MT5 Demo Trading",
     file: "src/pages/Mt5TradingPage.jsx",
     css: "src/pages/mt5-trading-page.css",
@@ -228,6 +250,7 @@ export const VIEW_META = {
   },
   "/education/candle-patterns": {
     tier: "free",
+    review: "pending",
     label: "Pattern Detection",
     file: "src/pages/TrainingCandlePatternsPage.jsx",
     css: "src/pages/training-candle-patterns-page.css",
@@ -235,6 +258,7 @@ export const VIEW_META = {
   },
   "/education/candle-patterns-guide": {
     tier: "free",
+    review: "pending",
     label: "Candle Patterns",
     file: "src/pages/CandlePatternsGuidePage.jsx",
     css: "src/pages/candle-patterns-guide.css",
@@ -242,6 +266,7 @@ export const VIEW_META = {
   },
   "/status/setup": {
     tier: "free",
+    review: "pending",
     label: "Setup & Diagnostics",
     file: "src/pages/SetupWizardPage.jsx",
     css: "src/pages/setup-wizard.css",
@@ -249,6 +274,7 @@ export const VIEW_META = {
   },
   "/lab/mt5-trading": {
     tier: "free",
+    review: "pending",
     label: "MT5 Trading (Lab)",
     file: "src/pages/Mt5TradingPage.jsx",
     css: "src/pages/mt5-trading-page.css",
@@ -256,6 +282,7 @@ export const VIEW_META = {
   },
   "/settings/risk-controls": {
     tier: "free",
+    review: "pending",
     label: "Risk Controls",
     file: "src/pages/RiskControlsPage.jsx",
     css: "src/pages/risk-controls.css",
@@ -263,6 +290,7 @@ export const VIEW_META = {
   },
   "/settings/settings": {
     tier: "free",
+    review: "pending",
     label: "General",
     file: "src/pages/SettingsPage.jsx",
     css: "src/pages/settings.css",
@@ -273,6 +301,7 @@ export const VIEW_META = {
   },
   "/settings/settings-education": {
     tier: "free",
+    review: "pending",
     label: "Education",
     file: "src/pages/SettingsEducationPage.jsx",
     css: "src/pages/settings-education.css",
@@ -280,6 +309,7 @@ export const VIEW_META = {
   },
   "/settings/theme-packs": {
     tier: "free",
+    review: "pending",
     label: "Theme Packs",
     file: "src/pages/ThemePage.jsx",
     css: "src/pages/theme-page.css",
@@ -287,6 +317,7 @@ export const VIEW_META = {
   },
   "/settings/user-preferences": {
     tier: "free",
+    review: "pending",
     label: "User Preferences",
     file: "src/pages/PreferenceLab.jsx",
     css: "src/pages/preference-lab.css",
@@ -294,6 +325,7 @@ export const VIEW_META = {
   },
   "/settings/trading-settings": {
     tier: "free",
+    review: "pending",
     label: "Trading",
     file: "src/pages/TradingSettingsPage.jsx",
     css: "src/pages/settings.css",
@@ -307,6 +339,7 @@ export const VIEW_META = {
   },
   "/settings/appearance": {
     tier: "free",
+    review: "pending",
     label: "Appearance",
     file: "src/pages/AppearanceSettingsPage.jsx",
     css: "src/pages/settings.css",
@@ -314,6 +347,7 @@ export const VIEW_META = {
   },
   "/dashboard/dashboard": {
     tier: "free",
+    review: "approved",
     label: "Dashboard",
     file: "src/pages/DashboardPage.jsx",
     css: "src/pages/home-dashboard.css",
@@ -325,6 +359,7 @@ export const VIEW_META = {
   },
   "/watchlists/add-symbol": {
     tier: "free",
+    review: "pending",
     label: "Add Symbol",
     file: "src/pages/AddSymbolPage.jsx",
     css: "src/pages/add-symbol.css",
@@ -332,6 +367,7 @@ export const VIEW_META = {
   },
   "/research/research-notes": {
     tier: "free",
+    review: "pending",
     label: "Notes",
     file: "src/pages/ResearchNotesPage.jsx",
     css: "src/pages/research-notes.css",
@@ -344,6 +380,7 @@ export const VIEW_META = {
   },
   "/research/events-calendar": {
     tier: "free",
+    review: "pending",
     label: "Events Calendar",
     file: "src/pages/EventsCalendarPage.jsx",
     css: "src/pages/events-calendar.css",
@@ -355,6 +392,7 @@ export const VIEW_META = {
   },
   "/research/stock-investigation": {
     tier: "free",
+    review: "pending",
     label: "Stock Investigation",
     file: "src/pages/StockInvestigationPage.jsx",
     css: "src/pages/stock-investigation.css",
@@ -365,6 +403,7 @@ export const VIEW_META = {
   },
   "/research/market-correlations": {
     tier: "free",
+    review: "pending",
     label: "Market Correlations",
     file: "src/pages/MarketCorrelationsPage.jsx",
     css: "src/pages/market-correlations.css",
@@ -374,6 +413,7 @@ export const VIEW_META = {
   },
   "/research/recently-analysed-symbols": {
     tier: "free",
+    review: "pending",
     label: "Recently Analysed",
     file: "src/pages/RecentlyAnalysedSymbolsPage.jsx",
     css: "src/pages/recently-analysed.css",
@@ -383,6 +423,7 @@ export const VIEW_META = {
   },
   "/education/settings-education": {
     tier: "free",
+    review: "pending",
     label: "Education Settings",
     file: "src/pages/SettingsEducationPage.jsx",
     css: "src/pages/settings.css",
