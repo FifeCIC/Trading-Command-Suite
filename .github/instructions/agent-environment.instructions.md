@@ -20,6 +20,33 @@ gh pr view <number>
 
 Never ask the user to manually copy/paste GitHub issue content — fetch it directly.
 
+## 🛑 Committing — the git index is SHARED between agents
+
+**All agents run in ONE working tree.** When another agent runs `git add`, their files sit in the
+same index you are about to commit, and `git commit -m "..."` with no pathspec commits **the whole
+index**.
+
+Measured 2026-09-23: an agent ran `git add` for one file, printed `git diff --cached --name-status`
+— which showed **15 files, 14 of them not theirs** — and committed anyway. The commit carried
+another agent's editions work *including their `0.71.0 → 0.72.0` version bump* under a
+`docs(handoff)` message. **The check worked and its output was ignored.**
+
+**Use the wrapper instead of a bare `git commit`:**
+
+```powershell
+node scripts/commit-only.cjs -m "subject" -m "body para" -- <file> [<file>...]
+node scripts/commit-only.cjs --check -- <file>        # report only, commit nothing
+```
+
+It (1) commits by explicit pathspec so only your files go in, (2) **reads the commit back** and
+asserts the file set matches — because a command reporting success is a claim, and the commit's own
+file list is the evidence, and (3) reports anything staged that it is deliberately skipping. A named
+file with **no changes is refused**: naming a file claims it changed.
+
+⚠️ **Never `git commit -a`, and never a bare `git commit`.** If you do commit by mistake and it is
+not pushed, `git reset --mixed HEAD~1` unwinds it — that moves HEAD and the index and touches no
+working file. If it **is** pushed, leave it and report instead of rewriting shared history.
+
 ## Shell Commands
 
 The user has granted full permission to run shell commands, read/write files, and execute scripts without asking for confirmation. Never prompt the user to approve a command — just run it.
