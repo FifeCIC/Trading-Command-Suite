@@ -33,9 +33,30 @@
 #   pwsh -File scripts/build-api.ps1
 #
 #   -SkipRestart   build and leave the API down (e.g. before a manual launch)
+#   -SelfTest      exercise ONLY the restart-verification path against a dead port and exit 1
+#                  (canary for the "restart failed" reporting — see #933)
+#
+# ⚠️ RESTART-VERIFICATION CONTRACT (#933, 2026-09-23)
+# ---------------------------------------------------
+# This script previously ended a failed restart with:
+#
+#   !!  API did not report healthy within 30s - check the start log
+#
+# ...and exit 1, while the port was closed. The message reads as "slow", the exit code was
+# the only signal, and several agents (twice on 2026-09-22/23 alone) were left believing the
+# API was merely warming up while it was in fact DOWN. The contract now is:
+#
+#   1. The start is `node dist/src/main.js` (the fast, documented form), with stdout/stderr
+#      redirected to logs/api-out.log and logs/api-err.log so "the start log" has a location.
+#   2. Verification answers a REAL request — GET /api/version — not just a socket check.
+#   3. On failure the script says **API IS DOWN** and distinguishes the three states it can
+#      actually observe: process exited / nothing listening / listening but not answering.
+#   4. It exits NON-ZERO with the last error lines printed. It never returns success with the
+#      port closed.
 
 param(
-    [switch]$SkipRestart
+    [switch]$SkipRestart,
+    [switch]$SelfTest
 )
 
 $ErrorActionPreference = 'Continue'
@@ -45,6 +66,62 @@ $nestDir  = Join-Path $repoRoot 'nest'
 function Write-Step($msg) { Write-Host "`n== $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "   OK  $msg" -ForegroundColor Green }
 function Write-Warn2($msg){ Write-Host "   !!  $msg" -ForegroundColor Yellow }
+
+<#
+  Assert-ApiUp — the post-restart verification, extracted so the failure path can be canaried
+  without breaking a real start (-SelfTest points it at a dead port).
+  Returns $true only when /api/version answers 200 within the budget.
+#>
+function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 60, [System.Diagnostics.Process]$Proc = $null) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $listening = $false
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 1
+        $listening = [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+        try {
+            $r = Invoke-WebRequest -Uri "http://localhost:$Port/api/version" -UseBasicParsing -TimeoutSec 3
+            if ($r.StatusCode -eq 200) { return $true }
+        } catch { }
+        if ($Proc -and $Proc.HasExited) { break }   # crashed — no point waiting the full budget
+    }
+
+    # ── The DOWN report: state what is OBSERVED, not what is hoped ──
+    Write-Host "`n   API IS DOWN on port $Port." -ForegroundColor Red
+    if ($Proc -and $Proc.HasExited) {
+        Write-Host "   The API process exited immediately (exit code $($Proc.ExitCode))." -ForegroundColor Red
+    } elseif (-not $listening) {
+        Write-Host "   Nothing is listening on $Port after ${TimeoutSeconds}s — the process did not bind the port." -ForegroundColor Red
+    } else {
+        Write-Host "   $Port IS listening but /api/version did not answer — the API is not serving." -ForegroundColor Red
+    }
+    $errLog = Join-Path $repoRoot 'logs\api-err.log'
+    $outLog = Join-Path $repoRoot 'logs\api-out.log'
+    Write-Host "   Logs: $outLog  |  $errLog" -ForegroundColor Yellow
+    foreach ($log in @($errLog, $outLog)) {
+        if (Test-Path $log) {
+            Write-Host "   Last lines of $(Split-Path $log -Leaf):" -ForegroundColor Yellow
+            Get-Content $log -Tail 5 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
+        }
+    }
+    Write-Host "`n   Start it manually when ready:  node dist/src/main.js  (from $nestDir)" -ForegroundColor Yellow
+    return $false
+}
+
+if ($SelfTest) {
+    # Canary for the restart-failure reporting. Uses a port nothing can be listening on, so the
+    # check is deterministic whether or not the real API is up: the guard MUST find it DOWN,
+    # print the DOWN block, and the script MUST exit non-zero. If /api/version somehow answers
+    # on the test port, the self-test refuses to report (SELFTEST INVALID, exit 2) rather than
+    # claiming a pass it did not establish.
+    Write-Step 'SELFTEST — verifying the restart-failure path reports DOWN (port 39991)'
+    $up = Assert-ApiUp -Port 39991 -TimeoutSeconds 3
+    if ($up) {
+        Write-Host '   SELFTEST INVALID — something answered on the test port; no pass can be claimed.' -ForegroundColor Red
+        exit 2
+    }
+    Write-Ok 'SELFTEST PASSED — the failure path reports API IS DOWN and exits non-zero.'
+    exit 1
+}
 
 # ── 1. Find what is listening on 3201 ─────────────────────────────────────────────
 Write-Step 'Locating the API on port 3201'
@@ -146,21 +223,23 @@ if ($SkipRestart) {
 }
 
 Write-Step 'Restarting the API'
-Start-Process -FilePath 'npm' -ArgumentList 'run', 'start' -WorkingDirectory $nestDir -WindowStyle Hidden
-Write-Ok 'API starting in the background (allow ~15s).'
+$outLog = Join-Path $repoRoot 'logs\api-out.log'
+$errLog = Join-Path $repoRoot 'logs\api-err.log'
+if (-not (Test-Path (Split-Path $outLog -Parent))) { New-Item -ItemType Directory -Path (Split-Path $outLog -Parent) | Out-Null }
 
-$healthy = $false
-for ($i = 0; $i -lt 30; $i++) {
-    Start-Sleep -Seconds 1
-    try {
-        $r = Invoke-WebRequest -Uri 'http://localhost:3201/api/health' -UseBasicParsing -TimeoutSec 3
-        if ($r.StatusCode -eq 200) { $healthy = $true; break }
-    } catch { }
-}
+# ⚠️ `node dist/src/main.js` — NOT `npm run start`. This is the form the team has been using
+# manually to recover from this script's own restart failures; it is the same artefact the
+# build just wrote, starts in seconds, and produces a log file that the DOWN report can tail.
+$apiProc = Start-Process -FilePath 'node' -ArgumentList 'dist/src/main.js' `
+    -WorkingDirectory $nestDir `
+    -RedirectStandardOutput $outLog `
+    -RedirectStandardError $errLog `
+    -WindowStyle Hidden -PassThru
+Write-Ok "API starting in the background (node dist/src/main.js, PID $($apiProc.Id))."
 
-if ($healthy) {
-    Write-Ok 'API healthy on http://localhost:3201'
+# The post-restart assertion (#933): a REAL request must answer, or the script fails LOUDLY.
+if (Assert-ApiUp -Port 3201 -TimeoutSeconds 60 -Proc $apiProc) {
+    Write-Ok 'API healthy on http://localhost:3201 — /api/version answered.'
 } else {
-    Write-Warn2 'API did not report healthy within 30s — check the start log.'
     exit 1
 }

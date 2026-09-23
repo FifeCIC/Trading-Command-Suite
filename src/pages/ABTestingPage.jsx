@@ -14,8 +14,10 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
+import { noticeFromError } from '../core/notices/from-error.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
+import NoticeBlock from '../components/NoticeBlock';
 import ProtocolPicker from '../components/ProtocolPicker';
 import './ab-testing.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -29,41 +31,71 @@ export default function ABTestingPage() {
   const [viewMode, setViewMode] = useState('signals'); // 'signals' | 'directives' | 'outcomes'
 
   // ── Available protocols ──
+  // ⚠️ NO `.catch(() => ({ protocols: [] }))` (#953). A failed request must NOT render as an
+  // EMPTY LIST: "pick a protocol" with nothing to pick is indistinguishable from a broken API,
+  // and the user is invited to keep trying a control that cannot work. React Query captures the
+  // error; the render below shows it with its own state.
   const protoQuery = useQuery({
     queryKey: ['ab-protocols'],
-    queryFn: () => apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
+    queryFn: () => apiGet('/api/scoring/protocols'),
     staleTime: 120_000,
   });
-  const protocols = protoQuery.data?.protocols || [];
+  // useMemo so the array identity is stable — a fresh `[]` per render would invalidate the
+  // comparison memo below on every pass (react-hooks/exhaustive-deps).
+  const protocols = useMemo(
+    () => (Array.isArray(protoQuery.data?.protocols) ? protoQuery.data.protocols : []),
+    [protoQuery.data],
+  );
 
   // ── Available watchlists ──
   const wlQuery = useQuery({
     queryKey: ['ab-watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => []),
+    queryFn: () => apiGet('/api/watchlists'),
     staleTime: 120_000,
   });
-  const watchlists = Array.isArray(wlQuery.data) ? wlQuery.data : [];
+  const watchlists = useMemo(() => (Array.isArray(wlQuery.data) ? wlQuery.data : []), [wlQuery.data]);
 
-  // ── Symbols from selected watchlist ──
-  const selectedWatchlist = watchlists.find(w => w.id === watchlistId);
+  // ── Symbols from the selected watchlist ─────────────────────────────────────────────────────
+  // ⚠️ THE LIST ENDPOINT DOES NOT CARRY SYMBOLS (#953, measured 2026-09-23): `GET /api/watchlists`
+  // returns `symbolCount`, NOT `symbols`. So `selectedWatchlist.symbols` was ALWAYS undefined →
+  // `symbols` was always [] → both score queries stayed disabled (`enabled: symbols.length > 0`)
+  // and the panel below the selectors was blank for EVERY selection, forever. The fourth silent
+  // catch was never even the whole story: the page could not work with the current API shape.
+  // The list is a summary; the full watchlist (with symbols) comes from `GET /api/watchlists/:id`.
+  const wlDetailQuery = useQuery({
+    queryKey: ['ab-watchlist-detail', watchlistId],
+    queryFn: () => apiGet(`/api/watchlists/${encodeURIComponent(watchlistId)}`),
+    enabled: !!watchlistId,
+    staleTime: 120_000,
+  });
   const symbols = useMemo(() => {
-    if (!selectedWatchlist) return [];
-    return (selectedWatchlist.symbols || []).map(s =>
-      typeof s === 'string' ? s : (s.ticker || '')
-    ).filter(Boolean).slice(0, 12);
-  }, [selectedWatchlist]);
+    const raw = wlDetailQuery.data?.symbols;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map(s => (typeof s === 'string' ? s : (s.ticker || '')))
+      .filter(Boolean)
+      .slice(0, 12);
+  }, [wlDetailQuery.data]);
 
   // ── Score Protocol A ──
+  // ⚠️ NO catch (#953): a side that FAILED to score is not a side that AGREED. The old
+  // `.catch(() => [])` made a 400/500 from either request render as "no divergence" — a
+  // conclusion the data cannot support.
   const scoreAQuery = useQuery({
     queryKey: ['ab-score-a', protoA, watchlistId],
     queryFn: () => apiPost('/api/scoring/gated/batch', {
       tickers: symbols,
       protocolId: protoA,
-    }).catch(() => []),
+    }),
     enabled: !!protoA && symbols.length > 0,
     refetchInterval: 30_000,
+    // Default retry (3, exponential) left the panel BLANK for ~8s between the first failure and
+    // the error state — measured 2026-09-23 (frames at t=2.5…7.5 rendered nothing). One quick
+    // retry gets to an honest state in ~2s; the 30s refetchInterval is the real retry loop.
+    retry: 1,
+    retryDelay: 1200,
   });
-  const scoresA = scoreAQuery.data || [];
+  const scoresA = useMemo(() => (Array.isArray(scoreAQuery.data) ? scoreAQuery.data : []), [scoreAQuery.data]);
 
   // ── Score Protocol B ──
   const scoreBQuery = useQuery({
@@ -71,11 +103,24 @@ export default function ABTestingPage() {
     queryFn: () => apiPost('/api/scoring/gated/batch', {
       tickers: symbols,
       protocolId: protoB,
-    }).catch(() => []),
+    }),
     enabled: !!protoB && symbols.length > 0,
     refetchInterval: 30_000,
+    retry: 1,
+    retryDelay: 1200,
   });
-  const scoresB = scoreBQuery.data || [];
+  const scoresB = useMemo(() => (Array.isArray(scoreBQuery.data) ? scoreBQuery.data : []), [scoreBQuery.data]);
+
+  /**
+   * State honesty (#953, 2026-09-23) — the three first-class states, kept apart:
+   *   loading   → skeleton (below)
+   *   error     → "Comparison unavailable" + the HTTP status + a retry, NEVER a divergence figure
+   *   empty     → "no comparable rows", which IS information (both sides ran)
+   * A failed side and an agreeing side must never render the same thing.
+   */
+  const bothSidesSelected = !!protoA && !!protoB && !!watchlistId;
+  const scoringFailed = scoreAQuery.isError || scoreBQuery.isError;
+  const retryScores = () => { scoreAQuery.refetch(); scoreBQuery.refetch(); };
 
   // ── Build comparison matrix ──
   const comparison = useMemo(() => {
@@ -196,18 +241,84 @@ export default function ABTestingPage() {
         </div>
       </div>
 
+      {/* ── Source failures — shown as failures, never as an empty list (#953) ── */}
+      {protoQuery.isError && (
+        <NoticeBlock
+          notice={noticeFromError(protoQuery.error, 'TCS-SYS-002', { operation: 'load the protocol list' })}
+          compact
+        />
+      )}
+      {wlQuery.isError && (
+        <NoticeBlock
+          notice={noticeFromError(wlQuery.error, 'TCS-SYS-002', { operation: 'load the watchlists' })}
+          compact
+        />
+      )}
+      {wlDetailQuery.isError && (
+        <NoticeBlock
+          notice={noticeFromError(wlDetailQuery.error, 'TCS-SYS-002', { operation: "load the watchlist's symbols" })}
+          compact
+        />
+      )}
+
+      {/* A selected watchlist with no symbols explains a compare that cannot run — say so instead
+          of leaving the panel blank (the queries are disabled while `symbols` is empty). */}
+      {watchlistId && wlDetailQuery.isSuccess && symbols.length === 0 && (
+        <Notice level="warning">
+          This watchlist has no symbols, so there is nothing to score. Add symbols to it first —
+          the comparison needs tickers to run against.
+        </Notice>
+      )}
+
       {/* ── No selection ── */}
       {(!protoA || !protoB || !watchlistId) && (
         <Notice level="info">Select a watchlist and two protocols to compare signal output.</Notice>
       )}
 
       {/* ── Loading ── */}
-      {(scoreAQuery.isLoading || scoreBQuery.isLoading) && (
+      {(scoreAQuery.isLoading || scoreBQuery.isLoading || wlDetailQuery.isLoading) && (
         <LoadingSkeleton variant="text" lines={4} className="ls-spacer-top" />
       )}
 
+      {/* ── Scoring failed: COMPARISON UNAVAILABLE, never a divergence figure ──────────────────
+          ⚠️ THE REASON THIS PAGE WAS REPORTED (#953). A side that failed has no opinion about
+          agreement, so the only honest render is "unavailable" + why + a way to retry. The
+          per-side notice below carries the code and the HTTP status. */}
+      {bothSidesSelected && scoringFailed && (
+        <>
+          <Notice level="critical" icon="⛔">
+            <strong>Comparison unavailable — a scoring request failed.</strong> A failed run and
+            a genuine agreement are different results, so no divergence figure is shown.{' '}
+            <button className="ab-retry-btn" onClick={retryScores}>Retry scoring</button>
+          </Notice>
+          {scoreAQuery.isError && (
+            <NoticeBlock
+              notice={noticeFromError(scoreAQuery.error, 'TCS-SYS-002', { operation: 'score Protocol A' })}
+              compact
+            />
+          )}
+          {scoreBQuery.isError && (
+            <NoticeBlock
+              notice={noticeFromError(scoreBQuery.error, 'TCS-SYS-002', { operation: 'score Protocol B' })}
+              compact
+            />
+          )}
+        </>
+      )}
+
+      {/* ── Ran successfully, but nothing comparable — this IS information, unlike a failure ──
+          ⚠️ Requires isSuccess on BOTH sides, not merely "not failed": while React Query is
+          RETRYING a failing request the query is not yet in its error state, and an "this is not
+          an error" line under an actively-failing request is the same lie in a quieter voice. */}
+      {bothSidesSelected && scoreAQuery.isSuccess && scoreBQuery.isSuccess && !comparison && (
+        <Notice level="info">
+          No comparable rows — A returned {scoresA.length} score(s), B returned {scoresB.length}
+          {' '}for the selected watchlist's symbols. Nothing to compare yet; this is not an error.
+        </Notice>
+      )}
+
       {/* ── Comparison Results ── */}
-      {comparison && (
+      {comparison && !scoringFailed && (
         <>
           {/* Summary cards */}
           <div className="ab-summary-grid">
