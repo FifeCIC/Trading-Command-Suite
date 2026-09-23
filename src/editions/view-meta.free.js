@@ -173,7 +173,7 @@ export const VIEW_META = {
   },
   "/watchlists/active-symbols": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Active Symbols",
     file: "src/pages/ActiveSymbolsPage.jsx",
     css: "src/pages/trading-platforms.css",
@@ -185,7 +185,7 @@ export const VIEW_META = {
   },
   "/watchlists/user-watchlists": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Watchlists",
     file: "src/pages/UserWatchlistsPage.jsx",
     css: "src/pages/watchlists.css",
@@ -359,7 +359,7 @@ export const VIEW_META = {
   },
   "/watchlists/add-symbol": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Add Symbol",
     file: "src/pages/AddSymbolPage.jsx",
     css: "src/pages/add-symbol.css",
