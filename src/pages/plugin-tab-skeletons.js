@@ -1,9 +1,4 @@
 export const PLUGIN_TAB_SKELETONS = {
-  'trading-strategies': {
-    title: 'Trading Strategies',
-    subtitle: 'Execution strategy catalog with threshold gates and position intent bindings.',
-    domain: 'Trading / Strategy Execution',
-  },
   'sees-ready': {
     title: 'SEES Ready',
     subtitle: 'Production-readiness checks for directives, data freshness, and signal quality.',

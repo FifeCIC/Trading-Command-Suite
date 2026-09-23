@@ -153,7 +153,6 @@ export const NAV_TREE = {
       // the same decision the A/B Ladder records.
       { id: 'ab-strategies', label: 'A/B Strategies', icon: '🆚' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
-      { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },

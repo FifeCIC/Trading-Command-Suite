@@ -1084,6 +1084,11 @@ export default function App() {
           <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
           <Route path="/scoringStrategies/:view" element={<ScoringStrategiesRedirect />} />
           <Route path="/scoringStrategies" element={<Navigate to="/scoring" replace />} />
+          {/* `/trading/trading-strategies` RETIRED 2026-09-23 (owner, option A): its table + sticky
+              sidebar layout moved to /trading/trading-bots, so this is a REDIRECT rather than a
+              deletion. A retired route with no redirect is a 404 for every bookmark, every doc link
+              and every QA procedure that names it - and paths are cheap, dead links are not. */}
+          <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

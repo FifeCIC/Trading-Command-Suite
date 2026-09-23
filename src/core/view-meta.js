@@ -15,7 +15,7 @@ const VIEW_META = {
   },
   '/research/symbols-browser': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Symbols Browser',
     file: 'src/pages/SymbolsBrowserPage.jsx',
     css: 'src/pages/symbols-browser.css',
@@ -26,7 +26,7 @@ const VIEW_META = {
   // is deliberately no "merge into Symbols Browser" here.
   '/research/broker-catalogue': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Broker Catalogue',
     file: 'src/pages/BrokerCataloguePage.jsx',
     css: 'src/pages/broker-catalogue.css',
@@ -40,7 +40,7 @@ const VIEW_META = {
   },
   '/research/screener': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Screener',
     file: 'src/pages/ScreenerPage.jsx',
     css: 'src/pages/screener.css',
@@ -48,7 +48,7 @@ const VIEW_META = {
   },
   '/research/earnings-calendar': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Earnings Calendar',
     file: 'src/pages/EarningsCalendarPage.jsx',
     css: 'src/pages/earnings-calendar.css',
@@ -56,7 +56,7 @@ const VIEW_META = {
   },
   '/research/earnings-whispers': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Earnings Whispers',
     file: 'src/pages/EarningsWhispersPage.jsx',
     css: 'src/pages/earnings-whispers.css',
@@ -64,7 +64,7 @@ const VIEW_META = {
   },
   '/research/news-intel': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'News Intel',
     file: 'src/pages/NewsIntelPage.jsx',
     css: 'src/pages/news-intel.css',
@@ -128,14 +128,6 @@ const VIEW_META = {
     file: 'src/pages/PositionsMonitorPage.jsx',
     css: 'src/pages/positions-monitor.css',
     api: ['GET /api/portfolio?source=mt5', 'GET /api/portfolio?source=trading212'],
-  },
-  '/trading/trading-strategies': {
-    tier: 'premium',
-    review: 'pending',
-    label: 'Trading Strategies',
-    file: 'src/pages/TradingStrategiesPage.jsx',
-    css: 'src/pages/trading-strategies.css',
-    api: ['GET /api/trading/strategies', 'GET /api/portfolio'],
   },
   '/trading/ab-strategies': {
     tier: 'premium',
@@ -1095,7 +1087,7 @@ const VIEW_META = {
   // added without metadata fails the verifier instead of landing on the user.
   '/research/research-notes': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Notes',
     file: 'src/pages/ResearchNotesPage.jsx',
     css: 'src/pages/research-notes.css',
@@ -1108,7 +1100,7 @@ const VIEW_META = {
   },
   '/research/events-calendar': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Events Calendar',
     file: 'src/pages/EventsCalendarPage.jsx',
     css: 'src/pages/events-calendar.css',
@@ -1119,8 +1111,8 @@ const VIEW_META = {
     ],
   },
   '/research/stock-investigation': {
-    tier: 'free',
-    review: 'pending',
+    tier: 'premium',
+    review: 'approved',
     label: 'Stock Investigation',
     file: 'src/pages/StockInvestigationPage.jsx',
     css: 'src/pages/stock-investigation.css',
@@ -1128,7 +1120,7 @@ const VIEW_META = {
   },
   '/research/market-correlations': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Market Correlations',
     file: 'src/pages/MarketCorrelationsPage.jsx',
     css: 'src/pages/market-correlations.css',
@@ -1136,7 +1128,7 @@ const VIEW_META = {
   },
   '/research/recently-analysed-symbols': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Recently Analysed',
     file: 'src/pages/RecentlyAnalysedSymbolsPage.jsx',
     css: 'src/pages/recently-analysed.css',
@@ -1144,7 +1136,7 @@ const VIEW_META = {
   },
   '/research/analyse-symbol': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Analyse Symbol',
     file: 'src/pages/AnalyseSymbolPage.jsx',
     css: 'src/pages/analyse-symbol.css',

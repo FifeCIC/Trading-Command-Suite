@@ -14,7 +14,12 @@
  */
 
 // ── Trading ──
-import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
+// TradingStrategiesPage was RETIRED 2026-09-23 (owner, option A). Its table + sticky sidebar layout
+// moved to StrategiesListPage (`/trading/trading-bots`), so TWO view ids had to go with it:
+//   'trading-strategies'  -> the routed view
+//   'strategies'          -> an ORPHAN id with no nav entry and no view-meta key; nothing routed to
+//                            it, so it was only discoverable by deleting the import and watching
+//                            what broke. Both mappings are removed rather than left dangling.
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
 import StrategyMonitorPage from '../pages/StrategyMonitorPage.jsx';
 // The canonical bot index (#504 consolidation, 2026-07-29). It was built and then referenced by
@@ -226,7 +231,6 @@ export const VIEW_COMPONENTS = {
   // Two of those strategies side by side, diffs marked (owner, 2026-09-22).
   'ab-strategies': AbStrategiesPage,
   // Trading — Legacy strategy pages (under review)
-  'trading-strategies': TradingStrategiesPage,
   'strategy-comparison': StrategyComparisonPage,
   'trade-journal': TradeJournalPage,
   'trading-plans': TradingPlansPage,
@@ -331,7 +335,7 @@ export const VIEW_COMPONENTS = {
   // Backtest / Strategies
   'backtest': BacktestPage,
   'scenario-analysis': ScenarioAnalysisPage,
-  'strategies': TradingStrategiesPage,
+  // 'strategies' was removed with TradingStrategiesPage (2026-09-23) - see the note at the import site.
 
   // Status / System
   'commands': CommandsReferencePage,

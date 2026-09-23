@@ -201,7 +201,7 @@ const PIPELINE = [
     ],
   },
   {
-    id: 'trading-strategy', title: 'Trading Strategy Evaluation', linkTo: '/trading/trading-strategies', linkLabel: 'Trading Strategies',
+    id: 'trading-strategy', title: 'Trading Strategy Evaluation', linkTo: '/trading/trading-bots', linkLabel: 'Trading Bots',
     fn: 'TradingStrategyService.evaluate() → portfolio-aware decision',
     fnDesc: 'Trading strategies add the portfolio context: Are existing positions profitable? Is the symbol already held? Would this exceed max positions? Does the strategy allow averaging down? Some strategies require existing positions to be in profit before opening new ones. Cooldown periods prevent overtrading.',
     dbTable: 'trading_strategy, decision_log',
@@ -443,7 +443,7 @@ export default function MetaStackExplorerPage() {
         { label: 'Active timeline events', pass: timelineEvents.length >= 0, detail: timelineEvents.length > 0 ? `${timelineEvents.length} events (risk ×${globalRiskMultiplier.toFixed(2)})` : 'none — risk multiplier ×1.0' },
       ],
       'trading-strategy': [
-        { label: 'Trading strategy selected', pass: !!selectedStrategy, detail: selectedStrategy ? selectedStrategy.name : '⬇ Select below', link: '/trading/trading-strategies', linkLabel: 'Strategies' },
+        { label: 'Trading strategy selected', pass: !!selectedStrategy, detail: selectedStrategy ? selectedStrategy.name : '⬇ Select below', link: '/trading/trading-bots', linkLabel: 'Bots' },
         { label: 'Strategy ID', pass: !!selectedStrategy?.id, detail: selectedStrategy?.id || '—' },
         { label: 'Strategy active', pass: selectedStrategy?.active === true, detail: selectedStrategy ? (selectedStrategy.active ? 'active' : 'inactive') : '—' },
         { label: 'Symbol assigned', pass: !!selectedStrategy?.symbol, detail: selectedStrategy?.symbol || 'no symbol' },

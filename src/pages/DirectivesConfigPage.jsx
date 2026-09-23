@@ -105,7 +105,7 @@ export default function DirectivesConfigPage() {
               Protocol: {protocol?.name || selectedProtocol}
               {protocol?.version && <span className="dc-version">v{protocol.version}</span>}
               {usage?.inUse && (
-                <a href={`/trading/trading-strategies`} className="dc-lock-icon" title={`In use by ${usage.strategyNames?.join(', ') || 'active strategy'} — click to view`}>
+                <a href={`/trading/trading-bots`} className="dc-lock-icon" title={`In use by ${usage.strategyNames?.join(', ') || 'active strategy'} — click to view`}>
                   🔒
                 </a>
               )}

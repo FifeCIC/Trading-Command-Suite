@@ -12,7 +12,7 @@
 
 export const PAGE_DATA_STATUS = {
   // ── Trading ──
-  'trading-strategies': { status: 'live', source: 'DB (seed data, promoted from Legacy + sortable columns #566)' },
+  // 'trading-strategies' RETIRED 2026-09-23 - its table+sidebar layout moved to 'trading-bots'.
   'strategies-index': { status: 'removed', note: 'Merged into strategy-monitor (#560, 2026-08-04)' },
   'strategy-monitor': { status: 'live', source: 'DB (tabbed hub: overview/strategies/compare, #504)' },
   'strategy-builder': { status: 'removed', note: 'Scoring-strategy layer retired from the trading loop (2026-08-27) — use Protocol Builder + Create Strategy' },

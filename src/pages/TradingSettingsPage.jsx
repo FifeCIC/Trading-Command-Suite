@@ -386,7 +386,7 @@ export default function TradingSettingsPage() {
       >
         <BotBarsTable />
         <MovedNote>
-          Add and edit bots on <a href="/trading/trading-strategies">Trading Strategies</a> or{' '}
+          Add and edit bots on <a href="/trading/trading-bots">Trading Bots</a> or{' '}
           <a href="/trading/bot-create">Create Bot</a>. Live evaluations are on{' '}
           <a href="/trading/strategy-monitor">Strategy Monitor</a>. The queue that paces them is
           on <a href="/settings/automation">Automation</a>.

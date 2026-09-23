@@ -66,12 +66,6 @@ export const SKELETON_ROLLOUT = {
     order: '7/15',
     status: 'decision',
   },
-  'trading-strategies': {
-    phase: 'Phase 2',
-    order: '8/15',
-    status: 'execution',
-  },
-
   'manual-trading': {
     phase: 'Phase 2',
     order: '11/15',

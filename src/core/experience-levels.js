@@ -23,7 +23,6 @@ export const EXPERIENCE_MATRIX = {
     // Trading
     'market-context':        { beginner: true,  experienced: true,  expert: true },
     'positions-monitor':     { beginner: true,  experienced: true,  expert: true },
-    'trading-strategies':    { beginner: false, experienced: true,  expert: true },
     'strategy-comparison':   { beginner: false, experienced: true,  expert: true },
     'trade-journal':         { beginner: true,  experienced: true,  expert: true },
     'trading-plans':         { beginner: false, experienced: true,  expert: true },
