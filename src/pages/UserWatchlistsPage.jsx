@@ -271,6 +271,18 @@ export default function UserWatchlistsPage() {
   return (
     <div className="wl-page">
 
+      {/*
+       * ⚠️ The page had NO `h1` at all — measured 2026-09-23, `document.querySelectorAll('h1').length === 0`
+       * while the seven other pages sampled each had exactly one. The accessibility policy is explicit:
+       * "Every page MUST have exactly one `<h1>`".
+       *
+       * It is `sr-only` rather than visible on purpose: this page's identity is carried by the sidebar
+       * and the breadcrumb, and it deliberately opens straight into its content. A visible title would
+       * duplicate the nav and change a design the owner is actively reviewing. `sr-only` keeps it in the
+       * accessibility tree (unlike `display:none`, which would remove it) and out of the way visually.
+       */}
+      <h1 className="sr-only">Watchlists</h1>
+
       {/* ── Filter toolbar ──
           Above the split, so it governs BOTH panes. The count beside it is load-bearing: a filter
           that hides 23 of 42 rows without saying so is indistinguishable from data loss. */}
