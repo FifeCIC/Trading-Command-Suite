@@ -31,6 +31,14 @@ import {
   decisionLabel,
   isObservation,
 } from '../core/decision-display.js';
+// R12 — three ways to show the rows NOTHING consumes. Pure and tested in
+// src/core/decision-trail-view.js: a decision row is never hidden by any mode, and a filtered list
+// always states how much it filtered.
+import {
+  OBSERVATION_MODES,
+  MODE_INFO,
+  applyObservationMode,
+} from '../core/decision-trail-view.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './decision-trail.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -51,12 +59,16 @@ export default function DecisionTrailPage() {
   const [expandedTrail, setExpandedTrail] = useState(null);
 
   // Sync symbol filter to URL param
+  //
+  // ⚠️ R12 — this used to write `{}` when no symbol was set, which STRIPPED every other
+  // parameter. Measured 2026-09-23: it deleted `?observe=B` on mount, so the variant picker
+  // looked dead — the click set the parameter and this effect removed it. It now edits ONLY the
+  // key it owns, reading the live query string rather than a captured snapshot.
   useEffect(() => {
-    if (symbolFilter) {
-      setSearchParams({ symbol: symbolFilter }, { replace: true });
-    } else {
-      setSearchParams({}, { replace: true });
-    }
+    const next = new URLSearchParams(window.location.search);
+    if (symbolFilter) next.set('symbol', symbolFilter);
+    else next.delete('symbol');
+    setSearchParams(next, { replace: true });
   }, [symbolFilter, setSearchParams]);
 
   // ── Fetch trails from automation loop recent decisions ──
@@ -76,6 +88,22 @@ export default function DecisionTrailPage() {
     keepPreviousData: true,
   });
   const trails = trailsQuery.data?.trails || [];
+
+  // ── R12 — the observation-display variant, carried in the URL so two modes can be compared ──
+  // `?observe=B` is deliberately NOT `?variant=A`: that parameter already means "the Old page
+  // design" on other pages (VariantSwitcher, documented in its header), and overloading it here
+  // would make one string mean two different things depending on the route.
+  const observeParam = searchParams.get('observe');
+  const mode = OBSERVATION_MODES.includes(observeParam) ? observeParam : 'A';
+  const setObserve = (m) => {
+    // From the LIVE query string, not the hook's snapshot: this page has another effect writing
+    // the same object, and a stale copy would drop its key (#R12, measured).
+    const next = new URLSearchParams(window.location.search);
+    if (m === 'A') next.delete('observe');
+    else next.set('observe', m);
+    setSearchParams(next, { replace: true });
+  };
+  const { rows, counts } = useMemo(() => applyObservationMode(trails, mode), [trails, mode]);
 
   // ── Compute completeness stats ──
   const stats = useMemo(() => {
@@ -153,17 +181,87 @@ export default function DecisionTrailPage() {
         <button className="dt-refresh-btn" onClick={() => trailsQuery.refetch()}>⟳ Refresh</button>
       </div>
 
+      {/* R12 — a VARIANT, and it SAYS so (owner: "make sure there is a notice explaining it is a
+          variant to be decided on"). Nothing below is a shipped default; the three modes are a
+          choice for the owner, and `?observe=` makes each one linkable so two can be compared. */}
+      <div className="dt-variant-notice" role="note">
+        <div className="dt-variant-head">
+          <span className="dt-variant-badge">VARIANT</span>
+          <strong>{MODE_INFO[mode].title}</strong>
+        </div>
+        <p className="dt-variant-desc">
+          {MODE_INFO[mode].desc} Three ways to handle rows nothing consumes. This page is a design
+          choice awaiting your decision, not a shipped default — and no mode ever hides a row that a
+          bot acted on.
+        </p>
+        <div className="dt-variant-picker" role="group" aria-label="Observation display variant">
+          {OBSERVATION_MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`dt-variant-btn ${m === mode ? 'active' : ''}`}
+              aria-pressed={m === mode}
+              onClick={() => setObserve(m)}
+            >
+              {MODE_INFO[m].label}
+            </button>
+          ))}
+        </div>
+        {counts.filtered && (
+          <p className="dt-variant-filtered">
+            {counts.hidden} observation{counts.hidden === 1 ? '' : 's'} not shown by this variant ·{' '}
+            {counts.total} row{counts.total === 1 ? '' : 's'} in the source
+          </p>
+        )}
+      </div>
+
       {/* Trail list */}
       <div className="dt-list">
         {isLoading ? (
           <LoadingSkeleton variant="card" count={3} />
-        ) : trails.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div className="dt-empty">
-            <p>No decision trails found{initialSymbol ? ` for ${initialSymbol}` : ''}.</p>
-            <p className="dt-empty-hint">Trails appear when the automation loop scores symbols — each tick decision is recorded to decision_log and displayed here as a pipeline trail.</p>
+            {counts.total > 0 ? (
+              <>
+                <p>Every row in this tick was an observation — nothing here had a consumer.</p>
+                <p className="dt-empty-hint">
+                  That is not an empty log: {counts.total} row{counts.total === 1 ? '' : 's'} came
+                  back and this variant filtered {' '}
+                  {counts.hidden}. Switch to <strong>A · chip</strong> to see them.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>No decision trails found{initialSymbol ? ` for ${initialSymbol}` : ''}.</p>
+                <p className="dt-empty-hint">Trails appear when the automation loop scores symbols — each tick decision is recorded to decision_log and displayed here as a pipeline trail.</p>
+              </>
+            )}
           </div>
         ) : (
-          trails.map((trail, i) => {
+          rows.map((row, i) => {
+            if (row.type === 'group') {
+              const symbols = [...new Set(row.observations.map((o) => o.symbol).filter(Boolean))];
+              return (
+                <div
+                  key={`group-${row.key}-${i}`}
+                  className="dt-group-row"
+                  title="Observations: scored, but no bot is subscribed — nothing can act on them"
+                >
+                  <span className="dt-group-count">{row.observations.length}</span>
+                  <span className="dt-group-label">
+                    observation{row.observations.length === 1 ? '' : 's'} · no consumer
+                  </span>
+                  <span className="dt-group-symbols">
+                    {symbols.slice(0, 6).join(' · ')}
+                    {symbols.length > 6 ? ` +${symbols.length - 6}` : ''}
+                  </span>
+                  <span className="dt-group-time">
+                    {(row.at || '').slice(11, 16)}
+                  </span>
+                </div>
+              );
+            }
+            const trail = row.trail;
             const isExpanded = expandedTrail === i;
             const decisionColor = decisionColorOf(trail.decision);
             // #909 — the 1500/500 colour scale is a RAW-score scale. A percentage row can never
