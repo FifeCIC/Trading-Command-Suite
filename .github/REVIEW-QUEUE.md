@@ -1,56 +1,50 @@
-# Review Queue — what needs the owner's eyes, in one list
+# 📋 Review Queue — the ONE list every agent adds to
 
-**Status:** active
-**Category:** A
-**Created:** 2026-09-23
-**Last updated:** 2026-09-23
-**Owner:** any agent (append rows); the human reviews
+**Purpose:** the things the owner must look at or decide, so no agent has to be asked twice and the
+owner never has to read six handoffs to find what is waiting.
 
----
+**How to answer:** reply with the row id and a word or two. Prose is not needed. 🎯
 
-## How to use this file
+**Rules for agents — the short version** (full rules: `.github/instructions/agent-environment.instructions.md`)
 
-- **On "review list" (or "show me the review queue", "what needs me?") — print the OPEN section
-  below, in full, in the chat.** Do not summarise it away, do not re-derive it from GitHub, and do
-  not make the owner open this file. That sentence is the whole point of the file.
-- **Append** a row when your work creates something a *human* must look at or decide: a new/changed
-  UI surface, a policy or threshold choice, a naming/terminology call, a thing you deliberately did
-  NOT do that the owner may want done, or a visual check you cannot perform yourself.
-- **Do NOT append** purely technical follow-ups (those are GitHub issues), cosmetic notes, or
-  anything an agent can settle by measuring. If an agent can decide it, it does not belong here.
-- **Close a row** by marking it `DONE (date)` with one line of what the owner said or did — or by
-  moving it out if it becomes an issue. Rows are never silently deleted: the list is the audit of
-  "did anyone tell the owner?".
-- Each row names **where to look** and **the decision needed**. A row without a decision is noise.
-
-### Row format
-
-```
-| id | opened | what | where | decision needed |
-```
+| | |
+|---|---|
+| ✅ A row is a **technical fork** the agent cannot settle by measuring, **where a new input belongs**, a **policy number** with no clear winner, or **permission to spend effort** | 🛑 **Not** "do you like this?", **not** layout/colour/wording of an existing surface (the owner reviews the UI and replies), **not** anything with a clear logical advantage (decide it, record it in DONE) |
+| ONE concern per row · question ≤ 40 words · ≤ 3 numbers | If it does not fit → it is an **explainer** (Lab / variant / mockup), not a row |
 
 ---
 
 ## OPEN
 
-| id | opened | what | where | decision needed |
-|---|---|---|---|---|
-| **R1** | 2026-09-23 | **Bot detail page now shows a REALISED RECORD panel** — 10 cells (n, expectancy + SE, payoff, win rate with W/L, total realised, capital allowance, max decline, return % of allowance, decline % of allowance, reliability chip), then the five rating blockers verbatim and the null-with-reason notes. Added by #894's work; you said you would adjust the UI to your liking. | `http://localhost:5173/trading/strategy/34ac0946-db7b-44ca-9121-e1eff293f05d` (**EURCAD Macro Session** — has an allowance) and `http://localhost:5173/trading/strategy/14fab974-b9e0-4294-b736-af4bbf610edc` (**Zurich EURCHF Session** — no allowance, so "not set" and no percentage cells) | Layout/emphasis only — is the panel in the right place, and is any figure too prominent or too quiet? |
-| **R2** | 2026-09-23 | **No UI can SET a bot's capital allowance.** It is displayed, the blocker names it, and 17 of 18 bots have none — so every one of them is permanently unratable until someone uses `PATCH /api/trading/strategies/:id` or edits the seed. | **#977** | Do you want the setter built (a small form), or is a seeded/API value enough for now? |
-| **R3** | 2026-09-23 | **The rating's risk condition is settled as an absolute CURRENCY allowance** (your Option A, corrected to currency). What is *not* settled: the **25% drawdown limit** is a policy number with no A/B copy, and no bot has an allowance except one seeded example. | `docs/SETTLED-DECISIONS.md` row 28; **#894** (closed) and **#965** | (a) Which bots should get an allowance, and at what amount? (b) Is 25% the right limit to start with? |
-| **R5** | 2026-09-23 | **Sprint #965 items 1–4 are built, but a backtest VERDICT cannot be produced on today's data.** The sample bar needs ≥30 trades *and* ≥30 signals per side: the runs with enough trades are legacy ones with no recorded signal count (they refuse correctly), `NVDA` fails at `need 100+ bars, have 29`, and the real XAU pair yields **7 and 15**. Only a ~30-day 5m FX window cleared it in testing. | **#965** comments (items 1–4) | Is importing bars for the stock symbols the right move, or should the comparison work stay on FX windows for now? (A data decision — the code is done.) |
-| **R6** | 2026-09-23 | **A backtest run's `winRate` is a SIGNAL rate, and adapters serve it as a trade rate** — measured `100%` beside `0 winners of 3`. Fixed in the comparison/list payloads; two other endpoints still conflate them. | **#980** | Do you want the stored column renamed (clearer, touches the schema) or the trade rate stored alongside it? |
-| **R7** | 2026-09-23 | **Sprint proposal for the week of 2026-09-28** (*"make change evaluable, and stop the bleed"*) — a plan awaiting your approval, with a companion sprint (#932) already closed. | **#930** (proposal) / **#932** (closed) | Approve, amend, or reject. |
-| **R8** | 2026-09-23 | **The Decision Trail now labels an OBSERVATION instead of showing it as a signal** (#971). A ladder row carries no consumer, so it is written as `OBSERVED` and the page adds a muted **"no consumer"** chip beside the decision badge. ⚠️ Two visual side-effects you may want to overrule: Symbol Focus's `SCORED` badge changed from `#60a5fa` to `#3b82f6` (it now uses the SHARED palette after three pages each had their own), and the Decision Trail's colour for an unknown/unrecognised value changed from amber `#f59e0b` (which reads as "blocked") to neutral grey. **Measured:** the 12 most recent decision rows are ALL observations — they are the majority of the log, and they crowd out the rows that actually did something | `/decisions` (Decision Trail) and `/symbol/:ticker` (Symbol Focus) — the chip, and the badge colour on both pages | **Is an observation worth a row in the Decision Trail at all?** Options: (a) keep listing them with the chip (current behaviour); (b) hide `OBSERVED` by default with a "show observations" toggle, so the page leads with decisions that had a consumer; (c) list them but collapsed into one summary line per tick. Also: are the two badge colours in R8-acceptable, or should each page keep its own? |
-| **R9** | 2026-09-23 | **#956 wants to stop scoring symbols that cannot trade — and the measurement says the target is 21%, not 85%.** Measured on the `score` table, last 24h, 5,756 rows / 29 symbols: market **closed** at score time = **840 rows (14.6%)**; **no active bot** on that ticker = **712 rows (12.4%)**; the **union = 1,209 rows (21.0%)**. ⚠️ The issue's headline "85% HOLD or NO_DATA" **does not reproduce** — today `breakdown.signal` is BUY 3,387 · HOLD 1,611 (28%) · STRONG_BUY 662 · STRONG_SELL 56 · SELL 40, and there are **no `NO_DATA` rows at all**, so the 5,764 came from a population I have not found (#971's 93% was decision_log rows — a third, different population). ⚠️ Also: SPY and US500 are separate symbols and the bot "US SPY Speed" is on **US500**, so "SPY has no bot" may be a sibling-instrument question rather than waste. And by policy a cadence change needs an **A/B copy**, not an in-place edit, so nothing is implemented yet | #956 (comment with the numbers + Options A/B/C and a falsification test) — evidence is `score.breakdown` in MySQL, no code changed | Three: **(1) which population is the target** — the measured 21%, or the original 85% (name the source of the 5,764 so it can be re-measured)? **(2) does a sibling instrument count as a consumer** (SPY ETF vs US500 CFD)? **(3) is a *planning* score still produced for a closed market** (#640's surface) or does the symbol stop until the session opens? |
-| **R10** | 2026-09-23 | **#660's three "risk" directives do not all need the same thing — one is unblocked, two need an input-surface decision.** `volatility-regime` is computable from **bars alone** and could ship today; `position-concentration` and `correlation-drag` need **portfolio context**, which `DirectiveInput` does not carry (read it: `symbol` + `bars` only — `directive.interface.ts` L66) and **no directive receives holdings at all** (every "position" hit in `directives/**` is *price* position). ⚠️ The engine that consumes them, `RiskGatingEngine.apply(baseScore, riskDirectives)`, is deliberately **pure — no I/O** — and `assessGlobalRiskLimits()` is called from the **automation loop** (L411, L2117), not the scoring service | #660 (comment with the measurement + Options A/B/C). Recommendation 🟢 **A**: an optional typed `portfolio?` on `DirectiveInput`, populated by the loop, with absence returning *unmeasurable* (never a veto) so backtests/replays are unaffected | Two: **(1) A, B or C** for the portfolio context — B (inject a service) is the one to avoid, it would make a replay read *today's* book; **(2) if A, what travels** — per-symbol weight only, or the whole book (`correlation-drag` needs the other holdings). Plus: does `volatility-regime` ship now, or wait so the `risk` group changes once? || **R11** | 2026-09-23 | **The backtest REPLAY view is built but has not been LOOKED at.** #819 Phase 1: a real run now replays - play/pause/step, 1x/10x/100x/instant, a price timeline with entry and exit markers, filters and a running summary - mounted INSIDE the existing Backtest Engine page (no new route). It was blocked on a data defect this work found and fixed: **all 556 persisted backtest trades were stamped 00:00:00** (5m runs: entry == exit 117 of 117), so a marker could not be placed on a timeline at all. Not visually verified - the dev server was 500-ing on an unrelated module's HMR and :4173 would not render the route, so this is code- and API-verified only. Two gaps it states on screen: SL/TP are NOT persisted per trade (only the exit reason) and no per-tick decision stream exists, so 'signal only vs all ticks' is not possible yet | /education/backtest - run a backtest (Symbol + Days > Run Backtest) and the replay appears below the results. Run 262904f8-d05c-4c3c-9579-79460ea40d9b (EURCAD 5m, 26 trades, real intraday times) replays immediately; a pre-fix run such as 214b9340-67d6-4d66-862d-d461d9cdff31 shows the 'cannot place markers' caveat instead | Is the replay the shape you wanted - list first with the timeline above it, and is the transport row in the right place? And do you want SL/TP persistence and the per-tick decision stream built next? (Both are engine changes; the decision stream is what makes 'all ticks' possible.) |
+| id | the decision, in one breath | where | question |
+|---|---|---|---|
+| **R12** | Shall I build an **Old/New variant** of the Decision Trail so you can SEE the three ways to handle observations, instead of reading a description? | Decision Trail (`/decisions`) — the page now labels a no-consumer row `OBSERVED` with a "no consumer" chip | Yes / no. (If yes: build it, and tell you when it's ready to look at.) |
+| **R13** | **Gate live scoring when the market is closed** — your reasoning ("no new data for those symbols, so why score?"). ⚠️ By policy a cadence change ships as an **A/B copy**, not an in-place edit | #956 · evidence: 840 of 5,756 score rows in 24h were produced while `marketStatus.open = false` | A/B copy (policy default) 🟢, or stop scoring outright? |
+| **R14** | Persist **SL/TP** per backtest trade (2 nullable columns) so the replay shows the levels, not just `SL`/`TP`/`EOD`. Small, additive, old runs say "not recorded" | #819 · `backtesttrade` · the replay's named gap | Build now? |
+| **R15** | Persist a **per-tick decision stream** per backtest run (new table + engine write path) — the only way "all ticks" and "why did it NOT trade here" become answerable. Large | #819 · would make the sprint's `signal only vs all ticks` filter possible | Build now, or after #606? |
 
+---
 
-  ---
+## DONE — with the owner's verdict (2026-09-23)
 
-## DONE
+| id | verdict / what happened |
+|---|---|
+| **R1** | **No change requested.** Owner: *"I don't want to be asked such specific UI questions. I prefer to review a UI and I will send the results to agent AI."* → the bot-detail panel stays as built; surfaces are for reviewing, not for asking about. |
+| **R2** | **DECIDED — build it, two places.** (a) Setters **on the bot page** `…/trading/strategy/debe2fa7-8f19-42c6-9656-f2e8d2f3b650` so the input shows *where it belongs in the algorithm*; (b) a **simplified "Truth view"** reached from the existing `Truth view — all 29 rules + enforcement →` button on `/trading/trading-bots` — same view, **URL parameter**, **settings only**, not the full information. ⚠️ Owner note: *this* kind of UI question is welcome (placing a new input). → issue |
+| **R3** | **DECIDED — 5%.** Owner expects ≥10 bots per account, so the allowance baseline is **5%**, plus a **toggle between percentage and a set amount**. |
+| **R4** | **Settled by building it** — #819 Phase 1 shipped (replay: transport, timeline, filters, summary). |
+| **R5** | **DECIDED — import bars, and add a NAMED period.** General market time is fine for some symbols, but the owner wants a **specific from/to window**, **named** and **noted** (their example: *"the 300% surge of Greenland Mining when Trump signed a deal, over just 2 days"*), captured once by a manual tool and **reused across many tests**. → issue |
+| **R6** | **DECIDED — rename.** Owner: *"If you think it will be clearer to rename it then go for it."* → agent's call, done under #980. |
+| **R7** | **APPROVED** — sprint proposal #930 stands. |
+| **R8** | **Tabled into R12.** Owner could not usefully decide from the description: *"complex — this is an example of when I want to see a mockup"*. Two durable rules came out of it: for a COMPLEX UI change, offer a **variant or mockup** instead of a question; and **ask first** — never for every change. |
+| **R9** | **Split, and mostly decided — see R13.** The owner called *"stop scoring symbols that cannot trade"* sensible, asked for far fewer numbers and a better layout, and asked a counter-question I must ANSWER, not ask: **what is "sibling"?** → SPY (the ETF) and US500 (the CFD) are two different instruments with two different contracts; the live bot is on US500, so the SPY score has no consumer — the sibling question was whether a bot on one should count as a consumer for the other. **Decided: no** — a consumer must be subscribed to the same symbol *and* protocol. |
+| **R10** | **DECIDED 🟢 Option A**, one line: give a directive an **optional `portfolio` input**; when it is absent (a backtest, a replay) the directive reports *unmeasurable* rather than voting — so history is never judged with today's book. |
+| **R11** | **Split.** The *"what shape should the replay be"* question is **withdrawn** — the owner reviews the replay and decides. The two **technical** forks survive as **R14** and **R15**. |
 
-| id | closed | what happened |
-|---|---|---|
-| **R4** | 2026-09-23 | **Settled by BUILDING it** - #819 Phase 1 shipped (a real run now replays with transport, timeline, filters and a summary). The row asked *confirm you still want it built now, and in what shape*; the build answers the first half, and the second half (\what shape\) moved to **R11**, which is the only place it is still open. Kept here rather than deleted, so the list stays an audit of what was raised. |
+---
 
+### 📚 Archived
+
+`archive/REVIEW-QUEUE-2026-09-23-batch1.md` — the first batch (R1–R11 as written), kept because the
+rows are the audit of what was raised, and because the batch's *size* is the evidence for the limits
+above.

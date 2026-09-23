@@ -85,15 +85,51 @@ owner does not have to read six handoffs and an attention board to find what is 
 | When | Do |
 |---|---|
 | The owner says **"review list"**, "show me the review queue", "what needs me?" | **Print the OPEN table from `.github/REVIEW-QUEUE.md` in full, in the chat.** Do not summarise it, do not re-derive it from GitHub, do not tell them to open the file — that sentence is the whole point of the file |
-| Your work creates something a **human** must look at or decide | **Append a row**: new/changed UI surface, policy or threshold choice, naming/terminology call, a thing you deliberately did NOT do, a visual check you cannot perform |
-| The row is settled | Mark it `DONE (date)` with one line of what happened. Rows are never silently deleted — the list is the audit of *"did anyone tell the owner?"* |
+| Work creates something a human must look at or decide | **Append a row** — subject to the limits below |
+| The row is settled | Move it to **DONE** with the date, one line, and the decision. Rows are never silently deleted — the list is the audit of *"did anyone tell the owner?"* |
 
-⚠️ **A row without a decision is noise.** Each row names **where to look** and **the decision
-needed** — and every link in it must have been verified, because a wrong bot id or path costs the
-owner the time the row was meant to save.
+### 🛑 WHAT GETS A ROW — measured 2026-09-23, after a batch the owner called *"hard"*
 
-⚠️ **Not for technical follow-ups.** Those are GitHub issues. If an agent can settle it by
-measuring, it does not belong in the queue.
+> *"I don't want to be asked such specific UI questions. I prefer to review a UI and I will send the
+> results to agent AI."* … *"I'm struggling to fully understand this one — complex — this is an
+> example of when I want to see a mockup"* … *"That's a lot, look at how many numbers are in
+> there"* … *"Same again too much — please choose one if there is a best, or explain it in the
+> Lab"* … *"too many matters in one group"*
+
+| ✅ IS a row | 🛑 is NOT a row |
+|---|---|
+| A **technical fork** the agent cannot settle by measuring, where the answer changes what gets built | *"Do you like this?"* — an invitation to give an opinion |
+| **Where a new input belongs** — explicitly wanted: *"the placing of a new input"* | Layout, colour, emphasis or wording of an existing surface. **The owner reviews the UI and reports back**; the row's job is to give them the URL |
+| A **policy number** with no clear logical winner (a limit, a band, a cap) | Anything with a **clear logical advantage** — decide it, then record the reasoning in DONE |
+| **Permission to spend effort** (*"shall I build a variant so you can see the choices?"*) | A description of work already done — that is a handoff, not a question |
+
+**Hard limits, because the human mind is the binding constraint:**
+
+- **ONE concern per row.** *"and also…"* means a second row.
+- **The question ≤ 40 words; context ≤ 100.** If it does not fit, it is not a row — it is an
+  **explainer**, and the row names which explainer.
+- **≤ 3 numbers per row**, and never the same number in a sentence *and* a table.
+- A row that needs re-measuring before it can be answered **is not ready to file** — measure first.
+- **No number that the reader must trust.** A figure carried from an earlier note is a claim; re-check
+  it or drop it (measured failure: a superseded 21% went to the owner next to a 33% that replaced it).
+
+### 🧰 TECHNIQUES FOR COMPLEXITY — use one BEFORE filing a row
+
+| Technique | Use when | Cost |
+|---|---|---|
+| **Decide it** | there is a clear logical advantage | free — put the reasoning in DONE |
+| **Table / mermaid / ASCII** | a comparison or a flow | cheap |
+| **Lab explainer** | a mechanism must be *taught*, not decided | medium |
+| **Old/New UI variant** | a UI change is **complex** and the owner wants a whole new approach to the page, not a question | expensive — **ASK FIRST**, never for every change |
+| **Mockup** | the *shape* of a surface is genuinely in question | expensive — same rule |
+
+⚠️ **Fun is requested and allowed.** *"going forward use more emojis, and wingdings to make things
+more interesting and fun. A touch of humour. Not all the time just surprise me sometimes because this
+is intense."* Personality belongs in a reply or a row; it never replaces clarity, and it is never an
+excuse for a longer row.
+
+⚠️ **Not for technical follow-ups with no fork.** Those are GitHub issues. If an agent can settle it
+by measuring, it does not belong in the queue.
 
 ## Shell Commands
 
