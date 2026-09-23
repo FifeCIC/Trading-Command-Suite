@@ -15,19 +15,13 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { timeAgo } from '../core/format-utils';
 import { decisionScore } from '../core/decision-score';
+// #971 — the decision palette is SHARED (src/core/decision-display.js). This page used to hold
+// its own copy keyed by the same values, which is how a new marker (OBSERVED) renders as an
+// unstyled row in one page and is noticed in another.
+import { decisionColor } from '../core/decision-display.js';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './symbol-focus.css';
-
-const DECISION_COLORS = {
-  SCORED: '#60a5fa',
-  EXECUTED: '#22c55e',
-  FAILED: '#ef4444',
-  BLOCKED: '#f59e0b',
-  SKIP: '#64748b',
-  HOLD: '#94a3b8',
-  QUEUED: '#a855f7',
-};
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
 
@@ -205,7 +199,7 @@ export default function SymbolFocusPage() {
                 {recentDecisions.map((d, i) => (
                   <div key={i} className="sf-decision-item">
                     <div className="sf-decision-head">
-                      <span className="sf-decision-badge" style={{ background: DECISION_COLORS[d.decision] || '#64748b' }}>
+                      <span className="sf-decision-badge" style={{ background: decisionColor(d.decision) }}>
                         {d.decision}
                       </span>
                       <span className="sf-decision-time">{timeAgo(d.timestamp)}</span>

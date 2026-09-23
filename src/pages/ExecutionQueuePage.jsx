@@ -10,6 +10,9 @@ const STATUS_COLORS = {
   queued: '#f59e0b', running: '#3b82f6', complete: '#22c55e', failed: '#ef4444', cancelled: '#94a3b8',
   success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b',
   EXECUTED: '#22c55e', FAILED: '#ef4444', SCORED: '#8b5cf6', SKIP: '#94a3b8', BLOCKED: '#ef4444',
+  // #971 — an observation (no consumer). Same muted slate as SKIP: it states an absence of
+  // action, and it must not read as a signal that did something.
+  OBSERVED: '#94a3b8',
 };
 
 const EVENT_TYPE_STYLE = {

@@ -647,3 +647,16 @@
   color: var(--ink-soft);
   line-height: 1.4;
 }
+
+/* #971 — the observation chip. A ladder row has NO consumer, and that has to be visible
+   without reading strategyId: an observation must not look like a signal that could trade. */
+.dt-trail-observation {
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}

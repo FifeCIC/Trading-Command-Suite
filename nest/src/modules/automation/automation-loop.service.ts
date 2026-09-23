@@ -247,7 +247,11 @@ export type TickDecision = {
   strategyId: string;
   symbol: string;
   brokerId: string;
-  decision: 'SCORED' | 'SKIP' | 'SIGNAL' | 'QUEUED' | 'EXECUTED' | 'FAILED' | 'BLOCKED' | 'PYRAMID';
+  // ⚠️ #971 — 'OBSERVED' means NOTHING CONSUMES THIS ROW. A ladder envelope has no bot attached,
+  // so it is an observation, not a signal. It used to be written as 'SCORED' (the same value a
+  // bot's dispatched signal carries) with `strategyId: ''`, which made "nothing reads this" an
+  // inference from an empty column instead of a stated fact.
+  decision: 'OBSERVED' | 'SCORED' | 'SKIP' | 'SIGNAL' | 'QUEUED' | 'EXECUTED' | 'FAILED' | 'BLOCKED' | 'PYRAMID';
   reason: string;
   signal?: string;
   ticket?: string | number;
@@ -1287,14 +1291,27 @@ export class AutomationLoopService implements OnModuleInit {
         for (const [slug, st] of Object.entries(bestLadder?.protocolStatus || {})) {
           if (!scoringStatus.has(slug)) scoringStatus.set(slug, st);
         }
-        // Decision-log observability — one SCORED row per visible signal.
+        // Decision-log observability — one OBSERVED row per visible signal.
+        //
+        // ⚠️ #971 — these are OBSERVATIONS, not signals. A ladder envelope is protocol-driven:
+        // no bot is subscribed to it, so nobody will ever act on the row. Writing them as 'SCORED'
+        // (which is what a bot's signal carries) made 539 of 577 scored rows indistinguishable
+        // from tradeable ones — the sprint's "why isn't this symbol trading?" question had no
+        // data answer. The VALUE is the claim now:
+        //   OBSERVED            nothing consumes it (this block)
+        //   SCORED              a bot scored a signal it may act on
+        //   BLOCKED / SKIP      a consumer refused it
+        //   QUEUED / EXECUTED   it reached the order path
+        // A reader wanting only tradeable rows must exclude OBSERVED. Rows written before this
+        // change still hold 'SCORED' with `strategyId = ''` — see src/core/decision-display.js,
+        // which reads the empty strategyId as the historical marker.
         for (const env of bestLadder?.envelopes ?? []) {
           decisions.push({
             timestamp: new Date().toISOString(),
             strategyId: '', // protocol-driven, not strategy-driven
             symbol: env.symbol,
             brokerId: 'mt5',
-            decision: 'SCORED',
+            decision: 'OBSERVED',
             reason: `${env.protocolId ?? 'any'}: composite=${env.composite} signal=${env.signal}`,
             // #909 — `env.composite` is the RAW additive score (GatedScore.composite), NOT a
             // percentage. `env.signalPct` is the percentage; this slot is the raw one.

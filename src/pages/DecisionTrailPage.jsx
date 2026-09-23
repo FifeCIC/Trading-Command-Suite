@@ -23,6 +23,14 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import { decisionScore } from '../core/decision-score';
+// #971 — one shared decision vocabulary (marker + palette + label). The page used to colour with
+// an inline ternary, which could not express "this row has no consumer" and rendered a ladder
+// observation exactly like a signal that could trade.
+import {
+  decisionColor as decisionColorOf,
+  decisionLabel,
+  isObservation,
+} from '../core/decision-display.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './decision-trail.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -157,7 +165,7 @@ export default function DecisionTrailPage() {
         ) : (
           trails.map((trail, i) => {
             const isExpanded = expandedTrail === i;
-            const decisionColor = trail.decision === 'EXECUTED' ? '#22c55e' : trail.decision === 'SCORED' ? '#3b82f6' : trail.decision === 'FAILED' ? '#ef4444' : '#f59e0b';
+            const decisionColor = decisionColorOf(trail.decision);
             // #909 — the 1500/500 colour scale is a RAW-score scale. A percentage row can never
             // clear it, and colouring one by it was reading the wrong units; pct rows and
             // historical (unit-unrecorded) rows get the neutral colour instead.
@@ -178,8 +186,16 @@ export default function DecisionTrailPage() {
                   <div className="dt-trail-meta">
                     <span className="dt-trail-symbol">{trail.symbol || '—'}</span>
                     <span className="dt-trail-decision" style={{ background: decisionColor + '22', color: decisionColor }}>
-                      {trail.decision || '—'}
+                      {decisionLabel(trail.decision)}
                     </span>
+                    {isObservation(trail) && (
+                      <span
+                        className="dt-trail-observation"
+                        title="No bot is subscribed to this row — it is an observation, and nothing will act on it."
+                      >
+                        no consumer
+                      </span>
+                    )}
                     <span className="dt-trail-composite" title={score.title || undefined} style={{ color: scoreColor }}>
                       {score.text}
                     </span>
