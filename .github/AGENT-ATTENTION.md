@@ -131,10 +131,11 @@ Items needing human attention. Agents: read this at session start. Append confir
   instead of a consecutive-dedupe hack; `/api/alerts/history` returns real rows (was `[]` by
   construction); a blocked manual trade writes a durable alert; the bell popup renders the list.
   Measured: badge **9,818 → 38 active alerts**, one row per real condition.
-- **⚠️ NOT committed (they also carry another agent's work):**
+- **✔ RESOLVED same day:** the other agent committed their work first (`A/B Copying`, planner),
+  which carried my `duplicatedFromId` + the reformat into HEAD. Both remaining files then differed
+  by MY edits alone and are committed now:
   - `nest/prisma/schema.prisma` — the two `Alert` columns (DDL already live; never `db push`).
-  - `nest/package.json` — `"version": "0.70.0"` (root `package.json` bumped + committed).
-  Whoever commits those files next lands these edits too — **please keep the version line**.
+  - `nest/package.json` — `"version": "0.70.0"` (root `package.json` bumped in 528b47c).
 - **Canaried:** the popup's two failure paths (API down → "Could not load alerts"; alerts endpoint
   aborted alone → "⚠ Stored alerts could not be loaded … (38 active)"). Neither renders "All clear".
 - **Agent:** Copilot (2026-09-23), alert attention rework.

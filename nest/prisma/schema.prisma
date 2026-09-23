@@ -2277,6 +2277,18 @@ model Alert {
   snoozedUntil DateTime?
   createdAt    DateTime  @default(now())
   readAt       DateTime?
+  // ── Recurrence collapse (2026-09-23) ────────────────────────────────────────────────────────
+  // A CONDITION alert (bridge down, data stale, trade blocked) is re-evaluated every poll
+  // window. Before these columns, every recurrence inserted a NEW row: "1 MT5 Bridge(s) Down"
+  // had 2,210 copies and the table held 12,865 undismissed rows for 1,121 conditions — a badge
+  // of 9,818 that trained the reader to ignore the bell. `AlertsService.addAlert()` now updates
+  // the existing undismissed row instead, so:
+  //   lastSeenAt  — the LAST time the condition was observed (age/auto-dismiss measures from here)
+  //   repeatCount — how many times it has been observed since it first appeared
+  // ⚠️ `createdAt` remains the FIRST sighting and must never be overwritten: a reader assuming
+  // creation time would misread a live condition as an old row.
+  lastSeenAt   DateTime? @db.DateTime(3)
+  repeatCount  Int       @default(1)
 
   @@index([type, createdAt])
   @@index([acknowledged, createdAt])
