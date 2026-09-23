@@ -6,12 +6,14 @@
 
 const VIEW_META = {
   '/dashboard': {
+    tier: 'free',
     label: 'Dashboard',
     file: 'src/pages/DashboardPage.jsx',
     css: 'src/pages/home-dashboard.css',
     api: ['GET /api/providers/mt5/diagnostics', 'GET /api/providers/mt5/positions', 'GET /api/scoring/ranked'],
   },
   '/research/symbols-browser': {
+    tier: 'free',
     label: 'Symbols Browser',
     file: 'src/pages/SymbolsBrowserPage.jsx',
     css: 'src/pages/symbols-browser.css',
@@ -21,6 +23,7 @@ const VIEW_META = {
   // gap between them (offered vs onboarded) is the capability this page exists to surface; there
   // is deliberately no "merge into Symbols Browser" here.
   '/research/broker-catalogue': {
+    tier: 'premium',
     label: 'Broker Catalogue',
     file: 'src/pages/BrokerCataloguePage.jsx',
     css: 'src/pages/broker-catalogue.css',
@@ -33,24 +36,28 @@ const VIEW_META = {
     ],
   },
   '/research/screener': {
+    tier: 'free',
     label: 'Screener',
     file: 'src/pages/ScreenerPage.jsx',
     css: 'src/pages/screener.css',
     api: ['GET /api/screener/ranked', 'GET /api/screener/hits'],
   },
   '/research/earnings-calendar': {
+    tier: 'free',
     label: 'Earnings Calendar',
     file: 'src/pages/EarningsCalendarPage.jsx',
     css: 'src/pages/earnings-calendar.css',
     api: ['GET /api/research/earnings/calendar'],
   },
   '/research/earnings-whispers': {
+    tier: 'premium',
     label: 'Earnings Whispers',
     file: 'src/pages/EarningsWhispersPage.jsx',
     css: 'src/pages/earnings-whispers.css',
     api: ['POST /api/earnings-whispers/parse', 'GET /api/earnings-whispers'],
   },
   '/research/news-intel': {
+    tier: 'free',
     label: 'News Intel',
     file: 'src/pages/NewsIntelPage.jsx',
     css: 'src/pages/news-intel.css',
@@ -77,6 +84,7 @@ const VIEW_META = {
   // cannot have one. The component IS registered, as `'symbol'` in view-routes.jsx:307.
   // ⚠️ `/trading/symbol/:ticker` renders the SAME component — see the mirror entry below.
   '/research/symbol': {
+    tier: 'free',
     label: 'Symbol Detail',
     file: 'src/pages/SymbolPage.jsx',
     css: 'src/pages/symbol-page.css',
@@ -90,36 +98,42 @@ const VIEW_META = {
     api: ['GET /api/symbols/:ticker/focus', 'GET /api/signals/envelope/:ticker?protocol=', 'GET /api/symbols/:ticker/overview', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
   },
   '/education/glossary': {
+    tier: 'free',
     label: 'Glossary',
     file: 'src/pages/GlossaryPage.jsx',
     css: 'src/pages/glossary-page.css',
     api: [],
   },
   '/trading/market-context': {
+    tier: 'free',
     label: 'Market Context',
     file: 'src/pages/MarketContextPage.jsx',
     css: 'src/pages/market-context.css',
     api: ['GET /api/trading/sessions/market-context', 'GET /api/portfolio', 'GET /api/scoring/runs'],
   },
   '/trading/positions-monitor': {
+    tier: 'free',
     label: 'Positions Monitor',
     file: 'src/pages/PositionsMonitorPage.jsx',
     css: 'src/pages/positions-monitor.css',
     api: ['GET /api/portfolio?source=mt5', 'GET /api/portfolio?source=trading212'],
   },
   '/trading/trading-strategies': {
+    tier: 'premium',
     label: 'Trading Strategies',
     file: 'src/pages/TradingStrategiesPage.jsx',
     css: 'src/pages/trading-strategies.css',
     api: ['GET /api/trading/strategies', 'GET /api/portfolio'],
   },
   '/trading/ab-strategies': {
+    tier: 'premium',
     label: 'A/B Strategies',
     file: 'src/pages/AbStrategiesPage.jsx',
     css: 'src/pages/ab-strategies.module.css',
     api: ['GET /api/scoring/strategies/derived', 'GET /api/scoring/strategy-registry'],
   },
   '/trading/strategy-comparison': {
+    tier: 'premium',
     label: 'Trading Strategy Comparison',
     file: 'src/pages/StrategyComparisonPage.jsx',
     css: 'src/pages/strategy-comparison.css',
@@ -133,6 +147,7 @@ const VIEW_META = {
   // `/trading/strategy-monitor` and `/trading/strategy-library` live above/below as their own
   // exact keys and win first (exact match is tried before prefix match).
   '/trading/strategy': {
+    tier: 'premium',
     label: 'Bot Detail',
     file: 'src/pages/ViewStrategyPage.jsx',
     css: 'src/pages/view-strategy.module.css',
@@ -142,6 +157,7 @@ const VIEW_META = {
   // view id that App.jsx derives from the `:ticker` param. Two URL prefixes, one page, so two
   // keys: getViewMeta() is a keyed lookup on the pathname and cannot know they are the same view.
   '/trading/symbol': {
+    tier: 'free',
     label: 'Symbol Detail',
     file: 'src/pages/SymbolPage.jsx',
     css: 'src/pages/symbol-page.css',
@@ -149,72 +165,84 @@ const VIEW_META = {
     api: ['GET /api/symbols/:ticker/focus', 'GET /api/signals/envelope/:ticker?protocol=', 'GET /api/symbols/:ticker/overview', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
   },
   '/trading/trading-bots': {
+    tier: 'premium',
     label: 'Trading Bots',
     file: 'src/pages/StrategiesListPage.jsx',
     css: 'src/pages/strategies-list.module.css',
     api: ['GET /api/trading/strategies', 'GET /api/portfolio?source=mt5'],
   },
   '/trading/strategy-monitor': {
+    tier: 'premium',
     label: 'Strategy Monitor',
     file: 'src/pages/StrategyMonitorPage.jsx',
     css: 'src/pages/strategy-monitor.css',
       api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena', 'GET /api/scoring/gated/thresholds'],
   },
   '/trading/bot-create': {
+    tier: 'premium',
     label: 'Create Bot',
     file: 'src/pages/StrategyCreatePage.jsx',
     css: 'src/pages/strategy-create.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/watchlists', 'POST /api/trading/strategies'],
   },
   '/lab/dual-protocol-inspector': {
+    tier: 'premium',
     label: 'Dual-Protocol Inspector',
     file: 'src/pages/ScoringDebugLab.jsx',
     css: 'src/pages/scoring-debug-lab.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/gated/:symbol'],
   },
   '/scoring/protocols-ladder': {
+    tier: 'premium',
     label: 'Protocols Ladder',
     file: 'src/pages/ProtocolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
   '/scoring/symbols-ladder': {
+    tier: 'premium',
     label: 'Symbols Ladder',
     file: 'src/pages/SymbolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
   '/protocols/protocols-ladder': {
+    tier: 'premium',
     label: 'Protocols Ladder',
     file: 'src/pages/ProtocolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
   '/scoring/protocol-builder': {
+    tier: 'premium',
     label: 'Protocol Builder',
     file: 'src/pages/CreateProtocolsPage.jsx',
     css: 'src/pages/create-protocols.css',
     api: ['GET /api/directives', 'GET /api/watchlists', 'POST /api/scoring/protocols'],
   },
   '/trading/trade-journal': {
+    tier: 'free',
     label: 'Trade Journal',
     file: 'src/pages/TradeJournalPage.jsx',
     css: 'src/pages/trade-journal-page.css',
     api: ['GET /api/journal/entries', 'GET /api/journal/stats'],
   },
   '/trading/calculators': {
+    tier: 'free',
     label: 'Calculators',
     file: 'src/pages/CalculatorsPage.jsx',
     css: 'src/pages/calculators.css',
     api: [],
   },
   '/trading/accounts-dashboard': {
+    tier: 'free',
     label: 'Accounts Dashboard',
     file: 'src/pages/AccountsDashboardPage.jsx',
     css: 'src/pages/accounts-dashboard.css',
     api: ['GET /api/providers/mt5/accounts', 'GET /api/portfolio/summary', 'GET /api/isa/dashboard'],
   },
   '/scoring/directives-registry': {
+    tier: 'premium',
     label: 'Directives Registry',
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
@@ -222,24 +250,28 @@ const VIEW_META = {
   },
   // Canonical URL — part of gradual /scoring/ → /protocols/ migration
   '/protocols/directives-registry': {
+    tier: 'premium',
     label: 'Directives Registry',
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
     api: ['GET /api/directives'],
   },
   '/trading/exit-signals': {
+    tier: 'premium',
     label: 'Exit Signals',
     file: 'src/pages/ExitSignalsPage.jsx',
     css: 'src/pages/exit-signals.css',
     api: ['GET /api/portfolio/exit-signals'],
   },
   '/scoring/sees-arena': {
+    tier: 'premium',
     label: 'Protocol Comparison',
     file: 'src/pages/SeesArenaPage.jsx',
     css: 'src/pages/sees-arena.css',
     api: ['POST /api/scoring/arena/consensus'],
   },
   '/protocols/sees-arena': {
+    tier: 'premium',
     label: 'Protocol Comparison',
     file: 'src/pages/SeesArenaPage.jsx',
     css: 'src/pages/sees-arena.css',
@@ -247,90 +279,105 @@ const VIEW_META = {
   },
   // Canonical URL — part of gradual /scoring/ → /protocols/ migration
   '/protocols/protocols-registry': {
+    tier: 'premium',
     label: 'Protocols Registry',
     file: 'src/pages/ProtocolsPage.jsx',
     css: 'src/pages/protocols.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/protocols'],
   },
   '/protocols/protocol-trail': {
+    tier: 'premium',
     label: 'Protocol Trail',
     file: 'src/pages/ProtocolTrailPage.jsx',
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/scoring/runs'],
   },
   '/scoring/singles-monitor': {
+    tier: 'premium',
     label: 'Singles Monitor',
     file: 'src/pages/SinglesMonitorPage.jsx',
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/scoring/breakdown/:symbol', 'GET /api/automation/status'],
   },
   '/automation/automation-dashboard': {
+    tier: 'premium',
     label: 'Automation Dashboard',
     file: 'src/pages/AutomationDashboardPage.jsx',
     css: 'src/pages/automation-dashboard.css',
     api: ['GET /api/automation/status', 'POST /api/automation/start', 'POST /api/automation/stop'],
   },
   '/automation/speed-scanner': {
+    tier: 'premium',
     label: 'Speed Scanner',
     file: 'src/pages/SpeedScannerPage.jsx',
     css: 'src/pages/speed-scanner.css',
     api: ['POST /api/speed/scan'],
   },
   '/automation/automation-rules': {
+    tier: 'premium',
     label: 'Automation Rules',
     file: 'src/pages/AutomationRulesPage.jsx',
     css: 'src/pages/automation-rules.css',
     api: ['GET /api/automation/rules'],
   },
   '/automation/execution-queue': {
+    tier: 'premium',
     label: 'Execution Queue',
     file: 'src/pages/ExecutionQueuePage.jsx',
     css: 'src/pages/execution-queue.css',
     api: ['GET /api/automation/status', 'GET /api/trading/mt5/positions'],
   },
   '/automation/alert-center': {
+    tier: 'free',
     label: 'Alert Center',
     file: 'src/pages/AlertCenterPage.jsx',
     css: 'src/pages/alert-center.css',
     api: ['GET /api/alerts', 'GET /api/automation/status'],
   },
   '/automation/decision-trail': {
+    tier: 'premium',
     label: 'Decision Trail',
     file: 'src/pages/DecisionTrailPage.jsx',
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/automation/status', 'GET /api/automation/decisions'],
   },
   '/automation/automation-overview': {
+    tier: 'premium',
     label: 'Automation Overview',
     file: 'src/pages/AutomationOverviewPage.jsx',
     css: 'src/pages/automation-overview.css',
     api: ['GET /api/automation/status', 'GET /api/trading/strategies', 'GET /api/automation/scoring-strategies', 'GET /api/scoring/protocols'],
   },
   '/watchlists/active-symbols': {
+    tier: 'free',
     label: 'Active Symbols',
     file: 'src/pages/ActiveSymbolsPage.jsx',
     css: 'src/pages/trading-platforms.css',
     api: ['GET /api/symbols', 'GET /api/portfolio', 'GET /api/directives'],
   },
   '/watchlists/user-watchlists': {
+    tier: 'free',
     label: 'Watchlists',
     file: 'src/pages/UserWatchlistsPage.jsx',
     css: 'src/pages/watchlists.css',
     api: ['GET /api/watchlists', 'POST /api/watchlists'],
   },
   '/development/qa-testing': {
+    tier: 'premium',
     label: 'QA Testing',
     file: 'src/pages/QaTestingPage.jsx',
     css: 'src/pages/qa-testing.css',
     api: [],
   },
   '/status/capability-map': {
+    tier: 'premium',
     label: 'Capability Map',
     file: 'src/pages/CapabilityMapPage.jsx',
     css: 'src/pages/capability-map.css',
     api: ['GET /api/capabilities', 'GET /api/directives', 'GET /api/providers/health'],
   },
   '/status/health-check': {
+    tier: 'premium',
     label: 'Health & Diagnostics',
     file: 'src/pages/HealthDashboardPage.jsx',
     css: 'src/pages/health-dashboard.css',
@@ -344,36 +391,42 @@ const VIEW_META = {
     ],
   },
   '/status/commands': {
+    tier: 'premium',
     label: 'Commands Reference',
     file: 'src/pages/CommandsReferencePage.jsx',
     css: 'src/pages/commands-reference.css',
     api: [],
   },
   '/builder/architecture-framework': {
+    tier: 'premium',
     label: 'Architecture Framework',
     file: 'src/pages/ArchitectureFrameworkPage.jsx',
     css: 'src/pages/architecture-framework.css',
     api: ['GET /api/architecture/index', 'GET /api/architecture/section/:key'],
   },
   '/lab/hot-stock-picks': {
+    tier: 'premium',
     label: 'Hot Stock Picks',
     file: 'src/pages/HotStockPicksPage.jsx',
     css: 'src/pages/hot-stock-picks-page.css',
     api: ['GET /api/scoring/ranked'],
   },
   '/lab/theme-lab': {
+    tier: 'premium',
     label: 'Theme Lab',
     file: 'src/pages/ThemeLabPage.jsx',
     css: 'src/pages/theme-lab.css',
     api: [],
   },
   '/status/meta-stack-pipeline': {
+    tier: 'premium',
     label: 'META.Stack Pipeline',
     file: 'src/pages/MetaStackPipelinePage.jsx',
     css: 'src/pages/meta-stack-pipeline.css',
     api: ['GET /api/health'],
   },
   '/settings/settings-database': {
+    tier: 'premium',
     label: 'Database Settings',
     file: 'src/pages/SettingsDatabasePage.jsx',
     css: 'src/pages/settings-database.css',
@@ -386,24 +439,28 @@ const VIEW_META = {
 
   // ── Trading ──
   '/trading/trading-plans': {
+    tier: 'free',
     label: 'Trading Plans',
     file: 'src/pages/TradingPlansPage.jsx',
     css: 'src/pages/trading-plans-page.css',
     api: [],
   },
   '/trading/strategy-library': {
+    tier: 'premium',
     label: 'Strategy Library',
     file: 'src/pages/StrategyLibraryPage.jsx',
     css: 'src/pages/strategy-library.css',
     api: [],
   },
   '/trading/performance-lab': {
+    tier: 'free',
     label: 'Trading Performance',
     file: 'src/pages/PerformanceLabPage.jsx',
     css: 'src/pages/performance-lab.css',
     api: [],
   },
   '/trading/trading-settings': {
+    tier: 'free',
     label: 'Trading',
     file: 'src/pages/TradingSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -416,24 +473,28 @@ const VIEW_META = {
 
   // ── Accounts (trading212) ──
   '/trading212/order-testing': {
+    tier: 'premium',
     label: 'Order Testing',
     file: 'src/pages/OrderTestingPage.jsx',
     css: 'src/pages/order-test.css',
     api: [],
   },
   '/trading212/t212-portfolio': {
+    tier: 'free',
     label: 'Portfolio',
     file: 'src/pages/T212PortfolioPage.jsx',
     css: 'src/pages/t212-portfolio.css',
     api: [],
   },
   '/trading212/t212-isa': {
+    tier: 'free',
     label: 'Stocks ISA',
     file: 'src/pages/T212ISAPage.jsx',
     css: 'src/pages/t212-isa.css',
     api: [],
   },
   '/trading212/t212-cfd': {
+    tier: 'premium',
     label: 'CFD',
     file: 'src/pages/T212CFDPage.jsx',
     css: 'src/pages/t212-cfd.css',
@@ -442,6 +503,7 @@ const VIEW_META = {
 
   // ── Protocols ──
   '/protocols/configure-directives': {
+    tier: 'premium',
     label: 'Protocol Editor',
     file: 'src/pages/DirectivesConfigPage.jsx',
     css: 'src/pages/directives-config.css',
@@ -450,24 +512,28 @@ const VIEW_META = {
 
   // ── Scoring ──
   '/scoring/live-ordering-stack': {
+    tier: 'premium',
     label: 'Ladder',
     file: 'src/pages/LadderPage.jsx',
     css: 'src/pages/ladder.css',
     api: [],
   },
   '/scoring/ab-ladder': {
+    tier: 'premium',
     label: 'A/B Ladder',
     file: 'src/pages/AbLadderPage.jsx',
     css: 'src/pages/ab-ladder.css',
     api: [],
   },
   '/scoring/scoring-activity-logs': {
+    tier: 'premium',
     label: 'Scoring Activity Logs',
     file: 'src/pages/ScoringActivityLogsPage.jsx',
     css: 'src/pages/scoring-activity-logs.css',
     api: [],
   },
   '/signals/signals-overview': {
+    tier: 'premium',
     label: 'Signals',
     file: 'src/pages/SignalsOverviewPage.jsx',
     css: 'src/pages/signals-overview.css',
@@ -478,24 +544,28 @@ const VIEW_META = {
 
   // ── Education ──
   '/education/mt5-demo-trading': {
+    tier: 'free',
     label: 'MT5 Demo Trading',
     file: 'src/pages/Mt5TradingPage.jsx',
     css: 'src/pages/mt5-trading-page.css',
     api: [],
   },
   '/education/backtest': {
+    tier: 'premium',
     label: 'Backtest Engine',
     file: 'src/pages/BacktestPage.jsx',
     css: 'src/pages/backtest-data.css',
     api: [],
   },
   '/education/candle-patterns': {
+    tier: 'free',
     label: 'Pattern Detection',
     file: 'src/pages/TrainingCandlePatternsPage.jsx',
     css: 'src/pages/training-candle-patterns-page.css',
     api: [],
   },
   '/education/candle-patterns-guide': {
+    tier: 'free',
     label: 'Candle Patterns',
     file: 'src/pages/CandlePatternsGuidePage.jsx',
     css: 'src/pages/candle-patterns-guide.css',
@@ -504,30 +574,35 @@ const VIEW_META = {
 
   // ── Status ──
   '/status/setup': {
+    tier: 'free',
     label: 'Setup & Diagnostics',
     file: 'src/pages/SetupWizardPage.jsx',
     css: 'src/pages/setup-wizard.css',
     api: [],
   },
   '/status/system-log': {
+    tier: 'premium',
     label: 'System Log',
     file: 'src/pages/SystemLogPage.jsx',
     css: 'src/pages/system-log.css',
     api: [],
   },
   '/status/platform-comparisons': {
+    tier: 'premium',
     label: 'API Comparisons',
     file: 'src/pages/PlatformComparisonsPage.jsx',
     css: 'src/pages/platform-comparisons.css',
     api: [],
   },
   '/status/meta-stack-status': {
+    tier: 'premium',
     label: 'META.Stack Status',
     file: 'src/pages/MetaStackStatusPage.jsx',
     css: 'src/pages/meta-stack-status.css',
     api: [],
   },
   '/status/file-inventory': {
+    tier: 'premium',
     label: 'File Inventory',
     file: 'src/pages/FileInventoryPage.jsx',
     css: 'src/pages/file-inventory-page.css',
@@ -536,48 +611,56 @@ const VIEW_META = {
 
   // ── Lab ──
   '/lab/timeline': {
+    tier: 'premium',
     label: 'Timeline',
     file: 'src/pages/TradingTimelinePage.jsx',
     css: 'src/pages/trading-timeline-page.css',
     api: [],
   },
   '/lab/mt5-trading': {
+    tier: 'free',
     label: 'MT5 Trading (Lab)',
     file: 'src/pages/Mt5TradingPage.jsx',
     css: 'src/pages/mt5-trading-page.css',
     api: [],
   },
   '/lab/strategy-wizard': {
+    tier: 'premium',
     label: 'Strategy Wizard',
     file: 'src/pages/StrategyWizardPage.jsx',
     css: 'src/pages/strategy-wizard.css',
     api: [],
   },
   '/lab/speed-trading': {
+    tier: 'premium',
     label: 'Speed Trading',
     file: 'src/pages/SpeedTradingPage.jsx',
     css: 'src/pages/speed-trading.css',
     api: [],
   },
   '/lab/gold-speed': {
+    tier: 'premium',
     label: 'Gold Speed',
     file: 'src/pages/GoldSpeedTradingPage.jsx',
     css: 'src/pages/speed-cockpit.css',
     api: [],
   },
   '/lab/diagrams': {
+    tier: 'premium',
     label: 'Diagrams',
     file: 'src/pages/DiagramsPage.jsx',
     css: 'src/pages/diagrams.css',
     api: [],
   },
   '/status/meta-stack-explorer': {
+    tier: 'premium',
     label: 'META.Stack Explorer',
     file: 'src/pages/MetaStackExplorerPage.jsx',
     css: 'src/pages/meta-stack-explorer.css',
     api: [],
   },
   '/lab/component-lab': {
+    tier: 'premium',
     label: 'Component Lab',
     file: 'src/pages/ComponentLabPage.jsx',
     css: 'src/pages/component-lab.css',
@@ -588,126 +671,147 @@ const VIEW_META = {
   // accurate: the page makes no live call, so it cannot go stale against a dead backend —
   // but it CAN go stale against a schema change. Re-run the script after schema edits.
   '/lab/identity-map': {
+    tier: 'premium',
     label: 'Identity Map',
     file: 'src/pages/IdentityMapLabPage.jsx',
     css: 'src/pages/identity-map-lab.module.css',
     api: [],
   },
   '/lab/widget-library': {
+    tier: 'premium',
     label: 'Widget Library',
     file: 'src/pages/WidgetBoardLabPage.jsx',
     css: 'src/components/widget-board.css',
     api: ['/api/health', '/api/signals/best', '/api/symbols/positions', '/api/trading/sessions/market-context'],
   },
   '/lab/screen-assignment': {
+    tier: 'premium',
     label: 'Screen Assignment',
     file: 'src/pages/ScreenCockpitPage.jsx',
     css: 'src/pages/screen-cockpit.css',
     api: [],
   },
   '/lab/responsive-layout-lab': {
+    tier: 'premium',
     label: 'Responsive Layout Lab',
     file: 'src/pages/ResponsiveLayoutLabPage.jsx',
     css: 'src/pages/responsive-layout-lab.css',
     api: [],
   },
   '/lab/charts-lab': {
+    tier: 'premium',
     label: 'Charts Lab',
     file: 'src/pages/ChartsLabPage.jsx',
     css: 'src/pages/charts-lab.css',
     api: [],
   },
   '/lab/theme-lab-motion': {
+    tier: 'premium',
     label: 'Motion Lab',
     file: 'src/pages/ThemeLabMotion.jsx',
     css: 'src/pages/theme-lab-motion.css',
     api: [],
   },
   '/lab/theme-lab-transitions': {
+    tier: 'premium',
     label: 'Transitions Lab',
     file: 'src/pages/ThemeLabTransitions.jsx',
     css: 'src/pages/theme-lab-transitions.css',
     api: [],
   },
   '/lab/theme-lab-scroll': {
+    tier: 'premium',
     label: 'Scroll Animations',
     file: 'src/pages/ThemeLabScroll.jsx',
     css: 'src/pages/theme-lab-scroll.css',
     api: [],
   },
   '/lab/theme-lab-popover': {
+    tier: 'premium',
     label: 'Popover API',
     file: 'src/pages/ThemeLabPopover.jsx',
     css: 'src/pages/theme-lab-popover.css',
     api: [],
   },
   '/lab/lab-landing': {
+    tier: 'premium',
     label: 'Lab Directory',
     file: 'src/pages/LabLandingPage.jsx',
     css: 'src/pages/lab-landing.css',
     api: [],
   },
   '/lab/pipeline-graph-lab': {
+    tier: 'premium',
     label: 'Pipeline Graph',
     file: 'src/pages/PipelineGraphLabPage.jsx',
     css: 'src/pages/pipeline-graph-lab.css',
     api: [],
   },
   '/lab/lab': {
+    tier: 'premium',
     label: 'Lab Sandbox',
     file: 'src/pages/LabPage.jsx',
     css: 'src/pages/lab.css',
     api: [],
   },
   '/lab/feature-lab': {
+    tier: 'premium',
     label: 'Feature Lab',
     file: 'src/pages/FeatureLabPage.jsx',
     css: 'src/pages/feature-lab.css',
     api: [],
   },
   '/lab/snapshot-replay': {
+    tier: 'premium',
     label: 'Snapshot Replay',
     file: 'src/pages/SnapshotReplayPage.jsx',
     css: 'src/pages/snapshot-replay.css',
     api: [],
   },
   '/lab/meta-stack-cockpit': {
+    tier: 'premium',
     label: 'META.Stack Cockpit',
     file: 'src/pages/MetaStackCockpitPage.jsx',
     css: 'src/pages/metastack-cockpit.css',
     api: [],
   },
   '/lab/daily-briefing': {
+    tier: 'premium',
     label: 'Daily Briefing',
     file: 'src/pages/DailyBriefingPage.jsx',
     css: 'src/pages/daily-briefing.css',
     api: [],
   },
   '/lab/ab-testing': {
+    tier: 'premium',
     label: 'A/B Protocol Testing',
     file: 'src/pages/ABTestingPage.jsx',
     css: 'src/pages/ab-testing.css',
     api: [],
   },
   '/lab/ai-costs': {
+    tier: 'premium',
     label: 'AI Costs',
     file: 'src/pages/AICostsPage.jsx',
     css: 'src/pages/ai-costs.css',
     api: [],
   },
   '/lab/daily-summary-report': {
+    tier: 'premium',
     label: 'Daily Summary Report',
     file: 'src/pages/DailySummaryReportPage.jsx',
     css: 'src/pages/daily-summary-report.css',
     api: [],
   },
   '/lab/portfolio-lab': {
+    tier: 'premium',
     label: 'Portfolio Lab',
     file: 'src/pages/PortfolioLabPage.jsx',
     css: 'src/pages/portfolio-lab.css',
     api: [],
   },
   '/lab/snapshots': {
+    tier: 'premium',
     label: 'Snapshots',
     file: 'src/pages/SnapshotLibraryPage.jsx',
     css: 'src/pages/snapshot-library.css',
@@ -716,30 +820,35 @@ const VIEW_META = {
 
   // ── Development ──
   '/development/roadmap': {
+    tier: 'premium',
     label: 'Dynamic Roadmap',
     file: 'src/pages/RoadmapPage.jsx',
     css: 'src/pages/roadmap-page.css',
     api: ['GET /api/roadmap'],
   },
   '/planner/personal-finances': {
+    tier: 'premium',
     label: 'Personal Finances',
     file: 'src/pages/PersonalFinancesPage.jsx',
     css: 'src/pages/personal-finances.css',
     api: [],
   },
   '/planner/trading-styles': {
+    tier: 'premium',
     label: 'Trading Styles',
     file: 'src/pages/TradingStylesPage.jsx',
     css: 'src/pages/trading-styles.css',
     api: [],
   },
   '/planner/objectives': {
+    tier: 'premium',
     label: 'Objectives',
     file: 'src/pages/ObjectivesPage.jsx',
     css: 'src/pages/objectives.css',
     api: [],
   },
   '/lab/allocator': {
+    tier: 'premium',
     label: 'Strategy Allocator',
     file: 'src/pages/GlobalAllocatorPage.jsx',
     css: 'src/pages/global-allocator.css',
@@ -748,42 +857,49 @@ const VIEW_META = {
 
   // ── Settings ──
   '/settings/monitoring': {
+    tier: 'premium',
     label: 'Monitoring',
     file: 'src/pages/MonitoringPage.jsx',
     css: 'src/pages/settings.css',
     api: ['GET /api/alerts/count', 'GET /api/alerts/settings'],
   },
   '/settings/risk-controls': {
+    tier: 'free',
     label: 'Risk Controls',
     file: 'src/pages/RiskControlsPage.jsx',
     css: 'src/pages/risk-controls.css',
     api: [],
   },
   '/settings/settings': {
+    tier: 'free',
     label: 'General',
     file: 'src/pages/SettingsPage.jsx',
     css: 'src/pages/settings.css',
     api: ['GET /api/system/settings/health-checks', 'PUT /api/system/settings/health-checks'],
   },
   '/settings/settings-education': {
+    tier: 'free',
     label: 'Education',
     file: 'src/pages/SettingsEducationPage.jsx',
     css: 'src/pages/settings-education.css',
     api: [],
   },
   '/settings/theme-packs': {
+    tier: 'free',
     label: 'Theme Packs',
     file: 'src/pages/ThemePage.jsx',
     css: 'src/pages/theme-page.css',
     api: [],
   },
   '/settings/user-preferences': {
+    tier: 'free',
     label: 'User Preferences',
     file: 'src/pages/PreferenceLab.jsx',
     css: 'src/pages/preference-lab.css',
     api: [],
   },
   '/settings/trading-settings': {
+    tier: 'free',
     label: 'Trading',
     file: 'src/pages/TradingSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -795,18 +911,21 @@ const VIEW_META = {
   },
   // ── Settings split (#617) — one page per META.Stack layer question ──
   '/settings/appearance': {
+    tier: 'free',
     label: 'Appearance',
     file: 'src/pages/AppearanceSettingsPage.jsx',
     css: 'src/pages/settings.css',
     api: [],
   },
   '/settings/scoring-settings': {
+    tier: 'premium',
     label: 'Scoring Settings',
     file: 'src/pages/ScoringSettingsPage.jsx',
     css: 'src/pages/settings.css',
     api: ['GET /api/scoring/gated/thresholds', 'POST /api/automation/layer'],
   },
   '/settings/automation': {
+    tier: 'premium',
     label: 'Automation Settings',
     file: 'src/pages/AutomationSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -821,12 +940,14 @@ const VIEW_META = {
 
   // ── Dashboard ──
   '/dashboard/dashboard': {
+    tier: 'free',
     label: 'Dashboard',
     file: 'src/pages/DashboardPage.jsx',
     css: 'src/pages/home-dashboard.css',
     api: ['GET /api/providers/mt5/diagnostics', 'GET /api/providers/mt5/positions', 'GET /api/scoring/ranked'],
   },
   '/dashboard/screen': {
+    tier: 'premium',
     label: 'Screen View',
     file: 'src/pages/ScreenBoardPage.jsx',
     css: 'src/components/widget-board.css',
@@ -835,6 +956,7 @@ const VIEW_META = {
 
   // ── Watchlists ──
   '/watchlists/add-symbol': {
+    tier: 'free',
     label: 'Add Symbol',
     file: 'src/pages/AddSymbolPage.jsx',
     css: 'src/pages/add-symbol.css',
@@ -848,6 +970,7 @@ const VIEW_META = {
   // all, and `scripts/verify-view-meta-routes.cjs` now ENFORCES coverage, so the next nav link
   // added without metadata fails the verifier instead of landing on the user.
   '/research/research-notes': {
+    tier: 'free',
     label: 'Notes',
     file: 'src/pages/ResearchNotesPage.jsx',
     css: 'src/pages/research-notes.css',
@@ -859,6 +982,7 @@ const VIEW_META = {
     ],
   },
   '/research/events-calendar': {
+    tier: 'free',
     label: 'Events Calendar',
     file: 'src/pages/EventsCalendarPage.jsx',
     css: 'src/pages/events-calendar.css',
@@ -869,42 +993,49 @@ const VIEW_META = {
     ],
   },
   '/research/stock-investigation': {
+    tier: 'free',
     label: 'Stock Investigation',
     file: 'src/pages/StockInvestigationPage.jsx',
     css: 'src/pages/stock-investigation.css',
     api: ['GET /api/research/investigations?limit=30', 'POST /api/research/investigations'],
   },
   '/research/market-correlations': {
+    tier: 'free',
     label: 'Market Correlations',
     file: 'src/pages/MarketCorrelationsPage.jsx',
     css: 'src/pages/market-correlations.css',
     api: ['GET /api/portfolio/correlation'],
   },
   '/research/recently-analysed-symbols': {
+    tier: 'free',
     label: 'Recently Analysed',
     file: 'src/pages/RecentlyAnalysedSymbolsPage.jsx',
     css: 'src/pages/recently-analysed.css',
     api: ['GET /api/scoring/recently-analysed?limit=50'],
   },
   '/research/analyse-symbol': {
+    tier: 'premium',
     label: 'Analyse Symbol',
     file: 'src/pages/AnalyseSymbolPage.jsx',
     css: 'src/pages/analyse-symbol.css',
     api: ['GET /api/symbols', 'GET /api/scoring/ranked?limit=50'],
   },
   '/protocols/protocol-builder': {
+    tier: 'premium',
     label: 'Protocol Builder',
     file: 'src/pages/CreateProtocolsPage.jsx',
     css: 'src/pages/create-protocols.css',
     api: ['GET /api/directives', 'GET /api/scoring/protocols', 'POST /api/scoring/protocols'],
   },
   '/protocols/directive-viewer': {
+    tier: 'premium',
     label: 'Directive Viewer',
     file: 'src/pages/DirectiveViewerPage.jsx',
     css: 'src/pages/directive-viewer.css',
     api: ['GET /api/directives/:id/viewer'],
   },
   '/protocols/dual-protocol-inspector': {
+    tier: 'premium',
     // The nav label is "Dual-Protocol Inspector"; the component file keeps its lab name.
     label: 'Dual-Protocol Inspector',
     file: 'src/pages/ScoringDebugLab.jsx',
@@ -912,6 +1043,7 @@ const VIEW_META = {
     api: ['GET /api/scoring/gated/:symbol?protocol&bars&timeframe'],
   },
   '/trading/strategies-derived': {
+    tier: 'premium',
     label: 'Strategies',
     file: 'src/pages/DerivedStrategiesPage.jsx',
     css: 'src/pages/derived-strategies.module.css',
@@ -924,12 +1056,14 @@ const VIEW_META = {
     ],
   },
   '/education/settings-education': {
+    tier: 'free',
     label: 'Education Settings',
     file: 'src/pages/SettingsEducationPage.jsx',
     css: 'src/pages/settings.css',
     api: [],
   },
   '/status/architecture-framework': {
+    tier: 'premium',
     label: 'Architecture',
     file: 'src/pages/ArchitectureFrameworkPage.jsx',
     css: 'src/pages/architecture-framework.css',
@@ -946,12 +1080,14 @@ const VIEW_META = {
   // analytics, about). It has no page component and no stylesheet of its own; `file` names the
   // shell that renders it so the overlay's component name and "open view file" stay truthful.
   '/status/analytics': {
+    tier: 'premium',
     label: 'Analytics',
     file: 'src/App.jsx',
     css: 'src/index.css',
     api: [],
   },
   '/lab/position-lifecycle': {
+    tier: 'premium',
     label: 'Position Lifecycle',
     file: 'src/pages/PositionLifecyclePage.jsx',
     css: 'src/pages/position-lifecycle.css',
