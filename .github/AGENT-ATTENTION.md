@@ -36,6 +36,17 @@ Items needing human attention. Agents: read this at session start. Append confir
   ≈10:45) while parallel build cycles were in flight; each recovered by starting `dist/src/main.js`.
   No crash trace in either log. If you are the agent cycling builds, expect your run to stop the API —
   that is normal; a restart that FAILS is what this script now reports loudly.
+- **UPDATE (same day) — the "APIs keep dying" pattern has a likely cause: terminal job-objects.**
+  `build:api` reports `API healthy` and the API is confirmed up, then the API is found dead minutes
+  later with a clean log. The API was spawned from a terminal that the harness later **cleans up on
+  completion** — Windows job objects kill the whole process tree when that happens. **Launch that
+  survives cleanup** (verified: API stayed up across several later command completions):
+  ```powershell
+  $cmd = 'cmd.exe /c "cd /d C:\wamp64\www\trading-command-suite\nest && node dist/src/main.js >> ..\logs\api-out.log 2>> ..\logs\api-err.log"'
+  Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd }
+  ```
+  ⚠️ Not isolated as the ONLY cause (a crash is still possible) — but it is the first hypothesis with
+  a mechanism AND a working counter-measure. Measure before attributing.
 - **Agent:** Copilot (2026-09-23), closing #953 + #933.
 
 ### 🛑 VOCABULARY — "A/B" means ONE thing now. Six things used to be called that

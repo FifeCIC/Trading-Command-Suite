@@ -38,6 +38,10 @@ import {
   resolveProfitCurrency,
   ASSUMED_CURRENCY_SAFETY_FACTOR,
 } from '../../common/trading/position-margin';
+// ⚠️ #848 — the peak rule lives in ONE place. An unreadable account value must never seed the
+// drawdown peak (a fabricated $10,000 did exactly that and blocked every trade on recovery);
+// peak-equity.spec.ts pins the rule and canaries it.
+import { nextPeakEquity } from '../../common/trading/peak-equity';
 import { NotificationService } from '../notifications/notifications.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 // ⚠️ #905 — the ceiling measurement behind the activation gate. ONE arithmetic basis shared
@@ -1623,10 +1627,10 @@ export class TradingStrategyService {
         // Drawdown check — track peak equity (only increases) so drawdown is real.
         // Previously peak was hardcoded to current equity, making drawdown always 0%
         // and permanently disabling the maxDrawdown: 0.25 risk limit.
-        // ⚠️ `portfolioValue` here is a REAL account reading — never a fallback (#848).
-        if (this.peakEquity === null || portfolioValue > this.peakEquity) {
-          this.peakEquity = portfolioValue;
-        }
+        // ⚠️ `portfolioValue` here is a REAL account reading — never a fallback (#848), and the
+        // only writer of `peakEquity` is `nextPeakEquity()`, which refuses to move on a null
+        // reading. Do not inline the comparison again — the spec canaries the rule.
+        this.peakEquity = nextPeakEquity(this.peakEquity, portfolioValue);
         const drawdownCheck = this.riskService.checkDrawdown(
           this.peakEquity,
           portfolioValue,
