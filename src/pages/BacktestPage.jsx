@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import ReplayPlayer from '../components/ReplayPlayer';
 import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -331,6 +332,10 @@ export default function BacktestPage() {
           )}
         </div>
       )}
+
+      {/* #819 — the replay of THIS run. Mounted here rather than as a new route: sprint #965
+          item 5 names the surfaces (#819, #606) and a fourth surface is the churn it forbids. */}
+      <ReplayPlayer runId={runId} />
     </div>
   );
 }
