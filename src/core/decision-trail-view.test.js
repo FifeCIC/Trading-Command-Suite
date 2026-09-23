@@ -11,9 +11,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { applyObservationMode, OBSERVATION_MODES, MODE_INFO } from './decision-trail-view.js';
+import { applyObservationMode, OBSERVATION_MODES, MODE_INFO, DEFAULT_OBSERVATION_MODE } from './decision-trail-view.js';
 
-const obs = (at, symbol = 'SPY') => ({ decision: 'OBSERVED', strategyId: '', symbol, timestamp: at });
+const obs = (at, symbol = 'SPY', extra = {}) => ({ decision: 'OBSERVED', strategyId: '', symbol, timestamp: at, ...extra });
 const dec = (at, decision = 'SCORED', strategyId = 'bot-1') => ({ decision, strategyId, symbol: 'XAUUSD', timestamp: at });
 
 const trails = [
@@ -90,12 +90,34 @@ test('an EMPTY list and a FULLY-filtered list do not look the same', () => {
   assert.equal(allObs.counts.hidden, 2);
 });
 
-test('an unknown mode falls back to A rather than rendering nothing', () => {
-  const { rows, counts } = applyObservationMode(trails, 'Z');
-  assert.equal(rows.length, 5);
-  assert.equal(counts.hidden, 0);
-  assert.equal(applyObservationMode(trails, undefined).rows.length, 5);
+test('an unknown mode falls back to the DEFAULT rather than rendering nothing', () => {
+  assert.equal(DEFAULT_OBSERVATION_MODE, 'C', 'the owner chose collapse');
+  const unknown = applyObservationMode(trails, 'Z');
+  // The default (C) shows everything: decisions as cards, observations folded.
+  assert.equal(unknown.counts.total, 5);
+  assert.equal(unknown.counts.hidden, 0, 'the default hides nothing');
+  assert.equal(unknown.rows.length, 4, '2 decision cards + 2 group rows');
+  assert.equal(applyObservationMode(trails, undefined).counts.total, 5);
   assert.equal(applyObservationMode(null, 'B').counts.total, 0);
+});
+
+test('a collapsed row names the STRONGEST score it is hiding (the actionable half)', () => {
+  const withScores = [
+    obs('2026-09-23T10:00:00Z', 'EURUSD', { compositePct: 59 }),
+    obs('2026-09-23T10:00:00Z', 'GBPUSD', { compositePct: 12 }),
+    obs('2026-09-23T10:00:00Z', 'USDJPY', { compositePct: 41, signal: 'BUY' }),
+    dec('2026-09-23T10:00:00Z'),
+  ];
+  const { rows } = applyObservationMode(withScores, 'C');
+  const group = rows.find((r) => r.type === 'group');
+  assert.equal(group.observations.length, 3);
+  assert.equal(group.strongest.symbol, 'EURUSD', 'the highest score, not the first row');
+  assert.equal(group.strongest.value, 59);
+  assert.equal(group.strongest.text, '59.0%');
+
+  // And the other direction: with nothing numeric, the row must say NOTHING rather than 0.
+  const noScores = applyObservationMode([obs('2026-09-23T10:00:00Z'), obs('2026-09-23T10:00:01Z')], 'C');
+  assert.equal(noScores.rows.find((r) => r.type === 'group').strongest, null);
 });
 
 test('every mode is described, so the picker cannot render a blank button', () => {

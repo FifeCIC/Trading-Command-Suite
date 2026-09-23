@@ -716,4 +716,6 @@
   color: inherit;
 }
 .dt-group-symbols { font-variant-numeric: tabular-nums; }
+.dt-group-strongest { color: var(--ink); font-variant-numeric: tabular-nums; }
+.dt-group-muted { font-style: italic; }
 .dt-group-time { margin-left: auto; font-variant-numeric: tabular-nums; }

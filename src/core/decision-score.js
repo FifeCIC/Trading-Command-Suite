@@ -13,7 +13,7 @@
  * The rule this helper enforces for every surface: **a number is never rendered without its unit.**
  *
  *   compositePct   → `7.0%`      (percentage of configured capacity — what minComposite gates)
- *   compositeRaw   → `178 raw`   (additive protocol score — never compare to a percentage bar)
+ *   compositeRaw   → `178 pts`  (additive protocol score — never compare to a percentage bar)
  *   composite      → `165?`      (historical row: the unit was never recorded — do not compute)
  *   none of them   → ''          (absence is absence, not 0)
  *
@@ -50,7 +50,7 @@ export function decisionScore(row) {
   const raw = num(row.compositeRaw);
   if (raw !== null) {
     return {
-      text: `${Math.round(raw)} raw`,
+      text: `${Math.round(raw)} pts`,
       kind: 'raw',
       title: 'Raw additive protocol score (directive maxScore sum) — not a percentage.',
       value: raw,

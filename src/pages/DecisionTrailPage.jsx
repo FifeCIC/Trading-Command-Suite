@@ -37,6 +37,7 @@ import {
 import {
   OBSERVATION_MODES,
   MODE_INFO,
+  DEFAULT_OBSERVATION_MODE,
   applyObservationMode,
 } from '../core/decision-trail-view.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -94,12 +95,12 @@ export default function DecisionTrailPage() {
   // design" on other pages (VariantSwitcher, documented in its header), and overloading it here
   // would make one string mean two different things depending on the route.
   const observeParam = searchParams.get('observe');
-  const mode = OBSERVATION_MODES.includes(observeParam) ? observeParam : 'A';
+  const mode = OBSERVATION_MODES.includes(observeParam) ? observeParam : DEFAULT_OBSERVATION_MODE;
   const setObserve = (m) => {
     // From the LIVE query string, not the hook's snapshot: this page has another effect writing
     // the same object, and a stale copy would drop its key (#R12, measured).
     const next = new URLSearchParams(window.location.search);
-    if (m === 'A') next.delete('observe');
+    if (m === DEFAULT_OBSERVATION_MODE) next.delete('observe');
     else next.set('observe', m);
     setSearchParams(next, { replace: true });
   };
@@ -190,9 +191,17 @@ export default function DecisionTrailPage() {
           <strong>{MODE_INFO[mode].title}</strong>
         </div>
         <p className="dt-variant-desc">
-          {MODE_INFO[mode].desc} Three ways to handle rows nothing consumes. This page is a design
-          choice awaiting your decision, not a shipped default — and no mode ever hides a row that a
-          bot acted on.
+          <strong>What this page answers:</strong> “why did the system do that?” — one card per
+          decision the automation loop recorded, newest first. Most rows are the loop scoring symbols
+          <em> that no bot is subscribed to</em>: real work, nobody to act on it. The three modes
+          differ only in how those rows are shown — <strong>A</strong> lists them (long and
+          repetitive), <strong>B</strong> leaves them out, <strong>C</strong> folds each batch into
+          one line and names the strongest score inside it.
+        </p>
+        <p className="dt-variant-desc">
+          <strong>Reading a score:</strong> <code>59%</code> is a share of the protocol’s capacity
+          (what the gates compare) and <code>178 pts</code> is the raw sum of directive points, which
+          is not a percentage — the two are never comparable.
         </p>
         <div className="dt-variant-picker" role="group" aria-label="Observation display variant">
           {OBSERVATION_MODES.map((m) => (
@@ -248,9 +257,15 @@ export default function DecisionTrailPage() {
                   title="Observations: scored, but no bot is subscribed — nothing can act on them"
                 >
                   <span className="dt-group-count">{row.observations.length}</span>
-                  <span className="dt-group-label">
-                    observation{row.observations.length === 1 ? '' : 's'} · no consumer
-                  </span>
+                  <span className="dt-group-label">scored · no bot watching</span>
+                  {row.strongest ? (
+                    <span className="dt-group-strongest">
+                      strongest <strong>{row.strongest.symbol}</strong> {row.strongest.text}
+                      {row.strongest.signal ? ` · ${row.strongest.signal}` : ''}
+                    </span>
+                  ) : (
+                    <span className="dt-group-muted">no numeric score recorded</span>
+                  )}
                   <span className="dt-group-symbols">
                     {symbols.slice(0, 6).join(' · ')}
                     {symbols.length > 6 ? ` +${symbols.length - 6}` : ''}

@@ -30,7 +30,12 @@ test('a queue-path (percentage) row renders as a percentage, with the gate unit 
 test('a ladder/A-B (raw) row renders as raw — never as a bare number', () => {
   const s = decisionScore({ compositeRaw: 178 });
 
-  assert.equal(s.text, '178 raw');
+  // ⚠️ The unit WORD changed from "raw" to "pts" (owner, 2026-09-23: *"'raw' whatever that
+  // means"* — the explanation lived only in a tooltip). The invariant is unchanged, and it is the
+  // reason this assertion exists: a raw row renders WITH a unit, never as a bare number that a
+  // reader would take for a percentage.
+  assert.equal(s.text, '178 pts');
+  assert.equal(s.text.includes('raw'), false, 'the on-screen word must not be unexplained jargon');
   assert.equal(s.kind, 'raw');
   // The canary: a bare `178` on a surface that also shows percentages is the #909 defect.
   assert.notEqual(s.text, '178');
@@ -61,5 +66,5 @@ test('no score at all is empty — absence, not 0', () => {
 
 test('zero is a real measurement and is rendered (0% is not "no data")', () => {
   assert.equal(decisionScore({ compositePct: 0 }).text, '0.0%');
-  assert.equal(decisionScore({ compositeRaw: 0 }).text, '0 raw');
+  assert.equal(decisionScore({ compositeRaw: 0 }).text, '0 pts');
 });

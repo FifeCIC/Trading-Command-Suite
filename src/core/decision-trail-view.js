@@ -26,24 +26,33 @@
  */
 
 import { isObservation } from './decision-display.js';
+import { decisionScore } from './decision-score.js';
 
 export const OBSERVATION_MODES = ['A', 'B', 'C'];
+
+/**
+ * The mode the page shows when the URL says nothing.
+ *
+ * ⚠️ Set to **C** from the owner's own reading, 2026-09-23: *"I like C · collapse — but only because
+ * A is highly repetitive, they all say OBSERVED"*.
+ */
+export const DEFAULT_OBSERVATION_MODE = 'C';
 
 export const MODE_INFO = {
   A: {
     label: 'A · chip',
-    title: 'Old — every row, chip marks the observations',
-    desc: 'Nothing is hidden. An observation carries its "no consumer" chip.',
+    title: 'Every row, a chip marks the ones nothing consumes',
+    desc: 'Nothing is hidden. Reads as a long list, because most rows are observations.',
   },
   B: {
     label: 'B · hide',
-    title: 'New — observations out of the way, count stated',
-    desc: 'The list leads with rows that had a consumer, and says how many it left out.',
+    title: 'Only the rows where something happened',
+    desc: 'Answers “what did the system actually DO?” — and says how many rows it left out.',
   },
   C: {
     label: 'C · collapse',
-    title: 'New — one line per tick for the observations',
-    desc: 'Each tick\u2019s observations fold into a single summary row; decisions keep a full card.',
+    title: 'What happened, plus one line per batch of scores nobody could act on',
+    desc: 'Answers both questions at once, with the strongest unused score named per batch.',
   },
 };
 
@@ -63,9 +72,9 @@ function tickKey(trail) {
  * `rows` is a list of `{ type: 'trail', trail }` or `{ type: 'group', key, at, observations }`.
  * An unrecognised mode falls back to A rather than rendering nothing.
  */
-export function applyObservationMode(trails = [], mode = 'A') {
+export function applyObservationMode(trails = [], mode = DEFAULT_OBSERVATION_MODE) {
   const list = Array.isArray(trails) ? trails : [];
-  const effective = OBSERVATION_MODES.includes(mode) ? mode : 'A';
+  const effective = OBSERVATION_MODES.includes(mode) ? mode : DEFAULT_OBSERVATION_MODE;
 
   const observations = list.filter((t) => isObservationRow(t));
   const decisions = list.filter((t) => !isObservationRow(t));
@@ -92,9 +101,23 @@ export function applyObservationMode(trails = [], mode = 'A') {
       const key = tickKey(trail);
       const group = byTick.get(key) ?? { type: 'group', key, at: trail.timestamp ?? null, observations: [] };
       group.observations.push(trail);
-      byTick.set(key, group);
-    }
+      byTick.set(key, group);    }
     counts.groups = byTick.size;
+    // ⚠️ The owner's reading of the first version, 2026-09-23: "this looks like a list of symbols
+    // that have X amount of scores" — a count and a symbol list is a tally, not information. So a
+    // group also carries the STRONGEST score in it: the actionable half of the row is "your ladder
+    // produced 59% BUY on EURUSD and no bot is watching", which a tally cannot say.
+    for (const group of byTick.values()) {
+      let best = null;
+      for (const trail of group.observations) {
+        const score = decisionScore(trail);
+        if (score.value === null) continue;
+        if (!best || score.value > best.value) {
+          best = { value: score.value, text: score.text, symbol: trail.symbol ?? '?', signal: trail.signal ?? null };
+        }
+      }
+      group.strongest = best;
+    }
     // Order: keep the incoming order, replacing a run of observations with its group at the
     // position of the FIRST observation in that run. The page's order is recency.
     const seen = new Set();
