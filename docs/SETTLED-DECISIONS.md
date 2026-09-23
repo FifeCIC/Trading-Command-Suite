@@ -102,6 +102,28 @@ that are settled but **NOT yet enforceable** — which is exactly the set that g
 
 ---
 
+## Settled 2026-09-23 — decision pass (agent, under delegated autonomy; owner ratification pending)
+
+> Recorded as issue comments on the day (owner unavailable; "work autonomously and make good
+> decisions"). The owner may reverse any row in review — none imply anything irreversible.
+> **All rows are 🔴 UNGUARDED until their guards ship** — that is the point of listing them:
+> an unguarded decision is one that WILL be re-opened.
+
+| # | Decision | What it means | Settled | Guard status |
+|---|---|---|---|---|
+| 13 | **The manual trade path runs the SAME risk gate as bots** | `placeManualTrade()` must call `assessGlobalRiskLimits()` before `broker.placeOrder()`; refusal = `TCS-RISK-*` notice naming cap + number. Sub-decisions: notional + margin shown in account currency **before the click**; `assessBookAtRisk()` evaluates **existing + incoming**. The margin-vs-risk arithmetic (§3) is explicitly NOT settled here | **#945** | 🔴 **UNGUARDED** — guard ships with fix: any path reaching `broker.placeOrder()` must route through the gate |
+| 14 | **Manual positions count against the same cap — explicitly, never silently** | The block reason and UI show slot holders split by origin; cap scope stays global; the VALUE is #943's business (maths → A/B) | #773 | 🔴 UNGUARDED |
+| 15 | **Bot `mode` is the only dispatch authority** | `trading_strategy.mode` decides dispatch; `metastack_snapshot.mode` carries the scoring STYLE and must never be read as a trading mode. The #929 fix flips A/B from intent-only to real dispatch — ships as its own change under owner visibility | #929 | 🔴 UNGUARDED |
+| 16 | **The exposure breaker measures what the gate measures** | Open-position count from the canonical source, fires at `>=` cap (**inclusive**). `> 80` against a cap of 5 cannot fire in any reachable state — decoration, not protection. Notional re-design is NOT settled (couples to #943) | #852 | 🔴 UNGUARDED — boundary test ships with fix |
+| 17 | **A score is never rendered without its protocol label** | SymbolPage: one score card **per assigned protocol** (from `/api/symbols/:ticker/protocols`); AutomationDashboard: protocol travels with the run/row data; ActivityLogs: protocol **as recorded on the row**. A silent default protocol is REJECTED | #925 | 🔴 UNGUARDED |
+| 18 | **Bot 'Hourly Triple-Directive Control' SUBSCRIBES to `hourly-3dir-v1`** | Applied via seeder + correct `role` + round-trip proof; `create()` should create-or-refuse (class fix, still open). ⚠️ Implementation deferred — seed files mid-edit by another agent (#833) | #874 | 🔴 UNGUARDED |
+| 19 | **`global_setting` is seeded with CURRENT values** | Persistence, not re-sizing. First run = dry-run with `changes` read before writing. Per-instrument sizing stays a maths change (#943) | #836 | 🔴 UNGUARDED |
+| 20 | **Long-only stays where genuinely long-biased — recorded per protocol** | Each of the 16 LONG_ONLY protocols tagged "by design" (with rationale) or "oversight" (a finding). SHORT path proven by ONE controlled experiment bot — not a bulk flip | #765 | 🔴 UNGUARDED |
+| 21 | **Guardian early-exit is maths — an A/B copy required** | Stop guardian tightening (#927) is the suspect mechanism; its effect on winners (0.448 realised vs 1.0–2.0 configured) is NOT an intended outcome. Mechanism must be isolated first; the policy change ships as a copied configuration with a falsification test (#944) | #916 | 🔴 UNGUARDED |
+| 22 | **Licensing enforcement is DEFERRED until launch** | "Polite gating, not a security boundary" is the stated position; revisit when a priced tier + distribution exist (commercial decisions first) | #809 | 🟡 stated on the licensing surface; no code guard (none is possible pre-pricing) |
+
+---
+
 ## How to use this file
 
 Before changing anything in a listed area, answer:
