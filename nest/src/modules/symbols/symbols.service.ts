@@ -11,6 +11,16 @@ import { resolvePositionPnl } from '../../common/utils/position-pnl';
 // #854/#778 — the ONE definition of a broker-maintained ("live") position row.
 import { isLivePosition } from '../../common/utils/position-freshness';
 
+/** A symbol's data-source record — one provider that has delivered bars for it. */
+export interface SymbolSource {
+  provider: string;
+  bars: number;
+  lastBarAt: string | null;
+}
+
+/** `symbolId` → every provider that has delivered bars for it. */
+type SourceMap = Map<string, SymbolSource[]>;
+
 @Injectable()
 export class SymbolsService {
   private readonly logger = new Logger(SymbolsService.name);
@@ -20,6 +30,38 @@ export class SymbolsService {
     private readonly modeService: ModeService,
     private readonly adapterFactory: AdapterFactory,
   ) {}
+
+  /**
+   * Data-source map cache — `symbolId` → the providers that delivered bars.
+   *
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * ⚠️ WHY THIS IS CACHED RATHER THAN OPTIMISED — every number measured 2026-09-23.
+   * ─────────────────────────────────────────────────────────────────────────────────────────
+   * The map is **114 rows** derived from **601,239** `marketbar` rows (83MB data + 74MB index).
+   * Every formulation of the aggregation costs about five seconds:
+   *
+   *     GROUP BY symbolId, provider .......... 4,606ms
+   *     bounded to the last 7 days .......... 8,150ms   SLOWER, and loses 66 of 110 symbols
+   *     bounded to the last 2 days .......... 4,972ms   SLOWER, and loses more
+   *     DISTINCT (symbolId, provider) ....... 5,203ms
+   *     + an index on (symbolId, provider) .. 5,356ms   built in 47.8s; EXPLAIN reports key=NULL
+   *
+   * So the query is not the thing to fix — **querying it per request is.** Adding this lookup
+   * took `/api/symbols` from instant to 4.7–7.0s, which the API flagged itself:
+   * `WARN [SlowRequest] GET /api/symbols — 5558ms`. An endpoint that answers correctly in seven
+   * seconds is still a regression — correctness is not a budget.
+   *
+   * ⚠️ The data is near-static, which is what makes a cache honest rather than a fudge:
+   * **3 symbols** have EVER been delivered by more than one provider. A 10-minute TTL costs
+   * essentially nothing in accuracy and removes the cost from every page load.
+   *
+   * ⚠️ Refreshes are LOGGED so staleness is visible rather than silent — a cache nobody can see
+   * is indistinguishable from a wrong answer.
+   */
+  private sourceCache: { at: number; map: SourceMap } | null = null;
+
+  /** How long a source map is trusted before it is rebuilt. See `sourceCache`. */
+  private static readonly SOURCE_TTL_MS = 10 * 60 * 1000;
 
   async create(dto: CreateSymbolDto): Promise<Symbol> {
     if (!this.prisma.isAvailable) {
@@ -104,34 +146,48 @@ export class SymbolsService {
    */
   private async withDataSources<T extends { id: string }>(
     symbols: T[],
-  ): Promise<Array<T & { sources: Array<{ provider: string; bars: number; lastBarAt: string | null }> | null }>> {
-    type Source = { provider: string; bars: number; lastBarAt: string | null };
-    const decorated = symbols.map((s) => ({ ...s, sources: [] as Source[] | null }));
+  ): Promise<Array<T & { sources: SymbolSource[] | null }>> {
+    const decorated = symbols.map((s) => ({ ...s, sources: [] as SymbolSource[] | null }));
     if (symbols.length === 0) return decorated;
 
     try {
-      // ONE grouped query for the whole page — not one per symbol.
-      const grouped = (await (this.prisma as any).marketBar.groupBy({
-        by: ['symbolId', 'provider'],
-        where: { symbolId: { in: symbols.map((s) => s.id) } },
-        _count: { _all: true },
-        _max: { timestamp: true },
-      })) as any[];
+      // ── Cache lookup. See `sourceCache` for why this is cached rather than tuned. ──
+      //
+      // ⚠️ STALE-WHILE-REVALIDATE. Measured 2026-09-23 the cold aggregation is **7,321ms** and a
+      // cache hit is **17ms**. A plain TTL would therefore make one unlucky page load every ten
+      // minutes pay seven seconds — a 400x spike, driven purely by WHEN the user arrived. That is
+      // the same defect in a milder costume: the endpoint is correct and intermittently unusable.
+      //
+      // So a stale map is SERVED rather than blocked on: the reader gets the previous answer
+      // immediately and the refresh happens behind them. The 7s cost is paid exactly once, by the
+      // first request after boot, instead of once per TTL window.
+      const now = Date.now();
+      const cached = this.sourceCache;
+      let byId: SourceMap;
 
-      const byId = new Map<string, Source[]>();
-      for (const g of grouped) {
-        const list = byId.get(g.symbolId) ?? [];
-        list.push({
-          provider: g.provider,
-          bars: g._count?._all ?? 0,
-          lastBarAt: g._max?.timestamp ? new Date(g._max.timestamp).toISOString() : null,
-        });
-        byId.set(g.symbolId, list);
+      if (cached) {
+        // Serve what we have, always. Only schedule a rebuild once the map goes stale.
+        byId = cached.map;
+        if (now - cached.at >= SymbolsService.SOURCE_TTL_MS) {
+          // Deliberately not awaited — the reader is not made to wait for a 7s aggregation.
+          // `.catch` rather than `void` so a failed background refresh is LOGGED, not swallowed:
+          // silently keeping a stale map forever would be indistinguishable from a fresh one.
+          this.refreshSourceMap(symbols.map((s) => s.id)).catch((err) =>
+            this.logger.warn(
+              `Background data-source refresh failed; serving the previous map (may be stale): ${String(err)}`,
+            ),
+          );
+        }
+      } else {
+        // Nothing to serve yet — this is the one request that pays for the aggregation.
+        byId = await this.refreshSourceMap(symbols.map((s) => s.id));
       }
+
       for (const d of decorated) {
         const list = byId.get(d.id);
-        // Largest delivery first, so the dominant provider leads. An absent entry stays `[]`.
-        if (list) d.sources = list.sort((a, b) => b.bars - a.bars);
+        // Largest delivery first, so the dominant provider leads. An absent entry stays `[]`,
+        // which is INFORMATION: no provider has ever delivered a bar for this symbol.
+        if (list) d.sources = [...list].sort((a, b) => b.bars - a.bars);
       }
     } catch (err) {
       // The symbols are still returned — only the provenance is unknown, and it says so.
@@ -142,6 +198,61 @@ export class SymbolsService {
       for (const d of decorated) d.sources = null;
     }
     return decorated;
+  }
+
+  /**
+   * refreshSourceMap() — rebuild and cache the `symbolId` → providers map.
+   *
+   * ⚠️ A single in-flight refresh is enforced: concurrent callers share one promise rather than
+   * each starting their own five-second aggregation. Without this, a page that fires several
+   * requests at once would stampede the database with identical 600k-row scans — the classic
+   * cache-miss pile-up, and the failure mode that makes a cache slower than no cache.
+   */
+  private refreshInFlight: Promise<SourceMap> | null = null;
+
+  private async refreshSourceMap(symbolIds: string[]): Promise<SourceMap> {
+    // Explicit `!== null`, not truthiness — a Promise is always truthy, and the linter is right
+    // that `if (promise)` reads as a mistake even when it is not one.
+    if (this.refreshInFlight !== null) return this.refreshInFlight;
+
+    this.refreshInFlight = (async () => {
+      // ONE grouped query for the whole page — not one per symbol. `marketBar` is a generated
+      // model, so no cast is needed; `(this.prisma as any)` would silence the very types that
+      // would catch a renamed column.
+      const started = Date.now();
+      const grouped = await this.prisma.marketBar.groupBy({
+        by: ['symbolId', 'provider'],
+        where: { symbolId: { in: symbolIds } },
+        _count: { _all: true },
+        _max: { timestamp: true },
+      });
+
+      const map: SourceMap = new Map();
+      for (const g of grouped) {
+        const list = map.get(g.symbolId) ?? [];
+        list.push({
+          provider: g.provider,
+          bars: g._count._all,
+          lastBarAt: g._max.timestamp
+            ? new Date(g._max.timestamp).toISOString()
+            : null,
+        });
+        map.set(g.symbolId, list);
+      }
+      this.sourceCache = { at: Date.now(), map };
+      this.logger.log(
+        `Data-source map refreshed: ${map.size} symbol(s) with delivered bars in ` +
+          `${Date.now() - started}ms (rebuilt every ${SymbolsService.SOURCE_TTL_MS / 60000}m; ` +
+          'a STALE map is served during the rebuild, so this never delays a page load).',
+      );
+      return map;
+    })();
+
+    try {
+      return await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
   }
 
   /** Find symbols that have a specific tag in their JSON tags array. */
