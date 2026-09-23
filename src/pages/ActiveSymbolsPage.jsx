@@ -12,6 +12,7 @@ import {
 import CopyViewData from '../components/CopyViewData';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
+import { notice } from '../core/notices/registry.js';
 import './trading-platforms.css';
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex'];
@@ -59,6 +60,29 @@ export default function ActiveSymbolsPage() {
     queryFn: () => apiGet('/api/symbols'),
     refetchInterval: 30_000,
   });
+
+  /**
+   * ⚠️⚠️ WHY THIS IS NOT `symbols.isError` (#964) — MEASURED, NOT ASSUMED.
+   *
+   * TanStack Query v5 defaults to `networkMode: 'online'`. When the app believes it is offline,
+   * a query that has NEVER succeeded is **PAUSED**, not failed. Measured 2026-09-23 on this page
+   * with the request forced to fail:
+   *
+   *     { status: 'pending', fetchStatus: 'paused', isLoading: false,
+   *       isError: false, isSuccess: false, hasData: false }
+   *
+   * So `isError` stays **false forever** — the error branch can never render, and the page sits on
+   * "0 symbols total" as a confident claim about an empty registry. The app's own header said
+   * "Offline" at the same moment.
+   *
+   * ⚠️ This is NOT an artefact of the test. `main.jsx` sets no `networkMode`, so the default applies
+   * in production too: **whenever the API is down, every `isError` branch in the app is unreachable.**
+   *
+   * ⇒ The reliable signal is **"we have no data and we are not loading"** — true whether the query
+   * errored, was paused, or was aborted. `isLoading` is false while paused (measured), so this
+   * condition covers the paused case without showing a false alarm during a normal first load.
+   */
+  const symbolsUnavailable = symbols.data === undefined && !symbols.isLoading;
 
   // ⚠️ `/api/symbols/positions`, NOT `/api/portfolio?source=mt5`.
   //
@@ -244,9 +268,32 @@ export default function ActiveSymbolsPage() {
       <header className="tp-page-header">
         <h1>Active Symbols</h1>
         <p>
-          {syms.length} symbol{syms.length !== 1 ? 's' : ''} total · {activeCount} active · {inactiveCount} inactive · Mode: {mode}
+          {/* A failed read must not render as "0 symbols" — see `symbolsUnavailable`. */}
+          {symbolsUnavailable
+            ? 'Symbol list could not be read — see the error below'
+            : `${syms.length} symbol${syms.length !== 1 ? 's' : ''} total · ${activeCount} active · ${inactiveCount} inactive`}{' '}
+          · Mode: {mode}
         </p>
       </header>
+
+      {symbolsUnavailable && (
+        <div className="tp-banner-retry" style={{ marginBottom: 16 }} role="alert">
+          <NoticeBlock
+            notice={
+              // A REAL error (a status-bearing failure) reports itself.
+              symbols.error
+                ? noticeFromError(symbols.error, 'TCS-SYS-009', {
+                    detail: 'the symbol list request did not complete',
+                  })
+                // A PAUSED query has no error object — there is nothing to report, so the notice
+                // states the actual condition rather than a status code that was never received.
+                : notice('TCS-SYS-009', {
+                    detail: 'the request was paused — the app believes it is offline',
+                  })
+            }
+          />
+        </div>
+      )}
 
       {error && (
         <div className="tp-banner-retry" style={{ marginBottom: 16 }}>
