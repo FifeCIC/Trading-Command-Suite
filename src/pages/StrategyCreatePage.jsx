@@ -253,8 +253,8 @@ export default function StrategyCreatePage() {
   // ── Render ─────────────────────────────────────────────
 
   return (
-    <div className="sc-page">
-      <motion.header className="sc-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="stratcreate-page">
+      <motion.header className="stratcreate-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <h1>Create Bot
           <PageInfoPopover>
@@ -267,11 +267,11 @@ export default function StrategyCreatePage() {
       </motion.header>
 
       {/* Tabs */}
-      <div className="sc-tabs">
+      <div className="stratcreate-tabs">
         {TABS.map(t => (
           <button
             key={t.id}
-            className={`sc-tab ${tab === t.id ? 'sc-tab-active' : ''}`}
+            className={`stratcreate-tab ${tab === t.id ? 'stratcreate-tab-active' : ''}`}
             onClick={() => setTab(t.id)}
           >
             {t.icon} {t.label}
@@ -281,21 +281,21 @@ export default function StrategyCreatePage() {
 
       {/* ── Form Tab ── */}
       {tab === 'form' && (
-        <motion.div className="sc-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="stratcreate-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           {protoLoading ? <LoadingSkeleton variant="text" lines={4} /> : (
-            <form className="sc-form" onSubmit={handleSubmit}>
+            <form className="stratcreate-form" onSubmit={handleSubmit}>
               {/* Name + Mode */}
-              <div className="sc-field-row">
-                <label className="sc-field">
+              <div className="stratcreate-field-row">
+                <label className="stratcreate-field">
                   <span>Strategy Name *</span>
                   <input
-                    className="sc-input" type="text" placeholder="e.g. Gold Scalp v2"
+                    className="stratcreate-input" type="text" placeholder="e.g. Gold Scalp v2"
                     value={name} onChange={e => setName(e.target.value)}
                   />
                 </label>
-                <label className="sc-field">
+                <label className="stratcreate-field">
                   <span>Mode</span>
-                  <select className="sc-input" value={mode} onChange={e => { setMode(e.target.value); if (e.target.value === 'score') setSymbol(''); }}>
+                  <select className="stratcreate-input" value={mode} onChange={e => { setMode(e.target.value); if (e.target.value === 'score') setSymbol(''); }}>
                     <option value="trade">Trade (single symbol)</option>
                     <option value="score">Score (watchlist)</option>
                   </select>
@@ -303,22 +303,22 @@ export default function StrategyCreatePage() {
               </div>
 
               {/* Symbol or Watchlist */}
-              <div className="sc-field-row">
+              <div className="stratcreate-field-row">
                 {mode === 'trade' ? (
-                  <label className="sc-field">
+                  <label className="stratcreate-field">
                     <span>Symbol</span>
                     <input
-                      className="sc-input" type="text" placeholder="e.g. XAUUSD"
+                      className="stratcreate-input" type="text" placeholder="e.g. XAUUSD"
                       value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())}
                     />
                     {symbol && (
-                      <span className="sc-hint">Asset type: {assetType}</span>
+                      <span className="stratcreate-hint">Asset type: {assetType}</span>
                     )}
                   </label>
                 ) : (
-                  <label className="sc-field">
+                  <label className="stratcreate-field">
                     <span>Watchlist</span>
-                    <select className="sc-input" value={watchlistName} onChange={e => setWatchlistName(e.target.value)}>
+                    <select className="stratcreate-input" value={watchlistName} onChange={e => setWatchlistName(e.target.value)}>
                       <option value="">— Select —</option>
                       {wlList.map(w => (
                         <option key={w.id || w.name} value={w.name}>{w.name}</option>
@@ -326,23 +326,23 @@ export default function StrategyCreatePage() {
                     </select>
                   </label>
                 )}
-                <label className="sc-field">
+                <label className="stratcreate-field">
                   <span>Broker</span>
-                  <select className="sc-input" value={brokerId} onChange={e => setBrokerId(e.target.value)}>
+                  <select className="stratcreate-input" value={brokerId} onChange={e => setBrokerId(e.target.value)}>
                     {BROKER_LIST.map(b => (
                       <option key={b} value={b}>{b.toUpperCase()}</option>
                     ))}
                   </select>
                   {brokerCfg && (
-                    <span className="sc-hint">{brokerCfg.note}</span>
+                    <span className="stratcreate-hint">{brokerCfg.note}</span>
                   )}
                 </label>
               </div>
 
               {/* Protocol */}
-              <label className="sc-field">
+              <label className="stratcreate-field">
                 <span>Protocol</span>
-                <select className="sc-input" value={protocolId} onChange={e => setProtocolId(e.target.value)}>
+                <select className="stratcreate-input" value={protocolId} onChange={e => setProtocolId(e.target.value)}>
                   <option value="">— Select —</option>
                   {protoList.map(p => (
                     <option key={p.id || p.slug} value={p.id || p.slug}>
@@ -354,7 +354,7 @@ export default function StrategyCreatePage() {
 
               {/* Broker compatibility */}
               {protocolId && symbol && (
-                <div className={`sc-compat ${brokerCompatible.ok ? 'sc-compat-ok' : 'sc-compat-warn'}`}>
+                <div className={`stratcreate-compat ${brokerCompatible.ok ? 'stratcreate-compat-ok' : 'stratcreate-compat-warn'}`}>
                   {brokerCompatible.ok
                     ? '✅ Broker compatible with protocol style and asset type'
                     : `⚠️ Broker may not support this: style=${!brokerCompatible.styleOk ? '✗' : '✓'}, asset=${!brokerCompatible.assetOk ? '✗' : '✓'}`}
@@ -362,21 +362,21 @@ export default function StrategyCreatePage() {
               )}
 
               {/* Risk params */}
-              <div className="sc-section-label">Risk Parameters</div>
-              <div className="sc-field-row sc-field-row-4">
-                <label className="sc-field">
+              <div className="stratcreate-section-label">Risk Parameters</div>
+              <div className="stratcreate-field-row stratcreate-field-row-4">
+                <label className="stratcreate-field">
                   <span>Base Size</span>
-                  <input className="sc-input" type="number" step="0.01" min="0.01" value={baseSize} onChange={e => setBaseSize(Number(e.target.value))} />
+                  <input className="stratcreate-input" type="number" step="0.01" min="0.01" value={baseSize} onChange={e => setBaseSize(Number(e.target.value))} />
                 </label>
-                <label className="sc-field">
+                <label className="stratcreate-field">
                   <span>SL %</span>
-                  <input className="sc-input" type="number" step="0.1" min="0.1" value={slPct} onChange={e => setSlPct(Number(e.target.value))} />
+                  <input className="stratcreate-input" type="number" step="0.1" min="0.1" value={slPct} onChange={e => setSlPct(Number(e.target.value))} />
                 </label>
-                <label className="sc-field">
+                <label className="stratcreate-field">
                   <span>TP %</span>
-                  <input className="sc-input" type="number" step="0.1" min="0.1" value={tpPct} onChange={e => setTpPct(Number(e.target.value))} />
+                  <input className="stratcreate-input" type="number" step="0.1" min="0.1" value={tpPct} onChange={e => setTpPct(Number(e.target.value))} />
                 </label>
-                <label className="sc-field">
+                <label className="stratcreate-field">
                   <span>Min Composite</span>
                   {/* ⚠️ Bounds were min="40" max="95" (#839). The state now seeds from the server
                       (serverBarDefault = BOT_BAR_DEFAULT, 10), but the OLD bounds would have
@@ -390,7 +390,7 @@ export default function StrategyCreatePage() {
                       The explicit name keeps the control's identity brief; `aria-describedby` below
                       still attaches the warning as the DESCRIPTION, which is what it is. */}
                   <input
-                    className="sc-input" type="number" min="0" max="100"
+                    className="stratcreate-input" type="number" min="0" max="100"
                     value={minComposite}
                     onChange={e => setMinComposite(Number(e.target.value))}
                     aria-label="Min Composite"
@@ -399,23 +399,23 @@ export default function StrategyCreatePage() {
                   />
                   {/* #840 — the warning, not a block. Names both numbers so the user can judge. */}
                   {barAboveCeiling && (
-                    <span id="min-composite-ceiling" className="sc-hint sc-hint-warn" role="status">
+                    <span id="min-composite-ceiling" className="stratcreate-hint stratcreate-hint-warn" role="status">
                       ⚠️ {barAboveCeiling.bar} is above the highest this protocol has ever reached
                       ({barAboveCeiling.ceiling}% over {barAboveCeiling.samples.toLocaleString()} readings).
                       A bot with this bar would probably never trade. You can still save it.
                     </span>
                   )}
                   {!barAboveCeiling && ceilingKnown(protocolCeiling) && (
-                    <span id="min-composite-ceiling" className="sc-hint">
+                    <span id="min-composite-ceiling" className="stratcreate-hint">
                       This protocol's highest recorded result is {protocolCeiling.ceilingPct}%.
                     </span>
                   )}
                 </label>
               </div>
 
-              <label className="sc-field">
+              <label className="stratcreate-field">
                 <span>Timeframe</span>
-                <select className="sc-input" value={timeframe} onChange={e => setTimeframe(e.target.value)}>
+                <select className="stratcreate-input" value={timeframe} onChange={e => setTimeframe(e.target.value)}>
                   {['5s','15s','1m','5m','15m','1h','4h','1d'].map(tf => (
                     <option key={tf} value={tf}>{tf}</option>
                   ))}
@@ -423,34 +423,34 @@ export default function StrategyCreatePage() {
               </label>
 
               {/* Description */}
-              <label className="sc-field">
+              <label className="stratcreate-field">
                 <span>Description</span>
                 <textarea
-                  className="sc-input sc-textarea" rows={2} placeholder="Optional notes about this strategy..."
+                  className="stratcreate-input stratcreate-textarea" rows={2} placeholder="Optional notes about this strategy..."
                   value={description} onChange={e => setDescription(e.target.value)}
                 />
               </label>
 
               {/* ── Signal Filters (collapsible) ── */}
-              <button type="button" className="sc-section-toggle" onClick={() => setShowAdvanced(!showAdvanced)}>
+              <button type="button" className="stratcreate-section-toggle" onClick={() => setShowAdvanced(!showAdvanced)}>
                 {showAdvanced ? '▾' : '▸'} Advanced Settings
               </button>
               {showAdvanced && (
-                <div className="sc-advanced-grid">
-                  <div className="sc-section-label">Signal Filters</div>
-                  <div className="sc-field-row">
-                    <label className="sc-field">
+                <div className="stratcreate-advanced-grid">
+                  <div className="stratcreate-section-label">Signal Filters</div>
+                  <div className="stratcreate-field-row">
+                    <label className="stratcreate-field">
                       <span>Min Rarity Band</span>
-                      <select className="sc-input" value={minRarityBand} onChange={e => setMinRarityBand(e.target.value)}>
+                      <select className="stratcreate-input" value={minRarityBand} onChange={e => setMinRarityBand(e.target.value)}>
                         <option value="">— Any —</option>
                         {['standard','strong','exceptional','cyclical','black-swan'].map(b => (
                           <option key={b} value={b}>{b}</option>
                         ))}
                       </select>
                     </label>
-                    <label className="sc-field">
+                    <label className="stratcreate-field">
                       <span>Require Direction</span>
-                      <select className="sc-input" value={requireDirection} onChange={e => setRequireDirection(e.target.value)}>
+                      <select className="stratcreate-input" value={requireDirection} onChange={e => setRequireDirection(e.target.value)}>
                         <option value="">— Any —</option>
                         <option value="long">Long only</option>
                         <option value="short">Short only</option>
@@ -459,58 +459,58 @@ export default function StrategyCreatePage() {
                   </div>
 
                   {/* ── Position & Risk Management ── */}
-                  <div className="sc-section-label">Position & Risk Management</div>
-                  <div className="sc-field-row sc-field-row-4">
-                    <label className="sc-field">
+                  <div className="stratcreate-section-label">Position & Risk Management</div>
+                  <div className="stratcreate-field-row stratcreate-field-row-4">
+                    <label className="stratcreate-field">
                       <span>Max Positions</span>
-                      <input className="sc-input" type="number" min="1" max="20" value={maxPositions} onChange={e => setMaxPositions(Number(e.target.value))} />
+                      <input className="stratcreate-input" type="number" min="1" max="20" value={maxPositions} onChange={e => setMaxPositions(Number(e.target.value))} />
                     </label>
-                    <label className="sc-field">
+                    <label className="stratcreate-field">
                       <span>Max Size</span>
-                      <input className="sc-input" type="number" step="0.01" min="0" placeholder="e.g. 0.5" value={maxSize} onChange={e => setMaxSize(e.target.value)} />
+                      <input className="stratcreate-input" type="number" step="0.01" min="0" placeholder="e.g. 0.5" value={maxSize} onChange={e => setMaxSize(e.target.value)} />
                     </label>
-                    <label className="sc-field">
+                    <label className="stratcreate-field">
                       <span>Max Daily Loss ($)</span>
-                      <input className="sc-input" type="number" step="0.01" min="0" placeholder="e.g. 500" value={maxDailyLoss} onChange={e => setMaxDailyLoss(e.target.value)} />
+                      <input className="stratcreate-input" type="number" step="0.01" min="0" placeholder="e.g. 500" value={maxDailyLoss} onChange={e => setMaxDailyLoss(e.target.value)} />
                     </label>
-                    <label className="sc-field">
+                    <label className="stratcreate-field">
                       <span>Cooldown (min)</span>
-                      <input className="sc-input" type="number" min="0" max="1440" value={cooldownMinutes} onChange={e => setCooldownMinutes(Number(e.target.value))} />
+                      <input className="stratcreate-input" type="number" min="0" max="1440" value={cooldownMinutes} onChange={e => setCooldownMinutes(Number(e.target.value))} />
                     </label>
                   </div>
-                  <label className="sc-field sc-checkbox-field">
-                    <label className="sc-checkbox-label">
+                  <label className="stratcreate-field stratcreate-checkbox-field">
+                    <label className="stratcreate-checkbox-label">
                       <input type="checkbox" checked={useRaritySizing} onChange={e => setUseRaritySizing(e.target.checked)} />
                       <span>Use rarity-based position sizing</span>
                     </label>
                   </label>
 
                   {/* ── Hot Stock Picks ── */}
-                  <div className="sc-section-label">Hot Stock Picks (#339)</div>
-                  <label className="sc-field sc-checkbox-field">
-                    <label className="sc-checkbox-label">
+                  <div className="stratcreate-section-label">Hot Stock Picks (#339)</div>
+                  <label className="stratcreate-field stratcreate-checkbox-field">
+                    <label className="stratcreate-checkbox-label">
                       <input type="checkbox" checked={hotStockEnabled} onChange={e => setHotStockEnabled(e.target.checked)} />
                       <span>Enable hot stock picks</span>
                     </label>
                   </label>
                   {hotStockEnabled && (
-                    <div className="sc-field-row sc-field-row-3">
-                      <label className="sc-field">
+                    <div className="stratcreate-field-row stratcreate-field-row-3">
+                      <label className="stratcreate-field">
                         <span>Hot Stock Allocation %</span>
-                        <input className="sc-input" type="number" step="0.1" min="0" max="100" placeholder="e.g. 10" value={hotStockAllocation} onChange={e => setHotStockAllocation(e.target.value)} />
+                        <input className="stratcreate-input" type="number" step="0.1" min="0" max="100" placeholder="e.g. 10" value={hotStockAllocation} onChange={e => setHotStockAllocation(e.target.value)} />
                       </label>
-                      <label className="sc-field">
+                      <label className="stratcreate-field">
                         <span>Detection Mode</span>
-                        <select className="sc-input" value={hotStockDetectionMode} onChange={e => setHotStockDetectionMode(e.target.value)}>
+                        <select className="stratcreate-input" value={hotStockDetectionMode} onChange={e => setHotStockDetectionMode(e.target.value)}>
                           <option value="">— Select —</option>
                           <option value="top-scoring">Top Scoring</option>
                           <option value="volume-spike">Volume Spike</option>
                           <option value="all">All</option>
                         </select>
                       </label>
-                      <label className="sc-field">
+                      <label className="stratcreate-field">
                         <span>Max Hold (hours)</span>
-                        <input className="sc-input" type="number" min="1" max="168" placeholder="24" value={hotStockMaxHoldHours} onChange={e => setHotStockMaxHoldHours(e.target.value)} />
+                        <input className="stratcreate-input" type="number" min="1" max="168" placeholder="24" value={hotStockMaxHoldHours} onChange={e => setHotStockMaxHoldHours(e.target.value)} />
                       </label>
                     </div>
                   )}
@@ -518,11 +518,11 @@ export default function StrategyCreatePage() {
               )}
 
               {/* Submit */}
-              <div className="sc-actions">
-                <button type="submit" className="sc-btn-primary" disabled={createMutation.isPending}>
+              <div className="stratcreate-actions">
+                <button type="submit" className="stratcreate-btn-primary" disabled={createMutation.isPending}>
                   {createMutation.isPending ? '⏳ Creating...' : 'Create Bot'}
                 </button>
-                {msg && <span className={`sc-msg ${msg.startsWith('✅') ? 'sc-msg-ok' : 'sc-msg-err'}`}>{msg}</span>}
+                {msg && <span className={`stratcreate-msg ${msg.startsWith('✅') ? 'stratcreate-msg-ok' : 'stratcreate-msg-err'}`}>{msg}</span>}
               </div>
             </form>
           )}
@@ -531,7 +531,7 @@ export default function StrategyCreatePage() {
 
       {/* ── Wizard Tab ── */}
       {tab === 'wizard' && (
-        <motion.div className="sc-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="stratcreate-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           <StrategyWizard />
         </motion.div>
       )}

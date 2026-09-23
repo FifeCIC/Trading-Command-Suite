@@ -1,21 +1,21 @@
 /* Server Controls Page */
 
-.sc-page {
+.svrcontrols-page {
   max-width: 960px;
 }
 
-.sc-header {
+.svrcontrols-header {
   margin-bottom: 1.5rem;
 }
 
-.sc-header h2 {
+.svrcontrols-header h2 {
   margin: 0 0 0.25rem;
   font-size: 1.4rem;
   color: var(--ink);
 }
 
-.sc-loading,
-.sc-error {
+.svrcontrols-loading,
+.svrcontrols-error {
   padding: 2rem;
   text-align: center;
   border-radius: 8px;
@@ -23,13 +23,13 @@
   border: 1px solid var(--border);
 }
 
-.sc-error {
+.svrcontrols-error {
   color: var(--color-loss);
   border-color: var(--color-loss);
   margin-bottom: 1rem;
 }
 
-.sc-retry-btn {
+.svrcontrols-retry-btn {
   display: block;
   margin: 0 auto;
   padding: 0.5rem 1.25rem;
@@ -42,14 +42,14 @@
 }
 
 /* Grid */
-.sc-grid {
+.svrcontrols-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
 }
 
 /* Card */
-.sc-card {
+.svrcontrols-card {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -57,15 +57,15 @@
   transition: border-color 0.2s;
 }
 
-.sc-card--live {
+.svrcontrols-card--live {
   border-color: var(--color-profit);
 }
 
-.sc-card--issue {
+.svrcontrols-card--issue {
   border-color: var(--color-loss);
 }
 
-.sc-card-header {
+.svrcontrols-card-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -74,17 +74,17 @@
   border-bottom: 1px solid var(--border);
 }
 
-.sc-card-header h3 {
+.svrcontrols-card-header h3 {
   margin: 0;
   font-size: 0.95rem;
   color: var(--ink);
 }
 
-.sc-card-icon {
+.svrcontrols-card-icon {
   font-size: 1.1rem;
 }
 
-.sc-card-body {
+.svrcontrols-card-body {
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -92,7 +92,7 @@
 }
 
 /* Status dot */
-.sc-status-dot {
+.svrcontrols-status-dot {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -100,32 +100,32 @@
   font-weight: 600;
 }
 
-.sc-dot-inner {
+.svrcontrols-dot-inner {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.sc-online {
+.svrcontrols-online {
   color: var(--color-profit);
 }
 
-.sc-online .sc-dot-inner {
+.svrcontrols-online .svrcontrols-dot-inner {
   background: var(--color-profit);
   box-shadow: 0 0 6px var(--color-profit);
 }
 
-.sc-offline {
+.svrcontrols-offline {
   color: var(--text-dim, #6b7280);
 }
 
-.sc-offline .sc-dot-inner {
+.svrcontrols-offline .svrcontrols-dot-inner {
   background: var(--text-dim, #6b7280);
 }
 
 /* Meta */
-.sc-card-meta {
+.svrcontrols-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1rem;
@@ -133,12 +133,12 @@
   color: var(--text-dim, #6b7280);
 }
 
-.sc-listener-info {
+.svrcontrols-listener-info {
   color: var(--text-faint, #4b5563);
 }
 
 /* Issue */
-.sc-issue {
+.svrcontrols-issue {
   padding: 0.5rem 0.75rem;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.25);
@@ -148,7 +148,7 @@
 }
 
 /* Log */
-.sc-log {
+.svrcontrols-log {
   margin: 0;
   padding: 0.5rem 0.75rem;
   background: var(--bg-elev);
@@ -162,13 +162,13 @@
 }
 
 /* Actions */
-.sc-actions {
+.svrcontrols-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.sc-btn {
+.svrcontrols-btn {
   padding: 0.4rem 0.9rem;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -179,47 +179,47 @@
   color: var(--ink);
 }
 
-.sc-btn:hover:not(:disabled) {
+.svrcontrols-btn:hover:not(:disabled) {
   background: var(--bg-elev-2);
 }
 
-.sc-btn:disabled {
+.svrcontrols-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.sc-btn--start {
+.svrcontrols-btn--start {
   background: rgba(34, 197, 94, 0.15);
   border-color: rgba(34, 197, 94, 0.3);
   color: var(--color-profit);
 }
 
-.sc-btn--start:hover:not(:disabled) {
+.svrcontrols-btn--start:hover:not(:disabled) {
   background: rgba(34, 197, 94, 0.25);
 }
 
-.sc-btn--stop {
+.svrcontrols-btn--stop {
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.25);
   color: var(--color-loss);
 }
 
-.sc-btn--stop:hover:not(:disabled) {
+.svrcontrols-btn--stop:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.2);
 }
 
-.sc-btn--open {
+.svrcontrols-btn--open {
   background: rgba(91, 141, 239, 0.12);
   border-color: rgba(91, 141, 239, 0.25);
   color: var(--accent);
 }
 
-.sc-btn--open:hover:not(:disabled) {
+.svrcontrols-btn--open:hover:not(:disabled) {
   background: rgba(91, 141, 239, 0.2);
 }
 
 /* Footnote */
-.sc-footnote {
+.svrcontrols-footnote {
   margin-top: 1.5rem;
   text-align: center;
   font-size: 0.78rem;

@@ -1,43 +1,43 @@
 /* ── Strategy Create — Unified Creation Hub ─────────────── */
 
-.sc-page { padding: 1.5rem 2rem; max-width: 800px; margin: 0 auto; }
+.stratcreate-page { padding: 1.5rem 2rem; max-width: 800px; margin: 0 auto; }
 
-.sc-header { margin-bottom: 1rem; }
-.sc-header h1 { margin: 0; font-size: 1.5rem; }
-.sc-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+.stratcreate-header { margin-bottom: 1rem; }
+.stratcreate-header h1 { margin: 0; font-size: 1.5rem; }
+.stratcreate-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
 
 /* Tabs */
-.sc-tabs { display: flex; gap: 2px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
-.sc-tab {
+.stratcreate-tabs { display: flex; gap: 2px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+.stratcreate-tab {
   padding: 0.5rem 1.2rem; border: none; background: none;
   color: var(--ink-soft); cursor: pointer; font-size: 0.82rem;
   border-bottom: 2px solid transparent; transition: all 0.15s;
   margin-bottom: -1px;
 }
-.sc-tab:hover { color: var(--ink); }
-.sc-tab-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-.sc-tab-content { padding-top: 0.25rem; }
+.stratcreate-tab:hover { color: var(--ink); }
+.stratcreate-tab-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.stratcreate-tab-content { padding-top: 0.25rem; }
 
 /* Form */
-.sc-form { display: flex; flex-direction: column; gap: 0.75rem; }
+.stratcreate-form { display: flex; flex-direction: column; gap: 0.75rem; }
 
-.sc-field-row { display: flex; gap: 0.75rem; }
-.sc-field-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
-.sc-field { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.sc-field span { font-size: 0.7rem; color: var(--ink-soft); font-weight: 600; }
-.sc-input {
+.stratcreate-field-row { display: flex; gap: 0.75rem; }
+.stratcreate-field-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.stratcreate-field { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.stratcreate-field span { font-size: 0.7rem; color: var(--ink-soft); font-weight: 600; }
+.stratcreate-input {
   padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--panel); color: var(--ink); font-size: 0.82rem;
 }
-.sc-input:focus { border-color: var(--accent); outline: none; }
-.sc-hint { font-size: 0.6rem; color: var(--ink-soft); margin-top: 1px; }
+.stratcreate-input:focus { border-color: var(--accent); outline: none; }
+.stratcreate-hint { font-size: 0.6rem; color: var(--ink-soft); margin-top: 1px; }
 
 /**
  * #840 — the above-ceiling warning. Uses the theme's notice tokens rather than a raw hex so it
  * follows light/dark like every other warning surface. `line-height` is set deliberately: this is a
  * full sentence in a narrow column, and without it the three wrapped lines collide.
  */
-.sc-hint-warn {
+.stratcreate-hint-warn {
   font-size: 0.62rem;
   line-height: 1.35;
   color: var(--notice-warning-text);
@@ -47,60 +47,60 @@
   margin-top: 3px;
 }
 
-.sc-section-label {
+.stratcreate-section-label {
   font-size: 0.72rem; font-weight: 700; color: var(--ink-soft);
   text-transform: uppercase; letter-spacing: 0.5px;
   margin-top: 0.25rem; padding-top: 0.5rem; border-top: 1px solid var(--line);
 }
 
-.sc-compat { padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; }
-.sc-compat-ok { background: rgba(34,197,94,0.08); color: #22c55e; }
-.sc-compat-warn { background: rgba(245,158,11,0.08); color: #d97706; }
+.stratcreate-compat { padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; }
+.stratcreate-compat-ok { background: rgba(34,197,94,0.08); color: #22c55e; }
+.stratcreate-compat-warn { background: rgba(245,158,11,0.08); color: #d97706; }
 
-.sc-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
-.sc-btn-primary {
+.stratcreate-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
+.stratcreate-btn-primary {
   padding: 8px 20px; border: none; border-radius: 6px;
   background: var(--accent); color: #fff; font-size: 0.82rem; font-weight: 600;
   cursor: pointer; transition: opacity 0.15s;
 }
-.sc-btn-primary:hover { opacity: 0.9; }
-.sc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.stratcreate-btn-primary:hover { opacity: 0.9; }
+.stratcreate-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.sc-msg { font-size: 0.75rem; font-weight: 600; }
-.sc-msg-ok { color: #22c55e; }
-.sc-msg-err { color: #ef4444; }
+.stratcreate-msg { font-size: 0.75rem; font-weight: 600; }
+.stratcreate-msg-ok { color: #22c55e; }
+.stratcreate-msg-err { color: #ef4444; }
 
 /* ── Advanced Settings Toggle ── */
-.sc-section-toggle {
+.stratcreate-section-toggle {
   display: block; width: 100%; padding: 6px 0;
   border: none; background: none; color: var(--ink-soft);
   font-size: 0.72rem; font-weight: 700; text-align: left;
   text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
   transition: color 0.15s;
 }
-.sc-section-toggle:hover { color: var(--accent); }
+.stratcreate-section-toggle:hover { color: var(--accent); }
 
-.sc-advanced-grid {
+.stratcreate-advanced-grid {
   display: flex; flex-direction: column; gap: 0.5rem;
   padding: 0.75rem; border: 1px solid var(--line); border-radius: 8px;
   background: var(--bg);
 }
 
 /* ── Textarea ── */
-.sc-textarea {
+.stratcreate-textarea {
   resize: vertical; min-height: 48px;
   font-family: inherit; line-height: 1.4;
 }
 
 /* ── Checkbox ── */
-.sc-checkbox-field { flex: none !important; }
-.sc-checkbox-label {
+.stratcreate-checkbox-field { flex: none !important; }
+.stratcreate-checkbox-label {
   display: flex; align-items: center; gap: 8px; cursor: pointer;
   font-size: 0.78rem; color: var(--ink);
 }
-.sc-checkbox-label input[type="checkbox"] {
+.stratcreate-checkbox-label input[type="checkbox"] {
   width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
 }
 
 /* ── 3-col grid (hot stock) ── */
-.sc-field-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.stratcreate-field-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }

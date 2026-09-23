@@ -254,7 +254,7 @@ export default function ScreenerPage() {
 
   return (
     <main className="screener-page">
-      <header className="sc-page-header">
+      <header className="screener-page-header">
         <h1>Screener</h1>
         <p>
           Attention-ranked catalysts — news and earnings events that deserve a look
@@ -263,42 +263,42 @@ export default function ScreenerPage() {
       </header>
 
       {/* Transparency strip (#682 decision 9) — what the app filtered out */}
-      <section className="sc-transparency">
-        <div className="sc-trans-item">
+      <section className="screener-transparency">
+        <div className="screener-trans-item">
           <strong>{universe.totalSymbols ?? '—'}</strong>
           <span>symbols in DB</span>
         </div>
-        <div className="sc-trans-item sc-trans-hit">
+        <div className="screener-trans-item screener-trans-hit">
           <strong>{universe.hitSymbols ?? ranked.length}</strong>
           <span>with recent catalysts</span>
         </div>
-        <div className="sc-trans-item sc-trans-quiet">
+        <div className="screener-trans-item screener-trans-quiet">
           <strong>{universe.quietSymbols ?? '—'}</strong>
           <span>quiet — filtered out</span>
         </div>
-        <div className="sc-trans-item">
+        <div className="screener-trans-item">
           <strong>{filtered.length}</strong>
           <span>shown · top {topN} picked</span>
         </div>
       </section>
 
-      <section className="sc-toolbar">
-        <div className="sc-toolbar-search">
-          <label htmlFor="sc-search">Search</label>
+      <section className="screener-toolbar">
+        <div className="screener-toolbar-search">
+          <label htmlFor="screener-search">Search</label>
           <input
-            id="sc-search"
+            id="screener-search"
             type="text"
             placeholder="Ticker..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="sc-toolbar-chips">
+        <div className="screener-toolbar-chips">
           {SOURCES.map((s) => (
             <button
               key={s}
               type="button"
-              className={`sc-chip ${source === s ? 'sc-chip-active' : ''}`}
+              className={`screener-chip ${source === s ? 'screener-chip-active' : ''}`}
               onClick={() => setSource(s)}
             >
               {s === 'all' ? 'All Sources' : s}
@@ -306,18 +306,18 @@ export default function ScreenerPage() {
           ))}
           <button
             type="button"
-            className={`sc-chip ${onlyDb ? 'sc-chip-active' : ''}`}
+            className={`screener-chip ${onlyDb ? 'screener-chip-active' : ''}`}
             onClick={() => setOnlyDb((v) => !v)}
             title="Only show symbols that exist in your database (hides discovery candidates)"
           >
             My DB only
           </button>
         </div>
-        <div className="sc-toolbar-chips">
-          <span className="sc-chip-label">Type</span>
+        <div className="screener-toolbar-chips">
+          <span className="screener-chip-label">Type</span>
           <button
             type="button"
-            className={`sc-chip ${catalystType === 'all' ? 'sc-chip-active' : ''}`}
+            className={`screener-chip ${catalystType === 'all' ? 'screener-chip-active' : ''}`}
             onClick={() => setCatalystType('all')}
           >
             All Types
@@ -326,7 +326,7 @@ export default function ScreenerPage() {
             <button
               key={t}
               type="button"
-              className={`sc-chip ${catalystType === t ? 'sc-chip-active' : ''}`}
+              className={`screener-chip ${catalystType === t ? 'screener-chip-active' : ''}`}
               onClick={() => setCatalystType(catalystType === t ? 'all' : t)}
             >
               {t}
@@ -339,14 +339,14 @@ export default function ScreenerPage() {
           Plain conditional render: AnimatePresence exits freeze on this page
           (motion 12.40 bug), leaving an invisible click-blocking ghost. */}
       {promoteTicker && (
-        <section className="sc-stories-panel sc-panel-enter">
-          <header className="sc-stories-header">
+        <section className="screener-stories-panel screener-panel-enter">
+          <header className="screener-stories-header">
             <h2>➕ Add {promoteTicker} to a watchlist</h2>
-            <button type="button" className="sc-stories-close" onClick={() => setPromoteTicker(null)} aria-label="Close">✕</button>
+            <button type="button" className="screener-stories-dismiss" onClick={() => setPromoteTicker(null)} aria-label="Close">✕</button>
           </header>
-          <div className="sc-promote-row">
+          <div className="screener-promote-row">
             <select
-              className="sc-promote-select"
+              className="screener-promote-select"
               value={watchChoice}
               onChange={(e) => setWatchChoice(e.target.value)}
             >
@@ -360,7 +360,7 @@ export default function ScreenerPage() {
             </select>
             {watchChoice === '__new__' && (
               <input
-                className="sc-promote-input"
+                className="screener-promote-input"
                 type="text"
                 placeholder="New watchlist name"
                 value={newListInput}
@@ -368,26 +368,26 @@ export default function ScreenerPage() {
               />
             )}
             <button
-              className="sc-promote-confirm"
+              className="screener-promote-confirm"
               disabled={promoteMutation.isPending}
               onClick={confirmPromote}
             >
               {promoteMutation.isPending ? 'Adding…' : 'Add to watchlist'}
             </button>
           </div>
-          {promoteMutation.isError && <p className="sc-promote-err">Promotion failed — try again.</p>}
+          {promoteMutation.isError && <p className="screener-promote-err">Promotion failed — try again.</p>}
         </section>
       )}
 
       {/* Symbol detail popover (#682 Phase 4.2 + 4.3) — catalyst history
           from GET /api/screener/hits plus per-story LONG/SHORT news lean. */}
       {selectedTicker && (
-        <section className="sc-stories-panel sc-panel-enter">
-          <header className="sc-stories-header">
+        <section className="screener-stories-panel screener-panel-enter">
+          <header className="screener-stories-header">
             <h2>🔎 {selectedTicker} — catalysts &amp; news</h2>
             <button
               type="button"
-              className="sc-stories-close"
+              className="screener-stories-dismiss"
               onClick={() => setSelectedTicker(null)}
               aria-label="Close detail panel"
             >
@@ -395,38 +395,38 @@ export default function ScreenerPage() {
             </button>
           </header>
 
-          <h3 className="sc-panel-subhead">Catalyst history</h3>
-          {hitsQuery.isLoading && <p className="sc-state">Loading catalyst history…</p>}
+          <h3 className="screener-panel-subhead">Catalyst history</h3>
+          {hitsQuery.isLoading && <p className="screener-state">Loading catalyst history…</p>}
           {!hitsQuery.isLoading && (!Array.isArray(hitsQuery.data?.hits) || hitsQuery.data.hits.length === 0) && (
-            <p className="sc-state">No stored catalyst hits for this ticker.</p>
+            <p className="screener-state">No stored catalyst hits for this ticker.</p>
           )}
           {!hitsQuery.isLoading && hitsQuery.data?.hits?.length > 0 && (
-            <ul className="sc-history-list">
+            <ul className="screener-history-list">
               {hitsQuery.data.hits.map((h) => (
-                <li key={h.id} className="sc-history-item">
-                  <span className={`sc-chip sc-chip--${h.source}`}>{h.source}</span>
-                  <span className="sc-history-type">{h.catalystType}</span>
-                  <span className="sc-history-nums">strength {h.catalystStrength ?? '—'} · reliability {h.sourceReliability ?? '—'}</span>
-                  <span className="sc-story-meta">{fmtWhen(null, h.timestamp)}</span>
+                <li key={h.id} className="screener-history-item">
+                  <span className={`screener-chip screener-chip--${h.source}`}>{h.source}</span>
+                  <span className="screener-history-type">{h.catalystType}</span>
+                  <span className="screener-history-nums">strength {h.catalystStrength ?? '—'} · reliability {h.sourceReliability ?? '—'}</span>
+                  <span className="screener-story-meta">{fmtWhen(null, h.timestamp)}</span>
                 </li>
               ))}
             </ul>
           )}
 
-          <h3 className="sc-panel-subhead">News stories</h3>
-          {storiesQuery.isLoading && <p className="sc-state">Loading stories…</p>}
+          <h3 className="screener-panel-subhead">News stories</h3>
+          {storiesQuery.isLoading && <p className="screener-state">Loading stories…</p>}
           {!storiesQuery.isLoading && (!Array.isArray(storiesQuery.data?.stories) || storiesQuery.data.stories.length === 0) && (
-            <p className="sc-state">No trade-supporting news stories stored for this ticker.</p>
+            <p className="screener-state">No trade-supporting news stories stored for this ticker.</p>
           )}
           {!storiesQuery.isLoading && storiesQuery.data?.stories?.length > 0 && (
-            <ul className="sc-stories-list">
+            <ul className="screener-stories-list">
               {storiesQuery.data.stories.map((s) => (
-                <li key={s.headline + (s.publishedAt || '')} className="sc-story">
-                  <span className={`sc-lean sc-lean--${String(s.lean).toLowerCase()}`}>{s.lean}</span>
-                  <a className="sc-story-headline" href={`https://www.google.com/search?q=${encodeURIComponent(s.headline)}`} target="_blank" rel="noreferrer">
+                <li key={s.headline + (s.publishedAt || '')} className="screener-story">
+                  <span className={`screener-lean screener-lean--${String(s.lean).toLowerCase()}`}>{s.lean}</span>
+                  <a className="screener-story-headline" href={`https://www.google.com/search?q=${encodeURIComponent(s.headline)}`} target="_blank" rel="noreferrer">
                     {s.headline}
                   </a>
-                  <span className="sc-story-meta">{s.source} · {fmtWhen(null, s.publishedAt)}</span>
+                  <span className="screener-story-meta">{s.source} · {fmtWhen(null, s.publishedAt)}</span>
                 </li>
               ))}
             </ul>
@@ -434,29 +434,29 @@ export default function ScreenerPage() {
         </section>
       )}
 
-      <section className="sc-table-wrap">
-        {isLoading && <p className="sc-state">Loading catalysts…</p>}
+      <section className="screener-table-wrap">
+        {isLoading && <p className="screener-state">Loading catalysts…</p>}
         {isError && !isLoading && (
-          <p className="sc-state">Couldn't load the screener feed. Retrying…</p>
+          <p className="screener-state">Couldn't load the screener feed. Retrying…</p>
         )}
         {!isLoading && !isError && filtered.length === 0 && (
-          <p className="sc-state">No catalysts match. Try another source or clear the search.</p>
+          <p className="screener-state">No catalysts match. Try another source or clear the search.</p>
         )}
         {!isLoading && filtered.length > 0 && (
-          <table className="sc-table">
+          <table className="screener-table">
             <thead>
               <tr>
-                <th className="sc-col-pick">🎯</th>
-                <th className="sc-th-sortable" title={helpFor('ticker', 'Ticker')} onClick={() => toggleSort('ticker')}>Ticker{sortIcon('ticker')}</th>
-                {cols.catalyst && <th className="sc-th-sortable" title={helpFor('catalyst', 'Catalyst')} onClick={() => toggleSort('catalyst')}>Catalyst{sortIcon('catalyst')}</th>}
-                {cols.source && <th className="sc-th-sortable" title={helpFor('source', 'Source')} onClick={() => toggleSort('source')}>Source{sortIcon('source')}</th>}
-                {cols.lean && <th className="sc-th-sortable" title={helpFor('lean', 'Lean')} onClick={() => toggleSort('lean')}>Lean{sortIcon('lean')}</th>}
-                <th className="sc-col-action">Action</th>
-                {cols.strength && <th className="sc-th-sortable" title={helpFor('strength', 'Strength')} onClick={() => toggleSort('strength')}>Strength{sortIcon('strength')}</th>}
-                {cols.reliability && <th className="sc-th-sortable" title={helpFor('reliability', 'Reliab.')} onClick={() => toggleSort('reliability')}>Reliab.{sortIcon('reliability')}</th>}
-                <th className="sc-th-sortable" title={helpFor('attention', 'Attention')} onClick={() => toggleSort('attention')}>Attention{sortIcon('attention')}</th>
-                {cols.when && <th className="sc-th-sortable" title={helpFor('when', 'When')} onClick={() => toggleSort('when')}>When{sortIcon('when')}</th>}
-                {cols.hits && <th className="sc-th-sortable" title={helpFor('hits', 'Hits')} onClick={() => toggleSort('hits')}>Hits{sortIcon('hits')}</th>}
+                <th className="screener-col-pick">🎯</th>
+                <th className="screener-th-sortable" title={helpFor('ticker', 'Ticker')} onClick={() => toggleSort('ticker')}>Ticker{sortIcon('ticker')}</th>
+                {cols.catalyst && <th className="screener-th-sortable" title={helpFor('catalyst', 'Catalyst')} onClick={() => toggleSort('catalyst')}>Catalyst{sortIcon('catalyst')}</th>}
+                {cols.source && <th className="screener-th-sortable" title={helpFor('source', 'Source')} onClick={() => toggleSort('source')}>Source{sortIcon('source')}</th>}
+                {cols.lean && <th className="screener-th-sortable" title={helpFor('lean', 'Lean')} onClick={() => toggleSort('lean')}>Lean{sortIcon('lean')}</th>}
+                <th className="screener-col-action">Action</th>
+                {cols.strength && <th className="screener-th-sortable" title={helpFor('strength', 'Strength')} onClick={() => toggleSort('strength')}>Strength{sortIcon('strength')}</th>}
+                {cols.reliability && <th className="screener-th-sortable" title={helpFor('reliability', 'Reliab.')} onClick={() => toggleSort('reliability')}>Reliab.{sortIcon('reliability')}</th>}
+                <th className="screener-th-sortable" title={helpFor('attention', 'Attention')} onClick={() => toggleSort('attention')}>Attention{sortIcon('attention')}</th>
+                {cols.when && <th className="screener-th-sortable" title={helpFor('when', 'When')} onClick={() => toggleSort('when')}>When{sortIcon('when')}</th>}
+                {cols.hits && <th className="screener-th-sortable" title={helpFor('hits', 'Hits')} onClick={() => toggleSort('hits')}>Hits{sortIcon('hits')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -464,20 +464,20 @@ export default function ScreenerPage() {
                 <motion.tr
                   key={r.ticker}
                   className={[
-                    i < topN ? 'sc-top-pick' : '',
-                    selectedTicker === r.ticker ? 'sc-row-selected' : '',
+                    i < topN ? 'screener-top-pick' : '',
+                    selectedTicker === r.ticker ? 'screener-row-selected' : '',
                   ].filter(Boolean).join(' ') || undefined}
                   onClick={() => setSelectedTicker(selectedTicker === r.ticker ? null : r.ticker)}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: Math.min(i * 0.012, 0.3) }}
                 >
-                  <td className="sc-col-pick">{i < topN ? '🎯' : ''}</td>
-                  <td className="sc-ticker-cell">
+                  <td className="screener-col-pick">{i < topN ? '🎯' : ''}</td>
+                  <td className="screener-ticker-cell">
                     <strong>{r.ticker}</strong>
-                    {r.inDb ? <span className="sc-in-db" title="Symbol exists in your database">DB</span> : null}
+                    {r.inDb ? <span className="screener-in-db" title="Symbol exists in your database">DB</span> : null}
                     {r.fitsCount > 0 ? (
-                      <span className="sc-fits" title={`Fits ${r.fitsCount} protocol(s): ${(r.fitsProtocols ?? []).join(', ')}`}>
+                      <span className="screener-fits" title={`Fits ${r.fitsCount} protocol(s): ${(r.fitsProtocols ?? []).join(', ')}`}>
                         ✓{r.fitsCount}
                       </span>
                     ) : null}
@@ -486,26 +486,26 @@ export default function ScreenerPage() {
                   {cols.source && (
                     <td>
                       {(r.sources ?? []).map((s) => (
-                        <span key={s} className={`sc-chip sc-chip--${s}`}>{s}</span>
+                        <span key={s} className={`screener-chip screener-chip--${s}`}>{s}</span>
                       ))}
                     </td>
                   )}
                   {cols.lean && (
                     <td>
                       {r.lean ? (
-                        <span className={`sc-lean sc-lean--${String(r.lean).toLowerCase()}`} title={r.storyCount ? `${r.storyCount} news storie(s)` : undefined}>
+                        <span className={`screener-lean screener-lean--${String(r.lean).toLowerCase()}`} title={r.storyCount ? `${r.storyCount} news storie(s)` : undefined}>
                           {r.lean}{r.storyCount > 0 ? ` 📰${r.storyCount}` : ''}
                         </span>
                       ) : <span className="pnl-none">—</span>}
                     </td>
                   )}
-                  <td className="sc-col-action">
+                  <td className="screener-col-action">
                     {r.promotedStatus ? (
-                      <span className="sc-watching" title={`Already in a watchlist (${r.promotedStatus})`}>🔖 {r.promotedStatus}</span>
+                      <span className="screener-watching" title={`Already in a watchlist (${r.promotedStatus})`}>🔖 {r.promotedStatus}</span>
                     ) : (
                       <button
                         type="button"
-                        className="sc-watch-btn"
+                        className="screener-watch-btn"
                         title="Add to watchlist"
                         onClick={(e) => { e.stopPropagation(); setPromoteTicker(r.ticker) }}
                       >
@@ -516,14 +516,14 @@ export default function ScreenerPage() {
                   {cols.strength && <td title={helpFor('strength', `Strength ${r.strength}`)}>{r.strength}</td>}
                   {cols.reliability && <td title={helpFor('reliability', `Reliability ${r.reliability}`)}>{r.reliability}</td>}
                   <td>
-                    <div className="sc-attn-cell" title={helpFor('attention', `Attention ${r.attentionWeight}`)}>
-                      <span className="sc-attn-num">{r.attentionWeight}</span>
-                      <span className="sc-attn-bar">
-                        <span className="sc-attn-fill" style={{ width: `${Math.min(100, Math.max(0, r.attentionWeight))}%` }} />
+                    <div className="screener-attn-cell" title={helpFor('attention', `Attention ${r.attentionWeight}`)}>
+                      <span className="screener-attn-num">{r.attentionWeight}</span>
+                      <span className="screener-attn-bar">
+                        <span className="screener-attn-fill" style={{ width: `${Math.min(100, Math.max(0, r.attentionWeight))}%` }} />
                       </span>
                     </div>
                   </td>
-                  {cols.when && <td className="sc-when" title={helpFor('when', 'When')}>{fmtWhen(r.nextEventAt, r.latestTimestamp)}</td>}
+                  {cols.when && <td className="screener-when" title={helpFor('when', 'When')}>{fmtWhen(r.nextEventAt, r.latestTimestamp)}</td>}
                   {cols.hits && <td title={helpFor('hits', `${r.hitCount} hit(s)`)}>{r.hitCount}</td>}
                 </motion.tr>
               ))}

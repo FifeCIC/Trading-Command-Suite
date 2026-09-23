@@ -7,12 +7,12 @@
   color: var(--ink);
 }
 
-.screener-page .sc-page-header h1 {
+.screener-page .screener-page-header h1 {
   margin: 0 0 0.2rem;
   font-size: 1.4rem;
 }
 
-.screener-page .sc-page-header p {
+.screener-page .screener-page-header p {
   color: var(--ink-soft);
   margin: 0 0 1rem;
   font-size: 0.85rem;
@@ -20,14 +20,14 @@
 
 /* --- Transparency strip (#682 decision 9) --- */
 
-.sc-transparency {
+.screener-transparency {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 0.85rem;
 }
 
-.sc-trans-item {
+.screener-trans-item {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -38,25 +38,25 @@
   min-width: 110px;
 }
 
-.sc-trans-item strong {
+.screener-trans-item strong {
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 
-.sc-trans-item span {
+.screener-trans-item span {
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
 }
 
-.sc-trans-hit strong { color: var(--color-buy); }
-.sc-trans-quiet strong { color: var(--ink-soft); }
+.screener-trans-hit strong { color: var(--color-buy); }
+.screener-trans-quiet strong { color: var(--ink-soft); }
 
 /* --- Toolbar --- */
 
-.sc-toolbar {
+.screener-toolbar {
   display: flex;
   align-items: center;
   gap: 0.8rem;
@@ -68,7 +68,7 @@
   margin-bottom: 0.85rem;
 }
 
-.sc-toolbar-search {
+.screener-toolbar-search {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -76,13 +76,13 @@
   min-width: 180px;
 }
 
-.sc-toolbar-search label {
+.screener-toolbar-search label {
   color: var(--ink-soft);
   font-size: 0.82rem;
   white-space: nowrap;
 }
 
-.sc-toolbar-search input {
+.screener-toolbar-search input {
   flex: 1;
   border-radius: 8px;
   border: 1px solid var(--line);
@@ -92,12 +92,12 @@
   min-width: 0;
 }
 
-.sc-toolbar-search input:focus {
+.screener-toolbar-search input:focus {
   outline: none;
   border-color: var(--accent);
 }
 
-.sc-toolbar-chips {
+.screener-toolbar-chips {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
@@ -105,7 +105,7 @@
 
 /* --- Chips --- */
 
-.sc-chip {
+.screener-chip {
   display: inline-block;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
@@ -120,38 +120,38 @@
   transition: color 0.15s, border-color 0.15s;
 }
 
-.sc-chip:hover { color: var(--accent); border-color: var(--accent); }
-.sc-chip-active {
+.screener-chip:hover { color: var(--accent); border-color: var(--accent); }
+.screener-chip-active {
   color: var(--accent);
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-.sc-chip--news { border-color: rgba(59, 130, 246, 0.4); color: #3b82f6; }
-.sc-chip--earnings { border-color: rgba(139, 92, 246, 0.4); color: #8b5cf6; }
+.screener-chip--news { border-color: rgba(59, 130, 246, 0.4); color: #3b82f6; }
+.screener-chip--earnings { border-color: rgba(139, 92, 246, 0.4); color: #8b5cf6; }
 
 /* --- Table --- */
 
-.sc-table-wrap {
+.screener-table-wrap {
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow-x: auto;
   background: var(--panel);
 }
 
-.sc-state {
+.screener-state {
   color: var(--ink-soft);
   font-size: 0.85rem;
   padding: 1rem;
   margin: 0;
 }
 
-.sc-table {
+.screener-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.sc-table thead th {
+.screener-table thead th {
   text-align: left;
   font-size: 0.68rem;
   letter-spacing: 0.03em;
@@ -163,7 +163,7 @@
   white-space: nowrap;
 }
 
-.sc-table td {
+.screener-table td {
   border-bottom: 1px solid var(--line);
   padding: 0.45rem 0.6rem;
   vertical-align: middle;
@@ -171,15 +171,15 @@
   font-size: 0.82rem;
 }
 
-.sc-table thead th.sc-th-sortable { cursor: pointer; }
-.sc-table thead th.sc-th-sortable:hover { color: var(--accent); }
+.screener-table thead th.screener-th-sortable { cursor: pointer; }
+.screener-table thead th.screener-th-sortable:hover { color: var(--accent); }
 
-.sc-table strong { color: var(--accent); font-size: 0.85rem; }
-.sc-col-pick { width: 40px; text-align: center; }
+.screener-table strong { color: var(--accent); font-size: 0.85rem; }
+.screener-col-pick { width: 40px; text-align: center; }
 
-.sc-ticker-cell { white-space: nowrap; }
+.screener-ticker-cell { white-space: nowrap; }
 
-.sc-in-db {
+.screener-in-db {
   display: inline-block;
   margin-left: 0.4rem;
   padding: 0.05rem 0.35rem;
@@ -194,7 +194,7 @@
 
 /* Protocol-fits chip (#646 suitability) */
 
-.sc-fits {
+.screener-fits {
   display: inline-block;
   margin-left: 0.35rem;
   padding: 0.05rem 0.35rem;
@@ -209,9 +209,9 @@
 
 /* Watch / promote actions (#682 Phase 4.4) */
 
-.sc-col-action { width: 90px; }
+.screener-col-action { width: 90px; }
 
-.sc-watch-btn {
+.screener-watch-btn {
   background: none;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -224,23 +224,23 @@
   transition: color 0.15s, border-color 0.15s;
 }
 
-.sc-watch-btn:hover { color: var(--accent); border-color: var(--accent); }
+.screener-watch-btn:hover { color: var(--accent); border-color: var(--accent); }
 
-.sc-watching {
+.screener-watching {
   font-size: 0.68rem;
   color: var(--ink-soft);
   white-space: nowrap;
 }
 
-.sc-promote-row {
+.screener-promote-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.sc-promote-select,
-.sc-promote-input {
+.screener-promote-select,
+.screener-promote-input {
   border-radius: 6px;
   border: 1px solid var(--line);
   background: var(--bg, rgba(0, 0, 0, 0.1));
@@ -250,10 +250,10 @@
   min-width: 0;
 }
 
-.sc-promote-select { flex: 1; max-width: 320px; }
-.sc-promote-input { flex: 1; max-width: 200px; }
+.screener-promote-select { flex: 1; max-width: 320px; }
+.screener-promote-input { flex: 1; max-width: 200px; }
 
-.sc-promote-confirm {
+.screener-promote-confirm {
   border: none;
   border-radius: 6px;
   background: var(--accent);
@@ -265,10 +265,10 @@
   font-family: inherit;
 }
 
-.sc-promote-confirm:hover:not(:disabled) { filter: brightness(1.15); }
-.sc-promote-confirm:disabled { opacity: 0.6; cursor: default; }
+.screener-promote-confirm:hover:not(:disabled) { filter: brightness(1.15); }
+.screener-promote-confirm:disabled { opacity: 0.6; cursor: default; }
 
-.sc-promote-err {
+.screener-promote-err {
   color: #ef4444;
   font-size: 0.75rem;
   margin: 0.4rem 0 0;
@@ -276,7 +276,7 @@
 
 /* Catalyst-type filter chips (#682 Phase 4.3) */
 
-.sc-chip-label {
+.screener-chip-label {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -288,7 +288,7 @@
 
 /* Symbol detail panel — catalyst history (#682 Phase 4.3) */
 
-.sc-panel-subhead {
+.screener-panel-subhead {
   margin: 0.6rem 0 0.35rem;
   font-size: 0.72rem;
   font-weight: 700;
@@ -297,7 +297,7 @@
   color: var(--ink-soft);
 }
 
-.sc-history-list {
+.screener-history-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -308,7 +308,7 @@
   overflow-y: auto;
 }
 
-.sc-history-item {
+.screener-history-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -320,41 +320,41 @@
   border: 1px solid var(--line);
 }
 
-.sc-history-type {
+.screener-history-type {
   color: var(--ink);
   font-weight: 600;
 }
 
-.sc-history-nums {
+.screener-history-nums {
   color: var(--ink-soft);
 }
 
-.sc-table tbody tr.sc-top-pick {
+.screener-table tbody tr.screener-top-pick {
   background: color-mix(in srgb, var(--accent) 8%, var(--panel));
   border-left: 2px solid var(--accent);
 }
 
-.sc-table tbody tr:hover {
+.screener-table tbody tr:hover {
   background: color-mix(in srgb, var(--accent) 6%, var(--panel));
 }
 
 /* Attention cell */
 
-.sc-attn-cell {
+.screener-attn-cell {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-width: 90px;
 }
 
-.sc-attn-num {
+.screener-attn-num {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   min-width: 2rem;
   text-align: right;
 }
 
-.sc-attn-bar {
+.screener-attn-bar {
   flex: 1;
   height: 6px;
   border-radius: 999px;
@@ -363,14 +363,14 @@
   max-width: 80px;
 }
 
-.sc-attn-fill {
+.screener-attn-fill {
   display: block;
   height: 100%;
   border-radius: 999px;
   background: var(--accent);
 }
 
-.sc-when {
+.screener-when {
   white-space: nowrap;
   color: var(--ink-soft);
   font-size: 0.78rem;
@@ -378,7 +378,7 @@
 
 /* --- News lean (#682 Phase 4.2) --- */
 
-.sc-lean {
+.screener-lean {
   display: inline-block;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
@@ -389,20 +389,20 @@
   white-space: nowrap;
 }
 
-.sc-lean--long { border-color: rgba(34, 197, 94, 0.4); color: #22c55e; }
-.sc-lean--short { border-color: rgba(239, 68, 68, 0.4); color: #ef4444; }
-.sc-lean--neutral { border-color: var(--line); color: var(--ink-soft); }
+.screener-lean--long { border-color: rgba(34, 197, 94, 0.4); color: #22c55e; }
+.screener-lean--short { border-color: rgba(239, 68, 68, 0.4); color: #ef4444; }
+.screener-lean--neutral { border-color: var(--line); color: var(--ink-soft); }
 
-.sc-table tbody tr { cursor: pointer; }
+.screener-table tbody tr { cursor: pointer; }
 
-.sc-table tbody tr.sc-row-selected {
+.screener-table tbody tr.screener-row-selected {
   background: color-mix(in srgb, var(--accent) 14%, var(--panel));
   border-left: 2px solid var(--accent);
 }
 
 /* --- Stories panel --- */
 
-.sc-stories-panel {
+.screener-stories-panel {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel);
@@ -412,16 +412,16 @@
 
 /* CSS-only entrance (no exit animation — AnimatePresence exits froze on this
    page and left invisible click-blocking ghosts; see #682 Phase 4.4). */
-.sc-panel-enter {
-  animation: sc-panel-in 0.16s ease-out;
+.screener-panel-enter {
+  animation: screener-panel-in 0.16s ease-out;
 }
 
-@keyframes sc-panel-in {
+@keyframes screener-panel-in {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.sc-stories-header {
+.screener-stories-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -429,13 +429,18 @@
   margin-bottom: 0.4rem;
 }
 
-.sc-stories-header h2 {
+.screener-stories-header h2 {
   margin: 0;
   font-size: 0.9rem;
   color: var(--ink);
 }
 
-.sc-stories-close {
+/* ⚠️ NAMED `dismiss`, NOT `close`. `src/index.css` colour-blind mode injects a ▼ pseudo-element on
+   any class CONTAINING `lose` (`[class*='lose']::before`), and "c-LOSE" matches — so the ✕ button
+   carried a phantom down-triangle that means "loss". This was pre-existing (it was
+   `sc-stories-close`) and is fixed by the rename rather than by defensive `content: none` CSS,
+   which is the better fix: a name that cannot match the rule needs no exemption. */
+.screener-stories-dismiss {
   background: none;
   border: none;
   color: var(--ink-soft);
@@ -445,9 +450,9 @@
   border-radius: 4px;
 }
 
-.sc-stories-close:hover { color: var(--ink); background: var(--line); }
+.screener-stories-dismiss:hover { color: var(--ink); background: var(--line); }
 
-.sc-stories-list {
+.screener-stories-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -456,7 +461,7 @@
   gap: 0.3rem;
 }
 
-.sc-story {
+.screener-story {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -464,9 +469,9 @@
   border-radius: 6px;
 }
 
-.sc-story:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.screener-story:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
-.sc-story-headline {
+.screener-story-headline {
   flex: 1;
   color: var(--ink);
   font-size: 0.82rem;
@@ -477,14 +482,14 @@
   white-space: nowrap;
 }
 
-.sc-story-headline:hover { color: var(--accent); }
+.screener-story-headline:hover { color: var(--accent); }
 
-.sc-story-meta {
+.screener-story-meta {
   color: var(--ink-soft);
   font-size: 0.68rem;
   white-space: nowrap;
 }
 
 @media (max-width: 768px) {
-  .sc-toolbar { flex-direction: column; align-items: stretch; }
+  .screener-toolbar { flex-direction: column; align-items: stretch; }
 }

@@ -98,40 +98,40 @@ export default function StartupChecklist() {
   const warningCount = allActions.filter((a) => a.type === 'warning' || a.type === 'error').length;
 
   return (
-    <div className="sc-banner">
-      <div className="sc-header" onClick={() => setCollapsed(!collapsed)}>
-        <span className="sc-icon">📋</span>
-        <span className="sc-title">
+    <div className="checklist-banner">
+      <div className="checklist-header" onClick={() => setCollapsed(!collapsed)}>
+        <span className="checklist-icon">📋</span>
+        <span className="checklist-title">
           Startup Checklist
           {warningCount > 0 && (
-            <span className="sc-badge sc-badge-warn">{warningCount}</span>
+            <span className="checklist-badge checklist-badge-warn">{warningCount}</span>
           )}
         </span>
-        <span className="sc-count">{allActions.length} action{allActions.length !== 1 ? 's' : ''}</span>
-        <span className="sc-chevron">{collapsed ? '▸' : '▾'}</span>
+        <span className="checklist-count">{allActions.length} action{allActions.length !== 1 ? 's' : ''}</span>
+        <span className="checklist-chevron">{collapsed ? '▸' : '▾'}</span>
       </div>
 
       {!collapsed && (
-        <div className="sc-body">
+        <div className="checklist-body">
           {allActions.map((action) => (
-            <div key={action.id} className={`sc-item sc-item--${action.type}`}>
-              <div className="sc-item-left">
-                <span className={`sc-dot sc-dot--${action.type}`} />
+            <div key={action.id} className={`checklist-item checklist-item--${action.type}`}>
+              <div className="checklist-item-left">
+                <span className={`checklist-dot checklist-dot--${action.type}`} />
                 <div>
-                  <div className="sc-item-label">{action.label}</div>
-                  <div className="sc-item-detail">{action.detail}</div>
+                  <div className="checklist-item-label">{action.label}</div>
+                  <div className="checklist-item-detail">{action.detail}</div>
                 </div>
               </div>
-              <div className="sc-item-actions">
+              <div className="checklist-item-actions">
                 <button
-                  className="sc-btn-copy"
+                  className="checklist-btn-copy"
                   onClick={() => copyCommand(action.command)}
                   title="Copy command to clipboard"
                 >
                   {copiedId === action.command ? '✓ Copied' : '📋 Copy'}
                 </button>
                 <button
-                  className="sc-btn-dismiss"
+                  className="checklist-btn-dismiss"
                   onClick={() => dismiss(action.id)}
                   title="Dismiss this reminder"
                 >

@@ -6,8 +6,8 @@ const POLL_MS = 5000;
 
 function StatusDot({ running }) {
   return (
-    <span className={`sc-status-dot ${running ? 'sc-online' : 'sc-offline'}`}>
-      <span className="sc-dot-inner" />
+    <span className={`svrcontrols-status-dot ${running ? 'svrcontrols-online' : 'svrcontrols-offline'}`}>
+      <span className="svrcontrols-dot-inner" />
       {running ? 'Online' : 'Offline'}
     </span>
   );
@@ -86,37 +86,37 @@ export default function ServerControlsPage() {
 
   if (loading) {
     return (
-      <div className="sc-page">
-        <header className="sc-header">
+      <div className="svrcontrols-page">
+        <header className="svrcontrols-header">
           <h2>Server Controls</h2>
           <p className="muted">Start and stop Trading Command Suite services.</p>
         </header>
-        <div className="sc-loading">Checking service statuses...</div>
+        <div className="svrcontrols-loading">Checking service statuses...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="sc-page">
-        <header className="sc-header">
+      <div className="svrcontrols-page">
+        <header className="svrcontrols-header">
           <h2>Server Controls</h2>
           <p className="muted">Start and stop Trading Command Suite services.</p>
         </header>
-        <div className="sc-error">{error}</div>
-        <button type="button" className="sc-retry-btn" onClick={fetchTasks}>Retry</button>
+        <div className="svrcontrols-error">{error}</div>
+        <button type="button" className="svrcontrols-retry-btn" onClick={fetchTasks}>Retry</button>
       </div>
     );
   }
 
   return (
-    <div className="sc-page">
-      <header className="sc-header">
+    <div className="svrcontrols-page">
+      <header className="svrcontrols-header">
         <h2>Server Controls</h2>
         <p className="muted">Start and stop Trading Command Suite services directly from here.</p>
       </header>
 
-      <div className="sc-grid">
+      <div className="svrcontrols-grid">
         {tasks.map((task) => {
           const busy = actionState[task.id];
           const running = task.running;
@@ -125,20 +125,20 @@ export default function ServerControlsPage() {
           const disableStop = !running || hasIssue || !!busy;
 
           return (
-            <article key={task.id} className={`sc-card ${running ? 'sc-card--live' : ''} ${hasIssue ? 'sc-card--issue' : ''}`}>
-              <div className="sc-card-header">
-                <span className="sc-card-icon">⚙️</span>
+            <article key={task.id} className={`svrcontrols-card ${running ? 'svrcontrols-card--live' : ''} ${hasIssue ? 'svrcontrols-card--issue' : ''}`}>
+              <div className="svrcontrols-card-header">
+                <span className="svrcontrols-card-icon">⚙️</span>
                 <h3>{task.label}</h3>
               </div>
 
-              <div className="sc-card-body">
+              <div className="svrcontrols-card-body">
                 <StatusDot running={running} />
 
-                <div className="sc-card-meta">
+                <div className="svrcontrols-card-meta">
                   {task.port && <span>Port: {task.port}</span>}
                   {task.pid && <span>PID: {task.pid}</span>}
                   {task.listenerPid > 0 && (
-                    <span className="sc-listener-info">
+                    <span className="svrcontrols-listener-info">
                       Listener: {task.listenerPid}
                       {task.listenerProcess ? ` (${task.listenerProcess})` : ''}
                     </span>
@@ -146,7 +146,7 @@ export default function ServerControlsPage() {
                 </div>
 
                 {hasIssue && (
-                  <div className="sc-issue">
+                  <div className="svrcontrols-issue">
                     {task.issue === 'port_owned_by_other_process' && (
                       <>⚠️ Port occupied by PID {task.listenerPid} ({task.listenerProcess || 'unknown'})</>
                     )}
@@ -157,13 +157,13 @@ export default function ServerControlsPage() {
                 )}
 
                 {task.logTail && (
-                  <pre className="sc-log">{task.logTail}</pre>
+                  <pre className="svrcontrols-log">{task.logTail}</pre>
                 )}
 
-                <div className="sc-actions">
+                <div className="svrcontrols-actions">
                   <button
                     type="button"
-                    className="sc-btn sc-btn--start"
+                    className="svrcontrols-btn svrcontrols-btn--start"
                     disabled={disableStart}
                     onClick={() => doAction(task.id, 'start')}
                   >
@@ -171,7 +171,7 @@ export default function ServerControlsPage() {
                   </button>
                   <button
                     type="button"
-                    className="sc-btn sc-btn--stop"
+                    className="svrcontrols-btn svrcontrols-btn--stop"
                     disabled={disableStop}
                     onClick={() => doAction(task.id, 'stop')}
                   >
@@ -180,7 +180,7 @@ export default function ServerControlsPage() {
                   {task.port && (
                     <button
                       type="button"
-                      className="sc-btn sc-btn--open"
+                      className="svrcontrols-btn svrcontrols-btn--open"
                       disabled={!running}
                       onClick={() => window.open(`http://localhost:${task.port}`, '_blank', 'noopener')}
                     >
@@ -194,7 +194,7 @@ export default function ServerControlsPage() {
         })}
       </div>
 
-      <p className="sc-footnote muted">
+      <p className="svrcontrols-footnote muted">
         Services are managed by the NestJS process manager. Status refreshes every {POLL_MS / 1000}s.
       </p>
     </div>
