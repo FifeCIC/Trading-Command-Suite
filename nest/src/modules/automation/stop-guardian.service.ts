@@ -395,6 +395,25 @@ export class StopGuardianService {
 
   // ── Simulated TSL (#936, R20=A 2026-09-24) — see `observeSimulatedTsl()` ──────────────────
   //
+  // ── DECISION (2026-09-24, primary — owner chose A) ──
+  // WHAT:      Post-entry exit management is PER-BOT DATA, not one global mechanism.
+  // WHY:       ELEVEN of this file's twelve rules were `global` — ONE guardian served every bot,
+  //            which is why the mechanism that actually locks in profit appeared NOWHERE on the
+  //            bot page. `trading_strategy.slPct` already spans **0.3%-3%** across live bots (a
+  //            10x range), so one shared trail distance cannot be right at both ends of it. The
+  //            guardian also ALREADY read a per-bot value (`strat?.slPct ?? 1`), so this finishes
+  //            a partial thing rather than starting a new direction.
+  // INSTEAD OF: keeping one hardcoded global mechanism (R20 option B), which the owner rejected.
+  //            Its cost is real and is NOT hidden: ~50 bots x knobs can drift, and
+  //            `seedDefaults()` convergence already flipped 5 bots auto->semi-auto once (#833).
+  //            Per-bot data is therefore bounded by declared defaults, never by hand-tuning.
+  // REVERSE BY: set the `simTsl*` columns back to their defaults (enabled=false, NULL) and
+  //            reintroduce a global rule in GUARDIAN_RULES. Nothing else depends on the split.
+  // REGISTER:  docs/SETTLED-DECISIONS.md — "Post-entry exit management is PER-BOT DATA (R20 = A)"
+  // GUARD:     nest/scripts/validate-trailing-claims.cjs + validate-bot-rules.cjs
+  // ⚠️ R20 IS ONLY PARTLY DELIVERED. This is the FIRST per-bot exit control, not the whole
+  // ruling: the eleven shared trailing rules above stay global until each is moved deliberately.
+  //
   // ⚠️ IN-MEMORY ON PURPOSE, AND THAT IS A DECLARED LIMITATION. `Mt5RawPosition` carries no
   // high/low watermark, so "the best price reached" is tracked from the first tick after the
   // threshold armed. A process restart resets it and the next tick may compute a slightly worse

@@ -134,6 +134,19 @@ function collectFiles() {
       } catch {
         continue;
       }
+      // ⚠️ DECLARED-GENERATED files are DERIVED, exactly like a `dist*` build: they have ONE source
+      // (the file they are filtered from) and their own freshness check
+      // (`generate-free-map.cjs --check`) that fails if they drift from it. Scanning them compares
+      // an artefact against the source it was generated FROM — the same false positive as the
+      // `dist-free` case above, and it landed the same way: measured 2026-09-24,
+      // `src/editions/screen-options.free.jsx` shared 554 windows with
+      // `src/components/ScreenOptions.jsx` (commit 6105cd0), which failed EVERY agent's prebuild.
+      //
+      // ⚠️ THE BANNER IS THE EXEMPTION'S OWN PROOF, which is why this is narrow rather than a
+      // directory exemption. A hand-written copy is by definition editable, so it will not carry
+      // "GENERATED FILE, DO NOT EDIT" — this can only skip a generator's output, never hide
+      // copy-paste. Exempting `src/editions/` wholesale WOULD hide it, so it is not done here.
+      if (/GENERATED FILE,\s*DO NOT EDIT/i.test(src.slice(0, 600))) continue;
       out.push({ rel: path.relative(ROOT, full).split(path.sep).join('/'), src });
     }
   };

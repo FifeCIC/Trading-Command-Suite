@@ -48,14 +48,14 @@
     },
     "validators": {
       "label": "Backend build-time validators",
-      "value": 23,
+      "value": 24,
       "unit": "",
       "source": "nest/scripts/validate-*.cjs (run in prebuild)",
       "how": "Get-ChildItem nest/scripts/validate-*.cjs"
     },
     "version": {
       "label": "Application version",
-      "value": "0.81.0",
+      "value": "0.82.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

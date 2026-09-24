@@ -58,7 +58,22 @@ function checkRegister(text) {
 
   lines.forEach((line, i) => {
     const m = line.match(/^\|\s*(\d+)\s*\|/);
-    if (!m) return;
+    if (!m) {
+      // ⚠️ A ROW CARRYING A GUARD STATUS BUT NO ROW NUMBER IS INVISIBLE TO THIS CHECK.
+      // Added 2026-09-24: R20's row was written WITHOUT a number, the validator reported
+      // "33 register rows" and skipped it entirely — the SAME defect this rule exists to prevent
+      // (an unmarked row is indistinguishable from an unguarded one), reached by another route.
+      // Scoped to rows carrying a guard emoji AND shaped like a TABLE ROW (`|`), so this file's
+      // other tables and its prose are untouched. ⚠️ The first version omitted the `|` test and
+      // immediately produced 3 false positives on PROSE — a "**Legend:** 🟢 … 🟡 … 🔴 …" line, a
+      // blockquote, and a numbered list item. A guard that fires on prose gets allowlisted, which
+      // is worse than no guard, so the pattern was TIGHTENED rather than the exemption widened.
+      const orphaned = line.trimStart().startsWith('|') ? MARKS.filter((mk) => line.includes(mk)) : [];
+      if (orphaned.length) {
+        errors.push(`SETTLED-DECISIONS.md:${i + 1}: carries ${orphaned.join(' ')} but NO row number — this check cannot see it. Number the row.`);
+      }
+      return;
+    }
     rows++;
     const n = Number(m[1]);
     const where = `SETTLED-DECISIONS.md:${i + 1} (row ${n})`;
@@ -125,6 +140,7 @@ function selfTest() {
   const cases = [
     ['a well-formed register row', () => checkRegister(goodRow).errors, false],
     ['a row with NO guard status', () => checkRegister('| 30 | **A thing** | because | #1 | — |').errors, true],
+    ['a row carrying a status but NO row number (invisible to the check)', () => checkRegister('| **A thing** | because | 🟢 gated |').errors, true],
     ['a row with TWO guard statuses', () => checkRegister('| 30 | **A thing** | 🟢 ok 🔴 also | #1 |').errors, true],
     ['a register with no rows at all', () => checkRegister('# empty').errors, true],
     ['duplicate row numbers', () => checkRegister(goodRow + '\n' + goodRow).errors, true],

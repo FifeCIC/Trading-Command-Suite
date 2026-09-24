@@ -1626,11 +1626,24 @@ export class TradingStrategyService {
     }
     // ── End safety gates ──
 
-    // ── Auto Trailing Stop (Sprint 2026-07-04) ──
-    // Use ATR-based trail: 2× ATR for trail distance, activate at +1.5× SL distance
-    const useTrailingStop = strategy.mode === 'auto'; // Auto-trail for all auto strategies
-    const trailDistancePct = slPct * 0.75;            // Trail at 75% of SL distance
-    const trailActivationPct = slPct * 1.5;            // Activate trailing once in 1.5× SL profit
+    // ── Post-entry exit management (#936) ──
+    //
+    // ⚠️ THIS BLOCK USED TO ANNOUNCE A TRAILING STOP THAT NOTHING ARMED — the numbers are now
+    // DELETED, not wired. Measured 2026-09-21: it computed `0.75 × slPct` and `1.5 × slPct`, wrote
+    // them into the entry notification AND the persisted `strategyEvaluation.tradeResult`, and
+    // returned a `trailingStop` object — while `placeOrder()` above sends NO trailing parameter
+    // and no consumer of that object existed anywhere in `nest/src` or `src/**`. The only real
+    // trail is `StopGuardianService` (distance `max(3 × ATR, declared)`, no profit activation).
+    //
+    // So every auto entry told the user and the record that a 0.75×SL trailing stop was in place
+    // when none was. Same class as #913 — a declared mechanism with no implementation behind it.
+    //
+    // ⚠️ WHY DELETED RATHER THAN WIRED: arming them would change how REAL positions are managed,
+    // which is a MATHS change needing a copied configuration plus a monitored comparison
+    // (maths-change-requires-ab; #929 blocks the comparison today). The per-bot simulated TSL
+    // (`simTslEnabled` / `simTslActivationPct` / `simTslDistancePct`, #936 R20=A) now EXISTS as an
+    // OBSERVER instead — the guardian records decision moments in `sim_tsl_event` and moves no
+    // stop, so the capability is measurable before it is allowed to touch a trade.
 
     const slPrice = evalResult.signal === 'BUY'
       ? entryPrice > 0
@@ -1673,9 +1686,7 @@ export class TradingStrategyService {
           body: [
             `Signal: ${evalResult.signal} @ ${evalResult.composite}%`,
             `Size: ${size} (${regimeLabel})`,
-            useTrailingStop
-              ? `Trailing SL: ${(trailDistancePct * 100).toFixed(1)}% trail`
-              : `SL/TP: ${slPct * 100}% / ${tpPct * 100}%`,
+            `SL/TP: ${slPct * 100}% / ${tpPct * 100}%`,
             `Rarity: ${evalResult.rarity?.band ?? 'standard'}`,
             `Strategy: ${strategy.name}`,
           ].join(' | '),
@@ -1691,9 +1702,7 @@ export class TradingStrategyService {
           tradeResult: result.success
             ? [
                 `Order: ticket ${result.ticket}, size ${size} (${regimeLabel})`,
-                useTrailingStop
-                  ? `Trailing: ${(trailDistancePct * 100).toFixed(1)}% trail, activate at +${(trailActivationPct * 100).toFixed(1)}% profit`
-                  : `Fixed SL/TP: ${slPct * 100}% / ${tpPct * 100}%`,
+                `SL/TP: ${slPct * 100}% / ${tpPct * 100}% — post-entry managed by StopGuardianService`,
               ].join(' | ')
             : `Order failed: ${result.error}`,
         },
@@ -1710,11 +1719,6 @@ export class TradingStrategyService {
         composite: evalResult.composite,
         signal: evalResult.signal,
         rarity: evalResult.rarity?.band ?? null,
-        trailingStop: useTrailingStop ? {
-          enabled: true,
-          trailDistancePct,
-          activationPct: trailActivationPct,
-        } : undefined,
         regimeSizing: { multiplier: regimeMultiplier, label: regimeLabel },
       };
     } catch (err: any) {

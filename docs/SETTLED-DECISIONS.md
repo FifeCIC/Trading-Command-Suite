@@ -193,6 +193,7 @@ If `detect-circular-work` shows an area with both CLOSED and OPEN issues, you ar
 | "Duplicate directive" warning means two opposite things | `ProtocolGatingService` L671 | Resolved in #789: real double-counting vs a valid copy shadowing a **dead** one. Only the group **kind** distinguishes them |
 | `signals-workbench` is `active: 1` with **0 groups** | `protocol` table + `protocols-seed-data.ts` L2450 | **RESOLVED 2026-09-11 — NOT a defect.** It is a *workbench* protocol populated by `SignalEnvelopeService.persistScores()` (`score-history.service.ts` L54), not scored through the gated pipeline. The `ProtocolHealthService` "no risk-gate group" warning is therefore expected, not a fault. It has no groups **in the seed either** — seed and DB agree |
 | `060ed261-…` protocol whose **slug is a UUID**, 0 groups | `protocol` + seed L2439 | **RESOLVED 2026-09-11 — abandoned placeholder.** A real protocol row ("Conviction Dip Accumulation", created 2026-07-26) that was never configured: `active: 0`, **0 groups in BOTH the seed and the DB**, and nothing references it. Seed and DB agree, so there is **no drift**. Left in place deliberately — deleting a `protocol` row is a data decision, and it is harmless (`active: 0`) |
+| 34 | **Post-entry exit management is PER-BOT DATA** (R20 = A) | `GUARDIAN_RULES` + `StopGuardianService` + `trading_strategy.simTsl*` | 🟡 **PARTIAL** — the per-bot columns exist and the observer is guarded, but NOTHING acts on a decision point and no test fails if a bot is armed without effect |
 
 ---
 
