@@ -275,19 +275,45 @@ export const THEORIES = [
     measure: 'total P&L per bot, grouped by the recorded strategy',
     unit: 'account currency (£)',
     window: 'All closed trades carrying a non-null pnl. Gold sources = the four active XAUUSD bots, the AB-B arm, and manual gold.',
-    status: 'supported',
+    status: 'refuted',
     evidence: {
       basis: 'measurement',
-      n: 10,
+      n: 11,
       result:
-        'Every gold source is negative: AB-B 929 arm −£35.41 (1 trade), Gold Position 4H −£22.36 (2), Gold Day-Trade M15 −£15.67 (4), Gold Scalp M5 −£12.27 (3) — **−£85.71 from 10 bot trades**. Two manual gold trades lost −£52.26 and −£13.68 as well. By contrast the FX session bots average −£0.29 to −£2.80 per trade and the manual/untagged bucket is −£0.08 per trade over 112 rows, i.e. flat. The declared stop on gold spans **0.3%–3%**, with Gold Scalp M5 at **slPct 0.3% / tpPct 0.5%** — 0.3% of XAUUSD is a move gold makes in minutes. ⚠️ Some rows in these buckets have NULL pnl (4 of the 19 AB rows, 86 of 112 manual), so the bucket totals understate the trade count but not the sign.',
+        '⚠️ REFUTED ON RE-MEASUREMENT 2026-09-24, by the #960 Tier 1 truth pass (`nest/scripts/audit-strategy-realism.cjs`). **Gold Swing 1H is net +£26.65** (2 trades: +£41.66 then −£15.01), so gold is NOT unprofitable on every path. ⚠️ The original evidence below listed only THREE of the four bots, so its sum never covered the scope its own statement claimed — a `supported` status resting on evidence narrower than the claim. Corrected per-bot totals, 11 trades, net **−£23.65**: Swing 1H +£26.65 (2), Scalp M5 −£12.27 (3), Day-Trade M15 −£15.67 (4), Position 4H −£22.36 (2). The largest single gold loss is **£31.07**, well under the £100 ceiling. Original text follows, unchanged: Every gold source is negative: AB-B 929 arm −£35.41 (1 trade), Gold Position 4H −£22.36 (2), Gold Day-Trade M15 −£15.67 (4), Gold Scalp M5 −£12.27 (3) — **−£85.71 from 10 bot trades**. Two manual gold trades lost −£52.26 and −£13.68 as well. By contrast the FX session bots average −£0.29 to −£2.80 per trade and the manual/untagged bucket is −£0.08 per trade over 112 rows, i.e. flat. The declared stop on gold spans **0.3%–3%**, with Gold Scalp M5 at **slPct 0.3% / tpPct 0.5%** — 0.3% of XAUUSD is a move gold makes in minutes. ⚠️ Some rows in these buckets have NULL pnl (4 of the 19 AB rows, 86 of 112 manual), so the bucket totals understate the trade count but not the sign.',
       measuredAt: '2026-09-24',
       source: 'Live `trade` table grouped by `strategy`; declared stops from `trading_strategy.slPct`',
     },
     falsification:
       'Disable gold on a COPIED configuration and measure the remaining book. If it is still substantially negative, gold is not the sole centre; if a gold bot turns positive over a longer window, this weakens.',
     decision:
-      'NOT acted on. This is #960 requirement 7 (a realistic exit) and requirement 3 (size against floor AND ceiling) — and changing `slPct` or `baseSize` is a MATHS change, so it needs a copied configuration and a monitored comparison (SETTLED-DECISIONS row 21), which A/B cannot yet provide (#929). The non-maths step available now is #960 Tier 1: write down why a 0.3% stop is defensible on gold, or change it through a copy.',
+      'SURVIVOR AFTER REFUTATION: three of the four gold bots are net negative and the four TOGETHER are net −£23.65. What is refuted is only the word "every". Ran 2026-09-24 as #960 Tier 1: `nest/scripts/audit-strategy-realism.cjs` reports 0 of 33 active bots breaching the £100 worst-loss ceiling and none exceeding the 60% stop-out threshold, so the tier\'s premise (2 gold bots risking £980.88 and £245.22 per trade) does not reproduce against realised losses. NO maths changed — `slPct`/`baseSize` are maths (SETTLED-DECISIONS row 21) and A/B cannot report yet (#929), so the available action was the written truth pass, which is now a guard rather than a one-off.',
+    area: 'trading',
+    issue: 960,
+  },
+  {
+    id: 'gold-bots-risk-over-the-ceiling',
+    raisedAt: '2026-09-24',
+    statement:
+      'The gold bots place trades whose risk per trade exceeds the £100 ceiling — #960 names two of them risking £980.88 and £245.22 per trade.',
+    predictedDirection:
+      'If true, the bots\' own realised losses should be in the hundreds of pounds, and their declared size × stop should exceed £100 by a wide margin.',
+    measure: 'largest realised single-trade loss per bot, and stop-out rate per bot, across all 33 active bots',
+    unit: 'account currency (£) and percent of closed trades',
+    window: 'All closed trades carrying a non-null pnl. Ceiling taken as £100 per #960; no canonical config home for it was found (searched nest/src and nest/prisma, 2026-09-24).',
+    status: 'refuted',
+    evidence: {
+      basis: 'measurement',
+      n: 33,
+      result:
+        'REFUTED. The largest single loss anywhere in the book is **£31.07** (Gold Day-Trade M15, `broker:sl`, 2026-09-17) — 31× smaller than the £980.88 and 8× smaller than the £245.22 that #960 attributes to two gold bots. No bot of 33 breaches the £100 ceiling. Stop-out rates are 0–50%, all below the 60% threshold, so no bot\'s stop sits inside the noise. Per gold bot: Position 4H worst £22.36 (0% stopped out, 2 trades), Day-Trade M15 £31.07 (50%, 4), Swing 1H £15.01 (50%, 2), Scalp M5 £9.44 (33%, 3). ⚠️ #960\'s figures are therefore NOT realised losses; they look like a modelled notional (size × stop distance × contract), which the first version of the audit also got wrong by ~100,000× on FX. Nothing in the audit now models risk — it reads the loss actually taken.',
+      measuredAt: '2026-09-24',
+      source: '`nest/scripts/audit-strategy-realism.cjs` against the live `trade` and `trading_strategy` tables',
+    },
+    falsification:
+      'Find a single closed trade on any bot with |pnl| > £100, or a bot whose stop-out rate is at or above 60% over 3+ trades. Either would reinstate the claim.',
+    decision:
+      'Do NOT re-derive size for the gold bots on the strength of #960\'s figures. Tier 1 keeps its value — exits ARE defined on all four bots (0.3/0.5 to 3/6) and the audit now runs as a guard — but the alarming risk number that motivated the tier does not exist in the data. If a different, real over-risk case exists, it will show as LOSS-OVER-CEILING on the guard, which exits non-zero.',
     area: 'trading',
     issue: 960,
   },
