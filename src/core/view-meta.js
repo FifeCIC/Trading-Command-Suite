@@ -336,7 +336,7 @@ const VIEW_META = {
   },
   '/automation/speed-scanner': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Speed Scanner',
     file: 'src/pages/SpeedScannerPage.jsx',
     css: 'src/pages/speed-scanner.css',
@@ -368,7 +368,7 @@ const VIEW_META = {
   },
   '/automation/decision-trail': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Decision Trail',
     file: 'src/pages/DecisionTrailPage.jsx',
     css: 'src/pages/decision-trail.css',
@@ -376,7 +376,7 @@ const VIEW_META = {
   },
   '/automation/automation-overview': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Automation Overview',
     file: 'src/pages/AutomationOverviewPage.jsx',
     css: 'src/pages/automation-overview.css',
