@@ -61,6 +61,13 @@ const REQUIRED_STRINGS = [
   'id', 'statement', 'predictedDirection', 'measure', 'unit', 'window', 'status', 'falsification', 'area',
 ];
 
+/**
+ * ⚠️ `raisedAt` — #944's acceptance criteria say a status must carry a DATE, and the first version of
+ * this guard did not enforce one. A theory with no date cannot be aged: "testing" for a fortnight and
+ * "testing" for a year look identical, and a claim about WHEN has to name when.
+ */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 const isNonEmptyString = (v) => typeof v === 'string' && v.trim().length > 0;
 
 /**
@@ -88,6 +95,10 @@ function validate(entries, statuses, bases) {
 
     if (seen.has(t.id)) errors.push(`${where}: duplicate id`);
     seen.add(t.id);
+
+    if (!DATE_RE.test(String(t.raisedAt || ''))) {
+      errors.push(`${where}: \`raisedAt\` must be a YYYY-MM-DD date (got ${JSON.stringify(t.raisedAt)})`);
+    }
 
     // 4 — a question is not a falsifiable statement
     if (isNonEmptyString(t.statement)) {
@@ -140,7 +151,8 @@ function validate(entries, statuses, bases) {
 // ── Self-test: prove each rule CAN fail, using the real validate() ────────────────────────────
 function selfTest(statuses, bases) {
   const good = {
-    id: 'good', statement: 'A sufficiently long falsifiable statement about the market yes.',
+    id: 'good', raisedAt: '2026-09-24',
+    statement: 'A sufficiently long falsifiable statement about the market yes.',
     predictedDirection: 'X up', measure: 'x', unit: 'units', window: '24h',
     status: 'refuted', falsification: 'measure x',
     evidence: { basis: 'measurement', n: 5, result: 'r', measuredAt: '2026-09-24', source: 's' },
@@ -159,6 +171,8 @@ function selfTest(statuses, bases) {
     ['measurement with no sample', [{ ...good, evidence: { ...good.evidence, n: 0 } }], true],
     ['code-read claiming a sample', [{ ...good, evidence: { ...good.evidence, basis: 'code-read', n: 1 } }], true],
     ['duplicate ids', [good, { ...good }], true],
+    ['a missing raisedAt date', [{ ...good, raisedAt: undefined }], true],
+    ['a non-date raisedAt', [{ ...good, raisedAt: 'last tuesday' }], true],
     ['empty registry', [], true],
   ];
 

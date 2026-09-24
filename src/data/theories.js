@@ -53,6 +53,7 @@ export const THEORIES = [
   // ── Scoring ───────────────────────────────────────────────────────────────────────────────────
   {
     id: 'weight-strategy-selects-denominator',
+    raisedAt: '2026-09-20',
     statement:
       'Changing `weightStrategy` changes the composite, because it selects which denominator the directional score is divided by.',
     predictedDirection:
@@ -79,6 +80,7 @@ export const THEORIES = [
   },
   {
     id: 'group-weights-weight-the-composite',
+    raisedAt: '2026-09-20',
     statement:
       "A group's `config.weight` changes how much its directives contribute to the composite.",
     predictedDirection:
@@ -106,6 +108,7 @@ export const THEORIES = [
   // ── Data / processing ─────────────────────────────────────────────────────────────────────────
   {
     id: 'most-scoring-is-on-untradeable-symbols',
+    raisedAt: '2026-09-22',
     statement:
       'Most scoring output is produced for symbols that cannot trade, so most of the work is wasted.',
     predictedDirection:
@@ -131,6 +134,7 @@ export const THEORIES = [
   },
   {
     id: 'closed-market-scores-cannot-become-signals',
+    raisedAt: '2026-09-22',
     statement:
       'Scoring a symbol whose market is closed produces no output any consumer can act on.',
     predictedDirection:
@@ -158,6 +162,7 @@ export const THEORIES = [
   // ── Trading / exits ───────────────────────────────────────────────────────────────────────────
   {
     id: 'the-stop-loss-is-where-the-money-dies',
+    raisedAt: '2026-09-23',
     statement: 'The loss in this system comes from stop-loss exits, not from the entry decision.',
     predictedDirection:
       'Stop-loss closes carry a large negative total P&L while terminal (manual/bot) closes are net positive, so the entry side is not the problem.',
