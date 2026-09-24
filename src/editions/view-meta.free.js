@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 43 of 136 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 43 of 137 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -299,7 +299,7 @@ export const VIEW_META = {
   },
   "/status/setup": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Setup & Diagnostics",
     file: "src/pages/SetupWizardPage.jsx",
     css: "src/pages/setup-wizard.css",
@@ -315,7 +315,7 @@ export const VIEW_META = {
   },
   "/settings/risk-controls": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Risk Controls",
     file: "src/pages/RiskControlsPage.jsx",
     css: "src/pages/risk-controls.css",
@@ -323,7 +323,7 @@ export const VIEW_META = {
   },
   "/settings/settings": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "General",
     file: "src/pages/SettingsPage.jsx",
     css: "src/pages/settings.css",
@@ -334,7 +334,7 @@ export const VIEW_META = {
   },
   "/settings/settings-education": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Education",
     file: "src/pages/SettingsEducationPage.jsx",
     css: "src/pages/settings-education.css",
@@ -342,7 +342,7 @@ export const VIEW_META = {
   },
   "/settings/theme-packs": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Theme Packs",
     file: "src/pages/ThemePage.jsx",
     css: "src/pages/theme-page.css",
@@ -350,7 +350,7 @@ export const VIEW_META = {
   },
   "/settings/user-preferences": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "User Preferences",
     file: "src/pages/PreferenceLab.jsx",
     css: "src/pages/preference-lab.css",
@@ -358,7 +358,7 @@ export const VIEW_META = {
   },
   "/settings/trading-settings": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Trading",
     file: "src/pages/TradingSettingsPage.jsx",
     css: "src/pages/settings.css",
@@ -372,7 +372,7 @@ export const VIEW_META = {
   },
   "/settings/appearance": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Appearance",
     file: "src/pages/AppearanceSettingsPage.jsx",
     css: "src/pages/settings.css",

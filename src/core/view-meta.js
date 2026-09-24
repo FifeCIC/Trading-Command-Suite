@@ -410,7 +410,7 @@ const VIEW_META = {
   },
   '/status/capability-map': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Capability Map',
     file: 'src/pages/CapabilityMapPage.jsx',
     css: 'src/pages/capability-map.css',
@@ -418,7 +418,7 @@ const VIEW_META = {
   },
   '/status/health-check': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Health & Diagnostics',
     file: 'src/pages/HealthDashboardPage.jsx',
     css: 'src/pages/health-dashboard.css',
@@ -433,7 +433,7 @@ const VIEW_META = {
   },
   '/status/commands': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Commands Reference',
     file: 'src/pages/CommandsReferencePage.jsx',
     css: 'src/pages/commands-reference.css',
@@ -465,7 +465,7 @@ const VIEW_META = {
   },
   '/status/meta-stack-pipeline': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'META.Stack Pipeline',
     file: 'src/pages/MetaStackPipelinePage.jsx',
     css: 'src/pages/meta-stack-pipeline.css',
@@ -473,7 +473,7 @@ const VIEW_META = {
   },
   '/settings/settings-database': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Database Settings',
     file: 'src/pages/SettingsDatabasePage.jsx',
     css: 'src/pages/settings-database.css',
@@ -639,7 +639,7 @@ const VIEW_META = {
   // ── Status ──
   '/status/setup': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Setup & Diagnostics',
     file: 'src/pages/SetupWizardPage.jsx',
     css: 'src/pages/setup-wizard.css',
@@ -647,7 +647,7 @@ const VIEW_META = {
   },
   '/status/system-log': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'System Log',
     file: 'src/pages/SystemLogPage.jsx',
     css: 'src/pages/system-log.css',
@@ -655,7 +655,7 @@ const VIEW_META = {
   },
   '/status/platform-comparisons': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'API Comparisons',
     file: 'src/pages/PlatformComparisonsPage.jsx',
     css: 'src/pages/platform-comparisons.css',
@@ -663,7 +663,7 @@ const VIEW_META = {
   },
   '/status/meta-stack-status': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'META.Stack Status',
     file: 'src/pages/MetaStackStatusPage.jsx',
     css: 'src/pages/meta-stack-status.css',
@@ -671,7 +671,7 @@ const VIEW_META = {
   },
   '/status/file-inventory': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'File Inventory',
     file: 'src/pages/FileInventoryPage.jsx',
     css: 'src/pages/file-inventory-page.css',
@@ -729,7 +729,7 @@ const VIEW_META = {
   },
   '/status/meta-stack-explorer': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'META.Stack Explorer',
     file: 'src/pages/MetaStackExplorerPage.jsx',
     css: 'src/pages/meta-stack-explorer.css',
@@ -935,6 +935,17 @@ const VIEW_META = {
     css: 'src/pages/theory-registry.css',
     api: [],
   },
+  // R21 / #990 — the design observation register. Static data with an ON-DEMAND guard
+  // (`scripts/validate-design-observations.cjs`), the same shape and the same reasoning as the
+  // theory registry above: the file is the source of truth, so there is no API to declare.
+  '/development/design-observations': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Design Observations',
+    file: 'src/pages/DesignObservationsPage.jsx',
+    css: 'src/pages/design-observations.css',
+    api: [],
+  },
   '/planner/personal-finances': {
     tier: 'premium',
     review: 'pending',
@@ -971,7 +982,7 @@ const VIEW_META = {
   // ── Settings ──
   '/settings/monitoring': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Monitoring',
     file: 'src/pages/MonitoringPage.jsx',
     css: 'src/pages/settings.css',
@@ -979,7 +990,7 @@ const VIEW_META = {
   },
   '/settings/risk-controls': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Risk Controls',
     file: 'src/pages/RiskControlsPage.jsx',
     css: 'src/pages/risk-controls.css',
@@ -987,7 +998,7 @@ const VIEW_META = {
   },
   '/settings/settings': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'General',
     file: 'src/pages/SettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -995,7 +1006,7 @@ const VIEW_META = {
   },
   '/settings/settings-education': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Education',
     file: 'src/pages/SettingsEducationPage.jsx',
     css: 'src/pages/settings-education.css',
@@ -1003,7 +1014,7 @@ const VIEW_META = {
   },
   '/settings/theme-packs': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Theme Packs',
     file: 'src/pages/ThemePage.jsx',
     css: 'src/pages/theme-page.css',
@@ -1011,7 +1022,7 @@ const VIEW_META = {
   },
   '/settings/user-preferences': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'User Preferences',
     file: 'src/pages/PreferenceLab.jsx',
     css: 'src/pages/preference-lab.css',
@@ -1019,7 +1030,7 @@ const VIEW_META = {
   },
   '/settings/trading-settings': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading',
     file: 'src/pages/TradingSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -1032,7 +1043,7 @@ const VIEW_META = {
   // ── Settings split (#617) — one page per META.Stack layer question ──
   '/settings/appearance': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Appearance',
     file: 'src/pages/AppearanceSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -1040,7 +1051,7 @@ const VIEW_META = {
   },
   '/settings/scoring-settings': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Scoring Settings',
     file: 'src/pages/ScoringSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -1048,7 +1059,7 @@ const VIEW_META = {
   },
   '/settings/automation': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Automation Settings',
     file: 'src/pages/AutomationSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -1201,7 +1212,7 @@ const VIEW_META = {
   },
   '/status/architecture-framework': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Architecture',
     file: 'src/pages/ArchitectureFrameworkPage.jsx',
     css: 'src/pages/architecture-framework.css',
@@ -1219,7 +1230,7 @@ const VIEW_META = {
   // shell that renders it so the overlay's component name and "open view file" stay truthful.
   '/status/analytics': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Analytics',
     file: 'src/App.jsx',
     css: 'src/index.css',
