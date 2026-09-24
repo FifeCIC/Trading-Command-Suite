@@ -115,7 +115,7 @@ const VIEW_META = {
   },
   '/trading/market-context': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Market Context',
     file: 'src/pages/MarketContextPage.jsx',
     css: 'src/pages/market-context.css',
@@ -123,7 +123,7 @@ const VIEW_META = {
   },
   '/trading/positions-monitor': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Positions Monitor',
     file: 'src/pages/PositionsMonitorPage.jsx',
     css: 'src/pages/positions-monitor.css',
@@ -131,7 +131,7 @@ const VIEW_META = {
   },
   '/trading/ab-strategies': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'A/B Strategies',
     file: 'src/pages/AbStrategiesPage.jsx',
     css: 'src/pages/ab-strategies.module.css',
@@ -139,7 +139,7 @@ const VIEW_META = {
   },
   '/trading/strategy-comparison': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading Strategy Comparison',
     file: 'src/pages/StrategyComparisonPage.jsx',
     css: 'src/pages/strategy-comparison.css',
@@ -174,7 +174,7 @@ const VIEW_META = {
   },
   '/trading/trading-bots': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading Bots',
     file: 'src/pages/StrategiesListPage.jsx',
     css: 'src/pages/strategies-list.module.css',
@@ -182,7 +182,7 @@ const VIEW_META = {
   },
   '/trading/strategy-monitor': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Strategy Monitor',
     file: 'src/pages/StrategyMonitorPage.jsx',
     css: 'src/pages/strategy-monitor.css',
@@ -190,7 +190,7 @@ const VIEW_META = {
   },
   '/trading/bot-create': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Create Bot',
     file: 'src/pages/StrategyCreatePage.jsx',
     css: 'src/pages/strategy-create.css',
@@ -238,7 +238,7 @@ const VIEW_META = {
   },
   '/trading/trade-journal': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Trade Journal',
     file: 'src/pages/TradeJournalPage.jsx',
     css: 'src/pages/trade-journal-page.css',
@@ -246,7 +246,7 @@ const VIEW_META = {
   },
   '/trading/calculators': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Calculators',
     file: 'src/pages/CalculatorsPage.jsx',
     css: 'src/pages/calculators.css',
@@ -254,7 +254,7 @@ const VIEW_META = {
   },
   '/trading/accounts-dashboard': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Accounts Dashboard',
     file: 'src/pages/AccountsDashboardPage.jsx',
     css: 'src/pages/accounts-dashboard.css',
@@ -279,7 +279,7 @@ const VIEW_META = {
   },
   '/trading/exit-signals': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Exit Signals',
     file: 'src/pages/ExitSignalsPage.jsx',
     css: 'src/pages/exit-signals.css',
@@ -487,7 +487,7 @@ const VIEW_META = {
   // ── Trading ──
   '/trading/trading-plans': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading Plans',
     file: 'src/pages/TradingPlansPage.jsx',
     css: 'src/pages/trading-plans-page.css',
@@ -495,7 +495,7 @@ const VIEW_META = {
   },
   '/trading/strategy-library': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Strategy Library',
     file: 'src/pages/StrategyLibraryPage.jsx',
     css: 'src/pages/strategy-library.css',
@@ -503,7 +503,7 @@ const VIEW_META = {
   },
   '/trading/performance-lab': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading Performance',
     file: 'src/pages/PerformanceLabPage.jsx',
     css: 'src/pages/performance-lab.css',
@@ -511,7 +511,7 @@ const VIEW_META = {
   },
   '/trading/trading-settings': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading',
     file: 'src/pages/TradingSettingsPage.jsx',
     css: 'src/pages/settings.css',
@@ -1179,7 +1179,7 @@ const VIEW_META = {
   },
   '/trading/strategies-derived': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Strategies',
     file: 'src/pages/DerivedStrategiesPage.jsx',
     css: 'src/pages/derived-strategies.module.css',

@@ -94,7 +94,7 @@ export const VIEW_META = {
   },
   "/trading/market-context": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Market Context",
     file: "src/pages/MarketContextPage.jsx",
     css: "src/pages/market-context.css",
@@ -106,7 +106,7 @@ export const VIEW_META = {
   },
   "/trading/positions-monitor": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Positions Monitor",
     file: "src/pages/PositionsMonitorPage.jsx",
     css: "src/pages/positions-monitor.css",
@@ -131,7 +131,7 @@ export const VIEW_META = {
   },
   "/trading/trade-journal": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Trade Journal",
     file: "src/pages/TradeJournalPage.jsx",
     css: "src/pages/trade-journal-page.css",
@@ -142,7 +142,7 @@ export const VIEW_META = {
   },
   "/trading/calculators": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Calculators",
     file: "src/pages/CalculatorsPage.jsx",
     css: "src/pages/calculators.css",
@@ -150,7 +150,7 @@ export const VIEW_META = {
   },
   "/trading/accounts-dashboard": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Accounts Dashboard",
     file: "src/pages/AccountsDashboardPage.jsx",
     css: "src/pages/accounts-dashboard.css",
@@ -196,7 +196,7 @@ export const VIEW_META = {
   },
   "/trading/trading-plans": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Trading Plans",
     file: "src/pages/TradingPlansPage.jsx",
     css: "src/pages/trading-plans-page.css",
@@ -204,7 +204,7 @@ export const VIEW_META = {
   },
   "/trading/performance-lab": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Trading Performance",
     file: "src/pages/PerformanceLabPage.jsx",
     css: "src/pages/performance-lab.css",
@@ -212,7 +212,7 @@ export const VIEW_META = {
   },
   "/trading/trading-settings": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Trading",
     file: "src/pages/TradingSettingsPage.jsx",
     css: "src/pages/settings.css",
