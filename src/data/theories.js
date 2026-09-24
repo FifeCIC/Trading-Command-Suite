@@ -201,7 +201,7 @@ export const THEORIES = [
       basis: 'measurement',
       n: 14,
       result:
-        'BEFORE the trail floor: 12 trades carried a stop within 0.15% of entry — 2 on 09-20 and 10 on 09-21 — while their TP stayed at the declared ~1%. Four had the stop ABOVE entry on a BUY (EURCAD 1.60873→sl 1.60905; AUDJPY 112.177→112.231; NZDJPY 90.101→90.153): trailed into profit at ~0.02%, then stopped out, several still booking a small gain (+0.17, +0.26, +0.48, +2.47). AFTER the floor landed (09-21 19:13, commit 5c2336c): 0 on 09-22, **2 on 09-23** — one opened 11:24 and closed 12:37, entirely post-fix — and 0 on 09-24. Over the 14 days, achieved R was 0.2–0.8R against a planned 1.0–1.2R on the majors. ⚠️ SECOND, INDEPENDENT CHECK from the guardian own record (`stop_adjustment`, the 452 rows whose reason string carries a `dist=` figure): average recorded trail distance **0.9546%** — so the floor HOLDS on average — but **36 adjustments recorded below 0.5%, minimum 0.299%**, and the guardian is very active (214 adjustments on 09-23, 184 on 09-21, 68 today across 6 symbols). ⚠️ Whether those 36 breach the DECLARED floor cannot be decided without joining each position own declared `slPct` per row, which is NOT done — a `dist=0.299%` is a breach for a ~1% strategy and legitimate for a 0.3% one.',
+        'BEFORE the trail floor: 12 trades carried a stop within 0.15% of entry — 2 on 09-20 and 10 on 09-21 — while their TP stayed at the declared ~1%. Four had the stop ABOVE entry on a BUY (EURCAD 1.60873→sl 1.60905; AUDJPY 112.177→112.231; NZDJPY 90.101→90.153): trailed into profit at ~0.02%, then stopped out, several still booking a small gain (+0.17, +0.26, +0.48, +2.47). AFTER the floor landed (09-21 19:13, commit 5c2336c): 0 on 09-22, **2 on 09-23** — one opened 11:24 and closed 12:37, entirely post-fix — and 0 on 09-24. Over the 14 days, achieved R was 0.2–0.8R against a planned 1.0–1.2R on the majors. ⚠️ SECOND, INDEPENDENT CHECK from the guardian own record (`stop_adjustment`, the 452 rows whose reason string carries a `dist=` figure): average recorded trail distance **0.9546%** — so the floor HOLDS on average — but **36 adjustments recorded below 0.5%, minimum 0.299%**, and the guardian is very active (214 adjustments on 09-23, 184 on 09-21, 68 today across 6 symbols). **RESOLVED 2026-09-24 — these are NOT breaches.** `trading_strategy.slPct` is per bot and spans **0.3% to 3%** (1% on 13 bots, 3% on 10, 1.5%, 0.4%, 0.5%, 0.3%, 2%, 0.6%), and the minimum observed distance (**0.299%**) matches the tightest declared floor (**0.3%**). The floor holds at the floor. ⚠️ My first framing called this an open residual; it is withdrawn, and the correction points instead at bots that DECLARE a stop as tight as 0.3%.',
       measuredAt: '2026-09-24',
       source: 'Live `trade` table, this session (7- and 14-day windows); fix attributed via git log -S on stop-guardian.service.ts',
     },
@@ -264,6 +264,32 @@ export const THEORIES = [
       'NOT acted on — it belongs with #929 and #965. **The instrument has a SECOND, independent defect**: even when A/B runs, its per-arm P&L is not attributable. Fixing attribution is a prerequisite for any A/B verdict, and it is an attribution fix, not a maths change.',
     area: 'trading',
     issue: 929,
+  },
+  {
+    id: 'gold-is-the-loss-centre',
+    raisedAt: '2026-09-23',
+    statement:
+      'Gold is unprofitable across every path that trades it — the bots, the manual route, and the A/B arm.',
+    predictedDirection:
+      'Every XAUUSD source shows a negative total, and removing gold leaves the book close to flat.',
+    measure: 'total P&L per bot, grouped by the recorded strategy',
+    unit: 'account currency (£)',
+    window: 'All closed trades carrying a non-null pnl. Gold sources = the four active XAUUSD bots, the AB-B arm, and manual gold.',
+    status: 'supported',
+    evidence: {
+      basis: 'measurement',
+      n: 10,
+      result:
+        'Every gold source is negative: AB-B 929 arm −£35.41 (1 trade), Gold Position 4H −£22.36 (2), Gold Day-Trade M15 −£15.67 (4), Gold Scalp M5 −£12.27 (3) — **−£85.71 from 10 bot trades**. Two manual gold trades lost −£52.26 and −£13.68 as well. By contrast the FX session bots average −£0.29 to −£2.80 per trade and the manual/untagged bucket is −£0.08 per trade over 112 rows, i.e. flat. The declared stop on gold spans **0.3%–3%**, with Gold Scalp M5 at **slPct 0.3% / tpPct 0.5%** — 0.3% of XAUUSD is a move gold makes in minutes. ⚠️ Some rows in these buckets have NULL pnl (4 of the 19 AB rows, 86 of 112 manual), so the bucket totals understate the trade count but not the sign.',
+      measuredAt: '2026-09-24',
+      source: 'Live `trade` table grouped by `strategy`; declared stops from `trading_strategy.slPct`',
+    },
+    falsification:
+      'Disable gold on a COPIED configuration and measure the remaining book. If it is still substantially negative, gold is not the sole centre; if a gold bot turns positive over a longer window, this weakens.',
+    decision:
+      'NOT acted on. This is #960 requirement 7 (a realistic exit) and requirement 3 (size against floor AND ceiling) — and changing `slPct` or `baseSize` is a MATHS change, so it needs a copied configuration and a monitored comparison (SETTLED-DECISIONS row 21), which A/B cannot yet provide (#929). The non-maths step available now is #960 Tier 1: write down why a 0.3% stop is defensible on gold, or change it through a copy.',
+    area: 'trading',
+    issue: 960,
   },
 ];
 
