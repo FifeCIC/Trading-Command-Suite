@@ -17,9 +17,8 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
-| **R20** | Make **post-entry exit management per-bot data** — a bot chooses which exit directives apply and with what settings. Today ONE global `StopGuardianService` serves every bot, hardcoded, which is why it appeared nowhere on the bot page | **#990** · #936 · `GUARDIAN_RULES`: 11 `global` + 1 `per-bot` (the per-bot one is `NOT IMPLEMENTED`) | Per-bot data, or keep one global mechanism because 50 configurable bots drift? ⚠️ A **maths change** — ships as an A/B copy, never in place. |
 
-**R17 was answered "Keep"** on 2026-09-24 — see DONE.
+**R17 was answered "Keep"** on 2026-09-24 · **R20 was answered "A"** on 2026-09-25 — see DONE.
 
 New rows appear when there is **something to look at or a genuine fork**, not before.
 
@@ -29,6 +28,7 @@ New rows appear when there is **something to look at or a genuine fork**, not be
 
 | id | verdict / what happened |
 |---|---|
+| **R20** | ✅ **DECIDED 2026-09-25 — option A: per-bot data.** Built as `simulated-tsl`, the FIRST per-bot exit control: `simTslEnabled` / `simTslActivationPct` / `simTslDistancePct` on `trading_strategy`, default OFF, **observer only** — it records firings in `sim_tsl_event` and sends no order and moves no stop. #936 is closed and the false announcement it was built on is deleted; `nest/scripts/validate-trailing-claims.cjs` guards the class. ⚠️ **The ruling is delivered in part, not whole** — the other eleven `GUARDIAN_RULES` stay global. Acting on a decision point is still maths and needs an A/B copy (#929 blocks it). Register row 34 · handoff 2026-09-25-936-simulated-tsl-observer |
 | **R1** | No change requested. *"I don't want to be asked such specific UI questions."* Surfaces are for reviewing, not for asking about. |
 | **R2** | **Build it, two places.** Setters on the bot page (where they belong in the algorithm) + a **settings-only** Truth view under the existing button on `/trading/trading-bots`, as a URL parameter. → **#985** |
 | **R3** | **5%** baseline (≥10 bots per account) + a **%/amount toggle**. → **#985** (stored unit stays currency, decision row 28) |
