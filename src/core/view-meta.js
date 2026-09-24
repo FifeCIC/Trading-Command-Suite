@@ -925,6 +925,16 @@ const VIEW_META = {
     css: 'src/pages/roadmap-page.css',
     api: ['GET /api/roadmap'],
   },
+  // #944 — the theory registry. Static data, no API: the file is the source of truth and
+  // `scripts/validate-theories.cjs` is its guard.
+  '/development/theory-registry': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Theory Registry',
+    file: 'src/pages/TheoryRegistryPage.jsx',
+    css: 'src/pages/theory-registry.css',
+    api: [],
+  },
   '/planner/personal-finances': {
     tier: 'premium',
     review: 'pending',

@@ -951,6 +951,19 @@ export class ProtocolGatingService {
     // capacity test was tried and reverted precisely because it would have made this fallback
     // reachable for real protocols — handing them `totalMax`, the OBSERVED max that ADR-011
     // bans. Left as-is; the fallback is unreachable in practice.
+    // ── DECISION (2026-09-24, primary) ──
+    // WHAT:       `weightStrategy` is declared INERT, and the denominator stays hardcoded HERE.
+    // WHY:        The field is never branched on, so 'group-weighted' and 'maxscore-weighted'
+    //             return an IDENTICAL composite (measured: 3 values, including an unrecognised
+    //             one). A field that reads as a control and selects nothing is a buried ability.
+    // INSTEAD OF: Renaming 'group-weighted' → 'configured-capacity', which is what #919 asked for.
+    //             The rename was the wrong fix: it would have made the docs read correctly while
+    //             leaving the control dead — the exact defect #919's own item 4 names.
+    // REVERSE BY: Accepting 'configured-capacity' as an alias, then UPDATING the 28 stored
+    //             `scoring_strategy.weightStrategy` rows. ⚠️ Wiring the choice is then a MATHS
+    //             change — it moves every percentage and needs a copied config + A/B comparison.
+    // REGISTER:   docs/SETTLED-DECISIONS.md row 31
+    // GUARD:      nest/src/modules/scoring/weight-strategy-inert.spec.ts
     const signalDenominator = capacityMaxTotal > 0 ? capacityMaxTotal : totalMax;
     const hasDirectionalEvidence = capacityMaxTotal > 0
       ? directionEligibleTotal > 0 && observedMaxTotal > 0

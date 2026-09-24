@@ -104,6 +104,10 @@ export const PAGE_DATA_STATUS = {
   'alert-center': { status: 'live', source: 'Alert system + DB (Prisma Alert model, click navigation #442)' },
 
   // ── Development ──
+  // The sandbox. `theory-registry` is static data with a build-time guard
+  // (`scripts/validate-theories.cjs`), not an API read — classified 'live' because the file IS the
+  // source of truth, the same convention as 'candle-patterns'.
+  'theory-registry': { status: 'live', source: 'src/data/theories.js (static registry, guarded)' },
   'architecture-framework': { status: 'live', source: 'Static architecture data' },
   'diagrams': { status: 'live', source: 'Generated diagrams' },
   'workflow-wizards': { status: 'mock', note: 'Not yet built' },

@@ -329,6 +329,13 @@ export const NAV_TREE = {
       // ── Project ──
       { id: 'roadmap', label: 'Roadmap', icon: '🗺' },
       { id: 'qa-testing', label: 'QA Checklist', icon: '🧪' },
+      // ── Decisions — the sandbox's OUTPUT (owner direction 2026-09-24) ──
+      // The Development area is where an agent may build a competing approach, measure it, and produce
+      // a decision. An experiment that does not end in a decision is a prototype, not an experiment —
+      // so the registry sits here, near the top, rather than at the bottom of a list of tools.
+      // Entries are enforced by scripts/validate-theories.cjs (a theory needs a falsification test).
+      { kind: 'section-header', id: 'dev-decisions', label: 'Decisions', icon: '⚖' },
+      { id: 'theory-registry', label: 'Theory Registry', icon: '🔬' },
       // ── Engineering tools — build and inspect the UI itself ──
       { kind: 'section-header', id: 'dev-engineering', label: 'Engineering Tools', icon: '🛠' },
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },

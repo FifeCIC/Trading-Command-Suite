@@ -158,6 +158,7 @@ import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
 import MetaStackStatusPage from '../pages/MetaStackStatusPage.jsx';
 import QATestingPage from '../pages/QATestingPage.jsx';
+import TheoryRegistryPage from '../pages/TheoryRegistryPage.jsx';
 import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
@@ -358,6 +359,7 @@ export const VIEW_COMPONENTS = {
   'dashboard': DashboardPage,
   'screen': ScreenBoardPage,
   'qa-testing': QATestingPage,
+  'theory-registry': TheoryRegistryPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,
   'meta-stack-explorer': MetaStackExplorerPage,

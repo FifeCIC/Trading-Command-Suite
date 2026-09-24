@@ -1,0 +1,221 @@
+/**
+ * theory-registry.css — styles for the Theory Registry page.
+ *
+ * ⚠️ TOKENS ONLY (`--ink`, `--ink-soft`, `--panel`, `--line`, `--accent`), per ui-standards. No
+ * hard-coded colours, so every theme pack keeps working and WCAG contrast is inherited from the
+ * token, not re-invented here.
+ *
+ * ⚠️ `refuted` is deliberately NOT red. A refuted theory is a successful experiment — it is the
+ * cheapest thing on this page. Styling it as an error would train the reader to see findings as
+ * failures, which is the opposite of the behaviour the registry exists to encourage.
+ */
+
+.tr-page {
+  max-width: 980px;
+}
+
+.tr-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+  color: var(--ink);
+}
+
+.tr-lede {
+  margin: 0 0 18px;
+  max-width: 62ch;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ── Tally strip ── */
+.tr-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 12px 16px;
+  margin-bottom: 22px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.tr-tally-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.tr-tally-n {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-tally-label {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Status colours: all three convey state, none imply failure ── */
+.tr-status--refuted,
+.tr-tally-n.tr-status--refuted {
+  color: var(--ink);
+}
+.tr-status--supported,
+.tr-tally-n.tr-status--supported {
+  color: var(--accent);
+}
+.tr-status--testing,
+.tr-tally-n.tr-status--testing {
+  color: var(--ink-soft);
+}
+.tr-status--untested,
+.tr-tally-n.tr-status--untested {
+  color: var(--ink-soft);
+  opacity: 0.75;
+}
+
+/* ── Groups ── */
+.tr-group {
+  margin-bottom: 30px;
+}
+
+.tr-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.tr-group-note {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+/* ── Cards ── */
+.tr-card {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 8px;
+}
+
+.tr-card--refuted {
+  border-left-color: var(--ink-soft);
+}
+.tr-card--supported {
+  border-left-color: var(--accent);
+}
+.tr-card--testing {
+  border-left-color: var(--ink-soft);
+  border-left-style: dashed;
+}
+
+.tr-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tr-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ⚠️ The evidence basis — a measurement must not look like a citation. */
+.tr-basis {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+}
+.tr-basis--strong {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tr-basis--weak {
+  border-style: dashed;
+}
+
+.tr-area {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tr-statement {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.tr-fields {
+  display: grid;
+  grid-template-columns: minmax(140px, 190px) 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.tr-fields dt {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  padding-top: 2px;
+}
+
+.tr-fields dd {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.tr-decision {
+  display: inline-block;
+  padding: 4px 8px;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.tr-issue {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.tr-issue:hover,
+.tr-issue:focus-visible {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .tr-fields {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .tr-fields dt {
+    margin-top: 8px;
+    font-weight: 600;
+  }
+}

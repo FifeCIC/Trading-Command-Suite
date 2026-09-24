@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 10 of 15 areas · 45 of 133 nav entries (premium ids AND labels removed)
+ * 10 of 15 areas · 46 of 135 nav entries (premium ids AND labels removed)
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -264,21 +264,27 @@ export const NAV_TREE = {
     views: [
       {
         kind: "section-header",
+        id: "dev-decisions",
+        label: "Decisions",
+        icon: "⚖",
+      },
+      {
+        kind: "section-header",
         id: "dev-engineering",
         label: "Engineering Tools",
-        icon: "",
+        icon: "🛠",
       },
       {
         kind: "section-header",
         id: "dev-theme",
         label: "Theme Engineering",
-        icon: "",
+        icon: "🎨",
       },
       {
         kind: "section-header",
         id: "dev-metastack",
         label: "META.Stack Internals",
-        icon: "",
+        icon: "🔗",
       },
       {
         kind: "section-header",
