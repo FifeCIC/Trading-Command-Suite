@@ -212,6 +212,33 @@ export const THEORIES = [
     area: 'trading',
     issue: 916,
   },
+  {
+    id: 'the-book-loses-money-broadly',
+    raisedAt: '2026-09-23',
+    statement:
+      'The trading book loses money across many symbols, so the entry logic is broadly unprofitable.',
+    predictedDirection:
+      'Losses should be spread across symbols, and removing any single symbol should leave the book substantially negative.',
+    measure: 'total P&L, and expectancy per trade',
+    unit: 'account currency (£)',
+    window:
+      'Closed trades since the trail-distance floor landed (09-21 19:13) — 65 trades, all symbols, live demo accounts.',
+    status: 'refuted',
+    evidence: {
+      basis: 'measurement',
+      n: 65,
+      result:
+        'Expectancy is −£1.89 per trade overall — but FIVE XAUUSD stop-outs carry −£117.39 of the −£122.56 total. The other 60 trades total −£5.17, an expectancy of −£0.09 (effectively flat). All five are gold, one sized 0.1 lots and losing £52.26 on its own. ⚠️ Also measured: the same 65 trades split BEFORE the floor (61 trades) give expectancy −£0.70, so the post-fix window looks WORSE — but 5 trades drive that too, and a verdict on it would be the thin-sample defect SETTLED-DECISIONS row 26 names. ⚠️ One of the five has `pnl` and `exitPrice` inconsistent by 3.6x (implied contract 274.1 against a consistent 75.75 elsewhere) while `pnlInvalid = 0` — an unverified lead, not a finding.',
+      measuredAt: '2026-09-24',
+      source: 'Live `trade` table, this session; fix boundary from git log -S on stop-guardian.service.ts',
+    },
+    falsification:
+      'Re-run the split over a longer window, or on a configuration with gold disabled. A remaining book that is still substantially negative refutes this and restores the original theory.',
+    decision:
+      'NOT acted on, deliberately. 65 trades with 5 carrying the result cannot support a verdict, and the honest next step is gold SIZING rather than another exit change — #960 requirement 3 already records two gold bots risking £980.88 and £245.22 against a £100 ceiling. The pnl/exitPrice inconsistency is a separate lead.',
+    area: 'trading',
+    issue: 960,
+  },
 ];
 
 export default THEORIES;
