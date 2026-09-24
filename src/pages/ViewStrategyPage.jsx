@@ -514,6 +514,20 @@ export default function ViewStrategyPage() {
     refetchInterval: 60_000,
   });
 
+  // The EXIT-MANAGEMENT layer (#936). Deliberately a SEPARATE fetch from `bot-rules`, because it
+  // is a different kind of thing: this behaviour is NOT a column on `trading_strategy`. One
+  // `StopGuardianService` serves every position on every bot, so nothing here is set on this bot.
+  //
+  // ⚠️ No `staleTime: Infinity` here, unlike `bot-rules`. This payload has a LIVE half —
+  // `guardedPositions` and `recentAdjustments` change every tick — so caching it would render a
+  // stale "what the guardian is doing" beside a fresh "what the guardian is", which is the
+  // disagreement this page exists to prevent.
+  const guardianQuery = useQuery({
+    queryKey: ['stop-guardian-status'],
+    queryFn: () => apiGet('/automation/stop-guardian/status'),
+    refetchInterval: 30_000,
+  });
+
   const bot = botQuery.data || null;
   const rules = useMemo(
     () => (Array.isArray(rulesQuery.data?.all) ? rulesQuery.data.all : []),
@@ -521,6 +535,26 @@ export default function ViewStrategyPage() {
   );
   const counts = rulesQuery.data?.counts || null;
   const subs = Array.isArray(subsQuery.data) ? subsQuery.data : [];
+
+  // ── The exit-management layer, split into its two halves ──────────────────────────────────
+  // The DECLARATIONS (what the mechanism is) and the LIVE STATE (what it is doing) arrive in one
+  // response on purpose: a list of stop edits with no statement of the rule that produced them is
+  // the "value without its enforcement" defect, and they cannot drift if they share one payload.
+  const guardianRules = Array.isArray(guardianQuery.data?.rules) ? guardianQuery.data.rules : [];
+  const gState = guardianQuery.isError ? null : (guardianQuery.data || null);
+
+  // ⚠️ Matched on `strategyId`, NEVER on symbol. Two bots can be subscribed to the same symbol, and
+  // a symbol match would silently attribute another bot's position to this one — the same
+  // attribution rule the realised record above follows.
+  const guardedMine = Array.isArray(gState?.guardedPositions)
+    ? gState.guardedPositions.filter((p) => p.strategyId === strategyId)
+    : [];
+
+  // The recorded stop edits for this bot's symbol. In-memory (last 50) rather than a query, so it
+  // is labelled with its window on screen — a count with no window reads as a total.
+  const adjustmentsMine = Array.isArray(gState?.recentAdjustments)
+    ? gState.recentAdjustments.filter((a) => a.symbol === bot?.symbol)
+    : [];
 
   // Match by `botId`, NEVER by name — a name match is a guess, and #894's own rule is that an
   // attribution which cannot be justified is worse than none. A missing row is a real zero
@@ -859,6 +893,152 @@ export default function ViewStrategyPage() {
           </ul>
         </section>
       ))}
+
+      {/* ── EXIT MANAGEMENT (post-entry) — #936 ────────────────────────────────────────────────
+          ⚠️ WHY THIS SECTION IS HERE, BESIDE THE EXIT STAGE ABOVE.
+          The Exit stage above lists this bot's EXIT columns: `slPct`, `tpPct`, `maxHoldHours`.
+          Those are the STATIC stop, target and time limit — set once, at entry. The mechanism that
+          actually MANAGES the stop afterwards, and therefore the thing that locks in profit, is
+          `StopGuardianService`, which is not a column on `trading_strategy` and so appeared NOWHERE
+          on this page. Measured 2026-09-24: a reader could study this bot's entire exit
+          configuration and still not know that a trailing tighten will move its stop, on what
+          evidence, how far, or how often.
+
+          ⚠️ RENDERED AS GLOBAL, NOT AS THIS BOT'S SETTINGS, and that is the honest reading. There
+          is no per-bot stop-management configuration in the schema. Showing these as if they were
+          this bot's values would be the same "value without its enforcement" defect in reverse. */}
+      {!settingsOnly && (
+        <section className={styles.group}>
+          <h2 className={styles.groupHead}>
+            Exit management — post-entry
+            <span className={styles.groupCount}>
+              <code>StopGuardianService</code>
+            </span>
+          </h2>
+
+          {guardianQuery.isError ? (
+            <div className={styles.errorBox}>
+              <strong>The exit-management declarations could not be read.</strong>
+              <p className={styles.summaryText}>
+                Whatever manages this bot&apos;s stop after entry is unknown from here. This is NOT
+                the same as &quot;nothing does&quot; — reload when the API is reachable. It is stated
+                rather than hidden because a blank section would read as a bot with no exit
+                management, which may be false.
+              </p>
+            </div>
+          ) : guardianRules.length === 0 ? (
+            <p className={styles.sectionNote}>Reading the guardian declarations…</p>
+          ) : (
+            <>
+              <p className={styles.sectionNote}>
+                <strong>One guardian serves every position on every bot.</strong> There is no per-bot
+                stop-management configuration in the schema, so none of the following is set on this
+                bot — it applies to all of them, including this one.
+              </p>
+
+              <ul className={styles.subList}>
+                {guardianRules.map((gr) => {
+                  const isLive = gr.enforcement === 'live';
+                  return (
+                    <li
+                      key={gr.id}
+                      className={`${styles.rule} ${isLive ? '' : styles.ruleDead}`}
+                    >
+                      <span className={styles.field}>
+                        {gr.label}
+                        <code className={styles.fieldCode}>{gr.id}</code>
+                      </span>
+
+                      <span className={`${styles.value} ${isLive ? styles.valueTrue : styles.valueUnset}`}>
+                        {gr.value}
+                      </span>
+
+                      <span className={`${styles.chip} ${isLive ? styles.chipLive : styles.chipNone}`}>
+                        {isLive ? 'LIVE' : 'NOT APPLIED'}
+                      </span>
+
+                      <p className={styles.summaryText}>{gr.detail}</p>
+
+                      {/* ⚠️ A non-live entry MUST carry its caveat on screen, never in a tooltip: the
+                          whole defect is a mechanism that reads as working. This is the row that names
+                          the sim-TSL gap. */}
+                      {gr.caveat && <p className={styles.caveat}>{gr.caveat}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* ── The LIVE half: what the guardian is actually doing, right now ── */}
+              <p className={styles.sectionNote}>
+                {gState ? (
+                  <>
+                    Guardian is <strong>{gState.enabled ? 'RUNNING' : 'STOPPED'}</strong>
+                    {gState.lastTickAt
+                      ? `, last tick ${new Date(gState.lastTickAt).toLocaleTimeString()}`
+                      : ', no tick yet'}
+                    {`, ${gState.tickCount ?? 0} tick(s) this session.`}{' '}
+                    {guardedMine.length > 0
+                      ? `${guardedMine.length} position(s) on ${bot.symbol} are guarded.`
+                      : `No open position on ${bot.symbol} is currently guarded — a real zero if the ` +
+                        'guardian is running, not a failed read.'}
+                  </>
+                ) : (
+                  'Reading the guardian\u2019s live state…'
+                )}
+              </p>
+
+              {guardedMine.length > 0 && (
+                <ul className={styles.subList}>
+                  {guardedMine.map((p) => {
+                    const above = p.stopConfidence >= 55;
+                    return (
+                      <li key={p.ticket} className={styles.rule}>
+                        <span className={styles.field}>
+                          #{p.ticket}
+                          <code className={styles.fieldCode}>{p.side}</code>
+                        </span>
+                        <span className={styles.value}>
+                          {p.currentSl ?? 'no stop'} → recommends {p.recommendedSl ?? 'hold'}
+                        </span>
+                        <span className={`${styles.chip} ${above ? styles.chipLive : styles.chipNone}`}>
+                          consensus {p.stopConfidence}
+                        </span>
+                        <p className={styles.summaryText}>
+                          {above
+                            ? 'At or above the ≥ 55 consensus, so an edit to this stop may be sent.'
+                            : 'Below the ≥ 55 consensus, so no edit is sent for this position.'}
+                          {p.wickFilterPassed === false
+                            ? ' The wick filter vetoed this tick — a fakeout was detected, so the position was skipped.'
+                            : ''}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {adjustmentsMine.length > 0 && (
+                <p className={styles.sectionNote}>
+                  <strong>{adjustmentsMine.length} stop edit(s)</strong> recorded for {bot.symbol} in
+                  the guardian&apos;s most recent adjustments (a rolling in-memory window, not a
+                  total — the durable audit trail is <code>stop_adjustment</code>). Latest:{' '}
+                  {adjustmentsMine[0].oldSl ?? 'none'} → {adjustmentsMine[0].newSl} at{' '}
+                  {new Date(adjustmentsMine[0].timestamp).toLocaleTimeString()}.
+                </p>
+              )}
+
+              {gState?.lastBridgeRefusal && (
+                <p className={styles.caveat}>
+                  ⚠️ The last stop edit was <strong>refused by the broker</strong> at{' '}
+                  {new Date(gState.lastBridgeRefusal.at).toLocaleTimeString()} —{' '}
+                  {gState.lastBridgeRefusal.detail.slice(0, 160)}. A refusal is honest (a closed
+                  market refuses every edit) but it means no stop was placed for that position.
+                </p>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       {/* Columns on the row that no declaration covers. Should be empty — the backend build fails
           if a behavioural column is undeclared. Shown when it is NOT empty, because that is a real

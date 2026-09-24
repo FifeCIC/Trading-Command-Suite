@@ -62,6 +62,20 @@ export interface GuardianState {
    * stop ALL stop maintenance. Only the broker's own refusal arms it.
    */
   marketClosedBackoff?: Array<{ symbol: string; retryAt: string }>;
+  /**
+   * ⚠️ #936 — the DECLARATION half of the exit behaviour, served with the live half.
+   *
+   * `guardedPositions` and `recentAdjustments` show what the guardian IS DOING. Without this
+   * field a consumer can render that as a list of edits with no statement of the rule that
+   * produced them — a value shown without its enforcement, which is the defect the bot truth
+   * view (#864) refuses to render at all. Served from the same response so the two cannot drift.
+   *
+   * Optional in the type so a test double or an older consumer that builds a `GuardianState`
+   * literal by hand still compiles; `getState()` always populates it.
+   */
+  rules?: GuardianRule[];
+  /** `{ global: n, 'per-bot': n }` — see `guardianRuleCounts()`. */
+  ruleCounts?: Record<string, number>;
 }
 
 export interface GuardedPosition {
@@ -178,6 +192,104 @@ export function trailDistanceProblem(trailDistance: number, declaredDistance: nu
     `trail distance ${trailDistance.toFixed(5)} is inside the declared stop distance ` +
     `${declaredDistance.toFixed(5)} — refusing to place a stop tighter than the position's own risk (#927)`
   );
+}
+
+/**
+ * GUARDIAN_RULES — the POST-ENTRY EXIT behaviour, declared once (#936).
+ * =====================================================================
+ *
+ * WHY THIS EXISTS. `bot-rules.ts` declares the 30 `trading_strategy` columns and their
+ * enforcement status, and the bot page renders them. Measured 2026-09-24: that page's EXIT
+ * stage shows **3 live / 4 declared** — `slPct`, `tpPct`, `maxHoldHours` — i.e. the STATIC stop,
+ * target and time limit. **The thing that actually manages a stop after entry, and therefore the
+ * thing that locks in profit, is not a bot column at all and appeared NOWHERE.**
+ *
+ * A reader could study the Exit stage of a bot and still not know that a trailing tighten will
+ * move the stop, on what evidence, how far, or how often. That is the same defect class bot-rules
+ * exists to close — a config surface that omits the mechanism that acts — one layer further down.
+ *
+ * ⚠️ THE `scope` FIELD IS THE POINT, NOT DECORATION.
+ * Every entry here is `global`: ONE `StopGuardianService` serves every position on every bot. There
+ * is no per-bot stop-management configuration anywhere in the schema. So this registry must NOT be
+ * rendered as if it were per-bot — `per-bot` is reserved for genuinely per-bot controls, and the
+ * single entry that carries it is the gap, not a feature.
+ *
+ * ⚠️ `enforcement` reuses `bot-rules.ts`'s vocabulary deliberately (live | display-only | none) so
+ * the two registries cannot drift into meaning different things by the same word.
+ */
+export interface GuardianRule {
+  id: string;
+  label: string;
+  kind: 'input' | 'threshold' | 'rule' | 'limit';
+  /** `global` = one implementation for all bots. `per-bot` = configurable on the bot row. */
+  scope: 'global' | 'per-bot';
+  enforcement: 'live' | 'display-only' | 'none';
+  /** The effective value or formula, as a reader of the UI should see it. */
+  value: string;
+  detail: string;
+  /** ⚠️ Required when enforcement is not `live` — states what is missing. */
+  caveat?: string;
+}
+
+export const GUARDIAN_RULES: GuardianRule[] = [
+  // ── the four inputs the consensus is computed from ───────────────────────────────────────
+  { id: 'atr-trailing-stop', label: 'ATR trailing stop', kind: 'input', scope: 'global',
+    enforcement: 'live', value: '3 × ATR(5m)',
+    detail: 'Sets the trail distance. May WIDEN the trail in a volatile market.' },
+  { id: 'supertrend', label: 'SuperTrend', kind: 'input', scope: 'global', enforcement: 'live',
+    value: 'directional vote', detail: 'Bullish helps a BUY, bearish helps a SELL. Opposing evidence reduces confidence.' },
+  { id: 'chandelier-exit', label: 'Chandelier exit', kind: 'input', scope: 'global', enforcement: 'live',
+    value: 'directional vote', detail: 'Stop-quality evidence.' },
+  { id: 'wick-filter', label: 'Wick filter', kind: 'input', scope: 'global', enforcement: 'live',
+    value: 'veto', detail: 'A detected fakeout SKIPS the position entirely for that tick.' },
+
+  // ── thresholds and rules ─────────────────────────────────────────────────────────────────
+  { id: 'consensus-threshold', label: 'Consensus threshold', kind: 'threshold', scope: 'global',
+    enforcement: 'live', value: '≥ 55',
+    detail: 'Side-aware: aligned average minus opposing average. Below this, no stop edit is sent.',
+    caveat:
+      '⚠️ Calibrated for FOUR signals. All four must stay registered in directives.module.ts or the ' +
+      'threshold is silently applied to fewer — enforced by validate-guardian-directive-ids.cjs.' },
+  { id: 'trail-distance', label: 'Trail distance', kind: 'rule', scope: 'global', enforcement: 'live',
+    value: 'max(3 × ATR(5m), declared slPct distance)',
+    detail: 'How far from current price the stop is trailed to. Never loosens: a tighten only ever moves the stop toward profit.' },
+  { id: 'declared-distance-floor', label: 'Declared-distance floor (#927)', kind: 'rule', scope: 'global',
+    enforcement: 'live', value: 'never inside the position\u2019s own slPct',
+    detail: 'A tighten may not leave the stop closer to price than the declared stop distance.',
+    caveat:
+      '⚠️ Added after SEVEN positions closed inside 28 minutes on stops trailed to ~0.03% against a ' +
+      'declared ~1%. This floor is the only thing preventing a repeat.' },
+  { id: 'protective-floor', label: 'Protective floor', kind: 'rule', scope: 'global', enforcement: 'live',
+    value: 'slPct from entry', detail: 'An UNLOCKED position (SL = 0) gets a disaster stop immediately, exempt from the cadence throttle.' },
+
+  // ── limits ───────────────────────────────────────────────────────────────────────────────
+  { id: 'cadence-per-position', label: 'Per-position cadence', kind: 'limit', scope: 'global',
+    enforcement: 'live', value: '1 edit / position / 60s', detail: 'Stops the bridge being hammered on one ticket.' },
+  { id: 'cadence-global-cap', label: 'Global edit cap', kind: 'limit', scope: 'global',
+    enforcement: 'live', value: '10 edits / minute', detail: 'Applies to every position including protective floors.' },
+  { id: 'market-closed-backoff', label: 'Market-closed backoff', kind: 'limit', scope: 'global',
+    enforcement: 'live', value: '15 min after a broker refusal',
+    detail: 'Armed ONLY by the broker\u2019s own refusal \u2014 a closed market is never predicted.' },
+
+  // ── the gap ──────────────────────────────────────────────────────────────────────────────
+  { id: 'simulated-tsl', label: 'Simulated TSL (decision point)', kind: 'rule', scope: 'per-bot',
+    enforcement: 'none', value: 'NOT IMPLEMENTED',
+    detail:
+      'A second, tighter threshold NOT sent to the broker. Touching it is a DECISION MOMENT \u2014 ' +
+      'may close, may hold, may tighten further \u2014 rather than an automatic exit. This is what lets ' +
+      'the gap be closed faster to lock in small profits, with the broker stop left further away.',
+    caveat:
+      '⚠️ NO READER ANYWHERE and NO COLUMN ON `trading_strategy`. Listed here so the absence is a ' +
+      'declared finding rather than a silence. Tracked by #936; its firings must be recorded so a ' +
+      'decision-moment close is distinguishable from the broker stop being hit.' },
+];
+
+/** Counts by scope — for a UI badge, mirroring `ruleEnforcementCounts()`. */
+export function guardianRuleCounts() {
+  return GUARDIAN_RULES.reduce<Record<string, number>>((acc, r) => {
+    acc[r.scope] = (acc[r.scope] ?? 0) + 1;
+    return acc;
+  }, {});
 }
 
 @Injectable()
@@ -658,6 +770,12 @@ export class StopGuardianService {
       marketClosedBackoff: [...this.marketClosedUntil.entries()]
         .filter(([, until]) => until > Date.now())
         .map(([symbol, until]) => ({ symbol, retryAt: new Date(until).toISOString() })),
+      // #936 — the DECLARATION half of this behaviour, served alongside the live half.
+      // A consumer must not render `recentAdjustments` / `guardedPositions` without it: a list of
+      // stop edits with no statement of the rule that produced them is exactly the "value shown
+      // without its enforcement" defect the bot truth view (#864) refuses to render for.
+      rules: GUARDIAN_RULES,
+      ruleCounts: guardianRuleCounts(),
     };
   }
 
