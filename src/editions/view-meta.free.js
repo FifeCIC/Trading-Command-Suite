@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 40 of 136 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 43 of 136 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -86,7 +86,7 @@ export const VIEW_META = {
   },
   "/education/glossary": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Glossary",
     file: "src/pages/GlossaryPage.jsx",
     css: "src/pages/glossary-page.css",
@@ -160,9 +160,42 @@ export const VIEW_META = {
       "GET /api/isa/dashboard",
     ],
   },
+  "/automation/automation-dashboard": {
+    tier: "free",
+    review: "approved",
+    label: "Automation Dashboard",
+    file: "src/pages/AutomationDashboardPage.jsx",
+    css: "src/pages/automation-dashboard.css",
+    api: [
+      "GET /api/automation/status",
+      "POST /api/automation/start",
+      "POST /api/automation/stop",
+    ],
+  },
+  "/automation/automation-rules": {
+    tier: "free",
+    review: "approved",
+    label: "Automation Rules",
+    file: "src/pages/AutomationRulesPage.jsx",
+    css: "src/pages/automation-rules.css",
+    api: [
+      "GET /api/automation/rules",
+    ],
+  },
+  "/automation/execution-queue": {
+    tier: "free",
+    review: "approved",
+    label: "Execution Queue",
+    file: "src/pages/ExecutionQueuePage.jsx",
+    css: "src/pages/execution-queue.css",
+    api: [
+      "GET /api/automation/status",
+      "GET /api/trading/mt5/positions",
+    ],
+  },
   "/automation/alert-center": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Alert Center",
     file: "src/pages/AlertCenterPage.jsx",
     css: "src/pages/alert-center.css",
@@ -242,7 +275,7 @@ export const VIEW_META = {
   },
   "/education/mt5-demo-trading": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "MT5 Demo Trading",
     file: "src/pages/Mt5TradingPage.jsx",
     css: "src/pages/mt5-trading-page.css",
@@ -250,7 +283,7 @@ export const VIEW_META = {
   },
   "/education/candle-patterns": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Pattern Detection",
     file: "src/pages/TrainingCandlePatternsPage.jsx",
     css: "src/pages/training-candle-patterns-page.css",
@@ -258,7 +291,7 @@ export const VIEW_META = {
   },
   "/education/candle-patterns-guide": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Candle Patterns",
     file: "src/pages/CandlePatternsGuidePage.jsx",
     css: "src/pages/candle-patterns-guide.css",
@@ -412,7 +445,7 @@ export const VIEW_META = {
   },
   "/education/settings-education": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Education Settings",
     file: "src/pages/SettingsEducationPage.jsx",
     css: "src/pages/settings.css",

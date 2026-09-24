@@ -6,7 +6,7 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 38 view(s) · 35 component(s) · 126 premium entry(ies) excluded.
+ * 41 view(s) · 38 component(s) · 123 premium entry(ies) excluded.
  */
 
 // ── Free pages ──
@@ -15,11 +15,14 @@ import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
 import AddSymbolPage from '../pages/AddSymbolPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import AppearanceSettingsPage from '../pages/AppearanceSettingsPage.jsx';
+import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
+import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
 import CalculatorsPage from '../pages/CalculatorsPage.jsx';
 import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import EarningsCalendarPage from '../pages/EarningsCalendarPage.jsx';
 import EventsCalendarPage from '../pages/EventsCalendarPage.jsx';
+import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 import GlossaryPage from '../pages/GlossaryPage.jsx';
 import MarketContextPage from '../pages/MarketContextPage.jsx';
 import MarketCorrelationsPage from '../pages/MarketCorrelationsPage.jsx';
@@ -53,6 +56,8 @@ export const VIEW_COMPONENTS = {
   'add-symbol': AddSymbolPage,
   'alert-center': AlertCenterPage,
   'appearance': AppearanceSettingsPage,
+  'automation-dashboard': AutomationDashboardPage,
+  'automation-rules': AutomationRulesPage,
   'calculators': CalculatorsPage,
   'candle-patterns': TrainingCandlePatternsPage,
   'candle-patterns-guide': CandlePatternsGuidePage,
@@ -60,6 +65,7 @@ export const VIEW_COMPONENTS = {
   'dashboard': DashboardPage,
   'earnings-calendar': EarningsCalendarPage,
   'events-calendar': EventsCalendarPage,
+  'execution-queue': ExecutionQueuePage,
   'glossary': GlossaryPage,
   'market-context': MarketContextPage,
   'market-correlations': MarketCorrelationsPage,

@@ -6,12 +6,15 @@
  * Check freshness:  node scripts/generate-free-manifest.cjs --check
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3)
  *
- * 40 free · 96 premium · 136 total
+ * 43 free · 93 premium · 136 total
  */
 export const FREE_MANIFEST = {
   generatedFrom: 'src/core/view-meta.js',
   freeViews: [
     '/automation/alert-center',
+    '/automation/automation-dashboard',
+    '/automation/automation-rules',
+    '/automation/execution-queue',
     '/dashboard',
     '/dashboard/dashboard',
     '/development/mt5-trading',
@@ -57,7 +60,7 @@ export const FREE_MANIFEST = {
   // the free build ships the map of the app. Measured before the change: all 95 premium paths were
   // present as string literals in dist-free/assets/index-*.js. Only the COUNT stays; anything that
   // genuinely needs the premium list derives it from view-meta.js, which never ships.
-  premiumCount: 96,
+  premiumCount: 93,
 };
 
 /** True when a view-meta key ships in the free edition. */
