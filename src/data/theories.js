@@ -185,6 +185,33 @@ export const THEORIES = [
     area: 'trading',
     issue: 960,
   },
+  {
+    id: 'guardian-trail-cuts-winners-early',
+    raisedAt: '2026-09-21',
+    statement:
+      'The stop guardian trails the stop so close to price that a winner is exited at a fraction of its target before the move has room to complete.',
+    predictedDirection:
+      'Trades closed by `broker:sl` carry an achieved move far below the planned target, and their stop sits much closer to entry than the strategy’s DECLARED stop distance.',
+    measure: 'achieved move as a multiple of the risk distance (R)',
+    unit: 'R — dimensionless: |exit − entry| ÷ |entry − sl|',
+    window:
+      'Live demo accounts, all symbols, closed trades. Afflicted = stop within 0.15% of entry while the declared stop is ~0.8–0.9%.',
+    status: 'testing',
+    evidence: {
+      basis: 'measurement',
+      n: 14,
+      result:
+        'BEFORE the trail floor: 12 trades carried a stop within 0.15% of entry — 2 on 09-20 and 10 on 09-21 — while their TP stayed at the declared ~1%. Four had the stop ABOVE entry on a BUY (EURCAD 1.60873→sl 1.60905; AUDJPY 112.177→112.231; NZDJPY 90.101→90.153): trailed into profit at ~0.02%, then stopped out, several still booking a small gain (+0.17, +0.26, +0.48, +2.47). AFTER the floor landed (09-21 19:13, commit 5c2336c): 0 on 09-22, **2 on 09-23** — one opened 11:24 and closed 12:37, entirely post-fix — and 0 on 09-24. Over the 14 days, achieved R was 0.2–0.8R against a planned 1.0–1.2R on the majors. ⚠️ The fixed sample is small: 9 of the 14 afflicted trades are pre-fix, so the residual rate is 2 in 2 post-fix days and could be 1–2 per day or noise.',
+      measuredAt: '2026-09-24',
+      source: 'Live `trade` table, this session (7- and 14-day windows); fix attributed via git log -S on stop-guardian.service.ts',
+    },
+    falsification:
+      'Turn the trailing tighten off on a COPIED configuration and re-measure achieved R on the same symbols. Winners still exiting at ~0.2R would refute it; the residual instances disappearing would confirm the trail is the whole mechanism.',
+    decision:
+      'The trail-distance FLOOR shipped 09-21 19:13 (#927): a tightening may never leave the stop closer to price than the declared stop distance. Measured effect: **10 afflicted/day → 0–2/day**. ⚠️ NOT closed: the residual is unexplained, and the trail DISTANCE itself is maths — changing it needs a copied configuration and a monitored comparison (SETTLED-DECISIONS row 21), which A/B cannot yet provide (#929).',
+    area: 'trading',
+    issue: 916,
+  },
 ];
 
 export default THEORIES;
