@@ -336,6 +336,10 @@ export const NAV_TREE = {
       // Entries are enforced by scripts/validate-theories.cjs (a theory needs a falsification test).
       { kind: 'section-header', id: 'dev-decisions', label: 'Decisions', icon: '⚖' },
       { id: 'theory-registry', label: 'Theory Registry', icon: '🔬' },
+      // R21 / #990 — the owner chose a NEW REGISTER over a second section in the review queue, so
+      // observations can accumulate BEFORE they become decisions. Sits beside the theory registry
+      // because they are the same shape: a held position, written down so it can be judged.
+      { id: 'design-observations', label: 'Design Observations', icon: '👁' },
       // ── Engineering tools — build and inspect the UI itself ──
       { kind: 'section-header', id: 'dev-engineering', label: 'Engineering Tools', icon: '🛠' },
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },

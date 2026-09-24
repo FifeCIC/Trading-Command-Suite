@@ -1,0 +1,256 @@
+/**
+ * design-observations.css — styles for the Design Observation Register.
+ *
+ * ⚠️ TOKENS ONLY (`--ink`, `--ink-soft`, `--panel`, `--line`, `--accent`), per ui-standards. No
+ * hard-coded colours, so every theme pack keeps working and WCAG contrast is inherited from the
+ * token rather than re-invented here.
+ *
+ * ⚠️ `rejected` is deliberately NOT red, for the same reason `refuted` is not red on the theory
+ * registry: a rejected observation is a decision that was taken and recorded. Styling it as an
+ * error would train the reader to stop raising observations, which is the opposite of the point.
+ * The colour that matters here belongs to the EVIDENCE BASIS badge, because that is where a
+ * citation could otherwise pass itself off as a measurement.
+ */
+
+.do-page {
+  max-width: 980px;
+}
+
+.do-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+  color: var(--ink);
+}
+
+.do-lede {
+  margin: 0 0 18px;
+  max-width: 64ch;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ── The ledger strip ── */
+.do-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 12px 16px;
+  margin-bottom: 22px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.do-tally-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.do-tally-n {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.do-tally-label {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Groups ── */
+.do-group {
+  margin-bottom: 30px;
+}
+
+.do-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.do-group-note {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* ── Cards ── */
+.do-card {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 8px;
+}
+
+/* Open rows get the accent border: they are the ones that want attention. Closed rows stay neutral. */
+.do-card--raised,
+.do-card--considering {
+  border-left-color: var(--accent);
+}
+
+.do-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.do-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.do-status--considering {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.do-status--decided,
+.do-status--rejected {
+  color: var(--ink-soft);
+}
+
+.do-status--raised {
+  opacity: 0.9;
+}
+
+/* ── ⚠️ The evidence badge is the most important element on the card ──
+   It grades how strong the evidence is, so a `cited` number is visibly weaker than a measurement. */
+.do-basis {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+}
+
+.do-basis--strong {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.do-basis--medium {
+  color: var(--ink);
+}
+
+.do-basis--weak {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.do-area {
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.do-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.do-observation {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.do-fields {
+  display: grid;
+  grid-template-columns: minmax(140px, max-content) 1fr;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.do-fields dt {
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+
+.do-fields dd {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* ── The field this whole register turns on ──
+   `reconsiderIf` is why a row is an observation rather than an opinion, so it is styled to be
+   unmistakable rather than blending into the list. */
+.do-reconsider {
+  display: block;
+  margin-top: 2px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink);
+}
+
+.do-decision {
+  display: block;
+  margin-top: 2px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+
+.do-issue {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.do-issue:hover,
+.do-issue:focus-visible {
+  text-decoration: underline;
+}
+
+.do-empty {
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+/* WCAG: honour a reduced-motion preference rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  .do-card,
+  .do-issue {
+    transition: none;
+  }
+}

@@ -108,6 +108,8 @@ export const PAGE_DATA_STATUS = {
   // (`scripts/validate-theories.cjs`), not an API read — classified 'live' because the file IS the
   // source of truth, the same convention as 'candle-patterns'.
   'theory-registry': { status: 'live', source: 'src/data/theories.js (static registry, guarded)' },
+  // R21 / #990 — same convention: the file IS the source of truth, so this is 'live', not 'mock'.
+  'design-observations': { status: 'live', source: 'src/data/design-observations.js (static register, guarded)' },
   'architecture-framework': { status: 'live', source: 'Static architecture data' },
   'diagrams': { status: 'live', source: 'Generated diagrams' },
   'workflow-wizards': { status: 'mock', note: 'Not yet built' },
