@@ -7,7 +7,7 @@
 const VIEW_META = {
   '/dashboard': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Dashboard',
     file: 'src/pages/DashboardPage.jsx',
     css: 'src/pages/home-dashboard.css',
@@ -92,7 +92,7 @@ const VIEW_META = {
   // ⚠️ `/trading/symbol/:ticker` renders the SAME component — see the mirror entry below.
   '/research/symbol': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Symbol Detail',
     file: 'src/pages/SymbolPage.jsx',
     css: 'src/pages/symbol-page.css',
@@ -154,7 +154,7 @@ const VIEW_META = {
   // exact keys and win first (exact match is tried before prefix match).
   '/trading/strategy': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Bot Detail',
     file: 'src/pages/ViewStrategyPage.jsx',
     css: 'src/pages/view-strategy.module.css',
@@ -165,7 +165,7 @@ const VIEW_META = {
   // keys: getViewMeta() is a keyed lookup on the pathname and cannot know they are the same view.
   '/trading/symbol': {
     tier: 'free',
-    review: 'pending',
+    review: 'approved',
     label: 'Symbol Detail',
     file: 'src/pages/SymbolPage.jsx',
     css: 'src/pages/symbol-page.css',
@@ -198,7 +198,7 @@ const VIEW_META = {
   },
   '/lab/dual-protocol-inspector': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Dual-Protocol Inspector',
     file: 'src/pages/ScoringDebugLab.jsx',
     css: 'src/pages/scoring-debug-lab.css',
@@ -206,7 +206,7 @@ const VIEW_META = {
   },
   '/scoring/protocols-ladder': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocols Ladder',
     file: 'src/pages/ProtocolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
@@ -214,7 +214,7 @@ const VIEW_META = {
   },
   '/scoring/symbols-ladder': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Symbols Ladder',
     file: 'src/pages/SymbolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
@@ -222,7 +222,7 @@ const VIEW_META = {
   },
   '/protocols/protocols-ladder': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocols Ladder',
     file: 'src/pages/ProtocolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
@@ -230,7 +230,7 @@ const VIEW_META = {
   },
   '/scoring/protocol-builder': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocol Builder',
     file: 'src/pages/CreateProtocolsPage.jsx',
     css: 'src/pages/create-protocols.css',
@@ -262,7 +262,7 @@ const VIEW_META = {
   },
   '/scoring/directives-registry': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Directives Registry',
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
@@ -271,7 +271,7 @@ const VIEW_META = {
   // Canonical URL — part of gradual /scoring/ → /protocols/ migration
   '/protocols/directives-registry': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Directives Registry',
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
@@ -287,7 +287,7 @@ const VIEW_META = {
   },
   '/scoring/sees-arena': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocol Comparison',
     file: 'src/pages/SeesArenaPage.jsx',
     css: 'src/pages/sees-arena.css',
@@ -295,7 +295,7 @@ const VIEW_META = {
   },
   '/protocols/sees-arena': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocol Comparison',
     file: 'src/pages/SeesArenaPage.jsx',
     css: 'src/pages/sees-arena.css',
@@ -304,7 +304,7 @@ const VIEW_META = {
   // Canonical URL — part of gradual /scoring/ → /protocols/ migration
   '/protocols/protocols-registry': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocols Registry',
     file: 'src/pages/ProtocolsPage.jsx',
     css: 'src/pages/protocols.css',
@@ -312,7 +312,7 @@ const VIEW_META = {
   },
   '/protocols/protocol-trail': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocol Trail',
     file: 'src/pages/ProtocolTrailPage.jsx',
     css: 'src/pages/decision-trail.css',
@@ -320,7 +320,7 @@ const VIEW_META = {
   },
   '/scoring/singles-monitor': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Singles Monitor',
     file: 'src/pages/SinglesMonitorPage.jsx',
     css: 'src/pages/decision-trail.css',
@@ -400,7 +400,7 @@ const VIEW_META = {
   },
   '/development/qa-testing': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'QA Testing',
     // ⚠️ Case matters to the bundle guard (scripts/validate-free-bundle.cjs) and to any
     // Linux/CI tooling: the file on disk is `QATestingPage.jsx`, not `QaTestingPage.jsx`.
@@ -441,7 +441,7 @@ const VIEW_META = {
   },
   '/builder/architecture-framework': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Architecture Framework',
     file: 'src/pages/ArchitectureFrameworkPage.jsx',
     css: 'src/pages/architecture-framework.css',
@@ -449,7 +449,7 @@ const VIEW_META = {
   },
   '/development/hot-stock-picks': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Hot Stock Picks',
     file: 'src/pages/HotStockPicksPage.jsx',
     css: 'src/pages/hot-stock-picks-page.css',
@@ -457,7 +457,7 @@ const VIEW_META = {
   },
   '/development/theme-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Theme Lab',
     file: 'src/pages/ThemeLabPage.jsx',
     css: 'src/pages/theme-lab.css',
@@ -559,7 +559,7 @@ const VIEW_META = {
   // ── Protocols ──
   '/protocols/configure-directives': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocol Editor',
     file: 'src/pages/DirectivesConfigPage.jsx',
     css: 'src/pages/directives-config.css',
@@ -569,7 +569,7 @@ const VIEW_META = {
   // ── Scoring ──
   '/scoring/live-ordering-stack': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Ladder',
     file: 'src/pages/LadderPage.jsx',
     css: 'src/pages/ladder.css',
@@ -577,7 +577,7 @@ const VIEW_META = {
   },
   '/scoring/ab-ladder': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'A/B Ladder',
     file: 'src/pages/AbLadderPage.jsx',
     css: 'src/pages/ab-ladder.css',
@@ -585,7 +585,7 @@ const VIEW_META = {
   },
   '/scoring/scoring-activity-logs': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Scoring Activity Logs',
     file: 'src/pages/ScoringActivityLogsPage.jsx',
     css: 'src/pages/scoring-activity-logs.css',
@@ -593,7 +593,7 @@ const VIEW_META = {
   },
   '/signals/signals-overview': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Signals',
     file: 'src/pages/SignalsOverviewPage.jsx',
     css: 'src/pages/signals-overview.css',
@@ -613,7 +613,7 @@ const VIEW_META = {
   },
   '/lab/backtest': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Backtest Engine',
     file: 'src/pages/BacktestPage.jsx',
     css: 'src/pages/backtest-data.css',
@@ -681,23 +681,23 @@ const VIEW_META = {
   // ── Lab ──
   '/lab/timeline': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Timeline',
     file: 'src/pages/TradingTimelinePage.jsx',
     css: 'src/pages/trading-timeline-page.css',
     api: [],
   },
-  '/development/mt5-trading': {
+  '/trading/mt5-trading': {
     tier: 'free',
-    review: 'pending',
-    label: 'MT5 Trading (Lab)',
+    review: 'approved',
+    label: 'MT5 Trading',
     file: 'src/pages/Mt5TradingPage.jsx',
     css: 'src/pages/mt5-trading-page.css',
     api: [],
   },
   '/development/strategy-wizard': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Strategy Wizard',
     file: 'src/pages/StrategyWizardPage.jsx',
     css: 'src/pages/strategy-wizard.css',
@@ -705,7 +705,7 @@ const VIEW_META = {
   },
   '/lab/speed-trading': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Speed Trading',
     file: 'src/pages/SpeedTradingPage.jsx',
     css: 'src/pages/speed-trading.css',
@@ -713,7 +713,7 @@ const VIEW_META = {
   },
   '/lab/gold-speed': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Gold Speed',
     file: 'src/pages/GoldSpeedTradingPage.jsx',
     css: 'src/pages/speed-cockpit.css',
@@ -721,7 +721,7 @@ const VIEW_META = {
   },
   '/development/diagrams': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Diagrams',
     file: 'src/pages/DiagramsPage.jsx',
     css: 'src/pages/diagrams.css',
@@ -737,7 +737,7 @@ const VIEW_META = {
   },
   '/development/component-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Component Lab',
     file: 'src/pages/ComponentLabPage.jsx',
     css: 'src/pages/component-lab.css',
@@ -749,7 +749,7 @@ const VIEW_META = {
   // but it CAN go stale against a schema change. Re-run the script after schema edits.
   '/development/identity-map': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Identity Map',
     file: 'src/pages/IdentityMapLabPage.jsx',
     css: 'src/pages/identity-map-lab.module.css',
@@ -757,7 +757,7 @@ const VIEW_META = {
   },
   '/development/widget-library': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Widget Library',
     file: 'src/pages/WidgetBoardLabPage.jsx',
     css: 'src/components/widget-board.css',
@@ -765,7 +765,7 @@ const VIEW_META = {
   },
   '/development/screen-assignment': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Screen Assignment',
     file: 'src/pages/ScreenCockpitPage.jsx',
     css: 'src/pages/screen-cockpit.css',
@@ -773,7 +773,7 @@ const VIEW_META = {
   },
   '/development/responsive-layout-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Responsive Layout Lab',
     file: 'src/pages/ResponsiveLayoutLabPage.jsx',
     css: 'src/pages/responsive-layout-lab.css',
@@ -781,7 +781,7 @@ const VIEW_META = {
   },
   '/lab/charts-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Charts Lab',
     file: 'src/pages/ChartsLabPage.jsx',
     css: 'src/pages/charts-lab.css',
@@ -789,7 +789,7 @@ const VIEW_META = {
   },
   '/development/theme-lab-motion': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Motion Lab',
     file: 'src/pages/ThemeLabMotion.jsx',
     css: 'src/pages/theme-lab-motion.css',
@@ -797,7 +797,7 @@ const VIEW_META = {
   },
   '/development/theme-lab-transitions': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Transitions Lab',
     file: 'src/pages/ThemeLabTransitions.jsx',
     css: 'src/pages/theme-lab-transitions.css',
@@ -805,7 +805,7 @@ const VIEW_META = {
   },
   '/development/theme-lab-scroll': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Scroll Animations',
     file: 'src/pages/ThemeLabScroll.jsx',
     css: 'src/pages/theme-lab-scroll.css',
@@ -813,7 +813,7 @@ const VIEW_META = {
   },
   '/development/theme-lab-popover': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Popover API',
     file: 'src/pages/ThemeLabPopover.jsx',
     css: 'src/pages/theme-lab-popover.css',
@@ -821,7 +821,7 @@ const VIEW_META = {
   },
   '/lab/lab-landing': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Lab Directory',
     file: 'src/pages/LabLandingPage.jsx',
     css: 'src/pages/lab-landing.css',
@@ -829,7 +829,7 @@ const VIEW_META = {
   },
   '/development/pipeline-graph-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Pipeline Graph',
     file: 'src/pages/PipelineGraphLabPage.jsx',
     css: 'src/pages/pipeline-graph-lab.css',
@@ -837,7 +837,7 @@ const VIEW_META = {
   },
   '/development/lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Lab Sandbox',
     file: 'src/pages/LabPage.jsx',
     css: 'src/pages/lab.css',
@@ -845,7 +845,7 @@ const VIEW_META = {
   },
   '/development/feature-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Feature Lab',
     file: 'src/pages/FeatureLabPage.jsx',
     css: 'src/pages/feature-lab.css',
@@ -853,7 +853,7 @@ const VIEW_META = {
   },
   '/lab/snapshot-replay': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Snapshot Replay',
     file: 'src/pages/SnapshotReplayPage.jsx',
     css: 'src/pages/snapshot-replay.css',
@@ -861,7 +861,7 @@ const VIEW_META = {
   },
   '/development/meta-stack-cockpit': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'META.Stack Cockpit',
     file: 'src/pages/MetaStackCockpitPage.jsx',
     css: 'src/pages/metastack-cockpit.css',
@@ -869,7 +869,7 @@ const VIEW_META = {
   },
   '/development/daily-briefing': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Daily Briefing',
     file: 'src/pages/DailyBriefingPage.jsx',
     css: 'src/pages/daily-briefing.css',
@@ -877,7 +877,7 @@ const VIEW_META = {
   },
   '/lab/ab-testing': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'A/B Protocol Testing',
     file: 'src/pages/ABTestingPage.jsx',
     css: 'src/pages/ab-testing.css',
@@ -885,7 +885,7 @@ const VIEW_META = {
   },
   '/development/ai-costs': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'AI Costs',
     file: 'src/pages/AICostsPage.jsx',
     css: 'src/pages/ai-costs.css',
@@ -893,7 +893,7 @@ const VIEW_META = {
   },
   '/development/daily-summary-report': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Daily Summary Report',
     file: 'src/pages/DailySummaryReportPage.jsx',
     css: 'src/pages/daily-summary-report.css',
@@ -901,7 +901,7 @@ const VIEW_META = {
   },
   '/lab/portfolio-lab': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Portfolio Lab',
     file: 'src/pages/PortfolioLabPage.jsx',
     css: 'src/pages/portfolio-lab.css',
@@ -909,7 +909,7 @@ const VIEW_META = {
   },
   '/lab/snapshots': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Snapshots',
     file: 'src/pages/SnapshotLibraryPage.jsx',
     css: 'src/pages/snapshot-library.css',
@@ -919,7 +919,7 @@ const VIEW_META = {
   // ── Development ──
   '/development/roadmap': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Dynamic Roadmap',
     file: 'src/pages/RoadmapPage.jsx',
     css: 'src/pages/roadmap-page.css',
@@ -929,7 +929,7 @@ const VIEW_META = {
   // `scripts/validate-theories.cjs` is its guard.
   '/development/theory-registry': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Theory Registry',
     file: 'src/pages/TheoryRegistryPage.jsx',
     css: 'src/pages/theory-registry.css',
@@ -948,7 +948,7 @@ const VIEW_META = {
   },
   '/planner/personal-finances': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Personal Finances',
     file: 'src/pages/PersonalFinancesPage.jsx',
     css: 'src/pages/personal-finances.css',
@@ -956,7 +956,7 @@ const VIEW_META = {
   },
   '/planner/trading-styles': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Trading Styles',
     file: 'src/pages/TradingStylesPage.jsx',
     css: 'src/pages/trading-styles.css',
@@ -964,7 +964,7 @@ const VIEW_META = {
   },
   '/planner/objectives': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Objectives',
     file: 'src/pages/ObjectivesPage.jsx',
     css: 'src/pages/objectives.css',
@@ -972,7 +972,7 @@ const VIEW_META = {
   },
   '/lab/allocator': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Strategy Allocator',
     file: 'src/pages/GlobalAllocatorPage.jsx',
     css: 'src/pages/global-allocator.css',
@@ -1165,7 +1165,7 @@ const VIEW_META = {
   },
   '/protocols/protocol-builder': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Protocol Builder',
     file: 'src/pages/CreateProtocolsPage.jsx',
     css: 'src/pages/create-protocols.css',
@@ -1173,7 +1173,7 @@ const VIEW_META = {
   },
   '/protocols/directive-viewer': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Directive Viewer',
     file: 'src/pages/DirectiveViewerPage.jsx',
     css: 'src/pages/directive-viewer.css',
@@ -1181,7 +1181,7 @@ const VIEW_META = {
   },
   '/protocols/dual-protocol-inspector': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     // The nav label is "Dual-Protocol Inspector"; the component file keeps its lab name.
     label: 'Dual-Protocol Inspector',
     file: 'src/pages/ScoringDebugLab.jsx',
@@ -1238,7 +1238,7 @@ const VIEW_META = {
   },
   '/lab/position-lifecycle': {
     tier: 'premium',
-    review: 'pending',
+    review: 'approved',
     label: 'Position Lifecycle',
     file: 'src/pages/PositionLifecyclePage.jsx',
     css: 'src/pages/position-lifecycle.css',

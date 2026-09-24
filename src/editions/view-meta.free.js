@@ -12,7 +12,7 @@
 export const VIEW_META = {
   "/dashboard": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Dashboard",
     file: "src/pages/DashboardPage.jsx",
     css: "src/pages/home-dashboard.css",
@@ -72,7 +72,7 @@ export const VIEW_META = {
   },
   "/research/symbol": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Symbol Detail",
     file: "src/pages/SymbolPage.jsx",
     css: "src/pages/symbol-page.css",
@@ -117,7 +117,7 @@ export const VIEW_META = {
   },
   "/trading/symbol": {
     tier: "free",
-    review: "pending",
+    review: "approved",
     label: "Symbol Detail",
     file: "src/pages/SymbolPage.jsx",
     css: "src/pages/symbol-page.css",
@@ -305,10 +305,10 @@ export const VIEW_META = {
     css: "src/pages/setup-wizard.css",
     api: [],
   },
-  "/development/mt5-trading": {
+  "/trading/mt5-trading": {
     tier: "free",
-    review: "pending",
-    label: "MT5 Trading (Lab)",
+    review: "approved",
+    label: "MT5 Trading",
     file: "src/pages/Mt5TradingPage.jsx",
     css: "src/pages/mt5-trading-page.css",
     api: [],

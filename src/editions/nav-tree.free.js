@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 10 of 15 areas · 49 of 136 nav entries (premium ids AND labels removed)
+ * 9 of 15 areas · 44 of 136 nav entries (premium ids AND labels removed)
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -107,6 +107,11 @@ export const NAV_TREE = {
         id: "positions-monitor",
         label: "Positions Monitor",
         icon: "◈",
+      },
+      {
+        id: "mt5-trading",
+        label: "MT5 Trading",
+        icon: "📈",
       },
       {
         id: "trading-plans",
@@ -271,46 +276,6 @@ export const NAV_TREE = {
         id: "settings-education",
         label: "Education",
         icon: "◉",
-      },
-    ],
-  },
-  development: {
-    label: "Development",
-    views: [
-      {
-        kind: "section-header",
-        id: "dev-decisions",
-        label: "Decisions",
-        icon: "⚖",
-      },
-      {
-        kind: "section-header",
-        id: "dev-engineering",
-        label: "Engineering Tools",
-        icon: "🛠",
-      },
-      {
-        kind: "section-header",
-        id: "dev-theme",
-        label: "Theme Engineering",
-        icon: "🎨",
-      },
-      {
-        kind: "section-header",
-        id: "dev-metastack",
-        label: "META.Stack Internals",
-        icon: "🔗",
-      },
-      {
-        kind: "section-header",
-        id: "dev-prototypes",
-        label: "Prototypes",
-        icon: "🧪",
-      },
-      {
-        id: "mt5-trading",
-        label: "MT5 Trading (Prototype)",
-        icon: "🔬",
       },
     ],
   },

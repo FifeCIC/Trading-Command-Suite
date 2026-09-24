@@ -155,6 +155,12 @@ export const NAV_TREE = {
       // the same decision the A/B Ladder records.
       { id: 'ab-strategies', label: 'A/B Strategies', icon: '🆚' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
+      // MOVED here from Development/Prototypes 2026-09-24 (owner direction). This is the manual
+      // trading surface and it is FREE — it was sitting in a premium-only area because it started
+      // life as a prototype, and one free leaf kept the whole Development area alive in the free
+      // build's nav. §9.2 called it "promoted to a first-class area"; this is that move. The
+      // education-facing copy stays at /education/mt5-demo-trading.
+      { id: 'mt5-trading', label: 'MT5 Trading', icon: '📈' },
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
@@ -363,7 +369,6 @@ export const NAV_TREE = {
       { id: 'pipeline-graph-lab', label: 'Pipeline Graph', icon: '🗺️' },
       // ── Prototypes — product features that are not yet real ──
       { kind: 'section-header', id: 'dev-prototypes', label: 'Prototypes', icon: '🧪' },
-      { id: 'mt5-trading', label: 'MT5 Trading (Prototype)', icon: '🔬' },
       { id: 'strategy-wizard', label: 'Strategy Wizard', icon: '🧙' },
       { id: 'daily-briefing', label: 'Daily Briefing', icon: '📋' },
       { id: 'hot-stock-picks', label: 'Hot Stock Picks', icon: '🔥' },
