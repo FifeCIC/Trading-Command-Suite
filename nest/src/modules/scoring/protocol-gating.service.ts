@@ -959,6 +959,9 @@ export class ProtocolGatingService {
     // INSTEAD OF: Renaming 'group-weighted' → 'configured-capacity', which is what #919 asked for.
     //             The rename was the wrong fix: it would have made the docs read correctly while
     //             leaving the control dead — the exact defect #919's own item 4 names.
+    // RATIFIED:   The OWNER answered review row R17 with "Keep" on 2026-09-24, so this is the
+    //             settled position and not a unilateral call. The rename is REJECTED; do not
+    //             re-open it without new evidence that something actually reads the field.
     // REVERSE BY: Accepting 'configured-capacity' as an alias, then UPDATING the 28 stored
     //             `scoring_strategy.weightStrategy` rows. ⚠️ Wiring the choice is then a MATHS
     //             change — it moves every percentage and needs a copied config + A/B comparison.
