@@ -103,13 +103,36 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     # The bridges are long-lived daemons; they must outlive the launcher. Use `cmd /c start`
     # to give each bridge its own detached console, which is not in the launcher's process
     # group and so never receives its signals.
+    # ⚠️ NO `cmd /c start` HERE — it opened a console WINDOW, once per bridge, every launch.
+    #
+    # The line used to be:
+    #     Start-Process -FilePath "cmd" -ArgumentList "/c start `"MT5 Bridge $brokerId`" /min ..."
+    #
+    # WHY THAT SHOWED A WINDOW. `start` ALWAYS creates a new console; it has no quiet form except
+    # `/B`, which was not used. `-WindowStyle Hidden` on the OUTER `cmd` cannot hide a window the
+    # INNER `start` creates — it only hides the outer cmd, which had no window to begin with.
+    # `/min` merely minimised it. Net effect: two empty, minimised console windows per launch
+    # (one per bridge), on every relaunch, which is what "terminals keep opening and they never
+    # contain anything" was.
+    #
+    # WHY REMOVING `start` IS SAFE. Its whole purpose was to give the bridge its own console so
+    # it outlives the launcher and never receives its CTRL_C_EVENT. `-WindowStyle Hidden` already
+    # does exactly that — the same reasoning the API block below records ("already gives the child
+    # its own console and detaches it from our signal group"). So `start` was redundant AND was
+    # the window. This is now the plain form, identical in shape to the API and Vite launches.
+    #
+    # ⚠️ It also fixes the redirects. With `start`, the `> log 2> err` applied to the *detaching*
+    # `start` command, so the child's output was never captured and the TEMP bridge logs stayed
+    # empty. `-RedirectStandardOutput/-Error` redirect the actual process.
     $bridgeLog = "$env:TEMP\mt5-bridge-${bridgePort}.log"
     $bridgeErr = "$env:TEMP\mt5-bridge-${bridgePort}-err.log"
     $bridgeArgs = "`"$bridgeScript`""
-    $started = Start-Process -FilePath "cmd" `
-        -ArgumentList "/c start `"MT5 Bridge $brokerId`" /min `"$pythonPath`" $bridgeArgs > `"$bridgeLog`" 2> `"$bridgeErr`"" `
+    $started = Start-Process -FilePath $pythonPath `
+        -ArgumentList $bridgeArgs `
         -WorkingDirectory $bridgeCwd `
-        -PassThru -WindowStyle Hidden
+        -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput $bridgeLog `
+        -RedirectStandardError $bridgeErr
     $mt5Pids += $started.Id
     Write-Host "    launcher PID $($started.Id) (detached; bridge on port ${bridgePort})" -ForegroundColor DarkGray
 }
