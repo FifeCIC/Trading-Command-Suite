@@ -103,6 +103,9 @@ const MAP_MODULES = [
   { full: 'src/core/nav-tree.js', free: 'src/editions/nav-tree.free.js' },
   { full: 'src/core/view-meta.js', free: 'src/editions/view-meta.free.js' },
   { full: 'src/core/view-explanations.js', free: 'src/editions/view-explanations.free.js' },
+  // Added 2026-09-24 (strip pass) — registries keyed by view id, which leak premium page titles.
+  { full: 'src/components/ScreenOptions.jsx', free: 'src/editions/screen-options.free.jsx' },
+  { full: 'src/pages/plugin-tab-skeletons.js', free: 'src/editions/plugin-tab-skeletons.free.js' },
 ];
 for (const { full, free } of MAP_MODULES) {
   if (mode === 'free') {

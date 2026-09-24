@@ -47,17 +47,35 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 function splitDeclaration(src, marker) {
   const start = src.indexOf(marker);
   if (start < 0) throw new Error(`declaration not found in source: ${marker}`);
-  // Top-level declarations close with `};` at column 0. Entries inside are indented, so this is
-  // unambiguous for these object literals.
-  const end = src.indexOf('\n};', start);
-  if (end < 0) throw new Error(`end of declaration not found for: ${marker}`);
-  return { head: src.slice(start, end + 3), tail: src.slice(end + 3) };
+  // Top-level declarations close with `};` at column 0 — but NOT always with the semicolon:
+  // plugin-tab-skeletons.js ends its object literal with a bare `}`. Requiring `\n};` threw
+  // "end of declaration not found" on a file that was perfectly well-formed.
+  const re = /^\};?[ \t]*\r?$/gm;
+  re.lastIndex = start;
+  const m = re.exec(src);
+  if (!m) throw new Error(`end of declaration not found for: ${marker}`);
+  return { head: src.slice(start, m.index + m[0].length), tail: src.slice(m.index + m[0].length) };
 }
 
 /** Evaluate a plain object-literal declaration (no imports, no calls) and return its value. */
 function evaluate(head, binding) {
   const src = head.replace(/^export\s+/, '');
   return new Function(`${src}\nreturn ${binding};`)();
+}
+
+/**
+ * Evaluate a declaration whose VALUES reference module-scope helpers.
+ *
+ * `OPTIONS_REGISTRY` is not pure data: one entry builds its options with
+ * `SB_OPTIONAL_COLUMNS.map(...)`. Evaluating the block alone threw ReferenceError, so the helpers are
+ * supplied from the module that defines them. Add to `ctx` as needed rather than inlining a copy of
+ * the referenced list — a copy would be the duplication this repo keeps banning.
+ */
+function evaluateWith(head, binding, ctx) {
+  const src = head.replace(/^export\s+/, '');
+  const names = Object.keys(ctx);
+  const factory = new Function(...names, `${src}\nreturn ${binding};`);
+  return factory(...names.map((n) => ctx[n]));
 }
 
 /** Evaluate `src/core/view-meta.js` and return the real VIEW_META binding. */
@@ -128,6 +146,58 @@ const metaSrc = read('src/core/view-meta.js');
 // accessor functions (getViewMetaKey / getViewMeta / formatViewMeta) and the default export.
 const metaSplit = splitDeclaration(metaSrc, 'const VIEW_META = {');
 
+// ── the two VIEW-ID REGISTRIES (added 2026-09-24, strip pass) ────────────────────────────────
+// A registry keyed by view id leaks the map in PROSE even when no route string ships: it carries the
+// premium view's own TITLE. Measured before this: ScreenOptions carried 4 premium-only names and
+// plugin-tab-skeletons 2. Both are a pure data declaration followed by code, so the same
+// split + verbatim-tail rule applies. ScreenOptions is a component file, hence .jsx on its copy.
+// (The declaration splits sit below, beside the import context that feeds the evaluation.)
+/**
+ * Build a context of every LOCAL binding a module imports, by evaluating each imported module.
+ *
+ * The registry-style files build their entries from the app's own column/option modules
+ * (`SB_OPTIONAL_COLUMNS.map(...)`, `SCR_OPTIONAL_COLUMNS.map(...)`, ...), so evaluating the block
+ * alone throws ReferenceError. Supplying them by hand was whack-a-mole — the second identifier
+ * appeared only after the first was fixed — so this resolves the whole import list instead. A module
+ * that cannot be evaluated (JSX, browser-only code) is REPORTED, not silently skipped: a missing
+ * binding should fail as a name, not as a mystery.
+ */
+function buildImportContext(relPath) {
+  const ctx = {};
+  const skipped = [];
+  const re = /^import\s*\{([^}]+)\}\s*from\s*'([^']+)'/gm;
+  for (const m of read(relPath).matchAll(re)) {
+    const names = m[1]
+      .split(',')
+      .map((s) => s.trim().split(/\s+as\s+/).pop())
+      .filter(Boolean);
+    const spec = m[2];
+    if (!spec.startsWith('.') || /\.(css|json)$/.test(spec)) continue;
+    const target = path.posix.normalize(path.posix.join(path.dirname(relPath), spec));
+    const resolved = fs.existsSync(path.join(ROOT, `${target}.js`)) ? `${target}.js` : target;
+    try {
+      const body = read(resolved)
+        .replace(/^export\s+default\s+/gm, 'const __defaultExport = ')
+        .replace(/^export\s+/gm, '');
+      Object.assign(ctx, new Function(`${body}\nreturn { ${names.join(', ')} };`)());
+    } catch {
+      skipped.push(resolved);
+    }
+  }
+  return { ctx, skipped };
+}
+const soSrc = read('src/components/ScreenOptions.jsx');
+const soSplit = splitDeclaration(soSrc, 'const OPTIONS_REGISTRY = {');
+const soImports = buildImportContext('src/components/ScreenOptions.jsx');
+if (soImports.skipped.length) {
+  console.warn(`  note: could not evaluate (any binding it defines will be missing): ${soImports.skipped.join(', ')}`);
+}
+const optionsRegistry = evaluateWith(soSplit.head, 'OPTIONS_REGISTRY', soImports.ctx);
+
+const ptSrc = read('src/pages/plugin-tab-skeletons.js');
+const ptSplit = splitDeclaration(ptSrc, 'export const PLUGIN_TAB_SKELETONS = {');
+const pluginTabs = evaluate(ptSplit.head, 'PLUGIN_TAB_SKELETONS');
+
 // ── view-explanations ────────────────────────────────────────────────────────────────────────
 const expSrc = read('src/core/view-explanations.js');
 const expSplit = splitDeclaration(expSrc, 'export const VIEW_EXPLANATIONS = {');
@@ -148,6 +218,24 @@ const freeNavTree = filterNavTree(navTree, freePaths);
 const freeMeta = Object.fromEntries(Object.entries(meta).filter(([, e]) => e.tier === 'free'));
 const freeExplanations = Object.fromEntries(
   Object.entries(explanations).filter(([id]) => freeIdTails.has(id)),
+);
+
+// The registries are keyed by view id, so they filter by id — with a deliberately ASYMMETRIC rule,
+// because the two registries are not the same shape:
+//   ScreenOptions     — an OPTIONS registry: a key that belongs to a premium view is dead in the free
+//                       build (that view cannot render), but an unknown key may be a shared key a
+//                       FREE view uses. So drop ONLY premium-view keys.
+//   plugin-tab-skeletons — a skeleton per plugin TAB, and a tab only ever renders for its own view,
+//                       so keep only keys that are free-view ids (78 -> 16 measured).
+// Getting this backwards would either leak names or break a free page, so the asymmetry is stated.
+const premiumIdTails = new Set(premiumPaths.map((p) => p.slice(p.lastIndexOf('/') + 1)));
+const premiumOnlyIdTails = new Set([...premiumIdTails].filter((id) => !freeIdTails.has(id)));
+
+const freeOptionsRegistry = Object.fromEntries(
+  Object.entries(optionsRegistry).filter(([id]) => !premiumOnlyIdTails.has(id)),
+);
+const freePluginTabs = Object.fromEntries(
+  Object.entries(pluginTabs).filter(([id]) => freeIdTails.has(id)),
 );
 
 const navViewCount = Object.values(freeNavTree).reduce((n, a) => n + a.views.length, 0);
@@ -186,6 +274,28 @@ const outputs = [
           `removed ones describe the scoring method in prose`,
       ) +
       `\nexport const VIEW_EXPLANATIONS = ${literal(freeExplanations)};\n${expSplit.tail}`,
+  },
+  {
+    file: 'src/editions/screen-options.free.jsx',
+    body:
+      HEADER(
+        'Free-edition view options registry',
+        'src/components/ScreenOptions.jsx',
+        `${Object.keys(freeOptionsRegistry).length} of ${Object.keys(optionsRegistry).length} keys — ` +
+          `premium-view keys dropped (their titles named premium pages), shared keys kept`,
+      ) +
+      `\nconst OPTIONS_REGISTRY = ${literal(freeOptionsRegistry)};\n${soSplit.tail}`,
+  },
+  {
+    file: 'src/editions/plugin-tab-skeletons.free.js',
+    body:
+      HEADER(
+        'Free-edition plugin tab skeletons',
+        'src/pages/plugin-tab-skeletons.js',
+        `${Object.keys(freePluginTabs).length} of ${Object.keys(pluginTabs).length} tabs — a tab only ` +
+          `renders for its own view, so non-free tabs are dropped`,
+      ) +
+      `\nexport const PLUGIN_TAB_SKELETONS = ${literal(freePluginTabs)};\n${ptSplit.tail}`,
   },
 ];
 
