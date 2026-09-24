@@ -235,6 +235,29 @@ export const BOT_RULES: BotRule[] = [
       '⚠️ Was inert until 2026-09-17: it parsed an order-comment format nothing emits (0 of 76) and ' +
       'defaulted to dry-run. Now armed; no live close observed yet.' },
 
+  // ── the DECISION MOMENT (#936, R20=A 2026-09-24) ────────────────────────────────────────────
+  // ⚠️ `display-only` IS THE HONEST STATUS, not a placeholder. A reader exists and runs each
+  // tick, so this is NOT `none` — but it places no order and moves no stop, so it is NOT `live`
+  // either. It explains a trade; it does not shape one. Promotion to trade-shaping is a maths
+  // change and needs an A/B copy, which #929 currently blocks.
+  { field: 'simTslEnabled', label: 'Simulated TSL', stage: 'exit', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/automation/stop-guardian.service.ts',
+    summary:
+      'Arms a second, TIGHTER threshold that is NEVER sent to the broker. Touching it is a ' +
+      'DECISION MOMENT — may close, may hold, may tighten further — recorded in `sim_tsl_event`.',
+    caveat:
+      '⚠️ Default OFF, and it only OBSERVES. No order is placed and no stop is moved from this ' +
+      'path, so it cannot lock in profit yet; it records that the moment occurred so it becomes ' +
+      'measurable.' },
+  { field: 'simTslActivationPct', label: 'Sim-TSL activation %', stage: 'exit', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/automation/stop-guardian.service.ts',
+    summary: 'Profit % at which the simulated threshold arms. NULL = not configured.',
+    caveat: '⚠️ Arms nothing unless `simTslEnabled` is on AND this is set.' },
+  { field: 'simTslDistancePct', label: 'Sim-TSL trail distance %', stage: 'exit', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/automation/stop-guardian.service.ts',
+    summary: 'The tighter trail distance, measured back from the best price reached. NULL = not configured.',
+    caveat: '⚠️ Never sent to the broker — the declared stop remains the real risk.' },
+
   // ── declared but enforced nowhere ──────────────────────────────────────────────────────────
   { field: 'hotStockEnabled', label: 'Hot stock enabled', stage: 'sizing', enforcement: 'none', enforcedBy: null,
     summary: 'Declared for the #339 Hot Stock Picks integration.',

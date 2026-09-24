@@ -209,10 +209,15 @@ export function trailDistanceProblem(trailDistance: number, declaredDistance: nu
  * exists to close — a config surface that omits the mechanism that acts — one layer further down.
  *
  * ⚠️ THE `scope` FIELD IS THE POINT, NOT DECORATION.
- * Every entry here is `global`: ONE `StopGuardianService` serves every position on every bot. There
- * is no per-bot stop-management configuration anywhere in the schema. So this registry must NOT be
- * rendered as if it were per-bot — `per-bot` is reserved for genuinely per-bot controls, and the
- * single entry that carries it is the gap, not a feature.
+ * Eleven entries are `global`: ONE `StopGuardianService` serves every position on every bot, and the
+ * trailing logic itself remains shared. `per-bot` is reserved for genuinely per-bot controls.
+ *
+ * CHANGED 2026-09-24 (#936, R20=A). The owner ruled that post-entry exit management becomes PER-BOT
+ * DATA, so `simulated-tsl` is now a real per-bot entry with columns on `trading_strategy` rather
+ * than a declared absence. It is the FIRST per-bot exit control, not the whole of R20 — the shared
+ * trailing rules above stay global until each is moved deliberately and separately. The paragraph
+ * that used to sit here said every entry was global and that the single per-bot entry was "the gap,
+ * not a feature"; that text was replaced rather than left to mislead.
  *
  * ⚠️ `enforcement` reuses `bot-rules.ts`'s vocabulary deliberately (live | display-only | none) so
  * the two registries cannot drift into meaning different things by the same word.
@@ -271,17 +276,20 @@ export const GUARDIAN_RULES: GuardianRule[] = [
     enforcement: 'live', value: '15 min after a broker refusal',
     detail: 'Armed ONLY by the broker\u2019s own refusal \u2014 a closed market is never predicted.' },
 
-  // ── the gap ──────────────────────────────────────────────────────────────────────────────
+  // ── the FIRST per-bot exit control (was: the gap) ────────────────────────────────────────
   { id: 'simulated-tsl', label: 'Simulated TSL (decision point)', kind: 'rule', scope: 'per-bot',
-    enforcement: 'none', value: 'NOT IMPLEMENTED',
+    enforcement: 'display-only', value: 'per-bot: simTslActivationPct / simTslDistancePct — default OFF',
     detail:
       'A second, tighter threshold NOT sent to the broker. Touching it is a DECISION MOMENT \u2014 ' +
       'may close, may hold, may tighten further \u2014 rather than an automatic exit. This is what lets ' +
       'the gap be closed faster to lock in small profits, with the broker stop left further away.',
     caveat:
-      '⚠️ NO READER ANYWHERE and NO COLUMN ON `trading_strategy`. Listed here so the absence is a ' +
-      'declared finding rather than a silence. Tracked by #936; its firings must be recorded so a ' +
-      'decision-moment close is distinguishable from the broker stop being hit.' },
+      '⚠️ IMPLEMENTED 2026-09-24 (#936, R20=A) \u2014 AS AN OBSERVER ONLY. The columns exist, the ' +
+      'guardian computes the threshold every tick and records each firing in `sim_tsl_event`, so a ' +
+      'decision-moment close is now distinguishable from the broker stop being hit. But NOTHING is ' +
+      'sent to the broker and no stop is moved, so it CANNOT lock in profit yet \u2014 `display-only` ' +
+      'is the honest status, not a placeholder. Default OFF. Acting on a decision point is a MATHS ' +
+      'change and needs a copied configuration plus a monitored comparison (#929 blocks that today).' },
 ];
 
 /** Counts by scope — for a UI badge, mirroring `ruleEnforcementCounts()`. */
@@ -384,6 +392,21 @@ export class StopGuardianService {
    * overwritten by any refusal from any path.
    */
   private lastRefusalDetail: string | null = null;
+
+  // ── Simulated TSL (#936, R20=A 2026-09-24) — see `observeSimulatedTsl()` ──────────────────
+  //
+  // ⚠️ IN-MEMORY ON PURPOSE, AND THAT IS A DECLARED LIMITATION. `Mt5RawPosition` carries no
+  // high/low watermark, so "the best price reached" is tracked from the first tick after the
+  // threshold armed. A process restart resets it and the next tick may compute a slightly worse
+  // `triggerPrice` than reality. A durable watermark needs a column — a later increment.
+  private readonly simTslWatermark = new Map<number, number>();
+  /**
+   * ⚠️ REQUIRED, NOT AN OPTIMISATION. `tick()` runs every few seconds; without this cooldown a
+   * position sitting on its threshold would write an event EVERY TICK and the table would be
+   * unreadable — the same "plausible rows, no signal" defect this repo keeps re-finding.
+   */
+  private readonly simTslLastMomentAt = new Map<number, number>();
+  private readonly SIM_TSL_MOMENT_COOLDOWN_MS = 60_000;
 
   constructor(
     private readonly strategyService: TradingStrategyService,
@@ -553,6 +576,10 @@ export class StopGuardianService {
         if (!pos) continue;
 
         const side: 'BUY' | 'SELL' = pos.type === 'buy' ? 'BUY' : 'SELL';
+
+        // #936 — observe the per-bot simulated TSL BEFORE the bar/directive work, so it runs even
+        // when bars are short and the rest of the tick skips this position. It records only.
+        this.observeSimulatedTsl(pos, strat);
 
         // 4. Load bars
         const candleData = await this.bridgeGet<{ bars: any[] }>(
@@ -780,6 +807,84 @@ export class StopGuardianService {
   }
 
   // ── Private Helpers ────────────────────────────────────
+
+  /**
+   * observeSimulatedTsl() — the per-bot DECISION MOMENT (#936, R20=A 2026-09-24).
+   * ==============================================================================
+   * WHAT IT DOES. For a bot with `simTslEnabled`, once the position is in profit by at least
+   * `simTslActivationPct`, it tracks a threshold `simTslDistancePct` BELOW the best price reached
+   * (above it for a SELL). When price touches that threshold it records a `decision-point` event.
+   *
+   * ⚠️ IT PLACES NOTHING AND MOVES NOTHING. The broker stop is untouched and no order is sent —
+   * `sim_tsl_event.action` is hardcoded `recorded`. That is the deliberate boundary: acting on a
+   * decision point (closing, or tightening the real stop) is a MATHS change and needs a copied
+   * configuration and a monitored comparison, which #929 currently blocks. This method exists so
+   * the moment becomes MEASURABLE first — which is exactly what #936's caveat asks for: "its
+   * firings must be recorded so a decision-moment close is distinguishable from the broker stop
+   * being hit."
+   *
+   * ⚠️ WHY IT IS CALLED BEFORE THE BAR LOAD. The rest of the loop `continue`s when fewer than 14
+   * bars are available. An observation that only ran on a healthy bar feed would be silent exactly
+   * when the guardian is degraded — the failure mode this repo treats as the dangerous one.
+   *
+   * See the field declarations for the in-memory watermark limitation and the dedupe cooldown.
+   */
+  private observeSimulatedTsl(pos: Mt5RawPosition, strat: any): void {
+    try {
+      if (!strat?.simTslEnabled) return;
+      const activationPct = Number(strat.simTslActivationPct);
+      const distancePct = Number(strat.simTslDistancePct);
+      // NULL / 0 means NOT CONFIGURED, never "trail at zero distance". Bailing correctly leaves
+      // the position unobserved rather than inventing a threshold.
+      if (!Number.isFinite(activationPct) || activationPct <= 0) return;
+      if (!Number.isFinite(distancePct) || distancePct <= 0) return;
+      if (!Number.isFinite(pos.priceOpen) || pos.priceOpen <= 0) return;
+      if (!Number.isFinite(pos.priceCurrent)) return;
+
+      const isBuy = pos.type === 'buy';
+      // Favourable-direction profit, independent of the broker's own `profit` (which is currency and
+      // already net of swap/commission, so it cannot be compared with a percentage threshold).
+      const profitPct =
+        ((isBuy ? pos.priceCurrent - pos.priceOpen : pos.priceOpen - pos.priceCurrent) /
+          pos.priceOpen) * 100;
+
+      const prevBest = this.simTslWatermark.get(pos.ticket);
+      const best = prevBest === undefined
+        ? pos.priceCurrent
+        : isBuy ? Math.max(prevBest, pos.priceCurrent) : Math.min(prevBest, pos.priceCurrent);
+      this.simTslWatermark.set(pos.ticket, best);
+
+      // Not yet in enough profit — nothing to observe.
+      if (profitPct < activationPct) return;
+
+      const triggerPrice = isBuy ? best * (1 - distancePct / 100) : best * (1 + distancePct / 100);
+      const touched = isBuy ? pos.priceCurrent <= triggerPrice : pos.priceCurrent >= triggerPrice;
+      if (!touched) return;
+
+      const last = this.simTslLastMomentAt.get(pos.ticket) ?? 0;
+      if (Date.now() - last < this.SIM_TSL_MOMENT_COOLDOWN_MS) return;
+      this.simTslLastMomentAt.set(pos.ticket, Date.now());
+
+      this.adjustmentRecorder.recordSimTslEvent({
+        tradeTicket: pos.ticket,
+        symbol: pos.symbol,
+        strategyId: strat.id ?? null,
+        strategyName: strat.name ?? null,
+        event: 'decision-point',
+        entryPrice: pos.priceOpen,
+        triggerPrice,
+        price: pos.priceCurrent,
+        profitPct,
+        distancePct,
+        activationPct,
+        detail: { best, side: pos.type, watermarkInMemory: true },
+      });
+    } catch (err: any) {
+      // ⚠️ An observer must never break the guardian. This is instrumentation, not control flow,
+      // and a throw here would abort the tick that does the real stop management.
+      this.logger.warn(`sim-TSL observation failed for #${pos?.ticket}: ${err?.message}`);
+    }
+  }
 
   private finishTick(tickStart: number) {
     this.state.lastTickMs = Date.now() - tickStart;

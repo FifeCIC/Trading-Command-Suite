@@ -73,7 +73,12 @@ for (const scope of SCOPES) {
     lines.forEach((line, i) => {
       const trimmed = line.trimStart();
       // A comment may legitimately DISCUSS these — the explanations in this codebase do.
-      if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*') || trimmed.startsWith('#')) return;
+      // ⚠️ `--` is SQL's line comment and was MISSING from this list until 2026-09-24, so a `.sql`
+      // comment explaining the rule failed the guard that enforces it. Found by writing that
+      // explanation in `prisma/sim-tsl-936.sql` (#936). A `--` line is a comment by definition, so
+      // adding it cannot hide a violation.
+      if (trimmed.startsWith('//') || trimmed.startsWith('--') || trimmed.startsWith('*')
+        || trimmed.startsWith('/*') || trimmed.startsWith('#')) return;
       // `ON UPDATE CURRENT_TIMESTAMP` cannot be expressed as a function in MySQL, so it is not a
       // violation here; its update path is fixed in the application instead. Reported separately by
       // `fix-local-time-defaults.cjs`.

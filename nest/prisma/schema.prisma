@@ -1439,6 +1439,28 @@ model TradingStrategy {
   // Units are HOURS (Int?), not a '30d' string, so a scalp protocol can express a
   // sub-day limit without a parser between config and enforcement.
   maxHoldHours  Int?
+  // Simulated TSL — the DECISION-MOMENT exit (#936, R20=A 2026-09-24).
+  //
+  // WHY PER-BOT AND NOT ONE GLOBAL RULE: the owner chose R20 option A, so post-entry exit
+  // management is per-bot data. The StopGuardianService was ONE hardcoded mechanism serving every
+  // bot, which is why the thing that actually locks in profit appeared nowhere on the bot page.
+  // `trading_strategy.slPct` already spans 0.3%-3% (a 10x range) across live bots, so a single
+  // shared trail distance cannot be right for both ends of it.
+  //
+  // ⚠️ DEFAULT-OFF IS THE CONTRACT. No existing bot changes behaviour, which is what lets this
+  // ship without a copied A/B configuration. The mechanism only OBSERVES: it computes a second,
+  // TIGHTER threshold that is NEVER sent to the broker, and records the moment price touches it.
+  // The broker stop stays where it is, deliberately, so small profits can be locked sooner later
+  // without moving real risk.
+  //
+  // NULL on either number = not configured = not armed. There is deliberately NO default: a
+  // guessed trail distance would trail real positions against a fiction.
+  //
+  // Acting on a decision point (closing or tightening) is a MATHS change and needs an A/B copy —
+  // see `.github/instructions/maths-change-requires-ab.instructions.md`.
+  simTslEnabled       Boolean @default(false)
+  simTslActivationPct Float?
+  simTslDistancePct   Float?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -2017,6 +2039,43 @@ model StopAdjustment {
   @@map("stop_adjustment")
   @@index([tradeTicket])
   @@index([symbol, adjustedAt])
+}
+
+// SimTslEvent — the recorded firings of the per-bot SIMULATED TSL (#936).
+//
+// ⚠️ WHY THIS TABLE EXISTS AT ALL. #936's own caveat: "its firings must be recorded so a
+// decision-moment close is distinguishable from the broker stop being hit." Without this table a
+// close at a decision point and a close at the broker stop are the same row, and the whole point
+// of the mechanism — locking in small profits sooner, with the broker stop left further away —
+// becomes unmeasurable.
+//
+// `action` is 'recorded' and that is the ONLY value the engine writes today. Nothing here sends
+// anything to a broker; the table records that a decision moment OCCURRED.
+model SimTslEvent {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  tradeTicket   String   @db.VarChar(100)
+  strategyId    String?  @db.VarChar(36)
+  strategyName  String?  @db.VarChar(200)
+  symbol        String   @db.VarChar(20)
+  /// 'armed' | 'decision-point' | 'cleared'. Only 'decision-point' is a decision moment.
+  event         String   @db.VarChar(30)
+  entryPrice    Float?
+  /// The level the simulated threshold sat at, and the price observed when it was touched.
+  triggerPrice  Float?
+  price         Float?
+  profitPct     Float?
+  distancePct   Float?
+  activationPct Float?
+  action        String   @default("recorded") @db.VarChar(30)
+  detail        Json?
+  occurredAt    DateTime @default(now())
+
+  @@map("sim_tsl_event")
+  @@index([tradeTicket, occurredAt])
+  @@index([symbol, occurredAt])
+  @@index([strategyId, occurredAt])
+  // Retention column must LEAD an index (validate-retention-columns.cjs).
+  @@index([occurredAt])
 }
 
 // ── Audit trail ──────────────────────────────────────────
