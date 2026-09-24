@@ -75,21 +75,41 @@ import { normalizeScorePercent, selectDirectionalEvidence } from './score-units'
  * (Historical note — the old formula was
  * `(technical × 0.40 + sentiment × 0.35) × riskMultiplier`, i.e. group weights
  * over NORMALIZED group scores, with gates multiplying. That was removed when
- * scoring moved to directional-only evidence. `weightStrategy` below now selects
- * between two DENOMINATOR conventions, not group weighting.)
+ * scoring moved to directional-only evidence.)
  *
- * The engine supports two denominator conventions, selectable per MetaStack:
- * both operate on DIRECTIONAL evidence only — they differ in what they divide by:
+ * ── ⚠️ `weightStrategy` IS INERT — DECLARED, NOT APPLIED (measured 2026-09-24, #919) ──
  *
- * 1. 'group-weighted' (default, misleading name): normalizes the directional raw
- *    total against the protocol's CONFIGURED directional capacity
- *    (`capacityMaxTotal`, INV-STABLE-DENOMINATOR). Stable over time — the same
- *    market condition scores the same on every tick.
+ * This field READS as a control and selects NOTHING. It is a parameter with a default
+ * that is only echoed into the payload (`meta.weightStrategy`); the denominator is
+ * HARDCODED further down:
  *
- * 2. 'maxscore-weighted': divides by the OBSERVED evidence sum for this tick.
- *    Because that denominator moves whenever a directive goes quiet, the same
- *    reading scores differently between ticks; retained for A/B comparison and
- *    screening, not for execution decisions.
+ *     denominatorMode: 'configured-capacity',   // not selectable — this IS the answer
+ *     configuredSignalMax: capacityMaxTotal,
+ *
+ * Measured 2026-09-24: all 28 `scoring_strategy` rows hold 'group-weighted', and
+ * `scoreWithGating` returns an IDENTICAL composite for 'group-weighted',
+ * 'maxscore-weighted' and an unrecognised string. `weight-strategy-inert.spec.ts`
+ * asserts that, so the claim above is CHECKED rather than asserted. If that test ever
+ * fails, someone has wired this field — read its header before touching either.
+ *
+ * WHAT THE TWO CONVENTIONS WILL MEAN IF WIRED. Both operate on DIRECTIONAL evidence
+ * only; they differ solely in what they divide by:
+ *
+ * 1. 'group-weighted' (the name is historical, not descriptive): divide by the
+ *    protocol's CONFIGURED directional capacity (`capacityMaxTotal`,
+ *    INV-STABLE-DENOMINATOR). Stable — the same market condition scores the same on
+ *    every tick. ⚠️ This is what the engine ACTUALLY does today, unconditionally.
+ *
+ * 2. 'maxscore-weighted': divide by the OBSERVED evidence sum for this tick. A quiet
+ *    directive shrinks the denominator, so the same reading scores differently between
+ *    ticks. Intended for A/B comparison and screening, never for execution decisions.
+ *
+ * ⚠️ WIRING (2) IS A MATHS CHANGE — it moves every percentage, so it requires a copied
+ * configuration and a monitored comparison
+ * (`.github/instructions/maths-change-requires-ab.instructions.md`). Do not switch it in
+ * place. And do NOT rename 'group-weighted' to make the documentation read correctly
+ * while the field stays inert: #919 asked for exactly that rename, and the rename was
+ * the wrong fix — declaring the field was the fix.
  *
  * ⚠️ NEITHER convention makes a neutral directive count. The distinction between
  * them is the DENOMINATOR only. If a protocol's compositor is too small to clear

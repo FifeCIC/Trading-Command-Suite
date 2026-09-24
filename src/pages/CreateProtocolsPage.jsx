@@ -408,7 +408,7 @@ export default function CreateProtocolsPage() {
                   min={1} max={20} step={0.5}
                   className="ff-input ff-input--sm"
                 />
-                <span className="ff-hint">Relative weight vs other groups (1–20)</span>
+                <span className="ff-hint">Stored for display only — NOT applied by the scorer (#919)</span>
               </label>
               <label className="ff-field">
                 <span className="ff-label">Min Multiplier</span>

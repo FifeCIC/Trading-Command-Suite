@@ -55,7 +55,13 @@ function DirectiveTrace({ symbol, onClose }) {
             <div key={g.groupId} className={`sal-trace-group ${g.isRisk ? 'sal-trace-risk' : ''}`}>
               <div className="sal-trace-group-head">
                 <span className="sal-trace-group-name">{g.groupName}</span>
-                {g.weight != null && <span className="sal-trace-group-wt">{g.weight}%</span>}
+                {/* ⚠️ DISPLAY ONLY (#919) — the recorded weight, which the scorer never applied. */}
+                {g.weight != null && (
+                  <span
+                    className="sal-trace-group-wt"
+                    title="Display only — group weights are NOT applied by the scorer (#919)."
+                  >{g.weight}% · not applied</span>
+                )}
                 <span className="sal-trace-group-score" style={{ color: bar.background }}>{g.score}</span>
               </div>
               {/* The group's own 0-100, so the number has visual weight instead of being a digit

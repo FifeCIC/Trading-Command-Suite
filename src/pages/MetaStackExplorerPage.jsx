@@ -498,7 +498,15 @@ export default function MetaStackExplorerPage() {
       ],
       'protocol': [
         { label: 'Protocol resolved', pass: !!selectedProtocol, detail: selectedProtocol?.name || activeProtocolId || '—' },
-        { label: 'Weight strategy', pass: !!scored.meta?.weightStrategy, detail: scored.meta?.weightStrategy || 'group-weighted' },
+        // ⚠️ This row used to read 'Weight strategy' with `pass: !!scored.meta?.weightStrategy` — a
+        // check that passed merely because the FIELD EXISTS, while the field selects nothing (measured
+        // 2026-09-24, #919). It reported a capability the engine does not have. Now it states the
+        // denominator the engine actually used, which is the truth the payload carries.
+        {
+          label: 'Denominator',
+          pass: scored.meta?.denominatorMode === 'configured-capacity',
+          detail: `${scored.meta?.denominatorMode || '—'} · weightStrategy is inert (#919)`,
+        },
         { label: 'Direction mode', pass: !!selectedProtocol?.directionMode, detail: selectedProtocol?.directionMode || 'LONG_ONLY' },
         { label: 'Trading style', pass: !!selectedProtocol?.tradingStyle, detail: selectedProtocol?.tradingStyle || '—' },
         { label: 'Win rate target', pass: !!selectedProtocol?.winRateTarget, detail: selectedProtocol?.winRateTarget || '—' },

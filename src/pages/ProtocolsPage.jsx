@@ -265,7 +265,14 @@ export default function ProtocolsPage() {
                   <div key={group.id} className={`protocols-group-card ${group.isRiskGate ? 'risk-gate' : ''}`}>
                     <div className="protocols-group-header">
                       <span className="protocols-group-name">{group.name}</span>
-                      <span className="protocols-group-weight">Weight: {(group.weight * 100).toFixed(0)}%</span>
+                      {/* ⚠️ DISPLAY ONLY (#919, 2026-09-24). The weight is stored, shown and saved — and
+                          NOT applied by the scorer: the composite is the raw sum of directional directive
+                          scores (protocol-gating.service.ts). Saying so here is the fix; the alternative
+                          (silently showing a number that looks like a control) is the defect #919 names. */}
+                      <span
+                        className="protocols-group-weight"
+                        title="Display only — group weights are NOT applied by the scorer. The composite is the raw sum of directional directive scores (#919)."
+                      >Weight: {(group.weight * 100).toFixed(0)}% · not applied</span>
                       {group.isRiskGate && (
                         <span className="protocols-risk-badge" title={`Multiplicative gate: ${Math.round(group.minMultiplier * 100)}%–${Math.round(group.maxMultiplier * 100)}% of signal survives`}>
                           ⚠ Gate {Math.round(group.minMultiplier * 100)}%–{Math.round(group.maxMultiplier * 100)}%

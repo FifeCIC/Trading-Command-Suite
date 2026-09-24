@@ -724,7 +724,11 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                     <div key={g.id} className="prb-group">
                       <div className="prb-group-head">
                         <span className="prb-group-name">{g.name}</span>
-                        <span className="prb-group-meta">Weight: {g.weight}{g.isRiskGate ? ' · Risk Gate' : ''}</span>
+                        {/* ⚠️ DISPLAY ONLY (#919) — stored and shown, never applied. See ProtocolsPage. */}
+                        <span
+                          className="prb-group-meta"
+                          title="Display only — group weights are NOT applied by the scorer (#919)."
+                        >Weight: {g.weight} · not applied{g.isRiskGate ? ' · Risk Gate' : ''}</span>
                       </div>
                       <div className="prb-group-dirs">
                         {g.directives?.map(d => (
