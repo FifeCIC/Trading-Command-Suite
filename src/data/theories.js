@@ -239,6 +239,32 @@ export const THEORIES = [
     area: 'trading',
     issue: 960,
   },
+  {
+    id: 'ab-arm-pnl-can-be-attributed',
+    raisedAt: '2026-09-21',
+    statement:
+      'A trade row recorded against an A/B arm carries a P&L that can be attributed to that arm and compared against the other arm.',
+    predictedDirection:
+      'Each arm accumulates its own P&L across its rows, so the two arms can be compared on realised outcome.',
+    measure: 'per-arm total P&L, and per-row P&L against that row recorded size',
+    unit: 'account currency (£); implied contract size (dimensionless)',
+    window: 'All closed trades. A/B rows are identified by the `AB-` strategy prefix — 19 rows.',
+    status: 'refuted',
+    evidence: {
+      basis: 'measurement',
+      n: 19,
+      result:
+        'The AB arm total P&L is −£35.41 across 19 rows, and **ONE row is 100% of it**. That row (`AB-B 929 XAU M15`) records `quantity` 0.02 while its P&L implies a contract size of **274.1** against a consistent **75.75** (= 100oz ÷ GBPUSD 1.32) everywhere else — **3.6x** — with `pnlInvalid = 0` and `abTestId` NULL. 4 of the 19 rows have `pnl` NULL. So the instrument cannot produce a per-arm comparison today. ⚠️ An initial misreading was REFUTED by the same data and is recorded so it is not re-derived: a NULL `ticket` is NOT distinctive to the A/B path — 106 of 115 bot rows and 108 of 114 manual rows are NULL too.',
+      measuredAt: '2026-09-24',
+      source: 'Live `trade` table, this session',
+    },
+    falsification:
+      'Recompute each arm P&L from broker deals rather than from `trade` rows. If the two arms separate cleanly, this is refuted.',
+    decision:
+      'NOT acted on — it belongs with #929 and #965. **The instrument has a SECOND, independent defect**: even when A/B runs, its per-arm P&L is not attributable. Fixing attribution is a prerequisite for any A/B verdict, and it is an attribution fix, not a maths change.',
+    area: 'trading',
+    issue: 929,
+  },
 ];
 
 export default THEORIES;
