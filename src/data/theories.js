@@ -287,7 +287,7 @@ export const THEORIES = [
     falsification:
       'Disable gold on a COPIED configuration and measure the remaining book. If it is still substantially negative, gold is not the sole centre; if a gold bot turns positive over a longer window, this weakens.',
     decision:
-      'SURVIVOR AFTER REFUTATION: three of the four gold bots are net negative and the four TOGETHER are net −£23.65. What is refuted is only the word "every". Ran 2026-09-24 as #960 Tier 1: `nest/scripts/audit-strategy-realism.cjs` reports 0 of 33 active bots breaching the £100 worst-loss ceiling and none exceeding the 60% stop-out threshold, so the tier\'s premise (2 gold bots risking £980.88 and £245.22 per trade) does not reproduce against realised losses. NO maths changed — `slPct`/`baseSize` are maths (SETTLED-DECISIONS row 21) and A/B cannot report yet (#929), so the available action was the written truth pass, which is now a guard rather than a one-off.',
+      'SURVIVOR AFTER REFUTATION: three of the four gold bots are net negative and the four TOGETHER are net −£23.65. What is refuted is only the word "every". Ran 2026-09-24 as #960 Tier 1: `nest/scripts/audit-strategy-realism.cjs` reports 0 of 33 active bots breaching the £100 worst-loss ceiling and none exceeding the 60% stop-out threshold, so the tier\'s premise (2 gold bots risking £980.88 and £245.22 per trade) does not reproduce against realised losses. NO maths changed — `slPct`/`baseSize` are maths (SETTLED-DECISIONS row 21) and A/B cannot report yet (#929), so the available action was the written truth pass, which is now a guard rather than a one-off. ⚠️ Only the word "every" is refuted — the CENTRALITY claim survives strongly and is recorded separately as `gold-dominates-the-books-loss` (XAUUSD is 91% of the book net loss).',
     area: 'trading',
     issue: 960,
   },
@@ -314,6 +314,32 @@ export const THEORIES = [
       'Find a single closed trade on any bot with |pnl| > £100, or a bot whose stop-out rate is at or above 60% over 3+ trades. Either would reinstate the claim.',
     decision:
       'Do NOT re-derive size for the gold bots on the strength of #960\'s figures. Tier 1 keeps its value — exits ARE defined on all four bots (0.3/0.5 to 3/6) and the audit now runs as a guard — but the alarming risk number that motivated the tier does not exist in the data. If a different, real over-risk case exists, it will show as LOSS-OVER-CEILING on the guard, which exits non-zero.',
+    area: 'trading',
+    issue: 960,
+  },
+  {
+    id: 'gold-dominates-the-books-loss',
+    raisedAt: '2026-09-24',
+    statement:
+      'The book is not losing broadly — it is losing on one symbol. XAUUSD accounts for almost all of the net loss, and the four gold bots are only part of that.',
+    predictedDirection:
+      'If true, removing XAUUSD leaves the book close to flat, and XAUUSD shows far more loss per trade than any other symbol.',
+    measure: 'net P&L grouped by symbol, and XAUUSD split into the four gold bots versus every other gold path',
+    unit: 'account currency (£), per symbol and per bucket',
+    window: 'All 254 closed trades. 10 rows carry a NULL pnl and are excluded from every SUM.',
+    status: 'supported',
+    evidence: {
+      basis: 'measurement',
+      n: 59,
+      result:
+        'SUPPORTED, and it is the largest single fact about this book. Total net **−£91.23** over 254 closed trades (−£0.37 each). XAUUSD alone is **−£82.79** over 59 trades (−£1.40 each) — **91% of the entire net loss**. Every other symbol combined is **−£8.44 over 185 trades**, i.e. flat at −£0.05 each. Within gold the split is the surprising part: the four gold bots account for only **−£23.65 over 11 trades**, while the other **48 gold trades are −£59.14** — the manual, untagged and A/B paths. The largest losses in the book are two untagged manual XAUUSD trades (−£65.25 on 2026-09-11, −£52.26 on 2026-09-21), the A/B arm (−£35.41) and Gold Day-Trade M15 (−£31.07). ⚠️ The recent window is the worse one: the **71 trades closed since 2026-09-21 19:13 net −£106.81**, more than the whole book nets, which means the earlier period was net positive. **I have not isolated why**, and the coincidence with the stop-guardian change on that date is NOT a cause — two things changed together and I did not separate them.',
+      measuredAt: '2026-09-24',
+      source: 'Live `trade` table via the mysql CLI; cross-referenced with the Tier 1 comment on #960',
+    },
+    falsification:
+      'Show a non-gold symbol, or the non-gold total, with a loss comparable to gold, or show the four gold bots contributing the majority of the gold loss. Either breaks the claim.',
+    decision:
+      'Do NOT act on this by editing the maths. `slPct`/`baseSize` are maths (SETTLED-DECISIONS row 21) and A/B cannot report yet (#929). What this changes is PRIORITY: the largest lever is gold exposure, and 48 of the 59 gold trades are not attributable to a bot at all — that is the #949 attribution defect, not a strategy result. Attribution is therefore a prerequisite for deciding anything about gold, because until it is fixed the manual and bot paths cannot be told apart. The MAGNITUDE is small (a £91 net on a demo book); the SHAPE is the finding.',
     area: 'trading',
     issue: 960,
   },
