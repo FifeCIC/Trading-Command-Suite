@@ -256,6 +256,23 @@ export default function StrategyMonitorPage() {
         </div>
 
         {/* Strategy cards — active trading only */}
+        {/* ── LIVE STATE ──────────────────────────────────────────────────────────────────────
+            The heading is load-bearing, not decoration. Trading Bots renders these SAME rows as a
+            TABLE and this page renders them as CARDS, which is how the two were reported as "
+            basically the same page but they aren't the same thing". With no stated division of
+            labour a reader has to infer it from the columns.
+
+            This page answers "what is happening NOW" (live score, queue depth, faults); Trading
+            Bots answers "what exists and how is it configured". The link makes the second half
+            reachable from here instead of duplicated here. */}
+        <div className="sm-live-head">
+          <h2>Live state</h2>
+          <span className="sm-monitor-note">
+            What is happening now. Configuration lives on{' '}
+            <Link to="/trading/trading-bots">Trading Bots</Link>.
+          </span>
+        </div>
+
         {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
           <EmptyState icon="◆" title="No active trading strategies" description="Activate a trading strategy to see monitoring data." />
         ) : (

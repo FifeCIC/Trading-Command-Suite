@@ -60,6 +60,15 @@
 
 .sm-monitor-note { font-size: 0.72rem; color: var(--ink-soft, #999); }
 
+/* Live-state section head (2026-09-25). The TABLE styling is not here on purpose - it comes from
+   strategies-list.module.css, which this page already imports, so the app has ONE table vocabulary
+   rather than a second copy that would drift. Only the section chrome belongs to this file. */
+.sm-live-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 0.75rem; flex-wrap: wrap; margin: 1rem 0 0.5rem;
+}
+.sm-live-head h2 { font-size: 1rem; margin: 0; }
+
 /* Signal Queues (#714 Stage 2) */
 .sm-queues { margin-top: 1.5rem; }
 .sm-queues-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
