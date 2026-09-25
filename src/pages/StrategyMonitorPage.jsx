@@ -38,7 +38,6 @@ import './strategy-monitor.css';
 import styles from './strategies-list.module.css';
 
 export default function StrategyMonitorPage() {
-  const [selectedStratId, setSelectedStratId] = useState(null);
   const [expandedBotId, setExpandedBotId] = useState(null);
   const [queueSearch, setQueueSearch] = useState('');
   const [queueSort, setQueueSort] = useState('depth');
@@ -255,7 +254,8 @@ export default function StrategyMonitorPage() {
           ))}
         </div>
 
-        {/* Strategy cards — active trading only */}
+        {/* The LIVE-STATE table. Superseded the accordion card grid on 2026-09-25: the cards and
+            Trading Bots' table rendered the same rows in two shapes with no stated split. */}
         {/* ── LIVE STATE ──────────────────────────────────────────────────────────────────────
             The heading is load-bearing, not decoration. Trading Bots renders these SAME rows as a
             TABLE and this page renders them as CARDS, which is how the two were reported as "
@@ -276,8 +276,32 @@ export default function StrategyMonitorPage() {
         {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
           <EmptyState icon="◆" title="No active trading strategies" description="Activate a trading strategy to see monitoring data." />
         ) : (
-          <div className={styles.grid}>
-            {monitoredStrats.map((s, i) => {
+          <div className={styles.tablePane}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Bot</th>
+                  <th scope="col">Symbol</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Watchlist</th>
+                  <th scope="col">Protocol</th>
+                  <th scope="col" className={styles.thNum}>Broker</th>
+                  <th scope="col" className={styles.thNum}>
+                    Score
+                    <PageInfoPopover>
+                      <strong>Protocol-scoped gated composite (0–100%).</strong>
+                      <br />
+                      The strategy's latest evaluation, expressed as a percentage of the protocol's
+                      maximum score. The Scoring ladder shows a different, dual scale — raw Signal
+                      (x/max) plus raw Opportunity (x/max) with percentages — so numbers there
+                      look larger. Click the score to see the live ordering stack.
+                    </PageInfoPopover>
+                  </th>
+                  <th scope="col" className={styles.thNum}>Queued</th>
+                </tr>
+              </thead>
+              <tbody>
+            {monitoredStrats.map((s) => {
               const isActive = isActiveStrategy(s);
               const isTrading = isTradingStrategy(s);
               const isScoring = isScoringStrategy(s);
@@ -291,21 +315,17 @@ export default function StrategyMonitorPage() {
               const typeColor = isTrading ? 'var(--color-accent-blue)' : isScoring ? '#8b5cf6' : 'var(--ink-soft)';
 
               return (
-                <motion.div
-                  key={s.id}
-                  className={`${styles.card} ${selectedStratId === s.id ? styles.cardSelected : ''}`}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.02 }}
-                  onClick={() => setSelectedStratId(selectedStratId === s.id ? null : s.id)}
-                >
-                      <div className={styles.cardTop}>
-                        <span className={styles.cardDot} style={{ background: isActive ? 'var(--risk-normal)' : 'var(--ink-soft)' }} />
-                        <strong className={styles.cardName}>{s.name}</strong>
-                        <span className={styles.cardType} style={{ background: `color-mix(in srgb, ${typeColor} 12%, transparent)`, color: 'var(--ink)', borderColor: typeColor }}>
-                      {typeLabel}
+                <tr key={s.id} className={styles.row}>
+                  <td>
+                    <span className={styles.nameCell}>
+                      <span className={styles.cardDot} style={{ background: isActive ? 'var(--risk-normal)' : 'var(--ink-soft)' }} />
+                      <Link to={`/trading/strategy/${s.id}`} className={styles.chipLink} title="Open the full rules view for this bot">
+                        {s.name}
+                      </Link>
                     </span>
-                  </div>
-                  <div className={styles.cardMeta}>
+                    <StrategyFaultBadge strategy={s} className={styles.rowFault} />
+                  </td>
+                  <td>
                     {s.symbol && (
                       <Link
                         to="/scoring/symbols-ladder"
@@ -316,67 +336,53 @@ export default function StrategyMonitorPage() {
                         {s.symbol}
                       </Link>
                     )}
-                    {s.watchlistName && <span className={`${styles.chip} ${styles.chipWl}`}>{s.watchlistName}</span>}
-                    <Link
-                      to="/protocols/protocols-registry"
-                      className={`${styles.chip} ${styles.chipProto} ${styles.chipLink}`}
-                      title={`Open protocol registry — this strategy consumes ${s.protocolId || 'no protocol'}`}
-                      onClick={e => e.stopPropagation()}
-                    >
+                  </td>
+                  <td>
+                    <span className={styles.cardType} style={{ background: `color-mix(in srgb, ${typeColor} 12%, transparent)`, color: 'var(--ink)', borderColor: typeColor }}>
+                      {typeLabel}
+                    </span>
+                  </td>
+                  <td className={styles.tdMuted}>{s.watchlistName || '—'}</td>
+                  <td>
+                    <Link to="/protocols/protocols-registry" className={styles.chipLink} title={`Open protocol registry — this strategy consumes ${s.protocolId || 'no protocol'}`}>
                       {s.protocolId || '—'}
                     </Link>
-                    <span className={`${styles.chip} ${styles.chipBroker}`}>{s.brokerId || '—'}</span>
-                    {queueDepthByStrategy.get(s.id) > 0 && (
+                  </td>
+                  <td className={styles.tdNum}>{s.brokerId || '—'}</td>
+                  <td className={styles.tdNum}>
+                    {/* Colour = the SERVER's classification for this evaluation (`lastSignal`) —
+                        measured 2026-09-20: `scoreClass(15)` painted 11 of 18 BUY rows RED while
+                        the server called them BUY. `lastComposite` is the #909 two-unit column,
+                        so it cannot be graded locally even once its units are settled (#847). */}
+                    {s.lastComposite != null ? (
+                      <Link
+                        to="/scoring/live-ordering-stack"
+                        className={signalClass(s.lastSignal)}
+                        title="Open the live ordering stack (Scoring)"
+                      >
+                        {s.lastComposite}
+                      </Link>
+                    ) : (
+                      <span className={styles.tdMuted}>—</span>
+                    )}
+                  </td>
+                  <td className={styles.tdNum}>
+                    {queueDepthByStrategy.get(s.id) > 0 ? (
                       <span
                         className={`${styles.chip} sl-chip-queue`}
                         title={`${queueDepthByStrategy.get(s.id)} pending signal(s) — see Signal Queues below`}
                       >
-                        ⏳ {queueDepthByStrategy.get(s.id)} queued
+                        ⏳ {queueDepthByStrategy.get(s.id)}
                       </span>
+                    ) : (
+                      <span className={styles.tdMuted}>—</span>
                     )}
-                  </div>
-                  {s.lastComposite != null && (
-                    <div className={styles.cardScore}>
-                      <span className={styles.scoreLabel}>
-                        Last Score
-                        <PageInfoPopover>
-                          <strong>Protocol-scoped gated composite (0–100%).</strong>
-                          <br />
-                          The strategy's latest evaluation, expressed as a percentage of the protocol's
-                          maximum score. The Scoring ladder shows a different, dual scale — raw Signal
-                          (x/max) plus raw Opportunity (x/max) with percentages — so numbers there
-                          look larger. Click the score to see the live ordering stack.
-                        </PageInfoPopover>
-                      </span>
-                      {/* Colour = the SERVER's classification for this evaluation (`lastSignal`) —
-                          measured 2026-09-20: `scoreClass(15)` painted 11 of 18 BUY rows RED while
-                          the server called them BUY. `lastComposite` is the #909 two-unit column,
-                          so it cannot be graded locally even once its units are settled (#847). */}
-                      <Link
-                        to="/scoring/live-ordering-stack"
-                        className={`${styles.scoreValue} ${signalClass(s.lastSignal)}`}
-                        title="Open the live ordering stack (Scoring)"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        {s.lastComposite}
-                      </Link>
-                    </div>
-                  )}
-                  <StrategyFaultBadge strategy={s} className={styles.cardWarning} />
-                  {selectedStratId === s.id && (
-                    <div className={styles.cardDetail}>
-                      {s.description && <p className={styles.detailDesc}>{s.description}</p>}
-                      <div className={styles.detailGrid}>
-                        <span>Mode: <strong>{s.mode || '—'}</strong></span>
-                        <span>Base Size: <strong>{s.baseSize || '—'}</strong></span>
-                        <span>SL: <strong>{s.slPct != null ? s.slPct + '%' : '—'}</strong></span>
-                        <span>TP: <strong>{s.tpPct != null ? s.tpPct + '%' : '—'}</strong></span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
+                  </td>
+                </tr>
               );
             })}
+              </tbody>
+            </table>
           </div>
         )}
 
