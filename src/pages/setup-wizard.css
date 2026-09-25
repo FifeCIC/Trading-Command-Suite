@@ -1,233 +1,453 @@
-.setup-wizard {
-  max-width: 720px;
+/* SetupWizardPage — the first-run experience (/status/setup). Ships in the FREE edition.
+ * ============================================================================
+ * ⚠️ THEMED TOKENS ONLY. Every colour below is a runtime token written onto :root by
+ *    `src/theme/adapters/vanilla.js` (--bg, --panel, --bg-elev, --border, --border-strong,
+ *    --ink, --ink-soft, --text-dim, --accent, --accent-soft, --risk-normal, --risk-elevated,
+ *    --risk-critical). That is what makes this page follow light / dark / black AND the packs.
+ *
+ * ⚠️ DO NOT REINTRODUCE A LITERAL COLOUR HERE. The previous version of this file hardcoded
+ *    #00f5ff, #00ff41, #1a1a1a, #2a2a2a, #888 and #e0e0e0 throughout, which broke BOTH
+ *    `ui-standards` ("never hardcode a hex value in a page/component CSS file") and
+ *    `accessibility-policy` ("no hardcoded hex values in page/component CSS"), and rendered
+ *    dark-on-dark in light mode because none of those were theme tokens.
+ *    `scripts/validate-css-tokens.cjs` gates the token names; it cannot see a hardcoded hex,
+ *    which is exactly why this note is here rather than relying on the guard.
+ *
+ * ⚠️ ANIMATION IS CSS-ONLY, deliberately. The global `prefers-reduced-motion` query in
+ *    `index.css` covers CSS animations and transitions; `motion/react` would need its own
+ *    handling to satisfy the accessibility policy. Nothing here loops beyond a single pulse.
+ */
+
+.sfr-stage {
+  /* The single outer surface. --bg rather than --panel so the steps read as raised on top. */
+  max-width: 780px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
-  color: #e0e0e0;
+  padding: 2.5rem 1.5rem 3rem;
+  color: var(--ink, inherit);
 }
 
-.wizard-header h1 {
-  margin: 0 0 0.25rem;
+/* ---------- Hero ---------- */
+
+.sfr-hero {
+  position: relative;
+  margin-bottom: 1.75rem;
+}
+
+/* A soft accent wash behind the hero. color-mix on a THEMED token, so it tints per theme. */
+.sfr-hero::before {
+  content: '';
+  position: absolute;
+  inset: -2.5rem -2rem auto -2rem;
+  height: 13rem;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 100% at 22% 0%,
+    color-mix(in srgb, var(--accent, #0ea5a6) 14%, transparent),
+    transparent 70%
+  );
+}
+
+.sfr-eyebrow {
+  position: relative;
+  margin: 0 0 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent, inherit);
+}
+
+.sfr-title {
+  position: relative;
+  margin: 0 0 0.5rem;
   font-size: 1.5rem;
-}
-
-.wizard-header p {
-  color: #888;
-  margin: 0 0 1.5rem;
-}
-
-/* --- Step chips --- */
-
-.wizard-steps {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.wizard-step-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  background: #1a1a1a;
-  color: #888;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: border-color 0.2s;
-}
-
-.wizard-step-chip:hover {
-  border-color: #444;
-}
-
-.wizard-step-chip.active {
-  border-color: #00f5ff;
-  color: #e0e0e0;
-}
-
-.wizard-step-chip.done {
-  border-color: #00ff4133;
-}
-
-.wizard-step-chip.done .step-number {
-  background: #00ff4120;
-  color: #00ff41;
-}
-
-.step-number {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #2a2a2a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
   font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink, inherit);
 }
 
-.wizard-step-chip.active .step-number {
-  background: #00f5ff20;
-  color: #00f5ff;
-}
-
-/* --- Body --- */
-
-.wizard-body h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.15rem;
-}
-
-.wizard-summary {
-  color: #888;
-  margin: 0 0 1.25rem;
-}
-
-/* --- Checks --- */
-
-.wizard-checks {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.wizard-check {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-}
-
-.wizard-check.pass {
-  border-color: #00ff4133;
-}
-
-.wizard-check.fail {
-  border-color: #ff004033;
-}
-
-.wizard-icon {
-  font-size: 1rem;
-  font-weight: 700;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.wizard-check.pass .wizard-icon {
-  background: #00ff4120;
-  color: #00ff41;
-}
-
-.wizard-check.fail .wizard-icon {
-  background: #ff004020;
-  color: #ff0040;
-}
-
-.wizard-check strong {
-  display: block;
-  font-size: 0.85rem;
-}
-
-.wizard-check p {
-  margin: 0.2rem 0 0;
-  font-size: 0.8rem;
-  color: #888;
-  line-height: 1.4;
-}
-
-/* --- Result --- */
-
-.wizard-result {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.wizard-result.all-ok {
-  background: #00ff4110;
-  border: 1px solid #00ff4133;
-}
-
-.wizard-result.needs-work {
-  background: #ffaa0010;
-  border: 1px solid #ffaa0033;
-}
-
-.wizard-result h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
-.wizard-result p {
+.sfr-lede {
+  position: relative;
   margin: 0;
-  font-size: 0.85rem;
-  color: #aaa;
-  line-height: 1.5;
+  max-width: 52ch;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ink-soft, inherit);
 }
 
-/* --- Action --- */
+/* ---------- Progress ---------- */
 
-.wizard-action {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.wizard-action p {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  color: #888;
-}
-
-.wizard-action code {
-  display: block;
-  background: #111;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #00f5ff;
-  word-break: break-all;
-}
-
-/* --- Footer --- */
-
-.wizard-footer {
+.sfr-progress {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-top: 1rem;
-  border-top: 1px solid #2a2a2a;
-  color: #666;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.sfr-progress-track {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border, rgba(128, 128, 128, 0.28));
+  overflow: hidden;
+}
+
+.sfr-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #0ea5a6);
+  /* Enter transitions use 250ms per ui-standards; this is a state change, not an entrance. */
+  transition: width 250ms ease-out, background-color 250ms ease-out;
+}
+
+.sfr-progress-text {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim, inherit);
+}
+
+/* ---------- Steps ---------- */
+
+.sfr-steps {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sfr-step {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: start;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+  border-radius: 10px;
+  background: var(--bg-elev, transparent);
+  /* Stagger from inline animationDelay, capped by the 6 rows we would ever have. */
+  animation: sfr-rise 250ms ease-out both;
+  transition: border-color 250ms ease-out, background-color 250ms ease-out;
+}
+
+.sfr-step--done {
+  border-color: color-mix(in srgb, var(--risk-normal, #2ecc91) 34%, var(--border, transparent));
+}
+
+.sfr-step--attention {
+  border-color: color-mix(in srgb, var(--risk-elevated, #ffd166) 44%, var(--border, transparent));
+  background: color-mix(in srgb, var(--risk-elevated, #ffd166) 5%, var(--bg-elev, transparent));
+}
+
+/* The glyph: a ring that fills. Running shows a rotating arc; done shows a tick. */
+.sfr-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-strong, rgba(128, 128, 128, 0.4));
   font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim, inherit);
+  transition: border-color 250ms ease-out, color 250ms ease-out;
 }
 
-.wizard-footer button {
-  padding: 0.4rem 1rem;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  background: #1a1a1a;
-  color: #e0e0e0;
+.sfr-step--running .sfr-glyph {
+  border-color: transparent;
+  border-top-color: var(--accent, #0ea5a6);
+  border-right-color: var(--accent, #0ea5a6);
+  animation: sfr-spin 900ms linear infinite;
+}
+
+.sfr-step--done .sfr-glyph {
+  border-color: var(--risk-normal, #2ecc91);
+  color: var(--risk-normal, #2ecc91);
+}
+
+.sfr-step--attention .sfr-glyph {
+  border-color: var(--risk-elevated, #ffd166);
+  color: var(--risk-elevated, #ffd166);
+}
+
+.sfr-step-body {
+  min-width: 0;
+}
+
+.sfr-step-title {
+  margin: 0 0 0.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink, inherit);
+}
+
+.sfr-step-promise {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--ink-soft, inherit);
+}
+
+.sfr-step-state {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.3));
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim, inherit);
+  white-space: nowrap;
+}
+
+.sfr-step--done .sfr-step-state {
+  border-color: color-mix(in srgb, var(--risk-normal, #2ecc91) 40%, transparent);
+  color: var(--risk-normal, #2ecc91);
+}
+
+.sfr-step--attention .sfr-step-state {
+  border-color: color-mix(in srgb, var(--risk-elevated, #ffd166) 44%, transparent);
+  color: var(--risk-elevated, #ffd166);
+}
+
+/* ---------- Checks ---------- */
+
+.sfr-checks {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sfr-check {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.sfr-check-mark {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--text-faint, var(--text-dim, inherit));
+}
+
+.sfr-check--pass .sfr-check-mark {
+  color: var(--risk-normal, #2ecc91);
+}
+
+.sfr-check--fail .sfr-check-mark {
+  color: var(--risk-critical, #ff5470);
+}
+
+.sfr-check-body {
+  min-width: 0;
+  display: block;
+}
+
+.sfr-check-label {
+  font-size: 0.78rem;
+  color: var(--ink-soft, inherit);
+}
+
+.sfr-check--fail .sfr-check-label {
+  color: var(--ink, inherit);
+  font-weight: 600;
+}
+
+.sfr-check-opt {
+  color: var(--text-faint, var(--text-dim, inherit));
+  font-weight: 400;
+  font-size: 0.72rem;
+}
+
+.sfr-check-plain {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink-soft, inherit);
+}
+
+/* The owner's diagnostic, behind a native disclosure — no state, keyboard-correct. */
+.sfr-check-tech {
+  margin-top: 0.3rem;
+}
+
+.sfr-check-tech summary {
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.7rem;
+  color: var(--text-dim, inherit);
+  /* 44px tap target (WCAG 2.5.5) without pushing the layout around: pad the box out. */
+  padding: 0.6rem 0;
+  margin: -0.3rem 0;
 }
 
-.wizard-footer button:disabled {
-  opacity: 0.3;
+.sfr-check-tech summary:hover {
+  color: var(--accent, inherit);
+}
+
+.sfr-check-tech code {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+  background: var(--bg-elev-2, var(--bg-elev, transparent));
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--ink-soft, inherit);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Outcome ---------- */
+
+.sfr-outcome {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+  border-radius: 10px;
+  background: var(--bg-elev, transparent);
+  transition: border-color 250ms ease-out;
+}
+
+.sfr-outcome--ready {
+  border-color: color-mix(in srgb, var(--risk-normal, #2ecc91) 34%, var(--border, transparent));
+  background: color-mix(in srgb, var(--risk-normal, #2ecc91) 6%, var(--bg-elev, transparent));
+}
+
+.sfr-outcome--pending {
+  border-color: color-mix(in srgb, var(--risk-elevated, #ffd166) 38%, var(--border, transparent));
+  background: color-mix(in srgb, var(--risk-elevated, #ffd166) 6%, var(--bg-elev, transparent));
+}
+
+.sfr-outcome-title {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink, inherit);
+}
+
+.sfr-outcome-text {
+  margin: 0;
+  max-width: 56ch;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-soft, inherit);
+}
+
+.sfr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.sfr-btn {
+  min-height: 44px; /* WCAG 2.5.5 */
+  padding: 0 1.1rem;
+  border: 1px solid var(--border-strong, rgba(128, 128, 128, 0.4));
+  border-radius: 6px;
+  background: var(--panel, transparent);
+  color: var(--ink, inherit);
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, opacity 150ms ease;
+}
+
+.sfr-btn:hover:not(:disabled) {
+  border-color: var(--accent, inherit);
+}
+
+.sfr-btn:disabled {
+  opacity: 0.45;
   cursor: default;
 }
 
-.wizard-footer button:hover:not(:disabled) {
-  border-color: #00f5ff;
+.sfr-btn--primary {
+  border-color: transparent;
+  background: var(--accent, #0ea5a6);
+  /* --accent is AA against --bg, but the label sits ON the accent. --bg is the theme's own
+     ground, so this stays legible in every pack, including light. */
+  color: var(--bg, #000);
+}
+
+.sfr-btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent, #0ea5a6) 86%, var(--ink, #fff));
+}
+
+/* ---------- Footnote ---------- */
+
+.sfr-footnote {
+  margin-top: 1.25rem;
+}
+
+.sfr-footnote p {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--text-dim, inherit);
+}
+
+.sfr-footnote strong {
+  color: var(--ink-soft, inherit);
+  font-weight: 600;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes sfr-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sfr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Narrow viewports ---------- */
+
+@media (max-width: 640px) {
+  .sfr-stage {
+    padding: 1.5rem 1rem 2.5rem;
+  }
+
+  /* The state pill moves under the title rather than squeezing the title to nothing. */
+  .sfr-step {
+    grid-template-columns: 30px 1fr;
+  }
+
+  .sfr-step-state {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 0.35rem;
+  }
+
+  .sfr-actions {
+    flex-direction: column;
+  }
+
+  .sfr-btn {
+    width: 100%;
+  }
 }
