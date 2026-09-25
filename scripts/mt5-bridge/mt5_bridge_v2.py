@@ -8,7 +8,7 @@ Usage:
     python mt5_bridge_v2.py
 """
 
-import os, json, logging, time
+import os, json, logging, threading, time
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -150,7 +150,7 @@ def detect_server_utc_offset(force=False):
     here against the two measurable failure modes only; the heuristic change is
     deliberately NOT made silently.
     """
-    global SERVER_UTC_OFFSET_SECONDS, _SERVER_OFFSET_MEASURED_AT
+    global SERVER_UTC_OFFSET_SECONDS, _SERVER_OFFSET_MEASURED_AT, _OFFSET_PROBE_WARNED
     now = time.time()
     if not force and _SERVER_OFFSET_MEASURED_AT and (now - _SERVER_OFFSET_MEASURED_AT) < _SERVER_OFFSET_TTL_SECONDS:
         return SERVER_UTC_OFFSET_SECONDS
@@ -162,11 +162,21 @@ def detect_server_utc_offset(force=False):
     try:
         terminal = mt5.terminal_info()
         if terminal is None or not getattr(terminal, 'connected', False):
-            logger.debug(
-                'Server UTC offset probe SKIPPED — terminal not connected; '
-                f'retaining {SERVER_UTC_OFFSET_SECONDS}s'
-            )
+            # ⚠️ #992 — ONCE PER STATE CHANGE, and it names the remedy.
+            # This exact line appeared **4,325 times** in a single outage and never once
+            # said what to do about it. The watchdog owns the messaging; this echoes the
+            # edge only, and the flag is cleared the moment the link comes back so the
+            # next genuine outage is still reported.
+            if not _OFFSET_PROBE_WARNED:
+                _OFFSET_PROBE_WARNED = True
+                logger.warning(
+                    'Server UTC offset probe SKIPPED — terminal not connected; '
+                    f'retaining {SERVER_UTC_OFFSET_SECONDS}s. '
+                    f'Remedy: POST http://127.0.0.1:{BRIDGE_PORT}/reconnect '
+                    '(further occurrences suppressed until the state changes)'
+                )
             return SERVER_UTC_OFFSET_SECONDS
+        _OFFSET_PROBE_WARNED = False
     except Exception as err:  # pragma: no cover - defensive, never fail a request
         logger.debug(f'Server UTC offset probe could not read terminal_info: {err}')
         return SERVER_UTC_OFFSET_SECONDS
@@ -622,6 +632,170 @@ def ensure_mt5():
     connection_errors += 1
     return False, 'MT5 not connected'
 
+
+# ── Connection health + auto-reconnect watchdog (#992) ─────────────────────
+#
+# ⚠️ WHY THIS EXISTS, AND WHY IT IS NOT IN A REQUEST HANDLER.
+#
+# Measured 2026-09-25: an MT5 terminal session dropped AFTER a successful startup.
+# The bridge had connected fine (it logged the balance), then lost the handle. From
+# then on it wrote 'terminal not connected' **4,325 times** and attempted NOTHING.
+# Trading on that broker was halted until a human called POST /reconnect, which fixed
+# it in ONE call (connectionErrors 485 -> 0).
+#
+# `ensure_mt5()` above is RIGHT to refuse reinitializing from a request handler — a
+# handler must not tear a session down while another thread is mid-order. But that
+# refusal left **no component responsible for recovery**. This watchdog is that
+# component. It runs on its own daemon thread, so a rebuild cannot race a request.
+#
+# ⚠️ IT MUST NOT FIGHT A GENUINELY-CLOSED TERMINAL. Reconnecting on a loop against a
+# terminal that is simply switched off is the restart-thrash this repo already paid
+# for once. So it backs off, and once it has established the terminal itself is
+# ABSENT it stops escalating — reconnecting cannot help there, and saying so is the
+# honest output rather than another attempt.
+
+STATE_OK = 'ok'
+STATE_SESSION_LOST = 'session-lost'
+STATE_TERMINAL_DOWN = 'terminal-down'
+STATE_ACCOUNT_UNAVAILABLE = 'account-unavailable'
+
+# The last state the watchdog OBSERVED. Logging is driven by CHANGES in this, which is
+# what turns 4,325 identical lines into one line with the remedy (#992).
+_CONNECTION_STATE = None
+_CONNECTION_STATE_DETAIL = None
+
+# Throttle for the offset probe's 'terminal not connected' line (#992). The probe is
+# called on every request, so an unthrottled line is 4x/minute forever.
+_OFFSET_PROBE_WARNED = False
+
+WATCHDOG_POLL_SECONDS = float(os.environ.get('MT5_WATCHDOG_POLL_SECONDS', '30'))
+WATCHDOG_FAILURES_BEFORE_RECONNECT = int(os.environ.get('MT5_WATCHDOG_FAILURES', '3'))
+WATCHDOG_MAX_BACKOFF_SECONDS = float(os.environ.get('MT5_WATCHDOG_MAX_BACKOFF_SECONDS', '1800'))
+
+
+def probe_connection_state():
+    """Classify the MT5 link WITHOUT changing it. Returns (state, detail).
+
+    ⚠️ THIS IS THE DISTINCTION #992 ASKS FOR, AND IT DID NOT EXIST. `reachable:false`
+    collapsed two unrelated faults into one flag:
+
+      * the terminal is RUNNING but its session dropped  -> `session-lost`
+        ...and `/reconnect` is the remedy.
+      * the terminal is ABSENT (switched off / not running) -> `terminal-down`
+        ...and reconnecting CANNOT help; the remedy is to start it.
+
+    Those need different actions, so they must not read the same.
+    """
+    try:
+        terminal = mt5.terminal_info()
+    except Exception as err:  # pragma: no cover - defensive
+        return STATE_TERMINAL_DOWN, f'terminal_info() raised: {err}'
+    if terminal is None:
+        return STATE_TERMINAL_DOWN, 'terminal_info() is None — terminal not running or not reachable'
+    if not getattr(terminal, 'connected', False):
+        return STATE_SESSION_LOST, 'terminal is running but its session is not connected'
+    try:
+        if mt5.account_info() is None:
+            return STATE_ACCOUNT_UNAVAILABLE, 'terminal connected, account_info() is None'
+    except Exception as err:  # pragma: no cover - defensive
+        return STATE_ACCOUNT_UNAVAILABLE, f'account_info() raised: {err}'
+    return STATE_OK, None
+
+
+def reconnect_mt5(reason):
+    """The SAME sequence `POST /reconnect` runs, callable from the watchdog (#992).
+
+    Extracted so there is ONE reconnect implementation. A second copy would drift,
+    and only one of them would receive the next fix — the failure mode this repo
+    warns about most often.
+    """
+    logger.warning(f'Reconnecting MT5: {reason}')
+    try:
+        mt5.shutdown()
+    except Exception as err:  # a failed shutdown must not block the re-init
+        logger.warning(f'Reconnect: shutdown() raised, continuing: {err}')
+    time.sleep(1)
+    ok, err = connect_mt5()
+    if ok:
+        info = mt5.account_info()
+        logger.warning(
+            f'MT5 reconnect SUCCEEDED — account={info.login if info else "?"} '
+            f'balance={info.balance if info else "?"}'
+        )
+        return True, None
+    logger.error(f'MT5 reconnect FAILED: {err}')
+    return False, err
+
+
+def _log_state_change(state, detail):
+    """Log ONCE per state change, and ALWAYS name the remedy (#992).
+
+    The defect was not that the bridge logged too little — it logged the same benign
+    condition 4,325 times and never once said what to do about it. A log line that
+    cannot be acted on is noise; the remedy is the part that matters.
+    """
+    if state == STATE_OK:
+        logger.info('MT5 connection state -> ok (recovered).')
+        return
+    remedy = f'POST http://127.0.0.1:{BRIDGE_PORT}/reconnect'
+    if state == STATE_TERMINAL_DOWN:
+        remedy += ' — or START THE MT5 TERMINAL: reconnecting cannot help while it is absent'
+    logger.error(f'MT5 connection state -> {state}: {detail}. Remedy: {remedy}')
+
+
+def connection_watchdog():
+    """Daemon thread: observe the MT5 link and recover a dropped session (#992).
+
+    Deliberately conservative. It waits for WATCHDOG_FAILURES_BEFORE_RECONNECT
+    consecutive bad polls (so a single blip never triggers a rebuild), backs off
+    exponentially up to WATCHDOG_MAX_BACKOFF_SECONDS, and stops escalating entirely
+    once the terminal itself is absent.
+    """
+    global _CONNECTION_STATE, _CONNECTION_STATE_DETAIL
+    failures = 0
+    backoff = WATCHDOG_POLL_SECONDS
+    next_attempt_at = 0.0
+    while True:
+        time.sleep(WATCHDOG_POLL_SECONDS)
+        try:
+            state, detail = probe_connection_state()
+        except Exception as err:  # pragma: no cover - the watchdog must never die
+            logger.warning(f'Connection watchdog probe failed: {err}')
+            continue
+
+        if state != _CONNECTION_STATE:
+            _log_state_change(state, detail)
+            _CONNECTION_STATE = state
+            _CONNECTION_STATE_DETAIL = detail
+
+        if state == STATE_OK:
+            failures = 0
+            backoff = WATCHDOG_POLL_SECONDS
+            next_attempt_at = 0.0
+            continue
+
+        failures += 1
+
+        # ⚠️ A terminal that is ABSENT is not a session we can rebuild. Say so and
+        # stop escalating rather than reconnecting forever against nothing.
+        if state == STATE_TERMINAL_DOWN:
+            continue
+
+        if failures < WATCHDOG_FAILURES_BEFORE_RECONNECT:
+            continue
+        if time.time() < next_attempt_at:
+            continue
+
+        ok, _err = reconnect_mt5(f'watchdog: {failures} consecutive bad polls in state {state} ({detail})')
+        if ok:
+            failures = 0
+            backoff = WATCHDOG_POLL_SECONDS
+            next_attempt_at = 0.0
+        else:
+            next_attempt_at = time.time() + backoff
+            backoff = min(backoff * 2, WATCHDOG_MAX_BACKOFF_SECONDS)
+            logger.warning(f'Next auto-reconnect attempt in {int(backoff)}s (backing off).')
+
 # ─── JSON Helpers ─────────────────────────────────────────
 
 def json_response(handler, data, status=200):
@@ -752,8 +926,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 connected, err = ensure_mt5()
                 acc = mt5.account_info() if connected else None
                 acct, _, _, active_num, _ = get_active_credentials()
+                # ⚠️ #992 — `connected:false` named the SYMPTOM and nothing else, so a caller
+                # could not tell "the terminal is switched off" from "the bridge lost its
+                # handle and could fix itself if asked". These fields are that distinction,
+                # and `connectionState` is what lets the watchdog be judged from OUTSIDE the
+                # Python log — which is where its evidence used to live and rot.
+                conn_state, conn_detail = probe_connection_state()
                 return json_response(self, {
                     'connected': connected, 'mt5Package': True,
+                    'connectionState': conn_state,
+                    'connectionStateDetail': conn_detail,
+                    'remedy': None if conn_state == STATE_OK else (
+                        f'POST http://127.0.0.1:{BRIDGE_PORT}/reconnect'
+                        + (' — or start the MT5 terminal' if conn_state == STATE_TERMINAL_DOWN else '')
+                    ),
                     'serverUtcOffsetSeconds': detect_server_utc_offset(),
                     'serverUtcOffsetHours': round(detect_server_utc_offset() / 3600.0, 2),
                     'activeAccount': active_num,
@@ -1470,15 +1656,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     results.append({'symbol': s, 'selected': sel, 'hasQuote': tick is not None})
                 return json_response(self, {'refreshed': len([r for r in results if r.get('selected')]), 'total': len(results), 'results': results})
 
-            # /reconnect
+            # /reconnect — ⚠️ #992: this now calls the SAME function the watchdog calls.
+            # Two copies of a reconnect would drift, and only one would get the next fix.
             if path == '/reconnect':
-                mt5.shutdown()
-                time.sleep(1)
-                ok, err = connect_mt5()
+                ok, err = reconnect_mt5('explicit POST /reconnect')
+                state, detail = probe_connection_state()
                 if ok:
                     info = mt5.account_info()
-                    return json_response(self, {'success': True, 'account': str(info.login) if info else None, 'balance': float(info.balance) if info else None})
-                return json_response(self, {'success': False, 'error': str(err)}, 500)
+                    return json_response(self, {'success': True, 'state': state, 'account': str(info.login) if info else None, 'balance': float(info.balance) if info else None})
+                return json_response(self, {'success': False, 'state': state, 'stateDetail': detail, 'error': str(err)}, 500)
 
             # /switch/<num>
             if len(parts) == 2 and parts[0] == 'switch':
@@ -1581,6 +1767,15 @@ if __name__ == '__main__':
     ok, err = connect_mt5()
     if not ok:
         logger.warning(f'MT5 not connected at startup: {err}')
+    # ⚠️ #992 — a session that drops AFTER startup must recover without a human. The
+    # startup connect succeeds and then NOTHING watches the link; that is the defect.
+    # Daemon thread: it dies with the process and can never block shutdown.
+    threading.Thread(target=connection_watchdog, name='mt5-watchdog', daemon=True).start()
+    logger.info(
+        f'Connection watchdog started — poll {int(WATCHDOG_POLL_SECONDS)}s, reconnect after '
+        f'{WATCHDOG_FAILURES_BEFORE_RECONNECT} consecutive bad polls, '
+        f'max backoff {int(WATCHDOG_MAX_BACKOFF_SECONDS)}s'
+    )
     server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
     logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port}')
     # ⚠️ Print the EFFECTIVE limits (#773). They come from the environment at import, so
