@@ -111,14 +111,17 @@ function readActiveBrokersFromEnv() {
 /**
  * The rule, as a PURE function so it can be exercised without a database.
  *
- * @param bots        [{ name, symbol, active }]  — active bots only
+ * @param bots        [{ name, symbol, active, baseSize }]  — active bots only
  * @param routes      [{ symbol, brokerId, enabled }]
- * @param capability  [{ brokerId, name, tradeMode }]
+ * @param capability  [{ brokerId, name, tradeMode, volumeMin }]
  * @param activeBrokers number[]
- * @returns {{ failures: Array<{symbol,bots,reason}>, notes: Array<{symbol,bots,reason}> }}
+ * @returns {{ failures, notes, sizeFailures, sizeNotes }}
  *
  * A FAILURE is a bot that can never trade: no active broker can carry its symbol.
  * A NOTE is a bot the #1002 runtime fallback will redirect to a broker that can — visible, not fatal.
+ * A SIZE FAILURE (#1005) is a bot whose symbol CAN trade but whose `baseSize` is below the floor on
+ * every broker that can carry it, so it can never fill. A SIZE NOTE is the partial case — it fills
+ * on some brokers but not others.
  */
 function evaluate(bots, routes, capability, activeBrokers) {
   const canTrade = new Map(); // SYMBOL -> Set<brokerId that can trade it>
@@ -143,18 +146,34 @@ function evaluate(bots, routes, capability, activeBrokers) {
     if (!routeOf.has(key)) routeOf.set(key, Number(r.brokerId));
   }
 
-  const bySymbol = new Map(); // SYMBOL -> [bot names]
+  const bySymbol = new Map(); // SYMBOL -> [bot]  (the whole bot, so `baseSize` is available)
   for (const b of bots) {
     const key = String(b.symbol || '').toUpperCase();
     if (!key) continue;
     if (!bySymbol.has(key)) bySymbol.set(key, []);
-    bySymbol.get(key).push(b.name);
+    bySymbol.get(key).push(b);
+  }
+
+  // SYMBOL -> Map(brokerId -> volumeMin), for brokers that CAN trade it. (#1005)
+  const floorOf = new Map();
+  for (const c of capability) {
+    const key = String(c.name).toUpperCase();
+    const id = Number(c.brokerId);
+    if (!canTrade.get(key)?.has(id)) continue;
+    if (c.volumeMin == null) continue; // NULL is UNKNOWN, never "no minimum"
+    if (!floorOf.has(key)) floorOf.set(key, new Map());
+    floorOf.get(key).set(id, Number(c.volumeMin));
   }
 
   const failures = [];
   const notes = [];
-  for (const [symbol, names] of bySymbol) {
+  /** #1005 — capability says the symbol CAN trade; the bot's CONFIGURED SIZE says otherwise. */
+  const sizeFailures = [];
+  const sizeNotes = [];
+  for (const [symbol, botList] of bySymbol) {
+    const names = botList.map((b) => b.name);
     const tradeable = [...(canTrade.get(symbol) || [])].filter((id) => activeBrokers.includes(id));
+    let usable = [];
 
     // ── An EXPLICIT active-MT5 route is a capability fact someone verified by hand, and #1002
     //    never second-guesses it. So this check does not either: if that broker cannot trade the
@@ -169,16 +188,15 @@ function evaluate(bots, routes, capability, activeBrokers) {
             `routed to broker ${routed}, which reports tradeMode=0 (or does not list it), and an ` +
             `explicit route is never overridden — this bot can never trade`,
         });
+        continue;
       }
+      usable = [routed];
+    } else if (nonMt5Routed.has(symbol)) {
+      // ⚠️ Checked BEFORE the capability branch: a symbol routed to binance is not an MT5 symbol,
+      // and testing it against MT5 tradeMode reported a healthy crypto bot as permanently dead.
+      // It is ALSO why the size floor below cannot false-positive: this `continue` happens first.
       continue;
-    }
-
-    // ── No usable MT5 route: either out of scope, or it depends on the capability fallback.
-    //    ⚠️ Checked BEFORE the capability branch: a symbol routed to binance is not an MT5 symbol,
-    //    and testing it against MT5 tradeMode reported a healthy crypto bot as permanently dead.
-    if (nonMt5Routed.has(symbol)) continue;
-
-    if (tradeable.length === 0) {
+    } else if (tradeable.length === 0) {
       failures.push({
         symbol,
         bots: names,
@@ -187,19 +205,51 @@ function evaluate(bots, routes, capability, activeBrokers) {
           `list, or listed with tradeMode=0 on all of them (active brokers: ${activeBrokers.join(', ')})`,
       });
       continue;
+    } else {
+      usable = tradeable;
+      const dflt = activeBrokers[0];
+      if (!tradeable.includes(dflt)) {
+        notes.push({
+          symbol,
+          bots: names,
+          reason:
+            `has no explicit route and the default broker ${dflt} cannot trade it; ` +
+            `#1002's resolveForOrder() will use broker ${tradeable[0]} instead`,
+        });
+      }
     }
-    const dflt = activeBrokers[0];
-    if (!tradeable.includes(dflt)) {
-      notes.push({
-        symbol,
-        bots: names,
-        reason:
-          `has no explicit route and the default broker ${dflt} cannot trade it; ` +
-          `#1002's resolveForOrder() will use broker ${tradeable[0]} instead`,
-      });
+
+    // ── SIZE FLOOR (#1005) — reached only when the symbol CAN be traded. Venue-aware BY
+    //    CONSTRUCTION rather than by an extra check: the non-MT5 branch above `continue`s first, so
+    //    an MT5 floor is never applied to a symbol routed elsewhere (the BTC false positive that
+    //    audit-bot-activation.cjs was corrected for on 2026-09-26).
+    const floors = [...(floorOf.get(symbol) ?? new Map())].filter(([id]) => usable.includes(id));
+    if (floors.length === 0) continue; // no KNOWN floor — unknown must never read as a failure
+    for (const bot of botList) {
+      const size = Number(bot.baseSize);
+      if (!Number.isFinite(size)) continue;
+      const fits = floors.filter(([, min]) => min <= size);
+      if (fits.length === 0) {
+        sizeFailures.push({
+          symbol,
+          bot: bot.name,
+          reason:
+            `baseSize ${size} is below the volume floor on EVERY broker that can trade ${symbol} ` +
+            `(${floors.map(([id, min]) => `broker ${id}: ${min}`).join(', ')}) — it can never fill`,
+        });
+      } else if (fits.length < floors.length) {
+        sizeNotes.push({
+          symbol,
+          bot: bot.name,
+          reason:
+            `baseSize ${size} is below the floor on some brokers that can trade ${symbol} ` +
+            `(${floors.filter(([, min]) => min > size).map(([id, min]) => `broker ${id}: ${min}`).join(', ')}) ` +
+            `— it fills only on the others`,
+        });
+      }
     }
   }
-  return { failures, notes };
+  return { failures, notes, sizeFailures, sizeNotes };
 }
 
 /** Synthetic inputs that MUST produce a failure — a guard never observed to fail is decoration. */
@@ -257,9 +307,51 @@ function selfTest() {
     console.error('❌ self-test: a non-MT5 (binance) route must be out of scope, not noted or failed');
     return 1;
   }
-  console.log('✅ self-test: 5 cases — the rule was observed to FAIL a dead bot and an explicit route to');
-  console.log('   a broker that cannot trade it, PASS a tradeable one, NOTE a #1002 redirect, and SKIP a');
-  console.log('   non-MT5 (crypto) route entirely.');
+  // ⚠️ #1005 SIZE-FLOOR cases. The LAST one is the BTC REGRESSION: a floor taken from the wrong venue.
+  const belowFloor = evaluate(
+    [{ name: 'Tiny Bot', symbol: 'BTC', active: true, baseSize: 0.01 }],
+    [],
+    [{ brokerId: 2, name: 'BTC', tradeMode: 4, volumeMin: 1 }, { brokerId: 3, name: 'BTC', tradeMode: 4, volumeMin: 1 }],
+    [2, 3],
+  );
+  if (belowFloor.sizeFailures.length !== 1) {
+    console.error('❌ self-test: a baseSize below the floor on EVERY capable broker must FAIL');
+    return 1;
+  }
+  const fitsFloor = evaluate(
+    [{ name: 'Big Bot', symbol: 'BTC', active: true, baseSize: 1 }],
+    [],
+    [{ brokerId: 2, name: 'BTC', tradeMode: 4, volumeMin: 1 }],
+    [2, 3],
+  );
+  if (fitsFloor.sizeFailures.length !== 0) {
+    console.error('❌ self-test: a baseSize AT the floor must not fail');
+    return 1;
+  }
+  const unknownFloor = evaluate(
+    [{ name: 'Unknown Floor Bot', symbol: 'BTC', active: true, baseSize: 0.01 }],
+    [],
+    [{ brokerId: 2, name: 'BTC', tradeMode: 4, volumeMin: null }],
+    [2, 3],
+  );
+  if (unknownFloor.sizeFailures.length !== 0) {
+    console.error('❌ self-test: an UNKNOWN floor (NULL) must not fail — unknown is not "no minimum"');
+    return 1;
+  }
+  const wrongVenue = evaluate(
+    [{ name: 'BTC Investment Monitor', symbol: 'BTC', active: true, baseSize: 0.01 }],
+    [{ symbol: 'BTC', brokerId: 0, enabled: true, provider: 'binance' }],
+    [{ brokerId: 2, name: 'BTC', tradeMode: 4, volumeMin: 1 }],
+    [2, 3],
+  );
+  if (wrongVenue.sizeFailures.length !== 0) {
+    console.error('❌ self-test: a non-MT5 symbol must NOT be judged against an MT5 floor (the BTC regression)');
+    return 1;
+  }
+  console.log('✅ self-test: 9 cases — the rule was observed to FAIL a dead bot, an explicit route to');
+  console.log('   a broker that cannot trade it, and a baseSize below the floor on every capable broker;');
+  console.log('   PASS a tradeable bot and one AT the floor; NOTE a #1002 redirect; and treat a non-MT5');
+  console.log('   route and an UNKNOWN floor as NOT failures.');
   return 0;
 }
 
@@ -289,9 +381,9 @@ async function main() {
   let bots, routes, capability;
   try {
     [bots, routes, capability] = await Promise.all([
-      prisma.tradingStrategy.findMany({ where: { active: true }, select: { name: true, symbol: true } }),
+      prisma.tradingStrategy.findMany({ where: { active: true }, select: { name: true, symbol: true, baseSize: true } }),
       prisma.symbolRoute.findMany({ select: { symbol: true, brokerId: true, enabled: true, provider: true } }),
-      prisma.brokerSymbol.findMany({ select: { brokerId: true, name: true, tradeMode: true } }),
+      prisma.brokerSymbol.findMany({ select: { brokerId: true, name: true, tradeMode: true, volumeMin: true } }),
     ]);
   } catch (err) {
     // ⚠️ ERROR, never pass — see the header. A check that inspects nothing must not report OK.
@@ -302,11 +394,11 @@ async function main() {
   }
   await prisma.$disconnect();
 
-  const { failures, notes } = evaluate(bots, routes, capability, activeBrokers);
+  const { failures, notes, sizeFailures, sizeNotes } = evaluate(bots, routes, capability, activeBrokers);
 
   if (args.includes('--json')) {
-    console.log(JSON.stringify({ activeBrokers, bots: bots.length, failures, notes }, null, 2));
-    process.exit(failures.length > 0 ? 1 : 0);
+    console.log(JSON.stringify({ activeBrokers, bots: bots.length, failures, notes, sizeFailures, sizeNotes }, null, 2));
+    process.exit(failures.length > 0 || sizeFailures.length > 0 ? 1 : 0);
   }
 
   console.log(`\n[route-capability] ${bots.length} active bot(s), ${activeBrokers.length} active broker(s) ` +
@@ -317,15 +409,28 @@ async function main() {
     for (const n of notes) console.log(`   • ${n.symbol} (${n.bots.join(', ')}) — ${n.reason}`);
   }
 
-  if (failures.length === 0) {
-    console.log('\n✅ OK — every active bot has a symbol at least one active broker can trade.\n');
+  if (sizeNotes.length > 0) {
+    console.log(`\n\u2139\ufe0f  ${sizeNotes.length} bot(s) fill only on SOME capable brokers (size below another broker's floor):`);
+    for (const n of sizeNotes) console.log(`   • ${n.symbol} (${n.bot}) — ${n.reason}`);
+  }
+
+  if (failures.length === 0 && sizeFailures.length === 0) {
+    console.log('\n✅ OK — every active bot has a symbol at least one active broker can trade,');
+    console.log('   and every baseSize meets the floor on a broker that can carry it.\n');
     process.exit(0);
   }
 
-  console.error(`\n❌ ${failures.length} bot symbol(s) NO active broker can trade — these bots can never trade:\n`);
-  for (const f of failures) console.error(`   • ${f.symbol} (${f.bots.join(', ')})\n     ${f.reason}`);
-  console.error('\n   Fix: route the symbol to a broker that lists it with tradeMode<>0, or deactivate the bot.');
-  console.error('   Note: `broker_symbol` is refreshed from the bridges; a stale row can report the old mode.\n');
+  if (failures.length > 0) {
+    console.error(`\n❌ ${failures.length} bot symbol(s) NO active broker can trade — these bots can never trade:\n`);
+    for (const f of failures) console.error(`   • ${f.symbol} (${f.bots.join(', ')})\n     ${f.reason}`);
+  }
+  if (sizeFailures.length > 0) {
+    console.error(`\n❌ ${sizeFailures.length} bot(s) whose CONFIGURED SIZE can never fill (#1005):\n`);
+    for (const f of sizeFailures) console.error(`   • ${f.symbol} (${f.bot})\n     ${f.reason}`);
+    console.error('   Fix: raise the bot\'s baseSize to the floor, or route it to a broker whose floor it meets.');
+    console.error('   ⚠️ Raising a baseSize IS a maths change — it alters how much a tradeable symbol trades.');
+  }
+  console.error('\n   Note: `broker_symbol` is refreshed from the bridges; a stale row can report the old mode or floor.\n');
   process.exit(1);
 }
 
