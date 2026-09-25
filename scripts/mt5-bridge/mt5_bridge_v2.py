@@ -787,10 +787,22 @@ def connection_watchdog():
     INSTEAD OF: Making this thread more aggressive, adding a second in-process
                watchdog, or lowering WATCHDOG_FAILURES_BEFORE_RECONNECT. All three
                assume the thread gets to run, which is the thing in question.
-    REVERSE BY: Making the HTTP server threaded (ThreadingHTTPServer) AND proving a
-               hard timeout on the probe, then re-running the :5002 canary until the
-               log advances past 'Initializing MT5'. That is the evidence that would
-               overturn this.
+    SUPERSEDED IN PART (2026-09-25, measured - do not drop this line):
+               The connect is now BOUNDED. `MT5_INIT_TIMEOUT_MS` is passed to every
+               `mt5.initialize()` (it was never passed before, which is why the call
+               could hold the interpreter forever), and the :5002 canary shows the
+               connect RETURNING after ~9s and `/health` then ANSWERING with
+               `state=terminal-down` and the remedy. So the STARTUP hang is covered
+               IN-PROCESS, no supervisor is needed, and `scripts/tcs-launch.ps1` is
+               untouched.
+               WHAT IS *NOT* SUPERSEDED: an in-process thread still cannot act
+               DURING a blocking call, so nothing here licenses a SECOND in-process
+               watchdog; and a bridge that wedges AFTER a successful connect is still
+               uncovered - this removes the startup hold, not every hold.
+    REVERSE BY: Removing the `timeout=` argument, or shrinking the default below a
+               real connect's cost (measured ~11ms on a live bridge, so the 20s
+               default has ~2000x headroom). Re-run the :5002 canary to see the
+               connect hang again.
     REGISTER:  docs/SETTLED-DECISIONS.md row 37
     GUARD:     scripts/mt5-bridge/test_connection_watchdog.py (13 tests - canaried
                both directions, but they cover CLASSIFICATION ONLY; nothing here
