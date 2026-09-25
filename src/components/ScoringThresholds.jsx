@@ -34,6 +34,7 @@
  * visibility.
  */
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { SettingRow } from './SettingsControls';
@@ -132,6 +133,14 @@ export function ThresholdClassification() {
           {summary.activeNoData > 0 && ` · ${summary.activeNoData} unmeasured`}
         </span>
       </SettingRow>
+
+      {/*
+        ⚠️ Sits directly under the two ceiling readings above, because it answers the other half
+        of the same question: those say what a protocol HAS reached, this says how much of the
+        scale it is being measured against could ever be earned. Reading one without the other is
+        how a low percentage gets mistaken for a broken protocol.
+      */}
+      <ReachableCapacity />
     </>
   );
 }
@@ -203,5 +212,121 @@ export function BotBarsTable() {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * ReachableCapacity — how much of each protocol's denominator has NEVER been earned
+ * directionally, and what its ceiling becomes on a scale that excludes that capacity.
+ *
+ * ⚠️ WHY THIS EXISTS (#761 point 3)
+ * ---------------------------------
+ * `ThresholdClassification` above reports the measured ceiling as a percentage of the FULL
+ * configured denominator. #761 established those percentages are honest but that the BANDS
+ * were calibrated on the old inflated scale — and asks the follow-up directly: *"configured
+ * capacity includes directives that are structurally unlikely to fire together, so the
+ * practical ceiling is well below the configured max. Worth measuring the realistic
+ * maximum."* `peakReach%` is that measurement.
+ *
+ * ⚠️ ON DEMAND, NOT ON PAGE LOAD — and that is deliberate.
+ * `GET /api/scoring/gated/reachable-capacity` costs ~500 ms because it walks every recorded
+ * breakdown. The `thresholds` endpoint above already measured 4793 ms against a 5000 ms
+ * budget, so bolting this on would have broken that budget; and fetching it eagerly on the
+ * Scoring page would make every visit pay 500 ms for a number most visits do not read.
+ * So the query is `enabled: false` until the reader asks for it.
+ *
+ * ⚠️ THIS ASSERTS NO VERDICT. It is the one place in this file that does not print a
+ * CANNOT FIRE badge, and that is on purpose. A high `never%` is largely a STRUCTURAL
+ * property of the stable-denominator design — direction eligibility comes from config, not
+ * from the tick (SETTLED-DECISIONS rows 2 and 3) — NOT a per-protocol fault. This repo
+ * already retired a warning of exactly this shape (#906, ADR-011): it derived capacity from
+ * declared `directionBias`, fired for 14 of 17 protocols on one structural cause, and
+ * carried no information. Reproducing that framing here would repeat it. The numbers are
+ * raw and the explanation travels with them.
+ *
+ * ⚠️ `—` IS NOT `0`. `peakReach%` is null when nothing was ever directional: nothing was
+ * reachable, so there is no ratio, rather than a ratio of zero. Same distinction the rest of
+ * this file makes between "no data" and "cannot fire".
+ */
+export function ReachableCapacity() {
+  const [open, setOpen] = useState(false);
+  const { data, isFetching, isError } = useQuery({
+    queryKey: ['scoring-reachable-capacity'],
+    queryFn: () => apiGet('/api/scoring/gated/reachable-capacity?days=7'),
+    enabled: open,
+    staleTime: 300_000,
+    retry: 1,
+  });
+
+  return (
+    <div className="setting-row">
+      <div className="setting-info" style={{ maxWidth: '100%', width: '100%' }}>
+        <strong>Reachable capacity</strong>
+        <p>
+          How much of each protocol&apos;s configured capacity has <em>never</em> been earned
+          directionally, and what its best reading becomes on a scale excluding it.{' '}
+          <strong>A high figure is mostly structural, not a fault</strong> — see the note
+          below before reading it as one.
+        </p>
+        {!open && (
+          <button type="button" className="cta" onClick={() => setOpen(true)}>
+            Measure reachable capacity (~0.5s)
+          </button>
+        )}
+        {open && isFetching && (
+          <p className="settings-section-desc">Measuring… this walks every recorded breakdown.</p>
+        )}
+        {open && isError && (
+          <p className="settings-section-desc">
+            Could not measure reachable capacity. Reported by
+            <code> GET /api/scoring/gated/reachable-capacity</code>.
+          </p>
+        )}
+        {open && data && (
+          <>
+            <p className="settings-section-desc">
+              {data.baseline.protocols} protocols · median{' '}
+              <strong>{data.summary.medianNeverPct}%</strong> of configured capacity never earned
+              directionally · worst <code>{data.summary.worst.slug}</code> at{' '}
+              {data.summary.worst.neverPct}% · best <code>{data.summary.best.slug}</code> at{' '}
+              {data.summary.best.neverPct}%
+            </p>
+            <div className="threshold-table-wrap">
+              <table className="threshold-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Protocol</th>
+                    <th scope="col">Configured</th>
+                    <th scope="col">Reachable</th>
+                    <th scope="col">Never %</th>
+                    <th scope="col">Peak % now</th>
+                    <th scope="col">Peak % of reachable</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.protocols.map((p) => (
+                    <tr key={p.slug}>
+                      <td>{p.slug}</td>
+                      <td>{p.configuredCapacity}</td>
+                      <td>{p.reachableCapacity}</td>
+                      <td>{p.neverPct}%</td>
+                      <td>{p.peakPctOfConfigured}%</td>
+                      <td>{p.peakPctOfReachable == null ? '—' : `${p.peakPctOfReachable}%`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ marginTop: '0.5rem' }}>
+              ⚠️ <strong>This is not a warning list.</strong> A directive that has never been
+              directional in this window is indistinguishable from one that was simply never
+              exercised, and a large share is expected from the stable-denominator design — the
+              denominator counts every non-gate directive, while only directional ones can earn.{' '}
+              <strong>Treat a high figure as &ldquo;investigate&rdquo;, not as proof.</strong>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

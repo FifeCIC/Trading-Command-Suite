@@ -1076,7 +1076,14 @@ const VIEW_META = {
     label: 'Scoring Settings',
     file: 'src/pages/ScoringSettingsPage.jsx',
     css: 'src/pages/settings.css',
-    api: ['GET /api/scoring/gated/thresholds', 'POST /api/automation/layer'],
+    // ⚠️ `reachable-capacity` is ON DEMAND (`enabled: false` until the reader clicks Measure).
+    // It is listed here because the page can call it, not because it loads with the page — it
+    // costs ~500 ms and is deliberately not paid on every visit.
+    api: [
+      'GET /api/scoring/gated/thresholds',
+      'GET /api/scoring/gated/reachable-capacity',
+      'POST /api/automation/layer',
+    ],
   },
   '/settings/automation': {
     tier: 'premium',

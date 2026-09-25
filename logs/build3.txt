@@ -1,0 +1,16 @@
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Help us improve the Prisma ORM for everyone. Share your feedback in a short 2-min survey: https://pris.ly/orm/survey/release-5-22
+
+
+> nest@0.84.0 build
+> tsc -p tsconfig.build.json
+
+   OK  Build succeeded.
+
+== Restarting the API
+   OK  API starting in the background (node dist/src/main.js, PID 18420).
+   OK  API healthy on http://localhost:3201 - /api/version answered.
+BUILD_EXIT=0
+API DOWN
