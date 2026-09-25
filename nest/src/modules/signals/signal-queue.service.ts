@@ -1,8 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { resolveEffectiveRole, directionAllowed } from '../../common/utils/signal-direction';
 // #882 — the ONE freshness bound, shared with the consumer gate (AutomationLoopService).
 import { getMaxSignalAgeMinutes } from '../../common/utils/signal-freshness';
+// #974 — persists WHY a signalled symbol was blocked, so the reason is queryable rather than
+// living only in a log line. AutomationModule is @Global(), so this needs no module import.
+import { AuditLogService } from '../automation/audit-log.service';
 
 /** A per-protocol actionable signal record, ready for queue routing (#714). */
 export interface RoutableSignal {
@@ -37,7 +40,17 @@ export interface RoutableSignal {
 export class SignalQueueService {
   private readonly logger = new Logger(SignalQueueService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    /**
+     * #974 — OPTIONAL on purpose. `signal-queue-expiry.spec.ts` constructs this service with a
+     * prisma stub alone (`new SignalQueueService({ isAvailable: true })`), and a required second
+     * parameter would break that test for a reason unrelated to what it asserts. At runtime
+     * `AutomationModule` is `@Global()` so the provider is always present; the `?` exists for the
+     * test edge, not for production.
+     */
+    @Optional() private readonly auditLog?: AuditLogService,
+  ) {}
 
   /** Sync queues from this run's routing records + all scored pairs.
    *
@@ -121,17 +134,34 @@ export class SignalQueueService {
         // happened. `blocked` = the protocol DID signal but the envelope was not
         // pre-trade ready (gate/risk/conflict); `silent` = no signal at all.
         const blocked: string[] = [];
+        // The same blocks, UNFORMATTED. `blocked` above is display text for the log line;
+        // parsing the cause back out of it would make a second source of truth for one fact.
+        const blockedPairs: Array<{ sym: string; why: string }> = [];
         const silent: string[] = [];
         for (const sym of dead) {
           const why = notRouteable?.get(`${pid}|${sym}`);
-          if (why) blocked.push(`${sym} (${why})`);
-          else silent.push(sym);
+          if (why) {
+            blocked.push(`${sym} (${why})`);
+            blockedPairs.push({ sym, why });
+          } else silent.push(sym);
         }
 
         if (blocked.length > 0) {
           this.logger.log(
             `Queue skip: ${pid} signalled but blocked pre-trade [${blocked.join(' | ')}]`,
           );
+          // ── Persist what the log just said (#974) ────────────────────────────────────────
+          // Until this existed the cause was LOG-ONLY, so "why didn't this symbol trade?" was
+          // answerable only by grepping api-out.log — while AuditLogService's own stated
+          // contract is that it answers exactly that question with a query. That gap is the
+          // reason the only observable symptom was "nothing happened".
+          //
+          // ⚠️ Step is `pre_trade_blocked`, NOT the duplicate guard's `duplicate_check`
+          // (`logBlocked`). Same `decision`, DIFFERENT cause — merging them would recreate the
+          // very defect the 'Queue skip' / 'Queue void' split was introduced to fix.
+          for (const { sym, why } of blockedPairs) {
+            this.auditLog?.logPreTradeBlocked(pid, sym, why);
+          }
         }
         if (silent.length === 0) continue;
 

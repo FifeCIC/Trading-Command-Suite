@@ -19,7 +19,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface AuditEventInput {
-  tickNumber: number;
+  /** Omit to attribute the event to the tick in progress. See `AuditLogService.currentTick`. */
+  tickNumber?: number;
   strategyId?: string;
   symbol?: string;
   step: string;
@@ -35,11 +36,30 @@ export class AuditLogService {
   /** Batch buffer to reduce DB writes. Flushed after each tick. */
   private buffer: AuditEventInput[] = [];
 
+  /**
+   * The tick currently in progress, set by `logTickStart()`.
+   *
+   * WHY (#974): a producer that is NOT the loop itself needs to attribute its event to a tick
+   * but has no tick number of its own. `SignalQueueService` is exactly that case — it discovers
+   * "this protocol signalled and the pre-trade gate blocked it" during the tick but is called
+   * with only routing data. Threading a tick number down through the whole scoring chain to
+   * satisfy a diagnostic would be the tail wagging the dog; `logTickStart()` already runs once
+   * per tick, so the loop's own number is available here and is the correct value.
+   *
+   * `0` means "no tick has started in this process" — a real, visible value rather than a
+   * guess, and such events are distinguishable from tick-attributed ones.
+   */
+  private currentTick = 0;
+
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Enqueue an event for batch write at end of tick. */
+  /**
+   * Enqueue an event for batch write at end of tick.
+   *
+   * `tickNumber` may be omitted; it then defaults to the tick in progress (see `currentTick`).
+   */
   log(event: AuditEventInput): void {
-    this.buffer.push(event);
+    this.buffer.push({ ...event, tickNumber: event.tickNumber ?? this.currentTick });
   }
 
   /** Get count of buffered events (not yet written to DB). */
@@ -66,7 +86,9 @@ export class AuditLogService {
         await (this.prisma as any).automationEvent.createMany({
           data: chunk.map(e => ({
             timestamp: new Date(),
-            tickNumber: e.tickNumber,
+            // `log()` always fills this; `?? 0` keeps the column's NOT NULL contract explicit
+            // rather than relying on a type that says `number | undefined`.
+            tickNumber: e.tickNumber ?? 0,
             strategyId: e.strategyId ?? null,
             symbol: e.symbol ?? null,
             step: e.step,
@@ -86,7 +108,28 @@ export class AuditLogService {
 
   /** Log a tick-start boundary event. */
   logTickStart(tickNumber: number): void {
+    // ⚠️ Order matters: record the tick BEFORE logging the boundary event, so that any producer
+    // called during this tick attributes correctly even if it runs between these two statements.
+    this.currentTick = tickNumber;
     this.log({ tickNumber, step: 'tick_start' });
+  }
+
+  /**
+   * Log that the pre-trade gate blocked a signal that a protocol genuinely produced (#974).
+   *
+   * ⚠️ Deliberately NOT `logBlocked()` (step `duplicate_check`). The duplicate guard and the
+   * pre-trade gate are DIFFERENT causes, and this codebase has already paid for reporting two
+   * causes under one label — the next investigation is then sent after the wrong component. The
+   * `decision` stays `'BLOCKED'` so existing queries still find it; the `step` is what separates
+   * them, exactly as the 'Queue skip' / 'Queue void' split already does in the log.
+   */
+  logPreTradeBlocked(protocolId: string, symbol: string, reason: string): void {
+    this.log({
+      symbol,
+      step: 'pre_trade_blocked',
+      decision: 'BLOCKED',
+      detail: { protocolId, reason },
+    });
   }
 
   /** Log that bars were fetched for a symbol. */
