@@ -182,3 +182,34 @@ npx rimraf dist; npx tsc -p tsconfig.build.json
 | ✅ **Always** update `schema.prisma` in the same commit | Otherwise the model drifts from reality again. |
 | ✅ **Always** run `db:check` before closing a schema-touching issue | It is the only thing standing between a routine push and data loss. |
 | ✅ **Always** put `CREATE TABLE` in a migration/script, **never** in a service method | Repeated execution is a different bug. |
+
+---
+
+## ⚠️ Two timestamps, two meanings — read the WRITE path, not the column name
+
+**Added 2026-09-25, because the same mistake had been made twice and the owner asked why.**
+
+| column | means | moves? |
+|---|---|---|
+| `createdAt` | **first insert** | **never** — the upsert's `ON DUPLICATE KEY` leaves it |
+| `updatedAt` | **last confirmation** | refreshed on every re-signal |
+
+> **Staleness is a claim about `updatedAt`.** `createdAt` reads like "age" and is not.
+
+**The cost, measured twice:**
+
+- **#882** — *"An earlier pass on #882 ordered by `createdAt` and overstated staleness for 5 of 7 rows for exactly this reason."* (`signal-freshness.ts`)
+- **#973** — reported *"5 rows PENDING for up to 8 days"*, measured on `createdAt`. Closed 2026-09-25 as **not a defect**: `0` rows breached the 360-minute `updatedAt` bound. The oldest `expired` row was *exactly* the oldest `pending` row the issue quoted — it had not stuck, it had expired.
+
+**Why it keeps happening — the reason, not the repair.** The correct column is not discoverable *at the point of query*. Someone asks "how old is this?" and reaches for the column whose name says age. A comment in a source file does not fire; a build gate does not fire on an ad-hoc `SELECT` in an investigation, which is where both occurrences happened.
+
+**So the fix is placed at the introspection point, and there are four of them:**
+
+1. **Column `COMMENT`s on the live table.** `DESCRIBE strategy_signal_queue` now names the authority. This is the one that would have caught both occurrences.
+2. **The canonical DDL** — `nest/prisma/raw-managed/strategy_signal_queue.sql`, so a restore carries the same warning.
+3. **This rule** — loads whenever an agent works on the schema.
+4. **The code authority** — `getMaxSignalAgeMinutes()` / `signalAgeMinutes()` in `nest/src/common/utils/signal-freshness.ts`. **Import them; never redeclare the bound or hand-roll the age.**
+
+⚠️ **A large `createdAt`→`updatedAt` drift means the signal is being KEPT ALIVE, not stuck.** Measured: EURCHF 226h created / 142 min updated (drift 13,418 min).
+
+⚠️ **Expiry is REVERSIBLE by design.** `status='expired'` is an archive; a later re-signal resurrects the row to `pending` via the existing upsert. A status moving *backwards* is a designed path, **not** an anomaly to investigate.
