@@ -57,24 +57,12 @@
    is a COMPOUND selector rather than its own class. */
 .filterActive.filterFaulty { background: var(--risk-critical); color: var(--bg); border-color: var(--risk-critical); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
-
-.card {
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; padding: 0.85rem 1rem;
-  cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
-}.card:hover { border-color: var(--accent); }
-.cardSelected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-
-.cardTop { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
 .cardDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.cardName { font-size: 0.9rem; flex: 1; }
 .cardType {
   font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid;
   font-weight: 600; white-space: nowrap;
 }
 
-.cardMeta { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 0.4rem; }
 .chip {
   font-size: 0.62rem; padding: 1px 6px; border-radius: 3px;
   background: var(--line); color: var(--ink-soft);
@@ -82,9 +70,7 @@
 /* ⚠️ THEMED tokens now, NOT hex. These were literal (#8b5cf6 / #06b6d4 / #d97706) which never
    followed the theme - the same defect the owner reported on the per-bot truth view. The runtime
    risk ramp gives three distinguishable, theme-aware tones. */
-.chipWl { border: 1px solid var(--risk-watch); background: color-mix(in srgb, var(--risk-watch) 14%, transparent); }
 .chipProto { border: 1px solid var(--risk-normal); background: color-mix(in srgb, var(--risk-normal) 14%, transparent); }
-.chipBroker { border: 1px solid var(--risk-elevated); background: color-mix(in srgb, var(--risk-elevated) 16%, transparent); }
 
 /* The role suffix on a protocol chip (LONG / SHORT / BOTH). Direction comes from the SUBSCRIPTION,
    not the bot, so it belongs on the protocol chip rather than anywhere else on the card. */
@@ -110,19 +96,6 @@
   color: var(--ink);
 }
 
-.cardScore { display: flex; justify-content: space-between; align-items: center; margin: 0.3rem 0; }
-.scoreLabel { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.65rem; color: var(--ink-soft); }
-.scoreValue { font-size: 1.1rem; font-weight: 800; }
-
-.cardPositions { font-size: 0.65rem; color: var(--accent); margin-top: 0.2rem; }
-.cardWarning {
-  font-size: 0.62rem; padding: 3px 8px; border-radius: 4px; margin-top: 0.3rem;
-  border: 1px solid var(--risk-critical);
-  background: color-mix(in srgb, var(--risk-critical) 10%, transparent);
-  color: var(--ink);
-}
-
-.cardDetail { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
 .detailDesc { font-size: 0.72rem; color: var(--ink-soft); margin: 0 0 0.5rem; }
 .detailGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 1rem; font-size: 0.7rem; color: var(--ink-soft); }
 .detailGrid strong { color: var(--ink); }
