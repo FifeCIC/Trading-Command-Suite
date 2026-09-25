@@ -133,19 +133,15 @@ export function orderRouteProblems(
  * per-tick scoring, quotes) resolves in O(1) with **zero DB hits**.
  *
  * Fallback order when no explicit row exists:
- *   1. asset-type default   (env `MT5_ASSET_BROKER_DEFAULTS`, e.g. "index:3,forex:2")
- *   2. primary broker       (first entry of MT5_ACTIVE_BROKERS)
+ *   1. capability selection  (a broker whose OWN symbol list permits it — #1002)
+ *   2. primary broker        (first entry of MT5_ACTIVE_BROKERS)
  *
- * ⚠️ (1) IS OPTIONAL AND UNSET BY DEFAULT, and it is a PREFERENCE — never a limit. Until
- * 2026-09-25 (#1002) it was explained ONLY here: it appeared in no `.env`, no `.env.example`,
- * no doc and no settings registry. A supported option that nobody can discover is
- * indistinguishable from one that does not exist, so it is now documented in
- * `nest/.env.example` as well.
- *
- * ⚠️ It is also now the SECOND choice. #1002 added capability-based selection (`tradeableOn`
- * below) — the broker's own symbol list decides whether it CAN trade a symbol. Use this env
- * only to choose between brokers that can BOTH trade it; it cannot make a broker trade
- * something its own list disables (`SYMBOL_TRADE_MODE = 0`).
+ * ⚠️ A THIRD, EARLIER STEP WAS REMOVED 2026-09-25 (#1002): an asset-type → broker map read from
+ * `MT5_ASSET_BROKER_DEFAULTS`. It RETURNED EARLY, before any capability consideration, so setting
+ * it would route a symbol to a broker whose own list refuses it (`SYMBOL_TRADE_MODE = 0`) — the
+ * exact failure #1002 exists to prevent. It was also never configured: a scan of the repo found no
+ * non-comment `MT5_ASSET_BROKER_DEFAULTS=`. Dead AND a trap, so it was removed, not documented.
+ * REVERSE BY: restore the map and the branch, placed AFTER the capability check.
  *
  * This exists so a symbol like UK100 can be sourced from Pepperstone (:5001,
  * current feed) while forex majors stay on MetaQuotes (:5000) — and it scales to
@@ -157,8 +153,6 @@ export class Mt5SymbolRouter implements OnModuleInit {
 
   /** symbol(UPPER) → { brokerId, brokerSymbol, provider } */
   private readonly routes = new Map<string, { brokerId: number; brokerSymbol: string | null; provider: string | null }>();
-  /** assetType(lower) → brokerId */
-  private readonly assetDefaults = new Map<string, number>();
 
   /**
    * SYMBOL → the brokerIds whose OWN symbol list says they can trade it (#1002).
@@ -185,15 +179,9 @@ export class Mt5SymbolRouter implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly conn: Mt5ConnectionManager,
   ) {
-    // Parse asset-type default brokers: MT5_ASSET_BROKER_DEFAULTS="index:3,forex:2"
-    // ⚠️ Unset by default; a PREFERENCE only, and second to capability-based selection (#1002).
-    // Empty env → an empty map, which is the normal state — not a misconfiguration.
-    const raw = process.env.MT5_ASSET_BROKER_DEFAULTS || '';
-    for (const pair of raw.split(',')) {
-      const [type, idStr] = pair.split(':').map((s) => s.trim());
-      const id = parseInt(idStr, 10);
-      if (type && !isNaN(id)) this.assetDefaults.set(type.toLowerCase(), id);
-    }
+    // NOTE: an asset-type → broker default map (`MT5_ASSET_BROKER_DEFAULTS`) was parsed here until
+    // 2026-09-25 (#1002). It was removed — see the class docstring: it returned EARLY, bypassing the
+    // capability check, and was never configured. Nothing to parse means no constructor work here.
   }
 
   async onModuleInit(): Promise<void> {
@@ -283,15 +271,21 @@ export class Mt5SymbolRouter implements OnModuleInit {
     return this.conn.getBrokerIds();
   }
 
-  /** Resolve the brokerId for a symbol without building the full route. */
+  /**
+   * Resolve the brokerId for a symbol without building the full route.
+   *
+   * ⚠️ `assetType` IS RETAINED IN THE SIGNATURE BUT NO LONGER SELECTS A BROKER (2026-09-25, #1002).
+   * It used to consult an `MT5_ASSET_BROKER_DEFAULTS` map and return EARLY — before any capability
+   * consideration — so setting it could route a symbol to a broker whose own symbol list refuses it.
+   * It was also never configured anywhere. The parameter stays because `resolve()` and its callers
+   * pass it, and removing it would ripple for no benefit.
+   * REVERSE BY: restore the map and the branch, placed AFTER the capability check.
+   */
   getBrokerId(symbol: string, assetType?: string): number {
+    void assetType; // no longer selects a broker — see note above
     const key = (symbol || '').toUpperCase();
     const explicit = this.routes.get(key);
     if (explicit) return explicit.brokerId;
-    if (assetType) {
-      const byType = this.assetDefaults.get(assetType.toLowerCase());
-      if (byType !== undefined) return byType;
-    }
     return this.primaryBrokerId();
   }
 
