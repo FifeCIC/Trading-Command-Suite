@@ -349,7 +349,13 @@ export default function ExecutionQueuePage() {
                     <div className="eq-job-results">
                       {job.result.results.slice(0, 5).map((r, j) => (
                         <span key={j} className={`eq-result-chip eq-result-${r.signal?.toLowerCase()}`}>
-                          {r.symbol}: {r.composite?.toFixed(0)} {r.signal}
+                          {/* ⚠️ §9.14 / D5=A — the composite is a score, so the free edition drops the
+                              NUMBER and keeps the chip's other two facts (symbol and direction).
+                              Blanking it would leave a gap that reads like missing data; a chip that
+                              still says "EURUSD BUY" is true and useful on its own. */}
+                          {r.symbol}
+                          {import.meta.env.VITE_EDITION !== 'free' && <>: {r.composite?.toFixed(0)}</>}{' '}
+                          {r.signal}
                         </span>
                       ))}
                       {job.result.results.length > 5 && (

@@ -169,12 +169,19 @@ export default function TradingPlansPage() {
                   <strong>{selected.content.symbol}</strong>
                   <span className="plan-signal-proto">{selected.content.protocolName || selected.content.protocolId}</span>
                 </div>
-                <div className="plan-signal-metrics">
-                  <span><em>Combined</em> <strong>{selected.content.combinedStrength ?? '—'}</strong></span>
-                  <span><em>Signal</em> <strong>{selected.content.signalPct != null ? `${selected.content.signalPct}%` : '—'}</strong></span>
-                  <span><em>Opportunity</em> <strong>{selected.content.opportunityPct != null ? `${selected.content.opportunityPct}%` : '—'}</strong></span>
-                  <span><em>Confidence</em> <strong>{selected.content.confidence ?? '—'}</strong></span>
-                </div>
+                {/* ⚠️ §9.14 / D5=A — the free edition shows no score-derived numbers. The row goes as a
+                    UNIT rather than field by field: all four values arrive in the same scoring
+                    payload, so stripping the two obvious percentages and keeping `combinedStrength`
+                    and `confidence` would leave the row looking intact while still carrying scores.
+                    Which fields LOOK like scores is not a safe test — the payload is the test. */}
+                {import.meta.env.VITE_EDITION !== 'free' && (
+                  <div className="plan-signal-metrics">
+                    <span><em>Combined</em> <strong>{selected.content.combinedStrength ?? '—'}</strong></span>
+                    <span><em>Signal</em> <strong>{selected.content.signalPct != null ? `${selected.content.signalPct}%` : '—'}</strong></span>
+                    <span><em>Opportunity</em> <strong>{selected.content.opportunityPct != null ? `${selected.content.opportunityPct}%` : '—'}</strong></span>
+                    <span><em>Confidence</em> <strong>{selected.content.confidence ?? '—'}</strong></span>
+                  </div>
+                )}
                 {(selected.content.topDirectives || []).length > 0 && (
                   <div className="plan-signal-drivers">
                     {(selected.content.topDirectives || []).slice(0, 3).map((d, i) => (

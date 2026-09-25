@@ -583,6 +583,11 @@ export default function SymbolPage() {
         transition={{ delay: 0.02 }}
         aria-label={`Key figures for ${symbol}`}
       >
+      {/* ⚠️ §9.14 / D5=A — this tile is a raw COMPOSITE, i.e. a score. The free edition does not show
+          score-derived numbers, and this page is on the plan's ``score history stripped'' list. The
+          whole tile goes rather than being blanked: a tile reading “—” still reserves space and
+          still tells a reader a number belongs there. Flag folds at build time (Vite define). */}
+      {import.meta.env.VITE_EDITION !== 'free' && (
         <StatTile
           label="Best reading"
           value={bestScore ? `${bestScore.env.composite}` : '—'}
@@ -590,6 +595,7 @@ export default function SymbolPage() {
           tone={bestScore ? signalClass(bestScore.env.signal) : 'sym-sig--none'}
           title="Highest raw composite among protocols returning a live reading. Composite is a SUM of directive scores, not a percentage — the percentage is shown in Protocol Strength below."
         />
+      )}
         <StatTile
           label="Win rate"
           value={aggWinRate === null ? '—' : `${aggWinRate}%`}

@@ -252,12 +252,18 @@ export default function MarketContextPage() {
               </div>
               {/* Multi-factor indicators */}
               <div className="mc-session-indicators">
-                <div className="mc-indicator" title="Average composite score for symbols in this session's region">
-                  <span className="mc-ind-label">Scoring</span>
-                  <span className={`mc-ind-value ${s.avgScore != null ? (s.avgScore >= 50 ? 'mc-ind-good' : 'mc-ind-warn') : 'mc-ind-none'}`}>
-                    {s.avgScore != null ? s.avgScore.toFixed(0) : '—'}
-                  </span>
-                </div>
+                {/* ⚠️ §9.14 / D5=A — 'Average composite score' is a score. The free edition shows no
+                    score-derived numbers, so the indicator is omitted. Its SIBLINGS stay: how many
+                    positions a session carries is not a score, and the session table is the point of
+                    this page. Removing the one indicator, not the panel. */}
+                {import.meta.env.VITE_EDITION !== 'free' && (
+                  <div className="mc-indicator" title="Average composite score for symbols in this session's region">
+                    <span className="mc-ind-label">Scoring</span>
+                    <span className={`mc-ind-value ${s.avgScore != null ? (s.avgScore >= 50 ? 'mc-ind-good' : 'mc-ind-warn') : 'mc-ind-none'}`}>
+                      {s.avgScore != null ? s.avgScore.toFixed(0) : '—'}
+                    </span>
+                  </div>
+                )}
                 <div className="mc-indicator" title="Open positions in this session's currency region">
                   <span className="mc-ind-label">Positions</span>
                   <span className={`mc-ind-value ${s.posCount > 0 ? 'mc-ind-good' : 'mc-ind-none'}`}>
