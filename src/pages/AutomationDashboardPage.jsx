@@ -72,18 +72,33 @@ export default function AutomationDashboardPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
+  // ⚠️ §9.14 — THE ENGINE CONTROLS ARE PREMIUM-ONLY BY DECISION (O2: the endpoints stay in the
+  // BACKEND by design — this is a UI boundary, not a security boundary). The owner's brief is that
+  // the free edition must not offer "start the trading bot".
+  //
+  // ⚠️ Omitting the BUTTONS is not enough on its own: these path literals would still ship in the
+  // free bundle, where anyone can read them and post to them from a console. So the path itself
+  // folds to empty in the free build. The ternary must be written AT THE CALL SITE — a helper taking
+  // the path as an argument would evaluate that argument either way and the literal would still
+  // ship. `import.meta.env.VITE_EDITION` is substituted at build time, so only one branch survives.
+  //
+  // toggle/config are NOT gated: the broker switches and the Confirm setting stay in the free
+  // edition, so their endpoints are genuinely used there.
   const startMutation = useMutation({
-    mutationFn: () => apiPost('/api/automation/start'),
+    mutationFn: () =>
+      apiPost(import.meta.env.VITE_EDITION === 'free' ? '' : '/api/automation/start'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
   const stopMutation = useMutation({
-    mutationFn: () => apiPost('/api/automation/stop'),
+    mutationFn: () =>
+      apiPost(import.meta.env.VITE_EDITION === 'free' ? '' : '/api/automation/stop'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
   const runNowMutation = useMutation({
-    mutationFn: () => apiPost('/api/automation/run-now'),
+    mutationFn: () =>
+      apiPost(import.meta.env.VITE_EDITION === 'free' ? '' : '/api/automation/run-now'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
@@ -173,18 +188,26 @@ export default function AutomationDashboardPage() {
         </h1>
         </div>
         <div className="ad-header-actions">
-          {loopRunning ? (
-            <button className="ad-btn ad-btn-pause" onClick={() => stopMutation.mutate()} disabled={isBusy}>
-              {stopMutation.isPending ? '⏳' : '⏸'} Stop Loop
-            </button>
-          ) : (
-            <button className="ad-btn ad-btn-start" onClick={() => startMutation.mutate()} disabled={isBusy}>
-              {startMutation.isPending ? '⏳' : '▶'} Start Loop
-            </button>
+          {/* ⚠️ §9.14 — Start / Stop / Run Now are the automation ENGINE. The free edition does not
+              present them (owner's brief, §5: it must not offer "start the trading bot"), so they are
+              OMITTED rather than shown-and-disabled — a greyed button still advertises the capability
+              and still ships the handler. The endpoints they call are gated above for the same reason. */}
+          {import.meta.env.VITE_EDITION !== 'free' && (
+            <>
+              {loopRunning ? (
+                <button className="ad-btn ad-btn-pause" onClick={() => stopMutation.mutate()} disabled={isBusy}>
+                  {stopMutation.isPending ? '⏳' : '⏸'} Stop Loop
+                </button>
+              ) : (
+                <button className="ad-btn ad-btn-start" onClick={() => startMutation.mutate()} disabled={isBusy}>
+                  {startMutation.isPending ? '⏳' : '▶'} Start Loop
+                </button>
+              )}
+              <button className="ad-btn ad-btn-run" onClick={() => runNowMutation.mutate()} disabled={isBusy || !loopRunning}>
+                {runNowMutation.isPending ? '⏳' : '⚡'} Run Now
+              </button>
+            </>
           )}
-          <button className="ad-btn ad-btn-run" onClick={() => runNowMutation.mutate()} disabled={isBusy || !loopRunning}>
-            {runNowMutation.isPending ? '⏳' : '⚡'} Run Now
-          </button>
           {/* §9.14 — Architecture Framework is a PREMIUM view; omitted in the free build so the path
               does not reach the shipped bundle. */}
           {import.meta.env.VITE_EDITION !== 'free' && (
@@ -304,14 +327,25 @@ export default function AutomationDashboardPage() {
                     </div>
                     {bs.enabled && (
                       <div className="ad-config-fields">
-                        <label className="ad-config-field">
-                          <span>Trading</span>
-                          <ToggleSwitch
-                            sm
-                            checked={bs.tradingEnabled}
-                            onChange={() => configMutation.mutate({ brokerId, tradingEnabled: !bs.tradingEnabled })}
-                          />
-                        </label>
+                        {/* ⚠️ §9.14 — switching a broker's Trading flag ON is "start the trading bot"
+                            FOR THAT BROKER, so the CONTROL is premium-only. Gated by absence, not by
+                            disabling, for the same reason as the header buttons. Its endpoint
+                            (`/api/automation/config`) is NOT gated: the Threshold and Confirm fields
+                            below still use it in the free edition.
+                            ⚠️ A read-only rendering of the state was considered and NOT done — it
+                            would need a class the stylesheet has not been checked for, and inventing
+                            one is the kind of change that has its own review. The loop status bar
+                            above still reports the overall automation state. */}
+                        {import.meta.env.VITE_EDITION !== 'free' && (
+                          <label className="ad-config-field">
+                            <span>Trading</span>
+                            <ToggleSwitch
+                              sm
+                              checked={bs.tradingEnabled}
+                              onChange={() => configMutation.mutate({ brokerId, tradingEnabled: !bs.tradingEnabled })}
+                            />
+                          </label>
+                        )}
                         <label className="ad-config-field">
                           <span>Threshold</span>
                           {/* ⚠️ The bounds were {40,95} and the fallback was `|| 65` (#839).
@@ -532,7 +566,18 @@ export default function AutomationDashboardPage() {
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
             <h2 className="ad-panel-title">📋 Decision Log {recentDecisions.length > 0 && <span className="ad-count-badge">({recentDecisions.length})</span>}</h2>
             {recentDecisions.length === 0 ? (
-              <EmptyState icon="📋" title="No decisions yet" description="Start the loop and click Run Now to trigger a tick." />
+              <EmptyState
+                icon="📋"
+                title="No decisions yet"
+                /* §9.14 — telling a free user to "Start the loop and click Run Now" points at two
+                   controls that do not exist in their edition. A dead instruction is worse than no
+                   instruction, so the wording follows the edition. */
+                description={
+                  import.meta.env.VITE_EDITION === 'free'
+                    ? 'Decisions appear here once the automation loop runs. Starting the loop is part of the full edition.'
+                    : 'Start the loop and click Run Now to trigger a tick.'
+                }
+              />
             ) : (
               <div className="ad-decision-list">
                 {recentDecisions.slice(0, 15).map((d, i) => {

@@ -168,8 +168,6 @@ export const VIEW_META = {
     css: "src/pages/automation-dashboard.css",
     api: [
       "GET /api/automation/status",
-      "POST /api/automation/start",
-      "POST /api/automation/stop",
     ],
   },
   "/automation/automation-rules": {

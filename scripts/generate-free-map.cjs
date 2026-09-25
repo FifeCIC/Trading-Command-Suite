@@ -244,7 +244,30 @@ const premiumPaths = Object.entries(meta).filter(([, e]) => e.tier === 'premium'
 const freeIdTails = new Set([...freePaths].map((p) => p.slice(p.lastIndexOf('/') + 1)));
 
 const freeNavTree = filterNavTree(navTree, freePaths);
-const freeMeta = Object.fromEntries(Object.entries(meta).filter(([, e]) => e.tier === 'free'));
+
+// ── endpoint redaction (§9.14 / O2) ──────────────────────────────────────────────────────────
+// The engine endpoints stay in the BACKEND — O2 makes this a UI boundary by decision. They must not
+// be ADVERTISED in the free build's metadata, though: a declared endpoint is a published capability,
+// and the free edition no longer presents a control that uses one.
+//
+// ⚠️ Found by measuring the ARTEFACT, not by reading the page. Gating the page's buttons removed
+// `run-now` and every button label, and still left `POST /api/automation/start` and `/stop` in the
+// free bundle — from HERE. **Removing a control is not the same as removing the declaration that
+// publishes it.** Any future strip should end by grepping the built bundle, not the source.
+const REDACT_ENDPOINTS = [/^POST \/api\/automation\/(start|stop|run-now)$/];
+
+let redactedEndpoints = 0;
+const freeMeta = Object.fromEntries(
+  Object.entries(meta)
+    .filter(([, e]) => e.tier === 'free')
+    .map(([k, e]) => {
+      const api = e.api || [];
+      const kept = api.filter((ep) => !REDACT_ENDPOINTS.some((re) => re.test(ep)));
+      if (kept.length === api.length) return [k, e];
+      redactedEndpoints += api.length - kept.length;
+      return [k, { ...e, api: kept }];
+    }),
+);
 const freeExplanations = Object.fromEntries(
   Object.entries(explanations).filter(([id]) => freeIdTails.has(id)),
 );
@@ -369,6 +392,11 @@ if (unusedScrub.length) {
   console.warn(
     `⚠ ${unusedScrub.length} vocabulary scrub rule(s) matched nothing: ` +
       `${unusedScrub.map(([f]) => `"${f}"`).join(', ')} — the wording may have moved, or the leak is already gone. Verify, then delete the rule.`,
+  );
+}
+if (redactedEndpoints) {
+  console.log(
+    `    endpoints redacted : ${redactedEndpoints} engine endpoint(s) no longer advertised in the free copy`,
   );
 }
 
