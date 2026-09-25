@@ -37,6 +37,27 @@ const CONTROL_SNAPSHOT = {
   snapshot: { mode: 'score', protocolId: 'xau-speed-m15', brokerId: 'mt5', tradeThreshold: 10 },
 };
 
+/**
+ * ⚠️ A VARIANT THAT ACTUALLY DIFFERS — added 2026-09-25. It is not decoration.
+ *
+ * Before this existed, `findUnique` returned `CONTROL_SNAPSHOT` for BOTH the control and the
+ * variant id. So the fixture described two arms with byte-identical configs — a state
+ * `AbTestService.create()` now REFUSES, and one that no real test can be in. The degenerate mock
+ * was harmless while nothing looked at the diff; once `computeResults` started reporting whether
+ * the arms CAN differ, it produced `verdict: 'unmeasurable'` and this file failed.
+ *
+ * The fix is to the FIXTURE, not to the assertion. Asserting `insufficient-data` on two identical
+ * arms would be asserting a bug: a test with identical arms cannot produce a result, and the
+ * verdict is right to say so. The difference below is a field the pipeline reads, so this pair is
+ * genuinely measurable and the sample-size verdict is the correct one to expect.
+ */
+const VARIANT_SNAPSHOT = {
+  id: 'snap-variant',
+  scoringStrategyId: 'ss-gold',
+  version: '1.0.2',
+  snapshot: { mode: 'score', protocolId: 'xau-speed-m15', brokerId: 'mt5', tradeThreshold: 20 },
+};
+
 function make(opts: { snapshot?: any; bots?: any[]; running?: any[] } = {}) {
   const svc = Object.create(AbTestService.prototype) as AbTestService;
 
@@ -49,7 +70,11 @@ function make(opts: { snapshot?: any; bots?: any[]; running?: any[] } = {}) {
       // `'snapshot' in opts`, not `opts.snapshot ?? CONTROL_SNAPSHOT` — an EXPLICIT null is the
       // "snapshot is missing" fixture, and `??` would have silently swallowed it and passed the
       // wrong snapshot in. Caught by the missing-snapshot test failing on `mode: 'auto'`.
-      findUnique: jest.fn(async () => ('snapshot' in opts ? opts.snapshot : CONTROL_SNAPSHOT)),
+      // Keyed on the id so control and variant are genuinely different configs (see VARIANT_SNAPSHOT).
+      findUnique: jest.fn(async (args: any) => {
+        if ('snapshot' in opts) return opts.snapshot;
+        return args?.where?.id === VARIANT_SNAPSHOT.id ? VARIANT_SNAPSHOT : CONTROL_SNAPSHOT;
+      }),
       findMany: jest.fn(async () => [{ id: 'snap-control' }, { id: 'snap-variant' }]),
     },
     tradingStrategy: { findMany: jest.fn(async () => opts.bots ?? [bot()]) },

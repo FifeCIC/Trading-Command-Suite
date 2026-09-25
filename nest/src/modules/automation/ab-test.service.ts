@@ -45,6 +45,35 @@ const SIDE_A_TAG = 'AB-A';
 const SIDE_B_TAG = 'AB-B';
 
 /**
+ * INERT_SNAPSHOT_FIELDS — config fields an A/B test CANNOT measure (#929).
+ *
+ * ⚠️ A field belongs here ONLY when the running code demonstrably ignores it. The list is a claim
+ * like any other: a field is added with a spec proving the code ignores it, and must be REMOVED
+ * the moment it is wired.
+ *
+ * `weightStrategy` is the first. `protocol-gating.service.ts` declares it INERT — the denominator
+ * is hardcoded, so both of its values produce identical composites — guarded by
+ * `weight-strategy-inert.spec.ts`.
+ *
+ * ⚠️ MEASURED 2026-09-25 — THIS IS NOT HYPOTHETICAL, IT ALREADY COST A TEST.
+ * The only A/B test that has ever completed (`#929 XAU M15 - group vs maxscore weighting`,
+ * 2026-09-22 11:19 → 2026-09-23 10:01) differed in EXACTLY ONE field of its two snapshots:
+ *
+ *     control v1.0.1  weightStrategy: "group-weighted"
+ *     variant v1.0.2  weightStrategy: "maxscore-weighted"
+ *
+ * ...which is the single field declared inert. Both arms therefore scored identically and the
+ * test was null BY CONSTRUCTION. Its verdict read
+ * `"Refusing to name a winner: 0 vs 0 closed trades (need >=30 per side)"` — which blames SAMPLE
+ * SIZE for a result that adding trades could never have produced. A month of accrual was spent
+ * to answer a question that had no answer.
+ *
+ * So the refusal below exists to fail at CREATE time, when changing the variant is one edit,
+ * rather than at read time a month later when it is a wasted window.
+ */
+const INERT_SNAPSHOT_FIELDS = new Set(['weightStrategy']);
+
+/**
  * Who is allowed to decide HOW an A/B side trades (#929).
  *
  * `mode: null` means **cannot judge** — never a default. See `resolveTradeAuthority()`.
@@ -96,6 +125,7 @@ export class AbTestService {
     }
 
     await this.assertSnapshotsExist(input.controlStackId, input.variantStackId);
+    await this.assertArmsCanDiffer(input.controlStackId, input.variantStackId);
 
     return this.prisma.abTest.create({
       data: {
@@ -106,6 +136,74 @@ export class AbTestService {
         status: 'draft',
       },
     });
+  }
+
+  /**
+   * diffSnapshots() — which fields two frozen configs actually disagree on.
+   *
+   * Returns FIELD NAMES only, never values: a strategy config can carry a broker credential, and
+   * a diff that leaks one into a log or an error message is a worse bug than the one it fixes.
+   */
+  private diffSnapshots(a: unknown, b: unknown): {
+    changed: string[];
+    inert: string[];
+    liveable: string[];
+  } {
+    const ka = (a ?? {}) as Record<string, unknown>;
+    const kb = (b ?? {}) as Record<string, unknown>;
+    const changed = [...new Set([...Object.keys(ka), ...Object.keys(kb)])].filter(
+      (k) => JSON.stringify(ka[k] ?? null) !== JSON.stringify(kb[k] ?? null),
+    );
+    const inert = changed.filter((k) => INERT_SNAPSHOT_FIELDS.has(k));
+    return { changed, inert, liveable: changed.filter((k) => !INERT_SNAPSHOT_FIELDS.has(k)) };
+  }
+
+  /**
+   * assertArmsCanDiffer() — REFUSE AN A/B WHOSE ARMS CANNOT PRODUCE A DIFFERENCE (#929).
+   *
+   * ⚠️ THE RULE IS ONE-SIDED ON PURPOSE: this refuses only when EVERY differing field is a KNOWN
+   * inert one. A single unrecognised field is treated as LIVE, because this service cannot know
+   * that a field it has never heard of is ignored — assuming inertness would block valid tests,
+   * and a guard that blocks valid work gets removed.
+   *
+   * Refusing here rather than warning is deliberate: the cost of a wrong refusal is one edit at
+   * create time, and the cost of a wrong admission is a whole measurement window spent accruing
+   * trades that cannot differ. That trade was already paid once (see INERT_SNAPSHOT_FIELDS).
+   */
+  private async assertArmsCanDiffer(controlId: string, variantId: string): Promise<void> {
+    const [control, variant] = await Promise.all([
+      this.prisma.metaStackSnapshot.findUnique({ where: { id: controlId } }),
+      this.prisma.metaStackSnapshot.findUnique({ where: { id: variantId } }),
+    ]);
+    if (!control || !variant) return; // assertSnapshotsExist has already reported this
+
+    const { changed, inert, liveable } = this.diffSnapshots(control.snapshot, variant.snapshot);
+
+    if (changed.length === 0) {
+      throw new BadRequestException(
+        `Control (${control.version}) and variant (${variant.version}) have IDENTICAL configs — ` +
+          `there is nothing to compare. Change at least one field on the variant (#929).`,
+      );
+    }
+
+    if (liveable.length === 0) {
+      throw new BadRequestException(
+        `A/B test cannot measure anything: the two snapshots differ ONLY in ` +
+          `${inert.map((f) => `'${f}'`).join(', ')}, which the code declares INERT ` +
+          `(the value is stored and echoed, but nothing branches on it). Both arms would score ` +
+          `identically, so no number of trades could separate them. Change a field the pipeline ` +
+          `actually reads — or wire '${inert[0]}' first (#929).`,
+      );
+    }
+
+    // Visible, not silent: a test whose arms differ in a live field AND an inert one is valid,
+    // but the inert difference is a decoy that must not later be credited with any result.
+    if (inert.length) {
+      this.logger.warn(
+        `A/B ${control.version} vs ${variant.version} also differs in inert field(s) ` +
+          `${inert.join(', ')} — those cannot contribute to a result (#929).`,
+      );
+    }
   }
 
   /** Start a test — enforces the max-1-active rule. */
@@ -181,14 +279,21 @@ export class AbTestService {
    * has not traded yet both rendered as `0 vs 0`. Returning the resolved bot makes the difference
    * a fact in the payload instead of an inference the reader has to make.
    */
-  async getResults(id: string): Promise<{ test: AbTest; tradeAuthority: AbTradeAuthority; results: any }> {
+  async getResults(id: string): Promise<{ test: AbTest; tradeAuthority: AbTradeAuthority; results: any; arms: any }> {
     const test = await this.prisma.abTest.findUnique({ where: { id } });
     if (!test) throw new NotFoundException(`A/B test ${id} not found`);
-    const [tradeAuthority, results] = await Promise.all([
+    const [tradeAuthority, results, arms] = await Promise.all([
       this.resolveTradeAuthority(test.controlStackId),
       test.status === 'complete' ? Promise.resolve(test.results ?? {}) : this.computeResults(test),
+      // ⚠️ #929 — ALWAYS computed, even for a completed test. A stored verdict is a record of what
+      // was concluded AT THE TIME; the arms diff is a live fact about the config that can explain
+      // it. The first test to complete ended with "0 vs 0 closed trades (need ≥30 per side)", which
+      // reads as "wait longer" when the true answer was "these arms cannot differ — no number of
+      // trades would help". Without this the one test that went wrong is the one test that cannot
+      // say why.
+      this.describeArms(test.controlStackId, test.variantStackId),
     ]);
-    return { test, tradeAuthority, results };
+    return { test, tradeAuthority, results, arms };
   }
 
   /** The first running test (null if none). ⚠️ Prefer getActiveTests() — capacity is >1 (#929). */
@@ -467,9 +572,51 @@ export class AbTestService {
       symbols: test.symbols,
       computedAt: new Date().toISOString(),
     };
+
+    // ⚠️ #929 — HOW COULD THIS TEST HAVE DIFFERED AT ALL?
+    //
+    // A verdict of "no difference" is meaningless if the two arms were never able to differ. This
+    // is not hypothetical: the first test to complete differed in exactly one field, and that
+    // field was inert, so the comparison was null by construction. Without this field the only
+    // visible output is `0 vs 0`, which reads as "not enough trades yet" and invites the operator
+    // to wait longer for a result that cannot arrive.
+    const arms = await this.describeArms(test.controlStackId, test.variantStackId);
     // #929 — a result without a stated verdict is not a result. The verdict REFUSES to name a
     // winner below the per-side sample bar, and names its method when it does.
-    return { ...result, verdict: this.buildVerdict(result.control, result.variant, unattributed) };
+    return { ...result, arms, verdict: this.buildVerdict(result.control, result.variant, unattributed, arms) };
+    // #929 — a result without a stated verdict is not a result. The verdict REFUSES to name a
+    // winner below the per-side sample bar, and names its method when it does.
+    return { ...result, arms, verdict: this.buildVerdict(result.control, result.variant, unattributed, arms) };
+  }
+
+  /**
+   * describeArms() — can these two frozen configs produce a different decision at all? (#929)
+   *
+   * ⚠️ EXTRACTED SO IT CAN BE READ ON A **COMPLETED** TEST, WHICH IS THE ONLY PLACE IT MATTERS.
+   *
+   * `getResults` serves the STORED `results` blob for a completed test rather than recomputing it,
+   * so a test that finished before this diagnostic existed carries a verdict with no explanation
+   * of why it produced nothing. That is precisely the test an operator will look at. Attaching the
+   * diff at read time fixes that WITHOUT rewriting `test.results` — a stored verdict is a
+   * historical record of what was concluded, and back-filling it would be falsifying it.
+   */
+  private async describeArms(
+    controlStackId: string,
+    variantStackId: string,
+  ): Promise<{ changedFields: string[]; inertFields: string[]; measurable: boolean } | null> {
+    try {
+      const [c, v] = await Promise.all([
+        this.prisma.metaStackSnapshot.findUnique({ where: { id: controlStackId } }),
+        this.prisma.metaStackSnapshot.findUnique({ where: { id: variantStackId } }),
+      ]);
+      if (!c || !v) return null;
+      const d = this.diffSnapshots(c.snapshot, v.snapshot);
+      return { changedFields: d.changed, inertFields: d.inert, measurable: d.liveable.length > 0 };
+    } catch (err) {
+      // A diff is a diagnostic. It must never take a verdict down with it.
+      this.logger.warn(`A/B arm diff failed: ${(err as Error).message}`);
+      return null;
+    }
   }
 
   /**
@@ -478,9 +625,39 @@ export class AbTestService {
    * this returns `insufficient-data` WITH the counts; above, it runs a two-proportion z-test on
    * win rates and reports the PnL-per-trade difference, both named.
    */
-  private buildVerdict(control: any, variant: any, unattributed = 0): Record<string, unknown> {
+  private buildVerdict(
+    control: any,
+    variant: any,
+    unattributed = 0,
+    arms: { changedFields: string[]; inertFields: string[]; measurable: boolean } | null = null,
+  ): Record<string, unknown> {
     const nA = control.closedTrades ?? 0;
     const nB = variant.closedTrades ?? 0;
+    // ⚠️ #929 — AN UNMEASURABLE TEST OUTRANKS AN UNDERPOWERED ONE.
+    // "Wait for more trades" is the wrong instruction when no number of trades can separate the
+    // arms. This is checked FIRST so the sample-size note cannot mask it.
+    if (arms && !arms.measurable) {
+      // ⚠️ TWO DISTINCT CAUSES, TWO DISTINCT SENTENCES. Composing one message for both produced
+      // "the two arms differ only in , which the code declares INERT" when the field list was
+      // empty — a sentence that reads as a bug and tells the reader nothing. `create()` refuses
+      // both cases, so a runnable test cannot reach here; a LEGACY row still can.
+      const which = arms.inertFields.length
+        ? `differ only in ${arms.inertFields.map((f) => `'${f}'`).join(', ')}, which the code ` +
+          `declares INERT`
+        : `are IDENTICAL in every field`;
+      return {
+        verdict: 'unmeasurable',
+        n: { control: nA, variant: nB },
+        unattributed,
+        requiredPerSide: AB_MIN_TRADES_FOR_VERDICT,
+        changedFields: arms.changedFields,
+        inertFields: arms.inertFields,
+        note:
+          `THIS TEST CANNOT PRODUCE A RESULT. The two arms ${which} — so both sides have always ` +
+          `scored identically and MORE TRADES CANNOT CHANGE THAT. Do not read ` +
+          `'${nA} vs ${nB}' as a small sample; it is an empty comparison (#929).`,
+      };
+    }
     // ⚠️ #929 — an unattributable row is named here, because `0 vs 0` reads as "no trades yet"
     // when it can equally mean "trades exist that we cannot attribute". Those are different
     // facts and must not render the same.

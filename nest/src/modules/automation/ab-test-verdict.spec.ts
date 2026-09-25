@@ -18,7 +18,20 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
         // #929 — `start()` now resolves the trade authority from the snapshot's scoring strategy,
         // so the harness must answer that lookup. The 'auto' bot below is what makes a test
         // startable at all; without it `start()` refuses, which is the point of the fix.
-        findUnique: jest.fn(async (args: any) => ({ id: args.where.id, scoringStrategyId: 'ss-1' })),
+        //
+        // ⚠️ ADDED 2026-09-25 — the fixture had NO `snapshot` payload, so both arms read as
+        // `undefined` and were therefore trivially identical. That was invisible until
+        // `computeResults` started reporting whether the arms CAN differ: two arms with nothing
+        // between them cannot produce a result, so every verdict assertion below began receiving
+        // `unmeasurable` instead of the branch under test. The payload below differs in
+        // `tradeThreshold` — a field the pipeline READS — so this pair is genuinely measurable and
+        // the sample-size and significance verdicts are the correct ones to expect.
+        findUnique: jest.fn(async (args: any) => ({
+          id: args.where.id,
+          scoringStrategyId: 'ss-1',
+          version: args.where.id === 'v' ? '1.0.2' : '1.0.1',
+          snapshot: { mode: 'score', brokerId: 'mt5', tradeThreshold: args.where.id === 'v' ? 20 : 10 },
+        })),
       },
       tradingStrategy: {
         findMany: jest.fn(async () => [{ id: 'b1', name: 'Harness Bot', mode: 'auto', active: 1 }]),
@@ -48,6 +61,17 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
     openedAt: new Date(),
   });
 
+  /**
+   * ⚠️ ADDED 2026-09-25 — the test row carried NO `controlStackId`/`variantStackId`, so
+   * `computeResults` looked both arms up with `id: undefined` and received the same snapshot
+   * twice. Invisible until the arms-diff landed; then every verdict here became `unmeasurable`,
+   * because two arms with nothing between them cannot produce a result. A real `ab_test` row
+   * always has both columns (they are NOT NULL), so the omission was a fixture gap, not a case.
+   */
+  const TEST = {
+    id: 'ab1', name: 'x', symbols: ['EURUSD'], controlStackId: 'c', variantStackId: 'v',
+  };
+
   it('attributes a REAPED row whose brokerComment was overwritten (#929)', async () => {
     // Measured 2026-09-23: 14 of 14 A/B rows had their comment rewritten by the reaper, and the
     // old comment-parsing split attributed 0 to each side — `0 vs 0` for a test full of trades.
@@ -56,7 +80,7 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
       { status: 'closed', pnl: -3, abTestSide: 'B', brokerComment: 'Reconciled: no broker counterpart (stranded row)' },
     ];
     const { svc } = make(reaped as any);
-    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+    const res = await (svc as any).computeResults(TEST);
 
     expect(res.control.closedTrades).toBe(1);
     expect(res.variant.closedTrades).toBe(1);
@@ -68,7 +92,7 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
       { status: 'closed', pnl: 5, abTestSide: null, brokerComment: 'Reconciled: no broker counterpart (stranded row)' },
     ];
     const { svc } = make(orphan as any);
-    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+    const res = await (svc as any).computeResults(TEST);
 
     // "no trades yet" and "trades we cannot attribute" must not render the same.
     expect(res.unattributed).toBe(1);
@@ -79,7 +103,7 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
   it('REFUSES a verdict below 30 closed trades per side — and says the counts', async () => {
     const trades = [t('AB-A', 5), t('AB-A', -2), t('AB-B', 1)];
     const { svc } = make(trades);
-    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+    const res = await (svc as any).computeResults(TEST);
 
     expect(res.verdict.verdict).toBe('insufficient-data');
     expect(res.verdict.n).toEqual({ control: 2, variant: 1 });
@@ -95,7 +119,7 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
       ...Array.from({ length: 20 }, () => t('AB-B', -1)),
     ];
     const { svc } = make(trades);
-    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+    const res = await (svc as any).computeResults(TEST);
 
     expect(res.verdict.verdict).toBe('control-leads');
     expect(res.verdict.method).toContain('two-proportion z-test');
@@ -111,7 +135,7 @@ describe('AbTestService — verdict honesty + capacity (#929)', () => {
       ...Array.from({ length: 15 }, () => t('AB-B', -1)),
     ];
     const { svc } = make(trades);
-    const res = await (svc as any).computeResults({ id: 'ab1', name: 'x', symbols: ['EURUSD'] });
+    const res = await (svc as any).computeResults(TEST);
     expect(res.verdict.verdict).toBe('no-significant-difference');
   });
 
