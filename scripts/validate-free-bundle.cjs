@@ -106,6 +106,8 @@ const MAP_MODULES = [
   // Added 2026-09-24 (strip pass) — registries keyed by view id, which leak premium page titles.
   { full: 'src/components/ScreenOptions.jsx', free: 'src/editions/screen-options.free.jsx' },
   { full: 'src/pages/plugin-tab-skeletons.js', free: 'src/editions/plugin-tab-skeletons.free.js' },
+  // Added 2026-09-25 — the glossary defined the app's own method on a page that ships free.
+  { full: 'src/data/glossary.js', free: 'src/editions/glossary.free.js' },
 ];
 for (const { full, free } of MAP_MODULES) {
   if (mode === 'free') {

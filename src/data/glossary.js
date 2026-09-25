@@ -526,19 +526,19 @@ const GLOSSARY = [
   },
   {
     term: 'rationale',
-    definition: 'The plain-English explanation a model gives for its decision, shown alongside the decision itself. For an AI stage this is not a nicety — it is the only way a human can audit a probabilistic step, and it is the reason this app already keeps a Decision Trail: the record exists so a decision can be explained after the fact, whoever made it.',
+    definition: 'The plain-English explanation a model gives for its decision, shown alongside the decision itself. For an AI stage this is not a nicety — it is the only way a human can audit a probabilistic step, and it is only useful if it is recorded alongside the decision rather than reconstructed afterwards.',
     category: 'AI-Assisted Systems',
     aliases: ['reasoning', 'explanation', 'why'],
   },
   {
     term: 'cognitive console',
-    definition: 'A UI surface that streams a system\'s reasoning as it happens, rather than only its results. This app\'s Decision Trail is the deterministic half of the same idea — what was considered, what was rejected, and why. Naming it makes the gap clear: the trail records RULES that fired, where a cognitive console would also record a model\'s live narration.',
+    definition: 'A UI surface that streams a system\'s reasoning as it happens, rather than only its results — what was considered, what was rejected, and why. A deterministic engine can publish the same shape for its own steps: the rules that fired, in order, at the moment they fired.',
     category: 'AI-Assisted Systems',
     aliases: ['reasoning console', 'live reasoning view'],
   },
   {
     term: 'retrieval-augmented generation',
-    definition: 'Answering with retrieved documents as context instead of relying on what the model memorised — often shortened to RAG. The app already does the deterministic version of this for directives: a directive reads stored news, fundamentals or insider rows for ITS symbol rather than asking a model what it remembers. The retrieval half is the part that survives a model change.',
+    definition: 'Answering with retrieved documents as context instead of relying on what the model memorised — often shortened to RAG. The retrieved facts are read at the moment of the decision rather than recalled, which makes the answer auditable and keeps it correctable when the underlying data changes.',
     category: 'AI-Assisted Systems',
     aliases: ['RAG', 'retrieval augmentation', 'grounded generation'],
   },

@@ -50,7 +50,9 @@ function splitDeclaration(src, marker) {
   // Top-level declarations close with `};` at column 0 — but NOT always with the semicolon:
   // plugin-tab-skeletons.js ends its object literal with a bare `}`. Requiring `\n};` threw
   // "end of declaration not found" on a file that was perfectly well-formed.
-  const re = /^\};?[ \t]*\r?$/gm;
+  // The close may be `};`, a bare `}`, or `];` — the glossary is an ARRAY declaration, and requiring
+  // only the object forms threw "end of declaration not found" on a file that was well-formed.
+  const re = /^[\]}];?[ \t]*\r?$/gm;
   re.lastIndex = start;
   const m = re.exec(src);
   if (!m) throw new Error(`end of declaration not found for: ${marker}`);
@@ -198,6 +200,33 @@ const ptSrc = read('src/pages/plugin-tab-skeletons.js');
 const ptSplit = splitDeclaration(ptSrc, 'export const PLUGIN_TAB_SKELETONS = {');
 const pluginTabs = evaluate(ptSplit.head, 'PLUGIN_TAB_SKELETONS');
 
+// ── the glossary (added 2026-09-25) ───────────────────────────────────────────────────────────
+// The public glossary was defining the app's OWN METHOD in a page that ships free: "SEES — Strategy
+// Execution & Evaluation System, the core scoring engine that runs directives", plus `directive`,
+// `composite`, `maxScore`. Measured: 99 entries, of which 35 sit in the three method categories and
+// 32 name the method in their text. The full edition wants that vocabulary; the free edition must
+// teach trading without teaching this system, so the entries are filtered rather than rewritten.
+const glSrc = read('src/data/glossary.js');
+const glSplit = splitDeclaration(glSrc, 'const GLOSSARY = [');
+const glossary = evaluate(glSplit.head, 'GLOSSARY');
+
+/** Categories that exist to explain THIS app's method, not trading. */
+const METHOD_CATEGORIES = new Set(['Architecture & Pipeline', 'Scoring', 'Directive Categories']);
+/** Belt and braces: a stray method word in an otherwise teachable entry is still method. */
+const METHOD_VOCAB = /SEES|directive|protocol|composite|maxScore|scoring engine|META\.Stack/i;
+
+const droppedGlossary = [];
+const freeGlossary = glossary.filter((e) => {
+  const text = `${e.term} ${e.definition || ''}`;
+  const why = METHOD_CATEGORIES.has(e.category)
+    ? `category: ${e.category}`
+    : METHOD_VOCAB.test(text)
+      ? 'names the method'
+      : null;
+  if (why) droppedGlossary.push(`${e.term} (${why})`);
+  return !why;
+});
+
 // ── view-explanations ────────────────────────────────────────────────────────────────────────
 const expSrc = read('src/core/view-explanations.js');
 const expSplit = splitDeclaration(expSrc, 'export const VIEW_EXPLANATIONS = {');
@@ -296,6 +325,17 @@ const outputs = [
           `renders for its own view, so non-free tabs are dropped`,
       ) +
       `\nexport const PLUGIN_TAB_SKELETONS = ${literal(freePluginTabs)};\n${ptSplit.tail}`,
+  },
+  {
+    file: 'src/editions/glossary.free.js',
+    body:
+      HEADER(
+        'Free-edition glossary',
+        'src/data/glossary.js',
+        `${freeGlossary.length} of ${glossary.length} entries — the ${droppedGlossary.length} dropped ` +
+          `explain this app's own method, which is the proprietary asset`,
+      ) +
+      `\nconst GLOSSARY = ${literal(freeGlossary)};\n${glSplit.tail}`,
   },
 ];
 

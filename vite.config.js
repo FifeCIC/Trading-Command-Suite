@@ -37,6 +37,8 @@ const FREE_MAP_FILES = new Map([
   // Added 2026-09-24 (strip pass): registries keyed by view id leak premium page TITLES in prose.
   ['ScreenOptions', 'screen-options.free.jsx'],
   ['plugin-tab-skeletons', 'plugin-tab-skeletons.free.js'],
+  // Added 2026-09-25: the public glossary was defining the app's own method (SEES, directives).
+  ['glossary', 'glossary.free.js'],
 ]);
 
 /**
