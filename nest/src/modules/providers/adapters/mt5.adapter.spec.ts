@@ -69,6 +69,9 @@ describe('Mt5Adapter execution contracts', () => {
     global.fetch = fetchMock as any;
     const router = {
       resolve: () => ({ brokerId: 0, url: null, brokerSymbol: 'BTC', explicit: true, mt5: false, provider: 'binance' }),
+      // #1002 — the ORDER path uses resolveForOrder; a stub without it fails as "not a function".
+      resolveForOrder: () => ({ brokerId: 0, url: null, brokerSymbol: 'BTC', explicit: true, mt5: false, provider: 'binance' }),
+      canTradeOn: () => undefined, // capability UNKNOWN — never refuse on unknown
       brokerIds: () => [2, 3],
     } as any;
     const adapter = new Mt5Adapter(undefined, undefined, undefined, router);
@@ -87,6 +90,9 @@ describe('Mt5Adapter execution contracts', () => {
     global.fetch = jest.fn().mockResolvedValue(response({ success: true, ticket: 7 })) as any;
     const router = {
       resolve: () => ({ brokerId: 3, url: 'http://localhost:5001', brokerSymbol: 'XAUUSD', explicit: true, mt5: true, provider: 'mt5' }),
+      // #1002 — see above; same shape, now including the two methods the order path calls.
+      resolveForOrder: () => ({ brokerId: 3, url: 'http://localhost:5001', brokerSymbol: 'XAUUSD', explicit: true, mt5: true, provider: 'mt5' }),
+      canTradeOn: () => undefined,
       brokerIds: () => [2, 3],
     } as any;
     const adapter = new Mt5Adapter(undefined, undefined, undefined, router);

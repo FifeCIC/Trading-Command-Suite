@@ -54,6 +54,9 @@ function makeService(adapter: ReturnType<typeof makeAdapter>, route: Record<stri
   const pyramidPolicy = { evaluate: async () => ({ blockers: [], hasOpenPosition: false }) } as any;
   const symbolRouter = {
     resolve: () => route,
+    // #1002 — `assess()` uses `resolveForOrder`, so the card shows the route the ORDER travels.
+    resolveForOrder: () => route,
+    canTradeOn: () => undefined, // capability UNKNOWN — the check must not refuse on unknown
     brokerIds: () => [2, 3],
     getBrokerId: () => route.brokerId,
     getBrokerSymbol: (s: string) => s.toUpperCase(),

@@ -36,7 +36,16 @@ function makeController(opts: { symbol: string; brokerId: number; url: string; b
     provider: opts.provider ?? 'mt5',
   };
   const router = {
+    // ⚠️ This stub must implement what the adapter actually CALLS (#1002). The order path now uses
+    // `resolveForOrder`, not `resolve` — and a stub missing a method fails as
+    // "resolveForOrder is not a function", which reads like a production bug rather than a stale
+    // test. Both are provided so this spec keeps testing route integrity, which is its subject.
+    //
+    // `canTradeOn` returns UNDEFINED deliberately: it models a router with no capability data,
+    // which is a real state, and proves the check does not refuse on unknown.
     resolve: () => route,
+    resolveForOrder: () => route,
+    canTradeOn: () => undefined,
     brokerIds: () => [2, 3],
   } as any;
   const adapter = new Mt5Adapter(undefined, undefined, undefined, router);

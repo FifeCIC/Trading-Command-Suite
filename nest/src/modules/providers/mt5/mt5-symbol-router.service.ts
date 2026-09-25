@@ -57,6 +57,15 @@ export function orderRouteProblems(
   symbol: string,
   route: ResolvedSymbolRoute | null,
   activeBrokerIds: number[] = [],
+  /**
+   * #1002 — capability lookup. `false` when the broker's OWN symbol list says it cannot trade this
+   * symbol (`broker_symbol.tradeMode = 0`), `true` when it can, `undefined` when unknown.
+   *
+   * ⚠️ ONLY a known `false` refuses. A broker whose symbol list has never been synced must keep
+   * working — treating UNKNOWN as "cannot trade" would refuse every order on a fresh install, which
+   * is a worse failure than the one being fixed.
+   */
+  canTrade?: (brokerId: number, symbol: string) => boolean | undefined,
 ): string[] {
   const ticker = (symbol || '').toUpperCase();
   const isCrypto = venueForSymbol(ticker).kind === 'crypto';
@@ -77,6 +86,25 @@ export function orderRouteProblems(
         `${route.provider ? ` (${route.provider})` : ''}, which is not an active MT5 bridge ` +
         `(active: ${activeBrokerIds.join(', ') || 'none'})`,
     );
+  }
+
+  // ── Capability (#1002) ────────────────────────────────────────────────────────────────────
+  // The broker LISTS the symbol and still refuses to trade it. This is the US30 case: the symbol
+  // had no `symbol_route` row, so it fell back to the primary bridge, whose own symbol list
+  // reports tradeMode=0 — and the order was refused by the broker with nothing naming the real
+  // reason. Measured 2026-09-25: broker 2 has 925 such symbols, broker 3 has 1.
+  //
+  // ⚠️ Guarded on `route.mt5`: a non-MT5 route (crypto → broker 0) is not in any MT5 symbol list,
+  // so asking would return `false` and mislabel a crypto route problem as a capability problem.
+  // The crypto rules above already refuse those for the right reason.
+  if (route.mt5 && canTrade) {
+    const allowed = canTrade(route.brokerId, ticker);
+    if (allowed === false) {
+      problems.push(
+        `broker ${route.brokerId} cannot trade ${ticker} — its own symbol list reports ` +
+          `tradeMode=0 (the symbol is listed with trading disabled on that broker)`,
+      );
+    }
   }
 
   if (isCrypto) {
@@ -120,6 +148,26 @@ export class Mt5SymbolRouter implements OnModuleInit {
   private readonly routes = new Map<string, { brokerId: number; brokerSymbol: string | null; provider: string | null }>();
   /** assetType(lower) → brokerId */
   private readonly assetDefaults = new Map<string, number>();
+
+  /**
+   * SYMBOL → the brokerIds whose OWN symbol list says they can trade it (#1002).
+   *
+   * Source: `broker_symbol.tradeMode`. `tradeMode = 0` means the broker LISTS the symbol and still
+   * refuses to trade it.
+   *
+   * ⚠️ This is what lets the router answer "can this broker trade this symbol?" instead of
+   * assuming the fallback broker can. Before it, an unrouted symbol went to `primaryBrokerId()` and
+   * the broker refused the order — the US30 story, recorded verbatim in that row's own `note` as
+   * "silent fallback to :5000, tradeMode 0".
+   */
+  private readonly tradeableOn = new Map<string, Set<number>>();
+
+  /**
+   * True once `broker_symbol` has been read. Absent data must read as UNKNOWN, never as "no".
+   * A capability that has not loaded is not a capability that says no — conflating them would
+   * refuse every order on a fresh install.
+   */
+  private capabilityLoaded = false;
   private loadedAt = 0;
 
   constructor(
@@ -160,6 +208,40 @@ export class Mt5SymbolRouter implements OnModuleInit {
       }
       this.loadedAt = Date.now();
       this.logger.log(`Mt5SymbolRouter: ${this.routes.size} explicit route(s) cached`);
+
+      // ── Capability (#1002) ──────────────────────────────────────────────────────────────────
+      // Loaded alongside the routes so it shares their freshness: a capability outliving a
+      // symbol-list refresh is exactly the stale-but-plausible figure this repo keeps finding.
+      // ⚠️ Failure here must NOT break routing. It only means the questions below answer
+      // "unknown", which is the pre-#1002 behaviour — hence a scoped catch rather than letting it
+      // fall into the outer one, where it would look like a `symbol_route` failure.
+      try {
+        const rows: Array<{ brokerId: number; name: string }> = await (this.prisma as any).brokerSymbol.findMany({
+          where: { tradeMode: { not: 0 } },
+          select: { brokerId: true, name: true },
+        });
+        this.tradeableOn.clear();
+        for (const r of rows) {
+          const key = String(r.name).toUpperCase();
+          let set = this.tradeableOn.get(key);
+          if (!set) {
+            set = new Set<number>();
+            this.tradeableOn.set(key, set);
+          }
+          set.add(Number(r.brokerId));
+        }
+        this.capabilityLoaded = true;
+        this.logger.log(
+          `Mt5SymbolRouter: ${this.tradeableOn.size} tradeable symbol(s) cached across ` +
+            `${new Set(rows.map((r) => Number(r.brokerId))).size} broker(s) (#1002)`,
+        );
+      } catch (err) {
+        this.capabilityLoaded = false;
+        this.logger.warn(
+          'Mt5SymbolRouter: could not load broker_symbol capability — capability stays UNKNOWN ' +
+            `(never assumed tradeable) (${(err as Error).message})`,
+        );
+      }
     } catch (err) {
       this.logger.warn(`Mt5SymbolRouter: could not load symbol_route — using defaults (${(err as Error).message})`);
     }
@@ -198,6 +280,64 @@ export class Mt5SymbolRouter implements OnModuleInit {
       if (byType !== undefined) return byType;
     }
     return this.primaryBrokerId();
+  }
+
+  /**
+   * Can `brokerId` trade `symbol`, per `broker_symbol`? (#1002)
+   *
+   * `undefined` = UNKNOWN (no capability data loaded). `false` = the broker's own list says no.
+   * The distinction is the whole point: unknown must not be read as a refusal.
+   */
+  canTradeOn(brokerId: number, symbol: string): boolean | undefined {
+    if (!this.capabilityLoaded) return undefined;
+    const set = this.tradeableOn.get((symbol || '').toUpperCase());
+    // Loaded, and NO broker lists it — so it cannot be traded on any configured bridge.
+    if (!set) return false;
+    return set.has(brokerId);
+  }
+
+  /** Active brokers that can trade `symbol`, in `MT5_ACTIVE_BROKERS` order. `null` = unknown. */
+  tradeableBrokers(symbol: string): number[] | null {
+    if (!this.capabilityLoaded) return null;
+    const set = this.tradeableOn.get((symbol || '').toUpperCase());
+    if (!set) return [];
+    return this.brokerIds().filter((id) => set.has(id));
+  }
+
+  /**
+   * `resolve()` for an ORDER (#1002).
+   *
+   * Identical to `resolve()` except that, when an UNROUTED symbol's default broker is known to be
+   * unable to trade it, it prefers an active bridge that can. An explicit `symbol_route` row is
+   * never second-guessed — a row records a capability fact someone verified by hand, and the whole
+   * point of this change is that facts like that should not have to be hand-maintained.
+   *
+   * ⚠️ Deliberately NOT folded into `resolve()`: that method also serves bars and quotes, where the
+   * question is which broker has the better FEED. Changing data routing to fix an execution problem
+   * would be a silent behaviour change in a path that has nothing to do with this defect.
+   */
+  resolveForOrder(symbol: string, assetType?: string): ResolvedSymbolRoute {
+    const base = this.resolve(symbol, assetType);
+    if (base.explicit) return base;
+
+    const tradeable = this.tradeableBrokers(symbol);
+    // `null` = capability unknown → keep the established route. `[]` = nobody can trade it → also
+    // keep it, so the order-route check produces a NAMED refusal instead of a send the broker
+    // will reject for reasons the operator has to go and find.
+    if (tradeable === null || tradeable.includes(base.brokerId)) return base;
+    const alternate = tradeable[0];
+    if (alternate === undefined) return base;
+
+    this.logger.warn(
+      `Mt5SymbolRouter: ${String(symbol).toUpperCase()} defaults to broker ${base.brokerId}, which ` +
+        `reports tradeMode=0 for it — routing the ORDER to broker ${alternate} instead (#1002)`,
+    );
+    return {
+      ...this.routeForBroker(alternate),
+      brokerSymbol: base.brokerSymbol,
+      explicit: false,
+      provider: base.provider,
+    };
   }
 
   /** Resolve a symbol to { brokerId, url, brokerSymbol } for bridge calls. */

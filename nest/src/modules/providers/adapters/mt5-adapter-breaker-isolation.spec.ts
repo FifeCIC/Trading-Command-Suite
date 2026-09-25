@@ -46,11 +46,20 @@ function routerStub() {
     mt5: true,
     provider: 'mt5',
   });
+  /** ONE definition, shared by `resolve` and `resolveForOrder` (#1002) so the stub cannot drift from itself. */
+  const resolveOne = (symbol: string) =>
+    (symbol || '').toUpperCase() === 'VIX'
+      ? routeFor(symbol, 3, BROKER_3_URL)
+      : routeFor(symbol, 2, BROKER_2_URL);
   return {
-    resolve: (symbol: string) =>
-      (symbol || '').toUpperCase() === 'VIX'
-        ? routeFor(symbol, 3, BROKER_3_URL)
-        : routeFor(symbol, 2, BROKER_2_URL),
+    resolve: resolveOne,
+    // #1002 — the ORDER path calls `resolveForOrder`, not `resolve`. A stub missing it fails as
+    // "resolveForOrder is not a function", which reads like a production bug rather than a stale
+    // test. Defined ONCE above so the two entries cannot drift apart from each other.
+    resolveForOrder: resolveOne,
+    // UNKNOWN capability on purpose: this spec is about circuit-breaker isolation, and it also
+    // proves the route check does not refuse when capability has not loaded.
+    canTradeOn: () => undefined,
     primaryBrokerId: () => 2,
     routeForBroker: (id: number) =>
       routeFor('', id, id === 3 ? BROKER_3_URL : BROKER_2_URL),

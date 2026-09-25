@@ -206,9 +206,13 @@ export class Mt5Adapter implements IProviderAdapter {
    * UK100 can be sourced from Pepperstone (:5001) while others use the default.
    * Falls back to the single default bridge when no router is injected (tests).
    */
-  private resolveRoute(symbol?: string, assetType?: string): ResolvedSymbolRoute {
+  private resolveRoute(symbol?: string, assetType?: string, forOrder = false): ResolvedSymbolRoute {
     if (this.symbolRouter && symbol) {
-      return this.symbolRouter.resolve(symbol, assetType);
+      // `forOrder` (#1002): the order path may prefer a broker that can TRADE the symbol, while
+      // bars and quotes keep the feed-based route. See Mt5SymbolRouter.resolveForOrder().
+      return forOrder
+        ? this.symbolRouter.resolveForOrder(symbol, assetType)
+        : this.symbolRouter.resolve(symbol, assetType);
     }
     const brokerId = this.symbolRouter?.primaryBrokerId() ?? 2;
     // No router (tests, single-bridge installs): the default bridge is the only bridge, and the
@@ -814,8 +818,9 @@ export class Mt5Adapter implements IProviderAdapter {
   async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
     // MT5 only allows short ASCII comments — sanitize via shared helper
     const safeComment = sanitizeMt5Comment(params.comment);
-    // Route the order to the broker that serves this symbol (#747).
-    const route = this.resolveRoute(params.symbol);
+    // Route the order to the broker that serves this symbol (#747). `forOrder` is #1002: it lets
+    // the router prefer a broker that can actually TRADE the symbol when the default one cannot.
+    const route = this.resolveRoute(params.symbol, undefined, true);
 
     // ── ROUTE INTEGRITY (#914) — the same check the feasibility library and the direct
     //    /api/trading/mt5/order path run, because THIS is the path manual trades and the
@@ -827,6 +832,10 @@ export class Mt5Adapter implements IProviderAdapter {
       params.symbol,
       route,
       this.symbolRouter?.brokerIds?.() ?? [],
+      // #1002 — the broker's OWN symbol list is the authority on whether it can trade this
+      // symbol. Without this the check could only ask "is the broker active?", which is true of a
+      // broker whose list reports tradeMode=0 for the symbol — the US30 case.
+      this.symbolRouter ? (b, s) => this.symbolRouter!.canTradeOn(b, s) : undefined,
     );
     if (routeProblems.length > 0) {
       const error =

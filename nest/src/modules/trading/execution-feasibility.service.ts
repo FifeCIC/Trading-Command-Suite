@@ -113,11 +113,21 @@ export class ExecutionFeasibilityService {
     // `Mt5Adapter.placeOrder()` and `Mt5TradingService.placeOrder()` refuse on — one shared
     // implementation (`orderRouteProblems`), so the card, the click and the broker agree.
     const adapterId = (adapter as any)?.id;
-    const route = adapterId === 'mt5' ? (this.symbolRouter?.resolve(ticker) ?? null) : null;
+    // ⚠️ `resolveForOrder`, NOT `resolve` (#1002). The card must show the route the ORDER will
+    // actually travel — and since #1002 the order path may prefer a broker that can trade the
+    // symbol over the default one. Using the feed route here would let the card say "broker 2"
+    // while the click went to broker 3, which is the card/click/broker disagreement this shared
+    // check exists to prevent.
+    const route = adapterId === 'mt5' ? (this.symbolRouter?.resolveForOrder(ticker) ?? null) : null;
     const routedBrokerId = route?.brokerId;
     const brokerSymbol = route?.brokerSymbol || ticker;
     const routeProblems = adapterId === 'mt5'
-      ? orderRouteProblems(ticker, route, this.symbolRouter?.brokerIds?.() ?? [])
+      ? orderRouteProblems(
+          ticker,
+          route,
+          this.symbolRouter?.brokerIds?.() ?? [],
+          this.symbolRouter ? (b, s) => this.symbolRouter!.canTradeOn(b, s) : undefined,
+        )
       : [];
     if (routeProblems.length > 0) {
       blockers.push({
