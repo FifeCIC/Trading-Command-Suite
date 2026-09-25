@@ -2,6 +2,7 @@
   "name": "tradingcs",
   "version": "0.85.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +11,10 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "check:bundle": "node ./scripts/check-bundle-budget.mjs",
+    "notices": "node ./scripts/generate-third-party-notices.cjs",
+    "notices:check": "node ./scripts/generate-third-party-notices.cjs --check",
+    "notices:audit": "node ./scripts/generate-third-party-notices.cjs --stdout --strict > NUL",
+    "test:licence": "node ./scripts/lib/licence-readiness.cjs --self-test",
     "extract:provider-comparisons": "node ./scripts/extract-provider-comparisons.cjs",
     "handoff:discord": "node ./scripts/handoff-to-discord.cjs",
     "digest:discord": "node ./scripts/weekly-digest-discord.cjs",

@@ -15,9 +15,23 @@
  *      a release must never ship on a failed guard.
  *   3. Rebuild WITHOUT sourcemaps into `dist-free-release` and zip THAT (sourcemaps are a
  *      developer aid; the shipped artefact should not carry the module map). Write a .sha256
- *      beside the zip.
+ *      beside the zip. Add the licence, the generated third-party notices and a short README
+ *      to the packaged folder FIRST — see "Legal files" below.
  *   4. `gh release create v<version>-free` on FifeCIC/trading-command-suite-free with the zip
  *      and its checksum attached.
+ *
+ * LEGAL FILES — why step 3 adds three files
+ * -----------------------------------------
+ * MIT/ISC/BSD/Apache-2.0 all require their copyright + permission notice to accompany a binary
+ * distribution, and this zip is a built bundle with every dependency inlined. Measured
+ * 2026-09-25: the production tree is 143 packages, and the zip previously shipped NO licence
+ * and NO notices. So step 3 writes:
+ *   LICENSE.txt                — copied from the repo root; the publisher REFUSES to package
+ *                                while it still contains unfilled [PLACEHOLDERS] (see
+ *                                assertLicenceReady), because a half-filled EULA is worse than
+ *                                none — it appears to grant terms nobody approved.
+ *   THIRD-PARTY-NOTICES.txt    — GENERATED, never hand-kept, so it cannot drift from the tree.
+ *   README.txt                 — what the bundle is and how to serve it.
  *
  * Version: taken from package.json. The free edition shares the app's version for now and
  * tags as `v<version>-free` so free and full releases never collide.
@@ -46,6 +60,65 @@ function run(cmd, args) {
   return r.stdout || '';
 }
 
+// ── legal files ─────────────────────────────────────────────────────────────────────────────
+const LICENCE_SRC = path.join(ROOT, 'LICENSE.txt');
+// The readiness verdict lives in a pure module so it can be canaried without building a release.
+const { checkLicence } = require('./lib/licence-readiness.cjs');
+
+function readLicence() {
+  if (!fs.existsSync(LICENCE_SRC)) {
+    console.error('🛑 LICENSE.txt is missing from the repo root. A distribution must carry a licence.');
+    process.exit(1);
+  }
+  return fs.readFileSync(LICENCE_SRC, 'utf8');
+}
+
+/**
+ * Refuse to package a licence that is not finished.
+ *
+ * NOTE ON THE DRY RUN: it reports the block and CONTINUES, so `--dry-run` can still show what
+ * would ship and where. A real release exits. That asymmetry is intentional, but it means the
+ * dry run is NOT the gate — the gate is this function returning on the non-dry path.
+ */
+function assertLicenceReady() {
+  const text = readLicence();
+  const verdict = checkLicence(text);
+  if (verdict.ok) return text;
+
+  console.error(`🛑 LICENSE.txt is not ready to ship — ${verdict.reason}.`);
+  console.error('   A half-filled licence appears to grant terms nobody approved. Fill it, have it');
+  console.error('   reviewed, then remove the DRAFT banner and re-run.');
+  console.error('   Review copy + clause reasoning: the FREE-EDITION-EULA document in the central docs store.');
+  if (!DRY_RUN) process.exit(1);
+  console.error('   (dry run — continuing so the rest of the plan can be inspected)');
+  return text;
+}
+
+const RELEASE_README = `Trading Command Suite — Free Edition (v${version})
+${'='.repeat(48)}
+
+This is a BUILT WEB APPLICATION, not an executable. Serve the folder over HTTP with any
+static file server; open index.html through that server rather than from the file system.
+
+Licence       — LICENSE.txt. Read it: it sets out what you may and may not do with this
+                software, and it is the terms you accept by using it. Note in particular that
+                it is NOT a licence to redistribute, and that it is not financial advice.
+
+Third parties — THIRD-PARTY-NOTICES.txt lists every bundled dependency with its licence and
+                reproduces the licence texts. This build contains the dependencies of the
+                application as published; the file is generated from the dependency tree.
+
+Checksum      — the .sha256 file beside the zip. Verify before use:
+                PowerShell:  Get-FileHash <zip> -Algorithm SHA256
+
+Source        — this release is built from a private development repository. The source is not
+                published. The application name and META.Stack are trade marks of the
+                licensor; no trade mark rights are granted by the licence.
+
+Trading risk  — this software can place orders with your broker at your instruction. You are
+                responsible for every order and position. Market data may be delayed or wrong.
+`;
+
 // ── 1. build ────────────────────────────────────────────────────────────────────────────────
 console.log(`[1/4] building free edition (v${version})...`);
 run('node_modules\\.bin\\vite.cmd', ['build', '--mode', 'free', '--outDir', 'dist-free', '--sourcemap']);
@@ -64,6 +137,26 @@ console.log('[3/4] packaging...');
 const RELEASE_DIST = path.join(ROOT, 'dist-free-release');
 fs.rmSync(RELEASE_DIST, { recursive: true, force: true });
 run('node_modules\\.bin\\vite.cmd', ['build', '--mode', 'free', '--outDir', 'dist-free-release']);
+
+// 3b. legal files — into the packaged folder BEFORE the zip is made, so the shipped artefact
+// carries them. Nothing here is optional: the guards in step 2 check the CODE, and these check
+// the OBLIGATIONS that come with shipping it.
+const licenceText = assertLicenceReady();
+fs.writeFileSync(path.join(RELEASE_DIST, 'LICENSE.txt'), licenceText, 'utf8');
+run('node', [
+  'scripts/generate-third-party-notices.cjs',
+  '--out', path.join(RELEASE_DIST, 'THIRD-PARTY-NOTICES.txt'),
+]);
+fs.writeFileSync(path.join(RELEASE_DIST, 'README.txt'), RELEASE_README, 'utf8');
+for (const f of ['LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'README.txt']) {
+  const p = path.join(RELEASE_DIST, f);
+  if (!fs.existsSync(p) || fs.statSync(p).size === 0) {
+    // Presence is a claim; size is the evidence that the copy actually carried content.
+    console.error(`🛑 ${f} did not make it into the packaged folder. Refusing to zip.`);
+    process.exit(1);
+  }
+}
+
 fs.rmSync(zipPath, { force: true });
 run('powershell.exe', [
   '-NoProfile',
