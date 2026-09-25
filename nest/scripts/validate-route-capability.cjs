@@ -32,6 +32,25 @@
  * If the database is unreachable this EXITS NON-ZERO. A check that inspects nothing and reports OK is
  * worse than no check, because the next reader trusts it.
  *
+ * ⚠️ TWO CHECKS, TWO DEPTHS — THIS IS DEPTH 1. They are NOT duplicates.
+ * -------------------------------------------------------------------
+ * `audit-bot-activation.cjs` (`npm run audit:bot-activation`) answers DEPTH 2: can this BOT trade
+ * **right now**? It adds bars, the `strategy_protocol` subscription and floor-vs-`baseSize`, and it
+ * reads `tradeMode` from the LIVE BRIDGES.
+ *
+ * THIS script answers DEPTH 1: can any active broker take this SYMBOL **at all**? It reads only
+ * `broker_symbol` in the DATABASE — so it still works when both bridges are DOWN, which is the one
+ * thing the audit cannot do. That is the whole reason it exists alongside the audit.
+ *
+ * ⚠️ Measured 2026-09-25 by running both on the same data, because "they might be duplicates" is a
+ * claim and this is the observation: this exits **0** while the audit exits **1**, naming
+ * `BTC … BELOW-FLOOR(0.01<1)`. **Both are right** — BTC's symbol is tradeable, BTC's bot is not.
+ * Both reported **38 active bots**, so the population agrees and only the depth differs. Neither is
+ * a duplicate, and a third mechanism for this question would be pure debt.
+ *
+ * WHEN TO RUN WHICH: bridges UP → run the AUDIT (it subsumes this question and adds the rest).
+ * Bridges DOWN, on CI, or on a machine with no bridge → run THIS.
+ *
  * Usage:  node scripts/validate-route-capability.cjs
  *         node scripts/validate-route-capability.cjs --self-test    (proves the rule can fail)
  *         node scripts/validate-route-capability.cjs --json

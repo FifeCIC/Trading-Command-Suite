@@ -22,7 +22,30 @@
  * instead of an afternoon. It is READ-ONLY: it never changes a bot, a route or an order.
  *
  * Usage (from nest/):  node scripts/audit-bot-activation.cjs
+ *                      npm run audit:bot-activation
  * Exit code: 1 if any ACTIVE bot is blocked, 0 otherwise (inactive bots are reported, not fatal).
+ *
+ * ⚠️ TWO CHECKS, TWO DEPTHS — THIS IS DEPTH 2. They are NOT duplicates.
+ * -------------------------------------------------------------------
+ * `validate-route-capability.cjs` (`npm run db:route-capability`) answers DEPTH 1: can any active
+ * broker trade this SYMBOL **at all**? It reads only `broker_symbol` in the DATABASE, so it still
+ * works with both bridges down — which is the one thing this script cannot do.
+ *
+ * THIS script answers DEPTH 2: can this BOT trade **right now**? It adds bars, the
+ * `strategy_protocol` subscription and floor-vs-`baseSize`, and it reads `tradeMode` from the LIVE
+ * BRIDGES rather than from the database.
+ *
+ * ⚠️ Measured 2026-09-25 by running both on the same data, because "they might be duplicates" is a
+ * claim and this is the observation:
+ *   • `db:route-capability` → exit **0**, "every active bot has a symbol at least one active broker can trade"
+ *   • this audit          → exit **1**, BTC Investment Monitor blocked `BELOW-FLOOR(0.01<1)`
+ * **Both are right.** BTC's *symbol* is tradeable (depth 1 passes); BTC's *bot* is not, because its
+ * size is under the broker minimum (depth 2 fails). Both reported **38 active bots** — the
+ * population agrees, only the depth differs. So neither is a duplicate of the other, and a third
+ * mechanism for this question would be pure debt.
+ *
+ * WHEN TO RUN WHICH: bridges UP → run THIS (it subsumes depth 1's question and adds the rest).
+ * Bridges DOWN, on CI, or on a machine with no bridge → run `db:route-capability`.
  */
 
 const fs = require('fs');

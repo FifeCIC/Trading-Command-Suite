@@ -133,26 +133,49 @@ in the UI and produces no queue entries, with no error anywhere.
 
 ---
 
-## 🔍 "Why isn't this bot trading?" — use these two, in this order
+## 🔍 "Why isn't this bot trading?" — one question, THREE depths, shallow to deep
+
+> ⚠️ **Depths 1 and 2 are NOT duplicates — they stop at different points**, and this was **measured**
+> (2026-09-25) rather than assumed. Run both on the same data and `db:route-capability` **exits 0**
+> ("every active bot has a symbol at least one active broker can trade") while the audit **exits 1**,
+> naming `BTC … BELOW-FLOOR(0.01<1)`. **Both are correct.** BTC's *symbol* is tradeable; BTC's *bot*
+> is not, because its size is under the broker minimum. Both reported **38 active bots** — the
+> population agrees, only the depth differs. Neither replaces the other, and a third mechanism for
+> this question would be pure debt.
 
 ```powershell
-# 1. WHY can this bot not trade? Names the specific fault, per bot.
-node nest/scripts/audit-bot-activation.cjs
+# DEPTH 1 — can any active broker take the SYMBOL at all?
+#   Reads the DATABASE only, so it works with both bridges DOWN. This is the one a
+#   no-bridge machine or a CI run can use.
+npm --prefix nest run db:route-capability
+#    exits 1 naming any bot whose symbol no active broker can trade
+
+# DEPTH 2 — can this BOT trade right now?
+#   Adds bars, the strategy_protocol subscription and floor-vs-baseSize, and reads
+#   tradeMode from the LIVE BRIDGES.
+#   ⚠️ With the bridges UP this SUBSUMES depth 1 — run this one instead.
+npm --prefix nest run audit:bot-activation
 #    reports: NO-BARS | NO-SUBSCRIPTION | BELOW-FLOOR | NOT-TRADEABLE-HERE | INACTIVE
 
-# 2. Has the DATABASE drifted from the SEED? Read-only — writes nothing.
+# DEPTH 3 — is the CONFIG still what the seed declares it should be? A different question again.
+#   Read-only, writes nothing. Reports changes: [{ bot, fields[] }].
 curl.exe -s -X POST "http://localhost:3201/api/trading/strategies/seed?dryRun=true"
 ```
 
-**`nest/scripts/audit-bot-activation.cjs` is the entry point for "why can't this bot trade".**
-It exists because the US500 incident (2026-09-15) produced a bot that looked perfectly configured
-in the UI while the bridge refused every order — three separate faults, all invisible.
+**The audit (`audit-bot-activation.cjs`) is the entry point for "why can't this bot trade"** — but
+only while the bridges are up. It exists because the US500 incident (2026-09-15) produced a bot that
+looked perfectly configured in the UI while the bridge refused every order — three separate faults,
+all invisible.
 
-**`?dryRun=true`** is the second question, and it is different: the audit asks whether a bot *can*
-trade, this asks whether the **configuration still matches `strategy-seed-data.ts`**. It reports
+**`?dryRun=true`** answers a different question again: not whether a bot *can* trade, but whether the
+**configuration still matches `strategy-seed-data.ts`**. It reports
 `changes: [{ bot, fields[] }]` without writing, so it is safe to run any time — and running it is
 how you find out that a bot's size, mode or time-stop was changed in the database and never put
 back into the seed.
+
+⚠️ **Known residual:** the active-bot counts agreeing (38 in both) is an observation, not a gate.
+Nothing fails if the two drift apart, which would mean one of them has a filter bug. Reconcile by
+running both — do not assume.
 
 ### ⚠️ Convergence is only safe in ONE direction: seed → database
 
