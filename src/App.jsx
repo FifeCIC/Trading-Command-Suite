@@ -44,6 +44,21 @@ import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition } from './core/edition-nav.js';
 import EditionNotice from './components/EditionNotice.jsx';
 
+/**
+ * Compile-time "the FULL edition" flag (§9.14 strip pass).
+ *
+ * ⚠️ WHY THE VITE DEFINE AND NOT `editionAllowsKey()`.
+ * Both answer "may this be offered?", but only ONE of them removes the premium route path from the
+ * shipped JavaScript. `editionAllowsKey()` is a runtime question, so the path literal stays in the
+ * bundle and the free-build guard reports it as a leak — correctly, because the free artefact is
+ * readable. `import.meta.env.VITE_EDITION` is substituted at build time, so `"free" !== "free"`
+ * folds to `false` and the whole guarded block is dropped by the minifier.
+ *
+ * Measured 2026-09-25: 20 premium route paths were reaching the free bundle, 9 of them the legacy
+ * redirects below. See `FREE-EDITION-PLAN.md` §9.14.
+ */
+const FULL_EDITION_ONLY = import.meta.env.VITE_EDITION !== 'free';
+
 // Edition-filtered once at module scope: the free build hides premium views from the sidebar.
 // (Full build = identity; see src/core/edition-nav.js.)
 const NAV_STRUCTURE = filterNavStructureByEdition(getNavStructure());
@@ -1066,29 +1081,39 @@ export default function App() {
           {TopMoversPage && <Route path="/lab/top-movers" element={<TopMoversPage />} />}
           {SystemHealthPage && <Route path="/settings/health-check" element={<SystemHealthPage />} />}
           {PlatformComparisonsPage && <Route path="/lab/platform-comparisons" element={<PlatformComparisonsPage />} />}
-          <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
-          <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
-          <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
-          <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
-          <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
-          <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/status/meta-stack-pipeline" replace />} />
-          <Route path="/planner/allocator" element={<Navigate to="/lab/allocator" replace />} />
+          {/* ⚠️ §9.14 — every redirect in this block lands on a PREMIUM view, so the free build
+              omits the route entirely. Two things are avoided by omitting rather than retargeting:
+              the premium path would otherwise ship as a string literal in the free bundle, and a
+              free user following an old bookmark would be sent to a page that is not there. The
+              free build falls through to the edition guard instead, which is the designed reply.
+              The flag folds at build time — see FULL_EDITION_ONLY at the top of this file. */}
+          {FULL_EDITION_ONLY && (
+            <>
+              <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
+              <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
+              <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
+              <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
+              <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
+              <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/status/meta-stack-pipeline" replace />} />
+              <Route path="/planner/allocator" element={<Navigate to="/lab/allocator" replace />} />
+              <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />
+              <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
+              {/* `/trading/trading-strategies` RETIRED 2026-09-23 (owner, option A): its table +
+                  sticky sidebar layout moved to /trading/trading-bots, so this is a REDIRECT rather
+                  than a deletion. A retired route with no redirect is a 404 for every bookmark,
+                  every doc link and every QA procedure that names it - and paths are cheap, dead
+                  links are not. Premium-only, because its destination is premium. */}
+              <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
+            </>
+          )}
           <Route path="/status/platform-api-management" element={<Navigate to="/status" replace />} />
           <Route path="/status/audit-log" element={<Navigate to="/status" replace />} />
           <Route path="/status/ai-logs" element={<Navigate to="/status" replace />} />
           <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
           <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
           <Route path="/lab/directive-audit" element={<Navigate to="/lab" replace />} />
-          {/* QA area retired 2026-09-03 — QA Checklist moved to Development */}
-          <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />
-          <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
           <Route path="/scoringStrategies/:view" element={<ScoringStrategiesRedirect />} />
           <Route path="/scoringStrategies" element={<Navigate to="/scoring" replace />} />
-          {/* `/trading/trading-strategies` RETIRED 2026-09-23 (owner, option A): its table + sticky
-              sidebar layout moved to /trading/trading-bots, so this is a REDIRECT rather than a
-              deletion. A retired route with no redirect is a 404 for every bookmark, every doc link
-              and every QA procedure that names it - and paths are cheap, dead links are not. */}
-          <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

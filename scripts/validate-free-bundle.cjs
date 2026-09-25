@@ -132,7 +132,26 @@ const appJs = fs
 const premiumKeys = Object.entries(meta)
   .filter(([, e]) => e.tier !== 'free')
   .map(([k]) => k);
-const leakedKeys = premiumKeys.filter((k) => appJs.includes(JSON.stringify(k)) || appJs.includes(`'${k}'`));
+
+// ⚠️ QUOTING IS NOT FIXED — do not go back to testing quoted forms (2026-09-25).
+//
+// This check used to look for each path wrapped in double quotes or single quotes. That is a
+// property of the BUNDLER, not of the leak, and the bundler emits JSX string props as TEMPLATE
+// literals: `(0,B.jsx)(`a`,{href:`/status/health-check`,...})`. The result was a guard reporting
+// "0/95 premium path(s) visible (expected 0)" while six premium paths shipped — a check passing
+// while its target is present.
+//
+// The `--mode full` canary did NOT catch it, and why is worth keeping: in the full build the same
+// paths exist in the map modules (nav-tree / view-meta) as ORDINARY quoted literals, so the
+// canary found 95/95 and looked healthy. It was validating the predicate against a quoting style
+// the free pages never use. A canary is only worth what its input is worth.
+//
+// So match on a BOUNDARY rather than on quoting: the path followed by anything that cannot
+// continue a path. That is independent of `"` / `'` / `` ` `` and of minifier choices.
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const pathIsPresent = (k) => new RegExp(`${escapeRegExp(k)}(?![A-Za-z0-9_$/-])`).test(appJs);
+
+const leakedKeys = premiumKeys.filter(pathIsPresent);
 if (mode === 'free' && leakedKeys.length) {
   failures.push(
     `PREMIUM PATHS SHIPPED: ${leakedKeys.length} premium route(s) appear as string literals in the free bundle, e.g. ${leakedKeys.slice(0, 3).join(', ')}`,
@@ -143,6 +162,22 @@ if (mode === 'full' && leakedKeys.length !== premiumKeys.length) {
   // nothing. (Guard rule: a guard never observed to fail is a decoration.)
   failures.push(
     `CHECKER BLIND: found only ${leakedKeys.length}/${premiumKeys.length} premium paths in the FULL build — this check could not detect a free-bundle leak`,
+  );
+}
+// ⚠️ THE CANARY THAT WAS MISSING (2026-09-25). The check above proves the predicate can find the
+// paths *somewhere* in the full build — and it passed for months while the free check was blind,
+// because the full build also contains the map modules (nav-tree / view-meta) holding every path as
+// an ORDINARY QUOTED literal. Free pages emit them as TEMPLATE literals instead, which is the form
+// the old predicate could not see. So the canary now asserts the predicate has been shown to work
+// against the quoting style the free pages actually use.
+const templateLiteralSeen = premiumKeys.some(
+  (k) => appJs.includes(`\`${k}\``) || appJs.includes(`\`${k}?`),
+);
+if (mode === 'full' && !templateLiteralSeen) {
+  failures.push(
+    'CHECKER BLIND: no premium path appears in template-literal form in the FULL build — this ' +
+      'predicate has not been shown to see the quoting style the free pages emit, so a green free ' +
+      'run would not be evidence',
   );
 }
 

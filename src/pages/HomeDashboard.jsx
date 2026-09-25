@@ -128,12 +128,17 @@ export default function HomeDashboard() {
               {mt5TradeAllowed === null ? '—' : mt5TradeAllowed ? 'Enabled' : 'Disabled'}
             </span>
           </div>
-          <div className="nd-status-item">
-            <span className="nd-status-label">Stop Guardian</span>
-            <span className={`nd-status-value ${sgEnabled ? 'ok' : ''}`}>
-              {sgEnabled ? `Guarding ${sgGuardedCount}` : 'Stopped'}
-            </span>
-          </div>
+          {/* §9.14 — Stop Guardian is a PREMIUM view, so its status row is omitted in the free
+              build rather than shown with no page behind it. The guard is the Vite define: folded
+              at build time, so the name never reaches the free bundle. */}
+          {import.meta.env.VITE_EDITION !== 'free' && (
+            <div className="nd-status-item">
+              <span className="nd-status-label">Stop Guardian</span>
+              <span className={`nd-status-value ${sgEnabled ? 'ok' : ''}`}>
+                {sgEnabled ? `Guarding ${sgGuardedCount}` : 'Stopped'}
+              </span>
+            </div>
+          )}
           <div className="nd-status-item">
             <span className="nd-status-label">Trading212</span>
             <span className="nd-status-value ok">Live — $2,393</span>

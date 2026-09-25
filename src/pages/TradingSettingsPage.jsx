@@ -372,11 +372,15 @@ export default function TradingSettingsPage() {
         desc="The META.Stack kill switch for dispatch. OFF keeps scoring and signals running but sends every order to paper."
       >
         <MetaStackLayerSwitch layer="trading" />
-        <MovedNote>
-          The same switch appears on <a href="/settings/automation">Automation</a>, alongside the
-          loop and the queue. Bots can dispatch only when BOTH this layer and the bot's own
-          broker flag allow it.
-        </MovedNote>
+        {/* §9.14 — /settings/automation is a PREMIUM view. Omitted in the free build so the path
+            does not ship and no dead link is offered. Flag folds at build time (Vite define). */}
+        {import.meta.env.VITE_EDITION !== 'free' && (
+          <MovedNote>
+            The same switch appears on <a href="/settings/automation">Automation</a>, alongside the
+            loop and the queue. Bots can dispatch only when BOTH this layer and the bot's own
+            broker flag allow it.
+          </MovedNote>
+        )}
       </SettingsSection>
 
       <SettingsSection
@@ -385,12 +389,19 @@ export default function TradingSettingsPage() {
         desc="Every active bot's bar against the highest score its protocol has actually produced. A bar above the achieved ceiling is a bot that can never fire."
       >
         <BotBarsTable />
-        <MovedNote>
-          Add and edit bots on <a href="/trading/trading-bots">Trading Bots</a> or{' '}
-          <a href="/trading/bot-create">Create Bot</a>. Live evaluations are on{' '}
-          <a href="/trading/strategy-monitor">Strategy Monitor</a>. The queue that paces them is
-          on <a href="/settings/automation">Automation</a>.
-        </MovedNote>
+        {/* §9.14 — Trading Bots, Create Bot and Strategy Monitor are PREMIUM views, and so is the
+            /settings/automation destination, so the whole note is premium-only. The flag is read
+            from the Vite define: the bundler folds this away in the free build, which is what stops
+            the names AND the paths reaching the shipped JS. `editionAllowsKey()` would answer the
+            same question at runtime and still ship the strings. */}
+        {import.meta.env.VITE_EDITION !== 'free' && (
+          <MovedNote>
+            Add and edit bots on <a href="/trading/trading-bots">Trading Bots</a> or{' '}
+            <a href="/trading/bot-create">Create Bot</a>. Live evaluations are on{' '}
+            <a href="/trading/strategy-monitor">Strategy Monitor</a>. The queue that paces them is
+            on <a href="/settings/automation">Automation</a>.
+          </MovedNote>
+        )}
       </SettingsSection>
 
       <SettingsSection

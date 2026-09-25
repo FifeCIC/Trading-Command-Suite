@@ -57,7 +57,13 @@ export const BOARD_DEFAULTS = {
  */
 export const BOARD_LABELS = {
   dashboard: 'Dashboard',
-  lab: 'Widget Library (Lab)',
+  // ⚠️ §9.14 — the lab board is only ever assigned on `/development/screen-assignment`, which is a
+  // PREMIUM view, so this label never renders in the free edition. It also *repeats the premium page
+  // name* ('Widget Library'), which is exactly what the rule above forbids — and the guard counts it
+  // as a leaked view name. Spread, so the entry is dropped whole rather than the string being left
+  // in a dead branch; `import.meta.env.VITE_EDITION` is substituted at build time so the bundler
+  // removes it from the free artefact entirely.
+  ...(import.meta.env.VITE_EDITION === 'free' ? {} : { lab: 'Widget Library (Lab)' }),
 };
 
 /** Board ids the app ships with (before anything is stored). */

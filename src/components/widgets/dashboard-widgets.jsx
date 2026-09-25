@@ -281,7 +281,11 @@ function DiversificationWidget() {
       {warnings.slice(0, 2).map((w, i) => (
         <p key={i} className="dash-div-warn-msg">⚠️ {w}</p>
       ))}
-      <a href="/planner/allocator" className="dash-div-link">View Strategy Allocator →</a>
+      {/* §9.14 — the Strategy Allocator is a PREMIUM view (/lab/allocator). Omitted in the free
+          build so neither the link text nor the path reaches the shipped bundle. */}
+      {import.meta.env.VITE_EDITION !== 'free' && (
+        <a href="/planner/allocator" className="dash-div-link">View Strategy Allocator →</a>
+      )}
     </>
   );
 }
@@ -532,9 +536,12 @@ function HotPicksWidget() {
           </a>
         ))}
       </div>
-      <button className="dash-hp-link" onClick={() => navigate('/development/hot-stock-picks')}>
-        View all picks{isFetching ? ' ⟳' : ''} →
-      </button>
+      {/* §9.14 — Hot Stock Picks is a PREMIUM view; omitted in the free build. */}
+      {import.meta.env.VITE_EDITION !== 'free' && (
+        <button className="dash-hp-link" onClick={() => navigate('/development/hot-stock-picks')}>
+          View all picks{isFetching ? ' ⟳' : ''} →
+        </button>
+      )}
     </>
   );
 }

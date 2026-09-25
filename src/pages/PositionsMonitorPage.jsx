@@ -106,7 +106,10 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
           </button>
         )}
         <a className="pm-nav-link" href={`/research/symbol/${pos.symbol}`}>🔍 Details</a>
-        <a className="pm-nav-link" href={`/automation/decision-trail?symbol=${pos.symbol}`} title={`Decision trail for ${pos.symbol}`}>🔗 Trail</a>
+        {/* §9.14 — the Decision Trail is a PREMIUM view; omitted in the free build. */}
+        {import.meta.env.VITE_EDITION !== 'free' && (
+          <a className="pm-nav-link" href={`/automation/decision-trail?symbol=${pos.symbol}`} title={`Decision trail for ${pos.symbol}`}>🔗 Trail</a>
+        )}
       </div>
     </motion.div>
   );

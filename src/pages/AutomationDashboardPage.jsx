@@ -185,7 +185,11 @@ export default function AutomationDashboardPage() {
           <button className="ad-btn ad-btn-run" onClick={() => runNowMutation.mutate()} disabled={isBusy || !loopRunning}>
             {runNowMutation.isPending ? '⏳' : '⚡'} Run Now
           </button>
-          <a href="/builder/architecture-framework" className="ad-arch-link">⬡ Architecture</a>
+          {/* §9.14 — Architecture Framework is a PREMIUM view; omitted in the free build so the path
+              does not reach the shipped bundle. */}
+          {import.meta.env.VITE_EDITION !== 'free' && (
+            <a href="/builder/architecture-framework" className="ad-arch-link">⬡ Architecture</a>
+          )}
         </div>
       </motion.header>
 

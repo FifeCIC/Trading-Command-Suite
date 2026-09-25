@@ -462,6 +462,9 @@ export default function ActiveSymbolsPage() {
                         {!hasCompanyName && sym.name && (
                           <span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>No company name</span>
                         )}
+                        {/* §9.14 — the Decision Trail is a PREMIUM view. Omitted in the free build
+                            so the path does not ship and no dead link is offered. */}
+                        {import.meta.env.VITE_EDITION !== 'free' && (
                         <span style={{ fontSize: '0.7rem' }}>
                           <a
                             href={`/automation/decision-trail?symbol=${sym.ticker}`}
@@ -472,6 +475,7 @@ export default function ActiveSymbolsPage() {
                             🔗 Trail
                           </a>
                         </span>
+                        )}
                       </div>
                     </td>
                     {cols.openTrade && (

@@ -26,7 +26,10 @@ const SEVERITY_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#64748b' };
 
 // Fallback routes by alert type
 const TYPE_FALLBACKS = {
-  signal: '/scoring/live-ordering-stack',
+  // §9.14 — `/scoring/live-ordering-stack` (the Ladder) is PREMIUM. A free user is sent to the same
+  // fallback a daily alert uses, rather than to a path that does not exist. The Vite define folds
+  // at build time, so the premium path never reaches the free bundle.
+  signal: import.meta.env.VITE_EDITION === 'free' ? '/dashboard' : '/scoring/live-ordering-stack',
   drawdown: '/trading/portfolio-overview',
   backtest: '/training/backtest',
   system: '/status/setup',
