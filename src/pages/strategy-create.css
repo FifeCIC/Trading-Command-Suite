@@ -4,8 +4,6 @@
 
 .stratcreate-header { margin-bottom: 1rem; }
 .stratcreate-header h1 { margin: 0; font-size: 1.5rem; }
-.stratcreate-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
-
 /* Tabs */
 .stratcreate-tabs { display: flex; gap: 2px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
 .stratcreate-tab {
