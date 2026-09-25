@@ -261,21 +261,85 @@ export class Mt5Controller {
   }
 
   @Post('reconnect')
-  @ApiOperation({ summary: 'Force MT5 bridge to fully reconnect to terminal' })
-  @ApiOkResponse({ description: 'Reconnection result' })
-  async reconnect() {
+  @ApiOperation({
+    summary: 'Force an MT5 bridge to fully reconnect to terminal',
+    description:
+      // ⚠️ #992 criterion 4. Before this, the endpoint hardcoded the PRIMARY bridge URL, so with
+      // `MT5_ACTIVE_BROKERS=2,3` the only recovery route the app exposed could not be AIMED at the
+      // broker that was down — and on 2026-09-25 that is exactly what happened: broker 2 lost its
+      // session and the API could only have reached it by luck of being primary.
+      'Pass brokerId to target a SPECIFIC bridge. Omitted = the default (primary) bridge, which is ' +
+      'what every existing caller gets. An id that is not a registered bridge is REFUSED with the ' +
+      'active ids named — never answered by the default (#914).',
+  })
+  @ApiOkResponse({ description: 'Reconnection result, naming the broker that was reconnected' })
+  async reconnect(@Query('brokerId') brokerId?: string) {
+    // `undefined`/'' means "the default bridge" and must stay that way for existing callers.
+    let resolvedBrokerId: number | null = null;
+    let bridgeUrl: string;
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/reconnect`, {
+      if (brokerId !== undefined && brokerId !== '') {
+        resolvedBrokerId = Number(brokerId);
+        if (!Number.isInteger(resolvedBrokerId)) {
+          return {
+            success: false,
+            brokerId: brokerId,
+            error: `brokerId must be an integer (got "${brokerId}")`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+      }
+      // ⚠️ This THROWS for an unregistered id rather than substituting the default (#914), and the
+      // throw is REPORTED. Swallowing it into "bridge unreachable" would tell the caller the bridge
+      // was down when the real fault was the id they asked for.
+      bridgeUrl = this.mt5Connection.getUrl(resolvedBrokerId);
+    } catch (err: any) {
+      return {
+        success: false,
+        brokerId: resolvedBrokerId,
+        error: err.message || String(err),
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    try {
+      const res = await fetch(`${bridgeUrl}/reconnect`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        return { success: false, error: (body as any).error || `Bridge returned HTTP ${res.status}`, timestamp: new Date().toISOString() };
+        return {
+          success: false,
+          brokerId: resolvedBrokerId,
+          bridgeUrl,
+          error: (body as any).error || `Bridge returned HTTP ${res.status}`,
+          timestamp: new Date().toISOString(),
+        };
       }
-      return await res.json();
+      // ⚠️ NAME WHICH BRIDGE ANSWERED. A reconnect result that does not say which broker was
+      // reconnected is the same defect one level up: with two bridges running, "success" is not
+      // enough to know whether the RIGHT one recovered.
+      const bridgeBody = (body as any) || {};
+      return {
+        ...bridgeBody,
+        brokerId: resolvedBrokerId,
+        bridgeUrl,
+        // The bridge now classifies its own link (#992): ok | session-lost | terminal-down |
+        // account-unavailable, with a remedy. Passing it through keeps that distinction visible to
+        // the caller instead of collapsing it back into a boolean.
+        connectionState: bridgeBody.connectionState ?? undefined,
+        timestamp: new Date().toISOString(),
+      };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Bridge unreachable', instructions: 'Start the bridge: cd scripts/mt5-bridge && python mt5_bridge.py', timestamp: new Date().toISOString() };
+      return {
+        success: false,
+        brokerId: resolvedBrokerId,
+        bridgeUrl,
+        error: err.message || 'Bridge unreachable',
+        instructions: 'Start the bridge: cd scripts/mt5-bridge && python mt5_bridge_v2.py',
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
