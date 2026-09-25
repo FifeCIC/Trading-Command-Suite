@@ -33,6 +33,7 @@ import { ObvDirective } from './implementations/obv.directive';
 import { MfiDirective } from './implementations/mfi.directive';
 import { AdxDirective } from './implementations/adx.directive';
 import { StochasticDirective } from './implementations/stochastic.directive';
+import { StochRsiDirective } from './implementations/stoch-rsi.directive';
 // Implemented trend
 import { PriceAboveSmaDirective } from './implementations/price-above-sma.directive';
 import { RsiOverboughtDirective } from './implementations/rsi-overbought.directive';
@@ -200,6 +201,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     MfiDirective,
     AdxDirective,
     StochasticDirective,
+    StochRsiDirective,
     RsiOverboughtDirective,
     MomentumContinuationComboDirective,
     // Implemented — Speed / Scalp
@@ -389,6 +391,7 @@ export class DirectivesModule implements OnModuleInit {
     private readonly mfi: MfiDirective,
     private readonly adx: AdxDirective,
     private readonly stochastic: StochasticDirective,
+    private readonly stochRsi: StochRsiDirective,
     private readonly rsiOverbought: RsiOverboughtDirective,
     private readonly momentumCont: MomentumContinuationComboDirective,
     // Implemented — Speed / Scalp
@@ -652,6 +655,14 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.regimeShiftExit);
     this.directivesService.register(this.timeStop);
     this.directivesService.register(this.sessionOpenEffect);
+    // StochRSI crossover (owner request 2026-09-25). Directional by the %K/%D cross with no score
+    // cliff — see the file header for the fault it is built to avoid.
+    this.directivesService.register(this.stochRsi);
+    // ⚠️ NOTE, NOT FIXED HERE: `StochasticDirective` is imported, listed in `providers` and
+    // constructor-injected, but has NO `register()` call — the exact shape #890 documented for
+    // `SuperTrendDirective`/`ATRTrailingStopDirective` ("being in providers is not the same as
+    // being registered"). Registering it would change `GET /api/directives`, so it is left for a
+    // separate change rather than slipped in beside an unrelated directive.
     // Q304 — Risk Gates
     this.directivesService.register(this.budgetGate);
     this.directivesService.register(this.liquidityCheck);

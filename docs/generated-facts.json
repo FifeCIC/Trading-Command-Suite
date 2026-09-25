@@ -6,7 +6,7 @@
   "facts": {
     "directiveFiles": {
       "label": "Directive implementation files",
-      "value": 107,
+      "value": 108,
       "unit": "",
       "source": "nest/src/modules/directives/**/*.directive.ts",
       "how": "curl -s localhost:3201/api/directives | jq length   # the registered set; files are a lower bound"
@@ -55,7 +55,7 @@
     },
     "version": {
       "label": "Application version",
-      "value": "0.89.2",
+      "value": "0.90.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"
