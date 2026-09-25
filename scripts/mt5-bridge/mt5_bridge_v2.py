@@ -1762,20 +1762,38 @@ if __name__ == '__main__':
     account, _, server, active, _ = get_active_credentials()
     logger.info(f'Bridge instance [{BROKER_TAG}] slot #{active}: {account} @ {server} on port {port}')
     logger.info(f'Starting MT5 Bridge v2 on port {port} (http.server, no Flask)...')
-    # Connect MT5 once at startup (after BRIDGE_ACCOUNT override takes effect)
-    logger.info('Connecting to MT5 at startup...')
-    ok, err = connect_mt5()
-    if not ok:
-        logger.warning(f'MT5 not connected at startup: {err}')
-    # ⚠️ #992 — a session that drops AFTER startup must recover without a human. The
-    # startup connect succeeds and then NOTHING watches the link; that is the defect.
-    # Daemon thread: it dies with the process and can never block shutdown.
+    # ⚠️ #992 — THE WATCHDOG STARTS BEFORE THE STARTUP CONNECT. IT IS NECESSARY, AND IT IS
+    # ⚠️⚠️ NOT SUFFICIENT — AND SAYING SO IS THE POINT OF THIS COMMENT.
+    #
+    # WHY IT MOVED. It used to be started AFTER `connect_mt5()`. A live canary on 2026-09-25
+    # (a throwaway bridge on :5002 pointed at a bogus server) showed the startup line, then
+    # NOTHING — no watchdog, no port, no diagnosis. The same shape as the original defect.
+    #
+    # ⚠️ WHAT THE CANARY THEN PROVED, WHICH CONTRADICTS THE OBVIOUS CONCLUSION. With the start
+    # moved up, the log now reads: watchdog started, then `Connecting to MT5 at startup...`,
+    # then `Initializing MT5:` — AND STOPS. It never advances, even with
+    # MT5_WATCHDOG_POLL_SECONDS=5 and 100+ seconds elapsed. `mt5.initialize()` against an
+    # unreachable server BLOCKS THE INTERPRETER, so the daemon thread never gets to run.
+    #
+    # So: an async watchdog CANNOT cover a startup hang. Reordering buys two real things — the
+    # watchdog's start is now visible in the log before the connect, and a connect that FAILS
+    # FAST (rather than blocking) is caught immediately — but a bridge that HANGS at initialize
+    # is still undiagnosable from inside this process. Fixing that needs the connect bounded
+    # and run OUT OF PROCESS, which is a larger change and is recorded, not hand-waved.
+    #
+    # It cannot thrash: when the watchdog does run and finds `terminal_info() is None`, that is
+    # `terminal-down`, and it deliberately does NOT reconnect in that state.
     threading.Thread(target=connection_watchdog, name='mt5-watchdog', daemon=True).start()
     logger.info(
         f'Connection watchdog started — poll {int(WATCHDOG_POLL_SECONDS)}s, reconnect after '
         f'{WATCHDOG_FAILURES_BEFORE_RECONNECT} consecutive bad polls, '
         f'max backoff {int(WATCHDOG_MAX_BACKOFF_SECONDS)}s'
     )
+    # Connect MT5 once at startup (after BRIDGE_ACCOUNT override takes effect)
+    logger.info('Connecting to MT5 at startup...')
+    ok, err = connect_mt5()
+    if not ok:
+        logger.warning(f'MT5 not connected at startup: {err}')
     server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
     logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port}')
     # ⚠️ Print the EFFECTIVE limits (#773). They come from the environment at import, so
