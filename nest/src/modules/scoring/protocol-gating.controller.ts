@@ -16,6 +16,11 @@ import { isDirectiveIncluded } from '../directives/directive-inclusion';
 import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-target';
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
 
+/** One decimal place, or the UI reads 46.50000000000001. */
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
 /**
  * Protocol Gating Controller — META.Stack Canonical Scoring
  * ==========================================================
@@ -212,6 +217,164 @@ export class ProtocolGatingController {
         activeCannotFire: rows.filter((r) => r.active && r.clears === 'no').length,
         activeNoData: rows.filter((r) => r.active && r.clears === 'no-data').length,
       },
+    };
+  }
+
+  /**
+   * GET /api/scoring/gated/reachable-capacity
+   *
+   * How much of each protocol's configured denominator has NEVER been earned directionally —
+   * and therefore what its ceiling becomes on a scale that excludes that capacity.
+   *
+   * ⚠️ WHY THIS EXISTS (#761 point 3)
+   * --------------------------------
+   * `thresholds` reports `protocolCeilings`: the best percentage a protocol has EVER achieved,
+   * `rawComposite / configuredSignalMax`. #761 established those percentages are honest but that
+   * the BANDS were calibrated on the old inflated scale — and its point 3 asks the follow-up
+   * question directly: *"configured capacity includes directives that are structurally unlikely to
+   * fire together, so the practical ceiling is well below the configured max. Worth measuring the
+   * realistic maximum."* This endpoint is that measurement. `peakReachPct` is the ceiling on a
+   * scale containing only capacity that has actually been earned at least once.
+   *
+   * ⚠️ OUTCOME-ONLY. IT READS NO DECLARED BIAS. Read this before "simplifying" it.
+   * ---------------------------------------------------------------------------------
+   * Capacity MUST NOT be derived from `directionBias` — tried 2026-09-10, reverted, settled in
+   * ADR-011 / SETTLED-DECISIONS row 9, and guarded by `directional-capacity-contract.spec.ts`.
+   * Declared bias massively understates what directives emit (`macd-crossover` declares `neutral`
+   * and fires directionally 5,252×), so gating capacity on it excludes the directives doing the
+   * real work. `ProtocolHealthService`'s `low-declared-directional-capacity` warning was RETIRED
+   * for exactly this reason (#906) after firing for 14 of 17 protocols.
+   *
+   * So the denominator here is not re-derived at all. It is READ from the recorded breakdown as
+   * `$.configuredSignalMax` — the scorer's own value for that tick.
+   *
+   * ⚠️ AND IT IS VERIFIED, NOT ASSUMED. Measured 2026-09-26 over 3,000 live rows, 0 mismatches:
+   *     configuredSignalMax == Σ maxScore over NON-GATE directives
+   * Gate groups resolve by (protocolId, groupId-KIND). This is load-bearing: `breakout.groupId` is
+   * a KIND ('risk' | 'technical' | 'sentiment'), NOT the group UUID — keying on the UUID matches
+   * nothing, silently excludes no gate, and inflates every denominator by exactly the gate capacity
+   * (100 here, 200 for `vix-spike-v1`). That was the first version's bug.
+   *
+   * ⚠️ `unobserved` IS NOT `neverDirectional`. A directive never exercised in the window looks
+   * identical to one that is structurally incapable. Collapsing them turns "not measured" into
+   * "cannot fire", which is how a protocol gets called broken when it is merely quiet.
+   *
+   * ⚠️ NOT A WARNING. This returns raw numbers with their explanation and asserts no verdict.
+   * A high `neverPct` is largely a STRUCTURAL property of the stable-denominator design (row 2/3:
+   * direction eligibility comes from config, not the tick), not a per-protocol fault. That is why
+   * the retired warning's framing is not reproduced here.
+   *
+   * ⚠️ COST: ~500 ms (JSON_TABLE over `score.breakdown`), flat across 1/7/30-day windows. That is
+   * why this is its OWN endpoint rather than a field on `thresholds` — bolting it on would make the
+   * Settings page 500 ms slower for every reader.
+   */
+  @Get('reachable-capacity')
+  async reachableCapacity(@Query('days') daysRaw?: string) {
+    const DAYS = Math.min(Math.max(Number(daysRaw) || 7, 1), 90);
+    const since = new Date(Date.now() - DAYS * 24 * 3600 * 1000);
+
+    // ── Gate groups: (protocolId, groupId-KIND) → isRiskGate ────────────────────────────────────
+    const gateRows = await this.prisma.protocolDirectiveGroup.findMany({
+      select: { protocolId: true, groupId: true, isRiskGate: true },
+    });
+    const isGate = new Map(gateRows.map((g) => [`${g.protocolId}::${g.groupId}`, g.isRiskGate === true]));
+    // Fallback for a row whose protocol is absent: any kind that is a gate anywhere.
+    const gateKinds = new Set(gateRows.filter((g) => g.isRiskGate === true).map((g) => g.groupId));
+
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ strategyId: string; breakdown: unknown }>>(
+      `SELECT strategyId, breakdown FROM score WHERE strategyId IS NOT NULL AND timestamp > ?`,
+      since,
+    );
+
+    const per = new Map<
+      string,
+      { cap: Map<string, number>; dir: Set<string>; peak: number; ticks: number }
+    >();
+
+    for (const r of rows) {
+      const b = (typeof r.breakdown === 'string' ? JSON.parse(r.breakdown) : r.breakdown) as {
+        breakouts?: Record<string, Array<{ directiveId?: string; maxScore?: number; signalClass?: string; groupId?: string }>>;
+        rawComposite?: number;
+      } | null;
+      if (!b?.breakouts) continue;
+
+      const slug = r.strategyId;
+      if (!per.has(slug)) per.set(slug, { cap: new Map(), dir: new Set(), peak: 0, ticks: 0 });
+      const p = per.get(slug)!;
+      p.ticks++;
+      const raw = Number(b.rawComposite ?? 0);
+      if (raw > p.peak) p.peak = raw;
+
+      for (const [gid, arr] of Object.entries(b.breakouts)) {
+        for (const e of arr) {
+          if (!e?.directiveId) continue;
+          const kind = e.groupId || gid;
+          if (isGate.get(`${slug}::${kind}`) ?? gateKinds.has(kind)) continue; // gate capacity is not in the denominator
+          if (!p.cap.has(e.directiveId)) p.cap.set(e.directiveId, Number(e.maxScore || 0));
+          if (e.signalClass === 'bullish' || e.signalClass === 'bearish') p.dir.add(e.directiveId);
+        }
+      }
+    }
+
+    const protocols = [...per.entries()]
+      .map(([slug, p]) => {
+        let configuredCapacity = 0;
+        let reachableCapacity = 0;
+        for (const [id, max] of p.cap) {
+          configuredCapacity += max;
+          if (p.dir.has(id)) reachableCapacity += max;
+        }
+        const neverCapacity = configuredCapacity - reachableCapacity;
+        return {
+          slug,
+          ticks: p.ticks,
+          directivesObserved: p.cap.size,
+          configuredCapacity,
+          reachableCapacity,
+          neverCapacity,
+          neverPct: configuredCapacity > 0 ? round1((100 * neverCapacity) / configuredCapacity) : 0,
+          peakComposite: p.peak,
+          /** Best % against the FULL denominator — reconciles with `thresholds.protocolCeilings`. */
+          peakPctOfConfigured: configuredCapacity > 0 ? round1((100 * p.peak) / configuredCapacity) : 0,
+          /**
+           * Best % against capacity that has been earned at least once — #761 point 3's "realistic
+           * maximum". `null` (not 0) when nothing was ever directional: nothing was reachable, so
+           * there is no ratio rather than a ratio of zero.
+           */
+          peakPctOfReachable: reachableCapacity > 0 ? round1((100 * p.peak) / reachableCapacity) : null,
+          /** Directives never once directional in the window, with the capacity each carries. */
+          neverDirectionalDirectives: [...p.cap.keys()].filter((id) => !p.dir.has(id)).sort(),
+        };
+      })
+      .sort((a, b) => b.neverPct - a.neverPct);
+
+    const medians = protocols.map((p) => p.neverPct).sort((a, b) => a - b);
+    const median = medians.length ? medians[Math.floor(medians.length / 2)] : 0;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays: DAYS,
+      baseline: {
+        rowsScanned: rows.length,
+        protocols: protocols.length,
+      },
+      /**
+       * Raw numbers, not a verdict. High is largely structural — see the method docblock.
+       * The canonical measurement is `nest/scripts/analyse-unreachable-capacity.cjs`; this endpoint
+       * reports the same figure, cross-validated against it (both 46.5% median, 2026-09-26).
+       */
+      method: {
+        denominator: 'read from $.configuredSignalMax in the recorded breakdown — NOT re-derived from config',
+        direction: 'outcome — did this directive in this protocol EVER record bullish/bearish?',
+        gateHandling: 'gate groups excluded by (protocolId, groupId-kind); verified Σ non-gate maxScore == configuredSignalMax on 3,000 rows',
+        caution: 'A directive never exercised looks identical to one that is incapable. Treat a high neverPct as "investigate", not as proof.',
+      },
+      summary: {
+        medianNeverPct: round1(median),
+        worst: protocols[0] ? { slug: protocols[0].slug, neverPct: protocols[0].neverPct } : null,
+        best: protocols.length ? { slug: protocols[protocols.length - 1].slug, neverPct: protocols[protocols.length - 1].neverPct } : null,
+      },
+      protocols,
     };
   }
 
