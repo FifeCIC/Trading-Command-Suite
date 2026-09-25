@@ -99,7 +99,104 @@ function getJson(url, timeoutMs = 20000) {
   });
 }
 
+/**
+ * classifyFaults() — PURE. Every fault code is a CLAIM about the world, and two of these claims were
+ * wrong in ways prose could not prevent (both measured 2026-09-26):
+ *
+ *   • `BELOW-FLOOR` was asserted for a symbol routed to a NON-MT5 venue — an MT5 floor applied to a
+ *     symbol that does not trade on MT5 (BTC → binance).
+ *   • `BROKER-HAS-NO-SYMBOL` was asserted when the bridge simply never answered, publishing "cannot
+ *     judge" as a definite "the broker does not list it".
+ *
+ * Extracted and tested so the next wrong claim has to get past `--self-test` first.
+ */
+function classifyFaults(i) {
+  const faults = [];
+  if (!i.active) faults.push('INACTIVE');
+  if (i.subs === 0) faults.push('NO-SUBSCRIPTION');
+  if (i.bars === 0) faults.push('NO-BARS');
+
+  if (i.nonMt5) {
+    // Out of scope for an MT5 audit — reported so it is VISIBLE, never silent, and never fatal.
+    faults.push(`NON-MT5-VENUE(${i.nonMt5})`);
+  } else if (!i.listLoaded) {
+    // CANNOT JUDGE — never "the broker has no such symbol". Fatal: a check that could not read its
+    // input must not report OK.
+    faults.push(`BRIDGE-UNAVAILABLE(:${i.port ?? '?'} ${i.unavailable ?? 'unreachable'})`);
+  } else {
+    if (i.tradeMode === 0) faults.push('NOT-TRADEABLE-HERE');
+    if (i.tradeMode === undefined) faults.push('BROKER-HAS-NO-SYMBOL');
+    if (i.volumeMin != null && i.size < i.volumeMin) faults.push(`BELOW-FLOOR(${i.size}<${i.volumeMin})`);
+  }
+  return faults;
+}
+
+/** INACTIVE and NON-MT5-VENUE are reported, not fatal — neither is a defect this audit judges. */
+function isBlocked(active, faults) {
+  return active && faults.some((f) => f !== 'INACTIVE' && !f.startsWith('NON-MT5-VENUE'));
+}
+
+/**
+ * Synthetic cases that MUST produce the stated fault — a rule never observed to fail is decoration.
+ * Cases 1 and 2 are the two real bugs; cases 3-5 prove the legitimate claims still fire, so the fix
+ * cannot have been "make it say nothing".
+ */
+function selfTest() {
+  const bad = [];
+  const check = (label, got, want) => {
+    const g = got.join(' ');
+    if (g !== want) bad.push(`${label}\n     want: ${want}\n      got: ${g}`);
+  };
+  const base = { active: true, subs: 1, bars: 100, port: 5001, size: 0.01, volumeMin: null };
+
+  // 1 — the BTC bug. A non-MT5 venue must NOT be judged against an MT5 floor, however far below it is.
+  check('1 non-MT5 route must be out of scope, never BELOW-FLOOR',
+    classifyFaults({ ...base, nonMt5: 'binance', listLoaded: true, tradeMode: 4, volumeMin: 1 }),
+    'NON-MT5-VENUE(binance)');
+
+  // 2 — the availability bug. No usable list must NOT be published as "the broker has no symbol".
+  check('2 no usable list must be BRIDGE-UNAVAILABLE, never BROKER-HAS-NO-SYMBOL',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: false, tradeMode: undefined, unavailable: 'terminal-down' }),
+    'BRIDGE-UNAVAILABLE(:5001 terminal-down)');
+
+  // 3 — direction check: a loaded list that GENUINELY lacks the ticker must still fire.
+  check('3 a loaded list genuinely missing the ticker must still fail',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: undefined }),
+    'BROKER-HAS-NO-SYMBOL');
+
+  // 4 — direction check: a real tradeMode=0 must still fire.
+  check('4 tradeMode=0 on a loaded list must still fail',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: 0 }),
+    'NOT-TRADEABLE-HERE');
+
+  // 5 — direction check: a genuine below-floor MT5 bot must still fire (the floor check is not dead).
+  check('5 a genuine MT5 below-floor bot must still fail',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 1 }),
+    'BELOW-FLOOR(0.01<1)');
+
+  // 6 — and a healthy bot must be silent, or the rule is just "everything fails".
+  check('6 a healthy bot must report nothing',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 0.01 }), '');
+
+  if (isBlocked(true, ['NON-MT5-VENUE(binance)'])) bad.push('7 a non-MT5 venue must NOT count as blocked');
+  if (isBlocked(true, ['INACTIVE'])) bad.push('8 INACTIVE must NOT count as blocked');
+  if (!isBlocked(true, ['BRIDGE-UNAVAILABLE(:5001 terminal-down)'])) {
+    bad.push('9 BRIDGE-UNAVAILABLE MUST count as blocked — cannot-judge is not a pass');
+  }
+
+  if (bad.length) {
+    console.error(`\n\u274c self-test: ${bad.length} case(s) FAILED:`);
+    for (const b of bad) console.error(`   ${b}`);
+    return 1;
+  }
+  console.log('\u2705 self-test: 9 cases — the rule FAILS a genuine below-floor bot, a tradeMode=0 and a');
+  console.log('   genuinely-absent symbol; SKIPS a non-MT5 venue entirely; and reports an unreadable bridge');
+  console.log('   as BRIDGE-UNAVAILABLE (blocked) rather than as a broker that lacks the symbol.');
+  return 0;
+}
+
 async function main() {
+  if (process.argv.slice(2).includes('--self-test')) process.exit(selfTest());
   loadEnv();
   const { map: portByBroker, ids: brokerIds } = portByBrokerMap();
 
@@ -115,11 +212,27 @@ async function main() {
 
   // ── Per-broker symbol list (tradeMode) — one call per live bridge ──
   const modesByPort = new Map();
+  /** port -> WHY the list is unusable, in the BRIDGE'S OWN words (`connectionState`). */
+  const listUnavailable = new Map();
   for (const port of Object.values(portByBroker)) {
     try {
       const list = await getJson(`http://127.0.0.1:${port}/symbols`);
-      modesByPort.set(port, new Map((list.symbols || []).map((s) => [String(s.name).toUpperCase(), s.tradeMode])));
-    } catch { /* bridge down — reported as UNKNOWN rather than assumed tradeable */ }
+      const rowsIn = Array.isArray(list.symbols) ? list.symbols : [];
+      // ⚠️ AN EMPTY LIST IS NOT AN ANSWER. A bridge whose terminal is down answers 503 WITH a JSON
+      // body (measured 2026-09-26: :5001 → `terminal-down`, 616 connection errors), so
+      // `list.symbols` is undefined and `new Map([])` would still SET the key — which is exactly how
+      // a live outage got published as "the broker does not list this symbol".
+      if (rowsIn.length === 0) throw new Error('empty symbol list');
+      modesByPort.set(port, new Map(rowsIn.map((s) => [String(s.name).toUpperCase(), s.tradeMode])));
+    } catch (err) {
+      // Ask the bridge WHY, so the fault names the remedy instead of just "unavailable".
+      let why = err && err.message ? String(err.message) : 'unreachable';
+      try {
+        const h = await getJson(`http://127.0.0.1:${port}/health`);
+        if (h && h.connectionState) why = String(h.connectionState);
+      } catch { /* health also unreadable — keep the original reason */ }
+      listUnavailable.set(port, why);
+    }
   }
 
   /** Per-symbol broker constraints. `/symbol/<X>/info` is the endpoint that carries volumeMin. */
@@ -187,22 +300,11 @@ async function main() {
     const active = Number(b.active) === 1;
     const subs = Number(b.subs);
 
-    const faults = [];
-    if (!active) faults.push('INACTIVE');
-    if (subs === 0) faults.push('NO-SUBSCRIPTION');
-    if (bars === 0) faults.push('NO-BARS');
-    if (nonMt5) {
-      // Out of scope for an MT5 audit — reported so it is VISIBLE, never silent, and never fatal.
-      faults.push(`NON-MT5-VENUE(${nonMt5})`);
-    } else if (!listLoaded) {
-      // CANNOT JUDGE — stated as such, never as "the broker has no such symbol". Fatal, because a
-      // check that could not read its input must not report OK.
-      faults.push(`BRIDGE-UNAVAILABLE(:${port ?? '?'})`);
-    } else {
-      if (tradeMode === 0) faults.push('NOT-TRADEABLE-HERE');
-      if (tradeMode === undefined) faults.push('BROKER-HAS-NO-SYMBOL');
-      if (c && c.volumeMin != null && size < c.volumeMin) faults.push(`BELOW-FLOOR(${size}<${c.volumeMin})`);
-    }
+    const faults = classifyFaults({
+      active, subs, bars, nonMt5, listLoaded, tradeMode,
+      volumeMin: c?.volumeMin ?? null, size, port,
+      unavailable: listUnavailable.get(port),
+    });
 
     rows.push({
       ticker,
@@ -219,8 +321,7 @@ async function main() {
       subs,
       minComposite: b.minComposite,
       faults,
-      // INACTIVE and NON-MT5-VENUE are reported, not fatal — neither is a defect this audit judges.
-      blocked: active && faults.some((f) => f !== 'INACTIVE' && !f.startsWith('NON-MT5-VENUE')),
+      blocked: isBlocked(active, faults),
     });
   }
 
@@ -253,7 +354,11 @@ async function main() {
   const unavailable = rows.filter((r) => r.faults.some((f) => f.startsWith('BRIDGE-UNAVAILABLE')));
   if (unavailable.length) {
     console.log('\n\u26a0\ufe0f  CANNOT JUDGE — a bridge did not answer its symbol list, so these were NOT checked:');
-    console.log('   This is NOT evidence the broker lacks the symbol. Re-run when the bridge answers.');
+    for (const r of unavailable) {
+      const why = r.faults.filter((f) => f.startsWith('BRIDGE-UNAVAILABLE')).join(' ');
+      console.log(`  ${r.ticker.padEnd(8)} ${r.name} — ${why}`);
+    }
+    console.log('   This is NOT evidence the broker lacks the symbol. Fix the bridge, then re-run.');
   }
 
   if (activeBlocked.length) {
