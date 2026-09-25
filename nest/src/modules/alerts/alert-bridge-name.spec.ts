@@ -36,6 +36,20 @@ const down = (brokerId: number, server: string | null) => ({
   reachable: false, health: null,
 });
 
+/**
+ * ⚠️ The REAL unreachable shape — copied from the live response, not invented.
+ *
+ * With broker 3's bridge stopped, `GET /api/automation/status` returned:
+ *     brokerId=3  server=?  url=http://localhost:5001  reachable=False
+ * `server` is the LITERAL STRING `'?'`, not null. My first spec used `null` and would therefore
+ * have passed while the live alert still printed a `?` — a fixture that did not match reality, which
+ * is the failure mode this repo keeps paying for.
+ */
+const downWithPlaceholder = (brokerId: number) => ({
+  brokerId, server: '?', url: `http://localhost:${4998 + brokerId}`,
+  reachable: false, health: null,
+});
+
 describe('checkMt5Connection — names the broker (#984)', () => {
   it('names the broker by ID when `server` is null — the case that produced "?"', async () => {
     // Broker 2 healthy with a name; broker 3 down and UNNAMEABLE (its probe failed).
@@ -58,6 +72,16 @@ describe('checkMt5Connection — names the broker (#984)', () => {
     const svc = make([healthy(2, 'MetaQuotes-Demo'), down(3, 'PepperstoneUK-Demo')]);
     const r = await svc.checkMt5Connection();
     expect(r.message).toContain('broker 3 (PepperstoneUK-Demo)');
+  });
+
+  it('the LIVE shape: `server` is the literal "?" and must not be echoed', async () => {
+    const svc = make([healthy(2, 'MetaQuotes-Demo'), downWithPlaceholder(3)]);
+    const r = await svc.checkMt5Connection();
+
+    expect(r.message).toContain('broker 3');
+    // Naming the broker is the point; printing its placeholder back is not a fix.
+    expect(r.message).not.toContain('(?)');
+    expect(r.message).not.toContain('?');
   });
 
   it('names EVERY broker when all are down', async () => {

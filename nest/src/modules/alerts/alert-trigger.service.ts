@@ -157,8 +157,15 @@ export class AlertTriggerService implements OnModuleInit {
        * name is appended when available. This is the substance of #984 — its own words are
        * *"a single `mt5` bucket cannot answer 'is my second broker working?'"*
        */
-      const label = (b: { brokerId: number; server?: string | null }) =>
-        `broker ${b.brokerId}${b.server ? ` (${b.server})` : ''}`;
+      const label = (b: { brokerId: number; server?: string | null }) => {
+        // ⚠️ MEASURED LIVE, 2026-09-25: when broker 3's bridge is STOPPED,
+        // `getAllBrokerHealths()` reports `server: '?'` — a literal placeholder, NOT null. My first
+        // version checked truthiness only, which would have rendered `broker 3 (?)`: it names the
+        // broker (the point of #984) but still prints the meaningless mark, so it is only
+        // half-fixed. The placeholder is treated as unknown here.
+        const named = b.server && b.server !== '?' ? ` (${b.server})` : '';
+        return `broker ${b.brokerId}${named}`;
+      };
 
       if (down.length === brokers.length) {
         const servers = down.map(label).join(', ');
