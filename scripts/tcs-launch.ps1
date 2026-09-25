@@ -173,7 +173,13 @@ foreach ($i in 0..($activeBrokers.Count - 1)) {
                     Write-Host "    MT5 #${brokerId} (${brokerServer}) ready after $($attempt*2)s — connected to terminal" -ForegroundColor DarkGray
                     break
                 }
-            } catch { /* not up yet */ }
+            } catch {
+                # ⚠️ This was `/* not up yet */` — a JavaScript comment. PowerShell cannot parse it:
+                # it tried to run `/*` as a COMMAND, so the catch threw instead of swallowing the
+                # expected failure, and the health-check loop reported a parse error on every retry.
+                # A comment here must use `#`. The catch is deliberately empty: not being up yet is
+                # the normal case on the first passes, and the loop retries.
+            }
         }
     }
     $bridgeReady[$bridgePort] = $ready
