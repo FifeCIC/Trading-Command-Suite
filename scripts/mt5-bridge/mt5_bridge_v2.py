@@ -750,6 +750,34 @@ def connection_watchdog():
     consecutive bad polls (so a single blip never triggers a rebuild), backs off
     exponentially up to WATCHDOG_MAX_BACKOFF_SECONDS, and stops escalating entirely
     once the terminal itself is absent.
+
+    ── DECISION (2026-09-25, primary) ────────────────────────────────────────────
+    WHAT:      This thread recovers a dropped SESSION. It is NOT capable of
+               recovering the bridge from a blocking native call, and it must not
+               be treated as if it were.
+    WHY:       This process is SINGLE-THREADED BY DESIGN (http.server, no Flask),
+               and `mt5.initialize()` / `mt5.terminal_info()` BLOCK THE INTERPRETER
+               when the terminal is unreachable. Measured live on broker 2,
+               2026-09-25: the watchdog classified terminal-down -> ok (recovered)
+               -> session-lost correctly, then WEDGED. No auto-recovery fired, the
+               log froze, and :5000 began refusing connections while the process
+               stayed alive (13 threads, 22.8s CPU). The HTTP server had stopped
+               accepting, and the watchdog's own probe was blocked inside
+               mt5.terminal_info() - it can hang at exactly the moment it is needed.
+               Independently reproduced on a throwaway :5002 bridge: with the
+               watchdog started BEFORE the connect, the log stops at
+               'Initializing MT5' and never advances.
+    INSTEAD OF: Making this thread more aggressive, adding a second in-process
+               watchdog, or lowering WATCHDOG_FAILURES_BEFORE_RECONNECT. All three
+               assume the thread gets to run, which is the thing in question.
+    REVERSE BY: Making the HTTP server threaded (ThreadingHTTPServer) AND proving a
+               hard timeout on the probe, then re-running the :5002 canary until the
+               log advances past 'Initializing MT5'. That is the evidence that would
+               overturn this.
+    REGISTER:  docs/SETTLED-DECISIONS.md row 37
+    GUARD:     scripts/mt5-bridge/test_connection_watchdog.py (13 tests - canaried
+               both directions, but they cover CLASSIFICATION ONLY; nothing here
+               fails if this limitation is forgotten)
     """
     global _CONNECTION_STATE, _CONNECTION_STATE_DETAIL
     failures = 0
