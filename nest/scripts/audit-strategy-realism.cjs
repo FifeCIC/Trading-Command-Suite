@@ -59,12 +59,20 @@
  * untagged shows NO-EVIDENCE even though it has been trading. The audit reports the coverage it
  * actually achieved (see the footer) so the gap is visible rather than silent.
  *
- * ⚠️ THE £100 CEILING HAS NO CANONICAL HOME
- * -----------------------------------------
- * £100 is the figure quoted in #960's body. A search of `nest/src` and `nest/prisma` on 2026-09-24
- * found no config entry for it. It is therefore read from env/constant here, and **that is a defect
- * in itself** — a ceiling hardcoded in an audit is the same class as a threshold hardcoded in a
- * service. If a canonical home exists, this must read from it.
+ * ⚠️ THE £100 CEILING HAS A CANONICAL HOME NOW — BUT THIS SCRIPT STILL DOES NOT READ IT
+ * ------------------------------------------------------------------------------------
+ * The 2026-09-24 finding was correct: £100 was quoted in #960's body and existed in NO config
+ * entry, so it was read from env/constant here — a ceiling hardcoded in an audit, the same class as
+ * a threshold hardcoded in a service.
+ *
+ * ✅ **FIXED 2026-09-26 (#991):** the ceiling is now declared as `risk.maxPerTrade` in
+ * `nest/src/common/settings/settings-registry.ts`, beside `risk.maxDailyLoss`, `risk.maxPerSymbol`
+ * and `risk.maxPositionSize`. `global_setting` materialises registry entries (7 `risk.*` rows
+ * exist today), so it has a home an operator can actually find.
+ *
+ * ⚠️ **REMAINING — this script still reads the env constant below.** The registry default is
+ * MIRRORED, not read, so changing the setting would not move the audit. That is the last slice of
+ * #991, and it is stated here rather than silently implied.
  *
  * Usage (from nest/):  node scripts/audit-strategy-realism.cjs [--self-test] [--all]
  *   --self-test  prove the classifier CAN return each verdict (no database needed)
@@ -77,7 +85,8 @@ const path = require('path');
 
 const NEST_ROOT = path.resolve(__dirname, '..');
 
-/** ⚠️ See the header: no canonical home was found for this. Override with REALISM_MAX_RISK. */
+/** ⚠️ MIRRORS the registry default rather than reading it — see the header. The canonical home is
+ *  `risk.maxPerTrade` in `settings-registry.ts`; wiring this read is the last slice of #991. */
 const MAX_RISK_PER_TRADE = Number(process.env.REALISM_MAX_RISK ?? 100);
 
 /** Share of a bot's closed trades that may end at the stop before the stop is judged too tight. */

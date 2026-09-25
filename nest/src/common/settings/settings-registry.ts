@@ -170,6 +170,37 @@ export const SETTINGS: SettingDefinition[] = [
     max: 1.0,
   },
   {
+    // ⚠️ Added 2026-09-26 (#991). The £100 per-trade ceiling existed ONLY as prose in #960's body:
+    // no config entry, no `global_setting` row, no constant, no guard. `audit-strategy-realism.cjs`
+    // could only read it from `REALISM_MAX_RISK ?? 100` — a default invented at the call site, which
+    // is the same defect as a threshold hardcoded in a service.
+    //
+    // WHY THIS MATTERS EVEN THOUGH NOTHING IS BROKEN: measured across 33 active bots, the largest
+    // single realised loss anywhere in the book is £31.07 (0 of 33 breach £100). So this is a
+    // MISSING CONTROL, not an active fault — and a control with no home cannot be enforced, and a
+    // bot cannot be validated against it because there is no source of truth to compare against.
+    // `development-status.instructions.md` puts risk limits in the "always treat as production"
+    // exception, so this path keeps full care pre-release.
+    key: 'risk.maxPerTrade',
+    type: 'number',
+    defaultValue: 100,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Max risk per trade',
+    description:
+      'Ceiling on the risk a SINGLE trade may carry, in account currency — the figure #960 Tier 1 ' +
+      'named but nothing enforced. This is the ceiling bots are validated against; it does not ' +
+      'resize an order. ⚠️ Not the same as risk.maxDailyLoss (all trades in a day) or ' +
+      'risk.maxPerSymbol (exposure to one instrument as a fraction of portfolio value). ' +
+      '⚠️ Breaching it today is measured, not prevented: 0 of 33 bots exceed it, so a future breach ' +
+      'is only visible if something reads this value.',
+    userChangeable: true,
+    // 0 is meaningful (risk nothing) rather than "unlimited", so there is no way to express
+    // "no limit" — an accidental huge value is a risk decision that should be visible in review.
+    min: 0,
+    max: 100000,
+  },
+  {
     // ⚠️ Added 2026-09-19 (#900). Declared since the beginning (`maxPortfolioRisk: 0.15` in four
     // literals) with NO READER ANYWHERE — the register's own words: "A portfolio-level risk cap
     // that does not exist is worse than none: it is assumed to be protecting something." Now
