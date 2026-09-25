@@ -1,0 +1,1301 @@
+{
+  "generatedFrom": "scripts/tools-index.cjs",
+  "count": 141,
+  "tools": [
+    {
+      "name": "analyse-unreachable-capacity.cjs",
+      "where": "nest",
+      "category": "analysis",
+      "purpose": "Is the score denominator counting capacity the numerator can never reach?",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "audit-bot-activation.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "WHY each trading bot can or cannot trade.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "audit-data-health.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "the guard for the class that cost 5 days of trading and 16,673",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "audit-denominator-history.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "what did the Signal denominator actually do over time?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "audit-hint-dependency.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "Audit which resolution path every protocol actually takes (#764).",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "audit-outcome-recording.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "the filtered-rate check for #825.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "audit-signal-capacity.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "answers \"why is the Signal denominator 725?\" (#781 follow-up)",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "audit-signal-capacity2.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "pin the Signal denominator to CONFIG (#781 / owner query).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "audit-strategy-realism.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "#960 Tier 1, as a GUARD rather than a one-off.",
+      "selfTest": true,
+      "reaches": null
+    },
+    {
+      "name": "check-breakdown.cjs",
+      "where": "repo",
+      "category": "check",
+      "purpose": "(no header comment)",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "check-bundle-budget.mjs",
+      "where": "repo",
+      "category": "check",
+      "purpose": "(no header comment)",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "check-clock-alert.cjs",
+      "where": "nest",
+      "category": "check",
+      "purpose": "one-off diagnostic for the MT5 clock-offset alert (#750 family).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "check-prisma-client-fresh.cjs",
+      "where": "nest",
+      "category": "check",
+      "purpose": "Assert the generated Prisma client matches `prisma/schema.prisma` (#765).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "check-urls.mjs",
+      "where": "repo",
+      "category": "check",
+      "purpose": "Broken Link Checker — checks all external URLs in the registry.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "diff-seed-vs-db.cjs",
+      "where": "repo",
+      "category": "comparison",
+      "purpose": "detect drift between the seed file and the database",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "db-schema.cjs",
+      "where": "repo",
+      "category": "database",
+      "purpose": "print the REAL columns and types for one or more tables, from the live database.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "seed-capabilities.cjs",
+      "where": "nest",
+      "category": "database",
+      "purpose": "seed the capability table from the KNOWN_FEATURES",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "build-preflight.cjs",
+      "where": "nest",
+      "category": "generator",
+      "purpose": "Build preflight — refuse to start `prisma generate` while the API holds its engine DLL.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "generate-free-manifest.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "derives the free-edition manifest from the tier state.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "generate-free-map.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "the free edition must not ship the MAP of the app.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "generate-free-registry.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "derives the FREE edition's view registry.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "generate-third-party-notices.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "produce THIRD-PARTY-NOTICES.txt for a distribution.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "publish-free-release.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "publish the FREE edition build to the PUBLIC repo.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "agent-claim.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Issue-claim + server-restart coordination state machine.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "align-scoring-strategy-thresholds.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "bring scoring_strategy.tradeThreshold onto the live scale.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "apply-threshold-column-defaults.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "align live column defaults with schema.prisma.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "batch-audit-directives.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Batch Directive Auditor — applies category, minScore, directionBias.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "breaker-before-after.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#846. Did broker 3 stop being skipped after the fix?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "breaker-post-fix-check.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#846. Is broker 3 skipped AFTER the fix landed?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "canary-view-meta-routes.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "prove `verify-view-meta-routes.cjs` can actually fail.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "classify-open-positions.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "are the current positions bot-traded or manual?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "clean-unused-imports.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "remove UNREFERENCED imports and dead import names.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "cleanup-canonical.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Generalised canonical cleanup: for every protocol, delete score rows whose",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "collapse-alert-backlog.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "one-off reconciliation of historic alert spam (2026-09-23).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "commit-only.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "commit EXACTLY the files you name, in a working tree eight agents share.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "confirm-breaker-attribution.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "which broker's errors tripped the shared breaker?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "dedupe-directives.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "one-off cleanup for issue #641.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "delete-directive.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Cleanup/repair tooling for removing a directive.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "detect-circular-work.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "alert when an area is being re-opened",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "diagnose-collation-failure.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "why did `trading_strategy` and",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "diagnose-unscored-protocols.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Diagnose why active protocols show no scores on the Protocols Ladder.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "diagnose-vix-order-failure.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "why was signal 507f7e90 blocked with",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "directive-conformance.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Tier-2 conformance suite for scoring directives.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "directive-guard.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "mechanical audit of scoring directives.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "docs-facts.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "GENERATE the volatile facts so no document has to remember them.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "dump-gold-directives.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Dump metadata for the 12 GOLD-protocol directives (issue #637 matrix input).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "extract-provider-comparisons.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "(no header comment)",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "find-risk-group-directives.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Find `session-open-effect` occurrences that sit inside a RISK-GATE group.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "fix-collation-fk-pair.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "finish #842 for the two tables an FK pins together.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "fix-collation-split.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#842. Normalise the divergent collation to the majority.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "fix-local-time-defaults.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "convert `DEFAULT CURRENT_TIMESTAMP` to `DEFAULT (UTC_TIMESTAMP())`.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "fix-local-time-writes.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "fix-local-time-sources.cjs — replace MySQL `NOW()` and `DEFAULT CURRENT_TIMESTAMP` in SQL.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "fix-mojibake.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "REVERSE-DECODE repair tool for CP1252/CP850 mojibake",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "fix-seed-directions.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "one-off cleanup (#620): remove directives from",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "handoff-to-discord.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Phase 1: Discord activity (#652)",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "identity-map.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "\"which column holds which identity?\", measured rather than assumed.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "inspect-781-symbols.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "what is actually PERSISTED for the #781 symbols?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "inspect-fk-graph.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "what pins the last two `0900_ai_ci` tables together?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "inspect-scoring-strategy-thresholds.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "what ARE the 27 rows, before aligning them?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "inspect-threshold-defaults.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "the LIVE column defaults, vs what schema.prisma claims.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "inspect-vix-state.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "(no header comment)",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "inspect-vix.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "(no header comment)",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "introspect-columns.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "print the real columns of the tables under test.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "list-empty-groups.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "List every protocol group whose `directiveIds` array is EMPTY.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "live-isolation-probe.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#846. Replay the user's exact scenario against the live API.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-broker-clock-offset.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "is the future-lead explained by the TICK-LAG",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-collation-split.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#842. Which tables disagree, and do real joins FAIL?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-future-lead-bound.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "the DECISIVE test for the broker-clock story.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-future-rows.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "decide whether #844's fix is LIVE or merely DECLARED.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-profit-taking.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "are the bots using profit-taking or trailing stops?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-sizing-config.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "is rarity sizing CONFIGURED on and never read?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "measure-sr-levels.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "QUICK ROUTE for #989 (Support & Resistance, Lab)",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "normalise-watchlists.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#763 — normalise merged watchlist symbol arrays to ONE entry per ticker.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "pepperstone-decision-log.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "what did the automation loop DECIDE today?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "profit-taking-detail.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "has trailing ACTUALLY adjusted any stop?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "protocol-notes-2026-08-20.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "2026-08-20 — Protocol state clarity: disable unconfigured protocols and",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "prototype-scoring-curve.js",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Prototype: Scoring Curve Formula",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "prune-orphan-entries.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "one-off for issue #619.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "quarantine-phantom-closes.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "flag trade rows that are NOT trades (#931).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "reconcile-signal-opportunity.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "prove Signal and Opportunity are not swapped.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "remove-risk-group-directive.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Remove `session-open-effect` from RISK-GATE groups in the protocol seed data.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "remove-seed-directive.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "One-off mechanical removal of a directive id from protocols-seed-data.ts.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "roadmap-sync.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Roadmap sync (epic #681, Phase B)",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "strip-seed-maxscores.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "one-off cleanup for issue #619.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "test-gate-membership-guard.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "proves INV-GATE-MEMBERSHIP actually bites.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "test-remove-risk-guard.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Verify that `remove-risk-group-directive.cjs` REFUSES to write invalid syntax.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "tools-index.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "GENERATE the index of this repo's own tooling, so no capability is",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "weekly-digest-discord.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Phase 2: weekly digest → Discord (#653)",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "why-no-pepperstone-trades.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "the user reports no trades on Pepperstone today,",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "validate-ab-inputs.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "THE A/B RUNNER MAY NOT INVENT ITS INPUTS (#929).",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-agent-docs.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the documentation-integrity gate",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-api-routes.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "every `/api/...` URL the frontend calls must exist on a NestJS controller.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "validate-archive-default-column.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "the archive endpoint's DEFAULT prune column",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-bot-rules.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every behavioural column on `trading_strategy` must be DECLARED.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-close-attribution.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every close path must also record WHAT it closed (#949).",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-collation-consistency.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "#842. Stop the collation split coming back.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-config-db-refs.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every config value that NAMES a database object must be valid",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-css-tokens.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the \"CSS variable actually exists\" gate",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-decisions.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a decision you cannot find is a decision nobody can reverse.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-design-observations.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "an observation is only an observation if it can be CLOSED.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "validate-directive-group-kind.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "INV-GATE-MEMBERSHIP (build-time)",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-duplication.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "INV-NO-NEW-DUPLICATION (build-time, ratcheted)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-edition-tiers.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the free/premium tier guard (FREE-EDITION-PLAN.md §3).",
+      "selfTest": true,
+      "reaches": null
+    },
+    {
+      "name": "validate-envelope-callers.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "every `/api/signals/envelope/:symbol` caller must pass a protocol.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-fabricated-stats.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a performance STAT must be computed, never typed.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-free-bundle.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "post-build assertion for the editions (FREE-EDITION-PLAN.md §3).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "validate-guardian-directive-ids.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "INV-GUARDIAN-DIRECTIVE-RESOLVABLE (build-time)",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-local-time-sources.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "no SQL in this repo may use MySQL's LOCAL clock.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-manual-trade-gate.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every ORDER-ORIGINATING path must run the portfolio risk gate.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-notices.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the notice-registry gate",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-output-style-sync.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "keeps the versioned style guide in step with its portable source.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-pipeline-contracts.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "build-time enforcement of the META.Stack pipeline contracts.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-protocol-directions.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "seed-data direction-contract validation (#620).",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-qa-ids.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "UNIQUENESS gate for the QA checklist and the capability registry.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-retention-columns.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "retention must bound on an INTRINSIC column, and the",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-risk-profile.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every `PortfolioRisk` key must be DECLARED, and every LIVE cap must",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-roadmap-columns.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the DECLARED column order must match the GENERATED one",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-route-capability.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every ACTIVE bot must have a symbol that at least one active",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-schema-safety.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "Schema safety check — refuse to let `prisma db push` delete live data.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-settings-access.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "fail the build when a setting is read without going through the registry.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-strategy-library-links.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "INV-STRATEGY-LIBRARY-LINK-RESOLVES (build-time)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-symbol-references.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "Referential-integrity guard for symbol refs.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "validate-text-encoding.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "mojibake guard",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-theories.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a theory is only a theory if it can be refuted.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-threshold-sources.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "no policy value may live outside its owner.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-ticket-columns.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a broker ticket is a 64-BIT identifier.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-timeframe-sources.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "one cadence table, and it must agree everywhere.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-timezone-sources.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "timezone maths has ONE owner, and DST is never approximated.",
+      "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-trade-phantoms.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "LOUD GUARD: a \"closed\" trade with no fill must not read as valid (#931).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "validate-trailing-claims.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "nothing may ANNOUNCE a trailing stop that no path arms.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "contract-probe.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "LIVE checks for the pipeline invariants that cannot be verified statically.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "probe-bar-timestamp-path.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "Decisive test: does the bar-refresh INSERT path shift the timestamp?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "probe-diagram-truth.cjs",
+      "where": "repo",
+      "category": "verification",
+      "purpose": "TEMPORARY DISCOVERY PROBE (2026-09-21)",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "probe-stale-symbols.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "diagnostic for #781 (UK100 4-month-old feed, VIX 0 bars).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "probe-timezone-roundtrip.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "Isolate why marketbar rows land in the future (#750 symptom, 2026-09-10).",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "verify-breaker-isolation-live.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "#846. Does the RUNNING system now isolate brokers?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "verify-config-override.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "one-off check that a protocol directive maxScore",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "verify-diagram-claims.cjs",
+      "where": "repo",
+      "category": "verification",
+      "purpose": "run the DiagramsPage claim assertions from the terminal.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "verify-seed-maxscores.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "one-off verification for issue #619.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "verify-t212-holdings.cjs",
+      "where": "nest",
+      "category": "verification",
+      "purpose": "are the 21 non-MT5 position rows really portfolio HOLDS?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "verify-view-meta-routes.cjs",
+      "where": "repo",
+      "category": "verification",
+      "purpose": "canary the view-meta resolver against real paths.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    }
+  ]
+}

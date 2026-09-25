@@ -57,6 +57,31 @@ A guard that has never been observed to fail is a decoration. Ship one that can 
 answers on two runs, and both were wrong** — nothing noticed, and a false result nearly reached the
 owner. That is the shape this rule exists to prevent.
 
+### 🛑 Before building a tool, LOOK IT UP — the index is generated, and it counts orphans
+
+```powershell
+node scripts/tools-index.cjs --write    # regenerate docs/TOOLS-INDEX.md + docs/tools-index.json
+node scripts/tools-index.cjs --check    # exit 1 if stale (runs in `prebuild`)
+node scripts/tools-index.cjs --orphans  # list only the tools named NOWHERE
+node scripts/tools-index.cjs --self-test
+```
+
+**`docs/TOOLS-INDEX.md`** lists every tool in `scripts/` and `nest/scripts/`, each marked with where
+it is reachable from: `prebuild` · `npm` · `docs` · **⚠️ ORPHAN** (named in none of them).
+
+⚠️ **Measured 2026-09-26: 141 tools, 75 orphans (53%).** An orphan is a tool that works, that nobody
+will find — `analyse-unreachable-capacity.cjs` was one, and it took three passes to locate while an
+agent was actively looking for exactly that capability. **Three separate proposals in one session
+were to BUILD something already in this list.**
+
+**The rule: grep for the capability words first, then read the index. Then build.** A fourth surface
+for something that already exists makes the problem worse, not better.
+
+⚠️ **The index is not a build gate for orphans** — 75 of them is a backlog to work through, not a
+build-breaker. `--check` fails only when the generated files are stale. Its success line reports the
+**real** orphan count, because it used to print a hardcoded `0` — on the one path a hurried reader or
+a gate is most likely to see.
+
 ## GitHub CLI (`gh`)
 
 GitHub issues, PRs, and labels are accessible via the `gh` CLI. Always use it rather than asking the user to paste issue content.
