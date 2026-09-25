@@ -144,12 +144,28 @@ export class AlertTriggerService implements OnModuleInit {
         return { triggered: true, title: 'MT5 Bridge Unreachable', message: 'No MT5 broker bridges configured.' };
       }
       const down = brokers.filter((b) => !b.reachable || !b.health?.connected);
+
+      /**
+       * #984 — name the broker, and NEVER render a bare `?`.
+       *
+       * The message used `b.server`. That field is null when the bridge cannot be reached — and a
+       * failed probe is EXACTLY when this alert fires, so the live alert read
+       * `MT5 Bridge(s) Down: ? unreachable`, which cannot be acted on because it does not say
+       * WHICH broker is down.
+       *
+       * `brokerId` comes from `MT5_ACTIVE_BROKERS` and is ALWAYS known, so it leads; the server
+       * name is appended when available. This is the substance of #984 — its own words are
+       * *"a single `mt5` bucket cannot answer 'is my second broker working?'"*
+       */
+      const label = (b: { brokerId: number; server?: string | null }) =>
+        `broker ${b.brokerId}${b.server ? ` (${b.server})` : ''}`;
+
       if (down.length === brokers.length) {
-        const servers = down.map((b) => b.server).join(', ');
+        const servers = down.map(label).join(', ');
         return { triggered: true, title: 'All MT5 Bridges Disconnected', message: `${servers} not connected. Automated trading disabled.` };
       }
       if (down.length > 0) {
-        const servers = down.map((b) => b.server).join(', ');
+        const servers = down.map(label).join(', ');
         // ⚠️ TITLE MUST NOT CARRY THE COUNT (2026-09-23). The title is the collapse key for
         // `collapseOrCreateAlert()` — "1 MT5 Bridge(s) Down" and "2 MT5 Bridge(s) Down" were two
         // DIFFERENT keys for ONE condition, so the row fractured every time the number moved.
