@@ -59,7 +59,13 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--bg-elev-2);
+  /* ⚠️ NOT `--bg-elev-2`. Measured 2026-09-25 on the `void` pack: `--bg-elev-2` AND `--bg-elev`
+     both resolve to `--panel` (`#111118`), so this chip was painted the EXACT colour of the
+     `.pg-stack-ratings-bar` it sits inside — a "raised" chip that reads flat. It is not only this
+     pack: `--bg-elev` / `--bg-elev-2` collapse to `--panel` on `core` and `scifi` too.
+     A `color-mix` off `--ink` CANNOT collapse on any pack, because it is derived from the value
+     that always contrasts with the surface. Same technique as the other collapsing-surface fixes. */
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
   border: 1px solid var(--line, #1a1a1a);
   border-radius: 6px;
   padding: 3px 10px;
