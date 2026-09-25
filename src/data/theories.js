@@ -372,6 +372,35 @@ export const THEORIES = [
       area: 'trading',
       issue: 989,
     },
+    {
+      id: 'upside-exhaustion-predicts-giveback',
+      raisedAt: '2026-09-25',
+      statement:
+        'An open long whose bars DECELERATE into a new high — price still rising, but less progress per bar than the bars before it — is nearer a local top than one reaching the same high at a steady or accelerating rate. So the deceleration is a usable exit signal for a position that is already open.',
+      predictedDirection:
+        'Flagged positions give back MORE of their peak before closing than unflagged ones. Giveback is the measure, and a flag that changes nothing is a FAILED flag — not a neutral result.',
+      measure:
+        'peak giveback per closed position = (peak favourable price − exit price) ÷ peak favourable price, split by whether the deceleration flag fired',
+      unit: 'percent of price — median and p75, with n per arm',
+      window:
+        'Closed trades on bots with the observer enabled, once n ≥ 30 closed per arm. No verdict below that, and the observer refuses one.',
+      status: 'testing',
+      evidence: {
+        basis: 'code-read',
+        n: null,
+        result:
+          'NOT YET MEASURED — this entry exists so the claim is FALSIFIABLE BEFORE the observer is built, which #995 requires and which is the whole point of the registry. The one thing established so far is a CONSTRAINT, not a result: the guardian evaluates **5m bars with limit=30** (2.5 hours of history — measured at `stop-guardian.service.ts:624`), while BOTH existing exhaustion directives declare `minBars {1d: 19}` and suitability `minTimeframe: M15`. Neither can be used as-is, so this signal must be computable inside 30 five-minute bars. ⚠️ That constraint is why the observer computes the metric itself rather than importing a directive — the same reason `observeSimulatedTsl()` (#936) does not add one either.',
+        measuredAt: '2026-09-25',
+        source:
+          '`stop-guardian.service.ts:624` (the guardian’s own bar request) + `momentum-exhaustion.directive.ts` / `directive-suitability.registry.ts` metadata',
+      },
+      falsification:
+        'Run the observer until n ≥ 30 flagged and n ≥ 30 unflagged closed positions, then compare peak giveback. **If flagged positions do not give back MORE, the signal is not an exit signal** and escalation to a guardian directive is refused. The comparison is the whole test: a difference in the OTHER direction is also a refutation.',
+      decision:
+        'OBSERVER ONLY, default OFF, per-bot. Nothing acts on the flag. ⚠️ Escalating it means adding an id to `STOP_GUARDIAN_DIRECTIVES`, which changes how much a tradeable position moves its stop — that is maths (`maths-change-requires-ab`) and needs a COPIED configuration, which #929’s precondition still blocks from reporting. ⚠️ DIRECTION IS THE POINT: both existing exhaustion directives are `directionBias: bullish` — "the DOWN-move is exhausting, so buy the dip". This is the mirror, "the UP-move is tiring", and there is no such signal in the app today (#995).',
+      area: 'trading',
+      issue: 995,
+    },
 ];
 
 export default THEORIES;

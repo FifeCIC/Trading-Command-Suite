@@ -20,7 +20,7 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 115,
+      "value": 116,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
       "how": "Select-String nest/prisma/schema.prisma '^model '"

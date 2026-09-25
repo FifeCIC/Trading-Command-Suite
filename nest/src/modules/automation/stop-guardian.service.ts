@@ -446,6 +446,22 @@ export class StopGuardianService {
   private readonly simTslLastMomentAt = new Map<number, number>();
   private readonly SIM_TSL_MOMENT_COOLDOWN_MS = 60_000;
 
+  // ── UP-move exhaustion observer (#995) — see `observeExhaustion()` ─────────────────────
+  //
+  // ⚠️ WHY THE COOLDOWN IS REQUIRED, NOT AN OPTIMISATION (same reason as sim-TSL's): `tick()`
+  // runs every few seconds while the underlying bars change every 5 MINUTES. Without it, one
+  // decelerating bar would write an event on every tick for five minutes and the table would be
+  // unreadable — the "plausible rows, no signal" defect this repo keeps re-finding.
+  private readonly exhaustionLastAt = new Map<number, number>();
+  private readonly EXHAUSTION_COOLDOWN_MS = 300_000;
+  /**
+   * Bars per comparison half. The signal compares the last `k` bars' progress with the `k` before
+   * them, so it needs `2k+1` bars and consumes them from the 30 the guardian already loads.
+   * ⚠️ SMALL ON PURPOSE: the guardian evaluates 5m bars, so k=3 is 15 minutes either side — a
+   * horizon that fits inside the position lifetimes this guardian manages.
+   */
+  private readonly EXHAUSTION_WINDOW_BARS = 3;
+
   constructor(
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
@@ -624,6 +640,13 @@ export class StopGuardianService {
           `/candles?symbol=${encodeURIComponent(strat.symbol)}&timeframe=5m&limit=30`,
         );
         const bars = candleData?.bars || [];
+        // #995 — the UP-move exhaustion observer. ⚠️ PLACED AFTER THE BAR LOAD, AND THAT IS A
+        // DECLARED LIMITATION, not an oversight. `observeSimulatedTsl()` is called BEFORE the load
+        // precisely so it still runs when the feed is degraded; this one CANNOT, because
+        // deceleration is a property of bars, not of a tick. So while the bar feed is short this
+        // observer is SILENT — the one condition under which it would be most useful to know it
+        // had stopped seeing anything. It records nothing rather than guessing from ticks.
+        this.observeExhaustion(pos, strat, bars);
         if (bars.length < 14) {
           guarded.push(this.makeGuarded(pos, strat, side, null, 0, true));
           continue;
@@ -921,6 +944,109 @@ export class StopGuardianService {
       // ⚠️ An observer must never break the guardian. This is instrumentation, not control flow,
       // and a throw here would abort the tick that does the real stop management.
       this.logger.warn(`sim-TSL observation failed for #${pos?.ticket}: ${err?.message}`);
+    }
+  }
+
+  /**
+   * observeExhaustion() — the UP-move exhaustion OBSERVER (#995).
+   * =============================================================
+   * WHAT IT WATCHES. A position whose move is DECELERATING into a new extreme: price still at the
+   * window high, but less progress over the last k bars than over the k bars before them. That is
+   * the mirror of what the app already has — `momentum-exhaustion` and
+   * `panic-exhaustion-absorption` are both `directionBias: 'bullish'`, i.e. "the DOWN-move is
+   * exhausting, buy the dip". Nothing watches "the UP-move is tiring" on a position already open.
+   *
+   * ⚠️ IT ACTS ON NOTHING. No order, no stop move — `exhaustion_event.action` is hardcoded
+   * `recorded`. Escalating it means adding an id to `STOP_GUARDIAN_DIRECTIVES`, which changes how
+   * much a tradeable position moves its stop: that is MATHS (`maths-change-requires-ab`) and needs
+   * a COPIED configuration, which #929’s precondition still blocks from reporting. The observer
+   * exists so the moment becomes MEASURABLE first.
+   *
+   * ⚠️ WHY IT COMPUTES THE METRIC INSTEAD OF CALLING A DIRECTIVE. Neither existing exhaustion
+   * directive fits this window, and that is measured, not assumed: the guardian evaluates 5m bars
+   * with limit=30, while `momentum-exhaustion` declares `minBars {1d: 19}` and suitability
+   * `minTimeframe M15`. `observeSimulatedTsl()` does not add a directive either, for the same
+   * reason — an observer is not a member of the consensus set.
+   *
+   * ⚠️ THREE DELIBERATE DIFFERENCES FROM `observeSimulatedTsl()`, each with a cost:
+   *   1. It needs BARS, so it runs after the bar load and is SILENT while the feed is short.
+   *   2. The threshold is NOT guessed. `exhaustionDecelPct` NULL means "not configured" and the
+   *      observer bails — a default would record firings against a number nobody chose, which is
+   *      evidence for a fiction.
+   *   3. It requires the move to be ADVANCING first. Deceleration after a DECLINE is just a
+   *      decline, and flagging that would mark every losing position as exhausted.
+   */
+  private observeExhaustion(pos: Mt5RawPosition, strat: any, bars: any[]): void {
+    try {
+      if (!strat?.exhaustionObserveEnabled) return;
+      const thresholdPct = Number(strat.exhaustionDecelPct);
+      // NULL / 0 means NOT CONFIGURED, never "arm at zero". Bailing leaves the position
+      // unobserved rather than inventing a threshold.
+      if (!Number.isFinite(thresholdPct) || thresholdPct <= 0) return;
+      if (!Number.isFinite(pos.priceOpen) || pos.priceOpen <= 0) return;
+      if (!Number.isFinite(pos.priceCurrent)) return;
+
+      const k = this.EXHAUSTION_WINDOW_BARS;
+      const need = k * 2 + 1;
+      if (!Array.isArray(bars) || bars.length < need) return;
+
+      const closes = bars
+        .map((b) => Number(b?.close))
+        .filter((n) => Number.isFinite(n));
+      if (closes.length < need) return;
+      const n = closes.length;
+
+      const isBuy = pos.type === 'buy';
+      // Progress in the FAVOURABLE direction for THIS position, so a sell mirrors a buy exactly.
+      const progress = (from: number, to: number) => (isBuy ? to - from : from - to);
+      const last = closes[n - 1];
+      const recentStart = closes[n - 1 - k];
+      const priorStart = closes[n - 1 - 2 * k];
+      const recent = progress(recentStart, last);
+      const prior = progress(priorStart, recentStart);
+
+      // ⚠️ Difference 3. A move must have been ADVANCING for the comparison to mean anything.
+      if (!(prior > 0)) return;
+
+      // The latest close must BE the window extreme (within 0.1%), or near it. Exhaustion is a
+      // claim about a move INTO a high; a mid-range deceleration is not the same statement.
+      const peak = isBuy ? Math.max(...closes) : Math.min(...closes);
+      const atExtreme = isBuy ? last >= peak * 0.999 : last <= peak * 1.001;
+      if (!atExtreme) return;
+
+      const decelPct = ((prior - recent) / prior) * 100;
+      if (decelPct < thresholdPct) return;
+
+      // ⚠️ REQUIRED, not an optimisation — see the field declaration.
+      const lastAt = this.exhaustionLastAt.get(pos.ticket) ?? 0;
+      if (Date.now() - lastAt < this.EXHAUSTION_COOLDOWN_MS) return;
+      this.exhaustionLastAt.set(pos.ticket, Date.now());
+
+      const entry = pos.priceOpen;
+      const profitPct =
+        ((isBuy ? pos.priceCurrent - entry : entry - pos.priceCurrent) / entry) * 100;
+
+      this.adjustmentRecorder.recordExhaustionEvent({
+        tradeTicket: pos.ticket,
+        symbol: pos.symbol,
+        strategyId: strat.id ?? null,
+        strategyName: strat.name ?? null,
+        side: isBuy ? 'buy' : 'sell',
+        entryPrice: entry,
+        price: pos.priceCurrent,
+        peakPrice: peak,
+        profitPct,
+        // Stored relative to ENTRY so rows are comparable across symbols and across time.
+        recentProgressPct: (recent / entry) * 100,
+        priorProgressPct: (prior / entry) * 100,
+        decelPct,
+        thresholdPct,
+        barsUsed: n,
+        detail: { k, windowBars: n, timeframe: '5m', observedOnly: true },
+      });
+    } catch (err: any) {
+      // An observer must never break the guardian.
+      this.logger.warn(`exhaustion observation failed for #${pos?.ticket}: ${err?.message}`);
     }
   }
 

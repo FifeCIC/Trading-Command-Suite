@@ -29,6 +29,35 @@ export interface SimTslEventParams {
 }
 
 /**
+ * ExhaustionEventParams — the recorded firing of the UP-move exhaustion observer (#995).
+ *
+ * ⚠️ Every number here is stored RAW, deliberately. `recentProgressPct` / `priorProgressPct` are
+ * the two halves of the comparison, and `decelPct` is that comparison at the threshold in force
+ * when the row was written. Storing the inputs rather than only the verdict means the threshold
+ * can be RE-EVALUATED against the same recorded firings later, without re-observing anything —
+ * which matters because the theory is `testing` and the right threshold is exactly what is
+ * unknown.
+ */
+export interface ExhaustionEventParams {
+  tradeTicket: string | number;
+  symbol: string;
+  strategyId?: string | null;
+  strategyName?: string | null;
+  /** 'buy' | 'sell' — the direction of the OPEN POSITION being watched. */
+  side: 'buy' | 'sell';
+  entryPrice?: number | null;
+  price?: number | null;
+  peakPrice?: number | null;
+  profitPct?: number | null;
+  recentProgressPct?: number | null;
+  priorProgressPct?: number | null;
+  decelPct?: number | null;
+  thresholdPct?: number | null;
+  barsUsed?: number | null;
+  detail?: Record<string, any> | null;
+}
+
+/**
  * StopGuardianService — records every SL/TP modification (#476).
  *
  * Called whenever a stop-loss or take-profit is changed — by
@@ -76,6 +105,50 @@ export class StopGuardianService {
     }).then(
       () => this.logger.log(`Sim-TSL ${params.event} recorded for ticket #${params.tradeTicket} (${params.symbol})`),
     ).catch(err => this.logger.warn(`Failed to record sim-TSL event: ${err.message}`));
+  }
+
+  /**
+   * recordExhaustionEvent() — the recorded firing of the UP-move exhaustion observer (#995).
+   * ========================================================================================
+   * ⚠️ WHAT IS DELIBERATELY MISSING: there is no ninth argument, no branch on the result, and no
+   * consumer. `action` is hardcoded `'recorded'` for the same reason `recordSimTslEvent`'s is —
+   * the mechanism OBSERVES. Escalating this into an exit means adding an id to
+   * `STOP_GUARDIAN_DIRECTIVES`, and that changes how much a tradeable position moves its stop:
+   * that is MATHS (`maths-change-requires-ab`) and needs a COPIED configuration, which #929's
+   * precondition still blocks from reporting.
+   *
+   * WHY IT SITS BESIDE `recordSimTslEvent` RATHER THAN IN ITS OWN RECORDER. Both answer "what was
+   * true about this position at a moment we did not act on", which is one kind of fact. A second
+   * recorder would drift from this one, and only one of them would receive the next fix.
+   *
+   * Fire-and-forget, matching the siblings — a logging failure must never block the tick.
+   */
+  recordExhaustionEvent(params: ExhaustionEventParams): void {
+    if (!this.prisma.isAvailable) return;
+
+    this.prisma.exhaustionEvent.create({
+      data: {
+        tradeTicket: String(params.tradeTicket),
+        symbol: params.symbol,
+        strategyId: params.strategyId ?? null,
+        strategyName: params.strategyName ?? null,
+        side: params.side,
+        event: 'observed',
+        entryPrice: params.entryPrice ?? null,
+        price: params.price ?? null,
+        peakPrice: params.peakPrice ?? null,
+        profitPct: params.profitPct ?? null,
+        recentProgressPct: params.recentProgressPct ?? null,
+        priorProgressPct: params.priorProgressPct ?? null,
+        decelPct: params.decelPct ?? null,
+        thresholdPct: params.thresholdPct ?? null,
+        barsUsed: params.barsUsed ?? null,
+        action: 'recorded',
+        detail: params.detail ?? undefined,
+      },
+    }).then(
+      () => this.logger.log(`Exhaustion observed for ticket #${params.tradeTicket} (${params.symbol}, decel ${params.decelPct}%)`),
+    ).catch(err => this.logger.warn(`Failed to record exhaustion event: ${err.message}`));
   }
 
   /**

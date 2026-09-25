@@ -1461,6 +1461,13 @@ model TradingStrategy {
   simTslEnabled       Boolean @default(false)
   simTslActivationPct Float?
   simTslDistancePct   Float?
+
+  /// #995 — the UP-move exhaustion OBSERVER. ⚠️ Default OFF is the CONTRACT, not a
+  /// convenience: no existing bot changes behaviour, so nothing here needs an A/B copy.
+  /// ⚠️ NULL `exhaustionDecelPct` means "not configured", never "arm at 0%" — the observer
+  /// bails rather than recording firings against a threshold nobody chose.
+  exhaustionObserveEnabled Boolean @default(false)
+  exhaustionDecelPct       Float?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -2071,6 +2078,50 @@ model SimTslEvent {
   occurredAt    DateTime @default(now())
 
   @@map("sim_tsl_event")
+  @@index([tradeTicket, occurredAt])
+  @@index([symbol, occurredAt])
+  @@index([strategyId, occurredAt])
+  // Retention column must LEAD an index (validate-retention-columns.cjs).
+  @@index([occurredAt])
+}
+
+// ExhaustionEvent — the recorded firings of the UP-move exhaustion OBSERVER (#995).
+//
+// ⚠️ WHY THIS EXISTS AT ALL. #995's theory (`upside-exhaustion-predicts-giveback`, status
+// `testing`) is falsifiable ONLY IF the firings are recorded: comparing peak giveback on flagged
+// versus unflagged closed positions needs the flagged set to be identifiable AFTER the fact.
+// Without this table the theory can only ever be argued, never tested.
+model ExhaustionEvent {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  tradeTicket       String   @db.VarChar(100)
+  strategyId        String?  @db.VarChar(36)
+  strategyName      String?  @db.VarChar(200)
+  symbol            String   @db.VarChar(20)
+  /// The direction of the OPEN POSITION being watched — a 'sell' position's exhaustion is a
+  /// FALLING move decelerating, which is the same code path mirrored.
+  side              String   @db.VarChar(10)
+  /// ⚠️ 'observed' is the ONLY event value the engine writes. There is no 'acted'.
+  event             String   @default("observed") @db.VarChar(30)
+  entryPrice        Float?
+  price             Float?
+  /// Highest (lowest for a sell) close in the evaluated window — what the move achieved.
+  peakPrice         Float?
+  profitPct         Float?
+  /// Net progress over the last k bars, and over the k bars before those, as % of price. The
+  /// comparison between them IS the signal, so both are stored raw rather than as a verdict.
+  recentProgressPct Float?
+  priorProgressPct  Float?
+  /// (prior − recent) ÷ prior × 100. Stored so the threshold can be RE-EVALUATED later against
+  /// the same recorded firings, without re-observing anything.
+  decelPct          Float?
+  thresholdPct      Float?
+  barsUsed          Int?
+  /// ⚠️ 'recorded' is the only value written. Nothing reaches the broker from this code path.
+  action            String   @default("recorded") @db.VarChar(30)
+  detail            Json?
+  occurredAt        DateTime @default(now())
+
+  @@map("exhaustion_event")
   @@index([tradeTicket, occurredAt])
   @@index([symbol, occurredAt])
   @@index([strategyId, occurredAt])

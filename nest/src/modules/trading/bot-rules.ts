@@ -258,6 +258,31 @@ export const BOT_RULES: BotRule[] = [
     summary: 'The tighter trail distance, measured back from the best price reached. NULL = not configured.',
     caveat: '⚠️ Never sent to the broker — the declared stop remains the real risk.' },
 
+  // #995 — the UP-move exhaustion OBSERVER. `display-only` for the same reason as `simTslEnabled`
+  // above: the guardian READS it every tick, so it is not `none` — but it places no order and moves
+  // no stop, so it is not `live` either. It records that a move was decelerating, which is what
+  // makes the theory (`upside-exhaustion-predicts-giveback`, status `testing`) falsifiable.
+  { field: 'exhaustionObserveEnabled', label: 'Exhaustion observer', stage: 'exit', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/automation/stop-guardian.service.ts',
+    summary:
+      'Watches an OPEN position for a move DECELERATING into a new extreme — price still at the ' +
+      'window high, but advancing less over the last bars than over the bars before them. Firings ' +
+      'are recorded in `exhaustion_event`.',
+    caveat:
+      '⚠️ Default OFF, and it only OBSERVES — no order and no stop move from this path. ⚠️ It is the ' +
+      'mirror of the direction the app lacked: both existing exhaustion directives are `bullish` ' +
+      'ENTRY signals ("the down-move is exhausting"). ⚠️ It needs BARS, so unlike sim-TSL it cannot ' +
+      'run before the bar load and is SILENT while the feed is short.' },
+  { field: 'exhaustionDecelPct', label: 'Exhaustion deceleration %', stage: 'exit', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/automation/stop-guardian.service.ts',
+    summary:
+      'How far recent progress must fall below prior progress before the move counts as ' +
+      'decelerating. NULL = not configured.',
+    caveat:
+      '⚠️ Deliberately NO default: a guessed threshold would record firings against a number nobody ' +
+      'chose, which is evidence for a fiction. Arms nothing unless `exhaustionObserveEnabled` is on ' +
+      'AND this is set.' },
+
   // ── declared but enforced nowhere ──────────────────────────────────────────────────────────
   { field: 'hotStockEnabled', label: 'Hot stock enabled', stage: 'sizing', enforcement: 'none', enforcedBy: null,
     summary: 'Declared for the #339 Hot Stock Picks integration.',
