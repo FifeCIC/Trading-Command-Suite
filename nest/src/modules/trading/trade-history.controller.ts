@@ -1018,6 +1018,261 @@ export class TradeHistoryController {
   }
 
   /**
+   * GET /api/trading/stop-guardian-stats — the Stop Guardian statistics page (#988).
+   * ================================================================================
+   * A READ-ONLY view over `stop_adjustment`, which already records every post-entry stop move.
+   * No new schema: `stop_adjustment` and `sim_tsl_event` both exist.
+   *
+   * ⚠️ THIS PAGE SHOWS MECHANICS, NOT A VERDICT (#988). Correlating a tighten with P&L would be a
+   * correlation between an intervention and an outcome the position would have had anyway — it
+   * cannot be read as causation without an A/B copy. So: how often, how far, from what evidence,
+   * and did the #927 floor hold. No profitability claim.
+   *
+   * ⚠️ `ok: false` IS PART OF THE CONTRACT. A failed read returns `ok:false` + `error`, and the
+   * page must render that as a FAILURE. Returning `[]` for a failed query would let an empty chart
+   * read as "the guardian did nothing", which is a different and false statement (#988 acceptance:
+   * "absence is not a negative").
+   */
+  @Get('stop-guardian-stats')
+  async getStopGuardianStats(
+    @Query('symbol') symbol?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    if (!this.prisma.isAvailable) {
+      return { ok: false, error: 'Database unavailable — the guardian history cannot be read.' };
+    }
+
+    try {
+      const where: any = {};
+      if (symbol) where.symbol = symbol.toUpperCase();
+      if (from || to) {
+        where.adjustedAt = {};
+        if (from) where.adjustedAt.gte = new Date(from);
+        if (to) where.adjustedAt.lte = new Date(to);
+      }
+
+      const [adjustments, simTslEvents] = await Promise.all([
+        (this.prisma as any).stopAdjustment.findMany({ where, orderBy: { adjustedAt: 'desc' } }),
+        (this.prisma as any).simTslEvent
+          .findMany({ orderBy: { occurredAt: 'desc' }, take: 500 })
+          .catch(() => []),
+      ]);
+
+      // ── the two things parsed out of `reason` ──────────────────────────────────────────────
+      // Measured shape (2026-09-25): "Consensus 55 | ATR=4.26786 | dist=0.300% | Wick=50"
+      const DIST = /dist=([\d.]+)%/;
+      const CONSENSUS = /Consensus\s+(\d+)/;
+
+      const distOf = (r: string | null): number | null => {
+        const m = DIST.exec(r ?? '');
+        return m ? Number(m[1]) : null;
+      };
+      const consensusOf = (r: string | null): number | null => {
+        const m = CONSENSUS.exec(r ?? '');
+        return m ? Number(m[1]) : null;
+      };
+
+      const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b);
+      const pct = (xs: number[], p: number) =>
+        xs.length === 0 ? null : xs[Math.min(xs.length - 1, Math.floor((p / 100) * xs.length))];
+
+      // ── 2. how far does it move a stop? ────────────────────────────────────────────────────
+      let tighten = 0, loosen = 0, unchanged = 0, restore = 0;
+      const achieved: number[] = [];
+      for (const a of adjustments) {
+        // ⚠️ DIRECTION IS NOT JUST THE SIGN OF `newSl - oldSl`. The guardian only ever TIGHTENS, so a
+        // downward move looks anomalous — but `#927`'s owner-authorised repair moves a stop BACK OUT
+        // to the declared distance, and its `reason` says `RESTORE #927 …`. Measured 2026-09-25: the
+        // only TWO downward moves in 614 rows are exactly those repairs. Counting them as "loosening"
+        // would invent a defect AND hide the repair, so they are their own class.
+        const isRestore = /^RESTORE\b/i.test(a.reason ?? '');
+        if (a.oldSl != null && a.newSl != null) {
+          if (isRestore) restore++;
+          else if (a.newSl > a.oldSl) tighten++;
+          else if (a.newSl < a.oldSl) loosen++;
+          else unchanged++;
+        }
+        const d = distOf(a.reason);
+        if (d !== null) achieved.push(d);
+      }
+      const achievedSorted = sorted(achieved);
+
+      // ── 3. timing ──────────────────────────────────────────────────────────────────────────
+      const perSymbolMap = new Map<string, number>();
+      const perHour = Array.from({ length: 24 }, () => 0);
+      const perDayMap = new Map<string, number>();
+      for (const a of adjustments) {
+        perSymbolMap.set(a.symbol, (perSymbolMap.get(a.symbol) ?? 0) + 1);
+        const t = a.adjustedAt ? new Date(a.adjustedAt) : null;
+        if (t && !isNaN(t.getTime())) {
+          perHour[t.getUTCHours()]++;
+          const day = t.toISOString().slice(0, 10);
+          perDayMap.set(day, (perDayMap.get(day) ?? 0) + 1);
+        }
+      }
+
+      // ── 5. which directives drove the decision? ───────────────────────────────────────────
+      // `directiveScores` is the recorded vote per directive, e.g.
+      // {"superTrend":55,"wickFilter":50,"chandelierExit":55,"atrTrailingStop":30}
+      const votes = new Map<string, { votes: number; sum: number }>();
+      const consensusDist = new Map<number, number>();
+      let consensusReadable = 0, consensusReached = 0;
+      for (const a of adjustments) {
+        const c = consensusOf(a.reason);
+        if (c !== null) {
+          consensusReadable++;
+          if (c >= 55) consensusReached++;
+          consensusDist.set(c, (consensusDist.get(c) ?? 0) + 1);
+        }
+        const ds = a.directiveScores;
+        if (ds && typeof ds === 'object') {
+          for (const [k, v] of Object.entries(ds as Record<string, unknown>)) {
+            if (typeof v !== 'number') continue;
+            const cur = votes.get(k) ?? { votes: 0, sum: 0 };
+            cur.votes++;
+            cur.sum += v;
+            votes.set(k, cur);
+          }
+        }
+      }
+
+      // ── 7. the #927 floor check: achieved `dist%` vs the POSITION'S OWN declared `slPct` ───
+      //
+      // ⚠️ THE JOIN COLUMN IS `trade.brokerTicket`, NOT `trade.ticket`. Measured 2026-09-25:
+      // `stop_adjustment.tradeTicket` holds real 64-bit tickets (e.g. 152599644648) while
+      // `trade.ticket` holds **2147483647** — the INT32 overflow sentinel — on all 15 rows where it
+      // is set at all. Joining on it matched ZERO rows and returned a plausible, silent empty result;
+      // `brokerTicket` matches 613 of 614. ⚠️ An earlier version of this query did exactly that, and
+      // the page's "no coverage, not a pass" message is what made it visible instead of looking clean.
+      //
+      // The `trading_strategy` join is still INCOMPLETE because `trade.strategy` is NULL on many
+      // rows (#949), so the COVERAGE travels with the check rather than being hidden: measured 495 of
+      // 614 rows resolve. A floor verdict over 495 rows is a different claim from one over 614.
+      const floorRows = await this.prisma
+        .$queryRawUnsafe<any[]>(
+          `SELECT sa.symbol AS symbol, ts.slPct AS declaredPct, sa.reason AS reason, sa.adjustedAt AS adjustedAt
+             FROM stop_adjustment sa
+             JOIN trade t ON t.brokerTicket = sa.tradeTicket
+             JOIN trading_strategy ts ON ts.name = t.strategy
+            WHERE t.strategy IS NOT NULL AND ts.slPct IS NOT NULL
+            ${symbol ? 'AND sa.symbol = ?' : ''}
+            ORDER BY sa.adjustedAt DESC
+            LIMIT 5000`,
+          ...(symbol ? [symbol.toUpperCase()] : []),
+        )
+        .catch(() => [] as any[]);
+
+      // ⚠️ A ROUNDING TOLERANCE IS REQUIRED, AND WITHOUT IT THIS CHECK LIES. `reason` records `dist=`
+      // to THREE decimal places while `slPct` is stored to ONE, so a declared 1% is routinely logged
+      // as `dist=0.999%`. A naive `d < declared` called **193 of 376 rows violations on 2026-09-25** —
+      // every one of them a rounding artefact, and the page would have reported 193 breaches of a
+      // safety invariant that had not been breached. The genuine #927 defect trailed a stop to
+      // **0.039% against a declared 1%** — 25x inside — so a real violation is LARGE and a 0.02pp
+      // band cannot hide one. The tolerance travels in the payload so a reader can apply their own.
+      const FLOOR_TOLERANCE_PCT = 0.02;
+
+      const floor = floorRows
+        .map((r) => {
+          const d = distOf(r.reason);
+          if (d === null || r.declaredPct == null) return null;
+          const declaredPct = Number(r.declaredPct);
+          return {
+            symbol: r.symbol,
+            declaredPct,
+            achievedPct: d,
+            // #927: a tighten may never leave the stop INSIDE the position's declared distance.
+            insideFloor: d < declaredPct - FLOOR_TOLERANCE_PCT,
+            adjustedAt: r.adjustedAt,
+          };
+        })
+        .filter(Boolean);
+
+      const timestamps = adjustments
+        .map((a: any) => (a.adjustedAt ? new Date(a.adjustedAt).getTime() : NaN))
+        .filter((n: number) => !isNaN(n));
+
+      return {
+        ok: true,
+        window: { symbol: symbol?.toUpperCase() ?? null, from: from ?? null, to: to ?? null },
+        sample: {
+          adjustments: adjustments.length,
+          symbols: perSymbolMap.size,
+          positions: new Set(adjustments.map((a: any) => a.tradeTicket)).size,
+          withDistance: achieved.length,
+          withoutDistance: adjustments.length - achieved.length,
+          firstAt: timestamps.length ? new Date(Math.min(...timestamps)).toISOString() : null,
+          lastAt: timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null,
+        },
+        frequency: {
+          perSymbol: [...perSymbolMap.entries()]
+            .map(([sym, count]) => ({ symbol: sym, count }))
+            .sort((a, b) => b.count - a.count),
+          perHourUtc: perHour.map((count, hour) => ({ hour, count })),
+          perDay: [...perDayMap.entries()]
+            .map(([day, count]) => ({ day, count }))
+            .sort((a, b) => (a.day < b.day ? 1 : -1)),
+        },
+        distance: {
+          tighten, loosen, unchanged, restore,
+          achievedPct: {
+            n: achievedSorted.length,
+            min: achievedSorted[0] ?? null,
+            p25: pct(achievedSorted, 25),
+            median: pct(achievedSorted, 50),
+            p75: pct(achievedSorted, 75),
+            max: achievedSorted[achievedSorted.length - 1] ?? null,
+            mean: achievedSorted.length
+              ? Number((achievedSorted.reduce((s, v) => s + v, 0) / achievedSorted.length).toFixed(4))
+              : null,
+          },
+        },
+        consensus: {
+          readable: consensusReadable,
+          reached: consensusReached,
+          distribution: [...consensusDist.entries()]
+            .map(([consensus, count]) => ({ consensus, count }))
+            .sort((a, b) => a.consensus - b.consensus),
+          byDirective: [...votes.entries()]
+            .map(([key, v]) => ({
+              key,
+              votes: v.votes,
+              avgScore: Number((v.sum / v.votes).toFixed(1)),
+            }))
+            .sort((a, b) => b.votes - a.votes),
+        },
+        floor: {
+          checked: floor.length,
+          violations: floor.filter((f: any) => f.insideFloor).length,
+          // The band below which a difference is indistinguishable from the recorded precision.
+          tolerancePct: 0.02,
+          // ⚠️ BREACHES FIRST — the table is the EVIDENCE for the count above it. Slicing the most
+          // RECENT 40 while breaches sat outside that window showed 0 rows beside a count of 18,
+          // which is a figure the reader cannot check (measured 2026-09-25: the newest 40 rows
+          // contained none of them). A count nobody can inspect is a claim, not a report.
+          rows: [...floor]
+            .sort((a: any, b: any) => Number(b.insideFloor) - Number(a.insideFloor))
+            .slice(0, 40),
+        },
+        simTsl: {
+          events: simTslEvents.length,
+          byEvent: Object.entries(
+            simTslEvents.reduce((acc: Record<string, number>, e: any) => {
+              acc[e.event] = (acc[e.event] ?? 0) + 1;
+              return acc;
+            }, {}),
+          ).map(([event, count]) => ({ event, count })),
+          // ⚠️ Stated on the payload so the page cannot imply these are broker actions (#936).
+          note: 'Recorded observations only — no order is sent and no stop is moved from this path.',
+        },
+      };
+    } catch (err) {
+      this.logger.error(`stop-guardian-stats failed: ${(err as Error).message}`);
+      return { ok: false, error: `Failed to read the guardian history: ${(err as Error).message}` };
+    }
+  }
+
+  /**
    * GET /api/trading/portfolio-snapshots — query portfolio snapshots.
    * ?type=trade&limit=10
    */

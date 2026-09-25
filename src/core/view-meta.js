@@ -285,6 +285,16 @@ const VIEW_META = {
     css: 'src/pages/exit-signals.css',
     api: ['GET /api/portfolio/exit-signals'],
   },
+  // #988 — new page, so `review: 'pending'` until the owner has looked at it (the editions pass
+  // treats an unapproved entry as pending rather than as a failure).
+  '/trading/stop-guardian': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Stop Guardian',
+    file: 'src/pages/StopGuardianStatsPage.jsx',
+    css: 'src/pages/stop-guardian-stats.css',
+    api: ['GET /api/trading/stop-guardian-stats'],
+  },
   '/scoring/sees-arena': {
     tier: 'premium',
     review: 'approved',

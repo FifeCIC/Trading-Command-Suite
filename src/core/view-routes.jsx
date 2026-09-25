@@ -54,6 +54,8 @@ import LadderPage from '../pages/LadderPage.jsx';
 import AbLadderPage from '../pages/AbLadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
+// #988 — the guardian's own history, read from `stop_adjustment` + `sim_tsl_event`.
+import StopGuardianStatsPage from '../pages/StopGuardianStatsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import SignalsOverviewPage from '../pages/SignalsOverviewPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
@@ -260,6 +262,9 @@ export const VIEW_COMPONENTS = {
   'ab-ladder': AbLadderPage,
   'sees-arena': SeesArenaPage,
   'exit-signals': ExitSignalsPage,
+  // #988 — placed beside `exit-signals` because both answer "what closes a position": one is the
+  // signal view, this is the mechanism that MOVES the stop after entry.
+  'stop-guardian': StopGuardianStatsPage,
   'scoring-activity-logs': ScoringActivityLogsPage,
   'protocols-registry': ProtocolsPage,
   'protocol-trail': ProtocolTrailPage,

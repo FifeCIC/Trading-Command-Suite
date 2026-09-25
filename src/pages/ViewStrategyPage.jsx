@@ -524,7 +524,12 @@ export default function ViewStrategyPage() {
   // disagreement this page exists to prevent.
   const guardianQuery = useQuery({
     queryKey: ['stop-guardian-status'],
-    queryFn: () => apiGet('/automation/stop-guardian/status'),
+    // ⚠️ `/api/...` IS REQUIRED (§988). This called `/automation/stop-guardian/status` without the
+    // prefix, so it 404'd on every load — `VITE_API_BASE_URL` is the host WITHOUT `/api`, and this
+    // page's other calls use the `TRADING` constant precisely for that. The failure was INVISIBLE:
+    // a 404 produced no error notice here, so the section simply rendered as if the guardian had
+    // nothing to say. Verified against the live API: with the prefix it returns 200 and 12 rules.
+    queryFn: () => apiGet('/api/automation/stop-guardian/status'),
     refetchInterval: 30_000,
   });
 

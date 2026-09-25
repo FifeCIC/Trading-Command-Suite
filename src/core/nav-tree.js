@@ -164,6 +164,10 @@ export const NAV_TREE = {
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
+      // #988 (owner request 2026-09-24) — the statistics page for the ONLY post-entry stop
+      // mechanism. Sits beside Exit Signals because both answer "what happens after entry";
+      // `exit-signals` is the signal-side view, this is the guardian that actually moves stops.
+      { id: 'stop-guardian', label: 'Stop Guardian', icon: '🛡' },
       // Moved out of the legacy block 2026-09-21: the journal reads the DB audit trail
       // (/api/trading/trade-history) and is now the surface that names WHO closed a trade
       // (#916 close attribution) — a first-class view, not a legacy page.
