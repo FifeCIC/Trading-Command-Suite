@@ -17,6 +17,7 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
+| **R22** | #989 asked for a **Lab S/R page**. I took the quick route first (the issue's own rule: *"publishing the page first would produce a confident display of an unvalidated idea"*) and it **refuted the premise** — a swing pivot reverses price **no more than an ordinary high**, on three timeframes. What survives is real but different: a **3-bar detection lag** (a ceiling is always known *after* the high) and the three methods disagreeing. So the page would report a **refutation**, not a predictor. | **#989** · theory `pivot-resistance-predicts-the-turn` (refuted) · `scripts/measure-sr-levels.cjs` | The pivot-ceiling premise is refuted — a pivot reverses price no more than an ordinary high. Do you still want the Lab page, reporting the detection lag and method disagreement instead of a predictor? |
 
 **R17 was answered "Keep"** on 2026-09-24 · **R20 was answered "A"** on 2026-09-25 — see DONE.
 
