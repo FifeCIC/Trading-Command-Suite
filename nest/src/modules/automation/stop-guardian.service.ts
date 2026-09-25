@@ -134,6 +134,25 @@ export interface StopAdjustment {
  * const (TS1206 "Decorators are not valid here"). The Jest suite did NOT catch that -
  * ts-jest transpiles more permissively; `nest run build` did.
  */
+
+// ── DECISION (2026-09-25, primary) ──
+// WHAT:      The set above stays FOUR trail-followers. A support/resistance level directive is NOT
+//            added to the guardian's consensus, and it is not used to drive sim-TSL gap closure.
+// WHY:       Measured, not assumed. A causal replay over 25,131 observations (1h), 53,906 (15m)
+//            and 7,577 (1d) found a confirmed swing-pivot high reverses price NO MORE than an
+//            ordinary non-pivot high at the same distance - giveback 0.6% vs 0.5%, 0.5% vs 0.5%,
+//            and on 1d the control reverses MORE (2.8% vs 2.5%). The level is a waypoint, not a
+//            limit: overshoot past it is a median 0.3% with a p90 of 3.0%.
+// INSTEAD OF: Adding a level directive to this set, which #989 anticipated.          <- required when overriding
+// REVERSE BY: Run `node scripts/measure-sr-levels.cjs` and show pivot giveback exceeding the
+//            CONTROL arm on any timeframe. The control runs on every invocation, so one command
+//            re-opens or re-confirms this. Then add the directive as a COPIED configuration -
+//            it is maths (maths-change-requires-ab) and A/B cannot report yet (#929).
+// REGISTER:  docs/SETTLED-DECISIONS.md row 35
+// GUARD:     src/data/theories.js `pivot-resistance-predicts-the-turn` (refuted) +
+//            scripts/measure-sr-levels.cjs, whose control arm fails the claim if it ever regresses.
+// ⚠️ The 3-bar detection lag is also a hard constraint on ANY level method: a pivot is only
+//    knowable PIVOT_WINDOW bars AFTER it forms, so the extreme is always in the past when usable.
 const STOP_GUARDIAN_DIRECTIVES = new Set([
   'atr-trailing-stop',
   'supertrend',
