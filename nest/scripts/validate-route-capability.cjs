@@ -42,11 +42,18 @@
  * `broker_symbol` in the DATABASE — so it still works when both bridges are DOWN, which is the one
  * thing the audit cannot do. That is the whole reason it exists alongside the audit.
  *
- * ⚠️ Measured 2026-09-25 by running both on the same data, because "they might be duplicates" is a
- * claim and this is the observation: this exits **0** while the audit exits **1**, naming
- * `BTC … BELOW-FLOOR(0.01<1)`. **Both are right** — BTC's symbol is tradeable, BTC's bot is not.
- * Both reported **38 active bots**, so the population agrees and only the depth differs. Neither is
- * a duplicate, and a third mechanism for this question would be pure debt.
+ * ⚠️ Measured 2026-09-25 by running both on the same data: this exits **0** while the audit exits
+ * **1**, naming `BTC … BELOW-FLOOR(0.01<1)`. Both reported **38 active bots**, so the population
+ * agrees and only the depth differs. Neither is a duplicate, and a third mechanism for this
+ * question would be pure debt.
+ *
+ * ⚠️ BUT THE CAUSE WAS MISREAD — CORRECTED 2026-09-26. I first recorded "both are right: BTC's
+ * symbol is tradeable, its bot is not." **That is wrong.** BTC is routed `provider 'binance'`, and
+ * the AUDIT's route subquery selects `provider = 'mt5'` only — so IT falls back to MetaQuotes and
+ * applies `volumeMin 1` to a symbol that does not trade there. `BTC` also exists on :5000 as a
+ * DIFFERENT instrument (the #914 hazard). **So the audit's `BELOW-FLOOR` for BTC is a false positive
+ * by venue, and this script was RIGHT to skip it** — which is the one thing the measurement does
+ * show: this script's non-MT5 skip is load-bearing, not a convenience.
  *
  * WHEN TO RUN WHICH: bridges UP → run the AUDIT (it subsumes this question and adds the rest).
  * Bridges DOWN, on CI, or on a machine with no bridge → run THIS.

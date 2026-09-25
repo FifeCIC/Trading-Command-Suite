@@ -135,13 +135,22 @@ in the UI and produces no queue entries, with no error anywhere.
 
 ## 🔍 "Why isn't this bot trading?" — one question, THREE depths, shallow to deep
 
-> ⚠️ **Depths 1 and 2 are NOT duplicates — they stop at different points**, and this was **measured**
-> (2026-09-25) rather than assumed. Run both on the same data and `db:route-capability` **exits 0**
-> ("every active bot has a symbol at least one active broker can trade") while the audit **exits 1**,
-> naming `BTC … BELOW-FLOOR(0.01<1)`. **Both are correct.** BTC's *symbol* is tradeable; BTC's *bot*
-> is not, because its size is under the broker minimum. Both reported **38 active bots** — the
-> population agrees, only the depth differs. Neither replaces the other, and a third mechanism for
-> this question would be pure debt.
+> ⚠️ **Depths 1 and 2 are NOT duplicates — they stop at different points.** Measured 2026-09-25:
+> `db:route-capability` **exits 0** ("every active bot has a symbol at least one active broker can
+> trade") while the audit **exits 1**, naming `BTC … BELOW-FLOOR(0.01<1)`. Both reported **38 active
+> bots**, so the population agrees and only the depth differs.
+>
+> 🛑 **CORRECTED 2026-09-26 — the CAUSE of that disagreement was misread, and the wrong version was
+> published in this file.** I first wrote *"both are correct: BTC's symbol is tradeable, its bot is
+> not."* **That is wrong.** `symbol_route` holds `BTC → provider 'binance'`, and the audit's route
+> subquery selects `provider = 'mt5'` **only** — so the audit falls back to MetaQuotes and applies
+> `volumeMin 1` to a symbol that **does not trade on MetaQuotes**. The bare ticker `BTC` also exists
+> on `:5000` as a *different* instrument (the #914 hazard). **So the audit's `BELOW-FLOOR` is a false
+> positive by venue, and because BTC is the only blocked bot, its exit 1 rests entirely on it.**
+>
+> ⚠️ **Consequence: do NOT raise BTC's `baseSize` to satisfy it.** That would change a live number to
+> satisfy a constraint from the wrong venue. Depths 1 and 2 are still different questions — that part
+> stands — but the illustration was a bad example and is retained here only as the correction.
 
 ```powershell
 # DEPTH 1 — can any active broker take the SYMBOL at all?

@@ -39,10 +39,21 @@
  * claim and this is the observation:
  *   • `db:route-capability` → exit **0**, "every active bot has a symbol at least one active broker can trade"
  *   • this audit          → exit **1**, BTC Investment Monitor blocked `BELOW-FLOOR(0.01<1)`
- * **Both are right.** BTC's *symbol* is tradeable (depth 1 passes); BTC's *bot* is not, because its
- * size is under the broker minimum (depth 2 fails). Both reported **38 active bots** — the
- * population agrees, only the depth differs. So neither is a duplicate of the other, and a third
- * mechanism for this question would be pure debt.
+ * Both reported **38 active bots**, so the population agrees and only the depth differs.
+ *
+ * ⚠️ BUT THE CAUSE OF THE DISAGREEMENT WAS MISREAD — CORRECTED 2026-09-26. I first recorded "both are
+ * right: BTC's *symbol* is tradeable, its *bot* is not." **That is wrong**, and it is written here
+ * because the wrong version was already published. `symbol_route` holds `BTC → provider 'binance'`
+ * (brokerId 0), and the `routedBroker` subquery above selects `provider = 'mt5'` **only** — so BTC's
+ * route reads as NULL, this script falls back to the primary broker, and it applies **MetaQuotes'**
+ * `volumeMin 1` to a symbol that does not trade on MetaQuotes. The bare ticker `BTC` does exist on
+ * :5000 — the #914 hazard the guard was already corrected for. **So this script's `BELOW-FLOOR` for
+ * BTC is a FALSE POSITIVE by venue, and because BTC is its only blocked bot, this script's exit 1
+ * rests entirely on it.**
+ *
+ * ⚠️ Do NOT "fix" that by raising BTC's `baseSize` — that changes a number to satisfy a constraint
+ * from the wrong venue. The fix is to skip, or explicitly NAME, non-MT5-routed symbols here, exactly
+ * as `validate-route-capability.cjs` already does for the same reason.
  *
  * WHEN TO RUN WHICH: bridges UP → run THIS (it subsumes depth 1's question and adds the rest).
  * Bridges DOWN, on CI, or on a machine with no bridge → run `db:route-capability`.
