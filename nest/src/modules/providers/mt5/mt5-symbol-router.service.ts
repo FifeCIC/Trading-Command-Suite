@@ -136,6 +136,17 @@ export function orderRouteProblems(
  *   1. asset-type default   (env `MT5_ASSET_BROKER_DEFAULTS`, e.g. "index:3,forex:2")
  *   2. primary broker       (first entry of MT5_ACTIVE_BROKERS)
  *
+ * ⚠️ (1) IS OPTIONAL AND UNSET BY DEFAULT, and it is a PREFERENCE — never a limit. Until
+ * 2026-09-25 (#1002) it was explained ONLY here: it appeared in no `.env`, no `.env.example`,
+ * no doc and no settings registry. A supported option that nobody can discover is
+ * indistinguishable from one that does not exist, so it is now documented in
+ * `nest/.env.example` as well.
+ *
+ * ⚠️ It is also now the SECOND choice. #1002 added capability-based selection (`tradeableOn`
+ * below) — the broker's own symbol list decides whether it CAN trade a symbol. Use this env
+ * only to choose between brokers that can BOTH trade it; it cannot make a broker trade
+ * something its own list disables (`SYMBOL_TRADE_MODE = 0`).
+ *
  * This exists so a symbol like UK100 can be sourced from Pepperstone (:5001,
  * current feed) while forex majors stay on MetaQuotes (:5000) — and it scales to
  * hundreds of symbols because routes live in a queryable table, not inline config.
@@ -175,6 +186,8 @@ export class Mt5SymbolRouter implements OnModuleInit {
     private readonly conn: Mt5ConnectionManager,
   ) {
     // Parse asset-type default brokers: MT5_ASSET_BROKER_DEFAULTS="index:3,forex:2"
+    // ⚠️ Unset by default; a PREFERENCE only, and second to capability-based selection (#1002).
+    // Empty env → an empty map, which is the normal state — not a misconfiguration.
     const raw = process.env.MT5_ASSET_BROKER_DEFAULTS || '';
     for (const pair of raw.split(',')) {
       const [type, idStr] = pair.split(':').map((s) => s.trim());
