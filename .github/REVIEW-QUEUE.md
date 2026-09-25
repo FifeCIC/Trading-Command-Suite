@@ -17,6 +17,7 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
+| **R24** | The remaining free-edition score surface is 6 pages' **DATA SOURCE**, not columns — so finishing it means a rebuild programme, not a strip. Stripping the calls would **empty** those pages. | FREE-EDITION-PLAN §9.14.6 (handoff `2026-09-25-free-edition-score-readouts.md`) | Should the free edition show score-derived data at all — e.g. the Automation decision log, the ranked-signal dashboard widgets and Market Tape — or should those six surfaces be rebuilt score-free? |
 
 **R17 was answered "Keep"** on 2026-09-24 · **R20 was answered "A"** on 2026-09-25 · **R22 was answered "B"** on 2026-09-25 — see DONE.
 
