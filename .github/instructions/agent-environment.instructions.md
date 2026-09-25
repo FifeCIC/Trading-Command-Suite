@@ -5,6 +5,58 @@ applyTo: "**"
 
 # Agent Environment — Available Tooling
 
+## 🛑 Read the facts. Do not remember them.
+
+> **The system is the source of truth. Every document — including every file in this folder — is a
+> CLAIM about it.** Two commands below make the correct move cheaper than the wrong one. Use them
+> before asserting anything about this project.
+
+### The volatile facts are GENERATED — the build fails if they go stale
+
+```powershell
+node scripts/docs-facts.cjs            # regenerate docs/GENERATED-FACTS.md
+node scripts/docs-facts.cjs --check    # exit 1 if stale (this runs in `prebuild`)
+```
+
+- **`docs/GENERATED-FACTS.md`** — counts derived from files (protocols, adapters, versions)
+- **`docs/generated-facts.json`** — the same, machine-readable
+- Its rule, which binds every agent: **quote nothing from memory. Either read it here, or query the endpoint.**
+
+Live values are deliberately NOT in that file (they change every tick). Query them:
+
+| What | Endpoint |
+|---|---|
+| All facts, file-derived + live, as JSON | `GET /api/architecture/facts` |
+| Version | `GET /api/version` |
+| Registered directives | `GET /api/directives` |
+| Protocols (all / gated) | `GET /api/scoring/protocols`, `GET /api/scoring/gated/protocols` |
+
+### The SCHEMA — read the column AND its type before naming it
+
+```powershell
+node scripts/db-schema.cjs trade                # columns + types for a table
+node scripts/db-schema.cjs --pattern 'ab_%'     # find tables by name
+node scripts/db-schema.cjs --self-test          # prove the guard can fail (no database needed)
+```
+
+⚠️ **A column NAME is not a definition.** The same column name holds different types in different
+tables — `score_snapshot.protocolId` is `varchar(36)` holding a **slug**, `strategy_protocol.protocolId`
+is `varchar(100)` holding a **slug**, `watchlist.protocolId` is `varchar(100)` holding a **UUID**.
+Joining the wrong one returns **no rows and no error** — it reads as "no such protocol", not as a bug.
+
+⛔ **Never guess a column name.** Measured 2026-09-25: an agent guessed six in one session and was
+wrong more than half; each wrong guess cost a round trip and produced a silently empty result.
+
+### Any NEW audit or validator script must ship a `--self-test`
+
+A guard that has never been observed to fail is a decoration. Ship one that can be made to fail in
+**both** directions and prove it. Precedents: `validate-theories.cjs --self-test`,
+`validate-route-capability.cjs --self-test`.
+
+⚠️ Measured the same day: a new audit script **with no self-test** reported **two contradictory
+answers on two runs, and both were wrong** — nothing noticed, and a false result nearly reached the
+owner. That is the shape this rule exists to prevent.
+
 ## GitHub CLI (`gh`)
 
 GitHub issues, PRs, and labels are accessible via the `gh` CLI. Always use it rather than asking the user to paste issue content.
