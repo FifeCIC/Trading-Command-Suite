@@ -145,7 +145,11 @@ async function main() {
             (SELECT sr.brokerId FROM symbol_route sr
               WHERE sr.symbol COLLATE utf8mb4_unicode_ci = t.symbol COLLATE utf8mb4_unicode_ci
                 AND sr.enabled = 1 AND sr.provider = 'mt5'
-              ORDER BY sr.priority ASC LIMIT 1) AS routedBroker
+              ORDER BY sr.priority ASC LIMIT 1) AS routedBroker,
+            (SELECT sr.provider FROM symbol_route sr
+              WHERE sr.symbol COLLATE utf8mb4_unicode_ci = t.symbol COLLATE utf8mb4_unicode_ci
+                AND sr.enabled = 1 AND sr.provider <> 'mt5'
+              ORDER BY sr.priority ASC LIMIT 1) AS nonMt5Provider
        FROM trading_strategy t
       ORDER BY t.symbol, t.name`,
   );
@@ -154,10 +158,30 @@ async function main() {
   const rows = [];
   for (const b of bots) {
     const ticker = String(b.symbol).toUpperCase();
+    // ⚠️ A symbol routed to a NON-MT5 venue (crypto → binance) is not an MT5 symbol. Measured
+    // 2026-09-26: BTC is routed `provider 'binance'`, the `routedBroker` subquery selects
+    // `provider = 'mt5'` ONLY so it reads NULL, and this script then fell back to :5000 and applied
+    // METAQUOTES' `volumeMin 1` to a symbol that does not trade there — reporting
+    // `BELOW-FLOOR(0.01<1)` as a fault. The bare ticker `BTC` exists on :5000 as a DIFFERENT
+    // instrument (the #914 hazard). That was a FALSE POSITIVE, and it was this script's only blocked
+    // bot, so its exit 1 rested entirely on it.
+    // So MT5 `tradeMode`/`volumeMin` are NOT consulted for these, and the columns print `n/a` rather
+    // than a number from a venue the symbol does not trade on.
+    const nonMt5 = b.nonMt5Provider != null ? String(b.nonMt5Provider) : null;
     const brokerId = b.routedBroker != null ? Number(b.routedBroker) : primary;
-    const port = portByBroker[brokerId];
-    const tradeMode = port != null ? modesByPort.get(port)?.get(ticker) : undefined;
-    const c = await constraints(port, ticker);
+    const port = nonMt5 ? undefined : portByBroker[brokerId];
+    // ⚠️ `modesByPort` only gets a key when the bridge actually ANSWERED (`catch` above leaves it
+    // absent). Measured 2026-09-26: :5001 was UP but returned **503** on `/symbols`, so all seven
+    // broker-3 symbols read `tradeMode: undefined` and were reported `BROKER-HAS-NO-SYMBOL` — i.e.
+    // "we could not ask" published as a definite "the broker does not list it". Those are different
+    // facts and only one of them is evidence, so they are now separate faults.
+    // ⚠️ A NON-EMPTY list, not merely a present key — this predicate was wrong on the first attempt.
+    // Measured 2026-09-26: :5001 returned 503 whose body parsed to `{}`, so `new Map([])` still SET
+    // the key, `listLoaded` read true, and all seven broker-3 symbols were still published as
+    // BROKER-HAS-NO-SYMBOL. An empty list is not an answer, so the test requires symbols.
+    const listLoaded = port != null && (modesByPort.get(port)?.size ?? 0) > 0;
+    const tradeMode = nonMt5 || !listLoaded ? undefined : modesByPort.get(port)?.get(ticker);
+    const c = nonMt5 || !listLoaded ? null : await constraints(port, ticker);
     const bars = Number(b.bars);
     const size = Number(b.baseSize);
     const active = Number(b.active) === 1;
@@ -167,9 +191,18 @@ async function main() {
     if (!active) faults.push('INACTIVE');
     if (subs === 0) faults.push('NO-SUBSCRIPTION');
     if (bars === 0) faults.push('NO-BARS');
-    if (tradeMode === 0) faults.push('NOT-TRADEABLE-HERE');
-    if (tradeMode === undefined) faults.push('BROKER-HAS-NO-SYMBOL');
-    if (c && c.volumeMin != null && size < c.volumeMin) faults.push(`BELOW-FLOOR(${size}<${c.volumeMin})`);
+    if (nonMt5) {
+      // Out of scope for an MT5 audit — reported so it is VISIBLE, never silent, and never fatal.
+      faults.push(`NON-MT5-VENUE(${nonMt5})`);
+    } else if (!listLoaded) {
+      // CANNOT JUDGE — stated as such, never as "the broker has no such symbol". Fatal, because a
+      // check that could not read its input must not report OK.
+      faults.push(`BRIDGE-UNAVAILABLE(:${port ?? '?'})`);
+    } else {
+      if (tradeMode === 0) faults.push('NOT-TRADEABLE-HERE');
+      if (tradeMode === undefined) faults.push('BROKER-HAS-NO-SYMBOL');
+      if (c && c.volumeMin != null && size < c.volumeMin) faults.push(`BELOW-FLOOR(${size}<${c.volumeMin})`);
+    }
 
     rows.push({
       ticker,
@@ -186,7 +219,8 @@ async function main() {
       subs,
       minComposite: b.minComposite,
       faults,
-      blocked: active && faults.some((f) => f !== 'INACTIVE'),
+      // INACTIVE and NON-MT5-VENUE are reported, not fatal — neither is a defect this audit judges.
+      blocked: active && faults.some((f) => f !== 'INACTIVE' && !f.startsWith('NON-MT5-VENUE')),
     });
   }
 
@@ -206,6 +240,21 @@ async function main() {
   const inactive = rows.filter((r) => !r.active);
   console.log(`\n${rows.length} bot(s): ${rows.length - activeBlocked.length - inactive.length} active and tradeable, ` +
     `${activeBlocked.length} ACTIVE BUT BLOCKED, ${inactive.length} inactive.`);
+
+  const nonMt5Rows = rows.filter((r) => r.faults.some((f) => f.startsWith('NON-MT5-VENUE')));
+  if (nonMt5Rows.length) {
+    console.log('\nNON-MT5 VENUE — routed elsewhere; MT5 tradeMode/floor do NOT apply, so they are not checked:');
+    for (const r of nonMt5Rows) {
+      const which = r.faults.filter((f) => f.startsWith('NON-MT5-VENUE')).join(' ');
+      console.log(`  ${r.ticker.padEnd(8)} ${r.name} — ${which}  (an MT5 floor here is NOT a fault)`);
+    }
+  }
+
+  const unavailable = rows.filter((r) => r.faults.some((f) => f.startsWith('BRIDGE-UNAVAILABLE')));
+  if (unavailable.length) {
+    console.log('\n\u26a0\ufe0f  CANNOT JUDGE — a bridge did not answer its symbol list, so these were NOT checked:');
+    console.log('   This is NOT evidence the broker lacks the symbol. Re-run when the bridge answers.');
+  }
 
   if (activeBlocked.length) {
     console.log('\nACTIVE BUT BLOCKED — these are configured to trade and cannot:');
