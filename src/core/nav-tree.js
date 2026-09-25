@@ -360,6 +360,10 @@ export const NAV_TREE = {
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'identity-map', label: 'Identity Map', icon: '🧭' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
+      // #974 — "why didn't it trade?", answered from the database. Built in Development because it
+      // is an EXPERIMENT first: does seeing the exit reasons help, or is it noise? Register row 36
+      // constrains how it may be framed (a thin funnel is not a fault), not whether it exists.
+      { id: 'blocked-signals', label: 'Blocked Signals', icon: '🚦' },
       // ── Theme engineering ──
       { kind: 'section-header', id: 'dev-theme', label: 'Theme Engineering', icon: '🎨' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },

@@ -56,16 +56,20 @@ export class SignalQueueService {
    *
    * @param actionable  envelopes that passed every pre-queue check
    * @param scoredPairs every `protocolId|symbol` scored this run
-   * @param notRouteable `protocolId|symbol` → WHY it was not routeable. Without
-   *   this the void pass cannot tell "the protocol never signalled" from "it
-   *   signalled and the pre-trade gate blocked it", and it used to report both
-   *   as `dropped non-signalling symbol(s)` — which blamed the protocol for a
-   *   decision the gate made, and cost real investigation time.
+   * @param notRouteable `protocolId|symbol` → WHY it was not routeable, as a MACHINE `code` plus
+   *   the human `reason`. Without this the void pass cannot tell "the protocol never signalled" from
+   *   "it signalled and the pre-trade gate blocked it", and it used to report both as
+   *   `dropped non-signalling symbol(s)` — which blamed the protocol for a decision the gate made,
+   *   and cost real investigation time.
+   *
+   *   ⚠️ The `code` is supplied by the producer (the gate branch that knows the cause). It is NOT
+   *   derived here from `reason` — a text classifier over a human message is a second source of
+   *   truth for one fact, and it breaks the first time the message is reworded.
    */
   async syncQueues(
     actionable: RoutableSignal[],
     scoredPairs: Set<string>,
-    notRouteable?: Map<string, string>,
+    notRouteable?: Map<string, { code: string; reason: string }>,
   ) {
     if (!this.prisma.isAvailable) return;
     if (actionable.length === 0 && scoredPairs.size === 0) return;
@@ -134,15 +138,15 @@ export class SignalQueueService {
         // happened. `blocked` = the protocol DID signal but the envelope was not
         // pre-trade ready (gate/risk/conflict); `silent` = no signal at all.
         const blocked: string[] = [];
-        // The same blocks, UNFORMATTED. `blocked` above is display text for the log line;
-        // parsing the cause back out of it would make a second source of truth for one fact.
-        const blockedPairs: Array<{ sym: string; why: string }> = [];
+        // The same blocks, STRUCTURED. `blocked` above is display text for the log line; parsing the
+        // cause back out of it would make a second source of truth for one fact.
+        const blockedPairs: Array<{ sym: string; code: string; reason: string }> = [];
         const silent: string[] = [];
         for (const sym of dead) {
-          const why = notRouteable?.get(`${pid}|${sym}`);
-          if (why) {
-            blocked.push(`${sym} (${why})`);
-            blockedPairs.push({ sym, why });
+          const block = notRouteable?.get(`${pid}|${sym}`);
+          if (block) {
+            blocked.push(`${sym} (${block.reason})`);
+            blockedPairs.push({ sym, code: block.code, reason: block.reason });
           } else silent.push(sym);
         }
 
@@ -159,8 +163,8 @@ export class SignalQueueService {
           // ⚠️ Step is `pre_trade_blocked`, NOT the duplicate guard's `duplicate_check`
           // (`logBlocked`). Same `decision`, DIFFERENT cause — merging them would recreate the
           // very defect the 'Queue skip' / 'Queue void' split was introduced to fix.
-          for (const { sym, why } of blockedPairs) {
-            this.auditLog?.logPreTradeBlocked(pid, sym, why);
+          for (const { sym, code, reason } of blockedPairs) {
+            this.auditLog?.logPreTradeBlocked(pid, sym, code, reason);
           }
         }
         if (silent.length === 0) continue;

@@ -97,6 +97,21 @@ export interface SignalEnvelope {
   }>;
   preTradeReady: boolean;
   preTradeBlockers: string[];
+  /**
+   * #974 — a MACHINE code per blocker, positionally parallel to `preTradeBlockers`.
+   *
+   * WHY a parallel array and not `{code,text}[]`: `preTradeBlockers` is already read by existing
+   * consumers, and changing its element type would ripple through all of them to serve a NEW
+   * diagnostic.
+   *
+   * WHY the code is assigned at the branch that KNOWS the cause rather than derived later from the
+   * text: a classifier that reads "Signal below 12% (6.5%)" and concludes BELOW_GATE is a second
+   * source of truth for one fact, and it breaks the moment someone rewords the message.
+   *
+   * Optional so an envelope built by a path that did not set it stays valid; absent reads as
+   * "uncoded", which is honest — it is not the same as "no blocker".
+   */
+  preTradeBlockerCodes?: string[];
   scoredAt: string;
   // ── #684 Signals v1 — best-of metadata ──
   protocolId: string | null;
@@ -483,6 +498,7 @@ export class SignalEnvelopeService {
         `No current market data — every cadence is stale (base ${baseTimeframe} newest ` +
         `${newestOfTf(baseTimeframe)}). Not scored (#827).`,
       ];
+      skipped.preTradeBlockerCodes = ['STALE_CADENCE'];
       return skipped;
     }
 
@@ -556,6 +572,7 @@ export class SignalEnvelopeService {
       envelope.preTradeBlockers.push(
         `Incomplete timeframe bundle (1d=${dayBars.length}, 1h=${hourBars.length}, 15m=${min15Bars.length})`,
       );
+      (envelope.preTradeBlockerCodes ??= []).push('INCOMPLETE_MTF');
     }
     return envelope;
   }
@@ -593,7 +610,7 @@ export class SignalEnvelopeService {
       ),
       protocolId,
     );
-    const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(
+    const { preTradeReady, preTradeBlockers, preTradeBlockerCodes } = this.evaluatePreTrade(
       gated,
       conflicts,
       gate.threshold,
@@ -634,6 +651,7 @@ export class SignalEnvelopeService {
       conflicts,
       preTradeReady,
       preTradeBlockers,
+      preTradeBlockerCodes,
       scoredAt: new Date().toISOString(),
       // ── #684 Signals v1 metadata ──
       protocolId: protocolId ?? null,
@@ -838,17 +856,25 @@ export class SignalEnvelopeService {
   ): {
     preTradeReady: boolean;
     preTradeBlockers: string[];
+    /** Positionally parallel to `preTradeBlockerCodes` on the envelope. See `SignalEnvelope`. */
+    preTradeBlockerCodes: string[];
   } {
     const blockers: string[] = [];
+    // Built in the SAME branches as `blockers`, so the two can never disagree about how many
+    // causes there were or which one came first.
+    const blockerCodes: string[] = [];
 
     if (gated.riskGate?.hardGateTriggered) {
       blockers.push(`Hard gate: ${gated.riskGate.hardGateReason}`);
+      blockerCodes.push('HARD_GATE');
     }
     if (gated.riskMultiplier < 0.3) {
       blockers.push(`Risk multiplier critically low (${(gated.riskMultiplier * 100).toFixed(0)}%)`);
+      blockerCodes.push('RISK_MULTIPLIER_LOW');
     }
     if (conflicts.some(c => c.severity === 'high')) {
       blockers.push('High-severity directive conflict');
+      blockerCodes.push('DIRECTIVE_CONFLICT');
     }
     if (gated.signalPct < gateThreshold) {
       // #718: threshold is per-protocol (override > style > default 65).
@@ -859,14 +885,17 @@ export class SignalEnvelopeService {
       blockers.push(
         `Signal below ${gateThreshold}% (${gated.signalPct.toFixed(1)}%)${gateLabel ? ` [${gateLabel}]` : ''}`,
       );
+      blockerCodes.push('BELOW_GATE');
     }
     if (gated.marketStatus && !gated.marketStatus.open) {
       blockers.push(`Market unavailable: ${gated.marketStatus.reason ?? 'closed or stale'}`);
+      blockerCodes.push('MARKET_UNAVAILABLE');
     }
 
     return {
       preTradeReady: blockers.length === 0,
       preTradeBlockers: blockers,
+      preTradeBlockerCodes: blockerCodes,
     };
   }
 
@@ -993,6 +1022,7 @@ export class SignalEnvelopeService {
       conflicts: [],
       preTradeReady: false,
       preTradeBlockers: ['No market data available'],
+      preTradeBlockerCodes: ['NO_MARKET_DATA'],
       scoredAt: new Date().toISOString(),
       protocolId: null,
       protocolName: null,
@@ -1021,6 +1051,7 @@ export class SignalEnvelopeService {
       if (!covered) {
         const env = this.emptyEnvelope(ticker);
         env.preTradeBlockers = ['Not included in any active protocol — no score produced'];
+      env.preTradeBlockerCodes = ['NOT_IN_PROTOCOL'];
         return env;
       }
     }
@@ -1455,27 +1486,40 @@ export class SignalEnvelopeService {
       // pre-trade gate used to be reported as though the PROTOCOL had never
       // signalled — which sent two separate investigations after the wrong
       // component. Keep this map in step with the isRouteable() filter above.
-      const notRouteable = new Map<string, string>();
+      const notRouteable = new Map<string, { code: string; reason: string }>();
       for (const env of scoredEnvelopes) {
         if (isRouteable(env) || !env.protocolId) continue;
         let why: string;
+        // The MACHINE code is the FIRST blocker's code, because blockers are pushed in the order
+        // the gates run and the first is the one that fired first. `codes` keeps every code so a
+        // signal blocked on two grounds is not reported as blocked on one.
+        let codes: string[] = env.preTradeBlockerCodes ?? [];
         if (env.preTradeBlockers?.length) {
           why = env.preTradeBlockers.join('; ');
         } else if (env.executionBlockers?.length) {
+          codes = ['EXECUTION_BLOCKER'];
           why = env.executionBlockers
             .map((b: any) => b?.reason ?? b?.code ?? b?.message ?? 'execution blocker')
             .join('; ');
         } else if (!env.scoreId) {
+          codes = ['NO_SCORE_LINEAGE'];
           why = 'no score lineage';
         } else if (signalToDirection(env.signal) === null) {
           // ⚠️ Must be checked BEFORE the final `else`, or this case is misreported as
           // 'dismissed' — which is the same shape as the original bug: a real cause labelled as
           // something it is not, sending the next investigation after the wrong component.
+          codes = ['NO_DIRECTION'];
           why = `signal class "${env.signal}" has no derivable direction`;
         } else {
+          codes = ['DISMISSED'];
           why = 'dismissed';
         }
-        notRouteable.set(`${env.protocolId}|${env.symbol}`, why);
+        // `UNCODED` is a real value, not a placeholder: it says the cause was recorded before the
+        // code existed, or came from a path that does not classify. It must not read as 'no cause'.
+        notRouteable.set(`${env.protocolId}|${env.symbol}`, {
+          code: codes[0] ?? 'UNCODED',
+          reason: why,
+        });
       }
 
       await this.signalQueue.syncQueues(routeable, scoredPairs, notRouteable);

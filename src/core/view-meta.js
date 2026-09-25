@@ -465,6 +465,17 @@ const VIEW_META = {
     css: 'src/pages/hot-stock-picks-page.css',
     api: ['GET /api/scoring/ranked'],
   },
+  '/development/blocked-signals': {
+    tier: 'premium',
+    // 'pending' until the owner has actually looked at it — the skill is explicit that this
+    // becomes 'approved' when they have, and claiming otherwise would be a claim without an
+    // observation behind it.
+    review: 'pending',
+    label: 'Blocked Signals',
+    file: 'src/pages/BlockedSignalsPage.jsx',
+    css: 'src/pages/blocked-signals.css',
+    api: ['GET /api/automation/pre-trade-blocks'],
+  },
   '/development/theme-lab': {
     tier: 'premium',
     review: 'approved',

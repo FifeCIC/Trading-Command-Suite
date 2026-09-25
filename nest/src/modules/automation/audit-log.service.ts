@@ -123,12 +123,12 @@ export class AuditLogService {
    * `decision` stays `'BLOCKED'` so existing queries still find it; the `step` is what separates
    * them, exactly as the 'Queue skip' / 'Queue void' split already does in the log.
    */
-  logPreTradeBlocked(protocolId: string, symbol: string, reason: string): void {
+  logPreTradeBlocked(protocolId: string, symbol: string, cause: string, reason: string): void {
     this.log({
       symbol,
       step: 'pre_trade_blocked',
       decision: 'BLOCKED',
-      detail: { protocolId, reason },
+      detail: { protocolId, cause, reason },
     });
   }
 

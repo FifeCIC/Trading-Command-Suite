@@ -166,6 +166,7 @@ import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
+import BlockedSignalsPage from '../pages/BlockedSignalsPage.jsx';
 import MetaStackExplorerPage from '../pages/MetaStackExplorerPage.jsx';
 import FileInventoryPage from '../pages/FileInventoryPage.jsx';
 
@@ -369,6 +370,7 @@ export const VIEW_COMPONENTS = {
   'design-observations': DesignObservationsPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,
+  'blocked-signals': BlockedSignalsPage,
   'meta-stack-explorer': MetaStackExplorerPage,
   'file-inventory': FileInventoryPage,
 

@@ -298,6 +298,92 @@ export class AutomationController {
     }
   }
 
+  /**
+   * GET /api/automation/pre-trade-blocks — WHY signals were blocked before dispatch (#974).
+   *
+   * ── DECISION (2026-09-25, primary) ──────────────────────────────────────────────────────────
+   * WHAT:  Returns the funnel's EXIT REASONS, grouped by machine `cause`.
+   * WHY:   The reason already existed but ONLY in `api-out.log`, as
+   *        `Queue skip: <protocol> signalled but blocked pre-trade [...]`. So the most-asked
+   *        question in this app — "why didn't it trade?" — was answerable only by grepping a log,
+   *        while `AuditLogService`'s own stated contract is that a query answers it.
+   * INSTEAD OF: classifying the free-text `reason` here at read time. A parser over a human message
+   *        is a second source of truth for one fact and breaks on the first reword; `cause` is
+   *        written by the gate branch that actually knows the answer.
+   * REVERSE BY: dropping `cause` from `logPreTradeBlocked` — the human `reason` is still persisted,
+   *        so this degrades to grouping by text rather than losing the data.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 36
+   * GUARD:     `cause` is asserted in the signals/automation suites; the endpoint itself is
+   *            SQL-free (findMany + in-memory fold) so it cannot drift from the schema.
+   *
+   * ⚠️ This is the FILTER WORKING, not a fault list. Register row 36: it must never be presented as
+   * "where signals die", or a healthy pipeline reads as a broken one.
+   */
+  @Get('pre-trade-blocks')
+  async getPreTradeBlocks(@Query('hours') hours?: string): Promise<{
+    windowHours: number;
+    total: number;
+    byCause: Array<{ cause: string; count: number }>;
+    bySymbol: Array<{ symbol: string; cause: string; count: number; lastAt: string; reason: string }>;
+  }> {
+    const windowHours = Math.max(1, Math.min(24 * 14, Number(hours) || 24));
+    const since = new Date(Date.now() - windowHours * 3600_000);
+
+    // Fold in memory rather than grouping in SQL: `cause` lives inside a JSON column, and a
+    // JSON-path GROUP BY would be a second, database-specific description of the same shape.
+    // The row count is bounded by the retention window, so this stays cheap.
+    const rows: Array<{ symbol: string | null; detail: string | null; timestamp: Date }> =
+      await (this.prisma as any).automationEvent.findMany({
+        where: { step: 'pre_trade_blocked', timestamp: { gte: since } },
+        select: { symbol: true, detail: true, timestamp: true },
+        orderBy: { timestamp: 'desc' },
+        take: 20_000,
+      });
+
+    const causeCounts = new Map<string, number>();
+    const byKey = new Map<string, { symbol: string; cause: string; count: number; lastAt: Date; reason: string }>();
+
+    for (const r of rows) {
+      let parsed: { protocolId?: string; cause?: string; reason?: string } = {};
+      try {
+        parsed = r.detail ? JSON.parse(r.detail) : {};
+      } catch {
+        // A malformed detail must not blank the whole response — record it as uncoded rather
+        // than dropping the row, because a silent drop would understate the block count.
+        parsed = { cause: 'UNPARSABLE_DETAIL', reason: String(r.detail ?? '') };
+      }
+      const cause = parsed.cause || 'UNCODED';
+      const symbol = r.symbol || '(unknown)';
+      causeCounts.set(cause, (causeCounts.get(cause) || 0) + 1);
+
+      const key = `${symbol}|${cause}`;
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        // Rows arrive newest-first, so the FIRST time a key is seen carries the latest reason.
+        byKey.set(key, {
+          symbol,
+          cause,
+          count: 1,
+          lastAt: r.timestamp,
+          reason: parsed.reason || '',
+        });
+      }
+    }
+
+    return {
+      windowHours,
+      total: rows.length,
+      byCause: [...causeCounts.entries()]
+        .map(([cause, count]) => ({ cause, count }))
+        .sort((a, b) => b.count - a.count),
+      bySymbol: [...byKey.values()]
+        .map(v => ({ ...v, lastAt: v.lastAt.toISOString() }))
+        .sort((a, b) => b.count - a.count || a.symbol.localeCompare(b.symbol)),
+    };
+  }
+
   /** GET /api/automation/queue — current queue state */
   @Get('queue')
   getQueue(): QueueJob[] {
