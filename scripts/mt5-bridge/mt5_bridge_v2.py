@@ -578,6 +578,23 @@ def reset_circuit_breaker():
     circuit_failures = 0
     circuit_opened_at = None
 
+# ── Bounded MT5 connect (#1000) ───────────────────────────────────────────────
+# `mt5.initialize()` accepts a `timeout` in MILLISECONDS and defaults to 60s — but when the
+# terminal is unreachable it can hold the interpreter far longer, and NOTHING else in this process
+# runs while it does.
+#
+# ⚠️ MEASURED 2026-09-25, and this is why the constant exists. A canary bridge on :5002 pointed at
+# a bogus server: the log reached `Initializing MT5:` and STOPPED. The socket WAS bound (the server
+# is started before the connect now) so the kernel accepted the TCP connection — but `GET /health`
+# never answered, timing out after 15s. **The native call does not release the GIL**, so the
+# serving thread never runs. Binding the port first is necessary and NOT sufficient; the connect
+# itself must be BOUNDED, which is what this timeout does.
+#
+# Setting it makes a failed connect RETURN instead of hanging, which is the difference between a
+# bridge that can report its own state and one that can only be killed.
+MT5_INIT_TIMEOUT_MS = int(os.environ.get('MT5_INIT_TIMEOUT_MS', '20000'))
+
+
 def connect_mt5():
     """Initialize MT5 connection — called at startup and on /reconnect."""
     global connection_errors
@@ -593,13 +610,13 @@ def connect_mt5():
         # without credentials (it should already be logged in). Launching with
         # login+password+path fails with "Process create failed" if terminal
         # is already running — the path is for targeting, not launching.
-        initialized = mt5.initialize(path=path)
+        initialized = mt5.initialize(path=path, timeout=MT5_INIT_TIMEOUT_MS)
         if not initialized:
             # Fallback: try launching the terminal with full credentials
             logger.info(f'Path-only init failed, trying with credentials: {mt5.last_error()}')
-            initialized = mt5.initialize(login=int(account), password=password, server=server, path=path)
+            initialized = mt5.initialize(login=int(account), password=password, server=server, path=path, timeout=MT5_INIT_TIMEOUT_MS)
     else:
-        initialized = mt5.initialize(login=int(account), password=password, server=server)
+        initialized = mt5.initialize(login=int(account), password=password, server=server, timeout=MT5_INIT_TIMEOUT_MS)
 
     if initialized:
         connection_errors = 0
@@ -1705,11 +1722,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if not acct or not pw: return json_response(self, {'success': False, 'error': f'Account #{num} not configured'}, 400)
                 ok = False
                 if mpath:
-                    ok = mt5.initialize(path=mpath)
+                    ok = mt5.initialize(path=mpath, timeout=MT5_INIT_TIMEOUT_MS)
                     if not ok:
-                        ok = mt5.initialize(login=int(acct), password=pw, server=srv, path=mpath)
+                        ok = mt5.initialize(login=int(acct), password=pw, server=srv, path=mpath, timeout=MT5_INIT_TIMEOUT_MS)
                 else:
-                    ok = mt5.initialize(login=int(acct), password=pw, server=srv)
+                    ok = mt5.initialize(login=int(acct), password=pw, server=srv, timeout=MT5_INIT_TIMEOUT_MS)
                 if ok:
                     os.environ['MT5_ACTIVE_ACCOUNT'] = num
                     info = mt5.account_info()
@@ -1762,6 +1779,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 kwargs = dict(login=login_int, password=str(password), server=str(server))
                 if mpath:
                     kwargs['path'] = mpath
+                kwargs.setdefault('timeout', MT5_INIT_TIMEOUT_MS)  # #1000 — never hold the interpreter open
                 ok = mt5.initialize(**kwargs)
                 if ok:
                     info = mt5.account_info()
