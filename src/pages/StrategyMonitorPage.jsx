@@ -198,7 +198,13 @@ export default function StrategyMonitorPage() {
     const balance = brokerId === 'mt5' ? mt5Diag?.balance : null;
     const account = brokerId === 'mt5' ? mt5Diag?.accountName : null;
     const status = trading ? 'Trading' : connected ? 'Connected' : 'Offline';
-    const color = trading ? '#22c55e' : connected ? '#f59e0b' : '#64748b';
+    // ── THE SAME MEANING WAS WRITTEN TWICE ──────────────────────────────────────────────────────
+    // `strategy-monitor.css` already resolves these three states with `--color-profit`,
+    // `--color-warning` and `--color-muted`, so the page carried each colour as BOTH a token and a
+    // literal. A literal never follows the theme: it is fixed the day it is typed, so the two
+    // expressions of one meaning can only ever drift. Measured 2026-09-25: 13 hex literals in this
+    // file against 32 token references in its stylesheet.
+    const color = trading ? 'var(--color-profit)' : connected ? 'var(--color-warning)' : 'var(--color-muted)';
     const icon = trading ? '🟢' : connected ? '🟡' : '⚫';
     return { brokerId, label, status, color, icon, balance, account };
   });
@@ -214,7 +220,7 @@ export default function StrategyMonitorPage() {
             {overview.active} active · {overview.trading} trading · {overview.scoring} scoring · avg score {overview.avgScore}
           </p>
         </div>
-        <div className="sm-loop-badge" style={{ background: loopRunning ? '#22c55e18' : '#64748b18', color: loopRunning ? '#22c55e' : '#64748b' }}>
+        <div className="sm-loop-badge" style={{ background: loopRunning ? 'color-mix(in srgb, var(--color-profit) 9%, transparent)' : 'color-mix(in srgb, var(--color-muted) 9%, transparent)', color: loopRunning ? 'var(--color-profit)' : 'var(--color-muted)' }}>
           {loopRunning ? '🟢 Loop Active' : '⚫ Loop Stopped'} · Tick #{tickCount} · {lastTickMs}ms
         </div>
       </motion.header>
@@ -225,7 +231,7 @@ export default function StrategyMonitorPage() {
         <div className="sm-stat-grid">
           <div className="sm-stat"><span className="sm-stat-val">{overview.total}</span><span className="sm-stat-label">Total</span></div>
           <div className="sm-stat"><span className="sm-stat-val pl-score-high">{overview.active}</span><span className="sm-stat-label">Active</span></div>
-          <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#3b82f6' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
+          <div className="sm-stat"><span className="sm-stat-val" style={{ color: 'var(--color-accent-blue)' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
           {/* Avg Score is the mean of `lastComposite` values — an average has NO server
               classification, so it renders MUTED ("cannot judge") instead of being graded against
               a remembered bar. Measured 2026-09-20: `lastComposite` spans 9-108 and its own units
@@ -259,7 +265,13 @@ export default function StrategyMonitorPage() {
               const isTrading = isTradingStrategy(s);
               const isScoring = isScoringStrategy(s);
               const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
-              const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
+              // `--ink-soft` for the neutral case, NOT `#94a3b8`: that literal is what `--ink-soft`
+              // USED TO BE. index.css records the change — "was #94a3b8 — boosted for WCAG AA on
+              // #000000" — so the literal silently pins this page to the pre-boost, lower-contrast
+              // value while every other page gets the corrected one.
+              // ⚠️ `isScoring` keeps a literal because NO canonical purple token exists; inventing
+              // an app-wide one is a decision above this page's remit. Declared, not quietly left.
+              const typeColor = isTrading ? 'var(--color-accent-blue)' : isScoring ? '#8b5cf6' : 'var(--ink-soft)';
 
               return (
                 <motion.div
@@ -405,7 +417,7 @@ export default function StrategyMonitorPage() {
                       aria-expanded={expanded}
                     >
                       <span className="smq-chevron">{expanded ? '▾' : '▸'}</span>
-                      <span className="smq-bot-dot" style={{ background: bot.active !== false ? '#22c55e' : '#64748b' }} />
+                      <span className="smq-bot-dot" style={{ background: bot.active !== false ? 'var(--color-profit)' : 'var(--ink-soft)' }} />
                       <strong className="smq-bot-name">{bot.name}</strong>
                       {bot.symbol && <span className="smq-bot-symbol">{bot.symbol}</span>}
                       <span className="smq-bot-mode">{bot.mode || '—'}</span>
