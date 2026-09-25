@@ -1,9 +1,0 @@
-API UP mode=fallback
---- subscriptions BEFORE ---
-{"id":"dfa3f640-033e-4e1b-b9f5-e04cba628e03","strategyId":"be87db26-dc13-452f-a0a0-c42182c4d71b","protocolId":"spy-day-v1","role":"long","sortOrder":0,"createdAt":"2026-09-11T22:42:55.308Z"}
---- ADD spy-speed-v1 (first, so the bot is never source-less) ---
-  added: {"id":"0ad603d1-0ca7-4f71-bcdc-2dd86139a5f3","strategyId":"be87db26-dc13-452f-a0a0-c42182c4d71b","protocolId":"spy-speed-v1","role":"long","sortOrder":0,"createdAt":"2026-09-25T18:19:04.93Z"}
---- DELETE the old spy-day-v1 subscription ---
-  deleted: {"count":1}
---- subscriptions AFTER ---
-{"id":"0ad603d1-0ca7-4f71-bcdc-2dd86139a5f3","strategyId":"be87db26-dc13-452f-a0a0-c42182c4d71b","protocolId":"spy-speed-v1","role":"long","sortOrder":0,"createdAt":"2026-09-25T18:19:04.93Z"}

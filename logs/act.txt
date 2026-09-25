@@ -1,6 +1,0 @@
-=== BEFORE ===
-slug	active
-dow-speed-v1	0
-=== AFTER ===
-slug	active
-dow-speed-v1	1
