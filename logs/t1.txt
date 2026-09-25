@@ -1,0 +1,32 @@
+x
+--- protocols involved ---
+slug	name	active	recommendedTimeframe	directionMode
+cac-speed-v1	CAC Speed Scalp V1	1	5s?30s	LONG_ONLY
+dax-speed-v1	DAX Speed Scalp V1	1	5s?30s	LONG_ONLY
+dow-speed-v1	Dow Speed Scalp V1	0	5s?30s	LONG_ONLY
+ftse-speed-v1	FTSE Speed Scalp V1	1	5s?30s	LONG_ONLY
+spy-day-v1	SPY Day Trade V1	1	5m?1h	LONG_ONLY
+spy-speed-v1	SPY Speed Scalp V1	1	5s?30s	LONG_ONLY
+vix-short-v1	VIX Spike Short V1	1	1m?5m	SHORT_ONLY
+x
+--- bots for the four symbols ---
+symbol	name	protocolId	active	mode	minComposite	timeframe	sessionWindow
+VIX	VIX Spike Short (demo proof #772)	vix-short-v1	1	auto	0	5m	NULL
+US500	US SPY Speed	spy-day-v1	1	auto	9	1h	["us"]
+UK100	FTSE Index Tick Scalp	ftse-speed-v1	1	auto	10	5m	["london"]
+x
+--- assignments for the four ---
+symbol	priority	ref	protocol_slug	proto_active
+UK100	0	c6b03791-a75b	ftse-speed-v1	1
+US30	0	3b605f94-d435	dow-speed-v1	0
+US500	0	1b70c296-e49f	spy-speed-v1	1
+x
+--- subscriptions held by those bots ---
+symbol	name	protocolId	role
+VIX	VIX Spike Short (demo proof #772)	vix-short-v1	short
+US500	US SPY Speed	spy-day-v1	long
+UK100	FTSE Index Tick Scalp	ftse-speed-v1	long
+x
+--- is US30/UK100 in any watchlist? ---
+name	protocolId	symbols_head
+ftse-index	c6b03791-a75b-4891-9038-b3c4c75817ba	["UK100"]

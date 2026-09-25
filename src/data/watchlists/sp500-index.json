@@ -1,0 +1,5 @@
+{
+  "protocolId": "spy-speed-v1",
+  "symbols": ["US500"],
+  "notes": "US 500 — Pepperstone-only (MetaQuotes reports tradeMode=0). Wired 2026-09-25: the symbol_protocol_assignment pointed at spy-speed-v1 but the protocol had NO watchlist, so US500 rested on a single scoring source while its peers (cac/dax/ftse-index) had two. Mirrors those three files."
+}

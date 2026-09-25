@@ -1,0 +1,5 @@
+{
+  "protocolId": "dow-speed-v1",
+  "symbols": ["US30"],
+  "notes": "Dow 30 — Pepperstone-only (MetaQuotes reports tradeMode=0, so orders are refused there). Wired 2026-09-25: the symbol_route row and the symbol_protocol_assignment both existed since 2026-09-15, but NO watchlist fed dow-speed-v1, so US30 had no scoring source and was never scored once. Mirrors cac-index.json / dax-index.json / ftse-index.json."
+}

@@ -1,0 +1,21 @@
+  FIX ÔÇö either:
+
+    npm run build:api        # stop API ÔåÆ build ÔåÆ restart API (recommended)
+
+    or stop the API yourself, then:
+
+    npm run build            # plain build, API stays down
+
+  Frontend-only change? The API does not need rebuilding:
+
+    npm --prefix <repo root> run build      # Vite, no Prisma involved
+
+
+   BUILD FAILED (exit 1)
+   The API has been left STOPPED on purpose - restarting into a failed
+   build would serve stale code and hide the error.
+
+   Restart when ready:  npm --prefix "C:\wamp64\www\trading-command-suite\nest" run start
+BUILD_EXIT=1
+=== API ===
+  DOWN

@@ -1,0 +1,21 @@
+x
+--- US500 bot + its subscription ids ---
+botId	name	symbol	legacyProtocol	subId	subscribedTo	role
+be87db26-dc13-452f-a0a0-c42182c4d71b	US SPY Speed	US500	spy-day-v1	dfa3f640-033e-4e1b-b9f5-e04cba628e03	spy-day-v1	long
+x
+--- spy protocols: which watchlist feeds each ---
+slug	watchlist	symbols
+spy-day-v1	spy-day-index	["SPY"]
+spy-speed-v1	NULL	NULL
+x
+--- dow-speed-v1 id (to activate + assign) ---
+id	slug	active
+3b605f94-d435-472b-8762-5ad23e9c350e	dow-speed-v1	0
+x
+--- what protocol/priority does cac/dax use (the working pattern)? ---
+symbol	slug	priority	watchlist	symbols
+FRA40	cac-speed-v1	0	cac-index	["FRA40"]
+GER40	dax-speed-v1	0	dax-index	["GER40"]
+UK100	ftse-speed-v1	0	ftse-index	["UK100"]
+US30	dow-speed-v1	0	NULL	NULL
+US500	spy-speed-v1	0	NULL	NULL

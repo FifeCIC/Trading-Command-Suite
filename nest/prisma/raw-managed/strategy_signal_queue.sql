@@ -8,25 +8,34 @@
 #
 # Restore on a fresh database:  mysql -u <user> -p <db> < strategy_signal_queue.sql
 # Declared in:  nest/scripts/validate-schema-safety.cjs (RAW_MANAGED_TABLES)
+  #
+  # ⚠️ THE TWO TIMESTAMPS MEAN DIFFERENT THINGS, AND THE WRONG ONE HAS BEEN READ TWICE.
+  #    createdAt = FIRST INSERT, never moves.  updatedAt = LAST CONFIRMATION, refreshed by
+  #    upsertEntry on every re-signal. **Staleness is a claim about updatedAt.**
+  #    Cost of mixing them up: #882 "overstated staleness for 5 of 7 rows"; #973 reported
+  #    "5 rows PENDING for up to 8 days" that had simply not expired yet. The bound is
+  #    SIGNAL_MAX_AGE_DEFAULT_MINUTES (360) in nest/src/common/utils/signal-freshness.ts.
+  #    The COMMENTs below are on the live columns too, so `DESCRIBE` says this at the point
+  #    of introspection rather than only in a file nobody opens.
 
-DROP TABLE IF EXISTS `strategy_signal_queue`;
-CREATE TABLE `strategy_signal_queue` (
-  `id` varchar(36) NOT NULL,
-  `strategyId` varchar(36) NOT NULL,
-  `symbol` varchar(20) NOT NULL,
-  `protocolId` varchar(100) NOT NULL,
-  `direction` varchar(10) NOT NULL,
-  `signal` varchar(10) NOT NULL,
-  `compositePct` int DEFAULT NULL,
-  `signalPct` int DEFAULT NULL,
-  `opportunityPct` int DEFAULT NULL,
-  `combinedStrength` int DEFAULT NULL,
-  `scoreId` varchar(36) DEFAULT NULL,
-  `status` varchar(20) NOT NULL DEFAULT 'pending',
-  `createdAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP()),
-  `updatedAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP()),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_bot_signal` (`strategyId`,`protocolId`,`symbol`),
+  DROP TABLE IF EXISTS `strategy_signal_queue`;
+  CREATE TABLE `strategy_signal_queue` (
+    `id` varchar(36) NOT NULL,
+    `strategyId` varchar(36) NOT NULL,
+    `symbol` varchar(20) NOT NULL,
+    `protocolId` varchar(100) NOT NULL,
+    `direction` varchar(10) NOT NULL,
+    `signal` varchar(10) NOT NULL,
+    `compositePct` int DEFAULT NULL,
+    `signalPct` int DEFAULT NULL,
+    `opportunityPct` int DEFAULT NULL,
+    `combinedStrength` int DEFAULT NULL,
+    `scoreId` varchar(36) DEFAULT NULL,
+    `status` varchar(20) NOT NULL DEFAULT 'pending',
+    `createdAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP())
+        COMMENT 'FIRST INSERT - NEVER moves (upsert ON DUPLICATE KEY leaves it). NOT the signal age. Reading this for staleness overstated 5 of 7 rows in #882 and 5 rows in #973. Staleness authority = updatedAt.',
+    `updatedAt` datetime NOT NULL DEFAULT (UTC_TIMESTAMP())
+        COMMENT 'LAST CONFIRMATION - refreshed on every re-signal. THIS is the staleness authority (default bound 360 min, SIGNAL_MAX_AGE_DEFAULT_MINUTES). A large createdAt-to-updatedAt drift means the signal is being KEPT ALIVE, not stuck.',
   KEY `idx_status` (`status`),
   KEY `idx_proto_sym` (`protocolId`,`symbol`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

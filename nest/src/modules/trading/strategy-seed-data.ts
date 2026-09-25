@@ -142,6 +142,33 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: ['london'],
     style: 'Tick Scalp',
   },
+  {
+    // Wired 2026-09-25. US30 was a DEAD ROUTE with three stacked faults and this bot is
+    // the piece that did not exist: the symbol_route row (broker 3 / Pepperstone) and the
+    // symbol_protocol_assignment had both existed since 2026-09-15, but `dow-speed-v1` was
+    // inactive, NO watchlist fed it, and no bot consumed it — so US30 was never scored once.
+    //
+    // ⚠️ WHY THE BARS HAD STOPPED, and it is the same cause. `bar-refresh` builds its set from
+    // positions / active-strategies / forex-floor / protocol-symbols, so an INACTIVE protocol
+    // takes its symbols out of the refresh set. Activating `dow-speed-v1` is therefore the
+    // single change that fixes BOTH the stale feed and the missing scoring. See
+    // nest/resolve-us30.sql, which recorded this chain when it retired the DJI30 duplicate.
+    //
+    // sessionWindow is `us`, NOT `london` like the FTSE/DAX/CAC peers — the Dow is a US index.
+    // baseSize 0.1 is the broker floor for index symbols on BOTH bridges (see the FTSE note).
+    name: 'Dow Index Tick Scalp',
+    symbol: 'US30',
+    protocolId: 'dow-speed-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.1,
+    slPct: 0.4,
+    tpPct: 0.6,
+    minComposite: 10,
+    sessionWindow: ['us'],
+    style: 'Tick Scalp',
+  },
 
   // ── XAUUSD Variants (derived from xau-speed-v1) ──────────
   {
@@ -296,7 +323,22 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // see nest/fix-symbol-tickers.sql (which could not apply the rename because a US500
     // row already exists).
     symbol: 'US500',
-    protocolId: 'spy-day-v1',
+    // ⚠️ spy-day-v1 -> spy-speed-v1 (2026-09-25). The bot was subscribed to `spy-day-v1`, whose
+    // ONLY watchlist (spy-day-index) holds `["SPY"]` — a different instrument. So the bot sat on
+    // US500 consuming signals generated for SPY, and `syncQueues()` routes on
+    // `sub.protocolId !== rec.protocolId`, so every US500 record scored under `spy-speed-v1`
+    // was dropped. TWO independent declarations already said this was wrong:
+    //   • symbol_protocol_assignment (PRIMARY source)  US500 -> spy-speed-v1
+    //   • speed-scan.service.ts fallback map           US500 -> spy-speed-v1
+    // ...and the bot's own name is "US SPY Speed", which is `spy-speed-v1`'s tradingStyle.
+    // The subscription was the only artefact that disagreed. Measured: US500 has NEVER traded.
+    //
+    // ⚠️ LEFT ALONE DELIBERATELY, and they are inconsistent with a 5s–30s tick-scalp protocol:
+    // `timeframe: '1h'`, `slPct: 3.0`, `tpPct: 6.0`, `style: 'Position'` are the values of a
+    // POSITION bot. The FTSE/DAX/CAC peers run 5m / 0.4 / 0.6. Realigning those is a MATHS
+    // change (SL/TP and cadence decide how much a tradeable symbol trades) and is left for the
+    // owner rather than edited in place — the wiring fix above is what makes the bot reachable.
+    protocolId: 'spy-speed-v1',
     brokerId: 'mt5',
     mode: 'auto',
     timeframe: '1h',
