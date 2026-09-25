@@ -343,6 +343,35 @@ export const THEORIES = [
     area: 'trading',
     issue: 960,
   },
+    {
+      id: 'pivot-resistance-predicts-the-turn',
+      raisedAt: '2026-09-25',
+      statement:
+        'A swing-pivot resistance above price predicts where an advancing move will turn — so the nearest confirmed pivot high is a usable ceiling for an open position, and its proximity can drive sim-TSL gap closure (#936).',
+      predictedDirection:
+        'If true, price should reverse at a pivot level MORE than at an ordinary high sitting the same distance away. The test is the CONTROL ARM, not the hit rate: without it, "price reached the level" is a fact about a random walk.',
+      measure:
+        'giveback after first touch — how far price falls back from the level, median, pivot level versus an ordinary (non-pivot) high in the identical causal window',
+      unit: 'percent of price, median; plus distance-to-level, reach rate and overshoot',
+      window:
+        '1h 2026-01-30 to 2026-09-25 (40 symbols, 25,131 observations), 15m (30 symbols, 53,906) and 1d (58 symbols, 7,577). Horizon = 24 / 96 / 10 bars held forward.',
+      status: 'refuted',
+      evidence: {
+        basis: 'measurement',
+        n: 25131,
+        result:
+          'REFUTED on three timeframes, and the refutation is the CONTROL that #989 did not ask for. (1) THE HEADLINE NUMBER IS AN ARTEFACT: the nearest pivot high sits a median **0.3%** above price (p25 0.1%), so "62.5% of ceilings were reached" and "realised/predicted = 1.001" are arithmetic, not prediction. The second version of this test reported a suspiciously tight p25–p75 of 0.999–1.004 and that tightness is what exposed it. (2) GIVEBACK — the only metric that can settle the claim, because a level that says "price turns here" must reverse price MORE than an ordinary high — is **0.6% pivot vs 0.5% control on 1h**, **0.5% vs 0.5% on 15m**, and **2.5% vs 2.8% on 1d**, where the control reverses MORE. A confirmed pivot is indistinguishable from an arbitrary high, and on the daily timeframe it is marginally worse. (3) Overshoot past the level is a median 0.3% on 1h with a p90 of 3.0% — the level is a waypoint, not a limit. (4) DETECTION LAG is **3 bars on every one of 2,675 pivots** (PIVOT_WINDOW, exactly), so on 1h a ceiling is identifiable three hours AFTER the high exists; the high is always in the past by the time it is usable. ⚠️ Method disagreement is real and does not rescue it: swing pivot vs round number vs 20-bar high differ by a median 1.1% and a p90 of 8.2% of price, so "which level" is not even well defined.',
+        measuredAt: '2026-09-25',
+        source:
+          '`scripts/measure-sr-levels.cjs` — a causal replay over the live `marketbar` table that never reads past bar i, mirroring the shipped `support-resistance.directive.ts` constants (LOOKBACK 30, PIVOT_WINDOW 3)',
+      },
+      falsification:
+        'Show a timeframe, symbol set or horizon where pivot-level giveback exceeds the control arm by a margin larger than the sampling spread. The control is in the same script and runs on every invocation, so this is re-testable in one command.',
+      decision:
+        'Do NOT wire a level directive into the guardian, and do NOT configure sim-TSL gap closure from predicted proximity. #936 correctly listed "predicted proximity → gap closure rate" as its input; that input does not exist. The quick route was the GATE for #989\'s advanced route and it has failed, so the page is not built on the accuracy claim. ⚠️ What survives is worth publishing as a finding rather than as a predictor: the 3-bar detection lag is a hard constraint on ANY level method, and method disagreement (median 1.1%, p90 8.2%) says the "which level" question is unresolved. Those are page content; the accuracy claim is not.',
+      area: 'trading',
+      issue: 989,
+    },
 ];
 
 export default THEORIES;
