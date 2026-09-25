@@ -17,9 +17,8 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
-| **R22** | #989 asked for a **Lab S/R page**. I took the quick route first (the issue's own rule: *"publishing the page first would produce a confident display of an unvalidated idea"*) and it **refuted the premise** — a swing pivot reverses price **no more than an ordinary high**, on three timeframes. What survives is real but different: a **3-bar detection lag** (a ceiling is always known *after* the high) and the three methods disagreeing. So the page would report a **refutation**, not a predictor. | **#989** · theory `pivot-resistance-predicts-the-turn` (refuted) · `scripts/measure-sr-levels.cjs` | The pivot-ceiling premise is refuted — a pivot reverses price no more than an ordinary high. Do you still want the Lab page, reporting the detection lag and method disagreement instead of a predictor? |
 
-**R17 was answered "Keep"** on 2026-09-24 · **R20 was answered "A"** on 2026-09-25 — see DONE.
+**R17 was answered "Keep"** on 2026-09-24 · **R20 was answered "A"** on 2026-09-25 · **R22 was answered "B"** on 2026-09-25 — see DONE.
 
 New rows appear when there is **something to look at or a genuine fork**, not before.
 
@@ -29,6 +28,7 @@ New rows appear when there is **something to look at or a genuine fork**, not be
 
 | id | verdict / what happened |
 |---|---|
+| **R22** | ✅ **ANSWERED 2026-09-25 — option B: close as answered, split out the exhaustion directive.** Within minutes of answering, B turned out to be the more valuable choice than I realised when offering it. **#989 is CLOSED as answered, not completed** — its advanced-route criteria are deliberately unmet, and the checklist on the issue says so. The measurement already had a surface (`/development/theory-registry`), so a page would have duplicated it. ⚠️ **The split-out found the real thing: #995.** Two exhaustion directives ALREADY exist (`momentum-exhaustion`, `panic-exhaustion-absorption` — 18 references, 8 files) and **both are `directionBias: 'bullish'` ENTRY signals**. So the guardian detects exhaustion on the way **DOWN** ("buy the panic dip") and never on the way **UP** ("this move is tiring") — the missing capability is a *direction*, not a directive type. ⚠️ I nearly filed #995 on the opposite premise ("none exists") — my first grep said **zero references** because `Select-String -Path nest\src\**\*.ts` does not recurse in PowerShell. The true count is 18. **A search tool that silently returns nothing reads exactly like a genuine absence.** |
 | **R20** | ✅ **DECIDED 2026-09-25 — option A: per-bot data.** Built as `simulated-tsl`, the FIRST per-bot exit control: `simTslEnabled` / `simTslActivationPct` / `simTslDistancePct` on `trading_strategy`, default OFF, **observer only** — it records firings in `sim_tsl_event` and sends no order and moves no stop. #936 is closed and the false announcement it was built on is deleted; `nest/scripts/validate-trailing-claims.cjs` guards the class. ⚠️ **The ruling is delivered in part, not whole** — the other eleven `GUARDIAN_RULES` stay global. Acting on a decision point is still maths and needs an A/B copy (#929 blocks it). Register row 34 · handoff 2026-09-25-936-simulated-tsl-observer |
 | **R1** | No change requested. *"I don't want to be asked such specific UI questions."* Surfaces are for reviewing, not for asking about. |
 | **R2** | **Build it, two places.** Setters on the bot page (where they belong in the algorithm) + a **settings-only** Truth view under the existing button on `/trading/trading-bots`, as a URL parameter. → **#985** |
