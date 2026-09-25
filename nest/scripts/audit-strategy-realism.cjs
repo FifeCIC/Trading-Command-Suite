@@ -106,6 +106,33 @@ function loadEnv() {
 }
 
 /**
+ * readMaxRiskPerTrade(prisma) — the per-trade ceiling from its CANONICAL HOME (#991).
+ *
+ * ⚠️ A setting that is STORED BUT NEVER READ is indistinguishable from one that does not exist —
+ * which was exactly #991's complaint about this ceiling before it had a home. So this READS the row
+ * rather than mirroring the registry default: changing `risk.maxPerTrade` now moves this audit.
+ *
+ * The env constant is used ONLY when the row is absent (the setting was declared 2026-09-26, so an
+ * older database legitimately has none) and the OUTPUT SAYS WHICH IT USED — because "no row" and
+ * "the row says 100" are different facts, and collapsing them is the defect this repo keeps paying
+ * for.
+ */
+async function readMaxRiskPerTrade(prisma) {
+  try {
+    const rows = await prisma.$queryRawUnsafe(
+      'SELECT `key`, value FROM global_setting WHERE `key` = "risk.maxPerTrade" LIMIT 1',
+    );
+    if (Array.isArray(rows) && rows.length > 0 && rows[0].value != null && rows[0].value !== '') {
+      const n = Number(rows[0].value);
+      if (Number.isFinite(n)) return { value: n, source: 'global_setting.risk.maxPerTrade' };
+    }
+    return { value: MAX_RISK_PER_TRADE, source: `FALLBACK — no global_setting row (env default ${MAX_RISK_PER_TRADE})` };
+  } catch (err) {
+    return { value: MAX_RISK_PER_TRADE, source: `FALLBACK — database read failed: ${err.message.split('\n')[0]}` };
+  }
+}
+
+/**
  * classify(bot, stats, cfg) — the WHOLE rule set, as a PURE function.
  *
  * Pure on purpose: `--self-test` calls THIS function with deliberately awkward input. A self-test
@@ -207,6 +234,7 @@ async function main() {
   );
 
   const byName = new Map(stats.map((s) => [s.name, s]));
+  const maxRisk = await readMaxRiskPerTrade(prisma);
   const rows = [];
   let flagged = 0;
 
@@ -217,7 +245,7 @@ async function main() {
       stopped: Number(s.stopped ?? 0),
       avgDeclaredPct: s.avgDeclaredPct === null || s.avgDeclaredPct === undefined ? null : Number(s.avgDeclaredPct),
       worstLoss: s.worstLoss === null || s.worstLoss === undefined ? null : Number(s.worstLoss),
-    });
+    }, { maxRisk: maxRisk.value });
     if (verdict.flags.some((f) => f !== 'NO-EVIDENCE')) flagged++;
     rows.push({ bot, stats: s, ...verdict });
   }
@@ -243,7 +271,7 @@ async function main() {
     );
   }
 
-  console.log(`\n  ceiling £${MAX_RISK_PER_TRADE} worst loss/trade · stop-out threshold ${STOP_OUT_THRESHOLD_PCT}% · min trades ${MIN_TRADES_FOR_VERDICT}`);
+  console.log(`\n  ceiling £${maxRisk.value} worst loss/trade — read from ${maxRisk.source} · stop-out threshold ${STOP_OUT_THRESHOLD_PCT}% · min trades ${MIN_TRADES_FOR_VERDICT}`);
   console.log('  ⚠️ recorded% is the stop distance on CLOSED trades — the guardian trails (607 adjustments in `stop_adjustment`), so it is expected to be tighter than declared. Reported, not judged.');
   console.log(`  ⚠️ attribution coverage: ${coverage.tagged} of ${coverage.n} closed trades carry a bot name — an untagged bot shows NO-EVIDENCE through no fault of its own (#949).`);
   console.log(`  flagged (excluding NO-EVIDENCE): ${flagged} of ${rows.length} bot(s)\n`);
