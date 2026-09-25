@@ -1818,12 +1818,31 @@ if __name__ == '__main__':
         f'max backoff {int(WATCHDOG_MAX_BACKOFF_SECONDS)}s'
     )
     # Connect MT5 once at startup (after BRIDGE_ACCOUNT override takes effect)
+    #
+    # ── SERVE BEFORE CONNECTING (#1000) ───────────────────────────────────────────────────────
+    # The HTTP server used to be created AFTER this call. That is why a bridge whose terminal is
+    # unreachable is UNDIAGNOSABLE: `mt5.initialize()` blocks the interpreter, the server is never
+    # constructed, and the port never opens — so nothing can ask the bridge what is wrong. The
+    # `:5002` canary showed exactly that (log stops at `Initializing MT5`, no port).
+    #
+    # The server is therefore bound and serving FIRST, on its own daemon thread. `/health` then
+    # answers while the connect is in flight or hung, which is the difference between "the bridge
+    # is wedged" and "something is listening and can tell you its state".
+    #
+    # ⚠️ This is necessary and may still not be sufficient: whether the serving thread actually gets
+    # CPU during `mt5.initialize()` depends on the native call releasing the GIL, which is not
+    # documented and is measured by the canary, not assumed here. If the canary shows the port
+    # answering, this covers criterion 1 and 3 of #1000; if it shows the port NOT answering, the
+    # conclusion is that the connect must also be bounded and run out of process, and that is
+    # recorded rather than hand-waved.
+    server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
+    logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port} (binding BEFORE connect, #1000)')
+    threading.Thread(target=server_obj.serve_forever, name='mt5-http', daemon=True).start()
+
     logger.info('Connecting to MT5 at startup...')
     ok, err = connect_mt5()
     if not ok:
         logger.warning(f'MT5 not connected at startup: {err}')
-    server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
-    logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port}')
     # ⚠️ Print the EFFECTIVE limits (#773). They come from the environment at import, so
     # this line is the only place a stale `.env` read is visible from the log. If it does
     # not match `nest/.env`, this process predates the edit — restart it.
@@ -1832,7 +1851,11 @@ if __name__ == '__main__':
         f'maxPositionSize={MAX_POSITION_SIZE}, maxDailyLoss={MAX_DAILY_LOSS}'
     )
     try:
-        server_obj.serve_forever()
+        # The HTTP server owns its own thread now, so park the main thread here. Parking (rather
+        # than exiting) keeps a KeyboardInterrupt deliverable and the shutdown orderly — a
+        # process whose main thread fell off the end would kill its daemon server mid-request.
+        while True:
+            time.sleep(3600)
     except KeyboardInterrupt:
         logger.info('Bridge shutting down...')
         server_obj.shutdown()
