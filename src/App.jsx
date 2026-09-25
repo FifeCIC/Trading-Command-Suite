@@ -1104,13 +1104,17 @@ export default function App() {
                   every doc link and every QA procedure that names it - and paths are cheap, dead
                   links are not. Premium-only, because its destination is premium. */}
               <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
+              {/* These two redirect only to FREE destinations, so the reason to gate them is not the
+                  destination — it is the SOURCE path: `/lab/metastack-*` names the system, and per
+                  §14.2.1 the NAME is part of the asset. An old bookmark falls through to the
+                  edition guard instead, which is the designed reply. */}
+              <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
+              <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
             </>
           )}
           <Route path="/status/platform-api-management" element={<Navigate to="/status" replace />} />
           <Route path="/status/audit-log" element={<Navigate to="/status" replace />} />
           <Route path="/status/ai-logs" element={<Navigate to="/status" replace />} />
-          <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
-          <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
           <Route path="/lab/directive-audit" element={<Navigate to="/lab" replace />} />
           <Route path="/scoringStrategies/:view" element={<ScoringStrategiesRedirect />} />
           <Route path="/scoringStrategies" element={<Navigate to="/scoring" replace />} />

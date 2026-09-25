@@ -181,6 +181,41 @@ if (mode === 'full' && !templateLiteralSeen) {
   );
 }
 
+// ── METHOD VOCABULARY (§9.14.1) ─────────────────────────────────────────────────────────────
+//
+// Per §14.2.1 the method's VOCABULARY is part of the proprietary asset: a reader who learns the
+// names has learnt what the composition is. Measured 2026-09-25 before the strip — SEES x4,
+// maxScore x1, 'scoring engine' x1, META.Stack x3, all as real strings in the shipped free JS.
+//
+// ⚠️ Case-SENSITIVE, and phrases rather than bare words, both learned by measuring:
+//   • the expansion 'Strategy Execution' matched the ordinary words "strategy execution" in two
+//     free pages when searched case-insensitively — a term list written the obvious way would have
+//     reported a leak that is not there;
+//   • a bare common word over-fires the same way. A guard that over-fires gets allowlisted, and an
+//     allowlisted guard is worse than none.
+const VOCABULARY = [
+  { term: 'SEES', re: /\bSEES\b/ },
+  { term: 'maxScore', re: /\bmaxScore\b/ },
+  { term: 'scoring engine', re: /scoring engine/ },
+  { term: 'META.Stack', re: /META\.Stack/ },
+  { term: 'metastack / meta-stack', re: /meta-?stack/ },
+];
+const leakedVocab = VOCABULARY.filter((v) => v.re.test(appJs)).map((v) => v.term);
+if (mode === 'free' && leakedVocab.length) {
+  failures.push(
+    `METHOD VOCABULARY SHIPPED: ${leakedVocab.length} term(s) name the proprietary method in the free ` +
+      `bundle: ${leakedVocab.join(', ')} — §9.14.1`,
+  );
+}
+if (mode === 'full' && leakedVocab.length !== VOCABULARY.length) {
+  const missing = VOCABULARY.filter((v) => !v.re.test(appJs)).map((v) => v.term);
+  failures.push(
+    `CHECKER BLIND: only ${leakedVocab.length}/${VOCABULARY.length} vocabulary term(s) found in the ` +
+      `FULL build (missing: ${missing.join(', ')}) — this check could not detect one in the free ` +
+      'bundle either',
+  );
+}
+
 // ── REGISTRY DETECTOR: a module that enumerates the app ─────────────────────────────────────
 //
 // Premium route PATHS are the hard evidence, but a registry keyed by VIEW ID (ScreenOptions) leaks
@@ -238,5 +273,6 @@ console.log(
     `${freeFiles.size} free page file(s), ${premiumFiles.size} premium page file(s) ${mode === 'free' ? 'absent' : 'present'}; ` +
     `${MAP_MODULES.length} map module(s) ${mode === 'free' ? 'filtered' : 'present'}, ` +
     `${leakedKeys.length}/${premiumKeys.length} premium path(s) visible ${mode === 'free' ? '(expected 0)' : '(expected all)'}, ` +
-    `${leakedLabels.length} premium name(s) ${mode === 'free' ? `reachable${STRICT ? '' : ' (reported, not enforced)'}` : 'visible'}.`,
+    `${leakedLabels.length} premium name(s) ${mode === 'free' ? `reachable${STRICT ? '' : ' (reported, not enforced)'}` : 'visible'}, ` +
+    `${leakedVocab.length} method vocabulary term(s) visible (expected 0).`,
 );

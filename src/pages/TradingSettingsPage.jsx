@@ -366,22 +366,25 @@ export default function TradingSettingsPage() {
         <p>Bots, thresholds, trade defaults and risk limits.</p>
       </motion.header>
 
-      <SettingsSection
-        id="trading-layer"
-        title="Trading layer"
-        desc="The META.Stack kill switch for dispatch. OFF keeps scoring and signals running but sends every order to paper."
-      >
-        <MetaStackLayerSwitch layer="trading" />
-        {/* §9.14 — /settings/automation is a PREMIUM view. Omitted in the free build so the path
-            does not ship and no dead link is offered. Flag folds at build time (Vite define). */}
-        {import.meta.env.VITE_EDITION !== 'free' && (
+      {/* ⚠️ §9.14 / §9.14.1 — the Trading layer kill switch is a META.Stack control, and the section
+          title, its description AND the component all name the system. The plan strips the layer
+          switches from this free page, so the section is premium-only. Removing it also drops
+          `<MetaStackLayerSwitch>` from the free bundle entirely — nothing else there imports it.
+          The guard is the Vite define, so the whole element is folded away rather than hidden. */}
+      {import.meta.env.VITE_EDITION !== 'free' && (
+        <SettingsSection
+          id="trading-layer"
+          title="Trading layer"
+          desc="The META.Stack kill switch for dispatch. OFF keeps scoring and signals running but sends every order to paper."
+        >
+          <MetaStackLayerSwitch layer="trading" />
           <MovedNote>
             The same switch appears on <a href="/settings/automation">Automation</a>, alongside the
             loop and the queue. Bots can dispatch only when BOTH this layer and the bot's own
             broker flag allow it.
           </MovedNote>
-        )}
-      </SettingsSection>
+        </SettingsSection>
+      )}
 
       <SettingsSection
         id="bots"

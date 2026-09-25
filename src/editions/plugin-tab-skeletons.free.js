@@ -52,7 +52,7 @@ export const PLUGIN_TAB_SKELETONS = {
   },
   "active-symbols": {
     title: "Active Symbols",
-    subtitle: "Watchlist-ready active symbol set used by SEES and strategies.",
+    subtitle: "Watchlist-ready active symbol set used by the scoring pipeline and strategies.",
     domain: "Watchlists / Core",
   },
   "user-watchlists": {

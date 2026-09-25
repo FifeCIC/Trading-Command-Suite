@@ -339,6 +339,39 @@ const outputs = [
   },
 ];
 
+// ── vocabulary scrub (§9.14.1) ───────────────────────────────────────────────────────────────
+//
+// Filtering removes whole ENTRIES, not the words inside the entries that stay — so a filtered copy
+// still carries the system's own vocabulary in the labels and subtitles it copies verbatim. Per
+// §14.2.1 that vocabulary IS the proprietary asset, so the generated text gets an explicit rewrite.
+//
+// ⚠️ Phrases, not bare terms. Rewriting 'SEES' on its own would produce nonsense mid-sentence, and a
+// bare term over-fires on ordinary English: measured 2026-09-25, a CASE-INSENSITIVE search for the
+// expansion 'Strategy Execution' matched the ordinary words "strategy execution" in two free pages.
+// A guard that over-fires gets allowlisted, and an allowlisted guard is worse than none.
+const VOCAB_SCRUB = [
+  ['META.Stack Layers', 'Layers'],
+  ['used by SEES and strategies', 'used by the scoring pipeline and strategies'],
+];
+
+const scrubFired = new Set();
+for (const out of outputs) {
+  for (const [from, to] of VOCAB_SCRUB) {
+    if (!out.body.includes(from)) continue;
+    out.body = out.body.split(from).join(to);
+    scrubFired.add(from);
+  }
+}
+// A rule that matches nothing is either already satisfied or stale. Say so rather than let it sit
+// there looking like protection.
+const unusedScrub = VOCAB_SCRUB.filter(([from]) => !scrubFired.has(from));
+if (unusedScrub.length) {
+  console.warn(
+    `⚠ ${unusedScrub.length} vocabulary scrub rule(s) matched nothing: ` +
+      `${unusedScrub.map(([f]) => `"${f}"`).join(', ')} — the wording may have moved, or the leak is already gone. Verify, then delete the rule.`,
+  );
+}
+
 // ── report ───────────────────────────────────────────────────────────────────────────────────
 const droppedNavEntries = [];
 for (const [areaId, area] of Object.entries(navTree)) {

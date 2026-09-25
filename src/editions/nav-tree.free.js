@@ -227,7 +227,7 @@ export const NAV_TREE = {
       {
         kind: "section-header",
         id: "settings-layers",
-        label: "META.Stack Layers",
+        label: "Layers",
         icon: "",
       },
       {

@@ -112,8 +112,9 @@ export default function SettingsPage() {
       <header className="settings-header">
         <h1>General</h1>
         <p>
-          Application plumbing. Everything a user can change that belongs to a META.Stack layer
-          now lives on that layer's page — see the index at the bottom.
+          Application plumbing. Everything a user can change that belongs to a{' '}
+          {import.meta.env.VITE_EDITION === 'free' ? 'pipeline' : 'META.Stack'} layer now lives on
+          that layer's page — see the index at the bottom.
         </p>
       </header>
 

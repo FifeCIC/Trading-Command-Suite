@@ -19,13 +19,21 @@ const DEFAULT_RULES = [
     config: { threshold: 15, unit: '% of portfolio' },
     enabled: true,
   },
-  {
-    id: 'min-sees-score',
-    name: 'Minimum SEES Aggregate Score (%)',
-    description: 'Require a minimum aggregate SEES score before any BUY signal can execute. Score threshold applies globally across all strategies.',
-    config: { threshold: 60, unit: '%' },
-    enabled: false,
-  },
+  // ⚠️ §9.14 / §9.14.1 — this rule gates on an aggregate SEES score: a scoring-dependent control the
+  // free edition does not ship (D5=A — free has no scoring engine), whose name AND description both
+  // carry the engine's name. DROPPED rather than reworded: a rule the free build cannot evaluate
+  // should not be offered at all, and a spread keeps the literals in a branch the bundler folds away.
+  ...(import.meta.env.VITE_EDITION === 'free'
+    ? []
+    : [
+        {
+          id: 'min-sees-score',
+          name: 'Minimum SEES Aggregate Score (%)',
+          description: 'Require a minimum aggregate SEES score before any BUY signal can execute. Score threshold applies globally across all strategies.',
+          config: { threshold: 60, unit: '%' },
+          enabled: false,
+        },
+      ]),
 ];
 
 export default function AutomationRulesPage() {

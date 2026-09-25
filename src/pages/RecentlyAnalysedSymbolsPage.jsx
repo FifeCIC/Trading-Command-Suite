@@ -45,7 +45,11 @@ export default function RecentlyAnalysedSymbolsPage() {
         <div>
           <h1>Recently Analysed Symbols
           <PageInfoPopover>
-            Symbols most recently scored by the SEES pipeline — ordered by analysis time
+            {/* §9.14.1 — 'SEES' is the scoring engine's name and the free edition does not carry the
+                method's vocabulary. Conditional, so the full edition keeps its own term. */}
+            Symbols most recently scored by the{' '}
+            {import.meta.env.VITE_EDITION === 'free' ? 'scoring pipeline' : 'SEES pipeline'}
+            {' '}— ordered by analysis time
           </PageInfoPopover>
         </h1>
         </div>

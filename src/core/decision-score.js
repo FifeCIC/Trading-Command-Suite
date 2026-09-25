@@ -52,7 +52,13 @@ export function decisionScore(row) {
     return {
       text: `${Math.round(raw)} pts`,
       kind: 'raw',
-      title: 'Raw additive protocol score (directive maxScore sum) — not a percentage.',
+      // §9.14.1 — `maxScore` is the scoring model's field name; the free edition does not carry the
+      // method's vocabulary, so it reads the concept in plain words instead of naming the field.
+      // Conditional rather than reworded, so the full edition keeps its own term exactly.
+      title:
+        import.meta.env.VITE_EDITION === 'free'
+          ? 'Raw additive protocol score (sum of the directive maxima) — not a percentage.'
+          : 'Raw additive protocol score (directive maxScore sum) — not a percentage.',
       value: raw,
     };
   }

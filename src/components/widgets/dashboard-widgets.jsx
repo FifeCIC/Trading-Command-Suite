@@ -640,7 +640,12 @@ registerWidget({
   title: 'Hot Picks',
   icon: '🔥',
   category: 'Signals',
-  description: 'Top ranked symbols from the scoring engine.',
+  // §9.14.1 — the phrase 'scoring engine' names the method in the free edition; the full edition
+  // keeps it. Conditional so neither edition is reworded for the other's sake.
+  description:
+    import.meta.env.VITE_EDITION === 'free'
+      ? 'Top ranked symbols.'
+      : 'Top ranked symbols from the scoring engine.',
   frame: true,
   size: { w: 4, h: 6, minW: 3, minH: 4 },
   Component: HotPicksWidget,
