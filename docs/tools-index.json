@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 141,
+  "count": 142,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -499,6 +499,16 @@
       "purpose": "\"which column holds which identity?\", measured rather than assumed.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "init-schema.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "build the FULL application schema on an EMPTY database (#997).",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "inspect-781-symbols.cjs",
