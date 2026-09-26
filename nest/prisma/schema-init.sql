@@ -1,28 +1,31 @@
--- schema-init.sql — the FULL application schema, generated from prisma/schema.prisma.
--- =====================================================================================
--- ⚠️ WHY THIS FILE EXISTS (#997): a fresh install could not create the schema. Measured 2026-09-25:
--- 130 tables live, ootstrapSchema() creates 9 at boot, aw-managed/ ships 4, and there were
--- ZERO migrations — so a new user received 9 tables on an empty database and the app could not
--- start. This file is the missing piece.
+-- schema-init.sql — the FULL application schema, GENERATED from prisma/schema.prisma.
+-- =====================================================================================================
+-- ⚠️ THIS FILE IS GENERATED. DO NOT EDIT IT BY HAND — a hand-edited copy drifts from the model, which
+-- is the defect it exists to remove. Regenerate with:
 --
--- GENERATED, NOT HAND-WRITTEN:
---   npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
--- Regenerate with exactly that command whenever schema.prisma changes. Do NOT edit by hand —
--- a hand-edited copy drifts from the model, which is the defect this file exists to remove.
+--     npm --prefix nest run db:init:gen        (writes)
+--     npm --prefix nest run db:init:gen:check  (fails if stale)
+--
+-- ⚠️ WHY A GENERATOR AND NOT A DOCUMENTED COMMAND (#997). The raw `prisma migrate diff` output is not
+-- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
+-- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
+-- timestamps in the future with no error — the #844 fault. The generator applies that correction
+-- (110 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+--
+-- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
+-- the build on the FIRST generated version and named every offending column.
+--
+-- SCALE: 118 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
---   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, the rest created
---      by ootstrapSchema() at boot with CREATE TABLE IF NOT EXISTS). Those are deliberately NOT
---      in schema.prisma, which is why db push is banned here (#769).
---   2. Seed DATA. The schema is not the seed; run the seeders after this.
+--   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
+--      bootstrapSchema() at boot). They are deliberately NOT in schema.prisma, which is why
+--      `db push` is banned here (#769).
+--   2. Seed DATA. A schema is not a seed; run the seeders after this.
 --
--- USAGE (fresh database only):
---   npm --prefix nest run db:init
---
--- ⚠️ Verified 2026-09-26 by applying it to an empty MySQL database: 118 base tables created, and
--- trade / symbol / trading_strategy / symbol_route / broker_symbol / protocol / scoring_strategy /
--- global_setting all present. Re-generated SQL is the source of truth; this header is context.
--- =====================================================================================
+-- USAGE (fresh database only):  npm --prefix nest run db:init
+-- =====================================================================================================
+
 -- CreateTable
 CREATE TABLE `Symbol` (
     `id` VARCHAR(36) NOT NULL,
@@ -33,7 +36,7 @@ CREATE TABLE `Symbol` (
     `tags` JSON NOT NULL,
     `aliases` JSON NOT NULL,
     `active` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `Symbol_ticker_key`(`ticker`),
@@ -48,7 +51,7 @@ CREATE TABLE `Strategy` (
     `version` VARCHAR(20) NOT NULL DEFAULT '1.0.0',
     `config` JSON NOT NULL,
     `active` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
@@ -68,7 +71,7 @@ CREATE TABLE `Directive` (
     `parentId` VARCHAR(36) NULL,
     `isDefault` BOOLEAN NOT NULL DEFAULT true,
     `forkReason` VARCHAR(500) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `Directive_strategyId_idx`(`strategyId`),
@@ -84,7 +87,7 @@ CREATE TABLE `Score` (
     `strategyId` VARCHAR(36) NOT NULL,
     `value` DOUBLE NOT NULL,
     `breakdown` JSON NOT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `Score_symbolId_timestamp_idx`(`symbolId`, `timestamp`),
     INDEX `Score_strategyId_timestamp_idx`(`strategyId`, `timestamp`),
@@ -102,7 +105,7 @@ CREATE TABLE `Signal` (
     `price` DOUBLE NOT NULL,
     `reason` JSON NOT NULL,
     `status` VARCHAR(50) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `Signal_symbolId_createdAt_idx`(`symbolId`, `createdAt`),
     INDEX `Signal_strategyId_createdAt_idx`(`strategyId`, `createdAt`),
@@ -122,7 +125,7 @@ CREATE TABLE `MarketBar` (
     `close` DOUBLE NOT NULL,
     `volume` DOUBLE NOT NULL,
     `recordingSessionId` VARCHAR(36) NULL,
-    `importedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `importedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `MarketBar_symbolId_timeframe_timestamp_idx`(`symbolId`, `timeframe`, `timestamp`),
     INDEX `MarketBar_provider_importedAt_idx`(`provider`, `importedAt`),
@@ -140,7 +143,7 @@ CREATE TABLE `ImportRun` (
     `timeframe` VARCHAR(20) NOT NULL,
     `status` VARCHAR(50) NOT NULL,
     `source` VARCHAR(100) NOT NULL,
-    `requestedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `requestedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `startedAt` DATETIME(3) NULL,
     `completedAt` DATETIME(3) NULL,
     `error` TEXT NULL,
@@ -156,7 +159,7 @@ CREATE TABLE `TickRecordingSession` (
     `symbolId` VARCHAR(36) NOT NULL,
     `timeframe` VARCHAR(20) NOT NULL DEFAULT '5s',
     `status` VARCHAR(20) NOT NULL DEFAULT 'recording',
-    `startedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `startedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `endedAt` DATETIME(3) NULL,
     `barCount` INTEGER NOT NULL DEFAULT 0,
     `gapCount` INTEGER NOT NULL DEFAULT 0,
@@ -192,7 +195,7 @@ CREATE TABLE `BacktestRun` (
     `positionModel` VARCHAR(30) NULL,
     `accountSize` DOUBLE NULL,
     `riskPct` DOUBLE NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `BacktestRun_symbolId_protocolId_idx`(`symbolId`, `protocolId`),
     INDEX `BacktestRun_createdAt_idx`(`createdAt`),
@@ -231,7 +234,7 @@ CREATE TABLE `ProviderHealth` (
     `status` VARCHAR(50) NOT NULL,
     `message` TEXT NULL,
     `latencyMs` INTEGER NULL,
-    `checkedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `checkedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `credentialsOk` BOOLEAN NOT NULL DEFAULT false,
     `endpoint` VARCHAR(500) NULL,
 
@@ -243,7 +246,7 @@ CREATE TABLE `ProviderHealth` (
 -- CreateTable
 CREATE TABLE `ApiActivityLog` (
     `id` VARCHAR(36) NOT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `endpoint` VARCHAR(220) NOT NULL,
     `method` VARCHAR(12) NOT NULL,
     `provider` VARCHAR(80) NULL,
@@ -266,7 +269,7 @@ CREATE TABLE `FaqEntry` (
     `category` VARCHAR(100) NOT NULL,
     `tags` VARCHAR(500) NOT NULL,
     `order` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `FaqEntry_category_order_idx`(`category`, `order`),
@@ -287,7 +290,7 @@ CREATE TABLE `ApiTrace` (
     `preview` VARCHAR(1000) NULL,
     `error` TEXT NULL,
     `cached` BOOLEAN NOT NULL DEFAULT false,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `expiresAt` DATETIME(3) NOT NULL,
 
     INDEX `ApiTrace_cacheKey_createdAt_idx`(`cacheKey`, `createdAt`),
@@ -303,7 +306,7 @@ CREATE TABLE `correlation_pair` (
     `symbol_b` VARCHAR(20) NOT NULL,
     `correlation` DOUBLE NOT NULL,
     `period_days` INTEGER NOT NULL DEFAULT 90,
-    `computed_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `computed_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `correlation_pair_symbol_a_idx`(`symbol_a`),
     INDEX `correlation_pair_computed_at_idx`(`computed_at`),
@@ -320,7 +323,7 @@ CREATE TABLE `SymbolCalibration` (
     `reason` VARCHAR(500) NOT NULL,
     `decayModifier` DOUBLE NULL,
     `volatilityAdjustment` DOUBLE NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `SymbolCalibration_symbol_idx`(`symbol`),
@@ -336,7 +339,7 @@ CREATE TABLE `NewsSource` (
     `reliabilityScore` DOUBLE NOT NULL DEFAULT 5.0,
     `patterns` JSON NOT NULL,
     `active` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `NewsSource_name_key`(`name`),
@@ -352,7 +355,7 @@ CREATE TABLE `ArticleSample` (
     `sentiment` DOUBLE NOT NULL DEFAULT 0,
     `fluffScore` DOUBLE NOT NULL DEFAULT 0,
     `publishedAt` DATETIME(3) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `ArticleSample_sourceId_publishedAt_idx`(`sourceId`, `publishedAt`),
     INDEX `ArticleSample_publishedAt_idx`(`publishedAt`),
@@ -367,7 +370,7 @@ CREATE TABLE `PublishingPattern` (
     `hourOfDay` INTEGER NOT NULL,
     `avgSentiment` DOUBLE NOT NULL DEFAULT 0,
     `articleCount` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     UNIQUE INDEX `PublishingPattern_sourceId_dayOfWeek_hourOfDay_key`(`sourceId`, `dayOfWeek`, `hourOfDay`),
     PRIMARY KEY (`id`)
@@ -385,7 +388,7 @@ CREATE TABLE `NewsArticle` (
     `sentiment` DOUBLE NOT NULL DEFAULT 0,
     `impact` VARCHAR(20) NOT NULL DEFAULT 'medium',
     `publishedAt` DATETIME(3) NOT NULL,
-    `importedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `importedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     UNIQUE INDEX `NewsArticle_url_key`(`url`),
     INDEX `NewsArticle_symbol_publishedAt_idx`(`symbol`, `publishedAt`),
@@ -405,7 +408,7 @@ CREATE TABLE `NewsImportRun` (
     `duplicates` INTEGER NOT NULL DEFAULT 0,
     `errors` INTEGER NOT NULL DEFAULT 0,
     `errorLog` TEXT NULL,
-    `startedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `startedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `completedAt` DATETIME(3) NULL,
 
     INDEX `NewsImportRun_startedAt_idx`(`startedAt`),
@@ -426,7 +429,7 @@ CREATE TABLE `news_item` (
     `sentiment` VARCHAR(50) NULL,
     `severity` INTEGER NOT NULL DEFAULT 0,
     `status` VARCHAR(20) NOT NULL DEFAULT 'new',
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     UNIQUE INDEX `news_item_sourceHash_key`(`sourceHash`),
     INDEX `news_item_publishedAt_idx`(`publishedAt`),
@@ -451,7 +454,7 @@ CREATE TABLE `DirectiveOutcome` (
     `priceT24h` DOUBLE NULL,
     `directionCorrect` BOOLEAN NULL,
     `outcomeComputedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `DirectiveOutcome_directiveId_symbol_predictedAt_idx`(`directiveId`, `symbol`, `predictedAt`),
     INDEX `DirectiveOutcome_predictedAt_idx`(`predictedAt`),
@@ -471,7 +474,7 @@ CREATE TABLE `MarketSnapshot` (
     `directiveScores` JSON NULL,
     `notes` TEXT NULL,
     `starred` BOOLEAN NOT NULL DEFAULT false,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `MarketSnapshot_symbol_idx`(`symbol`),
     INDEX `MarketSnapshot_starred_createdAt_idx`(`starred`, `createdAt`),
@@ -507,7 +510,7 @@ CREATE TABLE `ChartSnapshot` (
     `visibleRange` JSON NULL,
     `priceAtTime` DOUBLE NULL,
     `tags` JSON NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `ChartSnapshot_symbol_idx`(`symbol`),
     INDEX `ChartSnapshot_symbol_createdAt_idx`(`symbol`, `createdAt`),
@@ -521,7 +524,7 @@ CREATE TABLE `ProtocolVersion` (
     `strategyId` VARCHAR(36) NOT NULL,
     `version` VARCHAR(20) NOT NULL,
     `changes` TEXT NOT NULL,
-    `detectedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `detectedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `previousVersion` VARCHAR(20) NULL,
 
     INDEX `ProtocolVersion_strategyId_detectedAt_idx`(`strategyId`, `detectedAt`),
@@ -539,7 +542,7 @@ CREATE TABLE `MacroIndicator` (
     `previous` DOUBLE NULL,
     `date` DATETIME(3) NOT NULL,
     `source` VARCHAR(50) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     UNIQUE INDEX `MacroIndicator_indicator_key`(`indicator`),
     INDEX `MacroIndicator_category_date_idx`(`category`, `date`),
@@ -551,7 +554,7 @@ CREATE TABLE `FxRate` (
     `id` VARCHAR(36) NOT NULL,
     `pair` VARCHAR(20) NOT NULL,
     `rate` DOUBLE NOT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `provider` VARCHAR(50) NOT NULL,
 
     INDEX `FxRate_pair_timestamp_idx`(`pair`, `timestamp`),
@@ -566,7 +569,7 @@ CREATE TABLE `SymbolTechnical` (
     `timeframe` VARCHAR(20) NOT NULL,
     `indicator` VARCHAR(50) NOT NULL,
     `value` DOUBLE NOT NULL,
-    `computedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `computedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `SymbolTechnical_symbolId_timeframe_indicator_idx`(`symbolId`, `timeframe`, `indicator`),
     PRIMARY KEY (`id`)
@@ -579,7 +582,7 @@ CREATE TABLE `DataSourcesMeta` (
     `type` VARCHAR(50) NOT NULL,
     `config` JSON NOT NULL,
     `active` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `DataSourcesMeta_name_key`(`name`),
@@ -595,7 +598,7 @@ CREATE TABLE `ApiCredentials` (
     `apiSecret` TEXT NULL,
     `valid` BOOLEAN NOT NULL DEFAULT false,
     `lastTested` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `ApiCredentials_provider_label_key`(`provider`, `label`),
@@ -613,7 +616,7 @@ CREATE TABLE `StrategyPerformance` (
     `totalTrades` INTEGER NOT NULL DEFAULT 0,
     `periodStart` DATETIME(3) NOT NULL,
     `periodEnd` DATETIME(3) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `StrategyPerformance_strategyId_periodEnd_idx`(`strategyId`, `periodEnd`),
     PRIMARY KEY (`id`)
@@ -641,7 +644,7 @@ CREATE TABLE `Watchlist` (
     `userId` VARCHAR(100) NULL,
     `kind` VARCHAR(20) NOT NULL DEFAULT 'user',
     `isDefault` BOOLEAN NOT NULL DEFAULT false,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
     `importedAt` DATETIME(3) NULL,
 
@@ -658,8 +661,8 @@ CREATE TABLE `screener_hit` (
     `catalystStrength` DOUBLE NOT NULL DEFAULT 0,
     `sourceReliability` DOUBLE NOT NULL DEFAULT 50,
     `rawPayloadRef` VARCHAR(500) NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `screener_hit_ticker_idx`(`ticker`),
     INDEX `screener_hit_source_idx`(`source`),
@@ -679,7 +682,7 @@ CREATE TABLE `watchlist_item` (
     `promotedTo` VARCHAR(100) NULL,
     `promotedAt` DATETIME(3) NULL,
     `expiresAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `watchlist_item_screenerHitId_key`(`screenerHitId`),
@@ -698,7 +701,7 @@ CREATE TABLE `CronMeta` (
     `nextRun` DATETIME(3) NULL,
     `status` VARCHAR(50) NOT NULL DEFAULT 'idle',
     `enabled` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `CronMeta_name_key`(`name`),
@@ -714,7 +717,7 @@ CREATE TABLE `ProcessMeta` (
     `status` VARCHAR(50) NOT NULL DEFAULT 'stopped',
     `startedAt` DATETIME(3) NULL,
     `stoppedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `ProcessMeta_name_key`(`name`),
@@ -751,7 +754,7 @@ CREATE TABLE `Order` (
     `externalName` VARCHAR(64) NULL,
     `fillingMode` VARCHAR(16) NULL,
     `filledAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `Order_symbol_createdAt_idx`(`symbol`, `createdAt`),
@@ -767,7 +770,7 @@ CREATE TABLE `position_intent` (
     `symbol` VARCHAR(20) NOT NULL,
     `intent` VARCHAR(20) NOT NULL,
     `note` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `position_intent_provider_symbol_key`(`provider`, `symbol`),
@@ -786,7 +789,7 @@ CREATE TABLE `Position` (
     `provider` VARCHAR(50) NOT NULL,
     `accountId` VARCHAR(100) NULL,
     `lastQuotedAt` DATETIME(3) NULL,
-    `openedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `openedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
     `brokerTicket` VARCHAR(100) NULL,
     `side` VARCHAR(10) NULL,
@@ -818,9 +821,9 @@ CREATE TABLE `Trade` (
     `source` VARCHAR(30) NULL,
     `abTestId` VARCHAR(36) NULL,
     `abTestSide` VARCHAR(1) NULL,
-    `openedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `openedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `closedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `ticket` BIGINT NULL,
     `brokerTicket` VARCHAR(100) NULL,
     `sl` DOUBLE NULL,
@@ -856,7 +859,7 @@ CREATE TABLE `ApiCalls` (
     `durationMs` INTEGER NULL,
     `responseSize` INTEGER NULL,
     `error` TEXT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `ApiCalls_provider_timestamp_idx`(`provider`, `timestamp`),
     INDEX `ApiCalls_timestamp_idx`(`timestamp`),
@@ -872,7 +875,7 @@ CREATE TABLE `CacheMeta` (
     `missCount` INTEGER NOT NULL DEFAULT 0,
     `size` INTEGER NULL,
     `lastHit` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `CacheMeta_key_key`(`key`),
@@ -888,7 +891,7 @@ CREATE TABLE `DecodedDocument` (
     `extractedSymbols` JSON NOT NULL,
     `sentiment` VARCHAR(20) NULL,
     `analysis` JSON NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `DecodedDocument_format_createdAt_idx`(`format`, `createdAt`),
     PRIMARY KEY (`id`)
@@ -906,7 +909,7 @@ CREATE TABLE `StrategyMeta` (
     `bestCondition` VARCHAR(50) NULL,
     `riskLevel` VARCHAR(20) NOT NULL,
     `timeHorizon` VARCHAR(20) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `StrategyMeta_strategyId_key`(`strategyId`),
@@ -918,7 +921,7 @@ CREATE TABLE `WatchlistMeta` (
     `id` VARCHAR(36) NOT NULL,
     `watchlistId` VARCHAR(36) NOT NULL,
     `symbol` VARCHAR(20) NOT NULL,
-    `addedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `addedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `notes` TEXT NULL,
 
     INDEX `WatchlistMeta_symbol_idx`(`symbol`),
@@ -937,7 +940,7 @@ CREATE TABLE `NewsMeta` (
     `fluffScore` DOUBLE NOT NULL DEFAULT 0,
     `impact` VARCHAR(20) NOT NULL DEFAULT 'low',
     `publishedAt` DATETIME(3) NOT NULL,
-    `ingestedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `ingestedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `NewsMeta_symbol_publishedAt_idx`(`symbol`, `publishedAt`),
     INDEX `NewsMeta_publishedAt_idx`(`publishedAt`),
@@ -957,7 +960,7 @@ CREATE TABLE `OrderExecution` (
     `fee` DOUBLE NULL,
     `error` TEXT NULL,
     `executedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `OrderExecution_orderId_idx`(`orderId`),
     INDEX `OrderExecution_provider_executedAt_idx`(`provider`, `executedAt`),
@@ -973,7 +976,7 @@ CREATE TABLE `tradingplan` (
     `notes` TEXT NULL,
     `status` VARCHAR(20) NOT NULL DEFAULT 'draft',
     `symbols` JSON NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
     `portfolioSnapshot` JSON NULL,
 
@@ -996,7 +999,7 @@ CREATE TABLE `planstep` (
     `executedAt` DATETIME(3) NULL,
     `executedPrice` DOUBLE NULL,
     `notes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `planstep_planId_idx`(`planId`),
     PRIMARY KEY (`id`)
@@ -1020,7 +1023,7 @@ CREATE TABLE `earnings_event` (
     `time_of_day` VARCHAR(20) NULL,
     `currency` VARCHAR(10) NULL,
     `source` VARCHAR(30) NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updated_at` DATETIME(3) NOT NULL,
 
     INDEX `earnings_event_report_date_idx`(`report_date`),
@@ -1042,8 +1045,8 @@ CREATE TABLE `analyst_target` (
     `analyst_count` INTEGER NULL,
     `upside` DOUBLE NULL,
     `source` VARCHAR(30) NOT NULL,
-    `fetched_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `fetched_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `created_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updated_at` DATETIME(3) NOT NULL,
 
     INDEX `analyst_target_symbol_idx`(`symbol`),
@@ -1060,7 +1063,7 @@ CREATE TABLE `sources` (
     `url` VARCHAR(500) NULL,
     `description` VARCHAR(500) NULL,
     `active` BOOLEAN NOT NULL DEFAULT true,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updated_at` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `sources_name_key`(`name`),
@@ -1076,7 +1079,7 @@ CREATE TABLE `earnings_analysis_batch` (
     `raw_text` LONGTEXT NOT NULL,
     `entry_count` INTEGER NOT NULL DEFAULT 0,
     `status` VARCHAR(20) NOT NULL DEFAULT 'parsed',
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `earnings_analysis_batch_source_id_created_at_idx`(`source_id`, `created_at`),
     INDEX `earnings_analysis_batch_created_at_idx`(`created_at`),
@@ -1114,8 +1117,8 @@ CREATE TABLE `earnings_analysis` (
     `meta` JSON NULL,
     `raw_text` LONGTEXT NOT NULL,
     `ai_summary` TEXT NULL,
-    `parsed_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `parsed_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `created_at` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `earnings_analysis_symbol_report_date_idx`(`symbol`, `report_date`),
     INDEX `earnings_analysis_batch_id_idx`(`batch_id`),
@@ -1134,7 +1137,7 @@ CREATE TABLE `score_snapshot` (
     `rarityPct` DOUBLE NULL,
     `signalPct` DOUBLE NULL,
     `opportunityPct` DOUBLE NULL,
-    `snappedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `snappedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `score_snapshot_protocolId_snappedAt_idx`(`protocolId`, `snappedAt`),
     INDEX `score_snapshot_symbol_snappedAt_idx`(`symbol`, `snappedAt`),
@@ -1148,7 +1151,7 @@ CREATE TABLE `UserStar` (
     `userId` VARCHAR(36) NOT NULL DEFAULT 'default',
     `itemType` VARCHAR(20) NOT NULL,
     `itemId` VARCHAR(36) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `UserStar_userId_itemType_idx`(`userId`, `itemType`),
     UNIQUE INDEX `UserStar_userId_itemType_itemId_key`(`userId`, `itemType`, `itemId`),
@@ -1169,7 +1172,7 @@ CREATE TABLE `data_import_log` (
     `errorMessage` TEXT NULL,
     `rateLimitHits` INTEGER NOT NULL DEFAULT 0,
     `durationMs` INTEGER NULL,
-    `fetchedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `fetchedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `data_import_log_dataType_idx`(`dataType`),
     INDEX `data_import_log_dataType_status_fetchedAt_idx`(`dataType`, `status`, `fetchedAt`),
@@ -1187,7 +1190,7 @@ CREATE TABLE `portfolio_snapshot` (
     `positionCount` INTEGER NOT NULL,
     `cash` DOUBLE NULL,
     `providerSummary` JSON NOT NULL,
-    `takenAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `takenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `portfolio_snapshot_snapshotType_takenAt_idx`(`snapshotType`, `takenAt`),
     INDEX `portfolio_snapshot_takenAt_idx`(`takenAt`),
@@ -1250,7 +1253,7 @@ CREATE TABLE `trading_strategy` (
     `simTslDistancePct` DOUBLE NULL,
     `exhaustionObserveEnabled` BOOLEAN NOT NULL DEFAULT false,
     `exhaustionDecelPct` DOUBLE NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `trading_strategy_scoringStrategyId_idx`(`scoringStrategyId`),
@@ -1264,7 +1267,7 @@ CREATE TABLE `strategy_protocol` (
     `protocolId` VARCHAR(100) NOT NULL,
     `role` VARCHAR(10) NOT NULL DEFAULT 'long',
     `sortOrder` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `strategy_protocol_strategyId_idx`(`strategyId`),
     INDEX `strategy_protocol_protocolId_idx`(`protocolId`),
@@ -1285,7 +1288,7 @@ CREATE TABLE `strategy_evaluation` (
     `traded` BOOLEAN NOT NULL DEFAULT false,
     `tradeTicket` BIGINT NULL,
     `tradeResult` TEXT NULL,
-    `evaluatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `evaluatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `strategy_evaluation_evaluatedAt_idx`(`evaluatedAt`),
     INDEX `strategy_evaluation_strategyId_evaluatedAt_idx`(`strategyId`, `evaluatedAt`),
@@ -1304,7 +1307,7 @@ CREATE TABLE `ProtocolRun` (
     `coverage` DOUBLE NULL DEFAULT 1.0,
     `degradedProviders` TEXT NULL,
     `runCount` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
     `lastRunAt` DATETIME(3) NULL,
 
@@ -1340,7 +1343,7 @@ CREATE TABLE `scoring_strategy` (
     `hotStockDetectionMode` VARCHAR(20) NULL,
     `hotStockMaxHoldHours` INTEGER NULL,
     `maxHoldHours` INTEGER NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `scoring_strategy_watchlistId_idx`(`watchlistId`),
@@ -1366,7 +1369,7 @@ CREATE TABLE `metastack_snapshot` (
     `version` VARCHAR(20) NOT NULL,
     `snapshot` JSON NOT NULL,
     `fingerprint` VARCHAR(64) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `createdBy` VARCHAR(100) NULL,
 
     INDEX `metastack_snapshot_scoringStrategyId_idx`(`scoringStrategyId`),
@@ -1382,7 +1385,7 @@ CREATE TABLE `metastack_change_log` (
     `toVersion` VARCHAR(20) NOT NULL,
     `summary` VARCHAR(500) NULL,
     `details` JSON NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `author` VARCHAR(100) NULL,
 
     INDEX `metastack_change_log_scoringStrategyId_idx`(`scoringStrategyId`),
@@ -1395,7 +1398,7 @@ CREATE TABLE `SymbolProtocolAffinity` (
     `protocolId` VARCHAR(100) NOT NULL,
     `avgNormalizedScore` DOUBLE NOT NULL,
     `runCount` INTEGER NOT NULL DEFAULT 1,
-    `lastUpdated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `lastUpdated` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `SymbolProtocolAffinity_symbol_idx`(`symbol`),
     INDEX `SymbolProtocolAffinity_protocolId_idx`(`protocolId`),
@@ -1423,7 +1426,7 @@ CREATE TABLE `TimelineEvent` (
     `durationMin` INTEGER NULL,
     `source` VARCHAR(20) NOT NULL DEFAULT 'system',
     `metadata` JSON NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `TimelineEvent_startsAt_idx`(`startsAt`),
     INDEX `TimelineEvent_symbol_idx`(`symbol`),
@@ -1473,7 +1476,7 @@ CREATE TABLE `bridge_event` (
     `server` VARCHAR(100) NULL,
     `balance` DOUBLE NULL,
     `errorMessage` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `bridge_event_eventType_createdAt_idx`(`eventType`, `createdAt`),
     INDEX `bridge_event_createdAt_idx`(`createdAt`),
@@ -1496,7 +1499,7 @@ CREATE TABLE `stock_investigation` (
     `status` VARCHAR(20) NOT NULL DEFAULT 'open',
     `followedUpAt` DATETIME(3) NULL,
     `outcome` TEXT NULL,
-    `investigatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `investigatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `stock_investigation_symbol_investigatedAt_idx`(`symbol`, `investigatedAt`),
     INDEX `stock_investigation_status_idx`(`status`),
@@ -1512,7 +1515,7 @@ CREATE TABLE `fund_allocation` (
     `source` VARCHAR(50) NOT NULL DEFAULT 'earnings',
     `notes` TEXT NULL,
     `allocations` JSON NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
@@ -1528,7 +1531,7 @@ CREATE TABLE `trading_style_preference` (
     `enabled` BOOLEAN NOT NULL DEFAULT false,
     `preferences` JSON NOT NULL,
     `sortOrder` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `trading_style_preference_styleKey_key`(`styleKey`),
@@ -1553,7 +1556,7 @@ CREATE TABLE `trading_objective` (
     `isBuiltIn` BOOLEAN NOT NULL DEFAULT false,
     `progressPct` DOUBLE NOT NULL DEFAULT 0,
     `notes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `trading_objective_status_idx`(`status`),
@@ -1569,7 +1572,7 @@ CREATE TABLE `MacroSnapshot` (
     `regime` VARCHAR(20) NOT NULL,
     `source` VARCHAR(50) NOT NULL,
     `dxyActual` DOUBLE NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `MacroSnapshot_createdAt_idx`(`createdAt`),
     INDEX `MacroSnapshot_regime_createdAt_idx`(`regime`, `createdAt`),
@@ -1587,7 +1590,7 @@ CREATE TABLE `SocialMention` (
     `totalMentions` INTEGER NOT NULL DEFAULT 0,
     `avgSentiment` DOUBLE NOT NULL DEFAULT 0,
     `source` VARCHAR(30) NOT NULL DEFAULT 'finnhub',
-    `fetchedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `fetchedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `SocialMention_symbol_fetchedAt_idx`(`symbol`, `fetchedAt`),
     INDEX `SocialMention_fetchedAt_idx`(`fetchedAt`),
@@ -1606,7 +1609,7 @@ CREATE TABLE `InsiderTransaction` (
     `filingDate` DATETIME(3) NOT NULL,
     `currency` VARCHAR(10) NOT NULL DEFAULT 'USD',
     `source` VARCHAR(30) NOT NULL DEFAULT 'finnhub',
-    `fetchedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `fetchedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `InsiderTransaction_symbol_transactionDate_idx`(`symbol`, `transactionDate`),
     INDEX `InsiderTransaction_fetchedAt_idx`(`fetchedAt`),
@@ -1622,7 +1625,7 @@ CREATE TABLE `CompanyMetric` (
     `shareChange12m` DOUBLE NOT NULL DEFAULT 0,
     `marketCap` DOUBLE NOT NULL DEFAULT 0,
     `source` VARCHAR(30) NOT NULL DEFAULT 'finnhub',
-    `fetchedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `fetchedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `CompanyMetric_symbol_fetchedAt_idx`(`symbol`, `fetchedAt`),
     INDEX `CompanyMetric_fetchedAt_idx`(`fetchedAt`),
@@ -1652,8 +1655,8 @@ CREATE TABLE `stack_performance` (
     `sharpeApprox` DOUBLE NOT NULL DEFAULT 0,
     `rating` DOUBLE NOT NULL DEFAULT 0,
     `fingerprint` VARCHAR(16) NULL,
-    `computedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `computedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `stack_performance_scoringStrategyId_key`(`scoringStrategyId`),
@@ -1665,7 +1668,7 @@ CREATE TABLE `stack_performance` (
 -- CreateTable
 CREATE TABLE `decision_log` (
     `id` VARCHAR(36) NOT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `tickNumber` INTEGER NOT NULL,
     `strategyId` VARCHAR(36) NOT NULL,
     `symbol` VARCHAR(20) NOT NULL,
@@ -1689,7 +1692,7 @@ CREATE TABLE `decision_log` (
 CREATE TABLE `decision_trail` (
     `id` VARCHAR(36) NOT NULL,
     `tickNumber` INTEGER NOT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `strategyId` VARCHAR(36) NOT NULL,
     `symbol` VARCHAR(20) NOT NULL,
     `longProtocolId` VARCHAR(100) NULL,
@@ -1731,7 +1734,7 @@ CREATE TABLE `stop_adjustment` (
     `newTp` DOUBLE NULL,
     `reason` VARCHAR(200) NOT NULL,
     `directiveScores` JSON NULL,
-    `adjustedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `adjustedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `stop_adjustment_tradeTicket_idx`(`tradeTicket`),
     INDEX `stop_adjustment_symbol_adjustedAt_idx`(`symbol`, `adjustedAt`),
@@ -1754,7 +1757,7 @@ CREATE TABLE `sim_tsl_event` (
     `activationPct` DOUBLE NULL,
     `action` VARCHAR(30) NOT NULL DEFAULT 'recorded',
     `detail` JSON NULL,
-    `occurredAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `occurredAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `sim_tsl_event_tradeTicket_occurredAt_idx`(`tradeTicket`, `occurredAt`),
     INDEX `sim_tsl_event_symbol_occurredAt_idx`(`symbol`, `occurredAt`),
@@ -1783,7 +1786,7 @@ CREATE TABLE `exhaustion_event` (
     `barsUsed` INTEGER NULL,
     `action` VARCHAR(30) NOT NULL DEFAULT 'recorded',
     `detail` JSON NULL,
-    `occurredAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `occurredAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `exhaustion_event_tradeTicket_occurredAt_idx`(`tradeTicket`, `occurredAt`),
     INDEX `exhaustion_event_symbol_occurredAt_idx`(`symbol`, `occurredAt`),
@@ -1795,7 +1798,7 @@ CREATE TABLE `exhaustion_event` (
 -- CreateTable
 CREATE TABLE `automation_event` (
     `id` VARCHAR(36) NOT NULL,
-    `timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `timestamp` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `tickNumber` INTEGER NOT NULL,
     `strategyId` VARCHAR(36) NULL,
     `symbol` VARCHAR(20) NULL,
@@ -1822,7 +1825,7 @@ CREATE TABLE `directive_audit_run` (
     `stubCount` INTEGER NOT NULL,
     `noDataCount` INTEGER NOT NULL,
     `results` JSON NOT NULL,
-    `runAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `runAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `directive_audit_run_symbol_runAt_idx`(`symbol`, `runAt`),
     PRIMARY KEY (`id`)
@@ -1849,7 +1852,7 @@ CREATE TABLE `architecture_entry` (
     `content` TEXT NOT NULL,
     `status` VARCHAR(20) NOT NULL DEFAULT 'active',
     `tags` VARCHAR(500) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `architecture_entry_sectionId_idx`(`sectionId`),
@@ -1863,7 +1866,7 @@ CREATE TABLE `architecture_revision` (
     `entryId` VARCHAR(36) NOT NULL,
     `previousContent` TEXT NOT NULL,
     `changedBy` VARCHAR(20) NOT NULL DEFAULT 'agent',
-    `changedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `changedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `architecture_revision_entryId_idx`(`entryId`),
     PRIMARY KEY (`id`)
@@ -1883,7 +1886,7 @@ CREATE TABLE `capability` (
     `pipelineIntegration` VARCHAR(30) NOT NULL DEFAULT 'none',
     `devCompletion` VARCHAR(30) NOT NULL DEFAULT 'partial',
     `sortOrder` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `capability_category_idx`(`category`),
@@ -1905,7 +1908,7 @@ CREATE TABLE `research_note` (
     `id` VARCHAR(36) NOT NULL,
     `content` TEXT NOT NULL,
     `sortOrder` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
@@ -1935,7 +1938,7 @@ CREATE TABLE `protocol` (
     `adaptiveTargetMax` DOUBLE NULL,
     `adaptiveTargetSamples` INTEGER NOT NULL DEFAULT 0,
     `adaptiveTargetSince` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `protocol_slug_key`(`slug`),
@@ -1952,7 +1955,7 @@ CREATE TABLE `protocol_score_status` (
     `symbolsResolved` INTEGER NOT NULL DEFAULT 0,
     `symbolsScored` INTEGER NOT NULL DEFAULT 0,
     `lastTickAt` DATETIME(3) NULL,
-    `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `protocol_score_status_state_idx`(`state`),
     PRIMARY KEY (`protocolId`)
@@ -2009,7 +2012,7 @@ CREATE TABLE `symbol_route` (
     `priority` INTEGER NOT NULL DEFAULT 0,
     `enabled` BOOLEAN NOT NULL DEFAULT true,
     `note` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `symbol_route_brokerId_idx`(`brokerId`),
@@ -2050,7 +2053,7 @@ CREATE TABLE `Alert` (
     `acknowledged` BOOLEAN NOT NULL DEFAULT false,
     `dismissed` BOOLEAN NOT NULL DEFAULT false,
     `snoozedUntil` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `readAt` DATETIME(3) NULL,
     `lastSeenAt` DATETIME(3) NULL,
     `repeatCount` INTEGER NOT NULL DEFAULT 1,
@@ -2070,7 +2073,7 @@ CREATE TABLE `broker_config` (
     `note` TEXT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `sortOrder` INTEGER NOT NULL DEFAULT 0,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
@@ -2082,7 +2085,7 @@ CREATE TABLE `scheduled_job` (
     `type` VARCHAR(50) NOT NULL,
     `status` VARCHAR(20) NOT NULL DEFAULT 'queued',
     `priority` INTEGER NOT NULL DEFAULT 50,
-    `runAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `runAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `recurrence` VARCHAR(20) NULL,
     `recurrenceMs` INTEGER NULL,
     `payload` JSON NULL,
@@ -2090,7 +2093,7 @@ CREATE TABLE `scheduled_job` (
     `maxAttempts` INTEGER NOT NULL DEFAULT 3,
     `lastRunAt` DATETIME(3) NULL,
     `lastError` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `scheduled_job_status_runAt_idx`(`status`, `runAt`),
@@ -2108,7 +2111,7 @@ CREATE TABLE `ab_pair` (
     `falsification` TEXT NULL,
     `startedAt` DATETIME(3) NULL,
     `endedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `ab_pair_incumbentId_idx`(`incumbentId`),
@@ -2128,7 +2131,7 @@ CREATE TABLE `ab_test` (
     `endAt` DATETIME(3) NULL,
     `status` VARCHAR(20) NOT NULL DEFAULT 'draft',
     `results` JSON NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `ab_test_status_idx`(`status`),
@@ -2145,7 +2148,7 @@ CREATE TABLE `signal_dismissal` (
     `signalPct` INTEGER NULL,
     `opportunityPct` INTEGER NULL,
     `dismissCount` INTEGER NOT NULL DEFAULT 1,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `signal_dismissal_dismissedUntil_idx`(`dismissedUntil`),
     UNIQUE INDEX `signal_dismissal_symbol_protocolId_key`(`symbol`, `protocolId`),
@@ -2164,7 +2167,7 @@ CREATE TABLE `signal_rank_snapshot` (
     `opportunityPct` INTEGER NULL,
     `confidence` INTEGER NULL,
     `scoreId` VARCHAR(36) NULL,
-    `runAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `runAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `signal_rank_snapshot_runAt_idx`(`runAt`),
     INDEX `signal_rank_snapshot_symbol_protocolId_idx`(`symbol`, `protocolId`),
@@ -2189,7 +2192,7 @@ CREATE TABLE `roadmap_column` (
     `id` VARCHAR(40) NOT NULL,
     `title` VARCHAR(100) NOT NULL,
     `kind` VARCHAR(20) NOT NULL DEFAULT 'sprint',
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -2201,7 +2204,7 @@ CREATE TABLE `strategy_registry` (
     `name` VARCHAR(120) NULL,
     `source` VARCHAR(20) NOT NULL DEFAULT 'owner',
     `parts` JSON NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `strategy_registry_strategyKey_key`(`strategyKey`),
@@ -2221,9 +2224,9 @@ CREATE TABLE `broker_symbol` (
     `volumeMin` DOUBLE NULL,
     `volumeMax` DOUBLE NULL,
     `registered` BOOLEAN NOT NULL DEFAULT false,
-    `firstSeenAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `lastSeenAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `firstSeenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `lastSeenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `updatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `broker_symbol_brokerId_assetClass_idx`(`brokerId`, `assetClass`),
     INDEX `broker_symbol_brokerId_tradeMode_idx`(`brokerId`, `tradeMode`),
@@ -2242,7 +2245,7 @@ CREATE TABLE `broker_symbol_sync` (
     `registeredCount` INTEGER NOT NULL DEFAULT 0,
     `lastSyncAt` DATETIME(3) NULL,
     `lastSuccessAt` DATETIME(3) NULL,
-    `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     PRIMARY KEY (`brokerId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -18,6 +18,8 @@
     "prisma:generate": "prisma generate",
     "db:init": "node scripts/init-schema.cjs",
   "db:init:check": "node scripts/init-schema.cjs --check",
+  "db:init:gen": "node scripts/gen-schema-init.cjs",
+  "db:init:gen:check": "node scripts/gen-schema-init.cjs --check",
   "db:check": "node scripts/validate-schema-safety.cjs",
     "db:config-refs": "node scripts/validate-config-db-refs.cjs",
     "db:route-capability": "node scripts/validate-route-capability.cjs",

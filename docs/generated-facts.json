@@ -48,7 +48,7 @@
     },
     "validators": {
       "label": "Backend build-time validators",
-      "value": 25,
+      "value": 26,
       "unit": "",
       "source": "nest/scripts/validate-*.cjs (run in prebuild)",
       "how": "Get-ChildItem nest/scripts/validate-*.cjs"

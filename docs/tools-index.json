@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 142,
+  "count": 146,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -483,6 +483,16 @@
       "reaches": null
     },
     {
+      "name": "gen-schema-init.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "regenerate `prisma/schema-init.sql`, with the UTC correction applied.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "handoff-to-discord.cjs",
       "where": "repo",
       "category": "tool",
@@ -757,6 +767,22 @@
       "reaches": null
     },
     {
+      "name": "tmp-ground-truth.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "TEMP — ground truth for the stoch-rsi placement work. Read-only.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "tmp-state.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "TEMP — BEFORE/AFTER state capture for the stoch-rsi placement.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
       "name": "tools-index.cjs",
       "where": "repo",
       "category": "tool",
@@ -1023,6 +1049,16 @@
       "selfTest": false,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-pnl-integrity.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a closed trade whose P&L could not be computed must not be SILENT (#1003).",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },
