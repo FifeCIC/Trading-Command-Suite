@@ -27,7 +27,7 @@
     },
     "protocolSeedEntries": {
       "label": "Protocols in the seed file",
-      "value": 47,
+      "value": 48,
       "unit": "",
       "source": "nest/src/modules/scoring/protocols-seed-data.ts",
       "how": "curl -s localhost:3201/api/scoring/protocols | jq length"

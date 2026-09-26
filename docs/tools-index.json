@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 146,
+  "count": 144,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -763,22 +763,6 @@
       "where": "nest",
       "category": "tool",
       "purpose": "Verify that `remove-risk-group-directive.cjs` REFUSES to write invalid syntax.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "tmp-ground-truth.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "TEMP — ground truth for the stoch-rsi placement work. Read-only.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "tmp-state.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "TEMP — BEFORE/AFTER state capture for the stoch-rsi placement.",
       "selfTest": false,
       "reaches": null
     },

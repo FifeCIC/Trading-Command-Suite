@@ -25,7 +25,7 @@ number that is not here, add a collector — do not type it into prose.
 | Directive implementation files | **108** | `nest/src/modules/directives/**/*.directive.ts` | `curl -s localhost:3201/api/directives | jq length   # the registered set; files are a lower bound` |
 | Glossary entries | **99** across 12 categories | `src/data/glossary.js` | `open /education/glossary` |
 | Prisma models (declared) | **116** | `nest/prisma/schema.prisma` | `Select-String nest/prisma/schema.prisma '^model '` |
-| Protocols in the seed file | **47** | `nest/src/modules/scoring/protocols-seed-data.ts` | `curl -s localhost:3201/api/scoring/protocols | jq length` |
+| Protocols in the seed file | **48** | `nest/src/modules/scoring/protocols-seed-data.ts` | `curl -s localhost:3201/api/scoring/protocols | jq length` |
 | Provider adapter modules | **14** | `nest/src/modules/providers/adapters/*.adapter.ts (excludes specs)` | `Get-ChildItem nest/src/modules/providers/adapters -Filter *.adapter.ts` |
 | Live unmodelled tables with checked-in DDL | **4** | `nest/prisma/raw-managed/*.sql` | `npm --prefix nest run db:check   # authoritative, includes backups` |
 | Backend build-time validators | **26** | `nest/scripts/validate-*.cjs (run in prebuild)` | `Get-ChildItem nest/scripts/validate-*.cjs` |

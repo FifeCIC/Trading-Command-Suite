@@ -2534,5 +2534,63 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         ]
       }
     ]
-  }
+  },
+  "xau-speed-v1-copy": {
+    "name": "Gold Speed Scalp V1 (copy)",
+    "description": "Sub-minute gold (XAUUSD) scalping protocol. Gold is the ultimate fear gauge — volatile during CPI, FOMC, NFP, geopolitics. Tight spreads, massive liquidity. Reacts to USD strength and real rates.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Tick Scalp",
+    "recommendedTimeframe": "5s–30s",
+    "derivedFrom": "xau-speed-v1",
+    "avgHoldTime": "Seconds to a few minutes",
+    "winRateTarget": "65–75%",
+    "idealFor": "XTrend gold speed trading during London/NY overlap (12:00–16:00 GMT). Avoid first 5min after major news — spreads widen dramatically.",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "Micro-Structure Technicals",
+        "description": "Gold micro-moves: momentum, squeezes, volume spikes for sub-minute entries",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "bollinger-band-squeeze",
+          "gold-round-numbers",
+          "rsi-oversold",
+          "session-open-effect",
+          "speed-momentum",
+          "stoch-rsi",
+          "support-resistance-levels",
+          "volatility-tools",
+          "volume-confirmation"
+        ]
+      },
+      {
+        "id": "sentiment",
+        "name": "Sentiment & Macro Context",
+        "description": "Gold IS sentiment — DXY, real rates, fear gauge",
+        "weight": 0.2,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "gold-macro-correlation",
+          "gold-session-profile"
+        ]
+      },
+      {
+        "id": "risk",
+        "name": "Execution Risk",
+        "description": "Gold-specific: spread widening during news, weekend gaps, over-allocation",
+        "weight": 0.4,
+        "isRiskGate": true,
+        "minMultiplier": 0.4,
+        "maxMultiplier": 1.3,
+        "directiveIds": [
+          "liquidity-check"
+        ]
+      }
+    ]
+  },
 };
