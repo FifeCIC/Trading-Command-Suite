@@ -274,8 +274,19 @@ export class EdgeStatisticsService {
   private async pnlEvidence(): Promise<EdgeReport['pnlEvidence']> {
     try {
       const closed = await this.prisma.trade.count({ where: { closedAt: { not: null } } });
+      // ⚠️ `pnlInvalid: 0` IS REQUIRED — a closed trade can carry `pnl = 0` as a PLACEHOLDER rather
+      // than a result (#931, #1003). Measured 2026-09-26: 123 of 264 closed trades are flagged, so
+      // `pnl: { not: null }` ALONE reported **254** where only **131** have a computable P&L.
+      //
+      // This is a second `withPnl` and its sibling `pnl-statistics.service.ts` already filters — the
+      // QA entry for that one asserts "`withPnl` counts ONLY valid rows (measured 32, not 114)".
+      // Two queries, one predicate, only one of them carrying it is exactly how a number goes wrong
+      // in one view and stays right in the other.
+      //
+      // `closedTrades` is deliberately left UNFILTERED so the gap between "closed" and "has a
+      // usable result" stays visible rather than being silently narrowed.
       const withPnl = await this.prisma.trade.count({
-        where: { closedAt: { not: null }, pnl: { not: null } },
+        where: { closedAt: { not: null }, pnl: { not: null }, pnlInvalid: 0 },
       });
       return {
         closedTrades: closed,
