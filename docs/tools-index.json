@@ -396,7 +396,7 @@
       "where": "nest",
       "category": "tool",
       "purpose": "mechanical audit of scoring directives.",
-      "selfTest": false,
+      "selfTest": true,
       "reaches": [
         "npm"
       ]

@@ -22,11 +22,18 @@
  *           that NO active protocol can reach are counted separately: they have
  *           no evidence because they never run, which is a coverage fact rather
  *           than a readiness defect (115/129 warnings in the 2026-09-09 run).
+ *   MODE 8  Bar starvation (--db)  — a directive that declares a bar requirement
+ *           and is handed a smaller window returns 0 and says so: "Insufficient
+ *           data: need 72 bars, have 20". Nothing throws; the 0 folds silently
+ *           into an additive composite. Cause-agnostic — it reads the reason the
+ *           DIRECTIVE recorded, so it fires for any cause of a too-small window
+ *           (wrong cadence, mis-declared minBars, truncated fetch).
  *
  * Usage:
  *   node nest/scripts/directive-guard.cjs              # static + runtime
  *   node nest/scripts/directive-guard.cjs --static-only # skip runtime (no build)
  *   node nest/scripts/directive-guard.cjs --db          # + readiness evidence (local MySQL)
+ *   node nest/scripts/directive-guard.cjs --self-test    # canary mode 8 only (no DB, no build)
  *
  * Exit code: 1 if any ERROR-level finding (mode 1 static on a `ready` directive),
  * 0 otherwise. WARN findings are advisory and do not fail the run.
@@ -384,10 +391,180 @@ async function readinessEvidenceCheck() {
   );
 }
 
+// ── Bar starvation (MODE 8, --db) ─────────────────────────────────────────
+//
+// A directive that DECLARES a bar requirement and is handed a smaller window
+// returns 0 with an explanation — "Insufficient data: need 72 bars, have 20".
+// Nothing throws: the 0 folds silently into an additive composite, which is the
+// repo's signature defect (plausible number, no error).
+//
+// MEASURED 2026-09-27, `btc-speed-v1` — the worked case this mode exists for:
+//   • 4 of its 13 directives starved on 246 of 247 ticks (99.6%) for 24h+
+//   • 3,504 fresh 5m bars sat in `marketbar` — the DATA was never the problem
+//   • the window is `resolveCadence()`'s `required[tf] ?? required['1d'] ?? 100`
+//   • `??` is a FALL-THROUGH where that function's own docstring means a MAXIMUM
+//   • 74 of 108 directives declare their real requirement under the GENERIC key
+//     `'1d'`; ONE directive declaring `'15m'` suppressed the fall-through and
+//     starved every larger one. `btc-speed-v1.recommendedTimeframe = '15m–1d'`
+//     → `selectBaseTimeframe` → `'15m'` → `required['15m'] = 20` → window 20.
+//
+// ⚠️ DELIBERATELY CAUSE-AGNOSTIC, for the reason that makes a symptom guard
+// worth more than a cause guard: it would still fire if the cause were different.
+// It reimplements neither `getRequiredBars()` nor `selectBaseTimeframe()` — those
+// live in TS and remain the single source. It reads only what was persisted.
+//
+// Why a RATIO and not "any occurrence": crypto and equities have legitimate gaps,
+// and a symbol mid-import reports this once. A directive starved on MOST ticks is
+// chronic, and chronic is the only thing this mode fails on.
+
+const STARVATION_RE = /need (\d+) bars?,\s*have (\d+)/i;
+/** Below this many observations a gap is indistinguishable from a cold start. */
+const STARVATION_MIN_TICKS = 20;
+/** Share of ticks that must starve before it is chronic rather than a gap. */
+const STARVATION_RATIO = 0.5;
+
+/**
+ * Pure classifier — no DB, no filesystem, so `--self-test` can canary it.
+ * @param {Map<string,{protocolId:string,directiveId:string,ticks:number,starved:number,need:number,have:number}>} stats
+ */
+function classifyStarvation(stats, opts = {}) {
+  const minTicks = opts.minTicks ?? STARVATION_MIN_TICKS;
+  const ratio = opts.ratio ?? STARVATION_RATIO;
+  const chronic = [];
+  for (const s of stats.values()) {
+    if (s.ticks < minTicks) continue;   // too few observations to judge
+    const fraction = s.starved / s.ticks;
+    if (fraction < ratio) continue;     // a gap, not the defect
+    chronic.push({ ...s, fraction });
+  }
+  return chronic.sort((a, b) => b.fraction - a.fraction || b.need - a.need);
+}
+
+/** Count, per protocol+directive, how often the directive starved. */
+function tallyStarvation(breakdowns) {
+  const stats = new Map();
+  for (const bd of breakdowns) {
+    const protocolId = bd?.protocolId;
+    if (!protocolId || !bd?.breakouts) continue;
+    for (const list of Object.values(bd.breakouts)) {
+      if (!Array.isArray(list)) continue;
+      for (const d of list) {
+        const directiveId = d?.directiveId;
+        if (!directiveId) continue;
+        const key = `${protocolId}|${directiveId}`;
+        let s = stats.get(key);
+        if (!s) {
+          s = { protocolId, directiveId, ticks: 0, starved: 0, need: 0, have: 0 };
+          stats.set(key, s);
+        }
+        s.ticks++;
+        const m = STARVATION_RE.exec(String(d.reason ?? ''));
+        if (!m) continue;
+        s.starved++;
+        s.need = Math.max(s.need, Number(m[1]));
+        const have = Number(m[2]);
+        s.have = s.have === 0 ? have : Math.min(s.have, have);
+      }
+    }
+  }
+  return stats;
+}
+
+async function barStarvationCheck(hours = 24) {
+  loadEnvFile(path.join(NEST_ROOT, '.env'));
+  if (!process.env.DATABASE_URL) {
+    console.log('[guard] bar starvation: skipped — DATABASE_URL not set (see nest/.env).');
+    return;
+  }
+  let prisma;
+  try {
+    prisma = require(path.join(NEST_ROOT, 'node_modules', '@prisma', 'client'));
+  } catch {
+    console.log('[guard] bar starvation: skipped — @prisma/client not built (run prisma generate).');
+    return;
+  }
+  const client = new prisma.PrismaClient();
+  try {
+    await client.$connect();
+    const rows = await client.$queryRawUnsafe(
+      `SELECT breakdown FROM score WHERE timestamp >= (UTC_TIMESTAMP() - INTERVAL ${Number(hours)} HOUR)`,
+    );
+    const parsed = [];
+    for (const r of rows) {
+      try {
+        parsed.push(typeof r.breakdown === 'string' ? JSON.parse(r.breakdown) : r.breakdown);
+      } catch { /* not JSON — not this mode's business */ }
+    }
+    const stats = tallyStarvation(parsed);
+    const chronic = classifyStarvation(stats);
+    for (const c of chronic) {
+      report('score.breakdown', `${c.protocolId} / ${c.directiveId}`, 8, 'WARN',
+        `STARVED ${(c.fraction * 100).toFixed(0)}% of ${c.ticks} ticks — declares ${c.need} bars, window ${c.have}`);
+    }
+    console.log(
+      `[guard] bar starvation: ${parsed.length} breakdown(s) in ${hours}h, ` +
+      `${stats.size} protocol/directive pair(s) observed, ${chronic.length} chronic.`,
+    );
+  } catch (err) {
+    console.log(`[guard] bar starvation: skipped — ${err.message}`);
+  } finally {
+    await client.$disconnect().catch(() => {});
+  }
+}
+
+/**
+ * `--self-test` — prove the classifier can FAIL, in both directions, with no
+ * database and no build. A guard that has never been observed to fail is a
+ * decoration, and this one's whole value is that it separates chronic starvation
+ * from a transient gap.
+ */
+function runBarStarvationSelfTest() {
+  const mk = (directiveId, ticks, starved, need, have) =>
+    ['p|' + directiveId, { protocolId: 'p', directiveId, ticks, starved, need, have }];
+  const cases = [
+    { name: 'chronic starvation IS reported', stats: new Map([mk('chronic', 100, 99, 72, 20)]), expect: 1 },
+    { name: 'transient gap is NOT reported', stats: new Map([mk('gap', 100, 5, 72, 20)]), expect: 0 },
+    { name: 'below sample floor is NOT reported', stats: new Map([mk('cold', 3, 3, 72, 2)]), expect: 0 },
+    { name: 'exactly at the ratio floor IS reported', stats: new Map([mk('edge', 20, 10, 72, 20)]), expect: 1 },
+    { name: 'healthy directive is NOT reported', stats: new Map([mk('ok', 100, 0, 20, 200)]), expect: 0 },
+    { name: 'ordering is worst-first', stats: new Map([mk('a', 100, 60, 30, 20), mk('b', 100, 100, 72, 20)]), expect: 2, first: 'b' },
+  ];
+  let failed = 0;
+  for (const c of cases) {
+    const got = classifyStarvation(c.stats);
+    const ok = got.length === c.expect && (!c.first || got[0]?.directiveId === c.first);
+    if (!ok) failed++;
+    console.log(`[self-test] ${ok ? 'PASS' : 'FAIL'}  ${c.name}` +
+      (ok ? '' : ` (expected ${c.expect}${c.first ? `, first=${c.first}` : ''}; got ${got.length}${got[0] ? `, first=${got[0].directiveId}` : ''})`));
+  }
+  // The tally must count the REASON, not merely the directive's presence.
+  const tally = tallyStarvation([
+    { protocolId: 'p', breakouts: { technical: [
+      { directiveId: 'starved', reason: 'Insufficient data: need 72 bars, have 20.' },
+      { directiveId: 'fine', reason: 'RSI(14)=56.3 -> 17/140' },
+    ] } },
+    { protocolId: 'p', breakouts: { technical: [
+      { directiveId: 'starved', reason: 'Insufficient data: need 72 bars, have 20.' },
+    ] } },
+  ]);
+  const t = tally.get('p|starved');
+  const tallyOk = !!t && t.ticks === 2 && t.starved === 2 && t.need === 72 && tally.get('p|fine')?.starved === 0;
+  if (!tallyOk) failed++;
+  console.log(`[self-test] ${tallyOk ? 'PASS' : 'FAIL'}  tally counts ticks AND starvation separately`);
+
+  const total = cases.length + 1;
+  console.log(`[self-test] mode 8: ${total - failed}/${total} passed.`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
   const staticOnly = process.argv.includes('--static-only');
+
+  // MODE 8 self-test — standalone: no DB, no build, no static scan.
+  if (process.argv.includes('--self-test')) return runBarStarvationSelfTest();
+
   console.log('[guard] scanning directive implementations...\n');
 
   const files = fs.readdirSync(IMPL_DIR).filter((f) => /\.(?:directive|stub|directives)\.ts$/.test(f));
@@ -398,6 +575,7 @@ async function main() {
 
   if (!staticOnly) runtimeCheck();
   if (process.argv.includes('--db')) await readinessEvidenceCheck();
+  if (process.argv.includes('--db')) await barStarvationCheck();
 
   if (findings.length === 0) {
     console.log('[guard] no findings.');
