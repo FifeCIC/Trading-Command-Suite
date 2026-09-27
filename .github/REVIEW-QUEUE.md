@@ -18,6 +18,7 @@
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
 | **R24** | The remaining free-edition score surface is 6 pages' **DATA SOURCE**, not columns — so finishing it means a rebuild programme, not a strip. Stripping the calls would **empty** those pages. | FREE-EDITION-PLAN §9.14.6 (handoff `2026-09-25-free-edition-score-readouts.md`) | Should the free edition show score-derived data at all — e.g. the Automation decision log, the ranked-signal dashboard widgets and Market Tape — or should those six surfaces be rebuilt score-free? |
+| **R25** | **AutoTrading is OFF in both MT5 terminals** (`tradeAllowed=false`, `:5000` and `:5001`) — 19 orders refused `retcode 10027` in 48h. The app could not see this until today. Meanwhile the pipeline **keeps scoring and dispatching** into that wall. | #972 · commit `e0320a2` | While no broker can place an order, should the trading pipeline **pause dispatch** (stop the 10027 refusals), or **stay warm** so it fires the instant AutoTrading is switched on? |
 
 **R17 was answered "Keep"** on 2026-09-24 · **R20 was answered "A"** on 2026-09-25 · **R22 was answered "B"** on 2026-09-25 — see DONE.
 
