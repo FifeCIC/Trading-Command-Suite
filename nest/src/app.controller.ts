@@ -26,15 +26,36 @@ export class AppController {
     const uptimeFmt = `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m ${uptimeSec % 60}s`;
 
     // Fetch MT5 bridge health across ALL active brokers
+    //
+    // ⚠️ `tradeAllowed` IS THE TERMINAL'S AUTOTRADING BUTTON, AND THIS READ A FIELD THAT DOES
+    // NOT EXIST (#972). It was `health?.autoTrading`, which the bridge's `/health` has never sent
+    // — so this value was permanently `null` and NO surface could report that trading was switched
+    // off at the terminal.
+    //
+    // MEASURED 2026-09-27: both terminals reported `tradeAllowed: false` while `connected: true`.
+    // Every order was refused by the TERMINAL with `retcode 10027 AutoTrading disabled by client`
+    // (19 in 48h), and `decision_log` held exactly ONE execution in that window. The app looked
+    // healthy throughout, because the one field that would have said otherwise was always null.
+    //
+    // ⚠️ `null` here means UNKNOWN, not "off" — the bridge sends null when terminal_info() could
+    // not be read. Collapsing that into `false` would report a fault on every unreadable poll.
     let mt5Bridge: any = { connected: false, tradeAllowed: null, account: null, balance: null };
     try {
       const allHealths = await this.mt5Connection.getAllBrokerHealths();
       const connected = allHealths.filter((h: any) => h.health?.connected);
       if (connected.length > 0) {
-        const best = connected[0];
+        // ⚠️ Prefer a broker whose terminal will actually accept an order. `connected[0]` could be
+        // a broker with AutoTrading OFF while a sibling had it ON, and reporting the blocked one
+        // as "the" state would understate what the app can do.
+        const best = connected.find((h: any) => h.health?.tradeAllowed === true) ?? connected[0];
         mt5Bridge = {
           connected: true,
-          tradeAllowed: (best.health as any)?.autoTrading ?? null,
+          tradeAllowed: (best.health as any)?.tradeAllowed ?? null,
+          // If ANY connected broker can trade, trading is possible — so say so. Otherwise the
+          // first broker's state is the honest answer.
+          anyTradeAllowed:
+            connected.some((h: any) => h.health?.tradeAllowed === true) ||
+            (connected.every((h: any) => h.health?.tradeAllowed == null) ? null : false),
           account: best.health?.account ?? null,
           server: best.server ?? null,
           balance: best.health?.balance ?? null,

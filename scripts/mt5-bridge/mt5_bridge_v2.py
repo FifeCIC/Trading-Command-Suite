@@ -1049,8 +1049,34 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 # and `connectionState` is what lets the watchdog be judged from OUTSIDE the
                 # Python log — which is where its evidence used to live and rot.
                 conn_state, conn_detail = probe_connection_state()
+                # ⚠️ `tradeAllowed` — THE TERMINAL'S AutoTrading BUTTON. Published here because
+                # the app was reading a field that does not exist (#972).
+                #
+                # MEASURED 2026-09-27: BOTH terminals reported `tradeAllowed: false` (via
+                # /terminal/info) while `connected: true`. Every order was then refused by the
+                # TERMINAL with `retcode 10027 AutoTrading disabled by client` - 19 of them in 48h
+                # - and `decision_log` recorded exactly ONE execution in that window.
+                #
+                # `nest/src/app.controller.ts` read `health?.autoTrading`, a name this endpoint has
+                # never sent, so the app's `tradeAllowed` was permanently `null` and NOTHING could
+                # report that trading was switched off at the terminal. A config state that stops
+                # all trading must be visible where the app already looks for health, and a second
+                # request per poll to /terminal/info is the wrong shape for that.
+                #
+                # ⚠️ Read ONCE and reused. `terminal_info()` is the call that can BLOCK the
+                # interpreter when the terminal is unreachable (#992/#1000), so it must not be
+                # called twice in one response.
+                _term = None
+                try:
+                    _term = mt5.terminal_info()
+                except Exception:
+                    _term = None
                 return json_response(self, {
                     'connected': connected, 'mt5Package': True,
+                    # `trade_allowed` is None only when terminal_info() itself returned None, which
+                    # is the same condition `connectionState` already classifies - so a caller can
+                    # tell "trading is off" from "we could not ask", and neither reads as "fine".
+                    'tradeAllowed': _term.trade_allowed if _term else None,
                     'connectionState': conn_state,
                     'connectionStateDetail': conn_detail,
                     'remedy': None if conn_state == STATE_OK else (
