@@ -33,11 +33,29 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 
+/**
+ * Where a click on a Windows notification lands when the caller names no destination.
+ *
+ * The app's own shell, because the surfaces that carry the trading state live there — the Home
+ * dashboard already reads `mt5.tradeAllowed` ("src/pages/HomeDashboard.jsx"), so it is a page that
+ * can actually answer "is it back on yet?". Overridable so a non-default dev port or a future
+ * deployment does not need a code change to be reachable.
+ */
+export const DEFAULT_NOTIFY_URL = process.env.TCS_APP_URL ?? 'http://localhost:5173/';
+
 export interface WindowsNotifyInput {
   /** Stable key for throttling — e.g. 'trade-disabled'. */
   key: string;
   title: string;
   message: string;
+  /**
+   * Where clicking the notification should take the owner.
+   *
+   * ⚠️ Added 2026-09-27 after the owner reported the first version: *"Clicking on them didn't do
+   * anything."* A notification that only says something is worse than one that also does the next
+   * thing — the owner still has to go and find the app, which is a step this exists to remove.
+   */
+  url?: string;
   /** How long the balloon stays up. Long, because the point is to be noticed while away. */
   seconds?: number;
 }
@@ -108,16 +126,38 @@ export class WindowsNotifyService {
     // Single quotes are escaped by doubling, which is PowerShell's own rule for a literal string.
     const lit = (s: string) => `'${String(s).replace(/'/g, "''")}'`;
 
+    // ⚠️ A CLICKABLE BALLOON NEEDS A MESSAGE PUMP, AND MY FIRST ATTEMPT AT THAT BROKE A WORKING
+    // CHANNEL. Recorded because the mistake is the instructive part.
+    //
+    // `ShowBalloonTip()` on its own displays but never raises `BalloonTipClicked` — a WinForms
+    // event only fires if the thread pumps messages, and `Start-Sleep` does not pump. That is what
+    // the owner reported: *"Clicking on them didn't do anything."*
+    //
+    // MY FIX WAS TO USE A HIDDEN FORM AND `[Application]::Run($form)`. MEASURED: the process exited
+    // after **4 seconds against a 10-second timer** — `Run()` returned immediately, so the timer
+    // never got to run and the balloon was cut short. I had replaced a channel the owner had
+    // CONFIRMED WORKING ("I saw two windows notifications") with one that may not have shown at all.
+    //
+    // The shape below keeps the original, proven mechanism — `ShowBalloonTip` then WAIT — and only
+    // adds `DoEvents()` to the wait, which pumps the click without needing a form or a message loop.
+    // Smallest possible change to something that already worked.
+    const url = input.url ?? DEFAULT_NOTIFY_URL;
     const script = [
       'Add-Type -AssemblyName System.Windows.Forms',
       'Add-Type -AssemblyName System.Drawing',
       '$n = New-Object System.Windows.Forms.NotifyIcon',
       '$n.Icon = [System.Drawing.SystemIcons]::Warning',
+      // Clicking opens the app — the part the first version could not do.
+      `$n.add_BalloonTipClicked({ Start-Process ${lit(url)} })`,
+      // A plain click on the tray icon behaves the same, or the owner learns that clicking the
+      // notification is unreliable.
+      `$n.add_Click({ Start-Process ${lit(url)} })`,
       '$n.Visible = $true',
       `$n.ShowBalloonTip(${seconds * 1000}, ${lit(input.title)}, ${lit(input.message)}, [System.Windows.Forms.ToolTipIcon]::Warning)`,
-      // The balloon needs the icon alive for its lifetime; without the wait it is disposed
-      // immediately and nothing is ever shown.
-      `Start-Sleep -Seconds ${seconds}`,
+      // ⚠️ THE WAIT MUST PUMP, OR THE CLICK EVENT NEVER FIRES — but it must still END, or every
+      // notification leaks a PowerShell process. `DoEvents()` in a bounded loop does both.
+      `$end = (Get-Date).AddSeconds(${seconds})`,
+      'while ((Get-Date) -lt $end) { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 200 }',
       '$n.Visible = $false',
       '$n.Dispose()',
     ].join('; ');
