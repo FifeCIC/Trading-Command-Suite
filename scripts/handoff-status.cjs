@@ -160,7 +160,7 @@ function selfTest() {
  * the file documenting the convention itself. A count that includes its own documentation is wrong
  * in the direction that flatters the convention, which is the worst direction for it to be wrong.
  */
-const NOT_A_HANDOFF = /^README\.md$/i;
+const NOT_A_HANDOFF = /^README\.md$|^ORPHAN-ARCHIVE/i;
 
 function readStore(dir) {
   const out = [];

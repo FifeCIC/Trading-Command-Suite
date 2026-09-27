@@ -99,6 +99,29 @@ sweep even when nothing is. Use `--check`-style wording that a script can trust.
 
 ## 📁 CONSUMED STATE — the pending set is exactly what is in `handoff/`
 
+> ⚠️ **2026-09-27 — THE STORE WAS PURGED, AND THIS IS THE RECORD OF IT.** At the owner's direction
+> all **243** accumulated handoffs were removed. The reasoning is this file's own: *the closed issue
+> is the durable record; the handoff is working material.*
+>
+> **But the premise was measured before anything was deleted, and it held for only 148 of them:**
+>
+> | Category | Count | Where the record lives now |
+> |---|---|---|
+> | Issue **CLOSED** | 106 | the issue |
+> | Issue **OPEN** | 42 | the issue |
+> | **NO issue number in the slug** | **95** | **`ORPHAN-ARCHIVE-2026-09-27.md`** (verbatim, 640 KB) |
+>
+> The 95 were written on 09-10/09-11, **before the issue-number-in-slug convention existed**, so no
+> issue could be consulted instead and deleting them would have destroyed the only copy. They were
+> archived **verbatim — concatenated, unsummarised** — and the archive was **verified to contain every
+> one** of them before a single original was removed.
+>
+> ⚠️ **Do not repeat a purge on the assumption that "the issue covers it".** Check that the slug
+> carries an issue number first; `ORPHAN-ARCHIVE` exists precisely because that assumption failed on
+> **39%** of them. If any archived text matters, re-file it as an issue — that is the durable home.
+>
+> **Going forward the store starts empty,** and the convention below applies from now on.
+
 > **Added 2026-09-27.** The audit found **243 handoffs in a flat directory with no record of which
 > the Librarian had processed** — and no subdirectories at all. A spent handoff and a pending one
 > were **indistinguishable**, which is why the set only ever grows and why no reduction could be
