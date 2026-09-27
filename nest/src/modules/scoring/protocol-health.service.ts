@@ -42,6 +42,36 @@ export interface ProtocolHealthIssue {
   message: string;
 }
 
+/**
+ * ⚠️ #999 — WHY THERE IS NO WINDOW CONSTANT HERE, AND WHY THAT IS DELIBERATE.
+ *
+ * The defect was that `auditMeasuredCeilings()` read the `score` table and described what it found
+ * as "the highest composite EVER recorded". Measured 2026-09-27, that is false: `score` held 6,304
+ * rows spanning 2026-08-29 -> 09-27, while `score_snapshot` held 314,024 rows spanning 06-30 ->
+ * 09-27. And the number is not stable — for `xau-speed-m15` the `score` maximum was 55 when the
+ * issue was written and 32 when this was fixed, against a true all-history maximum of **638**.
+ *
+ * MY FIRST ATTEMPT AT THE FIX WAS WRONG, and it is recorded here because the mistake is the
+ * instructive part: I bounded the query with `AND s.timestamp >= ?` for a 30-day window. But
+ * `measureProtocolCeiling()` shares this arithmetic basis with this audit ON PURPOSE (see its
+ * docstring — "One arithmetic basis shared with the audit above, so detector and gate can never
+ * disagree about units again"), and that one is NOT windowed. Bounding the audit alone would have
+ * made the detector and the activation gate measure DIFFERENT ceilings for the same protocol.
+ * Introducing a disagreement between a detector and the gate that consumes it is a worse fault
+ * than the one being fixed.
+ *
+ * So the measurement is left on the shared, unbounded basis and the defect is fixed at the two
+ * places it actually lived:
+ *   1. THE CLAIM — the message now states the RANGE it read (`MIN(timestamp)` to now) instead of
+ *      asserting "EVER".
+ *   2. THE VERDICT — a `score_snapshot` cross-check can VETO the finding. When full history shows
+ *      a higher composite than the window did, "cannot reach the bar" is not established and is
+ *      reported as a warning rather than an error.
+ *
+ * ⚠️ A window constant is NOT the fix here. If one is ever wanted, it must be applied to
+ * `measureProtocolCeiling()` in the same change, so detector and gate stay on one basis.
+ */
+
 @Injectable()
 export class ProtocolHealthService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ProtocolHealthService.name);
@@ -166,9 +196,16 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
    * question that actually matters: **can this bot ever trade?**
    *
    * This check answers it from evidence. For each active bot it takes the
-   * protocol's highest composite ever recorded and compares it to the bot's own
-   * threshold. If the ceiling is below the bar, the bot is configured to never
+   * protocol's highest composite **within the range of `score` it actually read** and compares it
+   * to the bot's own threshold. If the ceiling is below the bar, the bot is configured to never
    * fire, and no amount of market movement will change that.
+   *
+   * ⚠️ #999 — IT USED TO SAY "EVER RECORDED" HERE, AND THAT WAS FALSE. `score` is a shorter,
+   * non-stationary window than `score_snapshot` (6,304 rows / 29 days against 314,024 rows /
+   * 89 days, measured 2026-09-27), and its maximum moves: 55 then 32 for `xau-speed-m15`, against
+   * a true all-history peak of 638. So the range is now NAMED in the message, and a `score_snapshot`
+   * cross-check can veto the finding when the longer history contradicts it. A measurement that
+   * describes a window must say so; a verdict that history falsifies must not be an error.
    *
    * THE CASE THAT MOTIVATED IT: `ftse-speed-v1`, `dax-speed-v1` and
    * `cac-speed-v1` each had an all-time maximum composite of **31** against a
@@ -224,6 +261,42 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       // today (26/26 measured), and `p.id` is a UUID — so the previous `ON p.id =
       // ts.protocolId` joined NOTHING, the audit's row set was empty, and it reported
       // clean forever while two bots could not fire. Matching slug OR id is the fix.
+      // ⚠️ #999 — THE WINDOW IS NOW BOUNDED **AND** CROSS-CHECKED, because "EVER" WAS A FALSE CLAIM.
+      //
+      // This query reads `score`. Measured 2026-09-27, `score` holds 6,304 rows spanning
+      // 2026-08-29 -> 09-27 (29 days), while `score_snapshot` holds 314,024 rows spanning
+      // 2026-06-30 -> 09-27 (89 days). The message below nevertheless said "highest composite
+      // EVER recorded", and `(N readings)` printed a bare count with no window on it.
+      //
+      // ⚠️ WORSE, ITEM: THE WINDOW IS NOT EVEN STABLE. For `xau-speed-m15` the `score` maximum was
+      // 55 when #999 was written and is 32 now, against a TRUE all-history maximum of 638 in
+      // `score_snapshot`. So the audit can pronounce a protocol unable to reach its bar using a
+      // number that is (a) window-dependent and (b) contradicted by the protocol's own history.
+      //
+      // The `snapshot*` subqueries below are the falsification test. `score_snapshot` carries no
+      // `breakdown` JSON, so it CANNOT yield `configuredSignalMax` and therefore cannot produce a
+      // percentage — it is deliberately used here as a RAW historical corroboration only, on the
+      // same basis (`composite` vs `rawComposite`), which is why it can veto a verdict but never
+      // create one.
+      // ⚠️ #999 — THE WINDOW IS CROSS-CHECKED, BUT DELIBERATELY **NOT** BOUNDED HERE.
+      //
+      // My first attempt at this fix added `AND s.timestamp >= ?` to bound the window. That was
+      // WRONG and is recorded because it would have been a regression: `measureProtocolCeiling()`
+      // below shares this arithmetic basis with this audit on purpose (see its docstring — "so
+      // detector and gate can never disagree about units again"), and it is NOT windowed. Bounding
+      // the audit alone would let the detector and the activation gate measure different ceilings
+      // for the same protocol and disagree — a worse fault than the one being fixed.
+      //
+      // So the basis stays shared and unbounded; what changes is (1) the message states the RANGE
+      // it actually read instead of claiming "EVER", and (2) the `snapshot*` subqueries below
+      // falsify a verdict that full history contradicts. Both fix the defect without moving the
+      // measurement.
+      //
+      // MEASURED 2026-09-27, and it is why "EVER" was false: `score` held 6,304 rows spanning
+      // 2026-08-29 -> 09-27 (29 days) while `score_snapshot` held 314,024 rows spanning 06-30 ->
+      // 09-27 (89 days). ⚠️ The window is not even stable — for `xau-speed-m15` the `score` maximum
+      // was 55 when #999 was written and 32 when this was fixed, against a TRUE all-history maximum
+      // of 638. A number that moves is not "EVER", and it cannot be the basis of a definite error.
       rows = await this.prisma.$queryRawUnsafe(`
         SELECT ts.protocolId,
                p.slug                AS slug,
@@ -240,7 +313,17 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
                   FROM score s
                  WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS capacity,
                (SELECT COUNT(*) FROM score s2
-                 WHERE s2.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS samples
+                 WHERE s2.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS samples,
+               -- The ACTUAL range read, so the message can name it rather than say "EVER".
+               (SELECT MIN(s.timestamp) FROM score s
+                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS windowFrom,
+               -- ⚠️ The falsification test: a LONGER history, from the table the pipeline writes.
+               (SELECT MAX(ss.composite) FROM score_snapshot ss
+                 WHERE ss.protocolId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS snapshotMax,
+               (SELECT COUNT(*) FROM score_snapshot ss
+                 WHERE ss.protocolId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS snapshotSamples,
+               (SELECT MAX(ss.snappedAt) FROM score_snapshot ss
+                 WHERE ss.protocolId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS snapshotNewest
           FROM trading_strategy ts
           JOIN protocol p
             ON (p.id COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci
@@ -263,27 +346,69 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       const ceilingRaw = row.ceilingRaw == null ? null : Number(row.ceilingRaw);
       const capacity = row.capacity == null ? null : Number(row.capacity);
       const samples = Number(row.samples ?? 0);
+      const snapshotMax = row.snapshotMax == null ? null : Number(row.snapshotMax);
+      const snapshotSamples = Number(row.snapshotSamples ?? 0);
 
       // Need a real history before claiming a ceiling. 10 readings is enough to
       // see the shape without waiting a session.
       if (ceilingPct == null || samples < 10) continue;
+
+      // ⚠️ #999 — THE RANGE IS NAMED, NOT CLAIMED. A bare count hides its own span:
+      // `(101 readings)` is unreadable; `(101 readings, 2026-08-30 -> 2026-09-27)` is checkable.
+      // This is the ACTUAL range of `score` for this protocol, read from MIN(timestamp), so the
+      // message can never again describe a window as all of history.
+      const windowFrom = row.windowFrom ? new Date(row.windowFrom).toISOString().slice(0, 10) : 'earliest';
+      const windowTo = new Date().toISOString().slice(0, 10);
+      const windowLabel = `${windowFrom} to ${windowTo}, ${samples} readings`;
+      const historyLabel = snapshotSamples > 0
+        ? `peak composite ${snapshotMax} across ${snapshotSamples} snapshots`
+        : 'no snapshot history to compare against';
 
       // The SAME percentage the gate compares against minComposite (#905). Raw and capacity are
       // kept in the message so the reader can re-derive the figure — a derived number alone
       // hides the data it came from.
       const describeCeiling = `${ceilingPct.toFixed(1)}% of capacity (raw ${ceilingRaw ?? '?'} of ${capacity ?? '?'})`;
 
-      if (ceilingPct < required) {
+      // ⚠️⚠️ #999 — THE FALSIFICATION TEST. A verdict of "this protocol cannot reach its bar" is a
+      // claim about ALL time, but it is computed from a WINDOW. `score_snapshot` holds the longer
+      // history, so when it shows a composite HIGHER than anything in the window, the protocol has
+      // demonstrably reached further than the window suggests and this verdict is NOT established.
+      //
+      // Measured for `xau-speed-m15`: window maximum raw 32, full-history maximum 638. Reporting
+      // "cannot reach 91" from the window alone would have been a false error contradicted by the
+      // protocol's own record — the exact shape this repo keeps re-finding (plausible output, no
+      // error, wrong underneath).
+      //
+      // It is deliberately a VETO and never a pass: `score_snapshot` carries no `breakdown`, so it
+      // cannot yield `configuredSignalMax` and cannot compute a percentage. It can only say "the
+      // window understates this protocol", which is a reason to LOOK, not a reason to approve.
+      const historyExceedsWindow =
+        snapshotMax != null && ceilingRaw != null && snapshotMax > ceilingRaw;
+
+      if (historyExceedsWindow) {
+        issues.push({
+          protocolId: row.slug,
+          kind: 'ceiling-near-threshold',
+          severity: 'warning',
+          message:
+            `Protocol "${row.slug}" measures ${describeCeiling} over ${windowLabel}, BELOW its ` +
+            `${row.bots} active bot(s)' minComposite of ${required}% — but a LONGER history is ` +
+            `higher (${historyLabel}), so "cannot reach the bar" is NOT established. Treat this as ` +
+            `a reason to look, not a verdict: the window may be unrepresentative, or the protocol ` +
+            `may have been changed. NOT reported as an error, because an error is a fact and this ` +
+            `is a contradiction between two sources.`,
+        });
+      } else if (ceilingPct < required) {
         issues.push({
           protocolId: row.slug,
           kind: 'ceiling-below-threshold',
           severity: 'error',
           message:
             `Protocol "${row.slug}" cannot reach the composite its ${row.bots} active bot(s) ` +
-            `require: highest composite EVER recorded is ${describeCeiling} against a ` +
-            `minComposite of ${required}% (${samples} readings). This bot cannot trade as ` +
-            `configured — fix the protocol's directional capacity, lower minComposite, or ` +
-            `disable the bot.`,
+            `require: highest composite over ${windowLabel} is ${describeCeiling} against a ` +
+            `minComposite of ${required}%, and the longer history agrees (${historyLabel}). ` +
+            `This bot cannot trade as configured — fix the protocol's directional capacity, lower ` +
+            `minComposite, or disable the bot.`,
         });
       } else if (ceilingPct < required * 1.25) {
         // Reaches the bar, but only just: it will fire rarely and any change to
@@ -293,8 +418,8 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
           kind: 'ceiling-near-threshold',
           severity: 'warning',
           message:
-            `Protocol "${row.slug}" barely clears its threshold: highest composite ever is ` +
-            `${describeCeiling} against minComposite ${required}% (${samples} readings). It ` +
+            `Protocol "${row.slug}" barely clears its threshold: highest composite over ` +
+            `${windowLabel} is ${describeCeiling} against minComposite ${required}%. It ` +
             `will trade rarely, and a small change to directive weights could strand it entirely.`,
         });
       }
