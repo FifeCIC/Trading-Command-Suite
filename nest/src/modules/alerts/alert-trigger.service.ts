@@ -19,6 +19,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AlertsService, type AlertSeverity } from './alerts.service';
+import { WindowsNotifyService } from './windows-notify.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
@@ -63,13 +64,35 @@ export class AlertTriggerService implements OnModuleInit {
     // a symbol scoring 20+ times a day is being evaluated continuously, so producing zero
     // executions is a signal about the PATH, not about the market being quiet.
     'symbol-silent':     { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 20 },
+    // ── #972/#1010, added 2026-09-27 at the owner's request ──────────────────────────────────
+    // Owner: *"I need the app to draw my attention when algo trading is not active."*
+    //
+    // ⚠️ THIS IS NOT `mt5-disconnected`. A bridge can be fully `connected: true` and still refuse
+    // every single order, because AutoTrading (`trade_allowed`) or the API trade path
+    // (`tradeapi_disabled`) is off at the TERMINAL. Measured 2026-09-27: both terminals reported
+    // `connected: true, tradeAllowed: false`, 19 orders were refused `retcode 10027` in 48h, and
+    // `decision_log` held ONE execution. `mt5-disconnected` stayed silent throughout, correctly —
+    // the bridges never dropped. So this needs its own trigger; folding it in would have made the
+    // existing one lie about what it detects.
+    'trade-disabled':    { enabled: true, cooldownSeconds: 900, severity: 'critical' },
   };
+
+  /**
+   * Triggers whose condition warrants a REAL Windows notification, not just an in-app row.
+   *
+   * ⚠️ Deliberately a short list. A notification channel that fires for every `warning` is one the
+   * owner learns to dismiss without reading — the same failure as an allowlisted guard, and it
+   * would spend the attention this feature exists to win. These are the conditions that make
+   * TRADING IMPOSSIBLE while the app still looks healthy.
+   */
+  private readonly ATTENTION_KEYS = new Set(['trade-disabled', 'mt5-disconnected']);
 
   constructor(
     private readonly alerts: AlertsService,
     private readonly prisma: PrismaService,
     private readonly calendar: MarketCalendarService,
     private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly windows: WindowsNotifyService,
   ) {}
 
   onModuleInit() {
@@ -125,6 +148,7 @@ export class AlertTriggerService implements OnModuleInit {
         case 'earnings-proximity': condition = await this.checkEarningsProximity(cfg); break;
         case 'bridge-clock-skew':  condition = await this.checkBridgeClockSkew(cfg); break;
         case 'symbol-silent':      condition = await this.checkSymbolSilent(cfg); break;
+        case 'trade-disabled':     condition = await this.checkTradeDisabled(); break;
       }
 
       if (condition?.triggered) {
@@ -182,6 +206,77 @@ export class AlertTriggerService implements OnModuleInit {
       return { triggered: false, title: '', message: '' };
     } catch {
       return { triggered: true, title: 'MT5 Bridge Error', message: 'Failed to query MT5 bridge health.' };
+    }
+  }
+
+  /**
+   * #972/#1010 — NO BROKER CAN PLACE AN ORDER, while every bridge reports itself healthy.
+   *
+   * ⚠️ WHY THIS IS SEPARATE FROM `checkMt5Connection`, in its own words: a terminal can be
+   * `connected: true` and still refuse every order because AutoTrading is switched off in the MT5
+   * UI (`trade_allowed`) or because the whole API trade path is disabled (`tradeapi_disabled`).
+   * Neither is visible from `connected`, so `mt5-disconnected` correctly stayed silent through the
+   * measured outage of 2026-09-27 — both bridges were up the entire time and NOT ONE order could
+   * be placed. That is the worst possible shape: every surface green, nothing executable.
+   *
+   * ⚠️ `null` MEANS UNKNOWN, NOT OFF. `tradeAllowed` is null only when the bridge could not read
+   * `terminal_info()` at all. Reporting a fault on an unreadable poll would be the same defect in
+   * the opposite direction — absence of information published as a definite value — so an unknown
+   * flag is skipped, and only a definite `false` triggers.
+   */
+  private async checkTradeDisabled(): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity } | null> {
+    try {
+      const brokers = await this.mt5Connection.getAllBrokerHealths();
+      if (brokers.length === 0) return null; // nothing configured — not this trigger's business
+
+      const connected = brokers.filter((b: any) => b.health?.connected);
+      // No bridge up at all is `mt5-disconnected`'s case; do not double-report it here.
+      if (connected.length === 0) return null;
+
+      const canTrade = (b: any) =>
+        b.health?.tradeAllowed === true && b.health?.tradeapiDisabled !== true;
+      // ⚠️ A DEFINITE block. This predicate is the fix for a bug my own canary caught: my first
+      // version triggered purely on `!some(canTrade)`, and `canTrade` is FALSE for an UNKNOWN flag
+      // (`null === true` is false) — so two unreadable bridges rendered as "trading is off". That is
+      // the exact defect this file's docblock says must not happen, written by me, and only the
+      // silent-direction test found it. Triggering now additionally requires a positive statement
+      // that something is blocked.
+      const definitelyBlocked = (b: any) =>
+        b.health?.tradeAllowed === false || b.health?.tradeapiDisabled === true;
+
+      if (connected.some(canTrade)) {
+        // At least one broker can trade — clear the throttle so the NEXT outage notifies
+        // immediately rather than being suppressed by the previous one's cooldown.
+        this.windows.reset('trade-disabled');
+        return { triggered: false, title: '', message: '' };
+      }
+      if (!connected.some(definitelyBlocked)) {
+        // Nothing can trade, but nothing SAID it cannot either — every flag is unknown. Cannot
+        // judge is not a fault, so this stays silent rather than raising a false alarm.
+        return { triggered: false, title: '', message: '' };
+      }
+
+      // ⚠️ Every remaining candidate reported a DEFINITE block. Distinguish the two flags, because
+      // they need different actions: one is a button in the terminal, the other is an API setting.
+      const reasons = connected.map((b: any) => {
+        const parts: string[] = [];
+        if (b.health?.tradeAllowed === false) parts.push('AutoTrading off');
+        if (b.health?.tradeapiDisabled === true) parts.push('API trade path disabled');
+        const why = parts.length ? parts.join(' + ') : 'no broker permits trading';
+        return `broker ${b.brokerId} (${b.server ?? '?'}): ${why}`;
+      });
+
+      return {
+        triggered: true,
+        title: 'Algo Trading Is OFF — no order can be placed',
+        message:
+          `${reasons.join('; ')}. Every bridge is CONNECTED, so nothing else will report this. ` +
+          `Enable AutoTrading in each MT5 terminal to resume.`,
+      };
+    } catch (err) {
+      // Cannot read the state — that is not evidence trading is off, so it does not trigger.
+      this.logger.warn(`trade-disabled check failed: ${(err as Error).message}`);
+      return null;
     }
   }
 
@@ -590,6 +685,15 @@ export class AlertTriggerService implements OnModuleInit {
     // not the trigger key. Keep 'trading' as the category, pass the message as `detail`.
     this.alerts.addAlert('trading', title, message, severity);
     this.logger.log(`ALERT [${severity}] ${title}: ${message}`);
+
+    // ⚠️ THE IN-APP ROW IS NOT ENOUGH FOR THESE, AND THAT IS THE WHOLE POINT (owner, 2026-09-27:
+    // *"the notifications aren't attention demanding - none are integrated with windows"*). The
+    // failure mode for `trade-disabled` is that nobody is looking at the app, so an alert that
+    // only appears inside it cannot fire. Fire-and-forget: a UI concern must never hold up or
+    // fail the trading path, and `notify()` already swallows its own errors.
+    if (this.ATTENTION_KEYS.has(key)) {
+      void this.windows.notify({ key, title, message });
+    }
   }
 
   private httpGet(url: string): Promise<string> {
