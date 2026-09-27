@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 146,
+  "count": 147,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -1082,6 +1082,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "UNIQUENESS gate for the QA checklist and the capability registry.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-readiness-verdict.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "readiness must come from `tradeReadiness()`, not from",
       "selfTest": true,
       "reaches": [
         "prebuild",

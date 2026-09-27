@@ -235,3 +235,51 @@ export function pnlColor(value) {
   if (value < 0) return PNL_COLORS.loss;
   return PNL_COLORS.neutral;
 }
+
+/**
+ * tradeReadiness() — THE verdict: may this envelope be traded, by the SAME rule the order path uses.
+ *
+ * ── WHY THIS EXISTS (#935, 2026-09-27) ────────────────────────────────────────────────────
+ * `SymbolPage` drew "✓ Trade Ready" from `preTradeReady` ALONE:
+ *
+ *     {primaryEnv.preTradeReady ? <span className="sym-ready">✓ Trade Ready</span> : …blockers}
+ *
+ * ⚠️ WARNING: `preTradeReady` covers the PRE-TRADE GATE ONLY. The order path requires the gate
+ * AND zero execution blockers AND a derivable direction — see `isRouteable()` in
+ * `nest/src/modules/signals/signal-envelope.service.ts`. Reading one condition out of three made
+ * the card claim a readiness the click path then refused: the badge said "Trade Ready" while the
+ * order path held a `size-below-minimum` execution blocker and rejected the order.
+ *
+ * ⚠️ `scoreId` and dismissals are DELIBERATELY EXCLUDED. Both are routing concerns this page does
+ * not carry — `scoreId` is `null` on the drilldown until persistence assigns it, so including it
+ * would mark every symbol blocked. This verdict covers exactly what a reader can see here.
+ *
+ * ⚠️ THREE STATES, NOT TWO. `executionBlockers === undefined` means the server never ran the
+ * assessment (an older build, or the assessment threw). That is the ABSENCE of an answer and must
+ * NEVER render as ready: an empty list and a failed query must not look the same.
+ *
+ * ⚠️ Lives here, not in `signal-card-view.js`, so it can be unit-tested with `node --test` — that
+ * module imports `./notices/registry` extensionless, which Node's ESM resolver cannot load.
+ *
+ * @param {object|null|undefined} envelope a SignalEnvelope from /api/signals/envelope/:symbol
+ * @returns {{ state: 'ready'|'blocked'|'unknown', reasons: string[] }}
+ */
+export function tradeReadiness(envelope) {
+  if (!envelope) return { state: 'unknown', reasons: [] };
+
+  const exec = envelope.executionBlockers;
+  // No assessment on the payload → we can judge it neither way.
+  if (exec === undefined) return { state: 'unknown', reasons: [] };
+
+  const execReasons = (exec || [])
+    .map((b) => b?.message || b?.reason || b?.hint || b?.code)
+    .filter(Boolean);
+
+  if (envelope.preTradeReady !== true || execReasons.length > 0) {
+    return {
+      state: 'blocked',
+      reasons: [...(envelope.preTradeBlockers || []), ...execReasons],
+    };
+  }
+  return { state: 'ready', reasons: [] };
+}

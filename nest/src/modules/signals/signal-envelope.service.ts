@@ -627,7 +627,7 @@ export class SignalEnvelopeService {
         ? Math.round((signalPct + opportunityPct) / 2)
         : (signalPct ?? opportunityPct ?? 0);
 
-    return {
+    const envelope: SignalEnvelope = {
       symbol,
       composite: gated.composite,
       maxPossible: gated.signalMax,
@@ -664,6 +664,100 @@ export class SignalEnvelopeService {
       marketStatus: gated.marketStatus ?? null,
       holdsCfd: false, // assigned by buildBestLadder from MT5 positions
     };
+
+    // ⚠️ NO feasibility annotation here, deliberately (#935).
+    // `buildEnvelope` is called BOTH by the single-symbol drilldown AND N times inside the ladder
+    // batch (buildLadder / buildBestLadder). Annotating here would re-assess every envelope on the
+    // batch endpoints a second time — the ladder already does it once for all N, with positions
+    // and bot sizes resolved in a single pass. The verdict is added by the CALLER that owns the
+    // boundary: `getDrilldown` (see the DECISION marker there).
+
+    return envelope;
+  }
+
+  /**
+   * annotateFeasibility() — the ONE place a single envelope is assessed for execution.
+   *
+   * STEP: the last thing that happens to an envelope before it is rendered or queued.
+   * BEFORE: pre-trade gating (`evaluatePreTrade`) → `preTradeReady` / `preTradeBlockers`.
+   * AFTER:  the card's verdict (`tradeReadiness`, frontend) and the queue's `isRouteable()`.
+   *
+   * Called by BOTH the drilldown (#935) and the ladder (#723), so the two paths cannot disagree
+   * about whether a symbol can be ordered. That disagreement IS the #935 defect: the card said
+   * ready while the order path refused, because only one of the two had been assessed.
+   *
+   * ⚠️ WARNING: `size` is the number that will ACTUALLY BE TRADED (#972). A bot-driven signal is
+   * sized by its bot's `baseSize`; only a signal with no executing bot falls back to the manual
+   * default, because only then does a human click the card. Sizing a bot's envelope from the
+   * manual default once made a 0.1-floor symbol unroutable at 0.01 and silently disabled it — a
+   * setting that had nothing to do with that symbol.
+   *
+   * ⚠️ FAILS CLOSED when the side cannot be derived: a signal class mapping to no direction must
+   * block, because assessing feasibility for the WRONG direction still looks perfectly executable.
+   *
+   * @param preFetched  Supplied by the ladder, which resolves size/positions ONCE for N envelopes.
+   *                    Omit it for a single drilldown and the helper resolves them itself.
+   *                    `size: undefined` means "not supplied"; `size: null` means "unknown" and is
+   *                    honoured as such rather than triggering a second lookup.
+   */
+  private async annotateFeasibility(
+    env: SignalEnvelope,
+    protocolId?: string | null,
+    preFetched?: { positions?: any[]; size?: number | null },
+  ): Promise<void> {
+    try {
+      const side = signalToSide(env.signal);
+      if (!side) {
+        env.executionBlockers = [
+          {
+            code: 'UNKNOWN_SIGNAL_CLASS',
+            reason: `Signal class "${env.signal}" has no derivable side`,
+          } as any,
+        ];
+        return;
+      }
+
+      // ⚠️ #972 — the BOT's size, not the manual default. The ladder passes its batched value in;
+      // a drilldown resolves it here. Both land on the same rule.
+      let size = preFetched?.size;
+      if (size === undefined) {
+        // ⚠️ Guarded on `protocolId` DELIBERATELY. An unscoped `findFirst` (no protocol filter)
+        // would match ANY active bot holding this symbol and size the envelope from the WRONG
+        // bot — while the ladder's own lookup, keyed `${protocolId}|${symbol}`, finds no match at
+        // all and falls back to the manual default. The two paths must agree, so: no protocol,
+        // no bot, manual default.
+        let botBaseSize: number | null = null;
+        if (protocolId) {
+          try {
+            const bot = await this.prisma.tradingStrategy.findFirst({
+              where: { active: true, protocolId, symbol: env.symbol.toUpperCase() },
+              select: { baseSize: true },
+            });
+            botBaseSize = bot?.baseSize ?? null;
+          } catch {
+            /* best-effort — an unknown size degrades to the manual default, never to a guess */
+          }
+        }
+        const defaults = await this.tradeDefaults?.getDefaults().catch(() => null);
+        size = botBaseSize ?? defaults?.size ?? null;
+      }
+
+      const res = await this.feasibility.assess({
+        symbol: env.symbol,
+        side,
+        brokerId: 'mt5',
+        protocolId: env.protocolId ?? protocolId ?? null,
+        ...(preFetched?.positions ? { positions: preFetched.positions } : {}),
+        marketStatus: env.marketStatus,
+        size,
+      });
+      env.executionBlockers = res.blockers;
+    } catch (err) {
+      // ⚠️ Best-effort, and deliberately NOT a fabricated blocker. `executionBlockers` stays
+      // `undefined`, which the frontend treats as "cannot judge" — never as ready. An unknown is
+      // not a pass, and it is not a failure; it is the absence of an answer.
+      this.logger.warn(`Execution feasibility annotation failed: ${(err as Error).message}`);
+    }
   }
 
   /**
@@ -1055,7 +1149,29 @@ export class SignalEnvelopeService {
         return env;
       }
     }
-    return this.buildEnvelope(ticker, protocolId);
+
+    const env = await this.buildEnvelope(ticker, protocolId);
+
+    // ── DECISION (#935, 2026-09-27, primary) ──────────────────────────────────────────────
+    // WHAT:  The single-symbol drilldown now carries `executionBlockers`, assessed with the SAME
+    //        `ExecutionFeasibilityService` call the ladder (#723) and the order path use.
+    // WHY:   SymbolPage rendered `preTradeReady` ALONE as "✓ Trade Ready". That field covers the
+    //        pre-trade gate only; the ORDER path additionally requires
+    //        `executionBlockers.length === 0` (see `isRouteable()` in buildBestLadder) plus the
+    //        broker's tradeMode and volume floor. Measured: this endpoint returned NO
+    //        `executionBlockers` at all — `undefined`, not `[]` — so the card could not have been
+    //        right even in principle, and a frontend-only fix could not have been correct.
+    // INSTEAD OF: Reading `executionBlockers` in the frontend, as #935 proposed. The field was
+    //        ABSENT from this endpoint, so a frontend-only fix would have read `undefined` and
+    //        concluded "no blockers" — the same defect wearing a new hat.
+    // REVERSE BY: Delete this call and the `tradeReadiness()` consumer in src/core/trade-readiness.js.
+    // REGISTER:  docs/SETTLED-DECISIONS.md
+    // GUARD:     nest/src/modules/signals/signal-envelope-readiness.spec.ts
+    //            + src/core/trade-readiness.test.js
+    // ──────────────────────────────────────────────────────────────────────────────────────
+    await this.annotateFeasibility(env, protocolId);
+
+    return env;
   }
 
   /** True when at least one ACTIVE protocol resolves this ticker as a symbol. */
@@ -1390,29 +1506,20 @@ export class SignalEnvelopeService {
       // never to a fabricated number.
       const tradeDefaults = await this.tradeDefaults?.getDefaults().catch(() => null);
       for (const env of scoredEnvelopes) {
-        const side = signalToSide(env.signal);
-        if (!side) {
-          // ⚠️ Fail CLOSED. Previously an underivable side became 'BUY', so feasibility was
-          // assessed for the wrong direction and the envelope still looked executable.
-          env.executionBlockers = [
-            { code: 'UNKNOWN_SIGNAL_CLASS', reason: `Signal class "${env.signal}" has no derivable side` } as any,
-          ];
-          continue;
-        }
-        const res = await this.feasibility.assess({
-          symbol: env.symbol,
-          side,
-          brokerId: 'mt5',
-          protocolId: env.protocolId,
+        // ⚠️ #935 — ONE assessment implementation, shared with the drilldown. This loop used to
+        // carry its OWN copy of it, and that duplication is exactly how the two paths drifted
+        // apart: the ladder blocked a symbol that the drilldown still drew as "✓ Trade Ready".
+        // The batched size/position resolution stays here (one bot query for N envelopes); only
+        // the assessment itself moved into the helper.
+        await this.annotateFeasibility(env, env.protocolId, {
           positions: mt5Positions,
-          marketStatus: env.marketStatus,
           // ⚠️ The size that will ACTUALLY BE TRADED, not a proxy for it (#972).
           // A bot envelope is sized by its bot; only a signal with no executing bot falls back to
-          // the manual default, because only then does a human click the card. Sizing a bot's
-          // envelope from the manual default made a 0.1-floor symbol unroutable at 0.01.
-          size: botByKey.get(`${env.protocolId}|${env.symbol.toUpperCase()}`)?.baseSize ?? tradeDefaults?.size ?? null,
+          // the manual default, because only then does a human click the card.
+          size: botByKey.get(`${env.protocolId}|${env.symbol.toUpperCase()}`)?.baseSize
+            ?? tradeDefaults?.size
+            ?? null,
         });
-        env.executionBlockers = res.blockers;
       }
     } catch (err) {
       this.logger.warn(`Execution feasibility annotation failed: ${(err as Error).message}`);

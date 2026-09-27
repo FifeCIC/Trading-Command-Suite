@@ -95,3 +95,8 @@ export function buildNotices(envelope) {
     add(notice('TCS-RISK-002', { description: c.description, type: c.type, severity: c.severity })));
   return out;
 }
+
+// ⚠️ `tradeReadiness()` deliberately lives in `./signal-utils`, NOT here (#935).
+// This module imports `./notices/registry` extensionless, which Node's ESM resolver cannot load —
+// so anything defined here cannot be unit-tested with `node --test`, and a verdict that cannot be
+// tested is a verdict that cannot be guarded. `signal-utils` has no such import.

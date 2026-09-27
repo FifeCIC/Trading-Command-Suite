@@ -14,7 +14,7 @@ import { apiGet } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error.js';
 import NoticeBlock from '../components/NoticeBlock';
 import StarToggle from '../components/StarToggle';
-import { stripWarningGlyph } from '../core/signal-utils';
+import { stripWarningGlyph, tradeReadiness } from '../core/signal-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './symbol-page.css';
@@ -535,6 +535,11 @@ export default function SymbolPage() {
 
   // The score card's three DISTINCT states — deliberately not collapsed (#926).
   const primaryEnv = scoredProtocols[0]?.env ?? null;
+  // #935 — the badge below must NOT read `preTradeReady` alone. That field covers the PRE-TRADE
+  // GATE only, while the order path additionally requires zero execution blockers and a derivable
+  // direction. Reading one condition of three made this card claim a readiness the click path then
+  // refused. `tradeReadiness()` is the shared verdict — see src/core/signal-card-view.js.
+  const readiness = tradeReadiness(primaryEnv);
   const firstEnvelopeError = protocolScores.find((p) => p.query?.isError)?.query?.error ?? null;
 
   return (
@@ -699,11 +704,21 @@ export default function SymbolPage() {
                 <span>Confidence: {primaryEnv.confidence}%</span>
                 {primaryEnv.rarity && <span style={{ color: primaryEnv.rarityColor }}>{primaryEnv.rarity}</span>}
               </div>
-              {primaryEnv.preTradeReady ? (
+              {readiness.state === 'ready' ? (
                 <span className="sym-ready">✓ Trade Ready</span>
+              ) : readiness.state === 'unknown' ? (
+                /* ⚠️ The server reported NO execution-feasibility assessment. That is the ABSENCE
+                   of an answer — it must not render as ready, and it must not be dressed up as a
+                   blocker either. "Cannot judge" is its own state, deliberately visible. */
+                <span
+                  className="sym-muted"
+                  title="The server did not report an execution-feasibility assessment for this symbol, so readiness cannot be determined."
+                >
+                  ? Readiness not reported
+                </span>
               ) : (
                 <div className="sym-blockers">
-                  {(primaryEnv.preTradeBlockers || []).map((b, i) => <span key={i} className="sym-blocker">🚫 {b}</span>)}
+                  {readiness.reasons.map((b, i) => <span key={i} className="sym-blocker">🚫 {b}</span>)}
                 </div>
               )}
               {scoredProtocols.length > 1 && (
