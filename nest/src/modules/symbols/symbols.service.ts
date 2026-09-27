@@ -773,9 +773,21 @@ export class SymbolsService {
       take: 20,
     }) as any[];
 
-    const protocolIds = new Set<string>();
-    scoringForSymbol.forEach((s: any) => { protocolIds.add(s.protocolId); if (s.shortProtocolId) protocolIds.add(s.shortProtocolId); });
-    tradingStrategies.forEach((s: any) => { protocolIds.add(s.protocolId); if (s.shortProtocolId) protocolIds.add(s.shortProtocolId); });
+    // ── #926 — resolved by THE AUTHORITY, not by whichever tables happened to be reachable ──
+    //
+    // ⚠️ This used to build `protocolIds` from TWO sources and no authority: the scoring
+    // strategies (read from **JSON files on disk** via `scoring_strategy.watchlistName`) and the
+    // active bots. Measured 2026-09-27 for XAUUSD that produced **8** protocols while the symbols
+    // the pipeline actually scores number **20** — and the 12 omitted included `xau-speed-v1` and
+    // `xau-speed-v1-copy` (the two rows in `symbol_protocol_assignment`, i.e. the EXPLICIT
+    // assignment) and `gold-macro-v1`, the one protocol with realised P&L on this symbol
+    // (2 trades, +30.48). The page therefore hid exactly the protocols a reader most needs.
+    //
+    // ⚠️ `scoringForSymbol` still resolves from disk and yielded **0** for XAUUSD. That read is a
+    // separate, still-open source of truth (see the register row for #926); it is NOT used to
+    // decide which protocols exist here any more.
+    const resolution = await this.symbolProtocolAuthority.resolve(upperTicker);
+    const protocolIds = new Set<string>(resolution.protocols.map((p) => p.protocolId));
 
     // Protocol info — query from DB (Epic #510 Phase 4, replaces PROTOCOL_REGISTRY import)
     const dbProtocols = await (this.prisma as any).protocol.findMany({

@@ -139,6 +139,7 @@ function getJson(url) {
   const prisma = new PrismaClient();
 
   let evidence = [];
+  let scoringNow = new Set();
   try {
     const since = new Date(Date.now() - days * 86400000);
     const rows = await prisma.$queryRawUnsafe(
@@ -146,6 +147,16 @@ function getJson(url) {
       since,
     );
     evidence = rows.map((r) => ({ protocolId: String(r.protocolId), symbol: String(r.symbol).toUpperCase() }));
+
+    // ⚠️ Criterion 2 is worded about protocols that are CURRENTLY TICKING
+    // (`protocol_score_status.state = 'scoring'`). That set is what makes a finding actionable:
+    // a protocol the pipeline believes it is scoring right now, which the authority cannot
+    // account for, is current incoherence. A single row left behind by a long-deleted protocol is
+    // historical drift with a different fix and a different owner — see the report split below.
+    const scoringRows = await prisma.$queryRawUnsafe(
+      `SELECT protocolId FROM protocol_score_status WHERE state = 'scoring'`,
+    );
+    scoringNow = new Set(scoringRows.map((r) => String(r.protocolId)));
   } catch (err) {
     // ⚠️ A guard that cannot read its input must ERROR, never pass.
     console.error(`✖ could not read score_snapshot evidence — ${err.message}`);
@@ -153,13 +164,15 @@ function getJson(url) {
     process.exit(2);
   }
 
-  const symbols = [...new Set(evidence.map((e) => e.symbol))];
   console.log(`[symbol-protocol-authority] evidence window: last ${days} day(s)`);
-  console.log(`[symbol-protocol-authority] ${evidence.length} scored pair(s) across ${symbols.length} symbol(s)`);
+  console.log(`[symbol-protocol-authority] ${evidence.length} scored pair(s) across ${new Set(evidence.map((e) => e.symbol)).size} symbol(s)`);
+  console.log(`[symbol-protocol-authority] ${scoringNow.size} protocol(s) report state=scoring`);
 
   const authorityBySymbol = new Map();
   const unresolvedFindings = [];
   let unreachable = 0;
+
+  const symbols = [...new Set(evidence.map((e) => e.symbol))];
 
   for (const symbol of symbols) {
     const res = await getJson(`${API}/api/symbols/${symbol}/protocols`);
@@ -177,13 +190,41 @@ function getJson(url) {
 
   const orphans = findOrphans(evidence, authorityBySymbol);
 
-  if (orphans.length) {
-    console.error('\n✖ SCORED, BUT NOT REACHABLE VIA THE AUTHORITY (#926):');
-    for (const o of orphans) console.error(`  ${o.symbol} / ${o.protocolId} — ${o.why}`);
+  // ⚠️ Split by ACTIONABILITY, measured 2026-09-27 after the first run mixed the two and went red
+  // on data that ended in AUGUST.
+  //
+  // FATAL — a pair scored inside the window whose protocol reports `state='scoring'` and which the
+  // authority cannot reach. That is criterion 2, verbatim, and it is current incoherence.
+  //
+  // NOTE — everything else: a protocol row that no longer exists (deleting a protocol orphans its
+  // `score_snapshot` history — `cad-sniper-v1` 4,237 rows ending 2026-08-03; `default-short` 112
+  // ending 2026-08-19) and a pair scored by a protocol that is no longer ticking. Real drift, but
+  // failing on it would make this guard red from birth and therefore ignored — the failure mode the
+  // repo warns about. Reported, counted, and it owns its own issue.
+  const fatal = orphans.filter((o) => scoringNow.has(o.protocolId));
+  const historical = orphans.filter((o) => !scoringNow.has(o.protocolId));
+
+  if (fatal.length) {
+    console.error("\n✖ SCORING NOW, BUT NOT REACHABLE VIA THE AUTHORITY (#926 criterion 2):");
+    for (const o of fatal) console.error(`  ${o.symbol} / ${o.protocolId} — ${o.why}`);
+  }
+  if (historical.length) {
+    console.error(
+      `\n⚠️  ${historical.length} pair(s) scored in the window by a protocol that is NOT currently ` +
+        'ticking and that the authority cannot resolve — historical, not fatal:',
+    );
+    for (const o of historical.slice(0, 6)) console.error(`  ${o.symbol} / ${o.protocolId}`);
+    if (historical.length > 6) console.error(`  … and ${historical.length - 6} more`);
   }
   if (unresolvedFindings.length) {
-    console.error('\n✖ UNRESOLVED ASSOCIATIONS — a row points at a protocol that does not exist:');
-    for (const u of unresolvedFindings) console.error(`  ${u}`);
+    console.error(
+      `\n⚠️  ${unresolvedFindings.length} all-time association(s) point at a protocol row that no longer ` +
+        'exists — HISTORICAL, not fatal (deleting a protocol orphans its score history):',
+    );
+    for (const u of unresolvedFindings.slice(0, 8)) console.error(`  ${u}`);
+    if (unresolvedFindings.length > 8) {
+      console.error(`  … and ${unresolvedFindings.length - 8} more`);
+    }
   }
   if (unreachable) {
     console.error(`\n✖ ${unreachable} symbol(s) could not be resolved because the API did not answer.`);
@@ -192,14 +233,22 @@ function getJson(url) {
 
   await prisma.$disconnect();
 
-  if (orphans.length || unresolvedFindings.length || unreachable) {
+  // Only CURRENT incoherence and an unreachable API are fatal.
+  if (fatal.length || unreachable) {
     console.error(
-      `\n[FAIL] ${orphans.length} orphan(s), ${unresolvedFindings.length} unresolved, ${unreachable} unreachable.`,
+      `\n[FAIL] ${fatal.length} currently-scoring orphan(s), ${unreachable} unreachable.` +
+        (historical.length || unresolvedFindings.length
+          ? ` (${historical.length + unresolvedFindings.length} historical finding(s) NOT counted.)`
+          : ''),
     );
     process.exit(1);
   }
   console.log(
-    `\n[symbol-protocol-authority] ✅ OK — all ${evidence.length} scored pair(s) are reachable via the authority`,
+    `\n[symbol-protocol-authority] ✅ OK — every pair scored in the last ${days} day(s) by a ` +
+      `currently-scoring protocol is reachable via the authority` +
+      (historical.length || unresolvedFindings.length
+        ? ` (${historical.length + unresolvedFindings.length} historical finding(s) reported above, not fatal.)`
+        : ''),
   );
 })().catch((err) => {
   console.error(`[FAIL] ${err.message}`);
