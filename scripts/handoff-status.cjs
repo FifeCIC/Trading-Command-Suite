@@ -153,17 +153,26 @@ function selfTest() {
   return 0;
 }
 
+/**
+ * Files that live in the store but are NOT handoffs.
+ *
+ * ⚠️ Added because the first run reported "CONSUMED 1" — and that one was `processed/README.md`,
+ * the file documenting the convention itself. A count that includes its own documentation is wrong
+ * in the direction that flatters the convention, which is the worst direction for it to be wrong.
+ */
+const NOT_A_HANDOFF = /^README\.md$/i;
+
 function readStore(dir) {
   const out = [];
   if (!fs.existsSync(dir)) throw new Error(`handoff directory not found: ${dir}`);
   for (const n of fs.readdirSync(dir)) {
-    if (!n.endsWith('.md')) continue;
+    if (!n.endsWith('.md') || NOT_A_HANDOFF.test(n)) continue;
     out.push({ name: n, body: fs.readFileSync(path.join(dir, n), 'utf8'), processed: false });
   }
   const pdir = path.join(dir, 'processed');
   if (fs.existsSync(pdir)) {
     for (const n of fs.readdirSync(pdir)) {
-      if (!n.endsWith('.md')) continue;
+      if (!n.endsWith('.md') || NOT_A_HANDOFF.test(n)) continue;
       out.push({ name: `processed/${n}`, body: fs.readFileSync(path.join(pdir, n), 'utf8'), processed: true });
     }
   }
