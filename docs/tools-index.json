@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 147,
+  "count": 148,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -81,6 +81,16 @@
       "purpose": "#960 Tier 1, as a GUARD rather than a one-off.",
       "selfTest": true,
       "reaches": null
+    },
+    {
+      "name": "audit-symbol-protocol-authority.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "#926 criterion 2.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "check-breakdown.cjs",

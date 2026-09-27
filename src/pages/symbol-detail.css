@@ -129,3 +129,21 @@
 .sd-protocol-meta { display: flex; gap: 0.75rem; font-size: 0.65rem; color: var(--ink-soft); }
 .sd-protocol-meta .rising { color: var(--color-profit); }
 .sd-protocol-meta .falling { color: var(--color-loss); }
+
+/* #926 — provenance chips. Each protocol states WHY it is in the list, so "assigned" is no
+   longer indistinguishable from "only ever observed". */
+.sd-protocol-sources { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; margin-left: 0.4rem; }
+.sd-src-chip {
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--line, rgba(148, 163, 184, 0.35));
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 1.4;
+}
+/* An `active=0` protocol is NOT a kill switch (#803), so it is marked rather than hidden. */
+.sd-src-off { color: var(--color-warning); border-style: dashed; }
+
+.sd-muted { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }

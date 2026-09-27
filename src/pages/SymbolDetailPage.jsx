@@ -172,26 +172,82 @@ export default function SymbolDetailPage() {
         <div ref={chartRef} style={{ width: '100%' }} />
       </div>
 
-      {/* ── Protocol Scores ── */}
-      {protocols.length > 0 && (
-        <section className="sd-card">
-          <h2>📊 Protocol Scores</h2>
+      {/* ── Protocol Scores — #926: the AUTHORITY's list, with provenance ── */}
+      <section className="sd-card">
+        <h2>📊 Protocol Scores</h2>
+        {protocolsQuery.isLoading ? (
+          <p className="sd-muted">Loading…</p>
+        ) : protocolsQuery.isError ? (
+          /* ⚠️ A FAILED query must not render as "this symbol has no protocols" (#926). An empty
+             list is information; an error is the absence of information. */
+          <p className="sd-error">Could not resolve protocols — the request failed. That is not the same as “none apply”.</p>
+        ) : protocols.length === 0 ? (
+          <p className="sd-muted">
+            No protocol is associated with {symbolId} — not by assignment, an active bot, a linked watchlist, or an
+            observed score.
+          </p>
+        ) : (
           <div className="sd-protocols">
             {protocols.map((p) => (
               <div key={p.id} className="sd-protocol-card">
                 <div className="sd-protocol-header">
-                  <div><strong>{p.name}</strong><span className="sd-protocol-type">{p.type} · {p.intendedTimeframe}</span></div>
-                  <div className="sd-protocol-score"><span className={`sd-score-badge ${p.signal}`}>{p.score}</span><span className={`sd-signal ${p.signal}`}>{p.signal}</span></div>
+                  <div>
+                    <strong>{p.name}</strong>
+                    <span className="sd-protocol-type">
+                      {p.type}
+                      {p.intendedTimeframe ? ` · ${p.intendedTimeframe}` : ''}
+                      {p.tradingStyle ? ` · ${p.tradingStyle}` : ''}
+                    </span>
+                    {/* WHY this protocol is listed. The provenance #926 requires — previously every
+                        entry was presented with equal confidence and no reason given at all. */}
+                    <span className="sd-protocol-sources" title="Which mechanism(s) associate this protocol with this symbol">
+                      {p.sources.map((s) => (
+                        <span key={s} className="sd-src-chip">{s}</span>
+                      ))}
+                      {p.active === false && <span className="sd-src-chip sd-src-off">inactive</span>}
+                    </span>
+                  </div>
+                  <div className="sd-protocol-score">
+                    {p.scored === true ? (
+                      <>
+                        <span className={`sd-score-badge ${p.signal || ''}`}>{p.score.toFixed(0)}</span>
+                        <span className={`sd-signal ${p.signal || ''}`}>{p.signal}</span>
+                      </>
+                    ) : p.scored === null ? (
+                      /* ⚠️ The score query FAILED — the absence of an answer, which must not be
+                         dressed up as "not scored". Distinct from the branch below. */
+                      <span className="sd-error" title={protocolsQuery.data?.scoreError || ''}>scores unavailable</span>
+                    ) : (
+                      /* ⚠️ Answered, and never scored. Rendering a bare 0 here would read as a real
+                         score of zero, which is a different fact. */
+                      <span className="sd-muted">not scored yet</span>
+                    )}
+                  </div>
                 </div>
-                <div className="sd-sparkline">{p.sparkline?.map((v, i) => <div key={i} className="sd-spark-bar" style={{ height: `${Math.max(3, v * 0.4)}px` }} />)}</div>
+                {(p.sparkline?.length ?? 0) > 0 && (
+                  <div className="sd-sparkline">
+                    {p.sparkline.map((v, i) => (
+                      <div key={i} className="sd-spark-bar" style={{ height: `${Math.max(3, v * 0.4)}px` }} />
+                    ))}
+                  </div>
+                )}
                 <div className="sd-protocol-meta">
-                  <span>Confidence: {(p.confidence * 100).toFixed(0)}%</span><span>Trend: {p.trend}</span><span>Exit: {p.exitUrgency}</span>
+                  <span>Sources: {p.sources.join(', ')}</span>
+                  <span className={p.trend || ''}>Trend: {p.trend ?? '—'}</span>
+                  <span>{p.lastScoredAt ? `Last scored: ${new Date(p.lastScoredAt).toLocaleString()}` : 'Never scored'}</span>
                 </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
+        {/* Drift the authority could not resolve is SHOWN, never silently dropped. */}
+        {(protocolsQuery.data?.unresolved?.length ?? 0) > 0 && (
+          <p className="sd-error">
+            ⚠️ {protocolsQuery.data.unresolved.length} association(s) point at a protocol that does not exist:{' '}
+            {protocolsQuery.data.unresolved.map((u) => `${u.id} (from ${u.from})`).join(', ')}
+          </p>
+        )}
+      </section>
 
       <div className="sd-grid">
         {/* Freshness Card */}

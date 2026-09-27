@@ -10,6 +10,9 @@ import { resolve } from 'path';
 import { resolvePositionPnl } from '../../common/utils/position-pnl';
 // #854/#778 — the ONE definition of a broker-maintained ("live") position row.
 import { isLivePosition } from '../../common/utils/position-freshness';
+// #926 — THE authority for "which protocols apply to this symbol". Injected rather than
+// re-derived here: a second implementation of that question is the defect the issue describes.
+import { SymbolProtocolAuthorityService } from './symbol-protocol-authority.service';
 
 /** A symbol's data-source record — one provider that has delivered bars for it. */
 export interface SymbolSource {
@@ -29,6 +32,7 @@ export class SymbolsService {
     private readonly prisma: PrismaService,
     private readonly modeService: ModeService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly symbolProtocolAuthority: SymbolProtocolAuthorityService,
   ) {}
 
   /**
@@ -604,6 +608,20 @@ export class SymbolsService {
     };
   }
 
+  /**
+   * GET /api/symbols/:ticker/protocols — cross-protocol scores for a symbol.
+   *
+   * ⚠️ REPLACED 2026-09-27 (#926). This method used to read `prisma.strategy` — a LEGACY table
+   * with a `config.symbols` JSON blob, unrelated to `symbol_protocol_assignment` or to anything
+   * else that decides which protocol scores a symbol. So it answered
+   * `{"protocols":[],"count":0}` for EVERY symbol, and three surfaces learned to route around
+   * it: `useSymbolEnvelope.js` calls it a dead endpoint, `view-meta.js` and `SymbolPage.jsx` both
+   * carry corrections naming it, and settled-decision row 17 records the `/focus` workaround.
+   *
+   * It now reads `SymbolProtocolAuthorityService` — the ranked union of assignment, active bots,
+   * FK-linked watchlists and observed score snapshots — so the list is the protocols that
+   * ACTUALLY apply, each carrying the provenance that put it there.
+   */
   async getProtocols(ticker: string) {
     const upperTicker = ticker.toUpperCase();
 
@@ -612,47 +630,95 @@ export class SymbolsService {
     });
     if (!symbol) throw new NotFoundException(`Symbol ${upperTicker} not found`);
 
-    // Find strategies that include this symbol
-    let strategies: any[] = [];
-    try {
-      const all = await (this.prisma as any).strategy.findMany({
-        include: { scores: true },
-      });
-      strategies = all.filter((s: any) => {
-        const config = (s.config as any) || {};
-        const symbols = config.symbols || config.symbolFocus || [];
-        return symbols.includes(upperTicker) || symbols.includes(symbol.id);
-      });
-    } catch {
-      strategies = [];
+    const resolution = await this.symbolProtocolAuthority.resolve(upperTicker);
+    const slugs = resolution.protocols.map((p) => p.protocolId);
+
+    // Enrich from the REAL score source. ⚠️ `score_snapshot.protocolId` holds a SLUG, which is
+    // exactly what the authority returns, so this join is direct — unlike the legacy path, which
+    // read a different table's `scores` relation and could never have been about these protocols.
+    //
+    // ⚠️ A FAILURE HERE IS RECORDED, NOT SWALLOWED (#926). The first cut wrapped this in
+    // `.catch(() => [])`, which turned a failing query into `scored: false` on every protocol —
+    // "cannot read the scores" silently rendered as "has never scored". Measured: every entry
+    // read `scored=false` even for protocols present BY observed evidence, i.e. the payload
+    // contradicted itself. `scoreError` exists so the two states stay distinguishable.
+    let scoreError: string | null = null;
+    let history: any[] = [];
+    if (slugs.length) {
+      try {
+        history = await (this.prisma as any).scoreSnapshot.findMany({
+          where: { symbol: upperTicker, protocolId: { in: slugs } },
+          orderBy: { snappedAt: 'desc' },
+          // ⚠️ `tradingSignal` is the PRISMA field; `trading_signal` is the MySQL COLUMN. Using the
+          // column name here throws `Unknown field 'trading_signal' for select statement`. The
+          // first cut of this hid the throw behind `.catch(() => [])`, so every protocol read
+          // `scored: false` and the payload contradicted itself. Measured 2026-09-27.
+          select: { protocolId: true, composite: true, tradingSignal: true, snappedAt: true },
+        });
+      } catch (err) {
+        scoreError = (err as Error).message;
+        this.logger.warn(`getProtocols(${upperTicker}): score enrichment failed — ${scoreError}`);
+      }
     }
 
-    const protocols = strategies.map((s) => {
-      const scores = (s.scores || []).map((sc: any) => Number(sc.score || 0)).reverse();
-      const currentScore = scores[scores.length - 1] || 0;
-      const firstSpark = scores[0] || currentScore;
-      const trend = currentScore > firstSpark ? 'rising' : currentScore < firstSpark ? 'falling' : 'flat';
+    const byProtocol = new Map<string, any[]>();
+    for (const r of history) {
+      const k = String(r.protocolId);
+      if (!byProtocol.has(k)) byProtocol.set(k, []);
+      byProtocol.get(k)!.push(r);
+    }
 
-      let signal = 'watch';
-      if (currentScore >= 70) signal = 'entry';
-      else if (currentScore <= 30) signal = 'exit';
+    const protocols = resolution.protocols.map((p) => {
+      // The query is descending, so [0] is newest; the sparkline wants oldest → newest.
+      const hist = byProtocol.get(p.protocolId) ?? [];
+      const sparkline = hist.map((h) => Number(h.composite || 0)).reverse();
+      const latest = hist[0];
+      const currentScore = latest ? Number(latest.composite || 0) : 0;
+      const firstScore = sparkline[0] ?? currentScore;
 
       return {
-        id: s.id,
-        name: s.name || 'Untitled',
-        type: (s.config as any)?.hasRiskConfig ? 'trading-strategy' : 'protocol',
-        intendedTimeframe: (s.config as any)?.timeframe || '1H',
+        id: p.protocolId,
+        name: p.name,
+        // ── #926 provenance: WHY this entry is in the list, and how strong the evidence is.
+        // A consumer can now render "assigned" differently from "only ever observed".
+        sources: p.sources,
+        rank: p.rank,
+        active: p.active,
+        type: 'protocol',
+        intendedTimeframe: p.recommendedTimeframe,
+        tradingStyle: p.tradingStyle,
+        directionMode: p.directionMode,
+        // ⚠️ THREE states, not two: `null` = the score query FAILED, `false` = it answered and
+        // this protocol has never scored, `true` = it has. Collapsing `null` into `false` is how
+        // a broken query reads as "nothing here", which is the defect class this issue is about.
+        scored: scoreError ? null : hist.length > 0,
         score: currentScore,
-        signal,
-        exitUrgency: currentScore <= 30 ? 'high' : currentScore <= 50 ? 'medium' : 'low',
-        confidence: Math.min(0.95, currentScore / 100 + 0.1),
-        lastRun: s.updatedAt?.toISOString() || null,
-        trend,
-        sparkline: scores,
+        signal: latest?.tradingSignal ?? null,
+        lastScoredAt: latest?.snappedAt ? new Date(latest.snappedAt).toISOString() : null,
+        trend:
+          hist.length === 0
+            ? null
+            : currentScore > firstScore
+              ? 'rising'
+              : currentScore < firstScore
+                ? 'falling'
+                : 'flat',
+        sparkline,
       };
     });
 
-    return { symbol: upperTicker, protocols, count: protocols.length };
+    return {
+      symbol: upperTicker,
+      protocols,
+      count: protocols.length,
+      // ⚠️ Surfaced, never dropped. A row pointing at a protocol that does not exist is drift the
+      // reader must be able to see; skipping it silently is how "three protocols" becomes "two".
+      unresolved: resolution.unresolved,
+      // So a consumer can tell "nothing applies" from "the query failed".
+      sourcesQueried: resolution.sourcesQueried,
+      // null when the enrichment query answered; the message when it did not.
+      scoreError,
+    };
   }
 
   /**
