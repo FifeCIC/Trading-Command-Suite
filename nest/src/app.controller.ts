@@ -39,23 +39,44 @@ export class AppController {
     //
     // ⚠️ `null` here means UNKNOWN, not "off" — the bridge sends null when terminal_info() could
     // not be read. Collapsing that into `false` would report a fault on every unreadable poll.
-    let mt5Bridge: any = { connected: false, tradeAllowed: null, account: null, balance: null };
+    //
+    // ⚠️ #1010 — THERE ARE **TWO** BLOCKERS, NOT ONE. `tradeAllowed` is the terminal's Algo Trading
+    // button; `tradeapiDisabled` disables the MT5 API trade path outright. Either one alone makes
+    // every order impossible, so a check that reads only the first can report "allowed" while
+    // nothing can execute. `tradeapiDisabled` was never read anywhere in this repo until #1010.
+    let mt5Bridge: any = {
+      connected: false,
+      tradeAllowed: null,
+      tradeapiDisabled: null,
+      account: null,
+      balance: null,
+    };
     try {
       const allHealths = await this.mt5Connection.getAllBrokerHealths();
       const connected = allHealths.filter((h: any) => h.health?.connected);
       if (connected.length > 0) {
+        // ⚠️ A broker counts as tradeable only when BOTH flags permit. `trade_allowed === true`
+        // alone is not enough — one broker with the API path disabled is not a place an order can
+        // land, and treating it as usable would understate the problem rather than overstate it.
+        const canTrade = (h: any) =>
+          h.health?.tradeAllowed === true && h.health?.tradeapiDisabled !== true;
         // ⚠️ Prefer a broker whose terminal will actually accept an order. `connected[0]` could be
         // a broker with AutoTrading OFF while a sibling had it ON, and reporting the blocked one
         // as "the" state would understate what the app can do.
-        const best = connected.find((h: any) => h.health?.tradeAllowed === true) ?? connected[0];
+        const best = connected.find(canTrade) ?? connected[0];
+        const flags = connected.map((h: any) => h.health?.tradeAllowed);
+        const apiFlags = connected.map((h: any) => h.health?.tradeapiDisabled);
         mt5Bridge = {
           connected: true,
           tradeAllowed: (best.health as any)?.tradeAllowed ?? null,
+          tradeapiDisabled: (best.health as any)?.tradeapiDisabled ?? null,
           // If ANY connected broker can trade, trading is possible — so say so. Otherwise the
           // first broker's state is the honest answer.
-          anyTradeAllowed:
-            connected.some((h: any) => h.health?.tradeAllowed === true) ||
-            (connected.every((h: any) => h.health?.tradeAllowed == null) ? null : false),
+          anyTradeAllowed: connected.some(canTrade)
+            ? true
+            : [...flags, ...apiFlags].every((f: any) => f == null)
+              ? null
+              : false,
           account: best.health?.account ?? null,
           server: best.server ?? null,
           balance: best.health?.balance ?? null,

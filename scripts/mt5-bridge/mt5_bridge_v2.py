@@ -1077,6 +1077,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     # is the same condition `connectionState` already classifies - so a caller can
                     # tell "trading is off" from "we could not ask", and neither reads as "fine".
                     'tradeAllowed': _term.trade_allowed if _term else None,
+                    # ⚠️ #1010 — A SECOND, INDEPENDENT BLOCKER. `trade_allowed` is the terminal's
+                    # Algo Trading button; `tradeapi_disabled` disables the whole MT5 API trade
+                    # path. Either one alone makes every order impossible, so reporting only the
+                    # first means the bridge can say "allowed" while nothing can execute. Read
+                    # from the SAME terminal_info() call as `tradeAllowed` above - no extra
+                    # native call, which matters because this handler is on the bridge's only
+                    # thread (see #1000).
+                    'tradeapiDisabled': _term.tradeapi_disabled if _term else None,
                     'connectionState': conn_state,
                     'connectionStateDetail': conn_detail,
                     'remedy': None if conn_state == STATE_OK else (
@@ -1295,7 +1303,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
             if path == '/terminal/info':
                 t = mt5.terminal_info()
                 return json_response(self, {'connected': t is not None, 'build': t.build if t else None, 'path': t.path if t else None,
-                    'tradeAllowed': t.trade_allowed if t else None, 'connectedAt': last_connection_attempt.isoformat() if last_connection_attempt else None})
+                    # ⚠️ #1010 — both blockers, so neither surface can report one and hide the other.
+                    'tradeAllowed': t.trade_allowed if t else None,
+                    'tradeapiDisabled': t.tradeapi_disabled if t else None,
+                    'connectedAt': last_connection_attempt.isoformat() if last_connection_attempt else None})
 
             # /calendar
             if path == '/calendar':
