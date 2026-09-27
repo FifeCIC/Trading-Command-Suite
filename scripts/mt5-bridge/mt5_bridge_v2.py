@@ -688,6 +688,36 @@ _OFFSET_PROBE_WARNED = False
 WATCHDOG_POLL_SECONDS = float(os.environ.get('MT5_WATCHDOG_POLL_SECONDS', '30'))
 WATCHDOG_FAILURES_BEFORE_RECONNECT = int(os.environ.get('MT5_WATCHDOG_FAILURES', '3'))
 WATCHDOG_MAX_BACKOFF_SECONDS = float(os.environ.get('MT5_WATCHDOG_MAX_BACKOFF_SECONDS', '1800'))
+# ── DECISION (2026-09-27, primary) ────────────────────────────────────────────────────────────
+# WHAT:      `terminal-down` now GETS a reconnect attempt, bounded to
+#            WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS consecutive tries before it stops escalating.
+#            It used to be skipped entirely.
+# WHY:       The skip rested on one assumption - "reconnecting cannot help while the terminal is
+#            absent". That assumption is FALSE, and it was measured false on the live bridge.
+#            `mt5.terminal_info()` returns None when THIS PROCESS'S IPC LINK to the terminal is
+#            stale, which is not the same thing as the terminal being absent. A shutdown() +
+#            initialize() - exactly what /reconnect does - repairs it.
+#
+#            Measured 2026-09-27: broker 2 sat in `terminal-down` with `connectionErrors: 71` and
+#            `reachable: false`, and `POST http://localhost:5000/reconnect` returned
+#            `{"success": true, "state": "ok", "balance": 1252.59}` on the first call. So the
+#            terminal WAS running, the remedy DID work, and the watchdog's own log line named that
+#            remedy while the code declined to call it. The bridge announced a fix it would not use.
+#
+#            Cost of the old behaviour, from `decision_log` over 7 days: 14 `Bridge unreachable
+#            (circuit breaker active for broker 2)` + 11 `Bridge unreachable (no response)` FAILED
+#            decisions, every one on the broker the watchdog had decided not to touch.
+# INSTEAD OF: Deleting the guard outright. A genuinely-closed terminal must still not be fought
+#            forever - that was the guard's real purpose and it is worth keeping. So the intent is
+#            preserved as a BOUND (5 tries) rather than a blanket refusal, which is the difference
+#            between "never try" and "stop trying".
+# REVERSE BY: Set WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS to 0 (restores never-try), or restore the
+#            unconditional `if state == STATE_TERMINAL_DOWN: continue`.
+# REGISTER:  docs/SETTLED-DECISIONS.md
+# GUARD:     scripts/mt5-bridge/test_connection_watchdog.py
+#              test_terminal_down_does_reconnect_bounded
+#              test_terminal_down_stops_escalating_after_the_bound
+WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS = int(os.environ.get('MT5_WATCHDOG_TERMINAL_DOWN_ATTEMPTS', '5'))
 
 
 def probe_connection_state():
@@ -756,7 +786,14 @@ def _log_state_change(state, detail):
         return
     remedy = f'POST http://127.0.0.1:{BRIDGE_PORT}/reconnect'
     if state == STATE_TERMINAL_DOWN:
-        remedy += ' — or START THE MT5 TERMINAL: reconnecting cannot help while it is absent'
+        # ⚠️ This used to read "reconnecting cannot help while it is absent". That was wrong often
+        # enough to matter: `terminal_info() is None` also happens when the terminal IS running and
+        # this process's IPC link has gone stale, and a reconnect fixes that. The watchdog now
+        # attempts it (bounded), so the line must not tell the reader the opposite of what happens.
+        remedy += (
+            f' — the watchdog will try {WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS}x; '
+            'if it stays down, START THE MT5 TERMINAL'
+        )
     logger.error(f'MT5 connection state -> {state}: {detail}. Remedy: {remedy}')
 
 
@@ -812,6 +849,10 @@ def connection_watchdog():
     failures = 0
     backoff = WATCHDOG_POLL_SECONDS
     next_attempt_at = 0.0
+    # Consecutive reconnect attempts made while the state is `terminal-down`. Bounded, because a
+    # genuinely-absent terminal cannot be reconnected and looping on it is the restart-thrash this
+    # repo already paid for once. Reset by any STATE_OK poll. See the DECISION above the constant.
+    terminal_down_attempts = 0
     while True:
         time.sleep(WATCHDOG_POLL_SECONDS)
         try:
@@ -829,25 +870,44 @@ def connection_watchdog():
             failures = 0
             backoff = WATCHDOG_POLL_SECONDS
             next_attempt_at = 0.0
+            terminal_down_attempts = 0
             continue
 
         failures += 1
-
-        # ⚠️ A terminal that is ABSENT is not a session we can rebuild. Say so and
-        # stop escalating rather than reconnecting forever against nothing.
-        if state == STATE_TERMINAL_DOWN:
-            continue
 
         if failures < WATCHDOG_FAILURES_BEFORE_RECONNECT:
             continue
         if time.time() < next_attempt_at:
             continue
 
-        ok, _err = reconnect_mt5(f'watchdog: {failures} consecutive bad polls in state {state} ({detail})')
+        # ⚠️ `terminal-down` IS attempted, but only so many times.
+        #
+        # This used to `continue` here, on the reasoning that "reconnecting cannot help while the
+        # terminal is absent". That reasoning is wrong for the common case: `terminal_info()` is
+        # None when this process's IPC link is stale, and a shutdown()+initialize() repairs it.
+        # Measured 2026-09-27 - broker 2 sat in this state for hours with 71 connection errors and
+        # `POST /reconnect` fixed it on the first call. The remedy was in the log; the code declined
+        # to use it. The bound keeps the anti-thrash intent without the false premise.
+        if state == STATE_TERMINAL_DOWN:
+            if terminal_down_attempts >= WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS:
+                continue
+            terminal_down_attempts += 1
+
+        ok, _err = reconnect_mt5(
+            f'watchdog: {failures} consecutive bad polls in state {state} ({detail})'
+            + (f' [terminal-down attempt {terminal_down_attempts}/{WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS}]'
+               if state == STATE_TERMINAL_DOWN else '')
+        )
         if ok:
             failures = 0
             backoff = WATCHDOG_POLL_SECONDS
             next_attempt_at = 0.0
+            # ⚠️ `terminal_down_attempts` is deliberately NOT reset here. It is reset ONLY by an
+            # observed STATE_OK poll, because that is the only proof the state actually cleared.
+            # Resetting it on a "successful" reconnect that left the state unchanged made the bound
+            # unreachable: the counter cleared every time and the watchdog retried forever. Caught
+            # by test_terminal_down_stops_escalating_after_the_bound reporting 9 attempts against a
+            # bound of 5 — which is exactly what a guard is for.
         else:
             next_attempt_at = time.time() + backoff
             backoff = min(backoff * 2, WATCHDOG_MAX_BACKOFF_SECONDS)

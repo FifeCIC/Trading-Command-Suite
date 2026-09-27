@@ -13,17 +13,20 @@ deliberately does NOT, and that cannot be verified by reading it:
 
   * it must NOT rebuild the session on a single blip,
   * it MUST rebuild after N consecutive bad polls,
-  * it must NOT reconnect against a terminal that is ABSENT (reconnecting cannot help,
-    and looping there is the restart-thrash this repo already paid for once),
+  * it MUST also try on `terminal-down`, but ONLY so many times — a genuinely-absent terminal
+    must not be fought forever, while a STALE IPC LINK must not be abandoned (2026-09-27: the
+    blanket skip left broker 2 dead for hours with 71 connection errors, and `/reconnect`
+    repaired it on the first call — see the DECISION beside WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS),
   * it must back off after a FAILED reconnect rather than hammering.
 
 ⚠️ HOW TO CANARY THIS FILE (do it before trusting it).
-  1. In connection_watchdog, move the `if state == STATE_TERMINAL_DOWN: continue`
-     below the reconnect call. `test_does_not_reconnect_when_the_terminal_is_absent`
-     must FAIL.
-  2. Change `if failures < WATCHDOG_FAILURES_BEFORE_RECONNECT: continue` to `<=`.
+  1. Delete the `if state == STATE_TERMINAL_DOWN:` bound inside connection_watchdog.
+     `test_terminal_down_stops_escalating_after_the_bound` must FAIL.
+  2. Restore the old unconditional `if state == STATE_TERMINAL_DOWN: continue`.
+     `test_terminal_down_does_reconnect_bounded` must FAIL.
+  3. Change `if failures < WATCHDOG_FAILURES_BEFORE_RECONNECT: continue` to `<=`.
      `test_waits_for_the_failure_threshold` must FAIL.
-  Restore byte-for-byte and confirm both pass again.
+  Restore byte-for-byte and confirm all pass again.
 
 Run:  python -m unittest scripts.mt5-bridge.test_connection_watchdog
   or: python scripts/mt5-bridge/test_connection_watchdog.py
@@ -197,12 +200,38 @@ class WatchdogDecisionTest(unittest.TestCase):
         self.assertEqual(len(self.reconnects), 1, 'did not reconnect at the threshold')
         self.assertIn('watchdog', self.reconnects[0])
 
-    def test_does_not_reconnect_when_the_terminal_is_absent(self):
-        # ⚠️ The anti-thrash rule. Fire many times so the threshold is exceeded.
-        down = (self.bridge.STATE_TERMINAL_DOWN, 'terminal absent')
-        self._run([down] * (self.bridge.WATCHDOG_FAILURES_BEFORE_RECONNECT * 5))
+    def test_terminal_down_does_reconnect_bounded(self):
+        """`terminal-down` is NOT abandoned — the stale-IPC-link case needs a reconnect.
+
+        ⚠️ This test REPLACES `test_does_not_reconnect_when_the_terminal_is_absent`, whose
+        premise was measured false on 2026-09-27: broker 2 sat in `terminal-down` with 71
+        connection errors and `POST /reconnect` restored it (`balance: 1252.59`) on the first
+        call. `terminal_info() is None` means the IPC link is stale far more often than it
+        means the terminal is absent.
+        """
+        down = (self.bridge.STATE_TERMINAL_DOWN, 'terminal_info() is None')
+        self._run([down] * (self.bridge.WATCHDOG_FAILURES_BEFORE_RECONNECT + 1))
         self.assertEqual(
-            self.reconnects, [], 'reconnected against an ABSENT terminal — reconnecting cannot help'
+            len(self.reconnects), 1,
+            'terminal-down was abandoned — a stale IPC link is recoverable and must be tried',
+        )
+
+    def test_terminal_down_stops_escalating_after_the_bound(self):
+        """The anti-thrash rule SURVIVES, as a bound rather than a blanket refusal.
+
+        A genuinely-absent terminal cannot be reconnected. Fire far more polls than the bound and
+        assert the attempts stop there — otherwise a closed terminal is hammered forever, which is
+        the restart-thrash this repo already paid for once.
+        """
+        bound = self.bridge.WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS
+        down = (self.bridge.STATE_TERMINAL_DOWN, 'terminal absent')
+        self._run(
+            [down] * (self.bridge.WATCHDOG_FAILURES_BEFORE_RECONNECT * (bound + 4)),
+            max_iterations=bound,
+        )
+        self.assertEqual(
+            len(self.reconnects), bound,
+            f'expected exactly {bound} bounded attempts against an absent terminal',
         )
 
     def test_recovers_and_resets(self):
@@ -230,10 +259,17 @@ class LogOnceTest(unittest.TestCase):
         self.assertEqual(len(self.lines), 1)
         self.assertIn('/reconnect', self.lines[0], 'the remedy is missing from the log line')
 
-    def test_terminal_down_says_reconnecting_cannot_help(self):
+    def test_terminal_down_names_a_remedy_that_is_actually_attempted(self):
+        """The line must not tell the reader the opposite of what the code does.
+
+        It used to say "reconnecting cannot help" while the code declined to reconnect — and the
+        remedy it named was the one that worked. Now it states what the watchdog WILL do.
+        """
         self.bridge.logger.error = lambda msg: self.lines.append(msg)
         self.bridge._log_state_change(self.bridge.STATE_TERMINAL_DOWN, 'terminal_info() is None')
-        self.assertIn('cannot help', self.lines[0])
+        self.assertIn('/reconnect', self.lines[0])
+        self.assertNotIn('cannot help', self.lines[0])
+        self.assertIn('START THE MT5 TERMINAL', self.lines[0])
 
     def test_offset_probe_warns_once_not_every_call(self):
         # ⚠️ The 4,325-line defect itself: the probe runs on EVERY request.
