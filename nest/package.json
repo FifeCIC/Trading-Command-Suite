@@ -30,7 +30,7 @@
     "seed:watchlists": "ts-node prisma/seed-watchlists.ts",
     "seed:symbol-onboarding": "ts-node prisma/seed-symbol-onboarding.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "node scripts/start-api.cjs",
     "build:preflight": "node scripts/build-preflight.cjs",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

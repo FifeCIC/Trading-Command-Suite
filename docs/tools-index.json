@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 145,
+  "count": 146,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -746,6 +746,16 @@
       "category": "tool",
       "purpose": "Roadmap sync (epic #681, Phase B)",
       "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "start-api.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "start the API, or refuse with the RIGHT instruction. Never destroys dist/ (#968).",
+      "selfTest": true,
       "reaches": [
         "npm"
       ]
