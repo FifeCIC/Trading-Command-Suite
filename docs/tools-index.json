@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 144,
+  "count": 145,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -490,6 +490,16 @@
       "selfTest": false,
       "reaches": [
         "npm"
+      ]
+    },
+    {
+      "name": "handoff-status.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "pending vs processed handoffs, and the vocabulary that makes an audit honest.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
       ]
     },
     {

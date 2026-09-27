@@ -62,11 +62,80 @@ agent that did the work to the Librarian that records it.
 directory nobody could find**. One canonical, discoverable location is the fix; permanence in the
 repo is not required.
 
-## ⚠️ A handoff must state what it did NOT do
+## ⚠️ A handoff must state what it did NOT do — IN ONE OF TWO DISTINCT SECTIONS
 
 **2026-09-11.** A handoff that reads as complete when the work was partial is the same defect as a
 ticked checklist box that was never verified (#638). If you stopped short anywhere, say so
 explicitly with the reason. Honest-partial is a pass; silent-partial is the failure.
+
+> ⚠️ **Corrected 2026-09-27, after an audit of all 243 handoffs.** `## Not done` was doing **two
+> different jobs**, and the ambiguity made the set **unauditable**: an automated sweep of
+> closed issues flagged **20** handoffs as carrying a caveat, then **8** once comments were included,
+> then **2**, and on reading them **neither was lost work** — one was a deferral, the other was a
+> change *deliberately declined*. **A 10× over-report from vocabulary alone.**
+
+Use **whichever applies**, and do not merge them — they mean opposite things to a reader deciding
+whether work is outstanding:
+
+```markdown
+## Deferred — work handed on
+
+- **{what}** — not done here because **{reason}**. Owner: **#{issue}**.
+  # A deferral names the issue that owns it, or it is not a deferral — it is a silent drop.
+
+## Deliberately unchanged
+
+- **{what}** — considered and declined. **{why it stays as it is}**.
+  # Nothing is outstanding. This records a decision, so the next reader does not re-open it.
+```
+
+| Section | Means | Is work outstanding? |
+|---|---|---|
+| **Deferred** | handed to a named owner | **YES** |
+| **Deliberately unchanged** | considered, declined, reason given | **NO** |
+
+⚠️ **Do not write `## Not done`.** It cannot distinguish the two, so it reads as outstanding in a
+sweep even when nothing is. Use `--check`-style wording that a script can trust.
+
+## 📁 CONSUMED STATE — the pending set is exactly what is in `handoff/`
+
+> **Added 2026-09-27.** The audit found **243 handoffs in a flat directory with no record of which
+> the Librarian had processed** — and no subdirectories at all. A spent handoff and a pending one
+> were **indistinguishable**, which is why the set only ever grows and why no reduction could be
+> made safely: deleting would have been a guess.
+
+**The convention, and it is a MOVE, never a delete:**
+
+```
+handoff/                    ← PENDING: written by agents, not yet processed
+handoff/processed/          ← CONSUMED: summarised into the three pages
+```
+
+- **An agent** writes to `handoff/` and stops there.
+- **The Librarian** reads a batch, writes the summaries, then **moves** the sources to
+  `handoff/processed/`. Moving is reversible; deleting is not.
+- **Nothing is ever deleted** — the existing rule that a handoff must not be deleted before it is
+  summarised is unchanged. This says where it goes *after*.
+
+⚠️ **Why a move rather than a `status:` field.** A field is a claim that can disagree with reality
+and needs parsing to trust; a directory is the fact itself. `ls handoff/*.md` is the pending list,
+with no script required to believe it.
+
+```powershell
+node scripts/handoff-status.cjs            # pending vs processed, and what needs attention
+node scripts/handoff-status.cjs --self-test  # prove the classifier can fail
+```
+
+## ⚠️ ONE HANDOFF PER LANDING — not one per issue
+
+The audit also found **24 issues carrying between 2 and 7 handoffs**, and the obvious response
+(merge them) was **wrong**: only **one** of the 24 was a phase series. The other 23 were
+**multi-landing** — separate changes sharing an issue number, written days apart (`#761` 09-10 →
+09-26; `#984` 09-23 → 09-25). Merging would have conflated distinct changes and destroyed the
+per-landing record.
+
+**So: a second handoff for an issue is correct when it is a second landing.** It is a mistake only
+when it restates the same landing — check the date and the change, not the issue number.
 
 ## 🛑 If your change touched the database schema
 
