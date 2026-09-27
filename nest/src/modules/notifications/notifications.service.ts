@@ -27,7 +27,27 @@ export type NotificationEvent =
   | 'position-opened'
   | 'position-closed'
   | 'stop-adjusted'
+  | 'trade-disabled'
   | 'test';
+
+/**
+ * HOW LOUD AN EVENT IS ALLOWED TO BE.
+ *
+ * ⚠️ Added 2026-09-27 at the owner's request: *"If there are priorities in our notifications then
+ * offer those as a control too."* Until this existed the only control was per-event on/off, so the
+ * unit of decision for the owner was "this exact event", and the real question they were asking was
+ * "stop sending me routine bookkeeping".
+ *
+ *   critical — trading is IMPOSSIBLE, or money is at immediate risk. Never mutable.
+ *   high     — a fault that needs a human but does not stop execution.
+ *   normal   — a trade lifecycle event.
+ *   low      — running commentary. Adjustments, pacing, housekeeping.
+ */
+export type NotificationPriority = 'critical' | 'high' | 'normal' | 'low';
+
+export const PRIORITY_RANK: Record<NotificationPriority, number> = {
+  critical: 4, high: 3, normal: 2, low: 1,
+};
 
 export interface NotificationMessage {
   title: string;
@@ -42,6 +62,20 @@ export interface NotificationPreference {
   event: NotificationEvent;
   channels: NotificationChannel[];
   enabled: boolean;
+  /** How loud this event is. Drives the global `minPriority` floor. */
+  priority: NotificationPriority;
+  /**
+   * ⚠️ A MANDATORY EVENT CANNOT BE DISABLED, and the reason is the failure this whole channel
+   * exists for: AutoTrading was off for days, 19 orders were refused, and NOBODY KNEW. An owner
+   * who mutes "trading is impossible" while tidying up a noisy list has reproduced that outage by
+   * hand. `send()` refuses to honour `enabled: false` on these rather than trusting the caller.
+   */
+  mandatory?: boolean;
+  /**
+   * The floor this event sits under, so the settings surface can explain the number rather than
+   * leaving the owner to guess why a muted event still arrives.
+   */
+  minPriority?: NotificationPriority;
 }
 
 export interface NotificationHistoryEntry {
@@ -69,17 +103,34 @@ const ALERT_EVENT_MAP: Record<
 };
 
 const DEFAULT_PREFERENCES: NotificationPreference[] = [
-  { event: 'entry-signal', channels: ['windows', 'telegram', 'discord'], enabled: true },
-  { event: 'drawdown-warning', channels: ['windows', 'telegram'], enabled: true },
-  { event: 'daily-limit', channels: ['email', 'discord'], enabled: true },
-  { event: 'daily-summary', channels: ['email'], enabled: true },
-  { event: 'backtest-complete', channels: ['telegram'], enabled: true },
-  { event: 'provider-degraded', channels: ['windows', 'telegram', 'discord'], enabled: true },
-  { event: 'dxy-regime-change', channels: ['windows', 'telegram', 'discord'], enabled: true },
-  { event: 'position-opened', channels: ['windows', 'telegram', 'discord'], enabled: true },
-  { event: 'position-closed', channels: ['windows', 'telegram', 'discord'], enabled: true },
-  { event: 'stop-adjusted', channels: ['windows', 'telegram'], enabled: true },
-  { event: 'test', channels: ['windows', 'telegram', 'discord', 'email'], enabled: true },
+  { event: 'entry-signal', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'high' },
+  { event: 'drawdown-warning', channels: ['windows', 'telegram'], enabled: true, priority: 'critical' },
+  { event: 'daily-limit', channels: ['email', 'discord'], enabled: true, priority: 'critical' },
+  { event: 'daily-summary', channels: ['email'], enabled: true, priority: 'low' },
+  { event: 'backtest-complete', channels: ['telegram'], enabled: true, priority: 'low' },
+  { event: 'provider-degraded', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'high' },
+  { event: 'dxy-regime-change', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'normal' },
+  { event: 'position-opened', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'normal' },
+  { event: 'position-closed', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'normal' },
+  // ⚠️ TURNED DOWN 2026-09-27, from the owner's report: *"So far I'm being updated on every stop
+  // loss adjustment."* MEASURED the same day: the Stop Guardian was trailing stops on a CLOSED
+  // market every ~30 seconds and the broker ACCEPTED every edit (#1011), so this event fired
+  // continuously all weekend for a market that was not trading. `low` is the honest
+  // classification — a stop adjustment is bookkeeping, not news — and the floor below mutes it by
+  // default while leaving the event itself intact and re-enableable.
+  { event: 'stop-adjusted', channels: ['windows', 'telegram'], enabled: false, priority: 'low' },
+  { event: 'test', channels: ['windows', 'telegram', 'discord', 'email'], enabled: true, priority: 'low' },
+
+  /**
+   * ⚠️ THE EVENT THAT MATTERS MOST, AND IT DID NOT EXIST UNTIL 2026-09-27.
+   *
+   * Every MT5 terminal had AutoTrading OFF; 19 orders were refused `retcode 10027`; `decision_log`
+   * held ONE execution in 48h — and every bridge reported `connected: true` the whole time, so
+   * `provider-degraded` correctly stayed silent. Nothing told anyone. The app looked healthy.
+   *
+   * `mandatory: true` because muting it reproduces that outage exactly.
+   */
+  { event: 'trade-disabled', channels: ['windows'], enabled: true, priority: 'critical', mandatory: true },
 ];
 
 @Injectable()
@@ -87,6 +138,16 @@ export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
   private history: NotificationHistoryEntry[] = [];
   private preferences: NotificationPreference[] = [...DEFAULT_PREFERENCES];
+
+  /**
+   * THE GLOBAL FLOOR — nothing quieter than this is delivered, on any channel.
+   *
+   * ⚠️ Defaults to `'low'`, which suppresses NOTHING. That is deliberate: a control that starts
+   * active and silent would look identical to a broken notification system, and the owner asked for
+   * this to REDUCE noise they chose, not to have noise removed on their behalf. `'critical'` is what
+   * mutes the routine traffic — and `trade-disabled` is exempt from the floor entirely.
+   */
+  private minPriority: NotificationPriority = 'low';
   private emailRateLimit = 0; // 0 = not rate limited
   private lastEmailSent = 0;
 
@@ -111,9 +172,33 @@ export class NotificationService {
   async send(msg: NotificationMessage): Promise<void> {
     const prefs = this.preferences.find((p) => p.event === msg.event);
 
-    if (!prefs || !prefs.enabled) {
+    // ⚠️ A MANDATORY EVENT IGNORES `enabled: false`, AND THAT IS ENFORCED HERE RATHER THAN TRUSTED.
+    // `trade-disabled` means no order can be placed. An owner tidying a noisy list is exactly the
+    // person who would switch it off, and switching it off reproduces the outage it exists for —
+    // 19 refusals and ONE execution, with the app reporting healthy throughout. The refusal is
+    // LOGGED, not silent, because a setting that appears to work and does not is worse than one
+    // that cannot be set.
+    if (prefs?.mandatory && !prefs.enabled) {
+      this.logger.warn(
+        `Refusing to mute mandatory notification "${msg.event}" — it is sent regardless of the stored preference.`,
+      );
+    } else if (!prefs || !prefs.enabled) {
       this.logger.debug(`Notification disabled for event: ${msg.event}`);
       return;
+    }
+
+    // ── The priority floor ──
+    // ⚠️ AND MANDATORY EVENTS ARE EXEMPT FROM IT. `minPriority: 'critical'` is a legitimate thing
+    // for the owner to choose and it must not take `trade-disabled` with it — the floor is a
+    // convenience control, and no convenience control is allowed to silence "you cannot trade".
+    if (!prefs?.mandatory && prefs) {
+      const floor = PRIORITY_RANK[this.minPriority];
+      if (PRIORITY_RANK[prefs.priority] < floor) {
+        this.logger.debug(
+          `Notification suppressed by minPriority=${this.minPriority}: ${msg.event} is ${prefs.priority}`,
+        );
+        return;
+      }
     }
 
     // Persist important events as Alert rows so they survive restarts and
@@ -219,6 +304,25 @@ export class NotificationService {
   /** Get current notification preferences. */
   getPreferences(): NotificationPreference[] {
     return this.preferences;
+  }
+
+  /** The global floor, so a settings surface can show it rather than assume its default. */
+  getMinPriority(): NotificationPriority {
+    return this.minPriority;
+  }
+
+  /**
+   * Update the floor. Returns what it actually became, so a caller cannot report a change that was
+   * rejected — the same reason `notify()` returns a boolean rather than void.
+   */
+  setMinPriority(priority: NotificationPriority): NotificationPriority {
+    if (PRIORITY_RANK[priority] == null) {
+      this.logger.warn(`Ignoring unknown minPriority "${priority}" — keeping "${this.minPriority}".`);
+      return this.minPriority;
+    }
+    this.minPriority = priority;
+    this.logger.log(`Notification floor set to "${priority}".`);
+    return this.minPriority;
   }
 
   /** Update notification preferences. */

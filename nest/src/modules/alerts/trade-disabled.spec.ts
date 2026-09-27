@@ -19,15 +19,15 @@ function check(service: AlertTriggerService): () => Promise<any> {
 }
 
 function serviceWith(brokers: any[]) {
-  const windows = { notify: jest.fn(), reset: jest.fn() };
+  const notifications = { send: jest.fn().mockResolvedValue(undefined) };
   const svc = new AlertTriggerService(
     { addAlert: jest.fn() } as any,        // alerts
     {} as any,                              // prisma
     {} as any,                              // calendar
     { getAllBrokerHealths: async () => brokers } as any, // mt5Connection
-    windows as any,
+    notifications as any,                   // notifications — the ONE dispatcher
   );
-  return { svc, windows };
+  return { svc, notifications };
 }
 
 const up = (brokerId: number, health: any) => ({
@@ -52,14 +52,12 @@ describe('#972/#1010 — trade-disabled', () => {
 
   it('STAYS SILENT when one broker can trade — even if the other cannot', async () => {
     // ⚠️ The direction that stops "one broken broker" reading as "trading is off".
-    const { svc, windows } = serviceWith([
+    const { svc } = serviceWith([
       up(2, { tradeAllowed: false, tradeapiDisabled: false }),
       up(3, { tradeAllowed: true, tradeapiDisabled: false }),
     ]);
     const r = await check(svc)();
     expect(r?.triggered).toBe(false);
-    // And the throttle must be CLEARED, or the next real outage is suppressed by this one.
-    expect(windows.reset).toHaveBeenCalledWith('trade-disabled');
   });
 
   it('STAYS SILENT when a flag is UNKNOWN (null) — unknown is not off', async () => {
@@ -94,24 +92,24 @@ describe('#972/#1010 — trade-disabled', () => {
   });
 
   it('STAYS SILENT when the bridge health query throws — cannot judge is not a fault', async () => {
-    const windows = { notify: jest.fn(), reset: jest.fn() };
+    const notifications = { send: jest.fn() };
     const svc = new AlertTriggerService(
       { addAlert: jest.fn() } as any,
       {} as any,
       {} as any,
       { getAllBrokerHealths: async () => { throw new Error('bridge down'); } } as any,
-      windows as any,
+      notifications as any,
     );
     expect(await check(svc)()).toBeNull();
   });
 });
 
-describe('ATTENTION_KEYS — which conditions earn a Windows notification', () => {
+describe('ATTENTION_KEYS — which conditions earn an out-of-app notification', () => {
   it('includes trade-disabled, and is deliberately small', () => {
     const keys = (new (AlertTriggerService as any)(
       { addAlert: jest.fn() } as any, {} as any, {} as any,
       { getAllBrokerHealths: async () => [] } as any,
-      { notify: jest.fn(), reset: jest.fn() } as any,
+      { send: jest.fn() } as any,
     ) as any).ATTENTION_KEYS as Set<string>;
 
     expect(keys.has('trade-disabled')).toBe(true);

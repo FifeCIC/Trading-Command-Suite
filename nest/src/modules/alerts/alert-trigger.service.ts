@@ -19,7 +19,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AlertsService, type AlertSeverity } from './alerts.service';
-import { WindowsNotifyService } from './windows-notify.service';
+import { NotificationService } from '../notifications/notifications.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
@@ -92,7 +92,7 @@ export class AlertTriggerService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly calendar: MarketCalendarService,
     private readonly mt5Connection: Mt5ConnectionManager,
-    private readonly windows: WindowsNotifyService,
+    private readonly notifications: NotificationService,
   ) {}
 
   onModuleInit() {
@@ -245,9 +245,8 @@ export class AlertTriggerService implements OnModuleInit {
         b.health?.tradeAllowed === false || b.health?.tradeapiDisabled === true;
 
       if (connected.some(canTrade)) {
-        // At least one broker can trade — clear the throttle so the NEXT outage notifies
-        // immediately rather than being suppressed by the previous one's cooldown.
-        this.windows.reset('trade-disabled');
+        // Trading is possible again. No throttle to clear here — `NotificationService` decides
+        // delivery from the owner's stored preferences, not from a counter this class owns.
         return { triggered: false, title: '', message: '' };
       }
       if (!connected.some(definitelyBlocked)) {
@@ -688,11 +687,27 @@ export class AlertTriggerService implements OnModuleInit {
 
     // ⚠️ THE IN-APP ROW IS NOT ENOUGH FOR THESE, AND THAT IS THE WHOLE POINT (owner, 2026-09-27:
     // *"the notifications aren't attention demanding - none are integrated with windows"*). The
-    // failure mode for `trade-disabled` is that nobody is looking at the app, so an alert that
-    // only appears inside it cannot fire. Fire-and-forget: a UI concern must never hold up or
-    // fail the trading path, and `notify()` already swallows its own errors.
+    // failure mode for `trade-disabled` is that nobody is looking at the app, so an alert that only
+    // appears inside it cannot fire.
+    //
+    // ⚠️ AND IT GOES THROUGH NotificationService RATHER THAN A LOCAL POWERSHELL CALL, WHICH CORRECTS
+    // A MISTAKE I MADE. I originally built a `WindowsNotifyService` here because I grepped THIS
+    // module for a dispatcher, found none, and concluded none existed — without looking in
+    // `modules/notifications/`, where a Windows toast channel has existed all along. That duplicate
+    // was worse than redundant: it BYPASSED THE OWNER'S PREFERENCES ENTIRELY, so a notification
+    // could not be turned off, prioritised or routed. This repo's own rule is "prefer the existing
+    // canonical mechanism", and a second implementation gets the next fix while the first does not.
+    //
+    // Fire-and-forget: a notification must never hold up or fail the trading path.
     if (this.ATTENTION_KEYS.has(key)) {
-      void this.windows.notify({ key, title, message });
+      void this.notifications
+        .send({
+          title,
+          body: message,
+          event: 'trade-disabled',
+          metadata: { trigger: key, urgency: 'critical' },
+        })
+        .catch(() => {});
     }
   }
 
