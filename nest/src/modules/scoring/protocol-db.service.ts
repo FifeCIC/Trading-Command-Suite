@@ -602,6 +602,21 @@ export class ProtocolDbService implements OnModuleInit {
     groups: number;
     assignments: number;
     watchlists: number;
+    /**
+     * #1012 — `score_snapshot` rows this deletion ORPHANS.
+     *
+     * ⚠️ THEY ARE NOT DELETED, AND THAT IS THE DECISION. They are the only record of what this
+     * protocol scored, and `score_snapshot` is what `/api/symbols/:ticker/protocols` enriches
+     * from. A retention decision was made deliberately (register row 42): history is KEPT and the
+     * orphan state is made VISIBLE rather than swept.
+     *
+     * ⚠️ Measured 2026-09-27: `hourly-3dir-v1-copy` was deleted by THIS method and left 1 row
+     * orphaned. It is reported so the act is recorded, not silent.
+     *
+     * ⚠️ Returned rather than merely logged, because a caller that cannot see the number cannot
+     * weigh it.
+     */
+    scoreSnapshots: number;
   } | null> {
     const row: any = await (this.prisma as any).protocol.findFirst({
       where: { OR: [{ slug: ref }, { id: ref }] },
@@ -611,6 +626,14 @@ export class ProtocolDbService implements OnModuleInit {
     if (!/-copy(-\d+)?$/.test(row.slug)) {
       throw new Error(`Refused: "${row.slug}" is not a copy (no -copy suffix) — refusing to delete it`);
     }
+
+    // #1012 — count the history this leaves behind, BEFORE deleting anything.
+    // ⚠️ Matched on BOTH the slug and the id: `score_snapshot.protocolId` normally holds a SLUG,
+    // but a raw UUID was measured in it for XAUUSD (507 rows). Counting only the slug would
+    // under-report exactly the rows that are hardest to find again.
+    const scoreSnapshots = await (this.prisma as any).scoreSnapshot
+      .count({ where: { protocolId: { in: [row.slug, row.id] } } })
+      .catch(() => 0);
 
     const groups: any[] = await (this.prisma as any).protocolDirectiveGroup.findMany({
       where: { protocolId: row.id },
@@ -632,7 +655,11 @@ export class ProtocolDbService implements OnModuleInit {
     void this.preloadAll().catch(() => { /* background refresh only */ });
     this.logger.log(
       `Deleted protocol copy "${row.slug}" (${entries.count} entry(ies), ${groupDel.count} group(s), ` +
-      `${assignments.count} assignment(s), ${watchlists.count} watchlist(s))`,
+        `${assignments.count} assignment(s), ${watchlists.count} watchlist(s))` +
+        (scoreSnapshots > 0
+          ? ` — ⚠️ ORPHANED ${scoreSnapshots} score_snapshot row(s). They are KEPT as history (#1012); ` +
+            'nothing will resolve them to a protocol name again.'
+          : ''),
     );
     return {
       slug: row.slug,
@@ -640,6 +667,8 @@ export class ProtocolDbService implements OnModuleInit {
       groups: groupDel.count,
       assignments: assignments.count,
       watchlists: watchlists.count,
+      // #1012 — reported, not silent. These rows remain in `score_snapshot` as history.
+      scoreSnapshots,
     };
   }
 
