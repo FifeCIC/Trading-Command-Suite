@@ -9,6 +9,7 @@ import MarketTape from './components/MarketTape';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
 import { apiGet } from './core/api/client';
+import useTradeAttention from './core/use-trade-attention';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import HomeDashboard from './pages/HomeDashboard';
@@ -239,6 +240,17 @@ function AppShell() {
   const [performanceSnapshot, setPerformanceSnapshot] = useState(() => getPerformanceSnapshot());
 
   const { isOnline, wasOffline, lastOnlineAt } = useNetworkStatus();
+
+  // ── Browser notification when algo trading is not active (owner request, 2026-09-27) ──
+  //
+  // ⚠️ THE BACKSTOP, NOT THE PRIMARY CHANNEL: this only fires while a tab is open, which is
+  // exactly the situation `trade-disabled` usually is NOT in. The Windows channel raised from the
+  // BACKEND (WindowsNotifyService) is the one that reaches an absent owner. Mounted at the shell
+  // so it watches globally rather than only on a page that happens to show the MT5 state.
+  //
+  // Reads `GET /api`, which already carries `anyTradeAllowed` (#972/#1010) — it computes nothing
+  // new and is not a second poller of the trading path.
+  useTradeAttention();
 
   const healthQuery = useQuery({
     queryKey: ['health'],
