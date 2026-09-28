@@ -542,6 +542,22 @@ export class PositionSyncService {
           exitPrice = filledVolume > 0
             ? exitDeals.reduce((sum: number, d: any) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
             : Number(exitDeals[exitDeals.length - 1].price || 0);
+          // ── DECISION (2026-09-28, primary) ──
+          // WHAT:      `realizedPnl` below is the position's ENTIRE net, with NO split by the
+          //            row's volume. That is correct ONLY while one row owns one positionId.
+          // WHY:       On a NETTING account every order on a symbol shares ONE positionId. If N
+          //            rows carry it, all N resolve to these same deals and EACH books the whole
+          //            net — a 4x overstatement on the 4-order A/B scale-ins, with plausible
+          //            numbers and no error. So the ORDER TICKET is still what the write sites
+          //            store (#1014 reverted, commit e7cb774); the bridge and adapter DO now carry
+          //            `positionId`, and the switch waits on this.
+          // INSTEAD OF: Storing `result.positionId` at the write sites, which is what #1014 asked
+          //            for and what the deal-match below appears to require.
+          // REVERSE BY: Split here — `rowShare = row.quantity / sum(OPENING deal volume)` — then
+          //            store the position id at the write sites. Verifiable only once a multi-row
+          //            position exists; measured 2026-09-28 that none does, so it is NOT verifiable yet.
+          // REGISTER:  docs/SETTLED-DECISIONS.md row 43
+          // GUARD:     nest/scripts/audit-trade-pnl-attribution.cjs (on demand)
           realizedPnl = exitDeals.reduce((sum: number, d: any) =>
             sum + Number(d.profit || 0) + Number(d.commission || 0) + Number(d.swap || 0) + Number(d.fee || 0), 0);
           // `pnl` ALREADY includes these (it is profit + commission + swap + fee). Storing them
@@ -569,8 +585,18 @@ export class PositionSyncService {
       // here, because this function runs on a LATER tick, after the position has already
       // vanished from the broker snapshot, and cannot tell a close of ours from the broker's.
       //
-      // When nothing recorded a reason, derive one from the broker's deal `reason`. The running
-      // bridge does not forward that field yet, so this yields `broker:unknown` — deliberately.
+      // When nothing recorded a reason, derive one from the broker's deal `reason`.
+      //
+      // ⚠️ CORRECTED 2026-09-28 — this said "The running bridge does not forward that field yet,
+      // so this yields `broker:unknown` — deliberately." That was TRUE when written and is now
+      // STALE: the bridge DOES forward it. This reconciler reads `/history`, whose handler maps
+      // `'reason': d.reason` per deal (scripts/mt5-bridge/mt5_bridge_v2.py), and a real stop-loss
+      // was measured arriving here as `reason=4`. So a row with no recorded reason now gets a
+      // genuine answer rather than a blanket `broker:unknown`.
+      //
+      // ⚠️ The comment was believed over the code by an agent (2026-09-28) and reported as a
+      // current defect. A stale comment is not neutral: it reads as a measurement, and it costs
+      // whoever believes it. Prefer the sentinel below, which is what "we truly cannot tell" means —
       // "The broker did it and did not say why" is the true statement; a guess is what made the
       // 2026-09-18 investigation impossible in the first place.
       // Precedence: a reason already ON the row (written by the closer at close time) > OUR comment
