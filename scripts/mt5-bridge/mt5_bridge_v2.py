@@ -101,6 +101,21 @@ _SERVER_OFFSET_TTL_SECONDS = 1800  # re-measure twice an hour — DST moves twic
 ROUNDING_STEP_SECONDS = 900
 ROUNDING_HALF_STEP_SECONDS = ROUNDING_STEP_SECONDS // 2
 
+# ── The MT5 MAGIC number (per-bot attribution key, #1018) ────────────────────────────────
+# MT5 stamps every order with an integer `magic`, and that value travels with the POSITION for
+# its whole life. Unlike the comment — which MT5 TRUNCATES (measured: `TCS Wellington NZDJPY
+# Sessi` against a real name of `Wellington NZDJPY Session`) — a magic is never truncated and
+# cannot be retyped by hand in the terminal.
+#
+# ⚠️ THE APP NOW SENDS A PER-BOT MAGIC; THIS IS ONLY THE FALLBACK. Before 2026-09-28 the bridge
+# hardcoded one value for every order, so every position on every bot carried the SAME magic and
+# it identified nothing. That is why the stop guardian had to match a position to a bot by SYMBOL
+# — which is not an owner (XAUUSD alone carries eight active bots).
+#
+# ⚠️ The default is kept EXACTLY as it was, so a caller that sends no magic (or an old client)
+# behaves byte-for-byte as before. Changing it would silently re-tag existing behaviour.
+DEFAULT_MAGIC = 234000
+
 def detect_server_utc_offset(force=False):
     """Measure how far the broker's server clock runs ahead of true UTC.
 
@@ -1446,6 +1461,22 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 volume = float(body.get('volume', 0.01))
                 sl = body.get('sl'); tp = body.get('tp')
                 comment = body.get('comment', 'TCS Trade')
+                # #1018 - the app supplies a PER-BOT magic, so a position can be attributed to
+                # the bot that opened it. Absent or unreadable -> DEFAULT_MAGIC, i.e. unchanged.
+                # WARNING: an MT5 magic is IMMUTABLE once the order is placed, so only this
+                # opening path can set it; a wrong value here cannot be corrected afterwards.
+                try:
+                    magic = int(body.get('magic') or DEFAULT_MAGIC)
+                except (TypeError, ValueError):
+                    magic = DEFAULT_MAGIC
+                # #1018 — the app supplies a PER-BOT magic so a position can be attributed to the
+                # bot that opened it. Absent or unreadable → DEFAULT_MAGIC, i.e. the old behaviour.
+                # ⚠️ Magic is read ONCE per order and is IMMUTABLE afterwards in MT5, so a wrong
+                # value here cannot be corrected later — only the opening path may set it.
+                try:
+                    magic = int(body.get('magic') or DEFAULT_MAGIC)
+                except (TypeError, ValueError):
+                    magic = DEFAULT_MAGIC
                 client_order_id = body.get('clientOrderId', '').strip()
                 if not symbol: return json_response(self, {'error': 'Symbol required'}, 400)
 
@@ -1535,7 +1566,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
                 req = {'action': mt5.TRADE_ACTION_DEAL if is_market else mt5.TRADE_ACTION_PENDING,
                        'symbol': symbol, 'volume': volume, 'type': mt5_type, 'price': price,
-                       'deviation': 20, 'magic': 234000, 'comment': comment,
+                       'deviation': 20, 'magic': magic, 'comment': comment,
                        'type_time': mt5.ORDER_TIME_GTC}
                 if sl: req['sl'] = float(sl)
                 if tp: req['tp'] = float(tp)
@@ -1617,7 +1648,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 close_origin = (q.get('origin', ['manual'])[0] or 'manual').strip()[:24]
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': float(pos.volume),
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
-                       'price': close_price, 'deviation': 20, 'magic': 234000, 'comment': f'TCS:{close_origin}',
+                       'price': close_price, 'deviation': 20, 'magic': DEFAULT_MAGIC, 'comment': f'TCS:{close_origin}',
                        'type_time': mt5.ORDER_TIME_GTC}
                 # #824 — closing is a market deal, so it carries a filling mode too.
                 filling_name, filling_mask = apply_filling(req, pos.symbol)
@@ -1715,7 +1746,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 cp = tick.bid if is_buy else tick.ask
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': vol,
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
-                       'price': cp, 'deviation': 20, 'magic': 234000, 'comment': 'Partial close',
+                       'price': cp, 'deviation': 20, 'magic': DEFAULT_MAGIC, 'comment': 'Partial close',
                        'type_time': mt5.ORDER_TIME_GTC}
                 # #824 — partial close is a market deal as well.
                 filling_name, filling_mask = apply_filling(req, pos.symbol)
@@ -1754,7 +1785,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                                 continue
                             price = tick.ask if mt5_type == mt5.ORDER_TYPE_BUY else tick.bid
                             req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': sym, 'volume': vol,
-                                   'type': mt5_type, 'price': price, 'deviation': 20, 'magic': 234000,
+                                   'type': mt5_type, 'price': price, 'deviation': 20, 'magic': DEFAULT_MAGIC,
                                    'comment': op.get('comment', 'TCS Bulk'), 'type_time': mt5.ORDER_TIME_GTC}
                             if op.get('sl'): req['sl'] = float(op['sl'])
                             if op.get('tp'): req['tp'] = float(op['tp'])
@@ -1781,7 +1812,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol,
                                    'volume': float(pos.volume), 'position': ticket,
                                    'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY,
-                                   'price': cp, 'deviation': 20, 'magic': 234000,
+                                   'price': cp, 'deviation': 20, 'magic': DEFAULT_MAGIC,
                                    'comment': 'TCS Bulk Close', 'type_time': mt5.ORDER_TIME_GTC}
                             # #824 — bulk close is a market deal.
                             filling_name, filling_mask = apply_filling(req, pos.symbol)
