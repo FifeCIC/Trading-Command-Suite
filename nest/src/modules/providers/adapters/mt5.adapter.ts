@@ -872,6 +872,9 @@ export class Mt5Adapter implements IProviderAdapter {
       sl: params.sl ?? null,
       tp: params.tp ?? null,
       comment: safeComment,
+      // #1018 — the position's identity for life. ABSENT is omitted from the payload entirely, so
+      // the bridge applies DEFAULT_MAGIC; sending 0 would look like a real id that no bot owns.
+      ...(params.magic != null ? { magic: params.magic } : {}),
       clientOrderId: params.clientOrderId,
     };
 

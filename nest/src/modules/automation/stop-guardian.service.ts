@@ -214,6 +214,20 @@ export function trailDistanceProblem(trailDistance: number, declaredDistance: nu
 }
 
 /**
+ * The BRIDGE's default magic — `DEFAULT_MAGIC` in `scripts/mt5-bridge/mt5_bridge_v2.py`.
+ *
+ * ⚠️ A LITERAL HERE, DELIBERATELY, and the duplication is the lesser evil. The bridge is Python and
+ * this is TypeScript; there is no shared constant to import, and the bridge cannot be assumed
+ * running to be asked. The value is fixed forever by MT5's own data — every position opened before
+ * 2026-09-28 carries it — so it cannot drift without invalidating the positions that exist.
+ *
+ * A position carrying it means "NO BOT ATTRIBUTED": not a bot whose magic happens to be 234000, but
+ * an order placed before per-bot magics existed. Per-bot values are seeded from 234100 upward for
+ * exactly that reason.
+ */
+const BRIDGE_DEFAULT_MAGIC = 234000;
+
+/**
  * resolvePositionOwner() — WHICH BOT OPENED THIS POSITION (#1018).
  * ==============================================================================
  *
@@ -752,10 +766,35 @@ export class StopGuardianService {
       // AMBIGUOUS — resolving it against a filtered list would make a name look unique when it is
       // not, which is the silent-wrong-answer failure this whole change exists to remove.
       const strategyNames = strategies.map((s: any) => String(s?.name ?? '')).filter(Boolean);
+      // ── #1018 — MAGIC FIRST, COMMENT AS FALLBACK ──────────────────────────────────────────
+      // The magic is the key that cannot lie: MT5 stamps it on the order, it travels with the
+      // POSITION for life, it is never truncated (the comment is), and it cannot be retyped in the
+      // terminal. So it is tried first and needs no ambiguity handling — a match is exact by
+      // construction, because `trading_strategy.magic` is UNIQUE.
+      //
+      // ⚠️ THE COMMENT RESOLVER IS NOT DEAD CODE. Every position opened BEFORE this change carries
+      // `DEFAULT_MAGIC` (234000 = "no bot attributed"), and magic is immutable, so those positions
+      // can never be attributed by magic and MUST keep resolving from the comment. Both paths are
+      // live, for as long as any pre-change position exists.
+      const nameByMagic = new Map<number, string>();
+      for (const s of strategies as any[]) {
+        if (s?.magic != null) nameByMagic.set(Number(s.magic), String(s.name ?? ''));
+      }
       const ownerByTicket = new Map<number, string>();
       const unresolved: string[] = [];
+      let viaMagic = 0;
       for (const p of positions) {
         if (!(p.comment || '').includes('TCS')) continue; // not ours
+        const m = (p as any).magic;
+        if (m != null && Number(m) !== BRIDGE_DEFAULT_MAGIC) {
+          const byMagic = nameByMagic.get(Number(m));
+          if (byMagic) { ownerByTicket.set(p.ticket, byMagic); viaMagic++; continue; }
+          // A magic that matches no bot is a CONTRADICTION, not a fallback: it says this position
+          // belongs to a bot the registry does not have. Falling through to the comment would
+          // silently paper over a missing or reassigned bot, so it is reported instead.
+          unresolved.push(`${p.symbol} #${p.ticket} magic=${m} matches NO bot (comment "${String(p.comment).slice(0, 30)}")`);
+          continue;
+        }
         const owner = resolvePositionOwner(p.comment, strategyNames);
         if (owner) ownerByTicket.set(p.ticket, owner.name);
         else unresolved.push(`${p.symbol} #${p.ticket} "${String(p.comment).slice(0, 40)}"`);

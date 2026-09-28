@@ -364,6 +364,8 @@ export class AutomationLoopService implements OnModuleInit {
     mode: string;
     protocolId: string | null;
     executionId?: string;
+    /** #1018 — the bot's MT5 magic. OMITTED when unknown. */
+    magic?: number;
     decisions: TickDecision[];
   }): Promise<void> {
     const { strategyId, strategyName, symbol, brokerId, side, compositePct, baseSize, slPct, tpPct, entryPrice, mode, protocolId, executionId, decisions } = params;
@@ -462,6 +464,8 @@ export class AutomationLoopService implements OnModuleInit {
       // Name only — the sanitizer strips '|'/'%', so "| composite%" polluted
       // the strategy name parsed back on close (see mt5-comment.util.ts).
       comment: `TCS ${strategyName}`,
+        // #1018 — the position's identity for life (see the adapter note).
+        magic: params.magic,
       clientOrderId: executionId,
     });
     this.auditLog.logOrderResult(this.state.tickCount, strategyId, symbol,
@@ -2038,6 +2042,7 @@ export class AutomationLoopService implements OnModuleInit {
           mode: strategy.mode,
           protocolId: head.protocolId,
           executionId: `queue-${head.id}`,
+        magic: strategy.magic ?? undefined,
           decisions,
         });
         const last = decisions.length > before ? decisions[decisions.length - 1] : null;

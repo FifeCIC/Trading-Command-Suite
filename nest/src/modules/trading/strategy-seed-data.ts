@@ -18,6 +18,13 @@ import { SessionTag } from './session-window';
 export interface SeedTradingStrategy {
   name: string;
   symbol: string;
+  /**
+   * #1018 — the bot's MT5 MAGIC, from the reserved range (>= 234100). SEEDED, not allocated, so
+   * a reinstall restores the SAME number and a position opened long ago still attributes to the
+   * bot that opened it. ⚠️ Must never be 234000 — that is the bridge DEFAULT_MAGIC, i.e. "no bot
+   * attributed", and a bot using it would be indistinguishable from one that sent none.
+   */
+  magic: number;
   protocolId: string;
   brokerId: string;
   // ⚠️ 'manual' is a REAL stored value (it is the schema default) and was missing from this
@@ -85,6 +92,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'FTSE Index Tick Scalp',
     symbol: 'UK100',
+
+    magic: 234100,
     protocolId: 'ftse-speed-v1',
     // brokerId is a broker TYPE, not an instance — routing is driven by
     // symbol_route (UK100 -> broker 3 / Pepperstone :5001). See the audit note
@@ -113,6 +122,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'DAX Index Tick Scalp',
     symbol: 'GER40',
+
+    magic: 234101,
     protocolId: 'dax-speed-v1',
     brokerId: 'mt5',
     // semi-auto -> auto (2026-09-15): same reason the FTSE bot was flipped on 09-10.
@@ -130,6 +141,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'CAC Index Tick Scalp',
     symbol: 'FRA40',
+
+    magic: 234102,
     protocolId: 'cac-speed-v1',
     brokerId: 'mt5',
     // semi-auto -> auto and 0.01 -> 0.1 (FRA40's broker floor) — 2026-09-15.
@@ -158,6 +171,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // baseSize 0.1 is the broker floor for index symbols on BOTH bridges (see the FTSE note).
     name: 'Dow Index Tick Scalp',
     symbol: 'US30',
+
+    magic: 234103,
     protocolId: 'dow-speed-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -174,6 +189,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Silver Speed Scalp',
     symbol: 'XAGUSD',
+
+    magic: 234104,
     protocolId: 'xau-speed-v1',
     brokerId: 'mt5',
     // semi-auto -> auto (2026-09-15) for data generation. baseSize stays 0.01: silver's
@@ -206,6 +223,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // ═══════════════════════════════════════════════════════════════════════════════════════
     name: 'Gold Scalp M5',
     symbol: 'XAUUSD',
+
+    magic: 234105,
     protocolId: 'xau-speed-m5',
     brokerId: 'mt5',
     mode: 'auto',
@@ -221,6 +240,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Gold Day-Trade M15',
     symbol: 'XAUUSD',
+
+    magic: 234106,
     protocolId: 'xau-speed-m15',
     brokerId: 'mt5',
     mode: 'auto',
@@ -236,6 +257,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Gold Swing 1H',
     symbol: 'XAUUSD',
+
+    magic: 234107,
     protocolId: 'xau-speed-1h',
     brokerId: 'mt5',
     mode: 'auto', // DB-only value — see the block note above 'Gold Scalp M5'
@@ -260,6 +283,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Gold Position 4H',
     symbol: 'XAUUSD',
+
+    magic: 234108,
     protocolId: 'xau-speed-4h',
     brokerId: 'mt5',
     mode: 'auto', // DB-only value — see the block note above 'Gold Scalp M5'
@@ -286,6 +311,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tokyo USDJPY Session',
     symbol: 'USDJPY',
+
+    magic: 234109,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     // `mode: auto` and `maxHoldHours` were DB-only — see the block note above 'Gold Scalp M5'.
@@ -302,6 +329,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'London EURUSD Macro',
     symbol: 'EURUSD',
+
+    magic: 234110,
     protocolId: 'eurusd-macro-v1',
     brokerId: 'mt5',
     // semi-auto -> auto (2026-09-15) for data generation.
@@ -323,6 +352,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // see nest/fix-symbol-tickers.sql (which could not apply the rename because a US500
     // row already exists).
     symbol: 'US500',
+
+    magic: 234111,
     // ⚠️ spy-day-v1 -> spy-speed-v1 (2026-09-25). The bot was subscribed to `spy-day-v1`, whose
     // ONLY watchlist (spy-day-index) holds `["SPY"]` — a different instrument. So the bot sat on
     // US500 consuming signals generated for SPY, and `syncQueues()` routes on
@@ -373,6 +404,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'VIX Spike Short (demo proof #772)',
     symbol: 'VIX',
+
+    magic: 234112,
     protocolId: 'vix-short-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -426,6 +459,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Sydney AUDUSD Session',
     symbol: 'AUDUSD',
+
+    magic: 234113,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -442,6 +477,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Sydney AUDJPY Session',
     symbol: 'AUDJPY',
+
+    magic: 234114,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -458,6 +495,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'GBPUSD Session',
     symbol: 'GBPUSD',
+
+    magic: 234115,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -474,6 +513,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'London EURGBP Session',
     symbol: 'EURGBP',
+
+    magic: 234116,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -490,6 +531,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'London GBPJPY Session',
     symbol: 'GBPJPY',
+
+    magic: 234117,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -506,6 +549,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Zurich EURCHF Session',
     symbol: 'EURCHF',
+
+    magic: 234118,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -522,6 +567,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Zurich USDCHF Session',
     symbol: 'USDCHF',
+
+    magic: 234119,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -538,6 +585,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tokyo EURJPY Session',
     symbol: 'EURJPY',
+
+    magic: 234120,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -554,6 +603,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Wellington NZDUSD Session',
     symbol: 'NZDUSD',
+
+    magic: 234121,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -570,6 +621,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Wellington NZDJPY Session',
     symbol: 'NZDJPY',
+
+    magic: 234122,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -588,6 +641,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'EURCAD Macro Session',
     symbol: 'EURCAD',
+
+    magic: 234123,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -619,6 +674,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'GBPCAD Macro Session',
     symbol: 'GBPCAD',
+
+    magic: 234124,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -635,6 +692,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'USDCAD Forex Session',
     symbol: 'USDCAD',
+
+    magic: 234125,
     protocolId: 'forex-session-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -655,6 +714,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // declared rather than discovered.
     name: 'Hourly Triple-Directive Control',
     symbol: 'EURUSD',
+
+    magic: 234126,
     protocolId: 'hourly-3dir-v1',
     brokerId: 'mt5',
     mode: 'manual',
@@ -691,6 +752,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'BTC Investment Monitor',
     symbol: 'BTC',
+
+    magic: 234127,
     protocolId: 'btc-speed-v1',
     brokerId: 'mt5',
     mode: 'manual',
@@ -751,6 +814,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - NVDA',
     symbol: 'NVDA',
+
+    magic: 234128,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -767,6 +832,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - MSFT',
     symbol: 'MSFT',
+
+    magic: 234129,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -783,6 +850,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - AAPL',
     symbol: 'AAPL',
+
+    magic: 234130,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -799,6 +868,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - AMZN',
     symbol: 'AMZN',
+
+    magic: 234131,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -815,6 +886,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - GOOGL',
     symbol: 'GOOGL',
+
+    magic: 234132,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -831,6 +904,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - TSLA',
     symbol: 'TSLA',
+
+    magic: 234133,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',
@@ -847,6 +922,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Tech Giants - AVGO',
     symbol: 'AVGO',
+
+    magic: 234134,
     protocolId: 'momentum-stock-v1',
     brokerId: 'mt5',
     mode: 'auto',

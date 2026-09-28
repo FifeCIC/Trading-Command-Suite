@@ -1380,6 +1380,16 @@ model TradingStrategy {
   // POST /api/trading/strategies/:id/duplicate. NULL = not a copy. Identity metadata only —
   // it never shapes a trade (declared in bot-rules NON_BEHAVIOURAL_COLUMNS).
   duplicatedFromId String? @db.VarChar(36)
+  // #1018 — THE PER-BOT MT5 MAGIC.
+  //
+  // MT5 stamps `magic` on the order and the value travels with the POSITION for life. It is
+  // never truncated (a COMMENT is: `TCS Wellington NZDJPY Sessi` vs a real name of
+  // `Wellington NZDJPY Session`) and it cannot be retyped in the terminal — so it is the
+  // durable key for "which bot opened this position". Seeded per bot, unique by construction.
+  //
+  // ⚠️ 234000 is the bridge DEFAULT_MAGIC, meaning "no bot attributed". A per-bot value must
+  // not collide with it, so the reserved range starts at 234100. NULL = not yet assigned.
+  magic         Int?     @unique
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")

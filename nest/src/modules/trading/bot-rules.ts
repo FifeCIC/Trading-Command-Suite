@@ -98,7 +98,23 @@ export interface BotRule {
 // ⚠️ Keep this array on ONE line, quoted, with no comments inside: validate-bot-rules.cjs reads
 // it with a regex and splits on commas — prose in here parses as a column name and the gate
 // then fails claiming the real column is undeclared.
-export const NON_BEHAVIOURAL_COLUMNS = ['id', 'createdAt', 'updatedAt', 'duplicatedFromId'] as const;
+/**
+ * `magic` is NON-BEHAVIOURAL (#1018), and the distinction is the point: it ATTRIBUTES a position to
+ * the bot that opened it, it does not SHAPE one. Nothing reads it to size, gate, time or stop
+ * anything, and the broker never interprets it. So it belongs here rather than as a rule.
+ *
+ * ⚠️ THIS ARRAY MUST STAY A SIMPLE COMMA-SEPARATED LIST OF QUOTED STRINGS. `validate-bot-rules.cjs`
+ * parses it with `.split(',').replace(/['"]/g, '')`, so a comma or an apostrophe anywhere inside —
+ * including in a comment — silently produces garbage entries instead of the names. Measured
+ * 2026-09-28: an explanatory comment placed INSIDE the brackets made `magic` parse as part of a
+ * comment fragment, and the build failed with `columns=40 declared=35` even though the name was
+ * visibly present. The reasoning lives out here for that reason, not for style.
+ *
+ * ⚠️ And `magic` was added because the guard FAILED the build the moment the column existed — which
+ * is the guard working correctly: a new column cannot arrive undeclared, and the choice between "a
+ * real rule someone must own" and "not behavioural" has to be made deliberately, not by omission.
+ */
+export const NON_BEHAVIOURAL_COLUMNS = ['id', 'createdAt', 'updatedAt', 'duplicatedFromId', 'magic'] as const;
 
 export const BOT_RULES: BotRule[] = [
   // ── identity ───────────────────────────────────────────────────────────────────────────────

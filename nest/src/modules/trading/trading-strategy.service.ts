@@ -2285,7 +2285,7 @@ export class TradingStrategyService {
   async seedDefaults(strategies: Array<{
     name: string; symbol: string; protocolId: string;
     brokerId: string; mode: string; timeframe: string;
-    baseSize: number; slPct: number; tpPct: number; minComposite: number;
+    baseSize: number; slPct: number; tpPct: number; minComposite: number; magic?: number;
     /** Session gate window (see session-window.ts). null/absent = ungated. */
     sessionWindow?: string[] | null;
     /**
@@ -2377,6 +2377,9 @@ export class TradingStrategyService {
           baseSize: s.baseSize,
           slPct: s.slPct,
           tpPct: s.tpPct,
+          // #1018 — CONVERGED, not insert-only. An `update` that omits this cannot repair a row
+          // whose magic was never assigned, so a re-seed would leave the fleet half-attributable.
+          ...(s.magic != null ? { magic: s.magic } : {}),
           minComposite: s.minComposite,
         };
 

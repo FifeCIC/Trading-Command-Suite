@@ -317,6 +317,16 @@ export interface BrokerOrderRequest {
   sl?: number;
   tp?: number;
   comment?: string;
+  /**
+   * #1018 — the MT5 magic of the BOT placing this order, so the resulting position can be
+   * attributed to its owner for life. MT5 stamps it on the order and carries it on the POSITION;
+   * unlike the comment it is never truncated and cannot be retyped in the terminal.
+   *
+   * ⚠️ Omitted → the bridge falls back to its DEFAULT_MAGIC, which means "no bot attributed". A
+   * caller that does not know the bot must OMIT this rather than guess a number, because magic is
+   * IMMUTABLE once the order is placed and a wrong value can never be corrected.
+   */
+  magic?: number;
   /** Stable caller-generated key used to make broker retries safe. */
   clientOrderId?: string;
 }
