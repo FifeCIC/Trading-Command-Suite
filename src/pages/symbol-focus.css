@@ -202,3 +202,59 @@
 }
 .sf-error h2 { color: var(--color-loss); font-size: 1.2rem; }
 .sf-error p { color: var(--ink-soft); margin: 0.5rem 0; }
+
+/* ── #926 follow-on — Protocol Comparison ──
+   The point of this table is that the reader can see, in one glance, which protocols generate
+   rows and which ones actually do something. Hence: numeric columns right-aligned so magnitudes
+   compare vertically, and the two ends already adjacent because the list is sorted by average. */
+.sf-cmp-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.78rem;
+}
+.sf-cmp-hl { color: var(--ink-soft); }
+
+/* Horizontal scroll rather than a cramped table — 10 columns will not fit a narrow pane, and a
+   squeezed table is unreadable rather than merely ugly. */
+.sf-cmp-scroll { overflow-x: auto; }
+
+.sf-cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.sf-cmp-table th {
+  text-align: left;
+  font-size: 0.64rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  padding: 0.25rem 0.4rem;
+  white-space: nowrap;
+}
+.sf-cmp-table td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sf-cmp-table .sf-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ⚠️ An unmeasured protocol is dimmed, NOT zeroed. It has no reading in the window; that is
+   "unknown", and rendering it as a low number would put it beside a measured-bad one. */
+.sf-cmp-unmeasured td { opacity: 0.5; }
+
+/* ⚠️ Marks "0 active bots". It is a FLAG, not a verdict — a protocol with no bot can still have
+   realised P&L (gold-macro-v1: 0 bots, +30.48), so this must not read as "broken". */
+.sf-cmp-flag {
+  color: var(--color-warning);
+  font-weight: 700;
+  cursor: help;
+}
+.sf-cmp-dir { color: var(--ink-soft); }
+.sf-cmp-src { color: var(--ink-soft); font-size: 0.68rem; }
+.sf-pnl-up { color: var(--color-profit); }
+.sf-pnl-down { color: var(--color-loss); }
+.sf-cmp-note { margin-top: 0.5rem; }

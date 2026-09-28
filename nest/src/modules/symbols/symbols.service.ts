@@ -668,6 +668,96 @@ export class SymbolsService {
       byProtocol.get(k)!.push(r);
     }
 
+    // ── #926 follow-on — per-protocol STATISTICS, so protocols can be COMPARED ──
+    //
+    // The owner's question (2026-09-27): *"how much processing is happening, very hidden, and how
+    // much data is generated, for one symbol which in the end can only trade so much… something to
+    // help investigate the strongest and weakest protocols."*
+    //
+    // Measured for XAUUSD: **23 protocols write ~85,400 rows; six of them write ~97% of it**, and
+    // `gold-macro-v1` alone wrote 12,802 rows with ZERO bots. A list of names cannot show that.
+    // These three aggregates can:
+    //   · `stats`   — average / best / worst score, and how many readings they rest on (n).
+    //   · `bots`    — how many ACTIVE bots can actually act on the protocol.
+    //   · `realised`— trades and P&L actually booked under it.
+    //
+    // ⚠️ `n` IS CARRIED, always. An average over 7 readings and one over 14,663 are not the same
+    // claim, and this repo has been burned by a statistic quoted without its sample size.
+    //
+    // ⚠️ `bots: 0` DOES NOT MEAN WORTHLESS, and the numbers here are how you tell. Measured:
+    // `gold-macro-v1` has **0 active bots yet 2 closed trades and +30.48 P&L** on XAUUSD. A rule
+    // that skipped scoring on "no bot" would have deleted a profitable protocol. `active = 0` is
+    // also NOT a kill switch (#803).
+    const WINDOW_DAYS = 30;
+    // ⚠️ A failure in ANY of the three aggregates is RECORDED, not swallowed. The first cut of the
+    // `history` query above used `.catch(() => [])` and that is exactly how every protocol came to
+    // read `scored: false` with no error anywhere (#926). Leaving stats queries silent would repeat
+    // it: a wrong column name would render as "this protocol has no readings" — a plausible number
+    // with no error, which is the failure shape this repo keeps re-finding.
+    let statsError: string | null = null;
+    let statRows: any[] = [];
+    try {
+      statRows = await this.prisma.$queryRawUnsafe(
+        `SELECT protocolId,
+                COUNT(*)              AS samples,
+                AVG(composite)        AS avgScore,
+                MAX(composite)        AS highScore,
+                MIN(composite)        AS lowScore,
+                AVG(signalPct)        AS avgSignalPct,
+                MAX(snappedAt)        AS lastAt
+           FROM score_snapshot
+          WHERE symbol = ? AND snappedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)
+          GROUP BY protocolId`,
+        upperTicker,
+        WINDOW_DAYS,
+      );
+    } catch (e) {
+      statsError ??= (e as Error).message;
+    }
+    const statsByProtocol = new Map<string, any>();
+    for (const r of statRows) statsByProtocol.set(String(r.protocolId), r);
+
+    // Which protocols have an ACTIVE bot — one query for all of them, not one each.
+    let botRows: any[] = [];
+    try {
+      botRows = await (this.prisma as any).tradingStrategy.groupBy({
+        by: ['protocolId'],
+        where: { symbol: upperTicker, active: true },
+        _count: { _all: true },
+      });
+    } catch (e) {
+      statsError ??= (e as Error).message;
+    }
+    const botsByProtocol = new Map<string, number>();
+    for (const r of botRows) if (r.protocolId) botsByProtocol.set(String(r.protocolId), r._count?._all ?? 0);
+
+    // Realised outcomes. ⚠️ THE PHANTOM-CLOSE PREDICATE IS LOAD-BEARING (#921/#931) — matching the
+    // note in getFocus(): 99 of 206 closed rows had no fill and no exit, and 17 of those are
+    // flagged VALID, so filtering on `pnlInvalid` is NOT sufficient. A row that never had a fill
+    // and never had an exit is not a trade, whatever its status says.
+    // ⚠️ ATTRIBUTION CAVEAT: `scoringStrategyId` holds a slug OR a bot id in different rows (#926),
+    // so this join resolves what it can and the UI states the number as attributed, not certain.
+    let tradeRows: any[] = [];
+    try {
+      tradeRows = await this.prisma.$queryRawUnsafe(
+        `SELECT scoringStrategyId AS attribution,
+                COUNT(*)                                          AS trades,
+                SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END)          AS wins,
+                SUM(pnl)                                          AS pnl
+           FROM trade
+          WHERE symbol = ?
+            AND status = 'closed'
+            AND brokerTicket IS NOT NULL
+            AND exitPrice IS NOT NULL
+          GROUP BY scoringStrategyId`,
+        upperTicker,
+      );
+    } catch (e) {
+      statsError ??= (e as Error).message;
+    }
+    const realisedByProtocol = new Map<string, any>();
+    for (const r of tradeRows) if (r.attribution) realisedByProtocol.set(String(r.attribution), r);
+
     const protocols = resolution.protocols.map((p) => {
       // The query is descending, so [0] is newest; the sparkline wants oldest → newest.
       const hist = byProtocol.get(p.protocolId) ?? [];
@@ -703,6 +793,39 @@ export class SymbolsService {
               : currentScore < firstScore
                 ? 'falling'
                 : 'flat',
+        // ── #926 follow-on — the COMPARISON payload ──
+        // `stats` is `null`, never zeroes, when the protocol has no readings in the window: a
+        // zero average and "no readings" are different facts, and rendering them alike is the
+        // failure shape this repo keeps re-finding.
+        stats: (() => {
+          const s = statsByProtocol.get(p.protocolId);
+          if (!s) return null;
+          return {
+            windowDays: WINDOW_DAYS,
+            // ⚠️ `samples` rides with every average. An average over 7 readings and one over
+            // 14,663 are not the same claim.
+            samples: Number(s.samples),
+            avg: s.avgScore == null ? null : Number(s.avgScore),
+            high: s.highScore == null ? null : Number(s.highScore),
+            low: s.lowScore == null ? null : Number(s.lowScore),
+            avgSignalPct: s.avgSignalPct == null ? null : Number(s.avgSignalPct),
+            lastAt: s.lastAt ? new Date(s.lastAt).toISOString() : null,
+          };
+        })(),
+        // How much of this symbol's processing can be ACTED ON. ⚠️ `0` is not "worthless" — see
+        // the note above `tradeRows`.
+        bots: botsByProtocol.get(p.protocolId) ?? 0,
+        // Realised outcomes, `null` when none are attributed. The UI must label these as
+        // ATTRIBUTED, because `scoringStrategyId` is a slug-or-bot-id (#926).
+        realised: (() => {
+          const t = realisedByProtocol.get(p.protocolId);
+          if (!t) return null;
+          return {
+            trades: Number(t.trades),
+            wins: Number(t.wins),
+            pnl: t.pnl == null ? null : Number(t.pnl),
+          };
+        })(),
         sparkline,
       };
     });
@@ -718,6 +841,11 @@ export class SymbolsService {
       sourcesQueried: resolution.sourcesQueried,
       // null when the enrichment query answered; the message when it did not.
       scoreError,
+      // Same contract for the three comparison aggregates (#926 follow-on).
+      statsError,
+      // ⚠️ States the window the averages cover, so a reader can never mistake a 30-day average
+      // for an all-time one.
+      statsWindowDays: WINDOW_DAYS,
     };
   }
 

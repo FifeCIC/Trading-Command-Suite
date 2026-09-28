@@ -44,9 +44,53 @@ export default function SymbolFocusPage() {
     retry: 1,
   });
 
+  // ── #926 follow-on — the COMPARISON view ──────────────────────────────────────────────────
+  // A SEPARATE question from `/focus`. `/focus` answers "what is this symbol doing right now";
+  // this answers "which of the protocols scoring it is earning its keep". The owner's ask
+  // (2026-09-27): *"show a list of the protocols that score it, compared… statistics for averages
+  // and highest scorer… and lowest scorer… something to help investigate the strongest and
+  // weakest protocols."*
+  //
+  // It is worth its own query because the numbers are the point: measured for XAUUSD, 23 protocols
+  // write ~85,400 rows and SIX of them write ~97% of it — a list of names cannot show that.
+  const protocolsQuery = useQuery({
+    queryKey: ['symbol-protocols-compare', symbol],
+    queryFn: () => apiGet(`/api/symbols/${symbol}/protocols`),
+    enabled: !!symbol,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+    retry: 1,
+  });
+
   const data = focusQuery.data;
   const loading = focusQuery.isLoading;
   const error = focusQuery.error;
+
+  // ── #926 follow-on — the comparison rows, STRONGEST FIRST ──
+  // ⚠️ A protocol with no readings in the window sorts LAST, and that is not the same as "worst":
+  // it is unknown. Sorting it as zero would put an unmeasured protocol next to a measured-bad one,
+  // which is exactly how a reader draws the wrong conclusion from a table.
+  const comparison = (protocolsQuery.data?.protocols || [])
+    .slice()
+    .sort((a, b) => {
+      const av = a.stats?.avg ?? null;
+      const bv = b.stats?.avg ?? null;
+      if (av === null && bv === null) return String(a.id).localeCompare(String(b.id));
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return bv - av;
+    });
+  const measured = comparison.filter((p) => p.stats);
+  const strongest = measured[0] || null;
+  const weakest = measured.length > 1 ? measured[measured.length - 1] : null;
+  const statsWindow = protocolsQuery.data?.statsWindowDays ?? null;
+  const statsFailed = Boolean(protocolsQuery.data?.statsError);
+
+  const fmt = (v, d = 1) => (v === null || v === undefined ? '—' : Number(v).toFixed(d));
+  // ⚠️ NO local money formatter. `fmtCurrency` above already does exactly this, and a second copy
+  // is the duplication the repo's own `validate-duplication` exists to catch — the shorter-lived
+  // of two copies is the one that gets fixed. It was also an UNUSED local until this table needed
+  // it, which is why it read as dead code (pre-existing lint finding, 2026-09-28).
 
   if (loading) return <div className="sf-page"><LoadingSkeleton lines={8} /></div>;
   if (error || !data) {
@@ -126,6 +170,95 @@ export default function SymbolFocusPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </motion.section>
+
+          {/* ── #926 follow-on — Protocol COMPARISON ──
+              Sorted strongest → weakest so the two ends are ADJACENT, which is the whole point:
+              finding the protocols that are earning their keep and the ones that only generate
+              rows. Every average carries its `n`, because an average over 7 readings and one over
+              14,663 are not the same claim. */}
+          <motion.section className="sf-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <h2>⚖️ Protocol Comparison ({comparison.length})</h2>
+
+            {protocolsQuery.isLoading ? (
+              <p className="sf-muted">Loading comparison…</p>
+            ) : protocolsQuery.isError ? (
+              /* ⚠️ A failed request must not render as "no protocols" — an empty list is
+                 information, an error is the absence of it. */
+              <p className="sf-muted">⚠️ Comparison unavailable — the request failed.</p>
+            ) : statsFailed ? (
+              <p className="sf-muted">⚠️ Statistics unavailable — {protocolsQuery.data.statsError}</p>
+            ) : comparison.length === 0 ? (
+              <p className="sf-muted">No protocol is associated with {symbol}.</p>
+            ) : (
+              <>
+                {strongest && (
+                  <div className="sf-cmp-highlights">
+                    <span className="sf-cmp-hl">
+                      🟢 Strongest (avg): <strong>{strongest.name}</strong> {fmt(strongest.stats.avg)} over{' '}
+                      {strongest.stats.samples} reading(s)
+                    </span>
+                    {weakest && (
+                      <span className="sf-cmp-hl">
+                        🔴 Weakest (avg): <strong>{weakest.name}</strong> {fmt(weakest.stats.avg)} over{' '}
+                        {weakest.stats.samples} reading(s)
+                      </span>
+                    )}
+                    <span className="sf-cmp-hl sf-muted">
+                      Averages cover the last {statsWindow ?? '—'} day(s)
+                    </span>
+                  </div>
+                )}
+
+                <div className="sf-cmp-scroll">
+                  <table className="sf-cmp-table">
+                    <thead>
+                      <tr>
+                        <th>Protocol</th>
+                        <th>Dir</th>
+                        <th className="sf-num">Avg</th>
+                        <th className="sf-num">High</th>
+                        <th className="sf-num">Low</th>
+                        <th className="sf-num">n</th>
+                        <th className="sf-num">Bots</th>
+                        <th className="sf-num">Trades</th>
+                        <th className="sf-num">P&L</th>
+                        <th>Why it is here</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comparison.map((p) => (
+                        <tr key={p.id} className={!p.stats ? 'sf-cmp-unmeasured' : ''}>
+                          <td title={p.id}>{p.name}</td>
+                          <td className="sf-cmp-dir">{p.directionMode === 'SHORT_ONLY' ? 'S' : p.directionMode === 'BOTH' ? 'L/S' : 'L'}</td>
+                          <td className="sf-num">{p.stats ? fmt(p.stats.avg) : '—'}</td>
+                          <td className="sf-num">{p.stats ? fmt(p.stats.high, 0) : '—'}</td>
+                          <td className="sf-num">{p.stats ? fmt(p.stats.low, 0) : '—'}</td>
+                          <td className="sf-num sf-muted">{p.stats ? p.stats.samples : '—'}</td>
+                          {/* ⚠️ `0` bots is not "worthless". gold-macro-v1 has 0 bots AND +30.48
+                              realised on XAUUSD — a rule that skipped it would have deleted a
+                              profitable protocol. It is marked, not judged. */}
+                          <td className="sf-num">
+                            {p.bots > 0 ? p.bots : <span className="sf-cmp-flag" title="No active bot subscribes — it still generated score rows">0</span>}
+                          </td>
+                          <td className="sf-num">{p.realised ? p.realised.trades : '—'}</td>
+                          <td className={`sf-num ${p.realised?.pnl > 0 ? 'sf-pnl-up' : p.realised?.pnl < 0 ? 'sf-pnl-down' : ''}`}>
+                            {p.realised ? fmtCurrency(p.realised.pnl) : '—'}
+                          </td>
+                          <td className="sf-cmp-src">{(p.sources || []).join(' · ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="sf-muted sf-cmp-note">
+                  Rows are score readings written in the window. ⚠️ <strong>Trades and P&L are
+                  ATTRIBUTED</strong> — `scoringStrategyId` holds a protocol slug in some rows and a
+                  bot id in others, so a figure shown here is attributed, not certain.
+                </p>
+              </>
             )}
           </motion.section>
 
