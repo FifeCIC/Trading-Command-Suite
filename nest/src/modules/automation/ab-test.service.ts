@@ -490,12 +490,13 @@ export class AbTestService {
       // overwrites that string, so a reaped A/B trade lost its side and vanished from the
       // verdict with no error. Measured 2026-09-23: 14 of 14 A/B rows attributed to 0 sides.
       abTestSide: side,
-      // ⚠️ #1014 — the POSITION id, not the order ticket. On this NETTING account all four A/B
-      // orders share ONE position, so the order ticket names something the reconciler can never
-      // match. Preferring the position id is what lets the closing deal be found at all.
-      brokerTicket: result.positionId != null
-        ? String(result.positionId)
-        : result.ticket != null ? String(result.ticket) : undefined,
+      // ⚠️ #1014 — still the ORDER ticket, on purpose. The A/B scale-ins are the clearest case: all
+      // four orders on this NETTING account share ONE positionId, so switching this to
+      // `result.positionId` would give all four rows the same closing deal — and the reconciler
+      // books the position's ENTIRE net to each, with no volume split. That is a 4x overstatement
+      // waiting for the next A/B run. The bridge and adapter now carry `positionId`; the switch
+      // waits on the split.
+      brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
       sl,
       tp,
       brokerComment: comment,

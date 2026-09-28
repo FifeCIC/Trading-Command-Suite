@@ -477,13 +477,21 @@ export class AutomationLoopService implements OnModuleInit {
           provider: brokerId, status: 'open', origin: 'strategy',
           source: 'meta-stack',
           scoringStrategyId: strategyId,
-          // ⚠️ #1014 — the POSITION id, NOT the order ticket. They are different namespaces and
-          // never intersect, and `position-sync.service.ts` matches closing deals by
-          // `deal.positionId`. Storing the order ticket here matched zero deals, so `exitPrice`
-          // stayed null and a real position was finalised as "vanished".
-          brokerTicket: result.positionId != null
-            ? String(result.positionId)
-            : result.ticket != null ? String(result.ticket) : undefined,
+          // ⚠️ #1014 — DELIBERATELY STILL THE ORDER TICKET. This looks like the bug the issue
+          // describes (the reconciler matches `deal.positionId`), and I changed it to prefer
+          // `result.positionId` — then reverted, because that alone is UNSAFE:
+          //
+          // `position-sync.service.ts` computes `realizedPnl` as the WHOLE net of the position's
+          // closing deals, with NO split by the row's volume. On a NETTING account every order on a
+          // symbol shares one positionId, so N rows carrying it would EACH claim the full P&L —
+          // a 4x overstatement on a scale-in, and a plausible-looking one.
+          //
+          // Measured 2026-09-28: no two `trade` rows share a brokerTicket yet, so nothing is
+          // overstated today. The correct fix needs the reconciler to SPLIT by volume ("many rows
+          // sharing a positionId") — and that split cannot be verified while no multi-row position
+          // exists. Shipping an unverifiable money path is worse than shipping this comment.
+          // The plumbing is in place: `result.positionId` is populated by the adapter.
+          brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
           sl, tp,
           brokerComment: `TCS ${strategyName}`,
         } as any);
@@ -2197,10 +2205,10 @@ export class AutomationLoopService implements OnModuleInit {
         origin: 'strategy',
         source: 'meta-stack',
         scoringStrategyId: action.strategyId,
-        // ⚠️ #1014 — the POSITION id, not the order ticket. See the note at the other write site.
-        brokerTicket: result.positionId != null
-          ? String(result.positionId)
-          : result.ticket != null ? String(result.ticket) : undefined,
+        // ⚠️ #1014 — see the note at the other write site: still the ORDER ticket on purpose.
+        // Preferring `result.positionId` here without a reconciler volume-split would make several
+        // rows claim the same position's whole P&L.
+        brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
         sl,
         tp,
       } as any);
