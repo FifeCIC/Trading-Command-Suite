@@ -241,6 +241,20 @@ export function trailDistanceProblem(trailDistance: number, declaredDistance: nu
  * ⚠️ `enforcement` reuses `bot-rules.ts`'s vocabulary deliberately (live | display-only | none) so
  * the two registries cannot drift into meaning different things by the same word.
  */
+// -- DECISION (2026-09-28, primary) --
+// WHAT:      The MECHANISM is the unit of exit configuration. A mechanism is a named thing that
+//            ACTS; the `trading_strategy` columns it reads (`fields`) are its SETTINGS, not
+//            peers of it. `scope` decides whether it is configurable per bot.
+// WHY:       `bot-rules.ts` and `GUARDIAN_RULES` were two declarations of ONE subject, rendered
+//            as two lists on different axes (stage vs owner), so neither was complete. Measured:
+//            5 columns claimed this service while it declared 1 mechanism naming 2. Both
+//            symptoms -- sim-TSL twice, exhaustion declared nowhere -- followed from that.
+// INSTEAD OF: Making ALL exit behaviour per-bot data. Rejected on cost, not on principle: ~11 new
+//            columns, and one global change becoming 40 divergent ones.
+// REVERSE BY: Give the 11 `global` mechanisms `fields` and move each to `per-bot` -- at which
+//            point the global-fields rule in validate-rule-enforcement.cjs must be NARROWED, not deleted.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 44
+// GUARD:     nest/scripts/validate-rule-enforcement.cjs (prebuild)
 export interface GuardianRule {
   id: string;
   label: string;

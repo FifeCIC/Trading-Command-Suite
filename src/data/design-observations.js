@@ -93,9 +93,11 @@ export const DESIGN_OBSERVATIONS = [
       source: 'This repo — /api/automation/stop-guardian/status, read 2026-09-24 (12 rules, guardian enabled, 251 ticks)',
       observedAt: '2026-09-24',
     },
-    status: 'considering',
+    status: 'decided',
+    decision:
+      'Owner ruling 2026-09-28: the MECHANISM is the unit, and `scope` decides whether it is per-bot. CLOSED — and its trigger was SPENT BEFORE ANYONE NOTICED. The trigger was "a second exit mechanism is added", and the second one (the up-move exhaustion observer) had already been added; that is why it fired. It fired silently because the guardian declared NO mechanism for it: it was attributed to the guardian by `bot-rules.ts` and declared by the service NOWHERE. The surface now names, per column, the mechanism that reads it, and `validate-rule-enforcement.cjs` (prebuild) fails if the two registries disagree. PARTIAL BY DESIGN: the 11 `global` mechanisms are still shared, so this alone does not make a stop policy trial-able on one bot — that is `exit-management-is-global-not-per-bot`, now a decided constraint rather than an open question.',
     reconsiderIf:
-      'Reconsider when a second exit mechanism is added, or when a bot needs a stop behaviour that differs from the others — at that moment “one global guardian” stops being a simplification and starts being a constraint.',
+      'Reconsider if a mechanism can exist OUTSIDE both registries — the failure here was not that the guardian was invisible, but that one of its mechanisms was declared nowhere, and a guard now covers that. A second surface, or a mechanism configured somewhere other than a bot column, would re-open it.',
     issue: 990,
   },
   {
@@ -116,9 +118,11 @@ export const DESIGN_OBSERVATIONS = [
       source: 'This repo — nest/src/modules/automation/stop-guardian.service.ts',
       observedAt: '2026-09-24',
     },
-    status: 'considering',
+    status: 'decided',
+    decision:
+      'Owner ruling 2026-09-28: mechanism = the unit, `scope` decides per-bot. DECIDED AS A CONSTRAINT KEPT — not as a defect removed, and the distinction is the honest reading of the ruling. The 11 `global` mechanisms remain shared by every bot, so a stop policy still cannot be trialled on one bot without a copied configuration, which is the #929 route. What CHANGED is that this is now explicit and visible per mechanism instead of an unexamined default, and the 2 `per-bot` mechanisms (sim-TSL and the exhaustion observer) demonstrate that the shape supports both. Making all 11 per-bot was the REJECTED alternative: ~11 new columns, and one global change becoming 40 divergent ones. NOT the maths: no threshold, gate or size moved.',
     reconsiderIf:
-      'Reconsider the moment two bots need different stop behaviour, or when a stop change is wanted as an A/B trial — a copied configuration needs the behaviour to be selectable per bot, which today it is not.',
+      'Reconsider when a stop policy genuinely must differ on ONE bot — that is the moment the shared default becomes a blocker rather than a simplification. The cheapest route then is NOT 11 new columns but promoting `scope` for the single mechanism that needs it, because `fields` already exists to carry the columns.',
     issue: 990,
   },
   {
