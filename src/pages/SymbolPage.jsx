@@ -360,9 +360,34 @@ export default function SymbolPage() {
     retry: 1,
   });
 
-  // Protocol ids this symbol is actually scored under. `/focus` returns `protocols` as an OBJECT
-  // keyed by protocol id, so the keys are the ids — no separate lookup needed.
-  const protocolIds = Object.keys(focusQuery.data?.protocols || {});
+  // ── WHICH protocols actually SCORE this symbol (#926 follow-up, 2026-09-28) ─────────────
+  //
+  // ⚠️ MEASURED: the list below used to be EVERY protocol `/focus` associates with the symbol,
+  // and each entry drives a call to `/api/signals/envelope/:symbol?protocol=…` — which is a full
+  // **SCORING RUN that PERSISTS a row**. Measured on XAUUSD: **130 ms and +1 `score` row per
+  // call**. So opening this page wrote one row per protocol — and the #926 authority fix, which
+  // grew `/focus` from 8 protocols to 20, **tripled that to ~20 rows per page view**. The page was
+  // scoring for display.
+  //
+  // `/api/symbols/:ticker/protocols` answers the same question in ONE read-only call — measured
+  // **1,353 ms and 0 writes** — because it reads the scores the pipeline already persisted rather
+  // than asking for new ones.
+  //
+  // ⚠️ `stats === null` means NO reading in the 30-day window: an ASSOCIATED but DORMANT protocol.
+  // Measured for XAUUSD, 11 of the 20 had last scored in **July**. Excluding them is the actual
+  // fix for "this list shows too many protocols" — they are associated with the symbol, but they
+  // do not score it, and saying otherwise is what made the card wrong.
+  const scoringProtocolsQuery = useQuery({
+    queryKey: ['symbol-protocols-scoring', symbol],
+    queryFn: () => apiGet(`/api/symbols/${symbol}/protocols`),
+    enabled: !!symbol,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const protocolIds = (scoringProtocolsQuery.data?.protocols || [])
+    .filter((p) => p.stats)
+    .map((p) => p.id);
 
   // ONE ENVELOPE PER PROTOCOL. This is the part that was missing: the old code requested the
   // envelope with no protocol and got 400, so the Score card was permanently empty while the
