@@ -363,11 +363,15 @@ export default function SymbolPage() {
   // ── WHICH protocols actually SCORE this symbol (#926 follow-up, 2026-09-28) ─────────────
   //
   // ⚠️ MEASURED: the list below used to be EVERY protocol `/focus` associates with the symbol,
-  // and each entry drives a call to `/api/signals/envelope/:symbol?protocol=…` — which is a full
-  // **SCORING RUN that PERSISTS a row**. Measured on XAUUSD: **130 ms and +1 `score` row per
-  // call**. So opening this page wrote one row per protocol — and the #926 authority fix, which
-  // grew `/focus` from 8 protocols to 20, **tripled that to ~20 rows per page view**. The page was
-  // scoring for display.
+  // and each entry drives a call to `/api/signals/envelope/:symbol?protocol=…` — a full **SCORING
+  // RUN** (gating + every directive + broker positions), measured at **130 ms each**. Opening this
+  // page ran 20 of them. The #926 authority fix grew `/focus` from 8 protocols to 20, so I had
+  // TRIPLED this page's scoring work. The page was re-computing a screen it could read.
+  //
+  // ⚠️ CORRECTION, 2026-09-28: I first claimed each call also WROTE a score row. **It does not** —
+  // both `persistScores()` call sites are inside `buildLadder`/`buildBestLadder`, not on the
+  // drilldown path. The row I counted was the background scoring loop. The cost here is CPU and
+  // broker calls, not writes; the fix is the same, but the reason has to be right.
   //
   // `/api/symbols/:ticker/protocols` answers the same question in ONE read-only call — measured
   // **1,353 ms and 0 writes** — because it reads the scores the pipeline already persisted rather

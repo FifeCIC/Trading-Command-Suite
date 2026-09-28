@@ -758,6 +758,88 @@ export class SymbolsService {
     const realisedByProtocol = new Map<string, any>();
     for (const r of tradeRows) if (r.attribution) realisedByProtocol.set(String(r.attribution), r);
 
+    // ── #926 follow-up (2026-09-28) — SERVE WHAT IS ALREADY PERSISTED ──────────────────────────
+    //
+    // ⚠️ THE FINDING THAT MOTIVATED THIS. `SymbolPage` fetched `/api/signals/envelope/:symbol?
+    // protocol=…` once per protocol to render its cards — 20 calls per view. Each is a full
+    // **SCORING RUN**: gating, every directive, and `assess()` (which fetches broker positions),
+    // measured at **130 ms**. The page was RE-COMPUTING 20 assessments to draw one screen.
+    //
+    // ⚠️ CORRECTION, 2026-09-28 — I first wrote here that the drilldown also PERSISTED a score row
+    // per call, from a before/after count of the `score` table. **That was wrong, and the two
+    // `persistScores()` call sites prove it:** they are inside `buildLadder` and `buildBestLadder`,
+    // and `getDrilldown -> buildEnvelope` contains no persist at all. The +1 row was the
+    // BACKGROUND SCORING LOOP, which writes on its own schedule. **A before/after count cannot
+    // isolate a writer when something else writes too** — the correct test is to measure the loop's
+    // rate first, then add the calls and look for EXCESS. The waste is real and it is COMPUTE, not
+    // writes; the fix below is the same either way, but the reason must be stated correctly.
+    //
+    // ⚠️ IT WAS RE-COMPUTING SOMETHING ALREADY STORED. `score.breakdown` holds the whole
+    // assessment: `rawComposite`, `rawMax`, `observedSignalMax`, `signal`, `rarity`, `confidence`,
+    // `preTradeReady`, `opportunityPct`, `riskMultiplier` and the full `breakouts[]` directive
+    // detail. Measured: **9,021 of 9,021 `score` rows carry a breakdown, 9,009 with breakouts.**
+    // So the envelope call re-derived what was already on disk.
+    //
+    // This reads the newest persisted row per protocol in ONE query and NO writes, so the page can
+    // render the same numbers from what META.Stack already produced.
+    //
+    // ⚠️ It is the LATEST PERSISTED reading, not a live one. That is a real semantic change and the
+    // UI must say so — `at` is returned so the age is always visible, and nothing here pretends the
+    // reading was taken now.
+    let latestError: string | null = null;
+    let latestRows: any[] = [];
+    try {
+      latestRows = await this.prisma.$queryRawUnsafe(
+        `SELECT strategyId, breakdown, \`timestamp\` FROM (
+           SELECT strategyId, breakdown, \`timestamp\`,
+                  ROW_NUMBER() OVER (PARTITION BY strategyId ORDER BY \`timestamp\` DESC) rn
+             FROM score
+            WHERE symbolId = ?
+         ) t WHERE rn = 1`,
+        symbol.id,
+      );
+    } catch (e) {
+      latestError = (e as Error).message;
+    }
+
+    /** The persisted assessment, flattened to exactly what a card needs to render. */
+    const parseLatest = (raw: any): any => {
+      if (!raw) return null;
+      let b: any = raw;
+      if (typeof b === 'string') {
+        try { b = JSON.parse(b); } catch { return null; }
+      }
+      if (!b || typeof b !== 'object') return null;
+      const num = (v: any) => (v === null || v === undefined ? null : Number(v));
+      // ⚠️ The stable denominator is `observedSignalMax` when present, else `configuredSignalMax`,
+      // else `rawMax` (INV-STABLE-DENOMINATOR). Computed here rather than stored, because
+      // `signalPct` is NOT a top-level key in the persisted breakdown — a reader that assumed it
+      // was would render every bar as 0.
+      const denom = num(b.observedSignalMax) ?? num(b.configuredSignalMax) ?? num(b.rawMax);
+      const composite = num(b.rawComposite);
+      return {
+        composite,
+        maxPossible: denom,
+        signalPct: composite !== null && denom ? (composite / denom) * 100 : null,
+        opportunityPct: num(b.opportunityPct),
+        rarity: b.rarity ?? b.rarityPct ?? null,
+        confidence: num(b.confidence),
+        preTradeReady: b.preTradeReady === true,
+        blockerCount: num(b.blockerCount) ?? 0,
+        signal: b.signal ?? null,
+        riskMultiplier: num(b.riskMultiplier),
+        denominatorMode: b.denominatorMode ?? null,
+        marketStatus: b.marketStatus ?? null,
+        // The directive detail the Drilldown renders. Same shape the live envelope produced.
+        breakouts: b.breakouts ?? null,
+      };
+    };
+
+    const latestByProtocol = new Map<string, any>();
+    for (const r of latestRows) {
+      if (r.strategyId) latestByProtocol.set(String(r.strategyId), { breakdown: r.breakdown, at: r.timestamp });
+    }
+
     const protocols = resolution.protocols.map((p) => {
       // The query is descending, so [0] is newest; the sparkline wants oldest → newest.
       const hist = byProtocol.get(p.protocolId) ?? [];
@@ -826,6 +908,18 @@ export class SymbolsService {
             pnl: t.pnl == null ? null : Number(t.pnl),
           };
         })(),
+        // ── the PERSISTED assessment (no scoring run) ──
+        // `null` when this protocol has never written a score row for this symbol — distinct from
+        // a reading of zero, and the card must render those two differently.
+        // ⚠️ `at` is ALWAYS returned with it. This is the latest persisted reading, not a live one,
+        // and a reader must be able to see how old it is.
+        latest: (() => {
+          const l = latestByProtocol.get(p.protocolId);
+          if (!l) return null;
+          const parsed = parseLatest(l.breakdown);
+          if (!parsed) return null;
+          return { ...parsed, at: l.at ? new Date(l.at).toISOString() : null };
+        })(),
         sparkline,
       };
     });
@@ -843,6 +937,8 @@ export class SymbolsService {
       scoreError,
       // Same contract for the three comparison aggregates (#926 follow-on).
       statsError,
+      // And for the persisted-reading query — a failure here must not read as "no protocols".
+      latestError,
       // ⚠️ States the window the averages cover, so a reader can never mistake a 30-day average
       // for an all-time one.
       statsWindowDays: WINDOW_DAYS,
