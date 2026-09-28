@@ -1,0 +1,14 @@
+=== composite distribution across ALL score_snapshot rows (the population) ===
+bucket	n	pct_of_pop
+a: <10	137975	42.8
+b: 10-19	41989	13.0
+c: 20-39	21242	6.6
+d: 40-79	64260	19.9
+e: 80+	57130	17.7
+=== the SAME buckets for trades that were actually taken ===
+bucket	trades
+a: <10	32
+b: 10-19	49
+c: 20-39	40
+d: 40-79	701
+e: 80+	308

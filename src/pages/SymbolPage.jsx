@@ -8,6 +8,7 @@
  */
 
 import { useParams, Link } from 'react-router-dom';
+import SymbolChangePanel from '../components/SymbolChangePanel';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
@@ -908,6 +909,10 @@ export default function SymbolPage() {
           <p className="sym-muted sym-source-line">Pooled across every bot trading {symbol}.</p>
           <ExitStack rows={exitRows} total={exitTotal} />
         </motion.section>
+
+        {/* The one section on this page with a TIME AXIS. Measured 2026-09-28: this page called six
+            endpoints and none of them was a history call, so every other panel here is a snapshot. */}
+        <SymbolChangePanel symbol={symbol} />
       </div>
 
       {/* ── Directive Drilldown ── */}

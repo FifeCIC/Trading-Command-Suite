@@ -6,6 +6,9 @@ import { apiGet } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import ChangeStat from '../components/ChangeStat';
+// The window maths lives in ONE module, shared with SymbolChangePanel. Two copies would drift,
+// and the surfaces would then disagree about the same account with neither obviously wrong.
+import { DAY_MS, money, pct, splitWindows, weeklySeries, groupBy, asTradeList } from '../core/performance-change';
 import './performance-change.css';
 
 /**
@@ -50,83 +53,6 @@ const WINDOWS = [
   { days: 14, label: '14 days' },
   { days: 28, label: '28 days' },
 ];
-
-const DAY_MS = 86_400_000;
-
-const money = (v) => (v == null ? '—' : `${v < 0 ? '−' : ''}£${Math.abs(v).toFixed(2)}`);
-const pct = (v) => (v == null ? '—' : `${v.toFixed(1)}%`);
-
-/** Parse a date that may arrive as an ISO string or a number. Returns null when unreadable. */
-function toMs(v) {
-  if (v == null) return null;
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const t = Date.parse(String(v));
-  return Number.isFinite(t) ? t : null;
-}
-
-/**
- * Split an entity's trades into the recent window and the equal-length window before it.
- *
- * ⚠️ Returns `previous: null` when the prior window holds NO trades. That is not the same as a
- * prior P&L of zero, and the difference is the whole point of ChangeStat: a bot that traded 40
- * times last week and 0 times the week before has no measurable change, not a +£400 improvement.
- */
-function splitWindows(trades, windowMs, nowMs) {
-  const recentFrom = nowMs - windowMs;
-  const priorFrom = nowMs - windowMs * 2;
-
-  const recent = [];
-  const prior = [];
-  for (const t of trades) {
-    const ts = toMs(t.closedAt);
-    if (ts == null) continue;
-    if (ts >= recentFrom) recent.push(t);
-    else if (ts >= priorFrom) prior.push(t);
-  }
-
-  const sum = (arr) => arr.reduce((a, t) => a + (Number(t.pnl) || 0), 0);
-  const wins = (arr) => arr.filter((t) => (Number(t.pnl) || 0) > 0).length;
-
-  return {
-    recentCount: recent.length,
-    priorCount: prior.length,
-    current: recent.length ? sum(recent) : null,
-    previous: prior.length ? sum(prior) : null,
-    recentWinRate: recent.length ? (wins(recent) / recent.length) * 100 : null,
-    priorWinRate: prior.length ? (wins(prior) / prior.length) * 100 : null,
-  };
-}
-
-/** Weekly P&L buckets, oldest → newest, for the sparkline. */
-function weeklySeries(trades, weeks, nowMs) {
-  const buckets = new Array(weeks).fill(null).map(() => 0);
-  const counts = new Array(weeks).fill(0);
-  for (const t of trades) {
-    const ts = toMs(t.closedAt);
-    if (ts == null) continue;
-    const weeksAgo = Math.floor((nowMs - ts) / (DAY_MS * 7));
-    if (weeksAgo < 0 || weeksAgo >= weeks) continue;
-    const idx = weeks - 1 - weeksAgo;
-    buckets[idx] += Number(t.pnl) || 0;
-    counts[idx] += 1;
-  }
-  // A week with no trades is not a week of zero P&L — drop it rather than plotting a false floor.
-  const out = [];
-  for (let i = 0; i < weeks; i++) if (counts[i] > 0) out.push(buckets[i]);
-  return out;
-}
-
-/** Group trades by a key function. */
-function groupBy(trades, keyFn) {
-  const map = new Map();
-  for (const t of trades) {
-    const k = keyFn(t);
-    if (!k) continue;
-    if (!map.has(k)) map.set(k, []);
-    map.get(k).push(t);
-  }
-  return map;
-}
 
 function EntityTable({ title, note, rows, windowLabel, onInspect }) {
   if (!rows.length) {
@@ -220,11 +146,7 @@ export default function PerformanceChangePage() {
     retry: 1,
   });
 
-  const trades = useMemo(() => {
-    const raw = tradesQuery.data;
-    const list = Array.isArray(raw) ? raw : (raw?.trades || raw?.data || []);
-    return Array.isArray(list) ? list : [];
-  }, [tradesQuery.data]);
+  const trades = useMemo(() => asTradeList(tradesQuery.data), [tradesQuery.data]);
 
   const nowMs = useMemo(() => Date.now(), []);
   const windowMs = windowDays * DAY_MS;

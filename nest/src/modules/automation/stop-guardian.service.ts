@@ -25,6 +25,18 @@ interface Mt5RawPosition {
   tp: number | null;
   profit: number;
   comment: string;
+  /**
+   * #1018 — the magic MT5 stamped on the order, carried by the position for life.
+   *
+   * Declared here rather than reached for with `as any`: it IS a field of the bridge's
+   * `/positions` payload (see the adapter's "raw bridge positions (with comment/magic/profit)"),
+   * and leaving it undeclared is how the whole attribution path came to be written without the
+   * type system seeing it.
+   *
+   * `null`/absent = the bridge reported none. `234000` = its `DEFAULT_MAGIC`, i.e. "no bot
+   * attributed" — NOT a bot.
+   */
+  magic?: number | null;
 }
 
 export interface GuardianState {
@@ -76,6 +88,23 @@ export interface GuardianState {
   rules?: GuardianRule[];
   /** `{ global: n, 'per-bot': n }` — see `guardianRuleCounts()`. */
   ruleCounts?: Record<string, number>;
+  /**
+   * ⚠️ #1018 — HOW the last tick established each position's owner, and WHO it could not.
+   *
+   * `guardedPositions` shows the SURVIVORS of attribution; this shows the attribution itself.
+   * The distinction is not cosmetic: `viaMagic` proves the durable path is LIVE rather than merely
+   * present, and `unresolved` names positions that were NOT MANAGED. That second one existed only
+   * as a log line, so an API consumer could not tell "everything is guarded" from "three positions
+   * were skipped" — the two render identically as a shorter list.
+   *
+   * Optional in the type for the same reason as `rules` (a hand-built test double still compiles);
+   * `getState()` always populates it.
+   */
+  ownerAttribution?: {
+    viaMagic: number;
+    viaComment: number;
+    unresolved: string[];
+  };
 }
 
 export interface GuardedPosition {
@@ -89,6 +118,17 @@ export interface GuardedPosition {
   stopConfidence: number;
   wickFilterPassed: boolean;
   lastEvaluatedAt: string | null;
+  /**
+   * ⚠️ #1018 — HOW the owner was established, so the resolution is CHECKABLE rather than assumed.
+   *
+   * `'magic'` is the durable key. The two `comment:*` forms are the fallback, and the distinction
+   * matters: a position resolved by `comment:unique-prefix` was matched on a TRUNCATED name, so it
+   * is the variant most likely to be wrong. Previously every path produced the same
+   * `strategyName` and NOTHING said which one had been used, so a check could only assert "the
+   * owner is right" — which the comment path also satisfies — and could not show the magic path
+   * had run at all.
+   */
+  ownerVia: 'magic' | 'comment:exact' | 'comment:unique-prefix';
 }
 
 export interface StopAdjustment {
@@ -780,15 +820,20 @@ export class StopGuardianService {
       for (const s of strategies as any[]) {
         if (s?.magic != null) nameByMagic.set(Number(s.magic), String(s.name ?? ''));
       }
-      const ownerByTicket = new Map<number, string>();
+      const ownerByTicket = new Map<number, { name: string; via: GuardedPosition['ownerVia'] }>();
       const unresolved: string[] = [];
       let viaMagic = 0;
+      let viaComment = 0;
       for (const p of positions) {
         if (!(p.comment || '').includes('TCS')) continue; // not ours
-        const m = (p as any).magic;
+        const m = p.magic;
         if (m != null && Number(m) !== BRIDGE_DEFAULT_MAGIC) {
           const byMagic = nameByMagic.get(Number(m));
-          if (byMagic) { ownerByTicket.set(p.ticket, byMagic); viaMagic++; continue; }
+          if (byMagic) {
+            ownerByTicket.set(p.ticket, { name: byMagic, via: 'magic' });
+            viaMagic++;
+            continue;
+          }
           // A magic that matches no bot is a CONTRADICTION, not a fallback: it says this position
           // belongs to a bot the registry does not have. Falling through to the comment would
           // silently paper over a missing or reassigned bot, so it is reported instead.
@@ -796,8 +841,17 @@ export class StopGuardianService {
           continue;
         }
         const owner = resolvePositionOwner(p.comment, strategyNames);
-        if (owner) ownerByTicket.set(p.ticket, owner.name);
-        else unresolved.push(`${p.symbol} #${p.ticket} "${String(p.comment).slice(0, 40)}"`);
+        if (owner) {
+          // The comment path's OWN sub-method is preserved: `unique-prefix` means a truncated name
+          // was matched, which is the variant most likely to be wrong.
+          ownerByTicket.set(p.ticket, {
+            name: owner.name,
+            via: `comment:${owner.via}` as GuardedPosition['ownerVia'],
+          });
+          viaComment++;
+        } else {
+          unresolved.push(`${p.symbol} #${p.ticket} "${String(p.comment).slice(0, 40)}"`);
+        }
       }
       // ⚠️ MADE VISIBLE, not silent. An unestablished owner means the position is NOT being
       // managed — which is safe (it keeps the broker-side stop the order path placed) but must be
@@ -811,9 +865,13 @@ export class StopGuardianService {
 
       for (const strat of autoStrats) {
         const pos = positions.find(
-          (p: Mt5RawPosition) => ownerByTicket.get(p.ticket) === strat.name,
+          (p: Mt5RawPosition) => ownerByTicket.get(p.ticket)?.name === strat.name,
         );
         if (!pos) continue;
+
+        // #1018 — carried through to `GuardedPosition.ownerVia` rather than discarded, so the
+        // resolution path is observable. `!` is safe: `pos` was found BY this map.
+        const ownerVia = ownerByTicket.get(pos.ticket)!.via;
 
         const side: 'BUY' | 'SELL' = pos.type === 'buy' ? 'BUY' : 'SELL';
 
@@ -834,7 +892,9 @@ export class StopGuardianService {
         // had stopped seeing anything. It records nothing rather than guessing from ticks.
         this.observeExhaustion(pos, strat, bars);
         if (bars.length < 14) {
-          guarded.push(this.makeGuarded(pos, strat, side, null, 0, true));
+          guarded.push(
+            this.makeGuarded(pos, strat, side, null, 0, true, ownerVia),
+          );
           continue;
         }
 
@@ -896,7 +956,7 @@ export class StopGuardianService {
 
         if (!wickPassed) {
           guarded.push(
-            this.makeGuarded(pos, strat, side, pos.sl, 15, false),
+            this.makeGuarded(pos, strat, side, pos.sl, 15, false, ownerVia),
           );
           continue;
         }
@@ -1013,11 +1073,14 @@ export class StopGuardianService {
             recommendedSl,
             stopConfidence,
             true,
+            ownerVia,
           ),
         );
       }
 
       this.state.guardedPositions = guarded;
+      // #1018 — the attribution OUTCOME, served beside the positions it produced.
+      this.state.ownerAttribution = { viaMagic, viaComment, unresolved };
     } catch (err) {
       this.logger.error(`Guardian tick error: ${(err as Error).message}`);
     }
@@ -1252,6 +1315,7 @@ export class StopGuardianService {
     recommendedSl: number | null,
     stopConfidence: number,
     wickFilterPassed: boolean,
+    ownerVia: GuardedPosition['ownerVia'],
   ): GuardedPosition {
     return {
       ticket: pos.ticket,
@@ -1264,6 +1328,7 @@ export class StopGuardianService {
       stopConfidence,
       wickFilterPassed,
       lastEvaluatedAt: new Date().toISOString(),
+      ownerVia,
     };
   }
 

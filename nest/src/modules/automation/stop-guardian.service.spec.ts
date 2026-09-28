@@ -455,6 +455,108 @@ describe('#927 — a trail can never leave the stop inside the declared distance
     });
   });
 
+  // ── #1018 — THE MAGIC PATH, AND THE ONE THING IT MUST NOT DO ────────────────────────────────
+  //
+  // The block above covers the FALLBACK half. These cover the durable half and its safety
+  // property — neither of which had ANY test, which is why the magic code could be written, built
+  // and seeded while remaining unobservable.
+  describe('owner attribution by magic (#1018)', () => {
+    const MAGIC_BOT = { active: true, mode: 'auto', symbol: 'XAUUSD', id: 'b1', name: 'Magic Bot', slPct: 1, magic: 234105 };
+    const COMMENT_BOT = { active: true, mode: 'auto', symbol: 'XAUUSD', id: 'b2', name: 'Comment Bot', slPct: 1, magic: 234106 };
+
+    /**
+     * Short bars drive the `bars.length < 14` branch — the cheapest path to `makeGuarded`.
+     *
+     * ⚠️ `comment` deliberately names a REAL, resolvable bot in every case. A test whose comment is
+     * unreadable could pass for the wrong reason: "no owner found" and "magic not consulted" look
+     * identical from the outside.
+     */
+    function serviceWithPosition(pos: Record<string, unknown>) {
+      (global as any).fetch = jest.fn(async (url: unknown) => {
+        const u = String(url);
+        if (u.includes('/positions')) return { ok: true, json: async () => ({ positions: [pos] }) } as any;
+        if (u.includes('/candles')) return { ok: true, json: async () => ({ bars: [] }) } as any;
+        return { ok: false, json: async () => ({}) } as any;
+      });
+      const service = new StopGuardianService(
+        { findAll: jest.fn().mockResolvedValue([MAGIC_BOT, COMMENT_BOT]) } as any,
+        { runAll: jest.fn().mockResolvedValue(new Map()) } as any,
+        { getUrl: () => 'http://mt5.test' } as any,
+        { recordAdjustment: jest.fn() } as any,
+      );
+      service.state.enabled = true;
+      return service;
+    }
+
+    const rawPos = (over: Record<string, unknown> = {}) => ({
+      ticket: 7, symbol: 'XAUUSD', type: 'buy', volume: 1,
+      priceOpen: 100, priceCurrent: 100, sl: 99, tp: null, profit: 0,
+      comment: 'TCS Comment Bot',
+      ...over,
+    });
+
+    it('prefers MAGIC over a comment that names a different, entirely real bot', async () => {
+      // ⚠️ The comment here resolves CLEANLY to 'Comment Bot'. So this cannot pass by "an owner was
+      // found" — the two paths disagree, and it only passes if MAGIC WON.
+      // ⚠️ CANARY: move the comment branch above the magic branch in `tick()` and this fails with
+      // strategyName 'Comment Bot'.
+      const service = serviceWithPosition(rawPos({ magic: 234105 }));
+      try {
+        await service.tick();
+        const g = service.state.guardedPositions.find((p) => p.ticket === 7);
+        expect(g?.strategyName).toBe('Magic Bot');
+        expect(g?.ownerVia).toBe('magic');
+        expect(service.state.ownerAttribution).toMatchObject({ viaMagic: 1, viaComment: 0 });
+      } finally {
+        service.stop();
+      }
+    });
+
+    it('an unmatched magic is a CONTRADICTION — never resolved from the comment', async () => {
+      // THE safety property, and the one an obvious implementation gets wrong. Falling through to
+      // the comment would hand a reassigned/unknown bot's position to whichever name the truncated,
+      // human-editable comment happens to carry — and the guardian would then write THAT bot's
+      // `slPct` onto a live position as the #927 declared-distance floor.
+      //
+      // ⚠️ The comment is resolvable, so the assertion is on `unresolved` and not merely on absence:
+      // a fall-through implementation WOULD guard the position, and a test that only checked
+      // `guardedPositions` would pass it.
+      // ⚠️ CANARY: replace the `continue` after `unresolved.push(...)` with a fall-through and this
+      // fails — 'Comment Bot' becomes the owner.
+      const service = serviceWithPosition(rawPos({ magic: 999999 }));
+      try {
+        await service.tick();
+        const un = service.state.ownerAttribution?.unresolved ?? [];
+        expect(un).toHaveLength(1);
+        expect(un[0]).toContain('magic=999999');
+        expect(un[0]).toContain('matches NO bot');
+        expect(service.state.guardedPositions).toHaveLength(0);
+        expect(service.state.ownerAttribution).toMatchObject({ viaMagic: 0, viaComment: 0 });
+      } finally {
+        service.stop();
+      }
+    });
+
+    it('the bridge default 234000 means "no bot attributed" and still falls back to the comment', async () => {
+      // Every position opened BEFORE per-bot magics existed carries 234000, and magic is immutable,
+      // so those can never be attributed by magic. Treating 234000 as a real magic would divert the
+      // entire pre-existing book into `unresolved` and the guardian would stop managing it — the
+      // fallback is live code, not a courtesy.
+      // ⚠️ CANARY: delete the `Number(m) !== BRIDGE_DEFAULT_MAGIC` condition and this fails — the
+      // position lands in `unresolved` instead of resolving from its comment.
+      const service = serviceWithPosition(rawPos({ magic: 234000 }));
+      try {
+        await service.tick();
+        const g = service.state.guardedPositions.find((p) => p.ticket === 7);
+        expect(g?.strategyName).toBe('Comment Bot');
+        expect(g?.ownerVia).toBe('comment:exact');
+        expect(service.state.ownerAttribution).toMatchObject({ viaMagic: 0, viaComment: 1, unresolved: [] });
+      } finally {
+        service.stop();
+      }
+    });
+  });
+
   it('THE CANARY — tiny ATR + flat price sends NO stop ~0.06 from price (the seven-close defect)', async () => {
     const { service, modifyCalls } = makeService({ bars: tinyAtrBars(), priceCurrent: 100, sl: 99 });
     try {
