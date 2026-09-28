@@ -114,6 +114,79 @@ function checkMarkers(files) {
   return { errors, markers };
 }
 
+/**
+ * RULE C — a SETTLED SUBJECT may be named only alongside the row that settled it.
+ *
+ * ⚠️ WHY THIS EXISTS (2026-09-28). An agent re-derived row 23's A/B netting finding as if it were
+ * new (row 43), and asked the owner a question row 23 records as explicitly ended. Nothing caught
+ * it: `detect-circular-work.cjs` reported "No topic reached the 3-touch threshold", because it
+ * tracks ISSUE re-opens, not an agent re-deriving a REGISTER entry.
+ *
+ * The rule is deliberately MECHANICAL: citing is cheap, and requiring a citation turns "did you
+ * read the register?" from a hope into a build failure. The declaration lives in the register
+ * itself (`## 🔒 Settled subjects`), so the owner reads the same list the guard enforces.
+ *
+ * Two things are checked, and BOTH can fail:
+ *   1. a numbered row naming a settled subject without citing its settling row;
+ *   2. a DECLARED TERM THAT APPEARS NOWHERE in its settling row — a stale/invented declaration,
+ *      which would otherwise silently stop guarding anything.
+ *
+ * ⚠️ Only `| <number> |` rows are treated as register rows, so the declaration table itself is
+ * never scanned as one. Pure function: the self-test injects text.
+ */
+function checkReopen(text) {
+  const errors = [];
+  const lines = text.split(/\r?\n/);
+
+  // ── Parse the declaration table, bounded by its heading and the next `## ` heading.
+  const start = lines.findIndex((l) => /^#{2,}\s/.test(l) && /settled subjects/i.test(l));
+  const subjects = [];
+  if (start !== -1) {
+    for (let i = start + 1; i < lines.length; i++) {
+      if (/^#{2,}\s/.test(lines[i])) break;
+      const m = lines[i].match(/^\|\s*(?!Subject)([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*rows?\s+([\d,\s]+)\s*\|\s*$/i);
+      if (!m) continue;
+      const terms = [...m[2].matchAll(/`([^`]+)`/g)].map((t) => t[1]);
+      const settles = m[3].split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n));
+      if (terms.length && settles.length) subjects.push({ subject: m[1].trim(), terms, settles });
+    }
+  }
+
+  // ── Which rows exist, and what they say.
+  const rows = lines
+    .map((line, i) => ({ line, i, m: line.match(/^\|\s*(\d+)\s*\|/) }))
+    .filter((r) => r.m);
+
+  for (const { subject, terms, settles } of subjects) {
+    // (2) Stale declaration: every declared term must ACTUALLY appear in a settling row.
+    const settlerText = rows.filter((r) => settles.includes(Number(r.m[1]))).map((r) => r.line).join('\n');
+    if (settlerText === '') {
+      errors.push(`Settled-subjects declaration "${subject}" names row(s) ${settles.join(', ')} — no such register row exists`);
+      continue;
+    }
+    for (const term of terms) {
+      let re;
+      try { re = new RegExp(term, 'i'); } catch { errors.push(`Settled-subjects declaration "${subject}": \`${term}\` is not a valid regular expression`); continue; }
+      if (!re.test(settlerText)) {
+        errors.push(`Settled-subjects declaration "${subject}": term \`${term}\` appears in NO settling row (${settles.map((n) => 'row ' + n).join(', ')}) — stale declaration, it guards nothing. Remove it or fix the term.`);
+      }
+    }
+    // (1) A row naming the subject must cite the row that settled it.
+    for (const r of rows) {
+      const n = Number(r.m[1]);
+      if (settles.includes(n)) continue; // the settling row may name its own subject
+      const named = terms.some((t) => { try { return new RegExp(t, 'i').test(r.line); } catch { return false; } });
+      if (!named) continue;
+      const cited = settles.some((s) => new RegExp(`rows?\\s+${s}\\b`, 'i').test(r.line));
+      if (!cited) {
+        errors.push(`SETTLED-DECISIONS.md:${r.i + 1} (row ${n}): names the settled subject "${subject}" WITHOUT citing ${settles.map((s) => 'row ' + s).join(' / ')} — this reads as re-opening a settled decision. Cite the row, or say what changed that invalidates it.`);
+      }
+    }
+  }
+
+  return { errors, subjects: subjects.length };
+}
+
 function collectFiles() {
   const out = [];
   const walk = (dir) => {
@@ -137,6 +210,9 @@ function collectFiles() {
 
 function selfTest() {
   const goodRow = '| 30 | **A thing** | because | #1 | 🟢 gated |';
+  // ── RULE C fixtures. The declaration is a table ABOVE the register rows, mirroring the real file.
+  const DECL = '## 🔒 Settled subjects\n| Subject | Terms | Settled by |\n| the netting question | `netting`, `hedging` | row 23 |';
+  const SETTLER = '| 23 | **Settled** | MT5 netting applies, hedging retracted | #1 | 🟢 gated |';
   const cases = [
     ['a well-formed register row', () => checkRegister(goodRow).errors, false],
     ['a row with NO guard status', () => checkRegister('| 30 | **A thing** | because | #1 | — |').errors, true],
@@ -147,6 +223,15 @@ function selfTest() {
     ['a well-formed marker', () => checkMarkers([{ file: 'a.ts', text: '// DECISION (2026-09-24, primary)\n// WHAT: x\n// WHY: y\n// REVERSE BY: z' }]).errors, false],
     ['a marker missing REVERSE BY', () => checkMarkers([{ file: 'a.ts', text: '// DECISION (2026-09-24, primary)\n// WHAT: x\n// WHY: y' }]).errors, true],
     ['prose that merely LOOKS like a marker', () => checkMarkers([{ file: 'a.ts', text: 'subgraph DECISION["4. DECISION (META.Stack)"]' }]).errors, false],
+
+    // ── RULE C — the re-open guard. Canaried in BOTH directions, plus its own failure mode.
+    ['RULE C: a row naming a settled subject WITHOUT citing its row', () => checkReopen(DECL + '\n' + SETTLER + '\n| 43 | **Copy** | the netting question again | #2 | 🟡 partial |').errors, true],
+    ['RULE C: the same row WITH the citation (the fix)', () => checkReopen(DECL + '\n' + SETTLER + '\n| 43 | **Copy** | the netting question (see row 23) | #2 | 🟡 partial |').errors, false],
+    ['RULE C: the SETTLING row may name its own subject', () => checkReopen(DECL + '\n' + SETTLER).errors, false],
+    ['RULE C: an unrelated row is untouched', () => checkReopen(DECL + '\n' + SETTLER + '\n| 44 | **Other** | a totally different matter | #3 | 🟢 gated |').errors, false],
+    ['RULE C: a declaration whose term appears in NO settling row (STALE, guards nothing)', () => checkReopen('## 🔒 Settled subjects\n| Subject | Terms | Settled by |\n| the question | `netting` | row 23 |\n| 23 | **Settled** | nothing relevant here | #1 | 🟢 gated |').errors, true],
+    ['RULE C: a declaration naming a row that does not exist', () => checkReopen('## 🔒 Settled subjects\n| Subject | Terms | Settled by |\n| the question | `netting` | row 99 |\n| 23 | **Settled** | netting applies | #1 | 🟢 gated |').errors, true],
+    ['RULE C: a register with NO declaration table is not an error', () => checkReopen('| 23 | **Settled** | netting applies | #1 | 🟢 gated |').errors, false],
   ];
 
   let bad = 0;
@@ -179,7 +264,8 @@ function main() {
 
   const reg = checkRegister(registerText);
   const mk = checkMarkers(collectFiles());
-  const errors = [...reg.errors, ...mk.errors];
+  const ro = checkReopen(registerText);
+  const errors = [...reg.errors, ...mk.errors, ...ro.errors];
 
   if (args.includes('--report')) {
     console.log('\n  REGISTER — guard status per row\n');
@@ -206,7 +292,8 @@ function main() {
     `${unguarded} ${registerText.split(/\r?\n/).filter((l) => /^\|\s*\d+\s*\|/.test(l) && l.includes(unguarded)).length}`,
   ].join(' · ');
   console.log(`  [decisions] ✅ ${reg.rows} register rows all carry a guard status (${tally}) · ${mk.markers} well-formed DECISION marker(s)`);
-  console.log(`  [decisions] ⚠️  this checks WELL-FORMEDNESS only — it cannot know whether a decision was recorded at all.`);
+  console.log(`  [decisions] ✅ ${ro.subjects} settled subject(s) declared; no row names one without citing the row that settled it`);
+  console.log(`  [decisions] ⚠️  this checks WELL-FORMEDNESS and RE-OPEN only — it cannot know whether a decision was recorded at all.`);
   process.exit(0);
 }
 
