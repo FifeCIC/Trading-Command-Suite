@@ -802,7 +802,6 @@ export class ProtocolGatingController {
         continue;
       }
 
-      const requiredBars = this.protocolDb.getRequiredBars(slug);
       // ⚠️ Cadence from the PROTOCOL, not a hardcoded '1d' — see the `batch` handler below
       // for the full explanation (#783 follow-up). This site additionally omitted the
       // `timeframe` argument on `scoreWithGating`, so the freshness check had to infer the
@@ -810,7 +809,8 @@ export class ProtocolGatingController {
       const cadence = selectBaseTimeframe(
         this.protocolDb.getCached(slug)?.recommendedTimeframe,
       );
-      const bars = await this.marketData.getBars(sym.id, cadence, requiredBars[cadence] ?? requiredBars['1d'] ?? 200);
+      // ⚠️ #1013 — the count came from an open-coded `requiredBars[cadence] ?? requiredBars['1d'] ?? 200`.
+      const bars = await this.marketData.getBars(sym.id, cadence, this.protocolDb.getBaseBarCount(slug, cadence));
       if (!bars || bars.length === 0) continue;
 
       const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, slug);
@@ -926,7 +926,7 @@ export class ProtocolGatingController {
       );
     }
 
-    const protocolBars = this.protocolDb.getRequiredBars(body.protocolId);
+    // (#1013) The raw requirement map is no longer read here — getBaseBarCount() owns the rule.
 
     // ⚠️ Cadence comes from the PROTOCOL, not a hardcoded '1d' (#783 follow-up, 2026-09-11).
     // This endpoint previously loaded `getBars(sym.id, '1d', protocolBars['1d'])` — it fetched
@@ -938,7 +938,9 @@ export class ProtocolGatingController {
     const cadence = selectBaseTimeframe(
       this.protocolDb.getCached(body.protocolId)?.recommendedTimeframe,
     );
-    const barCount = protocolBars[cadence] ?? protocolBars['1d'] ?? 200;
+    // ⚠️ #1013 — was `protocolBars[cadence] ?? protocolBars['1d'] ?? 200`: the same fall-through,
+    // where ONE base-cadence declaration suppressed every larger generic requirement.
+    const barCount = this.protocolDb.getBaseBarCount(body.protocolId, cadence);
 
     const holdings = await Promise.all(
       body.tickers.map(async (ticker) => {

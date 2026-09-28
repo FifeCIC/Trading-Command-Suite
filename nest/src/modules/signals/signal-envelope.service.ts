@@ -426,9 +426,18 @@ export class SignalEnvelopeService {
       : undefined;
     const requiredBars = protocolId ? this.protocolDb.getRequiredBars(protocolId) : { '1d': 200 };
     const baseTimeframe = selectBaseTimeframe(protocol?.recommendedTimeframe);
+    // ⚠️ #1013 — the BASE cadence must use the ONE sizing rule. `requiredBars[baseTimeframe]
+    // || 200` was the same fall-through as the other sites: it returned the base-cadence
+    // declaration (20 for `btc-speed-v1`) and never consulted the larger generic `'1d'`
+    // requirement (72). MEASURED: 4 of that protocol's 13 directives returned 0 on 246 of 247
+    // ticks (99.6%) with the reason `need 72 bars, have 20`, while 3,504 fresh 5m bars sat
+    // unused in `marketbar`. The `|| 200` never fired, because 20 is TRUTHY.
+    const baseBars = protocolId
+      ? this.protocolDb.getBaseBarCount(protocolId, baseTimeframe)
+      : requiredBars['1d'] || 200;
     const [marketBars, dayBars, hourBars, min15Bars] = sym
       ? await Promise.all([
-          this.marketData.getBars(sym.id, baseTimeframe, requiredBars[baseTimeframe] || 200),
+          this.marketData.getBars(sym.id, baseTimeframe, baseBars),
           this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200),
           this.marketData.getBars(sym.id, '1h', requiredBars['1h'] || 200),
           this.marketData.getBars(sym.id, '15m', requiredBars['15m'] || 200),

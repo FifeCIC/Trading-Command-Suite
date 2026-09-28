@@ -57,6 +57,14 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
       getCached: jest.fn(() => ({ recommendedTimeframe: '1m', groups: [] })),
       findBySlug: jest.fn(async () => ({ recommendedTimeframe: '1m', groups: [] })),
       getRequiredBars: jest.fn(() => ({})),
+      // ⚠️ #1013 — the base cadence window now comes from `getBaseBarCount()`, which folds the
+      // generic `'1d'` requirement into the base cadence (the old `requiredBars[tf] || 200`
+      // returned a small base-cadence declaration and never consulted the larger generic one).
+      // Here `getRequiredBars()` returns `{}`, so the real method falls through to its `|| 100`
+      // default. The COUNT is irrelevant to this spec: the mocked `getBars` returns
+      // `barsByTf[tf]` whatever count is requested. Without this the service throws
+      // `getBaseBarCount is not a function` and the staleness path is never exercised.
+      getBaseBarCount: jest.fn(() => 100),
     };
     const marketData: any = {
       getBars: jest.fn(async (_id: string, tf: string) => barsByTf[tf] ?? []),

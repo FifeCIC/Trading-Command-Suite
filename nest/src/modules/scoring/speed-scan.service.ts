@@ -8,6 +8,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { ProtocolGatingService } from './protocol-gating.service';
+import { ProtocolDbService } from './protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PrismaService } from '../../database/prisma.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
@@ -172,6 +173,7 @@ export class SpeedScanService {
 
   constructor(
     private readonly protocolGating: ProtocolGatingService,
+    private readonly protocolDb: ProtocolDbService,
     private readonly marketData: MarketDataService,
     private readonly prisma: PrismaService,
     private readonly seasonalAffinity: SeasonalAffinityService,
@@ -185,7 +187,12 @@ export class SpeedScanService {
   async scan(
     symbols: string[] = DEFAULT_SPEED_SYMBOLS,
     timeframe = '5s',
-    bars = 20,
+    /**
+     * Base bar count. OMIT IT — `undefined` means "size it from the protocol's own declared
+     * requirements". The old default was a literal `20`, which starved every directive that
+     * needed more; see the note in the loop below (#1013).
+     */
+    bars?: number,
   ): Promise<ScanResult> {
     const start = Date.now();
     const results: SymbolScore[] = [];
@@ -205,32 +212,46 @@ export class SpeedScanService {
           return { symbol, skipped: true, reason: 'No market data configured' };
         }
 
+        // ⚠️ #1013 — THE PROTOCOL IS RESOLVED BEFORE THE BARS, because the bar COUNT depends on
+        // it. This path used to fetch with a literal `bars = 20` (the old default parameter) and
+        // a literal `30` for every higher timeframe, whatever the directives declared.
+        //
+        // MEASURED 2026-09-28: `btc-speed-v1` starved 4 of its 13 directives on 246 of 247 ticks
+        // (99.6%) for 24h+, each returning 0 with `Insufficient data: need 72 bars, have 20`,
+        // while 3,504 fresh 5m bars sat unused in `marketbar`. `bollinger-band-squeeze` needed 72.
+        // Nothing threw — the 0 folded silently into an additive composite, which is why this
+        // was found by a guard reading the directive's own recorded reason and not by an error.
+        //
+        // Bar COUNT comes from `getRequiredBars()`, never a literal — the same rule
+        // `ProtocolRunnerService.resolveCadence()` already documents.
+        const resolved = await resolveProtocolForSymbol(symbol, this.prisma);
+        if (!resolved) {
+          return { symbol, skipped: true, reason: 'No protocol assigned — unscoped default scoring removed' };
+        }
+        const { slug: protocol, active: protocolActive } = resolved;
+        const barCount = bars ?? this.protocolDb.getBaseBarCount(protocol, timeframe);
+
         // Try requested timeframe first, fall back to 1d if insufficient bars.
         // ⚠️ Track which cadence actually won, so the freshness hint below matches the bars
         // really loaded. Passing the REQUESTED timeframe after a 1d fallback would report a
         // 1d series as a short-cadence one and mis-size the staleness window (#783 follow-up).
         let loadedTimeframe = timeframe;
-        let marketBars = await this.marketData.getBars(symId, timeframe, bars);
+        let marketBars = await this.marketData.getBars(symId, timeframe, barCount);
         if ((!marketBars || marketBars.length < 5) && timeframe !== '1d') {
-          marketBars = await this.marketData.getBars(symId, '1d', bars);
+          marketBars = await this.marketData.getBars(symId, '1d', barCount);
           loadedTimeframe = '1d';
         }
         if (!marketBars || marketBars.length < 5) {
           return { symbol, skipped: true, reason: `Insufficient bars (${timeframe}/1d)` };
         }
 
-        // Load higher timeframe bars for multi-timeframe directives
-        const [dayBars, hourBars, min15Bars] = await Promise.all([
-          this.marketData.getBars(symId, '1d', 30).catch(() => null),
-          this.marketData.getBars(symId, '1h', 30).catch(() => null),
-          this.marketData.getBars(symId, '15m', 30).catch(() => null),
-        ]);
-
-        const resolved = await resolveProtocolForSymbol(symbol, this.prisma);
-        if (!resolved) {
-          return { symbol, skipped: true, reason: 'No protocol assigned — unscoped default scoring removed' };
-        }
-        const { slug: protocol, active: protocolActive } = resolved;
+        // ⚠️ Higher timeframes sized by the protocol's own declarations too — this was a
+        // literal `30` each, which starves any multi-timeframe directive declaring more.
+        // `loadHigherTfBundle()` is the canonical loader for exactly this (MST-004).
+        const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(
+          symId,
+          protocol,
+        );
         const score = await this.protocolGating.scoreWithGating(
           symbol,
           marketBars as any,

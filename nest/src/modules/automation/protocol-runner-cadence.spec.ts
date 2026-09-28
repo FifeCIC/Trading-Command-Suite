@@ -32,7 +32,13 @@ function resolveCadence(
   const declared = db.getCached(protocolId)?.recommendedTimeframe;
   const timeframe = selectBaseTimeframe(declared) || FALLBACK_TIMEFRAME;
   const required = db.getRequiredBars(protocolId);
-  const barCount = required[timeframe] ?? required['1d'] ?? 100;
+  // ⚠️ MIRROR of `ProtocolDbService.getBaseBarCount()` (#1013). This suite defines its own
+  // copy of the logic rather than exercising the private method, so the two MUST be kept in
+  // step BY HAND — if the mirror ever diverges the suite passes while the real runner is
+  // wrong. The rule is a MAXIMUM, not a fall-through: the generic `'1d'` key is how a
+  // directive declares a requirement it cannot key to a runtime cadence (74 of 108 do), so
+  // `required[tf] ?? required['1d']` let ONE base-cadence declaration suppress every larger one.
+  const barCount = Math.max(required[timeframe] ?? 0, required['1d'] ?? 0) || 100;
   return { timeframe, barCount };
 }
 
@@ -85,13 +91,31 @@ describe('ProtocolRunnerService — per-protocol cadence', () => {
   });
 
   describe('bar count comes from getRequiredBars, not a literal', () => {
-    it('uses the protocol requirement for its own cadence', () => {
+    it('uses the LARGER of the cadence requirement and the generic 1d requirement', () => {
+      // The generic `'1d'` requirement wins here because it is the larger number. Sizing on
+      // `required[tf] ?? required['1d']` returned 120 — the SMALLER one — and that is exactly
+      // how the starvation hid (#1013).
       const { timeframe, barCount } = resolveCadence(
         'xau-speed-1h',
         dbWith('1h', { '1d': 200, '1h': 120, '15m': 30 }),
       );
       expect(timeframe).toBe('1h');
-      expect(barCount).toBe(120);
+      expect(barCount).toBe(200);
+    });
+
+    it('#1013 — a base-cadence declaration must NOT suppress a larger generic one', () => {
+      // THE MEASURED CASE. `btc-speed-v1` declares `'15m–1d'` → `selectBaseTimeframe` → `'15m'`.
+      // `multi-timeframe-trend` declares `{ '1d': 20, '1h': 20, '15m': 20 }` — a real
+      // base-cadence key — while `bollinger-band-squeeze` needs 72 under the generic `'1d'`.
+      // The old fall-through returned 20, so 4 of the protocol's 13 directives returned 0 on
+      // 246 of 247 ticks (99.6%) with the reason `need 72 bars, have 20`, while 3,504 fresh
+      // 5m bars sat unused in `marketbar`. Nothing threw: the 0 folded into the composite.
+      const { timeframe, barCount } = resolveCadence(
+        'btc-speed-v1',
+        dbWith('15m–1d', { '15m': 20, '1d': 72 }),
+      );
+      expect(timeframe).toBe('15m');
+      expect(barCount).toBe(72);
     });
 
     it('does not starve a protocol whose cadence has no explicit requirement', () => {

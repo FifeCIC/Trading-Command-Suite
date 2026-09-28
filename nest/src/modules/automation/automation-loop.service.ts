@@ -1183,7 +1183,10 @@ export class AutomationLoopService implements OnModuleInit {
             // wait. Measured: 55 identical decision_log reasons in 24h. Resolution lives in the
             // shared util (INV-SINGLE-CADENCE); guarded at build time by scanRawCadenceFallback().
             const timeframe = selectBaseTimeframe(this.protocolDb.getCached(protocolId)?.recommendedTimeframe);
-            const minBarsNeeded = requiredBars[timeframe] || 100;
+// ⚠️ #1013 — was `requiredBars[timeframe] || 100`, the same fall-through: this gate
+              // cleared at 20 bars while scoring needed 72, so the bot was declared "ready" and
+              // then every long-window directive returned 0.
+              const minBarsNeeded = this.protocolDb.getBaseBarCount(protocolId, timeframe);
 
             const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strat.symbol } });
             if (!dbSym) {
@@ -1487,9 +1490,10 @@ export class AutomationLoopService implements OnModuleInit {
             `scoring on the control's (${controlTf})`,
         );
       }
+      // ⚠️ #1013 — both sides via the ONE rule; this open-coded the fall-through twice.
       const requiredBars = Math.max(
-        this.protocolDb.getRequiredBars(controlCfg.protocolId)?.[controlTf] ?? 100,
-        this.protocolDb.getRequiredBars(variantCfg.protocolId)?.[variantTf] ?? 100,
+        this.protocolDb.getBaseBarCount(controlCfg.protocolId, controlTf),
+        this.protocolDb.getBaseBarCount(variantCfg.protocolId, variantTf),
       );
       const bars = await this.marketData.getBars(dbSym.id, controlTf, requiredBars);
       if (!bars || bars.length < 20) continue;

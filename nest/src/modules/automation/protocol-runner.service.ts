@@ -109,8 +109,12 @@ export class ProtocolRunnerService {
   private resolveCadence(protocolId: string): { timeframe: string; barCount: number } {
     const declared = this.protocolDb.getCached(protocolId)?.recommendedTimeframe;
     const timeframe = selectBaseTimeframe(declared) || FALLBACK_TIMEFRAME;
-    const required = this.protocolDb.getRequiredBars(protocolId);
-    const barCount = required[timeframe] ?? required['1d'] ?? 100;
+    // ⚠️ #1013 — delegate to the ONE home for this rule. It was open-coded here as
+    // `required[timeframe] ?? required['1d'] ?? 100`: a fall-through where the docstring
+    // above means a maximum, so ONE directive declaring a base cadence starved every larger
+    // generic requirement. Measured: btc-speed-v1, 4 of 13 directives dead on 246/247 ticks
+    // with 3,504 fresh bars sitting unused.
+    const barCount = this.protocolDb.getBaseBarCount(protocolId, timeframe);
     return { timeframe, barCount };
   }
 

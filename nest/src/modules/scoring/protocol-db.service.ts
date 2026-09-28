@@ -13,6 +13,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { DirectiveGroup } from '../directives/directive-groups';
 import { DirectivesService } from '../directives/directives.service';
 import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
 
 /**
  * Protocol symbol-derivation rules (#665, retired #764).
@@ -149,6 +150,46 @@ export class ProtocolDbService implements OnModuleInit {
     }
 
     return required;
+  }
+
+  /**
+   * The bar count the BASE (live) cadence must be fetched at for a protocol.
+   *
+   * ⚠️ WHY THIS EXISTS — #1013, measured 2026-09-27.
+   *
+   * A directive cannot know the protocol's runtime cadence, so the convention is to declare
+   * its real requirement under the GENERIC key `'1d'`. **74 of 108** directives do exactly
+   * that; only 3 declare a base-cadence key. Consumers therefore sized the base fetch with
+   * `required[tf] ?? required['1d'] ?? N` — a FALL-THROUGH, where the intent is a MAXIMUM. So
+   * ONE directive declaring `'15m'` suppressed the fall-through and every larger generic
+   * requirement was silently ignored.
+   *
+   * Measured: `btc-speed-v1` (`recommendedTimeframe '15m–1d'` → `selectBaseTimeframe` → `'15m'`
+   * → `required['15m'] = 20`) starved 4 of its 13 directives on **246 of 247 ticks (99.6%)**
+   * for 24h+ — each returning `0` with the reason `Insufficient data: need N bars, have 20`,
+   * while 3,504 fresh 5m bars sat unused in `marketbar`. `bollinger-band-squeeze` needed 72.
+   * Nothing threw: the `0` folded silently into an additive composite.
+   *
+   * ⚠️ Blast radius was MEASURED BEFORE changing it (`logs/probe-bar-window.cjs`): this rule
+   * changes 2 of 48 protocols and provably cannot change the other 46 — when `base >= 1d` the
+   * max equals today's value, and when `base` is absent the max equals `1d`.
+   *
+   * Four call sites previously open-coded the fall-through (the runner, the portfolio handler,
+   * the automation loop's readiness gate, and the A/B path). They now call this, so the rule
+   * has ONE home — the same reason `selectBaseTimeframe()` is a contract file.
+   *
+   * ⚠️ NOT used to size `loadHigherTfBundle()`'s 1d/1h/15m arrays: those are genuinely
+   * per-cadence, and folding the generic key into them would be the overloading bug, not the fix.
+   */
+  getBaseBarCount(protocolSlug: string, timeframe?: string): number {
+    const required = this.getRequiredBars(protocolSlug);
+    const baseTf =
+      timeframe || selectBaseTimeframe(this.getCached(protocolSlug)?.recommendedTimeframe) || '1d';
+    const own = required[baseTf] ?? 0;
+    const generic = required['1d'] ?? 0;
+    // `|| 100` is effectively unreachable (getRequiredBars never returns an empty map) — it is
+    // kept so this returns a usable number rather than 0 if that guarantee ever changes.
+    return Math.max(own, generic) || 100;
   }
 
   /** Clear the cache at start of each tick. */
