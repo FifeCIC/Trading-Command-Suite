@@ -1461,14 +1461,6 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 volume = float(body.get('volume', 0.01))
                 sl = body.get('sl'); tp = body.get('tp')
                 comment = body.get('comment', 'TCS Trade')
-                # #1018 - the app supplies a PER-BOT magic, so a position can be attributed to
-                # the bot that opened it. Absent or unreadable -> DEFAULT_MAGIC, i.e. unchanged.
-                # WARNING: an MT5 magic is IMMUTABLE once the order is placed, so only this
-                # opening path can set it; a wrong value here cannot be corrected afterwards.
-                try:
-                    magic = int(body.get('magic') or DEFAULT_MAGIC)
-                except (TypeError, ValueError):
-                    magic = DEFAULT_MAGIC
                 # #1018 — the app supplies a PER-BOT magic so a position can be attributed to the
                 # bot that opened it. Absent or unreadable → DEFAULT_MAGIC, i.e. the old behaviour.
                 # ⚠️ Magic is read ONCE per order and is IMMUTABLE afterwards in MT5, so a wrong
