@@ -880,6 +880,69 @@ export default function ViewStrategyPage() {
             <span className={styles.groupCount}>{stageRules.length} rules</span>
           </h2>
 
+          {/* ── THE MECHANISMS ACTING HERE — and the precedence that is NOT declared (2026-09-28) ──
+
+              ⚠️ WHY THIS IS A TABLE AND NOT A DIAGRAM OF ARROWS. The owner asked for the steps an
+              algorithm can take to be visible. Measured: they are NOT all visible, and the honest
+              reason is that **no execution ORDER is declared anywhere**. `bot-rules.ts` orders rules
+              by STAGE, `GUARDIAN_RULES` orders mechanisms by its own array, and neither is a runtime
+              sequence — the guardian tightens, the time-stop closes on age, and the observers record,
+              all independently. Drawing arrows would depict an ordering that does not exist, which is
+              the same defect as a stage shown for a mechanism that was never built.
+
+              ⚠️ ONE precedence IS real and enforced, and it is named below rather than drawn from
+              the layout: `declared-distance-floor` (#927) — a tighten may never leave the stop closer
+              to the price than the bot's own `slPct`. That is a genuine ordering between two owners,
+              and it is the only one this surface can state as fact today.
+
+              ⚠️ Mechanisms, not rules: this is the same `mechanismByField` link the rows below use,
+              so a mechanism cannot appear here and not there. Derived, never hand-listed. */}
+          {(() => {
+            const mechs = [];
+            const seen = new Set();
+            for (const r of stageRules) {
+              const o = exitMechanismFor.get(r.field);
+              if (!o || seen.has(o.mech.id)) continue;
+              seen.add(o.mech.id);
+              mechs.push({ mech: o.mech, fields: (o.mech.fields || []).filter((f) => stageRules.some((x) => x.field === f)) });
+            }
+            if (!mechs.length) return null;
+            return (
+              <div className={styles.sectionNote}>
+                <p>
+                  <strong>{mechs.length} mechanism(s) act on this stage</strong> — listed by owner. The
+                  engine runs these independently; <strong>no precedence between them is declared</strong>,
+                  so this is a set, not a sequence. A declared order is a design decision that has not
+                  been made (see #990).
+                </p>
+                <ul>
+                  {mechs.map(({ mech, fields }) => (
+                    <li key={mech.id}>
+                      <code className={styles.fieldCode}>{mech.id}</code>{' '}
+                      — <strong>{mech.label}</strong>
+                      {' · '}
+                      {mech.enforcement === 'live'
+                        ? 'LIVE — the engine acts'
+                        : mech.enforcement === 'display-only'
+                          ? 'OBSERVES ONLY — records, acts on nothing'
+                          : `NOT APPLIED (${mech.enforcement})`}
+                      {' · '}
+                      {mech.scope === 'per-bot' ? 'per-bot settings' : 'global — shared by every bot'}
+                      {fields.length ? ` · reads ${fields.map((f) => `\`${f}\``).join(', ')}` : ''}
+                    </li>
+                  ))}
+                </ul>
+                <p>
+                  ⚠️ <strong>The one ordering that IS enforced:</strong>{' '}
+                  <code className={styles.fieldCode}>declared-distance-floor</code> (#927) — a tighten
+                  may never leave the stop closer to price than this bot&apos;s own declared stop
+                  distance. It was added after seven positions closed inside 28 minutes on stops
+                  trailed to ~0.03% against a declared ~1%.
+                </p>
+              </div>
+            );
+          })()}
+
           <ul className={styles.subList}>
             {stageRules.map((rule) => {
               // ⚠️ An unrecognised level must NOT render as if it applies.
