@@ -325,6 +325,23 @@ export interface BrokerOrderRequest {
 export interface BrokerOrderResult {
   success: boolean;
   ticket?: string | number;
+  /**
+   * ⚠️ The BROKER'S POSITION id — a DIFFERENT NAMESPACE from `ticket` (#1014, 2026-09-28).
+   *
+   * `ticket` is the **ORDER** ticket. `positionId` is the **POSITION** the order filled into. They
+   * are different numbers that never intersect, and on a NETTING account every order on a symbol
+   * merges into ONE position — so four orders can share one `positionId`.
+   *
+   * WHY THIS FIELD EXISTS: `position-sync.service.ts` reconciles closing deals by
+   * `deal.positionId === trade.brokerTicket`. Storing the ORDER ticket there matched **zero**
+   * deals, so `exitPrice` stayed null, `pnl` stayed unknown, and the row was finalised as
+   * "position vanished" — a label for "closed with no computable result", not an observation.
+   * 7 XAUUSD trades and 13 overall were falsely closed that way.
+   *
+   * ⚠️ Populated from the bridge, which has always sent it (`d.position_id`); the adapter simply
+   * never copied it. Consumers must PREFER this over `ticket` when recording `brokerTicket`.
+   */
+  positionId?: string;
   price?: number;
   error?: string;
   status?: 'FILLED' | 'PARTIALLY_FILLED' | 'REJECTED' | 'UNKNOWN';

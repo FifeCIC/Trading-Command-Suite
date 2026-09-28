@@ -960,6 +960,11 @@ export class Mt5Adapter implements IProviderAdapter {
     const result: BrokerOrderResult = {
       success: data.success === true,
       ticket: data.ticket ?? undefined,
+      // ⚠️ #1014 — read the POSITION id, not just the order ticket. The bridge has always returned
+      // it (`positionId: d.position_id`); this adapter dropped it, so every caller could only see
+      // the ORDER ticket — and storing that as `brokerTicket` is what made the reconciler find
+      // zero closing deals and finalise real positions as "vanished".
+      positionId: data.positionId != null ? String(data.positionId) : undefined,
       price: data.price ?? undefined,
       error: data.error ?? undefined,
       status: data.status === 'partially_filled' || data.partial === true

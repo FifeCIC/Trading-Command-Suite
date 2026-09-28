@@ -477,7 +477,13 @@ export class AutomationLoopService implements OnModuleInit {
           provider: brokerId, status: 'open', origin: 'strategy',
           source: 'meta-stack',
           scoringStrategyId: strategyId,
-          brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
+          // ⚠️ #1014 — the POSITION id, NOT the order ticket. They are different namespaces and
+          // never intersect, and `position-sync.service.ts` matches closing deals by
+          // `deal.positionId`. Storing the order ticket here matched zero deals, so `exitPrice`
+          // stayed null and a real position was finalised as "vanished".
+          brokerTicket: result.positionId != null
+            ? String(result.positionId)
+            : result.ticket != null ? String(result.ticket) : undefined,
           sl, tp,
           brokerComment: `TCS ${strategyName}`,
         } as any);
@@ -2191,7 +2197,10 @@ export class AutomationLoopService implements OnModuleInit {
         origin: 'strategy',
         source: 'meta-stack',
         scoringStrategyId: action.strategyId,
-        brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
+        // ⚠️ #1014 — the POSITION id, not the order ticket. See the note at the other write site.
+        brokerTicket: result.positionId != null
+          ? String(result.positionId)
+          : result.ticket != null ? String(result.ticket) : undefined,
         sl,
         tp,
       } as any);

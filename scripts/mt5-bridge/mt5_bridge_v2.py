@@ -1570,7 +1570,26 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         'volume': filled_volume, 'time': time.time(), 'status': fill_status}
 
                 journal_trade('order_placed', {'ticket': result.order, 'symbol': symbol, 'type': order_type, 'volume': volume, 'price': price, 'clientOrderId': client_order_id or None})
-                return json_response(self, {'success': True, 'ticket': result.order, 'volume': volume,
+                # ⚠️ #1014 — `positionId` is NOT the same number as `ticket`, and this route used to
+                # omit it entirely. `result.order` is the ORDER ticket; `result.position` is the
+                # POSITION the fill went into. On a NETTING account every order on a symbol merges
+                # into one position, so four orders share one position id.
+                #
+                # The API stores whichever it is given as `trade.brokerTicket`, and
+                # `position-sync.service.ts` reconciles closing deals by `deal.positionId` — so an
+                # order ticket there matches NOTHING, `exitPrice` stays null, and a real position is
+                # finalised as "position vanished". Measured: 7 XAUUSD trades, 13 overall.
+                #
+                # ⚠️ `/history` already returned this field (from `d.position_id`); only this route
+                # was missing it, which is why the bug looked like a reconciler fault.
+                #
+                # ⚠️ `getattr` with a fallback: MT5 sets `position` on a filled order, but a
+                # simulation/rejected path may not. Keeping the key present and None is honest;
+                # inventing a value would be worse than omitting it.
+                position_id = getattr(result, 'position', None)
+                return json_response(self, {'success': True, 'ticket': result.order,
+                    'positionId': str(position_id) if position_id else None,
+                    'volume': volume,
                     'filledVolume': filled_volume, 'partial': fill_status == 'partially_filled',
                     'status': fill_status, 'retcode': result.retcode, 'symbol': symbol,
                     'price': float(result.price or price), 'type': order_type,
