@@ -364,6 +364,11 @@ export const NAV_TREE = {
       // is an EXPERIMENT first: does seeing the exit reasons help, or is it noise? Register row 36
       // constrains how it may be framed (a thin funnel is not a fault), not whether it exists.
       { id: 'blocked-signals', label: 'Blocked Signals', icon: '🚦' },
+      // 2026-09-28 — the CHANGE view. Every trading page rendered a snapshot; only PerformanceLab
+      // had a time axis. This is Development because it is an EXPERIMENT first: does seeing the
+      // period-over-period delta help you judge a system, or is it noise? Read-only by design —
+      // it calls two endpoints that only query the database.
+      { id: 'performance-change', label: 'Performance Change', icon: '📈' },
       // ── Theme engineering ──
       { kind: 'section-header', id: 'dev-theme', label: 'Theme Engineering', icon: '🎨' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },

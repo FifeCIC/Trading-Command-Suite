@@ -1,0 +1,486 @@
+===== SymbolPage.jsx
+  API L13: import { apiGet } from '../core/api/client';
+  API L349: queryFn: () => apiGet(`/api/symbols/${symbol}/focus`),
+  API L357: queryFn: () => apiGet(`/api/symbols/${symbol}/overview`),
+  API L386: queryFn: () => apiGet(`/api/symbols/${symbol}/protocols`),
+  API L402: queryFn: () => apiGet(`/api/signals/envelope/${symbol}?protocol=${encodeURIComponent(protocolId)}`),
+  API L411: queryFn: () => apiGet(`/api/earnings/symbol/${symbol}`),
+  API L419: queryFn: () => apiGet(`/api/news/feed?symbol=${symbol}&limit=5`),
+  HDR L529: <h2>Symbol not found</h2>
+  HDR L581: <h1>{symbol}</h1>
+  HDR L613: <motion.section
+  HDR L683: </motion.section>
+  HDR L711: <motion.section className="sym-card sym-card--score" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+  HDR L712: <h2>Score</h2>
+  HDR L777: </motion.section>
+  HDR L780: <motion.section className="sym-card sym-card--risk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+  HDR L781: <h2>Risk Gate</h2>
+  HDR L810: </motion.section>
+  HDR L813: <motion.section className="sym-card sym-card--earnings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.10 }}>
+  HDR L814: <h2>Earnings</h2>
+  HDR L827: </motion.section>
+  HDR L836: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.105 }}>
+  HDR L837: <h2>Directive Evidence</h2>
+  HDR L856: </motion.section>
+  HDR L859: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.11 }}>
+  HDR L860: <h2>Protocol Strength</h2>
+  HDR L892: </motion.section>
+  HDR L894: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+  HDR L895: <h2>Net P&L per Bot</h2>
+  HDR L904: </motion.section>
+  HDR L906: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.13 }}>
+  HDR L907: <h2>How Trades Ended</h2>
+  HDR L910: </motion.section>
+  HDR L915: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+  HDR L916: <h2>Directive Drilldown</h2>
+  HDR L943: </motion.section>
+  HDR L947: a shorter page and no reason (#926, development-philosophy section 7). */}
+  HDR L949: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+  HDR L950: <h2>Directive Drilldown</h2>
+  HDR L955: </motion.section>
+  HDR L960: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.14 }}>
+  HDR L961: <h2>Protocol Scores</h2>
+  HDR L988: </motion.section>
+  HDR L998: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+  HDR L999: <h2>Bot Outcomes on {symbol}</h2>
+  HDR L1009: </motion.section>
+  HDR L1013: <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.16 }}>
+  HDR L1014: <h2>Recent News</h2>
+===== SymbolDetailPage.jsx
+  API L5: import { apiGet } from '../core/api/client';
+  API L17: queryFn: () => apiGet(`/api/symbols/${symbolId}`),
+  API L23: queryFn: () => apiGet(`/api/market-data/freshness/${symbolId}`),
+  API L29: queryFn: () => apiGet(`/api/scoring/history/${symbolId}`),
+  API L37: queryFn: () => apiGet(`/api/symbols/${symbolId}/protocols`),
+  API L44: queryFn: () => apiGet(`/api/symbols/${symbolId}/overview`),
+  API L52: queryFn: () => apiGet(`/api/market-data/candles/${symbolId}?timeframe=${activeTf}`),
+  API L59: queryFn: () => apiGet('/api/portfolio?source=trading212'),
+  API L68: return apiGet(`/api/isa/fx-warning?symbol=${encodeURIComponent(tradeModal.ticker)}&side=${tradeModal.side}${exchange}`);
+  API L78: queryFn: () => fetch('/api/news/collect', { method: 'POST' }).then((r) => r.json()),
+  HDR L153: <h1>{sym.ticker || symbolId}</h1>
+  HDR L176: <section className="sd-card">
+  HDR L177: <h2>📊 Protocol Scores</h2>
+  HDR L250: </section>
+  HDR L254: <section className="sd-card">
+  HDR L255: <h2>Freshness</h2>
+  HDR L263: </section>
+  HDR L266: <section className="sd-card">
+  HDR L267: <h2>Current Score</h2>
+  HDR L277: </section>
+  HDR L280: <section className="sd-card sd-card--wide">
+  HDR L281: <h2>Recent Scores</h2>
+  HDR L294: </section>
+  HDR L299: <section className="sd-card">
+  HDR L300: <h2>Directive Breakdown</h2>
+  HDR L323: </section>
+  HDR L327: <section className="sd-card sd-card--trade">
+  HDR L328: <h2>💼 Portfolio & Trade</h2>
+  HDR L353: <h3>Trade Actions</h3>
+  HDR L390: </section>
+  HDR L396: <h3>{tradeModal.side.toUpperCase()} {tradeModal.ticker}</h3>
+  HDR L422: <section className="sd-card">
+  HDR L423: <h2>📰 Recent News</h2>
+  HDR L442: </section>
+===== ProtocolsPage.jsx
+  API L4: import { apiGet } from '../core/api/client';
+  API L22: queryFn: () => apiGet('/api/scoring/gated/protocols'),
+  API L69: <button onClick={() => protocolsQuery.refetch()}>Retry</button>
+  API L199: const res = await fetch(`/api/scoring/gated/protocols/${selectedProto.id}/toggle`, { method: 'PATCH' });
+  API L200: if (res.ok) protocolsQuery.refetch();
+  HDR L67: <h2>Unable to load protocols</h2>
+  HDR L83: <h2>Protocols Registry</h2>
+  HDR L126: <h1>{selectedProto.name}</h1>
+  HDR L136: <div className="protocols-id-section">
+  HDR L149: <h3>Theory</h3>
+  HDR L214: <h3>META.Stack Connections</h3>
+  HDR L263: <h3>Directive Groups</h3>
+  HDR L305: <h3>API Usage</h3>
+===== ProtocolsPerformancePage.jsx
+  API L7: import { apiGet } from '../core/api/client';
+  API L8: import { fetchScoringThresholds } from '../core/api/signals';
+  API L21: queryKey: ['perf-protocols'], queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })), staleTime: 60_000,
+  API L24: queryKey: ['perf-runs'], queryFn: () => apiGet('/api/scoring/runs?limit=200&groupBy=protocol').catch(() => ({ runs: [] })), staleTime: 10_000, refetchInterval: 30_000,
+  API L27: queryKey: ['perf-strats'], queryFn: () => apiGet('/api/trading/strategies/with-ratios').catch(() => []), staleTime: 15_000, refetchInterval: 30_000,
+  HDR L98: <h1>Protocols Performance <PageInfoPopover>Every symbol per protocol with score + P&amp;L from live trading.</PageInfoPopover></h1>
+===== ProtocolTrailPage.jsx
+  API L19: import { apiGet } from '../core/api/client';
+  API L49: return apiGet(`/api/scoring/breakdown/${encodeURIComponent(symbol)}${qs ? `?${qs}` : ''}`).catch(() => null);
+  HDR L135: <h1>Protocol Trail
+  HDR L232: {/* Group sections */}
+===== StrategiesListPage.jsx
+  API L16: import { apiGet, apiPost } from '../core/api/client';
+  API L118: const res = await apiGet(API);
+  API L134: queryFn: () => apiGet('/api/portfolio?source=mt5').catch(() => ({ positions: [] })),
+  HDR L183: <h1>Trading Bots</h1>
+  HDR L321: <h2 className={styles.sidebarTitle}>{sel.name}</h2>
+===== ViewStrategyPage.jsx
+  API L68: import { apiGet } from '../core/api/client';
+  API L486: queryFn: () => apiGet(`${TRADING}/${strategyId}`),
+  API L494: queryFn: () => apiGet(`${TRADING}/bot-rules`),
+  API L502: queryFn: () => apiGet(`${TRADING}/${strategyId}/protocols`),
+  API L512: queryFn: () => apiGet(BOT_PERF),
+  API L532: queryFn: () => apiGet('/api/automation/stop-guardian/status'),
+  HDR L72: // second IntersectionObserver is deliberate - a second implementation drifts.
+  HDR L114: * for a black background and would fail WCAG AA as text on a light panel. Keeping the meaning in
+  HDR L231: <section className={styles.group}>
+  HDR L232: <h2 className={styles.groupHead}>
+  HDR L275: </section>
+  HDR L305: <section className={styles.group}>
+  HDR L306: <h2 className={styles.groupHead}>
+  HDR L316: <p className={styles.sectionNote}>Reading the bot’s close history…</p>
+  HDR L330: <p className={styles.sectionNote}>
+  HDR L375: all, which is why the panel names it rather than printing a figure. */}
+  HDR L419: <p className={styles.sectionNote}>
+  HDR L431: <p className={styles.sectionNote}>
+  HDR L446: <p className={styles.sectionNote}>
+  HDR L455: <p key={i} className={styles.sectionNote}>
+  HDR L460: <p className={styles.sectionNote}>{query.data.populationNote}</p>
+  HDR L464: </section>
+  HDR L530: // a 404 produced no error notice here, so the section simply rendered as if the guardian had
+  HDR L633: // would re-create the very duplication this change removes. This section keeps the GLOBAL half:
+  HDR L740: <h1 className={styles.title}>{bot.name}</h1>
+  HDR L790: <section className={`${styles.summary} ${dormant.length === 0 ? styles.summaryClean : ''}`}>
+  HDR L818: </section>
+  HDR L837: <section className={styles.group}>
+  HDR L838: <h2 className={styles.groupHead}>
+  HDR L866: <p className={styles.sectionNote}>
+  HDR L873: </section>
+  HDR L877: <section key={stage} className={`${styles.group} lad-reveal`}>
+  HDR L878: <h2 className={styles.groupHead}>
+  HDR L969: </section>
+  HDR L973: ⚠️ WHY THIS SECTION IS HERE, BESIDE THE EXIT STAGE ABOVE.
+  HDR L985: three named are only the ones this section's author happened to look at, which is how a
+  HDR L995: <section className={styles.group}>
+  HDR L996: <h2 className={styles.groupHead}>
+  HDR L1009: rather than hidden because a blank section would read as a bot with no exit
+  HDR L1014: <p className={styles.sectionNote}>Reading the guardian declarations…</p>
+  HDR L1016: <p className={styles.sectionNote}>
+  HDR L1022: <p className={styles.sectionNote}>
+  HDR L1063: <p className={styles.sectionNote}>
+  HDR L1112: <p className={styles.sectionNote}>
+  HDR L1131: </section>
+  HDR L1142: <section className={styles.group}>
+===== StrategyMonitorPage.jsx
+  API L17: import { apiGet, apiPost } from '../core/api/client';
+  API L18: import { dismissSignal, fetchScoringThresholds } from '../core/api/signals';
+  API L50: queryFn: () => apiGet('/api/trading/strategies/with-ratios').catch(() => ({ strategies: [] })),
+  API L57: queryFn: () => apiGet('/api/automation/status').catch(() => null),
+  API L63: queryFn: () => apiGet('/api/providers/mt5/diagnostics').catch(() => null),
+  API L70: queryFn: () => apiGet('/api/trading/strategies/queues').catch(() => []),
+  HDR L217: <h1>Strategy Monitor</h1>
+  HDR L269: <h2>Live state</h2>
+  HDR L390: <section className="sm-queues">
+  HDR L392: <h2>
+  HDR L506: </section>
+===== PositionsMonitorPage.jsx
+  API L5: import { apiGet } from '../core/api/client';
+  API L217: queryFn: () => apiGet('/api/trading/mt5/positions')
+  API L229: queryFn: () => apiGet('/api/portfolio?source=trading212').catch(() => null),
+  API L239: mutationFn: ({ ticket }) => fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' }).then(r => r.json()),
+  HDR L326: <h1>Positions Monitor</h1>
+===== PortfolioPage.jsx
+  API L4: import { apiGet } from '../core/api/client';
+  API L96: apiGet('/api/portfolio/trading212/mode')
+  API L120: const data = await apiGet(url);
+  API L130: queryFn: () => apiGet('/api/portfolio/scores').then((d) => d?.scores || []).catch(() => []),
+  API L153: portfolioQuery.refetch();
+  API L154: scoresQuery.refetch();
+  API L175: <UnavailableNotice reason="no_connection" source={source} onRefresh={() => portfolioQuery.refetch()} />
+  API L195: <button className="pf-refresh-btn" onClick={() => portfolioQuery.refetch()} disabled={portfolioQuery.isFetching}>
+  API L200: <UnavailableNotice reason={reason} source={source} onRefresh={() => portfolioQuery.refetch()} />
+  API L364: portfolioQuery.refetch();
+  HDR L73: <h2>{n.title}</h2>
+  HDR L162: <h1>Portfolio</h1>
+  HDR L173: <h1>Portfolio</h1>
+  HDR L187: <h1>Portfolio</h1>
+  HDR L215: <h1>Portfolio</h1>
+  HDR L266: <div className="pf-section">
+  HDR L267: <h2>Broker Breakdown</h2>
+  HDR L282: <div className="pf-section">
+  HDR L283: <h2>Allocation</h2>
+  HDR L294: <div className="pf-section">
+  HDR L295: <h2>Positions</h2>
+  HDR L342: <div className="pf-section pf-account-detail">
+  HDR L343: <h2>Account</h2>
+===== TradeHistoryPage.jsx
+  API L3: import { apiGet } from '../core/api/client';
+  API L82: const data = await apiGet(`/api/trading/trade-history?${params.toString()}`);
+  API L147: <button className="pf-refresh-btn" onClick={() => historyQuery.refetch()} disabled={historyQuery.isFetching}>
+  HDR L129: <h1>Trade History</h1>
+  HDR L175: <div className="pf-section pf-section-flush">
+  HDR L186: <div className="pf-section">
+  HDR L187: <h2>Trades</h2>
+===== AccountsDashboardPage.jsx
+  API L2: import { apiGet } from '../core/api/client';
+  API L23: apiGet('/api/providers/mt5/accounts'),
+  API L24: apiGet('/api/portfolio/summary'),
+  API L25: apiGet('/api/isa/dashboard'),
+  API L26: apiGet('/api/providers/capital.com/account').catch(() => null),
+  HDR L120: <h1>💰 Accounts</h1>
+  HDR L148: <section className="tp-card">
+  HDR L149: <h2>Live Accounts</h2>
+  HDR L228: </section>
+  HDR L230: {/* ISA Panel — detailed metrics */}
+  HDR L232: <section className="tp-card ad-isa-panel">
+  HDR L234: <h2>Trading212 Stocks ISA</h2>
+  HDR L263: </section>
+  HDR L267: <section className="tp-card">
+  HDR L298: </section>
+  HDR L301: <section className="tp-card ad-totals">
+  HDR L302: <h2>Net Totals</h2>
+  HDR L312: </section>
+===== ExecutionQueuePage.jsx
+  API L4: import { apiGet, apiPost } from '../core/api/client';
+  API L109: queryFn: () => apiGet('/api/automation/events?limit=100'),
+  API L117: queryFn: () => apiGet('/api/automation/queue'),
+  API L124: queryFn: () => apiGet('/api/automation/queue/stats'),
+  API L137: queryFn: () => apiGet('/api/automation/status'),
+  API L144: queryFn: () => apiGet('/api/automation/jobs?limit=50'),
+  API L149: queryFn: () => apiGet('/api/automation/jobs/stats'),
+  HDR L175: <h1>Execution Queue
+  HDR L186: <motion.section className="eq-routine" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}>
+  HDR L225: </motion.section>
+  HDR L252: <h2>No events yet</h2>
+  HDR L284: <h2>Queue is empty</h2>
+  HDR L397: <h2>No scheduled jobs</h2>
+===== PositionLifecyclePage.jsx
+  API L2: import { apiGet } from '../core/api/client';
+  API L34: queryFn: () => apiGet('/api/trading/position-lifecycle').catch(() => null),
+  HDR L10: * Three panels: reconciled Trades, broker Position rows, and recent
+  HDR L51: <h2>Position Lifecycle Monitor</h2>
+  HDR L62: <section className="pl-section">
+  HDR L63: <h3>Open Trades <span className="pl-hint">(trade table — brokerTicket, origin, source)</span></h3>
+  HDR L85: </section>
+  HDR L87: <section className="pl-section">
+  HDR L88: <h3>Broker Positions <span className="pl-hint">(position table — live synced snapshot)</span></h3>
+  HDR L110: </section>
+  HDR L112: <section className="pl-section">
+  HDR L113: <h3>Recent Stop Adjustments <span className="pl-hint">(stop_adjustment audit)</span></h3>
+  HDR L129: </section>
+===== Mt5TradingPage.jsx
+  API L64: const res = await fetch('/api/providers/mt5/accounts');
+  API L73: const diagRes = await fetch('/api/providers/mt5/diagnostics');
+  API L85: fetch('/api/providers/mt5/positions'),
+  API L86: fetch('/api/providers/mt5/history'),
+  API L127: const res = await fetch(`/api/providers/mt5/switch/${accountNum}`, { method: 'POST' });
+  API L146: const res = await fetch('/api/providers/mt5/accounts/remove', {
+  API L192: const res = await fetch('/api/trading/mt5/order', {
+  API L217: const res = await fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' });
+  API L241: const res = await fetch('/api/trading/mt5/close-all', { method: 'POST' });
+  API L258: const res = await fetch('/api/providers/mt5/history');
+  HDR L288: <h2>{isReconnecting ? 'Connection Lost' : 'MT5 Bridge Offline'}</h2>
+  HDR L291: ? 'The MT5 bridge connection was lost. All trading panels have been suspended.'
+  HDR L344: <h1>MT5 Trading</h1>
+  HDR L465: {/* Quick Trade Panel */}
+  HDR L466: <div className="mt5u-trade-panel">
+  HDR L467: <h3>Quick Trade</h3>
+===== T212PortfolioPage.jsx
+  API L14: import { apiGet, apiPost } from '../core/api/client';
+  API L32: queryFn: () => apiGet('/api/portfolio/accounts').catch(() => ({ categories: [], grandTotal: null })),
+  API L51: queryFn: () => apiGet('/api/portfolio/trading212/validate'),
+  API L58: queryFn: () => apiGet('/api/portfolio/trading212/history?limit=20').catch(() => []),
+  API L66: queryFn: () => apiGet('/api/isa/dashboard').catch(() => null),
+  HDR L147: <h1>
+  HDR L172: <section className="t212p-section">
+  HDR L173: <h2>{investTitle} — Account Summary</h2>
+  HDR L204: </section>
+  HDR L208: <section className="t212p-section">
+  HDR L209: <h2>Positions ({combinedPositions.length})</h2>
+  HDR L242: </section>
+  HDR L246: <section className="t212p-section">
+  HDR L247: <h2>Recent Trades</h2>
+  HDR L276: </section>
+===== LadderPage.jsx
+  HDR L23: import { LadderToolbar, LadderEmptyState, LadderExcludedDivider } from '../components/LadderPanels';
+  HDR L348: // One card renderer — used for both the ladder and the excluded section.
+  HDR L374: <header className="lad-header"><h1>Ladder</h1></header>
+  HDR L385: <h1>Ladder
+  HDR L428: <h2 className="lad-proto-title">
+  HDR L453: <h3 className="lad-proto-subtitle">Non-Applicable Protocols</h3>
+===== AbLadderPage.jsx
+  HDR L62: * ⚠️ SYMBOL SET — the UNION of both sides' resolved symbols. Intersection would hide
+  HDR L90: import { LadderToolbar, LadderEmptyState, LadderExcludedDivider } from '../components/LadderPanels';
+  HDR L411: <header className="lad-header"><h1>A/B Ladder</h1></header>
+  HDR L421: <h1>A/B Ladder
+===== PortfolioLabPage.jsx
+  API L2: import { apiGet } from '../core/api/client';
+  API L13: return fetch('http://localhost:3201/api/lab/chat', {
+  API L21: return fetch('http://localhost:3201/api/lab/analyze', {
+  API L29: return fetch('http://localhost:3201/api/lab/classify', {
+  API L78: apiGet('/api/portfolio/summary?source=trading212').catch(() => null),
+  API L79: apiGet('/api/portfolio/scores').catch(() => null),
+  HDR L185: <h1 className="plab-title">🧪 Portfolio Lab</h1>
+  HDR L205: <h3>Positions</h3>
+  HDR L233: <h3>💬 DeepSeek Analysis</h3>
+  HDR L267: <h3>Scenarios</h3>
+===== SeesArenaPage.jsx
+  API L3: import { apiGet, apiPost } from '../core/api/client';
+  API L4: import { fetchScoringThresholds } from '../core/api/signals';
+  API L96: queryKey: ['arena-filters'], queryFn: () => apiGet('/api/scoring/arena/filters'), staleTime: 60_000,
+  API L140: queryKey: ['arena'], queryFn: () => apiGet('/api/scoring/arena'),
+  API L180: const res = await apiGet(`/api/scoring/gated/protocols/${pid}/symbols`).catch(() => ({ symbols: [] }));
+  HDR L210: <h1>SEES Arena
+===== StopGuardianStatsPage.jsx
+  API L3: import { apiGet } from '../core/api/client';
+  API L70: queryFn: () => apiGet('/api/trading/stop-guardian-stats').catch(() => null),
+  API L84: queryFn: () => apiGet(`/api/trading/stop-guardian-stats${qs ? `?${qs}` : ''}`),
+  HDR L111: <h2>Stop Guardian</h2>
+  HDR L130: <h2>Stop Guardian</h2>
+  HDR L160: <section className="sg-section">
+  HDR L161: <h3>Sample <span className="sg-hint">what every figure below is computed from</span></h3>
+  HDR L175: </section>
+  HDR L178: <section className="sg-section">
+  HDR L179: <h3>How often it acts <span className="sg-hint">per symbol, per UTC hour, per day</span></h3>
+  HDR L182: <h4>By symbol</h4>
+  HDR L195: <h4>By UTC hour</h4>
+  HDR L207: </section>
+  HDR L210: <section className="sg-section">
+  HDR L211: <h3>How far it moves a stop <span className="sg-hint">achieved trail distance, from each reason string</span></h3>
+  HDR L232: </section>
+  HDR L235: <section className="sg-section">
+  HDR L236: <h3>
+  HDR L290: </section>
+  HDR L293: <section className="sg-section">
+  HDR L294: <h3>What drove the decision <span className="sg-hint">consensus + the four directive votes</span></h3>
+  HDR L301: <h4>Directive votes</h4>
+  HDR L322: <h4>Consensus distribution</h4>
+  HDR L335: </section>
+  HDR L338: <section className="sg-section">
+  HDR L339: <h3>Simulated TSL decision points <span className="sg-hint">#936 — recorded, and NOT broker actions</span></h3>
+  HDR L347: </section>
+===== PerformanceLabPage.jsx
+  API L3: import { apiGet } from '../core/api/client';
+  API L25: queryFn: () => apiGet(`/api/performance/summary/full?days=${days}`),
+  API L31: queryFn: () => apiGet('/api/performance'),
+  API L38: queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => []),
+  HDR L58: <h1>Trading Performance
+  HDR L104: <section className="pl-section">
+  HDR L105: <h2>Open Positions (MT5)</h2>
+  HDR L130: </section>
+  HDR L135: <section className="pl-section">
+  HDR L136: <h2>Strategies</h2>
+  HDR L175: </section>
+  HDR L177: <section className="pl-section">
+  HDR L179: </section>
+  HDR L184: <section className="pl-section">
+  HDR L185: <h2>Equity Curve</h2>
+  HDR L212: </section>
+  HDR L217: <section className="pl-section">
+  HDR L218: <h2>Monthly Breakdown</h2>
+  HDR L245: </section>
+===== StrategyComparisonPage.jsx
+  API L40: import { apiGet } from '../core/api/client';
+  API L100: queryFn: () => apiGet('/api/trading/strategy-comparison'),
+  HDR L134: <h1>
+  HDR L462: <section className="strategycmp-section">
+  HDR L463: <h2>Live positions by strategy</h2>
+  HDR L490: </section>
+===== DerivedStrategiesPage.jsx
+  API L49: import { apiGet, apiPost, apiPatch, apiDelete } from '../core/api/client';
+  API L301: queryFn: () => apiGet(API),
+  HDR L487: <h1 className={styles.title}>Strategies</h1>
+===== AbStrategiesPage.jsx
+  API L62: import { apiGet } from '../core/api/client';
+  API L600: queryFn: () => apiGet(API),
+  API L651: queryFn: () => apiGet(API_BOT_PERF),
+  API L681: queryFn: () => apiGet(API_TESTS),
+  API L696: queryFn: () => apiGet(API_SNAPSHOTS),
+  API L708: queryFn: () => apiGet(`${API_METASTACKS}/${variantSnap.scoringStrategyId}/versions`),
+  API L721: queryFn: () => apiGet(`${API_METASTACKS}/${controlSnap.scoringStrategyId}/export/${controlSnap.id}`),
+  API L727: queryFn: () => apiGet(`${API_METASTACKS}/${variantSnap.scoringStrategyId}/export/${variantSnap.id}`),
+  HDR L803: <section className={styles.listSection}>
+  HDR L805: <h2 className={styles.listTitle}>Strategy pairs</h2>
+  HDR L871: </section>
+  HDR L873: <section className={styles.listSection}>
+  HDR L874: <h2 className={styles.listTitle}>Official tests</h2>
+  HDR L908: </section>
+  HDR L940: <h1 className={styles.title}>
+===== ScoringOverviewPage.jsx
+  API L16: import { fetchRankedSymbols } from '../core/api/scoring';
+  API L95: <button type="button" className="so-retry-btn" onClick={() => rankQuery.refetch()}>
+  API L349: <button type="button" className="so-refresh-link" onClick={() => rankQuery.refetch()}>
+  HDR L76: <h2>Scoring Overview</h2>
+  HDR L90: <h2>Scoring Overview</h2>
+  HDR L145: <h1>All Directives</h1>
+  HDR L212: {/* ---- Two-column section ---- */}
+  HDR L215: <section className="so-panel">
+  HDR L216: <h2>Score Distribution</h2>
+  HDR L235: </section>
+  HDR L238: <section className="so-panel">
+  HDR L239: <h2>Freshness Breakdown</h2>
+  HDR L255: <div className="so-signal-section">
+  HDR L256: <h3>Signal Breakdown</h3>
+  HDR L266: </section>
+  HDR L270: <section className="so-panel so-strategy-panel">
+  HDR L271: <h2>Active Protocol</h2>
+  HDR L298: </section>
+  HDR L301: <section className="so-panel">
+  HDR L302: <h2>Top Ranked Symbols</h2>
+  HDR L343: </section>
+===== SignalsOverviewPage.jsx
+  API L46: } from '../core/api/signals';
+  HDR L453: * Signal Loop panel (#693) — non-executive feedback-loop observability.
+  HDR L455: * nothing on this panel changes trading behaviour.
+  HDR L457: function SignalLoopPanel({ data, loading, error }) {
+  HDR L460: <section className="sig-loop">
+  HDR L465: </section>
+  HDR L470: <section className="sig-loop">
+  HDR L475: </section>
+  HDR L484: <section className="sig-loop">
+  HDR L511: <h3>Top dismissed protocols</h3>
+  HDR L536: <h3>Signal trades by protocol</h3>
+  HDR L558: </section>
+  HDR L614: <h1>
+  HDR L683: <section className="sig-dismissed">
+  HDR L684: <h2>Dismissed signals</h2>
+  HDR L694: </section>
+  HDR L697: <SignalLoopPanel
+===== SinglesMonitorPage.jsx
+  API L22: import { apiGet } from '../core/api/client';
+  API L48: queryFn: () => apiGet('/api/automation/status').catch(() => null),
+  API L74: return apiGet(`/api/scoring/breakdown/${encodeURIComponent(symbol)}${qs ? `?${qs}` : ''}`).catch(() => null);
+  HDR L120: <h1>Singles Monitor
+  HDR L190: {/* Group sections */}
+===== ExitSignalsPage.jsx
+  API L4: import { apiGet } from '../core/api/client';
+  API L37: queryFn: () => apiGet('/api/portfolio/exit-signals'),
+  HDR L58: <h1>🚪 Exit Signals</h1>
+===== PortfolioEventsPage.jsx
+  API L3: import { apiGet } from '../core/api/client';
+  API L11: queryFn: () => apiGet('/api/portfolio/events?days=90'),
+  HDR L31: <h1>📅 Portfolio Events</h1>
+===== TradeJournalPage.jsx
+  API L3: import { apiGet, apiPost } from '../core/api/client';
+  API L63: queryFn: () => apiGet('/api/trading/trade-history?limit=500').catch(() => ({ trades: [] })),
+  HDR L132: <h2>Trade Journal</h2>
+  HDR L158: <h3>Trade Summary</h3>
+===== SymbolsBrowserPage.jsx
+  API L4: import { apiGet } from '../core/api/client'
+  API L56: queryFn: () => apiGet('/api/symbols'),
+  API L62: queryFn: () => apiGet('/api/market-data/freshness'),
+  API L68: queryFn: () => apiGet('/api/symbols/positions'),
+  API L143: queryFn: () => apiGet(`/api/symbols/${selected.ticker}/snapshot`),
+  HDR L260: <h1>Symbols Browser</h1>
+  HDR L267: <section className="symbols-toolbar">
+  HDR L288: </section>
+  HDR L290: <section className="symbols-layout">
+  HDR L356: <h2>{selected.ticker}</h2>
+  HDR L369: <section className="symbol-detail-section">
+  HDR L370: <h3>Company</h3>
+  HDR L389: </section>
+  HDR L391: <section className="symbol-detail-section">
+  HDR L392: <h3>Ranges</h3>
+  HDR L411: </section>
+  HDR L414: <section className="symbol-detail-section">
+  HDR L415: <h3>Data Freshness</h3>
+  HDR L444: </section>
+  HDR L447: <section className="symbol-detail-section">
+  HDR L448: <h3>Position</h3>
+  HDR L482: </section>
+  HDR L484: <section className="symbol-detail-section">
+  HDR L485: <h3>Timestamps</h3>
+  HDR L496: </section>
+  HDR L498: <section className="symbol-detail-section">
+  HDR L499: <h3>ID</h3>
+  HDR L501: </section>
+  HDR L505: </section>

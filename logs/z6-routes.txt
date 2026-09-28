@@ -1,0 +1,25 @@
+=== view-meta keys containing these ids ===
+  215: '/scoring/symbols-ladder': {
+  239: '/trading/trade-journal': {
+  1267: '/lab/position-lifecycle': {
+=== nav-tree entries for those ids ===
+  118: { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
+  172: // (/api/trading/trade-history) and is now the surface that names WHO closed a trade
+  174: { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
+=== :symbolId anywhere in src ===
+  DiagramsPage.jsx:278: desc: 'React component tree: BrowserRouter → AppShell → panels → 80+ pages. Zustand stores (useUiStore, useCurrentSymbolStore) + TanStack Query for server state. Routes: /:area/:view, /research/symbol/:symbolId, /.',
+  DiagramsPage.jsx:301: R[/research/symbol/:symbolId]
+  architecture-reference.js:1269: route: 'GET /market-data/freshness/:symbolId',
+  architecture-reference.js:1277: route: 'POST /imports/trigger/:symbolId',
+  architecture-framework.data.js:1382: route: 'GET /market-data/freshness/:symbolId',
+  architecture-framework.data.js:1390: route: 'POST /imports/trigger/:symbolId',
+  skeleton-handoff.js:11: 'POST /api/imports/trigger/:symbolId',
+  skeleton-handoff.js:41: 'GET /api/market-data/freshness/:symbolId',
+  skeleton-handoff.js:69: 'GET /api/market-data/freshness/:symbolId',
+  skeleton-handoff.js:71: 'POST /api/imports/trigger/:symbolId',
+  skeleton-handoff.js:100: 'GET /api/market-data/freshness/:symbolId',
+  skeleton-handoff.js:101: 'POST /api/imports/trigger/:symbolId',
+  skeleton-handoff.js:134: 'GET /api/market-data/freshness/:symbolId',
+  skeleton-handoff.js:163: 'POST /api/imports/trigger/:symbolId',
+=== nav-tree area headers ===
+  401: * Derive the legacy flat NAV_STRUCTURE shape for backward compat with App.jsx.

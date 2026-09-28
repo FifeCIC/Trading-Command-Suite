@@ -1,0 +1,13 @@
+1017	OPEN	The 5 exit directives have never executed - their host protocol mt5-technical-core-v1 is inactive, and so is mt5-technical-short, so the bleed is scored in neither direction	bug, priority-high, requires:pro, Directives	2026-09-28T17:05:16Z
+1016	OPEN	ExitConsensus is built but UNVERIFIED - confirm the bar-cadence fix landed, and point the Exit Signals page at the bot book	enhancement, trading, priority-medium, requires:pro	2026-09-28T17:05:14Z
+1015	OPEN	Development area: trade-outcome statistics and charts built from what we already store - give-back distribution, trade-marked price, score overlay (XAUUSD first)	enhancement, priority-medium, requires:pro, user-experience	2026-09-28T17:05:11Z
+1014	OPEN	MT5 scale-ins: we store the ORDER ticket where the reconciler needs the POSITION id - 13 trades falsely marked 'position vanished'		2026-09-28T12:40:31Z
+1013	OPEN	btc-speed-v1: 4 of 13 directives starved to 0 on 99.6% of ticks - resolveCadence() fall-through where its docstring means a maximum		2026-09-28T09:35:37Z
+1011	OPEN	The Stop Guardian trails stops on a CLOSED market every ~30s - the broker accepts each edit, so 699 persisted and each one notified		2026-09-27T21:31:45Z
+=== batch 2026-09-28 ===
+--- A ---
+https://github.com/FifeCIC/Trading-Command-Suite/issues/1015
+--- B ---
+https://github.com/FifeCIC/Trading-Command-Suite/issues/1016
+--- C ---
+https://github.com/FifeCIC/Trading-Command-Suite/issues/1017

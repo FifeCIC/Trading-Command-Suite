@@ -1,0 +1,12 @@
+TABLE_NAME
+backtestrun
+chartsnapshot
+directiveoutcome
+importrun
+marketbar
+marketbar_future_orphan_backup_780
+marketbar_ts_backup_20260910
+marketsnapshot
+symboltechnical
+tickrecordingsession
+trading_strategy

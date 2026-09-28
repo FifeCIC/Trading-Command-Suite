@@ -1,0 +1,139 @@
+/* PerformanceChangePage — Development-area performance-change views.
+ *
+ * ⚠️ Only tokens that exist in the theme are referenced. An undefined custom property is silently
+ * dropped at runtime, so a typo reads as a styling choice rather than a fault.
+ * Guard: node scripts/validate-css-tokens.cjs
+ */
+
+.pc-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--ink);
+}
+
+.pc-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.pc-header h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.pc-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.pc-btn {
+  padding: 5px 11px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.pc-btn:hover {
+  background: var(--bg-elev);
+  color: var(--ink);
+}
+
+.pc-btn--on {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.pc-section {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+
+.pc-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.pc-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  max-width: 78ch;
+  line-height: 1.45;
+}
+
+.pc-empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  max-width: 78ch;
+}
+
+.pc-table-wrap {
+  overflow-x: auto;
+}
+
+.pc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.pc-table th {
+  text-align: left;
+  padding: 6px 10px 6px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.pc-table td {
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.pc-entity {
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.pc-row--clickable {
+  cursor: pointer;
+}
+
+.pc-row--clickable:hover td {
+  background: var(--bg-elev);
+}
+
+.pc-pos { color: var(--risk-normal); }
+.pc-neg { color: var(--risk-high); }
+
+.pc-sub {
+  color: var(--text-faint);
+}
+
+/* ⚠️ "no data" and "no comparison" are rendered in the faint token on purpose — they are an
+   absence of measurement, and must not read visually like a real zero. */
+.pc-unknown {
+  color: var(--text-faint);
+  font-style: italic;
+  font-family: inherit;
+}

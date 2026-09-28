@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 9 of 15 areas · 44 of 138 nav entries (premium ids AND labels removed)
+ * 9 of 15 areas · 44 of 139 nav entries (premium ids AND labels removed)
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 

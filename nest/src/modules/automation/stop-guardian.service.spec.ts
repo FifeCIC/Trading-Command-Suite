@@ -3,6 +3,7 @@ import {
   declaredStopDistance,
   trailDistanceFor,
   trailDistanceProblem,
+  resolvePositionOwner,
 } from './stop-guardian.service';
 
 describe('Automation StopGuardianService', () => {
@@ -396,6 +397,62 @@ describe('#927 — a trail can never leave the stop inside the declared distance
     expect(trailDistanceProblem(1.0, declared)).toBeNull(); // exactly at the floor is allowed
     expect(trailDistanceProblem(4.5, declared)).toBeNull();
     expect(trailDistanceProblem(0.06, 0)).toBeNull();       // nothing declared → nothing to enforce
+  });
+
+  // ── #1018 — WHICH BOT OPENED THIS POSITION ──────────────────────────────────────────────────
+  //
+  // ⚠️ These are the tests that make the fix falsifiable. The defect was a SYMBOL match standing in
+  // for an OWNER match, on a symbol carrying EIGHT active bots. Every refusal case below is
+  // load-bearing: the whole point is that an unestablished owner must NOT be guessed, because a
+  // guess writes another bot's `slPct` onto a live position as the #927 floor.
+  describe('resolvePositionOwner (#1018)', () => {
+    const NAMES = ['Gold Scalp M5', 'Gold Scalp M5 (copy)', 'Wellington NZDJPY Session', 'Tech Giants - NVDA'];
+
+    it('resolves an EXACT stamped name', () => {
+      expect(resolvePositionOwner('TCS Tech Giants - NVDA', NAMES)).toEqual({ name: 'Tech Giants - NVDA', via: 'exact' });
+    });
+
+    it('resolves a TRUNCATED comment when exactly one name matches — the measured live case', () => {
+      // Measured 2026-09-28: MT5 truncated this to 27 chars, so exact equality alone would have
+      // left the position UNGUARDED with nothing said. 'TCS Wellington NZDJPY Sessi'.
+      expect(resolvePositionOwner('TCS Wellington NZDJPY Sessi', NAMES))
+        .toEqual({ name: 'Wellington NZDJPY Session', via: 'unique-prefix' });
+    });
+
+    it('REFUSES when the truncated comment is a prefix of TWO names (the real copy-pair case)', () => {
+      // ⚠️ MY FIRST VERSION OF THIS TEST WAS WRONG, and the suite caught it: it used
+      // `'TCS Gold Scalp M5'`, which IS an exact name — so the exact tier correctly won and the
+      // assertion failed. Ambiguity needs a stamp that is NOT a name but prefixes two.
+      // 'Gold Scalp M5' and 'Gold Scalp M5 (copy)' both exist, so a truncation at 'Gold Scalp'
+      // genuinely cannot be attributed. Guessing here applies the wrong bot's slPct as the #927
+      // floor on a live position.
+      expect(resolvePositionOwner('TCS Gold Scalp', NAMES)).toBeNull();
+    });
+
+    it('tolerates a CASE difference — an MT5 comment is editable, so a mismatch must not silently unguard', () => {
+      expect(resolvePositionOwner('TCS tech giants - nvda', NAMES))
+        .toEqual({ name: 'Tech Giants - NVDA', via: 'exact' });
+      // ⚠️ The canonical spelling is returned, never the one stamped on the position.
+      expect(resolvePositionOwner('TCS wellington nzdjpy sessi', NAMES)?.name)
+        .toBe('Wellington NZDJPY Session');
+    });
+
+    it('REFUSES an unknown owner', () => {
+      expect(resolvePositionOwner('TCS No Such Bot', NAMES)).toBeNull();
+    });
+
+    it('REFUSES a comment that is not ours at all', () => {
+      expect(resolvePositionOwner('some broker note', NAMES)).toBeNull();
+      expect(resolvePositionOwner('', NAMES)).toBeNull();
+      expect(resolvePositionOwner(null, NAMES)).toBeNull();
+      expect(resolvePositionOwner(undefined, NAMES)).toBeNull();
+      expect(resolvePositionOwner('TCS  ', NAMES)).toBeNull(); // prefix but no name stamped
+    });
+
+    it('a SHORT name is not stolen by a longer one that starts with it', () => {
+      // Exact match must win over prefix, or 'Gold Scalp M5' would be ambiguous with itself.
+      expect(resolvePositionOwner('TCS Gold Scalp M5', ['Gold Scalp M5'])).toEqual({ name: 'Gold Scalp M5', via: 'exact' });
+    });
   });
 
   it('THE CANARY — tiny ATR + flat price sends NO stop ~0.06 from price (the seven-close defect)', async () => {

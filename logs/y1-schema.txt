@@ -1,0 +1,33 @@
+
+  strategy_signal_queue
+  column                         type                   null  key   default
+  ------------------------------------------------------------------------------------
+  id                             varchar(36)            no    PRI   NULL
+  strategyId                     varchar(36)            no    MUL   NULL
+  symbol                         varchar(20)            no          NULL
+  protocolId                     varchar(100)           no    MUL   NULL
+  direction                      varchar(10)            no          NULL
+  signal                         varchar(10)            no          NULL
+  compositePct                   int                    YES         NULL
+  signalPct                      int                    YES         NULL
+  opportunityPct                 int                    YES         NULL
+  combinedStrength               int                    YES         NULL
+  scoreId                        varchar(36)            YES         NULL
+  status                         varchar(20)            no    MUL   pending
+  createdAt                      datetime               no          utc_timestamp()  DEFAULT_GENERATED
+  updatedAt                      datetime               no          utc_timestamp()  DEFAULT_GENERATED
+
+  ÔÜá´©Å Read the TYPE, not just the name. `score_snapshot.protocolId` is varchar(36) and
+     holds a SLUG; `watchlist.protocolId` is varchar(100) and holds a UUID. Same name,
+     different thing ÔÇö joining one to `protocol.id` returns nothing, silently.
+
+=== tables matching account/equity/pnl ===
+
+  0 tables match '%account%' in tradingcs (query succeeded)
+
+
+  0 tables match '%equity%' in tradingcs (query succeeded)
+
+
+  0 tables match '%pnl%' in tradingcs (query succeeded)
+

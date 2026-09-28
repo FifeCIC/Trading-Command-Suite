@@ -476,6 +476,21 @@ const VIEW_META = {
     css: 'src/pages/blocked-signals.css',
     api: ['GET /api/automation/pre-trade-blocks'],
   },
+  '/development/performance-change': {
+    tier: 'premium',
+    // 'pending' until the owner has actually looked at it. Claiming 'approved' here would be a
+    // claim with no observation behind it — the skill is explicit that this flips only after the
+    // owner has seen the page.
+    review: 'pending',
+    label: 'Performance Change',
+    file: 'src/pages/PerformanceChangePage.jsx',
+    css: 'src/pages/performance-change.css',
+    // ⚠️ Both are DB READS, verified against their services rather than assumed from the name:
+    //   trade-history       → TradeRecorderService.getHistory()  (a `trade` read)
+    //   portfolio-snapshots → prisma.portfolioSnapshot.findMany() (a stored series)
+    // Several GETs under /api/scoring RECOMPUTE on call and are deliberately not used here.
+    api: ['GET /api/trading/trade-history', 'GET /api/trading/portfolio-snapshots'],
+  },
   '/development/theme-lab': {
     tier: 'premium',
     review: 'approved',

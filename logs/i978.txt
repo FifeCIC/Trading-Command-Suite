@@ -1,0 +1,128 @@
+title:	Give-back tracking (Tier 1) - reconstruct a position's peak from bars, and show it beside the recorded peak
+state:	OPEN
+author:	RyanBayne
+labels:	enhancement, priority-medium, requires:pro, user-experience
+comments:	1
+assignees:	
+projects:	
+milestone:	
+number:	978
+--
+## The question this answers
+
+*"What has this strategy allowed to slip?"* Today it is **unanswerable from the trade record**: there is no high-water / peak / MFE column **anywhere** in `schema.prisma`. `Trade` stores `entryPrice`, `exitPrice`, `sl`, `tp`, `pnl` ÔÇö nothing that remembers the best price the position ever saw.
+
+Owner framing (2026-09-23): *"If we mathed highs totalled ÔêÆ profit totalled it would tell us how much opportunity we missed out on."* The measurement below says that gap is real and large. This issue builds the first, cheapest version. **Tier 2 (recording it live) is a separate issue, deliberately paired with this one.**
+
+## Measured 2026-09-23 ÔÇö the gap is real
+
+Reconstructing the peak inside each closed trade's window from `marketbar` 1m bars:
+
+| | |
+|---|---|
+| closed trades with an exit price | 96 |
+| reconstructable from 1m bars | **83 (86%)** |
+| traded symbols with no bars at all | **0** |
+
+Of those 83:
+
+| | |
+|---|---|
+| in a favourable move at some point | **76 (92%)** |
+| summed peak of those 76 | **+10.53%** (of entry price) |
+| summed realised of those 76 | **ÔêÆ4.85%** |
+
+Those 76 reached a favourable peak worth **+10.53%** and closed at **ÔêÆ4.85%** ÔÇö i.e. they gave back **more than the entire peak they ever held**.
+
+### Reproduce (do not take my word for it)
+
+```sql
+-- A. coverage
+SELECT COUNT(*) AS closed_with_exit,
+       SUM(CASE WHEN EXISTS (SELECT 1 FROM marketbar mb JOIN symbol s ON s.id=mb.symbolId
+              WHERE s.ticker=t.symbol AND mb.timeframe='1m'
+                AND mb.timestamp>=t.openedAt AND mb.timestamp<=t.closedAt) THEN 1 ELSE 0 END) AS reconstructable
+FROM trade t WHERE t.status='closed' AND t.exitPrice IS NOT NULL;
+-- ÔåÆ 96 / 83
+
+-- B. the gap
+SELECT SUM(run_pct) AS peak_pct, SUM(real_pct) AS realised_pct,
+       ROUND(SUM(real_pct)/SUM(run_pct)*100,1) AS capture_pct, COUNT(*) n
+FROM (SELECT t.id,
+        CASE WHEN t.side='buy' THEN 100*(MAX(mb.high)-t.entryPrice)/t.entryPrice
+             ELSE 100*(t.entryPrice-MIN(mb.low))/t.entryPrice END AS run_pct,
+        CASE WHEN t.side='buy' THEN 100*(t.exitPrice-t.entryPrice)/t.entryPrice
+             ELSE 100*(t.entryPrice-t.exitPrice)/t.entryPrice END AS real_pct
+      FROM trade t JOIN symbol s ON s.ticker=t.symbol
+      JOIN marketbar mb ON mb.symbolId=s.id AND mb.timeframe='1m'
+           AND mb.timestamp>=t.openedAt AND mb.timestamp<=t.closedAt
+      WHERE t.status='closed' AND t.exitPrice IS NOT NULL
+      GROUP BY t.id, t.side, t.entryPrice, t.exitPrice) x;
+-- ÔåÆ peak +8.57 | realised ÔêÆ10.03 | capture ÔêÆ117.1% | n 83
+
+-- C. the subset that was favourable at some point (the honest "slipped" population)
+--    ÔåÆ n 83 | ever_favourable 76 | profitable 41 | peak +10.53 | realised ÔêÆ4.85
+
+-- D. is bar coverage continuous?   ÔåÉ the answer is NO, and it matters
+SELECT s.ticker, COUNT(*) bars_1m, COUNT(DISTINCT DATE(mb.timestamp)) days_with_bars
+FROM marketbar mb JOIN symbol s ON s.id=mb.symbolId WHERE mb.timeframe='1m'
+GROUP BY s.ticker ORDER BY bars_1m DESC LIMIT 8;
+-- ÔåÆ ~9,000 bars per FX major across only 12 distinct days
+```
+
+## ÔÜá´©Å Caveats that MUST be carried into the UI, not just the issue
+
+1. **It is a LOWER BOUND.** Even on reconstructable trades, bars covered only **76%** of the holding window on average. The real peaks are higher, so the gap is *bigger* than measured. Label it; do not hide it.
+2. **It is a perfect-foresight ceiling.** The peak is only knowable after the fact ÔÇö nobody can exit at the high. Show it as a **labelled reference line**, never as a KPI target. If it is presented as a goal, every future change looks like a failure. The improvable number is the **capture ratio**.
+3. **Summed percentages are unweighted.** `% of entry price` is unit-free but NOT capital-weighted. It is a directional aggregate, not a P&L figure. **Do not render it as money.**
+4. **Bar coverage is not continuous.** 1m bars are dense only **2026-09-10 ÔåÆ 2026-09-23**. Earlier periods are sparse (2026-09-08: 357 bars total). So this works going forward and is **not** a deep backfill.
+5. **Ticker mismatch is a live hazard (#970).** `spy-speed-v1` scored `SPY` while its bot trades `US500`. The join is `trade.symbol = symbol.ticker`, so an alias or near-name collision silently reconstructs the peak of the **wrong instrument**. Resolve through the canonical symbol route, and **refuse rather than guess** when it cannot be resolved.
+6. **Netting.** Where two bots hold one symbol the broker merges them into ONE position (measured: 3 XAUUSD orders ÔåÆ one position, vol 0.04). The peak is well defined for the merged position but **not attributable to a strategy**. Per-strategy give-back is only honest on non-colliding symbols ÔÇö suppress the attribution rather than fabricate it.
+
+## Scope ÔÇö Tier 1
+
+### Backend
+- New endpoint beside the existing one in `nest/src/modules/trading/trade-history.controller.ts` (`@Get('trade-history')` is at **L75**; the query shape is `provider`, `symbol`, `days` (default 30), `limit` (default 200), `status`). Match that shape.
+- Reconstruct per closed trade: `peakPrice`, `peakPct`, `realisedPct`, `capturePct = realisedPct / peakPct`.
+- Also return **`sampleSize`**, **`barsInWindow`** and **`windowCoveragePct`** ÔÇö so the lower-bound caveat is *data*, not prose in a tooltip.
+- `null` when not reconstructable. **Never 0.** Absence is not a zero, and a failed query must not render like an empty result.
+
+### Frontend ÔÇö `src/pages/TradeJournalPage.jsx` (212 lines, already exists)
+It already computes payoff and expectancy **in percent of price** precisely so they stay comparable across symbols (`stats.payoff`, `stats.expectancy`). Give-back drops into that same idiom and the same unit.
+- New stat card: **Capture** (`capturePct`) with `sampleSize` in the tooltip, `ÔÇö` when null.
+- Per trade: a **peak** marker alongside Entry / Exit.
+- Header: one line stating it is a lower bound derived from bars.
+
+### Adjacent defect ÔÇö fix it while here
+`holdDuration` in `TradeJournalPage.jsx` is **hardcoded to `'ÔÇö'`** and never computed, though `openedAt` and `closedAt` are both on the payload. Compute it or remove the field ÔÇö do not leave a permanently empty cell that implies data which never arrives.
+
+## ÔÜá´©Å The side-by-side requirement (owner decision, 2026-09-23)
+
+The owner wants **both tiers displayed alongside one another**, and this is analytical, not cosmetic ÔÇö where both exist, the difference between them **measures the sampling error**:
+
+- **Tier 1 (bars)** ÔÇö true intra-minute extremes (`high`/`low`), but only where bars exist.
+- **Tier 2 (live)** ÔÇö continuous coverage forever, but samples only every **2 minutes** (`automation-loop.service.ts` L494: `tickIntervalMs: 120000`), so it **misses intra-minute extremes**.
+
+So Tier 2 is **not simply "the accurate one"**. Build the view to carry **both series**, and until Tier 2 has data render its column as `ÔÇö` ÔÇö never `0`, and never a copy of the Tier 1 value.
+
+## Not in scope
+- **A histogram / pie of give-back** needs a categorical renderer; the app has exactly one chart library (`lightweight-charts ^5.2.0`, time-series only, and it is used in 9 files). That decision is **#579**, not this issue.
+- **Recording the peak live** ÔÇö the paired Tier 2 issue.
+- **A new standalone statistics page** ÔÇö if this grows, it belongs on **#746**'s widget board, not a third dashboard surface.
+
+## Acceptance criteria
+- [ ] Endpoint returns peak + capture + coverage per trade, with `null` for unreconstructable rows ÔÇö **demonstrate a `null` row, not just a good one**
+- [ ] Journal shows Capture with its sample size; `ÔÇö` when null (canary both directions)
+- [ ] Peak visibly labelled as a lower bound from bars
+- [ ] Ticker resolved through the canonical route; unresolvable ÔåÆ refused, not guessed
+- [ ] Attribution suppressed on netted symbols (show it is suppressed, do not silently drop)
+- [ ] `holdDuration` computed or removed
+- [ ] **Gate 3:** run query B against the real DB and paste the literal output in the closing comment
+
+## Related
+- **#746** ÔÇö widget board; the eventual home of an aggregate view
+- **#579** ÔÇö chart-library evaluation (the histogram half)
+- **#974** ÔÇö signal funnel: the other "where does it die" view
+- **#667** ÔÇö personal trading statistics on the ladder card
+- **#916** ÔÇö `closeReason` answers *who* closed it; give-back answers *how much was left*
+- **#970** ÔÇö ticker-mismatch hazard for the bar join

@@ -214,6 +214,74 @@ export function trailDistanceProblem(trailDistance: number, declaredDistance: nu
 }
 
 /**
+ * resolvePositionOwner() — WHICH BOT OPENED THIS POSITION (#1018).
+ * ==============================================================================
+ *
+ * THE DEFECT IT REPLACES. `tick()` matched a strategy to a position with
+ * `p.symbol === strat.symbol && comment.includes('TCS')`. That is a SYMBOL match standing in for an
+ * OWNER match, and **XAUUSD has EIGHT active bots** whose `slPct` runs 0.3 / 0.5 / 1.5 / 3.0 — a
+ * 10x spread. The loop finds the SAME position for every one of them, `makeGuarded()` stamps
+ * `strategyId: strat.id`, and `strat.slPct` sets the #927 declared-distance floor. So the floor
+ * that exists to stop the stop being trailed too tight could be computed from a bot that does not
+ * own the position.
+ *
+ * ⚠️ The page already asserted the correct principle — "Matched on `strategyId`, NEVER on symbol"
+ * — but wrote it at the CONSUMER. The filter was right; the value it filtered on was assigned by a
+ * symbol match. A rule stated only where it is read does not constrain where it is written.
+ *
+ * ── WHY THE COMMENT, AND WHY IT IS NOT SIMPLE ──────────────────────────────────────────
+ * The open path stamps `TCS <bot name>` on the order comment. **MT5 TRUNCATES COMMENTS**, measured
+ * live 2026-09-28: `"TCS Wellington NZDJPY Sessi"` (27 chars) against the strategy's real name
+ * `"Wellington NZDJPY Session"` — 11 of 12 positions matched exactly and that one did not, so an
+ * exact-equality match alone would silently leave it UNGUARDED.
+ *
+ * A bare prefix match is worse than it looks: `Gold Scalp M5` and `Gold Scalp M5 (copy)` both
+ * exist, so a truncated `TCS Gold Scalp M5` is a prefix of TWO names.
+ *
+ * So this resolves in two tiers and then REFUSES:
+ *   1. exact name ✓
+ *   2. prefix of EXACTLY ONE name ✓
+ *   3. anything else → `null`. Zero candidates (unknown) and 2+ (ambiguous) are the SAME answer:
+ *      we cannot tell, and a guess here writes the wrong risk distance onto a live position.
+ *
+ * ⚠️ `null` is NOT "no owner is plausible" — it is "ownership could not be ESTABLISHED", and the
+ * caller must make that visible rather than fall back. A refusal is safe: the position keeps the
+ * broker-side stop the order path placed. Falling back to the symbol match is not safe — that is
+ * the defect being removed.
+ *
+ * ⚠️ THE DURABLE FIX IS NOT A STRING MATCH. `magic` travels with a position and is never
+ * truncated, but every position currently carries the SAME value (234000), so it is not a per-bot
+ * key yet. Giving each bot its own magic is the long-run answer; this function is the correct
+ * bounded one. See #1018.
+ *
+ * Pure and exported so the spec can drive every tier without a bridge, a position or a clock.
+ */
+export function resolvePositionOwner(
+  comment: string | null | undefined,
+  names: readonly string[],
+): { name: string; via: 'exact' | 'unique-prefix' } | null {
+  const m = /^TCS\s+(.+)$/.exec(String(comment ?? '').trim());
+  if (!m) return null;
+  const stamped = m[1].trim();
+  if (!stamped) return null;
+
+  // ⚠️ CASE-INSENSITIVE, AND THAT IS NOT LAXNESS. An MT5 comment is an editable field on the
+  // position itself — a person can retype it in the terminal — so `TCS s1` against a bot named
+  // `S1` is a real state, not a typo to be rejected. Under a case-SENSITIVE rule that position
+  // would be left UNGUARDED by a mismatch nobody could see: the wrong answer and the silent answer
+  // are the two this whole change exists to remove. Found by the spec, which stamps `TCS s1` for a
+  // bot named `S1` — the OLD code never noticed, because a symbol match does not read the comment
+  // at all. Comparison is lowercased; the CANONICAL name from the list is returned, so a caller
+  // never receives a spelling the registry does not contain.
+  const lower = stamped.toLowerCase();
+  const exact = names.find((n) => n.toLowerCase() === lower);
+  if (exact) return { name: exact, via: 'exact' };
+  const prefixed = names.filter((n) => n.toLowerCase().startsWith(lower));
+  if (prefixed.length === 1) return { name: prefixed[0], via: 'unique-prefix' };
+  return null;
+}
+
+/**
  * GUARDIAN_RULES — the POST-ENTRY EXIT behaviour, declared once (#936).
  * =====================================================================
  *
@@ -674,10 +742,37 @@ export class StopGuardianService {
       // 3. Evaluate each auto-strategy position
       const guarded: GuardedPosition[] = [];
 
+      // ── #1018 — resolve OWNERSHIP ONCE per position, then match on it ──────────────────────
+      //
+      // ⚠️ This replaces `p.symbol === strat.symbol`. A symbol is not an owner: XAUUSD has EIGHT
+      // active bots, so that predicate returned the SAME position for every one of them and the
+      // #927 floor was computed from whichever bot's `slPct` happened to be iterated.
+      //
+      // ⚠️ `ALL` strategy names, not just the auto ones. A truncated comment must be allowed to be
+      // AMBIGUOUS — resolving it against a filtered list would make a name look unique when it is
+      // not, which is the silent-wrong-answer failure this whole change exists to remove.
+      const strategyNames = strategies.map((s: any) => String(s?.name ?? '')).filter(Boolean);
+      const ownerByTicket = new Map<number, string>();
+      const unresolved: string[] = [];
+      for (const p of positions) {
+        if (!(p.comment || '').includes('TCS')) continue; // not ours
+        const owner = resolvePositionOwner(p.comment, strategyNames);
+        if (owner) ownerByTicket.set(p.ticket, owner.name);
+        else unresolved.push(`${p.symbol} #${p.ticket} "${String(p.comment).slice(0, 40)}"`);
+      }
+      // ⚠️ MADE VISIBLE, not silent. An unestablished owner means the position is NOT being
+      // managed — which is safe (it keeps the broker-side stop the order path placed) but must be
+      // knowable, or "the guardian is quietly skipping this position" is invisible.
+      if (unresolved.length) {
+        this.logger.warn(
+          `Owner could not be established for ${unresolved.length} TCS position(s) — not managed ` +
+          `this tick (the broker-side stop stands): ${unresolved.join('; ')}`,
+        );
+      }
+
       for (const strat of autoStrats) {
         const pos = positions.find(
-          (p: Mt5RawPosition) =>
-            p.symbol === strat.symbol && (p.comment || '').includes('TCS'),
+          (p: Mt5RawPosition) => ownerByTicket.get(p.ticket) === strat.name,
         );
         if (!pos) continue;
 

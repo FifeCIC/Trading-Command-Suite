@@ -1,0 +1,88 @@
+title:	Durable peak tracking + time-decaying trail distance ÔÇö 4 positions gave back profit and closed red
+state:	OPEN
+author:	RyanBayne
+labels:	
+comments:	0
+assignees:	
+projects:	
+milestone:	
+number:	998
+--
+## The observation, measured
+
+Owner, 2026-09-25: *"another later-afternoon to evening drift into the red after sitting with profitÔÇª it was steady and we bled that instead of slowly bringing trailing stop up in reaction [to] the time passing and then eventual need to close anyway."*
+
+Every trade closed in the previous 36h, with the best price it reached **reconstructed from `marketbar` highs between `openedAt` and `closedAt`** (`trade` joined to `symbol` on ticker; bars sampled 226ÔÇô833 per trade):
+
+| symbol | best reached | actually closed | gave back | held | how it closed |
+|---|---|---|---|---|---|
+| **XAUUSD** | **+0.482%** | **ÔêÆ0.249%** | 0.73pp | 4.3h | `broker:sl` |
+| **AUDJPY** | **+0.169%** | **ÔêÆ0.092%** | 0.26pp | 15.3h | **`system:time-stop`** |
+| **NZDJPY** | **+0.129%** | **ÔêÆ0.037%** | 0.17pp | 15.1h | **`system:time-stop`** |
+| **NZDUSD** | **+0.077%** | **ÔêÆ0.312%** | 0.39pp | 14.9h | **`system:time-stop`** |
+| **FRA40** | **+1.314%** | +0.133% | **1.18pp** | 6.9h | `broker:unknown` |
+| **GER40** | **+1.031%** | +0.098% | **0.93pp** | 7.1h | `broker:unknown` |
+| EURJPY | +0.297% | +0.195% | 0.10pp | 10.5h | `broker:terminal` |
+| GBPJPY | +0.243% | +0.147% | 0.10pp | 10.3h | `broker:terminal` |
+| USDJPY | +0.569% | +0.427% | 0.14pp | 10.6h | `broker:terminal` |
+
+**Four positions were in profit and closed red ÔÇö three of them by the time-stop.** FRA40 and GER40 surrendered **90%** of their best move.
+
+ÔÜá´©Å **This is a RECONSTRUCTION, not a record.** There is no maximum-favourable-excursion column anywhere in the schema. `best reached` is the bar high during the hold, which is a real traded price but not necessarily fillable at the bid; treat the magnitudes as indicative and the *pattern* as solid.
+
+ÔÜá´©Å Also anomalous: `UK100` has `closedAt` set, `exitPrice` NULL and `pnl` 0 at exactly 24.0h held. Not investigated here.
+
+## Root cause ÔÇö the trail has no time term
+
+`StopGuardianService` computes the trail distance as:
+
+```
+trailDistanceFor(atr, declared) = max(3 ├ù ATR(5m), declared slPct distance)
+```
+
+That is a function of **volatility** and a **floor**. It contains **no term for how long the position has been held.** A position in profit for 15 hours gets the *same* trail distance as one held 15 minutes, unless ATR happens to have changed. Nothing reacts to the passage of time.
+
+The only time-aware mechanism is `PositionTimeStopService` (`maxHoldHours`), and it is an **absolute deadline, not a ratchet**: it does not protect profit, it closes at a fixed age. So a position drifts down for hours and is then closed ÔÇö sometimes in the red, as measured above.
+
+Measured live `maxHoldHours` on active bots: **12h ├ù 14 bots, 24h ├ù 9, NULL ├ù 9, 72h ├ù 2, 120h ├ù 2, 4h ├ù 2.** ÔÜá´©Å **Nine active bots have no time stop at all**, so their positions have neither a time-based exit nor a time-based trail.
+
+## What is being asked for ÔÇö two linked changes
+
+### 1. Durable peak tracking (the measurement layer)
+
+A position's **highest price and highest profit %** must be **stored**, not reconstructed. Today it exists only as an in-memory `Map` (`stop-guardian.service.ts` L440, `simTslWatermark`), declared in the code as ephemeral:
+
+> *"ÔÜá´©Å IN-MEMORY ON PURPOSEÔÇª A durable watermark needs a column ÔÇö a later increment."*
+
+Measured state right now: **0 of 39 bots have `simTslEnabled`, `sim_tsl_event` has 0 rows, and no table has a `peak`/`best`/`mfe` column on a position or trade.** So the give-back above had to be inferred from bars.
+
+**Requirement:** a `peakPrice` + `peakProfitPct` written each tick for **every open position**, independent of `simTslEnabled` ÔÇö a peak is a **record**, not an exit action, so it must not require arming an exit control. Without this, "did we give back profit?" stays unanswerable and this issue can never be re-verified.
+
+### 2. Time-decaying trail distance (the behaviour change)
+
+Make the trail distance **decrease as holding time increases**, so an ageing position is protected progressively closer to its peak. Conceptually:
+
+```
+effectiveTrail = f(baseTrail, heldHours)   where f decreases in heldHours
+```
+
+ÔÜá´©Å **THIS IS A MATHS CHANGE.** It alters how much a trade banks, so per `.github/instructions/maths-change-requires-ab.instructions.md` it needs a **copied configuration and a monitored comparison**, not an in-place edit.
+
+ÔÜá´©Å **#929 blocks the monitoring half.** `dispatchSideTrade()` reads `metastack_snapshot.mode`, which holds the scoring *style* (`"score"`) and compares it against trading modes (`auto`/`manual`/`semi-auto`). Every stack therefore evaluates as "not auto" and takes the intent-only branch ÔÇö **the A/B runner places no orders.** Copies can be created and scored today; they cannot yet be *compared in live trading*.
+
+### ­ƒøæ THE CONSTRAINT THAT MUST NOT BE MISSED ÔÇö #927
+
+`declared-distance-floor` exists for a measured reason:
+
+> *"Added after SEVEN positions closed inside 28 minutes on stops trailed to ~0.03% against a declared ~1%. This floor is the only thing preventing a repeat."*
+
+A time-decay that tightens the trail **must decay toward `declared slPct` and never inside it.** If the decay is allowed to breach that floor, this change reproduces #927 exactly ÔÇö and #927 was seven positions, not one. Any design here must state explicitly what bounds the decay, and that bound must be a **live** enforcement, not prose.
+
+## Not done
+
+Nothing was changed. No column added, no trail formula edited, no copy created. The issue records the measurement and the two requirements.
+
+- The `peakPrice`/`peakProfitPct` columns are a **schema change** ÔÇö `ALTER TABLE` + `npx prisma generate` with the API stopped, **never `db push`** (`database-schema.instructions.md`, #769), and `db:check` must pass before and after.
+- The decay is a **maths change** and is gated on a copied configuration.
+- **No claim is made that time-decay is the correct fix.** It is the owner's hypothesis, and this repo's most repeated defect is a plausible number with no error ÔÇö the measurement above shows the give-back is real, but does not prove that tightening with age would have captured it rather than stopping out earlier and worse.
+

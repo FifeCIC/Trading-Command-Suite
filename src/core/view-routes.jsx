@@ -167,6 +167,9 @@ import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
 import BlockedSignalsPage from '../pages/BlockedSignalsPage.jsx';
+// Performance Change (2026-09-28) — the CHANGE lens over the same stored data: period over period,
+// not a running total. Sits beside Blocked Signals because both answer a question from the DB.
+import PerformanceChangePage from '../pages/PerformanceChangePage.jsx';
 import MetaStackExplorerPage from '../pages/MetaStackExplorerPage.jsx';
 import FileInventoryPage from '../pages/FileInventoryPage.jsx';
 
@@ -371,6 +374,7 @@ export const VIEW_COMPONENTS = {
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,
   'blocked-signals': BlockedSignalsPage,
+  'performance-change': PerformanceChangePage,
   'meta-stack-explorer': MetaStackExplorerPage,
   'file-inventory': FileInventoryPage,
 

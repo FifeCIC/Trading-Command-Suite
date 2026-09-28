@@ -1,0 +1,88 @@
+/* ChangeStat — the reusable performance-change block.
+ *
+ * ⚠️ TOKENS. Only variables that actually exist in this theme are used. An undefined custom
+ * property is NOT an error at runtime — the declaration is silently dropped and the element falls
+ * back to inherited styling, so a typo here looks like a design choice rather than a bug.
+ * `node scripts/validate-css-tokens.cjs` is the guard; it must exit 0.
+ *
+ * Verified against the token list: --bg, --panel, --bg-elev, --border, --line, --ink, --ink-soft,
+ * --text-dim, --text-faint, --accent, --font-mono, --risk-normal, --risk-high
+ */
+
+.change-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 132px;
+}
+
+.change-stat__label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.change-stat__value {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.change-stat__delta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.change-stat__arrow {
+  font-size: 9px;
+}
+
+/* Direction is carried by the sign and the arrow as well as the colour, so these three classes
+   are redundant on purpose — removing the colour must not remove the meaning. */
+.change-stat--good .change-stat__delta { color: var(--risk-normal); }
+.change-stat--bad  .change-stat__delta { color: var(--risk-high); }
+.change-stat--flat .change-stat__delta { color: var(--text-dim); }
+
+.change-stat__delta--unknown {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.change-stat__spark {
+  display: block;
+  margin-top: 3px;
+  overflow: visible;
+}
+
+.change-stat__spark polyline {
+  stroke: var(--accent);
+}
+
+.change-stat--bad .change-stat__spark polyline { stroke: var(--risk-high); }
+.change-stat--good .change-stat__spark polyline { stroke: var(--risk-normal); }
+
+.change-stat__hint {
+  font-size: 10px;
+  color: var(--text-faint);
+  line-height: 1.3;
+}
+
+.change-stat__hint--reason {
+  color: var(--text-dim);
+}
+
+/* A row of these tiles. Wraps rather than scrolls so a narrow pane stays readable. */
+.change-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

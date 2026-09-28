@@ -51,6 +51,12 @@ const ALLOWLIST = [
     why: 'RECEIVES `strategy` as an explicit parameter (#884) — the parser belongs to its callers. ' +
       'If this ever becomes the ONLY file with a parser reference, the callers have regressed.',
   },
+  {
+    file: 'modules/scoring/exit-consensus.service.ts',
+    why: 'ADVISORY ONLY — mentions closeReason solely in a MEASURED-provenance comment (376 closes ' +
+      'grouped by reason, which is the evidence that no exit directive has ever driven one). ' +
+      'Queries prisma.tradingStrategy and prisma.symbol; never reads or writes prisma.trade.',
+  },
 ];
 
 function walk(dir, out = []) {

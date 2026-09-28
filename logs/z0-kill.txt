@@ -1,0 +1,4 @@
+--- node processes running dist/src/main.js ---
+PID 420 killed
+--- remaining ---
+0

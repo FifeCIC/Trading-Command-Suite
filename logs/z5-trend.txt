@@ -1,0 +1,365 @@
+===== useProtocolData.js
+  L21: queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+  L27: queryFn: () => apiGet('/api/scoring/runs?limit=200&groupBy=protocol').catch(() => ({ runs: [] })),
+===== ProtocolsPage.jsx head
+  import { useState, useEffect } from 'react';
+  import { useQuery } from '@tanstack/react-query';
+  import { useSearchParams } from 'react-router-dom';
+  import { apiGet } from '../core/api/client';
+  import ProtocolsPageB from './ProtocolsPageB';
+  import { getProtocolType } from '../core/protocol-utils';
+  import NoticeBlock from '../components/NoticeBlock';
+  import { noticeFromError } from '../core/notices/from-error.js';
+  import './protocols-page.css';
+  
+  export default function ProtocolsPage() {
+    // Two DESIGNS of this page: New is the default. Old is available at ?variant=A
+    const [searchParams] = useSearchParams();
+    const isVariantA = searchParams.get('variant') === 'A';
+  
+    const [selected, setSelected] = useState(null);
+    const [styleFilter, setStyleFilter] = useState('All');
+  
+    // Load data regardless of variant (so hooks are consistent)
+    const protocolsQuery = useQuery({
+      queryKey: ['protocols'],
+      queryFn: () => apiGet('/api/scoring/gated/protocols'),
+      staleTime: 30_000,
+    });
+  
+    const protocols = (() => {
+      const raw = Array.isArray(protocolsQuery.data?.protocols)
+        ? protocolsQuery.data.protocols
+        : [];
+      // Deduplicate by id — API may return protocols with the same id
+===== sparkline/polyline/svg in components+pages
+  CanvasCandlestickChart.jsx:505: return <canvas ref={canvasRef} className="clab-canvas" />;
+  ReplayPlayer.jsx:282: <polyline
+  BtcSpeedTradingPage.jsx:164: {/* Sparkline */}
+  BtcSpeedTradingPage.jsx:165: <svg className="btc-sparkline" viewBox="0 0 100 20" preserveAspectRatio="none">
+  BtcSpeedTradingPage.jsx:166: <polyline fill="none" stroke="var(--accent)" strokeWidth="1.5"
+  ChartsLabPage.jsx:261: <CanvasCandlestickChart
+  ComponentLabPage.jsx:387: // Mini Chart Widget (decorative sparkline)
+  ComponentLabPage.jsx:403: const polylinePoints = points.map((p, i) => `${(i / (points.length - 1)) * 100},${100 - p}`).join(' ');
+  ComponentLabPage.jsx:414: <svg viewBox="0 0 100 100" className="cl-sparkline" preserveAspectRatio="none">
+  ComponentLabPage.jsx:415: <polyline
+  ComponentLabPage.jsx:421: points={polylinePoints}
+  ComponentLabPage.jsx:432: points={`0,100 ${polylinePoints} 100,100`}
+  GoldSpeedTradingPage.jsx:145: <svg className="gold-sparkline" viewBox="0 0 100 20" preserveAspectRatio="none">
+  GoldSpeedTradingPage.jsx:146: <polyline fill="none" stroke="#f59e0b" strokeWidth="1.5"
+  MacroMonitorPage.jsx:186: {/* Sparkline */}
+  MacroMonitorPage.jsx:187: <svg viewBox="0 0 100 100" className="mm-sparkline" preserveAspectRatio="none">
+  MacroMonitorPage.jsx:188: <polyline
+  MacroMonitorPage.jsx:216: <polyline fill="none" stroke="var(--accent, #0ea5a6)" strokeWidth="1.5" points={linePts} />
+  MetaStackPipelinePage.jsx:177: protocols: <svg viewBox="0 0 100 100"><polygon points="50,15 65,45 50,80 35,45" strokeWidth="2" fill="none" opacity="0.3"/><circle cx="50" cy="45" r="12" fill="none" strokeWidth="1.5" opacity="0.2"/></svg>,
+  MetaStackPipelinePage.jsx:178: sees: <svg viewBox="0 0 100 100"><polygon points="50,12 62,40 95,42 70,65 77,92 50,78 23,92 30,65 5,42 38,40" strokeWidth="1.2" fill="none" opacity="0.25"/><circle cx="50" cy="50" r="16" fill="none" strokeWidth="1" opacity="0.15"/></svg>,
+  MetaStackPipelinePage.jsx:181: execution: <svg viewBox="0 0 100 100"><polyline points="20,60 35,45 55,55 80,20" strokeWidth="2.5" fill="none" opacity="0.35"/><circle cx="20" cy="60" r="4" opacity="0.3"/><circle cx="35" cy="45" r="3" opacity="0.25"/><circle cx="55" cy="55" r="3" opacity="0.2"/><circle cx="80" cy="20" r="5" opacity="0.3"/></svg>,
+  PipelineGraphLabPage.jsx:10: function BgIconScoring() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><polygon points="50,15 62,45 95,48 70,70 77,98 50,82 23,98 30,70 5,48 38,45" strokeWidth="1.5" fill="none" opacity="0.45"/><circle cx="50" cy="52" r="18" strokeWidth="1.2" fill="none" opacity="0.3"/></svg>; }
+  PipelineGraphLabPage.jsx:13: function BgIconExecution() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><polyline points="25,75 45,40 65,55 85,20" strokeWidth="2.5" fill="none" opacity="0.45"/><circle cx="25" cy="75" r="4" opacity="0.5"/><circle cx="45" cy="40" r="4" opacity="0.4"/><circle cx="65" cy="55" r="4" opacity="0.35"/><circle cx="85" cy="20" r="5" opacity="0.5"/></svg>; }
+  PipelineGraphLabPage.jsx:16: function BgIconRisk() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><polygon points="50,10 90,85 10,85" strokeWidth="1.8" fill="none" opacity="0.4"/><line x1="50" y1="40" x2="50" y2="70" strokeWidth="2.5" opacity="0.35"/><circle cx="50" cy="75" r="3" opacity="0.4"/><rect x="10" y="85" width="80" height="5" rx="2" opacity="0.2"/></svg>; }
+  SnapshotReplayPage.jsx:83: // ── All signals sparkline ──
+  SnapshotReplayPage.jsx:392: {/* Signal history sparkline */}
+  SnapshotReplayPage.jsx:393: <div className="sr-signal-sparkline">
+  SpeedTradingPage.jsx:78: // ── Tick history (last 30 mid prices for sparkline) ──
+  SpeedTradingPage.jsx:452: {/* Mini sparkline from tick history */}
+  SpeedTradingPage.jsx:453: <svg className="st-sparkline" viewBox="0 0 100 20" preserveAspectRatio="none">
+  SpeedTradingPage.jsx:454: <polyline
+  SymbolDetailPage.jsx:227: {(p.sparkline?.length ?? 0) > 0 && (
+  SymbolDetailPage.jsx:228: <div className="sd-sparkline">
+  SymbolDetailPage.jsx:229: {p.sparkline.map((v, i) => (
+===== distribution/histogram/bucket/equity
+  AbLadderPage.jsx:17: *     single-column layout delta live in `ab-ladder.css`. A full CSS copy is the
+  AbLadderPage.jsx:121: * `delta` is the percentage-point gap when BOTH sides carry a percentage, else null —
+  AbLadderPage.jsx:131: let delta = null;
+  AbLadderPage.jsx:135: delta = Math.round(Math.abs(mine - theirs));
+  AbLadderPage.jsx:147: delta,
+  AbLadderPage.jsx:384: {row.lead && row.delta != null && (
+  AbLadderPage.jsx:386: className={`ab-delta ab-delta--${row.lead}`}
+  AbLadderPage.jsx:387: title={`${leadName} leads by ${row.delta} percentage point${row.delta === 1 ? '' : 's'} (of each protocol's own capacity)`}
+  AbLadderPage.jsx:389: {row.lead.toUpperCase()} +{row.delta}
+  AbLadderPage.jsx:393: <span className="ab-delta ab-delta--tie" title="Tie — both sides score the same on the ranked metric">
+  AbLadderPage.jsx:397: {row.delta == null && !row.lead && !row.tie && (
+  AbLadderPage.jsx:398: <span className="ab-delta ab-delta--na" title="Only one side has scored this symbol — a gap needs both denominators">
+  AbStrategiesPage.jsx:402: const deltaTitle = (p) => {
+  AbStrategiesPage.jsx:404: if (p.delta != null) return `B − A: ${pnlSign(p.bRec.pnl)} − ${pnlSign(p.aRec.pnl)} = ${pnlSign(p.delta)}`;
+  AbStrategiesPage.jsx:409: const sideRow = (side, pair, strategy, rec, deltaNode) => (
+  AbStrategiesPage.jsx:430: {deltaNode}
+  AbStrategiesPage.jsx:476: className={`${styles.numCol} ${styles.deltaCell}`}
+  AbStrategiesPage.jsx:477: title={deltaTitle(p)}
+  AbStrategiesPage.jsx:479: {p.delta != null
+  AbStrategiesPage.jsx:480: ? <span className={pnlClass(p.delta)}>{pnlSign(p.delta)}</span>
+  AbStrategiesPage.jsx:648: const [deltaSort, setDeltaSort] = usePersistentChoice('abstrategies:sort', 'desc', ['desc', 'asc']);
+  AbStrategiesPage.jsx:749: // never 0. `delta` is null unless BOTH sides have one: a half-comparable pair is not a number.
+  AbStrategiesPage.jsx:768: delta: aRec && bRec ? bRec.pnl - aRec.pnl : null,
+  AbStrategiesPage.jsx:778: if (x.delta == null && y.delta == null) return x.symbol.localeCompare(y.symbol);
+  AbStrategiesPage.jsx:779: if (x.delta == null) return 1;
+  AbStrategiesPage.jsx:780: if (y.delta == null) return -1;
+  AbStrategiesPage.jsx:781: if (x.delta !== y.delta) return deltaSort === 'desc' ? y.delta - x.delta : x.delta - y.delta;
+  AbStrategiesPage.jsx:785: }, [tablePairs, deltaSort]);
+  AbStrategiesPage.jsx:835: sortDir={deltaSort}
+  AbStrategiesPage.jsx:836: onToggleSort={() => setDeltaSort(deltaSort === 'desc' ? 'asc' : 'desc')}
+  ABTestingPage.jsx:475: <p>Track how Protocol A and Protocol B signals perform over time:</p>
+  AccountsDashboardPage.jsx:101: const liveTotal = liveMT5.reduce((s, a) => s + (a.balance ?? a.equity ?? 0), 0)
+  AccountsDashboardPage.jsx:103: const demoTotal = demoMT5.reduce((s, a) => s + (a.balance ?? a.equity ?? 0), 0);
+  AccountsDashboardPage.jsx:160: <span className="ad-card-balance">{formatCurrency(acc.balance ?? acc.equity, acc.currency)}</span>
+  AccountsDashboardPage.jsx:285: <span className="ad-card-balance">{formatCurrency(acc.balance ?? acc.equity, { currency: acc.currency })}</span>
+  ActiveSymbolsPage.jsx:103: // so `pnl` is a placeholder 0) BEFORE any statistic, and each bucket carries `reliability`, which
+  ActiveSymbolsPage.jsx:342: // it verbatim — including the fabricated `'Xtrend'` on 29 rows. A CSV is the artefact
+  ActiveSymbolsPage.jsx:423: believe `Xtrend` was a venue, which is how the owner found this: 29 rows carried an
+  ActiveSymbolsPage.jsx:424: onboarding-seeder DEFAULT of `'Xtrend'`, and there is no Xtrend exchange at all.
+  AICostsPage.jsx:65: const pnl = pnlQuery.data?.balance != null ? (pnlQuery.data.equity - pnlQuery.data.balance) : 0;
+  ApiActivityPage.jsx:41: const latencyBuckets = Array.isArray(summary.latencyBuckets) ? summary.latencyBuckets : [];
+  ApiActivityPage.jsx:42: const maxLatency = Math.max(...latencyBuckets.map((bucket) => bucket.avgLatencyMs), 1);
+  ApiActivityPage.jsx:57: <p>Live request feed, provider filters, error counts, and one-hour latency trends.</p>
+  ApiActivityPage.jsx:97: <div className="api-latency-chart" aria-label="Average latency by five minute bucket">
+  ApiActivityPage.jsx:98: {latencyBuckets.map((bucket) => (
+  ApiActivityPage.jsx:99: <div key={bucket.label} className="api-latency-bar">
+  ApiActivityPage.jsx:102: style={{ height: `${Math.max((bucket.avgLatencyMs / maxLatency) * 100, bucket.count ? 8 : 0)}%` }}
+  ApiActivityPage.jsx:103: title={`${bucket.label}: ${bucket.avgLatencyMs}ms avg, ${bucket.count} requests`}
+  ApiActivityPage.jsx:105: <span className="api-latency-label">{bucket.label}</span>
+  ApiEndpointsPage.jsx:226: <h3>Endpoint Distribution</h3>
+  AutomationDashboardPage.jsx:255: const equity = h?.equity ?? balance;
+  AutomationDashboardPage.jsx:256: const pnl = equity - balance;
+  AutomationDashboardPage.jsx:267: <span className="ad-broker-equity">${equity.toFixed(0)}</span>
+  BacktestPage.jsx:8: import EquityCurveChart from '../components/backtest/EquityCurveChart';
+  BacktestPage.jsx:127: const equityQuery = useQuery({
+  BacktestPage.jsx:128: queryKey: ['backtest-equity', runId],
+  BacktestPage.jsx:129: queryFn: () => apiGet(`/api/backtest/equity/${runId}`),
+  BacktestPage.jsx:135: const equityData = equityQuery.data;
+  BacktestPage.jsx:230: <option value="fixedPercent">% of Equity</option>
+  BacktestPage.jsx:326: {/* Equity curve + drawdown */}
+  BacktestPage.jsx:327: {equityData && !equityData.error && equityData.equity?.length > 0 && (
+  BacktestPage.jsx:329: <h3>Equity Curve &amp; Drawdown</h3>
+  BacktestPage.jsx:330: <EquityCurveChart equityData={equityData} symbol={symbol} height={300} />
+  BtcSpeedTradingPage.jsx:5: * Includes the SpeedDecisionPanel for multi-timeframe trend + micro S/R context.
+  CapabilityMapPage.jsx:132: { name: 'Performance (summary + equity)', count: 3 },
+  CapabilityMapPage.jsx:179: 'Strategy Performance Dashboard (Equity Curve + Monthly Breakdown)',
+  CapabilityMapPage.jsx:265: //     and its SEED_CALENDAR events were all in the past, so every prediction was delta=0
+  ChartsLabPage.jsx:138: // Each poll snapshots bid/ask into a synthetic bar bucket
+  ChartsLabPage.jsx:295: <li><span className="clab-done">✓</span> Synthetic sub-minute candles from quote polling (bucket bid/ask into OHLC)</li>
+  DailyBriefingPage.jsx:169: <span className="db-snap-label">Equity</span>
+  DailyBriefingPage.jsx:170: <span className="db-snap-value">{formatCurrency(diag.equity, { abs: true })}</span>
+  DailySummaryReportPage.jsx:8: *   (DB closed trades), /api/providers/mt5/diagnostics (account balance/equity),
+  DailySummaryReportPage.jsx:109: lines.push(`- **Balance:** ${formatCurrency(diag.balance, { abs: true })}  |  **Equity:** ${formatCurrency(diag.equity, { abs: true })}`);
+  DataElementsPage.jsx:29: description: 'Price above EMA20 above EMA50 — trend alignment check.',
+  DiagramsPage.jsx:373: E[ATR Percentile<br/>90-period distribution]
+  DiagramsPage.jsx:378: H[regime: trending · ranging · chaotic]
+  DiagramsPage.jsx:748: desc: 'On-demand batch scanner via POST /api/speed/scan. 23 default symbols scored against their mapped protocol (60+ symbol→protocol entries in SYMBOL_PROTOCOL_MAP). Includes MicroTrendDetector analysis and seasonal affinity multiplier. Route-to-trade supports quick-trade (confirm), one-click (execute), and automation (create strategy) modes.',
+  DiagramsPage.jsx:767: M[MicroTrendDetector.analyze<br/>ADX · clarity · direction · patterns]
+  DiagramsPage.jsx:771: O[topPick + topPickTrend]
+  DiagramsPage.jsx:958: desc: 'Trading212ImportService fetches positions from live.trading212.com/api/v0 (equity/portfolio + equity/account/cash). Ticker normalization via cleanT212Ticker() (strips _US_EQ, _EQ, handles modifiers). Positions persisted to Position table (delete stale + insert fresh). Separate /scores endpoint integrates with ScoringService. Frontend PortfolioPage queries /api/portfolio/trading212/mode, /api/portfolio/holdings, /api/portfolio/scores. Also supports order execution (buy/sell/cancel) with pre-trade safety gates.',
+  DiagramsPage.jsx:961: A[GET equity/account/cash<br/>balance, free, invested, ppl]
+  DiagramsPage.jsx:962: B[GET equity/portfolio<br/>positions array]
+  DiagramsPage.jsx:963: C[GET equity/orders<br/>filled orders for history]
+  DiagramsPage.jsx:1131: desc: 'Full trace from TradingStrategyService.evaluateAllActive() through scoring, evaluation, safety gates, bridge, to MT5 order execution. Safety gates: MT5_MAX_POSITION_SIZE, MT5_MAX_OPEN_POSITIONS, MT5_MAX_DAILY_LOSS, RiskService.canOpenPosition, drawdown check. Regime-adaptive sizing: high vol=0.5×, chaotic=0.25×, strong trend=1.25×. MT5 fallback: if DB has <30 bars, fetches from bridge and stores.',
+  DiagramsPage.jsx:1152: SZ2 -->|strong trend| SZ5["×1.25 boost"]
+  DiagramsPage.jsx:1520: P1["speed-equity-v1<br/>5s bars ⚡"]
+  DiagramsPage.jsx:1582: P4["POST /api/speed/scan<br/>4 timeframes · micro-trend<br/>seasonal affinity · 23 symbols<br/>heaviest per-symbol, few symbols"]
+  DirectiveImpactAuditPage.jsx:58: if (sortBy === 'trend') return b.trend - a.trend;
+  DirectiveImpactAuditPage.jsx:106: <option value="trend">Trend</option>
+  DirectiveImpactAuditPage.jsx:163: <th>Trend</th>
+  DirectiveImpactAuditPage.jsx:197: <td className="dia-num" style={{ color: d.trend > 0 ? '#22c55e' : d.trend < 0 ? '#ef4444' : 'var(--textDim)' }}>
+  DirectiveImpactAuditPage.jsx:198: {d.trend > 0 ? '+' : ''}{d.trend.toFixed(1)}
+  EarningsCalendarPage.jsx:57: function capBucket(cap) {
+  EarningsCalendarPage.jsx:239: const bucket = capBucket(e.marketCap);
+  EarningsCalendarPage.jsx:240: if (bucket !== capFilter) return false; // null-cap rows drop when a bucket is chosen
+  EarningsCalendarPage.jsx:630: <span className={priorPct >= 0 ? 'ec-delta ec-delta-up' : 'ec-delta ec-delta-down'} title={`${priorPct >= 0 ? '+' : ''}${priorPct}% vs prior-year quarter`}>
+  ExitSignalsPage.jsx:26: const TREND_ICONS = {
+  ExitSignalsPage.jsx:61: ? `${summary.total} positions — ${summary.critical} critical, ${summary.high} high urgency. Multi-factor analysis: score trend + P&L + signal degradation.`
+  ExitSignalsPage.jsx:62: : 'Portfolio position exit monitoring with trend analysis'}
+  ExitSignalsPage.jsx:78: <p className="es-hint">Import your Trading212 portfolio or add positions to see exit signals with trend analysis.</p>
+  ExitSignalsPage.jsx:132: <span className="es-metric-label">Trend</span>
+  ExitSignalsPage.jsx:134: {TREND_ICONS[sig.scoreTrend] || '—'} {sig.scoreTrend}
+  FeatureLabPage.jsx:16: { id: 'news-dissipation', label: 'News Dissipation Curve', status: 'active', desc: 'How news event effects decay over time.' },
+  HealthDashboardPage.jsx:81: function TrendBar({ point, maxAvg }) {
+  HealthDashboardPage.jsx:85: <div className="hd-trend-row">
+  HealthDashboardPage.jsx:86: <span className="hd-trend-hour">{point.hour?.slice(11) || point.hour}</span>
+  HealthDashboardPage.jsx:87: <div className="hd-trend-bar-wrap">
+  HealthDashboardPage.jsx:88: <span className="hd-trend-bar" style={{ width: `${Math.min(pct, 100)}%`, background: color }} />
+  HealthDashboardPage.jsx:90: <span className="hd-trend-val" style={{ color }}>{point.avgMs}ms</span>
+  HealthDashboardPage.jsx:91: <span className="hd-trend-count">{point.count}</span>
+  HealthDashboardPage.jsx:240: if (!data?.apiTrends?.length) return 1;
+  HealthDashboardPage.jsx:241: return Math.max(...data.apiTrends.map(p => p.avgMs), 1);
+  HealthDashboardPage.jsx:242: }, [data?.apiTrends]);
+  HealthDashboardPage.jsx:251: System vitals, DB health, slow queries, API trends, provider status, and trace correlation — refreshed every 15s.
+  HealthDashboardPage.jsx:289: {/* ── 4. API Trends ── */}
+  HealthDashboardPage.jsx:292: <div className="hd-trend-chart">
+  HealthDashboardPage.jsx:293: {(data?.apiTrends || []).slice(0, 24).map(p => <TrendBar key={p.hour} point={p} maxAvg={maxAvgMs} />)}
+  HealthDashboardPage.jsx:294: {(!data?.apiTrends || data.apiTrends.length === 0) && <span className="hd-empty">No API trend data</span>}
+  LadderPage.jsx:58: * into the BOTH bucket of the new per-direction memory.
+  LadderPage.jsx:68: * readInitialSelection() — starting state for the per-direction protocol buckets.
+  LadderPage.jsx:84: * `seeded` is what separates "this bucket has never been given its default" — seed it, with
+  LadderPage.jsx:85: * everything — from "the user deliberately emptied this bucket", which must be left alone.
+  LadderPage.jsx:92: * When `seeded` is absent the stored buckets came from the code that HAD the defect, so
+  LadderPage.jsx:220: // The active selection set is the current direction's own bucket.
+  LadderPage.jsx:239: // Other directions' buckets are never touched, so BOTH → LONG → BOTH restores each
+  MacroMonitorPage.jsx:12: trend: [5.25, 5.50, 5.50, 5.50, 5.50, 5.50, 5.50, 5.50, 5.50, 5.50, 5.50, 5.50],
+  MacroMonitorPage.jsx:18: trend: [6.5, 6.0, 5.0, 4.9, 4.0, 3.7, 3.2, 3.5, 3.4, 3.8, 3.4, 3.2],
+  MacroMonitorPage.jsx:24: trend: [3.2, 2.6, 2.1, 2.9, 3.2, 2.7, 2.4, 3.0, 3.3, 2.8, 2.8, 3.1],
+  MacroMonitorPage.jsx:30: trend: [315, 236, 175, 310, 180, 228, 256, 190, 290, 210, 165, 272],
+  MacroMonitorPage.jsx:36: trend: [3.5, 3.6, 3.7, 3.8, 3.9, 3.9, 3.7, 3.8, 3.9, 3.9, 3.9, 3.8],
+  MacroMonitorPage.jsx:42: trend: [48.4, 47.8, 49.2, 46.9, 50.1, 47.6, 48.8, 49.5, 48.2, 50.3, 49.1, 50.3],
+  MacroMonitorPage.jsx:48: trend: [54.5, 53.0, 52.5, 51.8, 53.2, 54.0, 52.8, 53.9, 55.1, 52.4, 52.1, 53.8],
+  MacroMonitorPage.jsx:54: trend: [3.75, 4.00, 4.25, 4.50, 4.50, 4.50, 4.75, 4.50, 4.50, 4.50, 4.50, 4.25],
+  MacroMonitorPage.jsx:60: trend: [4.2, 3.9, 3.7, 3.4, 3.2, 3.1, 2.9, 3.0, 2.8, 3.0, 2.9, 2.8],
+  MacroMonitorPage.jsx:66: trend: [0.7, -0.3, 0.4, 0.5, -0.1, 0.8, -0.5, 0.3, 0.9, -0.4, -0.2, 0.6],
+  MacroMonitorPage.jsx:90: trend: ind.series?.map((s) => s.value) || [],
+  MacroMonitorPage.jsx:142: <span className="mm-risk-label">Inflation Trend</span>
+  MacroMonitorPage.jsx:147: <span className="mm-risk-value mm-risk-on">Above Trend</span>
+  MacroMonitorPage.jsx:159: const minVal = Math.min(...ind.trend);
+  MacroMonitorPage.jsx:160: const maxVal = Math.max(...ind.trend);
+  MacroMonitorPage.jsx:163: const linePts = ind.trend.map((v, i) => `${(i / (ind.trend.length - 1)) * 100},${toY(v)}`).join(' ');
+  MetaStackExplorerPage.jsx:220: fnDesc: 'If all gates pass, the trade is sent to the broker via MT5 bridge. The outcome is recorded: did the order fill? What was the entry price? Over time, outcomes are compared against signals to measure prediction accuracy. Manual trades not executed through the app won\'t have this data — but testing uses the app for full traceability.',
+  MetaStackExplorerPage.jsx:518: { label: 'Gating delta', pass: typeof scored.meta?.gatingDelta === 'number', detail: `weighted vs additive: ${scored.meta?.gatingDelta?.toFixed?.(1) || '—'} pts` },
+  Mt5StatusPage.jsx:244: <div className="mt5-stat"><span className="mt5-stat-label">Equity</span>
+  Mt5StatusPage.jsx:245: <span className="mt5-stat-value">{diagnostics.equity !== undefined ? `$${Number(diagnostics.equity).toLocaleString()}` : '—'}</span></div>
+  Mt5TradingPage.jsx:78: ? { ...diag.account, balance: diag.balance, equity: diag.equity, server: diag.server }
+  Mt5TradingPage.jsx:442: <span>Equity</span>
+  Mt5TradingPage.jsx:443: <strong>${account.equity?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '—'}</strong>
+  ObjectivesPage.jsx:197: <input className="ob-input" placeholder="Title (e.g. Grow Xtrend to 500 GBP)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+  PerformanceLabPage.jsx:60: Real trade outcomes — win rate, P&L, drawdown, and equity curve from closed trades. Open positions show mark-to-market via MT5.
+  PerformanceLabPage.jsx:182: {/* ── Equity Curve ── */}
+  PerformanceLabPage.jsx:183: {data?.equityCurve?.length > 1 && (
+  PerformanceLabPage.jsx:185: <h2>Equity Curve</h2>
+  PerformanceLabPage.jsx:186: <div className="pl-equity-chart">
+  PerformanceLabPage.jsx:188: {data.equityCurve.map((pt, i) => {
+  PerformanceLabPage.jsx:189: const maxAbs = Math.max(1, ...data.equityCurve.map(p => Math.abs(p.cumPnl)));
+  PerformanceLabPage.jsx:197: {i % Math.ceil(data.equityCurve.length / 10) === 0 && (
+  PerformanceLabPage.jsx:205: <span>Start: {data.equityCurve[0]?.date}</span>
+  PerformanceLabPage.jsx:206: <span>End: {data.equityCurve[data.equityCurve.length - 1]?.date}</span>
+  PersonalFinancesPage.jsx:132: <p>💡 Future: automatic fund transfers, strategy-linked allocation suggestions, and pie-level distribution tracking.</p>
+  PortfolioPage.jsx:261: MT5 totals use account equity; position values are notional exposure.
+  PortfolioPage.jsx:272: <div className="pf-broker-row"><span>Equity</span><strong>{a.equity?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? '—'} {a.currency || ''}</strong></div>
+  PositionsMonitorPage.jsx:135: <div><span>Delta</span><span>{pos.delta?.toFixed(2) || '—'}</span></div>
+  ScoringOverviewPage.jsx:8: * - Summary cards: total scored, mode, avg score, freshness distribution
+  ScoringOverviewPage.jsx:9: * - Score distribution bar chart
+  ScoringOverviewPage.jsx:30: /** @param {{ low: number, high: number }} bucket @param {number} val */
+  ScoringOverviewPage.jsx:31: function inBucket(bucket, val) {
+  ScoringOverviewPage.jsx:32: return val >= bucket.low && val <= bucket.high;
+  ScoringOverviewPage.jsx:35: const SCORE_BUCKETS = [
+  ScoringOverviewPage.jsx:36: { low: 0, high: 20, label: '0–20', css: 'so-bucket--low' },
+  ScoringOverviewPage.jsx:37: { low: 21, high: 40, label: '21–40', css: 'so-bucket--watch' },
+  ScoringOverviewPage.jsx:38: { low: 41, high: 60, label: '41–60', css: 'so-bucket--mid' },
+  ScoringOverviewPage.jsx:39: { low: 61, high: 80, label: '61–80', css: 'so-bucket--entry' },
+  ScoringOverviewPage.jsx:40: { low: 81, high: 100, label: '81–100', css: 'so-bucket--strong' },
+  ScoringOverviewPage.jsx:123: // Score distribution — use normalized scores (% of max)
+  ScoringOverviewPage.jsx:125: const bucketCounts = SCORE_BUCKETS.map(b => ({
+  ScoringOverviewPage.jsx:127: count: normScores.filter(s => inBucket(b, s)).length,
+  ScoringOverviewPage.jsx:129: const maxBucket = Math.max(1, ...bucketCounts.map(b => b.count));
+  ScoringOverviewPage.jsx:131: // Signal distribution
+  ScoringOverviewPage.jsx:214: {/* ---- Score distribution ---- */}
+  ScoringOverviewPage.jsx:216: <h2>Score Distribution</h2>
+  ScoringOverviewPage.jsx:221: {bucketCounts.map(b => (
+  ScoringOverviewPage.jsx:227: style={{ width: `${(b.count / maxBucket) * 100}%` }}
+  ScoringOverviewPage.jsx:253: {/* Signal distribution */}
+  SectorRotationPage.jsx:52: trend: apiSec?.trend ?? 0,
+  SectorRotationPage.jsx:69: const maxAbs = Math.max(...sectors.map((s) => Math.max(Math.abs(s.momentum), Math.abs(s.trend))), 5);
+  SectorRotationPage.jsx:95: <p className="sr2-hint">Short-term momentum vs long-term trend. Leading (top-right), Improving (top-left), Weakening (bottom-right), Lagging (bottom-left).</p>
+  SectorRotationPage.jsx:113: <text x="4" y="2" fill="rgba(255,255,255,0.2)" fontSize="2.2" transform="rotate(-90, 4, 2)">Trend →</text>
+  SectorRotationPage.jsx:117: const cy = 100 - toQuadY(s.trend); // invert Y
+  SectorRotationPage.jsx:120: <circle cx={cx} cy={cy} r="2.5" fill={s.momentum > 0 && s.trend > 0 ? '#22c55e' : s.momentum > 0 ? '#f59e0b' : s.trend > 0 ? '#0ea5a6' : '#ef4444'} opacity="0.9" />
+  SettingsDatabasePage.jsx:35: backtest_run:        'Historical backtest results with entry signals, equity curves, and performance stats.',
+  SettingsPage.jsx:62: apiTrends: 'API Response Trends', providerGrid: 'Provider Health Grid', traceCorrelations: 'Trace Correlations',
+  SnapshotLibraryPage.jsx:229: const d = r.delta || {};
+  SnapshotLibraryPage.jsx:246: <span className={`sl-cmp-delta ${d.priceChange >= 0 ? 'pos' : 'neg'}`}>
+  SnapshotLibraryPage.jsx:257: <span className={`sl-cmp-delta ${d.compositeChange >= 0 ? 'pos' : 'neg'}`}>
+  SnapshotLibraryPage.jsx:284: {/* Delta details */}
+  SnapshotLibraryPage.jsx:289: <span>{d.biggestDirectiveMover.id} ({d.biggestDirectiveMover.delta >= 0 ? '+' : ''}{d.biggestDirectiveMover.delta})</span>
+  SpeedScannerPage.jsx:11: const TREND_COLORS = {
+  SpeedScannerPage.jsx:71: const topPickTrend = data.topPickTrend;
+  SpeedScannerPage.jsx:79: const trending = scanned.filter((s) => s.trend?.clarity === 'strong' || s.trend?.clarity === 'moderate').length;
+  SpeedScannerPage.jsx:80: const sideways = scanned.filter((s) => s.trend?.sideways).length;
+  SpeedScannerPage.jsx:81: const trade = scanned.filter((s) => s.trend?.recommendation === 'trade').length;
+  SpeedScannerPage.jsx:82: return { total: scanned.length, trending, sideways, trade };
+  SpeedScannerPage.jsx:91: if (filterRec === 'trade') list = list.filter(s => s.trend?.recommendation === 'trade');
+  SpeedScannerPage.jsx:92: else if (filterRec === 'actionable') list = list.filter(s => s.trend?.recommendation !== 'pause');
+  SpeedScannerPage.jsx:93: else if (filterRec === 'not-pause') list = list.filter(s => s.trend?.recommendation !== 'pause');
+  SpeedScannerPage.jsx:104: case 'adx': list.sort((a, b) => (b.trend?.adx || 0) - (a.trend?.adx || 0)); break;
+  SpeedScannerPage.jsx:105: case 'patterns': list.sort((a, b) => (b.trend?.patternCount || 0) - (a.trend?.patternCount || 0)); break;
+  SpeedScannerPage.jsx:106: case 'clarity': list.sort((a, b) => (CLARITY_ORDER[b.trend?.clarity] || 0) - (CLARITY_ORDER[a.trend?.clarity] || 0)); break;
+  SpeedScannerPage.jsx:119: Real-time symbol ranking with trend clarity, pattern detection, and trade/pause recommendations.
+  SpeedScannerPage.jsx:120: {!isLoading && <span> {stats.total} symbols · {stats.trending} trending · {stats.trade} tradeable</span>}
+  SpeedScannerPage.jsx:122: <span className="ss-live-badge" title="Live market data pipeline: MT5 candles → SpeedScanService → directive scoring → trend detection → trade/pause recommendation">
+  SpeedScannerPage.jsx:133: {topPickTrend && <span className="ss-top-trend">{topPickTrend}</span>}
+  SpeedScannerPage.jsx:165: <div className="ss-summary-item ss-trending">
+  SpeedScannerPage.jsx:166: <span className="ss-summary-label">Trending</span>
+  SpeedScannerPage.jsx:167: <span className="ss-summary-value">{stats.trending}</span>
+  SpeedScannerPage.jsx:191: const topSideways = top?.trend?.sideways;
+  SpeedScannerPage.jsx:196: {next?.trend && ` (${next.trend.clarity} ${next.trend.direction}, composite ${next.composite})`}
+  SpeedScannerPage.jsx:203: {next?.trend && ` — ${next.trend.clarity} ${next.trend.direction}, composite ${next.composite}`}
+  SpeedScannerPage.jsx:257: const t = sym.trend ?? {};
+  SpeedScannerPage.jsx:259: const trendColor = TREND_COLORS[t.clarity] || '#6b7280';
+  SpeedScannerPage.jsx:289: {/* Trend bar */}
+  SpeedScannerPage.jsx:290: <div className="ss-trend-col">
+  SpeedScannerPage.jsx:291: <div className="ss-trend-header">
+  SpeedScannerPage.jsx:292: <span className="ss-trend-label" style={{ color: trendColor }}>
+  SpeedScannerPage.jsx:297: <div className="ss-trend-bar">
+  SpeedScannerPage.jsx:299: className="ss-trend-fill"
+  SpeedScannerPage.jsx:302: background: trendColor,
+  SpeedScannerPage.jsx:306: <div className="ss-trend-detail">
+  SpeedTradingPage.jsx:6: import { getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
+  SpeedTradingPage.jsx:698: <label className="st-chart-setting"><span>Volume histogram</span><input type="checkbox" checked={chartSettings.showVolume} onChange={e => setChartSettings(s => ({ ...s, showVolume: e.target.checked }))} /></label>
+  StockInvestigationPage.jsx:48: Persistent research — investigations survive sessions and build knowledge over time
+  StopGuardianStatsPage.jsx:322: <h4>Consensus distribution</h4>
+  StopGuardianStatsPage.jsx:323: {consensus.distribution.length === 0 ? <p className="sg-muted">—</p> : (
+  StopGuardianStatsPage.jsx:327: {consensus.distribution.map((c) => (
+  SymbolDetailPage.jsx:236: <span className={p.trend || ''}>Trend: {p.trend ?? '—'}</span>
+  T212CFDPage.jsx:51: <span className="t212c-stat-label">Equity</span>
+  TechnicalIndicatorsPage.jsx:9: { id: 'macd', name: 'MACD', fullName: 'Moving Average Convergence Divergence', category: 'Trend', defaultPeriod: '12/26/9' },
+  TechnicalIndicatorsPage.jsx:10: { id: 'sma', name: 'SMA', fullName: 'Simple Moving Average', category: 'Trend', defaultPeriod: 20 },
+  TechnicalIndicatorsPage.jsx:11: { id: 'ema', name: 'EMA', fullName: 'Exponential Moving Average', category: 'Trend', defaultPeriod: 20 },
+  TechnicalIndicatorsPage.jsx:15: { id: 'adx', name: 'ADX', fullName: 'Average Directional Index', category: 'Trend', defaultPeriod: 14 },
+  TechnicalIndicatorsPage.jsx:19: { id: 'ichimoku', name: 'Ichimoku', fullName: 'Ichimoku Cloud', category: 'Trend', defaultPeriod: '9/26/52' },
+  ViewStrategyPage.jsx:90: // and it always signs positives — right for a delta, wrong for a rate. `winRate` is a FRACTION
+  BeginnerGuide.jsx:99: <p>Each directive asks a single question about the market: <em>"Is the trend healthy?"</em>, <em>"Is the pullback deep enough?"</em>, <em>"Is volume confirming the move?"</em> The score (0 to max) tells you how strongly the conditions match.</p>
+  BeginnerGuide.jsx:108: <li><GlossaryPopover term="trend directive"><strong>Trend</strong></GlossaryPopover> — which direction the market is moving</li>
+  BeginnerGuide.jsx:117: <p>A <strong>protocol</strong> is a collection of directives that work together. For example, a "Trend Pullback" protocol might combine a trend directive (confirming the trend direction) with an entry directive (spotting a pullback) and a risk directive (checking volatility is acceptable). You can build your own protocols on the <strong>Protocol Editor</strong> page.</p>
+  BeginnerGuide.jsx:167: case 'Trend':    return <TrendBody name={name} description={description} directiveId={directiveId} />;
+  BeginnerGuide.jsx:256: function TrendBody({ name, description }) {
+  BeginnerGuide.jsx:260: <strong>{name}</strong> is a <strong>trend directive</strong> — it identifies whether the market is trending and in which direction.
+  BeginnerGuide.jsx:263: <h4>What Trend Directives Do</h4>
+  BeginnerGuide.jsx:264: <p>Trend directives determine if the market is moving consistently in one direction (uptrend or downtrend) or if it's choppy and directionless. They typically use moving averages, price structure (higher highs/lower lows), or ADX. The golden rule: <strong>"The trend is your friend."</strong> Trading with the trend has statistically higher success rates.</p>
+  BeginnerGuide.jsx:379: <li><strong>No single directive tells the whole story:</strong> Combine multiple directives (entry + trend + risk) for a complete picture. This is what protocols do.</li>
+  CanvasCandlestickChart.jsx:10: *   intervalMs    — bucket interval in ms
+  CanvasCandlestickChart.jsx:17: function bucketTicks(ticks, intervalMs) {
+  CanvasCandlestickChart.jsx:19: const buckets = [];
+  CanvasCandlestickChart.jsx:25: if (cur) buckets.push(cur);
+  CanvasCandlestickChart.jsx:33: if (cur) buckets.push(cur);
+  CanvasCandlestickChart.jsx:34: return buckets;
+  CanvasCandlestickChart.jsx:121: const bars = bucketTicks(ticks, intervalMs).slice(-maxBars);
+  CanvasCandlestickChart.jsx:477: const delta = -e.deltaY * 0.005;
+  CanvasCandlestickChart.jsx:478: const newZoom = Math.max(0.2, Math.min(5, zoomRef.current + delta));
+  SpeedChart.jsx:22: HistogramSeries,
+  SpeedChart.jsx:33: * Bucket raw ticks into OHLC candles. Shared with CandlestickChart (now merged).
+  SpeedChart.jsx:35: function bucketTicks(ticks, intervalMs) {
+  SpeedChart.jsx:37: const buckets = [];
+  SpeedChart.jsx:38: let currentBucket = null;
+  SpeedChart.jsx:40: const bucketTime = Math.floor(tick.timestamp / intervalMs) * intervalMs;
+  SpeedChart.jsx:41: if (!currentBucket || currentBucket.time !== bucketTime) {
+  SpeedChart.jsx:42: if (currentBucket) buckets.push(currentBucket);
+  SpeedChart.jsx:43: currentBucket = {
+  SpeedChart.jsx:44: time: bucketTime / 1000, // lightweight-charts uses seconds
+  SpeedChart.jsx:52: currentBucket.high = Math.max(currentBucket.high, tick.price);
+  SpeedChart.jsx:53: currentBucket.low = Math.min(currentBucket.low, tick.price);
+  SpeedChart.jsx:54: currentBucket.close = tick.price;
+  SpeedChart.jsx:55: currentBucket.volume += tick.volume || 0;
+  SpeedChart.jsx:58: if (currentBucket) buckets.push(currentBucket);
+  SpeedChart.jsx:59: return buckets;
+  SpeedChart.jsx:89: // When in external mode, bucket ticks into candles
+  SpeedChart.jsx:92: const all = bucketTicks(ticks, intervalMs);
+  SpeedChart.jsx:308: const volSeries = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: '' });
+  SpeedDecisionPanel.jsx:5: * Shows multi-timeframe trend alignment, nearest S/R levels,
+  SpeedDecisionPanel.jsx:19: function TrendDot({ direction, label }) {
+  SpeedDecisionPanel.jsx:24: <span className="sdp-trend-dot" title={`${label}: ${direction}`}>
+  SpeedDecisionPanel.jsx:119: // ── Trend dots (extracted from scoring results) ──────
+  SpeedDecisionPanel.jsx:120: // The multi-timeframe-trend directive reason string contains "1D: bullish | 1H: bearish | 15M: neutral"
+  SpeedDecisionPanel.jsx:121: const trendReason = score?.directiveReasons?.['multi-timeframe-trend'] ?? '';
+  SpeedDecisionPanel.jsx:122: const dayTrend = trendReason.match(/1D:\s*(\w+)/)?.[1] ?? 'neutral';
+  SpeedDecisionPanel.jsx:123: const hourTrend = trendReason.match(/1H:\s*(\w+)/)?.[1] ?? 'neutral';
+  SpeedDecisionPanel.jsx:124: const min15Trend = trendReason.match(/15M:\s*(\w+)/)?.[1] ?? 'neutral';
+  SpeedDecisionPanel.jsx:149: {/* ── Trend Alignment ────────────────────────────── */}
+  SpeedDecisionPanel.jsx:151: <span className="sdp-section-label">Trend</span>
+  SpeedDecisionPanel.jsx:152: <div className="sdp-trend-dots">
+  SpeedDecisionPanel.jsx:153: <TrendDot direction={dayTrend} label="1D" />
+  SpeedDecisionPanel.jsx:154: <TrendDot direction={hourTrend} label="1H" />
+  SpeedDecisionPanel.jsx:155: <TrendDot direction={min15Trend} label="15M" />

@@ -1,0 +1,3 @@
+n	firstOpen	lastClose
+124	2026-07-10 00:33:57.085	2026-09-28 13:29:26.000
+ERROR 1146 (42S02) at line 1: Table 'tradingcs.market_bar' doesn't exist

@@ -276441,3 +276441,21 @@ ConnectionResetError: [WinError 10054] An existing connection was forcibly close
 2026-09-27 23:11:05,839 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:11:05.839584", "action": "close", "symbol": "GOOGL", "ticket": 152686247719, "error": "GOOGL rejected (retcode 10018, filling=FOK): Market closed. Broker allows: FOK.", "code": "TCS-TRADE-005", "retcode": 10018}
 2026-09-27 23:11:05,884 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:11:05.884246", "action": "close", "symbol": "NVDA", "ticket": 152687078102, "error": "NVDA rejected (retcode 10018, filling=FOK): Market closed. Broker allows: FOK.", "code": "TCS-TRADE-005", "retcode": 10018}
 2026-09-27 23:12:12,505 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:12:12.505759", "action": "order_placed", "ticket": 152687745451, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4275.12, "clientOrderId": "queue-ea80b7f8-babf-11f1-be5c-9c6b00b28963"}
+2026-09-27 23:13:36,649 [ERROR] [broker2] MT5 connection state -> terminal-down: terminal_info() is None — terminal not running or not reachable. Remedy: POST http://127.0.0.1:5000/reconnect — the watchdog will try 5x; if it stays down, START THE MT5 TERMINAL
+2026-09-27 23:14:36,662 [WARNING] [broker2] Reconnecting MT5: watchdog: 3 consecutive bad polls in state terminal-down (terminal_info() is None — terminal not running or not reachable) [terminal-down attempt 1/5]
+2026-09-27 23:14:37,667 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-27 23:14:43,668 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1244.79
+2026-09-27 23:14:43,672 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-27 23:14:43,675 [WARNING] [broker2] MT5 reconnect SUCCEEDED — account=10011309743 balance=1244.79
+2026-09-27 23:15:13,677 [INFO] [broker2] MT5 connection state -> ok (recovered).
+2026-09-27 23:16:13,683 [ERROR] [broker2] MT5 connection state -> terminal-down: terminal_info() is None — terminal not running or not reachable. Remedy: POST http://127.0.0.1:5000/reconnect — the watchdog will try 5x; if it stays down, START THE MT5 TERMINAL
+2026-09-27 23:17:13,684 [WARNING] [broker2] Reconnecting MT5: watchdog: 3 consecutive bad polls in state terminal-down (terminal_info() is None — terminal not running or not reachable) [terminal-down attempt 1/5]
+2026-09-27 23:17:14,685 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-27 23:17:19,293 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1244.79
+2026-09-27 23:17:19,296 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-27 23:17:19,296 [WARNING] [broker2] MT5 reconnect SUCCEEDED — account=10011309743 balance=1244.79
+2026-09-27 23:17:49,298 [INFO] [broker2] MT5 connection state -> ok (recovered).
+2026-09-27 23:21:08,127 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:21:08.127185", "action": "close", "symbol": "MSFT", "ticket": 152686062299, "error": "MSFT rejected (retcode 10018, filling=FOK): Market closed. Broker allows: FOK.", "code": "TCS-TRADE-005", "retcode": 10018}
+2026-09-27 23:21:08,159 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:21:08.159797", "action": "close", "symbol": "TSLA", "ticket": 152686169037, "error": "TSLA rejected (retcode 10018, filling=FOK): Market closed. Broker allows: FOK.", "code": "TCS-TRADE-005", "retcode": 10018}
+2026-09-27 23:21:08,201 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:21:08.201246", "action": "close", "symbol": "GOOGL", "ticket": 152686247719, "error": "GOOGL rejected (retcode 10018, filling=FOK): Market closed. Broker allows: FOK.", "code": "TCS-TRADE-005", "retcode": 10018}
+2026-09-27 23:21:08,232 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:21:08.232047", "action": "close", "symbol": "NVDA", "ticket": 152687078102, "error": "NVDA rejected (retcode 10018, filling=FOK): Market closed. Broker allows: FOK.", "code": "TCS-TRADE-005", "retcode": 10018}

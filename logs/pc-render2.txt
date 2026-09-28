@@ -1,0 +1,6 @@
+lines: 133
+=== rows still showing all-empty (should be 0) ===
+0
+=== account tiles ===
+L111: - generic [ref=e62]: Performance Change
+L115: - heading "Performance Change" [level=2] [ref=e66]

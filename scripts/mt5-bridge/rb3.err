@@ -150178,3 +150178,17 @@
 2026-09-27 22:01:00,159 [WARNING] [broker3] Server UTC offset probe REJECTED — freshest tick (EURUSD) is 162361s old, beyond the 450s tolerance budget of the 900s rounding step. Retaining 0s rather than applying a biased measurement (#845).
 2026-09-27 22:01:02,292 [INFO] [broker3] Server UTC offset measured: 10800s (3.00h) from EURUSD tick 0s old — was 0s
 2026-09-27 23:02:08,705 [INFO] [broker3] [TRADE JOURNAL] {"timestamp": "2026-09-27T23:02:08.668875", "action": "order_placed", "ticket": 91982773, "symbol": "VIX", "type": "sell", "volume": 0.1, "price": 16.39, "clientOrderId": "queue-d1ebd8d7-b923-11f1-be5c-9c6b00b28963"}
+2026-09-27 23:13:36,671 [ERROR] [broker3] MT5 connection state -> terminal-down: terminal_info() is None — terminal not running or not reachable. Remedy: POST http://127.0.0.1:5001/reconnect — the watchdog will try 5x; if it stays down, START THE MT5 TERMINAL
+2026-09-27 23:14:36,687 [WARNING] [broker3] Reconnecting MT5: watchdog: 3 consecutive bad polls in state terminal-down (terminal_info() is None — terminal not running or not reachable) [terminal-down attempt 1/5]
+2026-09-27 23:14:37,691 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-27 23:14:42,057 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1045.52
+2026-09-27 23:14:42,062 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-27 23:14:42,063 [WARNING] [broker3] MT5 reconnect SUCCEEDED — account=62135531 balance=1045.52
+2026-09-27 23:15:12,066 [INFO] [broker3] MT5 connection state -> ok (recovered).
+2026-09-27 23:16:12,073 [ERROR] [broker3] MT5 connection state -> terminal-down: terminal_info() is None — terminal not running or not reachable. Remedy: POST http://127.0.0.1:5001/reconnect — the watchdog will try 5x; if it stays down, START THE MT5 TERMINAL
+2026-09-27 23:17:12,074 [WARNING] [broker3] Reconnecting MT5: watchdog: 3 consecutive bad polls in state terminal-down (terminal_info() is None — terminal not running or not reachable) [terminal-down attempt 1/5]
+2026-09-27 23:17:13,075 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-27 23:17:15,795 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1045.52
+2026-09-27 23:17:15,797 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-27 23:17:15,797 [WARNING] [broker3] MT5 reconnect SUCCEEDED — account=62135531 balance=1045.52
+2026-09-27 23:17:45,798 [INFO] [broker3] MT5 connection state -> ok (recovered).
