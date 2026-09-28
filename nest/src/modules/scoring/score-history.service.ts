@@ -191,6 +191,36 @@ export class ScoreHistoryService {
   }
 
   /**
+   * Score history for a symbol identified by its TICKER.
+   *
+   * ⚠️ WHY THIS EXISTS (#1014). `getHistory()` takes a `symbolId` — the UUID foreign key on
+   * `score.symbolId`. `ExitSignalService.computeTrend()` passed `score.ticker` into it, so
+   * `where: { symbolId: 'MSTR' }` matched **nothing**, and EVERY portfolio position reported
+   * `scoreTrend: 'no_data'` with the reason "Insufficient score history for trend analysis".
+   *
+   * MEASURED 2026-09-28: MSTR had **103** scores and AMZN **99**. The data was there; the key
+   * was not. No error was raised, because an empty result is indistinguishable from "no data"
+   * unless something insists on the difference — which is exactly why this returns [] only
+   * when the symbol itself is genuinely unknown.
+   *
+   * A ticker is NOT an id. `score.symbolId` is a UUID; `score_snapshot.symbol` is a ticker.
+   * Same word in different tables, and joining the wrong one returns no rows and no error.
+   */
+  async getHistoryByTicker(ticker: string, limit = 20): Promise<ScoreHistoryEntry[]> {
+    if (!ticker || !this.prisma.isAvailable) {
+      return [];
+    }
+    const sym = await this.prisma.symbol.findFirst({
+      where: { ticker: ticker.toUpperCase() },
+      select: { id: true },
+    });
+    if (!sym) {
+      return [];
+    }
+    return this.getHistory(sym.id, limit);
+  }
+
+  /**
    * Return the single most recent score snapshot for a symbol.
    * Throws NotFoundException if no scores exist.
    */

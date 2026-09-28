@@ -194,8 +194,13 @@ export class ExitSignalService {
     score: { symbol: string; ticker: string; score: number | null; signal: string; dataStatus: string },
   ): Promise<{ trend: ExitSignal['scoreTrend']; velocity: number | null; lastTimestamp: string | null }> {
     try {
-      // We need the symbol ID from the DB — use ticker as fallback
-      const history = await this.scoreHistory.getHistory(score.ticker, 10);
+      // ⚠️ #1014 — `getHistory()` takes a `symbolId` (the UUID FK on `score.symbolId`). This
+      // passed `score.ticker`, so `where: { symbolId: 'MSTR' }` matched NOTHING and EVERY
+      // position reported `scoreTrend: 'no_data'` with "Insufficient score history for trend
+      // analysis" — which reads as a data gap, not as a broken lookup.
+      // MEASURED 2026-09-28: MSTR had 103 scores, AMZN 99. The old comment said "use ticker as
+      // fallback"; there was no fallback, and the empty result looked the same as no data.
+      const history = await this.scoreHistory.getHistoryByTicker(score.ticker, 10);
 
       if (!history || history.length < 2) {
         return { trend: 'no_data', velocity: null, lastTimestamp: null };
