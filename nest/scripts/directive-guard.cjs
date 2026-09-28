@@ -501,6 +501,33 @@ async function barStarvationCheck(hours = 24) {
       report('score.breakdown', `${c.protocolId} / ${c.directiveId}`, 8, 'WARN',
         `STARVED ${(c.fraction * 100).toFixed(0)}% of ${c.ticks} ticks — declares ${c.need} bars, window ${c.have}`);
     }
+    // ⚠️ THE RATIO ABOVE CANNOT REPORT RECOVERY until the window rolls past the fix. Measured
+    // 2026-09-28: 30 minutes after the repair landed, this mode still read "95% of 250 ticks"
+    // — a state a reader would misread as "the fix failed", which is how a guard gets ignored
+    // and then allowlisted. The newest tick is therefore reported separately, and it is the
+    // reading to trust when asking "is it fixed NOW?".
+    let newest = null;
+    for (const bd of parsed) {
+      const ts = Date.parse(bd?.timestamp ?? '');
+      if (!Number.isFinite(ts)) continue;
+      if (!newest || ts > newest.ts) newest = { ts, bd };
+    }
+    if (newest) {
+      let total = 0;
+      let starved = 0;
+      for (const list of Object.values(newest.bd.breakouts ?? {})) {
+        if (!Array.isArray(list)) continue;
+        for (const d of list) {
+          total++;
+          if (STARVATION_RE.test(String(d?.reason ?? ''))) starved++;
+        }
+      }
+      console.log(
+        `[guard] bar starvation: NEWEST tick ${newest.bd.timestamp} — ` +
+        `${starved}/${total} directive(s) starved. (Trust this for "is it fixed now?"; ` +
+        `the ratio below is the 24h backlog.)`,
+      );
+    }
     console.log(
       `[guard] bar starvation: ${parsed.length} breakdown(s) in ${hours}h, ` +
       `${stats.size} protocol/directive pair(s) observed, ${chronic.length} chronic.`,
