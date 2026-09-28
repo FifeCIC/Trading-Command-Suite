@@ -10,6 +10,9 @@ import { resolve } from 'path';
 import { resolvePositionPnl } from '../../common/utils/position-pnl';
 // #854/#778 — the ONE definition of a broker-maintained ("live") position row.
 import { isLivePosition } from '../../common/utils/position-freshness';
+// #926 follow-up — the ONE group-shaping implementation, so the persisted breakdown renders the
+// same panels the live envelope did. A copy here is what would drift.
+import { shapeEnvelopeGroups } from '../../common/utils/envelope-groups';
 // #926 — THE authority for "which protocols apply to this symbol". Injected rather than
 // re-derived here: a second implementation of that question is the defect the issue describes.
 import { SymbolProtocolAuthorityService } from './symbol-protocol-authority.service';
@@ -830,8 +833,11 @@ export class SymbolsService {
         riskMultiplier: num(b.riskMultiplier),
         denominatorMode: b.denominatorMode ?? null,
         marketStatus: b.marketStatus ?? null,
-        // The directive detail the Drilldown renders. Same shape the live envelope produced.
+        // The directive detail the Drilldown renders — shaped by the SAME helper the live envelope
+        // uses, so the two paths cannot drift. `breakouts` is kept alongside it for consumers that
+        // want the raw hits; `groups` is what the panels read.
         breakouts: b.breakouts ?? null,
+        groups: shapeEnvelopeGroups({ breakouts: b.breakouts, subScores: b.subScores }),
       };
     };
 

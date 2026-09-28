@@ -18,6 +18,8 @@ import { selectBaseTimeframe, everyCadenceStale } from '../../common/utils/timef
 // `'STRONG_SELL'.startsWith('SELL')` is FALSE, which routed the strongest bearish signal as a
 // LONG/BUY. See the file header in `signal-direction.ts` for the measured evidence.
 import { signalToDirection, signalToSide, isBuySignal, isSellSignal } from '../../common/utils/signal-direction';
+// #926 follow-up — the ONE group-shaping implementation, shared with the persisted-breakdown path.
+import { shapeEnvelopeGroups } from '../../common/utils/envelope-groups';
 import {
   resolveStyleThreshold,
   SIGNALS_GATE_DEFAULT,
@@ -772,54 +774,19 @@ export class SignalEnvelopeService {
   /**
    * Build directive group panels from GatedScore breakouts.
    */
+  /**
+   * Shape a GatedScore's breakouts into the ordered group panels the UI renders.
+   *
+   * ⚠️ EXTRACTED 2026-09-28 (#926 follow-up). The body moved to
+   * `common/utils/envelope-groups.ts` so the PERSISTED breakdown can be shaped by the SAME code
+   * instead of a copy. The symbol page could otherwise only get shaped groups by running a full
+   * scoring pass to re-derive them — which it did, 20 times per page view.
+   *
+   * ⚠️ Delegation, deliberately: two shapings of the same data is the one thing this must not
+   * become, because only one of them would get the next fix.
+   */
   private buildGroups(gated: GatedScore): SignalEnvelope['groups'] {
-    const groupMap: Record<string, { name: string; weight: number; isRisk: boolean }> = {
-      technical: { name: 'Technical', weight: 40, isRisk: false },
-      sentiment: { name: 'Sentiment', weight: 35, isRisk: false },
-      risk: { name: 'Risk Gate', weight: 25, isRisk: true },
-      macro: { name: 'Macro', weight: 20, isRisk: false },
-      fundamental: { name: 'Fundamental', weight: 15, isRisk: false },
-      exit: { name: 'Exit Signals', weight: 10, isRisk: true },
-    };
-
-    const groups: SignalEnvelope['groups'] = [];
-
-    for (const [groupId, breakouts] of Object.entries(gated.breakouts)) {
-      if (!breakouts || breakouts.length === 0) continue;
-
-      const meta = groupMap[groupId] || { name: groupId, weight: 0, isRisk: false };
-      const score = gated.subScores[groupId] ?? 50;
-
-      // Sort breakouts by normalized score descending, take top 5
-      const sorted = [...breakouts]
-        .sort((a, b) => b.normalizedScore - a.normalizedScore)
-        .slice(0, 5);
-
-      groups.push({
-        groupId,
-        groupName: meta.name,
-        score: Math.round(score),
-        weight: meta.weight,
-        isRisk: meta.isRisk,
-        topDirectives: sorted.map(b => ({
-          id: b.directiveId,
-          name: b.name,
-          score: b.score,
-          maxScore: b.maxScore,
-          normalized: b.normalizedScore,
-          signalClass: b.signalClass,
-          reason: b.reason,
-        })),
-      });
-    }
-
-    // Sort: non-risk groups first by weight desc, risk groups last
-    groups.sort((a, b) => {
-      if (a.isRisk !== b.isRisk) return a.isRisk ? 1 : -1;
-      return b.weight - a.weight;
-    });
-
-    return groups;
+    return shapeEnvelopeGroups({ breakouts: gated.breakouts, subScores: gated.subScores });
   }
 
   /**
