@@ -594,6 +594,49 @@ export default function ViewStrategyPage() {
     [rules],
   );
 
+  // ── WHO READS EACH COLUMN — the ONE axis this page was missing (2026-09-28) ─────────────
+  //
+  // ⚠️ WHY THIS EXISTS. `bot-rules.ts` and `GUARDIAN_RULES` are two declarations of ONE subject,
+  // and this page rendered them as two INDEPENDENT lists. The cost, measured on the owner's own
+  // bot: Simulated TSL appeared as THREE loose rows under "Exit" *and* again as a mechanism under
+  // "Exit management", while the exhaustion observer was attributed to the guardian by
+  // `bot-rules.ts` and declared by `GUARDIAN_RULES` NOWHERE — so it showed in one list and was
+  // missing from the other. Two lists, grouped on different axes (stage vs owner), so NEITHER was
+  // complete and nothing compared them.
+  //
+  // The link is `fields` (the columns a mechanism reads, added to `GuardianRule` the same day) and
+  // `nest/scripts/validate-rule-enforcement.cjs` keeps the two registries honest at build time, so
+  // this render cannot drift back into disagreement.
+  const mechanismByField = useMemo(() => {
+    const m = new Map();
+    for (const gr of guardianRules) for (const f of gr.fields || []) m.set(f, gr);
+    return m;
+  }, [guardianRules]);
+
+  /** The mechanism that owns a column, plus whether this is the FIRST column of that mechanism —
+   *  so the mechanism's detail and caveat are stated ONCE, beside its first column, instead of
+   *  being repeated on every one of them. */
+  const exitMechanismFor = useMemo(() => {
+    const firstSeen = new Set();
+    const out = new Map();
+    for (const rule of rules) {
+      const mech = mechanismByField.get(rule.field);
+      if (!mech) continue;
+      const isFirst = !firstSeen.has(mech.id);
+      if (isFirst) firstSeen.add(mech.id);
+      out.set(rule.field, { mech, isFirst });
+    }
+    return out;
+  }, [rules, mechanismByField]);
+
+  // ⚠️ The PER-BOT mechanisms are rendered WITH their columns above, so rendering them again here
+  // would re-create the very duplication this change removes. This section keeps the GLOBAL half:
+  // the one implementation that serves every bot and is set on none of them.
+  const globalGuardianRules = useMemo(
+    () => guardianRules.filter((gr) => gr.scope !== 'per-bot'),
+    [guardianRules],
+  );
+
   // ⚠️ Declared with the other hooks, ABOVE the early returns below - a hook after a conditional
   // return breaks the Rules of Hooks.
   //
@@ -849,6 +892,7 @@ export default function ViewStrategyPage() {
               const value = formatValue(raw);
               const configured = isConfigured(raw);
               const isNotLive = rule.enforcement !== 'live';
+              const owner = exitMechanismFor.get(rule.field) || null;
 
               return (
                 <li
@@ -874,6 +918,21 @@ export default function ViewStrategyPage() {
 
                   <span className={`${styles.chip} ${styles[meta.chip]}`}>{meta.word}</span>
 
+                  {/* ⚠️ WHICH MECHANISM READS THIS COLUMN (2026-09-28). Stated on EVERY row, not
+                      only the first, because "who acts on this" is a property of the row — and
+                      stated OUTSIDE the settingsOnly guard, because it is structural rather than
+                      explanatory. `scope` is the load-bearing word: `per-bot` means this bot's
+                      own value; `global` means one implementation shared by every position. */}
+                  {owner && (
+                    <p className={styles.caveat}>
+                      Read by the <strong>{owner.mech.label}</strong> mechanism
+                      {owner.mech.scope === 'per-bot'
+                        ? ' (per-bot — set on this bot)'
+                        : ' (global — shared by every bot, set on none of them)'}
+                      .
+                    </p>
+                  )}
+
                   <p className={styles.summaryText}>{rule.summary}</p>
 
                   {/* The enforcement hint is ALWAYS shown for a non-live rule — never only on
@@ -882,6 +941,17 @@ export default function ViewStrategyPage() {
                       ⚠️ SUPPRESSED IN SETTINGS MODE, and the chip is NOT: the verdict stays on
                       screen, only the explanation goes. Removing the chip too would leave someone
                       tuning a bot believing every field they set is applied. */}
+                  {/* The mechanism's own reasoning, stated ONCE, on the first of its columns. The
+                      columns keep their independence; the mechanism is not repeated per row. */}
+                  {!settingsOnly && owner && owner.isFirst && (
+                    <p className={styles.caveat}>
+                      <strong>{owner.mech.label}</strong> — {owner.mech.detail}
+                    </p>
+                  )}
+                  {!settingsOnly && owner && owner.isFirst && owner.mech.caveat && (
+                    <p className={styles.caveat}>{owner.mech.caveat}</p>
+                  )}
+
                   {!settingsOnly && isNotLive && <p className={styles.caveat}>{meta.hint}</p>}
 
                   {!settingsOnly && rule.caveat && <p className={styles.caveat}>{rule.caveat}</p>}
@@ -899,23 +969,32 @@ export default function ViewStrategyPage() {
         </section>
       ))}
 
-      {/* ── EXIT MANAGEMENT (post-entry) — #936 ────────────────────────────────────────────────
+      {/* ── EXIT MANAGEMENT (post-entry) — #936 ────────────────────────────────────────────
           ⚠️ WHY THIS SECTION IS HERE, BESIDE THE EXIT STAGE ABOVE.
-          The Exit stage above lists this bot's EXIT columns: `slPct`, `tpPct`, `maxHoldHours`.
-          Those are the STATIC stop, target and time limit — set once, at entry. The mechanism that
-          actually MANAGES the stop afterwards, and therefore the thing that locks in profit, is
-          `StopGuardianService`, which is not a column on `trading_strategy` and so appeared NOWHERE
-          on this page. Measured 2026-09-24: a reader could study this bot's entire exit
+          The Exit stage above lists every EXIT column this bot has. Those are set once, at entry
+          (`slPct`, `tpPct`) or on a schedule (`maxHoldHours`); the mechanism that actually
+          MANAGES the stop afterwards — and therefore the thing that locks in profit — is
+          `StopGuardianService`, which is not a column on `trading_strategy` and so appeared
+          NOWHERE on this page. Measured 2026-09-24: a reader could study this bot's entire exit
           configuration and still not know that a trailing tighten will move its stop, on what
           evidence, how far, or how often.
 
+          ⚠️ CORRECTED 2026-09-28. This comment used to say the Exit stage "lists this bot's EXIT
+          columns: `slPct`, `tpPct`, `maxHoldHours`" — THREE. It lists NINE, across three owners
+          (`automation-loop`, `position-time-stop`, `stop-guardian`) plus one nothing owns. The
+          three named are only the ones this section's author happened to look at, which is how a
+          reader was told a partial set was the whole set.
+
           ⚠️ RENDERED AS GLOBAL, NOT AS THIS BOT'S SETTINGS, and that is the honest reading. There
-          is no per-bot stop-management configuration in the schema. Showing these as if they were
-          this bot's values would be the same "value without its enforcement" defect in reverse. */}
+          is no per-bot stop-management configuration in the schema for these. Showing them as if
+          they were this bot's values would be the same "value without its enforcement" defect in
+          reverse. The `per-bot` mechanisms are NOT repeated here — they are rendered beside the
+          columns they read, in the Exit stage above, because one subject in two places is the
+          duplication this page was fixed to remove. */}
       {!settingsOnly && (
         <section className={styles.group}>
           <h2 className={styles.groupHead}>
-            Exit management — post-entry
+            Exit management — global mechanisms
             <span className={styles.groupCount}>
               <code>StopGuardianService</code>
             </span>
@@ -933,16 +1012,23 @@ export default function ViewStrategyPage() {
             </div>
           ) : guardianRules.length === 0 ? (
             <p className={styles.sectionNote}>Reading the guardian declarations…</p>
+          ) : globalGuardianRules.length === 0 ? (
+            <p className={styles.sectionNote}>
+              No GLOBAL guardian mechanisms are declared. The guardian&apos;s per-bot mechanisms are
+              listed above beside the columns they read.
+            </p>
           ) : (
             <>
               <p className={styles.sectionNote}>
-                <strong>One guardian serves every position on every bot.</strong> There is no per-bot
-                stop-management configuration in the schema, so none of the following is set on this
-                bot — it applies to all of them, including this one.
+                <strong>These {globalGuardianRules.length} mechanisms serve every position on every
+                bot.</strong> They are set on none of them — this bot&apos;s exit configuration does
+                not include them, and there is no column to change. The guardian&apos;s{' '}
+                <strong>per-bot</strong> mechanisms are listed above beside the columns they read,
+                not repeated here.
               </p>
 
               <ul className={styles.subList}>
-                {guardianRules.map((gr) => {
+                {globalGuardianRules.map((gr) => {
                   const isLive = gr.enforcement === 'live';
                   return (
                     <li
