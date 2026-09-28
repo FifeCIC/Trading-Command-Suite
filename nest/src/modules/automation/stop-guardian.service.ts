@@ -253,6 +253,25 @@ export interface GuardianRule {
   detail: string;
   /** ⚠️ Required when enforcement is not `live` — states what is missing. */
   caveat?: string;
+  /**
+   * ⚠️ The `trading_strategy` COLUMN(S) this mechanism reads. ABSENT for a mechanism that reads no
+   * bot column (every `global` one).
+   *
+   * WHY THIS EXISTS (2026-09-28). `bot-rules.ts` attributes a column to an enforcing FILE via
+   * `enforcedBy` — a CLAIM — and until now nothing checked it against a mechanism that actually
+   * declares the column. Measured: FIVE columns claimed `stop-guardian.service.ts`, while
+   * `GUARDIAN_RULES` declared ONE mechanism touching bot columns and named only TWO of the five in
+   * prose. So `exhaustionObserveEnabled` / `exhaustionDecelPct` were attributed to the guardian and
+   * declared by it NOWHERE — a reader saw them under "Exit", the guardian's own list did not
+   * mention them, and nothing failed the build.
+   *
+   * It also lets a surface render a mechanism ONCE with its columns nested — instead of the same
+   * subject appearing as three loose rows in the exit list AND again as the mechanism that owns
+   * them (which is exactly what the owner saw on the bot page).
+   *
+   * Enforced by `nest/scripts/validate-rule-enforcement.cjs`.
+   */
+  fields?: string[];
 }
 
 export const GUARDIAN_RULES: GuardianRule[] = [
@@ -297,6 +316,7 @@ export const GUARDIAN_RULES: GuardianRule[] = [
 
   // ── the FIRST per-bot exit control (was: the gap) ────────────────────────────────────────
   { id: 'simulated-tsl', label: 'Simulated TSL (decision point)', kind: 'rule', scope: 'per-bot',
+    fields: ['simTslEnabled', 'simTslActivationPct', 'simTslDistancePct'],
     enforcement: 'display-only', value: 'per-bot: simTslActivationPct / simTslDistancePct — default OFF',
     detail:
       'A second, tighter threshold NOT sent to the broker. Touching it is a DECISION MOMENT \u2014 ' +
@@ -309,6 +329,24 @@ export const GUARDIAN_RULES: GuardianRule[] = [
       'sent to the broker and no stop is moved, so it CANNOT lock in profit yet \u2014 `display-only` ' +
       'is the honest status, not a placeholder. Default OFF. Acting on a decision point is a MATHS ' +
       'change and needs a copied configuration plus a monitored comparison (#929 blocks that today).' },
+
+  // ⚠️ THE MECHANISM THAT WAS MISSING (#995). Its two columns were attributed to this service by
+  // `bot-rules.ts` from 2026-09-28 but declared here NOWHERE — so the guardian's own list, the one
+  // the bot page renders as "Exit management", was SILENT about a mechanism it runs every tick.
+  // Found by reading both registries side by side, not by trusting either one.
+  { id: 'exhaustion-observer', label: 'Exhaustion observer (up-move)', kind: 'rule', scope: 'per-bot',
+    fields: ['exhaustionObserveEnabled', 'exhaustionDecelPct'],
+    enforcement: 'display-only', value: 'per-bot: exhaustionDecelPct',
+    detail:
+      'Watches an OPEN position for a move DECELERATING into a new extreme — price still at the ' +
+      'window high, but advancing less over the last bars than over the bars before them. Each ' +
+      'firing is recorded in `exhaustion_event`.',
+    caveat:
+      '⚠️ OBSERVER ONLY, default OFF — no order is placed and no stop is moved from this path. ' +
+      '⚠️ It is the mirror of the direction the app lacked: both existing exhaustion directives ' +
+      'are `bullish` ENTRY signals. ⚠️ It needs BARS, so unlike sim-TSL it cannot run before the ' +
+      'bar load and is SILENT while the feed is short — which is a fact about the mechanism, not a ' +
+      'fault in it.' },
 ];
 
 /** Counts by scope — for a UI badge, mirroring `ruleEnforcementCounts()`. */

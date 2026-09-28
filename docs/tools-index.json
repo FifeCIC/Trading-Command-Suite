@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 148,
+  "count": 149,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -927,6 +927,7 @@
       "purpose": "a decision you cannot find is a decision nobody can reverse.",
       "selfTest": true,
       "reaches": [
+        "prebuild",
         "npm"
       ]
     },
@@ -1149,6 +1150,17 @@
       "purpose": "every ACTIVE bot must have a symbol that at least one active",
       "selfTest": true,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-rule-enforcement.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "an `enforcedBy` attribution must name a mechanism that DECLARES",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },
