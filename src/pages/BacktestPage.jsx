@@ -273,7 +273,11 @@ export default function BacktestPage() {
         <div className="bt-results">
           <div className="bt-stats-grid">
             <div className="bt-stat"><div className="bt-stat-value">{stats.totalSignals}</div><div>Entry Signals</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{(stats.winRate * 100).toFixed(0)}%</div><div>Win Rate (10d)</div></div>
+            {/* ⚠️ #980 — `stats.winRate` is a SIGNAL rate (profitable entry signals ÷ entry
+                signals). Labelling it "Win Rate" invited reading it as a trade rate, and run
+                `0dd94ddd` stored 100% here beside 0 winners of 3 trades. The two populations are
+                now labelled as what they are. */}
+            <div className="bt-stat"><div className="bt-stat-value">{(stats.winRate * 100).toFixed(0)}%</div><div>Entry Signals Profitable</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.averageReturn10d}%</div><div>Avg Return (10d)</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.maxReturn10d}%</div><div>Max Return (10d)</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.maxDrawdown10d}%</div><div>Max Drawdown (10d)</div></div>

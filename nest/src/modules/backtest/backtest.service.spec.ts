@@ -386,3 +386,66 @@ describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () 
   });
 });
 
+describe('BacktestService.getSummary — two populations, each named (#980)', () => {
+  /**
+   * ⚠️ THE CITED DEFECT, reproduced as a test.
+   *
+   * `getSummary` used to return `signals: r.totalTrades` — a TRADE count under a SIGNAL name — and
+   * `winRate: r.winRate`, the SIGNAL rate, with nothing naming either population. Run `0dd94ddd` is
+   * the measured case: stored `winRate 1` (100%) beside **0 winners of 3** trades. A consumer could
+   * therefore read "3 signals, 100% win rate" from a run that lost every trade it made.
+   *
+   * Acceptance criteria this pins:
+   *   1. no signal rate under a trade name, or vice versa;
+   *   2. `0 of 3 trades won` AND `100% of entry signals profitable` visible as DISTINCT figures;
+   *   3. an unrecorded signal count reports as UNKNOWN — never 0, never the trade count.
+   */
+  function summaryPrisma(r: any, trades: Array<[string, number, number]>) {
+    return {
+      isAvailable: true,
+      symbol: { findUnique: jest.fn(async () => ({ id: 'sym-1', ticker: 'XAUUSD' })) },
+      backtestRun: { findMany: jest.fn(async () => [r]) },
+      backtestTrade: {
+        groupBy: jest.fn(async (args: any) => {
+          // ⚠️ Key on presence of `where.pnl`, not its truthiness — `pnl: { gt: 0 }` is an object
+          // and `gt` is literally 0, so a Boolean check would return every trade as a winner.
+          const winnersOnly = args?.where?.pnl !== undefined;
+          return trades
+            .map(([runId, w, l]) => ({ runId, _count: { _all: winnersOnly ? w : w + l } }))
+            .filter((x) => x._count._all > 0);
+        }),
+      },
+    };
+  }
+
+  it('serves 0 of 3 TRADES won beside 100% of entry SIGNALS, as two distinct figures', async () => {
+    const prisma = summaryPrisma(run('r-980'), [['r-980', 0, 3]]);
+    const row = (await svc(prisma).getSummary('XAUUSD')).runs[0];
+
+    expect(row.signalWinRatePct).toBe(100); // 100% of entry SIGNALS were profitable
+    expect(row.tradeWinRatePct).toBe(0);    // 0 of 3 TRADES won — the measured reality
+    expect(row.trades).toBe(3);
+    expect(row.signals).toBe(40);           // the SIGNAL count, from its own column
+  });
+
+  it('never substitutes totalTrades for an unrecorded signal count', async () => {
+    // Legacy run: written before `backtestrun.totalSignals` existed.
+    const prisma = summaryPrisma(run('r-legacy', { totalSignals: null, totalTrades: 50 }), []);
+    const row = (await svc(prisma).getSummary('XAUUSD')).runs[0];
+
+    expect(row.signals).toBeNull();   // UNKNOWN — the old form served 50 here
+    expect(row.signals).not.toBe(50);
+    expect(row.signals).not.toBe(0);
+    expect(row.trades).toBe(50);      // still available, under its own name
+  });
+
+  it('reports a trade rate of NULL when the run produced no trades, never a borrowed number', async () => {
+    const prisma = summaryPrisma(run('r-empty', { totalTrades: 0, winRate: 1 }), []);
+    const row = (await svc(prisma).getSummary('XAUUSD')).runs[0];
+
+    expect(row.tradeWinRatePct).toBeNull(); // NOT the 100% signal rate
+    expect(row.tradeWinRatePct).not.toBe(100);
+    expect(row.signalWinRatePct).toBe(100);
+  });
+});
+

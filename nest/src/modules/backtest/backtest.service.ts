@@ -291,7 +291,17 @@ export interface BacktestResult {
     kellyEdge?: number;
   };
   stats: {
-    totalSignals: number;
+    /**
+     * Entry SIGNALS — the population `winRate` and `sharpeApproximation` rest on.
+     * ⚠️ NULL means NOT RECORDED (runs written before `backtestrun.totalSignals` existed).
+     * It is never 0, and never the trade count — see #980.
+     */
+    totalSignals: number | null;
+    /**
+     * ⚠️ A **SIGNAL** rate — profitable entry signals ÷ entry signals. It is NOT a trade rate.
+     * Two different populations have been conflated here before (#980): run `0dd94ddd` stored
+     * 100% beside **0 winners of 3 trades**. Use `tradeWinRate` when the question is about trades.
+     */
     winRate: number;
     averageReturn10d: number;
     maxReturn10d: number;
@@ -300,7 +310,12 @@ export interface BacktestResult {
     sharpeApproximation: number;
     // bracket trade stats
     totalTrades?: number;
-    tradeWinRate?: number;
+    /**
+     * ⚠️ A **TRADE** rate as a FRACTION (0–1), not a percentage — `run()` and `formatRunResult`
+     * must agree on the scale, because one field name with two scales is the defect #980 removed.
+     * Counted from `backtesttrade`, never borrowed from `winRate`. NULL when the run made no trades.
+     */
+    tradeWinRate?: number | null;
     avgTradePnl?: number;
     totalPnl?: number;
     maxTradeDrawdown?: number;
@@ -925,7 +940,21 @@ export class BacktestService {
     };
   }
 
-  async getSummary(symbol: string): Promise<{ symbol: string; runs: { id: string; date: string; signals: number; winRate: number }[] }> {
+  async getSummary(symbol: string): Promise<{
+    symbol: string;
+    runs: {
+      id: string;
+      date: string;
+      /** ⚠️ BRACKETED TRADES. This field was once named `signals` while holding a trade count (#980). */
+      trades: number;
+      /** ⚠️ Entry SIGNALS. NULL = never recorded — never 0, and never substituted with `trades`. */
+      signals: number | null;
+      /** ⚠️ A SIGNAL rate. Its population is `signals`, NOT `trades`. */
+      signalWinRatePct: number;
+      /** ⚠️ A TRADE rate, counted from `backtesttrade`. NULL when the run has no trades. */
+      tradeWinRatePct: number | null;
+    }[];
+  }> {
     const symbolRow = await this.prisma.symbol.findUnique({ where: { ticker: symbol.toUpperCase() } });
     if (!symbolRow) return { symbol, runs: [] };
     const runs = await this.prisma.backtestRun.findMany({
@@ -933,14 +962,45 @@ export class BacktestService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+
+    // ⚠️ Count the trades from `backtesttrade`, exactly as `listAllRuns` does. Two populations,
+    // two counts, kept separate — the whole point of #980 is that they must not be merged, and
+    // this endpoint merged them in the other direction (`signals: r.totalTrades`).
+    const runIds = runs.map((r) => r.id);
+    const [counted, countedWins] = await Promise.all([
+      runIds.length
+        ? this.prisma.backtestTrade.groupBy({
+            by: ['runId'],
+            where: { runId: { in: runIds } },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as any[]),
+      runIds.length
+        ? this.prisma.backtestTrade.groupBy({
+            by: ['runId'],
+            where: { runId: { in: runIds }, pnl: { gt: 0 } },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as any[]),
+    ]);
+    const countedByRun = new Map(counted.map((c: any) => [c.runId, c._count._all]));
+    const winsByRun = new Map(countedWins.map((c: any) => [c.runId, c._count._all]));
+
     return {
       symbol,
-      runs: runs.map((r) => ({
-        id: r.id,
-        date: `${r.startDate.toISOString().split('T')[0]} to ${r.endDate.toISOString().split('T')[0]}`,
-        signals: r.totalTrades,
-        winRate: r.winRate,
-      })),
+      runs: runs.map((r) => {
+        const tradesCounted = countedByRun.get(r.id) ?? 0;
+        const wins = winsByRun.get(r.id) ?? 0;
+        return {
+          id: r.id,
+          date: `${r.startDate.toISOString().split('T')[0]} to ${r.endDate.toISOString().split('T')[0]}`,
+          trades: r.totalTrades,
+          signals: r.totalSignals ?? null,
+          signalWinRatePct: Math.round(r.winRate * 10000) / 100,
+          tradeWinRatePct:
+            tradesCounted > 0 ? Math.round((wins / tradesCounted) * 10000) / 100 : null,
+        };
+      }),
     };
   }
 
@@ -1539,6 +1599,19 @@ export class BacktestService {
   }
 
   private formatRunResult(run: any): BacktestResult {
+    // ⚠️ #980 — COUNT THE TRADES; NEVER BORROW THE SIGNAL RATE.
+    //
+    // This adapter used to write `totalSignals: run.totalTrades` — a TRADE count under a SIGNAL
+    // name — and `tradeWinRate: run.winRate` — a SIGNAL rate under a TRADE name. Measured
+    // 2026-09-23: run `0dd94ddd` stored `winRate 1` (100%) while its own `backtesttrade` rows held
+    // **0 winners of 3**, and this adapter served that 100% as the trade win rate. Plausible
+    // number, no error, wrong population underneath.
+    //
+    // The trades are already on the object, so the trade rate is countable here — and when there
+    // are none the honest answer is NULL, not a borrowed number from a different population.
+    const runTrades = Array.isArray(run.trades) ? run.trades : [];
+    const tradeWinners = runTrades.filter((t: any) => Number(t.pnl) > 0).length;
+
     return {
       id: run.id,
       symbol: run.symbol?.ticker || '',
@@ -1575,7 +1648,8 @@ export class BacktestService {
         } : {}),
       },
       stats: {
-        totalSignals: run.totalTrades,
+        // ⚠️ `run.totalSignals`, NOT `run.totalTrades` (#980). NULL = never recorded.
+        totalSignals: run.totalSignals ?? null,
         winRate: run.winRate,
         averageReturn10d: 0,
         maxReturn10d: 0,
@@ -1583,7 +1657,16 @@ export class BacktestService {
         profitFactor: run.profitFactor,
         sharpeApproximation: run.sharpeRatio,
         totalTrades: run.totalTrades,
-        tradeWinRate: run.winRate,
+        // ⚠️ A FRACTION (0–1), matching `run()`'s own shape — NOT a percentage.
+        //
+        // `run()` sets `tradeWinRate = tradeWinners / trades.length`, and BacktestPage renders it
+        // as `(tradeWinRate * 100)`. Writing a percentage here would give ONE field name TWO scales
+        // depending on whether the result came from a live run or a stored row — which is the same
+        // split-unit defect #980 exists to remove, reproduced one level down. Caught before it
+        // shipped by reading the consumer.
+        //
+        // NULL when there are no trades: the SIGNAL rate must never stand in for a trade rate.
+        tradeWinRate: runTrades.length > 0 ? tradeWinners / runTrades.length : null,
         avgTradePnl: run.avgTradePnl,
         totalPnl: run.totalPnl,
         maxTradeDrawdown: run.maxDrawdown,
@@ -1986,18 +2069,21 @@ export class BacktestService {
     protocolId?: string;
     slRange?: { min: number; max: number; step: number };
     tpRange?: { min: number; max: number; step: number };
-  }): Promise<{ best: BacktestResult; runs: number; params: { slPct: number; tpPct: number; winRate: number }[] }> {
+  }): Promise<{ best: BacktestResult; runs: number; params: { slPct: number; tpPct: number; tradeWinRatePct: number | null }[] }> {
     const { symbol, days = 365, protocolId, slRange = { min: 1, max: 5, step: 1 }, tpRange = { min: 1, max: 10, step: 2 } } = params;
     this.logger.log(`Grid search: ${symbol} SL=${slRange.min}-${slRange.max} TP=${tpRange.min}-${tpRange.max}`);
 
     let best: BacktestResult | null = null;
-    const allRuns: { slPct: number; tpPct: number; winRate: number }[] = [];
+    // ⚠️ #980 — the field is named for its POPULATION. This array used to be typed and sorted on
+    // a field called `winRate`, and filled with `result.stats.tradeWinRate ?? result.stats.winRate`.
+    // When a candidate produced no trades that fallback silently substituted the SIGNAL rate, so a
+    // grid of SL/TP candidates could be ranked on a number from a different population.
+    const allRuns: { slPct: number; tpPct: number; tradeWinRatePct: number | null }[] = [];
 
     for (let sl = slRange.min; sl <= slRange.max; sl += slRange.step) {
       for (let tp = tpRange.min; tp <= tpRange.max; tp += tpRange.step) {
         const result = await this.run({ symbol, days, protocolId, slPct: sl, tpPct: tp });
-        const wr = result.stats.tradeWinRate ?? result.stats.winRate;
-        allRuns.push({ slPct: sl, tpPct: tp, winRate: wr });
+        allRuns.push({ slPct: sl, tpPct: tp, tradeWinRatePct: result.stats.tradeWinRate ?? null });
 
         if (!best || (result.stats.totalPnl ?? 0) > (best.stats.totalPnl ?? 0)) {
           best = result;
@@ -2005,7 +2091,12 @@ export class BacktestService {
       }
     }
 
-    return { best: best!, runs: allRuns.length, params: allRuns.sort((a, b) => b.winRate - a.winRate) };
+    // Nulls sort LAST — an unrankable candidate is not a candidate with a win rate of 0.
+    return {
+      best: best!,
+      runs: allRuns.length,
+      params: allRuns.sort((a, b) => (b.tradeWinRatePct ?? -1) - (a.tradeWinRatePct ?? -1)),
+    };
   }
 
   // ── Walk-Forward Optimization ───────────────────────
@@ -2017,7 +2108,7 @@ export class BacktestService {
     protocolId?: string;
     slRange?: { min: number; max: number; step: number };
     tpRange?: { min: number; max: number; step: number };
-  }): Promise<{ train: BacktestResult; test: BacktestResult; optimizedParams: { slPct: number; tpPct: number }; outOfSampleWinRate: number }> {
+  }): Promise<{ train: BacktestResult; test: BacktestResult; optimizedParams: { slPct: number; tpPct: number }; outOfSampleWinRate: number | null }> {
     const { symbol, trainDays = 730, testDays = 365, protocolId, slRange = { min: 1, max: 5, step: 1 }, tpRange = { min: 1, max: 10, step: 2 } } = params;
     this.logger.log(`Walk-forward: ${symbol} train=${trainDays}d test=${testDays}d`);
 
@@ -2040,7 +2131,10 @@ export class BacktestService {
       train: trainResult,
       test: testResult,
       optimizedParams: { slPct: bestParams.slPct, tpPct: bestParams.tpPct },
-      outOfSampleWinRate: testResult.stats.tradeWinRate ?? testResult.stats.winRate,
+      // ⚠️ #980 — the TRADE rate, and NULL when the run produced no trades. The `?? winRate`
+      // fallback that used to sit here served the SIGNAL rate under a name reading "win rate",
+      // which is the exact conflation this issue exists to remove.
+      outOfSampleWinRate: testResult.stats.tradeWinRate ?? null,
     };
   }
 }
