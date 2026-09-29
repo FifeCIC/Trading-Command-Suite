@@ -283,7 +283,7 @@ const VIEW_META = {
     label: 'Exit Signals',
     file: 'src/pages/ExitSignalsPage.jsx',
     css: 'src/pages/exit-signals.css',
-    api: ['GET /api/portfolio/exit-signals'],
+    api: ['GET /api/scoring/exit-consensus'],
   },
   // #988 — new page, so `review: 'pending'` until the owner has looked at it (the editions pass
   // treats an unapproved entry as pending rather than as a failure).

@@ -1179,6 +1179,60 @@ async function main() {
     }
   }
 
+  // ── INV-EXIT-VERDICT-ALIVE (#1016) ─────────────────────────────────────
+  //
+  // ⚠️ WHY THIS IS A LIVE CHECK AND NOT A UNIT TEST.
+  //
+  // #1016 measured a regression that NO unit test can see. Each exit directive was switched to
+  // fetch bars at its own declared cadence; the suitability registry spells those `D1`/`H1`/`M15`
+  // while `marketbar.timeframe` is keyed `1d`/`1h`/`15m`. **The wrong key returns an empty array
+  // and raises nothing**, so every directive was skipped and `conviction` collapsed to `NO_DATA`
+  // on every open position — a worse failure than the mismatch it was fixing, and one that
+  // typechecks perfectly (tsc exit 0) because the defect is in the DATA the service is handed,
+  // not in its logic. A mock cannot be handed the wrong cadence.
+  //
+  // So this asserts the two things that were actually broken, against the RUNNING endpoint:
+  //   1. every verdict carries a barsTimeframe — the fetch found bars at a real cadence; and
+  //   2. no assessment is NO_DATA — the directives produced something.
+  //
+  // ⚠️ An empty book is NOT a failure and is reported SKIP. No bot holding a position is a normal
+  // state, and a guard that fails whenever the book is empty is a guard everyone switches off.
+  {
+    const INV = 'INV-EXIT-VERDICT-ALIVE';
+    const NAME = 'the exit verdict is alive for every open position';
+    try {
+      const res = await request('GET', `${API}/api/scoring/exit-consensus`);
+      if (res.status !== 200) {
+        record(INV, NAME, false,
+          `HTTP ${res.status} from /api/scoring/exit-consensus. ExitConsensus is the ONLY mechanism ` +
+          'that evaluates an OPEN position (the 5 exit directives, simTsl and ExitSignalService were ' +
+          'all measured inert or advisory), so a non-200 here means nothing is looking at exits at all.');
+      } else {
+        const body = JSON.parse(res.body);
+        const assessments = Array.isArray(body.assessments) ? body.assessments : [];
+        if (assessments.length === 0) {
+          record(INV, NAME, true,
+            `skipped — no open positions to evaluate (count=${body.count ?? 0}). Neither a pass nor a failure.`, true);
+        } else {
+          const noTf = assessments.filter((a) => (a.verdicts || []).some((v) => !v.barsTimeframe));
+          const noData = assessments.filter((a) => a.conviction === 'NO_DATA');
+          const ok = noTf.length === 0 && noData.length === 0;
+          record(INV, NAME, ok, ok
+            ? `${assessments.length} position(s) evaluated, every verdict carries a barsTimeframe and none is NO_DATA (asOf ${body.asOf}).`
+            : `WARNING: ${noData.length} position(s) read NO_DATA and ${noTf.length} carry a verdict with no ` +
+              'barsTimeframe. This is the #1016 failure exactly: a cadence key that does not exist in ' +
+              'marketbar.timeframe returns an empty array with NO error, so every directive is silently ' +
+              'skipped and the verdict degrades to NO_DATA. Check toStoreTimeframe() against the real ' +
+              'column values (SELECT DISTINCT timeframe FROM marketbar). ' +
+              (noData.length ? `NO_DATA symbols: ${noData.map((a) => a.symbol).slice(0, 8).join(', ')}. ` : '') +
+              (noTf.length ? `Missing timeframe: ${noTf.map((a) => a.symbol).slice(0, 8).join(', ')}.` : ''));
+        }
+      }
+    } catch (err) {
+      record(INV, NAME, false, `could not reach /api/scoring/exit-consensus — ${err.message}`);
+    }
+  }
+
   if (prisma) await prisma.$disconnect();
 
   // ── report ─────────────────────────────────────────────────────────────

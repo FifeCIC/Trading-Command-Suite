@@ -43,7 +43,7 @@ export const PAGE_DATA_STATUS = {
   'sees-live-stack': { status: 'live', source: 'DB + Directive Engine' },
   'sees-arena': { status: 'live', source: 'Multi-stack comparison (compare-only, ladders detached #434)' },
   'predictive-sees': { status: 'live', source: 'Directional bias engine' },
-  'exit-signals': { status: 'live', note: 'Exit urgency from portfolio scores + decisions' },
+  'exit-signals': { status: 'live', note: 'Exit urgency for the MT5 bot book (ExitConsensus)' },
   'protocol-overview': { status: 'live', source: 'DB (48 protocols, consolidated stats + directive tooltips)' },
   'create-protocols': { status: 'live', source: 'DB + Directive Registry' },
   'protocol-builder': { status: 'live', source: 'DB + Directive Registry (#560 Protocol Builder — new route, builds protocols with direction/timeframe/groups)' },

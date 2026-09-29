@@ -23,25 +23,72 @@ const URGENCY_LABELS = {
   NONE: 'No Signal',
 };
 
-const TREND_ICONS = {
-  collapsing: '📉📉',
-  declining: '📉',
-  stable: '➡️',
-  rising: '📈',
-  no_data: '❓',
-};
+/**
+ * #1016 — THE EXIT PAGE READS THE BOT BOOK, NOT TRADING 212.
+ *
+ * ⚠️ WHY THE SOURCE CHANGED. `GET /api/portfolio/exit-signals` reads the **Trading 212** book via
+ * `PortfolioService`, which is a data-import concern. Owner direction, 2026-09-28: *"I don't want
+ * any Trading212 bot activity going forward. Only data import and updates on the status of the
+ * portfolio."* The 40 bot-managed positions are MT5, and the service that evaluates them is
+ * `ExitConsensusService` — `GET /api/scoring/exit-consensus`.
+ *
+ * ⚠️ THE SHAPES DO NOT MATCH, so this adapter IS the boundary. `ExitConsensus` answers a
+ * side-dependent question ("leave THIS position?") and returns `conviction` plus five per-directive
+ * verdicts. The card contract wants `urgency`, one score, and a reason list. The mapping is written
+ * out field by field rather than renamed, because a silent rename here renders a confident card
+ * built from the wrong field — the class of defect this repo keeps re-finding.
+ */
+const CONVICTION_TO_URGENCY = { EXIT: 'CRITICAL', REDUCE: 'HIGH', HOLD: 'LOW', NO_DATA: 'NONE' };
+
+/** One `ExitAssessment` → one card. Every rendered field is derived here; none is invented. */
+function toCard(a, asOf) {
+  const verdicts = Array.isArray(a.verdicts) ? a.verdicts : [];
+  const arguing = verdicts.filter((v) => v.arguesExit);
+  const scores = verdicts.map((v) => (typeof v.score === 'number' ? v.score : 0));
+  return {
+    // identity — the ticket is the position, `bot` is its resolved OWNER (see #1018)
+    symbol: a.symbol,
+    ticker: a.ticket,
+    bot: a.bot,
+    side: a.side,
+    urgency: CONVICTION_TO_URGENCY[a.conviction] || 'NONE',
+    conviction: a.conviction,
+    pnlPct: a.profitPct,
+    // "Score" = the STRONGEST urgency any directive reports. A max, not an average: averaging
+    // would let four calm directives drown the one that is shouting.
+    currentScore: scores.length ? Math.max(...scores) : null,
+    // How many of the five actually argue leaving. Shown as "2/5" so the denominator is visible —
+    // two of the five can never argue an exit at all today (see #1020).
+    agreeing: arguing.length,
+    verdictCount: verdicts.length,
+    // Only the directives that ARGUE an exit — a card listing five reasons when one argues exit
+    // reads as five problems.
+    reasons: (arguing.length ? arguing : verdicts.slice(0, 1)).map((v) => v.reason).filter(Boolean),
+    source: 'MT5 (bot book)',
+    broker: a.brokerId,
+    signal: a.side,
+    // Peak and give-back are the POINT of this page (#998) — carried through, not dropped.
+    peakProfitPct: a.peakProfitPct ?? null,
+    giveBackPct: a.giveBackPct ?? null,
+    lastUpdated: asOf ?? null,
+  };
+}
 
 export default function ExitSignalsPage() {
   const exitQuery = useQuery({
-    queryKey: ['portfolio', 'exit-signals'],
-    queryFn: () => apiGet('/api/portfolio/exit-signals'),
+    queryKey: ['scoring', 'exit-consensus'],
+    queryFn: () => apiGet('/api/scoring/exit-consensus'),
     refetchInterval: 30000,
   });
 
   const apiOnline = !exitQuery.isError;
-  const signals = exitQuery.data ?? [];
   const isLoading = exitQuery.isLoading;
-  const isEmpty = !isLoading && (!Array.isArray(signals) || signals.length === 0);
+  const signals = useMemo(
+    () => (Array.isArray(exitQuery.data?.assessments) ? exitQuery.data.assessments : [])
+      .map((a) => toCard(a, exitQuery.data?.asOf)),
+    [exitQuery.data],
+  );
+  const isEmpty = !isLoading && signals.length === 0;
 
   const summary = useMemo(() => {
     if (!Array.isArray(signals)) return null;
@@ -50,7 +97,6 @@ export default function ExitSignalsPage() {
     const total = signals.length;
     return { critical, high, total };
   }, [signals]);
-
   return (
     <div className="es-page">
       <motion.header className="es-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -58,8 +104,8 @@ export default function ExitSignalsPage() {
           <h1>🚪 Exit Signals</h1>
           <p className="es-subtitle">
             {summary
-              ? `${summary.total} positions — ${summary.critical} critical, ${summary.high} high urgency. Multi-factor analysis: score trend + P&L + signal degradation.`
-              : 'Portfolio position exit monitoring with trend analysis'}
+              ? `${summary.total} open positions on the bot book — ${summary.critical} exit, ${summary.high} reduce. Five exit directives evaluated per position, in isolation.`
+              : 'Open-position exit evaluation — MT5 bot book'}
           </p>
         </div>
         {summary && (summary.critical > 0 || summary.high > 0) && (
@@ -74,8 +120,8 @@ export default function ExitSignalsPage() {
 
       {isEmpty && (
         <div className="es-empty">
-          <p>No exit signals available.</p>
-          <p className="es-hint">Import your Trading212 portfolio or add positions to see exit signals with trend analysis.</p>
+          <p>No open positions to evaluate.</p>
+          <p className="es-hint">This page evaluates the MT5 bot book — it shows nothing when no bot holds a position. Trading 212 is data-import only and is deliberately not read here.</p>
         </div>
       )}
 
@@ -111,6 +157,7 @@ export default function ExitSignalsPage() {
                       <div className="es-card-header">
                         <div className="es-symbol-row">
                           <span className="es-symbol">{sig.symbol || sig.ticker}</span>
+                          {sig.bot && <span className="es-bot">{sig.bot}</span>}
                           {sig.pnlPct != null && (
                             <span className={`es-pnl ${sig.pnlPct >= 0 ? 'positive' : 'negative'}`}>
                               {sig.pnlPct >= 0 ? '+' : ''}{sig.pnlPct.toFixed(1)}%
@@ -125,38 +172,22 @@ export default function ExitSignalsPage() {
                       <div className="es-card-body">
                         <div className="es-metrics-row">
                           <div className="es-metric">
-                            <span className="es-metric-label">Score</span>
-                            <span className="es-metric-value">{sig.currentScore ?? '—'}</span>
-                          </div>
-                          <div className="es-metric">
-                            <span className="es-metric-label">Trend</span>
+                            <span className="es-metric-label">Peak</span>
                             <span className="es-metric-value">
-                              {TREND_ICONS[sig.scoreTrend] || '—'} {sig.scoreTrend}
-                              {sig.scoreVelocity != null && sig.scoreVelocity !== 0 && (
-                                <span className="es-velocity">
-                                  {' '}({sig.scoreVelocity > 0 ? '+' : ''}{sig.scoreVelocity})
-                                </span>
-                              )}
+                              {sig.peakProfitPct != null ? `${sig.peakProfitPct >= 0 ? '+' : ''}${sig.peakProfitPct.toFixed(2)}%` : '—'}
                             </span>
                           </div>
                           <div className="es-metric">
-                            <span className="es-metric-label">Urgency</span>
-                            <span className="es-metric-value">{sig.urgencyScore}/100</span>
+                            <span className="es-metric-label">Give-back</span>
+                            <span className="es-metric-value">
+                              {sig.giveBackPct != null ? `−${sig.giveBackPct.toFixed(2)}%` : '—'}
+                            </span>
+                          </div>
+                          <div className="es-metric">
+                            <span className="es-metric-label">Argue exit</span>
+                            <span className="es-metric-value">{sig.agreeing}/{sig.verdictCount}</span>
                           </div>
                         </div>
-
-                        {sig.positionValue != null && sig.positionValue > 0 && (
-                          <div className="es-metrics-row">
-                            <div className="es-metric">
-                              <span className="es-metric-label">Position</span>
-                              <span className="es-metric-value">${sig.positionValue.toFixed(0)}</span>
-                            </div>
-                            <div className="es-metric">
-                              <span className="es-metric-label">Signal</span>
-                              <span className={`es-metric-value es-signal-${sig.signal}`}>{sig.signal}</span>
-                            </div>
-                          </div>
-                        )}
 
                         {/* ── Source + Broker info ── */}
                         <div className="es-source-row">
