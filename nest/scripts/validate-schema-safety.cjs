@@ -126,6 +126,62 @@ const RAW_MANAGED_TABLES = {
 };
 
 /**
+ * Strip Prisma line comments (`//` and `///`) so a `@@map(...)` that appears in PROSE is not read
+ * as a directive.
+ *
+ * ⚠️ MEASURED 2026-09-29, and it was self-inflicted. A comment inside `BacktestPeriod` read
+ * *"Same reason `SymbolRoute` carries `@@map(\"symbol_route\")`"* — and the parser, matching the
+ * first `@@map` in the model body, resolved `BacktestPeriod` to **`symbol_route`**. The comment was
+ * believed over the directive below it.
+ *
+ * Two failures in one: the model was checked against the WRONG table (so a correct mapping read as
+ * corrupt), and `backtest_period` — the table it really maps to — looked unmodelled in the other
+ * direction. A parser that reads comments as code is the same defect class as a document that lies.
+ */
+function stripComments(schema) {
+  return schema
+    .split('\n')
+    .map((line) => {
+      const i = line.indexOf('//');
+      return i === -1 ? line : line.slice(0, i);
+    })
+    .join('\n');
+}
+
+/**
+ * model -> the table it RESOLVES to (`@@map` value when present, else the model name verbatim).
+ *
+ * ⚠️ This direction is the one `schemaTables()` cannot express, and it is the direction that
+ * breaks at runtime. Prisma's implicit table name is the model name EXACTLY — so a model called
+ * `BacktestPeriod` looks for a table named `BacktestPeriod`. On Windows MySQL matches table names
+ * case-insensitively, which is why the repo's older models work unmapped (`MarketBar` finds
+ * `marketbar`) and why the failure is so easy to miss: it is the UNDERSCORE that differs, not the
+ * case. A model with no `@@map` whose snake_case table exists resolves to `backtestperiod` and
+ * finds nothing.
+ */
+function schemaModels(schema) {
+  const code = stripComments(schema);
+  const map = new Map();
+  // ⚠️ `^\s*model`, NOT `^model`. Measured 2026-09-29: `BrokerSymbol` and `BrokerSymbolSync` are
+  // INDENTED in this schema, so a line-start anchor misses them — and a missed declaration does not
+  // merely go unreported, it makes the PREVIOUS model's block swallow everything up to the next
+  // match. `StrategyRegistry` therefore resolved to `broker_symbol_sync`, another model's table.
+  const blocks = [...code.matchAll(/^\s*model\s+(\w+)\s*\{/gm)];
+  for (let i = 0; i < blocks.length; i++) {
+    const name = blocks[i][1];
+    const start = blocks[i].index;
+    const end = i + 1 < blocks.length ? blocks[i + 1].index : code.length;
+    const body = code.slice(start, end);
+    // ⚠️ The LAST `@@map` in the block, not the first. A model block is `… @@map("x") }`, and
+    // `code` is comment-free, so the last one is the directive — but taking `matchAll` and the last
+    // entry also keeps this correct if a future Prisma feature adds a second map above it.
+    const all = [...body.matchAll(/@@map\("([^"]+)"\)/g)];
+    map.set(name, all.length ? all[all.length - 1][1] : name);
+  }
+  return map;
+}
+
+/**
  * Model names and `@@map` targets from schema.prisma.
  *
  * Reads both because a model may be mapped to a differently-named table, and comparing
@@ -134,15 +190,34 @@ const RAW_MANAGED_TABLES = {
  */
 function schemaTables(schema) {
   const names = new Set();
-  for (const m of schema.matchAll(/^model\s+(\w+)/gm)) {
-    names.add(m[1]);
+  for (const [model, table] of schemaModels(schema)) {
+    names.add(model);
     // Prisma's implicit table name is the model name, so cover the lowercase form too.
-    names.add(m[1].toLowerCase());
-  }
-  for (const m of schema.matchAll(/@@map\("([^"]+)"\)/g)) {
-    names.add(m[1]);
+    names.add(model.toLowerCase());
+    if (table !== model) names.add(table);
   }
   return names;
+}
+
+/**
+ * Every model that resolves to a table the database does not have.
+ *
+ * ⚠️ THE DEFECT THIS EXISTS FOR (#986, measured 2026-09-29). A new model `BacktestPeriod` was
+ * added against a table created by hand as `backtest_period`, without `@@map`. Prisma resolved
+ * it to `backtestperiod`, which does not exist — so EVERY query on the new service returned
+ * HTTP 500 with "The table `backtestperiod` does not exist in the current database", while all
+ * 20 unit tests passed. A mocked Prisma never touches a table name, so no test could see it; only
+ * a request to the running API could.
+ *
+ * Pure, so `--self-test` can prove it fails in both directions without a database.
+ */
+function modelsMissingTables(models, liveTableNames) {
+  const live = new Set([...liveTableNames].map((n) => String(n).toLowerCase()));
+  const missing = [];
+  for (const [model, table] of models) {
+    if (!live.has(table.toLowerCase())) missing.push({ model, table });
+  }
+  return missing;
 }
 
 async function main() {
@@ -152,6 +227,7 @@ async function main() {
   }
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
   const known = schemaTables(schema);
+  const models = schemaModels(schema);
 
   // Uses the Prisma client's raw escape hatch — the same mechanism the application uses for
   // its raw-managed tables, and already a dependency. Deliberately NOT a new driver: adding
@@ -189,8 +265,7 @@ async function main() {
   const unmodelled = [];
   for (const r of rows) {
     const name = String(r.name);
-    if (known.has(name) || known.has(name.toLowerCase())) continue;
-    // TABLE_ROWS is an estimate for InnoDB. Confirm with a real COUNT so the reported
+    if (known.has(name) || known.has(name.toLowerCase())) continue;    // TABLE_ROWS is an estimate for InnoDB. Confirm with a real COUNT so the reported
     // number is defensible — this is a guard, and a guard that cites a wrong count gets
     // argued with instead of acted on.
     let count = 0;
@@ -209,7 +284,15 @@ async function main() {
   const declared = unmodelled.filter((t) => t.declared);
   const emptyUndeclared = unmodelled.filter((t) => !t.declared && t.count === 0);
 
-  console.log(`[schema-safety] ${rows.length} tables; ${known.size} schema names; ${unmodelled.length} unmodelled`);
+  // ── The OTHER direction: every declared model must resolve to a table that EXISTS ────────────
+  //
+  // ⚠️ Both directions are checked here because they are the same question asked twice, and the
+  // second one is the one that fails at RUNTIME. A model with no table compiles, type-checks and
+  // passes every unit test, then 500s on its first request — measured on #986, where all 20 tests
+  // were green while `GET /api/backtest/periods` returned "the table backtestperiod does not exist".
+  const missingTables = modelsMissingTables(models, rows.map((r) => String(r.name)));
+
+  console.log(`[schema-safety] ${rows.length} tables; ${known.size} schema names; ${unmodelled.length} unmodelled; ${models.size} models`);
   for (const t of declared) {
     console.log(`  ✓ ${t.name} (${t.count} rows) — raw-managed by ${RAW_MANAGED_TABLES[t.name].owner}`);
   }
@@ -232,8 +315,172 @@ async function main() {
     process.exit(1);
   }
 
+  // ⚠️ The model→table failure is reported BEFORE the all-clear, so the all-clear cannot be
+  // printed for a schema that has a model with no table.
+  if (missingTables.length > 0) {
+    console.error('');
+    console.error('[schema-safety] ✗ UNSAFE — these models resolve to a table the database does NOT have:');
+    for (const m of missingTables) {
+      console.error(`    ${m.model} -> ${m.table}   (no such table)`);
+    }
+    console.error('');
+    console.error('  Every query on these models fails at runtime, and NO unit test can see it —');
+    console.error('  a mocked Prisma never touches a table name.');
+    console.error('');
+    console.error('  FIX: Prisma uses the model name VERBATIM as the table name, so a table whose real');
+    console.error('  name has an underscore needs an explicit map:');
+    console.error('      model FooBar { ... @@map("foo_bar") }');
+    console.error('  (The repo\'s older tables have no underscore — marketbar, backtestrun — which is');
+    console.error('   why they work unmapped on Windows, where MySQL ignores case.)');
+    console.error('');
+    process.exit(1);
+  }
+
   console.log('[schema-safety] ✅ OK — every non-empty table is either modelled or declared raw-managed.');
+  console.log(`[schema-safety] ✅ OK — all ${models.size} declared model(s) resolve to a table that exists.`);
   process.exit(0);
+}
+
+/**
+ * --self-test — prove the model→table check can FAIL, in both directions, with no database.
+ *
+ * "A guard that has never been observed to fail is not a guard. It is a decoration."
+ *
+ * ⚠️ This covers the PURE functions. The WIRING into `main()` was canaried separately, because a
+ * correct function nobody calls is the same defect one level up:
+ *
+ *   Observed 2026-09-29 — a model with no `@@map` was temporarily appended to `schema.prisma`
+ *   (`model CanaryTableThatCannotExist`), `db:check` was run, and it exited **1** naming that model
+ *   under `UNSAFE`, after which the schema was restored byte-for-byte (SHA256 compared) and
+ *   `db:check` went back to exit 0. The canary script was NOT kept: it edits `schema.prisma`, and
+ *   a mutating canary that can be interrupted mid-run is a worse hazard in a shared working tree
+ *   than the observation is worth. Re-run it by hand if this wiring is ever changed.
+ */
+if (process.argv.includes('--self-test')) {
+  const cases = [
+    {
+      label: 'a model whose table exists passes',
+      models: new Map([['MarketBar', 'MarketBar']]),
+      live: ['marketbar'],
+      expect: 0,
+    },
+    {
+      // ⚠️ THE MEASURED DEFECT, exactly: a snake_case table with no @@map. Prisma looks for
+      // `backtestperiod`; the database has `backtest_period`.
+      label: '⚠️ a snake_case table with NO @@map is reported (the #986 defect)',
+      models: new Map([['BacktestPeriod', 'BacktestPeriod']]),
+      live: ['backtest_period'],
+      expect: 1,
+    },
+    {
+      label: 'the same model WITH @@map passes',
+      models: new Map([['BacktestPeriod', 'backtest_period']]),
+      live: ['backtest_period'],
+      expect: 0,
+    },
+    {
+      label: 'a model with no table at all is reported',
+      models: new Map([['Ghost', 'Ghost']]),
+      live: ['marketbar'],
+      expect: 1,
+    },
+    {
+      label: 'matching is case-insensitive, as MySQL on Windows is',
+      models: new Map([['SymbolRoute', 'symbol_route']]),
+      live: ['SYMBOL_ROUTE'],
+      expect: 0,
+    },
+  ];
+
+  let failed = 0;
+  console.log('[schema-safety] self-test — model→table resolution');
+  for (const c of cases) {
+    const got = modelsMissingTables(c.models, c.live).length;
+    const ok = got === c.expect;
+    if (!ok) failed++;
+    console.log(`  ${ok ? '✔' : '✖'} ${c.label} (expected ${c.expect} missing, got ${got})`);
+  }
+
+  // ⚠️ The PARSER is tested too, not only the comparison. A `@@map` quoted in a comment must not be
+  // read as a directive — measured 2026-09-29, where prose made `BacktestPeriod` resolve to
+  // `symbol_route` and the guard then checked the model against the wrong table.
+  const parserCases = [
+    {
+      label: 'a `@@map` quoted in a COMMENT is ignored; the real directive wins',
+      schema: [
+        'model BacktestPeriod {',
+        '  // Same reason `SymbolRoute` carries @@map("symbol_route").',
+        '  id String @id',
+        '  @@map("backtest_period")',
+        '}',
+      ].join('\n'),
+      model: 'BacktestPeriod',
+      expect: 'backtest_period',
+    },
+    {
+      label: 'a model with no directive resolves to its own name',
+      schema: ['model MarketBar {', '  id String @id', '}'].join('\n'),
+      model: 'MarketBar',
+      expect: 'MarketBar',
+    },
+    {
+      label: 'a directive is read even when a comment mentions a different one',
+      schema: [
+        'model A {',
+        '  // see @@map("wrong_one")',
+        '  @@map("right_one")',
+        '}',
+      ].join('\n'),
+      model: 'A',
+      expect: 'right_one',
+    },
+    {
+      // ⚠️ Measured 2026-09-29: `BrokerSymbolSync` is indented in this schema, so a `^model`
+      // anchor missed it and `StrategyRegistry` absorbed its `@@map`.
+      label: 'an INDENTED model declaration is found, and does not leak its @@map upward',
+      schema: [
+        'model StrategyRegistry {',
+        '  id String @id',
+        '  @@map("strategy_registry")',
+        '}',
+        '',
+        '  model BrokerSymbolSync {',
+        '    id String @id',
+        '    @@map("broker_symbol_sync")',
+        '  }',
+      ].join('\n'),
+      model: 'StrategyRegistry',
+      expect: 'strategy_registry',
+    },
+    {
+      label: 'the indented model itself resolves correctly',
+      schema: [
+        'model StrategyRegistry {',
+        '  @@map("strategy_registry")',
+        '}',
+        '',
+        '  model BrokerSymbolSync {',
+        '    @@map("broker_symbol_sync")',
+        '  }',
+      ].join('\n'),
+      model: 'BrokerSymbolSync',
+      expect: 'broker_symbol_sync',
+    },
+  ];
+  console.log('[schema-safety] self-test — schema parser');
+  for (const c of parserCases) {
+    const got = schemaModels(c.schema).get(c.model);
+    const ok = got === c.expect;
+    if (!ok) failed++;
+    console.log(`  ${ok ? '✔' : '✖'} ${c.label} (expected ${c.expect}, got ${got})`);
+  }
+
+  console.log(
+    failed === 0
+      ? '[schema-safety] ✅ self-test passed — the check fires on a missing table and stays quiet otherwise'
+      : `[schema-safety] ✗ self-test FAILED (${failed} case(s))`,
+  );
+  process.exit(failed === 0 ? 0 : 1);
 }
 
 main().catch((err) => {

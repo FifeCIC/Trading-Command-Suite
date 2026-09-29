@@ -120,14 +120,30 @@ function factVersion() {
 
 function factPrismaModels() {
   const src = read('nest/prisma/schema.prisma');
-  const models = (src.match(/^model\s+\w+/gm) || []).length;
+  // ⚠️ `^\s*model`, NOT `^model`. Measured 2026-09-29: `BrokerSymbol` and `BrokerSymbolSync` are
+  // INDENTED in this schema, so a line-start anchor undercounted by 2 — this fact reported **117**
+  // when there are **119**. A generated fact that is quietly wrong is worse than no fact: it is
+  // quoted as authoritative, and the only way to catch it was to parse the same file a different
+  // way and notice the disagreement. The same anchor bug was in `validate-schema-safety.cjs`, where
+  // it did more damage — a missed `model` line makes the previous model's block swallow the next
+  // one's `@@map`, so `StrategyRegistry` resolved to `broker_symbol_sync`.
+  //
+  // Also skips anything inside a `//` comment, for the same reason the validator does.
+  const srcNoComments = src
+    .split('\n')
+    .map((l) => {
+      const i = l.indexOf('//');
+      return i === -1 ? l : l.slice(0, i);
+    })
+    .join('\n');
+  const models = (srcNoComments.match(/^\s*model\s+\w+/gm) || []).length;
   return {
     id: 'prismaModels',
     label: 'Prisma models (declared)',
     value: must(models, 80, 'prisma models'),
     unit: '',
     source: 'nest/prisma/schema.prisma',
-    how: "Select-String nest/prisma/schema.prisma '^model '",
+    how: "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '",
   };
 }
 

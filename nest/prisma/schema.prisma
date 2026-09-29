@@ -310,7 +310,14 @@ model BacktestPeriod {
   // no underscore (`marketbar`, `backtestrun`, `backtesttrade`) — which is why they work unmapped
   // on Windows (MySQL lowercases them and they match). A SNAKE_CASE table name does NOT: the model
   // `BacktestPeriod` resolves to `backtestperiod`, never `backtest_period`. The database column/table
-  // is fine; only the mapping was missing. Same reason `SymbolRoute` carries `@@map("symbol_route")`.
+  // is fine; only the mapping was missing.
+  //
+  // ⚠️ This comment deliberately does NOT spell out another model's map directive. It did, and the
+  // guard below read the PROSE as the directive: `BacktestPeriod` was resolved to `symbol_route`.
+  // A comment that quotes a pattern a parser greps for is a trap for every future parser, not only
+  // this one. `validate-schema-safety.cjs` now strips comments before parsing AND self-tests that —
+  // but the trap is not worth leaving in place. See the sibling models, e.g. SymbolRoute, for the
+  // same shape.
   @@map("backtest_period")
 }
 

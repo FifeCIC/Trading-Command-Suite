@@ -20,10 +20,10 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 117,
+      "value": 119,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
-      "how": "Select-String nest/prisma/schema.prisma '^model '"
+      "how": "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '"
     },
     "protocolSeedEntries": {
       "label": "Protocols in the seed file",

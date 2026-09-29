@@ -1179,7 +1179,7 @@
       "where": "nest",
       "category": "validator",
       "purpose": "Schema safety check — refuse to let `prisma db push` delete live data.",
-      "selfTest": false,
+      "selfTest": true,
       "reaches": [
         "npm"
       ]
