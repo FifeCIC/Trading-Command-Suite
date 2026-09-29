@@ -838,6 +838,49 @@ asserts the file set - a command reporting success is a claim, and the commit's 
 evidence. It names anything staged that it is deliberately skipping. A named file with **no changes
 is refused**. Surfaced for all agents in `agent-environment.instructions.md` next to the `gh` CLI.
 
+---
+
+## 2026-09-29 - primary - THE APP HAS NO EXIT: 0 of 168 closes were score-driven
+
+Measured 2026-09-29 on `trade` (`status='closed' AND pnlInvalid=0`, n=168) while answering *"why is
+this not profitable?"*:
+
+| Reading | Value |
+|---|---|
+| Total / average P&L | **−145.76** / **−0.868** |
+| Win rate | 48.4% — **breakeven at the measured 1.34× adverse ratio needs 57.2%** |
+| Configured stop / target | 0.982% / 1.666% (R:R ≈ 1.7:1 **in our favour**) |
+| Realised capture | **+0.23% — about 14% of the target** |
+| **Closes driven by a score or signal** | **0** |
+
+Buckets reconcile exactly (`−308.62 + 143.24 − 44.5 + 5.93 + 58.19 = −145.76`): `broker:sl` **30 =
+−308.62 — the entire loss**; `broker:terminal` 60 = +143.24 but **unattributed** (`close-reason.ts`:
+*"`user:manual` would claim knowledge we do not have"*); `system:time-stop` 46 = −44.5 at a **17.5 h**
+average hold.
+
+**This is not a scoring problem.** Entry work HAS improved — win rate **8.77% → 48.4%** and the
+adverse ratio **2.11× → 1.34×** since 2026-09-12. The untouched half is the exit.
+
+### ⚠️ Two hypotheses already tested and REFUTED — do not re-run them
+
+1. *"The trail parks winners at breakeven."* **False.** On the 60 `broker:terminal` closes the final
+   stop sits **−1.102% below entry** — a full stop away. Only **9.7%** of stops are near entry.
+2. *"Opposing bots net each other out on a shared symbol."* **False.** **0 of 60** terminal closes
+   had an opposite-side position open within 60 minutes.
+
+### Where the work is now ordered
+
+**`.github/PRIMARY-GOALS.md`** (new, 2026-09-29) — the ORDER, because ~15 open issues (#916 #917 #928
+#998 #1016 #1017 #990 #930 #982 #771) all touch exits and several describe the same defect in
+different words. `#916` says *"winners exit at a third of their target"*; `#917` says *"closed at 14%
+of target"*. Both true. Neither is a plan.
+
+⚠️ **The critical path is `#965` (A/B via backtesting), NOT the exit.** A live A/B cannot measure an
+exit change: test `b50727ee` wrote **56 rows for 4 real trades (A 3, B 1)** because each arm holds one
+position per symbol. Posted as direct evidence to `#965` rather than filed as a new issue.
+
+- **Agent:** primary (2026-09-29).
+
 **Recovery if you commit by mistake:** `git reset --mixed HEAD~1` - moves HEAD and the index and
 touches no working file (verified: 7 of 7 file hashes identical). **If it is already pushed, leave
 it and report** rather than rewriting shared history.
