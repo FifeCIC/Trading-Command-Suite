@@ -71,6 +71,7 @@ model Symbol {
   marketBars MarketBar[]
   importRuns ImportRun[]
   backtestRuns BacktestRun[]
+  backtestPeriods BacktestPeriod[]
   recordingSessions TickRecordingSession[]
   positions  Position[]
 }
@@ -243,6 +244,11 @@ model BacktestRun {
   // NULL = a hand-assembled request, or a run made before the column existed. Never read as "equal".
   botId        String?  @db.VarChar(36)
   botBaseSize  Float?
+  // ⚠️ ADDED 2026-09-29 (#986) — WHICH WINDOW this run measured. Without it a period comparison
+  // and a protocol comparison are indistinguishable in this table, so a difference produced by the
+  // DATES could be credited to the PROTOCOL. NULL = not period-scoped (every run before this
+  // column, and any plain day-range run) — deliberately distinct from the id of a period.
+  periodId     String?  @db.VarChar(36)
   winRate      Float
   totalPnl     Float
   profitFactor Float
@@ -263,6 +269,49 @@ model BacktestRun {
 
   @@index([symbolId, protocolId])
   @@index([createdAt])
+  @@index([periodId])
+}
+
+// ── Backtest Periods (#986) ───────────────────────────────
+// A WINDOW a human remembers by its story rather than its dates — the owner's own example:
+// "the 300% surge of Greenland Mining when Trump signed a deal, over just 2 days".
+//
+// ⚠️ THE NAME AND NOTE ARE THE FEATURE, NOT DECORATION. `BacktestRun` already stores startDate and
+// endDate, and a run list of dates is unreadable — 400 rows of "2026-03-11 to 2026-03-13" say
+// nothing about why any window mattered. Storing the reason next to the dates is what lets a run
+// be read months later, and what lets the same window be re-measured without retyping it.
+//
+// ⚠️ This is NOT a second bar store. The bars stay in `MarketBar` (the table the backtest and the
+// #819 replay both read); this row only names a RANGE of it.
+model BacktestPeriod {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  name      String   @db.VarChar(120)
+  note      String?  @db.Text
+  symbolId  String   @db.VarChar(36)
+  timeframe String   @db.VarChar(10)
+  fromDate  DateTime
+  toDate    DateTime
+  // Which provider supplied the bars for this window. NULL = never imported.
+  provider  String?  @db.VarChar(50)
+  // Bars present in `marketbar` for this window at the last import.
+  // ⚠️ NULL = never imported; 0 = an import ran and found NOTHING (a finding, not a success).
+  barCount  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  @@index([symbolId, timeframe, fromDate])
+  @@index([createdAt])
+  // ⚠️ REQUIRED — measured 2026-09-29, the first live call to GET /api/backtest/periods returned
+  // HTTP 500: *"The table `backtestperiod` does not exist in the current database."*
+  //
+  // Prisma's default table name is the MODEL name verbatim, and this database's older tables have
+  // no underscore (`marketbar`, `backtestrun`, `backtesttrade`) — which is why they work unmapped
+  // on Windows (MySQL lowercases them and they match). A SNAKE_CASE table name does NOT: the model
+  // `BacktestPeriod` resolves to `backtestperiod`, never `backtest_period`. The database column/table
+  // is fine; only the mapping was missing. Same reason `SymbolRoute` carries `@@map("symbol_route")`.
+  @@map("backtest_period")
 }
 
 model BacktestTrade {

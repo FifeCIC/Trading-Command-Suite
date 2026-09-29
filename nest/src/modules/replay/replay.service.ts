@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService, SIGNAL_THRESHOLDS } from '../scoring/protocol-gating.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
+import { BacktestPeriodService } from '../backtest/backtest-period.service';
 import type { MarketBar } from '../directives/interfaces/directive.interface';
 
 export interface ReplayConfig {
@@ -9,6 +10,15 @@ export interface ReplayConfig {
   timeframe: string;
   from: string;
   to: string;
+  /**
+   * #986 — replay a STORED PERIOD in one call.
+   *
+   * ⚠️ The period is AUTHORITATIVE for `symbol`/`timeframe`/`from`/`to`; the caller supplies only
+   * the scoring options (protocols, thresholds, window). Set this and the four window fields may be
+   * omitted — hand-assembling them is how a replay ends up measuring slightly different dates from
+   * the backtest it is meant to explain.
+   */
+  periodId?: string;
   protocolIds?: string[];
   windowSize?: number;
   /** Override BUY threshold (default: top 20th percentile of scores) */
@@ -69,6 +79,11 @@ export interface ReplayResult {
   from: string;
   to: string;
   totalBars: number;
+  /**
+   * #986 — the stored period this replayed, echoed so the output says WHICH window it describes.
+   * Absent for a hand-assembled config.
+   */
+  period?: { id: string; name: string; note: string | null };
   steps: ReplayStep[];
   summary: {
     avgComposite: number;
@@ -105,11 +120,13 @@ export class ReplayService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
+    // #986 — resolves a stored period to the window the replay walks. Optional so the existing
+    // hand-assembled path keeps working unchanged when no period is supplied.
+    private readonly periods?: BacktestPeriodService,
   ) {}
 
   /** Load bars for a symbol within a date range */
-  async loadBars(
-    symbol: string,
+  async loadBars(    symbol: string,
     timeframe: string,
     from: Date,
     to: Date,
@@ -204,12 +221,54 @@ export class ReplayService {
     }
   }
 
+  /**
+   * #986 — resolve a stored period to the window this replay walks, or `null` for a hand-assembled
+   * config.
+   *
+   * ⚠️ THROWS rather than defaulting. A replay that silently walked a different window from the
+   * backtest it is meant to explain is the most misleading output this module can produce: every
+   * number would be plausible and the dates would be wrong.
+   */
+  private async resolvePeriod(periodId?: string) {
+    if (!periodId) return null;
+    if (!this.periods) {
+      throw new BadRequestException(
+        'A period-scoped replay was requested but the period service is not wired, so the window ' +
+          'cannot be resolved. Refusing to walk an unspecified range.',
+      );
+    }
+    return this.periods.resolveForRun(periodId);
+  }
+
   /** Run replay — step through bars and score each one */
   async runReplay(config: ReplayConfig): Promise<ReplayResult> {
-    const { symbol, timeframe, from, to, protocolIds, windowSize = 30 } =
-      config;
+    // ── #986 — a stored PERIOD names the market and the window ───────────────────────────────
+    // ⚠️ Resolved BEFORE the destructure, and it THROWS when the id does not resolve. A fallback
+    // would replay different dates than the backtest it is meant to explain, and the output would
+    // look exactly as convincing.
+    const period = await this.resolvePeriod(config.periodId);
+
+    const {
+      symbol: configSymbol,
+      timeframe: configTimeframe,
+      from: configFrom,
+      to: configTo,
+      protocolIds,
+      windowSize = 30,
+    } = config;
+
+    const symbol = period?.symbol ?? configSymbol;
+    const timeframe = period?.timeframe ?? configTimeframe;
+    const from = period?.from.toISOString() ?? configFrom;
+    const to = period?.to.toISOString() ?? configTo;
     const fromDate = new Date(from);
     const toDate = new Date(to);
+    if (!symbol || !timeframe || !from || !to) {
+      throw new BadRequestException(
+        'Replay needs either a periodId, or symbol + timeframe + from + to. ' +
+          'A partially-filled config would walk an unintended window.',
+      );
+    }
     if (!protocolIds?.length) {
       throw new Error('Replay requires at least one protocolId for canonical META.Stack scoring.');
     }
@@ -217,36 +276,23 @@ export class ReplayService {
     // Load bars
     const bars = await this.loadBars(symbol, timeframe, fromDate, toDate);
 
+    // ⚠️ #986 — AN EMPTY WINDOW IS A FINDING, NOT A RESULT.
+    // This used to log a warning and return a summary of ZEROES, which is the "plausible numbers,
+    // no error" shape: `avgComposite: 0, buySignals: 0` reads as "the market did nothing", and the
+    // truth — "we never read any bars" — was nowhere in the payload. An unreadable input must make
+    // the caller's job fail, not hand it a confident zero.
     if (bars.length < windowSize) {
-      this.logger.warn(
-        `Only ${bars.length} bars for ${symbol} (need ${windowSize}+)`,
+      const where = period
+        ? `period '${period.name}' (${from} → ${to})`
+        : `${symbol} ${timeframe} (${from} → ${to})`;
+      throw new BadRequestException(
+        `Replay found ${bars.length} bar(s) for ${where}, and needs ${windowSize}+ to score one ` +
+          'window. Refusing to return a zero-filled summary: that would report "the market did ' +
+          'nothing" when the real finding is that there are no bars to read. ' +
+          (period
+            ? `Import them first: POST /api/backtest/periods/${period.id}/import`
+            : 'Check the symbol, timeframe and date range.'),
       );
-      return {
-        symbol,
-        timeframe,
-        from,
-        to,
-        totalBars: bars.length,
-        steps: [],
-        summary: {
-          avgComposite: 0,
-          maxComposite: 0,
-          minComposite: 0,
-          buySignals: 0,
-          sellSignals: 0,
-          holdSignals: 0,
-          totalDirectivesRun: 0,
-          directivesPerBar: 0,
-        },
-        outcomes: {
-          buyAccuracy: 0, sellAccuracy: 0,
-          avgBuyReturn1: 0, avgSellReturn1: 0,
-          avgBuyReturn5: 0, avgSellReturn5: 0,
-          bestBuyReturn: 0, worstBuyReturn: 0,
-          signalCount: 0, missedOpportunities: 0, falsePositives: 0,
-          lowScoreAccuracy: 0, midScoreAccuracy: 0,
-        },
-      };
     }
 
     const steps: ReplayStep[] = [];
@@ -463,6 +509,8 @@ export class ReplayService {
       from,
       to,
       totalBars: bars.length,
+      // #986 — which stored window this replayed, so the output says why the dates mattered.
+      period: period ? { id: period.id, name: period.name, note: period.note } : undefined,
       steps,
       summary: {
         avgComposite,

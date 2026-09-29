@@ -7,6 +7,21 @@ import { DirectivesService } from '../directives/directives.service';
 import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { BacktestPeriodService } from './backtest-period.service';
+
+/**
+ * #986 — the most bars a single PERIOD-scoped run will load.
+ *
+ * ⚠️ Exceeding it is an ERROR, not a silent truncation. `take` returns the FIRST N rows in
+ * `timestamp` order, so capping silently would drop the END of the window — the run would report
+ * results for a window it only partly read, with nothing in the output saying so. Refusing is the
+ * honest failure: the caller can narrow the period or coarsen the timeframe.
+ *
+ * The cap is generous because it is a guard against a mis-specified window, not a performance
+ * budget — but note the engine calls `fullScore()` once per bar, so a very large window is also
+ * very slow, and the error message says so.
+ */
+export const PERIOD_BAR_CAP = 20_000;
 
 /**
  * #819 — how many bars the replay endpoint returns in one call. Capped because a 5m window over
@@ -79,6 +94,22 @@ export interface BacktestRunRequest {
    * run must be able to say what it actually measured.
    */
   botId?: string;
+  /**
+   * #986 — run against a STORED PERIOD (a named, noted window) instead of a bar count.
+   *
+   * ⚠️ WITHOUT THIS THE ENGINE CANNOT REACH THE PAST. `days` sets `take: days + 120`, a ROW LIMIT
+   * that walks backwards from the newest bar — so the only windows expressible were "the most
+   * recent N bars". A window that ended months ago (a specific surge, an earnings move, a vol
+   * spike) was not reachable at all, which is why the sprint verdict could not be produced.
+   *
+   * ⚠️ The period is AUTHORITATIVE for the market and the window (symbol, timeframe, from, to) and
+   * the request supplies the STRATEGY (protocol, stops, sizing). A period is a statement about
+   * WHERE to look; a protocol is a statement about WHAT to do there.
+   *
+   * ⚠️ An unresolvable `periodId` THROWS. Falling back to a day-range run would measure a different
+   * window while reporting the requested one — the same defect `resolveBotDrivenRequest` refuses.
+   */
+  periodId?: string;
   days?: number;
   timeframe?: string;
   protocolId?: string;
@@ -273,6 +304,23 @@ export interface BacktestResult {
   caveats?: string[];
   /** News exclusion mode used (#105) */
   newsExclusion?: string;
+  /**
+   * #986 — the STORED PERIOD this run measured, echoed so a result always says which window it
+   * describes. Absent on a day-range run.
+   *
+   * ⚠️ This travels with the result because `period: '2026-03-11 to 2026-03-13'` does not say WHY
+   * the window mattered, and a period comparison that reads as a protocol comparison is the defect
+   * the column exists to prevent.
+   */
+  measuredPeriod?: {
+    id: string;
+    name: string;
+    note: string | null;
+    from: string;
+    to: string;
+    /** Bars actually loaded for the window — the sample the run rests on. */
+    bars: number;
+  };
   /** Number of news dates found for this symbol/period */
   newsDatesCount?: number;
   /** Execution realism applied (#50) */
@@ -336,6 +384,9 @@ export class BacktestService {
     private readonly directivesService: DirectivesService,
     private readonly protocolDb: ProtocolDbService,
     private readonly protocolGating: ProtocolGatingService,
+    // #986 — resolves a stored period to the window a run measures. Only touched when
+    // `request.periodId` is set, so a day-range run does not depend on the database here.
+    private readonly periods?: BacktestPeriodService,
   ) {}
 
   /**
@@ -384,13 +435,38 @@ export class BacktestService {
     return merged;
   }
 
+  /**
+   * #986 — resolve a stored period to the window a run measures, or `null` for a day-range run.
+   *
+   * ⚠️ IT THROWS RATHER THAN DEFAULTING when the id does not resolve. A fallback to a day-range run
+   * would measure a DIFFERENT window while reporting the requested one, and in this engine the
+   * difference is invisible: both produce a plausible result set. Same refusal as
+   * `resolveBotDrivenRequest` makes for an unresolvable `botId`.
+   */
+  private async resolvePeriod(periodId?: string) {
+    if (!periodId) return null;
+    if (!this.periods) {
+      throw new Error(
+        'A period-scoped backtest was requested but the period service is not wired, so the ' +
+          'window cannot be resolved. Refusing to run rather than measuring an unspecified range.',
+      );
+    }
+    return this.periods.resolveForRun(periodId);
+  }
+
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
     // ── #965 item 3 — resolve a BOT-DRIVEN request before anything is defaulted ──────────────
     const resolved = await this.resolveBotDrivenRequest(request);
+
+    // ── #986 — a stored PERIOD names the market and the window ───────────────────────────────
+    // Resolved BEFORE the destructure so the period can own `symbol`/`timeframe` below, and so an
+    // unresolvable id throws before any work is done.
+    const period = await this.resolvePeriod(request.periodId);
+
     const {
-      symbol,
+      symbol: requestSymbol,
       days = 365,
-      timeframe = '1d',
+      timeframe: requestTimeframe = '1d',
       protocolId,
       slPct = 1.0,
       tpPct = 1.0,
@@ -411,12 +487,28 @@ export class BacktestService {
       kellyCapPct = 25,
     } = resolved.request;
 
-    // ⚠️ A symbol is still required — from the request or from the bot. Stated rather than defaulted,
-    // because a defaulted symbol would measure a market nobody asked for.
+    // ⚠️ #986 — A PERIOD WINS ON WHERE TO LOOK; THE REQUEST WINS ON WHAT TO DO THERE.
+    // A period is a statement about WHICH market and WHICH dates; a protocol or bot is a statement
+    // about WHAT to do in them. So the period owns `symbol` and `timeframe`, while everything else
+    // (protocol, stops, sizing, news mode) still comes from the request — over which the bot merge
+    // has already applied the caller's precedence.
+    const symbol = period?.symbol ?? requestSymbol;
+    const timeframe = period?.timeframe ?? requestTimeframe;
+
+    // ⚠️ `totalDays` IS TWO DIFFERENT QUANTITIES, and only the period case knows the real one.
+    // On a day-range run it stores the REQUEST's `days` — a row limit, not an elapsed duration. On
+    // a period run the window's span is known exactly, so the column carries the true duration. A
+    // reader comparing a period run against a day-range run must not assume the same meaning; the
+    // `measuredPeriod` echo below is what tells them which they have.
+    const totalDays = period
+      ? Math.max(1, Math.round((period.to.getTime() - period.from.getTime()) / 86_400_000))
+      : days;
+
+    // ⚠️ A symbol is still required — from the period, the request, or the bot. Stated rather than
+    // defaulted, because a defaulted symbol would measure a market nobody asked for.
     if (!symbol) {
       throw new Error('Backtest requires a symbol, or a botId whose bot declares one.');
     }
-
     // 2026-09-08: unscoped and custom-weight backtests previously fell into a
     // second scoring implementation. Require the canonical protocol identity.
     if (!protocolId) throw new Error('Backtest requires protocolId for canonical META.Stack scoring.');
@@ -438,17 +530,46 @@ export class BacktestService {
     this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'unscoped'} brackets=${doBrackets} slip=${slippage} spread=${spread} commission=${commission} sizing=${sizingLabel} acct=${accountSize} risk=${riskPct}%`);
 
     // Load all bars
+    //
+    // ⚠️ #986 — TWO DIFFERENT QUESTIONS, two different queries. A day-range run asks "the most
+    // recent N bars" (`take`, walking backwards from the newest). A PERIOD run asks "every bar
+    // between these two instants" (`timestamp` range) — and it must NOT be clamped with `take`,
+    // because `take` returns the FIRST rows in ascending order and would silently drop the END of
+    // the window. The cap below is therefore a refusal, not a truncation.
     const rows = await this.prisma.marketBar.findMany({
       where: {
         symbol: { ticker: symbol.toUpperCase() },
         timeframe,
+        ...(period ? { timestamp: { gte: period.from, lte: period.to } } : {}),
       },
       orderBy: { timestamp: 'asc' },
-      take: days + 120,
+      // +1 over the cap so hitting it can be DETECTED — a query capped at exactly N cannot tell
+      // "exactly N" from "more than N".
+      ...(period ? { take: PERIOD_BAR_CAP + 1 } : { take: days + 120 }),
     });
 
+    if (period && rows.length > PERIOD_BAR_CAP) {
+      throw new Error(
+        `Period '${period.name}' contains more than ${PERIOD_BAR_CAP} ${timeframe} bars ` +
+          `(${period.from.toISOString()} → ${period.to.toISOString()}). Refusing to run rather than ` +
+          'measure a truncated window: the bar load returns rows in ascending order, so capping it ' +
+          'would drop the END of the window and the result would describe dates it never read. ' +
+          'Narrow the period, or use a coarser timeframe — note each bar costs one full score ' +
+          'evaluation, so a window this large would also be very slow.',
+      );
+    }
+
     if (rows.length < 100) {
-      throw new Error(`Not enough data for ${symbol}: need 100+ bars, have ${rows.length}. Try importing data first.`);
+      const scope = period
+        ? `for period '${period.name}' (${period.from.toISOString()} → ${period.to.toISOString()})`
+        : `for ${symbol}`;
+      throw new Error(
+        `Not enough data ${scope}: need 100+ ${timeframe} bars, have ${rows.length}. ` +
+          (period
+            ? 'The window exists but holds no bars — import them first ' +
+              `(POST /api/backtest/periods/${period.id}/import).`
+            : 'Try importing data first.'),
+      );
     }
 
     const bars: MarketBar[] = rows.map((r) => ({
@@ -686,8 +807,20 @@ export class BacktestService {
       // no bot to have diverged from.
       drivenBy: resolved.drivenBy ?? undefined,
       caveats: resolved.caveats,
+      // #986 — WHICH STORED PERIOD this measured. Echoed with its name and note so the result says
+      // why the window mattered, not only which dates it covered.
+      measuredPeriod: period
+        ? {
+            id: period.id,
+            name: period.name,
+            note: period.note,
+            from: period.from.toISOString(),
+            to: period.to.toISOString(),
+            bars: bars.length,
+          }
+        : undefined,
       period: `${bars[windowSize].timestamp.toISOString().split('T')[0]} to ${bars[bars.length - 1].timestamp.toISOString().split('T')[0]}`,
-      totalDays: days,
+      totalDays,
       timeframe,
       entrySignals: entrySignals.slice(-200),
       trades: doBrackets ? trades : undefined,
@@ -749,7 +882,7 @@ export class BacktestService {
             timeframe,
             startDate: bars[windowSize].timestamp,
             endDate: bars[bars.length - 1].timestamp,
-            totalDays: days,
+            totalDays,
             totalTrades: trades.length,
             // ⚠️ #965 item 1 — the DENOMINATOR of `winRate`, persisted so a verdict can state the
             // sample its own metric rests on. Without it, a comparison could only bar on trades
@@ -759,6 +892,10 @@ export class BacktestService {
             // its two sides were even sized the same before crediting a difference to the protocol.
             botId: resolved.drivenBy?.botId ?? null,
             botBaseSize: resolved.drivenBy?.baseSize ?? null,
+            // #986 — WHICH WINDOW this measured. Without it a period comparison and a protocol
+            // comparison are indistinguishable in this table, so a difference produced by the
+            // DATES could be credited to the PROTOCOL.
+            periodId: period?.id ?? null,
             winRate: Number(winRate.toFixed(4)),
             totalPnl: Number(totalPnl.toFixed(4)),
             profitFactor: Number((grossProfit / grossLoss).toFixed(4)),

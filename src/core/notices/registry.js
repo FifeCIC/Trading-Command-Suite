@@ -430,6 +430,56 @@ export const NOTICES = {
     refs: ['#841'],
   },
 
+  // ── Backtest period capture (#986) ─────────────────────────────────────
+  // ⚠️ THREE CODES, NOT ONE, because the three outcomes are DIFFERENT CLAIMS and collapsing them is
+  // the defect this feature exists to avoid. `no-bars` says the provider answered and the window is
+  // empty; `provider-unavailable` says nothing established whether bars exist. Rendering either as
+  // a quiet success would report "the market did nothing" when the truth might be "we never looked".
+  'TCS-DATA-007': {
+    severity: 'success',
+    area: 'DATA',
+    title: 'Period captured',
+    message:
+      '{inserted} bar(s) inserted for {symbol} {timeframe} over {from} → {to} ' +
+      '({fetched} fetched from {provider}, {alreadyPresent} already present).',
+    cause:
+      '{alreadyPresent} bar(s) were already in MarketBar and were left untouched — an import never ' +
+      'overwrites, so a series cannot silently mix two different feeds.',
+    action:
+      'Re-running this import must report 0 inserted. If it does not, the window is not idempotent ' +
+      'and the extra rows came from somewhere else.',
+    params: ['inserted', 'symbol', 'timeframe', 'from', 'to', 'fetched', 'provider', 'alreadyPresent'],
+    refs: ['#986'],
+  },
+  'TCS-DATA-008': {
+    severity: 'warning',
+    area: 'DATA',
+    title: 'Period import found no bars',
+    message:
+      'No provider returned bars for {symbol} {timeframe} over {from} → {to}. The window is EMPTY ' +
+      'as far as the providers are concerned.',
+    cause: 'The ticker may be wrong, the exchange may not trade that window, or the range may be a weekend or holiday.',
+    action:
+      'Check the ticker and the dates. A window that genuinely traded nothing is a valid answer — ' +
+      'but it is a FINDING, not a captured period, so do not run a backtest against it yet.',
+    params: ['symbol', 'timeframe', 'from', 'to'],
+    refs: ['#986'],
+  },
+  'TCS-DATA-009': {
+    severity: 'warning',
+    area: 'DATA',
+    title: 'Period import — no provider could answer',
+    message: 'No provider could answer for {symbol} {timeframe} over {from} → {to}.',
+    cause:
+      'This is NOT the same as an empty window. Nothing established whether bars exist, so the ' +
+      'absence of data is unknown rather than absent.',
+    action:
+      'Check provider health and rate limits, then re-run the import. Do not read a zero here as ' +
+      '"the market did nothing".',
+    params: ['symbol', 'timeframe', 'from', 'to'],
+    refs: ['#986'],
+  },
+
   // ── Scoring ────────────────────────────────────────────────────────────
   'TCS-SCORE-001': {
     severity: 'info',

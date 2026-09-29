@@ -174,6 +174,23 @@ export interface IProviderAdapter {
   getCandlesBatch?(symbols: string[], timeframe?: string, limit?: number): Promise<Record<string, MarketBar[]>>;
 
   /**
+   * Candles for an EXACT date window (optional). Returns `null` when the provider cannot answer.
+   *
+   * ⚠️ `getCandles()` is LIMIT-based and always walks BACK from the present — it has no way to
+   * express "2026-03-11 → 2026-03-13". A period capture (#986) is exactly that request, so it
+   * needs this method instead. Measured: the whole reason a past window could not be captured was
+   * that the only fetch available was `getCandles`, so the caller would have had to guess a `limit`
+   * large enough to reach back past the window and then filter — which silently returns the WRONG
+   * window whenever the guess is short, with no error.
+   *
+   * ⚠️ `null` means UNKNOWN, never "no data". An adapter that does not implement this returns
+   * undefined (absent); one that implements it but could not reach the provider returns `null`.
+   * Callers MUST NOT collapse either into an empty bar list — `[]` is a finding, `null` is the
+   * absence of information, and the two must not render the same (development-philosophy §7).
+   */
+  getCandlesRange?(symbol: string, timeframe: string, from: Date, to: Date): Promise<MarketBar[] | null>;
+
+  /**
    * Fetch aggregate sentiment for a symbol (optional — Finnhub-specific).
    */
   getSentiment?(symbol: string): Promise<SentimentData | null>;

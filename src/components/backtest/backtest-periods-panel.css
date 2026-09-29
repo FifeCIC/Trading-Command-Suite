@@ -1,0 +1,266 @@
+/**
+ * Backtest periods panel (#986).
+ *
+ * ⚠️ Every colour is a CSS variable — `validate-css-tokens.cjs` runs in prebuild and fails on a
+ * NEW undefined token, and `ui-standards.instructions.md` forbids hex literals here. The token
+ * check is what caught a hardcoded colour in an earlier change rather than review.
+ *
+ * ⚠️ The semantic tones are used on BORDERS and TEXT-ONLY where they pass WCAG AA. `--color-profit`
+ * and `--color-loss` are tuned for dark panels; they are never used as a background behind body
+ * text (accessibility-policy.instructions.md).
+ */
+
+.btp {
+  margin: var(--space-lg, 20px) 0;
+  padding: var(--space-md, 16px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.btp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm, 8px);
+  flex-wrap: wrap;
+}
+
+.btp-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.btp-sub {
+  margin: var(--space-sm, 8px) 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  max-width: 70ch;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.btp button {
+  /* 40px minimum tap target (accessibility-policy) — a 28px control is unusable on touch. */
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.btp button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+/* A visible focus ring — never removed. Keyboard users lose the app without it. */
+.btp button:focus-visible,
+.btp input:focus-visible,
+.btp select:focus-visible,
+.btp textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btp button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btp-toggle {
+  flex: 0 0 auto;
+}
+
+.btp-small {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+}
+
+/* ── Capture form ─────────────────────────────────────────────────────────── */
+
+.btp-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-md, 12px);
+  margin-top: var(--space-md, 12px);
+}
+
+.btp-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.btp-form input,
+.btp-form select,
+.btp-form textarea {
+  padding: 8px 10px;
+  min-height: 36px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+}
+
+/* Numbers in a data tool must be monospaced so digits line up (ui-standards). */
+.btp-form input[type='date'] {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+}
+
+.btp-form textarea {
+  resize: vertical;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.btp-note-field {
+  grid-column: 1 / -1;
+}
+
+.btp-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 12px);
+  flex-wrap: wrap;
+  margin-top: var(--space-md, 12px);
+}
+
+.btp-hint {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  max-width: 60ch;
+}
+
+/* ── Import result ────────────────────────────────────────────────────────── */
+
+.btp-import {
+  margin-top: var(--space-md, 12px);
+}
+
+.btp-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md, 16px);
+  margin-top: var(--space-sm, 8px);
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  color: var(--ink-soft);
+}
+
+.btp-counts b {
+  color: var(--ink);
+}
+
+.btp-coverage {
+  margin: var(--space-sm, 8px) 0 0;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  color: var(--ink-soft);
+}
+
+.btp-findings,
+.btp-attempted {
+  margin: var(--space-sm, 8px) 0 0;
+  padding-left: 1.2em;
+  font-size: 0.78rem;
+  color: var(--color-warning);
+}
+
+.btp-attempted {
+  color: var(--ink-soft);
+}
+
+.btp-empty {
+  margin: var(--space-md, 12px) 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.btp-registered {
+  margin: var(--space-sm, 8px) 0 0;
+  font-size: 0.78rem;
+  color: var(--color-warning);
+  border-left: 2px solid var(--color-warning);
+  padding-left: var(--space-sm, 8px);
+}
+
+/* ── The list ─────────────────────────────────────────────────────────────
+   ⚠️ The TABLE itself uses the GLOBAL `.bt-table` (src/index.css), not a local copy.
+   `validate-duplication.cjs` (INV-NO-NEW-DUPLICATION, in prebuild) caught this file restating
+   `.bt-table`/`th`/`td` and `.sr-only` — both already exist globally — and the correct fix is to
+   reuse them rather than bank the duplication. Only the btp-specific offsets and cells live here. */
+
+.btp-list {
+  margin-top: var(--space-md, 12px);
+}
+
+.btp-row-selected td {
+  background: var(--color-grid);
+}
+
+.btp-name {
+  font-weight: 600;
+}
+
+.btp-note {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  max-width: 40ch;
+}
+
+.btp-window {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+/* ⚠️ "not imported" and "0 — empty" are styled DIFFERENTLY on purpose. They are different facts,
+   and `barCount` is null for one and 0 for the other. Rendering them identically is how "nobody
+   has looked" hides as "there is nothing there". */
+.btp-none,
+.btp-zero {
+  font-size: 0.72rem;
+}
+
+.btp-none {
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.btp-zero {
+  color: var(--color-warning);
+}
+
+.btp-run {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 12px);
+  flex-wrap: wrap;
+  margin-top: var(--space-md, 12px);
+  padding-top: var(--space-md, 12px);
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 768px) {
+  .btp-window {
+    white-space: normal;
+  }
+}

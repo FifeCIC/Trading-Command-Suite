@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 149,
+  "count": 150,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -272,6 +272,16 @@
       "purpose": "#846. Is broker 3 skipped AFTER the fix landed?",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "canary-backtest-period.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "prove the #986 guards can FAIL. (#986)",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "canary-view-meta-routes.cjs",

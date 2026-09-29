@@ -27,6 +27,9 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-DATA-004` | error | DATA | Feed freshness unknown |
 | `TCS-DATA-005` | warning | DATA | Symbols have stopped producing bars |
 | `TCS-DATA-006` | success | DATA | All feeds fresh |
+| `TCS-DATA-007` | success | DATA | Period captured |
+| `TCS-DATA-008` | warning | DATA | Period import found no bars |
+| `TCS-DATA-009` | warning | DATA | Period import — no provider could answer |
 | `TCS-INTEG-001` | critical | INTEG | MT5 bridge not connected |
 | `TCS-INTEG-002` | critical | INTEG | MT5 circuit breaker open |
 | `TCS-RISK-001` | warning | RISK | Trade blocked by a safety gate |
@@ -66,7 +69,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-019` | success | TRADE | A/B copy created |
 | `TCS-TRADE-020` | info | TRADE | Bot deleted |
 
-**44 codes** — 2 critical, 26 error, 9 warning, 2 info, 5 success.
+**47 codes** — 2 critical, 26 error, 11 warning, 2 info, 6 success.
 
 ## Codes by area
 
@@ -373,6 +376,36 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `count`
 - **Call:** `notice('TCS-DATA-006', { count })`
 - **Related:** #841
+
+#### `TCS-DATA-007` — Period captured
+
+- **Severity:** success
+- **Message:** {inserted} bar(s) inserted for {symbol} {timeframe} over {from} → {to} ({fetched} fetched from {provider}, {alreadyPresent} already present).
+- **Cause:** {alreadyPresent} bar(s) were already in MarketBar and were left untouched — an import never overwrites, so a series cannot silently mix two different feeds.
+- **Action:** Re-running this import must report 0 inserted. If it does not, the window is not idempotent and the extra rows came from somewhere else.
+- **Params:** `inserted`, `symbol`, `timeframe`, `from`, `to`, `fetched`, `provider`, `alreadyPresent`
+- **Call:** `notice('TCS-DATA-007', { inserted, symbol, timeframe, from, to, fetched, provider, alreadyPresent })`
+- **Related:** #986
+
+#### `TCS-DATA-008` — Period import found no bars
+
+- **Severity:** warning
+- **Message:** No provider returned bars for {symbol} {timeframe} over {from} → {to}. The window is EMPTY as far as the providers are concerned.
+- **Cause:** The ticker may be wrong, the exchange may not trade that window, or the range may be a weekend or holiday.
+- **Action:** Check the ticker and the dates. A window that genuinely traded nothing is a valid answer — but it is a FINDING, not a captured period, so do not run a backtest against it yet.
+- **Params:** `symbol`, `timeframe`, `from`, `to`
+- **Call:** `notice('TCS-DATA-008', { symbol, timeframe, from, to })`
+- **Related:** #986
+
+#### `TCS-DATA-009` — Period import — no provider could answer
+
+- **Severity:** warning
+- **Message:** No provider could answer for {symbol} {timeframe} over {from} → {to}.
+- **Cause:** This is NOT the same as an empty window. Nothing established whether bars exist, so the absence of data is unknown rather than absent.
+- **Action:** Check provider health and rate limits, then re-run the import. Do not read a zero here as "the market did nothing".
+- **Params:** `symbol`, `timeframe`, `from`, `to`
+- **Call:** `notice('TCS-DATA-009', { symbol, timeframe, from, to })`
+- **Related:** #986
 
 ### RISK — Risk and safety gates
 

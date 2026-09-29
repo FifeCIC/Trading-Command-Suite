@@ -1,6 +1,8 @@
-import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException, Patch } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
+import { BacktestPeriodService } from './backtest-period.service';
+import type { CreatePeriodInput } from './backtest-period.service';
 import { PrismaService } from '../../database/prisma.service';
 import type { BacktestRunRequest } from './backtest.service';
 
@@ -27,6 +29,7 @@ import type { BacktestRunRequest } from './backtest.service';
 export class BacktestController {
   constructor(
     private readonly backtestService: BacktestService,
+    private readonly periods: BacktestPeriodService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -143,6 +146,89 @@ export class BacktestController {
   @Delete('runs/:runId')
   async deleteRun(@Param('runId') runId: string) {
     return this.backtestService.deleteRun(runId);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+  // Backtest PERIODS (#986) — a named, noted window you capture once and reuse.
+  //
+  // ⚠️ ROUTE ORDER MATTERS: 'periods/import' and 'periods/:id/import' are declared BEFORE the
+  // bare 'periods/:id' GET so Nest cannot match the literal segment 'import' as an id. The repo has
+  // a route-order guard for this class (`nest/src/common/route-order.spec.ts`) because a shadowed
+  // literal route answers 404 with no clue why.
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * The list to pick from. ⚠️ `barCount: null` means NEVER IMPORTED; `0` means the window is
+   * EMPTY. `runs` says how many backtests already measured this period.
+   */
+  @Get('periods')
+  @ApiOperation({ summary: 'List stored backtest periods (named windows) for reuse (#986)' })
+  async listPeriods(@Query('symbol') symbol?: string, @Query('limit') limit?: string) {
+    return this.periods.list({ symbol, limit: limit ? parseInt(limit, 10) : undefined });
+  }
+
+  /**
+   * Capture a window as an object: name + note + from/to (+ symbol/timeframe).
+   * Does not fetch anything — defining a period and filling it are separate acts.
+   */
+  @Post('periods')
+  @ApiOperation({ summary: 'Create a named, noted backtest period (#986)' })
+  async createPeriod(@Body() body: CreatePeriodInput) {
+    return this.periods.create(body);
+  }
+
+  /**
+   * Create AND import in one call — the manual capture tool's single action.
+   *
+   * ⚠️ Returns `outcome`, and `no-bars` / `provider-unavailable` are NOT successes. HTTP 200 is
+   * correct because the query genuinely succeeded, but `inserted` is 0 and `findings[]` say why.
+   * Callers MUST branch on `outcome`, never on the status code alone.
+   */
+  @Post('periods/import')
+  @ApiOperation({ summary: 'Create a period AND import its bars in one call (#986)' })
+  async createAndImport(@Body() body: CreatePeriodInput & { import?: boolean }) {
+    const period = await this.periods.create(body);
+    // `import` defaults to TRUE here: this endpoint exists so the manual capture is one action, and
+    // a default of false would let a capture look complete while holding no bars at all.
+    if (body.import === false) return { period, import: null };
+    return { period, import: await this.periods.importBars(period.id) };
+  }
+
+  /** Re-run the import for an existing period. A second run MUST report `inserted: 0`. */
+  @Post('periods/:id/import')
+  @ApiOperation({ summary: 'Import (or re-import) the bars for a stored period — idempotent (#986)' })
+  async importPeriodBars(@Param('id') id: string) {
+    return this.periods.importBars(id);
+  }
+
+  /** What `MarketBar` ACTUALLY holds for this window now, versus what was requested. */
+  @Get('periods/:id/coverage')
+  @ApiOperation({ summary: 'Bar coverage for a period — present rows, actual span, providers (#986)' })
+  async periodCoverage(@Param('id') id: string) {
+    return this.periods.coverage(id);
+  }
+
+  @Get('periods/:id')
+  @ApiOperation({ summary: 'One stored period with its coverage and the runs that used it (#986)' })
+  async getPeriod(@Param('id') id: string) {
+    return this.periods.get(id);
+  }
+
+  /** Rename or re-note. The WINDOW is not editable — a measured window is evidence, not a draft. */
+  @Patch('periods/:id')
+  @ApiOperation({ summary: 'Rename or re-note a period (#986)' })
+  async updatePeriod(@Param('id') id: string, @Body() body: { name?: string; note?: string | null }) {
+    return this.periods.update(id, body);
+  }
+
+  /**
+   * Delete a period. Refused while runs reference it unless `cascade: true` — see the service.
+   * ⚠️ The BARS are retained: they belong to the symbol, not to this label.
+   */
+  @Delete('periods/:id')
+  @ApiOperation({ summary: 'Delete a period (bars retained; runs must be unlinked on purpose) (#986)' })
+  async deletePeriod(@Param('id') id: string, @Query('cascade') cascade?: string) {
+    return this.periods.remove(id, { cascade: cascade === 'true' });
   }
 
   /** Equity curve + drawdown for a run */

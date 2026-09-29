@@ -6,6 +6,7 @@ import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import BacktestChartPane from '../components/backtest/BacktestChartPane';
 import EquityCurveChart from '../components/backtest/EquityCurveChart';
+import BacktestPeriodsPanel from '../components/backtest/BacktestPeriodsPanel';
 
 // ── Preset profiles (#50) ──
 const EXECUTION_PRESETS = {
@@ -52,6 +53,11 @@ export default function BacktestPage() {
   // A bot carries protocol + symbol + levels, and "backtest this bot" is ONE call (#965 item 3), so
   // it is the default path here.
   const [botId, setBotId] = useState('');
+  // ⚠️ #986 — when set, the RUN targets this stored window and the period owns symbol/timeframe/
+  // from/to. The engine previously could only walk BACKWARDS from the newest bar by a row count
+  // (`take: days + 120`), so a window that ended months ago was not reachable at all.
+  const [periodId, setPeriodId] = useState('');
+  const [periodName, setPeriodName] = useState('');
   const [newsExclusion, setNewsExclusion] = useState('none');
   const [showExecution, setShowExecution] = useState(false);
 
@@ -96,21 +102,41 @@ export default function BacktestPage() {
   }, [bots, botId]);
 
   const runMutation = useMutation({
-    mutationFn: () => apiPost('/api/backtest/run', botId ? { botId, days } : {
-      symbol,
-      days,
-      timeframe: '1d',
-      newsExclusion,
-      slippage,
-      spread,
-      commission,
-      positionModel,
-      accountSize,
-      riskPct,
-      kellyCapPct,
-      atrPeriod,
-      atrMultiplier,
-    }),
+    mutationFn: () => {
+      // Execution realism travels with every run — it describes HOW the fill was modelled, which is
+      // independent of WHERE in time the run looked.
+      const execution = {
+        newsExclusion,
+        slippage,
+        spread,
+        commission,
+        positionModel,
+        accountSize,
+        riskPct,
+        kellyCapPct,
+        atrPeriod,
+        atrMultiplier,
+      };
+
+      // ⚠️ A PERIOD RUN SENDS NO `symbol` AND NO `days`. Sending them would be dead weight at best
+      // and misleading at worst: the server takes the period's window, so a `days` value in the
+      // request would suggest the window came from this form when it did not. A period is a
+      // statement about WHERE to look; the bot and the execution block are what to do there.
+      if (periodId) {
+        return apiPost('/api/backtest/run', {
+          periodId,
+          ...(botId ? { botId } : {}),
+          ...execution,
+        });
+      }
+
+      return apiPost('/api/backtest/run', botId ? { botId, days } : {
+        symbol,
+        days,
+        timeframe: '1d',
+        ...execution,
+      });
+    },
     onSuccess: (data) => {
       setRunId(data.id);
       setShowChart(true);
@@ -267,7 +293,27 @@ export default function BacktestPage() {
         )}
       </div>
 
-{runMutation.isError && <NoticeBlock notice={noticeFromError(runMutation.error)} compact />}
+      {runMutation.isError && <NoticeBlock notice={noticeFromError(runMutation.error)} compact />}
+
+      {/* #986 — capture a window, name it, and run against it. Placed ABOVE the results so the
+          control that scopes a run sits with the run, and mounted here rather than as a new route
+          because a fourth surface for the same job is the churn #965 item 5 forbids. */}
+      <BacktestPeriodsPanel
+        onRunPeriod={(p) => {
+          setPeriodId(p.id);
+          setPeriodName(p.name);
+          runMutation.mutate();
+        }}
+      />
+
+      {periodId && (
+        <p className="bt-active-period">
+          Next run targets the captured period <strong>{periodName}</strong>.
+          <button type="button" className="bt-clear-period" onClick={() => { setPeriodId(''); setPeriodName(''); }}>
+            Clear
+          </button>
+        </p>
+      )}
 
       {stats && (
         <div className="bt-results">
@@ -299,6 +345,17 @@ export default function BacktestPage() {
           </div>
 
           {result?.period && <p className="bt-period">Period: {result.period}</p>}
+
+          {/* ⚠️ #986 — WHICH STORED PERIOD this measured, by name and note. `result.period` above
+              is a date range; on its own it does not say why the window mattered, and a result
+              from a captured window must never read as an ordinary day-range run. */}
+          {result?.measuredPeriod && (
+            <p className="bt-measured-period">
+              Captured period: <strong>{result.measuredPeriod.name}</strong>
+              {result.measuredPeriod.note ? ` — ${result.measuredPeriod.note}` : ''}
+              <span className="bt-measured-bars"> · {result.measuredPeriod.bars} bars loaded</span>
+            </p>
+          )}
 
           {/* Execution realism info */}
           {execution && (

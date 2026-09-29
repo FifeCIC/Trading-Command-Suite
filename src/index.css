@@ -1892,6 +1892,16 @@ button.nav-active {
 .bt-stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; text-align: center; font-size: 0.75rem; color: var(--ink-soft); }
 .bt-stat-value { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
 .bt-period { font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
+/* #986 — a run that measured a CAPTURED period says so by name, not only by date range. The date
+   range alone does not say why the window mattered, and a captured-window result must never read
+   as an ordinary day-range run. */
+.bt-measured-period { font-size: 0.8rem; color: var(--ink); margin-bottom: 0.5rem; padding: 6px 10px; border-left: 2px solid var(--accent); }
+.bt-measured-bars { color: var(--ink-soft); font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.72rem; }
+/* The active-scope banner. Visible so the reader can tell a period-scoped run from a day-range one
+   BEFORE the run rather than inferring it from the result afterwards. */
+.bt-active-period { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--ink); margin: 0.75rem 0; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; }
+.bt-clear-period { min-height: 32px; padding: 4px 10px; font-size: 0.72rem; font-weight: 600; color: var(--ink); background: var(--color-input-bg); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; }
+.bt-clear-period:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bt-table { width: 100%; border-collapse: collapse; }
 .bt-table th { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 2px solid var(--line); font-size: 0.7rem; text-transform: uppercase; color: var(--ink-soft); }
 .bt-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.82rem; }

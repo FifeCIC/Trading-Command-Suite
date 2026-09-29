@@ -27,6 +27,29 @@ import {
  *   Indices: ^GSPC (S&P 500), ^IXIC (NASDAQ)
  */
 
+/**
+ * Yahoo interval for a `period1`/`period2` range fetch (#986).
+ *
+ * ⚠️ Deliberately a SEPARATE map from `toYahooParams()`. That one derives a `range` from a bar
+ * COUNT; this one names an interval for an explicit window. Merging them would couple a
+ * limit-and-walk-backwards request to a range request, and they are different questions.
+ *
+ * ⚠️ These are the intervals Yahoo serves for historical ranges, and each has its own history cap
+ * (see `getCandlesRange`). A timeframe with no entry falls back to daily rather than throwing,
+ * because a wrong-resolution answer the caller can SEE beats an exception it cannot act on.
+ */
+const YAHOO_RANGE_INTERVAL: Record<string, string> = {
+  '1m': '1m',
+  '5m': '5m',
+  '15m': '15m',
+  '30m': '30m',
+  '1h': '1h',
+  '4h': '1h',   // Yahoo has no 4h — captured at 1h and aggregated downstream
+  '1d': '1d',
+  '1w': '1wk',
+  '1M': '1mo',
+};
+
 @Injectable()
 export class YahooFinanceAdapter implements IProviderAdapter {
   readonly name = 'Yahoo Finance';
@@ -151,6 +174,91 @@ export class YahooFinanceAdapter implements IProviderAdapter {
     } catch (err) {
       this.logger.error(`Yahoo getCandles(${symbol}) failed: ${(err as Error).message}`);
       return [];
+    }
+  }
+
+  /**
+   * getCandlesRange() — bars for an EXACT window, which `getCandles()` cannot express. (#986)
+   *
+   * ⚠️ WHY `period1`/`period2` AND NOT `range`. Yahoo's `range=1mo|3mo|...` always counts BACK from
+   * now, so it can describe only the recent past. `period1`/`period2` (unix seconds) is the only
+   * form that NAMES a window — and naming a window is the entire requirement: the owner wants to
+   * capture "the 300% surge of Greenland Mining ... over just 2 days" and re-measure it repeatedly.
+   *
+   * ⚠️ INTRADAY HISTORY IS CAPPED BY YAHOO, and the cap depends on the interval — roughly 30 days
+   * for 1m, 60 days for 5m/15m/30m, ~730 days for 1h. ⚠️ A request beyond the cap does NOT error:
+   * the API returns whatever it holds for the part it can serve. So this method returns the bars it
+   * actually got and lets the caller compare the first/last bar against the requested window.
+   * Returning a truncated window without saying so is the "plausible numbers, no error" defect this
+   * repo keeps re-finding — a 2-day capture that silently became a 1-day capture still looks like a
+   * result, and the missing half is invisible.
+   *
+   * ⚠️ Returns `null` (UNKNOWN) on failure, never `[]` (FOUND NOTHING). The two are different
+   * claims: an empty list asserts the market produced no bars, which a rate-limit or a 404 does not
+   * establish.
+   */
+  async getCandlesRange(
+    symbol: string,
+    timeframe: string,
+    from: Date,
+    to: Date,
+  ): Promise<MarketBar[] | null> {
+    try {
+      await this.rateLimit();
+      const ySymbol = this.toYahooSymbol(symbol);
+      const interval = YAHOO_RANGE_INTERVAL[timeframe] ?? YAHOO_RANGE_INTERVAL['1d'];
+      const p1 = Math.floor(from.getTime() / 1000);
+      const p2 = Math.ceil(to.getTime() / 1000);
+
+      const url =
+        `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(ySymbol)}` +
+        `?interval=${interval}&period1=${p1}&period2=${p2}`;
+      const res = await fetch(url);
+
+      if (res.status === 429) { this.hitRateLimit(); return null; }
+      if (!res.ok) {
+        this.logger.warn(`Yahoo candles range ${symbol}: HTTP ${res.status}`);
+        return null;
+      }
+
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      // `chart.error` is set (with HTTP 200) for an unknown symbol — an EMPTY list here would
+      // claim "this symbol traded nothing in the window", which is a different and false claim.
+      if (!result || data?.chart?.error) {
+        this.logger.warn(
+          `Yahoo candles range ${symbol}: no result (${data?.chart?.error?.description ?? 'unknown'})`,
+        );
+        return null;
+      }
+
+      const timestamps: number[] = result.timestamp || [];
+      const quote = result.indicators?.quote?.[0];
+      if (!quote || !timestamps.length) return [];   // genuinely no bars in the window
+
+      const bars: MarketBar[] = [];
+      for (let i = 0; i < timestamps.length; i++) {
+        const o = quote.open?.[i];
+        const h = quote.high?.[i];
+        const l = quote.low?.[i];
+        const c = quote.close?.[i];
+        const v = quote.volume?.[i];
+        if (o == null || c == null) continue;
+        bars.push({
+          timestamp: new Date(timestamps[i] * 1000),
+          open: o,
+          high: h ?? Math.max(o, c),
+          low: l ?? Math.min(o, c),
+          close: c,
+          volume: v ?? 0,
+        });
+      }
+      return bars;
+    } catch (err) {
+      this.logger.error(
+        `Yahoo getCandlesRange(${symbol}) failed: ${(err as Error).message}`,
+      );
+      return null;
     }
   }
 
