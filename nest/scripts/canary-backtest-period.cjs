@@ -93,6 +93,15 @@ const CANARIES = [
     from: '(first?.timestamp.getTime() ?? 0) - period.fromDate.getTime() > 3_600_000,',
     to: 'period.fromDate.getTime() - (first?.timestamp.getTime() ?? 0) > 3_600_000,',
   },
+  {
+    // ⚠️ The measured defect this guard exists for: a provider that cannot answer used to write
+    // `barCount: 0` without looking at `MarketBar`, so a window holding 289 mt5 bars was STORED as
+    // empty — and the list a human picks from would have shown it that way.
+    label: 'failed import — the stored count taken from the IMPORT instead of the TABLE',
+    guard: 'a window that already holds bars must not be stored as empty when no provider answers',
+    from: 'data: { barCount: existing.barCount, provider: null },',
+    to: 'data: { barCount: 0, provider: null },',
+  },
 ];
 
 function canary(original, originalSha, c) {

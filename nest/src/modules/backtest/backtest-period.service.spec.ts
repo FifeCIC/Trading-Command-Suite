@@ -340,9 +340,35 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
 
     expect(out.outcome).toBe('provider-unavailable');
     expect(out.findings.join(' ')).toMatch(/NOT the same as an empty window/);
-    // ⚠️ barCount is written as 0 while `provider` stays null, so "nothing established whether bars
-    // exist" is not recorded as "the window is empty".
+    // Nothing fetched AND nothing already present, so 0 is the true count here.
     expect(prisma._updated.at(-1)).toEqual({ barCount: 0, provider: null });
+  });
+
+  it('⚠️ NO provider answering does NOT make a window that already holds bars read as empty', async () => {
+    // ⚠️ THE MEASURED DEFECT, reproduced. Observed live on XAUUSD 5m 2026-09-15 → 2026-09-16:
+    //   import outcome : provider-unavailable
+    //   stored barCount: 0     <- what this branch used to write, without looking at MarketBar
+    //   coverage       : 289, providers=[mt5]
+    // The LIST is what a human picks from, so that made a perfectly measurable window look EMPTY.
+    const existing = barsFor(12).map((b) => ({
+      symbolId: 'sym-1', timeframe: '5m', timestamp: b.timestamp, provider: 'mt5',
+    }));
+    const prisma = mockPrisma({ period: { ...PERIOD }, symbol: SYMBOL, bars: existing });
+    const adapters = mockAdapters({
+      yahoo: { id: 'yahoo', getCandlesRange: async () => null },
+    });
+    const svc = new BacktestPeriodService(prisma, adapters);
+
+    const out = await svc.importBars('per-1');
+
+    expect(out.outcome).toBe('provider-unavailable');
+    // The stored count is the TABLE's count, not the import's fetched count.
+    expect(prisma._updated.at(-1)).toEqual({ barCount: 12, provider: null });
+    // `barCount` and `provider` answer different questions, and the null is explained rather than
+    // left to read as "this window is empty".
+    expect(out.findings.join(' ')).toMatch(/ALREADY HOLDS 12 bar\(s\) from \[mt5\]/);
+    expect(out.barsBefore).toBe(12);
+    expect(out.barsAfter).toBe(12);
   });
 
   it('⚠️ an adapter with NO range fetch is SKIPPED, never asked with the limit-based method', async () => {

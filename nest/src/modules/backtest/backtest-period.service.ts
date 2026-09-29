@@ -99,7 +99,14 @@ export interface PeriodCoverage {
   barCount: number;
   coveredFrom: string | null;
   coveredTo: string | null;
-  /** Distinct providers that supplied the bars present — more than one is a mixture, and is said. */
+  /**
+   * Distinct providers that supplied the bars present — more than one is a mixture, and is said.
+   *
+   * ⚠️ THIS is where "who supplied these bars" is answered, NOT `BacktestPeriod.provider`. That
+   * column records what an IMPORT supplied; this records what the TABLE holds. Measured
+   * 2026-09-29: a window with 289 mt5 bars had `provider: null` after an import that fetched
+   * nothing, which is correct about the import and misleading about the bars.
+   */
   providers: string[];
   /** True when `barCount > 0` and the window's own ends are not covered. */
   truncatedStart: boolean;
@@ -291,9 +298,28 @@ export class BacktestPeriodService {
       }
     }
 
-    // ── Provider unavailable: we do NOT know whether bars exist ──────────────────────────────
+    // ── No provider supplied bars. ⚠️ THAT IS NOT THE SAME AS AN EMPTY WINDOW ────────────────
+    //
+    // ⚠️ MEASURED DEFECT, 2026-09-29 — this branch used to write `barCount: 0` WITHOUT LOOKING AT
+    // `MarketBar`, and that made the stored figure contradict the table it summarises. Observed on a
+    // real period (XAUUSD 5m, 2026-09-15 → 2026-09-16):
+    //
+    //   import outcome : provider-unavailable  (Yahoo cannot serve XAUUSD 5m; the other three
+    //                                            adapters implement no range fetch)
+    //   stored barCount: 0                      <- "this window holds nothing"
+    //   coverage       : 289, providers=[mt5]   <- the window holds 289 bars
+    //
+    // The LIST is what the owner picks from, so it would have offered a window labelled EMPTY that
+    // can be measured perfectly well. Two different questions had been given one answer:
+    //   "did a provider supply bars?"      -> no        (this import's answer)
+    //   "does the window hold bars?"       -> yes, 289  (the table's answer)
+    //
+    // So `barCount` now ALWAYS comes from `MarketBar` — it is the column's stated meaning — while
+    // `provider` records only what THIS import supplied (null when it supplied nothing). A window
+    // that already holds bars explains the null in `findings[]` rather than leaving it ambiguous.
     if (!fetchedBars) {
-      const findings = [
+      const existing = await this.coverage(periodId);
+      const findings: string[] = [
         sawEmptyAnswer
           ? `No provider returned bars for ${symbol.ticker} ${period.timeframe} ` +
             `${from.toISOString()} → ${to.toISOString()}. The window is EMPTY as far as the ` +
@@ -302,9 +328,17 @@ export class BacktestPeriodService {
           : `No provider could answer for ${symbol.ticker} ${period.timeframe}. This is NOT the ` +
             'same as an empty window: nothing established whether bars exist. See `attempted`.',
       ];
+      if (existing.barCount > 0) {
+        findings.push(
+          `⚠️ This window ALREADY HOLDS ${existing.barCount} bar(s) from ` +
+            `[${existing.providers.join(', ')}]. This import supplied none, so 'provider' is null — ` +
+            'that is the IMPORT having no provider, NOT the window being empty. Run a backtest ' +
+            'against it as normal; the bars are there.',
+        );
+      }
       await this.prisma.backtestPeriod.update({
         where: { id: periodId },
-        data: { barCount: 0, provider: null },
+        data: { barCount: existing.barCount, provider: null },
       });
       return {
         outcome: sawEmptyAnswer ? 'no-bars' : 'provider-unavailable',
@@ -317,10 +351,10 @@ export class BacktestPeriodService {
         fetched: 0,
         inserted: 0,
         alreadyPresent: 0,
-        barsBefore: 0,
-        barsAfter: 0,
-        coveredFrom: null,
-        coveredTo: null,
+        barsBefore: existing.barCount,
+        barsAfter: existing.barCount,
+        coveredFrom: existing.coveredFrom,
+        coveredTo: existing.coveredTo,
         attempted,
         findings,
       };
@@ -452,8 +486,15 @@ export class BacktestPeriodService {
       timeframe: r.timeframe,
       from: r.fromDate.toISOString(),
       to: r.toDate.toISOString(),
-      /** ⚠️ `barCount: null` = NEVER IMPORTED. 0 = imported and the window is empty. */
+      /**
+       * ⚠️ ALWAYS read from `MarketBar`, never from what an import fetched — see the long note in
+       * `importBars`. `null` = never imported; `0` = imported and the window genuinely holds
+       * nothing. A window that holds bars from an earlier import reads its true count even when
+       * THIS import supplied none.
+       */
       barCount: r.barCount,
+      /** What an IMPORT supplied. NULL = the last import supplied nothing — which does NOT mean the
+       *  window is empty. Use `coverage().providers` for who actually supplied the bars. */
       provider: r.provider,
       runs: runsByPeriod.get(r.id) ?? 0,
       createdAt: r.createdAt.toISOString(),
