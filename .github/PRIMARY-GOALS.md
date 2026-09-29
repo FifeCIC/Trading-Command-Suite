@@ -89,7 +89,8 @@ worthless unmeasured.
 
 ```
  instrument ──► exit inputs ──► verdict verified ──► verdict TRUSTWORTHY ──► ONE ACTING EXIT ──► payoff settled
- (#965)         (#1017) ✅       (#1016) ✅            (#1020)                 (#1019)              (#916, #917, #998)
+ (#965)         (#1017) ✅       (#1016) ✅            (#1020) ✅               (#1019)              (#916, #917, #998)
+                                                        ↑ NEXT IS (#1019)
 ```
 
 | Step | Owner | Why here and not later |
@@ -97,7 +98,7 @@ worthless unmeasured.
 | **1. The instrument** | **#965** (+ `#980`/`#986`, other agent) | **The critical path.** Any exit change is a maths change, and live A/B **cannot** measure it: test `b50727ee` wrote **56 rows for 4 real trades (A 3, B 1)** because each arm holds one position per symbol. The sample must come from the **backtest**. |
 | **2. Give the exit real inputs** | **#1017** — *closed 2026-09-29* | The 5 exit directives have never run — 0 appearances in 6,693 score breakdowns. The verdict cannot be better than its inputs. |
 | **3. Verify the verdict** | **#1016** — *closed 2026-09-29* | `ExitConsensusService` was built but unverified. Verified: all 17 open positions return a verdict, every verdict carries a `barsTimeframe`, **zero `NO_DATA`**. The page now reads the bot book, and `INV-EXIT-VERDICT-ALIVE` guards the cadence regression live. |
-| **3b. Make the verdict trustworthy** | **#1020** | Measured 2026-09-29: **`regime-shift-exit` and `time-stop` hardcode `signalClass: 'neutral'`**, and `arguesExit` reads *only* `signalClass` (`exit-consensus.service.ts` L447-448) — so **2 of the 5 exit directives can never argue an exit, even at score 100**. A verdict missing two of its five inputs is not one to act on. **Settle the contract BEFORE #1019 wires it.** |
+| **3b. Make the verdict trustworthy** | **#1020** — *closed 2026-09-29* | Measured: **`regime-shift-exit` and `time-stop` hardcoded `signalClass: 'neutral'`**, and `arguesExit` read *only* `signalClass` — so **2 of the 5 exit directives could never argue an exit, even at score 100**. Settled: a directive with no direction declares `exitScoreThreshold`; **silence is not authority**, and `time-stop` omits it deliberately because it cannot see position age. Register row 45. |
 | **4. One acting exit, as a COPY** | **#1019** | The goal of the sprint. Per `maths-change-requires-ab`, the incumbent keeps running untouched and both configurations exist together. |
 | **5. Settle the payoff** | **#916, #917, #998** | These describe the defect the acting exit is meant to move. They are the *acceptance test* for step 4, not a parallel workstream. |
 
@@ -122,6 +123,6 @@ can evaluate, which is how the last year of scoring iterations happened.
 - `#965` — the instrument (A/B via backtesting)
 - `#1017` — the exit inputs (**closed** 2026-09-29; its fix is `#1020`)
 - `#1016` — the exit verdict + its page (**closed** 2026-09-29)
-- `#1020` — the exit-verdict contract (step 3b)
+- `#1020` — the exit-verdict contract (**closed** 2026-09-29; register row 45)
 - `#1019` — the acting exit (step 4)
 - `#916`, `#917` — the payoff defect the exit exists to move
