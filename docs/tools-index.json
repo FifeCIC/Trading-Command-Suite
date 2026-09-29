@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 150,
+  "count": 151,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -759,6 +759,16 @@
       "purpose": "One-off mechanical removal of a directive id from protocols-seed-data.ts.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "replay-exit-counterfactual.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "would an exit rule have IMPROVED the trades we already have, or",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "roadmap-sync.cjs",

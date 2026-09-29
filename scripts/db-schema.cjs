@@ -45,93 +45,15 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const ENV_PATH = path.join(REPO_ROOT, 'nest', '.env');
 const DB_NAME_FALLBACK = 'tradingcs';
 
-/**
- * ⚠️ IDENTIFIERS ARE INTERPOLATED INTO SQL, so they are VALIDATED, not escaped.
- * A table name arrives from `argv`; anything outside `[A-Za-z0-9_]` is refused before a query is
- * built. This is the only injection surface in the file and it is closed here rather than trusted.
- */
-function assertIdentifier(name) {
-  if (!/^[A-Za-z0-9_]+$/.test(name)) {
-    throw new Error(
-      `refusing "${name}": a table name must match [A-Za-z0-9_]+ — this is the SQL-injection guard, not a style rule`,
-    );
-  }
-  return name;
-}
-
-/** Parse the key we need out of a .env file. Deliberately does not evaluate the file. */
-function databaseUrlFromEnv(text) {
-  const line = text
-    .split(/\r?\n/)
-    .find((l) => /^\s*DATABASE_URL\s*=/.test(l));
-  if (!line) return null;
-  let v = line.slice(line.indexOf('=') + 1).trim();
-  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-    v = v.slice(1, -1);
-  }
-  return v || null;
-}
+// ⚠️ THE CONNECTION LAYER LIVES IN ONE PLACE NOW: `scripts/lib/mysql-cli.cjs`, which carries the
+// guards, their docblocks and their self-test. This file used to define them itself, unexported, so
+// any second tool needing the database had to copy them or invent its own — and that duplication is
+// what the repo names as its most expensive kind of technical debt. This file now CONSUMES the one
+// implementation, so the two cannot drift. `selfTest()` below still runs its cases against these
+// imported bindings, so the proof is unchanged.
+const { assertIdentifier, assertPattern, query, connect, selfTest } = require('./lib/mysql-cli.cjs');
 
 /** mysql://user:pass@host:port/db  ->  the pieces the CLI needs. */
-function parseMysqlUrl(url) {
-  const m = /^mysql:\/\/([^:]+):([^@]*)@([^:/]+):(\d+)\/([^?]+)/.exec(url || '');
-  if (!m) return null;
-  return { user: m[1], password: m[2], host: m[3], port: m[4], database: m[5] };
-}
-
-/** Find a usable mysql client without hardcoding one machine's install path. */
-function findMysqlClient() {
-  // ⚠️ NO `shell: true`. With a shell the args are concatenated rather than escaped, which Node
-  // warns about (DEP0190) and which would be an injection surface if a value ever reached argv.
-  const onPath = spawnSync('mysql', ['--version'], { stdio: 'ignore' });
-  if (!onPath.error && onPath.status === 0) return 'mysql';
-
-  // WAMP layout, matched by glob rather than a pinned version number.
-  const binRoot = 'C:\\wamp64\\bin\\mysql';
-  if (fs.existsSync(binRoot)) {
-    for (const dir of fs.readdirSync(binRoot)) {
-      const candidate = path.join(binRoot, dir, 'bin', 'mysql.exe');
-      if (fs.existsSync(candidate)) return candidate;
-    }
-  }
-  return null;
-}
-
-function query(sql, conn) {
-  const client = findMysqlClient();
-  if (!client) {
-    throw new Error(
-      'no mysql client found — install one or add it to PATH. (Refusing to print an empty schema: ' +
-        'an empty result and an unreachable database must never look the same.)',
-    );
-  }
-  const args = [
-    '-h', conn.host,
-    '-P', conn.port,
-    '-u', conn.user,
-    '--batch',
-    '--raw',
-    conn.database,
-    '-e', sql,
-  ];
-  // Password via env, never argv — argv is visible in the process list.
-  return execFileSync(client, args, {
-    env: { ...process.env, MYSQL_PWD: conn.password },
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-}
-
-function connect() {
-  if (!fs.existsSync(ENV_PATH)) {
-    throw new Error(`nest/.env not found at ${ENV_PATH} — refusing to guess credentials`);
-  }
-  const url = databaseUrlFromEnv(fs.readFileSync(ENV_PATH, 'utf8'));
-  if (!url) throw new Error('DATABASE_URL is not set in nest/.env');
-  const conn = parseMysqlUrl(url);
-  if (!conn) throw new Error('DATABASE_URL is not a mysql:// URL in the expected shape');
-  return conn;
-}
 
 function columnsFor(tables, conn) {
   const list = tables.map((t) => `'${assertIdentifier(t)}'`).join(',');
@@ -152,13 +74,7 @@ function tablesMatching(pattern, conn) {
   return query(sql, conn).split(/\r?\n/).filter(Boolean).slice(1).map((r) => r.trim());
 }
 
-/** A LIKE pattern is also interpolated — so it is validated too. */
-function assertPattern(p) {
-  if (!/^[A-Za-z0-9_%]+$/.test(p)) {
-    throw new Error(`refusing pattern "${p}": must match [A-Za-z0-9_%]+`);
-  }
-  return p;
-}
+// (assertPattern moved to scripts/lib/mysql-cli.cjs — imported at the top of this file.)
 
 // ── self-test ────────────────────────────────────────────────────────────────────────────────
 /**
@@ -169,59 +85,16 @@ function assertPattern(p) {
  * noticed. A guard that has never been observed to fail is a decoration
  * (development-philosophy §5).
  */
-function selfTest() {
-  const cases = [
-    ['accepts a plain table name', () => assertIdentifier('trade') === 'trade'],
-    ['accepts digits and underscores', () => assertIdentifier('ab_pair_2') === 'ab_pair_2'],
-    ['REJECTS a semicolon', () => throws(() => assertIdentifier('trade; DROP TABLE trade'))],
-    ['REJECTS a backtick escape', () => throws(() => assertIdentifier('trade`'))],
-    ['REJECTS a space', () => throws(() => assertIdentifier('trade history'))],
-    ['REJECTS a comment', () => throws(() => assertIdentifier('trade--'))],
-    ['parses DATABASE_URL', () => {
-      const c = parseMysqlUrl('mysql://u:p%40x@localhost:3306/db');
-      return c && c.user === 'u' && c.host === 'localhost' && c.port === '3306' && c.database === 'db';
-    }],
-    ['REJECTS a non-mysql url', () => parseMysqlUrl('postgres://u:p@h:5432/db') === null],
-    ['reads DATABASE_URL from .env text', () => {
-      const u = databaseUrlFromEnv('# c\nDATABASE_URL="mysql://a:b@h:1/d"\nPORT=3201');
-      return u === 'mysql://a:b@h:1/d';
-    }],
-    ['returns null when DATABASE_URL is absent', () => databaseUrlFromEnv('PORT=3201') === null],
-    ['REJECTS a wildcard as an identifier', () => throws(() => assertIdentifier('trade%'))],
-    ['accepts a LIKE pattern', () => assertPattern('ab_%') === 'ab_%'],
-    ['REJECTS a quoted pattern', () => throws(() => assertPattern("ab_%' OR 1=1"))],
-  ];
-
-  let failed = 0;
-  for (const [label, fn] of cases) {
-    let ok = false;
-    try {
-      ok = fn() === true;
-    } catch {
-      ok = false;
-    }
-    if (!ok) failed++;
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`);
-  }
-  console.log(
-    `\n  ${cases.length - failed}/${cases.length} passed${failed ? '  — SELF-TEST FAILED' : ''}\n`,
-  );
-  process.exit(failed ? 1 : 0);
-}
-
-function throws(fn) {
-  try {
-    fn();
-    return false;
-  } catch {
-    return true;
-  }
-}
+// The self-test LIVES IN THE LIBRARY now (`scripts/lib/mysql-cli.cjs`) and covers the same 13 cases
+// against the same guards — it moved with the code it tests, so the proof and the implementation
+// cannot drift apart. `--self-test` below calls it.
 
 // ── main ─────────────────────────────────────────────────────────────────────────────────────
 function main() {
   const argv = process.argv.slice(2);
-  if (argv.includes('--self-test')) return selfTest();
+  // ⚠️ `selfTest()` now returns a FAILURE COUNT instead of exiting — the library must not decide
+  // when the process ends. (It also never exits from a library: a caller may want to continue.)
+  if (argv.includes('--self-test')) return process.exit(selfTest() ? 1 : 0);
 
   try {
     const conn = connect();

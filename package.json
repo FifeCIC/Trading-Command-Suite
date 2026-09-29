@@ -16,6 +16,8 @@
     "notices:audit": "node ./scripts/generate-third-party-notices.cjs --stdout --strict > NUL",
     "test:licence": "node ./scripts/lib/licence-readiness.cjs --self-test",
     "extract:provider-comparisons": "node ./scripts/extract-provider-comparisons.cjs",
+    "replay:exit": "node ./scripts/replay-exit-counterfactual.cjs",
+    "test:replay-exit": "node ./scripts/replay-exit-counterfactual.cjs --self-test",
     "handoff:discord": "node ./scripts/handoff-to-discord.cjs",
     "digest:discord": "node ./scripts/weekly-digest-discord.cjs",
     "roadmap:sync": "node ./scripts/roadmap-sync.cjs",
