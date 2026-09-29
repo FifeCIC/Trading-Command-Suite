@@ -480,6 +480,50 @@ export const NOTICES = {
     refs: ['#986'],
   },
 
+  // ── Log retention (#1023) ──────────────────────────────────────────────
+  // ⚠️ THREE CODES AGAIN, for the same reason as the import above: "nothing was old enough",
+  // "this is only a preview" and "these files are now gone" are three different claims. Rendering
+  // the dry run with the same wording as the real run is how someone believes files were deleted
+  // that are still there — or the reverse.
+  'TCS-DATA-010': {
+    severity: 'info',
+    area: 'DATA',
+    title: 'Log retention — nothing to remove',
+    message:
+      'No log file is older than the {days}-day window. {files} file(s) held, {size} in total. ' +
+      'The file being written now is never a candidate.',
+    cause:
+      'Either every file is inside the window, or the window is set below one day, in which case ' +
+      'the policy is deliberately inert rather than pruning everything.',
+    action: 'If you expected removals, check the retention window in Settings — a window under 1 day removes nothing by design.',
+    params: ['days', 'files', 'size'],
+    refs: ['#1023'],
+  },
+  'TCS-DATA-011': {
+    severity: 'info',
+    area: 'DATA',
+    title: 'Log retention — preview only, nothing removed',
+    message: 'A prune would remove {count} file(s) and free {size}: {names}.',
+    cause: 'This was a DRY RUN. It reports what a real run would do and deletes nothing.',
+    action: 'Check the list above. If it is right, run the prune; if it is not, raise the retention window first.',
+    params: ['count', 'size', 'names'],
+    refs: ['#1023'],
+  },
+  'TCS-DATA-012': {
+    severity: 'warning',
+    area: 'DATA',
+    title: 'Log retention — files deleted',
+    message: '{count} log file(s) were permanently deleted, freeing {size}: {names}.',
+    cause:
+      'Log retention DELETES rather than archives. The removal is recorded in the surviving log, but ' +
+      'the deleted content is gone — there is no copy.',
+    action:
+      'If you needed any of these, the setting logging.pruneEnabled=false stops the daily prune, and ' +
+      'logging.retentionDays raises the window.',
+    params: ['count', 'size', 'names'],
+    refs: ['#1023'],
+  },
+
   // ── Scoring ────────────────────────────────────────────────────────────
   'TCS-SCORE-001': {
     severity: 'info',

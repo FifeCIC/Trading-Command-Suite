@@ -11,6 +11,22 @@ param([switch]$SkipFrontend)
 $ROOT = 'C:\wamp64\www\trading-command-suite'
 $ErrorActionPreference = 'Continue'
 
+# ── Where console output goes (#1023) ───────────────────────
+#
+# ⚠️ ONE DIRECTORY FOR ALL PROCESS OUTPUT. Measured 2026-09-29: the API's console capture was
+# written to `%TEMP%\nest-api.log` by THIS script and to `logs\api-out.log` by `build-api.ps1`,
+# so which file was live depended on which launcher ran last — and `api-out.log` existed in THREE
+# directories at once (470 KB in `logs\`, 225 KB in `nest\`, 1.2 MB in `nest\logs\`). Tailing the
+# wrong one shows a stale file and reads as "the API is silent", a false negative with no error.
+#
+# So everything lands next to the app's own structured log (`nest\logs\tcs-<date>.log`), and the
+# LAUNCHER is named in the file, not implied by the directory. "Where is the log?" now has one
+# answer: `GET /api/system/logs/files` lists them all, because they are all in one place.
+#
+# `nest\logs\` is gitignored — correct for raw console capture, which is not repository material.
+$LOG_DIR = Join-Path $ROOT 'nest\logs'
+if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null }
+
 # ── Load .env ────────────────────────────────────────────
 
 $envPath = "$ROOT\nest\.env"
@@ -55,7 +71,14 @@ if ($zombieBridges) {
 }
 
 @(3201) + $bridgePorts + @(5173, 5174) | ForEach-Object {
-    $conn = Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue | Select-Object -First 1
+    # ⚠️ `-State Listen` IS REQUIRED. Measured 2026-09-29 (#1023): without it this loop killed
+    # whatever process owned the FIRST connection the cmdlet happened to return — a TIME_WAIT or
+    # established socket, not the server — so the real listener survived. The launcher then started a
+    # new API that could not bind, that one died, and **the launcher still printed "All services
+    # running"** because its verification tests the PORT, not the process it started. The old API
+    # kept serving and `GET /api/version` reported the previous version while the launch looked
+    # clean. Only the LISTEN socket identifies the server.
+    $conn = Get-NetTCPConnection -LocalPort $_ -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($conn) { 
         try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction Stop } catch {}
         $null = cmd /c "taskkill /F /PID $($conn.OwningProcess) 2>nul"
@@ -124,8 +147,8 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     # ⚠️ It also fixes the redirects. With `start`, the `> log 2> err` applied to the *detaching*
     # `start` command, so the child's output was never captured and the TEMP bridge logs stayed
     # empty. `-RedirectStandardOutput/-Error` redirect the actual process.
-    $bridgeLog = "$env:TEMP\mt5-bridge-${bridgePort}.log"
-    $bridgeErr = "$env:TEMP\mt5-bridge-${bridgePort}-err.log"
+    $bridgeLog = Join-Path $LOG_DIR "console-mt5-${bridgePort}.log"
+    $bridgeErr = Join-Path $LOG_DIR "console-mt5-${bridgePort}-err.log"
     $bridgeArgs = "`"$bridgeScript`""
     $started = Start-Process -FilePath $pythonPath `
         -ArgumentList $bridgeArgs `
@@ -186,7 +209,7 @@ foreach ($i in 0..($activeBrokers.Count - 1)) {
     if (-not $ready) {
         Write-Host "    ⚠️  MT5 #${brokerId} (${brokerServer}) did NOT report connected within 90s" -ForegroundColor Yellow
         Write-Host "        Starting the API anyway — but its first refresh will fetch nothing." -ForegroundColor Yellow
-        Write-Host "        Check: $env:TEMP\mt5-bridge-${bridgePort}-err.log" -ForegroundColor DarkGray
+        Write-Host "        Check: $LOG_DIR\console-mt5-${bridgePort}-err.log" -ForegroundColor DarkGray
     }
 }
 
@@ -194,8 +217,8 @@ foreach ($i in 0..($activeBrokers.Count - 1)) {
 
 Write-Host "  Starting NestJS API (port 3201)…" -ForegroundColor Cyan
 $env:DATABASE_URL = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs'
-$nestLog = "$env:TEMP\nest-api.log"
-$nestErr = "$env:TEMP\nest-api-err.log"
+$nestLog = Join-Path $LOG_DIR 'console-api.log'
+$nestErr = Join-Path $LOG_DIR 'console-api-err.log'
 # Detached for the same reason as the bridges (#765): a child started with `-NoNewWindow`
 # shares this console's process group, so the launcher exiting sends it CTRL_C_EVENT.
 #
@@ -223,8 +246,8 @@ if (-not $SkipFrontend) {
         -ArgumentList "/c npx vite --host --port 5173 --strictPort" `
         -WorkingDirectory $ROOT `
         -PassThru -WindowStyle Hidden `
-        -RedirectStandardOutput "$env:TEMP\vite.log" `
-        -RedirectStandardError "$env:TEMP\vite-err.log"
+        -RedirectStandardOutput (Join-Path $LOG_DIR 'console-vite.log') `
+        -RedirectStandardError (Join-Path $LOG_DIR 'console-vite-err.log')
     Write-Host "    PID $($vite.Id) (detached; Vite on port 5173)" -ForegroundColor DarkGray
 }
 
@@ -238,12 +261,12 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     $brokerServer = $envVars["MT5_SERVER_$brokerId"] ?? '?'
     # Carry the REAL per-port log paths (RedirectStandardOutput/Err above) so the
     # "didn't start" message points at an actual file — the bridge writes to
-    # mt5-bridge-<port>.log, NOT a constructed '<Name>.log' under TEMP.
-    $services += @{ Name = "MT5 #${brokerId} (${brokerServer})"; Port = $bridgePort; Color = 'Yellow'; Log = "$env:TEMP\mt5-bridge-${bridgePort}.log"; ErrLog = "$env:TEMP\mt5-bridge-${bridgePort}-err.log" }
+    # console-mt5-<port>.log in $LOG_DIR, NOT a constructed '<Name>.log' under TEMP.
+    $services += @{ Name = "MT5 #${brokerId} (${brokerServer})"; Port = $bridgePort; Color = 'Yellow'; Log = (Join-Path $LOG_DIR "console-mt5-${bridgePort}.log"); ErrLog = (Join-Path $LOG_DIR "console-mt5-${bridgePort}-err.log") }
 }
-$services += @{ Name = 'NestJS API'; Port = 3201; Color = 'Cyan'; Log = "$env:TEMP\nest-api.log"; ErrLog = "$env:TEMP\nest-api-err.log" }
+$services += @{ Name = 'NestJS API'; Port = 3201; Color = 'Cyan'; Log = $nestLog; ErrLog = $nestErr }
 if (-not $SkipFrontend) {
-    $services += @{ Name = 'Vite'; Port = 5173; Color = 'Green'; Log = "$env:TEMP\vite.log"; ErrLog = "$env:TEMP\vite-err.log" }
+    $services += @{ Name = 'Vite'; Port = 5173; Color = 'Green'; Log = (Join-Path $LOG_DIR 'console-vite.log'); ErrLog = (Join-Path $LOG_DIR 'console-vite-err.log') }
 }
 
 $allUp = $false
@@ -311,7 +334,7 @@ if ($allUp) {
             Write-Host "    API health: $($health.status)" -ForegroundColor DarkGray
         } catch {
             Write-Host "    ⚠️  Port 3201 is listening but /api/health did not answer." -ForegroundColor Yellow
-            Write-Host "        The API process may have exited. Check: $env:TEMP\nest-api-err.log" -ForegroundColor Yellow
+            Write-Host "        The API process may have exited. Check: $nestErr" -ForegroundColor Yellow
         }
     }
 
@@ -332,7 +355,7 @@ if ($allUp) {
     # Show NestJS error log inline if it failed
     if ($down | Where-Object { $_.Name -eq 'NestJS API' }) {
         Write-Host "`n  ── NestJS error log (last 30 lines) ──" -ForegroundColor DarkGray
-        Get-Content "$env:TEMP\nest-api-err.log" -Tail 30 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+        Get-Content $nestErr -Tail 30 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
         Write-Host "  ───────────────────────────────────" -ForegroundColor DarkGray
     }
 }

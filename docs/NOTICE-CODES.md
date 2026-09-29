@@ -30,6 +30,9 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-DATA-007` | success | DATA | Period captured |
 | `TCS-DATA-008` | warning | DATA | Period import found no bars |
 | `TCS-DATA-009` | warning | DATA | Period import — no provider could answer |
+| `TCS-DATA-010` | info | DATA | Log retention — nothing to remove |
+| `TCS-DATA-011` | info | DATA | Log retention — preview only, nothing removed |
+| `TCS-DATA-012` | warning | DATA | Log retention — files deleted |
 | `TCS-INTEG-001` | critical | INTEG | MT5 bridge not connected |
 | `TCS-INTEG-002` | critical | INTEG | MT5 circuit breaker open |
 | `TCS-RISK-001` | warning | RISK | Trade blocked by a safety gate |
@@ -69,7 +72,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-019` | success | TRADE | A/B copy created |
 | `TCS-TRADE-020` | info | TRADE | Bot deleted |
 
-**47 codes** — 2 critical, 26 error, 11 warning, 2 info, 6 success.
+**50 codes** — 2 critical, 26 error, 12 warning, 4 info, 6 success.
 
 ## Codes by area
 
@@ -406,6 +409,36 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `symbol`, `timeframe`, `from`, `to`
 - **Call:** `notice('TCS-DATA-009', { symbol, timeframe, from, to })`
 - **Related:** #986
+
+#### `TCS-DATA-010` — Log retention — nothing to remove
+
+- **Severity:** info
+- **Message:** No log file is older than the {days}-day window. {files} file(s) held, {size} in total. The file being written now is never a candidate.
+- **Cause:** Either every file is inside the window, or the window is set below one day, in which case the policy is deliberately inert rather than pruning everything.
+- **Action:** If you expected removals, check the retention window in Settings — a window under 1 day removes nothing by design.
+- **Params:** `days`, `files`, `size`
+- **Call:** `notice('TCS-DATA-010', { days, files, size })`
+- **Related:** #1023
+
+#### `TCS-DATA-011` — Log retention — preview only, nothing removed
+
+- **Severity:** info
+- **Message:** A prune would remove {count} file(s) and free {size}: {names}.
+- **Cause:** This was a DRY RUN. It reports what a real run would do and deletes nothing.
+- **Action:** Check the list above. If it is right, run the prune; if it is not, raise the retention window first.
+- **Params:** `count`, `size`, `names`
+- **Call:** `notice('TCS-DATA-011', { count, size, names })`
+- **Related:** #1023
+
+#### `TCS-DATA-012` — Log retention — files deleted
+
+- **Severity:** warning
+- **Message:** {count} log file(s) were permanently deleted, freeing {size}: {names}.
+- **Cause:** Log retention DELETES rather than archives. The removal is recorded in the surviving log, but the deleted content is gone — there is no copy.
+- **Action:** If you needed any of these, the setting logging.pruneEnabled=false stops the daily prune, and logging.retentionDays raises the window.
+- **Params:** `count`, `size`, `names`
+- **Call:** `notice('TCS-DATA-012', { count, size, names })`
+- **Related:** #1023
 
 ### RISK — Risk and safety gates
 

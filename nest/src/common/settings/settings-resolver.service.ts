@@ -67,6 +67,15 @@ export interface ResolvedSetting {
   userChangeable: boolean;
   owner: string;
   migratedFrom?: string;
+  /**
+   * Declared numeric bounds, passed through so a UI can enforce exactly what `set()` enforces.
+   *
+   * ⚠️ Without these a client has to re-declare the range, and two copies of a bound drift — the
+   * surface then offers a value the server refuses, or hides a legal one. Present only for `number`
+   * settings that declare them; absent means unbounded, not zero.
+   */
+  min?: number;
+  max?: number;
 }
 
 /**
@@ -210,6 +219,8 @@ export class SettingsResolverService implements OnModuleInit {
       userChangeable: def.userChangeable,
       owner: def.owner,
       migratedFrom: def.migratedFrom,
+      ...(def.min !== undefined ? { min: def.min } : {}),
+      ...(def.max !== undefined ? { max: def.max } : {}),
     };
   }
 
@@ -622,6 +633,8 @@ export class SettingsResolverService implements OnModuleInit {
       userChangeable: def.userChangeable,
       owner: def.owner,
       migratedFrom: def.migratedFrom,
+      ...(def.min !== undefined ? { min: def.min } : {}),
+      ...(def.max !== undefined ? { max: def.max } : {}),
     };
   }
 }

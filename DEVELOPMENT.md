@@ -90,12 +90,19 @@ trading-command-suite/
 | `http://localhost:3201/api/system/logs/files` | Every log file with size and path |
 | `http://localhost:3201/api/system/logs/file` | The log content — **read this one** |
 | `http://localhost:3201/api/system/logs` | In-memory ring buffer — the last 500 entries ONLY |
+| `http://localhost:3201/api/system/logs/retention` | What a prune would remove, by name and size |
+| `POST http://localhost:3201/api/system/logs/prune?dryRun=true` | Preview the prune — the default, and deletes nothing |
+| `http://localhost:3201/api/system/logs/collapse-stats` | Repeated lines suppressed since boot |
 
 > ⚠️ **The log file is `nest/logs/tcs-<date>.log`.** `/api/system/logs` (no suffix) is NOT the file —
-> it is the in-memory buffer, and `/api/system/logs/recent` does not exist. Two launchers also write
-> raw console captures to *other* places (`logs/api-out.log` via `build-api.ps1`,
-> `%TEMP%\nest-api.log` via `tcs-launch.ps1`), so tailing the wrong one reads as "the API is silent".
-> Full map: `.github/instructions/agent-environment.instructions.md` → *Where the logs are*.
+> it is the in-memory buffer, and `/api/system/logs/recent` does not exist. Console captures now land in
+> the same directory (`nest/logs/console-{api,build-api,mt5-<port>,vite}[-err].log`) with the launcher
+> named in the file, so "where is the log?" has one answer. Full map:
+> `.github/instructions/agent-environment.instructions.md` → *Where the logs are*.
+>
+> ⚠️ Retention, volume and the retention window are **settings**, not constants:
+> `logging.retentionDays` (30), `logging.pruneEnabled` (true), `logging.collapseRepeats` (true),
+> `logging.repeatWindowMinutes` (5). UI: `/settings/data-management` → the Log Files panel.
 
 ## Environment Variables (nest/.env)
 

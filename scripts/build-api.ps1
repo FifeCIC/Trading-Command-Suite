@@ -47,7 +47,10 @@
 # API was merely warming up while it was in fact DOWN. The contract now is:
 #
 #   1. The start is `node dist/src/main.js` (the fast, documented form), with stdout/stderr
-#      redirected to logs/api-out.log and logs/api-err.log so "the start log" has a location.
+#      redirected to nest\logs\console-build-api.log and -err.log so "the start log" has a
+#      location. ⚠️ ONE directory for console capture (#1023): this file used to write
+#      logs\api-out.log while tcs-launch.ps1 wrote %TEMP%\nest-api.log, so which file was live
+#      depended on which launcher ran last and the wrong one read as "the API is silent".
 #   2. Verification answers a REAL request — GET /api/version — not just a socket check.
 #   3. On failure the script says **API IS DOWN** and distinguishes the three states it can
 #      actually observe: process exited / nothing listening / listening but not answering.
@@ -94,8 +97,8 @@ function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 60, [System.Diag
     } else {
         Write-Host "   $Port IS listening but /api/version did not answer — the API is not serving." -ForegroundColor Red
     }
-    $errLog = Join-Path $repoRoot 'logs\api-err.log'
-    $outLog = Join-Path $repoRoot 'logs\api-out.log'
+    $errLog = Join-Path $repoRoot 'nest\logs\console-build-api-err.log'
+    $outLog = Join-Path $repoRoot 'nest\logs\console-build-api.log'
     Write-Host "   Logs: $outLog  |  $errLog" -ForegroundColor Yellow
     foreach ($log in @($errLog, $outLog)) {
         if (Test-Path $log) {
@@ -223,9 +226,13 @@ if ($SkipRestart) {
 }
 
 Write-Step 'Restarting the API'
-$outLog = Join-Path $repoRoot 'logs\api-out.log'
-$errLog = Join-Path $repoRoot 'logs\api-err.log'
-if (-not (Test-Path (Split-Path $outLog -Parent))) { New-Item -ItemType Directory -Path (Split-Path $outLog -Parent) | Out-Null }
+# ⚠️ `nest\logs\` — the same directory `tcs-launch.ps1` writes to (#1023). The LAUNCHER is named in
+# the file, so a reader can tell which one started the running API instead of inferring it from a
+# path. `nest\logs\` is gitignored, which is right for raw console capture.
+$logDir = Join-Path $repoRoot 'nest\logs'
+if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+$outLog = Join-Path $logDir 'console-build-api.log'
+$errLog = Join-Path $logDir 'console-build-api-err.log'
 
 # ⚠️ `node dist/src/main.js` — NOT `npm run start`. This is the form the team has been using
 # manually to recover from this script's own restart failures; it is the same artefact the

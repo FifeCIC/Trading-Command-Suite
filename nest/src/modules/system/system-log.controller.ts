@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { SystemLogService, LogEntry } from './log.service';
 import { MetricsMiddleware } from '../../common/middleware/metrics.middleware';
 
@@ -45,6 +45,35 @@ export class SystemLogController {
   @Get('logs/categories')
   getCategories() {
     return { categories: this.logService.categories };
+  }
+
+  /**
+   * What the log directory holds and what a prune would remove — the DRY RUN.
+   *
+   * The report lists every file by name and size, so "which files will go?" is answered before
+   * anything is deleted rather than after. `kept` names the reason each survivor survived, which is
+   * how the today's-file exemption is checkable rather than asserted.
+   */
+  @Get('logs/retention')
+  getRetention() {
+    return this.logService.getRetentionReport();
+  }
+
+  /**
+   * Run the prune. `POST` on purpose — it deletes files, so it must not be reachable by a GET that a
+   * browser, a prefetcher or a link-checker can fire. Defaults to a dry run when `dryRun` is absent.
+   */
+  @Post('logs/prune')
+  prune(@Query('dryRun') dryRun?: string) {
+    // ⚠️ Absent means DRY RUN, not live. The dangerous value must be the one you typed out.
+    const isDryRun = dryRun !== 'false';
+    return this.logService.pruneOldLogs({ dryRun: isDryRun });
+  }
+
+  /** How much volume the repeat collapse has removed since boot. */
+  @Get('logs/collapse-stats')
+  getCollapseStats() {
+    return this.logService.getCollapseStats();
   }
 
   @Get('metrics')

@@ -1,0 +1,149 @@
+/**
+ * log-retention-panel.css — styling for LogRetentionPanel (#1023).
+ *
+ * ⚠️ Colours come from the tokens in `index.css :root`, never from hex literals
+ * (ui-standards.instructions.md). The panel sits inside DataManagementPage, so it reuses that page's
+ * panel rhythm rather than inventing a second one.
+ *
+ * Accessibility (accessibility-policy.instructions.md):
+ *   - interactive elements are ≥44px tall or given a 44px hit box;
+ *   - the "will be removed" row carries a border AND a text verdict, so colour is not the only signal;
+ *   - no animation is introduced, so there is nothing to disable under `prefers-reduced-motion`.
+ */
+
+.lrp-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.lrp-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.lrp-header h2 { font-size: 1rem; margin: 0; }
+.lrp-sub { font-size: 0.75rem; color: var(--ink-soft); }
+
+.lrp-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.lrp-control { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.lrp-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.lrp-control-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.lrp-input {
+  width: 6.5rem;
+  min-height: 44px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+}
+
+/* The checkbox itself is small by nature; the LABEL is the tap target and is given 44px. */
+.lrp-control label[for^="lrp-"],
+.lrp-control > .lrp-label { min-height: 1.2rem; }
+
+.lrp-section input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  vertical-align: middle;
+}
+
+.lrp-note { font-size: 0.72rem; color: var(--ink-soft); line-height: 1.5; }
+.lrp-hint { font-size: 0.72rem; color: var(--color-muted); }
+.lrp-ok { font-size: 0.72rem; color: var(--color-profit); }
+.lrp-warn { font-size: 0.72rem; color: var(--color-warning); }
+
+.lrp-notice { margin-bottom: 0.75rem; }
+
+.lrp-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.lrp-btn {
+  min-height: 44px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.lrp-btn:hover:not(:disabled) { background: var(--line); }
+.lrp-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.lrp-btn-danger {
+  color: var(--color-loss);
+  border-color: var(--color-loss);
+  background: transparent;
+}
+
+.lrp-btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--color-loss) 14%, transparent); }
+
+.lrp-table-wrap { overflow-x: auto; }
+
+.lrp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+
+.lrp-table th {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+}
+
+.lrp-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); }
+
+.lrp-file { font-size: 0.78rem; color: var(--color-accent-blue); }
+.lrp-size { font-variant-numeric: tabular-nums; color: var(--ink-soft); white-space: nowrap; }
+.lrp-verdict { color: var(--ink-soft); font-size: 0.75rem; }
+.lrp-empty { color: var(--ink-soft); font-style: italic; }
+
+/* A row that a prune would remove: a full left marker AND a border, so the state is visible without
+ * relying on the colour. */
+.lrp-row-remove td {
+  background: color-mix(in srgb, var(--color-loss) 8%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-loss) 35%, transparent);
+}
+
+.lrp-row-remove .lrp-verdict { color: var(--color-loss); font-weight: 600; }
+
+.lrp-footer { margin: 0.75rem 0 0; }
+
+@media (max-width: 600px) {
+  .lrp-input { width: 5rem; }
+  .lrp-controls { grid-template-columns: 1fr; }
+}

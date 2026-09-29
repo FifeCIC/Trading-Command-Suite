@@ -339,6 +339,79 @@ export const SETTINGS: SettingDefinition[] = [
     min: 0,
     max: 1440,
   },
+
+  // ── Log retention and volume (#1023) ─────────────────────────────────────────
+  //
+  // ⚠️ THESE SETTINGS DELETE FILES, so the defaults are deliberately CONSERVATIVE. Measured
+  // 2026-09-29: `nest/logs/` held 62 files / 21.8 MB with nothing pruning any of it, and the log
+  // for 2026-09-24 alone was 5.8 MB — 10-34× its neighbours — because 4,800 identical
+  // `bridge[2] GET /symbols FAILED` warnings were written verbatim.
+  //
+  // ⚠️ A RETENTION POLICY MUST NOT BE ABLE TO DELETE THE EVIDENCE. `retention.config.ts` already
+  // carries that lesson for database rows (a retention run destroyed the evidence of the very
+  // defect it was being investigated for). Three things follow, and all three are enforced in code
+  // rather than promised here:
+  //   1. TODAY'S FILE IS NEVER PRUNED, whatever the window says.
+  //   2. `logging.pruneEnabled` can be switched off without editing anything.
+  //   3. Every prune is available as a DRY RUN, and reports each file by name and size before it
+  //      removes anything.
+  {
+    key: 'logging.retentionDays',
+    type: 'number',
+    defaultValue: 30,
+    class: 'runtime',
+    owner: 'system',
+    label: 'Log retention (days)',
+    description:
+      'Log files older than this are removed by the daily prune. 30 days is roughly 10 MB at the ' +
+      'measured rate, or ~175 MB if every day were as bad as 2026-09-24. Today\'s file is never ' +
+      'removed regardless of this value.',
+    userChangeable: true,
+    min: 1,
+    max: 3650,
+  },
+  {
+    key: 'logging.pruneEnabled',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'system',
+    label: 'Prune old log files',
+    description:
+      'OFF stops the daily prune entirely and keeps every log file. Turn it off while investigating ' +
+      'something historical — deletion is the one operation here that cannot be undone.',
+    userChangeable: true,
+  },
+  {
+    key: 'logging.collapseRepeats',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'system',
+    label: 'Collapse repeated log lines',
+    description:
+      'ON writes the first occurrence of an identical message and then suppresses duplicates within ' +
+      'the window below, emitting one summary line instead. Measured cause of the 5.8 MB day: 4,800 ' +
+      'identical lines. The warning is still recorded — once, plus a count — which is what it is worth. ' +
+      'OFF restores byte-for-byte verbatim logging and is the right setting while chasing a specific ' +
+      'repeating fault.',
+    userChangeable: true,
+  },
+  {
+    key: 'logging.repeatWindowMinutes',
+    type: 'number',
+    defaultValue: 5,
+    class: 'runtime',
+    owner: 'system',
+    label: 'Repeated-line window (minutes)',
+    description:
+      'How long an identical message is collapsed for. A very short window keeps most duplicates and ' +
+      'buys little; a very long one hides a fault that starts repeating slowly. Five minutes matches ' +
+      'the cadence of the bridge polling that produced the measured storm.',
+    userChangeable: true,
+    min: 1,
+    max: 1440,
+  },
 ];
 
 /** Fast lookup. Built once at module load; the registry is static by design. */

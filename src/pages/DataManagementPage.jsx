@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { formatDateTime } from '../core/format-utils';
+import LogRetentionPanel from '../components/system/LogRetentionPanel';
 import './data-management.css';
 
 export default function DataManagementPage() {
@@ -162,6 +163,12 @@ export default function DataManagementPage() {
           </table>
         </div>
       </section>
+
+      {/* ── Log files ──
+          Placed directly under the database tables: the two answer the same question ("what is this
+          install storing, and for how long") about the two things it grows. See LogRetentionPanel
+          for why the prune is a preview-then-delete, and why today's file is never a candidate. */}
+      <LogRetentionPanel />
 
       {/* ── Info ── */}
       <section className="dm-section dm-info">

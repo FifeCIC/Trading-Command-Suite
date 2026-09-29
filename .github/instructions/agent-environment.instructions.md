@@ -312,25 +312,54 @@ file.** `/api/system/logs/recent` does not exist (404). Use `/file` for history.
 
 ### ⚠️ FOUR OTHER PLACES ALSO LOOK LIKE THE LOG — and one is outside the repo
 
+> ⚠️ **NARROWED 2026-09-29 (#1023).** Every launcher now redirects to **`nest/logs/console-*.log`**,
+> with the launcher named in the file, so the directory is the answer and the old split is history.
+> The rows below are kept because **stale files from before the change are still on disk** and will
+> be tailed by anyone who does not read this line. `GET /api/system/logs/files` lists what is
+> actually there.
+
 | Path | Written by | What it is |
 |---|---|---|
 | `nest/logs/tcs-<date>.log` | the app (`SystemLogService`) | **canonical** — structured, dated |
-| `logs/api-out.log`, `logs/api-err.log` | `build-api.ps1` (redirect) | raw console capture |
-| **`%TEMP%\nest-api.log`**, `%TEMP%\nest-api-err.log` | `tcs-launch.ps1` (redirect) | raw console capture — **outside the repo** |
+| `nest/logs/console-{api,build-api,mt5-<port>,vite}[-err].log` | `build-api.ps1`, `tcs-launch.ps1` | raw console capture — **the live one** |
+| `logs/api-out.log`, `logs/api-err.log` | `build-api.ps1` **before** #1023 | raw console capture — **stale** |
+| `%TEMP%\nest-api.log`, `%TEMP%\nest-api-err.log` | `tcs-launch.ps1` **before** #1023 | raw console capture — **stale**, and **outside the repo** |
 | `logs/scoring/*.jsonl` | `scoring-log.service.ts` | structured scoring, served by `/api/logs/scoring/*` |
 | `logs/*.log`, `nest/*.log` | agents, by hand | ad-hoc per-session captures |
 
-⚠️ **WHICH ONE IS LIVE DEPENDS ON WHAT LAST STARTED THE API.** `build-api.ps1` redirects to
-`logs/`, `tcs-launch.ps1` redirects to `%TEMP%` — so the same service writes its console output to
-one of two unrelated directories depending on the launcher. **Tailing the wrong one shows a stale
-file and reads as "the API is silent".** `logs/status` names the live one.
-
-⚠️ **`api-out.log` EXISTS IN THREE DIRECTORIES** — `logs/`, `nest/`, and `nest/logs/` (measured:
-470 KB today, 225 KB stale from 09-21, 1.2 MB stale from 09-22). Same filename, three meanings.
+⚠️ **WHICH ONE IS LIVE DEPENDED ON WHAT LAST STARTED THE API** — `build-api.ps1` redirected to
+`logs/`, `tcs-launch.ps1` redirected to `%TEMP%`. That divergence is now **removed**: both write to
+`nest/logs/console-*`, and the filename names the launcher, so the answer no longer has to be
+inferred from a path. It remains recorded here because it was the reason
+`api-out.log` **existed in THREE directories at once** (`logs/` 470 KB, `nest/` 225 KB from 09-21,
+`nest/logs/` 1.2 MB from 09-22) and because tailing the wrong one shows a stale file, which reads as
+"the API is silent" — a false negative with no error. `logs/status` names the live file.
 
 ⚠️ **A 0-BYTE LOG IS NORMAL IMMEDIATELY AFTER A RESTART** — `Start-Process -RedirectStandardOutput`
 truncates the file when it opens it. Do **not** read emptiness as evidence of a fault without
 checking the mtime against the restart time; that mistake was made and corrected on 2026-09-29.
+
+### Retention and volume — settings, not a constant (#1023)
+
+The app now prunes its own dated log files and collapses repeated lines. Both are driven by declared
+settings, readable and changeable live:
+
+| Key | Default | What it does |
+|---|---|---|
+| `logging.retentionDays` | 30 | Dated files outside the window are removed. **Below 1 day is inert** — it removes nothing, not everything. |
+| `logging.pruneEnabled` | true | The off switch for the 03:15 daily prune. |
+| `logging.collapseRepeats` | true | Bounds a warn-storm to one line per window, plus a count of what was suppressed. |
+| `logging.repeatWindowMinutes` | 5 | The window. On expiry the message is re-reported, so an hourly fault is not swallowed. |
+
+```powershell
+curl.exe -s http://localhost:3201/api/system/logs/retention        # what a prune would remove, by name and size
+curl.exe -s -X POST "http://localhost:3201/api/system/logs/prune?dryRun=true"    # preview (also the default)
+curl.exe -s http://localhost:3201/api/system/logs/collapse-stats   # volume suppressed since boot
+```
+
+⚠️ **The prune DELETES rather than archives**, and it logs what it removed. Today's file is refused
+whatever the window says; a file whose name carries no date (`api-out.log`, `console-*.log`) is
+never a candidate. UI: **`/settings/data-management`**, the Log Files panel.
 
 ### Retention — there is none
 
