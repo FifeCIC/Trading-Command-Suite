@@ -88,9 +88,9 @@ The dependency is strict. Measurement is worthless without a change to measure; 
 worthless unmeasured.
 
 ```
- instrument ──► exit inputs ──► verdict verified ──► verdict TRUSTWORTHY ──► PROVE THE RULE ──► ONE ACTING EXIT ──► payoff settled
- (#965)         (#1017) ✅       (#1016) ✅            (#1020) ✅               (#1024)             (#1019)              (#916, #917, #998)
-                                                                                ↑ NEXT IS (#1024)
+ instrument ──► exit inputs ──► verdict verified ──► verdict TRUSTWORTHY ──► PROVE THE RULE ──► REPLAY THE VERDICT ──► ONE ACTING EXIT
+ (#965)         (#1017) ✅       (#1016) ✅            (#1020) ✅               (#1024) ✅           (not yet filed)       (#1019 RE-SCOPED)
+                                                                                ⚠️ REFUTED THE PREMISE
 ```
 
 | Step | Owner | Why here and not later |
@@ -99,8 +99,9 @@ worthless unmeasured.
 | **2. Give the exit real inputs** | **#1017** — *closed 2026-09-29* | The 5 exit directives have never run — 0 appearances in 6,693 score breakdowns. The verdict cannot be better than its inputs. |
 | **3. Verify the verdict** | **#1016** — *closed 2026-09-29* | `ExitConsensusService` was built but unverified. Verified: all 17 open positions return a verdict, every verdict carries a `barsTimeframe`, **zero `NO_DATA`**. The page now reads the bot book, and `INV-EXIT-VERDICT-ALIVE` guards the cadence regression live. |
 | **3b. Make the verdict trustworthy** | **#1020** — *closed 2026-09-29* | Measured: **`regime-shift-exit` and `time-stop` hardcoded `signalClass: 'neutral'`**, and `arguesExit` read *only* `signalClass` — so **2 of the 5 exit directives could never argue an exit, even at score 100**. Settled: a directive with no direction declares `exitScoreThreshold`; **silence is not authority**, and `time-stop` omits it deliberately because it cannot see position age. Register row 45. |
-| **3c. Prove the rule PAYS** | **#1024** | ⚠️ **Added 2026-09-29 because #1019 turned out not to be evaluable.** The backtest engine models exits as `TP` / `SL` / `EOD` with **no trail and no rule exit**, while live exits via a moving ATR trail + time-stop + unattributed closes — so a backtest verdict would not transfer. #1024 replays the **168 real closed trades** against an exit rule instead, and must report **how many WINNERS the rule would have killed**. |
-| **4. One acting exit, as a COPY** | **#1019** — *blocked on #1024* | The goal of the sprint. Per `maths-change-requires-ab`, the incumbent keeps running untouched and both configurations exist together. ⚠️ **Do not build it before #1024 answers whether the rule pays** — the sizing on #1019 shows the exit must intercept the **30 stop-outs (−308.62)**, not the give-back: fixing only the 46 time-stops (−44.5) still leaves a loss. |
+| **3c. Prove the rule PAYS** | **#1024** — *closed 2026-09-29* | ⚠️ **Refuted the premise.** 165 real trades, all with bars: **no setting reaches break-even.** Best improves the mean **+0.035%/trade** and still leaves it negative, while **cutting 17–29 winners**. And the early-stop rule — the one the sizing said was the lever — is a **wash (0.000)**, because those losses recover often enough to cancel it. |
+| **3d. Replay the VERDICT** | *not yet filed* | The one untested question: does the actual 5-directive `ExitConsensus` verdict pay over these same trades? #1024 tested a *simple* rule, not the consensus — so "our verdict is a wash" is **not** what it showed. Cheap now: the replay exists. |
+| **4. One acting exit, as a COPY** | **#1019** — *RE-SCOPED, do not build yet* | ⚠️ **The premise — "the app loses because it exits too late" — is refuted.** Two independent tests have failed to support it. Point 3d is the only remaining way it could be true. If that is a wash too, **go to the loss MAGNITUDE instead** (size / stop geometry, `#916`, `#917`), not to exit timing. |
 | **5. Settle the payoff** | **#916, #917, #998** | These describe the defect the acting exit is meant to move. They are the *acceptance test* for step 4, not a parallel workstream. |
 
 **Do not reorder steps 1 and 4.** Building the exit before the instrument produces a change nobody
