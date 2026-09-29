@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.100.0",
+  "version": "0.101.0",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -18,6 +18,8 @@
     "extract:provider-comparisons": "node ./scripts/extract-provider-comparisons.cjs",
     "replay:exit": "node ./scripts/replay-exit-counterfactual.cjs",
     "test:replay-exit": "node ./scripts/replay-exit-counterfactual.cjs --self-test",
+    "replay:verdict": "node ./scripts/replay-exit-verdict.cjs",
+    "test:replay-verdict": "node ./scripts/replay-exit-verdict.cjs --self-test",
     "handoff:discord": "node ./scripts/handoff-to-discord.cjs",
     "digest:discord": "node ./scripts/weekly-digest-discord.cjs",
     "roadmap:sync": "node ./scripts/roadmap-sync.cjs",

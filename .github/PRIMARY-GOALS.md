@@ -88,9 +88,9 @@ The dependency is strict. Measurement is worthless without a change to measure; 
 worthless unmeasured.
 
 ```
- instrument ──► exit inputs ──► verdict verified ──► verdict TRUSTWORTHY ──► PROVE THE RULE ──► REPLAY THE VERDICT ──► ONE ACTING EXIT
- (#965)         (#1017) ✅       (#1016) ✅            (#1020) ✅               (#1024) ✅           (not yet filed)       (#1019 RE-SCOPED)
-                                                                                ⚠️ REFUTED THE PREMISE
+ instrument ──► exit inputs ──► verdict verified ──► verdict TRUSTWORTHY ──► PROVE THE RULE ──► REPLAY THE VERDICT ──► TARGET THE LOSS
+ (#965)         (#1017) ✅       (#1016) ✅            (#1020) ✅               (#1024) ✅           (#1027) ✅            (#1019 RE-SCOPED)
+                                                                                ⚠️ REFUTED            ⚠️ REFUTED            → #916 / #917
 ```
 
 | Step | Owner | Why here and not later |
@@ -100,12 +100,23 @@ worthless unmeasured.
 | **3. Verify the verdict** | **#1016** — *closed 2026-09-29* | `ExitConsensusService` was built but unverified. Verified: all 17 open positions return a verdict, every verdict carries a `barsTimeframe`, **zero `NO_DATA`**. The page now reads the bot book, and `INV-EXIT-VERDICT-ALIVE` guards the cadence regression live. |
 | **3b. Make the verdict trustworthy** | **#1020** — *closed 2026-09-29* | Measured: **`regime-shift-exit` and `time-stop` hardcoded `signalClass: 'neutral'`**, and `arguesExit` read *only* `signalClass` — so **2 of the 5 exit directives could never argue an exit, even at score 100**. Settled: a directive with no direction declares `exitScoreThreshold`; **silence is not authority**, and `time-stop` omits it deliberately because it cannot see position age. Register row 45. |
 | **3c. Prove the rule PAYS** | **#1024** — *closed 2026-09-29* | ⚠️ **Refuted the premise.** 165 real trades, all with bars: **no setting reaches break-even.** Best improves the mean **+0.035%/trade** and still leaves it negative, while **cutting 17–29 winners**. And the early-stop rule — the one the sizing said was the lever — is a **wash (0.000)**, because those losses recover often enough to cancel it. |
-| **3d. Replay the VERDICT** | *not yet filed* | The one untested question: does the actual 5-directive `ExitConsensus` verdict pay over these same trades? #1024 tested a *simple* rule, not the consensus — so "our verdict is a wash" is **not** what it showed. Cheap now: the replay exists. |
-| **4. One acting exit, as a COPY** | **#1019** — *RE-SCOPED, do not build yet* | ⚠️ **The premise — "the app loses because it exits too late" — is refuted.** Two independent tests have failed to support it. Point 3d is the only remaining way it could be true. If that is a wash too, **go to the loss MAGNITUDE instead** (size / stop geometry, `#916`, `#917`), not to exit timing. |
+| **3d. Replay the VERDICT** | **#1027** — *closed 2026-09-29* | ⚠️ **Refuted too.** 166 trades, the 5 REAL directives, the REAL `arguesExitFor`. EXIT level (2+ arguing): fires on 77, delta **−0.0080%** — worse. REDUCE level (1+ arguing): fires on 153, delta **+0.0272%** but the mean is **still negative**, and it **cuts 61 winners** (31 turn red). **Three tests now fail to reach break-even.** Also found: `time-stop` returned `neutral` in **4206 of 4206** evaluations — it can *never* argue an exit. |
+| **4. Target the LOSS ITSELF** | **#1019** — *RE-SCOPED 2026-09-29 — do NOT build an exit* | ⚠️ **The premise — "the app loses because it exits too late" — is refuted three ways** (`#1024`, and both levels of `#1027`). **Do not build a generic early-close rule.** Go to the loss **MAGNITUDE**: size / stop geometry — `#916`, `#917`. The sizing says why: fixing the 46 time-stops to break-even leaves **−101.26**; the 30 stop-outs are **−308.62**, and a stop-out costs **4.3×** what a win earns (−10.29 vs +2.39). |
 | **5. Settle the payoff** | **#916, #917, #998** | These describe the defect the acting exit is meant to move. They are the *acceptance test* for step 4, not a parallel workstream. |
 
 **Do not reorder steps 1 and 4.** Building the exit before the instrument produces a change nobody
 can evaluate, which is how the last year of scoring iterations happened.
+
+### ⚠️ What is NOT refuted — do not over-read the three refutations
+
+| Not refuted | Why it still matters |
+|---|---|
+| **Stop geometry and size** | Every test held the *existing* entry and the *existing* stop. Nothing here says a **tighter or wider stop**, or a **different size**, is wrong — those are the untested levers, and they are where step 4 now points. |
+| **The verdict as a SELECTOR** | The replay asks *"if the verdict said leave, was leaving better?"* It does **not** ask whether the verdict fires on the **right** trades. A rule that is right 60% of the time still loses if the other 40% is larger. |
+| **A time-based exit** | Not tested. `time-stop` cannot argue one (`#1027`), so no replay of it exists yet. |
+
+Refuting *"exit timing pays"* three times is **not** refuting *"this book can be made to pay"*. The
+next measurement is about **how much a loss costs**, not **when it happens**.
 
 ## 6. Standing constraints
 
@@ -127,5 +138,6 @@ can evaluate, which is how the last year of scoring iterations happened.
 - `#1016` — the exit verdict + its page (**closed** 2026-09-29)
 - `#1020` — the exit-verdict contract (**closed** 2026-09-29; register row 45)
 - `#1024` — the counterfactual exit replay (step 3c)
-- `#1019` — the acting exit (step 4, blocked on #1024)
+- `#1027` — the verdict replay (step 3d; **closed** 2026-09-29 — the exit premise is refuted three ways)
+- `#1019` — step 4, **re-scoped 2026-09-29** to the loss magnitude; do not build an exit
 - `#916`, `#917` — the payoff defect the exit exists to move

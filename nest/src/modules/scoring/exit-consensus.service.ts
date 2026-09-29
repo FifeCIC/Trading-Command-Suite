@@ -62,6 +62,31 @@ import type { DirectiveInput, DirectiveResult } from '../directives/interfaces/d
  * `observeSimulatedTsl()` draws, for the same reason.
  */
 
+// ── DECISION (2026-09-29, primary) ──
+// WHAT:      The verdict stays ADVISORY. No acting exit is built, and this service must not be
+//            given the ability to close a position, move a stop, or place anything.
+// WHY:       MEASURED three independent ways over the trades we already have. `#1024` — a simple
+//            give-back rule, 8 settings: best improves the mean +0.035%/trade, the mean stays
+//            NEGATIVE, and it cuts 17-29 winners; the early-stop rule is a wash (0.000). `#1027` —
+//            the REAL 5-directive verdict with the REAL `arguesExitFor`: EXIT level fires on 77 of
+//            166 trades for delta -0.0080%, i.e. WORSE; REDUCE level fires on 153 of 166 for delta
+//            +0.0272%, but the mean is STILL NEGATIVE and it cuts 61 winners (31 turn red).
+//            So "the app loses because it exits too late" is refuted, and the lever is the loss
+//            MAGNITUDE, not the exit moment: fixing the 46 time-stops to break-even still leaves
+//            -101.26, while the 30 stop-outs are -308.62 — a stop-out costs 4.3x what a win earns.
+// INSTEAD OF: building the acting exit that `#1019` proposed, which was the plan until this was
+//            measured. ⚠️ The premise is refuted; the CAPABILITY is not — see REVERSE BY.
+// REVERSE BY: Run the measurement these replays did NOT run: whether the verdict works as a
+//            SELECTOR (whether it fires on the RIGHT trades, not merely whether leaving was better
+//            when it did)', over a tighter/wider STOP and a different SIZE — both of which every
+//            test so far held fixed at the incumbent. If that shows positive expectation, reverse
+//            this and build the actor as a COPY per `maths-change-requires-ab`.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 46
+// GUARD:     NONE, deliberately — and said plainly rather than implied. `npm run replay:verdict`
+//            (self-test 12/12; two guards canaried in both directions, restore hash-verified)
+//            re-runs the measurement, but a replay is a MEASUREMENT, not a gate: nothing fails the
+//            build if an actor is added here anyway.
+
 /** The exit directives, named explicitly so this evaluation is auditable and separable. */
 export const EXIT_DIRECTIVE_IDS = [
   'momentum-exhaustion',

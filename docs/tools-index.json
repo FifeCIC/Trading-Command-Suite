@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 151,
+  "count": 152,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -765,6 +765,16 @@
       "where": "repo",
       "category": "tool",
       "purpose": "would an exit rule have IMPROVED the trades we already have, or",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "replay-exit-verdict.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "STEP 3d (#1024's untested question).",
       "selfTest": true,
       "reaches": [
         "npm"
