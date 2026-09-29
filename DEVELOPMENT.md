@@ -86,7 +86,16 @@ trading-command-suite/
 | `http://localhost:3201/docs` | Swagger API docs |
 | `http://localhost:3201/api/health` | Health check |
 | `http://localhost:3201/api/system/metrics` | Request metrics |
-| `http://localhost:3201/api/system/logs` | System log |
+| `http://localhost:3201/api/system/logs/status` | Which log file is live, and its size |
+| `http://localhost:3201/api/system/logs/files` | Every log file with size and path |
+| `http://localhost:3201/api/system/logs/file` | The log content — **read this one** |
+| `http://localhost:3201/api/system/logs` | In-memory ring buffer — the last 500 entries ONLY |
+
+> ⚠️ **The log file is `nest/logs/tcs-<date>.log`.** `/api/system/logs` (no suffix) is NOT the file —
+> it is the in-memory buffer, and `/api/system/logs/recent` does not exist. Two launchers also write
+> raw console captures to *other* places (`logs/api-out.log` via `build-api.ps1`,
+> `%TEMP%\nest-api.log` via `tcs-launch.ps1`), so tailing the wrong one reads as "the API is silent".
+> Full map: `.github/instructions/agent-environment.instructions.md` → *Where the logs are*.
 
 ## Environment Variables (nest/.env)
 

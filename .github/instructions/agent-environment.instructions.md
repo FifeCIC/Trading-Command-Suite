@@ -283,3 +283,61 @@ pwsh -File C:\wamp64\www\trading-command-suite\scripts\tcs-stop.ps1     # stop a
 ```
 
 ⚠️ `tcs-stop.ps1` stops the **whole** stack (MT5 bridge, NestJS, Vite) — not just one service.
+
+---
+
+## 🛑 Where the logs are — ASK THE API, do not guess a path
+
+> **Measured 2026-09-29.** The app writes a good log and **serves it over HTTP**, and almost nothing
+> knew: a grep of `.github/`, `docs/`, `README.md`, `SETUP.md` and `DEVELOPMENT.md` for
+> `system/logs` / `logs/status` / `logs/file` found **one** mention, of a route that is not the
+> useful one. Everything below already existed. This section is the surface, not new plumbing.
+
+```powershell
+curl.exe -s http://localhost:3201/api/system/logs/status   # directory, today's file, size, queue
+curl.exe -s http://localhost:3201/api/system/logs/files    # EVERY log file with name + size + path
+curl.exe -s http://localhost:3201/api/system/logs/file     # the content (the one to read)
+curl.exe -s http://localhost:3201/api/system/logs/categories
+```
+
+⚠️ **`/api/system/logs` (no suffix) is the in-memory ring buffer — the LAST 500 entries, not the
+file.** `/api/system/logs/recent` does not exist (404). Use `/file` for history.
+
+### The canonical log
+
+**`nest/logs/tcs-<YYYY-MM-DD>.log`** — written by `SystemLogService`
+(`nest/src/modules/system/log.service.ts`). One file per day, structured, with a category per entry
+(`mt5`, `provider`, `scoring`, `user-action`, `system`, `trading`, `api`). Relocatable with
+`TCS_LOG_DIR`. **This is the one to read.**
+
+### ⚠️ FOUR OTHER PLACES ALSO LOOK LIKE THE LOG — and one is outside the repo
+
+| Path | Written by | What it is |
+|---|---|---|
+| `nest/logs/tcs-<date>.log` | the app (`SystemLogService`) | **canonical** — structured, dated |
+| `logs/api-out.log`, `logs/api-err.log` | `build-api.ps1` (redirect) | raw console capture |
+| **`%TEMP%\nest-api.log`**, `%TEMP%\nest-api-err.log` | `tcs-launch.ps1` (redirect) | raw console capture — **outside the repo** |
+| `logs/scoring/*.jsonl` | `scoring-log.service.ts` | structured scoring, served by `/api/logs/scoring/*` |
+| `logs/*.log`, `nest/*.log` | agents, by hand | ad-hoc per-session captures |
+
+⚠️ **WHICH ONE IS LIVE DEPENDS ON WHAT LAST STARTED THE API.** `build-api.ps1` redirects to
+`logs/`, `tcs-launch.ps1` redirects to `%TEMP%` — so the same service writes its console output to
+one of two unrelated directories depending on the launcher. **Tailing the wrong one shows a stale
+file and reads as "the API is silent".** `logs/status` names the live one.
+
+⚠️ **`api-out.log` EXISTS IN THREE DIRECTORIES** — `logs/`, `nest/`, and `nest/logs/` (measured:
+470 KB today, 225 KB stale from 09-21, 1.2 MB stale from 09-22). Same filename, three meanings.
+
+⚠️ **A 0-BYTE LOG IS NORMAL IMMEDIATELY AFTER A RESTART** — `Start-Process -RedirectStandardOutput`
+truncates the file when it opens it. Do **not** read emptiness as evidence of a fault without
+checking the mtime against the restart time; that mistake was made and corrected on 2026-09-29.
+
+### Retention — there is none
+
+Measured 2026-09-29: `logs/` **191 files / 12.6 MB**, `nest/logs/` **62 files / 21.8 MB** —
+~34 MB across 253 files, nothing prunes any of it.
+
+**A bad day is 10–34× a normal one.** `tcs-2026-09-24.log` is **5.8 MB** against neighbours of
+173–572 KB, and the cause is repetition: **4,800 identical `bridge[2] GET /symbols FAILED`** lines
+plus 1,738 for one symbol's quotes. Nothing deduplicates, rate-limits or summarises repeated
+identical warnings.
