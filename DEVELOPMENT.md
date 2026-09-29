@@ -103,6 +103,9 @@ trading-command-suite/
 > ⚠️ Retention, volume and the retention window are **settings**, not constants:
 > `logging.retentionDays` (30), `logging.pruneEnabled` (true), `logging.collapseRepeats` (true),
 > `logging.repeatWindowMinutes` (5). UI: `/settings/data-management` → the Log Files panel.
+>
+> ⚠️ The prune **moves before it removes**: a file outside the window goes to `nest/logs/archive/`
+> and is deleted on the next run, so raising the window before then keeps it.
 
 ## Environment Variables (nest/.env)
 

@@ -357,9 +357,12 @@ curl.exe -s -X POST "http://localhost:3201/api/system/logs/prune?dryRun=true"   
 curl.exe -s http://localhost:3201/api/system/logs/collapse-stats   # volume suppressed since boot
 ```
 
-⚠️ **The prune DELETES rather than archives**, and it logs what it removed. Today's file is refused
-whatever the window says; a file whose name carries no date (`api-out.log`, `console-*.log`) is
-never a candidate. UI: **`/settings/data-management`**, the Log Files panel.
+⚠️ **The prune MOVES before it removes.** A file outside the window goes to
+`nest/logs/archive/` and is deleted on the NEXT run, so a removal noticed within one cycle is
+recoverable with a move — and raising `logging.retentionDays` before the next run keeps it. Today's
+file is refused whatever the window says; a file whose name carries no date (`api-out.log`,
+`console-*.log`) is never a candidate. The prune logs both halves into the surviving file. UI:
+**`/settings/data-management`**, the Log Files panel.
 
 ### Retention — there is none
 

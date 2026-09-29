@@ -94,6 +94,31 @@ describe('selectPrunable — which files a prune may remove', () => {
     expect(remove.map((r) => r.name)).toEqual(['tcs-2026-08-20.log', 'tcs-2026-08-01.log', 'tcs-2026-07-01.log']);
     expect(bytesRemoved).toBe(600);
   });
+
+  it('judges the ARCHIVE by the same window — which is what makes a removal recoverable', () => {
+    // ⚠️ WHAT THE GRACE ACTUALLY IS, stated precisely, because the first version of this comment
+    // said the opposite and the SERVICE was wrong in the matching way.
+    //
+    // The window is ABSOLUTE — it is the date in the filename against today — so a file moved at 31
+    // days is still outside a 30-day window one day later (32d) and IS removed on the next pass.
+    // There is therefore no grace in the window itself, and an implementation that re-lists the
+    // archive AFTER moving purges the file it just archived, in the same run. That is what the first
+    // version did (measured: `archived` and `purged` both named the same file), which made the
+    // "reversible by copy" acceptance criterion false while reading as satisfied.
+    //
+    // The grace lives in the ORDER instead: purge only from a listing taken BEFORE the move. This
+    // test pins the half that the pure function owns — the archive is judged by the window, so a
+    // wider window KEEPS an archived file, which is the recovery lever a reader actually has.
+    const noTodaysFile = ''; // the archive has no file being written, so nothing is exempt there
+    const movedAt31Days = [f('tcs-2026-08-29.log')];
+    const dayLater = NOW + DAY;
+
+    // Still outside the 30d window one day on, so a pass over it removes it.
+    expect(selectPrunable(movedAt31Days, noTodaysFile, 30, dayLater).remove.map((r) => r.name))
+      .toEqual(['tcs-2026-08-29.log']);
+    // Widen the window before the next run and the archived file SURVIVES — the lever works.
+    expect(selectPrunable(movedAt31Days, noTodaysFile, 60, dayLater).remove).toEqual([]);
+  });
 });
 
 describe('fileAgeDays — a name, not an mtime', () => {

@@ -9,9 +9,14 @@
  * "what is this install storing, and for how long".
  *
  * ⚠️ THE PRUNE IS TWO STEPS, ALWAYS. "Preview" reports what WOULD go; only then does the destructive
- * button become enabled, and it names the count and size it is about to delete. A retention rule
+ * button become enabled, and it names the count and size it is about to move. A retention rule
  * that deletes the evidence of the defect being investigated is a documented failure in this repo
  * (`retention.config.ts`), and the cheap fix for it is to make the list visible before the delete.
+ *
+ * ⚠️ AND IT MOVES RATHER THAN DELETES (#1023 criterion 3). A file outside the window is moved into
+ * `archive/` and removed on the NEXT run, so the decision is reversible for one cycle — and raising
+ * the window before the next run keeps the archived file. The panel says this, because "prune"
+ * reads as "gone" and it is not.
  */
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +25,6 @@ import { noticeFromError } from '../../core/notices/from-error';
 import { notice } from '../../core/notices/registry';
 import NoticeBlock from '../NoticeBlock';
 import './log-retention-panel.css';
-
 const RETENTION_KEY = 'logging.retentionDays';
 const PRUNE_KEY = 'logging.pruneEnabled';
 const COLLAPSE_KEY = 'logging.collapseRepeats';
@@ -165,9 +169,11 @@ export default function LogRetentionPanel() {
     : null;
 
   const resultNotice = result
-    ? (result.pruned?.length > 0
-        ? notice('TCS-DATA-012', { count: result.pruned.length, size: formatBytes(result.bytesFreed), names: result.pruned.map((f) => f.name).join(', ') })
-        : notice('TCS-DATA-010', { days: result.retentionDays, files: result.totalFiles ?? 0, size: formatBytes(result.totalBytes ?? 0) }))
+    ? (result.purged?.length > 0
+        ? notice('TCS-DATA-012', { count: result.purged.length, size: formatBytes(result.bytesFreed), names: result.purged.map((f) => f.name).join(', ') })
+        : result.archived?.length > 0
+          ? notice('TCS-DATA-013', { count: result.archived.length, names: result.archived.map((f) => f.name).join(', '), size: formatBytes((result.archived || []).reduce((n, f) => n + (f.size || 0), 0)) })
+          : notice('TCS-DATA-010', { days: result.retentionDays, files: result.totalFiles ?? 0, size: formatBytes(result.totalBytes ?? 0) }))
     : null;
 
   return (
@@ -176,7 +182,8 @@ export default function LogRetentionPanel() {
         <h2 id="lrp-title">📝 Log Files</h2>
         <span className="lrp-sub">
           {report
-            ? `${report.totalFiles} file(s) · ${formatBytes(report.totalBytes)} · prunes daily at 03:15`
+            ? `${report.totalFiles} file(s) · ${formatBytes(report.totalBytes)} · prunes daily at 03:15` +
+              (report.archiveHeld?.length ? ` · ${report.archiveHeld.length} in archive (${formatBytes(report.archiveHeldBytes)})` : '')
             : 'not read'}
         </span>
       </div>
@@ -270,12 +277,17 @@ export default function LogRetentionPanel() {
           disabled={previewCount === 0 || pruneMutation.isPending}
         >
           {pruneMutation.isPending
-            ? 'Deleting…'
+            ? 'Pruning…'
             : previewCount > 0
-              ? `Delete ${previewCount} file(s) · ${formatBytes(preview.bytesFreed)}`
-              : 'Delete — preview first'}
+              ? `Move ${previewCount} file(s) to archive · ${formatBytes(preview.bytesFreed)}`
+              : 'Prune — preview first'}
         </button>
-        {previewCount === 0 && <span className="lrp-note">Preview to enable. The button names what it will delete.</span>}
+        {previewCount > 0 && (
+          <span className="lrp-note">
+            Moves them to <code>archive/</code> — nothing is deleted until the next run, so this is recoverable.
+          </span>
+        )}
+        {previewCount === 0 && <span className="lrp-note">Preview to enable. The button names what it will move.</span>}
       </div>
 
       <div className="lrp-table-wrap">
@@ -308,10 +320,11 @@ export default function LogRetentionPanel() {
       </div>
 
       <p className="lrp-note lrp-footer">
-        ⚠️ Retention <strong>deletes</strong> rather than archives — the removed content is gone, and the only record
-        is a line in the surviving log. The file being written now is never a candidate, whatever the window says.
-        Console captures (<code>api-out.log</code>, <code>%TEMP%\nest-api*.log</code>) are never auto-pruned: they carry no
-        date, so the policy has no age to judge and declines to act.
+        ⚠️ A prune <strong>moves</strong> before it removes: a file outside the window goes to <code>archive/</code>
+        and is only deleted on the next run, so raising the window before then keeps it. The file being written
+        now is never a candidate, whatever the window says. Console captures (<code>api-out.log</code>,
+        <code>%TEMP%\nest-api*.log</code>) are never auto-pruned: they carry no date, so the policy has no age to
+        judge and declines to act.
       </p>
     </section>
   );

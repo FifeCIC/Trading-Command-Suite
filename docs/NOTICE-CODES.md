@@ -32,7 +32,8 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-DATA-009` | warning | DATA | Period import — no provider could answer |
 | `TCS-DATA-010` | info | DATA | Log retention — nothing to remove |
 | `TCS-DATA-011` | info | DATA | Log retention — preview only, nothing removed |
-| `TCS-DATA-012` | warning | DATA | Log retention — files deleted |
+| `TCS-DATA-012` | warning | DATA | Log retention — files removed |
+| `TCS-DATA-013` | info | DATA | Log retention — files moved to the archive |
 | `TCS-INTEG-001` | critical | INTEG | MT5 bridge not connected |
 | `TCS-INTEG-002` | critical | INTEG | MT5 circuit breaker open |
 | `TCS-RISK-001` | warning | RISK | Trade blocked by a safety gate |
@@ -72,7 +73,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-019` | success | TRADE | A/B copy created |
 | `TCS-TRADE-020` | info | TRADE | Bot deleted |
 
-**50 codes** — 2 critical, 26 error, 12 warning, 4 info, 6 success.
+**51 codes** — 2 critical, 26 error, 12 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -430,14 +431,24 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Call:** `notice('TCS-DATA-011', { count, size, names })`
 - **Related:** #1023
 
-#### `TCS-DATA-012` — Log retention — files deleted
+#### `TCS-DATA-012` — Log retention — files removed
 
 - **Severity:** warning
-- **Message:** {count} log file(s) were permanently deleted, freeing {size}: {names}.
-- **Cause:** Log retention DELETES rather than archives. The removal is recorded in the surviving log, but the deleted content is gone — there is no copy.
-- **Action:** If you needed any of these, the setting logging.pruneEnabled=false stops the daily prune, and logging.retentionDays raises the window.
+- **Message:** {count} log file(s) were removed from the archive, freeing {size}: {names}.
+- **Cause:** Log retention MOVES a file out of the live directory one cycle before removing it, so a removal noticed within that cycle is still recoverable from the archive. Past the archive it is gone — there is no third copy.
+- **Action:** To recover a file that was only moved, take it from the archive directory named in the report. To stop removals entirely, set logging.pruneEnabled=false; to widen the window, raise logging.retentionDays.
 - **Params:** `count`, `size`, `names`
 - **Call:** `notice('TCS-DATA-012', { count, size, names })`
+- **Related:** #1023
+
+#### `TCS-DATA-013` — Log retention — files moved to the archive
+
+- **Severity:** info
+- **Message:** {count} log file(s) moved out of the live log directory: {names}. {size} will be freed when they are removed on the next run.
+- **Cause:** Nothing was deleted. A file outside the retention window is moved to the archive and is only removed on the following run, so the decision to prune is reversible for one cycle.
+- **Action:** Nothing to do — this is a normal prune. If a file here is still wanted, move it back before the next run.
+- **Params:** `count`, `names`, `size`
+- **Call:** `notice('TCS-DATA-013', { count, names, size })`
 - **Related:** #1023
 
 ### RISK — Risk and safety gates

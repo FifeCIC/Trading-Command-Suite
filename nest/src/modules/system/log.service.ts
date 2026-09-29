@@ -68,6 +68,26 @@ function resolveLogDir(): string {
 
 const LOG_DIR = resolveLogDir();
 
+/**
+ * Where a pruned file GOES, one cycle before it is removed.
+ *
+ * ⚠️ WHY THIS EXISTS (#1023 acceptance criterion 3). The criterion asks that the prune be
+ * *reversible-by-copy* — "archive before delete, or move rather than remove". A bare `unlink` at 30
+ * days satisfies nobody: retention.config.ts already records a run that destroyed the evidence of
+ * the defect being investigated, and "the window was long enough" is a claim about how fast a human
+ * looks rather than about what the system can undo.
+ *
+ * So a file outside the window is **moved here**, not removed. The NEXT run removes it from here on
+ * the same rule. Net effect: one extra cron cycle of grace (up to ~24h), the live directory is
+ * bounded exactly as before, and an accidental deletion noticed the same day is recoverable with a
+ * `move` rather than a restore.
+ *
+ * ⚠️ The archive is a SUBDIRECTORY on purpose: `getLogFiles()` and `listDatedLogFiles()` both use a
+ * non-recursive `readdirSync`, so archived files cannot be mistaken for live ones, cannot be served
+ * as "today's log", and cannot re-enter the live selection.
+ */
+const ARCHIVE_DIR = path.join(LOG_DIR, 'archive');
+
 const LOG_FILE = () => {
   const d = new Date();
   return `tcs-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.log`;
@@ -345,20 +365,40 @@ export class SystemLogService {
     this.refreshPolicyIfStale();
     const files = this.listDatedLogFiles();
     const selection = selectPrunable(files, LOG_FILE(), this.policy.retentionDays, nowMs);
+
+    // The archive is judged by the SAME rule against the SAME window, which is what gives a moved
+    // file exactly one extra cycle before removal.
+    const held = this.listArchivedLogFiles();
+    const heldSelection = selectPrunable(held, '', this.policy.retentionDays, nowMs);
+
     return {
       directory: LOG_DIR,
+      archive: ARCHIVE_DIR,
       retentionDays: this.policy.retentionDays,
       pruneEnabled: this.policy.pruneEnabled,
       totalFiles: files.length,
       totalBytes: files.reduce((n, f) => n + f.size, 0),
+      /** What the next prune MOVES into the archive. Nothing is deleted in this step. */
       wouldRemove: selection.remove,
       bytesWouldFree: selection.bytesRemoved,
       kept: selection.keep,
+      /** The archive: moved here last cycle, removed this cycle. */
+      archiveHeld: held,
+      archiveHeldBytes: held.reduce((n, f) => n + f.size, 0),
+      archiveWouldRemove: heldSelection.remove,
+      /** The grace, stated rather than implied. */
+      note:
+        'A file outside the window is MOVED to `archive/` first and deleted on the NEXT run, so a ' +
+        'removal noticed within one cycle is recoverable with a move. `wouldRemove` is the move.',
     };
   }
 
   /**
-   * Remove log files outside the retention window.
+   * Move files outside the retention window into `archive/`, then delete last cycle's arrivals.
+   *
+   * ⚠️ TWO STEPS, AND THE ORDER MATTERS. Moving first means nothing is ever removed on the run that
+   * decided to remove it — the file has to survive one whole cycle in the archive before it can go.
+   * That is what makes the deletion reversible rather than final at the moment of decision.
    *
    * ⚠️ NEVER TOUCHES TODAY'S FILE — `selectPrunable` refuses it whatever the window says.
    * ⚠️ NEVER THROWS. It runs on a schedule in a long-lived process; a failure is reported as a
@@ -371,33 +411,85 @@ export class SystemLogService {
     const report = this.getRetentionReport(nowMs);
 
     if (!this.policy.pruneEnabled) {
-      return { ...report, dryRun, pruned: [], bytesFreed: 0, skipped: 'logging.pruneEnabled is OFF — nothing removed' };
+      return {
+        ...report,
+        dryRun,
+        archived: [],
+        purged: [],
+        pruned: [],
+        bytesFreed: 0,
+        skipped: 'logging.pruneEnabled is OFF — nothing moved, nothing removed',
+      };
     }
 
-    const pruned: Array<{ name: string; size: number }> = [];
+    const archived: Array<{ name: string; size: number }> = [];
+    const purged: Array<{ name: string; size: number }> = [];
     const failed: Array<{ name: string; error: string }> = [];
+
     if (!dryRun) {
+      try {
+        fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+      } catch (err) {
+        failed.push({ name: '(archive directory)', error: (err as Error).message });
+      }
+
+      // Step 1 — MOVE. A name collision means a file with that date is already archived (a second
+      // run in the same cycle), so the live copy is the newer fact and is left alone for the next run.
       for (const f of report.wouldRemove) {
         try {
-          fs.unlinkSync(path.join(LOG_DIR, f.name));
-          pruned.push({ name: f.name, size: f.size });
+          const dest = path.join(ARCHIVE_DIR, f.name);
+          if (fs.existsSync(dest)) {
+            failed.push({ name: f.name, error: 'already present in archive — left in place, not overwritten' });
+            continue;
+          }
+          fs.renameSync(path.join(LOG_DIR, f.name), dest);
+          archived.push({ name: f.name, size: f.size });
         } catch (err) {
           failed.push({ name: f.name, error: (err as Error).message });
         }
       }
+
+      // Step 2 — PURGE what was ALREADY in the archive when this run started.
+      //
+      // ⚠️ `report.archiveWouldRemove`, NOT a fresh listing. Measured 2026-09-29: the first version
+      // re-listed the archive after moving and applied the window to the result, so a file moved in
+      // step 1 was judged again in step 2 — still outside the window, because the window is absolute
+      // rather than measured from the move — and was removed **in the same run it was archived**. The
+      // grace was a fiction: `archived` and `purged` both named the same file, and the live directory
+      // was no more reversible than a plain `unlink`.
+      //
+      // The listing taken BEFORE the move is what makes "one cycle" true: anything moved this run
+      // cannot appear in it, so it is guaranteed to survive until the next run.
+      for (const f of report.archiveWouldRemove) {
+        try {
+          fs.unlinkSync(path.join(ARCHIVE_DIR, f.name));
+          purged.push({ name: f.name, size: f.size });
+        } catch (err) {
+          failed.push({ name: f.name, error: (err as Error).message });
+        }
+      }
+    } else {
+      // A preview must show BOTH halves, or "nothing to remove" would be read as "nothing happens".
+      archived.push(...report.wouldRemove);
+      purged.push(...report.archiveWouldRemove);
     }
 
-    // ⚠️ The REMOVAL IS ITSELF LOGGED. A log that records everything except its own pruning leaves
-    // "why is the 12th missing?" unanswerable. Note this line is written to the surviving file.
-    if (!dryRun && pruned.length > 0) {
-      const bytes = pruned.reduce((n, f) => n + f.size, 0);
+    // ⚠️ The MOVEMENT AND THE REMOVAL ARE BOTH LOGGED. A log that records everything except its own
+    // pruning leaves "why is the 12th missing?" unanswerable. These lines go to the surviving file,
+    // and they are also what makes the archive self-explaining a week later.
+    if (!dryRun && (archived.length > 0 || purged.length > 0)) {
+      const bytes = purged.reduce((n, f) => n + f.size, 0);
       this.writeQueue.push(
         this.formatLine(
           new Date().toISOString(),
           'info',
           'SystemLogService',
-          `Log retention: removed ${pruned.length} file(s), ${formatBytes(bytes)} freed ` +
-            `(${pruned.map((f) => f.name).join(', ')}). Window: ${this.policy.retentionDays}d.`,
+          `Log retention (window ${this.policy.retentionDays}d): ` +
+            `${archived.length} file(s) moved to archive/` +
+            (archived.length ? ` (${archived.map((f) => f.name).join(', ')})` : '') +
+            `; ${purged.length} removed from archive/` +
+            (purged.length ? ` (${purged.map((f) => f.name).join(', ')}), ${formatBytes(bytes)} freed` : '') +
+            `. A moved file survives one cycle before removal — recover it from nest/logs/archive/.`,
         ),
       );
       this.flushQueue();
@@ -406,8 +498,11 @@ export class SystemLogService {
     return {
       ...report,
       dryRun,
-      pruned,
-      bytesFreed: pruned.reduce((n, f) => n + f.size, 0),
+      archived,
+      purged,
+      /** Kept for callers written against the first shape — the two halves together. */
+      pruned: [...archived, ...purged],
+      bytesFreed: purged.reduce((n, f) => n + f.size, 0),
       failed,
     };
   }
@@ -417,8 +512,11 @@ export class SystemLogService {
   scheduledLogPrune(): void {
     try {
       const r = this.pruneOldLogs();
-      if (r.pruned.length > 0) {
-        this.logger.log(`Log retention removed ${r.pruned.length} file(s), ${formatBytes(r.bytesFreed)}`);
+      if (r.archived.length > 0 || r.purged.length > 0) {
+        this.logger.log(
+          `Log retention: ${r.archived.length} moved to archive/, ${r.purged.length} removed, ` +
+            `${formatBytes(r.bytesFreed)} freed`,
+        );
       }
     } catch (err) {
       this.logger.warn(`Log retention failed: ${(err as Error).message}`);
@@ -427,10 +525,19 @@ export class SystemLogService {
 
   /** `tcs-<date>.log` files with sizes. Separated so the policy stays filesystem-free. */
   private listDatedLogFiles(): LogFileInfo[] {
+    return this.listDatedFilesIn(LOG_DIR);
+  }
+
+  /** The archive: same shape, same rule, a directory deeper. */
+  private listArchivedLogFiles(): LogFileInfo[] {
+    return this.listDatedFilesIn(ARCHIVE_DIR);
+  }
+
+  private listDatedFilesIn(dir: string): LogFileInfo[] {
     try {
-      return fs.readdirSync(LOG_DIR)
+      return fs.readdirSync(dir)
         .filter((f) => f.startsWith('tcs-') && f.endsWith('.log') && fileAgeDays(f, Date.now()) !== null)
-        .map((f) => ({ name: f, size: fs.statSync(path.join(LOG_DIR, f)).size }));
+        .map((f) => ({ name: f, size: fs.statSync(path.join(dir, f)).size }));
     } catch {
       return [];
     }

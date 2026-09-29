@@ -512,15 +512,29 @@ export const NOTICES = {
   'TCS-DATA-012': {
     severity: 'warning',
     area: 'DATA',
-    title: 'Log retention — files deleted',
-    message: '{count} log file(s) were permanently deleted, freeing {size}: {names}.',
+    title: 'Log retention — files removed',
+    message: '{count} log file(s) were removed from the archive, freeing {size}: {names}.',
     cause:
-      'Log retention DELETES rather than archives. The removal is recorded in the surviving log, but ' +
-      'the deleted content is gone — there is no copy.',
+      'Log retention MOVES a file out of the live directory one cycle before removing it, so a ' +
+      'removal noticed within that cycle is still recoverable from the archive. Past the archive ' +
+      'it is gone — there is no third copy.',
     action:
-      'If you needed any of these, the setting logging.pruneEnabled=false stops the daily prune, and ' +
-      'logging.retentionDays raises the window.',
+      'To recover a file that was only moved, take it from the archive directory named in the ' +
+      'report. To stop removals entirely, set logging.pruneEnabled=false; to widen the window, ' +
+      'raise logging.retentionDays.',
     params: ['count', 'size', 'names'],
+    refs: ['#1023'],
+  },
+  'TCS-DATA-013': {
+    severity: 'info',
+    area: 'DATA',
+    title: 'Log retention — files moved to the archive',
+    message: '{count} log file(s) moved out of the live log directory: {names}. {size} will be freed when they are removed on the next run.',
+    cause:
+      'Nothing was deleted. A file outside the retention window is moved to the archive and is only ' +
+      'removed on the following run, so the decision to prune is reversible for one cycle.',
+    action: 'Nothing to do — this is a normal prune. If a file here is still wanted, move it back before the next run.',
+    params: ['count', 'names', 'size'],
     refs: ['#1023'],
   },
 
