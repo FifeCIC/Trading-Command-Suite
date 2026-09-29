@@ -24,6 +24,21 @@ export class RegimeShiftExitDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  /**
+   * ⚠️ #1020 — THIS DIRECTIVE HAS NO DIRECTION TO OFFER, SO IT SPEAKS THROUGH ITS SCORE.
+   *
+   * "Market structure is breaking" is true for a long and a short alike, so `signalClass: 'neutral'`
+   * is CORRECT here — and until this threshold was declared, that `neutral` made the verdict
+   * structurally unable to see this directive at all. MEASURED 2026-09-29: the score reached 100
+   * carrying the reason "Regime shift detected … Exit recommended." while `arguesExit` was `false`
+   * on every one of 17 open positions, because the consumer derives `arguesExit` from `signalClass`
+   * and this class returns nothing else.
+   *
+   * 70 is NOT a round number chosen to make it fire — it is this class's OWN band boundary. The
+   * branch `entropyDelta > 0.25 * maxEntropy` scores `70 + min(30, …)` and is the only branch whose
+   * reason text recommends leaving; below it the reason reads "Monitor positions."
+   */
+  readonly exitScoreThreshold = 70;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

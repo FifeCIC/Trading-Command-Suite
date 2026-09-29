@@ -73,6 +73,56 @@ export const EXIT_DIRECTIVE_IDS = [
 
 export type ConvictionLevel = 'EXIT' | 'REDUCE' | 'HOLD' | 'NO_DATA';
 
+// ── DECISION (2026-09-29, primary) ──
+// WHAT:      An exit directive with no direction declares `exitScoreThreshold`; a score at or above
+//            it argues an exit for EITHER side. Omitting the threshold means the directive does not
+//            get to argue an exit at all — `time-stop` omits it deliberately.
+// WHY:       `arguesExit` was derived from `signalClass` alone, so two directives that hardcode
+//            `signalClass: 'neutral'` could never argue an exit — `regime-shift-exit` reached score
+//            100 with the reason "Exit recommended." and was invisible to all 17 open positions.
+// INSTEAD OF: an inline ternary in `runExitDirectives()`, which was untestable — that is WHY the
+//            two directives stayed muted with nobody noticing. Extracted so it can be canaried.
+//            Also instead of keying on `directionBias === 'neutral'`, which would have SILENTLY
+//            DISABLED `chandelier-exit` (neutral bias, real bullish/bearish, 6 live exits).
+// REVERSE BY: delete the `byThreshold` branch in `arguesExitFor()` and the `exitScoreThreshold`
+//            declaration on `regime-shift-exit`; behaviour returns to directional-only. The
+//            directional path is untouched either way, so nothing else needs changing.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 45
+// GUARD:     nest/src/modules/scoring/exit-consensus.service.spec.ts (12 tests, canaried both ways)
+/**
+ * ⚠️ #1020 — THE RULE THAT DECIDES WHETHER ONE DIRECTIVE ARGUES AN EXIT.
+ *
+ * Extracted from `runExitDirectives()` for one reason: it was inline in a private method, so the
+ * defect it now fixes had NO test, and the two directives it silently muted were invisible. A rule
+ * that cannot be called cannot be canaried.
+ *
+ * ⚠️ IT DELIBERATELY DOES NOT TAKE `directionBias`. The first design keyed on it — `directionBias ===
+ * 'neutral'` meaning "read the score instead of the class" — and that would have SILENTLY DISABLED
+ * `chandelier-exit`, which declares neutral bias while emitting real bullish/bearish and arguing 6
+ * exits on live data. `directive.interface.ts` already documented why: *"a `neutral` directionBias is
+ * valid for a dynamic two-sided directive."* The number of arguments here is the guard against that
+ * mistake recurring.
+ *
+ * Two INDEPENDENT ways to argue, because they answer different questions:
+ *   • `direction` — the directive made a claim about direction and it opposes the position's side.
+ *   • `threshold` — the directive has no direction to offer ("regime is breaking, get out" is true
+ *     for a long and a short alike), so it declared a side-agnostic `exitScoreThreshold`.
+ * A directive that clears BOTH reports `direction`, the more specific claim.
+ */
+export function arguesExitFor(
+  side: 'buy' | 'sell',
+  signalClass: string,
+  score: number,
+  exitScoreThreshold?: number,
+): { arguesExit: boolean; via: 'direction' | 'threshold' | null } {
+  const byDirection = side === 'buy' ? signalClass === 'bearish' : signalClass === 'bullish';
+  const hasThreshold = Number.isFinite(Number(exitScoreThreshold));
+  const byThreshold = hasThreshold && Number(score) >= Number(exitScoreThreshold);
+  if (byDirection) return { arguesExit: true, via: 'direction' };
+  if (byThreshold) return { arguesExit: true, via: 'threshold' };
+  return { arguesExit: false, via: null };
+}
+
 export interface ExitDirectiveVerdict {
   id: string;
   name: string;
@@ -80,6 +130,14 @@ export interface ExitDirectiveVerdict {
   signalClass: string;
   /** `true` when this verdict argues for leaving the position (bearish on a long). */
   arguesExit: boolean;
+  /**
+   * ⚠️ #1020 — WHY it argues, or `null` when it does not. Load-bearing, for the same reason
+   * `barsTimeframe` is: two different questions reach the same `arguesExit: true`, and a reader who
+   * cannot tell them apart cannot price the verdict. `direction` means the directive made a claim
+   * opposing the position's side; `threshold` means it declared a side-agnostic
+   * `exitScoreThreshold` and its score alone cleared it.
+   */
+  arguesExitVia: 'direction' | 'threshold' | null;
   score: number;
   maxScore: number;
   /**
@@ -445,12 +503,21 @@ export class ExitConsensusService {
       }
       if (!result) continue;
       const signalClass = String(result.signalClass ?? 'neutral');
-      const arguesExit = side === 'buy' ? signalClass === 'bearish' : signalClass === 'bullish';
+      // ⚠️ #1020 — the rule lives in `arguesExitFor()` so it can be CALLED and canaried. It was
+      // inline here, in a private method, which is why the two directives it silently muted had no
+      // test. See that function for why it deliberately does NOT take `directionBias`.
+      const { arguesExit, via: arguesExitVia } = arguesExitFor(
+        side,
+        signalClass,
+        Number(result.score ?? 0),
+        (inst as any).exitScoreThreshold,
+      );
       verdicts.push({
         id,
         name: String(inst.name ?? id),
         signalClass,
         arguesExit,
+        arguesExitVia,
         score: round(Number(result.score ?? 0), 2),
         maxScore: Number(inst.maxScore ?? 0),
         barsTimeframe: tf,

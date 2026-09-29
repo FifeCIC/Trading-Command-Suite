@@ -283,6 +283,27 @@ export interface IDirective {
   readonly suitability?: SuitabilityProfile;
 
   /**
+   * ⚠️ DECLARE THIS ONLY IF A HIGH SCORE ALONE MEANS "LEAVE", REGARDLESS OF SIDE (#1020).
+   *
+   * Most exit directives answer a DIRECTIONAL question: they emit `bullish`/`bearish` and the
+   * consumer asks whether that opposes the open position's side. That path needs nothing declared.
+   *
+   * A few answer a SIDE-AGNOSTIC one: "something is wrong, get out" — true for a long and a short
+   * alike. Such a directive CANNOT express that through `signalClass`, because `neutral` is neutral
+   * for both sides, and emitting a direction would be inventing a claim it does not have. This field
+   * is how it speaks instead: `score >= exitScoreThreshold` argues an exit, for either side.
+   *
+   * ⚠️ THE PRESENCE OF THIS NUMBER IS THE DECLARATION OF AUTHORITY. Omitting it is not an oversight
+   * to be filled in later — it means the directive does NOT get to argue an exit, and its score is
+   * reported for information only. `time-stop` omits it deliberately; the reason is on that class.
+   *
+   * ⚠️ Set it to the score at which the directive's OWN reason text begins recommending an exit —
+   * never to a round number chosen to make something fire. It is a claim about the directive's
+   * internal bands, and a threshold that does not match them silently misprices the verdict.
+   */
+  readonly exitScoreThreshold?: number;
+
+  /**
    * Minimum number of bars required per timeframe for this directive to produce
    * a meaningful score. When the input has fewer bars than declared here,
    * the directive may return score 0 (data-starved) rather than a false signal.

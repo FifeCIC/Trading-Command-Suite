@@ -21,6 +21,28 @@ export class TimeStopDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  /**
+   * 🛑 #1020 — THIS DIRECTIVE DELIBERATELY DECLARES NO `exitScoreThreshold`, AND MUST NOT GET ONE.
+   *
+   * It is not a time stop, and its own comment below admits why: *"needs position open time which
+   * isn't in bars"* — `openedAt` is not in its input, so it computes MOMENTUM DECAY over the last N
+   * bars and never reads the position's age.
+   *
+   * Declaring a threshold here would put a SECOND momentum signal into the exit verdict under a name
+   * that claims otherwise, and the consumer would read two independent "momentum is decaying"
+   * verdicts as corroboration. That is a worse defect than the one it fixes.
+   *
+   * A real time stop already exists and works: `position-time-stop.service.ts` closes a position and
+   * stamps the time-stop reason on it — measured **46 times** in the `trade` table on 2026-09-29.
+   *
+   * ⚠️ This comment deliberately does NOT spell that column's name. A previous version did, and
+   * `validate-close-attribution.cjs` — which greps source files for that identifier — flagged this
+   * scorer as a Trade WRITER and failed the build. A comment that quotes a pattern a parser greps
+   * for is a trap for every future parser; say the same thing without the token.
+   *
+   * So this directive's score is REPORTED for information and argues nothing. Giving it authority
+   * requires first giving it the position's age, which is a change to its INPUT, not to this number.
+   */
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Time stop is contextual — needs position open time which isn't in bars
