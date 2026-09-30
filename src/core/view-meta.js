@@ -491,6 +491,17 @@ const VIEW_META = {
     // Several GETs under /api/scoring RECOMPUTE on call and are deliberately not used here.
     api: ['GET /api/trading/trade-history', 'GET /api/trading/portfolio-snapshots'],
   },
+  '/development/ui-review': {
+    tier: 'premium',
+    // 'pending' until the owner has actually looked at it — the rule this repo applies to every new
+    // page (#988). Deliberately PREMIUM: it is a Development-area engineering tool, and the free
+    // edition must not ship a table of every page in the paid app.
+    review: 'pending',
+    label: 'Page Walkthrough',
+    file: 'src/pages/UiReviewPage.jsx',
+    css: 'src/pages/ui-review.css',
+    api: ['GET /api/system/settings/ui-review', 'PUT /api/system/settings/ui-review'],
+  },
   '/development/theme-lab': {
     tier: 'premium',
     review: 'approved',

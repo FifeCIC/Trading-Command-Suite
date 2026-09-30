@@ -31,6 +31,32 @@ export interface AppSettings {
   data: { stalenessHours: number };
   newsImport: NewsImportSettings;
   healthChecks: HealthChecksConfig;
+  uiReview: UiReviewConfig;
+}
+
+/**
+ * UiReviewEntry — the owner's verdict on ONE page, captured while walking the whole app.
+ *
+ * STEP IN THE PIPELINE: written by `/development/ui-review` on every interaction → stored here →
+ * mirrored to `nest/app-settings.json`, which is the copy an agent reads to work from.
+ *
+ * ⚠️ The three fields are deliberately permissive (`null` = not yet answered). A page with no
+ * verdict must be distinguishable from a page judged "low importance" — collapsing "fine" and
+ * "cannot judge" into one value is the defect this repo keeps re-finding.
+ */
+export interface UiReviewEntry {
+  importance: 'H' | 'M' | 'L' | null;
+  hide: boolean | null;
+  keen: 1 | 2 | 3 | null;
+  /** Free text — what the owner suggests changing about this page. */
+  note: string;
+  /** ISO timestamp of the last write, so a stale verdict is visible rather than implied. */
+  updatedAt: string;
+}
+
+/** Every page's verdict, keyed by its full view path (e.g. `/trading/positions-monitor`). */
+export interface UiReviewConfig {
+  entries: Record<string, UiReviewEntry>;
 }
 
 export interface HealthChecksConfig {
@@ -80,6 +106,7 @@ const DEFAULTS: AppSettings = {
     portStatus: true,
     autoRefreshSec: 15,
   },
+  uiReview: { entries: {} },
 };
 
 const SETTING_KEY = 'app';
@@ -139,6 +166,39 @@ export class SettingsService {
     settings.healthChecks = { ...settings.healthChecks, ...partial };
     await this.update(settings);
     return settings.healthChecks;
+  }
+
+  /** Every page verdict so far. Missing keys simply mean "not answered yet". */
+  async getUiReview(): Promise<UiReviewConfig> {
+    const settings = await this.get();
+    return settings.uiReview || { entries: {} };
+  }
+
+  /**
+   * setUiReviewEntry() — write ONE page's verdict.
+   *
+   * ⚠️ A PER-ENTRY write, not "send the whole table back". The page saves on every interaction, so
+   * posting the entire map each time would (a) let two quick clicks race and silently lose one, and
+   * (b) rewrite the whole settings blob on every dropdown change. This merges one key and returns
+   * the stored entry, so the client can show what was actually saved rather than assume it.
+   *
+   * `update()` persists to the `appsetting` row AND mirrors to `nest/app-settings.json` — the file
+   * an agent reads. No schema change: the table already exists.
+   */
+  async setUiReviewEntry(viewKey: string, patch: Partial<UiReviewEntry>): Promise<UiReviewEntry> {
+    const settings = await this.get();
+    const uiReview: UiReviewConfig = settings.uiReview || { entries: {} };
+    const previous: UiReviewEntry = uiReview.entries[viewKey] || {
+      importance: null,
+      hide: null,
+      keen: null,
+      note: '',
+      updatedAt: '',
+    };
+    const entry: UiReviewEntry = { ...previous, ...patch, updatedAt: new Date().toISOString() };
+    uiReview.entries[viewKey] = entry;
+    await this.update({ uiReview });
+    return entry;
   }
 
   private async saveToDb(data: AppSettings): Promise<void> {

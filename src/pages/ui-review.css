@@ -1,0 +1,197 @@
+/* UiReviewPage — the page-walkthrough verdict table.
+   ⚠️ Only tokens that actually exist are used here. An undefined CSS property is NOT an error at
+   runtime — it is silently dropped and the element inherits — so a wrong name looks like a styling
+   choice, not a bug. `node scripts/validate-css-tokens.cjs` is the check. */
+
+.uir-page {
+  padding: 18px 20px 40px;
+  color: var(--ink);
+}
+
+.uir-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+.uir-sub {
+  margin: 0 0 14px;
+  color: var(--ink-soft);
+  max-width: 78ch;
+  font-size: 0.92rem;
+}
+
+.uir-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.uir-summary b {
+  color: var(--accent);
+}
+
+.uir-summary-note {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+}
+
+.uir-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.uir-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.uir-filters .uir-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.uir-filters input[type='search'] {
+  min-width: 240px;
+  padding: 6px 8px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.uir-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.uir-table th,
+.uir-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.uir-table thead th {
+  color: var(--text-dim);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.uir-area-row th {
+  padding-top: 16px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+
+.uir-page-cell {
+  min-width: 240px;
+}
+
+.uir-label {
+  display: block;
+  color: var(--ink);
+}
+
+.uir-path {
+  display: block;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+
+.uir-tier {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.uir-tier--free {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.uir-table select,
+.uir-note {
+  background: var(--bg-elev);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.84rem;
+}
+
+.uir-note {
+  width: 100%;
+  min-width: 200px;
+}
+
+.uir-table select:focus-visible,
+.uir-note:focus-visible,
+.uir-filters input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.uir-status {
+  white-space: nowrap;
+  font-size: 0.76rem;
+  color: var(--text-faint);
+}
+
+.uir-status--saved {
+  color: var(--accent);
+}
+
+.uir-status--error {
+  color: var(--risk-high, var(--accent));
+  font-weight: 700;
+}
+
+.uir-footer {
+  margin-top: 18px;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.uir-footer code {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uir-page * {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .uir-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

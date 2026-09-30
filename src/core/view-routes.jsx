@@ -165,6 +165,7 @@ import DesignObservationsPage from '../pages/DesignObservationsPage.jsx';
 import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
+import UiReviewPage from '../pages/UiReviewPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
 import BlockedSignalsPage from '../pages/BlockedSignalsPage.jsx';
 // Performance Change (2026-09-28) — the CHANGE lens over the same stored data: period over period,
@@ -372,6 +373,7 @@ export const VIEW_COMPONENTS = {
   'theory-registry': TheoryRegistryPage,
   'design-observations': DesignObservationsPage,
   'architecture-framework': ArchitectureFrameworkPage,
+  'ui-review': UiReviewPage,
   'diagrams': DiagramsPage,
   'blocked-signals': BlockedSignalsPage,
   'performance-change': PerformanceChangePage,

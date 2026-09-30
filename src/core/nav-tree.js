@@ -354,6 +354,7 @@ export const NAV_TREE = {
       { kind: 'section-header', id: 'dev-engineering', label: 'Engineering Tools', icon: '🛠' },
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
+      { id: 'ui-review', label: 'Page Walkthrough', icon: '📋' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
       { id: 'widget-library', label: 'Widget Library', icon: '⬚' },
       { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
