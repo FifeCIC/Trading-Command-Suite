@@ -1,9 +1,0 @@
-=== score.value scale (all scores) ===
-n	mn	avgv	mx
-14862	0	57.97	230
-=== score.value for ATTRIBUTED trades only ===
-n	mn	avgv	mx
-69	50	90.01	133
-=== attributed-trade count WITHOUT the pnl filter (does the join lose rows?) ===
-attributed_all	pnl_null	closedat_null
-253	4	0
