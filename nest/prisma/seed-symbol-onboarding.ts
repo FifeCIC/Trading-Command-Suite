@@ -125,8 +125,26 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
 // fact. A future reader has to be able to re-verify the choice, so name the
 // measurement, e.g. "verified tradeMode=4 on :5001; absent from :5000".
 const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?: string; brokerSymbol?: string | null }> = [
-  { symbol: 'UK100', brokerId: 3, note: 'FTSE 100 — Pepperstone feed current; MetaQuotes stale since 2026-05' },
-  { symbol: 'GER40', brokerId: 3, note: 'DAX 40 — Pepperstone has a real GER40 feed' },
+  // ⚠️ #1009 — EVERY MT5 ROUTE PINS `brokerSymbol`, AND IT IS NOT COSMETIC.
+  //
+  // Measured 2026-10-01 against the live bridges: all six tickers below are EXACT matches on
+  // `:5001` (tradeMode=4), so pinning them is a NO-OP AT RUNTIME today. That is the point — the
+  // route was correct because the venue happens to use the same names, not because anything
+  // guaranteed it. A bare ticker is a GLOBAL namespace (`:5000` alone lists 12,363 instruments) and
+  // can resolve to a DIFFERENT instrument on another venue: that is the hazard already recorded for
+  // `BTC` (the #914 class).
+  //
+  // ⚠️ The coincidence HAS already broken once, in both directions, and both are verifiable now:
+  //   `GER40` — ABSENT from `:5000` (that venue calls it `DE40`, and `DE40` there is tradeMode=0)
+  //   `VIX`   — ABSENT from `:5000` entirely
+  // So a broker-2 route for either would resolve to nothing, or to the wrong instrument, silently.
+  // `US500` is the symbol from the 2026-09-15 incident where a bot looked perfectly configured in
+  // the UI while the bridge refused every order.
+  //
+  // ⚠️ Verified against the bridge's own `/symbols`, NOT assumed (#760 / INV-PROVIDER-REACHABLE):
+  //   (Invoke-RestMethod http://localhost:5001/symbols).symbols | ? name -eq GER40   # tradeMode 4
+  { symbol: 'UK100', brokerId: 3, brokerSymbol: 'UK100', note: 'FTSE 100 — Pepperstone feed current; MetaQuotes stale since 2026-05' },
+  { symbol: 'GER40', brokerId: 3, brokerSymbol: 'GER40', note: 'DAX 40 — Pepperstone has a real GER40 feed. ⚠️ :5000 calls this DE40 and disables it, so a fallback here resolves to nothing (#1009)' },
   // ⚠️ FRA40 RE-POINTED 2 -> 3 on 2026-09-15. The previous note ("Pepperstone returns 0")
   // was measured on 2026-09-10 and is NO LONGER TRUE: :5001 now feeds FRA40 live
   // (contiguous 1h bars verified on BOTH bridges), and it is the broker that ACCEPTS
@@ -138,6 +156,7 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
   {
     symbol: 'FRA40',
     brokerId: 3,
+    brokerSymbol: 'FRA40',
     note: 'CAC 40 — re-pointed to Pepperstone 2026-09-15: :5000 refuses orders (tradeMode 0), :5001 accepts them AND feeds it live (both bridges verified, contiguous 1h bars)',
   },
   // US30 — added 2026-09-15. It had NO route row, so orders fell back to the primary broker
@@ -148,6 +167,7 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
   {
     symbol: 'US30',
     brokerId: 3,
+    brokerSymbol: 'US30',
     note: 'Dow 30 — added 2026-09-15: no route existed (silent fallback to :5000, tradeMode 0); Pepperstone accepts orders and feeds it live (verified both bridges)',
   },
   // US500 — added 2026-09-15. It had NO route row at all, so `Mt5SymbolRouter` fell
@@ -171,9 +191,10 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
   {
     symbol: 'US500',
     brokerId: 3,
+    brokerSymbol: 'US500',
     note: 'US 500 Index — Pepperstone tradeMode=4 verified 2026-09-15; MetaQuotes :5000 reports tradeMode=0 (trading disabled)',
   },
-  { symbol: 'XAGUSD', brokerId: 3, note: 'Silver — live on both bridges; Pepperstone (3) is primary for metals' },
+  { symbol: 'XAGUSD', brokerId: 3, brokerSymbol: 'XAGUSD', note: 'Silver — live on both bridges; Pepperstone (3) is primary for metals' },
   // VIX — added 2026-09-11 (#772). Pepperstone-ONLY: :5001 lists
   // {"name":"VIX","tradeMode":4} under Retail\Indices\Minors\VIX and returns 200
   // 1h bars; :5000 has no VIX at all and returns 0 bars. brokerSymbol is the
@@ -325,6 +346,16 @@ async function main() {
     // has, so a re-seed could not REPAIR a wrong brokerSymbol — it would only
     // re-enable the row. brokerSymbol and provider are both load-bearing for
     // symbol resolution (#760), so both are set on update as well as create.
+    //
+    // ⚠️ #1009 — `r.brokerSymbol ?? undefined` is the mechanism, and `undefined` is doing real
+    // work: Prisma OMITS an `undefined` field from the UPDATE, whereas `null` would write a NULL.
+    // That distinction is what lets a route remain un-pinned deliberately while every route BELOW
+    // that should be pinned can now be repaired by a re-seed.
+    //
+    // VERIFIED BY ROUND-TRIP, 2026-10-01: `GER40` was NULLed directly in the database, the seeder
+    // was re-run, and the value came back as `GER40` — so the repair path works and the earlier
+    // text above ("a re-seed could not REPAIR a wrong brokerSymbol") is now only true of routes
+    // whose seed entry omits the field.
     await prisma.symbolRoute.upsert({
       where: { symbol_brokerId: { symbol: r.symbol, brokerId: r.brokerId } },
       update: {
