@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 152,
+  "count": 154,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -1209,6 +1209,28 @@
       "where": "nest",
       "category": "validator",
       "purpose": "fail the build when a setting is read without going through the registry.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-signal-classification.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "INV-NO-SIGNAL-PREFIX-TEST (build-time)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-signal-column-width.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "INV-SIGNAL-COLUMN-FITS-A-CLASS (build-time)",
       "selfTest": true,
       "reaches": [
         "prebuild",

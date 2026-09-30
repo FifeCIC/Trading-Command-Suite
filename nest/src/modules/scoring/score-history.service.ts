@@ -12,6 +12,9 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// ⚠️ THE canonical classifier, not a local test. See the `signal` field's docblock for why a
+// prefix test here demoted BOTH strong classes to `watch`.
+import { classifySignal } from '../../common/utils/signal-direction';
 
 export interface ScoreSnapshot {
   id: string;
@@ -31,6 +34,30 @@ export interface ScoreHistoryEntry {
   timestamp: Date;
 }
 
+/** The DISPLAY tier shown on the Recently Analysed page, for a signal class. */
+export type AnalysisTier = 'entry' | 'defensive' | 'watch';
+
+/**
+ * analysisTier() — the ONE place a signal class becomes a display tier (#1029).
+ *
+ * ⚠️ PURE AND EXPORTED SO THE TABLE CAN BE ASSERTED WITHOUT A DATABASE. #1029's acceptance asked for
+ * exactly that: *"a test asserts the table above, so a reintroduced prefix test fails"*. The build
+ * gate (`validate-signal-classification.cjs`) proves no prefix test exists ANYWHERE — but a gate that
+ * forbids a shape is not the same as a test that pins the BEHAVIOUR, and both were asked for.
+ *
+ * ⚠️ `hold` AND `unknown` BOTH map to `watch`. That is deliberate and was the pre-existing behaviour:
+ * an unrecognised class must degrade to "no view" rather than be guessed into a direction — the same
+ * rule `classifySignal()` is built on.
+ *
+ * Measured 2026-09-30: the old prefix test sent **both** `STRONG_BUY` and `STRONG_SELL` here as
+ * `watch`, because each begins with `STRONG`. The two strongest findings the system can produce read
+ * as indistinguishable from `HOLD`.
+ */
+export function analysisTier(signal: unknown): AnalysisTier {
+  const cls = classifySignal(signal);
+  return cls === 'buy' ? 'entry' : cls === 'sell' ? 'defensive' : 'watch';
+}
+
 export interface RecentlyAnalysedSymbol {
   symbolId: string;
   ticker: string;
@@ -38,7 +65,13 @@ export interface RecentlyAnalysedSymbol {
   latestConfidence: number;
   lastAnalysedAt: string;
   totalRuns: number;
-  signal: string;
+  /**
+   * The DISPLAY tier, derived from the server-owned signal class — never from the raw composite.
+   *
+   * ⚠️ A CLOSED UNION, so a new tier cannot be added by accident at one site and missed at another.
+   * The three values are a UI contract: `RecentlyAnalysedSymbolsPage` maps them to badge labels.
+   */
+  signal: AnalysisTier;
 }
 
 /**
@@ -721,9 +754,8 @@ export class ScoreHistoryService {
         // often 100s-1000s) against the 60/40 tiers. Use the server-owned signal
         // (STRONG_BUY/BUY/HOLD/SELL/STRONG_SELL) persisted in the breakdown,
         // falling back to a neutral tier for legacy rows that predate it.
-        const signal = entry.latestSignal?.startsWith('BUY') ? 'entry'
-          : entry.latestSignal?.startsWith('SELL') ? 'defensive'
-          : 'watch';
+        // #1029 — see `analysisTier()`. Whole-token classification, never a prefix test.
+        const signal: AnalysisTier = analysisTier(entry.latestSignal);
         return {
           symbolId: entry.symbolId, ticker,
           latestScore: Number(entry.latestScore.toFixed(1)),

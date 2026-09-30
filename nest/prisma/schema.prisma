@@ -1332,7 +1332,12 @@ model ScoreSnapshot {
   protocolId String   @db.VarChar(36)
   symbol     String   @db.VarChar(20)
   composite  Float
-  tradingSignal String @map("trading_signal") @db.VarChar(10)
+  // ⚠️ VarChar(16), NOT 10 (#1028, 2026-09-30). `STRONG_SELL` is ELEVEN characters, so at
+  // VarChar(10) MySQL truncated it to `STRONG_SEL` on write — 1,081 rows of real scoring history
+  // were stored as a value that is not a signal class at all. Measured: `STRONG_BUY` (10) fitted
+  // EXACTLY, which is why the defect hid — only the bearish strong class was corrupted, and only
+  // the highest-conviction bearish signal the system can produce.
+  tradingSignal String @map("trading_signal") @db.VarChar(16)
   rarityPct  Float?
   signalPct  Float?   // #726 — pre-gate directional % (the "signal %" a user sees)
   opportunityPct Float? // #726 — additive screening %
@@ -1571,7 +1576,8 @@ model StrategyEvaluation {
   strategyId    String   @db.VarChar(36)
   symbol        String   @db.VarChar(20)
   composite     Float
-  signal        String   @db.VarChar(10)
+  // ⚠️ VarChar(16), NOT 10 — see `ScoreSnapshot.tradingSignal` for why (#1028).
+  signal        String   @db.VarChar(16)
   rarityBand    String?  @db.VarChar(20)
   rarityPct     Float?
   direction     String?  @db.VarChar(10)
@@ -2018,7 +2024,11 @@ model DecisionLog {
   /// average or compare this column — its unit is unknown per row. Read `compositeRaw`
   /// and `compositePct` instead; a reader that shows this must label it as untyped.
   composite   Float?
-  signal      String?  @db.VarChar(10)    // BUY, SELL, HOLD
+  // ⚠️ VarChar(16), NOT 10 (#1028, 2026-09-30). `STRONG_SELL` is ELEVEN characters; at VarChar(10)
+  // it was truncated to `STRONG_SEL` on write — 726 rows. The comment here used to read
+  // "BUY, SELL, HOLD", which was the OBSERVATION and not the CONTRACT: the column really receives
+  // STRONG_BUY too (2,166 rows), so the class vocabulary was always wider than the declared width.
+  signal      String?  @db.VarChar(16)    // BUY | STRONG_BUY | SELL | STRONG_SELL | HOLD
   /// ⚠️ BIGINT since 2026-09-22 — was `int`, and this is the column that proved the bug.
   /// MySQL's `sql_mode` is empty (non-strict), so an out-of-range write is clamped rather
   /// than rejected: `automation-loop.service.ts` passes a REAL 12-digit broker ticket here,
@@ -2056,15 +2066,18 @@ model DecisionTrail {
   // LONG side
   longProtocolId  String?  @db.VarChar(100)
   longComposite   Float    @default(0)
-  longSignal      String?  @db.VarChar(10)
+  // ⚠️ VarChar(16), NOT 10 (#1028). These three are EMPTY today, and widened anyway: they are named
+  // for signal classes, so the first writer to place a STRONG_SELL here would silently truncate it
+  // exactly as `decision_log.signal` did. An empty column is not evidence that the width is right.
+  longSignal      String?  @db.VarChar(16)
   // SHORT side
   shortProtocolId String?  @db.VarChar(100)
   shortComposite  Float    @default(0)
-  shortSignal     String?  @db.VarChar(10)
+  shortSignal     String?  @db.VarChar(16)
   // Outcome
   winner          String?  @db.VarChar(10)   // LONG | SHORT | NONE
   chosenComposite Float    @default(0)
-  finalSignal     String?  @db.VarChar(10)   // BUY | SELL | HOLD
+  finalSignal     String?  @db.VarChar(16)   // BUY | STRONG_BUY | SELL | STRONG_SELL | HOLD
   reason          String?  @db.Text
   actionable      Boolean  @default(false)
   // Trade result (only if a trade executed)
