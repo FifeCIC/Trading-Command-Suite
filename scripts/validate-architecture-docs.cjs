@@ -13,11 +13,24 @@
  * batch #17) and were reconciled by hand, because **nothing failed the build when one was
  * updated and not the other**.
  *
- * ⚠️ AND THIS IS NOT WHAT `validate-duplication.cjs` DOES. Its allowance already tracks the
- * `architecture-framework.data.js <-> architecture-reference.js` pair, and that guard is good —
- * it catches copy-paste GROWTH. But it answers a DIFFERENT question. Adding a 26th section to
- * one file and not the other is not duplication: it creates no new shared 8-line window, so the
- * pair neither GREW nor SHRANK — and `validate-duplication.cjs` is, by design, blind to it.
+ * ⚠️ AND THIS IS NOT WHAT `validate-duplication.cjs` DOES — and the reason is subtle enough that
+ * it was got wrong TWICE, so it is written down properly here.
+ *
+ * That guard DOES track this pair, at 1023 windows. Reading only that fact, the conclusion "so the
+ * pair is already protected" looks sound. **It is wrong, and the guard's own annotation says so:**
+ *
+ *     "What is still UNGUARDED is the agreement itself: nothing fails the build if one surface is
+ *      updated and the other is not. They diverged once already (batch #17 ...)."
+ *
+ * The pair is in the ALLOWANCE, and an allowance does the opposite of protecting a number — it
+ * LICENSES it to vary. Its own note records the growth as expected and banked: +51 windows at
+ * batch #22, +125 at batch #23, "banked deliberately, not silently". So a divergence is
+ * *permitted* by design, and that guard cannot fire on it. Two facts pointed in opposite
+ * directions and the weaker reading was the more comfortable one.
+ *
+ * The general lesson, which is why this comment is long: **an entry in an allowance list is not a
+ * guard on the thing the list counts.** Read what the allowance MEANS before concluding a value is
+ * protected — a name in a config is a claim, not a definition.
  *
  * ── THE TWO INVARIANTS ───────────────────────────────────────────────────────────────────────
  *
