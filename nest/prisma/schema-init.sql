@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (110 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (111 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 118 CREATE TABLE statements.
+-- SCALE: 119 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -183,6 +183,7 @@ CREATE TABLE `BacktestRun` (
     `totalSignals` INTEGER NULL,
     `botId` VARCHAR(36) NULL,
     `botBaseSize` DOUBLE NULL,
+    `periodId` VARCHAR(36) NULL,
     `winRate` DOUBLE NOT NULL,
     `totalPnl` DOUBLE NOT NULL,
     `profitFactor` DOUBLE NOT NULL,
@@ -199,6 +200,26 @@ CREATE TABLE `BacktestRun` (
 
     INDEX `BacktestRun_symbolId_protocolId_idx`(`symbolId`, `protocolId`),
     INDEX `BacktestRun_createdAt_idx`(`createdAt`),
+    INDEX `BacktestRun_periodId_idx`(`periodId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `backtest_period` (
+    `id` VARCHAR(36) NOT NULL,
+    `name` VARCHAR(120) NOT NULL,
+    `note` TEXT NULL,
+    `symbolId` VARCHAR(36) NOT NULL,
+    `timeframe` VARCHAR(10) NOT NULL,
+    `fromDate` DATETIME(3) NOT NULL,
+    `toDate` DATETIME(3) NOT NULL,
+    `provider` VARCHAR(50) NULL,
+    `barCount` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `backtest_period_symbolId_timeframe_fromDate_idx`(`symbolId`, `timeframe`, `fromDate`),
+    INDEX `backtest_period_createdAt_idx`(`createdAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -1133,7 +1154,7 @@ CREATE TABLE `score_snapshot` (
     `protocolId` VARCHAR(36) NOT NULL,
     `symbol` VARCHAR(20) NOT NULL,
     `composite` DOUBLE NOT NULL,
-    `trading_signal` VARCHAR(10) NOT NULL,
+    `trading_signal` VARCHAR(16) NOT NULL,
     `rarityPct` DOUBLE NULL,
     `signalPct` DOUBLE NULL,
     `opportunityPct` DOUBLE NULL,
@@ -1224,6 +1245,7 @@ CREATE TABLE `trading_strategy` (
     `shortProtocolId` VARCHAR(36) NULL,
     `scoringStrategyId` VARCHAR(36) NULL,
     `duplicatedFromId` VARCHAR(36) NULL,
+    `magic` INTEGER NULL,
     `symbol` VARCHAR(20) NOT NULL,
     `brokerId` VARCHAR(50) NOT NULL DEFAULT 'mt5',
     `timeframe` VARCHAR(10) NOT NULL DEFAULT '5m',
@@ -1256,6 +1278,7 @@ CREATE TABLE `trading_strategy` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    UNIQUE INDEX `trading_strategy_magic_key`(`magic`),
     INDEX `trading_strategy_scoringStrategyId_idx`(`scoringStrategyId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -1281,7 +1304,7 @@ CREATE TABLE `strategy_evaluation` (
     `strategyId` VARCHAR(36) NOT NULL,
     `symbol` VARCHAR(20) NOT NULL,
     `composite` DOUBLE NOT NULL,
-    `signal` VARCHAR(10) NOT NULL,
+    `signal` VARCHAR(16) NOT NULL,
     `rarityBand` VARCHAR(20) NULL,
     `rarityPct` DOUBLE NULL,
     `direction` VARCHAR(10) NULL,
@@ -1677,7 +1700,7 @@ CREATE TABLE `decision_log` (
     `compositeRaw` DOUBLE NULL,
     `compositePct` DOUBLE NULL,
     `composite` DOUBLE NULL,
-    `signal` VARCHAR(10) NULL,
+    `signal` VARCHAR(16) NULL,
     `ticket` BIGINT NULL,
     `price` DOUBLE NULL,
     `quantity` DOUBLE NULL,
@@ -1697,13 +1720,13 @@ CREATE TABLE `decision_trail` (
     `symbol` VARCHAR(20) NOT NULL,
     `longProtocolId` VARCHAR(100) NULL,
     `longComposite` DOUBLE NOT NULL DEFAULT 0,
-    `longSignal` VARCHAR(10) NULL,
+    `longSignal` VARCHAR(16) NULL,
     `shortProtocolId` VARCHAR(100) NULL,
     `shortComposite` DOUBLE NOT NULL DEFAULT 0,
-    `shortSignal` VARCHAR(10) NULL,
+    `shortSignal` VARCHAR(16) NULL,
     `winner` VARCHAR(10) NULL,
     `chosenComposite` DOUBLE NOT NULL DEFAULT 0,
-    `finalSignal` VARCHAR(10) NULL,
+    `finalSignal` VARCHAR(16) NULL,
     `reason` TEXT NULL,
     `actionable` BOOLEAN NOT NULL DEFAULT false,
     `tradeTicket` BIGINT NULL,
@@ -2279,6 +2302,9 @@ ALTER TABLE `TickRecordingSession` ADD CONSTRAINT `TickRecordingSession_symbolId
 
 -- AddForeignKey
 ALTER TABLE `BacktestRun` ADD CONSTRAINT `BacktestRun_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `backtest_period` ADD CONSTRAINT `backtest_period_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BacktestTrade` ADD CONSTRAINT `BacktestTrade_runId_fkey` FOREIGN KEY (`runId`) REFERENCES `BacktestRun`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

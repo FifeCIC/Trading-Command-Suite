@@ -509,6 +509,7 @@
       "purpose": "regenerate `prisma/schema-init.sql`, with the UTC correction applied.",
       "selfTest": false,
       "reaches": [
+        "prebuild",
         "npm"
       ]
     },

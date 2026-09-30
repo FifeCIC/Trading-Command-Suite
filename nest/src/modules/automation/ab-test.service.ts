@@ -484,12 +484,29 @@ export class AbTestService {
       status: result.success ? 'open' : 'rejected',
       origin: 'strategy',
       source: 'meta-stack',
-      abTestId: test.id,
+      // ⚠️ #1039 — THE TAG IS A CLAIM, AND A REJECTED ORDER CANNOT MAKE IT.
+      //
+      // `abTestId` asserts "this row belongs to an A/B arm". An order the broker REFUSED never
+      // entered one — nothing was opened, nothing can be closed, and it has no P&L. Tagging it
+      // anyway made `summarize()` count it as a `trade`, which inflated the sample the verdict's own
+      // `>= 30 closed per side` bar is measured against. Measured 2026-09-30: 91 of 104 rows on the
+      // `b50727ee` run were `rejected` (44 A / 47 B), so arm B summed to exactly £0.00 over 52 rows.
+      //
+      // The row is STILL RECORDED — a refused order is a fact worth keeping, and `strategy` already
+      // names the test (`AB-A {name}`). What is withheld is the ATTRIBUTION, which is the part that
+      // was false. `computeResults` also filters `rejected` at read time, so a legacy row or a
+      // future writer that forgets cannot inflate a verdict again.
+      abTestId: result.success ? test.id : undefined,
       // ⚠️ #929 — the side is stored STRUCTURALLY. `computeResults` used to recover it by
       // parsing `brokerComment` for the `AB-A`/`AB-B` tag, but the stranded-trade reaper
       // overwrites that string, so a reaped A/B trade lost its side and vanished from the
       // verdict with no error. Measured 2026-09-23: 14 of 14 A/B rows attributed to 0 sides.
-      abTestSide: side,
+      //
+      // ⚠️ #1039 — withheld together with `abTestId`, and it MUST be this one field, not a second
+      // one added above: two `abTestSide` keys in a single object literal means the LAST wins, so
+      // an unconditional copy elsewhere in this block would silently undo the guard. That is not
+      // hypothetical — it is how the first version of this fix read before it was checked.
+      abTestSide: result.success ? side : undefined,
       // ⚠️ #1014 — still the ORDER ticket, on purpose. The A/B scale-ins are the clearest case: all
       // four orders on this NETTING account share ONE positionId, so switching this to
       // `result.positionId` would give all four rows the same closing deal — and the reconciler
@@ -512,6 +529,31 @@ export class AbTestService {
       orderBy: { openedAt: 'asc' },
     });
 
+    // ⚠️ #1039 — A REJECTED ORDER IS NOT A TRADE, AND MUST NOT REACH AN ARM.
+    //
+    // `dispatchSideTrade` writes a `trade` row for an order the broker REFUSED, carrying
+    // `status: 'rejected'` — and until now it carried `abTestId` too, so `summarize()` counted it
+    // as `trades`. Measured 2026-09-30 on the `b50727ee` run: **91 of 104 attributed rows were
+    // `rejected`** — 44 on arm A, 47 on arm B — against only 13 genuinely closed (8 A / 5 B).
+    //
+    // ⚠️ THE SAMPLE WAS INFLATED, SO THE VERDICT'S OWN SAMPLE BAR WAS MIS-MEASURED. The bar is
+    // `>= 30 closed per side`; arm B summed to exactly £0.00 because `rejected` rows carry no P&L
+    // and they dominated it. A verdict read from those numbers compares arm A's real money
+    // against arm B's ABSENCE OF TRADES and reports it as a result.
+    //
+    // ⚠️ EXCLUDED AT READ TIME AS WELL AS AT WRITE TIME, deliberately (both halves of #1039).
+    // The write-side fix stops NEW rows being tagged; this filter stops a LEGACY row — or a
+    // future writer that forgets — from silently inflating a verdict again. A read path that
+    // trusts a tag it cannot verify is how the tag became wrong in the first place.
+    const rejectedRows = trades.filter((t) => t.status === 'rejected');
+    const counted = trades.filter((t) => t.status !== 'rejected');
+    if (rejectedRows.length) {
+      this.logger.log(
+        `A/B ${test.id}: excluded ${rejectedRows.length} REJECTED row(s) that never traded ` +
+          `(${trades.length} attributed → ${counted.length} counted) — #1039`,
+      );
+    }
+
     // ⚠️ #929 — attribute by `abTestSide`, NOT by parsing `brokerComment`.
     //
     // This read `t.brokerComment?.includes('AB-A')`. `brokerComment` is NOT immutable: the
@@ -521,14 +563,15 @@ export class AbTestService {
     // 2026-09-23: 14 A/B rows, `side_A = 0`, `side_B = 0`, `0 vs 0` reported.
     //
     // A verdict must never depend on a mutable display string. `trade.abTestSide` is the record.
-    const sideA = trades.filter((t) => t.abTestSide === 'A');
-    const sideB = trades.filter((t) => t.abTestSide === 'B');
+    // ⚠️ #1039 — over `counted`, NOT `trades`: a rejected row has no side that means anything.
+    const sideA = counted.filter((t) => t.abTestSide === 'A');
+    const sideB = counted.filter((t) => t.abTestSide === 'B');
 
     // ⚠️ Rows tagged to this test that carry NO side are REPORTED, never dropped in silence.
     // They were traded before `abTestSide` existed, or written by a path that forgot it. A test
     // that says `0 vs 0` while holding rows nobody can attribute is the misleading output; a
     // count of those rows is the honest one (see development-philosophy §7, “make silence visible”).
-    const unattributed = trades.filter((t) => t.abTestSide !== 'A' && t.abTestSide !== 'B').length;
+    const unattributed = counted.filter((t) => t.abTestSide !== 'A' && t.abTestSide !== 'B').length;
 
     // Live unrealized P&L from MT5 positions tagged with the A/B comment.
     let liveBySide: Record<'A' | 'B', number> = { A: 0, B: 0 };
@@ -575,6 +618,15 @@ export class AbTestService {
       control: summarize(sideA, liveBySide.A),
       variant: summarize(sideB, liveBySide.B),
       unattributed,
+      // ⚠️ #1039 — STATE BOTH COUNTS so `attributed` can never be mistaken for the sample again.
+      // The whole defect was one number standing in for two different quantities: "rows tagged to
+      // this test" and "rows that actually traded". Naming both makes the difference readable
+      // without re-deriving it, and a future inflation shows up as a gap rather than as growth.
+      attribution: {
+        attributed: trades.length,
+        counted: counted.length,
+        excludedRejected: rejectedRows.length,
+      },
       symbols: test.symbols,
       computedAt: new Date().toISOString(),
     };
@@ -587,9 +639,6 @@ export class AbTestService {
     // visible output is `0 vs 0`, which reads as "not enough trades yet" and invites the operator
     // to wait longer for a result that cannot arrive.
     const arms = await this.describeArms(test.controlStackId, test.variantStackId);
-    // #929 — a result without a stated verdict is not a result. The verdict REFUSES to name a
-    // winner below the per-side sample bar, and names its method when it does.
-    return { ...result, arms, verdict: this.buildVerdict(result.control, result.variant, unattributed, arms) };
     // #929 — a result without a stated verdict is not a result. The verdict REFUSES to name a
     // winner below the per-side sample bar, and names its method when it does.
     return { ...result, arms, verdict: this.buildVerdict(result.control, result.variant, unattributed, arms) };

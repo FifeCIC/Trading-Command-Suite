@@ -155,7 +155,7 @@ buried ability `development-philosophy` §7 warns about.
 | `fix-local-time-writes.cjs` | nest | tool | — | npm | fix-local-time-sources.cjs — replace MySQL `NOW()` and `DEFAULT CURRENT_TIMESTAMP` in SQL. |
 | `fix-mojibake.cjs` | repo | tool | yes | docs | REVERSE-DECODE repair tool for CP1252/CP850 mojibake |
 | `fix-seed-directions.cjs` | nest | tool | — | ⚠️ **NOTHING** | one-off cleanup (#620): remove directives from |
-| `gen-schema-init.cjs` | nest | tool | — | npm | regenerate `prisma/schema-init.sql`, with the UTC correction applied. |
+| `gen-schema-init.cjs` | nest | tool | — | prebuild, npm | regenerate `prisma/schema-init.sql`, with the UTC correction applied. |
 | `handoff-status.cjs` | repo | tool | yes | docs | pending vs processed handoffs, and the vocabulary that makes an audit honest. |
 | `handoff-to-discord.cjs` | repo | tool | — | npm | Phase 1: Discord activity (#652) |
 | `identity-map.cjs` | nest | tool | — | ⚠️ **NOTHING** | "which column holds which identity?", measured rather than assumed. |
