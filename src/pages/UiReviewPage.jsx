@@ -80,6 +80,7 @@ export default function UiReviewPage() {
   const [entries, setEntries] = useState({});
   const [status, setStatus] = useState({});
   const [loadError, setLoadError] = useState(null);
+  const [openNote, setOpenNote] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Filters — 140 rows is too many to scan, and "what is still unanswered" is the question that
@@ -120,6 +121,63 @@ export default function UiReviewPage() {
   };
 
   /**
+   * openOnNextScreen() — open a page in a WINDOW placed on your other monitor.
+   *
+   * HOW THIS WORKS, because it is not obvious:
+   *   `window.open(url, name, features)` creates a real POPUP WINDOW rather than a tab, and the
+   *   `left` / `top` / `width` / `height` features position it. A tab cannot be positioned — that is
+   *   the whole reason this uses features. A popup opened from inside a click IS allowed, so the
+   *   browser will not block it.
+   *
+   * ⚠️ "The screen to the right" is MEASURED where the browser will let us, and assumed only as a
+   * fallback. `getScreenDetails()` reports every screen and its real bounds, so a monitor arranged
+   * to the LEFT, or stacked vertically, is handled correctly. The first call asks the browser for
+   * the "window management" permission — in Chrome/Edge you get a prompt; if it is denied or
+   * unsupported, the fallback assumes one screen sits immediately to the right, which is right for
+   * the common arrangement and wrong for the others.
+   *
+   * ⚠️ Each page gets its OWN window name, so opening five pages gives five windows side by side
+   * rather than one window being replaced five times.
+   */
+  const openOnNextScreen = async (path, label) => {
+    const width = Math.round((window.screen?.availWidth || 1500) * 0.92);
+    const height = Math.round((window.screen?.availHeight || 900) * 0.92);
+    const winName = `tcs-review-${path.replace(/[^a-zA-Z0-9]+/g, '-')}`;
+    const features = (l, t) => `popup=yes,left=${l},top=${t},width=${width},height=${height},noopener`;
+
+    try {
+      if (typeof window.getScreenDetails === 'function') {
+        const details = await window.getScreenDetails();
+        const current = details.currentScreen;
+        const others = (details.screens || []).filter((s) => s !== current);
+        if (others.length) {
+          // Prefer a screen whose left edge starts at/after this screen's right edge...
+          const toTheRight = others
+            .filter((s) => s.availLeft >= (current?.availLeft ?? 0) + (current?.availWidth ?? 0) - 8)
+            .sort((a, b) => a.availLeft - b.availLeft);
+          // ...otherwise fall back to the first other screen, so a left-hand or stacked monitor still works.
+          const target = toTheRight[0] || others[0];
+          const l = target.availLeft + Math.round((target.availWidth - width) / 2);
+          const t = target.availTop + Math.round((target.availHeight - height) / 2);
+          setOpenNote(`Opened “${label}” on a second screen (${target.availWidth}\u00d7${target.availHeight}).`);
+          window.open(path, winName, features(l, t));
+          return;
+        }
+      }
+    } catch {
+      // Permission denied or unsupported — fall through rather than failing the click.
+    }
+
+    const s2 = window.screen;
+    const left = (s2?.availLeft ?? 0) + (s2?.availWidth ?? 0);
+    window.open(path, winName, features(left, 40));
+    setOpenNote(
+      'No second screen was reported, so “' + label + '” was placed just right of this one. Allow ' +
+        'the browser\u2019s window-management permission for it to use your real screens.',
+    );
+  };
+
+  /**
    * Is a verdict recorded for this page?
    *
    * ⚠️ Written as one named predicate on purpose. The first version was an inline
@@ -151,8 +209,10 @@ export default function UiReviewPage() {
         <h2>Page walkthrough — verdicts</h2>
         <p className="uir-sub">
           Every page in the app, in sidebar order, with the views that are not sidebar entries listed
-          after them. Each change saves immediately.
+          after them. Each change saves immediately. <b>Click a page name</b> to open it in a new
+          window, or <b>⇥ other screen</b> to place it on your second monitor.
         </p>
+        {openNote ? <p className="uir-sub uir-sub--note">{openNote}</p> : null}
       </header>
 
       {loadError ? (
@@ -217,8 +277,27 @@ export default function UiReviewPage() {
                 ) : null}
                 <tr key={r.key}>
                   <td className="uir-page-cell">
-                    <span className="uir-label">{r.label}</span>
-                    <code className="uir-path">{r.key}</code>
+                    <a
+                      className="uir-label uir-label--link"
+                      href={r.key}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Open ${r.label} in a new window`}
+                    >
+                      {r.label}
+                    </a>
+                    <span className="uir-path-row">
+                      <code className="uir-path">{r.key}</code>
+                      <button
+                        type="button"
+                        className="uir-screen-btn"
+                        onClick={() => openOnNextScreen(r.key, r.label)}
+                        aria-label={`Open ${r.label} on another screen`}
+                        title="Open on the next screen to the right — the browser asks for permission to see your screens the first time"
+                      >
+                        ⇥ other screen
+                      </button>
+                    </span>
                   </td>
                   <td>
                     <span className={`uir-tier uir-tier--${r.tier}`}>{r.tier === 'free' ? 'FREE' : 'premium'}</span>

@@ -121,6 +121,52 @@
   font-size: 0.76rem;
 }
 
+.uir-sub--note {
+  color: var(--accent);
+}
+
+.uir-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.uir-label--link {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border);
+}
+
+.uir-label--link:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.uir-screen-btn {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  min-height: 24px;
+  white-space: nowrap;
+}
+
+.uir-screen-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.uir-screen-btn:focus-visible,
+.uir-label--link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .uir-tier {
   display: inline-block;
   padding: 1px 6px;
