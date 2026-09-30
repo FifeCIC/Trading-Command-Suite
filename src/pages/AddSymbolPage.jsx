@@ -243,8 +243,24 @@ function ManualAddForm({ onSuccess }) {
       <button type="submit" className="btn btn-primary" disabled={adding}>
         {adding ? 'Adding...' : 'Add Symbol'}
       </button>
-      {msg && <span style={{ color: msg.type === 'error' ? '#ef4444' : '#22c55e', fontSize: '0.85rem' }}>{msg.text}</span>}
+      {/*
+        ⚠️ `msg.notice` MUST be INSIDE the `msg &&` guard.
+        It was not: the span above was guarded and this line was not, so on the FIRST render — when
+        `msg` is still null — `msg.notice` threw
+          TypeError: Cannot read properties of null (reading 'notice')
+        and took the whole Add Symbol page down before it could paint. The guarded line immediately
+        above is what made it look safe: a reader checks "is msg handled?" and sees yes.
+        This is a per-ROW check, not a per-PAGE one — the crash happened on a page that renders fine
+        everywhere else.
+      */}
+      {msg && (
+        <>
+          {msg.text && (
+            <span style={{ color: msg.type === 'error' ? '#ef4444' : '#22c55e', fontSize: '0.85rem' }}>{msg.text}</span>
+          )}
           {msg.notice && <NoticeBlock notice={msg.notice} compact />}
+        </>
+      )}
     </form>
   );
 }
