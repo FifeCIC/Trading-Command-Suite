@@ -58,10 +58,15 @@ export interface ExhaustionEventParams {
 }
 
 /**
- * StopGuardianService — records every SL/TP modification (#476).
+ * StopAdjustmentRecorder — records every SL/TP modification (#476).
+ *
+ * ⚠️ NOT the Stop Guardian. Two different classes shared the name
+ * `StopGuardianService` until 2026-09-30 — this one RECORDS a change to a stop, and the
+ * trailing-stop MANAGER lives in `modules/automation/stop-guardian.service.ts` and keeps
+ * the name `StopGuardianService`. This class never decides, guards or places anything.
  *
  * Called whenever a stop-loss or take-profit is changed — by
- * automation (future Stop Guardian logic) or manual amend via
+ * automation (the Stop Guardian's trailing logic) or manual amend via
  * the MT5 bridge or API.
  */
 @Injectable()
