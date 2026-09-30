@@ -264,14 +264,27 @@ price, `price` came back `0`, and the per-symbol cap refused:
         const rows = (Array.isArray(posData) ? posData : posData?.positions) ?? [];
         if (!Array.isArray(rows)) return { brokerId, rows: [] as Array<Record<string, any>> };
 
-        // Fill counts from the deal history, grouped by position id, entry IN only.
+        // Fill counts from the deal history, grouped by position id.
+        //
+        // ⚠️ CORRECTED 2026-09-30, by reading the payload rather than the MT5 docs. The first
+        // version filtered on `Number(d.entry) === 0` to keep only deals that OPEN a position —
+        // which is how MT5 models it — and every fill count came back `null`. The reason is that
+        // the bridge does not send `entry` at all: measured on `/history/deals?days=30`, a deal
+        // carries exactly `ticket, symbol, type, volume, price, profit, positionId, orderId,
+        // commission, swap, fee, time, comment, reason`. A filter on an absent field excludes
+        // everything, silently, and returns an empty map rather than an error.
+        //
+        // ⚠️ So this counts ALL deals for a positionId, and that is exact FOR THIS METHOD'S
+        // PURPOSE: every row here is an OPEN position, which by definition has no closing deal yet.
+        // The one exception is a position that has been PARTIALLY closed and is still open — that
+        // one has a closing deal, so its count is one higher than its fill count. Widening this to
+        // `entry` needs the field added to the bridge first; until then the number is honest for
+        // the common case and is labelled "deals" on the page rather than claimed as "fills".
         const fills = new Map<string, number>();
         if (dealRes.status === 'fulfilled' && dealRes.value.ok) {
           const dealData = await dealRes.value.json().catch(() => null);
           for (const d of (dealData?.deals ?? [])) {
-            const isEntry = Number(d.entry ?? -1) === 0;
-            if (!isEntry) continue;
-            const pid = String(d.position_id ?? d.positionId ?? '');
+            const pid = String(d.positionId ?? d.position_id ?? '');
             if (!pid) continue;
             fills.set(pid, (fills.get(pid) ?? 0) + 1);
           }

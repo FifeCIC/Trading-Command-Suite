@@ -91,6 +91,23 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
       )}
 
       <div className="pm-pos-details">
+        <div>
+          <span>Owner</span>
+          {/* The loud case is the ABSENT one. A position no mechanism owns is one nothing will
+              manage — the broker stop is all that stands, and that is how 0.10 lots sat unattended
+              for 2h20m while 26 guardian warnings went to a log nobody reads. */}
+          <span className={pos.owner ? '' : 'pm-loss'}>
+            {pos.owner ? pos.owner.strategyName : '★ UNOWNED — nothing is managing this'}
+          </span>
+        </div>
+        <div>
+          <span>Managed by</span>
+          <span>
+            {pos.owner
+              ? `TCS guardian · stop via ${pos.owner.ownerVia}`
+              : 'the broker\u2019s stop only'}
+          </span>
+        </div>
         <div><span>Direction</span><span className={pos.direction === 'BUY' ? 'pm-buy' : 'pm-sell'}>{pos.direction}</span></div>
         <div><span>Volume</span><span>{pos.volume}</span></div>
         <div><span>Leverage</span><span>{pos.leverage || '—'}</span></div>
@@ -284,6 +301,34 @@ export default function PositionsMonitorPage() {
     placeholderData: (prev) => prev,
   });
 
+  // WHO OWNS EACH POSITION, AND WHAT IS MANAGING IT (#1037).
+  //
+  // ⚠️ Joined from `StopGuardianService`, NOT re-derived here. The guardian is the ONE owner of the
+  // attribution rule, and it already publishes both halves: `guardedPositions[]` carries
+  // `ticket → strategyName + ownerVia` (measured: `ownerVia: 'magic'`), and `ownerAttribution`
+  // gives the roll-up `{ viaMagic, viaComment, unresolved[] }`. Re-computing this from the position
+  // comment would be a SECOND implementation of the rule that CAUSED the incident — `viaComment`
+  // failed precisely because a comment is mutable text a later order can overwrite.
+  //
+  // ⚠️ A position ABSENT from `guardedPositions` is the loud case, not a blank: it means no
+  // mechanism in the app is managing it, and the broker-side stop is all that stands. Silence here
+  // is exactly what the −322.67 position experienced for 2h20m.
+  const guardianQuery = useQuery({
+    queryKey: ['stop-guardian-status'],
+    // ⚠️ `/api/...` IS REQUIRED (§988) — `VITE_API_BASE_URL` is the host WITHOUT `/api`.
+    queryFn: () => apiGet('/api/automation/stop-guardian/status').catch(() => null),
+    refetchInterval: 30000,
+  });
+
+  const ownerByTicket = useMemo(() => {
+    const m = new Map();
+    const rows = guardianQuery.data?.guardedPositions;
+    if (Array.isArray(rows)) {
+      for (const g of rows) m.set(String(g.ticket), g);
+    }
+    return m;
+  }, [guardianQuery.data]);
+
   // Close mutation
   const closeMutation = useMutation({
     mutationFn: ({ ticket }) => fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' }).then(r => r.json()),
@@ -331,8 +376,20 @@ export default function PositionsMonitorPage() {
       currentPrice: curPrice,
       avgCost: entryPrice,
       allocation: null,
+      // ── #1037 passthroughs ──
+      // ⚠️ THIS OBJECT IS AN EXPLICIT LITERAL, so any field not named here is DROPPED. The card
+      // below reads `brokerLabel` / `fillCount` / `divergence` / `owner`, and the first version of
+      // that card read them off a row that never carried them — the fields rendered as nothing and
+      // looked like a clean position. Name every field the render depends on.
+      brokerId: p.brokerId,
+      brokerLabel: p.brokerLabel,
+      currency: p.currency,
+      fillCount: p.fillCount,
+      divergence: p.divergence,
+      comment: p.comment,
+      owner: ownerByTicket.get(String(p.ticket)) ?? null,
     };
-  }), [mt5Query.data]);
+  }), [mt5Query.data, ownerByTicket]);
 
   // Map Trading212 positions (long-only Invest accounts — direction is always BUY)
   const t212Positions = useMemo(() => (t212Query.data?.positions || []).map((p) => ({
