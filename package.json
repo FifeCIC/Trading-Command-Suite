@@ -32,6 +32,7 @@
     "test:replay-clock": "node --test src/core/replay-clock.test.js",
     "test:threshold-ceiling": "node --test src/core/threshold-ceiling.test.js",
     "test:bridge-offset": "python scripts/mt5-bridge/test_bridge_offset_guard.py",
+    "test:bridge-credential-binding": "python scripts/mt5-bridge/test_credential_binding.py",
     "docs:facts": "node ./scripts/docs-facts.cjs --write",
     "docs:facts:check": "node ./scripts/docs-facts.cjs --check",
     "test:docs-facts": "node ./scripts/docs-facts.cjs --self-test",
@@ -43,7 +44,9 @@
     "validate:theories": "node ./scripts/validate-theories.cjs",
     "test:theories": "node ./scripts/validate-theories.cjs --self-test",
     "validate:decisions": "node ./scripts/validate-decisions.cjs",
-    "test:decisions": "node ./scripts/validate-decisions.cjs --self-test"
+    "test:decisions": "node ./scripts/validate-decisions.cjs --self-test",
+    "validate:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs",
+    "test:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs --self-test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

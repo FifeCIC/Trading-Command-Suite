@@ -18,6 +18,9 @@ account is worse than a bridge that is down: the down one refuses orders, the wr
   3. Make the server comparison case-SENSITIVE → `test_case_difference_is_not_a_mismatch` FAILS.
   4. Drop the `if account` guard → `test_blank_request_is_not_a_mismatch` FAILS (every path-based
      connect, which passes no credentials, would be reported as a mismatch).
+  5. Move `return mt5.order_send(req)` ABOVE the `if credential_mismatch is not None` check in
+     `order_send_checked` → the three gate tests FAIL (the order is sent, then nothing refuses).
+  6. Change `raise BridgeRefusal(...)` to `return None` → the refusal tests FAIL (nothing raises).
 
 Run:  python scripts/mt5-bridge/test_credential_binding.py
 """
@@ -87,6 +90,75 @@ class CredentialBindingTest(unittest.TestCase):
         """`account_info()` returns None while the terminal is unreachable — that is #992's
         `terminal-down`, a different condition with a different remedy."""
         self.assertIsNone(bridge.verify_connection_identity('99999999', 'NoSuchServer-Demo', '9', None))
+
+    # ── THE GATE — order_send_checked (#1035) ───────────────────────────────────────────────
+    #
+    # Verification alone would only LOG the problem. These cover the refusal that makes it matter:
+    # a reported mismatch must stop the order being placed at all.
+
+    def _bind_wrong(self):
+        """The measured state: asked for 99999999 @ NoSuchServer-Demo, attached to a live account."""
+        bridge.credential_mismatch = {
+            'requestedAccount': '99999999', 'requestedServer': 'NoSuchServer-Demo',
+            'actualAccount': '62135531', 'actualServer': 'PepperstoneUK-Demo',
+            'activeSlot': '9', 'reasons': ['account: asked 99999999, got 62135531'],
+        }
+
+    def test_an_order_is_REFUSED_when_bound_to_the_wrong_account(self):
+        """The whole point: a bridge on the wrong account must not place a real order on it."""
+        self._bind_wrong()
+        with self.assertRaises(bridge.BridgeRefusal) as ctx:
+            bridge.order_send_checked({'action': 1, 'symbol': 'EURUSD'})
+        body = ctx.exception.body
+        self.assertFalse(body['success'])
+        self.assertEqual(body['code'], bridge.NOTICE_ACCOUNT_MISMATCH)
+        self.assertEqual(body['code'], 'TCS-TRADE-021', 'the code must match the registry entry')
+        self.assertEqual(ctx.exception.status, 409)
+        # ⚠️ All four params are REQUIRED: the registry message interpolates every one, so a missing
+        # key renders the refusal with blanks in the UI — the refusal would look like a glitch.
+        for key in ('requestedAccount', 'requestedServer', 'actualAccount', 'actualServer'):
+            self.assertIn(key, body['params'])
+        self.assertEqual(body['params']['actualAccount'], '62135531')
+
+    def test_a_refusal_never_reaches_the_terminal(self):
+        """⚠️ A refusal that still called order_send would ALREADY have placed the order.
+        Asserted by instrumenting the real call, not by inspecting the branch."""
+        self._bind_wrong()
+        sent = []
+        original = bridge.mt5.order_send
+        bridge.mt5.order_send = lambda req: sent.append(req) or SimpleNamespace(retcode=10009)
+        try:
+            with self.assertRaises(bridge.BridgeRefusal):
+                bridge.order_send_checked({'symbol': 'EURUSD'})
+        finally:
+            bridge.mt5.order_send = original
+        self.assertEqual(sent, [], 'the terminal must NOT be contacted when the binding is wrong')
+
+    def test_a_CORRECT_binding_still_delegates(self):
+        """The other direction: the gate must be invisible when nothing is wrong."""
+        bridge.credential_mismatch = None
+        sentinel = SimpleNamespace(retcode=10009, order=555)
+        original = bridge.mt5.order_send
+        bridge.mt5.order_send = lambda req: sentinel
+        try:
+            self.assertIs(bridge.order_send_checked({'symbol': 'EURUSD'}), sentinel,
+                          'a clean binding must return the terminal result UNCHANGED')
+        finally:
+            bridge.mt5.order_send = original
+
+    def test_the_surfaces_report_orderReady(self):
+        """⚠️ SOURCE-LEVEL, not live. The payloads are built inline in `do_GET`, so they cannot be
+        called without a socket; this asserts the surface exists rather than dropping it silently.
+        `connected: true` + `orderReady: false` is the honest reading — it can SEE, it must not ACT.
+        The live check belongs to the issue's QA entry.
+        """
+        src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mt5_bridge_v2.py')
+        with open(src_path, encoding='utf-8') as fh:
+            src = fh.read()
+        self.assertEqual(src.count("'orderReady': credential_mismatch is None"), 2,
+                         '/health AND /broker must both expose orderReady')
+        self.assertIn('ORDERS ARE REFUSED', src,
+                      'the mismatch remedy must say orders are refused, not just name the account')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 155,
+  "count": 156,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -902,6 +902,17 @@
       "category": "validator",
       "purpose": "every behavioural column on `trading_strategy` must be DECLARED.",
       "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-bridge-order-choke-point.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "EVERY order the MT5 bridge sends passes ONE gate (#1035).",
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"

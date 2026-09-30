@@ -46,6 +46,30 @@ pre-release, and **current trading results are not evidence of anything**.
 **Dev activity disturbing the running app is expected, not news.** Restarting the API mid-tick,
 re-seeding over a live row, running a migration — none of these need a warning paragraph.
 
+### ⚠️ DOWNTIME — paper is silent, REAL MONEY is reported
+
+> **Owner direction, 2026-09-30:** *"I'm not bothered about down-time due to development. We are
+> developing on a live operating version for the sake of identifying problems immediately after any
+> changes we make… Only when there is a real money account involved will I want to know about
+> downtime."*
+
+The app runs on a **live operating demo on purpose** — changes go straight in so defects surface
+immediately instead of after a staging cycle. So:
+
+| Account | Report the downtime? |
+|---|---|
+| **Paper / demo** (MetaQuotes-Demo, PepperstoneUK-Demo) | **No** — not a sentence, not a caveat |
+| **REAL MONEY** | **Yes** — a halted real account is a money event, not development churn |
+
+**Take an agent's own breakage at face value.** Bringing the bridges down by running a canary, or
+stopping the API to build, needs **no apology paragraph** — restore it and move on. What is still
+wanted, always: **the defect you found** (one line, with the command that shows it), and **a hazard
+you created whose state you have NOT confirmed** — that one must be said once, plainly, because
+silence about an *unresolved* risk is a different thing from silence about expected churn.
+
+⚠️ The line moves the moment a real account is configured. Check which account a bridge is bound to
+rather than assuming paper — see **#1035** (a bridge can bind to an account it was not configured for).
+
 ### Mode 2 — EXAMINATION (only when invoked)
 
 When the owner asks you to **look at observed live activity** — *"why did these positions close?"*,

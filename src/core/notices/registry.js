@@ -316,6 +316,34 @@ export const NOTICES = {
     refs: [],
   },
 
+  // ── Credential binding (#1035) ───────────────────────────
+  'TCS-TRADE-021': {
+    severity: 'critical',
+    area: 'TRADE',
+    title: 'Bridge is on the wrong account — orders refused',
+    message:
+      'This bridge was configured for account {requestedAccount} @ {requestedServer}, but it is ' +
+      'attached to {actualAccount} @ {actualServer}. No order was sent.',
+    // ⚠️ WHY THIS IS A REFUSAL AND NOT A WARNING (decision, 2026-09-30 — see the DECISION marker
+    // at `order_send_checked()` in scripts/mt5-bridge/mt5_bridge_v2.py). Measured: a bridge started
+    // with account 99999999 @ NoSuchServer-Demo attached to 62135531 @ PepperstoneUK-Demo — a LIVE
+    // account it was never configured for — and reported success. Every field it published about
+    // itself was wrong. Per-broker routing, risk caps, the stop guardian and `brokerTicket`
+    // reconciliation all assume the slot→account binding holds, so a bridge on the wrong account is
+    // worse than a bridge that is down: the down one refuses, this one would have ACCEPTED.
+    cause:
+      'MetaTrader 5 can answer a credentialled initialise with a DIFFERENT account to the one ' +
+      'requested — it falls back to a terminal that is already running — and nothing compared the ' +
+      'request with the result (#1035).',
+    action:
+      'Check which account the terminal at this bridge’s MT5_PATH_<slot> is logged into. Log it into ' +
+      '{requestedAccount} @ {requestedServer}, or point the slot at the right terminal, then ' +
+      'POST /reconnect on this bridge. Reads still work, so the app can still see what the attached ' +
+      'account holds.',
+    params: ['requestedAccount', 'requestedServer', 'actualAccount', 'actualServer'],
+    refs: [],
+  },
+
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {
     severity: 'critical',

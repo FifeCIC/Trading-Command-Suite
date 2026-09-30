@@ -72,8 +72,9 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-018` | error | TRADE | Bot is still active |
 | `TCS-TRADE-019` | success | TRADE | A/B copy created |
 | `TCS-TRADE-020` | info | TRADE | Bot deleted |
+| `TCS-TRADE-021` | critical | TRADE | Bridge is on the wrong account — orders refused |
 
-**51 codes** — 2 critical, 26 error, 12 warning, 5 info, 6 success.
+**52 codes** — 3 critical, 26 error, 12 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -276,6 +277,16 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Action:** If it was part of a pair, the other side is untouched. Deletion never touches trades or history.
 - **Params:** `name`, `detail`
 - **Call:** `notice('TCS-TRADE-020', { name, detail })`
+- **Related:** *none*
+
+#### `TCS-TRADE-021` — Bridge is on the wrong account — orders refused
+
+- **Severity:** critical
+- **Message:** This bridge was configured for account {requestedAccount} @ {requestedServer}, but it is attached to {actualAccount} @ {actualServer}. No order was sent.
+- **Cause:** MetaTrader 5 can answer a credentialled initialise with a DIFFERENT account to the one requested — it falls back to a terminal that is already running — and nothing compared the request with the result (#1035).
+- **Action:** Check which account the terminal at this bridge’s MT5_PATH_<slot> is logged into. Log it into {requestedAccount} @ {requestedServer}, or point the slot at the right terminal, then POST /reconnect on this bridge. Reads still work, so the app can still see what the attached account holds.
+- **Params:** `requestedAccount`, `requestedServer`, `actualAccount`, `actualServer`
+- **Call:** `notice('TCS-TRADE-021', { requestedAccount, requestedServer, actualAccount, actualServer })`
 - **Related:** *none*
 
 ### SCORE — Scoring and signals

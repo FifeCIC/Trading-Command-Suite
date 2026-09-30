@@ -396,6 +396,7 @@ NOTICE_POSITION_MISSING = 'TCS-TRADE-014'
 NOTICE_DUPLICATE        = 'TCS-TRADE-015'
 NOTICE_SIZE_CAP         = 'TCS-TRADE-016'
 NOTICE_POSITION_CAP     = 'TCS-TRADE-017'
+NOTICE_ACCOUNT_MISMATCH = 'TCS-TRADE-021'
 NOTICE_MARGIN           = 'TCS-TRADE-003'
 
 
@@ -684,6 +685,76 @@ def verify_connection_identity(account, server, active, info):
             f'{info.login} @ {info.server}, not on slot #{active}.'
         )
     return credential_mismatch
+
+
+class BridgeRefusal(Exception):
+    """A refusal raised from deep inside a handler, carrying a STRUCTURED body and a status.
+
+    ⚠️ WHY AN EXCEPTION RATHER THAN A RETURNED DICT. A successful `mt5.order_send()` returns an
+    OBJECT (`result.retcode`, `result.order`, `result.price`), while a refusal is a dict — so a
+    wrapper that RETURNED a dict would make every call site raise `AttributeError` on the refusal
+    path, turning a clean refusal into a 500. Raising keeps the success path's type identical and
+    gives the refusal ONE catch site in `do_POST`, which is what makes a single choke point
+    possible (#1035).
+    """
+
+    def __init__(self, body, status=409):
+        super().__init__(body.get('error', 'refused'))
+        self.body = body
+        self.status = status
+
+
+# ── DECISION (2026-09-30, primary) ──
+# WHAT:      A bridge bound to an account it was NOT configured for REFUSES orders. READS stay open.
+# WHY:       A wrong-account order is a REAL order on an account the slot was never configured for.
+#            A bridge on the wrong account is worse than a bridge that is DOWN: the down one
+#            refuses, the wrong one ACCEPTS. Per-broker routing, risk caps, the stop guardian and
+#            `brokerTicket` reconciliation all assume the slot->account binding holds.
+#            The gate is on the ACTION, not on a route allowlist (which drifts silently) and NOT in
+#            `ensure_mt5()` (which would gate /health, /positions and /account, blinding the app to
+#            the very position someone needs to look at).
+# INSTEAD OF: Log-and-expose only — what shipped with #992 option B. It reports the mismatch and
+#            still sends the order, so detecting the condition changed nothing about the outcome.
+# REVERSE BY: Delete the `if credential_mismatch is not None` raise here and return
+#            `mt5.order_send(req)` unconditionally. The wrapper and all seven call sites stay valid,
+#            so this is a two-line reversal.
+# REGISTER:  docs/SETTLED-DECISIONS.md row 49
+# GUARD:     scripts/validate-bridge-order-choke-point.cjs (in nest prebuild, --self-test)
+#            scripts/mt5-bridge/test_credential_binding.py (canary directions 5 and 6)
+def order_send_checked(req):
+    """`mt5.order_send()` with the #1035 credential-binding refusal in front of it.
+
+    ⚠️ THE SINGLE CHOKE POINT FOR ORDER PLACEMENT. Every mutating path — `/order`,
+    `/close/<ticket>`, `/close/partial/<ticket>`, `/order/modify`, and all three actions in
+    `/orders/bulk` — sends through here. Gating at the ACTION rather than at a hand-maintained list
+    of routes means a NEW endpoint cannot escape the check by being forgotten: if it sends an
+    order, it comes through here. `scripts/validate-bridge-order-choke-point.cjs` fails the build
+    if a bare `mt5.order_send(` reappears in this file, which is what keeps that true.
+
+    ⚠️ A BRIDGE ON THE WRONG ACCOUNT IS WORSE THAN A BRIDGE THAT IS DOWN: the down one refuses,
+    this one would ACCEPT — placing a real order on an account the slot was never configured for,
+    while per-broker routing, risk caps, the stop guardian and `brokerTicket` reconciliation all
+    assume the binding holds.
+
+    ⚠️ READS ARE DELIBERATELY NOT GATED. `/health`, `/positions`, `/account` and the quote routes
+    keep working, so the app can still SEE what the attached account holds — a bridge that went
+    dark would hide the very position someone needs to look at.
+    """
+    if credential_mismatch is not None:
+        m = credential_mismatch
+        raise BridgeRefusal(refusal(
+            NOTICE_ACCOUNT_MISMATCH,
+            f'Bridge is attached to {m["actualAccount"]} @ {m["actualServer"]}, not the configured '
+            f'{m["requestedAccount"]} @ {m["requestedServer"]} — refusing to place an order on the '
+            f'wrong account (#1035).',
+            {
+                'requestedAccount': m['requestedAccount'],
+                'requestedServer': m['requestedServer'],
+                'actualAccount': m['actualAccount'],
+                'actualServer': m['actualServer'],
+            },
+        ))
+    return mt5.order_send(req)
 
 
 def connect_mt5():
@@ -1169,8 +1240,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'connected': connected, 'mt5Package': True,
                     # ⚠️ #1035 — non-null when this bridge is bound to an account it was NOT
                     # configured for. Surfaced so the API's `answered`/`reachable` pair can carry
-                    # it; today it is reported and NOT acted on (see the note at the global).
+                    # it, AND now acted on: `orderReady` below is false and every order-placing
+                    # route refuses with TCS-TRADE-021 (see `order_send_checked`).
                     'credentialMismatch': credential_mismatch,
+                    # ⚠️ #1035 — the actionable half of the pair above. `connected: true` with
+                    # `orderReady: false` is the honest reading of a bridge attached to the wrong
+                    # account: it can SEE, and it must not ACT. Reads are deliberately ungated.
+                    'orderReady': credential_mismatch is None,
                     # `trade_allowed` is None only when terminal_info() itself returned None, which
                     # is the same condition `connectionState` already classifies - so a caller can
                     # tell "trading is off" from "we could not ask", and neither reads as "fine".
@@ -1185,9 +1261,23 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'tradeapiDisabled': _term.tradeapi_disabled if _term else None,
                     'connectionState': conn_state,
                     'connectionStateDetail': conn_detail,
-                    'remedy': None if conn_state == STATE_OK else (
-                        f'POST http://127.0.0.1:{BRIDGE_PORT}/reconnect'
-                        + (' — or start the MT5 terminal' if conn_state == STATE_TERMINAL_DOWN else '')
+                    # ⚠️ #1035 — the mismatch remedy takes precedence over the connectivity one.
+                    # A bridge that is connected to the WRONG account has conn_state STATE_OK, so
+                    # without this it would report `remedy: null` — i.e. "nothing to do" — while
+                    # refusing every order. That is precisely the buried-ability shape: correct
+                    # behaviour nobody can see.
+                    'remedy': (
+                        f'This bridge is attached to {credential_mismatch["actualAccount"]} @ '
+                        f'{credential_mismatch["actualServer"]}, not its configured '
+                        f'{credential_mismatch["requestedAccount"]} @ '
+                        f'{credential_mismatch["requestedServer"]} — ORDERS ARE REFUSED. Log the '
+                        f'terminal at MT5_PATH_{credential_mismatch["activeSlot"]} into the '
+                        f'configured account, then POST http://127.0.0.1:{BRIDGE_PORT}/reconnect'
+                    ) if credential_mismatch is not None else (
+                        None if conn_state == STATE_OK else (
+                            f'POST http://127.0.0.1:{BRIDGE_PORT}/reconnect'
+                            + (' — or start the MT5 terminal' if conn_state == STATE_TERMINAL_DOWN else '')
+                        )
                     ),
                     'serverUtcOffsetSeconds': detect_server_utc_offset(),
                     'serverUtcOffsetHours': round(detect_server_utc_offset() / 3600.0, 2),
@@ -1239,6 +1329,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     # endpoint that answers "which account is this bridge?" — and until now the
                     # answer was a claim nothing verified.
                     'credentialMismatch': credential_mismatch,
+                    'orderReady': credential_mismatch is None,
                     'features': {'bulkQuotes': True, 'bulkCandles': True, 'perSymbolOverrides': True},
                 })
 
@@ -1659,7 +1750,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 else:
                     filling_name, filling_mask = 'n/a (pending)', 0
 
-                result = mt5.order_send(req)
+                result = order_send_checked(req)
                 successful_retcodes = (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL)
                 if not result or result.retcode not in successful_retcodes:
                     error = order_rejected(result, symbol, filling_name, filling_mask)
@@ -1732,7 +1823,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'type_time': mt5.ORDER_TIME_GTC}
                 # #824 — closing is a market deal, so it carries a filling mode too.
                 filling_name, filling_mask = apply_filling(req, pos.symbol)
-                result = mt5.order_send(req)
+                result = order_send_checked(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = order_rejected(result, pos.symbol, filling_name, filling_mask)
                     journal_trade('order_failed', {'symbol': pos.symbol, 'action': 'close', 'ticket': ticket,
@@ -1804,7 +1895,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 req = {'action': mt5.TRADE_ACTION_SLTP, 'position': int(ticket), 'symbol': pos.symbol,
                        'sl': float(body.get('sl', 0)) or float(pos.sl or 0),
                        'tp': float(body.get('tp', 0)) or float(pos.tp or 0)}
-                result = mt5.order_send(req)
+                result = order_send_checked(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = mt5.last_error() if not result else result.comment
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
@@ -1830,7 +1921,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'type_time': mt5.ORDER_TIME_GTC}
                 # #824 — partial close is a market deal as well.
                 filling_name, filling_mask = apply_filling(req, pos.symbol)
-                result = mt5.order_send(req)
+                result = order_send_checked(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = order_rejected(result, pos.symbol, filling_name, filling_mask)
                     return json_response(self, refusal(rejection_code(result), error,
@@ -1871,7 +1962,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             if op.get('tp'): req['tp'] = float(op['tp'])
                             # #824 — bulk market order needs a filling mode too.
                             filling_name, filling_mask = apply_filling(req, sym)
-                            res = mt5.order_send(req)
+                            res = order_send_checked(req)
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': res.order if ok_res else None, 'symbol': sym, 'action': 'place',
@@ -1896,7 +1987,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                                    'comment': 'TCS Bulk Close', 'type_time': mt5.ORDER_TIME_GTC}
                             # #824 — bulk close is a market deal.
                             filling_name, filling_mask = apply_filling(req, pos.symbol)
-                            res = mt5.order_send(req)
+                            res = order_send_checked(req)
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': ticket, 'symbol': pos.symbol, 'action': 'close',
@@ -1913,13 +2004,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
                                    'symbol': pos.symbol,
                                    'sl': float(op.get('sl', 0)) or float(pos.sl or 0),
                                    'tp': float(op.get('tp', 0)) or float(pos.tp or 0)}
-                            res = mt5.order_send(req)
+                            res = order_send_checked(req)
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': ticket, 'symbol': pos.symbol, 'action': 'modify',
                                 'error': None if ok_res else (res.comment if res else str(mt5.last_error()))})
                         else:
                             results.append({'index': i, 'success': False, 'error': f'Unknown action: {action}'})
+                    except BridgeRefusal as e:
+                        # #1035 — caught BEFORE the generic branch below. The bulk loop's own
+                        # try/except would otherwise flatten this to a bare string and lose the
+                        # notice code, so the structured body is carried through per operation.
+                        # Every operation is still refused; only the wording changes.
+                        results.append({'index': i, 'success': False, 'error': e.body.get('error'),
+                                        'code': e.body.get('code'), 'params': e.body.get('params')})
                     except Exception as e:
                         results.append({'index': i, 'success': False, 'error': str(e)})
                 journal_trade('bulk_operations', {'total': len(operations), 'succeeded': len([r for r in results if r['success']])})
@@ -2030,6 +2128,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 return json_response(self, {'success': False, 'error': str(error)}, 400)
 
             return json_response(self, {'error': 'not found'}, 404)
+        except BridgeRefusal as e:
+            # #1035 — a structured refusal raised from the order choke point deep inside a
+            # handler. Caught BEFORE the generic branch, which would flatten it to a 500 with a
+            # bare message and lose the notice code the UI needs to explain the refusal.
+            logger.warning(f'Refused POST {path}: {e}')
+            return json_response(self, e.body, e.status)
         except Exception as e:
             logger.error(f'Error handling POST {path}: {e}')
             return json_response(self, {'error': str(e)}, 500)
