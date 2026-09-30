@@ -200,7 +200,7 @@ price, `price` came back `0`, and the per-symbol cap refused:
    *      cannot produce its own P&L must not be shown as valid**, and that check cannot be made
    *      from either source alone.
    *
-   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopAdjustmentRecorder` is the ONE owner of "which bot does
+   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopGuardianService` is the ONE owner of "which bot does
    * this position belong to", and it already publishes `ownerAttribution` including `unresolved`.
    * Re-deriving it from the comment or magic here would be a SECOND implementation of the rule that
    * caused the incident — `viaComment` failed precisely because the comment is mutable text another
@@ -216,6 +216,13 @@ price, `price` came back `0`, and the per-symbol cap refused:
     const gaps: string[] = [];
     const brokers: Array<Record<string, any>> = [];
     const collected: Array<Record<string, any>> = [];
+    // ⚠️ ORDER → POSITION (#1037). The app stores an ORDER ticket on `trade.brokerTicket`, and MT5
+    // gives every deal BOTH an `orderId` and a `positionId`. Measured 2026-09-30 against the broker's
+    // own deals: of 10 real incident rows, **9 carried an order id and 0 carried a position id** —
+    // so matching a position on `brokerTicket` directly cannot work, and this map is what makes it
+    // work. It is also why one position can have MANY app rows: the incident's ten rows all resolved
+    // to a single `positionId`.
+    const orderToPosition = new Map<string, string>();
 
     const perBroker = await Promise.all(
       brokerIds.map(async (brokerId) => {
@@ -287,6 +294,11 @@ price, `price` came back `0`, and the per-symbol cap refused:
             const pid = String(d.positionId ?? d.position_id ?? '');
             if (!pid) continue;
             fills.set(pid, (fills.get(pid) ?? 0) + 1);
+            // The order → position half. One orderId belongs to exactly one position, so this is a
+            // clean function rather than a heuristic (measured: 207 deals → 207 orderIds, 103
+            // positionIds).
+            const oid = d.orderId ?? d.order_id;
+            if (oid != null) orderToPosition.set(String(oid), pid);
           }
         } else {
           gaps.push(`broker ${brokerId}: deal history unreadable — fill counts unavailable for its rows`);
@@ -333,6 +345,44 @@ price, `price` came back `0`, and the per-symbol cap refused:
       : [];
     const byTicket = new Map(recorded.map((t) => [String(t.brokerTicket), t]));
 
+    // ── CLAIMANTS — WHO ACTUALLY BUILT THIS POSITION (#1037) ────────────────────────────────
+    //
+    // ⚠️ A netting account has ONE position per symbol, so several bots' orders MERGE into it. The
+    // incident's position was built from orders belonging to three different bots, and the broker
+    // reports only the net — it never says the position has more than one author.
+    //
+    // This resolves the authors by going: app `brokerTicket` (an ORDER id) → deal → `positionId` →
+    // the bot on that app row. More than one claimant means the position has **no single owner**,
+    // and that is a FINDING to show, not an error to hide.
+    //
+    // ⚠️ Identity is the BOT (`scoringStrategyId` → `trading_strategy.name`), not the free-text
+    // `strategy` column. `strategy` is the MT5 comment body — mutable text another order can
+    // overwrite, which is the very thing that made the original attribution fail.
+    const orderIds = [...orderToPosition.keys()];
+    const appOrderRows = orderIds.length
+      ? await this.prisma.trade.findMany({
+          where: { brokerTicket: { in: orderIds } },
+          select: { brokerTicket: true, scoringStrategyId: true },
+        })
+      : [];
+    const botIds = [...new Set(appOrderRows.map((r) => String(r.scoringStrategyId ?? '')).filter(Boolean))];
+    const bots = botIds.length
+      ? await this.prisma.tradingStrategy.findMany({ where: { id: { in: botIds } }, select: { id: true, name: true } })
+      : [];
+    const botNameById = new Map(bots.map((b) => [b.id, b.name]));
+
+    const claimantsByPosition = new Map<string, Set<string>>();
+    for (const r of appOrderRows) {
+      const pid = orderToPosition.get(String(r.brokerTicket));
+      if (!pid) continue;
+      const botId = String(r.scoringStrategyId ?? '');
+      // A row with no resolvable bot still COUNTS as a distinct author — an unidentified order is
+      // evidence of a second writer, and dropping it would hide exactly the case this exists for.
+      const label = botNameById.get(botId) ?? (botId ? `bot ${botId.slice(0, 8)}…` : 'unattributed order');
+      if (!claimantsByPosition.has(pid)) claimantsByPosition.set(pid, new Set());
+      claimantsByPosition.get(pid)!.add(label);
+    }
+
     // ⚠️ Typed explicitly. Without the annotation the spread of `Record<string, any>` contributes
     // no index signature to the inferred literal, so `row.profit` below does not type-check — the
     // object is narrower than it looks and the compiler is right to refuse it.
@@ -354,7 +404,17 @@ price, `price` came back `0`, and the per-symbol cap refused:
           };
         }
       }
-      return { ...row, recorded: rec, divergence };
+      return {
+        ...row,
+        recorded: rec,
+        divergence,
+        // ⚠️ `contested` is the loud state: a position whose orders came from more than one bot has
+        // no single owner, so no one bot's rules can be said to be managing it. Both fields are
+        // always present — an empty array and a `false` are answers, and a missing field would read
+        // as "not checked".
+        claimants: [...(claimantsByPosition.get(row.ticket) ?? [])],
+        contested: (claimantsByPosition.get(row.ticket)?.size ?? 0) > 1,
+      };
     });
 
     // Unreadable bridges first — a gap must not be the last thing a reader sees, and it must not

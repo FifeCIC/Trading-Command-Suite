@@ -135,6 +135,19 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
           recorded size are not from the same trade.
         </div>
       )}
+      {/* CONTESTED — MORE THAN ONE BOT BUILT THIS POSITION (#1037).
+          A netting account has ONE position per symbol, so several bots' orders merge into it and
+          the broker reports only the net. It never says the position has more than one author. The
+          app can: it knows which order each bot placed, and the deals say which position that order
+          joined. Naming the claimants is the whole point — a position nobody owns is one nobody
+          manages, and silence there is what let 0.10 lots sit untrailed for 2h20m. */}
+      {pos.contested && (
+        <div className="pm-warning">
+          ⚠ <strong>CONTESTED — no single owner.</strong> Orders from{' '}
+          <strong>{pos.claimants.length} different bots</strong> went into this one broker position:{' '}
+          {pos.claimants.join(' · ')}. No one bot&apos;s rules can be said to be managing it.
+        </div>
+      )}
       {pos.source === 'MT5' && pos.daysHeld > 7 && (
         <div className="pm-warning">⚠ CFD held {pos.daysHeld} days — consider closing</div>
       )}
@@ -395,6 +408,8 @@ export default function PositionsMonitorPage() {
       currency: p.currency,
       fillCount: p.fillCount,
       divergence: p.divergence,
+      claimants: p.claimants || [],
+      contested: Boolean(p.contested),
       comment: p.comment,
       owner: ownerByTicket.get(String(p.ticket)) ?? null,
       // ⚠️ CLOSE ROUTING IS NOT BROKER-AWARE YET (#1033). `DELETE /close/:ticket` sends to the
