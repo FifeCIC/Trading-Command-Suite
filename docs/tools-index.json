@@ -1,7 +1,17 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 156,
+  "count": 157,
   "tools": [
+    {
+      "name": "analyse-query-patterns.cjs",
+      "where": "repo",
+      "category": "analysis",
+      "purpose": "WHERE THE PIPELINE ASKS THE DATABASE FOR SOMETHING IT ALREADY HAS.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
+    },
     {
       "name": "analyse-unreachable-capacity.cjs",
       "where": "nest",
