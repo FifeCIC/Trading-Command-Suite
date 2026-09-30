@@ -201,6 +201,62 @@ export class SettingsService {
     return entry;
   }
 
+  /**
+   * deleteUiReviewEntry() — remove ONE page's verdict, or every verdict when no key is given.
+   *
+   * ⚠️ #1040 — THIS EXISTS BECAUSE THE STORE WAS WRITE-ONLY PER KEY. A verdict could be written and
+   * overwritten but never removed, so a key created by mistake was permanent. That is not
+   * hypothetical: the round-trip verification of this feature used the key `__selftest__`, and it is
+   * still in `app-settings.json` today. A write-only store has no way to correct its own history,
+   * which is a worse defect than the stray key it produced.
+   *
+   * ⚠️ An absent key is NOT an error and does NOT throw: deleting something that is already gone has
+   * the outcome the caller wanted. `removed` reports which keys were ACTUALLY deleted, so a caller
+   * can tell "it was there and is now gone" from "there was nothing there" — the same rule as the rest
+   * of this repo, that a no-op and a success must not be indistinguishable when the caller cares.
+   */
+  async deleteUiReviewEntry(viewKey?: string): Promise<{ removed: string[] }> {
+    const settings = await this.get();
+    const uiReview: UiReviewConfig = settings.uiReview || { entries: {} };
+    const removed: string[] = [];
+
+    if (viewKey) {
+      // ⚠️ `hasOwnProperty`, not a truthiness test: an entry is always an object, but a prototype
+      // key like `constructor` would pass `in` and then delete nothing while reporting success.
+      if (Object.prototype.hasOwnProperty.call(uiReview.entries, viewKey)) {
+        delete uiReview.entries[viewKey];
+        removed.push(viewKey);
+      }
+    } else {
+      removed.push(...Object.keys(uiReview.entries));
+      uiReview.entries = {};
+    }
+
+    if (removed.length === 0) return { removed };
+
+    // ⚠️⚠️ THIS MUST NOT GO THROUGH `update()`. `update()` does `deepMerge(current, partial)`, and a
+    // MERGE CANNOT REMOVE A KEY: the deleted key is still present in `current`, so the merge puts it
+    // straight back. Measured 2026-10-01 — the first version of this method called `update()` and
+    // reported `removed: ['__selftest__']` while the key REMAINED in the store. A silent no-op
+    // wearing a success message, which is the worst kind: the caller has no reason to look again.
+    //
+    // So the delete writes the WHOLE settings object directly, bypassing the merge. This is the same
+    // trap the seeder rules already record — "an upsert-only seeder cannot delete" — reached here
+    // through a different door. Any path that REMOVES must not reuse a mechanism built only to ADD.
+    const next: AppSettings = { ...settings, uiReview: { entries: uiReview.entries } };
+    await this.saveToDb(next);
+    try {
+      fs.writeFileSync(this.filePath, JSON.stringify(next, null, 2));
+    } catch {
+      // The DB write is the authority; the file is the agent-readable mirror. A mirror failure is
+      // not a reason to report the delete as failed when the store itself changed.
+    }
+    this.logger.log(
+      `UI review cleared: ${removed.length} key(s) — ${removed.slice(0, 3).join(', ')}${removed.length > 3 ? ` (+${removed.length - 3} more)` : ''}`,
+    );
+    return { removed };
+  }
+
   private async saveToDb(data: AppSettings): Promise<void> {
     if (!this.prisma.isAvailable) return;
     await this.prisma.appSetting.upsert({

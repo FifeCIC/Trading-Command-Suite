@@ -251,6 +251,20 @@ if (-not $SkipFrontend) {
     Write-Host "    PID $($vite.Id) (detached; Vite on port 5173)" -ForegroundColor DarkGray
 }
 
+# ⚠️ THE PIDs WE STARTED, SO THE VERIFICATION CAN PROVE *OUR* PROCESS HOLDS THE PORT (#1026).
+# Measured 2026-09-29: this script printed "All services running and bridges connected" while the
+# API answering on 3201 was the PREVIOUS process — the one the launcher had just started never
+# bound the port and exited, and every check still passed because each one tests the PORT, not the
+# process. `GET /api/version` then served the OLD version under a clean-looking launch.
+#
+# This is the same defect the file already records twice for #765. The list below is what turns
+# "something is listening" into "the thing I started is listening".
+$startedPids = @{ 3201 = $nest.Id }
+if (-not $SkipFrontend) { $startedPids[5173] = $vite.Id }
+for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
+    if ($i -lt $mt5Pids.Count) { $startedPids[5000 + $i] = $mt5Pids[$i] }
+}
+
 # ── Wait and verify ────────────────────────────────────────
 
 Write-Host "`n  Waiting for services to come online…" -ForegroundColor DarkGray
@@ -317,8 +331,36 @@ if ($allUp) {
         if (-not $ok) { $degraded += "MT5 #${brokerId} (${brokerServer}) port ${bridgePort}" }
     }
 
-    if ($degraded.Count -eq 0) {
+    # ⚠️ #1026 — AND IS IT *OUR* PROCESS? Everything below proves something is listening and
+    # answering. None of it proves the process we started owns the port. An old API that survived
+    # the kill loop answers `/api/health` perfectly well, so the launcher reports success while the
+    # OLD build serves the port — and a version bump then appears not to have taken effect.
+    #
+    # ⚠️ COMPUTED BEFORE THE SUCCESS MESSAGE, not after. Printing "All services running" and then
+    # qualifying it two lines later is the defect rather than a caveat on it: the green line is what
+    # a reader takes away, and a contradiction underneath reads as noise.
+    $impostors = @()
+    foreach ($port in $startedPids.Keys) {
+        $expected = $startedPids[$port]
+        $owner = (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -First 1).OwningProcess
+        if ($owner -and $expected -and $owner -ne $expected) {
+            $impostors += "port $port is owned by PID $owner, but we started PID $expected"
+        } elseif (-not $owner -and $expected) {
+            $impostors += "port $port has no LISTEN owner, but we started PID $expected"
+        }
+    }
+
+    if ($degraded.Count -eq 0 -and $impostors.Count -eq 0) {
         Write-Host "  All services running and bridges connected" -ForegroundColor Green
+    } elseif ($impostors.Count -gt 0) {
+        # A stale process outranks a degraded bridge: the reader needs to know the running build is
+        # not the one they just made, because every other measurement they take is then suspect.
+        Write-Host "  Services are LISTENING, but NOT under the processes this launcher started" -ForegroundColor Red
+        foreach ($im in $impostors) { Write-Host "    $im" -ForegroundColor Red }
+        Write-Host "    An older service is serving the port. Stop the stack and launch again:" -ForegroundColor Yellow
+        Write-Host "      pwsh -File scripts\tcs-stop.ps1" -ForegroundColor Yellow
+        Write-Host "    Until then, the running build is NOT the one you just made." -ForegroundColor Yellow
     } else {
         Write-Host "  Services are LISTENING but the pipeline is NOT healthy" -ForegroundColor Yellow
         Write-Host "    Not connected to MT5: $($degraded -join ', ')" -ForegroundColor Yellow
