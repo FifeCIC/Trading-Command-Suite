@@ -62,11 +62,26 @@ The app holds **one row** for it:
 | `pnlInvalid` | **0** | asserts the row is usable |
 | `closeReason` | `broker:sl` | correct |
 
-⚠️ **The test that produced it is still running.** `ab_test` row `b50727ee` (*"#929 measurable run
-— tradeThreshold 55 (v1.0.0) vs 10 (v1.0.1)"*) is `status: running`, `endAt NULL`, `results NULL`, and
-today holds **42 rows — 9 closed, 33 rejected** — where every closed row has `exitPrice NULL` and
-`pnl NULL`. It cannot produce a comparison, and it is still adding 0.01 to this position's symbol
-every ~2 minutes. Also worth knowing: `threshold 55 vs 10` makes the variant fire near-constantly.
+⚠️ **The test that produced it is still running, and nothing stopped it on purpose.** `ab_test` row
+`b50727ee` (*"#929 measurable run — tradeThreshold 55 (v1.0.0) vs 10 (v1.0.1)"*, `symbols:
+["XAUUSD"]`) is `status: running`, started **2026-09-25 23:29**, `endAt NULL`.
+
+Measured 2026-09-30 17:20:
+
+| what the test produced | count |
+|---|---|
+| trade rows carrying the test id | **104** — 56 on 09-28, 48 on 09-30 |
+| of those, with an exit price and a P&L | **1** |
+| `closed` but with no exit price | **12** |
+| `rejected` | **91** |
+
+**103 of 104 rows cannot contribute to a comparison.** What ended its day was not design: at `13:14`
+orders were refused for **negative margin** (*"need 0.00, have −81.89"*), and at `15:29` by the app's
+own **daily loss limit** (*"−240.83 vs −100.00 [broker 2]"*). The last attempt was **15:33**, and both
+bridges report `tradeAllowed: true`. **A daily loss limit resets, so nothing is actually holding it.**
+
+Also worth knowing: `threshold 55 vs 10` makes the variant fire near-constantly — two orders every
+~2 minutes — which is how one idea accumulated a ten-fill position.
 
 ## 2. Seven failures → seven rules
 
