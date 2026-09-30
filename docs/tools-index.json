@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 157,
+  "count": 160,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -282,6 +282,16 @@
       "purpose": "#846. Is broker 3 skipped AFTER the fix landed?",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "canary-architecture-docs.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "TEMPORARY canary — proves validate-architecture-docs.cjs fails when it should, then restores.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "canary-backtest-period.cjs",
@@ -897,6 +907,16 @@
       "reaches": null
     },
     {
+      "name": "validate-architecture-docs.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "does the CHIPBOARD still agree with the page it was generated from?",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "validate-archive-default-column.cjs",
       "where": "nest",
       "category": "validator",
@@ -1225,6 +1245,14 @@
       "reaches": [
         "npm"
       ]
+    },
+    {
+      "name": "validate-selftest-harness.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a new guard must not hand-roll the repo's own self-test harness.",
+      "selfTest": true,
+      "reaches": null
     },
     {
       "name": "validate-settings-access.cjs",

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradeRecorderService } from './trade-recorder.service';
 import { StopAdjustmentRecorder } from './stop-guardian.service';
+import { buildOrderToPosition, buildClaimants, isContested } from './position-claimants';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { Mt5SymbolRouter, orderRouteProblems } from '../providers/mt5/mt5-symbol-router.service';
@@ -200,7 +201,7 @@ price, `price` came back `0`, and the per-symbol cap refused:
    *      cannot produce its own P&L must not be shown as valid**, and that check cannot be made
    *      from either source alone.
    *
-   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopGuardianService` is the ONE owner of "which bot does
+   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopAdjustmentRecorder` is the ONE owner of "which bot does
    * this position belong to", and it already publishes `ownerAttribution` including `unresolved`.
    * Re-deriving it from the comment or magic here would be a SECOND implementation of the rule that
    * caused the incident — `viaComment` failed precisely because the comment is mutable text another
@@ -216,13 +217,13 @@ price, `price` came back `0`, and the per-symbol cap refused:
     const gaps: string[] = [];
     const brokers: Array<Record<string, any>> = [];
     const collected: Array<Record<string, any>> = [];
-    // ⚠️ ORDER → POSITION (#1037). The app stores an ORDER ticket on `trade.brokerTicket`, and MT5
-    // gives every deal BOTH an `orderId` and a `positionId`. Measured 2026-09-30 against the broker's
-    // own deals: of 10 real incident rows, **9 carried an order id and 0 carried a position id** —
-    // so matching a position on `brokerTicket` directly cannot work, and this map is what makes it
-    // work. It is also why one position can have MANY app rows: the incident's ten rows all resolved
-    // to a single `positionId`.
-    const orderToPosition = new Map<string, string>();
+    // ⚠️ EVERY deal from EVERY bridge, collected so the derivation below runs ONCE over the whole
+    // set. The app stores an ORDER ticket on `trade.brokerTicket`; MT5 gives each deal BOTH an
+    // `orderId` and a `positionId` (measured 2026-09-30: of 10 real incident rows, 9 carried an
+    // order id and 0 a position id), so the position is reachable only through the deals.
+    // The derivation itself is `position-claimants.ts` — ONE implementation, shared with the
+    // guardian (#1041), because two copies drift and only one gets the next fix.
+    const allDeals: Array<Record<string, any>> = [];
 
     const perBroker = await Promise.all(
       brokerIds.map(async (brokerId) => {
@@ -294,11 +295,9 @@ price, `price` came back `0`, and the per-symbol cap refused:
             const pid = String(d.positionId ?? d.position_id ?? '');
             if (!pid) continue;
             fills.set(pid, (fills.get(pid) ?? 0) + 1);
-            // The order → position half. One orderId belongs to exactly one position, so this is a
-            // clean function rather than a heuristic (measured: 207 deals → 207 orderIds, 103
-            // positionIds).
-            const oid = d.orderId ?? d.order_id;
-            if (oid != null) orderToPosition.set(String(oid), pid);
+            // Collected, not mapped here — the whole set is needed before the order → position
+            // mapping is built, so a deal seen on one bridge can be joined from another.
+            allDeals.push(d);
           }
         } else {
           gaps.push(`broker ${brokerId}: deal history unreadable — fill counts unavailable for its rows`);
@@ -358,6 +357,7 @@ price, `price` came back `0`, and the per-symbol cap refused:
     // ⚠️ Identity is the BOT (`scoringStrategyId` → `trading_strategy.name`), not the free-text
     // `strategy` column. `strategy` is the MT5 comment body — mutable text another order can
     // overwrite, which is the very thing that made the original attribution fail.
+    const orderToPosition = buildOrderToPosition(allDeals);
     const orderIds = [...orderToPosition.keys()];
     const appOrderRows = orderIds.length
       ? await this.prisma.trade.findMany({
@@ -371,17 +371,8 @@ price, `price` came back `0`, and the per-symbol cap refused:
       : [];
     const botNameById = new Map(bots.map((b) => [b.id, b.name]));
 
-    const claimantsByPosition = new Map<string, Set<string>>();
-    for (const r of appOrderRows) {
-      const pid = orderToPosition.get(String(r.brokerTicket));
-      if (!pid) continue;
-      const botId = String(r.scoringStrategyId ?? '');
-      // A row with no resolvable bot still COUNTS as a distinct author — an unidentified order is
-      // evidence of a second writer, and dropping it would hide exactly the case this exists for.
-      const label = botNameById.get(botId) ?? (botId ? `bot ${botId.slice(0, 8)}…` : 'unattributed order');
-      if (!claimantsByPosition.has(pid)) claimantsByPosition.set(pid, new Set());
-      claimantsByPosition.get(pid)!.add(label);
-    }
+    // Identity is the BOT, never the free-text `strategy` column — see `position-claimants.ts`.
+    const claimantsByPosition = buildClaimants(appOrderRows, orderToPosition, botNameById);
 
     // ⚠️ Typed explicitly. Without the annotation the spread of `Record<string, any>` contributes
     // no index signature to the inferred literal, so `row.profit` below does not type-check — the
@@ -412,8 +403,8 @@ price, `price` came back `0`, and the per-symbol cap refused:
         // no single owner, so no one bot's rules can be said to be managing it. Both fields are
         // always present — an empty array and a `false` are answers, and a missing field would read
         // as "not checked".
-        claimants: [...(claimantsByPosition.get(row.ticket) ?? [])],
-        contested: (claimantsByPosition.get(row.ticket)?.size ?? 0) > 1,
+        claimants: claimantsByPosition.get(row.ticket) ?? [],
+        contested: isContested(claimantsByPosition.get(row.ticket)),
       };
     });
 
