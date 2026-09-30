@@ -116,6 +116,17 @@ import { IchimokuCloudDirective } from './implementations/mt5-indicators.directi
 // never be registered. See STOP_GUARDIAN_DIRECTIVES in stop-guardian.service.ts.
 import { ChandelierExitDirective } from './implementations/chandelier-exit.directive';
 
+// ── Surge family (#663 "Trade a Surge") ──────────────────────────────────────────────────────
+// Registered 2026-10-01. ⚠️ Registering a directive is additive; ATTACHING one to a live protocol
+// changes what a tradeable symbol scores and is therefore a maths change needing a copied config
+// and a monitored comparison (`maths-change-requires-ab.instructions.md`). These are registered and
+// deliberately NOT attached — see the header of surge.directive.ts.
+import {
+  SurgeDetectionDirective,
+  SpikeHoldConfirmationDirective,
+  SurgeExhaustionDirective,
+} from './implementations/surge.directive';
+
 // Stubs (placeholder — PHP math at TradePress, awaiting NestJS port)
 import {
   // Trend
@@ -264,6 +275,11 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     ATRTrailingStopDirective,
     WickFilterDirective,
     ChandelierExitDirective,
+    // Surge family (#663). `readiness: 'alpha'` on all three — unvalidated, so they must not
+    // raise any protocol's tier, and a protocol can only claim its WEAKEST directive's readiness.
+    SurgeDetectionDirective,
+    SpikeHoldConfirmationDirective,
+    SurgeExhaustionDirective,
     MomentumROCDirective,
     DeMarkerDirective,
     AccumulationDistDirective,
