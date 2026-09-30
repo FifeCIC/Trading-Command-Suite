@@ -8,6 +8,15 @@ import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interf
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { BacktestPeriodService } from './backtest-period.service';
+// #1021 — ONE derivation of the trade win rate. This existed in FOUR places in TWO unit
+// conventions (three `groupBy` pairs producing a PERCENT, one in-memory producing a FRACTION), and
+// one of them returned `0` where the others returned `null` for a run with no trades.
+import {
+  countTradeWinRatesByRun,
+  tradeWinRateFromRows,
+  percentOrNull,
+  NO_TRADES,
+} from './run-metrics';
 
 /**
  * #986 — the most bars a single PERIOD-scoped run will load.
@@ -786,8 +795,14 @@ export class BacktestService {
     const sharpeApproximation = stdDev > 0 ? (avgReturn10d / stdDev) * Math.sqrt(252 / 10) : 0;
 
     // Bracket trade stats
-    const tradeWinners = trades.filter(t => t.pnl > 0).length;
-    const tradeWinRate = trades.length ? tradeWinners / trades.length : 0;
+    //
+    // ⚠️ #1021 — THE TRADE RATE IS NULL WHEN THERE ARE NO TRADES, AND THIS SITE USED TO SAY `0`.
+    // `0` reads as "every trade lost"; `null` says "there was no trade to judge". A run that made
+    // no trades was therefore stored as a 0% win rate — a failure — rather than as an absence of
+    // information. The shared function returns null, and `tradeWinRate` below is nullable to match.
+    const tradeStats = tradeWinRateFromRows(trades);
+    const tradeWinRate = tradeStats.fraction;
+    const tradeWinners = tradeStats.winners;
     const avgTradePnl = trades.length ? trades.reduce((s, t) => s + t.pnlPct, 0) / trades.length : 0;
     const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
     const grossPnlTotal = trades.reduce((s, t) => s + t.pnl + (t.commission ?? 0), 0);
@@ -858,7 +873,13 @@ export class BacktestService {
         sharpeApproximation: Number(sharpeApproximation.toFixed(2)),
         ...(doBrackets ? {
           totalTrades: trades.length,
-          tradeWinRate: Number(tradeWinRate.toFixed(2)),
+          // ⚠️ #1021 — NULL IS PASSED THROUGH, and this line is why the null case has to be handled
+      // rather than type-checked. `strictNullChecks` is OFF in this project, so `number | null`
+      // compiles as `number` and `tradeWinRate.toFixed(2)` on a run with NO trades would have thrown
+      // at runtime while `tsc` reported success — the compiler cannot catch this one. The absence of
+      // information must survive to the caller: `null` here means "no trade to judge", and `0` would
+      // claim every trade lost.
+      tradeWinRate: tradeWinRate === null ? null : Number(tradeWinRate.toFixed(2)),
           avgTradePnl: Number(avgTradePnl.toFixed(2)),
           totalPnl: Number(totalPnl.toFixed(4)),
           maxTradeDrawdown: Number(maxTradeDrawdown.toFixed(4)),
@@ -1103,39 +1124,24 @@ export class BacktestService {
     // ⚠️ Count the trades from `backtesttrade`, exactly as `listAllRuns` does. Two populations,
     // two counts, kept separate — the whole point of #980 is that they must not be merged, and
     // this endpoint merged them in the other direction (`signals: r.totalTrades`).
+    //
+    // ⚠️ #1021 — DERIVED BY THE SHARED FUNCTION, not by a locally-written pair of `groupBy`s. This
+    // exact pair existed in THREE read paths and one of them computed a FRACTION while the others
+    // computed a PERCENT, so the same rule had two unit conventions under one name.
     const runIds = runs.map((r) => r.id);
-    const [counted, countedWins] = await Promise.all([
-      runIds.length
-        ? this.prisma.backtestTrade.groupBy({
-            by: ['runId'],
-            where: { runId: { in: runIds } },
-            _count: { _all: true },
-          })
-        : Promise.resolve([] as any[]),
-      runIds.length
-        ? this.prisma.backtestTrade.groupBy({
-            by: ['runId'],
-            where: { runId: { in: runIds }, pnl: { gt: 0 } },
-            _count: { _all: true },
-          })
-        : Promise.resolve([] as any[]),
-    ]);
-    const countedByRun = new Map(counted.map((c: any) => [c.runId, c._count._all]));
-    const winsByRun = new Map(countedWins.map((c: any) => [c.runId, c._count._all]));
+    const tradeRates = await countTradeWinRatesByRun(this.prisma, runIds);
 
     return {
       symbol,
       runs: runs.map((r) => {
-        const tradesCounted = countedByRun.get(r.id) ?? 0;
-        const wins = winsByRun.get(r.id) ?? 0;
+        const t = tradeRates.get(r.id) ?? { ...NO_TRADES };
         return {
           id: r.id,
           date: `${r.startDate.toISOString().split('T')[0]} to ${r.endDate.toISOString().split('T')[0]}`,
           trades: r.totalTrades,
           signals: r.totalSignals ?? null,
           signalWinRatePct: Math.round(r.winRate * 10000) / 100,
-          tradeWinRatePct:
-            tradesCounted > 0 ? Math.round((wins / tradesCounted) * 10000) / 100 : null,
+          tradeWinRatePct: percentOrNull(t.fraction),
         };
       }),
     };
@@ -1306,24 +1312,14 @@ export class BacktestService {
     // ⚠️ Counted from the TRADES, not taken from the stored column: the P&L metrics are computed
     // over trades, so the sample a verdict rests on must be the rows that exist. If the two
     // disagree, that is a finding and it is surfaced below rather than smoothed over.
-    const [counted, countedWins] = await Promise.all([
-      this.prisma.backtestTrade.groupBy({
-        by: ['runId'],
-        where: { runId: { in: runIds } },
-        _count: { _all: true },
-      }),
-      this.prisma.backtestTrade.groupBy({
-        by: ['runId'],
-        where: { runId: { in: runIds }, pnl: { gt: 0 } },
-        _count: { _all: true },
-      }),
-    ]);
-    const countedByRun = new Map(counted.map((c) => [c.runId, c._count._all]));
-    const winsByRun = new Map(countedWins.map((c) => [c.runId, c._count._all]));
+    //
+    // ⚠️ #1021 — the shared derivation. This pair was a verbatim copy of `getSummary`'s, which is
+    // how the two of them could drift apart without anything failing.
+    const tradeRates = await countTradeWinRatesByRun(this.prisma, runIds);
 
     const formatted = runs.map((r) => {
-      const tradesCounted = countedByRun.get(r.id) ?? 0;
-      const wins = winsByRun.get(r.id) ?? 0;
+      const t = tradeRates.get(r.id) ?? { ...NO_TRADES };
+      const tradesCounted = t.trades;
       // ⚠️ TYPED when a verdict could rest on it (#976): `as any` here would let a stale client
       // silently read `undefined` and the bar would then refuse every comparison for the WRONG
       // reason, blaming the data instead of the build.
@@ -1335,8 +1331,7 @@ export class BacktestService {
         timeframe: r.timeframe,
         totalTrades: r.totalTrades,
         tradesCounted,
-        tradeWinRatePct:
-          tradesCounted > 0 ? Math.round((wins / tradesCounted) * 10000) / 100 : null,
+        tradeWinRatePct: percentOrNull(t.fraction),
         totalSignals,
         /** The bot that produced this run. NULL = hand-assembled request. */
         botId: r.botId ?? null,
@@ -1747,7 +1742,9 @@ export class BacktestService {
     // The trades are already on the object, so the trade rate is countable here — and when there
     // are none the honest answer is NULL, not a borrowed number from a different population.
     const runTrades = Array.isArray(run.trades) ? run.trades : [];
-    const tradeWinners = runTrades.filter((t: any) => Number(t.pnl) > 0).length;
+    // ⚠️ #1021 — the shared pure derivation, so this in-memory path and the three `groupBy` paths
+    // cannot drift on either the null case or the unit again.
+    const tradeStats = tradeWinRateFromRows(runTrades);
 
     return {
       id: run.id,
@@ -1803,7 +1800,7 @@ export class BacktestService {
         // shipped by reading the consumer.
         //
         // NULL when there are no trades: the SIGNAL rate must never stand in for a trade rate.
-        tradeWinRate: runTrades.length > 0 ? tradeWinners / runTrades.length : null,
+        tradeWinRate: tradeStats.fraction,
         avgTradePnl: run.avgTradePnl,
         totalPnl: run.totalPnl,
         maxTradeDrawdown: run.maxDrawdown,
