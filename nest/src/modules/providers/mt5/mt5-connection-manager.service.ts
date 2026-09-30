@@ -71,6 +71,33 @@ export interface Mt5BrokerInfo {
   url: string;
   health: Mt5BridgeHealth | null;
   reachable: boolean;
+  /**
+   * #992 — DID THE BRIDGE ANSWER? `reachable` cannot tell you, and that is the defect this field
+   * exists to remove.
+   *
+   * `reachable` is `ok && connected`, so `reachable: false` conflates two conditions that need
+   * OPPOSITE responses:
+   *
+   *   · `answered: false`  — the bridge did not reply (down, refused, timed out). Posting
+   *     `/reconnect` at it cannot work either; the remedy is to START it.
+   *   · `answered: true, reachable: false` — the bridge is ALIVE and says its MT5 session is gone.
+   *     This is the recoverable case: `POST /reconnect` is exactly what fixes it, and on
+   *     2026-09-25 that one call took `connectionErrors` from 485 to 0.
+   *
+   * ⚠️ `reachable` KEEPS ITS MEANING — callers depend on it (`AlertTriggerService`,
+   * `SystemHealthService`, `automation.controller`) and re-defining a field others already read is
+   * how a fix becomes an outage. This is additive: `answered` is new, nothing else moved.
+   */
+  answered: boolean;
+  /**
+   * The bridge's OWN classification of its MT5 link (#992): `ok` | `session-lost` | `terminal-down`
+   * | `account-unavailable`. Carried through so a caller does not have to re-derive it, and so
+   * "the terminal is switched off" stops looking like "the bridge lost its handle".
+   */
+  connectionState?: string | null;
+  connectionStateDetail?: string | null;
+  /** The bridge's stated remedy for its own state — `POST .../reconnect`, or "start the terminal". */
+  remedy?: string | null;
 }
 
 const BASE_PORT = 5000;
@@ -198,10 +225,79 @@ export class Mt5ConnectionManager {
           url,
           health: ok ? (data as Mt5BridgeHealth) : null,
           reachable: ok && !!data?.connected,
+          // #992 — the two halves `reachable` merges, kept apart. `answered` is whether the bridge
+          // replied AT ALL; the state fields are what it said about its own link.
+          answered: ok,
+          connectionState: data?.connectionState ?? null,
+          connectionStateDetail: data?.connectionStateDetail ?? null,
+          remedy: data?.remedy ?? null,
         };
       }),
     );
     return results;
+  }
+
+  /**
+   * reconnectBroker() — the ONE place that tears down and rebuilds a bridge's MT5 session (#992).
+   *
+   * ⚠️ EXTRACTED SO THERE IS ONE IMPLEMENTATION, mirroring the bridge's own reason for extracting
+   * `reconnect_mt5()`: a second copy drifts and only one of them gets the next fix. The manual
+   * endpoint (`POST /api/providers/mt5/reconnect`) and the automatic session watchdog both call
+   * this.
+   *
+   * ⚠️ AN UNREGISTERED ID IS REFUSED, never answered by the default bridge (#914). `getUrl()`
+   * THROWS for one, and that throw is returned as `refused` rather than folded into "unreachable" —
+   * telling a caller the bridge was down when the real fault is the id they named sends them to
+   * the wrong place to look.
+   */
+  async reconnectBroker(brokerId?: number | null): Promise<{
+    success: boolean;
+    refused?: boolean;
+    brokerId: number | null;
+    bridgeUrl?: string;
+    connectionState?: string | null;
+    error?: string;
+    instructions?: string;
+  }> {
+    let bridgeUrl: string;
+    try {
+      bridgeUrl = this.getUrl(brokerId);
+    } catch (err) {
+      return { success: false, refused: true, brokerId: brokerId ?? null, error: (err as Error).message || String(err) };
+    }
+
+    try {
+      const res = await fetch(`${bridgeUrl}/reconnect`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(15_000),
+      });
+      const body: any = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return {
+          success: false,
+          brokerId: brokerId ?? null,
+          bridgeUrl,
+          error: body?.error || `Bridge returned HTTP ${res.status}`,
+        };
+      }
+      // ⚠️ NAME WHICH BRIDGE ANSWERED. A reconnect result that does not say which broker was
+      // reconnected cannot tell you whether the RIGHT one recovered, with two bridges running.
+      return {
+        ...body,
+        success: true,
+        brokerId: brokerId ?? null,
+        bridgeUrl,
+        connectionState: body?.connectionState ?? null,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        brokerId: brokerId ?? null,
+        bridgeUrl,
+        error: (err as Error).message || 'Bridge unreachable',
+        instructions: 'Start the bridge: cd scripts/mt5-bridge && python mt5_bridge_v2.py',
+      };
+    }
   }
 
   /** Get health from a specific broker (defaults to first active) */

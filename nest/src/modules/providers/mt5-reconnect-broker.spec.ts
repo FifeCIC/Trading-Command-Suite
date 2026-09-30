@@ -1,4 +1,5 @@
 import { Mt5Controller } from './mt5.controller';
+import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
 
 /**
  * mt5-reconnect-broker.spec.ts — the API can aim a reconnect at a NAMED bridge (#992 criterion 4).
@@ -23,22 +24,43 @@ describe('Mt5Controller.reconnect — per-broker targeting (#992)', () => {
   const PRIMARY = 'http://localhost:5000';
   const PEPPERSTONE = 'http://localhost:5001';
 
+  /**
+   * ⚠️ THE DOUBLE DELEGATES TO THE REAL MANAGER, DELIBERATELY (#992).
+   *
+   * The reconnect logic now lives in `Mt5ConnectionManager.reconnectBroker()`; this endpoint is a
+   * thin wrapper over it so that the AUTOMATIC recovery watchdog and this manual route cannot drift
+   * apart. A double that hand-rolled its own routing would therefore be testing a copy, and the real
+   * one could regress unnoticed — exactly the failure this file exists to catch. So it constructs
+   * the real manager and forwards.
+   *
+   * The manager reads `MT5_ACTIVE_BROKERS` at CONSTRUCTION, so the env is set for that one line and
+   * restored immediately — otherwise this file would leak two brokers into every other spec sharing
+   * the process.
+   */
   function make() {
     const ctrl = Object.create(Mt5Controller.prototype) as any;
     const fetched: string[] = [];
-    const urls = new Map<number, string>([[2, PRIMARY], [3, PEPPERSTONE]]);
+    const saved = process.env.MT5_ACTIVE_BROKERS;
+
+    process.env.MT5_ACTIVE_BROKERS = '2,3';
+    const real = new Mt5ConnectionManager();
+    if (saved === undefined) delete process.env.MT5_ACTIVE_BROKERS;
+    else process.env.MT5_ACTIVE_BROKERS = saved;
 
     ctrl.logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
     ctrl.BRIDGE_URL = PRIMARY;
     ctrl.mt5Connection = {
-      // Mirrors the REAL contract, including the throw — a mock that returned the default for an
-      // unknown id would make the refusal test pass for the wrong reason.
+      // Kept because the REAL manager owns this contract: it THROWS for an unregistered id rather
+      // than substituting the default (#914), and a mock that returned the default would make the
+      // refusal test pass for the wrong reason.
       getUrl: jest.fn((id?: number | null) => {
         if (id == null) return PRIMARY;
-        const url = urls.get(id);
+        const url = new Map<number, string>([[2, PRIMARY], [3, PEPPERSTONE]]).get(id);
         if (!url) throw new Error(`Broker ${id} is not an MT5 bridge (active: 2, 3) — refusing to answer as the default bridge`);
         return url;
       }),
+      // The canonical implementation, not a second copy of it.
+      reconnectBroker: (id?: number | null) => real.reconnectBroker(id),
     };
 
     (global as any).fetch = jest.fn(async (url: string) => {

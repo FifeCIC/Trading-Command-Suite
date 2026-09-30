@@ -4,6 +4,7 @@ import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
 import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
 import { Mt5SymbolRouter } from './mt5/mt5-symbol-router.service';
+import { Mt5SessionRecoveryService } from './mt5/mt5-session-recovery.service';
 import { resolveMt5BridgeUrl } from './mt5/mt5-bridge.config';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -18,6 +19,9 @@ export class Mt5Controller {
     private readonly prisma: PrismaService,
     private readonly mt5Connection: Mt5ConnectionManager,
     private readonly symbolRouter: Mt5SymbolRouter,
+    // #992 option B — its state is served beside the manual reconnect, because the two are two
+    // halves of one remedy and a reader should not have to hunt for the automatic one.
+    private readonly sessionRecovery: Mt5SessionRecoveryService,
   ) {}
 
   private getMt5Adapter(): Mt5Adapter | null {
@@ -276,71 +280,49 @@ export class Mt5Controller {
   async reconnect(@Query('brokerId') brokerId?: string) {
     // `undefined`/'' means "the default bridge" and must stay that way for existing callers.
     let resolvedBrokerId: number | null = null;
-    let bridgeUrl: string;
-    try {
-      if (brokerId !== undefined && brokerId !== '') {
-        resolvedBrokerId = Number(brokerId);
-        if (!Number.isInteger(resolvedBrokerId)) {
-          return {
-            success: false,
-            brokerId: brokerId,
-            error: `brokerId must be an integer (got "${brokerId}")`,
-            timestamp: new Date().toISOString(),
-          };
-        }
-      }
-      // ⚠️ This THROWS for an unregistered id rather than substituting the default (#914), and the
-      // throw is REPORTED. Swallowing it into "bridge unreachable" would tell the caller the bridge
-      // was down when the real fault was the id they asked for.
-      bridgeUrl = this.mt5Connection.getUrl(resolvedBrokerId);
-    } catch (err: any) {
-      return {
-        success: false,
-        brokerId: resolvedBrokerId,
-        error: err.message || String(err),
-        timestamp: new Date().toISOString(),
-      };
-    }
-
-    try {
-      const res = await fetch(`${bridgeUrl}/reconnect`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(15000),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
+    if (brokerId !== undefined && brokerId !== '') {
+      resolvedBrokerId = Number(brokerId);
+      if (!Number.isInteger(resolvedBrokerId)) {
         return {
           success: false,
-          brokerId: resolvedBrokerId,
-          bridgeUrl,
-          error: (body as any).error || `Bridge returned HTTP ${res.status}`,
+          brokerId,
+          error: `brokerId must be an integer (got "${brokerId}")`,
           timestamp: new Date().toISOString(),
         };
       }
-      // ⚠️ NAME WHICH BRIDGE ANSWERED. A reconnect result that does not say which broker was
-      // reconnected is the same defect one level up: with two bridges running, "success" is not
-      // enough to know whether the RIGHT one recovered.
-      const bridgeBody = (body as any) || {};
-      return {
-        ...bridgeBody,
-        brokerId: resolvedBrokerId,
-        bridgeUrl,
-        // The bridge now classifies its own link (#992): ok | session-lost | terminal-down |
-        // account-unavailable, with a remedy. Passing it through keeps that distinction visible to
-        // the caller instead of collapsing it back into a boolean.
-        connectionState: bridgeBody.connectionState ?? undefined,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        brokerId: resolvedBrokerId,
-        bridgeUrl,
-        error: err.message || 'Bridge unreachable',
-        instructions: 'Start the bridge: cd scripts/mt5-bridge && python mt5_bridge_v2.py',
-        timestamp: new Date().toISOString(),
-      };
     }
+
+    // ⚠️ ONE IMPLEMENTATION (#992). The body of this endpoint — getUrl, the refusal for an
+    // unregistered id, the POST, the state passthrough — moved to
+    // `Mt5ConnectionManager.reconnectBroker()` so the AUTOMATIC recovery watchdog and this manual
+    // route cannot drift apart. The bridge did the same thing for the same reason when it extracted
+    // `reconnect_mt5()`: a second copy drifts and only one of them gets the next fix.
+    const result = await this.mt5Connection.reconnectBroker(resolvedBrokerId);
+    return { ...result, timestamp: new Date().toISOString() };
+  }
+
+  /**
+   * GET /api/providers/mt5/session-recovery — the automatic recovery watchdog's state (#992).
+   *
+   * ⚠️ The surface is part of the fix, not a nicety. The whole defect was that a halted session was
+   * invisible: `reachable:false` did not say WHY, and the cause lived in a Python log nobody reads.
+   * `unansweringBrokerIds` vs `bridges[].consecutiveDown` is exactly the distinction that was
+   * missing — "the bridge is not running" and "the bridge is running and its session is gone".
+   */
+  @Get('session-recovery')
+  @ApiOperation({ summary: 'Automatic MT5 session-recovery watchdog state (#992)' })
+  getSessionRecoveryState() {
+    return { ...this.sessionRecovery.getState(), timestamp: new Date().toISOString() };
+  }
+
+  /** POST /api/providers/mt5/session-recovery — turn the automatic recovery on or off. */
+  @Post('session-recovery')
+  @ApiOperation({ summary: 'Enable or disable automatic MT5 session recovery (#992)' })
+  setSessionRecovery(@Body() body: { enabled: boolean }) {
+    return {
+      ...this.sessionRecovery.setEnabled(!!body?.enabled),
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get('accounts')
