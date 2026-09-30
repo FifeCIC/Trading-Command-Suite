@@ -3,7 +3,7 @@
 **Status:** active
 **Category:** A (agent-operational)
 **Created:** 2026-09-29
-**Last updated:** 2026-09-29
+**Last updated:** 2026-09-30
 **Owner:** primary agent
 
 ---
@@ -128,8 +128,36 @@ next measurement is about **how much a loss costs**, not **when it happens**.
 - **Check `docs/SETTLED-DECISIONS.md` before touching an area this file names.** Re-opening a
   settled decision by accident is the most expensive thing that happens here.
 
+## 7. The incident that sets the standard
+
+**Ticket `152703882760`, XAUUSD, 2026-09-30: −322.67.** Sixteen times the next worst trade of its
+day, and more than the day's other trades made back. It is the worked example the change guide is
+built on, because every part of it was reachable while every build was green.
+
+| What happened | Why it could |
+|---|---|
+| **Ten fills, one position.** Nine A/B arm orders joined a stranger's 0.01 — all eleven deals share **one `positionId`** | A netting account has no per-order position. An arm cannot own what it trades (**#807**, **#929**) |
+| **The row says `quantity 0.01` and `pnl −322.67`** | 0.01 lots over 21.14 points is ≈ 16. `pnlInvalid = 0` asserts the row is usable (**#1014**) |
+| **The loss is invisible to its own experiment** — the row has `abTestId NULL`; all 42 rows that carry the test id have `exitPrice NULL, pnl NULL` | The trade that lost the most is the one the verdict cannot see (**#1014**) |
+| **Unmanaged 2 h 20 m** — 26 guardian warnings, `Owner could not be established` | Ownership was being read from a **comment**, and the arms were rewriting it (`AB-B` at 12:32 → `AB-A` from 12:42) (**#1030**, **#1033**) |
+| **`maxPyramidTiers: 1` — nine adds landed** | The cap was checked per order, and a netting account has no per-order position |
+| **`scoringStrategyId` resolves to nothing** | A UUID in a slug column reads as a valid link (**#801**) |
+
+**The standard this sets:** a change to a bot or an algorithm is not finished when it compiles and
+places an order. It is finished when the position it creates has a **structural owner**, a cap that
+binds the **net** position, a row whose **size reconciles to its P&L**, and an outcome the experiment
+can **see back**. Every rule, with the evidence and the questions to ask, is in
+**`docs/change-guide-position-lifecycle.md`**.
+
+**This is also why the position-management interface is specified in that document.** The owner's
+test of it: explaining this failure took the **broker's deal history**, not the app. The interface
+must make it explainable at a glance, or it has not replaced watching three systems.
+
 ## Related
 
+- **`docs/change-guide-position-lifecycle.md`** — the incident, the rules it implies, and the
+  position-management interface specification
+- **#1037** — the position-management interface (specified from the incident above)
 - `.github/AGENT-ATTENTION.md` — blockers
 - `docs/SETTLED-DECISIONS.md` — settled decisions and their guard status
 - `#930` — the adopted sprint this file orders the exit half of
