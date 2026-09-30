@@ -211,7 +211,52 @@ export function buildBotStagePath(bot, rules) {
     lines.push(`  ${nodes[i].id} --> ${nodes[i + 1].id}`);
   }
 
-  return { source: lines.join('\n'), nodes };
+  // ── THE BRAKE LAYER — what stops a trade, and whether it needs the app to be running ─────
+  //
+  // ⚠️ WHY THIS EXISTS (owner, 2026-09-30). Two facts were true, important, and named NOWHERE in
+  // this picture — and both were learned the hard way on the −322.67 position:
+  //
+  //   1. EVERY app-side brake needs the app to be RUNNING. The guardian, the time-stop, the
+  //      exhaustion observer and the loop's own risk gate all live in this process. With the PC
+  //      off there is **no management of any open position at all**. The owner had not factored
+  //      this in, and nothing here said it.
+  //   2. The brakes that DO survive come from somewhere this page never named — the **bridge's**
+  //      own caps and the **broker's** SL/TP — and one of them, the daily-loss cap, **RESETS AT
+  //      MIDNIGHT** (`mt5_bridge_v2.py:1680`, window `datetime.now().replace(hour=0, …)`).
+  //
+  // The lifecycle chain above answers "where can this bot act?". These nodes answer "what acts
+  // when it cannot?" — which is the half a reader is blind to. A stage stroked red is NOT the same
+  // as a position that is unprotected, and before this the picture could not tell them apart.
+  //
+  // ⚠️ `tally: null` marks these as NOT stages, and `botStageClaims` skips them. They carry no
+  // assertion because neither is checkable from a bot's declarations — and a claim that cannot be
+  // evaluated must resolve to unverified, never to a pass. Inventing a green here would be the
+  // "verifier that inspects nothing" defect this repo names in its own instructions.
+  const coverage = [
+    {
+      id: `st${nodes.length + 1}`,
+      stage: 'coverage',
+      tally: null,
+      label:
+        'Brakes INSIDE the app — guardian trailing, time-stop, exhaustion, the loop risk gate. ' +
+        '⚠ ALL REQUIRE THE APP TO BE RUNNING. PC off = no management of any open position.',
+    },
+    {
+      id: `st${nodes.length + 2}`,
+      stage: 'coverage',
+      tally: null,
+      label:
+        'Brakes OUTSIDE the app — bridge caps (max positions / max size / daily loss, which ⚠ ' +
+        'RESETS AT MIDNIGHT) and the broker SL/TP. The broker SL/TP is the ONLY brake that survives ' +
+        'the app and the PC being off — and it is FIXED when the order was placed, so a scale-in ' +
+        'adds size WITHOUT moving it.',
+    },
+  ];
+  for (const c of coverage) lines.push(`  ${c.id}["${c.label.replace(/"/g, '&quot;')}"]`);
+  lines.push(`  ${nodes[nodes.length - 1].id} -.-> ${coverage[0].id}`);
+  lines.push(`  ${coverage[0].id} -.-> ${coverage[1].id}`);
+
+  return { source: lines.join('\n'), nodes: [...nodes, ...coverage] };
 }
 
 /**
@@ -235,6 +280,10 @@ export function buildBotStagePath(bot, rules) {
 export function botStageClaims(bot, path) {
   const claims = [];
   for (const n of path.nodes) {
+    // ⚠️ The brake-layer nodes (`tally: null`) are NOT stages and carry no claim. See
+    // `buildBotStagePath`: they state a fact about the system, not about this bot, so there is
+    // nothing here to evaluate — and `undefined.declared` would throw.
+    if (!n.tally) continue;
     const t = n.tally;
 
     if (t.declared === 0) {

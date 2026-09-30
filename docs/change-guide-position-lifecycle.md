@@ -88,6 +88,21 @@ is not stopped, only **paused until midnight**, and it resumes on its own.
 That is the finding worth keeping: the only thing that stopped this bleeding was a **bridge-level
 risk cap, configured outside all of the app's exit machinery**, and it resets daily.
 
+### The run was cancelled — 2026-09-30
+
+`POST /api/automation/ab-tests/:id/cancel` → `status: cancelled`. Verified: `SELECT COUNT(*) FROM
+ab_test WHERE status='running'` = **0**, so `automation-loop.service.ts` `evaluateAbTest()` iterates
+nothing and no further orders are dispatched for it.
+
+⚠️ **It had to be `cancel`, not `stop`, and that distinction did not exist in the API.** `stop()`
+marks a test `complete` and **computes a verdict**. With **1 usable row out of 104**, that would have
+manufactured a result — the exact defect this guide exists to prevent. `cancel()` existed in the
+service since #482 with **no route**, so the untruthful action was the only one reachable. The route
+now exists (`ab-test.controller.ts`), and the reasoning is in a header comment there.
+
+⚠️ **Not observed:** a full trading day with no new rows for this test. The status query is evidence
+that the runner cannot select it; the absence of orders tomorrow is the confirmation.
+
 Also worth knowing: `threshold 55 vs 10` makes the variant fire near-constantly — two orders every
 ~2 minutes — which is how one idea accumulated a ten-fill position.
 
@@ -102,7 +117,7 @@ Each rule is a question to ask of **any** change to bot activity or an algorithm
 | **3** | **The loss is invisible to the experiment that caused it**: the −322.67 row has `abTestId NULL`, while all 42 rows that *do* carry the test id have `exitPrice NULL, pnl NULL` | **A trade must carry its origin structurally.** If the origin is absent, the trade must be excluded from every verdict *and* the exclusion must be counted. A loss no verdict can see is a silent loss. See **#1014** |
 | **4** | **Unmanaged for 2 h 20 m.** 26 guardian warnings, `Owner could not be established … not managed this tick` | **Ownership must resolve without parsing a comment.** A comment is mutable text that another order can overwrite. Ownership is a structural fact. See **#1030**, **#1033** |
 | **5** | **The declared cap did not bind.** Both arms declare `maxPyramidTiers: 1`; **nine** adds landed | **A size/tier cap binds the aggregate position, not the order.** On a netting account an order is an increment to a position, so per-order checks cannot enforce a position limit. See **#721**, **#807** |
-| **6** | `trade.scoringStrategyId = 4d9bc5ef-…` resolves to **nothing** — real ids look like `ss-…` | **Every identifier on a trade resolves, or is absent.** Two identifier spaces in one column read as a valid link and return nothing. See **#801** |
+| **6** | `trade.scoringStrategyId = 4d9bc5ef-…` resolves to **0 rows** in `scoring_strategy` | **A column must hold one namespace.** Measured: that id is **not garbage** — it is a real **bot** id, `trading_strategy` → **`Gold Position 4H (copy)`**. And the first fill's comment was `TCS Gold Position 4H copy`, so **that bot opened the position and nine A/B orders piled onto it.** The column holds a bot id where most readers expect a scoring id, so a correct join returns **nothing, with no error**. See **#801** |
 | **7** | **33 orders rejected** while the position stayed open; the runner kept firing every 2 minutes | **A rejection escalates; it does not retry.** Retrying into a refusal is not a strategy, and a refusal that changes nothing is invisible. |
 
 ## 3. The review lens — ask these of any bot or algorithm change
@@ -119,6 +134,16 @@ Written as questions rather than a checklist, because the answers are the point.
 - **Orphan behaviour.** If this component stops — crashes, is disabled, is rate-limited — which
   mechanism manages the positions it created? Name it. "None" is an acceptable answer only if it is
   stated.
+- **The machine.** ⚠️ Added 2026-09-30 at the owner's prompting, and it should have been obvious:
+  **every app-side mechanism requires the PC to be on.** The guardian, the time-stop, the exhaustion
+  observer and the loop's risk gate all live in one process on one machine. With it off there is
+  **no management of any open position at all** — the broker's SL/TP, fixed at order time, is the
+  only thing left. For any protection this change adds, state whether it survives the machine going
+  off. Most do not, and nothing in the app said so until now.
+- **Money, not percent.** A stop defined as a **price distance** does not bound the loss — the loss
+  is `distance × size`, and size can grow after the order is placed. The −322.67 position was stopped
+  about 1% from its VWAP, exactly as configured, and still lost 10× what was intended, because nine
+  later orders had added size while the stop stayed where the *first* order put it.
 - **Refusal.** What does the app do when the broker says no, and where does that appear?
 
 ### How far the bot book is from that design today

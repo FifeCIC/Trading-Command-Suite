@@ -1063,6 +1063,45 @@ export default function ViewStrategyPage() {
             </span>
           </h2>
 
+          {/* ── COVERAGE — WHAT PROTECTS AN OPEN POSITION WHEN THE APP IS NOT RUNNING ────────
+              ⚠️ WHY THIS EXISTS (owner, 2026-09-30). Two facts, both learned on the −322.67
+              position, neither of them visible anywhere on this page before now:
+
+                1. EVERY mechanism named below runs INSIDE this process. With the PC off there
+                   is no management of any open position at all — no trailing, no time-stop, no
+                   guardian. The owner had not factored that in, and this page did not say it.
+                2. The brakes that DO survive come from places this page never named — the
+                   BRIDGE's own caps and the BROKER's SL/TP. One of those, the daily-loss cap,
+                   releases at midnight (`mt5_bridge_v2.py:1680`, window
+                   `datetime.now().replace(hour=0, …)`).
+
+              ⚠️ A FACT ABOUT THE SYSTEM, NOT ABOUT THIS BOT. Nothing here is a column on
+              `trading_strategy`, and that is exactly why it was missing: this page is built FROM
+              the bot's own declarations, so the brakes that matter most when the bot cannot act
+              are the ones the bot does not declare. A stage stroked red is NOT the same thing as
+              an unprotected position, and before this block the page could not tell them apart. */}
+          <div className={styles.coverageNotice}>
+            <strong>What protects an open position if the app stops</strong>
+            <ul className={styles.coverageList}>
+              <li>
+                <strong>Inside the app</strong> — guardian trailing, time-stop, exhaustion observer
+                and the loop&apos;s risk gate. <em>All of these need the app running.</em> With the
+                PC off, an open position is <strong>unmanaged</strong>.
+              </li>
+              <li>
+                <strong>In the bridge</strong> — max open positions, max position size, daily-loss
+                cap. Enforced outside every app mechanism. ⚠️ The daily-loss cap{' '}
+                <strong>resets at midnight</strong>, so it is a brake that lets go.
+              </li>
+              <li>
+                <strong>At the broker</strong> — the SL/TP on the order. The <strong>only</strong>{' '}
+                brake that survives the app and the PC being off. ⚠️ It is fixed when the order was
+                placed, so a further order adds size <strong>without moving it</strong> — which is
+                how one position reached ten times its intended size.
+              </li>
+            </ul>
+          </div>
+
           {guardianQuery.isError ? (
             <div className={styles.errorBox}>
               <strong>The exit-management declarations could not be read.</strong>
