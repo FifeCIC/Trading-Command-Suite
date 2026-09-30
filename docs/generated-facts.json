@@ -6,7 +6,7 @@
   "facts": {
     "directiveFiles": {
       "label": "Directive implementation files",
-      "value": 109,
+      "value": 110,
       "unit": "",
       "source": "nest/src/modules/directives/**/*.directive.ts",
       "how": "curl -s localhost:3201/api/directives | jq length   # the registered set; files are a lower bound"
@@ -48,7 +48,7 @@
     },
     "validators": {
       "label": "Backend build-time validators",
-      "value": 30,
+      "value": 31,
       "unit": "",
       "source": "nest/scripts/validate-*.cjs (run in prebuild)",
       "how": "Get-ChildItem nest/scripts/validate-*.cjs"

@@ -127,6 +127,10 @@ import {
   SurgeExhaustionDirective,
 } from './implementations/surge.directive';
 
+// News catalyst (#4 / #630 / #512). ⚠️ INERT until a producer populates `input.news` from
+// `news_item` — the directive is correct and testable, but abstains on every live call without it.
+import { NewsCatalystDirective } from './implementations/news-catalyst.directive';
+
 // Stubs (placeholder — PHP math at TradePress, awaiting NestJS port)
 import {
   // Trend
@@ -280,6 +284,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     SurgeDetectionDirective,
     SpikeHoldConfirmationDirective,
     SurgeExhaustionDirective,
+    NewsCatalystDirective,
     MomentumROCDirective,
     DeMarkerDirective,
     AccumulationDistDirective,
