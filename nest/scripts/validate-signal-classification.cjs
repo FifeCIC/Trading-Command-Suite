@@ -57,13 +57,18 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+// ⚠️ SHARED SOURCE-SHAPE BLOCKS, extracted 2026-09-30 (#1030). `walkSourceFiles` and
+// `stripComments` were duplicated into `validate-single-bridge-position-io.cjs` and the duplication
+// validator failed the build on 8 blocks. This repo's rule is EXTRACT, never bank: banking removes
+// the complaint, extracting removes the class.
+const {
+  runCases,
+  stripComments,
+  walkSourceFiles,
+} = require('../../scripts/lib/validator-helpers.cjs');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SCAN_ROOTS = [path.join(ROOT, 'nest', 'src'), path.join(ROOT, 'src')];
-
-/** A spec deliberately asserts the WRONG behaviour, so it must not be scanned. */
-const SKIP_FILE = /\.(spec|test)\.[cm]?[jt]sx?$/;
-const SCAN_EXT = /\.([cm]?[jt]sx?)$/;
 
 /** Words that mean "this value IS a signal class" — the guard's first condition. */
 const RECEIVER = String.raw`(?:signal|signalClass|latestSignal|direction|dir|side|bias)`;
@@ -83,25 +88,6 @@ const PATTERN = new RegExp(
 /** The canonical call. Anything that already routes through the authority is fine. */
 const CANONICAL = /\b(classifySignal|isSellSignal|isBuySignal|signalToDirection|signalToSide|signalToBrokerSide)\s*\(/;
 
-/**
- * Remove comments so this repo's own prose about the defect does not fail its own guard.
- *
- * ⚠️ Deliberately crude: block comments, then any line whose first non-space character starts a
- * comment. An inline trailing comment survives — which risks a FALSE POSITIVE, so the check below
- * also requires the line NOT to mention the canonical helper. Over-stripping would only cause false
- * negatives, which is the safer direction for a gate.
- */
-function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split(/\r?\n/)
-    .filter((l) => {
-      const t = l.trim();
-      return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*'));
-    })
-    .join('\n');
-}
-
 /** Findings for one source string. Exported shape so the self-test can drive it directly. */
 function scanSource(src, rel) {
   const out = [];
@@ -116,21 +102,10 @@ function scanSource(src, rel) {
   return out;
 }
 
-function walk(dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.name === 'node_modules' || e.name === 'dist') continue;
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) walk(full, out);
-    else if (SCAN_EXT.test(e.name) && !SKIP_FILE.test(e.name)) out.push(full);
-  }
-  return out;
-}
-
 function scanTree() {
   const findings = [];
   for (const root of SCAN_ROOTS) {
-    for (const full of walk(root)) {
+    for (const full of walkSourceFiles(root)) {
       const rel = path.relative(ROOT, full).split(path.sep).join('/');
       findings.push(...scanSource(fs.readFileSync(full, 'utf8'), rel));
     }
@@ -170,7 +145,6 @@ function selfTest() {
     ['the REAL tree is clean', () => scanTree().length === 0],
   ];
 
-  const { runCases } = require('../../scripts/lib/validator-helpers.cjs');
   process.exit(runCases(cases) ? 1 : 0);
 }
 
