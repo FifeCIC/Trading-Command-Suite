@@ -51,6 +51,22 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
         <div className="pm-pos-title">
           <strong>{pos.symbol}</strong>
           <span className="pm-pos-source">{pos.source}</span>
+          {/* WHICH ACCOUNT. Two accounts hold this book and the money is not the same money —
+              a position with no account on it is not actionable (#1037). */}
+          {pos.brokerLabel && (
+            <span className="pm-pos-source" title="MT5 account this position is held on">
+              {pos.brokerLabel}
+              {pos.currency ? ` · ${pos.currency}` : ''}
+            </span>
+          )}
+          {pos.fillCount > 1 && (
+            <span
+              className="pm-pos-source"
+              title={`${pos.fillCount} fills make up this ONE broker position. It grew after it was opened, so the stop has not moved with the size.`}
+            >
+              {pos.fillCount} fills
+            </span>
+          )}
           {pos.ticket && <span className="pm-pos-ticket" title={`MT5 ticket #${pos.ticket}`}>#{pos.ticket}</span>}
         </div>
         <div className="pm-pos-pnl-group">
@@ -88,6 +104,19 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
       </div>
       {pos.overnightFee > 0 && (
         <div className="pm-warning">⚠ Overnight fee accruing: ${pos.overnightFee.toFixed(2)}/day</div>
+      )}
+      {/* THE RECORD AND THE BROKER DISAGREE ABOUT THE SIZE (#1037).
+          The −322.67 position was ONE broker position of 0.10 built from ten fills, while the app's
+          own row said 0.01 and `pnlInvalid` said the row was usable. Neither source can see this
+          alone: the broker reports a NET volume and never says how it got there, and the app's row
+          is the only place the intended size is written down. */}
+      {pos.divergence && (
+        <div className="pm-warning">
+          ⚠ Size does not reconcile: the app records <strong>{pos.divergence.recordedQuantity}</strong>{' '}
+          but the broker holds <strong>{pos.divergence.netVolume}</strong> as one position
+          {pos.divergence.factor ? ` (×${pos.divergence.factor})` : ''}. This row&apos;s P&amp;L and its
+          recorded size are not from the same trade.
+        </div>
       )}
       {pos.source === 'MT5' && pos.daysHeld > 7 && (
         <div className="pm-warning">⚠ CFD held {pos.daysHeld} days — consider closing</div>
@@ -211,11 +240,32 @@ export default function PositionsMonitorPage() {
   const [searchParams] = useSearchParams();
   const highlightTicket = searchParams.get('highlight');
 
-  // MT5 positions
+  // MT5 positions — EVERY bridge, not the primary one (#1037, closing the reading half of #1033).
+  //
+  // ⚠️ WHY THE ENDPOINT CHANGED. `GET /api/trading/mt5/positions` reads ONE bridge — the primary.
+  // Measured 2026-09-30: `symbol_route` sends XAGUSD / US500 / US30 / UK100 / FRA40 / GER40 to
+  // broker 3 (PepperstoneUK-Demo), so those positions were absent from this page entirely and the
+  // page still looked complete. `/positions/managed` reads every registered bridge and stamps each
+  // row with its `brokerId`, account and currency.
+  //
+  // ⚠️ The map below RENAMES two fields back to what the rest of this page already expects
+  // (`volume` ← `netVolume`, `type` ← `side`) rather than editing every consumer. It is a seam, and
+  // it is deliberate: the alternative was touching the risk bar, the close handler and the details
+  // grid in the same commit as a data-source change, which is how a display fix becomes an order
+  // bug. The genuinely new fields (`brokerLabel`, `fillCount`, `recorded`, `divergence`) pass
+  // through untouched for the columns that use them.
   const mt5Query = useQuery({
     queryKey: ['mt5-positions'],
-    queryFn: () => apiGet('/api/trading/mt5/positions')
-      .then(data => ({ positions: Array.isArray(data) ? data : (data?.positions || []) }))
+    queryFn: () => apiGet('/api/trading/mt5/positions/managed')
+      .then(data => ({
+        positions: (data?.positions || []).map((p) => ({
+          ...p,
+          volume: p.netVolume,
+          type: String(p.side || '').toLowerCase(),
+        })),
+        brokers: data?.brokers || [],
+        gaps: data?.gaps || [],
+      }))
       .catch(() => null),
     staleTime: 15000,
     refetchInterval: 30000,

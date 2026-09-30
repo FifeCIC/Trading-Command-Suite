@@ -27,6 +27,17 @@ export class Mt5TradingController {
   @Get('positions')
   getPositions() { return this.mt5.getPositions(); }
 
+  /**
+   * GET /api/trading/mt5/positions/managed — EVERY open position on EVERY bridge (#1037).
+   *
+   * ⚠️ Distinct from `GET positions` above, which reads the PRIMARY bridge only (#1033). This one
+   * is the read path for the Positions Monitor and is ADDITIVE: `getPositions()` keeps its meaning
+   * because `closeAll()` / `closePosition()` / `modifyPosition()` depend on it, and those decide
+   * WHICH BRIDGE to send an order to. A read-only page must not change order routing.
+   */
+  @Get('positions/managed')
+  getPositionsManaged() { return this.mt5.getPositionsManaged(); }
+
   @Get('history')
   getHistory() { return this.mt5.getHistory(); }
 

@@ -167,7 +167,191 @@ price, `price` came back `0`, and the per-symbol cap refused:
   }
 
   /**
-   * getSymbolInfo() — the broker's specification for a symbol (#865).
+   * getPositionsManaged() — EVERY open position, EVERY bridge, with the facts needed to decide
+   * what to do about it (#1037).
+   *
+   * ⚠️ WHY THIS EXISTS, AND WHY IT IS NOT `getPositions()`.
+   *
+   * `getPositions()` above reads `this.bridgeUrl` — the PRIMARY broker only (#1033, the read-path
+   * half of #1030). Measured 2026-09-30: `symbol_route` sends XAGUSD / US500 / US30 / UK100 /
+   * FRA40 / GER40 to brokerId **3**, and the guardian saw 8 of 14 positions. The six it could not
+   * see held **77%** of the floating loss. A page built on `getPositions()` therefore shows less
+   * than half the book, and shows it as if it were the whole of it.
+   *
+   * This method is ADDITIVE and deliberately leaves `getPositions()` alone. `getPositions()` is
+   * consumed by `closeAll()` / `closePosition()` / `modifyPosition()`, which are MONEY PATHS: for
+   * those, the question is not only "what is open?" but "WHICH BRIDGE do I send the close to?", and
+   * changing their view of the world in the same commit as a read-only page is how a display fix
+   * becomes an order-routing bug. #1033 owns that half.
+   *
+   * ⚠️ THREE FACTS ARE GATHERED PER POSITION, and each exists because its absence was the defect:
+   *
+   *   1. **`brokerId` + account + currency.** Two accounts hold this book (MetaQuotes-Demo, GBP;
+   *      PepperstoneUK-Demo, USD). A row without its account is not actionable — the same symbol
+   *      can be open on both, and the money is not the same money.
+   *   2. **`fillCount`.** The −322.67 position was TEN fills sharing ONE `positionId`, opened by a
+   *      different bot's order. The broker reports the NET volume (0.10) and never says how it got
+   *      there, so a one-row-per-position view looks identical whether a position is a single
+   *      deliberate trade or nine accidental scale-ins. Counted from the deal history, grouped by
+   *      `position_id` with `entry === 0` (deal entry IN).
+   *   3. **`recorded`** — the app's own `trade` row for this ticket, and whether its `quantity`
+   *      reconciles to the broker's net volume. On the incident row the app said `0.01` while the
+   *      broker said `0.10`, with `pnlInvalid = 0` asserting the row was usable. **A row whose size
+   *      cannot produce its own P&L must not be shown as valid**, and that check cannot be made
+   *      from either source alone.
+   *
+   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopGuardianService` is the ONE owner of "which bot does
+   * this position belong to", and it already publishes `ownerAttribution` including `unresolved`.
+   * Re-deriving it from the comment or magic here would be a SECOND implementation of the rule that
+   * caused the incident — `viaComment` failed precisely because the comment is mutable text another
+   * order can overwrite. The caller joins `GET /api/automation/stop-guardian/status` instead.
+   */
+  async getPositionsManaged(): Promise<{
+    fetchedAt: string;
+    brokers: Array<Record<string, any>>;
+    positions: Array<Record<string, any>>;
+    gaps: string[];
+  }> {
+    const brokerIds = this.mt5Connection.getBrokerIds();
+    const gaps: string[] = [];
+    const brokers: Array<Record<string, any>> = [];
+    const collected: Array<Record<string, any>> = [];
+
+    const perBroker = await Promise.all(
+      brokerIds.map(async (brokerId) => {
+        let url: string;
+        try {
+          url = this.mt5Connection.getUrl(brokerId);
+        } catch {
+          gaps.push(`broker ${brokerId}: not a registered bridge — cannot be read`);
+          return { brokerId, rows: [] as Array<Record<string, any>> };
+        }
+
+        const [posRes, acctRes, dealRes] = await Promise.allSettled([
+          fetch(`${url}/positions`, { signal: AbortSignal.timeout(10_000) }),
+          fetch(`${url}/account`, { signal: AbortSignal.timeout(10_000) }),
+          fetch(`${url}/history/deals?days=30`, { signal: AbortSignal.timeout(15_000) }),
+        ]);
+
+        // ⚠️ A FAILED READ IS NOT AN EMPTY ACCOUNT. "no positions" and "could not ask" must never
+        // render the same — that is the difference between a flat book and a blind app.
+        if (posRes.status !== 'fulfilled' || !posRes.value.ok) {
+          gaps.push(`broker ${brokerId}: position read FAILED — its positions are NOT shown, which is not the same as having none`);
+          return { brokerId, rows: [] as Array<Record<string, any>> };
+        }
+
+        const acct = acctRes.status === 'fulfilled' && acctRes.value.ok
+          ? await acctRes.value.json().catch(() => null)
+          : null;
+        if (!acct) gaps.push(`broker ${brokerId}: account read FAILED — balance/currency unknown for its rows`);
+
+        const label = acct
+          ? `${acct.login ?? '?'} @ ${acct.server ?? '?'}`
+          : `broker ${brokerId} (account unreadable)`;
+        brokers.push({
+          brokerId,
+          url,
+          login: acct?.login ?? null,
+          server: acct?.server ?? null,
+          currency: acct?.currency ?? null,
+          balance: acct?.balance ?? null,
+          equity: acct?.equity ?? null,
+          marginFree: acct?.margin_free ?? acct?.marginFree ?? null,
+          label,
+        });
+
+        const posData = await posRes.value.json().catch(() => null);
+        const rows = (Array.isArray(posData) ? posData : posData?.positions) ?? [];
+        if (!Array.isArray(rows)) return { brokerId, rows: [] as Array<Record<string, any>> };
+
+        // Fill counts from the deal history, grouped by position id, entry IN only.
+        const fills = new Map<string, number>();
+        if (dealRes.status === 'fulfilled' && dealRes.value.ok) {
+          const dealData = await dealRes.value.json().catch(() => null);
+          for (const d of (dealData?.deals ?? [])) {
+            const isEntry = Number(d.entry ?? -1) === 0;
+            if (!isEntry) continue;
+            const pid = String(d.position_id ?? d.positionId ?? '');
+            if (!pid) continue;
+            fills.set(pid, (fills.get(pid) ?? 0) + 1);
+          }
+        } else {
+          gaps.push(`broker ${brokerId}: deal history unreadable — fill counts unavailable for its rows`);
+        }
+
+        return {
+          brokerId,
+          rows: rows.map((p: any) => {
+            const ticket = String(p.ticket);
+            return {
+              ticket,
+              brokerId,
+              brokerLabel: label,
+              currency: acct?.currency ?? null,
+              symbol: String(p.symbol ?? ''),
+              side: Number(p.type) === 1 ? 'SELL' : 'BUY',
+              netVolume: Number(p.volume ?? 0),
+              fillCount: fills.get(ticket) ?? null,
+              openTime: p.time ? new Date(Number(p.time) * 1000).toISOString() : null,
+              priceOpen: Number(p.price_open ?? p.priceOpen ?? 0),
+              priceCurrent: Number(p.price_current ?? p.priceCurrent ?? 0),
+              sl: Number(p.sl ?? 0),
+              tp: Number(p.tp ?? 0),
+              profit: Number(p.profit ?? 0),
+              comment: String(p.comment ?? ''),
+            };
+          }),
+        };
+      }),
+    );
+
+    for (const b of perBroker) collected.push(...b.rows);
+
+    // ── The app's own row for each ticket, and whether it reconciles ──────────────────────────
+    const tickets = collected.map((r) => r.ticket);
+    const recorded = tickets.length
+      ? await this.prisma.trade.findMany({
+          where: { brokerTicket: { in: tickets }, status: 'open' },
+          select: {
+            id: true, brokerTicket: true, quantity: true, entryPrice: true, pnl: true,
+            pnlInvalid: true, pnlInvalidReason: true, strategy: true, openedAt: true,
+          },
+        })
+      : [];
+    const byTicket = new Map(recorded.map((t) => [String(t.brokerTicket), t]));
+
+    // ⚠️ Typed explicitly. Without the annotation the spread of `Record<string, any>` contributes
+    // no index signature to the inferred literal, so `row.profit` below does not type-check — the
+    // object is narrower than it looks and the compiler is right to refuse it.
+    const positions: Array<Record<string, any>> = collected.map((row) => {
+      const rec = byTicket.get(row.ticket) ?? null;
+      let divergence: Record<string, any> | null = null;
+      if (rec) {
+        const q = Number(rec.quantity ?? 0);
+        // ⚠️ EXACT, not approximate: a half-sized or doubled record is a real finding, and a
+        // tolerance would hide exactly the class of error this column exists to expose.
+        if (q > 0 && Math.abs(row.netVolume - q) > 1e-9) {
+          divergence = {
+            recordedQuantity: q,
+            netVolume: row.netVolume,
+            factor: Number((row.netVolume / q).toFixed(4)),
+            note:
+              `app records ${q} but the broker holds ${row.netVolume} as ONE position — ` +
+              `${row.fillCount ?? '?'} fill(s). Size and P&L are not from the same trade.`,
+          };
+        }
+      }
+      return { ...row, recorded: rec, divergence };
+    });
+
+    // Unreadable bridges first — a gap must not be the last thing a reader sees, and it must not
+    // be invisible either. Ordering is information here.
+    positions.sort((a, b) => Math.abs(b.profit) - Math.abs(a.profit));
+
+    return { fetchedAt: new Date().toISOString(), brokers, positions, gaps };
+  }
+
+  /**
    *
    * ⚠️ `contractSize` is what makes a position SIZE meaningful: 100 for gold (troy oz), 100000 for
    * an FX pair, 1 for an index CFD. Without it, `size × 100_000` is applied to every instrument,
