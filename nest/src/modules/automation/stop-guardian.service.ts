@@ -12,7 +12,12 @@ import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { DirectivesService } from '../directives/directives.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { NotificationService } from '../notifications/notifications.service';
-import { StopGuardianService as StopAdjustmentRecorder } from '../trading/stop-guardian.service';
+// ⚠️ #review-2026-09-30 — this read `StopGuardianService AS StopAdjustmentRecorder` because TWO
+// classes shared the name `StopGuardianService` (this one guards; that one records). The alias WAS
+// the correct name, written down as a workaround for the collision. `trading/stop-guardian.service.ts`
+// has now been renamed to `StopAdjustmentRecorder`, so the alias is deleted and each name means one
+// thing. If you are looking for the service that TRAILS stops, it is this file.
+import { StopAdjustmentRecorder } from '../trading/stop-guardian.service';
 import { SystemLogService } from '../system/log.service';
 
 interface Mt5RawPosition {

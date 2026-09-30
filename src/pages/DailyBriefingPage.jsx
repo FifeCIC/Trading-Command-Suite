@@ -5,7 +5,7 @@
  * calendar events, overnight movers, P&L summary, and analyst changes.
  *
  * Data sources:
- *   GET /api/automation/timeline    — calendar events
+ *   GET /api/automation/risk-events — calendar events with their risk action
  *   GET /api/providers/mt5/diagnostics — portfolio summary
  *   GET /api/providers/mt5/positions   — open positions
  *   GET /api/scoring/ranked         — top scored symbols
@@ -45,7 +45,7 @@ export default function DailyBriefingPage() {
   // ── Calendar events ──
   const timelineQuery = useQuery({
     queryKey: ['briefing-timeline'],
-    queryFn: () => apiGet('/api/automation/timeline?lookahead=1440').catch(() => null),
+    queryFn: () => apiGet('/api/automation/risk-events?lookahead=1440').catch(() => null),
     refetchInterval: 120_000,
   });
   const events = timelineQuery.data?.events || [];

@@ -177,7 +177,7 @@ export default function MarketTape() {
 
   const timelineQuery = useQuery({
     queryKey: ['market-tape', 'timeline'],
-    queryFn: () => apiGet('/api/automation/timeline?lookahead=120').catch(() => null),
+    queryFn: () => apiGet('/api/automation/risk-events?lookahead=120').catch(() => null),
     refetchInterval: 60_000, staleTime: 30_000, retry: 1,
   });
 

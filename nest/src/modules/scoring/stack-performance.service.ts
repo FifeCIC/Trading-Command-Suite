@@ -201,6 +201,21 @@ export class StackPerformanceService {
     else if (rating > 20) { band = 'Weak'; stars = '★★☆☆☆'; }
     else { band = 'Untested'; stars = '★☆☆☆☆'; }
 
+    // ⚠️ #review-2026-09-30 — READ THE PRIOR FINGERPRINT *BEFORE* THE UPSERT BELOW WRITES IT.
+    //
+    // This read used to happen AFTER the upsert, whose `update` clause sets `fingerprint`. So it
+    // compared the freshly-written value against itself and `fingerprintChanged` was **always
+    // `false`** — a drift detector that could never detect drift. A wasted query would have been
+    // cheap; this was the feature silently not working, which is the defect class this repo keeps
+    // re-finding: plausible output, no error.
+    //
+    // ⚠️ Captured to a plain value, not a nullable row, so the comparison below cannot accidentally
+    // depend on a row that a later write has since replaced.
+    const priorRow = await this.prisma.stackPerformance
+      .findUnique({ where: { scoringStrategyId }, select: { fingerprint: true } })
+      .catch(() => null);
+    const priorFingerprint: string | null = priorRow?.fingerprint ?? null;
+
     // Persist to StackPerformance table
     try {
       await this.prisma.stackPerformance.upsert({
@@ -252,14 +267,12 @@ export class StackPerformanceService {
       this.logger.warn(`Failed to persist StackPerformance for ${scoringStrategyId}: ${(err as Error).message}`);
     }
 
-    // Check if fingerprint changed from last persisted rating
-    const lastPersisted = await this.prisma.stackPerformance.findUnique({
-      where: { scoringStrategyId },
-      select: { fingerprint: true },
-    }).catch(() => null);
-    const fingerprintChanged = lastPersisted
-      ? lastPersisted.fingerprint !== fingerprint
-      : false;
+    // ⚠️ #review-2026-09-30 — compared against the value read BEFORE the upsert.
+    // `priorFingerprint === null` means there was no row yet, so there is nothing to have changed
+    // FROM — a first computation is not drift, and reporting it as such would fire on every new
+    // MetaStack. That matches the original intent (`lastPersisted ? … : false`) while actually
+    // being able to return `true`.
+    const fingerprintChanged = priorFingerprint !== null && priorFingerprint !== fingerprint;
 
     return {
       scoringStrategyId,

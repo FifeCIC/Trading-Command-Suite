@@ -20,7 +20,7 @@ import { SeasonalityService } from '../scoring/seasonality.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { MarketSessionsService, type SessionTimelineEvent } from '../calendar/market-sessions.service';
 
-export interface TimelineEvent {
+export interface RiskEvent {
   id: string;
   type: string;
   scope: 'global' | 'broker' | 'symbol' | 'session' | 'protocol';
@@ -44,8 +44,8 @@ export interface TimelineEvent {
 }
 
 @Injectable()
-export class TimelineService {
-  private readonly logger = new Logger(TimelineService.name);
+export class EventRiskService {
+  private readonly logger = new Logger(EventRiskService.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -56,12 +56,12 @@ export class TimelineService {
 
   // ── Main API ──────────────────────────────────────────
 
-  async getActiveEvents(lookaheadMinutes = 120): Promise<TimelineEvent[]> {
+  async getActiveEvents(lookaheadMinutes = 120): Promise<RiskEvent[]> {
     const now = new Date();
     const lookahead = new Date(now.getTime() + lookaheadMinutes * 60000);
     const pastWindow = new Date(now.getTime() - 120 * 60000);
 
-    const events: TimelineEvent[] = [];
+    const events: RiskEvent[] = [];
 
     // 1. DB-stored events (economic calendar, custom events)
     events.push(...await this.getDbEvents(now, lookahead));
@@ -81,7 +81,7 @@ export class TimelineService {
     return events.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   }
 
-  async getSymbolEvents(symbol: string, lookaheadHours = 48): Promise<TimelineEvent[]> {
+  async getSymbolEvents(symbol: string, lookaheadHours = 48): Promise<RiskEvent[]> {
     const all = await this.getActiveEvents(lookaheadHours * 60);
     const relevant = all.filter(e =>
       e.scope === 'global' ||
@@ -97,7 +97,7 @@ export class TimelineService {
     return relevant;
   }
 
-  computeRiskMultiplier(events: TimelineEvent[]): number {
+  computeRiskMultiplier(events: RiskEvent[]): number {
     let multiplier = 1.0;
     for (const event of events) {
       if (event.action === 'block') return 0;
@@ -113,7 +113,7 @@ export class TimelineService {
 
   // ── Event Sources ─────────────────────────────────────
 
-  private async getDbEvents(now: Date, lookahead: Date): Promise<TimelineEvent[]> {
+  private async getDbEvents(now: Date, lookahead: Date): Promise<RiskEvent[]> {
     if (!this.prisma.isAvailable) return [];
     try {
       const rows = await (this.prisma as any).timelineEvent.findMany({
@@ -150,7 +150,7 @@ export class TimelineService {
     }
   }
 
-  private async getEarningsEvents(now: Date, lookahead: Date): Promise<TimelineEvent[]> {
+  private async getEarningsEvents(now: Date, lookahead: Date): Promise<RiskEvent[]> {
     const finnhub = this.adapterFactory.create('finnhub');
     if (!finnhub?.getEarningsCalendar) return [];
 
@@ -181,7 +181,7 @@ export class TimelineService {
     }
   }
 
-  private getSessionEvents(now: Date, lookahead: Date): TimelineEvent[] {
+  private getSessionEvents(now: Date, lookahead: Date): RiskEvent[] {
     // Session windows now come from the canonical DST-aware MarketSessionsService.
     // This replaces the old hardcoded-UTC session logic (NY was pinned to 13:00 UTC,
     // 30min early in EDT; DST was ignored). All session state is derived from the
@@ -191,7 +191,7 @@ export class TimelineService {
       this.marketSessions.getTimelineEvents(now, Math.max(0, lookaheadMinutes));
 
     return sessionEvents.map((e) => {
-      const ev: TimelineEvent = {
+      const ev: RiskEvent = {
         id: e.id,
         type: e.type,
         scope: 'session',
@@ -212,7 +212,7 @@ export class TimelineService {
     });
   }
 
-  private async getSeasonalityEvents(symbol: string): Promise<TimelineEvent[]> {
+  private async getSeasonalityEvents(symbol: string): Promise<RiskEvent[]> {
     try {
       const result = await this.seasonalityService.compute(symbol);
       const now = new Date();
@@ -223,7 +223,7 @@ export class TimelineService {
 
       if (samples < 5) return []; // Not enough data
 
-      const events: TimelineEvent[] = [];
+      const events: RiskEvent[] = [];
       if (bullishPct >= 0.60) {
         events.push({
           id: `season-${symbol}-bullish`,
@@ -271,8 +271,8 @@ export class TimelineService {
 
   // ── Recurring Economic Events ─────────────────────────
 
-  private getRecurringEconomicEvents(now: Date, lookahead: Date): TimelineEvent[] {
-    const events: TimelineEvent[] = [];
+  private getRecurringEconomicEvents(now: Date, lookahead: Date): RiskEvent[] {
+    const events: RiskEvent[] = [];
 
     // NFP: first Friday of each month at 13:30 UTC
     const nfpDate = this.getFirstFriday(now.getUTCFullYear(), now.getUTCMonth() + 1);
@@ -294,7 +294,7 @@ export class TimelineService {
   private makeEconomicEvent(
     type: string, label: string, riskMultiplier: number,
     thresholdAdjust: number, icon: string, date: Date,
-  ): TimelineEvent {
+  ): RiskEvent {
     const start = new Date(date);
     start.setUTCHours(13, 30, 0, 0);
     const end = new Date(start.getTime() + 2 * 3600000);

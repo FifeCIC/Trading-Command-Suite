@@ -96,7 +96,7 @@ const SAMPLE_NODES = [
     stats: { ticks: '2,341', trades: '12', lastTick: '5s ago' },
     docs: {
       description: 'Broker-agnostic tick loop: check Timeline → fetch portfolios → score positions → evaluate strategies → dispatch trades. Safety limits: max 1 trade/tick, min 60s cooldown, emergency stop.',
-      endpoints: ['GET /api/automation/status', 'POST /api/automation/run-now', 'GET /api/automation/timeline'],
+      endpoints: ['GET /api/automation/status', 'POST /api/automation/run-now', 'GET /api/automation/risk-events'],
       tables: ['LoopTick', 'TradingStrategy', 'StrategyEvaluation', 'AutomationConfig'],
       files: ['nest/src/modules/automation/automation-loop.service.ts', 'nest/src/modules/automation/timeline.service.ts', 'nest/src/modules/trading/trading-strategy.service.ts'],
       strategies: '3 active strategies — gold-hedge-v1 (XAUUSD), tech-titans-v1 (NVDA), oil-trader-v1 (USOIL)',

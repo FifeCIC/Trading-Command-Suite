@@ -44,7 +44,7 @@ import type { AbTest } from '@prisma/client';
 // must reach bar queries through selectBaseTimeframe() (INV-SINGLE-CADENCE).
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
 import { AdapterFactory } from '../providers/adapter-factory';
-import { TimelineService } from './timeline.service';
+import { EventRiskService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { MetaStackVersioningService } from '../scoring/metastack-versioning.service';
 import { StrategyRegistryService } from '../scoring/strategy-registry.service';
@@ -551,7 +551,7 @@ export class AutomationLoopService implements OnModuleInit {
 
   constructor(
     private readonly adapterFactory: AdapterFactory,
-    private readonly timelineService: TimelineService,
+    private readonly timelineService: EventRiskService,
     private readonly scoringService: ScoringService,
     private readonly strategyService: TradingStrategyService,
     private readonly tradeRecorder: TradeRecorderService,

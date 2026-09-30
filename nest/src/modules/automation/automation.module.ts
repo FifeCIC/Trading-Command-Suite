@@ -18,14 +18,14 @@ import { JobQueueService } from './job-queue.service';
 import { JobQueueController } from './job-queue.controller';
 import { AbTestService } from './ab-test.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
-import { TimelineService } from './timeline.service';
+import { EventRiskService } from './timeline.service';
 import { AutomationLoopService } from './automation-loop.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { PositionTimeStopService } from './position-time-stop.service';
 import { AuditLogService } from './audit-log.service';
 import { AutomationController } from './automation.controller';
 import { StopGuardianController } from './stop-guardian.controller';
-import { TimelineController } from './timeline.controller';
+import { EventRiskController } from './timeline.controller';
 import { AbTestController } from './ab-test.controller';
 
 /**
@@ -43,7 +43,7 @@ import { AbTestController } from './ab-test.controller';
 @Global()
 @Module({
   imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, DiversificationModule, MarketDataModule, SymbolsModule, CalendarModule, AuthModule, SignalsModule, NotificationsModule],
-  controllers: [AutomationController, StopGuardianController, TimelineController, AbTestController, JobQueueController],
+  controllers: [AutomationController, StopGuardianController, EventRiskController, AbTestController, JobQueueController],
   providers: [
     SymbolDataCacheService,
     ProtocolRunnerService,
@@ -51,7 +51,7 @@ import { AbTestController } from './ab-test.controller';
     JobQueueService,
     AbTestService,
     MultiProtocolRankingService,
-    TimelineService,
+    EventRiskService,
     AutomationLoopService,
     StopGuardianService,
     PositionTimeStopService,
@@ -64,7 +64,7 @@ import { AbTestController } from './ab-test.controller';
     JobQueueService,
     AbTestService,
     MultiProtocolRankingService,
-    TimelineService,
+    EventRiskService,
     AutomationLoopService,
     StopGuardianService,
     PositionTimeStopService,

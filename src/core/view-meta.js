@@ -1181,7 +1181,7 @@ const VIEW_META = {
     css: 'src/pages/events-calendar.css',
     api: [
       'GET /api/research/earnings/calendar',
-      'GET /api/automation/timeline?lookahead=240',
+      'GET /api/automation/risk-events?lookahead=240',
       'GET /api/portfolio',
     ],
   },

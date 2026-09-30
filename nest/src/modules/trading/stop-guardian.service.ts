@@ -65,8 +65,8 @@ export interface ExhaustionEventParams {
  * the MT5 bridge or API.
  */
 @Injectable()
-export class StopGuardianService {
-  private readonly logger = new Logger(StopGuardianService.name);
+export class StopAdjustmentRecorder {
+  private readonly logger = new Logger(StopAdjustmentRecorder.name);
 
   constructor(private readonly prisma: PrismaService) {}
 

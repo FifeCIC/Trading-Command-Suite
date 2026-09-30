@@ -1,13 +1,16 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { TimelineService } from './timeline.service';
+import { EventRiskService } from './timeline.service';
 
-@Controller('automation/timeline')
-export class TimelineController {
-  constructor(private readonly timeline: TimelineService) {}
+@Controller('automation/risk-events')
+export class EventRiskController {
+  constructor(private readonly timeline: EventRiskService) {}
 
   /**
-   * GET /api/automation/timeline
-   * Full timeline: active events within the lookahead window.
+   * GET /api/automation/risk-events
+   * Active events within the lookahead window, each carrying its risk ACTION
+   * (`block` | `gate` | `boost` | `reduce`). Renamed from `/api/automation/timeline`
+   * (2026-09-30 review): the old path collided with `GET /api/timeline`, which is the
+   * UI DISPLAY model and returns a different shape for a different purpose.
    */
   @Get()
   async getTimeline(@Query('lookahead') lookahead?: string) {
@@ -17,7 +20,7 @@ export class TimelineController {
   }
 
   /**
-   * GET /api/automation/timeline/symbol/:symbol
+   * GET /api/automation/risk-events/symbol/:symbol
    * Events relevant to a specific symbol.
    */
   @Get('symbol/:symbol')
@@ -38,7 +41,7 @@ export class TimelineController {
   }
 
   /**
-   * GET /api/automation/timeline/risk
+   * GET /api/automation/risk-events/risk
    * Quick risk check — returns current global risk multiplier.
    */
   @Get('risk')

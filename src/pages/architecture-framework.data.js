@@ -1579,7 +1579,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
     status: 'designed',
   },
   {
-    route: 'GET /api/automation/timeline',
+    route: 'GET /api/automation/risk-events',
     method: 'GET',
     permission: 'Authenticated operator access',
     owner: 'Timeline controller',
@@ -1587,7 +1587,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
     status: 'designed',
   },
   {
-    route: 'GET /api/automation/timeline/symbol/:symbol',
+    route: 'GET /api/automation/risk-events/symbol/:symbol',
     method: 'GET',
     permission: 'Authenticated operator access',
     owner: 'Timeline controller',

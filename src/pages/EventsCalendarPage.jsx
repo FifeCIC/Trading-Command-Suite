@@ -49,7 +49,7 @@ export default function EventsCalendarPage() {
   // Real macro events from timeline
   const timelineQuery = useQuery({
     queryKey: ['events', 'timeline'],
-    queryFn: () => apiGet('/api/automation/timeline?lookahead=240'),
+    queryFn: () => apiGet('/api/automation/risk-events?lookahead=240'),
     staleTime: 300_000,
   });
 

@@ -40,7 +40,7 @@ export default function AutomationDashboardPage() {
 
   const timelineQuery = useQuery({
     queryKey: ['automation', 'timeline'],
-    queryFn: () => apiGet('/api/automation/timeline?lookahead=240'),
+    queryFn: () => apiGet('/api/automation/risk-events?lookahead=240'),
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
