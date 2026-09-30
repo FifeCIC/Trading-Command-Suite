@@ -230,3 +230,101 @@ node scripts/analyse-query-patterns.cjs --self-test    # 7/7 — proves each rul
 ⚠️ It is a **report, not a build gate** — deliberately. It cannot see caching, a bounded loop, or a
 deliberate re-read, so gating on it would fail builds for correct code, and an allowlisted guard is
 worse than none.
+
+---
+
+## 9. RESOLVED — the two "which copy wins?" questions, answered by the owner's intent
+
+**Owner clarification, 2026-09-30**, asked to settle §2 items 1–3:
+
+> *"My original discussion of a timeline was a UI feature that would be horizontal for viewing history and
+> future calendar events… ability to zoom in/out to look at hours/days/weeks. Agent AI might have
+> understood that it will need a class of some sort to bring almost all data together. However things
+> might have got confusing when I discussed integrating the schedule system so those items show on the
+> timeline too… As for scenarios: this may relate to specific periods of market data for a symbol and
+> notes to understand a key activity we want to practice trading, for training and in backtesting…
+> **take the most substantial work and clean-up anything else, maybe a merge if both have unique
+> features.**"*
+
+### 9a. ⚠️ The timeline class was NOT over-built — TWO DIFFERENT THINGS were built and given the SAME NAME
+
+This is the clearest confirmation in the whole review that **naming, not architecture, is the defect.**
+The owner suspected an agent "understood it will need a class to bring almost all data together". That is
+half right, and the other half is the problem.
+
+| | `timeline/timeline.service.ts` (3 KB) | `automation/timeline.service.ts` (13 KB) |
+|---|---|---|
+| **What it is** | a **display model** | an **event-aware decision engine** |
+| `TimelineEvent` fields | `title`, `description`, `importance`, `prediction`, `predictionScore`, `type: session-open\|economic\|earnings\|prediction\|note` | `action: block\|gate\|boost\|reduce\|info`, **`riskMultiplier`**, **`thresholdAdjust`**, `scope: global\|broker\|symbol\|session\|protocol` |
+| Reads | sessions, calendar | calendar + earnings + **seasonality + protocol windows** |
+| **Effect on trading** | **none — it shows** | **it decides** (`computeRiskMultiplier()`) |
+| Route | `GET /api/timeline` | `GET /api/automation/timeline` (+ `/:symbol`, `/risk`) |
+| Wired | `TimelineModule` in `app.module.ts:36` | `automation.module.ts:21,28` |
+
+**Both are live. Neither is redundant. They share a name and nothing else.**
+
+**The owner's confusion is explained exactly.** *"I discussed integrating the schedule system so those
+items show on the timeline."* — that integration **did land**, but in the **risk engine**, and the UI's
+calendar surfaces (`EventsCalendarPage`, `DailyBriefingPage`, `AutomationDashboardPage`, `MarketTape`)
+read **that** engine. So the schedule data the owner wanted displayed is arriving via the *decision*
+service, while a purpose-built **display** service sits at `GET /api/timeline` with almost no consumer.
+
+**Decision: RENAME, not merge.** They are different concerns, so merging would fuse a *view* with a
+*gate*:
+
+| Today | Should be | Why |
+|---|---|---|
+| `automation/timeline.service.ts` → `TimelineService` / `TimelineEvent` | **`EventRiskService` / `EventRisk`** | It computes `riskMultiplier` and gates trades. "Timeline" describes its *input*, not its job |
+| `automation/timeline.controller.ts` → `@Controller('automation/timeline')` | `@Controller('automation/event-risk')` | Route name should say what it does |
+| `timeline/timeline.service.ts` → `TimelineService` | **unchanged** — it IS the timeline | It is the display surface |
+
+⚠️ **A reader seeing `TimelineService` today cannot tell whether it shows or decides.** That is the whole
+cost, and it is a renamed-symbol cost, not a design cost.
+
+### 9b. ⚠️ The timeline UI the owner described DOES NOT EXIST — neither copy is it
+
+The owner's intent — *horizontal, history + future, trades optional, **zoom hours→days→weeks*** — is
+**not implemented in either service**:
+
+- the display service is a **day grid** (`TimelineDay` = date + events + priority symbols), not a zoomable scale;
+- the risk service is not a UI model at all.
+
+**So the feature is unbuilt; only its two halves' *names* collide.** The two existing services are
+worth keeping as **data sources for** that UI — the display one for the shape, the risk one for the
+gating overlay — but neither is the horizontal zoomable timeline that was asked for.
+
+### 9c. Scenarios — a genuine MERGE, and neither copy matches the stated intent
+
+Both copies store scenarios in an **in-memory `Map`**, so **scenarios are lost on every restart**. For
+material the owner describes as *"for training and in backtesting"*, that makes both copies unusable as
+built.
+
+| | `scenario.service.ts` (singular — **WIRED**) | `scenarios.service.ts` (plural — **dead**) |
+|---|---|---|
+| Storage | in-memory `Map` | in-memory `Map` |
+| `id` prefix | `scn-` | `sc-` |
+| `readinessScore` | **0–100** | **0–1** ⚠️ *same name, different unit* — the `totalExposure` hazard again |
+| `marketCondition` | typed union `'bull'\|'bear'\|…` | loose `string` |
+| `assessment` | `+ assessedAt` | **+ `directivesMissed`** |
+| extras | — | **`historicalReference {date, outcome}`**, `addHistory()` |
+
+**The plural copy carries the two features closest to the owner's intent** (`directivesMissed` — what did
+*not* fire, the useful half for training; and `historicalReference`, a past date + outcome).
+
+**Decision: port the plural's unique fields into the singular, then delete the plural.**
+
+⚠️ **But state the gap plainly:** the owner's intent is *"specific periods of market data for a symbol
+and notes"*. **Neither copy has a period** — `historicalReference` is a single `{date, outcome}`, not a
+`from/to` range, and there is no bar-window link. Both copies are really a **market-condition factor
+checklist**, which is closer to directive scoring than to a practice/backtest notebook. So the merge
+above fixes the *duplication*; it does **not** deliver the feature as described.
+
+### 9d. Recommendation, updated
+
+| # | Action | Effort | Risk |
+|---|---|---|---|
+| 1 | Rename `automation/timeline.*` → `EventRiskService` / `/api/automation/event-risk` | S | low — but touches the UI's query keys, so **one commit** |
+| 2 | Merge `scenarios/*` unique fields into `scenario.*`, delete the plural set | S | low |
+| 3 | Decide whether scenarios get **persistence** — today neither copy survives a restart | M | low |
+| 4 | (Feature) build the horizontal zoomable timeline, using both services as sources | **L** | — |
+
