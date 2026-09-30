@@ -76,9 +76,17 @@ Measured 2026-09-30 17:20:
 | `rejected` | **91** |
 
 **103 of 104 rows cannot contribute to a comparison.** What ended its day was not design: at `13:14`
-orders were refused for **negative margin** (*"need 0.00, have −81.89"*), and at `15:29` by the app's
-own **daily loss limit** (*"−240.83 vs −100.00 [broker 2]"*). The last attempt was **15:33**, and both
-bridges report `tradeAllowed: true`. **A daily loss limit resets, so nothing is actually holding it.**
+orders were refused for **negative margin** (*"need 0.00, have −81.89"*), and at `15:29` by a
+**daily loss limit** (*"−240.83 vs −100.00 [broker 2]"*). The last attempt was **15:33**, and both
+bridges report `tradeAllowed: true`.
+
+**And the brake lets go every day.** It is not the app's — it is enforced in the **bridge**,
+`scripts/mt5-bridge/mt5_bridge_v2.py:1680`, from `MT5_MAX_DAILY_LOSS` (configured `100`). Its window
+is `datetime.now().replace(hour=0, …)` — **local midnight** — summing today's deal profit. So the run
+is not stopped, only **paused until midnight**, and it resumes on its own.
+
+That is the finding worth keeping: the only thing that stopped this bleeding was a **bridge-level
+risk cap, configured outside all of the app's exit machinery**, and it resets daily.
 
 Also worth knowing: `threshold 55 vs 10` makes the variant fire near-constantly — two orders every
 ~2 minutes — which is how one idea accumulated a ten-fill position.
