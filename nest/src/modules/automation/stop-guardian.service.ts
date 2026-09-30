@@ -38,6 +38,40 @@ interface Mt5RawPosition {
    * attributed" — NOT a bot.
    */
   magic?: number | null;
+  /**
+   * #1030 — WHICH bridge reported this position.
+   *
+   * Stamped by `Mt5ConnectionManager.getAllPositions()`; the bridge itself never sends it. It is
+   * the authority for ADDRESSING a position: the position lives on the account that reported it,
+   * so every write for it must go back to THAT bridge.
+   *
+   * ⚠️ `symbol_route` is NOT a substitute, and this is the whole reason the field exists. A route
+   * says where a symbol WOULD be traded NOW; a position was opened under whatever the route was
+   * THEN. Change a route and the position does not move with it — reading the route would aim the
+   * stop edit at a bridge that has never heard of the ticket, and the failure is a plausible
+   * "no such position" rather than anything that looks like a routing bug.
+   */
+  // ── DECISION (2026-09-30, primary) ──
+  // WHAT:      A position is addressed by the bridge that HOLDS it (`brokerId`), never by a URL
+  //            captured at start-up, and never by `symbol_route`.
+  // WHY:       `getUrl()` with no argument returns the PRIMARY broker, so one captured URL
+  //            silently scoped everything to one of two accounts: measured live 2026-09-30,
+  //            `:5000` held 7 positions and `:5001` held 2 (US500, GER40), and the guardian
+  //            reported `7 guarded` every tick. Those two had never been trailed or time-stopped.
+  //            A route is NOT a substitute: it says where a symbol WOULD trade now, while the
+  //            position was opened under whatever the route was THEN — change the route and the
+  //            position does not move, so the edit would name an account that has never heard of
+  //            the ticket.
+  // INSTEAD OF: reading `symbol_route` per position — the obvious-looking fix, wrong for exactly
+  //            the reason above — and instead of adding a SECOND bridge URL, when
+  //            `Mt5ConnectionManager` already had `getAllPositions()` / `getCandles` /
+  //            `modifyOrder` and was simply not being used.
+  // REVERSE BY: delete this field and pass no broker to the manager calls. That is what #1030 was.
+  //            `stop-guardian.service.spec.ts` asserts a broker-3 position is guarded AND that its
+  //            modify is addressed to broker 3, so a reversal fails the suite rather than shipping.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 47
+  // GUARD:     nest/scripts/validate-single-bridge-position-io.cjs (prebuild; self-test 14/14)
+  brokerId?: number;
 }
 
 export interface GuardianState {
@@ -106,6 +140,21 @@ export interface GuardianState {
     viaComment: number;
     unresolved: string[];
   };
+  /**
+   * #1030 — the per-bridge read, so "the guardian sees both accounts" is a NUMBER rather than an
+   * inference. `positionsByBroker` is derived from the `brokerId` stamped on each row by
+   * `getAllPositions()`; `brokersQueried` is the configured set.
+   *
+   * ⚠️ DECLARED LIMITATION: a broker that contributed `0` is reported as `0`, and that number
+   * cannot distinguish "this account holds no positions" from "this bridge did not answer". Both
+   * are silence, and telling them apart needs a health probe this tick does not make. The field's
+   * job is to make the SILENCE VISIBLE — `0` next to a configured broker is the thing to go and
+   * check. Use `GET /api/mt5/health` to resolve which of the two it is.
+   */
+  brokerCoverage?: {
+    brokersQueried: number[];
+    positionsByBroker: Record<number, number>;
+  };
 }
 
 export interface GuardedPosition {
@@ -130,6 +179,15 @@ export interface GuardedPosition {
    * had run at all.
    */
   ownerVia: 'magic' | 'comment:exact' | 'comment:unique-prefix' | 'comment:normalised';
+  /**
+   * #1030 — the MT5 account whose stop would be edited, i.e. the bridge this position came from.
+   *
+   * Served so "is the second broker actually being managed?" is answerable from `GET /status`
+   * instead of by reading a log. Before this, `guardedPositions` was populated from ONE bridge and
+   * nothing in the payload named which — so a broker-3 position being absent was indistinguishable
+   * from it not existing, which is exactly how this defect stayed invisible.
+   */
+  brokerId?: number;
 }
 
 export interface StopAdjustment {
@@ -522,7 +580,29 @@ export class StopGuardianService {
   private readonly logger = new Logger(StopGuardianService.name);
   private timer: NodeJS.Timeout | null = null;
   private ticking = false;
-  private readonly bridgeUrl: string;
+  // ── #1030 — THERE IS NO `bridgeUrl` FIELD HERE ANY MORE, AND THAT IS THE FIX ──────────────
+  //
+  // It used to be `this.bridgeUrl = this.mt5Connection.getUrl()` — one URL, resolved once in the
+  // constructor, used for `/positions`, `/candles` and `/order/modify`. `getUrl()` with no
+  // argument returns the PRIMARY broker, so with `MT5_ACTIVE_BROKERS=2,3` (MetaQuotes :5000 and
+  // Pepperstone :5001) every position on broker 3 was invisible to the guardian AND would have
+  // been edited on the wrong account if it had been visible.
+  //
+  // ⚠️ The fix is NOT a second URL. `Mt5ConnectionManager` ALREADY had the broker-aware API —
+  // `getAllPositions()` (every bridge, each row stamped with `brokerId`), `getCandles(…, brokerId)`
+  // and `modifyOrder(…, brokerId)`. This service hand-rolled a single-URL `fetch` INSTEAD of using
+  // the shared core, so it inherited none of its routing. One URL field cannot be "made correct"
+  // here; addressing must follow the POSITION, and only the position knows which account holds it.
+  //
+  // ⚠️ MEASURED 2026-09-30 BEFORE the fix, live: `:5000` held 7 positions, `:5001` held 2
+  // (US500, GER40), and the guardian reported `7 guarded` on every tick. GER40 also returned
+  // **0 candles from `:5000`** and 2 from `:5001`, so it was invisible twice over — no position
+  // AND no bars — and would have been skipped even had it been seen.
+  //
+  // ⚠️ REVERSE BY: re-add the field and pass no broker to the manager calls. Do NOT do that —
+  // `stop-guardian.spec.ts` asserts a broker-3 position is guarded and that the modify is
+  // addressed to broker 3, and `validate-single-bridge-position-io.cjs` fails the build on the
+  // reintroduced shape.
 
   state: GuardianState = {
     enabled: false,
@@ -603,7 +683,7 @@ export class StopGuardianService {
   private readonly MARKET_CLOSED_BACKOFF_MS = 15 * 60_000;
 
   /**
-   * #893 — the refusal body from the LAST `bridgePost` call, cleared before every
+   * #893 — the refusal body from the LAST `modifyStop` call, cleared before every
    * post so `applyModify` can attribute a failure to THIS call. Distinct from
    * `state.lastBridgeRefusal`, which is a historical record for `/status` and is
    * overwritten by any refusal from any path.
@@ -673,7 +753,9 @@ export class StopGuardianService {
      */
     private readonly syslog?: SystemLogService,
   ) {
-    this.bridgeUrl = this.mt5Connection.getUrl();
+    // #1030 — nothing is resolved here any more. Addressing is per-POSITION (see the field
+    // comment above): a URL captured in the constructor cannot know which account holds a
+    // position that has not been read yet.
   }
 
   // ── Loop Control ──────────────────────────────────────
@@ -708,74 +790,93 @@ export class StopGuardianService {
   }
 
   // ── Bridge Helpers ────────────────────────────────────
+  //
+  // #1030 — the two raw-`fetch` helpers that used to live here (`bridgeGet` / `bridgePost`) are
+  // GONE, not reparameterised. Both addressed ONE URL captured in the constructor; every read and
+  // write the guardian makes is now addressed by the manager that owns the broker registry. The
+  // only thing those helpers did that the manager did not was the refusal bookkeeping below
+  // (#892/#893), which is preserved verbatim in `modifyStop()`.
 
-  private async bridgeGet<T>(path: string): Promise<T | null> {
+  /**
+   * modifyStop() — edit ONE position's stop on the bridge that HOLDS it (#1030).
+   *
+   * BEFORE: `bridgePost('/order/modify', {ticket, sl})` against `this.bridgeUrl`. With
+   * `MT5_ACTIVE_BROKERS=2,3` that URL was always the primary broker (`:5000`), so a position on
+   * broker 3 was not merely unmanaged — an edit for it would have been aimed at the wrong ACCOUNT.
+   *
+   * ⚠️ THE #892/#893 BOOKKEEPING IS THE POINT OF THIS METHOD, not the call itself. A refused stop
+   * edit and a successful one were once indistinguishable: the caller saw a bare boolean, and
+   * `0 adjusted` read as "nothing needed adjusting" rather than "the broker said no" — measured
+   * 2026-09-18, three positions cleared the confidence gate and every edit came back
+   * `HTTP 400 {"error": "Market closed"}` with nothing anywhere saying so. So the refusal is
+   * recorded on the state (`GET /status` says WHY), remembered for ONE decision
+   * (`lastRefusalDetail` — does this refusal mean "market closed"?), and logged throttled by
+   * content.
+   *
+   * ⚠️ A TRANSPORT FAILURE IS STILL SEPARATE FROM A BROKER REFUSAL (#892), and `status === 0` is
+   * what distinguishes them — "nothing was consulted". They need OPPOSITE handling: a closed market
+   * is backed off (#893), a dead bridge must NOT be, or the stop stays unmoved for 15 minutes after
+   * the bridge comes back. Collapsing the two would silently reintroduce #893 backwards.
+   */
+  private async modifyStop(pos: Mt5RawPosition, newSl: number): Promise<boolean> {
+    const path = '/order/modify';
+    let result: any;
     try {
-      const res = await fetch(`${this.bridgeUrl}${path}`, {
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!res.ok) return null;
-      return (await res.json()) as T;
-    } catch {
-      return null;
-    }
-  }
-
-  private async bridgePost(path: string, body: unknown): Promise<boolean> {
-    try {
-      const res = await fetch(`${this.bridgeUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!res.ok) {
-        // ⚠️ #892 — the bridge answers a REFUSED modify with a 4xx and a body of
-        // `{'success': false, 'error': '<mt5 error>'}`. Returning a bare `false`
-        // threw that away, so a refused stop edit was indistinguishable from a
-        // successful one at every layer above: the caller sees only a boolean, and
-        // the guardian then reports `0 adjusted` — which reads as "nothing needed
-        // adjusting" rather than "the broker said no".
-        let detail = '';
-        try {
-          detail = (await res.text()).slice(0, 300);
-        } catch {
-          detail = '<body unreadable>';
-        }
-        // Recorded on the state so `GET /status` says WHY, not just that nothing moved.
-        this.state.lastBridgeRefusal = {
-          at: new Date().toISOString(),
-          path,
-          detail: detail || `HTTP ${res.status}`,
-        };
-        // #893 — remembered for ONE decision (see `lastRefusalDetail`): whether this
-        // refusal means "market closed".
-        this.lastRefusalDetail = detail;
-        // Throttled by content — see REFUSAL_LOG_MS. A repeated identical refusal is
-        // still recorded above; only its log line is suppressed.
-        const key = `${path} ${res.status} ${detail}`;
-        const now = Date.now();
-        const isRepeat =
-          this.lastRefusalKey === key && now - this.lastRefusalLogAt < this.REFUSAL_LOG_MS;
-        if (!isRepeat) {
-          this.lastRefusalKey = key;
-          this.lastRefusalLogAt = now;
-          this.logger.error(
-            `Bridge POST ${path} refused: HTTP ${res.status} ${detail}`,
-          );
-        }
-      }
-      return res.ok;
+      result = await this.mt5Connection.modifyOrder(
+        pos.ticket,
+        newSl,
+        undefined,
+        pos.brokerId,
+      );
     } catch (err) {
-      // ⚠️ #892 — a TRANSPORT failure is a different cause from "the broker said
-      // no", and without this line the two are identical to every caller. The
-      // bridge being down, the request timing out, and a rejected price are three
-      // problems with three different fixes.
+      this.lastRefusalDetail = null;
       this.logger.error(
-        `Bridge POST ${path} failed: ${(err as Error).message}`,
+        `Stop modify THREW for ${pos.symbol} #${pos.ticket} (broker ${pos.brokerId ?? '?'}): ` +
+          `${(err as Error).message}`,
       );
       return false;
     }
+
+    if (result?.ok) return true;
+
+    // `status === 0` ⟺ the bridge was never reached (down, timed out, or an unregistered broker
+    // id). There is no broker error to quote, so this is a transport failure rather than a refusal.
+    const status = Number(result?.status ?? 0);
+    if (!status) {
+      this.lastRefusalDetail = null;
+      this.logger.error(
+        `Stop modify NOT SENT for ${pos.symbol} #${pos.ticket} (broker ${pos.brokerId ?? '?'}): ` +
+          `${result?.error ?? 'bridge unreachable'} — no broker response, so this is a transport ` +
+          'failure, NOT a market-closed signal (no backoff armed).',
+      );
+      return false;
+    }
+
+    const detail =
+      String(result?.error ?? result?.message ?? '').slice(0, 300) || `HTTP ${status}`;
+    // Recorded on the state so `GET /status` says WHY, not just that nothing moved.
+    this.state.lastBridgeRefusal = {
+      at: new Date().toISOString(),
+      path,
+      detail,
+    };
+    // #893 — remembered for ONE decision (see `lastRefusalDetail`): does this mean "market closed"?
+    this.lastRefusalDetail = detail;
+    // Throttled by content — see REFUSAL_LOG_MS. A repeated identical refusal is still recorded
+    // above; only its log line is suppressed.
+    const key = `${path} ${status} ${detail}`;
+    const now = Date.now();
+    const isRepeat =
+      this.lastRefusalKey === key && now - this.lastRefusalLogAt < this.REFUSAL_LOG_MS;
+    if (!isRepeat) {
+      this.lastRefusalKey = key;
+      this.lastRefusalLogAt = now;
+      this.logger.error(
+        `Stop modify refused by broker ${pos.brokerId ?? '?'}: ${pos.symbol} #${pos.ticket} — ` +
+          `HTTP ${status} ${detail}`,
+      );
+    }
+    return false;
   }
 
   // ── Main Tick ──────────────────────────────────────────
@@ -813,9 +914,27 @@ export class StopGuardianService {
         return [];
       }
 
-      // 2. Fetch raw MT5 positions
-      const posData = await this.bridgeGet<{ positions: Mt5RawPosition[] }>('/positions');
-      const positions = posData?.positions || [];
+      // 2. Fetch raw MT5 positions from EVERY active bridge (#1030)
+      //
+      // ⚠️ WAS `this.bridgeGet('/positions')` — one hardcoded bridge (the primary, `:5000`). With
+      // `MT5_ACTIVE_BROKERS=2,3` that made every broker-3 position invisible here. The manager
+      // stamps each returned row with the `brokerId` it came from, and THAT stamp — not
+      // `symbol_route` — is what every later write is addressed by.
+      const positions = (await this.mt5Connection.getAllPositions()) as Mt5RawPosition[];
+
+      // #1030 — the per-bridge read, so "does the guardian see both accounts?" is a NUMBER from
+      // `GET /status` rather than an inference from a log. Derived from the stamps above, so it
+      // costs no extra round trip. See `brokerCoverage` for the declared limitation: `0` cannot
+      // distinguish "this account is empty" from "this bridge did not answer".
+      const positionsByBroker: Record<number, number> = {};
+      for (const p of positions) {
+        const b = Number(p.brokerId ?? 0);
+        positionsByBroker[b] = (positionsByBroker[b] ?? 0) + 1;
+      }
+      this.state.brokerCoverage = {
+        brokersQueried: this.mt5Connection.getBrokerIds(),
+        positionsByBroker,
+      };
 
       if (positions.length === 0) {
         this.state.guardedPositions = [];
@@ -867,7 +986,7 @@ export class StopGuardianService {
           // A magic that matches no bot is a CONTRADICTION, not a fallback: it says this position
           // belongs to a bot the registry does not have. Falling through to the comment would
           // silently paper over a missing or reassigned bot, so it is reported instead.
-          unresolved.push(`${p.symbol} #${p.ticket} magic=${m} matches NO bot (comment "${String(p.comment).slice(0, 30)}")`);
+          unresolved.push(`${p.symbol} #${p.ticket} on broker ${p.brokerId ?? '?'} magic=${m} matches NO bot (comment "${String(p.comment).slice(0, 30)}")`);
           continue;
         }
         const owner = resolvePositionOwner(p.comment, strategyNames);
@@ -880,7 +999,7 @@ export class StopGuardianService {
           });
           viaComment++;
         } else {
-          unresolved.push(`${p.symbol} #${p.ticket} "${String(p.comment).slice(0, 40)}"`);
+          unresolved.push(`${p.symbol} #${p.ticket} on broker ${p.brokerId ?? '?'} "${String(p.comment).slice(0, 40)}"`);
         }
       }
       // ⚠️ MADE VISIBLE, not silent. An unestablished owner means the position is NOT being
@@ -920,11 +1039,8 @@ export class StopGuardianService {
         // when bars are short and the rest of the tick skips this position. It records only.
         this.observeSimulatedTsl(pos, strat);
 
-        // 4. Load bars
-        const candleData = await this.bridgeGet<{ bars: any[] }>(
-          `/candles?symbol=${encodeURIComponent(strat.symbol)}&timeframe=5m&limit=30`,
-        );
-        const bars = candleData?.bars || [];
+        // 4. Load bars — from the bridge that holds the POSITION (#1030)
+        const bars = await this.loadBars(strat.symbol, pos.brokerId);
         // #995 — the UP-move exhaustion observer. ⚠️ PLACED AFTER THE BAR LOAD, AND THAT IS A
         // DECLARED LIMITATION, not an oversight. `observeSimulatedTsl()` is called BEFORE the load
         // precisely so it still runs when the feed is degraded; this one CANNOT, because
@@ -1370,7 +1486,32 @@ export class StopGuardianService {
       wickFilterPassed,
       lastEvaluatedAt: new Date().toISOString(),
       ownerVia,
+      // #1030 — which account this managed position sits on, so the guard's coverage is
+      // checkable from the payload instead of inferred from a log.
+      brokerId: pos.brokerId,
     };
+  }
+
+  /**
+   * loadBars() — the 5m bars for a symbol, fetched from the bridge that holds the POSITION (#1030).
+   *
+   * ⚠️ WHY THE POSITION'S BRIDGE AND NOT THE PRIMARY. Measured live 2026-09-30:
+   * `GET :5000/candles?symbol=GER40` answers `200` with **0 bars**, while `:5001` answers with
+   * bars — GER40 is routed to broker 3 and the primary simply does not carry it. That is a SECOND,
+   * independent reason GER40 was never trailed: even had the position been visible, the bar load
+   * returned nothing, and the tick skips any position with fewer than 14 bars. One bridge was
+   * wrong twice over.
+   *
+   * ⚠️ THE PRIMARY IS KEPT AS A FALLBACK, AND THAT IS THE OLD BEHAVIOUR RATHER THAN A NEW RISK.
+   * Before this change the primary was the ONLY bridge ever asked, so falling back to it can only
+   * preserve a read that used to succeed. It is not reached when the position's own bridge answers.
+   */
+  private async loadBars(symbol: string, brokerId?: number): Promise<any[]> {
+    if (brokerId != null) {
+      const own = await this.mt5Connection.getCandles(symbol, '5m', 30, brokerId);
+      if (own.length) return own;
+    }
+    return this.mt5Connection.getCandles(symbol, '5m', 30);
   }
 
   /**
@@ -1483,10 +1624,8 @@ export class StopGuardianService {
 
     // #893 — cleared so a refusal recorded during THIS call is unambiguous.
     this.lastRefusalDetail = null;
-    const ok = await this.bridgePost('/order/modify', {
-      ticket: pos.ticket,
-      sl: newSl,
-    });
+    // #1030 — addressed to the bridge that HOLDS the position, not to a URL captured at start-up.
+    const ok = await this.modifyStop(pos, newSl);
 
     if (ok) {
       // #893 — a successful edit proves the market is open: drop any backoff.

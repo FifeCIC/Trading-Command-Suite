@@ -59,6 +59,14 @@ import { classifyMt5Comment } from '../providers/mt5-comment.util';
 export interface TimedStopCandidate {
   ticket: number;
   symbol: string;
+  /**
+   * #1030 — the MT5 account holding this position, i.e. the bridge the CLOSE must be sent to.
+   *
+   * Stamped by `getAllPositions()`. Without it the close goes to the primary bridge, where the
+   * ticket does not exist — and a close for an unknown ticket is a plausible-looking "no such
+   * position", not anything that reads as a routing bug.
+   */
+  brokerId?: number;
   strategyId: string | null;
   strategyName: string | null;
   side: 'BUY' | 'SELL' | 'UNKNOWN';
@@ -95,6 +103,15 @@ export interface TimeStopState {
    */
   lastSummary: {
     positionsSeen: number;
+    /**
+     * #1030 — which bridges contributed positions, and how many each.
+     *
+     * ⚠️ Added because this service read ONE bridge (`getPositions()` with no argument = the
+     * primary) and its `positionsSeen` count gave no hint of that. A broker-3 position was simply
+     * absent from a number that looked complete. This field is the denominator's own denominator.
+     * A configured broker missing from here is the thing to investigate.
+     */
+    brokersSeen: Record<number, number>;
     attributed: number;
     withinLimit: number;
     noLimitConfigured: number;
@@ -280,15 +297,27 @@ export class PositionTimeStopService {
    * and a close fails, the slot that frees soonest is the one that has been idle longest.
    */
   private async evaluate() {
-    const raw = await (this.mt5Connection as any).getPositions();
+    // ⚠️ #1030 — `getPositions()` (no argument) returns the PRIMARY bridge ONLY. With
+    // `MT5_ACTIVE_BROKERS=2,3` that meant a position on broker 3 was never evaluated for its
+    // hold limit, so its slot was never freed by the mechanism #773 added to free slots.
+    // `getAllPositions()` merges every bridge and stamps each row with its `brokerId`.
+    const raw = await (this.mt5Connection as any).getAllPositions();
     const positions: any[] = Array.isArray(raw) ? raw : (raw?.positions ?? []);
     /** Counters — see `lastSummary`. These make a zero unambiguous. */
     let attributed = 0;
     let withinLimit = 0;
     let noLimit = 0;
+    // #1030 — which bridges actually contributed. Derived from the stamped rows, so it costs
+    // nothing extra and shows a missing configured broker as an absent key.
+    const brokersSeen: Record<number, number> = {};
+    for (const p of positions) {
+      const b = Number(p?.brokerId ?? 0);
+      brokersSeen[b] = (brokersSeen[b] ?? 0) + 1;
+    }
     const setSummary = (candidateCount: number, skipCount: number) => {
       this.state.lastSummary = {
         positionsSeen: positions.length,
+        brokersSeen,
         attributed,
         withinLimit,
         noLimitConfigured: noLimit,
@@ -370,6 +399,8 @@ export class PositionTimeStopService {
       candidates.push({
         ticket: Number(p.ticket),
         symbol,
+        // #1030 — carried to the close, which must go back to the account holding the position.
+        brokerId: p.brokerId != null ? Number(p.brokerId) : undefined,
         strategyId: attribution.strategyId,
         strategyName: attribution.strategyName,
         side: p.type === 'buy' ? 'BUY' : p.type === 'sell' ? 'SELL' : 'UNKNOWN',
@@ -421,7 +452,9 @@ export class PositionTimeStopService {
       try {
         // `origin` stamps `TCS:time-stop` on the broker deal (#916) — belt AND braces with the
         // closeReason write below: the deal survives even when the trade row is not matched yet.
-        const result = await (this.mt5Connection as any).closePosition(c.ticket, undefined, 'time-stop');
+        // #1030 — `c.brokerId` addresses the account that HOLDS the ticket. It used to be
+        // `undefined`, which the manager resolves to the PRIMARY bridge.
+        const result = await (this.mt5Connection as any).closePosition(c.ticket, c.brokerId, 'time-stop');
         if (result?.ok === false) {
           this.logger.warn(`Time-stop close rejected for ${c.symbol}#${c.ticket}: ${result?.error ?? 'unknown'}`);
           continue;

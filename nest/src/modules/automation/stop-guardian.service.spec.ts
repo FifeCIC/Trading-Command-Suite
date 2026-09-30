@@ -6,6 +6,59 @@ import {
   resolvePositionOwner,
 } from './stop-guardian.service';
 
+/**
+ * mt5Double() — the bridge double for this spec (#1030).
+ *
+ * ⚠️ WHY THIS EXISTS INSTEAD OF A `global.fetch` MOCK. The guardian used to reach the bridge with
+ * its own `fetch` against ONE hardcoded URL, so mocking `global.fetch` was the entire contract. It
+ * now goes through `Mt5ConnectionManager`, which owns the broker registry — a `fetch` mock would
+ * stand in for a path the service no longer uses, and every assertion built on it would keep
+ * passing while testing nothing. So the double stands in for the MANAGER, and each recorded modify
+ * keeps the `brokerId` it was addressed to — which is the property #1030 is about.
+ */
+function mt5Double(opts: {
+  /** Positions exactly as `getAllPositions()` returns them: every row stamped with its `brokerId`. */
+  positions?: any[];
+  /** Bars for every broker, unless `barsByBroker` overrides a specific one. */
+  bars?: any[];
+  /**
+   * Per-broker bars. Models a bridge that simply does not carry the symbol — the measured GER40
+   * case, where `:5000` answers 200 with ZERO bars and `:5001` answers with data.
+   */
+  barsByBroker?: Record<number, any[]>;
+  brokerIds?: number[];
+  /**
+   * A broker refusal (`{success:false, error}`), as a string. `null`/absent = the modify succeeds.
+   */
+  modifyFails?: string | null;
+  /** HTTP status for the refusal. `0` models a TRANSPORT failure — the bridge never answered. */
+  modifyStatus?: number;
+} = {}) {
+  const modifyCalls: Array<{ ticket: number; sl?: number; tp?: number; brokerId?: number }> = [];
+  const modifyOrder = jest.fn(
+    async (ticket: number, sl?: number, tp?: number, brokerId?: number) => {
+      modifyCalls.push({ ticket, sl, tp, brokerId });
+      if (opts.modifyFails) {
+        return { ok: false, status: opts.modifyStatus ?? 400, error: opts.modifyFails, brokerId };
+      }
+      return { ok: true, success: true, brokerId };
+    },
+  );
+  const getCandles = jest.fn(
+    async (symbol: string, _tf?: string, _limit?: number, brokerId?: number) => {
+      if (opts.barsByBroker && brokerId != null) return opts.barsByBroker[brokerId] ?? [];
+      return opts.bars ?? [];
+    },
+  );
+  const manager = {
+    getAllPositions: jest.fn(async () => opts.positions ?? []),
+    getBrokerIds: jest.fn(() => opts.brokerIds ?? [2]),
+    getCandles,
+    modifyOrder,
+  };
+  return { manager: manager as any, modifyCalls, modifyOrder, getCandles };
+}
+
 describe('Automation StopGuardianService', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => {
@@ -17,7 +70,7 @@ describe('Automation StopGuardianService', () => {
     const service = new StopGuardianService(
       { findAll: jest.fn().mockResolvedValue([]) } as any,
       {} as any,
-      { getUrl: () => 'http://mt5.test' } as any,
+      mt5Double().manager,
       { recordAdjustment: jest.fn() } as any,
     );
     service.state.enabled = true;
@@ -48,28 +101,17 @@ describe('Automation StopGuardianService', () => {
     }));
 
     const makeService = (type: 'buy' | 'sell') => {
-      (global as any).fetch = jest.fn(async (url: unknown) => {
-        const u = String(url);
-        if (u.includes('/positions')) {
-          return {
-            ok: true,
-            json: async () => ({
-              positions: [
-                { ticket: 1, symbol: 'XAUUSD', type, volume: 1, priceOpen: 100, priceCurrent: 100, sl: type === 'buy' ? 90 : 110, tp: null, profit: 0, comment: 'TCS s1' },
-              ],
-            }),
-          } as any;
-        }
-        if (u.includes('/candles')) {
-          return { ok: true, json: async () => ({ bars }) } as any;
-        }
-        return { ok: false, json: async () => ({}) } as any;
+      const { manager } = mt5Double({
+        positions: [
+          { ticket: 1, symbol: 'XAUUSD', type, volume: 1, priceOpen: 100, priceCurrent: 100, sl: type === 'buy' ? 90 : 110, tp: null, profit: 0, comment: 'TCS s1', brokerId: 2 },
+        ],
+        bars,
       });
 
       return new StopGuardianService(
         { findAll: jest.fn().mockResolvedValue([{ active: true, mode: 'auto', symbol: 'XAUUSD', id: 's1', name: 'S1', slPct: 1 }]) } as any,
         { runAll: jest.fn().mockResolvedValue(bullishEvidence()) } as any,
-        { getUrl: () => 'http://mt5.test' } as any,
+        manager,
         { recordAdjustment: jest.fn() } as any,
       );
     };
@@ -118,28 +160,17 @@ describe('Automation StopGuardianService', () => {
       volume: 1000,
     }));
 
-    (global as any).fetch = jest.fn(async (url: unknown) => {
-      const u = String(url);
-      if (u.includes('/positions')) {
-        return {
-          ok: true,
-          json: async () => ({
-            positions: [
-              { ticket: 1, symbol: 'XAUUSD', type: 'buy', volume: 1, priceOpen: 100, priceCurrent: 100, sl: 90, tp: null, profit: 0, comment: 'TCS s1' },
-            ],
-          }),
-        } as any;
-      }
-      if (u.includes('/candles')) {
-        return { ok: true, json: async () => ({ bars }) } as any;
-      }
-      return { ok: false, json: async () => ({}) } as any;
+    const { manager } = mt5Double({
+      positions: [
+        { ticket: 1, symbol: 'XAUUSD', type: 'buy', volume: 1, priceOpen: 100, priceCurrent: 100, sl: 90, tp: null, profit: 0, comment: 'TCS s1', brokerId: 2 },
+      ],
+      bars,
     });
 
     const service = new StopGuardianService(
       { findAll: jest.fn().mockResolvedValue([{ active: true, mode: 'auto', symbol: 'XAUUSD', id: 's1', name: 'S1', slPct: 1 }]) } as any,
       { runAll } as any,
-      { getUrl: () => 'http://mt5.test' } as any,
+      manager,
       { recordAdjustment: jest.fn() } as any,
     );
     service.state.enabled = true;
@@ -219,33 +250,20 @@ describe('Automation StopGuardianService', () => {
      * the test exercises the backoff without depending on ATR stop arithmetic.
      */
     const makeService = (refusalBody: string, backoffMs = 50) => {
-      const modifyCalls = { count: 0 };
-      (global as any).fetch = jest.fn(async (url: unknown) => {
-        const u = String(url);
-        if (u.includes('/positions')) {
-          return {
-            ok: true,
-            json: async () => ({
-              positions: [
-                { ticket: 1, symbol: 'XAUUSD', type: 'buy', volume: 1, priceOpen: 100, priceCurrent: 100, sl: 0, tp: null, profit: 0, comment: 'TCS s1' },
-              ],
-            }),
-          } as any;
-        }
-        if (u.includes('/candles')) {
-          return { ok: true, json: async () => ({ bars: bars30() }) } as any;
-        }
-        if (u.includes('/order/modify')) {
-          modifyCalls.count++;
-          return { ok: false, status: 400, text: async () => refusalBody } as any;
-        }
-        return { ok: false, json: async () => ({}) } as any;
+      const parsed = JSON.parse(refusalBody);
+      const { manager, modifyCalls } = mt5Double({
+        positions: [
+          { ticket: 1, symbol: 'XAUUSD', type: 'buy', volume: 1, priceOpen: 100, priceCurrent: 100, sl: 0, tp: null, profit: 0, comment: 'TCS s1', brokerId: 2 },
+        ],
+        bars: bars30(),
+        modifyFails: String(parsed.error),
+        modifyStatus: 400,
       });
 
       const service = new StopGuardianService(
         { findAll: jest.fn().mockResolvedValue([{ active: true, mode: 'auto', symbol: 'XAUUSD', id: 's1', name: 'S1', slPct: 1 }]) } as any,
         { runAll: jest.fn().mockResolvedValue(bullishEvidence()) } as any,
-        { getUrl: () => 'http://mt5.test' } as any,
+        manager,
         { recordAdjustment: jest.fn() } as any,
       );
       (service as any).MARKET_CLOSED_BACKOFF_MS = backoffMs;
@@ -257,17 +275,17 @@ describe('Automation StopGuardianService', () => {
       const { service, modifyCalls } = makeService('{"success": false, "error": "Market closed"}', 400);
       try {
         await service.tick();
-        expect(modifyCalls.count).toBe(1); // the probe that discovers the closure
+        expect(modifyCalls.length).toBe(1); // the probe that discovers the closure
         expect(service.getState().marketClosedBackoff).toEqual([
           { symbol: 'XAUUSD', retryAt: expect.any(String) },
         ]);
 
         await service.tick();
-        expect(modifyCalls.count).toBe(1); // skipped — no bridge call at all
+        expect(modifyCalls.length).toBe(1); // skipped — no bridge call at all
 
         jest.setSystemTime(Date.now() + 500); // past the 400ms window — fires no timers
         await service.tick();
-        expect(modifyCalls.count).toBe(2); // probe after expiry
+        expect(modifyCalls.length).toBe(2); // probe after expiry
       } finally {
         // An assertion failure must never leave the service ticking: a leaked REAL
         // 30s chain made jest hang for minutes instead of reporting the failure.
@@ -280,7 +298,7 @@ describe('Automation StopGuardianService', () => {
       try {
         await service.tick();
         await service.tick();
-        expect(modifyCalls.count).toBe(2); // both ticks attempted
+        expect(modifyCalls.length).toBe(2); // both ticks attempted
         expect(service.getState().marketClosedBackoff).toEqual([]);
       } finally {
         service.stop();
@@ -340,36 +358,22 @@ describe('#927 — a trail can never leave the stop inside the declared distance
     priceOpen?: number;
     slPct?: number;
   }) {
-    const modifyCalls: Array<{ body: any }> = [];
     const recordAdjustment = jest.fn();
-    (global as any).fetch = jest.fn(async (url: unknown, init?: any) => {
-      const u = String(url);
-      if (u.includes('/positions')) {
-        return {
-          ok: true,
-          json: async () => ({
-            positions: [
-              {
-                ticket: 7, symbol: 'XAUUSD', type: 'buy', volume: 1,
-                priceOpen: opts.priceOpen ?? 100, priceCurrent: opts.priceCurrent,
-                sl: opts.sl, tp: null, profit: 0, comment: 'TCS s1',
-              },
-            ],
-          }),
-        } as any;
-      }
-      if (u.includes('/candles')) return { ok: true, json: async () => ({ bars: opts.bars }) } as any;
-      if (u.includes('/order/modify')) {
-        modifyCalls.push({ body: init?.body ? JSON.parse(String(init.body)) : null });
-        return { ok: true, json: async () => ({ success: true }) } as any;
-      }
-      return { ok: false, json: async () => ({}) } as any;
+    const { manager, modifyCalls } = mt5Double({
+      positions: [
+        {
+          ticket: 7, symbol: 'XAUUSD', type: 'buy', volume: 1,
+          priceOpen: opts.priceOpen ?? 100, priceCurrent: opts.priceCurrent,
+          sl: opts.sl, tp: null, profit: 0, comment: 'TCS s1', brokerId: 2,
+        },
+      ],
+      bars: opts.bars,
     });
 
     const service = new StopGuardianService(
       { findAll: jest.fn().mockResolvedValue([{ active: true, mode: 'auto', symbol: 'XAUUSD', id: 's1', name: 'S1', slPct: opts.slPct ?? 1 }]) } as any,
       { runAll: jest.fn().mockResolvedValue(bullishEvidence()) } as any,
-      { getUrl: () => 'http://mt5.test' } as any,
+      manager,
       { recordAdjustment } as any,
     );
     service.state.enabled = true;
@@ -502,16 +506,13 @@ describe('#927 — a trail can never leave the stop inside the declared distance
      * identical from the outside.
      */
     function serviceWithPosition(pos: Record<string, unknown>) {
-      (global as any).fetch = jest.fn(async (url: unknown) => {
-        const u = String(url);
-        if (u.includes('/positions')) return { ok: true, json: async () => ({ positions: [pos] }) } as any;
-        if (u.includes('/candles')) return { ok: true, json: async () => ({ bars: [] }) } as any;
-        return { ok: false, json: async () => ({}) } as any;
-      });
+      // `brokerId` first so a caller-supplied one wins, but the default is present: the manager
+      // always stamps it, and a position without one is not something the service ever sees.
+      const { manager } = mt5Double({ positions: [{ brokerId: 2, ...pos }], bars: [] });
       const service = new StopGuardianService(
         { findAll: jest.fn().mockResolvedValue([MAGIC_BOT, COMMENT_BOT]) } as any,
         { runAll: jest.fn().mockResolvedValue(new Map()) } as any,
-        { getUrl: () => 'http://mt5.test' } as any,
+        manager,
         { recordAdjustment: jest.fn() } as any,
       );
       service.state.enabled = true;
@@ -606,8 +607,8 @@ describe('#927 — a trail can never leave the stop inside the declared distance
       await service.tick();
       expect(modifyCalls).toHaveLength(1);
       // 103 − declared 1.0 = 102 (locks +2% from a 100 entry). The old arithmetic sent 102.94.
-      expect(modifyCalls[0].body.sl).toBe(102);
-      expect(modifyCalls[0].body.sl).not.toBe(102.94);
+      expect(modifyCalls[0].sl).toBe(102);
+      expect(modifyCalls[0].sl).not.toBe(102.94);
       // #927 acceptance box 4 — `stop_adjustment` can be read without recomputing ATR:
       // 1 / 103 = 0.971%.
       expect(recordAdjustment).toHaveBeenCalledTimes(1);
@@ -624,7 +625,168 @@ describe('#927 — a trail can never leave the stop inside the declared distance
       expect(modifyCalls).toHaveLength(1);
       // 3×ATR = 3.0 > declared 1.0 → 103 − 3 = 100, exactly the ATR trail (the fix must not
       // disable the mechanism it bounds).
-      expect(modifyCalls[0].body.sl).toBe(100);
+      expect(modifyCalls[0].sl).toBe(100);
+    } finally {
+      service.stop();
+    }
+  });
+});
+
+/**
+ * #1030 — POST-ENTRY MANAGEMENT MUST ADDRESS THE ACCOUNT THAT HOLDS THE POSITION.
+ * ===============================================================================
+ *
+ * MEASURED 2026-09-30, live, BEFORE the fix: `:5000` (broker 2) held 7 positions and `:5001`
+ * (broker 3) held 2 — US500 and GER40. The guardian reported `7 guarded` on every tick and had
+ * never seen the other two. Separately, `GET :5000/candles?symbol=GER40` answers `200` with ZERO
+ * bars while `:5001` answers with data, so GER40 was invisible TWICE over: no position AND no bars,
+ * and a tick skips any position with fewer than 14 bars. One bridge was wrong in two places.
+ *
+ * ⚠️ CANARY, both directions:
+ *   • pass `undefined` instead of `pos.brokerId` in `modifyStop()` → the broker-3 assertions fail,
+ *     because the edit is recorded against the primary;
+ *   • drop `pos.brokerId` from `loadBars()` → the "bars from the position's own bridge" test fails,
+ *     because the primary returns zero bars and the position is skipped.
+ */
+describe('#1030 — a second MT5 account is managed, not just the primary', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  const bullishEvidence = () =>
+    new Map([
+      ['atr-trailing-stop', { score: 75, confidence: 0.7, signalClass: 'bullish', reason: 'x' }],
+      ['supertrend', { score: 75, confidence: 0.7, signalClass: 'bullish', reason: 'x' }],
+      ['chandelier-exit', { score: 80, confidence: 0.55, signalClass: 'bullish', reason: 'x' }],
+      ['wick-filter', { score: 80, confidence: 0.7, signalClass: 'bullish', reason: 'x', metadata: { isFakeout: false } }],
+    ]);
+
+  /**
+   * ⚠️ LOW ATR ON PURPOSE (the #927 fixture's shape). The trail distance is
+   * `max(3×ATR, declared)`, so a realistic bar range makes 3×ATR dominate — the target lands
+   * BELOW the existing stop, "never loosen" refuses it, and no edit is sent. A test that reasons
+   * about the ROUTING of an edit must first make an edit happen.
+   */
+  const flatBars = () =>
+    Array.from({ length: 30 }, (_, i) => ({
+      timestamp: new Date(Date.now() - (30 - i) * 3600000).toISOString(),
+      open: 100.5 + i * 0.01,
+      high: 100.52 + i * 0.01,
+      low: 100.48 + i * 0.01,
+      close: 100.5 + i * 0.01,
+      volume: 1000,
+    }));
+
+  /** A position as broker 3 reports it — the account the guardian could not see at all. */
+  const broker3Position = () => ({
+    ticket: 5001, symbol: 'GER40', type: 'buy', volume: 1,
+    priceOpen: 100, priceCurrent: 103, sl: 99, tp: null, profit: 5,
+    comment: 'TCS Index Bot', magic: 234200, brokerId: 3,
+  });
+
+  const indexBot = { active: true, mode: 'auto', symbol: 'GER40', id: 'i1', name: 'Index Bot', slPct: 1, magic: 234200 };
+
+  const makeService = (opts: { barsByBroker?: Record<number, any[]>; bars?: any[] } = {}) => {
+    const { manager, modifyCalls, getCandles } = mt5Double({
+      positions: [broker3Position()],
+      bars: opts.bars ?? flatBars(),
+      barsByBroker: opts.barsByBroker,
+      brokerIds: [2, 3],
+    });
+    const service = new StopGuardianService(
+      { findAll: jest.fn().mockResolvedValue([indexBot]) } as any,
+      { runAll: jest.fn().mockResolvedValue(bullishEvidence()) } as any,
+      manager,
+      { recordAdjustment: jest.fn() } as any,
+    );
+    service.state.enabled = true;
+    return { service, modifyCalls, getCandles };
+  };
+
+  it('GUARDS a position that only broker 3 reports, and names the account in the payload', async () => {
+    const { service } = makeService();
+    try {
+      await service.tick();
+      expect(service.state.guardedPositions).toHaveLength(1);
+      expect(service.state.guardedPositions[0].symbol).toBe('GER40');
+      expect(service.state.guardedPositions[0].brokerId).toBe(3);
+    } finally {
+      service.stop();
+    }
+  });
+
+  it("addresses the stop edit to the POSITION's own account, not the primary", async () => {
+    // THE money-path assertion. A modify aimed at the primary bridge names an account that does not
+    // hold ticket 5001 — the broker answers "no such position", which reads as a data problem
+    // rather than as a routing one.
+    const { service, modifyCalls } = makeService();
+    try {
+      await service.tick();
+      expect(modifyCalls.length).toBeGreaterThan(0);
+      expect(modifyCalls[0].ticket).toBe(5001);
+      expect(modifyCalls[0].brokerId).toBe(3);
+    } finally {
+      service.stop();
+    }
+  });
+
+  it("loads bars from the POSITION's bridge — the primary answers 200 with zero bars", async () => {
+    // The measured GER40 case. If the load asks the primary, `bars.length < 14` sends the position
+    // down the skip path and NOTHING reports a fault — the tick still says `1 guarded`.
+    const { service, getCandles } = makeService({ barsByBroker: { 2: [], 3: flatBars() } });
+    try {
+      await service.tick();
+      const g = service.state.guardedPositions[0];
+      expect(g).toBeDefined();
+      // Evaluated, not skipped: a position with no usable bars carries confidence 0.
+      expect(g.stopConfidence).not.toBe(0);
+      // ...and the read really was addressed to broker 3 first.
+      expect(getCandles.mock.calls[0][3]).toBe(3);
+    } finally {
+      service.stop();
+    }
+  });
+
+  it('reports the per-bridge read, so a silent second account is visible', async () => {
+    const { service } = makeService();
+    try {
+      await service.tick();
+      expect(service.state.brokerCoverage).toEqual({
+        brokersQueried: [2, 3],
+        positionsByBroker: { 3: 1 },
+      });
+    } finally {
+      service.stop();
+    }
+  });
+
+  it('a TRANSPORT failure is NOT a market-closed refusal — no backoff is armed', async () => {
+    // #892/#893 IN REVERSE, and the reason `modifyOrder` now returns `status`. `status: 0` means the
+    // bridge was never reached. Collapsing that into "the broker refused" would pause the symbol for
+    // 15 minutes after the bridge came back — trading a transient outage for a stop that stays
+    // unmoved, which is the opposite of what #893 was for.
+    const { manager, modifyCalls } = mt5Double({
+      positions: [{ ...broker3Position(), sl: 0 }], // sl:0 drives the protective path
+      bars: flatBars(),
+      modifyFails: 'connect ECONNREFUSED 127.0.0.1:5001',
+      modifyStatus: 0,
+    });
+    const service = new StopGuardianService(
+      { findAll: jest.fn().mockResolvedValue([indexBot]) } as any,
+      { runAll: jest.fn().mockResolvedValue(bullishEvidence()) } as any,
+      manager,
+      { recordAdjustment: jest.fn() } as any,
+    );
+    service.state.enabled = true;
+    try {
+      await service.tick();
+      expect(modifyCalls).toHaveLength(1);
+      expect(service.getState().marketClosedBackoff).toEqual([]);
+      // The next tick retries rather than backing off.
+      await service.tick();
+      expect(modifyCalls).toHaveLength(2);
     } finally {
       service.stop();
     }

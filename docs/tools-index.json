@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 154,
+  "count": 155,
   "tools": [
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -1231,6 +1231,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "INV-SIGNAL-COLUMN-FITS-A-CLASS (build-time)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-single-bridge-position-io.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "INV-POSITION-IO-IS-BROKER-ADDRESSED (build-time)",
       "selfTest": true,
       "reaches": [
         "prebuild",

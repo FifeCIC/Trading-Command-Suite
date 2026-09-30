@@ -354,11 +354,25 @@ export class Mt5ConnectionManager {
     return { ok, ...data };
   }
 
+  /**
+   * modifyOrder() — edit a position's SL/TP on the bridge that HOLDS it (#1030).
+   *
+   * ⚠️ `status` IS CARRIED OUT DELIBERATELY, and it is not decoration. `ok:false` alone cannot
+   * distinguish the two failures this method produces, and they need opposite handling:
+   *
+   *   - a BROKER REFUSAL  → HTTP 4xx + `{success:false, error:'Market closed'}` → BACK OFF
+   *   - a TRANSPORT failure → the bridge is unreachable → `status: 0` → RETRY next tick
+   *
+   * `fetch()` already computed the status and this method used to drop it, so the only way for a
+   * caller to tell the two apart was to keep its own raw `fetch` — which is exactly why
+   * `StopGuardianService` had bypassed this manager and bound itself to a single bridge (#1030).
+   * `status === 0` means "nothing was consulted".
+   */
   async modifyOrder(ticket: number, sl?: number, tp?: number, brokerId?: number) {
-    const { ok, data } = await this.fetch('/order/modify', {
+    const { ok, status, data } = await this.fetch('/order/modify', {
       method: 'POST', body: JSON.stringify({ ticket, sl, tp }),
     }, brokerId);
-    return { ok, ...data };
+    return { ok, status, ...data };
   }
 
   /** Fetch candles from a specific broker bridge */

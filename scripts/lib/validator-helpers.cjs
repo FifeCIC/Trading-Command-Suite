@@ -79,4 +79,57 @@ function runSelfTest(cases) {
   process.exit(runCases(cases) ? 1 : 0);
 }
 
-module.exports = { walkFiles, loadTree, runCases, runSelfTest };
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// SOURCE-SHAPE SHARED BLOCKS — extracted 2026-09-30 (#1030).
+//
+// `validate-signal-classification.cjs` and `validate-single-bridge-position-io.cjs` are both
+// "scan the source for a forbidden SHAPE" guards, and the second was written by copying the first.
+// The duplication validator failed the build on **8 shared blocks**. Extraction removes the class;
+// `--update-allowance` would have removed only the complaint, leaving two copies to drift — and the
+// next shape guard would have copied whichever one it happened to open.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/** A spec deliberately asserts the WRONG shape, so a source-shape guard must not scan it. */
+const SKIP_SPEC = /\.(spec|test)\.[cm]?[jt]sx?$/;
+
+/** Source extensions a shape guard scans (TS/JS, CJS/MJS, plus the JSX/TSX variants). */
+const SOURCE_EXT = /\.([cm]?[jt]sx?)$/;
+
+/**
+ * walkSourceFiles() — every SOURCE file under `dir`, excluding specs and build output.
+ *
+ * ⚠️ Distinct from `walkFiles()`, which takes an arbitrary filter and does NOT skip `node_modules`
+ * or `dist`. A shape guard wants source, so the two must not be conflated.
+ */
+function walkSourceFiles(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkSourceFiles(full, out);
+    else if (SOURCE_EXT.test(entry.name) && !SKIP_SPEC.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+/**
+ * stripComments() — remove comments so this repo's own PROSE about a defect cannot fail its own
+ * guard. Every instruction file here documents the bugs it forbids, sometimes quoting them verbatim.
+ *
+ * ⚠️ Deliberately crude: block comments, then any line whose first non-space character starts a
+ * comment. An inline trailing comment SURVIVES, which risks a false positive — so each guard must
+ * also exempt the line that demonstrates correct usage. Over-stripping would cause false negatives,
+ * which is the safer direction for a gate.
+ */
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(/\r?\n/)
+    .filter((l) => {
+      const t = l.trim();
+      return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*'));
+    })
+    .join('\n');
+}
+
+module.exports = { walkFiles, loadTree, runCases, runSelfTest, walkSourceFiles, stripComments, SKIP_SPEC, SOURCE_EXT };

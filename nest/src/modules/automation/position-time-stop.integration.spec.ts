@@ -40,12 +40,15 @@ function makeService(opts: {
 }) {
   const closeCalls: number[] = [];
   const mt5 = {
-    getPositions: jest.fn(async () => opts.positions),
-    closePosition: jest.fn(async (ticket: number) => {
+    // ⚠️ #1030 — `getAllPositions`, not `getPositions`. The service read the PRIMARY bridge only
+    // (`getPositions()` with no argument), so a position on broker 3 was never evaluated for its
+    // hold limit and its slot was never freed by the mechanism #773 added to free slots.
+    getAllPositions: jest.fn(async () => opts.positions),
+    closePosition: jest.fn(async (ticket: number, _brokerId?: number) => {
       closeCalls.push(ticket);
       return { ok: true };
     }),
-    getUrl: () => 'http://localhost:5000',
+    getBrokerIds: () => [2, 3],
   } as any;
 
   const strategyService = {
@@ -180,15 +183,15 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
 
     it('one failed close does not abort the rest of the batch', async () => {
       const mt5 = {
-        getPositions: jest.fn(async () => [
-          { ticket: 10, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(50) },
-          { ticket: 20, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(40) },
+        getAllPositions: jest.fn(async () => [
+          { ticket: 10, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(50), brokerId: 2 },
+          { ticket: 20, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0, openedAt: ago(40), brokerId: 3 },
         ]),
         closePosition: jest.fn(async (t: number) => {
           if (t === 10) throw new Error('bridge refused');
           return { ok: true };
         }),
-        getUrl: () => 'http://localhost:5000',
+        getBrokerIds: () => [2, 3],
       } as any;
       const svc = new PositionTimeStopService(mt5, { findAll: async () => [AUDUSD_STRATEGY] } as any, {
     trade: { updateMany: jest.fn(async () => ({ count: 0 })) },
@@ -575,6 +578,7 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
 
       expect(svc.state.lastSummary).toEqual({
         positionsSeen: 4,
+        brokersSeen: { 0: 4 }, // the fixtures carry no `brokerId`, so they read as unstamped
         attributed: 4,
         withinLimit: 3,
         noLimitConfigured: 0,
@@ -591,6 +595,7 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
       // which is a different fact from candidates 0 with positionsSeen 6.
       expect(svc.state.lastSummary).toEqual({
         positionsSeen: 0,
+        brokersSeen: {},
         attributed: 0,
         withinLimit: 0,
         noLimitConfigured: 0,
