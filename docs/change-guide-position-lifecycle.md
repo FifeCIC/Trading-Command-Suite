@@ -62,6 +62,12 @@ The app holds **one row** for it:
 | `pnlInvalid` | **0** | asserts the row is usable |
 | `closeReason` | `broker:sl` | correct |
 
+⚠️ **The test that produced it is still running.** `ab_test` row `b50727ee` (*"#929 measurable run
+— tradeThreshold 55 (v1.0.0) vs 10 (v1.0.1)"*) is `status: running`, `endAt NULL`, `results NULL`, and
+today holds **42 rows — 9 closed, 33 rejected** — where every closed row has `exitPrice NULL` and
+`pnl NULL`. It cannot produce a comparison, and it is still adding 0.01 to this position's symbol
+every ~2 minutes. Also worth knowing: `threshold 55 vs 10` makes the variant fire near-constantly.
+
 ## 2. Seven failures → seven rules
 
 Each rule is a question to ask of **any** change to bot activity or an algorithm.
