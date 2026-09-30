@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradeRecorderService } from './trade-recorder.service';
-import { StopGuardianService } from './stop-guardian.service';
+import { StopAdjustmentRecorder } from './stop-guardian.service';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { Mt5SymbolRouter, orderRouteProblems } from '../providers/mt5/mt5-symbol-router.service';
@@ -74,7 +74,7 @@ export class Mt5TradingService {
 
   constructor(
     private readonly tradeRecorder: TradeRecorderService,
-    private readonly stopGuardian: StopGuardianService,
+    private readonly stopGuardian: StopAdjustmentRecorder,
     private readonly prisma: PrismaService,
     private readonly mt5Connection: Mt5ConnectionManager,
     // #903 — optional so tests can construct without it; when absent, a CRYPTO order is REFUSED
@@ -200,7 +200,7 @@ price, `price` came back `0`, and the per-symbol cap refused:
    *      cannot produce its own P&L must not be shown as valid**, and that check cannot be made
    *      from either source alone.
    *
-   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopGuardianService` is the ONE owner of "which bot does
+   * ⚠️ ATTRIBUTION IS NOT COMPUTED HERE. `StopAdjustmentRecorder` is the ONE owner of "which bot does
    * this position belong to", and it already publishes `ownerAttribution` including `unresolved`.
    * Re-deriving it from the comment or magic here would be a SECOND implementation of the rule that
    * caused the incident — `viaComment` failed precisely because the comment is mutable text another
