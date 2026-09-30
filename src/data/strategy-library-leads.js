@@ -41,7 +41,10 @@ export const STRATEGY_LIBRARY_LEADS = [
     difficulty: 'Advanced',
     timeframe: '1m / 5m / 15m',
     status: 'concept',
-    requiresNewDirectives: ['surge-detection', 'spike-hold-confirmation', 'surge-exhaustion'],
+    // ⚠️ `requiresNewDirectives` USED TO LIST THESE THREE. They were implemented 2026-10-01, so the
+    // field is now EMPTY — leaving it populated beside a `directiveMappings` that names the same
+    // three would be a self-contradicting entry, and the field is only useful while it is truthful.
+    requiresNewDirectives: [],
     overview: `
 A reaction trade rather than a trend trade. A fast, large move is detected, then WATCHED rather
 than chased. The question the idea is built on is the owner's own: *what goes up fast and high has
@@ -59,7 +62,19 @@ detection runs immediately, the decision waits for evidence that the spike held.
       { title: 'Resolve', body: 'Holds above → continuation candidate. Fails back inside → fade candidate. Neither → no trade, which is the common case.' },
       { title: 'Two-way', body: 'The hedge-CFD variant trades both directions. ⚠️ Needs a duplicate-position policy first — see #721 and the netting hazard in the change guide.' },
     ],
-    directiveMappings: [],
+    directiveMappings: [
+      // ⚠️ WIRED 2026-10-01 — the three directives now EXIST (`surge.directive.ts`, registered in
+      // `directives.module.ts`). They moved from `requiresNewDirectives` to here, which is what
+      // those two fields mean: one names what is missing, the other what exists.
+      //
+      // ⚠️ THE ENTRY STAYS `concept` ANYWAY. Directives existing is not the strategy working: not
+      // one is attached to a live protocol, and ATTACHING them changes what a tradeable symbol
+      // scores — a maths change needing a copied configuration and a monitored comparison. Status
+      // moves to `partial` when a protocol is built, not when the code compiles.
+      { directiveId: 'surge-detection', role: 'signal', note: 'The trigger. ATR-relative so one threshold works across instruments.' },
+      { directiveId: 'spike-hold-confirmation', role: 'confirm', note: 'The decision. Held → continuation; failed → fade. Both outcomes are directional.' },
+      { directiveId: 'surge-exhaustion', role: 'confirm', note: 'Deceleration. Direction is INVERTED from the surge — an up-move tiring reads bearish.' },
+    ],
     strengths: ['Trades the reaction instead of predicting the spike', 'A no-trade outcome is a first-class result, not a missed opportunity'],
     risks: ['Surge detection is easy to back-fit; the threshold must be ATR-relative and fixed BEFORE looking', 'Trading both ways on a netting account merges into one position — the #1037 contested problem'],
     configSchema: { surgeAtrMultiplier: { type: 'number', default: 2.0 }, watchBars: { type: 'number', default: 5 } },
