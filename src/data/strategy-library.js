@@ -45,7 +45,16 @@
  * Future: filter by assetClass, difficulty, or status.
  */
 
+// Strategy ideas captured from the GitHub backlog (2026-10-01 clean-out). Kept in their own file so
+// each keeps its `sourceIssue` provenance — see the header there for why that matters.
+import { STRATEGY_LIBRARY_LEADS } from './strategy-library-leads';
+
 export const STRATEGY_LIBRARY = [
+  // ⚠️ LEADS FIRST, and the ordering is deliberate. They are `concept` stage with no directive
+  // mappings, so a reader who stops after the first few cards sees the ideas that still need work
+  // rather than only the ones already wired. Both sets render identically — one array is rendered,
+  // two files keep the origin honest.
+  ...STRATEGY_LIBRARY_LEADS,
   {
     id: 'scale-in-recycled-capital',
     name: 'Scale-In Capital Recycling',
@@ -424,6 +433,9 @@ AND the sector is not in a confirmed downtrend (price above 200-day MA).
   },
   {
     id: 'sector-momentum-rotation',
+    // ⚠️ #597 ("ETF Strategies — sector rotation…") was CLOSED as ALREADY COVERED, not as a new idea:
+    // this entry plus `sector-etf-scale-in` are the two horizons it described. Recorded here so the
+    // issue does not get re-filed as a strategy lead.
     name: 'Sector Momentum Rotation',
     tagline: 'Weekly relative strength ranking across 11 sectors — hold the top 2, rotate losers',
     category: 'Momentum / Rotation',
