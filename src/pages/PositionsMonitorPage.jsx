@@ -143,13 +143,22 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
       {/* Action row */}
       <div className="pm-actions">
         {pos.source === 'MT5' && (
-          <button
-            className="pm-close-btn"
-            onClick={() => onClose(pos.ticket, pos.symbol)}
-            disabled={isClosing}
-          >
-            {isClosing ? '⌛ Closing...' : '✕ Close'}
-          </button>
+          pos.closable ? (
+            <button
+              className="pm-close-btn"
+              onClick={() => onClose(pos.ticket, pos.symbol)}
+              disabled={isClosing}
+            >
+              {isClosing ? '⌛ Closing...' : '✕ Close'}
+            </button>
+          ) : (
+            <span
+              className="pm-warning"
+              title="Close is not offered for this account: the close route still addresses the PRIMARY bridge only, so pressing it here would send the request to the wrong broker. Tracked in #1033."
+            >
+              ⚠️ Close unavailable — routing not broker-aware (#1033)
+            </span>
+          )
         )}
         <a className="pm-nav-link" href={`/research/symbol/${pos.symbol}`}>🔍 Details</a>
         {/* §9.14 — the Decision Trail is a PREMIUM view; omitted in the free build. */}
@@ -388,6 +397,15 @@ export default function PositionsMonitorPage() {
       divergence: p.divergence,
       comment: p.comment,
       owner: ownerByTicket.get(String(p.ticket)) ?? null,
+      // ⚠️ CLOSE ROUTING IS NOT BROKER-AWARE YET (#1033). `DELETE /close/:ticket` sends to the
+      // PRIMARY bridge only, so a Close pressed on a broker-3 row would be AIMED AT THE WRONG
+      // ACCOUNT. Showing this page's other rows is safe — they are read-only — but a visible
+      // action that hits the wrong broker is a money bug.
+      //
+      // ⚠️ FAIL CLOSED. If `brokers` is missing, `closable` is false for EVERY row and the buttons
+      // disappear. That is deliberate: an unproven routing must refuse, never guess. A Close that
+      // silently does nothing is a nuisance; a Close that reaches the wrong account is a loss.
+      closable: p.brokerId === mt5Query.data?.brokers?.[0]?.brokerId,
     };
   }), [mt5Query.data, ownerByTicket]);
 
