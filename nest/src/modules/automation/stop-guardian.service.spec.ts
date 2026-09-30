@@ -453,6 +453,36 @@ describe('#927 — a trail can never leave the stop inside the declared distance
       // Exact match must win over prefix, or 'Gold Scalp M5' would be ambiguous with itself.
       expect(resolvePositionOwner('TCS Gold Scalp M5', ['Gold Scalp M5'])).toEqual({ name: 'Gold Scalp M5', via: 'exact' });
     });
+
+    // ── TIER 3 — PUNCTUATION LOSS (added 2026-09-29) ──────────────────────────────────────────
+    //
+    // ⚠️ THE MEASURED LIVE CASE, NOT A HYPOTHETICAL. `XAUUSD #152698800224` on broker :5000, opened
+    // 2026-09-29 13:11, carried the comment **`TCS Gold Swing 1H copy`** while its bot is named
+    // **`Gold Swing 1H (copy)`** — MT5 had STRIPPED THE PARENTHESES. Tier 1 missed (not equal) and
+    // tier 2 missed (not a prefix of `Gold Swing 1H (copy)`), so that position was left UNMANAGED
+    // for **341 consecutive ticks**, warned every 30s but only into a console log. The NZDJPY case
+    // above is TRUNCATION; this is the same MT5 mutation through punctuation, and it was not covered.
+    //
+    // ⚠️ CANARY: delete tier 3 from `resolvePositionOwner()` and the first test below fails — it is
+    // the only assertion that distinguishes tier 3 from a refusal.
+    it('resolves a PUNCTUATION-STRIPPED name — the measured `Gold Swing 1H copy` case', () => {
+      const gold = ['Gold Swing 1H', 'Gold Swing 1H (copy)'];
+      expect(resolvePositionOwner('TCS Gold Swing 1H copy', gold))
+        .toEqual({ name: 'Gold Swing 1H (copy)', via: 'normalised' });
+    });
+
+    it('the normalised tier does NOT weaken the exact tier', () => {
+      // A name that IS exact must still win outright, rather than being flattened toward a neighbour.
+      expect(resolvePositionOwner('TCS Gold Swing 1H', ['Gold Swing 1H', 'Gold Swing 1H (copy)']))
+        .toEqual({ name: 'Gold Swing 1H', via: 'exact' });
+    });
+
+    it('the normalised tier KEEPS the uniqueness rule — a flattening collision is still refused', () => {
+      // Synthetic pair, labelled as such: two names differing ONLY by punctuation flatten to the
+      // same string. A stamp matching neither exactly nor as a prefix must still refuse rather than
+      // pick one. Tier 3 adds a way to match; it does not relax the discipline tiers 1–2 had.
+      expect(resolvePositionOwner('TCS AB', ['A B', 'A-B'])).toBeNull();
+    });
   });
 
   // ── #1018 — THE MAGIC PATH, AND THE ONE THING IT MUST NOT DO ────────────────────────────────

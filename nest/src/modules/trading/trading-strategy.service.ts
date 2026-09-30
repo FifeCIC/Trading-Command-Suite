@@ -77,6 +77,29 @@ export interface StrategySummary {
   mode: string;
   active: boolean;
   brokerId?: string;
+  /**
+   * #1018 — the bot's MT5 MAGIC: the position's identity for LIFE.
+   *
+   * ⚠️ THIS FIELD EXISTS HERE BECAUSE THIS METHOD IS AN EXPLICIT FIELD LIST, AND THAT IS DANGEROUS.
+   * `findAll()` does not return the Prisma row; it maps one field at a time. So a column that is
+   * SEEDED, ACCEPTED by the bridge and FORWARDED by the adapter is still lost if it is not named
+   * here — and nothing fails.
+   *
+   * MEASURED 2026-09-29. `magic` was omitted. Consequently `strategy.magic` was ALWAYS `undefined`,
+   * `automation-loop.service.ts` passed `undefined`, `mt5.adapter.ts` omitted it (`...(params.magic
+   * != null ? ... : {})`), and the bridge fell back to `DEFAULT_MAGIC = 234000` — which means "no bot
+   * attributed". Every live position carried 234000 and `trade.magic` was NULL on every open row.
+   * THREE LAYERS WERE CORRECT AND ONE HAND-WRITTEN LIST DROPPED THE VALUE.
+   *
+   * The cost is not theoretical: the order comment became the ONLY owner key, and MT5 mutates it
+   * (truncation, and it strips parentheses). `XAUUSD #152698800224` on the `Gold Swing 1H (copy)`
+   * bot arrived as `TCS Gold Swing 1H copy`, resolved to NO bot, and was left unmanaged for 341
+   * consecutive ticks with a warning nobody reading the canonical log could see.
+   *
+   * Guarded by `bot-summary-mapping.spec.ts` — it fails when a column the order path depends on is
+   * added to the schema but not to this list.
+   */
+  magic?: number | null;
   minComposite?: number;
   baseSize?: number | null;
   slPct?: number | null;
@@ -365,6 +388,10 @@ export class TradingStrategyService {
         mode: s.mode,
         active: s.active,
         brokerId: s.brokerId,
+        // #1018 — MUST BE CARRIED. Omitting it here is what made every order fall back to the
+        // bridge's DEFAULT_MAGIC (234000 = "no bot attributed") and left `trade.magic` NULL.
+        // See the field's docblock for the full chain; guarded by bot-summary-mapping.spec.ts.
+        magic: (s as any).magic ?? null,
         minComposite: s.minComposite,
         baseSize: s.baseSize,
         slPct: s.slPct,
@@ -483,6 +510,16 @@ export class TradingStrategyService {
     maxHoldHours?: number | null;
     maxPyramidTiers?: number;
     duplicatedFromId?: string | null;
+    /**
+     * #1018 — the bot's MT5 magic. Supplied by the DUPLICATE path (which must not inherit the
+     * source's) and omitted by every other caller, in which case one is ALLOCATED below.
+     *
+     * ⚠️ This DTO is why `commit`-time `magic` was invisible: `duplicate()` calls THIS method, not
+     * `prisma.tradingStrategy.create`, so a field absent here cannot reach the database no matter
+     * what the caller passes. tsc caught it — `Object literal may only specify known properties` —
+     * which is the one place a dropped column is NOT silent.
+     */
+    magic?: number | null;
   }) {
     // Auto-create ScoringStrategy when watchlist is provided without a scoringStrategyId
     let scoringStrategyId = data.scoringStrategyId ?? null;
@@ -558,6 +595,10 @@ export class TradingStrategyService {
         maxHoldHours: data.maxHoldHours ?? null,
         maxPyramidTiers: data.maxPyramidTiers ?? undefined,
         duplicatedFromId: data.duplicatedFromId ?? null,
+        // #1018 — EVERY bot gets a magic, including one created through the API. An explicit value
+        // is honoured (the duplicate path needs a DIFFERENT one from its source); otherwise the
+        // next free value is allocated, so "no bot attributed" cannot be the normal case.
+        magic: data.magic ?? (await this.allocateMagic()),
       },
     });
   }
@@ -776,6 +817,24 @@ export class TradingStrategyService {
    * MyISAM has no transactions, so a failure mid-copy cleans up in reverse by hand — a partial
    * copy that LOOKS complete is the failure mode this guards against.
    */
+  /**
+   * allocateMagic() — the next free per-bot MT5 magic (#1018).
+   *
+   * ⚠️ 234000 IS RESERVED AND MUST NEVER BE HANDED OUT. It is the bridge's `DEFAULT_MAGIC`, i.e.
+   * "no bot attributed" (see `mt5_bridge_v2.py`), so a bot carrying it would be indistinguishable
+   * from an unattributed position. Per-bot magics start at 234100, matching the seed's convention.
+   *
+   * ⚠️ `max + 1`, NEVER a count or a lowest-free. Magic is IMMUTABLE on a position in MT5, so
+   * reusing a value freed by a deleted bot would silently re-attribute every position that bot
+   * still has open.
+   */
+  private async allocateMagic(): Promise<number> {
+    const MAGIC_FLOOR = 234100;
+    const top = await this.prisma.tradingStrategy.aggregate({ _max: { magic: true } });
+    const highest = top?._max?.magic ?? MAGIC_FLOOR - 1;
+    return Math.max(highest + 1, MAGIC_FLOOR);
+  }
+
   async duplicate(id: string) {
     const source = await this.prisma.tradingStrategy.findUnique({
       where: { id },
@@ -884,6 +943,18 @@ export class TradingStrategyService {
         watchlistName,
         active: false,
         duplicatedFromId: source.id,
+        // #1018 — A COPY NEEDS ITS OWN MAGIC, and this was omitted.
+        //
+        // MEASURED 2026-09-29: ALL FIVE bots with a NULL magic were `(copy)` bots — every one of
+        // them ACTIVE with a live position. `Gold Swing 1H (copy)`'s XAUUSD position was therefore
+        // attributable by neither key (its order comment had been mangled to `TCS Gold Swing 1H
+        // copy`) and sat UNMANAGED for 341 consecutive ticks. The duplicate path was the only
+        // creator of magics less bots — the seed assigns them, this did not.
+        //
+        // ⚠️ IT MUST NOT INHERIT THE SOURCE'S MAGIC. Two bots sharing one magic makes every
+        // position the copy opens indistinguishable from the source's — exactly the conflation
+        // `magic` exists to prevent, and magic is immutable on a position once placed.
+        magic: await this.allocateMagic(),
       });
       copyBotId = bot.id;
 

@@ -21,6 +21,10 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync, spawnSync } = require('child_process');
+// ⚠️ THE SHARED HARNESS, NOT A LOCAL COPY. This file and `scripts/tools-index.cjs` had each
+// hand-rolled the same self-test loop, and `validate-duplication.cjs` failed the build on the pair.
+// Extraction is the repo's rule here — banking hides the instance, extraction removes the class.
+const { runCases } = require('./validator-helpers.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const ENV_PATH = path.join(REPO_ROOT, 'nest', '.env');
@@ -163,19 +167,8 @@ function selfTest() {
     ['returns null when DATABASE_URL is absent', () => databaseUrlFromEnv('PORT=3201') === null],
   ];
 
-  let failed = 0;
-  for (const [label, fn] of cases) {
-    let ok = false;
-    try {
-      ok = fn() === true;
-    } catch {
-      ok = false;
-    }
-    if (!ok) failed++;
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`);
-  }
-  console.log(`\n  ${cases.length - failed}/${cases.length} passed${failed ? '  — SELF-TEST FAILED' : ''}\n`);
-  return failed;
+  // ⚠️ `runCases` applies the STRICT rule (`fn() === true`), which is what this file already used.
+  return runCases(cases);
 }
 
 module.exports = {

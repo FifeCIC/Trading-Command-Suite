@@ -464,8 +464,8 @@ export class AutomationLoopService implements OnModuleInit {
       // Name only — the sanitizer strips '|'/'%', so "| composite%" polluted
       // the strategy name parsed back on close (see mt5-comment.util.ts).
       comment: `TCS ${strategyName}`,
-        // #1018 — the position's identity for life (see the adapter note).
-        magic: params.magic,
+      // #1018 — the position's identity for life (see the adapter note).
+      magic: params.magic,
       clientOrderId: executionId,
     });
     this.auditLog.logOrderResult(this.state.tickCount, strategyId, symbol,
@@ -481,6 +481,11 @@ export class AutomationLoopService implements OnModuleInit {
           provider: brokerId, status: 'open', origin: 'strategy',
           source: 'meta-stack',
           scoringStrategyId: strategyId,
+          // #1018 — RECORD THE OWNER ON THE ROW, not only on the position. This was omitted, so
+          // `trade.magic` was NULL on every open row and the ONLY remaining owner key was a
+          // `scoringStrategyId` that holds slugs as well as UUIDs. Measured 2026-09-29: 150 of 318
+          // closed trades could not be attributed to ANY bot.
+          magic: params.magic,
           // ⚠️ #1014 — DELIBERATELY STILL THE ORDER TICKET. This looks like the bug the issue
           // describes (the reconciler matches `deal.positionId`), and I changed it to prefer
           // `result.positionId` — then reverted, because that alone is UNSAFE:
@@ -2175,13 +2180,33 @@ export class AutomationLoopService implements OnModuleInit {
       ? action.side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100)
       : 0;
 
+    // ⚠️ THE COMMENT MUST CARRY THE BOT **NAME**, NOT ITS ID — and this path wrote the ID.
+    //
+    // `resolvePositionOwner()` matches a position to a bot by NAME (the auto path writes
+    // `TCS ${strategyName}`). This path wrote `TCS ${action.strategyId}` — a UUID — so a
+    // semi-auto-confirmed position could NEVER be attributed: the comment named no bot, and until
+    // 2026-09-29 the order sent no magic either, so it landed on the bridge's DEFAULT_MAGIC too.
+    // TWO KEYS, BOTH EMPTY. Measured the same day: `XAUUSD #152698800224` was left unmanaged for
+    // 341 consecutive ticks for the analogous reason (a parenthesised bot name the comment mangled
+    // to `TCS Gold Swing 1H copy`).
+    //
+    // Resolved HERE rather than stored on the pending action, so a bot renamed between queueing and
+    // confirming still yields the CURRENT name. Best-effort: an unresolvable id falls back to the id
+    // (still wrong, but visibly so in the comment rather than silently blank).
+    const owner = await this.prisma.tradingStrategy
+      .findUnique({ where: { id: action.strategyId }, select: { name: true, magic: true } })
+      .catch(() => null);
+    const ownerName = owner?.name || action.strategyId;
+
     const result = await broker.placeOrder({
       symbol: action.symbol,
       side: action.side as 'BUY' | 'SELL',
       quantity: action.quantity,
       sl,
       tp,
-      comment: `TCS ${action.strategyId}`,
+      comment: `TCS ${ownerName}`,
+      // #1018 — without this the position carries DEFAULT_MAGIC and no bot owns it.
+      magic: owner?.magic ?? undefined,
       clientOrderId: `confirm-${action.id}`,
     });
 
@@ -2210,6 +2235,8 @@ export class AutomationLoopService implements OnModuleInit {
         origin: 'strategy',
         source: 'meta-stack',
         scoringStrategyId: action.strategyId,
+        // #1018 — the row records its owner, read from the same lookup that named the comment.
+        magic: owner?.magic ?? null,
         // ⚠️ #1014 — see the note at the other write site: still the ORDER ticket on purpose.
         // Preferring `result.positionId` here without a reconciler volume-split would make several
         // rows claim the same position's whole P&L.

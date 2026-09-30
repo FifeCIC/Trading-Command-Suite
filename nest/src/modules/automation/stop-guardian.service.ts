@@ -13,6 +13,7 @@ import { DirectivesService } from '../directives/directives.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { StopGuardianService as StopAdjustmentRecorder } from '../trading/stop-guardian.service';
+import { SystemLogService } from '../system/log.service';
 
 interface Mt5RawPosition {
   ticket: number;
@@ -128,7 +129,7 @@ export interface GuardedPosition {
    * owner is right" — which the comment path also satisfies — and could not show the magic path
    * had run at all.
    */
-  ownerVia: 'magic' | 'comment:exact' | 'comment:unique-prefix';
+  ownerVia: 'magic' | 'comment:exact' | 'comment:unique-prefix' | 'comment:normalised';
 }
 
 export interface StopAdjustment {
@@ -292,10 +293,11 @@ const BRIDGE_DEFAULT_MAGIC = 234000;
  * A bare prefix match is worse than it looks: `Gold Scalp M5` and `Gold Scalp M5 (copy)` both
  * exist, so a truncated `TCS Gold Scalp M5` is a prefix of TWO names.
  *
- * So this resolves in two tiers and then REFUSES:
+ * So this resolves in THREE tiers and then REFUSES:
  *   1. exact name ✓
  *   2. prefix of EXACTLY ONE name ✓
- *   3. anything else → `null`. Zero candidates (unknown) and 2+ (ambiguous) are the SAME answer:
+ *   3. punctuation-normalised match of EXACTLY ONE name ✓ — added 2026-09-29, see below
+ *   4. anything else → `null`. Zero candidates (unknown) and 2+ (ambiguous) are the SAME answer:
  *      we cannot tell, and a guess here writes the wrong risk distance onto a live position.
  *
  * ⚠️ `null` is NOT "no owner is plausible" — it is "ownership could not be ESTABLISHED", and the
@@ -303,17 +305,19 @@ const BRIDGE_DEFAULT_MAGIC = 234000;
  * broker-side stop the order path placed. Falling back to the symbol match is not safe — that is
  * the defect being removed.
  *
- * ⚠️ THE DURABLE FIX IS NOT A STRING MATCH. `magic` travels with a position and is never
- * truncated, but every position currently carries the SAME value (234000), so it is not a per-bot
- * key yet. Giving each bot its own magic is the long-run answer; this function is the correct
- * bounded one. See #1018.
+ * ⚠️ THE DURABLE KEY IS `magic`, NOT A STRING MATCH — and as of 2026-09-29 it finally works.
+ * `magic` travels with a position and is never truncated or punctuation-mangled, but every position
+ * commissioned before that date carries the same value (234000 = "no bot attributed"), because
+ * `findAll()` dropped the column before it could ever reach an order. Those positions stay
+ * unattributable by magic FOR LIFE (magic is immutable in MT5), so for them this comment path is
+ * the ONLY key — which is exactly why the third tier below exists. See #1018.
  *
  * Pure and exported so the spec can drive every tier without a bridge, a position or a clock.
  */
 export function resolvePositionOwner(
   comment: string | null | undefined,
   names: readonly string[],
-): { name: string; via: 'exact' | 'unique-prefix' } | null {
+): { name: string; via: 'exact' | 'unique-prefix' | 'normalised' } | null {
   const m = /^TCS\s+(.+)$/.exec(String(comment ?? '').trim());
   if (!m) return null;
   const stamped = m[1].trim();
@@ -332,6 +336,26 @@ export function resolvePositionOwner(
   if (exact) return { name: exact, via: 'exact' };
   const prefixed = names.filter((n) => n.toLowerCase().startsWith(lower));
   if (prefixed.length === 1) return { name: prefixed[0], via: 'unique-prefix' };
+
+  // ── TIER 3 — PUNCTUATION-NORMALISED (2026-09-29) ────────────────────────────────────────────
+  //
+  // ⚠️ MT5 DOES NOT ONLY TRUNCATE A COMMENT — IT STRIPS PUNCTUATION. Measured live 2026-09-29: the
+  // bot `Gold Swing 1H (copy)` stamped **`TCS Gold Swing 1H copy`** on its XAUUSD position. The
+  // parentheses were gone, so tier 1 missed (not equal) and tier 2 missed (not a prefix of
+  // `Gold Swing 1H (copy)`), and that position sat UNMANAGED for **341 consecutive ticks** — warned
+  // every 30s, but only into a console log. Compare the NZDJPY case above: truncation was already
+  // known; punctuation loss is the same mutation and was not.
+  //
+  // Removing non-alphanumerics on BOTH sides recovers it. ⚠️ THE UNIQUENESS RULE IS KEPT: a
+  // normalised collision is refused exactly like a prefix collision. The pair that can collide is
+  // `X` and `X (copy)`, and writing the wrong one's risk distance onto a live position is the
+  // failure this function exists to prevent.
+  const flat = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const target = flat(stamped);
+  if (target) {
+    const normalised = names.filter((n) => flat(n) === target);
+    if (normalised.length === 1) return { name: normalised[0], via: 'normalised' };
+  }
   return null;
 }
 
@@ -642,6 +666,12 @@ export class StopGuardianService {
     private readonly mt5Connection: Mt5ConnectionManager,
     private readonly adjustmentRecorder: StopAdjustmentRecorder,
     private readonly notifications?: NotificationService,
+    /**
+     * Optional so the spec can construct the service without a log file, and so a missing logger
+     * can never stop the guardian from ticking. Used ONLY to make an unestablished owner visible in
+     * the CANONICAL log — see the warning in `tick()`.
+     */
+    private readonly syslog?: SystemLogService,
   ) {
     this.bridgeUrl = this.mt5Connection.getUrl();
   }
@@ -857,10 +887,21 @@ export class StopGuardianService {
       // managed — which is safe (it keeps the broker-side stop the order path placed) but must be
       // knowable, or "the guardian is quietly skipping this position" is invisible.
       if (unresolved.length) {
-        this.logger.warn(
+        const message =
           `Owner could not be established for ${unresolved.length} TCS position(s) — not managed ` +
-          `this tick (the broker-side stop stands): ${unresolved.join('; ')}`,
-        );
+          `this tick (the broker-side stop stands): ${unresolved.join('; ')}`;
+        this.logger.warn(message);
+        // ⚠️ ALSO THE CANONICAL LOG, and that is not duplication (#1018 follow-up, 2026-09-29).
+        //
+        // `logger.warn` writes to STDOUT, which the launcher captures in `nest/logs/console-*.log`
+        // — NOT the structured file the app serves at `/api/system/logs/file`. MEASURED: this exact
+        // warning appeared **341 times** in `console-build-api.log` and **ZERO times** in
+        // `tcs-2026-09-29.log`. So the guardian was reporting correctly and the report was
+        // invisible to anyone reading the log the way the app tells you to.
+        //
+        // The structured log also COLLAPSES repeats (`logging.collapseRepeats`, 5-min window),
+        // which is exactly what a 30s-per-tick storm needs.
+        this.syslog?.warn('StopGuardianService', message, 'trading');
       }
 
       for (const strat of autoStrats) {

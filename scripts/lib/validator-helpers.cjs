@@ -40,24 +40,43 @@ function loadTree(scanRoot, filter, keyRoot = scanRoot) {
 }
 
 /**
- * The standard self-test harness: run `cases` ([name, fn] tuples), print PASS/FAIL, and exit.
- * A case passes only if its fn returns truthy — a case that THROWS is a failure, never a skip
- * (a canary that cannot establish its condition must not report success).
+ * Run `cases` ([name, fn] tuples), print one line each plus an `n/m passed` summary, and RETURN the
+ * number that failed. Does NOT exit.
+ *
+ * ⚠️ THE NON-EXITING HALF, EXTRACTED 2026-09-29. `runSelfTest` ends the process, which is wrong for a
+ * LIBRARY (`scripts/lib/mysql-cli.cjs` must let its caller choose the exit code) and wrong for a tool
+ * whose exit code depends on more than the self-test. Those callers had each hand-rolled this loop —
+ * measured: **TEN files**, in two slightly different output formats — and the duplication validator
+ * failed the build on the first NEW pair. Extraction removes the CLASS; banking the pair would have
+ * removed only the complaint.
+ *
+ * ⚠️ A case passes only if its fn returns **exactly `true`** — not merely truthy. A case that THROWS
+ * is a FAILURE, never a skip: a canary that cannot establish its condition must not report success.
+ * (This is the stricter of the two rules the hand-rolled copies used, adopted deliberately so that a
+ * case returning an array, a string or a count cannot read as a pass.)
  */
-function runSelfTest(cases) {
-  let fail = 0;
+function runCases(cases) {
+  let failed = 0;
   for (const [name, fn] of cases) {
     let ok = false;
-    try { ok = fn(); } catch { ok = false; }
+    try {
+      ok = fn() === true;
+    } catch {
+      ok = false;
+    }
+    if (!ok) failed++;
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}`);
-    if (!ok) fail++;
   }
-  if (fail) {
-    console.log(`\nSELFTEST FAILED — ${fail} case(s)`);
-    process.exit(1);
-  }
-  console.log('\nSELFTEST PASSED — both directions proven on fixtures');
-  process.exit(0);
+  console.log(`\n  ${cases.length - failed}/${cases.length} passed${failed ? '  — SELF-TEST FAILED' : ''}\n`);
+  return failed;
 }
 
-module.exports = { walkFiles, loadTree, runSelfTest };
+/**
+ * The standard self-test harness: run `cases`, then EXIT — 1 if any case failed, else 0.
+ * A thin wrapper over `runCases()`, so a fix to the harness cannot miss one caller.
+ */
+function runSelfTest(cases) {
+  process.exit(runCases(cases) ? 1 : 0);
+}
+
+module.exports = { walkFiles, loadTree, runCases, runSelfTest };

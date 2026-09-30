@@ -41,6 +41,10 @@
 
 const fs = require('fs');
 const path = require('path');
+// ⚠️ THE SHARED HARNESS, NOT A LOCAL COPY — see validator-helpers.cjs. The loop that used to live
+// here was byte-identical to `scripts/lib/mysql-cli.cjs`'s, and the duplication guard failed the
+// build on the pair (2026-09-29).
+const { runCases } = require('./lib/validator-helpers.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const NEST = path.join(REPO_ROOT, 'nest');
@@ -371,19 +375,7 @@ function selfTest() {
       return line.includes('0 orphans');
     }],
   ];
-  let failed = 0;
-  for (const [label, fn] of cases) {
-    let ok = false;
-    try {
-      ok = fn() === true;
-    } catch {
-      ok = false;
-    }
-    if (!ok) failed++;
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`);
-  }
-  console.log(`\n  ${cases.length - failed}/${cases.length} passed${failed ? '  — SELF-TEST FAILED' : ''}\n`);
-  process.exit(failed ? 1 : 0);
+  process.exit(runCases(cases) ? 1 : 0);
 }
 
 function main() {

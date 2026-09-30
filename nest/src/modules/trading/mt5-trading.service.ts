@@ -245,6 +245,15 @@ price, `price` came back `0`, and the per-symbol cap refused:
     comment?: string;
     origin?: string;
     clientOrderId?: string;
+    /**
+     * #1018 — the owning bot's MT5 magic, for a caller that KNOWS the bot.
+     *
+     * ⚠️ Omitting it is legitimate for a purely manual order (there is no bot to attribute it to),
+     * but the POSITION then carries the bridge's `DEFAULT_MAGIC` (234000 = "no bot attributed").
+     * This path did not send a magic at ALL until 2026-09-29 — so even a caller that knew the bot
+     * could not attribute the position.
+     */
+    magic?: number;
   }): Promise<{ success: boolean; ticket?: number; price?: number; error?: string; status?: string; filledQuantity?: number }> {
     const side = params.type === 'BUY' ? 'buy' : 'sell';
     const origin = (params.origin || 'user') as 'user' | 'agent' | 'strategy' | 'system';
@@ -303,6 +312,9 @@ price, `price` came back `0`, and the per-symbol cap refused:
       if (params.tp) body.tp = params.tp;
       if (params.comment) body.comment = sanitizeMt5Comment(params.comment);
       if (params.clientOrderId) body.clientOrderId = params.clientOrderId;
+      // #1018 — the bridge reads this (`body.get('magic') or DEFAULT_MAGIC`); omitting it collapses
+      // the position onto the default, where no bot owns it.
+      if (params.magic != null) body.magic = params.magic;
 
       const res = await fetch(`${orderUrl}/order`, {
         method: 'POST',
@@ -339,7 +351,12 @@ price, `price` came back `0`, and the per-symbol cap refused:
           brokerTicket: data.ticket != null ? String(data.ticket) : undefined,
           sl: params.sl,
           tp: params.tp,
-          magic: 234000, // bridge hardcodes magic=234000 (see mt5_bridge_v2.py /order)
+          // ⚠️ THE OLD COMMENT HERE WAS FALSE AND THE VALUE WAS A LITERAL. It read "bridge
+          // hardcodes magic=234000" — true before 2026-09-28, and wrong since: `mt5_bridge_v2.py`
+          // now reads `body.get('magic') or DEFAULT_MAGIC`. Sending nothing made every position
+          // carry 234000 while the row CLAIMED a value the request never produced.
+          // Record the truth: what was sent, or NULL when no bot was known.
+          magic: params.magic ?? null,
           brokerComment: params.comment,
         });
         // Record initial SL/TP as adjustment (#476)
