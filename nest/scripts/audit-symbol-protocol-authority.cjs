@@ -32,6 +32,9 @@
  */
 
 const http = require('http');
+// ⚠️ THE SHARED HARNESS (#1032). Path reaches OUT of nest/ to the repo's scripts/lib, because the
+// canonical harness is single-sourced there and a second copy under nest/ is the defect itself.
+const { runCases } = require('../../scripts/lib/validator-helpers.cjs');
 
 /** Pure: which evidence pairs the authority failed to account for. Self-testable. */
 function findOrphans(evidencePairs, authorityBySymbol) {
@@ -100,13 +103,9 @@ if (process.argv.includes('--self-test')) {
       authority({ USDCAD: ['forex-session-v1'], XAUUSD: [] }),
     ).length === 0);
 
-  let failed = 0;
-  for (const [name, fn] of cases) {
-    let ok = false;
-    try { ok = fn() === true; } catch { ok = false; }
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}`);
-    if (!ok) failed++;
-  }
+  // ⚠️ The harness is SHARED (#1032). The trailing line is kept because it states WHAT was proven
+  // (both directions, on fixtures) — information the generic `n/m passed` summary does not carry.
+  const failed = runCases(cases);
   console.log(failed === 0 ? '\nSELFTEST PASSED — both directions proven on fixtures' : `\nSELFTEST FAILED (${failed})`);
   process.exit(failed === 0 ? 0 : 1);
 }

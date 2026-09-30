@@ -40,6 +40,10 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+// ⚠️ THE SHARED HARNESS (#1032). This file hand-rolled its own loop until
+// `validate-selftest-harness.cjs` flagged it — a copy written on the same day the issue about
+// hand-rolled copies was open. The guard is the reason it is not still there.
+const { runCases } = require('./lib/validator-helpers.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const NEST_SRC = path.join(ROOT, 'nest', 'src');
@@ -321,16 +325,9 @@ async function f() { return 1; }`;
     }],
   ];
 
-  let failed = 0;
-  console.log('=== self-test: every rule must be able to fire ===');
-  for (const [name, fn] of cases) {
-    let ok = false;
-    try { ok = fn() === true; } catch (e) { ok = false; }
-    if (!ok) failed++;
-    console.log(`  ${ok ? 'PASS' : '**FAIL**'}  ${name}`);
-  }
-  console.log(`\n  ${failed === 0 ? 'SELF-TEST VALID' : `SELF-TEST INVALID — ${failed} case(s) failed`}`);
-  return failed;
+  // ⚠️ The harness is SHARED (#1032). `runCases` prints the PASS/FAIL lines and the summary, and
+  // returns the failure count without exiting, so `if (require.main === module)` still owns the exit.
+  return runCases(cases);
 }
 
 if (require.main === module) {

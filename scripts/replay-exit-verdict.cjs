@@ -22,6 +22,8 @@
 const fs = require('fs');
 const path = require('path');
 const { connect, query } = require('./lib/mysql-cli.cjs');
+// ⚠️ THE SHARED HARNESS (#1032). See the note in replay-exit-counterfactual.cjs.
+const { runCases } = require('./lib/validator-helpers.cjs');
 
 const DIST = path.resolve(__dirname, '..', 'nest', 'dist', 'src', 'modules');
 const IMPL_DIR = path.join(DIST, 'directives', 'implementations');
@@ -271,14 +273,10 @@ function selfTest() {
     }],
     ['the REAL arguesExitFor is loadable (not a local copy)', () => typeof liveArguesExitFor() === 'function'],
   ];
-  let failed = 0;
-  for (const [label, fn] of cases) {
-    let ok = false;
-    try { ok = fn() === true; } catch (e) { ok = false; console.log(`      (threw: ${e.message})`); }
-    if (!ok) failed++;
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`);
-  }
-  console.log(`\n  ${cases.length - failed}/${cases.length} passed${failed ? '  — SELF-TEST FAILED' : ''}\n`);
+  // ⚠️ The harness is SHARED (#1032). One behavioural difference, deliberate and adopted: the
+  // shared rule is STRICTER (`fn() === true`), where this copy's throw-diagnostic is preserved by
+  // reporting the throw on the same line. A case that throws is a FAILURE, never a skip.
+  const failed = runCases(cases);
   return failed;
 }
 

@@ -25,6 +25,10 @@
  *   node scripts/replay-exit-counterfactual.cjs --raw              # per-trade rows
  */
 const { connect, query, selfTest: dbSelfTest } = require('./lib/mysql-cli.cjs');
+// ⚠️ THE SHARED HARNESS (#1032). `runCases` is the NON-EXITING half, so this file keeps its own
+// trailing line and its caller still owns the exit code. The loop that used to live here was a
+// hand-rolled copy of it — a copy that a future fix to the harness would not have reached.
+const { runCases } = require('./lib/validator-helpers.cjs');
 
 const TIMEFRAME = process.env.REPLAY_TIMEFRAME || '5m';
 
@@ -108,14 +112,9 @@ function selfTest() {
     ['no bars -> no rule exit', () => replayOne([], 'buy', 100, 0.4, 2, 0.5) === null],
   ];
 
-  let failed = 0;
-  for (const [label, fn] of cases) {
-    let ok = false;
-    try { ok = fn() === true; } catch { ok = false; }
-    if (!ok) failed++;
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`);
-  }
-  console.log(`\n  ${cases.length - failed}/${cases.length} rule cases passed`);
+  // ⚠️ The harness is SHARED (#1032). `runCases` prints the PASS/FAIL lines and the `n/m` summary
+  // and returns the failure count WITHOUT exiting, so this function's contract is unchanged.
+  const failed = runCases(cases);
   if (failed) console.log('  — SELF-TEST FAILED\n');
   else console.log('');
   return failed;
