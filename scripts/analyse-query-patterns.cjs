@@ -11,7 +11,19 @@
  *   REDUNDANT  two Prisma reads of the SAME model in one function with no intervening write, where
  *              the second is not obviously keyed differently. Often a helper re-fetching a row the
  *              caller just loaded and passed nowhere.
- *   REFETCH    a read of a model immediately AFTER a `create`/`update`/`upsert` on it — those
+ *   REFETCH    a `findFirst`/`findUnique` on a model immediately AFTER a `create`/`update`/
+ *              `upsert`/`delete` on it, with NO branch or early exit between them.
+ *
+ *              ⚠️ MEASURED 2026-09-30: the first version of this reported 15 REFETCH sites, and a
+ *              hand-check of 5 found **0 real** — every one was an if/else alternative, an
+ *              aggregate over a different set, or a deliberate concurrency guard. Applying them
+ *              would have DELETED working safety checks. `count`/`findMany`/`aggregate`/`groupBy`
+ *              were therefore removed from REFETCH (they answer a question about a SET, so a
+ *              fresh call after a write is usually a different question) and a branch between the
+ *              two calls now causes the site to be REJECTED and counted, never reported as a hit.
+ *              Treat any surviving REFETCH as a hint to read, never as a fix to apply.
+ *
+ *              For reference, the original rule was — those
  *              operations already return the written row, so the follow-up read is pure cost.
  *
  * ⚠️ WHAT THIS IS NOT. It is a REPORT, not a build gate. It cannot see whether a loop's iterations
@@ -100,8 +112,68 @@ function findNPlusOne(src) {
   return out;
 }
 
+/**
+ * Can these two calls actually be a SEQUENCE?
+ *
+ * ⚠️ MEASURED 2026-09-30 — this check exists because the first version of this scanner had a
+ * 0-of-5 hit rate. It reported `REFETCH` five times and **all five were false positives**, and
+ * acting on them would have DAMAGED the code:
+ *
+ *   backtest-period.service.ts:390  count(before) → createMany → count(after) feeding `lostRows`
+ *                                   ("rows DISAPPEARED") — a deliberate CONCURRENCY GUARD.
+ *                                   Replacing it with createMany's return value deletes the guard.
+ *   position-sync.service.ts:355    findFirst(byTicket)→update, then findFirst(bySymbol)→update.
+ *                                   Two ALTERNATIVE fallback branches, not a sequence.
+ *   screener.service.ts:619         create is `watchlist`, findFirst is `screenerHit` — different models.
+ *   trading-strategy.service.ts:714 the count()s ASK A GUARD QUESTION — "do other bots use this
+ *                                   protocol?" — before deleting. Not a re-read of what was written.
+ *
+ * The lesson is this repo's own rule: a guard that produces false positives gets allowlisted, and
+ * an allowlisted guard is worse than none. So this refuses to report rather than guesses.
+ *
+ * Two calls are a sequence only when between them there is no branch, no early exit, and no
+ * change of nesting depth — otherwise they are alternatives.
+ */
+/**
+ * Is a read plausibly a RE-READ of what a write just wrote?
+ *
+ * `findFirst`/`findUnique` on the same model can be (the write created the row the read wants).
+ * `count`/`findMany`/`aggregate`/`groupBy` CANNOT be assumed to be: they answer a question about
+ * a SET, so a fresh call after a write is usually a different question — which is exactly what
+ * the backtest `lostRows` guard is. Dropping them removes the whole class of false positive.
+ */
+const REFETCH_READ_OPS = new Set(['findFirst', 'findUnique', 'findFirstOrThrow', 'findUniqueOrThrow']);
+
 /** REDUNDANT / REFETCH — per function, the sequence of Prisma calls. */
 function findRedundant(src) {
+  const out = [];
+  const rejected = [];
+  for (const fn of functionsOf(src)) {
+    const calls = [];
+    const re = new RegExp(PRISMA_CALL.source, 'g');
+    let m;
+    while ((m = re.exec(fn.body)) !== null) calls.push({ at: m.index, model: m[1], op: m[2] });
+    for (let i = 1; i < calls.length; i++) {
+      const prev = calls[i - 1];
+      const cur = calls[i];
+      if (prev.model !== cur.model) continue;
+      const between = fn.body.slice(prev.at, cur.at);
+      if (/\}\s*else\b|\belse\s+if\b|\breturn\b|\bcontinue\b|\bbreak\b/.test(between)) {
+        rejected.push({ fn: fn.name, reason: 'branch or early exit between the calls' });
+        continue;
+      }
+      if (WRITE_OPS.has(prev.op) && REFETCH_READ_OPS.has(cur.op)) {
+        out.push({ fn: fn.name, kind: 'REFETCH', model: cur.model, after: prev.op, op: cur.op, line: lineAt(src, fn.start + cur.at), text: `${prev.op}() then ${cur.op}()` });
+      } else if (READ_OPS.has(prev.op) && READ_OPS.has(cur.op) && prev.op === cur.op && REFETCH_READ_OPS.has(cur.op)) {
+        out.push({ fn: fn.name, kind: 'REDUNDANT', model: cur.model, after: prev.op, op: cur.op, line: lineAt(src, fn.start + cur.at), text: `${prev.op}() then ${cur.op}()` });
+      }
+    }
+  }
+  return out;
+}
+
+/** Exposed so the self-test can prove the REJECT path fires — a guard never seen to fail is a decoration. */
+function findRejected(src) {
   const out = [];
   for (const fn of functionsOf(src)) {
     const calls = [];
@@ -112,10 +184,9 @@ function findRedundant(src) {
       const prev = calls[i - 1];
       const cur = calls[i];
       if (prev.model !== cur.model) continue;
-      if (WRITE_OPS.has(prev.op) && READ_OPS.has(cur.op)) {
-        out.push({ fn: fn.name, kind: 'REFETCH', model: cur.model, after: prev.op, op: cur.op, line: lineAt(src, fn.start + cur.at), text: `${prev.op}() then ${cur.op}()` });
-      } else if (READ_OPS.has(prev.op) && READ_OPS.has(cur.op) && prev.op === cur.op) {
-        out.push({ fn: fn.name, kind: 'REDUNDANT', model: cur.model, after: prev.op, op: cur.op, line: lineAt(src, fn.start + cur.at), text: `${prev.op}() then ${cur.op}()` });
+      const between = fn.body.slice(prev.at, cur.at);
+      if (/\}\s*else\b|\belse\s+if\b|\breturn\b|\bcontinue\b|\bbreak\b/.test(between)) {
+        out.push({ fn: fn.name, model: cur.model, text: `${prev.op}() then ${cur.op}()`, reason: 'branch or early exit' });
       }
     }
   }
@@ -191,6 +262,48 @@ async function f(d) {
   const again = await this.prisma.trade.findUnique({ where: { id: made.id } });
 }`;
       return findRedundant(s).some((x) => x.kind === 'REFETCH');
+    }],
+    ['REFETCH FALSE POSITIVE: an if/else alternative is NOT a sequence', () => {
+      // Measured shape at position-sync.service.ts:355 — two fallback branches, not a refetch.
+      const s = `
+async function f(pos) {
+  const byTicket = await this.prisma.trade.findFirst({ where: { brokerTicket: pos.t } });
+  if (byTicket) {
+    await this.prisma.trade.update({ where: { id: byTicket.id }, data: {} });
+    return 0;
+  }
+  const bySymbol = await this.prisma.trade.findFirst({ where: { symbol: pos.s } });
+}`;
+      return !findRedundant(s).some((x) => x.kind === 'REFETCH');
+    }],
+    ['REFETCH FALSE POSITIVE: count() after a write asks a DIFFERENT question', () => {
+      // Measured shape at backtest-period.service.ts:390 — the count is a concurrency GUARD
+      // (rowsBefore vs rowsAfter = rows that DISAPPEARED). Calling this a refetch and
+      // "optimising" it away deletes the guard.
+      const s = `
+async function f(bars) {
+  await this.prisma.marketBar.createMany({ data: bars });
+  const barsAfter = await this.prisma.marketBar.count({ where: { symbolId: 1 } });
+}`;
+      return !findRedundant(s).some((x) => x.kind === 'REFETCH');
+    }],
+    ['REFETCH FALSE POSITIVE: a guard count() before a delete is not a refetch', () => {
+      const s = `
+async function f(ref) {
+  const row = await this.prisma.protocol.findFirst({ where: { slug: ref } });
+  const other = await this.prisma.tradingStrategy.count({ where: { protocolId: row.slug } });
+  await this.prisma.protocol.delete({ where: { id: row.id } });
+}`;
+      return findRedundant(s).length === 0;
+    }],
+    ['REJECT PATH is reported, not silently dropped', () => {
+      const s = `
+async function f(pos) {
+  const a = await this.prisma.trade.findFirst({ where: { x: 1 } });
+  if (a) { return 1; }
+  const b = await this.prisma.trade.findUnique({ where: { id: 2 } });
+}`;
+      return findRejected(s).length === 1;
     }],
     ['REDUNDANT FALSE POSITIVE: DIFFERENT models are not paired', () => {
       const s = `
