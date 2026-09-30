@@ -100,4 +100,14 @@ describe('#992 — MT5 session recovery watchdog (option B)', () => {
     expect(reconnects).toEqual([]);
     expect(svc.getState().enabled).toBe(false);
   });
+
+  it('⚠️ ships DISABLED — an unattended money-path action stays off until its blast radius is measured', () => {
+    // MEASURED 2026-09-30: a reconnect on an UNRELATED third bridge (:5002) coincided with BOTH
+    // live bridges dropping to `terminal-down`, and they recovered only when each was driven by
+    // hand. The mechanism (`mt5.shutdown()` breaking a terminal-shared IPC link) is plausible but
+    // was NOT isolated, so the automatic action was switched off rather than left live.
+    // ⚠️ CANARY: set `enabled: true` in the service's initial `state` and this FAILS.
+    const { svc } = make([[SESSION_LOST]]);
+    expect(svc.getState().enabled).toBe(false);
+  });
 });

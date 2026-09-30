@@ -610,6 +610,82 @@ def reset_circuit_breaker():
 MT5_INIT_TIMEOUT_MS = int(os.environ.get('MT5_INIT_TIMEOUT_MS', '20000'))
 
 
+# ── Credential binding verification (#1035) ──────────────────────────────────
+#
+# ⚠️ MEASURED 2026-09-30, and this is why it exists. A canary bridge started with
+# `MT5_ACCOUNT_9=99999999` / `MT5_SERVER_9=NoSuchServer-Demo` logged:
+#
+#     16:04:57 Initializing MT5: server=NoSuchServer-Demo, account=99999999 (account #9)
+#     16:04:59 MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1065.04
+#     16:04:59 MT5 reconnect SUCCEEDED — account=62135531 balance=1065.04
+#
+# It asked for ONE account and attached to a DIFFERENT, LIVE one, then reported success.
+# `mt5.initialize()` with a login/server it cannot honour appears to fall back to attaching
+# to whatever terminal is already running — so every field the bridge publishes about itself
+# (`account`, `server`, `connected`) is wrong, and NOTHING compared the request with the result.
+#
+# ⚠️ A BRIDGE IS AN ACCOUNT-SCOPED THING. `MT5_ACTIVE_BROKERS=2,3` maps `:5000` and `:5001` to
+# two accounts, and per-broker routing, the stop guardian, risk caps and `brokerTicket`
+# reconciliation all assume that binding holds. A bridge silently attached to the OTHER account
+# is worse than a bridge that is down: the down one refuses orders, the wrong one ACCEPTS them.
+#
+# ⚠️ It became reachable UNATTENDED with #992 option B, whose watchdog POSTs `/reconnect` by
+# itself. So this must be REPORTED, never inherited silently.
+#
+# ⚠️ LOG-AND-EXPOSE ONLY, DELIBERATELY. Whether a mismatched bridge should REFUSE orders is a
+# behaviour decision on a money path and is left open on #1035 — a refused order is not
+# obviously better than a misrouted one until that is decided.
+credential_mismatch = None
+_last_mismatch_key = None
+
+
+def verify_connection_identity(account, server, active, info):
+    """Compare the REQUESTED account/server with the ACTUAL session. Returns a mismatch dict or None.
+
+    ⚠️ `info` is passed IN rather than read here, so the rule is testable without a live terminal
+    — the same reason the watchdog's decision is split from its loop.
+    """
+    global credential_mismatch, _last_mismatch_key
+    if info is None:
+        return None
+
+    reasons = []
+    if account and str(info.login) != str(account):
+        reasons.append(f'account: asked {account}, got {info.login}')
+    if server and str(info.server).strip().lower() != str(server).strip().lower():
+        reasons.append(f'server: asked {server}, got {info.server}')
+
+    if not reasons:
+        if credential_mismatch is not None:
+            logger.warning(
+                f'Credential binding RESTORED — this bridge is back on the account it was '
+                f'configured for ({info.login} @ {info.server}) (#1035)'
+            )
+        credential_mismatch = None
+        _last_mismatch_key = None
+        return None
+
+    credential_mismatch = {
+        'requestedAccount': account or None,
+        'requestedServer': server or None,
+        'actualAccount': str(info.login),
+        'actualServer': str(info.server),
+        'activeSlot': str(active),
+        'reasons': reasons,
+    }
+    # Logged on CHANGE, not on every connect — a reconnect loop would otherwise repeat it, which
+    # is the 4,325-line defect this file already carries a warning about.
+    key = '|'.join(reasons)
+    if key != _last_mismatch_key:
+        _last_mismatch_key = key
+        logger.error(
+            f'CREDENTIAL MISMATCH (#1035): this bridge is bound to an account it was NOT '
+            f'configured for — {" ; ".join(reasons)}. Orders from this bridge would be placed on '
+            f'{info.login} @ {info.server}, not on slot #{active}.'
+        )
+    return credential_mismatch
+
+
 def connect_mt5():
     """Initialize MT5 connection — called at startup and on /reconnect."""
     global connection_errors
@@ -638,6 +714,9 @@ def connect_mt5():
         reset_circuit_breaker()
         info = mt5.account_info()
         logger.info(f'MT5 connected: {info.login} @ {info.server}, balance={info.balance}')
+        # ⚠️ #1035 — verify the BINDING before anything trusts this session. Measured: this call
+        # can attach to a different account than the one requested and return success.
+        verify_connection_identity(account, server, active, info)
         # Re-measure the broker's clock offset on every (re)connect. MT5 epochs
         # are SERVER time; stamping them as UTC put every timestamp ~3h in the
         # future and defeated the market-status staleness gate (2026-09-10).
@@ -1088,6 +1167,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     _term = None
                 return json_response(self, {
                     'connected': connected, 'mt5Package': True,
+                    # ⚠️ #1035 — non-null when this bridge is bound to an account it was NOT
+                    # configured for. Surfaced so the API's `answered`/`reachable` pair can carry
+                    # it; today it is reported and NOT acted on (see the note at the global).
+                    'credentialMismatch': credential_mismatch,
                     # `trade_allowed` is None only when terminal_info() itself returned None, which
                     # is the same condition `connectionState` already classifies - so a caller can
                     # tell "trading is off" from "we could not ask", and neither reads as "fine".
@@ -1151,6 +1234,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'server': acc.server if acc else None,
                     'currency': acc.currency if acc else None,
                     'leverage': acc.leverage if acc else None,
+                    # #1035 — non-null means this bridge is bound to an account it was NOT
+                    # configured for. Exposed here as well as on /health because /broker is the
+                    # endpoint that answers "which account is this bridge?" — and until now the
+                    # answer was a claim nothing verified.
+                    'credentialMismatch': credential_mismatch,
                     'features': {'bulkQuotes': True, 'bulkCandles': True, 'perSymbolOverrides': True},
                 })
 

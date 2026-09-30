@@ -116,7 +116,32 @@ export class Mt5SessionRecoveryService {
   private polling = false;
 
   state: SessionRecoveryState = {
-    enabled: true,
+    // ── DEFAULT OFF, AND THAT IS DELIBERATE (#1035) ────────────────────────────────────────────
+    // ⚠️ This shipped `true`. It was turned OFF on 2026-09-30 after a measurement showed the
+    // trigger may not be SCOPED TO THE BRIDGE IT IS AIMED AT.
+    //
+    // MEASURED: a canary bridge on `:5002` (a third instance, unrelated to the live pair) issued
+    // `POST /reconnect`. `reconnect_mt5()` runs `mt5.shutdown()` + `initialize()`. That reconnect
+    // FAILED with `-10004 No IPC connection`, and **BOTH live bridges — `:5000` and `:5001` — then
+    // reported `connected:false, state:'terminal-down'`**, from `connected:true` minutes earlier.
+    // They recovered only when `/reconnect` was driven on each of them by hand.
+    //
+    // ⚠️ NOT ISOLATED, AND SAID PLAINLY: two things happened in that window (a canary process was
+    // started, and it POSTed `/reconnect`), and the MT5 terminal's own state was not observed
+    // independently. `mt5.shutdown()` breaking a TERMINAL-shared IPC link is the plausible
+    // mechanism — it is why a FAILED reconnect can leave the IPC broken for every process attached
+    // to that terminal — but a plausible mechanism is not an observation, and this file does not
+    // get to attribute a cause it did not isolate.
+    //
+    // ⚠️ WHAT THAT MEANS FOR THIS SERVICE: it acts AUTOMATICALLY and UNATTENDED. If one `/reconnect`
+    // can knock out a healthy SIBLING bridge, then a watchdog meant to recover one broker can
+    // instead cause an outage on TWO — silently, and on a money path. An automatic action whose
+    // blast radius is unknown must have a blast radius of zero until it is measured.
+    //
+    // RE-ENABLE WITH: `POST /api/providers/mt5/session-recovery {"enabled": true}` — an explicit,
+    // deliberate act, once #1035 has settled whether a reconnect is scoped to one bridge.
+    // REVERSE BY: flipping this back to `true`, having first measured the sibling effect.
+    enabled: false,
     pollCount: 0,
     lastPollAt: null,
     bridges: [],
