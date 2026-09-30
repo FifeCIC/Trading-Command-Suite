@@ -1172,14 +1172,46 @@ export class TradeHistoryController {
       // band cannot hide one. The tolerance travels in the payload so a reader can apply their own.
       const FLOOR_TOLERANCE_PCT = 0.02;
 
-      const floor = floorRows
+      // ── #1034: THE ROW'S OWN DECLARED VALUE, AND AN HONEST 'CANNOT JUDGE' ─────────────────
+      //
+      // Defect A was arithmetic: `dist=` used to be recorded against CURRENT price while `slPct` is
+      // declared against ENTRY, so any position in profit produced `dist < slPct` by construction and
+      // **413 of 993 rows "breached"**. The writer now uses the entry denominator (see
+      // `automation/stop-guardian.service.ts`).
+      //
+      // Defect B was a stale join: the check compared a historical row against TODAY's
+      // `trading_strategy.slPct`, so retuning a bot's `slPct` retro-labelled its whole history as
+      // breaches. The writer now carries `slPct=` in the reason, and THIS is the value to judge
+      // against — the config of the time.
+      //
+      // ⚠️ ROWS WRITTEN BEFORE THAT CHANGE CANNOT BE JUDGED, and they must not be counted as
+      // breaches OR as passes. Both older formats are indistinguishable here: their `dist` may be
+      // against either denominator and their `slPct` is not recorded. They are reported as
+      // `notCheckable`, because "fine" and "cannot judge" must never render the same — the rule this
+      // repo has already paid for. Collapsing them into `insideFloor: false` would claim 580 rows
+      // were verified when nothing was checked.
+      const SL_PCT_IN_REASON = /slPct=([\d.]+)/;
+      const slPctOf = (reason: string | null): number | null => {
+        const m = SL_PCT_IN_REASON.exec(reason ?? '');
+        return m ? Number(m[1]) : null;
+      };
+
+      const floorAll = floorRows
         .map((r) => {
           const d = distOf(r.reason);
-          if (d === null || r.declaredPct == null) return null;
-          const declaredPct = Number(r.declaredPct);
+          if (d === null) return null;
+          // The row's OWN declared value wins. The stored column is a fallback for rows that predate
+          // the marker and is flagged as such, so the caller can tell the two apart.
+          const own = slPctOf(r.reason);
+          const declaredPct = own ?? (r.declaredPct == null ? null : Number(r.declaredPct));
+          if (declaredPct === null) return null;
           return {
             symbol: r.symbol,
             declaredPct,
+            // `selfDescribing` = the row carries its own declared value, so it is judgeable. A false
+            // here means the verdict below rests on TODAY's config handed in by the join, which is
+            // the defect this issue is about.
+            selfDescribing: own !== null,
             achievedPct: d,
             // #927: a tighten may never leave the stop INSIDE the position's declared distance.
             insideFloor: d < declaredPct - FLOOR_TOLERANCE_PCT,
@@ -1187,6 +1219,12 @@ export class TradeHistoryController {
           };
         })
         .filter(Boolean);
+
+      // ⚠️ A breach is only claimed for a row that carries its own declared value. A row whose
+      // verdict would rest on today's config is reported as unjudgeable, never as a breach and never
+      // as a pass.
+      const floor = floorAll.filter((f: any) => f.selfDescribing);
+      const notCheckable = floorAll.filter((f: any) => !f.selfDescribing);
 
       const timestamps = adjustments
         .map((a: any) => (a.adjustedAt ? new Date(a.adjustedAt).getTime() : NaN))
@@ -1244,6 +1282,16 @@ export class TradeHistoryController {
         floor: {
           checked: floor.length,
           violations: floor.filter((f: any) => f.insideFloor).length,
+          // ROWS THAT CANNOT BE JUDGED, COUNTED SO THEY CANNOT BE MISTAKEN FOR PASSES (#1034).
+          // These predate the self-describing `slPct=` marker, so the only declared value available
+          // is TODAY's config — the very comparison this issue is about. They are neither breaches
+          // nor passes. 0 here means every checkable row was checked; a large number here beside 0
+          // violations means almost nothing was checked, and those two states must never look alike.
+          notCheckable: notCheckable.length,
+          note:
+            notCheckable.length > 0
+              ? `${notCheckable.length} row(s) predate the self-describing slPct= marker: neither breaches nor passes, because their dist denominator and declared value are both unknown. Only rows carrying slPct= are judged.`
+              : null,
           // The band below which a difference is indistinguishable from the recorded precision.
           tolerancePct: 0.02,
           // ⚠️ BREACHES FIRST — the table is the EVIDENCE for the count above it. Slicing the most

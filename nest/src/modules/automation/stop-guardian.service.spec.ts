@@ -4,6 +4,7 @@ import {
   trailDistanceFor,
   trailDistanceProblem,
   resolvePositionOwner,
+  stopAdjustmentReason,
 } from './stop-guardian.service';
 
 /**
@@ -403,6 +404,59 @@ describe('#927 — a trail can never leave the stop inside the declared distance
     expect(trailDistanceProblem(0.06, 0)).toBeNull();       // nothing declared → nothing to enforce
   });
 
+  // ── #1034 — THE AUDIT STRING'S DENOMINATOR, AND WHY IT LOOKED LIKE 413 BREACHES ───────────
+  //
+  // ⚠️ THE CASE BELOW IS THE MEASURED DEFECT, reproduced exactly. `slPct` is declared against
+  // ENTRY, but `dist` was recorded against CURRENT price. On a position 0.081% in profit the same
+  // absolute trail becomes a SMALLER percentage, so `dist < slPct` followed BY ARITHMETIC — the
+  // panel reported 413 breaches of an invariant that had not been breached, and the number grew
+  // with every position that went into profit. The GBPUSD row from the issue is reproduced here
+  // so that reverting the denominator fails a test instead of quietly inflating a count.
+  describe('#1034 — the recorded distance is a percentage of ENTRY, not of current price', () => {
+    it('a position in profit does NOT shrink the recorded percentage', () => {
+      const entry = 100;
+      const current = 100.081;         // the issue's GBPUSD row: slPct=1, +0.081% in profit
+      const declared = declaredStopDistance(entry, 1); // = 1.0 price units
+
+      const reason = stopAdjustmentReason({
+        stopConfidence: 55,
+        atrValue: 4.26786,
+        trailDistance: declared,
+        entryPrice: entry,
+        slPct: 1,
+      });
+
+      // ⚠️ THE REGRESSION GUARD. Against the entry the trail IS the declared distance, so the row
+      // reads 1.000 — at the floor, not inside it. The old denominator produced 0.999 here, which
+      // the panel then reported as a breach of the very invariant the value satisfies.
+      expect(reason).toContain('dist=1.000%');
+      expect(reason).not.toContain('dist=0.999%');
+
+      // Proof the old denominator is what produced 0.999, rather than asserting it from memory.
+      const underOldDenominator = ((declared / current) * 100).toFixed(3);
+      expect(underOldDenominator).toBe('0.999');
+    });
+
+    it('carries the declared slPct OF THE TIME, so a later retune cannot retro-label the row', () => {
+      const reason = stopAdjustmentReason({
+        stopConfidence: 55, atrValue: 7.71, trailDistance: 0.538, entryPrice: 100, slPct: 0.3,
+      });
+      // Gold Swing 1H declared ~0.3% on 2026-09-23 and declares 1.5% today. The row must record
+      // what was in force when it was written; the panel judges against THIS, not today's config.
+      expect(reason).toContain('slPct=0.3');
+    });
+
+    it('says n/a rather than 0.000% when the entry is unreadable', () => {
+      // `0.000%` would read as a real measurement of zero — "the stop sits on the price" — where
+      // the truth is that no percentage can be computed. The two must not render the same.
+      const reason = stopAdjustmentReason({
+        stopConfidence: 55, atrValue: 4, trailDistance: 1, entryPrice: 0, slPct: 1,
+      });
+      expect(reason).toContain('dist=n/a%');
+      expect(reason).not.toContain('dist=0.000%');
+    });
+  });
+
   // ── #1018 — WHICH BOT OPENED THIS POSITION ──────────────────────────────────────────────────
   //
   // ⚠️ These are the tests that make the fix falsifiable. The defect was a SYMBOL match standing in
@@ -609,10 +663,21 @@ describe('#927 — a trail can never leave the stop inside the declared distance
       // 103 − declared 1.0 = 102 (locks +2% from a 100 entry). The old arithmetic sent 102.94.
       expect(modifyCalls[0].sl).toBe(102);
       expect(modifyCalls[0].sl).not.toBe(102.94);
-      // #927 acceptance box 4 — `stop_adjustment` can be read without recomputing ATR:
-      // 1 / 103 = 0.971%.
+      // #927 acceptance box 4 — `stop_adjustment` can be read without recomputing ATR.
+      //
+      // ⚠️ CHANGED 2026-10-01 (#1034). This asserted `dist=0.971%` — the declared 1.0 divided by
+      // `priceCurrent` 103. That is the ENTRY-denominated `slPct` compared against a
+      // CURRENT-price-denominated `dist`, and it is why the panel reported 413 breaches of an
+      // invariant that had not been breached: on any position in profit the recorded percentage is
+      // arithmetically smaller than the declared one. The assertion did not merely fail to catch the
+      // defect — it ENCODED it, which is why every run agreed the behaviour was correct.
+      //
+      // The declared distance is 1.0 risk-units on a 100 entry, so the row reads 1.000%.
       expect(recordAdjustment).toHaveBeenCalledTimes(1);
-      expect(recordAdjustment.mock.calls[0][0].reason).toContain('dist=0.971%');
+      expect(recordAdjustment.mock.calls[0][0].reason).toContain('dist=1.000%');
+      expect(recordAdjustment.mock.calls[0][0].reason).not.toContain('dist=0.971%');
+      // The row must describe itself, so the panel can judge it without today's config (#1034 B).
+      expect(recordAdjustment.mock.calls[0][0].reason).toContain('slPct=1');
     } finally {
       service.stop();
     }

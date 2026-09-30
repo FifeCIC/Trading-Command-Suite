@@ -1252,7 +1252,9 @@
       "category": "validator",
       "purpose": "a new guard must not hand-roll the repo's own self-test harness.",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "validate-settings-access.cjs",

@@ -301,14 +301,52 @@ export function trailDistanceFor(atrValue: number, declaredDistance: number): nu
   return Math.max(atrTrail, declaredDistance);
 }
 
-/**
- * #927 — validation, not decoration. Returns a problem string when a proposed trail would leave
- * the stop closer to price than the declared distance; the tick REFUSES the modify in that case.
- * With `trailDistanceFor` max()ing, this should never fire — which is exactly why it exists: it
- * makes the invariant checkable (and canaried) rather than implied by one `Math.max` nobody
- * re-reads.
- */
-export function trailDistanceProblem(trailDistance: number, declaredDistance: number): string | null {
+  /**
+   * stopAdjustmentReason() — the audit string written to `stop_adjustment.reason`.
+   *
+   * ⚠️ EXPORTED AND PURE SO THE SPEC CAN CANARY IT (#1034). The defect this replaces was an invisible
+   * ARITHMETIC one: `dist` was recorded against `currentPrice` while `slPct` is declared against
+   * ENTRY, so for any position in profit `dist < slPct` followed by construction and the audit panel
+   * reported **413 breaches of an invariant that had not been breached**. A denominator is exactly
+   * the kind of thing that is right in one place and wrong in another, so it is asserted here rather
+   * than left to the call site.
+   *
+   * ⚠️ `dist` is a percentage of ENTRY — the same base `declaredStopDistance()` and `protectiveSl()`
+   * use. Do not "simplify" it back to the current price: a percentage is only comparable to the
+   * number it is declared against, and the reader of this row is comparing it to `slPct`.
+   *
+   * ⚠️ `slPct=` is the DECLARED VALUE OF THE TIME, carried IN the row. The panel used to join to
+   * today's `trading_strategy.slPct` and judge a days-old row against it, so retuning a bot
+   * retro-labelled its whole history as breaches. A row must be self-describing to be judgeable.
+   */
+  export function stopAdjustmentReason(params: {
+    stopConfidence: number;
+    atrValue: number;
+    trailDistance: number;
+    entryPrice: number;
+    slPct: number;
+    wickScore?: number | null;
+  }): string {
+    const { stopConfidence, atrValue, trailDistance, entryPrice, slPct, wickScore } = params;
+    const entry = Number(entryPrice);
+    // `entry > 0` is the guard, not a formatting choice: an unreadable entry cannot produce a
+    // percentage, and `n/a` is honest where `0.000%` would read as a real measurement of zero.
+    const dist = entry > 0 ? ((trailDistance / entry) * 100).toFixed(3) : 'n/a';
+    return (
+      `Consensus ${stopConfidence} | ATR=${atrValue.toFixed(5)} | ` +
+      `dist=${dist}% | ` +
+      `slPct=${slPct} | ` +
+      `Wick=${wickScore ?? 'n/a'}`
+    );
+  }
+  /**
+   * #927 — validation, not decoration. Returns a problem string when a proposed trail would leave
+   * the stop closer to price than the declared distance; the tick REFUSES the modify in that case.
+   * With `trailDistanceFor` max()ing, this should never fire — which is exactly why it exists: it
+   * makes the invariant checkable (and canaried) rather than implied by one `Math.max` nobody
+   * re-reads.
+   */
+  export function trailDistanceProblem(trailDistance: number, declaredDistance: number): string | null {
   if (!(declaredDistance > 0)) return null; // no declared distance → nothing to enforce
   if (trailDistance + 1e-9 >= declaredDistance) return null;
   return (
@@ -1208,11 +1246,21 @@ export class StopGuardianService {
             await this.applyModify(
               pos,
               recommendedSl!,
-              // #927 — the distance is recorded as a PERCENTAGE of price so `stop_adjustment` can
-              // be read (and audited) without recomputing ATR from the price columns.
-              `Consensus ${stopConfidence} | ATR=${atrValue.toFixed(5)} | ` +
-                `dist=${currentPrice > 0 ? ((trailDistance / currentPrice) * 100).toFixed(3) : 'n/a'}% | ` +
-                `Wick=${wickScore ?? 'n/a'}`,
+              // #927 — the distance is recorded as a PERCENTAGE so `stop_adjustment` can be read (and
+              // audited) without recomputing ATR from the price columns.
+              //
+              // ⚠️ #1034: built by a PURE exported function, because the defect was arithmetic that a
+              // call site could not be tested on. See `stopAdjustmentReason()` above for the two
+              // things it fixes — the ENTRY denominator, and carrying `slPct=` so the row is
+              // self-describing and a later config change cannot retro-label it a breach.
+              stopAdjustmentReason({
+                stopConfidence,
+                atrValue,
+                trailDistance,
+                entryPrice,
+                slPct,
+                wickScore,
+              }),
               stopConfidence,
               side,
               adjustments,
