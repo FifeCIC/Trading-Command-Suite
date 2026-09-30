@@ -82,6 +82,23 @@ export interface SessionRecoveryState {
 
 @Injectable()
 export class Mt5SessionRecoveryService {
+  // ── DECISION (2026-09-30, primary) ──
+  // WHAT:      TWO recovery mechanisms are kept ON PURPOSE — the bridge's own watchdog (A) and this
+  //            service (B). Neither replaces the other, and B must not be deleted as redundant.
+  // WHY:       A recovers while the bridge can still POLL MT5, and it is BOUNDED deliberately:
+  //            `WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS = 5`, after which it stops escalating and never
+  //            tries again, because reconnecting a switched-off terminal forever hides the real
+  //            remedy. **Once A stops, nothing ever tries again** — and on 2026-09-25 that cost
+  //            ~1 hour of trading while the bridge logged 4,325 lines and named no remedy. B is an
+  //            observer outside that process, acting on the case A can still SPEAK about and has
+  //            given up on.
+  // INSTEAD OF: making the bridge's watchdog unbounded (which is the loop A refuses to be), or
+  //            folding B's retry into A (which shares A's fate — same process, same interpreter).
+  // REVERSE BY: delete this service and its module registration. Do NOT do that on the grounds that
+  //            "the bridge already has a watchdog" — read the bound above first.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 48 (and row 37 for the failure mode B cannot cover)
+  // GUARD:     nest/src/modules/providers/mt5/mt5-session-recovery.spec.ts (7 tests, canaried in
+  //            three directions: threshold, the `answered` branch, and the attempt cap)
   private readonly logger = new Logger(Mt5SessionRecoveryService.name);
 
   /** 3 × 30s = 90s of a bridge saying "my session is gone" before we touch it. */
