@@ -17,7 +17,7 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
-| — | *Nothing is waiting on you.* | | |
+| **R35** | Schedule a window for the MT5 blast-radius experiment? It is expected to disturb **both** live bridges while it runs. | **#1046** | May I schedule a slot where I start a third observer bridge, drive `mt5.shutdown()` on a canary only, and watch all three — the isolation #1046 needs? |
 
 **R24, R25, R26, R28 and R29 were all answered on 2026-10-01** — see DONE.
 
