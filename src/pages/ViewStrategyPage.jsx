@@ -509,12 +509,38 @@ export default function ViewStrategyPage() {
   });
 
   const bot = botQuery.data || null;
+  const botName = bot?.name ?? null;
   const rules = useMemo(
     () => (Array.isArray(rulesQuery.data?.all) ? rulesQuery.data.all : []),
     [rulesQuery.data],
   );
   const counts = rulesQuery.data?.counts || null;
   const subs = Array.isArray(subsQuery.data) ? subsQuery.data : [];
+
+  // ── #1051 criterion 7 — THE EXIT CHAIN, for THIS bot ────────────────────────────────────
+  //
+  // The guardian block below answers "what MECHANISMS manage this bot's stop". This answers the
+  // other half: "what does the evidence say about the positions it is holding right now" — the
+  // verdict of `ExitConsensusService` over the exit directives. Both were asked for, and they are
+  // different questions: a mechanism can be declared and still return HOLD on every position.
+  //
+  // ⚠️ Filtered SERVER-side by bot NAME (`?bot=`). `assessment.bot` is the bot's name
+  // (`bot?.name ?? null`), not its id, and pulling the whole pool onto one bot's page invites the
+  // reader to attribute another bot's verdict to this one.
+  //
+  // ⚠️ ADVISORY ONLY. Nothing acts on `action` yet — see the endpoint's header and register row 45.
+  // The panel says so, because a page that shows "EXIT" beside a live position reads as an
+  // instruction unless it is told otherwise.
+  const exitChainQuery = useQuery({
+    queryKey: ['exit-consensus', botName],
+    queryFn: () => apiGet(`/api/scoring/exit-consensus${botName ? `?bot=${encodeURIComponent(botName)}` : ''}`),
+    enabled: Boolean(botName),
+    refetchInterval: 30_000,
+  });
+  const exitChain = Array.isArray(exitChainQuery.data?.assessments) ? exitChainQuery.data.assessments : [];
+  // ⚠️ `poolTotal` is the denominator. Without it an empty list cannot be told apart from a failed
+  // broker read — `assessAll()` returns [] for both, and a blank panel reads as "nothing open".
+  const exitPoolTotal = exitChainQuery.data?.poolTotal ?? null;
 
   // ── The exit-management layer, split into its two halves ──────────────────────────────────
   // The DECLARATIONS (what the mechanism is) and the LIVE STATE (what it is doing) arrive in one
@@ -1076,6 +1102,77 @@ export default function ViewStrategyPage() {
               </li>
             </ul>
           </div>
+
+          {/* ── #1051 criterion 7 — the exit CHAIN's live verdict for this bot ──────────────
+              ⚠️ Three states, never two: a failed read, "this bot holds nothing open", and a
+              verdict list. `assessAll()` returns [] for a broker-read failure AND for a bot with
+              no positions, so the two are separated by `poolTotal` rather than by a blank panel. */}
+          <h3 className={styles.groupHead}>What would close these positions — the exit chain</h3>
+          {exitChainQuery.isError ? (
+            <div className={styles.errorBox}>
+              <strong>The exit verdict could not be read.</strong>
+              <p className={styles.summaryText}>
+                This is a FAILED READ, not &quot;nothing is at risk&quot;. The positions may still be
+                open and unmanaged — reload when the API is reachable.
+              </p>
+            </div>
+          ) : !botName ? (
+            <p className={styles.sectionNote}>Reading this bot…</p>
+          ) : exitPoolTotal === 0 ? (
+            <p className={styles.sectionNote}>
+              No open broker positions exist on <strong>any</strong> bot, so there is nothing for the
+              exit chain to assess. (Reported explicitly: an empty verdict list and a failed read
+              otherwise look identical.)
+            </p>
+          ) : exitChain.length === 0 ? (
+            <p className={styles.sectionNote}>
+              This bot holds <strong>no open positions</strong>. {exitPoolTotal} open position(s)
+              exist across other bots — they are deliberately not shown here, because their verdicts
+              are not this bot&apos;s.
+            </p>
+          ) : (
+            <>
+              <p className={styles.sectionNote}>
+                <strong>Advisory only.</strong> Nothing acts on these verdicts yet — no order is
+                placed and no stop is moved by them. They are the combination of the exit directives&apos;
+                own readings, shown so the chain is inspectable rather than inferred.
+              </p>
+              <ul className={styles.subList}>
+                {exitChain.map((a) => (
+                  <li key={`${a.brokerId ?? '?'}-${a.ticket}`} className={styles.rule}>
+                    <span className={styles.field}>
+                      <code>{a.symbol}</code> {String(a.side || '').toUpperCase()} · ticket {a.ticket}
+                      {a.brokerId ? ` · broker ${a.brokerId}` : ''}
+                    </span>
+                    <div className={styles.summaryText}>
+                      <strong>{a.conviction}</strong> → <strong>{a.action}</strong>
+                      {' · '}P&amp;L {a.profitPct != null ? `${a.profitPct >= 0 ? '+' : ''}${a.profitPct.toFixed(2)}%` : '—'}
+                      {/* ⚠️ `null` means the peak is UNKNOWN and must never render as 0%, which
+                          would assert "still at the peak" — a claim about the market, not about
+                          our data. */}
+                      {' · '}give-back {a.giveBackPct != null ? `${a.giveBackPct.toFixed(2)}%` : 'unknown'}
+                      {a.stopInProfit ? ' · stop is IN PROFIT' : ''}
+                    </div>
+                    {Array.isArray(a.reasons) && a.reasons.length > 0 && (
+                      <div className={styles.summaryText}>
+                        {a.reasons.slice(0, 3).map((rsn, i) => (
+                          <div key={i} className={styles.sectionNote}>· {rsn}</div>
+                        ))}
+                      </div>
+                    )}
+                    {Array.isArray(a.verdicts) && a.verdicts.filter((v) => v.arguesExit).length > 0 && (
+                      <div className={styles.summaryText}>
+                        arguing exit:{' '}
+                        {a.verdicts.filter((v) => v.arguesExit)
+                          .map((v) => `${v.name} (${v.arguesExitVia ?? 'n/a'})`)
+                          .join(', ')}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           {guardianQuery.isError ? (
             <div className={styles.errorBox}>

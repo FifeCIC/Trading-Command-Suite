@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ExitConsensusService } from './exit-consensus.service';
 
 /**
@@ -21,14 +21,27 @@ export class ExitConsensusController {
   constructor(private readonly exitConsensus: ExitConsensusService) {}
 
   @Get()
-  async get() {
-    const assessments = await this.exitConsensus.assessAll();
+  async get(@Query('bot') bot?: string) {
+    const all = await this.exitConsensus.assessAll();
+    // ⚠️ #1051 criterion 7 — filtered by BOT NAME, because the bot detail view asks "what would
+    // close THIS bot's positions", and pulling every open position onto one bot's page both
+    // over-fetches and invites the reader to attribute another bot's verdict to this one.
+    // `assessment.bot` is the bot's NAME (`bot?.name ?? null`), not its id — matched exactly.
+    const assessments = bot ? all.filter((a) => (a.bot ?? '') === bot) : all;
     return {
       asOf: new Date().toISOString(),
+      bot: bot ?? null,
       count: assessments.length,
       /**
-       * ⚠️ An empty array is INFORMATION (no open bot positions), and must never be rendered the
-       * same as a failed read. `ExitConsensusService.assessAll()` returns [] on a broker-read
+       * ⚠️ THE DENOMINATOR. Without it `count: 0` cannot be told apart from a failed broker read,
+       * and `assessAll()` returns `[]` for BOTH. A bot page showing "no open positions" when the
+       * bridge was unreachable is this repo's most-repeated defect; `poolTotal` makes the two
+       * distinguishable without a fake success flag.
+       */
+      poolTotal: all.length,
+      /**
+       * ⚠️ An empty array is INFORMATION (this bot holds nothing open), and must never be rendered
+       * the same as a failed read. `ExitConsensusService.assessAll()` returns [] on a broker-read
        * failure too, so `count: 0` alone cannot distinguish them — the service logs which it was,
        * and this endpoint deliberately carries no fake success flag.
        */
