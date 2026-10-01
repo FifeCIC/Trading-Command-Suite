@@ -17,6 +17,27 @@ function MiniBar({ value, max, color = '#22c55e' }) {
   return <span className="pl-bar"><span className="pl-bar-fill" style={{ width: `${pct}%`, background: color }} /></span>;
 }
 
+/**
+ * fmtProfitFactor() — profit factor, rendered without trusting its type.
+ *
+ * ⚠️ THE BUG THIS EXISTS FOR (2026-10-01). Both call sites read
+ * `pf === Infinity ? '∞' : pf.toFixed(n)`. **`Infinity` cannot survive JSON** —
+ * `JSON.stringify({ v: Infinity })` is `{"v":null}` — so that guard NEVER matched and `.toFixed()`
+ * was called on `null`, throwing "Cannot read properties of null (reading 'toFixed')" on
+ * /lab/performance. Measured: 4 of 43 strategies ("Tech Giants - MSFT/GOOGL/AVGO/AAPL", one winning
+ * trade and no losing one) arrived as `"profitFactor": null`.
+ *
+ * A profit factor IS unbounded when there are no losing trades, so '∞' is the honest rendering — not
+ * '—' (which would claim the value is unknowable) and not '0.0' (which would claim break-even).
+ * `999` is the finite sentinel the API now sends; `null`/non-finite is still handled because that
+ * is what older responses carry, and it is what `Infinity` becomes on the wire.
+ */
+function fmtProfitFactor(v, digits = 2) {
+  if (v == null || !Number.isFinite(v)) return '∞';
+  if (v >= 999) return '∞';
+  return v.toFixed(digits);
+}
+
 export default function PerformanceLabPage() {
   const [days, setDays] = useState(90);
 
@@ -85,7 +106,7 @@ export default function PerformanceLabPage() {
             <span className="pl-stat-sub">{data.overall.totalWins}W / {data.overall.totalLosses}L</span>
           </div>
           <div className="pl-stat-card">
-            <span className="pl-stat-val">{data.overall.profitFactor === Infinity ? '∞' : data.overall.profitFactor.toFixed(2)}</span>
+            <span className="pl-stat-val">{fmtProfitFactor(data.overall.profitFactor, 2)}</span>
             <span className="pl-stat-label">Profit Factor</span>
           </div>
           <div className="pl-stat-card">
@@ -151,7 +172,7 @@ export default function PerformanceLabPage() {
                     <span className="pl-cs-label">Trades</span>
                   </div>
                   <div className="pl-card-stat">
-                    <span className="pl-cs-val">{s.profitFactor === Infinity ? '∞' : s.profitFactor.toFixed(1)}</span>
+                    <span className="pl-cs-val">{fmtProfitFactor(s.profitFactor, 1)}</span>
                     <span className="pl-cs-label">PF</span>
                   </div>
                 </div>

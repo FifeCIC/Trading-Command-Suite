@@ -183,7 +183,13 @@ export class PerformanceService {
         totalLosses: losses.length,
         winRate: closed.length > 0 ? Math.round((wins.length / closed.length) * 100) : 0,
         totalPnl: Math.round(closed.reduce((s, t) => s + (t.pnl || 0), 0) * 100) / 100,
-        profitFactor: totalLoss > 0 ? Math.round((totalWin / totalLoss) * 100) / 100 : totalWin > 0 ? Infinity : 0,
+        // ⚠️ A FINITE SENTINEL, NOT `Infinity` (fixed 2026-10-01). `JSON.stringify(Infinity)` is
+        // `null`, so `Infinity` left this service as `null` — and the page's `=== Infinity` guard
+        // could never match, so `null.toFixed(2)` crashed /lab/performance. A profit factor IS
+        // unbounded when there are no losing trades, so 999 says "no losses" in a value JSON can
+        // carry. `pnl-statistics.service.ts`, `stack-performance.service.ts` and
+        // `monte-carlo.service.ts` already use this sentinel; this service was the outlier.
+        profitFactor: totalLoss > 0 ? Math.round((totalWin / totalLoss) * 100) / 100 : totalWin > 0 ? 999 : 0,
         activeStrategies: strategies.length,
       },
       equityCurve,
@@ -237,7 +243,9 @@ export class PerformanceService {
       totalPnl: Math.round(closed.reduce((s, t) => s + (t.pnl || 0), 0) * 100) / 100,
       avgWin: wins.length > 0 ? Math.round((totalWin / wins.length) * 100) / 100 : 0,
       avgLoss: losses.length > 0 ? Math.round((totalLoss / losses.length) * 100) / 100 : 0,
-      profitFactor: totalLoss > 0 ? Math.round((totalWin / totalLoss) * 100) / 100 : totalWin > 0 ? Infinity : 0,
+      // ⚠️ 999, not `Infinity` — see the note on `overall.profitFactor` above. `Infinity` does not
+      // survive JSON; it arrives as `null` and crashes any `.toFixed()` that trusts it.
+      profitFactor: totalLoss > 0 ? Math.round((totalWin / totalLoss) * 100) / 100 : totalWin > 0 ? 999 : 0,
       largestWin: Math.round(Math.max(0, ...winPnl) * 100) / 100,
       largestLoss: Math.round(Math.min(0, ...lossPnl) * 100) / 100,
       avgHoldingHours: Math.round(avgHoldingHours * 10) / 10,
