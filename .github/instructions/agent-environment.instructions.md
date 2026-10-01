@@ -47,6 +47,20 @@ Joining the wrong one returns **no rows and no error** — it reads as "no such 
 ⛔ **Never guess a column name.** Measured 2026-09-25: an agent guessed six in one session and was
 wrong more than half; each wrong guess cost a round trip and produced a silently empty result.
 
+### The SCHEMA can DRIFT — a model can silently under-report a table (#948)
+
+```powershell
+npm --prefix nest run db:schema-drift             # field-level drift: schema.prisma (DMMF) vs the live DB
+npm --prefix nest run db:schema-drift:self-test   # prove BOTH directions can be detected
+```
+
+`db:check` (#769) covers **table-level** drift — a table with no model. This covers **field-level**
+drift: a **modelled** table missing **columns** that exist in the database. Prisma then cannot read
+them and every query silently under-reports — the repo's most expensive failure signature. Measured
+instances, both found by accident: `symbol_route.provider`, and `Trade.pnlInvalid` (#805 — the P&L
+report counted 82 fabricated rows as trades). It reads the **DMMF**, so it cannot disagree with what
+the app actually does. Runs **on demand** (it needs a live DB), beside `db:check`.
+
 ### Any NEW audit or validator script must ship a `--self-test`
 
 A guard that has never been observed to fail is a decoration. Ship one that can be made to fail in

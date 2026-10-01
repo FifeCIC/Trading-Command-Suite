@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 168,
+  "count": 169,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -67,6 +67,16 @@
       "purpose": "the filtered-rate check for #825.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "audit-schema-drift.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "FIELD-LEVEL drift between `schema.prisma` and the live database.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "audit-signal-capacity.cjs",

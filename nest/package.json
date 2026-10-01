@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.107.0",
+  "version": "0.108.0",
   "description": "",
   "author": "",
   "private": true,
@@ -24,6 +24,8 @@
     "db:config-refs": "node scripts/validate-config-db-refs.cjs",
     "db:route-capability": "node scripts/validate-route-capability.cjs",
     "db:pnl-integrity": "node scripts/validate-pnl-integrity.cjs",
+    "db:schema-drift": "node scripts/audit-schema-drift.cjs",
+    "db:schema-drift:self-test": "node scripts/audit-schema-drift.cjs --self-test",
     "db:fix-local-time": "node scripts/fix-local-time-writes.cjs && node scripts/fix-local-time-defaults.cjs",
     "db:push": "node -e \"console.error('\\n[db:push] BLOCKED. This repo has 10 raw-managed tables that are NOT in schema.prisma, so `prisma db push` would DROP them (incl. strategy_signal_queue and 195k backup rows).\\n\\nRun `npm run db:check` to see them. To add a column: ALTER TABLE ... ; npx prisma generate\\n'); process.exit(1)\"",
     "db:unsafe-push-I-have-read-the-warning": "node scripts/validate-schema-safety.cjs && prisma db push",
