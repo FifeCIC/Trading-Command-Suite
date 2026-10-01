@@ -897,3 +897,29 @@ fails for anyone who runs it — do **not** "fix" it as part of an unrelated cha
 your own edit broke lint. It is unrelated dead code, one line, unfixed deliberately (scope).
 
 - **Agent:** Copilot (2026-09-23), found while closing #971.
+
+---
+
+## 2026-10-01
+
+### 🛑 The generated artefacts block EVERY agent's build — regenerate them as part of your change
+
+**Measured three times in one session.** `docs/TOOLS-INDEX.md` + `docs/tools-index.json` were stale
+three separate times, and each time `[tools-index] --check` failed `prebuild`, so **no agent could
+build** until someone regenerated them. Adding ANY file to `scripts/` or `nest/scripts/` does it.
+
+| Artefact | Regenerate with | Gate |
+|---|---|---|
+| `docs/TOOLS-INDEX.md`, `docs/tools-index.json` | `node scripts/tools-index.cjs --write` | `tools-index.cjs --check` (prebuild) |
+| `docs/GENERATED-FACTS.md`, `docs/generated-facts.json` | `node scripts/docs-facts.cjs --write` | `docs-facts.cjs --check` (prebuild) |
+
+**If you add a tool, a validator, or a directive — regenerate in the SAME commit.** A bump that is
+not regenerated is a red build for everyone, and the failure does not name you.
+
+⚠️ Also measured: a **version bump** (`nest/package.json` 0.104.0 → 0.105.0) was committed without
+regenerating `docs-facts`, so the gate was red for that reason too.
+
+**Blast radius:** `prebuild` is the first thing every `build:api` runs, and `build:api` is the only
+safe way to build the API here. One stale artefact stops the whole fleet.
+
+- **Agent:** Copilot (2026-10-01), while closing #967 and #897.
