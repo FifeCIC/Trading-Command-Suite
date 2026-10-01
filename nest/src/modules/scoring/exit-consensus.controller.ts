@@ -15,6 +15,22 @@ import { ExitConsensusService } from './exit-consensus.service';
  * ⚠️ ADVISORY. It returns an assessment; it closes nothing and moves no stop. Acting on an
  * `action` is a maths change and needs a copied configuration and a monitored comparison first
  * — see `ExitConsensusService`'s header.
+ *
+ * ── DECISION (2026-10-01, primary) ──
+ * WHAT:      The exit chain stays ADVISORY. `action` is computed and published; nothing consumes it.
+ * WHY:       Acting on it changes what a live position does, so it is a maths change. The owner's
+ *            rule requires a COPIED configuration and a MONITORED comparison — and #929 blocks the
+ *            monitor: `dispatchSideTrade()` reads `metastack_snapshot.mode`, which holds the scoring
+ *            STYLE (`"score"`), and compares it against trading modes, so every stack evaluates as
+ *            "not auto" and takes the intent-only branch. A change that cannot be MEASURED must not
+ *            be made on a money path, however good the reasoning for it looks.
+ * INSTEAD OF: Giving the chain authority now — the owner's R29 asked for "an advanced exit process",
+ *            and a computed-but-unused verdict is a fair reading of that as unfinished.
+ * REVERSE BY: Fix #929, create a copied configuration (`maths-change-requires-ab`), run the
+ *            comparison, then set the action. One line of behaviour, once it is measurable.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 54
+ * GUARD:     NONE — nothing fails if a future change starts acting on `action`. 🔴 UNGUARDED, and
+ *            said plainly rather than implied.
  */
 @Controller('scoring/exit-consensus')
 export class ExitConsensusController {
