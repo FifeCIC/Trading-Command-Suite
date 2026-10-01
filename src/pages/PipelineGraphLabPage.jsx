@@ -88,7 +88,7 @@ const SAMPLE_NODES = [
   {
     id: 'automation',
     label: 'Automation Loop',
-    subtype: 'Broker-Agnostic · 3 Strategies',
+    subtype: 'Broker-Agnostic · 3 Bots',
     icon: '🔄', bgIcon: BgIconAutomation,
     color: '#22c55e', health: 'healthy',
     variant: 'titlebar',
@@ -99,7 +99,7 @@ const SAMPLE_NODES = [
       endpoints: ['GET /api/automation/status', 'POST /api/automation/run-now', 'GET /api/automation/risk-events'],
       tables: ['LoopTick', 'TradingStrategy', 'StrategyEvaluation', 'AutomationConfig'],
       files: ['nest/src/modules/automation/automation-loop.service.ts', 'nest/src/modules/automation/timeline.service.ts', 'nest/src/modules/trading/trading-strategy.service.ts'],
-      strategies: '3 active strategies — gold-hedge-v1 (XAUUSD), tech-titans-v1 (NVDA), oil-trader-v1 (USOIL)',
+      bots: '3 active bots — gold-hedge-v1 (XAUUSD), tech-titans-v1 (NVDA), oil-trader-v1 (USOIL)',
     },
   },
   {
@@ -425,10 +425,10 @@ function DetailOverlay({ node, onClose }) {
             <p>{d.directives}</p>
           </section>
         )}
-        {d.strategies && (
+        {d.bots && (
           <section className="pg-overlay-section">
-            <h4>Active Strategies</h4>
-            <p>{d.strategies}</p>
+            <h4>Active Bots</h4>
+            <p>{d.bots}</p>
           </section>
         )}
         {d.connection && (
@@ -521,11 +521,15 @@ export default function PipelineGraphLabPage() {
   const liveNodes = positionedNodes.map((n) => {
     const updated = { ...n, stats: { ...n.stats } };
     if (n.id === 'automation' && autoStatus) {
-      const strats = Array.isArray(autoStatus.activeStrategies) ? autoStatus.activeStrategies.length : (autoStatus.activeStrategies ?? 0);
+      // ⚠️ BOTS, not strategies (#878). `autoStatus.activeStrategies` is `trading_strategy` rows
+      // with `active = true` (see automation.controller.ts). The stat KEY is rendered as the LABEL
+      // by the Object.entries loop on the node, so "strategies" printed a bot count under the wrong
+      // word — "strategy" already means a derived strategy or a protocol subscription elsewhere.
+      const bots = Array.isArray(autoStatus.activeStrategies) ? autoStatus.activeStrategies.length : (autoStatus.activeStrategies ?? 0);
       updated.stats = {
         ticks: String(autoStatus.tickCount ?? '—'),
         trades: String(autoStatus.tradeCount ?? '—'),
-        strategies: String(strats),
+        bots: String(bots),
         status: autoStatus.loopEnabled ? 'RUNNING' : 'PAUSED',
       };
       updated.health = autoStatus.loopEnabled ? 'healthy' : 'degraded';

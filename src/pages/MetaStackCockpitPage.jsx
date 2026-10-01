@@ -184,7 +184,12 @@ export default function MetaStackCockpitPage() {
   // count or a list depending on the endpoint's mood — handle both rather than printing
   // "[object Object]".
   const brokerRows = Object.entries(automationQuery.data?.brokerStates || {});
-  const strategyCount = Array.isArray(automationQuery.data?.activeStrategies)
+// ⚠️ BOTS, not strategies (#878). `activeStrategies` comes from the automation status endpoint,
+    // which builds it from `tradingStrategy.findMany({ where: { active: true } })` — i.e. rows in
+    // `trading_strategy`. "Strategy" already means a derived strategy, a protocol subscription and
+    // a strategy-library entry elsewhere in this app, so a bot count labelled "Strategies" showed a
+    // number that no reader could tie back to anything. Named for what it holds, labelled the same.
+    const botCount = Array.isArray(automationQuery.data?.activeStrategies)
     ? automationQuery.data.activeStrategies.length
     : (automationQuery.data?.activeStrategies ?? '—');
 
@@ -467,7 +472,7 @@ export default function MetaStackCockpitPage() {
               title="Auto loop"
               badge={{ text: automationQuery.data.loopEnabled ? 'ON' : 'OFF', tone: automationQuery.data.loopEnabled ? 'both' : 'warn' }}
               rows={[
-                ['Strategies', strategyCount],
+                ['Bots', botCount],
                 ['Ticks', automationQuery.data.tickCount ?? 0],
                 ['Risk ×', automationQuery.data.globalRiskMultiplier ?? '—'],
               ]}

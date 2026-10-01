@@ -164,7 +164,11 @@ function AutomationPulseWidget() {
   if (isLoading) return <p className="wb-muted">Loading…</p>;
   if (!data) return <p className="wb-muted">Automation status unavailable.</p>;
 
-  const strategies = Array.isArray(data.activeStrategies) ? data.activeStrategies.length : 0;
+  // ⚠️ BOTS, not strategies (#878). `activeStrategies` is built server-side from
+  // `tradingStrategy.findMany({ where: { active: true } })` — `trading_strategy` rows. The app
+  // already uses "strategy" in three narrower senses, so labelling a bot count that way made the
+  // number unreadable. The variable is named for what it holds.
+  const bots = Array.isArray(data.activeStrategies) ? data.activeStrategies.length : 0;
   // null ≠ 0 — see the file header. Only total when every broker reported; otherwise the
   // honest answer is "unknown", because a partial sum understates and a 0 is a fabrication.
   const brokerStates = (data.brokerStates && typeof data.brokerStates === 'object')
@@ -184,8 +188,8 @@ function AutomationPulseWidget() {
         </strong>
       </li>
       <li>
-        <span>Strategies</span>
-        <strong>{strategies}</strong>
+        <span>Bots</span>
+        <strong>{bots}</strong>
       </li>
       <li>
         <span>Positions</span>

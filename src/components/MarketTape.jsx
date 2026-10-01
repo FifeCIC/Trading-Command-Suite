@@ -295,7 +295,12 @@ export default function MarketTape() {
   // 4. Automation pulse
   if (userPrefs.tapeAuto && autoQuery.data) {
     const auto = autoQuery.data;
-    const strategies = auto.activeStrategies?.length || 0;
+    // ⚠️ `activeStrategies` is a MISNOMER (#878). `GET /api/automation/status` builds it from
+  // `prisma.tradingStrategy.findMany({ where: { active: true } })` — those are `trading_strategy`
+  // rows, i.e. BOTS, not the strategy concept the app calls a Protocol/Scoring Strategy elsewhere.
+  // The tape said "25 strategies" when 25 was a bot count, and the word is already overloaded in
+  // this app; the count is labelled for what it IS rather than for the field's name.
+  const bots = auto.activeStrategies?.length || 0;
     // ⚠️ null ≠ 0. `brokerStates[*].positionCount` is null until a tick has MEASURED it — no
     // adapter yet, the fetch threw, or no tick has run. This previously read
     // `sum + (b.positionCount || 0)`, collapsing "not reported" into a confident 0, so the tape
@@ -312,7 +317,7 @@ export default function MarketTape() {
     const lastTick = auto.lastTickAt ? timeAgo(auto.lastTickAt) : '—';
     sections.push({
       key: 'auto', label: 'Auto',
-      content: `${pulse} · ${strategies} strategies · ${positions == null ? '? positions' : `${positions} positions`} · Last tick ${lastTick}`,
+      content: `${pulse} · ${bots} bots · ${positions == null ? '? positions' : `${positions} positions`} · Last tick ${lastTick}`,
       color: auto.loopEnabled ? 'var(--market-open, #22c55e)' : 'var(--ink-soft, #64748b)',
     });
   }
