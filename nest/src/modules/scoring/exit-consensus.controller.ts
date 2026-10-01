@@ -20,16 +20,16 @@ import { ExitConsensusService } from './exit-consensus.service';
  * WHAT:      The exit chain stays ADVISORY. `action` is computed and published; nothing consumes it.
  * WHY:       Acting on it changes what a live position does, so it is a maths change. The owner's
  *            rule requires a COPIED configuration and a MONITORED comparison, and the monitor
- *            cannot reach a verdict in useful time: `MAX_AB_SYMBOLS = 4` and ONE ACTIVE TEST at a
- *            time across 27 bots, so a controlled exit comparison needs weeks for a readable sample.
- *            A change that cannot be MEASURED must not be made on a money path, however good the
- *            reasoning for it looks.
- *            ⚠️ CORRECTED 2026-10-01. This marker first said #929 blocked the monitor via the
- *            `metastack_snapshot.mode` conflation. **That was fixed on 2026-09-23** —
- *            `resolveTradeAuthority()` reads the mode from the BOT, and `ab-trade-authority.spec.ts`
- *            locks it. The claim was carried from `maths-change-requires-ab.instructions.md`,
- *            which was itself stale, and reached this file without being re-measured. Measured
- *            2026-10-01: `ab_test` = 2 rows, **122 trades tagged** `abTestId` — the runner works.
+ *            cannot yet reach a verdict on a REAL test: measured 2026-10-01, the one completed A/B
+ *            run produced **identical P&L for both arms** (−11.80 / −11.80), and across the 122
+ *            tagged trades only **17 distinct orders** exist while **91 of 110** arm rows carry a
+ *            NULL `pnl` — the merged-position split is not resolving, so there is nothing to read.
+ *            ⚠️ CORRECTED 2026-10-01 (second correction to this marker). It first blamed the
+ *            `metastack_snapshot.mode` conflation — fixed 2026-09-23 — and then claimed capacity
+ *            was `MAX_AB_SYMBOLS = 4` / one test at a time. **Both were read from issues rather than
+ *            measured.** The real defaults are `AB_MAX_SYMBOLS = 8` and `AB_MAX_ACTIVE = 2`, both
+ *            env-overridable, widened on 2026-09-22. Capacity is not the binding constraint;
+ *            ATTRIBUTION is.
  * INSTEAD OF: Giving the chain authority now — the owner's R29 asked for "an advanced exit process",
  *            and a computed-but-unused verdict is a fair reading of that as unfinished.
  * REVERSE BY: Fix #929, create a copied configuration (`maths-change-requires-ab`), run the

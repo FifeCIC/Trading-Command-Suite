@@ -83,16 +83,21 @@ A rule that over-fires gets ignored. Narrow beats broad.
 | `ab_test` rows | **2** (1 cancelled, 1 complete) — the issue said zero |
 | trades tagged `abTestId` | **122** — the issue said zero |
 | snapshots with 2+ distinct versions | **1** (`ss-1785454844642`: 1.0.0 / 1.0.1 / 1.0.2) — a valid control/variant pair exists |
-| `MAX_AB_SYMBOLS` | **4** |
-| concurrent active tests | **1** |
+| `AB_MAX_SYMBOLS` (default) | **8** — env-overridable; the issue said 4 |
+| `AB_MAX_ACTIVE` (default) | **2** — env-overridable; the issue said 1 |
+| distinct orders behind the 122 tagged trades | **17** |
+| arm rows with a NULL `pnl` | **91 of 110** |
+| the one completed run's two arms | **−11.80 / −11.80 — identical** |
 
-**So steps 1–4 are all executable today. What is missing is throughput:** 4 symbols and one active
-test at a time, across 27 bots, means a controlled comparison takes **weeks** to reach a sample worth
-reading. That is the real constraint on the rule below — not a broken runner.
+⚠️ **The capacity figures in the row above were ALSO read from an issue rather than measured**, on the
+first attempt at this correction. Both are env-overridable and were widened on 2026-09-22. **The
+binding constraint is not capacity — it is ATTRIBUTION:** A/B arms trade the same symbol on the same
+netting account, the positions merge, and the volume split is not resolving, so a verdict has nothing
+readable to stand on.
 
-**Consequence for this rule, stated plainly:** the rule still stands, but its cost is now *time*
-rather than *impossibility*. Do not describe it as "blocked"; describe it as "needs a window", and
-say how long the window is.
+**Consequence for this rule, stated plainly:** the rule still stands, but its cost is neither
+"impossible" nor "slow because of a symbol cap". It is **"cannot yet produce a readable result"**, and
+the honest thing to say is that, with the measurement behind it.
 
 ⚠️ **Do not respond to this by editing the runner's maths to make it fire faster.** That is a maths
 change without an A/B — the exact thing the rule forbids.
