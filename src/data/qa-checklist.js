@@ -5472,17 +5472,41 @@ const QA_CHECKLIST = [
         procedure: 'npm run validate:architecture-docs (expect exit 0), then remove one section name from ARCHITECTURE_INDEX in architecture-reference.js and re-run.',
         // ⚠️ The two check IDs this entry originally named were REMOVED 2026-10-01 (#1050), not
         // because the checks are gone — they run and pass — but because `validate-architecture-docs.cjs`
-        // mints `INV-` IDs that were never registered in `meta-stack-contracts.instructions.md`. The
+        // mints `INV-` IDs that were not registered in `meta-stack-contracts.instructions.md`. The
         // four-page mirror greps every `INV-` token in this file and failed `prebuild` with
-        // `[stale-qa-mirror]`, which blocked EVERY agent's build. Naming an unregistered invariant here
-        // asserts a contract that the single-owner register does not contain.
-        // To put the IDs back: add BOTH to the contracts-doc register AND give each its own entry here
-        // with a structured `invariant: 'INV-…'` field — a prose mention is not enough (the mirror wants
-        // the field). See #1050.
+        // `[stale-qa-mirror]`, which blocked EVERY agent's build.
+        // ✅ RESUMED 2026-10-01: both IDs are now REGISTERED (contracts-doc rows + canaries in
+        // `validate-pipeline-contracts.cjs`) and each has its own structured entry below —
+        // `qa-contract-033` (INV-ARCH-DOCS-1) and `qa-contract-034` (INV-ARCH-DOCS-2). This entry
+        // keeps the prose procedure; the two structured entries are what the mirror gates on.
         expected: 'Green at rest. After the removal it names the missing section and exits 1. Both checks are enforced. Not in prebuild - on demand only.',
         category: 'Integration',
         priority: 'high',
         versionNote: '2026-09-30 - batch #24 (meta-stack-review-and-guards)',
+      },
+      {
+        id: 'qa-contract-033',
+        invariant: 'INV-ARCH-DOCS-1',
+        area: 'Pipeline Contracts',
+        system: 'Architecture surfaces',
+        name: 'the two architecture surfaces list the same section index',
+        procedure: 'Run `node scripts/validate-architecture-docs.cjs` (expect exit 0 and "2 invariant(s) hold"). Then add a section name to the section index in src/core/architecture-reference.js ONLY and re-run.',
+        expected: 'Green at rest. After the one-sided add it reports `INV-ARCH-DOCS-1 … N one-sided`, names WHICH side is missing the section, and exits 1. Restore afterwards. ⚠️ Run `--self-test` as well: it drives the pure check function in BOTH directions (reference-only and page-only), so the guard is proven able to fail rather than merely present. ⚠️ The ownership split is why this sat unregistered until #1050: the script minted the ID, and the single-owner rule gives `INV-*` registration to the contracts doc only.',
+        category: 'Contract',
+        priority: 'high',
+        versionNote: '2026-10-01 — #1050 registration of ids minted by validate-architecture-docs.cjs',
+      },
+      {
+        id: 'qa-contract-034',
+        invariant: 'INV-ARCH-DOCS-2',
+        area: 'Pipeline Contracts',
+        system: 'Architecture surfaces',
+        name: 'every reference export exists on the architecture page',
+        procedure: 'Run `node scripts/validate-architecture-docs.cjs` (expect exit 0). Then rename one `export const` in src/core/architecture-reference.js so its page counterpart no longer matches, and re-run.',
+        expected: 'Green at rest. After the rename it reports `INV-ARCH-DOCS-2 … N have no counterpart on the page`, names the orphan export, and exits 1. Restore afterwards. The check is ONE-WAY (reference → page) by design: a page-only export is permitted, so a two-way parity assertion would fire on legitimate framing and get allowlisted.',
+        category: 'Contract',
+        priority: 'medium',
+        versionNote: '2026-10-01 — #1050 registration of ids minted by validate-architecture-docs.cjs',
       },
       {
         id: 'qa-ui-054',

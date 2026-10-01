@@ -425,6 +425,31 @@ const CANARIES = [
     markers: ['symbol-not-tradeable', 'getSymbolTradability'],
     hint: 'A symbol may be offered for trade only when the broker that will receive the order reports it tradeable (tradeMode 4) and the size clears that broker\'s volume floor. US500 is LISTED on both bridges and tradeable on only one (tradeMode 0 on MetaQuotes :5000, 4 on Pepperstone :5001), and its floor is 0.1 lots against a 0.01 manual default — so the card read as fully actionable while the bridge would have refused the click twice over (#US500).',
   },
+  // ⚠️ Added 2026-10-01 (#1050). These two were MINTED INSIDE `validate-architecture-docs.cjs`
+  // (L151–171) and never registered, so a QA entry that cited them failed `prebuild` with
+  // `[stale-qa-mirror] … which is not in the contracts doc` — a build red for every agent, whose
+  // message read as "the invariant no longer exists" when in fact the invariant existed and the
+  // REGISTER was incomplete. The canary is the registration: it asserts the two pure check
+  // functions still exist in the owning script, so deleting the check cannot leave the row
+  // claiming an enforcement that is gone. The check itself is run on demand
+  // (`node scripts/validate-architecture-docs.cjs`, `--self-test` drives both directions).
+  {
+    id: 'INV-ARCH-DOCS-1',
+    root: 'repo',
+    file: 'scripts/validate-architecture-docs.cjs',
+    // ⚠️ Anchored on the DEFINITION, not the bare name. A bare `checkSectionParity` marker
+    // PASSED with the function renamed, because the name survives in the self-test call sites —
+    // measured 2026-10-01, first canary attempt reported green with the mechanism removed.
+    markers: ['function checkSectionParity('],
+    hint: 'The two architecture surfaces must list the SAME section index. A section added to one and not the other drifted silently and was caught by a human one batch late (batch #16).',
+  },
+  {
+    id: 'INV-ARCH-DOCS-2',
+    root: 'repo',
+    file: 'scripts/validate-architecture-docs.cjs',
+    markers: ['function checkReferenceIsDerived('],
+    hint: 'Every `export const` in architecture-reference.js must exist on the page — an orphan lets an agent read a capability the owner cannot see. The direction is one-way on purpose: page-only framing is permitted.',
+  },
 ];
 
 /** Invariants enforced by a scan rather than a canary. */
