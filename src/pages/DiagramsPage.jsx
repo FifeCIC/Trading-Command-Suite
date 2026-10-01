@@ -1386,55 +1386,87 @@ const DIAGRAMS = [
   {
     id: 'protocol-symbol-resolution',
     label: 'Protocol Symbol Resolution',
-    desc: 'How protocols determine which symbols to score. Three resolution paths in priority order: (1) DB SymbolProtocolAssignment rows for single-symbol protocols, (2) DB Watchlist linked via watchlist_id on protocol, (3) Auto-derived from protocol ID pattern matching. Added 2026-08-05 to fix META.Stack foundation.',
+    desc: 'Two directions, and they are NOT the same question. (a) SYMBOL to PROTOCOLS — one ranked union of four DB sources (assignment, bot subscription, watchlist, observed) with per-entry provenance, served by SymbolProtocolAuthorityService (#926). Six mechanisms each held a partial answer before this and disagreed 2 / 8 / 3 / 0 / 0 / gold-macro-v1 for one symbol. (b) PROTOCOL to SYMBOLS — a DB row or a watchlist FK, never a name match and never an ID pattern: INV-NO-SYMBOL-GUESSING (#764) emptied the hint tables that inferred symbols from a protocol slug, because a guess cannot survive a rename and cannot report that it broke. Rewritten 2026-09-30 (handoff batch #24); the previous version drew an auto-derive-from-ID third path that no longer exists.',
     code: `flowchart TB
-    subgraph Protocol["Protocol"]
-        P1["btc-speed-v1"]
+    subgraph Q["The question, split in two"]
+        Q1["Which PROTOCOLS apply to this SYMBOL?<br/>(symbol to protocols)"]
+        Q2["Which SYMBOLS does this PROTOCOL score?<br/>(protocol to symbols)"]
     end
 
-    subgraph Path1["Path 1 — DB: SymbolProtocolAssignment"]
-        A1["SELECT symbol FROM SymbolProtocolAssignment WHERE protocolId = ?"]
-        A2["Single-symbol: BTCUSD"]
+    subgraph Union["(a) SymbolProtocolAuthorityService — ONE authority (#926)"]
+        U1["symbol_protocol_assignment"]
+        U2["strategy_protocol (active bot subscription)"]
+        U3["watchlist.protocolId (FOREIGN KEY)"]
+        U4["observed: protocol_score_status"]
+        RANK["rank per entry<br/>+ provenance recorded per source"]
+        U1 --> RANK
+        U2 --> RANK
+        U3 --> RANK
+        U4 --> RANK
     end
 
-    subgraph Path2["Path 2 — DB: Watchlist"]
-        B1["SELECT symbols FROM Watchlist WHERE protocolId = ?"]
-        B2["Multi-symbol: EURUSD, GBPUSD, USDJPY, ..."]
+    subgraph Resolve["(b) protocol to symbols — FK, never a guess"]
+        D1["symbol_protocol_assignment row"]
+        D2["watchlist.protocolId FK<br/>(INV-WATCHLIST-IDENTITY #763)"]
+        D3["NO ID pattern match.<br/>Hint tables EMPTY<br/>(INV-NO-SYMBOL-GUESSING #764)"]
     end
 
-    subgraph Path3["Path 3 — Auto-Derive Fallback"]
-        C1["Pattern match protocol ID"]
-        C2["btc-* → BTCUSD<br/>xau-* → XAUUSD<br/>forex-* → forex-majors watchlist<br/>oil-* → USOIL"]
+    Q1 --> Union
+    Q2 --> Resolve
+
+    RANK --> OUT1["GET /api/symbols/:ticker/protocols<br/>+ GET /api/symbols/:ticker/focus<br/>(they were 8 vs 20, now agree)"]
+    D1 --> OUT2["resolveSymbols(protocolId)"]
+    D2 --> OUT2
+    D3 -.->|refused| OUT2
+
+    style Union fill:#1a2a3a,stroke:#3b82f6,color:#e5e7eb
+    style Resolve fill:#1a3a1a,stroke:#22c55e,color:#e5e7eb
+    style D3 fill:#3a1a1a,stroke:#ef4444,color:#e5e7eb
+    style RANK fill:#8b5cf6,color:#fff
+    style OUT1 fill:#0ea5a6,color:#fff
+    style OUT2 fill:#0ea5a6,color:#fff`,
+  },
+  {
+    id: 'symbol-protocol-authority',
+    label: 'Symbol to Protocol Authority',
+    desc: 'Which protocols apply to a symbol now has ONE authority (#926, 2026-09-27). Six live mechanisms each held a partial answer, and measured for XAUUSD they reported 2 / 8 / 3 / 0 / 0 / gold-macro-v1 — so a symbol could be assigned but not traded, traded but not assigned, or scored by neither. SymbolProtocolAuthorityService resolves a ranked UNION of four DB sources with per-entry provenance, because a first-hit chain would change its answer when an unrelated table gained a row. The weaker sources ADD protocols rather than being filtered, and rank records the strongest evidence.',
+    code: `flowchart LR
+    subgraph SOURCES["Four DB sources — each a PARTIAL answer"]
+        S1["symbol_protocol_assignment"]
+        S2["strategy_protocol<br/>(active bot)"]
+        S3["watchlist.protocolId"]
+        S4["protocol_score_status<br/>(observed)"]
     end
 
-    subgraph API["resolveSymbols(protocolId)"]
-        D1["1. Check SymbolProtocolAssignment"]
-        D2["2. Check Watchlist.protocolId"]
-        D3["3. Auto-derive from ID"]
+    subgraph AUTHORITY["SymbolProtocolAuthorityService (#926)"]
+        M["Ranked UNION, not a first-hit chain"]
+        P["per-entry provenance<br/>+ rank = strongest evidence"]
+        M --> P
     end
 
-    P1 --> D1
-    D1 -->|found| A1
-    D1 -->|not found| D2
-    D2 -->|found| B1
-    D2 -->|not found| D3
-    D3 --> C1
-    A1 --> A2
-    B1 --> B2
-    C1 --> C2
+    subgraph BEFORE["Before — six mechanisms, no authority"]
+        B1["answered 2"]
+        B2["answered 8"]
+        B3["answered 3"]
+        B4["answered 0"]
+        B5["answered 0"]
+        B6["answered gold-macro-v1"]
+    end
 
-    A2 --> Out["GET /api/scoring/gated/protocols/:id/symbols"]
-    B2 --> Out
-    C2 --> Out
+    SOURCES --> M
+    P --> A["GET /api/symbols/:ticker/protocols"]
+    P --> B["GET /api/symbols/:ticker/focus"]
+    A --> CMP{"Agree?"}
+    B --> CMP
+    CMP -->|was 8 vs 20| FIX["Now 20 = 20 for XAUUSD"]
+    CMP -->|still| OPEN["No: a symbol could be assigned-but-not-traded,<br/>traded-but-not-assigned, or scored by neither"]
 
-    style Path1 fill:#1a3a1a,stroke:#22c55e,color:#e5e7eb
-    style Path2 fill:#1a2a3a,stroke:#3b82f6,color:#e5e7eb
-    style Path3 fill:#3a2a1a,stroke:#f59e0b,color:#e5e7eb
-    style API fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
-    style D1 fill:#22c55e,color:#000
-    style D2 fill:#3b82f6,color:#fff
-    style D3 fill:#f59e0b,color:#000
-    style Out fill:#0ea5a6,color:#fff`,
+    BEFORE -.->|superseded by| AUTHORITY
+
+    style AUTHORITY fill:#1a2a3a,stroke:#3b82f6,color:#e5e7eb
+    style BEFORE fill:#3a1a1a,stroke:#ef4444,color:#e5e7eb
+    style FIX fill:#1a3a1a,stroke:#22c55e,color:#e5e7eb
+    style OPEN fill:#3a2a1a,stroke:#f59e0b,color:#e5e7eb`,
   },
   {
     id: 'protocol-direction',
