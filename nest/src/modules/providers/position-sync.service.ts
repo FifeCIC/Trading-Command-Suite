@@ -913,6 +913,21 @@ export class PositionSyncService {
           status: 'closed',
           exitPrice: resolvedExit,
           pnl: pnlValue,
+          // ⚠️ #1045 — READ THE PROVENANCE, NOT JUST THE VALUE.
+          //
+          // When deal history yielded a close deal, `closedAt` above was already set to the
+          // broker's OWN exit time. When it did not, this fallback writes `now` — the moment the
+          // APP NOTICED the position had gone. Both look identical on the row, so
+          // `closedAt - openedAt` is a trade duration for some rows and reconciliation latency for
+          // others.
+          //
+          // Measured 2026-10-01: 231 rows with an exit price average 15.7 h; the 134 without one
+          // average **587.5 h (24 days)** on bots that scalp on minute cadences. Nothing reported it.
+          //
+          // ⚠️ DO NOT null this to signal the uncertainty — `closedAt IS NOT NULL` is the "this
+          // trade is closed" predicate across the app, so a null RE-OPENS the trade. The value
+          // stays; consumers ask `closeTimeIsBrokerDerived()` (`common/trading/close-time.ts`)
+          // before reporting a duration.
           closedAt: closedAt ?? new Date(),
           closeReason,
           ...(strategy ? { strategy } : {}),

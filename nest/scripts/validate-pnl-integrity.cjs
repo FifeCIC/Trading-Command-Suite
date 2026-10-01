@@ -299,6 +299,13 @@ async function main() {
   console.log(`   quarantined   ${String(pops.quarantined.length).padStart(4)}   flagged pnlInvalid; \`pnl\` is a placeholder`);
   console.log(`   exit-unknown  ${String(pops.exitUnknown.length).padStart(4)}   closed, no exit price, NOT flagged  <-- the defect`);
   console.log(`   open          ${String(pops.open.length).padStart(4)}   still open; no result yet`);
+  // ⚠️ #1045 — the SAME rows, read for a different consequence. No exit price means no deal history
+  // was found, which means `closedAt` was written when the APP NOTICED rather than when the broker
+  // closed. `closedAt - openedAt` is therefore not a duration for these rows. Measured 2026-10-01:
+  // the 231 with an exit price average 15.7 h; these average 587.5 h (24 days).
+  console.log(`   └─ of which ${pops.quarantined.length + pops.exitUnknown.length} carry NO exit price, so their \`closedAt\``);
+  console.log('      is the app-NOTICED time, not the broker close time (#1045) — never report a');
+  console.log('      duration from it. The rule is `common/trading/close-time.ts`.');
 
   if (phantomHistorical.length > 0) {
     console.log(`\nℹ️  ${phantomHistorical.length} HISTORICAL unflagged phantom(s) — reported, not fatal. These are`);

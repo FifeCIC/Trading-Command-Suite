@@ -7,6 +7,9 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// #1045 — `closedAt` is a broker time only when deal history was found. Ask explicitly rather than
+// relying on `pnlInvalid` (a P&L flag) to keep excluding the rows whose close time is app-noticed.
+import { meanLifetimeHours } from '../../common/trading/close-time';
 
 export interface StrategyPerformance {
   strategyId: string;
@@ -202,14 +205,22 @@ export class PerformanceService {
     const totalWin = winPnl.reduce((s, v) => s + v, 0);
     const totalLoss = Math.abs(lossPnl.reduce((s, v) => s + v, 0));
 
-    // Avg holding time
-    let avgHoldingHours = 0;
-    const withHolding = closed.filter(t => t.openedAt && t.closedAt);
-    if (withHolding.length > 0) {
-      avgHoldingHours = withHolding.reduce((s, t) =>
-        s + (new Date(t.closedAt!).getTime() - new Date(t.openedAt).getTime()) / 3600000, 0
-      ) / withHolding.length;
-    }
+    // ── Avg holding time (#1045) ───────────────────────────────
+    // ⚠️ NOT `closedAt - openedAt` — `closedAt` is the broker's own exit time ONLY when deal
+    // history was found. Otherwise it is the moment the app NOTICED the position had gone.
+    // Measured 2026-10-01: the 231 rows with an exit price average **15.7 h**; the 134 without one
+    // average **587.5 h — 24 days** on bots that scalp on 1–15 minute cadences. That is
+    // reconciliation latency, and averaging it here is how a plausible wrong number reaches a
+    // screen. `tradeLifetimeHours()` returns null for those rows, so they are SKIPPED rather than
+    // counted as a zero-hour trade.
+    //
+    // This already excluded them via `pnlInvalid: 0` — but that flag means "the P&L could not be
+    // computed", not "the close time is uncertain". Asking the right question explicitly stops the
+    // number depending on two unrelated facts continuing to agree by accident.
+    const lifetime = meanLifetimeHours(closed);
+    // 0 means "nothing was measurable", which is the existing contract for this field; it never
+    // means "trades closed instantly".
+    const avgHoldingHours = lifetime.hours ?? 0;
 
     const uniqueSymbols = [...new Set(trades.map(t => t.symbol))];
     const dates = trades.map(t => t.openedAt).sort();
