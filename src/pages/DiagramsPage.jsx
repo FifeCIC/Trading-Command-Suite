@@ -1,9 +1,8 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
-import mermaid from 'mermaid';
 import { annotateSource, claimsFor, evaluateClaims, summarise } from '../core/diagram-claims';
-import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
+import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/mermaid-theme';
 // Shell chrome is shared, not re-invented: the verdict block IS a notice, so it uses the
 // canonical notice stylesheet rather than a second colour recipe. See diagrams-page.css.
 import '../components/notice-block.css';
@@ -431,19 +430,19 @@ const DIAGRAMS = [
   {
     id: 'exit-signals',
     label: 'Exit Signal System',
-    desc: '5 exit-focused directives contribute scores to the composite -- they do NOT trigger position closes automatically. Exit monitoring is planned but not yet automated. These directives run alongside entry directives in the same scoring pipeline.',
+    desc: 'Exit is now a CHAIN, not a score. The 5 exit directives still contribute scores to the composite, but ExitConsensusService (#990/#1027) turns them into a VERDICT, and post-entry mechanisms ACT on it: the Stop Guardian is the ONE trailing writer (#913, #927) and the max-hold sweep closes (#773), each addressing the account that HOLDS the position (#1030). R29 (#1051) adds the hold ceiling on top: below it a profitable position may be re-scored and held on; inside the final hour of the symbol own market it closes bluntly, unless the user overrides -- and the override must ask profit-only vs all, with a strong risk warning (#1048).',
     code: `flowchart TB
     subgraph Market["Market Data (same DirectiveInput)"]
         A[Price Bars<br/>closes, highs, lows]
         B[Volume]
         C[ATR 14-period]
     end
-    subgraph ExitDirectives["Exit Directives (5)"]
-        F[momentum-exhaustion<br/>P65 maxScore=100<br/>bias: bullish]
-        G[target-achieved<br/>P60 maxScore=100<br/>bias: bullish]
-        H[regime-shift-exit<br/>P80 maxScore=100<br/>bias: neutral]
-        I[time-stop<br/>P50 maxScore=100<br/>bias: neutral]
-        J[chandelier-exit<br/>P64 maxScore=100<br/>bias: neutral]
+    subgraph ExitDirectives["Exit Directives (5) scores into the composite"]
+        F[momentum-exhaustion<br/>P65 maxScore=100]
+        G[target-achieved<br/>P60 maxScore=100]
+        H[regime-shift-exit<br/>P80 maxScore=100]
+        I[time-stop<br/>P50 maxScore=100]
+        J[chandelier-exit<br/>P64 maxScore=100]
     end
     subgraph Logic["Scoring Logic"]
         K[RSI >= 70 + vol declining<br/>score 65-95]
@@ -452,10 +451,20 @@ const DIAGRAMS = [
         N[Momentum decay > 2%<br/>score 40-80]
         O[Price below highest22 - 3xATR<br/>score 25 bearish]
     end
-    subgraph Output["Output (scores only)"]
-        P[Scores feed into<br/>composite via protocol groups]
-        Q[signalClass: bullish/bearish/neutral]
-        R[No automated close<br/>planned, not built]
+    subgraph Consensus["ExitConsensusService (#990 / #1027)"]
+        EC[arguesExitFor a VERDICT,<br/>not a score. Reads the exit directives.]
+    end
+    subgraph Act["Post-entry mechanisms these ACT"]
+        SG[Stop Guardian<br/>the ONE trailing writer #913 / #927]
+        TS[max-hold sweep<br/>position-time-stop #773]
+        MC[close by the account<br/>that HOLDS it #1030]
+    end
+    subgraph Ceiling["R29 hold ceiling (#1051 / #1048)"]
+        CH{Inside final hour of<br/>the symbol own market?}
+        BLUNT[Blunt close]
+        HOLD[Re-score / advanced-exit<br/>check - may hold on]
+        OVN{User override?}
+        PROFIT[Overnight: profit-only vs all<br/>STRONG RISK WARNING]
     end
     A --> K --> F
     B --> K
@@ -467,14 +476,22 @@ const DIAGRAMS = [
     A --> O
     C --> O
     O --> J
-    F --> P
-    G --> P
-    H --> P
-    I --> P
-    J --> P
-    P --> Q
-    Q -.-> R
-    style R fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
+    F --> EC
+    G --> EC
+    H --> EC
+    I --> EC
+    J --> EC
+    EC --> SG
+    EC --> TS
+    EC --> MC
+    EC --> CH
+    CH -->|yes| BLUNT
+    CH -->|no| HOLD
+    HOLD --> OVN
+    OVN --> PROFIT
+    style EC fill:#1a2a3a,stroke:#3b82f6,color:#e5e7eb
+    style BLUNT fill:#3a1a1a,stroke:#ef4444,color:#e5e7eb
+    style PROFIT fill:#3a2a1a,stroke:#f59e0b,color:#e5e7eb`,
   },
   {
     id: 'alert-center',
@@ -1798,7 +1815,8 @@ export default function DiagramsPage() {
     // The source is annotated with claim results first, so the diagram carries its own accuracy.
     // `readStatusColors()` is read here, not at module scope, because the theme can change.
     const src = annotateSource(diagram.id, diagram.code, claimResults, readStatusColors());
-    mermaid.render(`${id}-svg`, src).then(({ svg }) => {
+    // `renderMermaidSvg` retries a style-only result — see its header in core/mermaid-theme.js.
+    renderMermaidSvg(`${id}-svg`, src).then((svg) => {
       el.innerHTML = svg;
     }).catch(() => {
       el.innerHTML = '<p style="color:var(--ink-soft);padding:1rem">Diagram rendering failed. Check Mermaid syntax.</p>';

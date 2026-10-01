@@ -148,3 +148,35 @@ export function readStatusColors() {
   const t = readTokens();
   return { ok: t.profit, bad: t.loss, warning: t.warning, muted: t.muted };
 }
+
+/**
+ * renderMermaidSvg() — the ONE way this app turns a Mermaid source into an SVG string.
+ *
+ * ⚠️ SYMPTOM GUARD — Mermaid can resolve its FIRST pass with a STYLE-ONLY svg (no nodes at all)
+ * for a source that parses perfectly. Measured on /development/diagrams 2026-10-01: **every
+ * diagram with no registered claim rendered BLANK** while diagrams that HAD a claim rendered
+ * fine — because a claim fetch updates React state and triggers a SECOND render, which succeeds.
+ * A claim-less diagram only ever got the first pass, so it stayed empty with no error.
+ *
+ * The cause is NOT isolated (no re-initialisation race, and the source renders correctly in a
+ * standalone Mermaid). This retries on the observable SYMPTOM instead of the cause, deliberately:
+ * a symptom guard fires without needing the theory to be right, and a wrong theory it inherits
+ * would have been worse than no guard.
+ *
+ * ⚠️ Detecting "empty" by the absence of graph TEXT (`<text>`, `<foreignObject>`, `<span>`).
+ * All three appear depending on `htmlLabels`; the style-only svg carries none of them.
+ *
+ * @param renderId  the svg element id (must be unique per rendered diagram)
+ * @param source    the Mermaid source, already run through `annotateSource`
+ * @returns the svg string, retried up to `attempts` times while it carries no graph
+ */
+const MERMAID_HAS_GRAPH = /<text\b|<foreignObject\b|<span\b/;
+export async function renderMermaidSvg(renderId, source, attempts = 3) {
+  let last = '';
+  for (let i = 0; i < attempts; i++) {
+    const { svg } = await mermaid.render(renderId, source);
+    if (MERMAID_HAS_GRAPH.test(svg)) return svg;
+    last = svg;
+  }
+  return last;
+}

@@ -9,7 +9,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import mermaid from 'mermaid';
 import { apiGet } from '../core/api/client';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
 import {
@@ -19,7 +18,7 @@ import {
   unverifiableSchemaKeys,
 } from '../core/strategy-diagram';
 import { annotateSource, summarise } from '../core/diagram-claims';
-import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
+import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/mermaid-theme';
 import { noticeFromError } from '../core/notices/from-error';
 import './strategy-library.css';
 import './strategy-decision-path.css';
@@ -90,9 +89,8 @@ function StrategyDecisionPath({ strategy, bots, botsNotice, directives }) {
     // The source is annotated with the claim results FIRST, so a node whose claim failed is
     // stroked in the picture rather than only described beside it.
     const src = annotateSource(strategy.id, path.source, rows, readStatusColors());
-    mermaid
-      .render(`sd-${strategy.id}-svg`, src)
-      .then(({ svg }) => {
+    renderMermaidSvg(`sd-${strategy.id}-svg`, src)
+      .then((svg) => {
         if (!cancelled && hostRef.current) hostRef.current.innerHTML = svg;
       })
       .catch(() => {

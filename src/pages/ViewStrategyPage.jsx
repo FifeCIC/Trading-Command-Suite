@@ -64,7 +64,6 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import mermaid from 'mermaid';
 import { apiGet } from '../core/api/client';
 // The app's ONE reveal-on-scroll mechanism (Theme Lab -> Scroll Animations). `.lad-reveal` is
 // `opacity: 0` in `ladder.css`, and this hook is the only thing that adds `lad-reveal--show`, so a
@@ -84,7 +83,7 @@ import {
   isDormant,
 } from '../core/bot-stage-path';
 import { annotateSource, summarise } from '../core/diagram-claims';
-import { useThemedMermaid, readStatusColors } from '../core/mermaid-theme';
+import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/mermaid-theme';
 // Shared formatters — the app's ONE P&L sign/class pair and the number/currency/date helpers.
 // ⚠️ `formatPct` takes ALREADY-PERCENT values (it toFixed()s and appends '%', it does NOT ×100),
 // and it always signs positives — right for a delta, wrong for a rate. `winRate` is a FRACTION
@@ -213,9 +212,8 @@ function BotLifecyclePath({ bot, rules }) {
     let cancelled = false;
     // The source is annotated FIRST, so a stage whose claim failed is stroked in the picture.
     const src = annotateSource(diagramId, path.source, rows, readStatusColors());
-    mermaid
-      .render(`${diagramId}-svg`, src)
-      .then(({ svg }) => {
+    renderMermaidSvg(`${diagramId}-svg`, src)
+      .then((svg) => {
         if (!cancelled && hostRef.current) hostRef.current.innerHTML = svg;
       })
       .catch(() => {
