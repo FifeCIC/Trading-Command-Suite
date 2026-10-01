@@ -333,7 +333,162 @@ async function checkProtocolRefs() {
   }
 }
 
+// ── Daily-bar duplicates (#880) ──────────────────────────────────────────────
+//
+// ⚠️ READ THIS BEFORE WRITING ANY DAY-OF-WEEK FILTER OVER `marketbar` `1d`.
+//
+// MEASURED 2026-10-01 — daily bars are stamped at the session's **START**, not its close, so a
+// normal week is labelled **Sun, Mon, Tue, Wed, Thu** and NOT Mon–Fri:
+//
+//     EURUSD 1d (mt5)          gap to previous bar
+//     2026-09-30 21:00 Wed          24h
+//     2026-09-29 21:00 Tue          24h
+//     2026-09-28 21:00 Mon          24h
+//     2026-09-27 21:00 Sun          72h   <-- the weekend gap is BEFORE the Sunday bar
+//     2026-09-24 21:00 Thu          24h
+//
+// The 72-hour weekend gap falls between **Thu 21:00 and Sun 21:00**, which is only consistent with
+// session-START stamping: FX opens Sun 21:00 UTC and the fifth session runs Thu 21:00 → Fri 21:00.
+// So Sun–Thu is **CORRECT, not a bug** — #880 left this explicitly undecided, and this settles it.
+//
+// ⚠️ THE TRAP THIS CREATES: `DAYOFWEEK(timestamp) = 6` (Friday) matches essentially nothing —
+// measured 283 bars against ~2,400 for every other day — because **there is no Friday bar in this
+// convention**. The Friday session is the one stamped `Thursday 21:00`. A weekday filter written
+// against the Mon–Fri assumption silently matches nothing and reads as "no data", not as "wrong
+// filter". (This blocked the first `friday-drift` test. That directive is now RETIRED — #879 — with
+// the finding that no Friday session effect exists.)
+//
+// What REMAINS a real defect is the stray Friday bars: they are **byte-identical** to the preceding
+// Thursday bar (same open, close AND volume), so they are duplicate writes, not a mislabelled
+// session. That is what this check finds.
+
+/**
+ * classifyDailyBarDuplicates() — PURE, so `--self-test` can canary it in both directions.
+ *
+ * `rows` must be ordered by (symbolId, provider, timestamp ASC). A pair is a duplicate only when ALL
+ * of open/high/low/close/volume are equal — comparing `close` alone would flag a flat-but-real
+ * session, and a false positive here gets the check ignored.
+ */
+function classifyDailyBarDuplicates(rows) {
+  const out = [];
+  const prev = new Map();
+  for (const r of rows) {
+    const key = `${r.symbolId}|${r.provider}`;
+    const p = prev.get(key);
+    if (p) {
+      const same =
+        Number(p.open) === Number(r.open) &&
+        Number(p.high) === Number(r.high) &&
+        Number(p.low) === Number(r.low) &&
+        Number(p.close) === Number(r.close) &&
+        Number(p.volume) === Number(r.volume);
+      if (same) {
+        out.push({
+          symbolId: r.symbolId,
+          provider: r.provider,
+          timestamp: r.timestamp,
+          priorTimestamp: p.timestamp,
+          ticker: r.ticker ?? null,
+        });
+      }
+    }
+    prev.set(key, r);
+  }
+  return out;
+}
+
+async function checkDailyBarDuplicates() {
+  console.log('\n[5] Daily-bar duplicates (marketbar 1d) — #880');
+  const rows = await prisma.$queryRawUnsafe(
+    `SELECT b.symbolId, b.provider, b.timestamp, b.open, b.high, b.low, b.close, b.volume, s.ticker
+       FROM marketbar b JOIN symbol s ON s.id = b.symbolId
+      WHERE b.timeframe = '1d'
+      ORDER BY b.symbolId, b.provider, b.timestamp ASC`,
+  );
+  const dupes = classifyDailyBarDuplicates(rows);
+  if (dupes.length === 0) {
+    console.log('      ✅ no consecutive identical OHLCV bars');
+    return;
+  }
+  // Reported, NOT deleted: removing market rows is a data decision, and a re-import can recreate
+  // them. The check's job is to stop this being invisible.
+  const sample = dupes.slice(0, 3).map((d) => `${d.ticker}@${d.provider} ${new Date(d.timestamp).toISOString()}`);
+  warnings.push(
+    `${dupes.length} daily bar(s) are byte-identical to the bar before them (same open/high/low/close/volume)` +
+      ` — e.g. ${sample.join(', ')}. These are stray duplicate writes, not sessions: the Sun–Thu labelling is` +
+      ' correct (session-START stamps) and a DAYOFWEEK=Friday filter matches nothing by design. Do not delete' +
+      ' the rows to silence this — fix the import.',
+  );
+}
+
+/** `--self-test` — canary the pure classifier in BOTH directions. No database needed. */
+function selfTestDailyBarDuplicates() {
+  const bar = (t, o, h, l, c, v, provider = 'mt5', symbolId = 's1') => ({
+    symbolId, provider, timestamp: t, open: o, high: h, low: l, close: c, volume: v,
+  });
+  let failed = 0;
+  const check = (name, got, expect) => {
+    const ok = got === expect;
+    if (!ok) failed++;
+    console.log(`[self-test] ${ok ? 'PASS' : 'FAIL'}  ${name}` + (ok ? '' : ` (expected ${expect}; got ${got})`));
+  };
+
+  // MUST fire: the real #880 shape — a Friday bar identical to the Thursday bar before it.
+  check(
+    'the real #880 duplicate IS found',
+    classifyDailyBarDuplicates([
+      bar('2026-09-10T21:00:00Z', 1.16114, 1.165, 1.158, 1.15983, 195012),
+      bar('2026-09-11T21:00:00Z', 1.16114, 1.165, 1.158, 1.15983, 195012),
+    ]).length,
+    1,
+  );
+  check(
+    'same close but different volume is NOT a duplicate',
+    classifyDailyBarDuplicates([
+      bar('2026-09-10T21:00:00Z', 1.16, 1.165, 1.158, 1.15983, 195012),
+      bar('2026-09-11T21:00:00Z', 1.16, 1.165, 1.158, 1.15983, 111111),
+    ]).length,
+    0,
+  );
+  check(
+    'a single bar is not a duplicate',
+    classifyDailyBarDuplicates([bar('2026-09-10T21:00:00Z', 1, 2, 0.5, 1.5, 10)]).length,
+    0,
+  );
+  check(
+    'identical bars for DIFFERENT symbols are not duplicates of each other',
+    classifyDailyBarDuplicates([
+      bar('2026-09-10T21:00:00Z', 1, 2, 0.5, 1.5, 10, 'mt5', 's1'),
+      bar('2026-09-10T21:00:00Z', 1, 2, 0.5, 1.5, 10, 'mt5', 's2'),
+    ]).length,
+    0,
+  );
+  check(
+    'identical bars from DIFFERENT providers are not duplicates of each other',
+    classifyDailyBarDuplicates([
+      bar('2026-09-10T21:00:00Z', 1, 2, 0.5, 1.5, 10, 'mt5', 's1'),
+      bar('2026-09-10T21:00:00Z', 1, 2, 0.5, 1.5, 10, 'yahoo', 's1'),
+    ]).length,
+    0,
+  );
+  check(
+    'a run of three identical bars yields TWO findings',
+    classifyDailyBarDuplicates([
+      bar('2026-09-09T21:00:00Z', 1, 2, 0.5, 1.5, 10),
+      bar('2026-09-10T21:00:00Z', 1, 2, 0.5, 1.5, 10),
+      bar('2026-09-11T21:00:00Z', 1, 2, 0.5, 1.5, 10),
+    ]).length,
+    2,
+  );
+  check('no bars is not a failure', classifyDailyBarDuplicates([]).length, 0);
+
+  console.log(`[self-test] daily-bar duplicate classifier: ${failed === 0 ? 'all canaries passed' : `${failed} FAILED`}.`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 (async () => {
+  if (process.argv.includes('--self-test')) selfTestDailyBarDuplicates();
+
   console.log('='.repeat(72));
   console.log('  DATA HEALTH AUDIT');
   console.log('  Guards the silent-failure class: #733, #821, #801, and the 2026-09-15 outage.');
@@ -344,6 +499,7 @@ async function checkProtocolRefs() {
     await checkStaleness();
     await checkThresholdReachability();
     await checkProtocolRefs();
+    await checkDailyBarDuplicates();
   } catch (e) {
     console.error('\nFATAL: ' + e.message);
     await prisma.$disconnect();

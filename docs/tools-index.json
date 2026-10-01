@@ -37,7 +37,7 @@
       "where": "nest",
       "category": "audit",
       "purpose": "the guard for the class that cost 5 days of trading and 16,673",
-      "selfTest": false,
+      "selfTest": true,
       "reaches": [
         "npm"
       ]
