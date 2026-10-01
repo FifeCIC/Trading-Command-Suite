@@ -252,14 +252,28 @@ export class ExitConsensusService {
     this.barCache.clear();
     let positions: any[] = [];
     try {
-      // ⚠️ #1033 — EVERY BRIDGE. This read the PRIMARY only, so a position held on the second
-      // account received NO EXIT ASSESSMENT AT ALL. Measured 2026-09-30: 2 of 9 positions are on
-      // broker 3, and they held the two largest single losses — the verdict was blind to exactly
-      // the positions it exists to watch, and reported the remaining 7 as the whole picture.
+      // ⚠️ EVERY BRIDGE, read through the ADAPTER's own all-broker method.
       //
-      // Safe to widen: the verdict is ADVISORY (settled decision, row 45) — it places nothing,
-      // moves no stop and closes nothing, so a wider input cannot act on the wrong account.
-      positions = await (this.mt5 as any).getAllPositions();
+      // `Mt5Adapter.getPositions()` is NOT primary-only. It delegates to
+      // `fetchAllBrokerPositions()`, which iterates every active broker (`#883`) and maps each
+      // row — so this call already covers the whole book, broker 3 included, and satisfies
+      // #1033's "every bridge" requirement.
+      //
+      // ⚠️ #1033 BROKE THIS PAGE, AND THE BREAK WAS INVISIBLE. That commit changed this line to
+      // `(this.mt5 as any).getAllPositions()`. `getAllPositions()` exists on
+      // `Mt5ConnectionManager` and `Mt5TradingService`, but NOT on `Mt5Adapter` — which is what
+      // `this.mt5` is. The method was `undefined`, the call threw `... is not a function`, the
+      // catch below swallowed it and returned `[]`, and this page rendered "No open positions to
+      // evaluate." while 11 MT5 positions were live (measured 2026-10-01). The `as any` cast is
+      // what hid it: it silenced the compiler that would otherwise have named the missing method.
+      //
+      // The call below is deliberately UN-CAST. If `getPositions()` is ever renamed or removed,
+      // the build fails — which is the guard this call site did not have.
+      //
+      // Safe to read the whole book: the verdict is ADVISORY (settled decision, row 45) — it
+      // places nothing, moves no stop and closes nothing, so a wider input cannot act on the
+      // wrong account.
+      positions = await this.mt5.getPositions();
     } catch (err) {
       this.logger.warn(`Could not read broker positions: ${(err as Error).message}`);
       return [];

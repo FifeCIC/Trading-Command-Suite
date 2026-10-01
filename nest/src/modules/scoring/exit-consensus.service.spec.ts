@@ -6,7 +6,7 @@
  * long as they existed. A rule that cannot be called cannot be canaried. Extracting `arguesExitFor()`
  * is what made these assertions possible.
  */
-import { arguesExitFor } from './exit-consensus.service';
+import { arguesExitFor, ExitConsensusService } from './exit-consensus.service';
 
 describe('arguesExitFor (#1020)', () => {
   describe('directional — unchanged, and it must STAY unchanged', () => {
@@ -78,5 +78,70 @@ describe('arguesExitFor (#1020)', () => {
       // position-time-stop.service.ts / closeReason 'system:time-stop' — 46 rows measured.
       expect(arguesExitFor('buy', 'neutral', 80, undefined)).toEqual({ arguesExit: false, via: null });
     });
+  });
+});
+
+/**
+ * #1033 REGRESSION — the broker read must call a method `Mt5Adapter` ACTUALLY HAS.
+ *
+ * ⚠️ WHAT WENT WRONG. #1033 changed `assessAll()`'s read from `this.mt5.getPositions()` to
+ * `(this.mt5 as any).getAllPositions()`. `getAllPositions()` exists on `Mt5ConnectionManager` and
+ * `Mt5TradingService`, but NOT on `Mt5Adapter` — which is what `this.mt5` is. The call threw
+ * `this.mt5.getAllPositions is not a function`, the `catch` swallowed it and returned `[]`, and
+ * the Exit Signals page rendered "No open positions to evaluate." while **11 MT5 positions were
+ * live** (measured 2026-10-01; the swallow is visible in `nest/logs/console-build-api.log`).
+ *
+ * The `as any` cast is what made it invisible: it silenced the compiler that would have named the
+ * missing method. An empty book and a swallowed TypeError rendered identically — this repo's most
+ * expensive failure signature, "plausible output, no error".
+ *
+ * ⚠️ THE GUARD. The mock below defines ONLY what `Mt5Adapter` actually provides. If the service
+ * ever reaches for a method the adapter does not have, the call throws inside `assessAll()`, the
+ * empty array comes back, and the first test fails. The second test proves that empty path is
+ * REACHABLE — so the first cannot pass for the wrong reason.
+ */
+describe('ExitConsensusService.assessAll — the broker read (#1033 regression)', () => {
+  /** One open position in the shape `Mt5Adapter.getPositions()` returns. */
+  const livePosition = {
+    ticker: 'XAUUSD',
+    symbol: 'XAUUSD',
+    side: 'buy',
+    avgCost: 4184.04,
+    currentPrice: 4167.86,
+    sl: 4100,
+    openedAt: new Date(Date.now() - 3_600_000).toISOString(),
+    brokerTicket: '123456',
+    brokerId: 2,
+  };
+
+  function build(mt5: any): ExitConsensusService {
+    const prisma = {
+      symbol: { findFirst: jest.fn(async () => ({ id: 'sym-xauusd' })) },
+      tradingStrategy: { findMany: jest.fn(async () => []) },
+    } as any;
+    // No bars, no directives, no score history — enough to reach the assessment, not to judge it.
+    const marketData = { getBars: jest.fn(async () => []) } as any;
+    const directives = { get: jest.fn(() => null) } as any;
+    const protocolGating = {} as any;
+    const scoreHistory = { getHistoryByTicker: jest.fn(async () => []) } as any;
+    return new ExitConsensusService(prisma, mt5, marketData, directives, protocolGating, scoreHistory);
+  }
+
+  it('returns ONE assessment per open position — the read must not come back empty', async () => {
+    const mt5 = { getPositions: jest.fn(async () => [livePosition]) };
+    const out = await build(mt5).assessAll();
+    expect(mt5.getPositions).toHaveBeenCalledTimes(1);
+    expect(out).toHaveLength(1);
+    expect(out[0].symbol).toBe('XAUUSD');
+    expect(out[0].ticket).toBe('123456');
+  });
+
+  it('CANARY: a read that THROWS still returns [] — the empty path #1033 shipped must stay reachable', async () => {
+    const mt5 = {
+      getPositions: jest.fn(async () => {
+        throw new TypeError('this.mt5.getAllPositions is not a function');
+      }),
+    };
+    await expect(build(mt5).assessAll()).resolves.toEqual([]);
   });
 });
