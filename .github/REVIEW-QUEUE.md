@@ -63,6 +63,10 @@ New rows appear when there is **something to look at or a genuine fork**, not be
 
 | **R21** | ✅ **NEW REGISTER (2026-09-24)** — you chose a dedicated register over a second section in this queue. **Built:** `src/data/design-observations.js` → `/development/design-observations`, in Development → Decisions beside the Theory Registry. ⚠️ The field that makes it a register rather than a gripe log is **`reconsiderIf`** — the condition that should re-open the design — **required on every row**, the way a theory requires a falsification test. Seeded with **4** observations from this session. Reasoning in **#990**; the R20 fork is still open above. |
 
+| **R32** | ⚖️ **DECIDED WITHOUT YOU (2026-10-01) — fix the writer, do NOT delete the rows.** 205 daily bars repeat the bar before them; **166 are MT5 Friday** bars across **29** symbols, so it is a writer defect, not a market one. Deleting the rows would let the import recreate them, so the fix belongs in the writer. **Filed as #1049**; the detector already reports it. ⚠️ **Reversal is one line:** deleting the rows instead is a data decision and yours to make — say so and I will stop treating the writer as the fix. |
+| **R33** | ⚖️ **DECIDED WITHOUT YOU (2026-10-01) — `protocol.active` is USER STATE and must NOT be seeded.** `PATCH …/gated/protocols/:id/toggle` writes it, so seeding it would make the seeder **overwrite your toggle on every re-seed**. Recorded as **register row 52** + a `DECISION` marker at the seeder. ⚠️ **Reversal:** add `active` to the seed's `create`/`update` payload — the marker's `REVERSE BY:` line names exactly where. |
+| **R34** | ⚖️ **DECIDED WITHOUT YOU (2026-10-01) — the `audit-data-health` failure is NOT a new defect; it is #999's consequence.** Gold `1h`/`4h` top out at **0.88%** of a **910**-point denominator against **8–9%** bars — structural, identical over 7 and 30 days. Evidence posted **on #999** rather than filing a competing issue. ⚠️ **Reversal:** if you want it tracked separately, say so and I will split it out. |
+
 ## 📚 Archived
 
 - `archive/REVIEW-QUEUE-2026-09-23-batch1.md` — R1–R11 as first written. Kept because the batch's

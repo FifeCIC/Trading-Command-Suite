@@ -840,8 +840,28 @@ export class ProtocolDbService implements OnModuleInit {
    *
    * Epic #510 Phase 4 — DB-Driven Architecture.
    */
-  async seedProtocolsToDatabase(): Promise<{ seeded: number; groups: number; entries: number }> {
-    let protocols = 0, groups = 0, entries = 0;
+  async seedProtocolsToDatabase(): Promise<{ seeded: number; groups: number; entries: number }> {      // ── DECISION (2026-10-01, Copilot; owner unavailable, autonomous) ──
+      // WHAT:      `active` is DELIBERATELY NOT SEEDED. This upsert writes name, description,
+      //            directionMode, tradingStyle, recommendedTimeframe, avgHoldTime, winRateTarget,
+      //            idealFor and derivedFrom — and nothing else.
+      // WHY:       `protocol.active` is USER STATE, not configuration. It is owned by
+      //            `PATCH /api/scoring/gated/protocols/:id/toggle` (protocol-gating.controller.ts),
+      //            which writes the DB. Seeding it would make this seeder authoritative over a
+      //            user's toggle and REVERT their choice on every re-seed and every reinstall.
+      //            The database is the durable owner of state; the seed is the durable owner of
+      //            configuration. Conflating them is how a user's setting silently disappears.
+      // INSTEAD OF: Adding `active` to the seed payload so `active` becomes reconstructible.
+      //            That was considered and declined — it buys reproducibility at the cost of
+      //            discarding the user's decision, which is the wrong trade here.
+      // REVERSE BY: Adding `active` to the config type and to both the `create` and `update`
+      //            blocks, converging ONLY where declared (see the #833 rule: fields the seed
+      //            omits are left alone on purpose). Then every protocol that declares it becomes
+      //            seed-owned and a re-seed will overwrite a toggle.
+      // REGISTER:  docs/SETTLED-DECISIONS.md — "protocol.active is user state, not config"
+      // GUARD:     none. Nothing fails if a future edit adds `active` here. Stated rather than
+      //            implied: this decision is 🔴 UNGUARDED.
+
+      let protocols = 0, groups = 0, entries = 0;
     for (const [slug, config] of Object.entries(PROTOCOL_SEED_DATA)) {
       try {
         const proto = await (this.prisma as any).protocol.upsert({

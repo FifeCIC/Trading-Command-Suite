@@ -5470,7 +5470,16 @@ const QA_CHECKLIST = [
         system: 'Architecture-surface agreement',
         name: 'the two architecture surfaces cannot diverge unnoticed (2026-09-30)',
         procedure: 'npm run validate:architecture-docs (expect exit 0), then remove one section name from ARCHITECTURE_INDEX in architecture-reference.js and re-run.',
-        expected: 'Green at rest. After the removal it names the missing section and exits 1. INV-ARCH-DOCS-1 and -2 are both enforced. Not in prebuild - on demand only.',
+        // ⚠️ The two check IDs this entry originally named were REMOVED 2026-10-01 (#1050), not
+        // because the checks are gone — they run and pass — but because `validate-architecture-docs.cjs`
+        // mints `INV-` IDs that were never registered in `meta-stack-contracts.instructions.md`. The
+        // four-page mirror greps every `INV-` token in this file and failed `prebuild` with
+        // `[stale-qa-mirror]`, which blocked EVERY agent's build. Naming an unregistered invariant here
+        // asserts a contract that the single-owner register does not contain.
+        // To put the IDs back: add BOTH to the contracts-doc register AND give each its own entry here
+        // with a structured `invariant: 'INV-…'` field — a prose mention is not enough (the mirror wants
+        // the field). See #1050.
+        expected: 'Green at rest. After the removal it names the missing section and exits 1. Both checks are enforced. Not in prebuild - on demand only.',
         category: 'Integration',
         priority: 'high',
         versionNote: '2026-09-30 - batch #24 (meta-stack-review-and-guards)',
