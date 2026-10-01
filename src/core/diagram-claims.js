@@ -161,7 +161,12 @@ export const DIAGRAM_CLAIMS = {
       says: '8 Registered (failoverPriority)',
       expect: 8,
       probe: { api: '/api/providers/health', count: true },
-      note: 'Live: 10 registrations in providers.module.ts. NOTE GET /api/providers/rate-limits returns {"adapters":[]} — the rate-limit surface the diagram describes is EMPTY, so nothing in the page or the API shows the tracker state this diagram draws.',
+      // ⚠️ UPDATED 2026-10-01 (#940) — this note used to say rate-limits returned
+      // `{"adapters":[]}`. That was TRUE and is now FALSE: getAllRateLimits() reads the
+      // RateLimitGovernor (#744) and the route returns 10 entries plus a `registered` list.
+      // The remaining divergence is the diagram's own "(8)" against live 10 — that is the
+      // Diagrams page mis-statement tracked by #938, not an empty API surface.
+      note: 'Live: 10 registrations in providers.module.ts. GET /api/providers/rate-limits now returns real per-provider state plus a `registered` list (#940) — the rate-limit surface this diagram describes is readable. The diagram still SAYS 8; the two it omits are capital.com and interactive-brokers.',
     },
   ],
   'signal-state-machine': [
