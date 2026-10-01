@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 165,
+  "count": 168,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -309,6 +309,16 @@
       "category": "tool",
       "purpose": "prove the #986 guards can FAIL. (#986)",
       "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "canary-bridge-recovery-bounds.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Canary for validate-bridge-recovery-bounds.cjs.",
+      "selfTest": false,
       "reaches": [
         "npm"
       ]
@@ -980,6 +990,16 @@
       ]
     },
     {
+      "name": "validate-bridge-recovery-bounds.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "#1000's two invariants, as a build-time guard.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "validate-broker-symbol-pinned.cjs",
       "where": "nest",
       "category": "validator",
@@ -1195,6 +1215,17 @@
       "category": "validator",
       "purpose": "seed-data direction-contract validation (#620).",
       "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-protocol-slugs.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a protocol SEED KEY must be a slug, never a UUID.",
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"

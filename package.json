@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.106.0",
+  "version": "0.107.0",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -56,7 +56,11 @@
     "validate:decisions": "node ./scripts/validate-decisions.cjs",
     "test:decisions": "node ./scripts/validate-decisions.cjs --self-test",
     "validate:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs",
-    "test:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs --self-test"
+    "test:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs --self-test",
+    "validate:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs",
+    "test:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs --self-test",
+    "canary:bridge-bounds": "node scripts/canary-bridge-recovery-bounds.cjs",
+    "canary:bridge-5002": "pwsh -File scripts/mt5-bridge/canary-5002-bounded-connect.ps1"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",
