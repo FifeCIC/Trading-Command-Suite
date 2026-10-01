@@ -149,8 +149,15 @@ function ContentCard({ title, children }) {
  *
  * SEE ALSO: Route table at line ~1050, renderMainContent at line ~484,
  *           VIEW_COMPONENTS at core/view-routes.jsx.
+ *
+ * ⚠️ `directContent` / `directArea` / `directView` (#1047) — the four LITERAL-route pages
+ * (`src/core/direct-pages.jsx`) used to be mounted as BARE ELEMENTS outside this component, so they
+ * got no sidebar, no breadcrumb and — because `useThemeRuntime()` runs in here — no theme pack.
+ * They now render as the shell's content with the area/view stated, so the chrome and the theme
+ * apply. The BUNDLE reason they were split out is untouched: the component is still referenced only
+ * when the edition module exports it, so the free build still ships no premium page code.
  */
-function AppShell() {
+function AppShell({ directContent = null, directArea = null, directView = null }) {
   const { area, view, symbolId, ticker, strategyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -167,7 +174,7 @@ function AppShell() {
   const symbolArea = location.pathname.startsWith('/research/symbol/') ? 'research'
     : location.pathname.startsWith('/trading/symbol/') ? 'trading'
     : 'trading';
-  const primaryArea = isStrategyRoute ? 'trading' : (isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading'))));
+  const primaryArea = directArea ?? (isStrategyRoute ? 'trading' : (isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')))));
   // defaultView: the first REAL view for the current area.
   //
   // ⚠️ NOT `areaViews[0]`. A `kind: 'section-header'` entry is a LABEL with an `id` (used as a
@@ -509,6 +516,12 @@ function AppShell() {
     // the thing the free edition must not contain, so the guard moved to where "no page" is
     // decided. Deliberate consequence: in the free build a typo'd URL and a premium URL read the
     // same, because telling them apart is exactly what the removed list was for.
+
+    // ── DIRECT-ROUTE PAGES (#1047) — render inside the chrome, not beside it ──
+    // The element is passed in from the route so the edition swap keeps working: in the free build
+    // `direct-pages.free.jsx` exports `null`, the route is not declared at all, and this branch is
+    // never reached. Nothing premium is referenced from here.
+    if (directContent) return directContent;
 
     // ── Component map lookup (handles ~90 simple views) ──
     const Component = VIEW_COMPONENTS[secondaryView];
@@ -1089,11 +1102,15 @@ export default function App() {
               than left to `/:area/:view`, which matches two segments and would not reach it. */}
           <Route path="/trading/strategy/:strategyId" element={<AppShell />} />
           <Route path="/symbol/:ticker" element={<SymbolRedirect />} />
-          {/* Direct-route pages — guarded by `null` in the free build (src/core/direct-pages.jsx). */}
-          {DataManagementPage && <Route path="/settings/data-management" element={<DataManagementPage />} />}
-          {TopMoversPage && <Route path="/lab/top-movers" element={<TopMoversPage />} />}
-          {SystemHealthPage && <Route path="/settings/health-check" element={<SystemHealthPage />} />}
-          {PlatformComparisonsPage && <Route path="/lab/platform-comparisons" element={<PlatformComparisonsPage />} />}
+          {/* Direct-route pages — guarded by `null` in the free build (src/core/direct-pages.jsx).
+              ⚠️ #1047 — rendered AS THE SHELL'S CONTENT, not as bare elements: mounted outside
+              `AppShell` they had no menu, no sidebar and no theme pack, because `useThemeRuntime()`
+              runs inside the shell. `directArea`/`directView` give the sidebar and breadcrumb the
+              right context; the `&&` guards are what keep the free bundle free of premium code. */}
+          {DataManagementPage && <Route path="/settings/data-management" element={<AppShell directArea="settings" directView="data-management" directContent={<DataManagementPage />} />} />}
+          {TopMoversPage && <Route path="/lab/top-movers" element={<AppShell directArea="lab" directView="top-movers" directContent={<TopMoversPage />} />} />}
+          {SystemHealthPage && <Route path="/settings/health-check" element={<AppShell directArea="settings" directView="health-check" directContent={<SystemHealthPage />} />} />}
+          {PlatformComparisonsPage && <Route path="/lab/platform-comparisons" element={<AppShell directArea="lab" directView="platform-comparisons" directContent={<PlatformComparisonsPage />} />} />}
           {/* ⚠️ §9.14 — every redirect in this block lands on a PREMIUM view, so the free build
               omits the route entirely. Two things are avoided by omitting rather than retargeting:
               the premium path would otherwise ship as a string literal in the free bundle, and a

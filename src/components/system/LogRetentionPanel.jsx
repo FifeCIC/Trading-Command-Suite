@@ -161,6 +161,10 @@ export default function LogRetentionPanel() {
   const pruneEnabled = report?.pruneEnabled;
   const previewCount = preview?.wouldRemove?.length ?? 0;
   const previewNames = (preview?.wouldRemove || []).map((f) => f.name);
+  // The server lists `kept` OLDEST FIRST, so the head is the oldest held file and its `reason`
+  // already carries the age and the window (e.g. "21d old, inside the 30d window"). Read from the
+  // report rather than recomputing an age here — a second derivation is one that can disagree.
+  const oldestKeptReason = report?.kept?.[0]?.reason ?? null;
 
   const previewNotice = preview
     ? (previewCount === 0
@@ -280,14 +284,34 @@ export default function LogRetentionPanel() {
             ? 'Pruning…'
             : previewCount > 0
               ? `Move ${previewCount} file(s) to archive · ${formatBytes(preview.bytesFreed)}`
-              : 'Prune — preview first'}
+              : preview
+                ? 'Nothing to remove'
+                : 'Prune — preview first'}
         </button>
-        {previewCount > 0 && (
+        {/* ⚠️ THREE STATES, NOT TWO (#1047). "Not run yet", "ran and found nothing" and "ran and
+            found work" are three different claims, and collapsing the first two is what made a
+            correctly-working prune read as a BROKEN BUTTON: the label said "Prune — preview first"
+            both before a preview and after one that found nothing, so pressing it appeared to do
+            nothing at all. "An empty list and a failed query must never render the same." */}
+        {preview && previewCount > 0 && (
           <span className="lrp-note">
             Moves them to <code>archive/</code> — nothing is deleted until the next run, so this is recoverable.
           </span>
         )}
-        {previewCount === 0 && <span className="lrp-note">Preview to enable. The button names what it will move.</span>}
+        {preview && previewCount === 0 && (
+          <span className="lrp-note lrp-ok">
+            ✅ Nothing to prune — no file is older than the {windowDays}-day window.
+            {report?.totalFiles ? ` ${report.totalFiles} file(s) held, ${formatBytes(report.totalBytes)} in total.` : ''}
+            {oldestKeptReason ? ` Oldest: ${oldestKeptReason}.` : ''}
+            {' '}A prune would also show no immediate change even when it removes something — it MOVES files to{' '}
+            <code>archive/</code> and deletes them on the next run.
+          </span>
+        )}
+        {!preview && (
+          <span className="lrp-note">
+            Preview first. The button names what it will move — and says so plainly when there is nothing.
+          </span>
+        )}
       </div>
 
       <div className="lrp-table-wrap">
