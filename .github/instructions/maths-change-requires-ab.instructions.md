@@ -61,20 +61,41 @@ A rule that over-fires gets ignored. Narrow beats broad.
 
 ---
 
-## ⚠️ Precondition — the A/B runner cannot place orders yet (#929)
+## ⚠️ Precondition — the runner WORKS; the constraint is now CAPACITY (#929)
 
-`dispatchSideTrade()` reads `metastack_snapshot.mode`, which holds `"score"` (the scoring *style*),
-and compares it against trading modes `'auto'|'manual'|'semi-auto'`. Every stack therefore evaluates
-as "not auto" and takes the intent-only branch — **no order is placed.**
+> **⚠️ CORRECTED 2026-10-01 — this section was STALE and it propagated a false blocker.**
+>
+> It said `dispatchSideTrade()` reads `metastack_snapshot.mode` (a scoring *style*) where it expects
+> a trading mode, so "no order is placed". **That defect was fixed on 2026-09-23**:
+> `resolveTradeAuthority()` resolves the mode from the **bot** (`trading_strategy.mode`, which really
+> is `'auto' | 'manual'`), and `ab-trade-authority.spec.ts` locks it with a canary procedure.
+>
+> **The stale claim was acted on.** It was read, believed, and written into
+> `docs/SETTLED-DECISIONS.md` row 54 and a `DECISION` marker as the reason the exit chain stays
+> advisory — **without re-measuring**. That is the exact failure this file warns about two sections
+> up: *"a stale comment is not neutral: it reads as a measurement, and it costs whoever believes it."*
+> A rule that cites a blocker must **re-measure that blocker**, not inherit it.
 
-Measured 2026-09-22: A/B test "XAU M15 group vs maxscore weighting" ran from 12:19:37. **10 rows
-reported `EXECUTED` with `brokerTicket: NULL`**, each carrying the reconciler comment *"no broker
-counterpart (stranded row)"*, in 5 identical pairs.
+**Measured 2026-10-01**, after the stale claim was caught:
 
-**So steps 1–3 are executable today; step 4 (monitoring) is not, until #929 is settled.**
+| Fact | Value |
+|---|---|
+| `ab_test` rows | **2** (1 cancelled, 1 complete) — the issue said zero |
+| trades tagged `abTestId` | **122** — the issue said zero |
+| snapshots with 2+ distinct versions | **1** (`ss-1785454844642`: 1.0.0 / 1.0.1 / 1.0.2) — a valid control/variant pair exists |
+| `MAX_AB_SYMBOLS` | **4** |
+| concurrent active tests | **1** |
 
-⚠️ **Do not respond to this by editing the runner's maths to make it fire.** That is a maths change
-without an A/B — the exact thing the rule forbids.
+**So steps 1–4 are all executable today. What is missing is throughput:** 4 symbols and one active
+test at a time, across 27 bots, means a controlled comparison takes **weeks** to reach a sample worth
+reading. That is the real constraint on the rule below — not a broken runner.
+
+**Consequence for this rule, stated plainly:** the rule still stands, but its cost is now *time*
+rather than *impossibility*. Do not describe it as "blocked"; describe it as "needs a window", and
+say how long the window is.
+
+⚠️ **Do not respond to this by editing the runner's maths to make it fire faster.** That is a maths
+change without an A/B — the exact thing the rule forbids.
 
 ---
 
