@@ -227,6 +227,21 @@ export interface ExitAssessment {
   asOf: string;
 }
 
+export interface ExitAssessmentResult {
+  assessments: ExitAssessment[];
+  /**
+   * `false` when the broker read FAILED. Distinct from a read that succeeded and found nothing.
+   *
+   * ⚠️ A caller that renders `[]` without checking this reintroduces the 2026-10-01 silent-empty:
+   * eleven live positions rendered as "No open positions to evaluate."
+   */
+  readOk: boolean;
+  /** Why the read failed, or `null`. */
+  readError: string | null;
+  /** How many positions the broker returned. `0` is information; `null` is the absence of it. */
+  positionsRead: number | null;
+}
+
 @Injectable()
 export class ExitConsensusService {
   private readonly logger = new Logger(ExitConsensusService.name);
@@ -247,6 +262,25 @@ export class ExitConsensusService {
    * concern and are deliberately excluded (owner direction, 2026-09-28).
    */
   async assessAll(): Promise<ExitAssessment[]> {
+    return (await this.assessAllWithStatus()).assessments;
+  }
+
+  /**
+   * assessAllWithStatus() — the same assessment, WITH the read outcome (#1044 class).
+   *
+   * ⚠️ WHY THIS EXISTS. `assessAll()` returns `[]` on a FAILED broker read AND on a broker read
+   * that legitimately found nothing. Two different facts, one value — so a caller cannot tell
+   * "nothing is open" from "we could not look", and the honest rendering of the second is not an
+   * empty list.
+   *
+   * Measured 2026-10-01: `getPositions()` threw (`... is not a function`), the catch swallowed it,
+   * `assessAll()` returned `[]`, and the page printed **"No open positions to evaluate."** while
+   * **11 MT5 positions were live**. The bug was fixed; the SHAPE that made it silent was not.
+   *
+   * ⚠️ The empty-but-successful case stays distinguishable too: `positionsRead` is the count the
+   * broker actually returned, so `0` is information and `null` is the absence of information.
+   */
+  async assessAllWithStatus(): Promise<ExitAssessmentResult> {
     // Bars are fetched once per (symbol, timeframe) per call. Reset so a repeated call never
     // reports a decision made on stale bars.
     this.barCache.clear();
@@ -275,10 +309,15 @@ export class ExitConsensusService {
       // wrong account.
       positions = await this.mt5.getPositions();
     } catch (err) {
+      // ⚠️ A FAILED READ IS NOT AN EMPTY BOOK. The status travels with the result so a caller
+      // cannot render the two the same — that is the defect this method exists to close.
       this.logger.warn(`Could not read broker positions: ${(err as Error).message}`);
-      return [];
+      return { assessments: [], readOk: false, readError: (err as Error).message, positionsRead: null };
     }
-    if (!Array.isArray(positions) || positions.length === 0) return [];
+    if (!Array.isArray(positions) || positions.length === 0) {
+      // Read SUCCEEDED and found nothing. `positionsRead: 0` is information, not a failure.
+      return { assessments: [], readOk: true, readError: null, positionsRead: 0 };
+    }
 
     const bots = await this.loadBotMap();
 
@@ -292,7 +331,12 @@ export class ExitConsensusService {
     }
     // Most give-back first — the position handing back the most profit is the one to look at.
     // ⚠️ `null` (unknown peak) sorts LAST, never as 0: an unmeasured give-back is not a small one.
-    return out.sort((a, b) => (b.giveBackPct ?? -1) - (a.giveBackPct ?? -1));
+    return {
+      assessments: out.sort((a, b) => (b.giveBackPct ?? -1) - (a.giveBackPct ?? -1)),
+      readOk: true,
+      readError: null,
+      positionsRead: positions.length,
+    };
   }
 
   /** Active bots by symbol, for the declared stop distance and the bot's name. */

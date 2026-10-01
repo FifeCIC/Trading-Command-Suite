@@ -541,6 +541,13 @@ export default function ViewStrategyPage() {
   // ⚠️ `poolTotal` is the denominator. Without it an empty list cannot be told apart from a failed
   // broker read — `assessAll()` returns [] for both, and a blank panel reads as "nothing open".
   const exitPoolTotal = exitChainQuery.data?.poolTotal ?? null;
+  // ⚠️ #1044-class defect — `poolTotal` alone is NOT enough. Measured 2026-10-01: `getPositions()`
+  // threw (`... is not a function`), the catch swallowed it and `assessAll()` returned `[]`, so
+  // BOTH count and poolTotal were 0 and the page said "No open positions" while **11 positions
+  // were live**. A thrown error yields a real status; a SWALLOWED one does not. `readOk` is that
+  // status, and `false` must render as a failure, never as an empty book.
+  const exitReadOk = exitChainQuery.data?.readOk ?? null;
+  const exitReadError = exitChainQuery.data?.readError ?? null;
 
   // ── The exit-management layer, split into its two halves ──────────────────────────────────
   // The DECLARATIONS (what the mechanism is) and the LIVE STATE (what it is doing) arrive in one
@@ -1118,6 +1125,17 @@ export default function ViewStrategyPage() {
             </div>
           ) : !botName ? (
             <p className={styles.sectionNote}>Reading this bot…</p>
+          ) : exitReadOk === false ? (
+            // ⚠️ This branch is the whole point of `readOk`. Without it this case fell through to
+            // the `poolTotal === 0` branch below and rendered as "no open positions anywhere" —
+            // a claim about the account, made when we could not see the account.
+            <div className={styles.errorBox}>
+              <strong>The broker read FAILED — this is not &quot;nothing is open&quot;.</strong>
+              <p className={styles.summaryText}>
+                {exitReadError || 'The exit assessment could not read broker positions.'} Any open
+                positions are still open and unassessed. Reload once the bridge is reachable.
+              </p>
+            </div>
           ) : exitPoolTotal === 0 ? (
             <p className={styles.sectionNote}>
               No open broker positions exist on <strong>any</strong> bot, so there is nothing for the

@@ -44,7 +44,11 @@ export class ExitConsensusController {
 
   @Get()
   async get(@Query('bot') bot?: string) {
-    const all = await this.exitConsensus.assessAll();
+    // ⚠️ Uses the STATUS-carrying variant. `assessAll()` returns `[]` for a FAILED broker read and
+    // for an empty book alike, so a caller cannot tell "nothing is open" from "we could not look"
+    // — and on 2026-10-01 that rendered 11 live positions as "No open positions to evaluate."
+    const result = await this.exitConsensus.assessAllWithStatus();
+    const all = result.assessments;
     // ⚠️ #1051 criterion 7 — filtered by BOT NAME, because the bot detail view asks "what would
     // close THIS bot's positions", and pulling every open position onto one bot's page both
     // over-fetches and invites the reader to attribute another bot's verdict to this one.
@@ -55,12 +59,19 @@ export class ExitConsensusController {
       bot: bot ?? null,
       count: assessments.length,
       /**
-       * ⚠️ THE DENOMINATOR. Without it `count: 0` cannot be told apart from a failed broker read,
-       * and `assessAll()` returns `[]` for BOTH. A bot page showing "no open positions" when the
-       * bridge was unreachable is this repo's most-repeated defect; `poolTotal` makes the two
-       * distinguishable without a fake success flag.
+       * ⚠️ THE DENOMINATOR, plus the READ OUTCOME beside it. Without these `count: 0` cannot be
+       * told apart from a failed broker read, and `assessAll` returns `[]` for BOTH. A bot page
+       * showing "no open positions" when the bridge was unreachable is this repo's most-repeated
+       * defect; `readOk` and `positionsRead` make the three cases distinguishable without a fake
+       * success flag.
        */
       poolTotal: all.length,
+      /** `false` = the broker read FAILED. Render that, never an empty list. */
+      readOk: result.readOk,
+      /** Why it failed, or `null`. */
+      readError: result.readError,
+      /** Positions the broker reported. `0` = read OK and nothing open; `null` = could not read. */
+      positionsRead: result.positionsRead,
       /**
        * ⚠️ An empty array is INFORMATION (this bot holds nothing open), and must never be rendered
        * the same as a failed read. `ExitConsensusService.assessAll()` returns [] on a broker-read
