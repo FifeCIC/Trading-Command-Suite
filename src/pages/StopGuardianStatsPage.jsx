@@ -83,6 +83,22 @@ export default function StopGuardianStatsPage() {
     // THROUGH the notice registry. Swallowing it into `{ok:false}` would hide which failure it was.
     queryFn: () => apiGet(`/api/trading/stop-guardian-stats${qs ? `?${qs}` : ''}`),
     staleTime: 30_000,
+    /**
+     * ⚠️ SELF-HEAL — added 2026-10-01 after an owner report of `TCS-SYS-007` on this page.
+     *
+     * ⚠️ THE CAUSE WAS NOT ISOLATED, and this is a SYMPTOM fix, deliberately. Measured: the
+     * endpoint answers `200` in ~200 ms (unfiltered, by symbol, and by date range), and a re-load
+     * renders the page — the transport code means NO response arrived, not a bad one, and the only
+     * signature found was the API restarted underneath an already-open page. `development-philosophy`
+     * prefers a symptom guard over a cause guard when the cause is not understood, and this is
+     * correct whatever the cause was: a 30s loop clears any transient transport failure by itself.
+     *
+     * The defect is concrete regardless of cause. `staleTime` does not re-run a FAILED query, so a
+     * single failed fetch left the page frozen on "Action failed" until a manual browser reload —
+     * there was no refetch loop and no retry control. `ABTestingPage` added the same 30s loop for
+     * the same reason: a page that cannot clear its own error reads as a broken page.
+     */
+    refetchInterval: 30_000,
   });
 
   const data = statsQuery.data;
@@ -116,6 +132,19 @@ export default function StopGuardianStatsPage() {
             This is a FAILED READ, not an empty history — the guardian may have adjusted stops that
             cannot be shown here. Retry, and if it persists check the API and the database.
           </p>
+          {/*
+            ⚠️ THE COPY SAID "Retry" BUT OFFERED NO WAY TO DO IT (2026-10-01). The only recoveries
+            were a manual browser reload or changing a filter — neither is what "Retry" means, and
+            the second is not even discoverable. This is the affordance the page already promised.
+          */}
+          <button
+            type="button"
+            className="sg-retry"
+            onClick={() => statsQuery.refetch()}
+            disabled={statsQuery.isFetching}
+          >
+            {statsQuery.isFetching ? 'Retrying…' : 'Retry'}
+          </button>
         </div>
       </div>
     );

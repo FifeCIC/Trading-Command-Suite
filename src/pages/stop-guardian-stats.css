@@ -286,6 +286,35 @@
   line-height: 1.5;
 }
 
+/* The failure state's Retry control — the affordance the copy already described (2026-10-01).
+   Theme tokens only, and a visible focus ring: the page is keyboard-navigable throughout and a
+   control that cannot be reached by keyboard is not a retry control. */
+.sg-retry {
+  margin-top: 0.85rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.45rem 1rem;
+  min-height: 2.25rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.sg-retry:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.sg-retry:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.sg-retry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sg-page * {
     transition: none !important;
