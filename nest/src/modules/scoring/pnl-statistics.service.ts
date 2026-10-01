@@ -35,6 +35,11 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// #1044 — the ONE classifier for "is this closed trade a result". A `pnlInvalid`-only filter
+// misses every closed row with no exit price that was never flagged (21 measured 2026-10-01),
+// and those carry a placeholder `pnl = 0` that gets averaged in as a break-even trade. Do not
+// re-inline this test: the whole defect was two consumers answering differently.
+import { classifyPnlRow } from '../../common/trading/pnl-population';
 
 export type PnlReliability = 'noise' | 'weak' | 'moderate' | 'strong';
 
@@ -76,6 +81,19 @@ export interface PnlReport {
      * Reported so a reader can always see WHICH population a number came from.
      */
     excludedInvalid: number;
+    /**
+     * Rows EXCLUDED because they are closed with NO exit price and were never flagged (#1044).
+     *
+     * ⚠️ These are the SAME physical fault as `pnlInvalid = 1` — a close whose exit price was
+     * never captured — but no flag marks them. Measured 2026-10-01: **21** such rows against 113
+     * flagged ones, and they are the reason two consumers of this table disagreed about its size
+     * (264 rows by a `pnlInvalid`-only filter, 243 by structure) with no error anywhere.
+     *
+     * They were being counted as BREAK-EVEN TRADES because `pnl` is a placeholder 0. Reported
+     * separately rather than merged into `excludedInvalid`, so the two causes stay distinguishable
+     * — one is a human declaration, the other is a defect that nothing has flagged.
+     */
+    excludedExitUnknown: number;
     distinctDays: number;
     firstTrade: string | null;
     lastTrade: string | null;
@@ -117,7 +135,7 @@ export class PnlStatisticsService {
     const empty = (reason: string): PnlReport => ({
       generatedAt: new Date().toISOString(),
       window,
-      sample: { closedTrades: 0, withPnl: 0, excludedInvalid: 0, distinctDays: 0, firstTrade: null, lastTrade: null },
+      sample: { closedTrades: 0, withPnl: 0, excludedInvalid: 0, excludedExitUnknown: 0, distinctDays: 0, firstTrade: null, lastTrade: null },
       populationNote: 'No trades evaluated.',
       overall: null,
       bySide: [],
@@ -136,32 +154,44 @@ export class PnlStatisticsService {
     const where: any = { closedAt: { not: null, gte: since }, pnl: { not: null } };
     if (params.symbol) where.symbol = params.symbol;
 
-    let trades: Array<{ pnl: number | null; side: string; source: string | null; strategy: string | null; symbol: string; closedAt: Date | null; pnlInvalid: number | null }>;
+    let trades: Array<{ pnl: number | null; side: string; source: string | null; strategy: string | null; symbol: string; closedAt: Date | null; pnlInvalid: number | null; exitPrice: number | null }>;
     try {
       trades = await this.prisma.trade.findMany({
         where,
-        select: { pnl: true, side: true, source: true, strategy: true, symbol: true, closedAt: true, pnlInvalid: true },
+        // ⚠️ `exitPrice` is REQUIRED by the classifier and is not a statistic. Omitting it makes
+        // every row read as `exit-unknown` (an absent field is indistinguishable from a null one
+        // in TypeScript with `strictNullChecks: false`), so the exclusion would be silent, total
+        // and wrong — every trade excluded, no error.
+        select: { pnl: true, side: true, source: true, strategy: true, symbol: true, closedAt: true, pnlInvalid: true, exitPrice: true },
       });
     } catch (err) {
       return empty(`Trade query failed: ${(err as Error).message}`);
     }
 
-    // ⚠️ EXCLUDE invalid rows BEFORE any statistic is computed.
+    // ⚠️ EXCLUDE non-results BEFORE any statistic is computed.
     //
-    // This is the single most important line in this file. `pnlInvalid = 1` means the exit
+    // This is the single most important block in this file. `pnlInvalid = 1` means the exit
     // price was never captured, so `pnl` is a placeholder 0 — not a break-even trade. With
     // 82 such rows against 32 real ones, including them states a win rate of 8.77% when the
     // truth is 31.3%, and it deflates `expectancy` for a reason that has nothing to do with
     // the trading logic. A measurement tool that reports a false verdict is worse than no
     // tool, because the verdict is trusted. (#805)
-    const invalidRows = trades.filter((t) => Number(t.pnlInvalid) === 1);
-    const validTrades = trades.filter((t) => Number(t.pnlInvalid) !== 1);
+    //
+    // ⚠️ #1044 — THE FLAG ALONE IS NOT ENOUGH. `pnlInvalid` misses every closed row whose exit
+    // price is absent WITHOUT a flag: measured 2026-10-01, **21** of them, all carrying a
+    // placeholder `pnl = 0` that was being averaged in as a break-even. The classification now
+    // lives in ONE pure module (`common/trading/pnl-population.ts`) so this service, the
+    // endpoint that already split the three states, and the audit scripts cannot drift apart.
+    const invalidRows = trades.filter((t) => classifyPnlRow(t) === 'quarantined');
+    const exitUnknownRows = trades.filter((t) => classifyPnlRow(t) === 'exit-unknown');
+    const validTrades = trades.filter((t) => classifyPnlRow(t) === 'realised');
 
     const rows = validTrades.filter((t): t is typeof t & { pnl: number } => t.pnl !== null && Number.isFinite(t.pnl));
     if (rows.length === 0) {
       return empty(
         `No closed trades with usable PnL in the last ${days} day(s). ` +
-        `${invalidRows.length} row(s) were excluded as pnlInvalid.`,
+        `${invalidRows.length} row(s) were excluded as pnlInvalid, ` +
+        `${exitUnknownRows.length} as exit-unknown (no exit price, not flagged).`,
       );
     }
 
@@ -177,14 +207,25 @@ export class PnlStatisticsService {
         closedTrades: trades.length,
         withPnl: rows.length,
         excludedInvalid: invalidRows.length,
+        excludedExitUnknown: exitUnknownRows.length,
         distinctDays,
         firstTrade: sortedDates[0] ?? null,
         lastTrade: sortedDates[sortedDates.length - 1] ?? null,
       },
-      populationNote: invalidRows.length > 0
-        ? `${rows.length} valid trade(s) used. ${invalidRows.length} row(s) EXCLUDED as pnlInvalid ` +
-          `(exit price never captured — not losses). Any win rate or expectancy below is over the valid set only.`
-        : `${rows.length} valid trade(s) used. No invalid rows in this window.`,
+      populationNote: (() => {
+        const parts = [`${rows.length} valid trade(s) used.`];
+        if (invalidRows.length > 0) {
+          parts.push(`${invalidRows.length} row(s) EXCLUDED as pnlInvalid (exit price never captured — not losses).`);
+        }
+        if (exitUnknownRows.length > 0) {
+          parts.push(
+            `${exitUnknownRows.length} row(s) EXCLUDED as exit-unknown — closed with no exit price and NOT flagged ` +
+            '(#1044). These carry a placeholder `pnl = 0` and were previously averaged in as break-even trades.',
+          );
+        }
+        parts.push('Any win rate or expectancy below is over the valid set only.');
+        return parts.join(' ');
+      })(),
       overall: bucket('ALL', rows.map((r) => r.pnl)),
       bySide: groupBy(rows, (r) => r.side).map(([label, list]) => bucket(label, list)),
       bySource: groupBy(rows, (r) => r.source ?? '(unspecified)').map(([label, list]) => bucket(label, list)),

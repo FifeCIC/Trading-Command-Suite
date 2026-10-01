@@ -134,9 +134,92 @@ function selfTest() {
   return 0;
 }
 
+/**
+ * classifyPopulations(rows) — #1044. The SAME rule as `nest/src/common/trading/pnl-population.ts`,
+ * kept here in plain JS so this script needs no build.
+ *
+ * ⚠️ A SECOND IMPLEMENTATION IS A COST, so it is deliberately minimal and the TS module is named
+ * as the owner. It exists because the guard must run against the LIVE database with no build step.
+ * If the two ever disagree, the TS module wins and this follows — see the self-test below, which
+ * pins the four states so a divergence fails loudly rather than quietly.
+ *
+ * @param rows [{ id, symbol, closedAt, exitPrice, pnl, pnlInvalid }]
+ */
+function classifyPopulations(rows) {
+  const out = { realised: [], quarantined: [], exitUnknown: [], open: [] };
+  for (const r of rows) {
+    if (r.closedAt === null || r.closedAt === undefined) { out.open.push(r); continue; }
+    if (Number(r.pnlInvalid) === 1) { out.quarantined.push(r); continue; }
+    // ⚠️ The structural half is applied to the VALUE, not used to reject the row: a missing exit
+    // price on a row carrying a real recovered number must NOT discard it (see the TS owner).
+    if ((r.exitPrice === null || r.exitPrice === undefined) && Number(r.pnl ?? 0) === 0) {
+      out.exitUnknown.push(r);
+      continue;
+    }
+    out.realised.push(r);
+  }
+  return out;
+}
+
+/**
+ * The #1044 self-test — proves `classifyPopulations` can fail in BOTH directions.
+ *
+ * Measured 2026-10-01: 113 flagged rows and **21 UNFLAGGED** ones, all with no exit price and a
+ * placeholder `pnl = 0`. The 21 are the defect: a `pnlInvalid`-only filter accepts them, so they
+ * were averaged in as break-even trades and moved the win rate with no error.
+ */
+function selfTestPopulations() {
+  const bad = [];
+  const check = (label, got, want) => {
+    if (String(got) !== String(want)) bad.push(`${label}\n     want: ${want}\n      got: ${got}`);
+  };
+
+  const rows = [
+    { id: 'realised', symbol: 'XAUUSD', closedAt: 'x', exitPrice: 1.16, pnl: 42.5, pnlInvalid: 0 },
+    { id: 'breakeven', symbol: 'XAUUSD', closedAt: 'x', exitPrice: 1.16, pnl: 0, pnlInvalid: 0 },
+    { id: 'flagged', symbol: 'XAUUSD', closedAt: 'x', exitPrice: null, pnl: 0, pnlInvalid: 1 },
+    { id: 'phantom', symbol: 'EURUSD', closedAt: 'x', exitPrice: null, pnl: 0, pnlInvalid: 0 },
+    { id: 'openrow', symbol: 'EURUSD', closedAt: null, exitPrice: null, pnl: 0, pnlInvalid: 0 },
+    // ⚠️ A real recovered number with NO exit price is NOT discarded — the structural fact is
+    // applied to the value. Without this case the rule would silently throw away real P&L.
+    { id: 'recovered', symbol: 'GBPUSD', closedAt: 'x', exitPrice: null, pnl: -234.52, pnlInvalid: 0 },
+  ];
+  const p = classifyPopulations(rows);
+
+  check('1 a priced result is realised', p.realised.length, 3);
+  check('2 a genuine break-even (pnl 0 WITH an exit) is realised, not discarded',
+    p.realised.some((r) => r.id === 'breakeven'), 'true');
+  check('3 a real P&L with NO exit price is REALISED — never discard a number that exists',
+    p.realised.some((r) => r.id === 'recovered'), 'true');
+  check('4 a flagged row is quarantined', p.quarantined.length, 1);
+  check('5 a closed row with NO exit price AND a placeholder zero is exit-unknown — the 21-row gap',
+    p.exitUnknown.length, 1);
+  check('6 …and it is the row we expect, not a coincidence',
+    p.exitUnknown[0] && p.exitUnknown[0].id, 'phantom');
+  check('7 an open row is neither', p.open.length, 1);
+  check('8 the four populations account for every input',
+    p.realised.length + p.quarantined.length + p.exitUnknown.length + p.open.length, rows.length);
+
+  if (bad.length) {
+    console.error(`\n❌ populations self-test: ${bad.length} case(s) FAILED:`);
+    for (const b of bad) console.error(`   ${b}`);
+    return 1;
+  }
+  console.log('✅ populations self-test: 8 cases — an UNFLAGGED phantom is detected, a FLAGGED one');
+  console.log('   is not double-counted, a genuine break-even is not mistaken for one, and a real');
+  console.log('   recovered P&L with no exit price is NOT discarded.');
+  return 0;
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  if (args.includes('--self-test')) process.exit(selfTest());
+  if (args.includes('--self-test')) {
+    // Both halves must pass. A self-test that stops at the first suite hides the second.
+    const a = selfTest();
+    const b = selfTestPopulations();
+    process.exit(a === 0 && b === 0 ? 0 : 1);
+  }
+  const populationsOnly = args.includes('--populations');
 
   const daysIdx = args.indexOf('--days');
   const days = daysIdx >= 0 ? Number(args[daysIdx + 1]) : 3;
@@ -159,7 +242,7 @@ async function main() {
   let rows;
   try {
     rows = await prisma.$queryRawUnsafe(
-      `SELECT id, symbol, pnlInvalid, pnlInvalidReason, closedAt
+      `SELECT id, symbol, pnlInvalid, pnlInvalidReason, closedAt, exitPrice, pnl
          FROM trade WHERE status = 'closed'`,
     );
   } catch (err) {
@@ -178,16 +261,71 @@ async function main() {
     invalid: Number(r.pnlInvalid) === 1,
     reason: r.pnlInvalidReason,
     closedAt: r.closedAt,
+    exitPrice: r.exitPrice,
+    pnl: r.pnl,
+    pnlInvalid: r.pnlInvalid,
   }));
   const result = evaluate(input, cutoffMs);
 
+  // ── #1044 — the population split, and the UNFLAGGED phantom ──────────────────────────────
+  const pops = classifyPopulations(input);
+  const phantomIsRecent = (r) => {
+    const t = r.closedAt instanceof Date ? r.closedAt.getTime() : Date.parse(String(r.closedAt));
+    return Number.isFinite(t) && t >= cutoffMs;
+  };
+  const phantomRecent = pops.exitUnknown.filter(phantomIsRecent);
+  const phantomHistorical = pops.exitUnknown.filter((r) => !phantomIsRecent(r));
+
   if (args.includes('--json')) {
-    console.log(JSON.stringify({ windowDays: days, cutoff: new Date(cutoffMs).toISOString(), ...result }, null, 2));
-    process.exit(result.recent.length > 0 ? 1 : 0);
+    console.log(JSON.stringify({
+      windowDays: days,
+      cutoff: new Date(cutoffMs).toISOString(),
+      ...result,
+      populations: {
+        realised: pops.realised.length,
+        quarantined: pops.quarantined.length,
+        exitUnknown: pops.exitUnknown.length,
+        open: pops.open.length,
+        exitUnknownRecent: phantomRecent.length,
+      },
+    }, null, 2));
+    process.exit(result.recent.length > 0 || phantomRecent.length > 0 ? 1 : 0);
   }
 
   console.log(`\n[pnl-integrity] ${result.closedTotal} closed trade(s); ${result.invalidTotal} carry no computable P&L.`);
   console.log(`[pnl-integrity] window: last ${days} day(s), from ${new Date(cutoffMs).toISOString()}`);
+  console.log('[pnl-integrity] populations (#1044 — the four states a `0` cannot express):');
+  console.log(`   realised      ${String(pops.realised.length).padStart(4)}   a result, including a priced break-even`);
+  console.log(`   quarantined   ${String(pops.quarantined.length).padStart(4)}   flagged pnlInvalid; \`pnl\` is a placeholder`);
+  console.log(`   exit-unknown  ${String(pops.exitUnknown.length).padStart(4)}   closed, no exit price, NOT flagged  <-- the defect`);
+  console.log(`   open          ${String(pops.open.length).padStart(4)}   still open; no result yet`);
+
+  if (phantomHistorical.length > 0) {
+    console.log(`\nℹ️  ${phantomHistorical.length} HISTORICAL unflagged phantom(s) — reported, not fatal. These are`);
+    console.log('   structurally identical to the flagged rows; only the flag is missing. A');
+    console.log('   `pnlInvalid`-only filter books each one as a BREAK-EVEN TRADE.');
+  }
+
+  if (populationsOnly) {
+    console.log(phantomRecent.length === 0
+      ? `\n✅ OK — no UNFLAGGED phantom has been written in the last ${days} day(s).\n`
+      : `\n❌ ${phantomRecent.length} UNFLAGGED phantom(s) closed in the last ${days} day(s).\n`);
+    process.exit(phantomRecent.length === 0 ? 0 : 1);
+  }
+
+  if (phantomRecent.length > 0) {
+    console.error(`\n❌ PHANTOM — ${phantomRecent.length} trade(s) closed in the last ${days} day(s) with NO`);
+    console.error('   exit price and NO `pnlInvalid` flag (#1044). `pnl` holds a placeholder 0, so any');
+    console.error('   consumer filtering on `pnlInvalid` alone books them as break-even trades:\n');
+    for (const r of phantomRecent.slice(0, 20)) {
+      const when = r.closedAt instanceof Date ? r.closedAt.toISOString() : String(r.closedAt);
+      console.error(`   • ${String(r.symbol).padEnd(9)} ${when}  pnl=${r.pnl}`);
+    }
+    if (phantomRecent.length > 20) console.error(`   …and ${phantomRecent.length - 20} more.`);
+    console.error('\n   Fix in the WRITER, not by editing rows: see `position-sync.service.ts`');
+    console.error('   (`reapStrandedOpenTrades`). The rule is `pnl-population.ts`.\n');
+    process.exit(1);
+  }
 
   if (result.historical.length > 0) {
     const byReason = new Map();

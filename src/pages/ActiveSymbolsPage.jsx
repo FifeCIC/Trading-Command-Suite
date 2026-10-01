@@ -141,6 +141,11 @@ export default function ActiveSymbolsPage() {
   // rather than letting the column's numbers imply a complete book.
   const histSample = histPnlQuery.data?.sample ?? null;
   const histExcluded = histSample?.excludedInvalid ?? null;
+  // ⚠️ #1044 — a SECOND exclusion cause, reported separately on purpose. `excludedInvalid` counts
+  // rows a human flagged; these are closed rows with no exit price that NOTHING had flagged, so a
+  // consumer filtering on `pnlInvalid` alone was booking each one as a break-even trade. Merging
+  // the two counts would hide which cause is growing, and that is the only thing worth watching.
+  const histExitUnknown = histSample?.excludedExitUnknown ?? null;
 
   const protocolCountBySymbol = useMemo(() => {
     const map = {};
@@ -600,6 +605,10 @@ export default function ActiveSymbolsPage() {
           `> Current = unrealised on an open position (all providers). Historical = realised from closed trades.`,
           histExcluded != null
             ? `> ⚠️ Historical P/L excludes ${histExcluded} quarantined closed trade(s) whose exit price was never captured.`
+            : '',
+          histExitUnknown != null && histExitUnknown > 0
+            ? `> ⚠️ …and a further ${histExitUnknown} closed trade(s) with no exit price that NO flag marked (#1044) — ` +
+              'structurally the same fault, previously counted as break-even trades.'
             : '',
           '',
           '| Symbol | Type | Broker | Current P/L | Current % | Historical P/L | n | Reliability |',

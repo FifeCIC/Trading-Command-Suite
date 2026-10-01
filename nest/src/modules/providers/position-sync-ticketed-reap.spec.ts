@@ -126,6 +126,48 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     // ⚠️ The whole point: a REAL exit, not a fabricated zero.
     expect(updateArg.data.exitPrice).toBe(23500);
     expect(updateArg.data.pnl).toBeCloseTo(-204, 2);
+    // ⚠️ #1044 — and the flag must move WITH the evidence: a real exit means a usable result.
+    // Without this assertion a future fix could latch `pnlInvalid: 1` on and silently hide every
+    // good number behind it (the #1014 "repair looks half-done" shape).
+    expect(updateArg.data.pnlInvalid).toBe(0);
+    expect(updateArg.data.pnlInvalidReason).toBeNull();
+  });
+
+  /**
+   * #1044 — the writer, measured live.
+   *
+   * Every Trade is CREATED with `pnl: 0`, so a close that captured no exit price still carried a
+   * non-null `pnl`. `pnlUnknown` was derived from `pnlValue == null`, so those rows were written
+   * `pnlInvalid: 0` — a placeholder zero recorded as a VALID break-even result.
+   *
+   * Measured 2026-10-01: **21 such rows**, the newest written that morning. They are invisible to
+   * a `pnlInvalid`-only filter, which is why two consumers of the same table disagreed about its
+   * size (264 rows vs 243) and neither reported an error.
+   */
+  it('⚠️ flags a close with NO exit price even when pnl is a stale 0 from creation (#1044)', async () => {
+    trade.findMany.mockResolvedValue([{
+      id: 'phantom-zero', symbol: 'US500', openedAt: new Date('2026-09-29T12:59:22Z'),
+      brokerTicket: '92271505', side: 'buy', pnl: 0, exitPrice: null, quantity: 0.1,
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 'phantom-zero', symbol: 'US500', side: 'buy',
+      // ⚠️ The finaliser reads THE ROW IT RESOLVED, and the stale `pnl: 0` it was CREATED with is
+      // what defeated the old test (`pnlValue == null` was false because 0 is not null).
+      pnl: 0, exitPrice: null,
+    });
+    // No deal history → no exit price can be derived.
+    adapter.getDeals.mockResolvedValue([]);
+
+    const result = await service.syncPositions('mt5', [], { authoritative: true });
+
+    expect(result.reaped).toBe(1);
+    const data: any = trade.update.mock.calls[0][0].data;
+    expect(data.exitPrice).toBeNull();
+    expect(data.pnl).toBe(0);
+    // The zero is still there — this fix does NOT blank data — but it is now FLAGGED, so a
+    // reader filtering on `pnlInvalid` gets the right answer.
+    expect(data.pnlInvalid).toBe(1);
+    expect(String(data.pnlInvalidReason)).toContain('placeholder');
   });
 
   /**
@@ -240,5 +282,12 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
       where: expect.objectContaining({ id: 'phantom', status: 'open', brokerTicket: null }),
       data: expect.objectContaining({ status: 'closed', pnl: 0 }),
     }));
+    // ⚠️ #1044 — and the FLAG IS SET AT THE WRITE, not by a later sweep. Before this, the flag came
+    // only from `quarantine-phantom-closes.cjs`, so a row reaped between sweeps carried
+    // `pnlInvalid = 0` and was counted as a break-even trade. A two-step invariant fails silently
+    // whenever the second step is skipped.
+    const written: any = trade.updateMany.mock.calls[0][0].data;
+    expect(written.pnlInvalid).toBe(1);
+    expect(String(written.pnlInvalidReason)).toContain('#1044');
   });
 });

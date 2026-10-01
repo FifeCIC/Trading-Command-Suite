@@ -313,6 +313,20 @@ export class PositionSyncService {
             status: 'closed',
             closedAt: new Date(),
             pnl: 0,
+            // ⚠️ #1044 — THE FLAG IS SET HERE, AT THE WRITE, AND NOT BY A LATER SWEEP.
+            //
+            // The `pnl: 0` above is deliberate (there was never a fill, so there is no P&L), but
+            // nothing about the row SAYS so. Before this change the flag was applied only by the
+            // separate `quarantine-phantom-closes.cjs` pass, so a row reaped between sweeps
+            // carried `pnlInvalid = 0` and was counted as a BREAK-EVEN TRADE by every consumer
+            // filtering on that flag. Measured 2026-10-01: **21 such rows** existed, and they
+            // were the reason two readers of the same table disagreed about its size (264 rows
+            // by `pnlInvalid`, 243 by structure) with no error anywhere.
+            //
+            // Two-step invariants ("write, then flag") fail silently whenever the second step is
+            // skipped. The classification rule lives in `common/trading/pnl-population.ts`.
+            pnlInvalid: 1,
+            pnlInvalidReason: 'Structural phantom — reaped with no broker counterpart and no exit price (#1044)',
             brokerComment: 'Reconciled: no broker counterpart (stranded row)',
             // Named here rather than left null: a reaped row closed for a reason we DO know, and
             // the 2026-09-18 investigation was slowed by exactly this kind of unattributed exit.
@@ -867,7 +881,31 @@ export class PositionSyncService {
       const resolvedExit = exitPrice ?? trade.exitPrice ?? null;
       const exitKnown = resolvedExit != null;
       const pnlValue = exitKnown ? (realizedPnl ?? trade.pnl ?? null) : (trade.pnl ?? null);
-      const pnlUnknown = pnlValue == null;
+      // ⚠️⚠️ #1044 — THE EXIT IS THE EVIDENCE. A NON-NULL `pnl` IS NOT.
+      //
+      // This line used to read `const pnlUnknown = pnlValue == null;`, so a row closed with NO
+      // exit price was written `pnlInvalid: 0` **whenever it happened to carry any `pnl` at all**.
+      // Every Trade is CREATED with `pnl: 0` (`position-sync` open path, `signal-actions`), so
+      // that value was almost always present — and a placeholder zero was recorded as a VALID
+      // break-even result.
+      //
+      // Measured 2026-10-01: **21** such rows (`origin=strategy`, `source=meta-stack`,
+      // `closeReason=broker:unknown`, real `brokerTicket`, `exitPrice IS NULL`, `pnl = 0`,
+      // `pnlInvalid = 0`) — and still being written: the newest was **that morning**. They are
+      // invisible to `pnlInvalid`-only filters, which is why two consumers of the same table
+      // disagreed about its size (264 rows vs 243) with no error anywhere.
+      //
+      // The 2026-09-22 sweep that "fixed" this nulled `pnl` on six rows, which made
+      // `pnlValue == null` true FOR THOSE SIX. That treated the symptom: any row whose `pnl` was
+      // still 0 kept passing, which is exactly the 21. The rule now keys on the exit, so it
+      // cannot be defeated by a placeholder surviving on the row.
+      //
+      // ⚠️ Deliberately NOT `!exitKnown` on its own: a NON-zero `pnl` with an unknown exit price
+      // is a real number recovered from deal history and must be preserved. Only a `0` is
+      // ambiguous — see `placeholderZeroReason()` in `common/trading/pnl-population.ts`, which
+      // makes exactly this distinction and is the single owner of the rule.
+      const exitUnknownZero = !exitKnown && pnlValue === 0;
+      const pnlUnknown = pnlValue == null || exitUnknownZero;
 
       await this.prisma.trade.update({
         where: { id: trade.id },
@@ -888,8 +926,12 @@ export class PositionSyncService {
           ...(pnlUnknown
             ? {
                 pnlInvalid: 1,
-                pnlInvalidReason:
-                  'exit-unknown: position vanished; no broker deal history and no last price',
+                // The reason distinguishes the two causes on purpose: an existing reader looks for
+                // the `exit-unknown:` prefix, and #1044 (a placeholder zero that no flag caught) is
+                // a DIFFERENT fault from a vanished position with no deal history at all.
+                pnlInvalidReason: exitUnknownZero
+                  ? 'exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)'
+                  : 'exit-unknown: position vanished; no broker deal history and no last price',
               }
             : {
                 // ⚠️ CLEARED WHEN THE P&L IS NOW KNOWN (#1014). Without this the repair pass writes

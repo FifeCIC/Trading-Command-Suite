@@ -48,10 +48,26 @@ function loadEnv() {
   }
 }
 
-/** THE PREDICATE. Structural — deliberately no date window (that was the defect). */
+/**
+ * THE PREDICATE. Structural — deliberately no date window (that was the defect).
+ *
+ * ⚠️ WIDENED 2026-10-01 (#1044). It used to require `brokerTicket IS NULL`, which missed a whole
+ * second shape of the same fault: a row that **has** a ticket (a real position existed) but whose
+ * exit price was never captured, carrying a placeholder `pnl = 0` and NO flag. Measured then:
+ * **21** such rows, still being written (the newest that morning), all invisible to
+ * `pnlInvalid`-only filters — so two consumers of the same table disagreed about its size
+ * (264 rows vs 243) and neither reported an error.
+ *
+ * The two shapes are the same thing: a close with no exit evidence. So the ticket is no longer
+ * required, and instead the `pnl = 0` placeholder is made explicit — a NON-zero `pnl` with a
+ * missing exit price is a real number recovered from deal history and is NOT flagged.
+ *
+ *   (no ticket AND no exit)  OR  (no exit AND placeholder zero)
+ */
 const PREDICATE =
-  "status = 'closed' AND brokerTicket IS NULL AND exitPrice IS NULL AND pnlInvalid = 0";
+  "status = 'closed' AND pnlInvalid = 0 AND exitPrice IS NULL AND (brokerTicket IS NULL OR pnl = 0)";
 
-const REASON = 'Structural phantom - closed with no brokerTicket and no exitPrice (#931)';
+const REASON =
+  'Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)';
 
 module.exports = { NEST_ROOT, loadEnv, PREDICATE, REASON };
