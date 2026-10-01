@@ -26,10 +26,42 @@
  * by that page's own stylesheet. Dead CSS is not inert when the selector is generic.
  */
 
-/* ── Preview mode ────────────────────────────────────── */
-.cockpit-mode-preview {
-  padding: 1rem;
-}
+/* ════════════════════════════════════════════════════════
+   #862 — DECISION: the `preview` / `slot` vocabulary was VESTIGIAL. DELETED, not reserved.
+
+   WHAT WAS REMOVED: `.cockpit-mode-preview`, `.cockpit-preview-grid`, `.cockpit-preview-slot`,
+   `.cockpit-slot-header`, `-label`, `-key`, `-desc`, `-placeholder`, `-left`, `-center`, `-right`,
+   `.cockpit-panel-placeholder`, `.cockpit-placeholder-icon`, `-label`, `-desc`, `.cockpit-panel-left`,
+   `-center`, `-right`.
+
+   WHY DELETED RATHER THAN KEPT AS A RESERVE. Two independent reasons, either sufficient:
+
+   1. SUPERSEDED, not planned. `.cockpit-preview-grid`/`.cockpit-slot-*` styled a *preview* of the
+      pipeline stages — key, label, description, placeholder. The page now renders THE STAGES
+      THEMSELVES, as columns, via `.cockpit-screen-panel` / `.cockpit-panel-titlebar` / `-body` /
+      `-hint` / `-cards`. Keeping both leaves two implementations of one idea, and only one of them
+      receives the next fix. The replacement is already in this file, further down.
+   2. WRONG AXIS. `.cockpit-slot-left/center/right` and `.cockpit-panel-left/center/right` encode
+      left/centre/right MONITOR positions. "Triple" was one person's hardware, not a property of the
+      layout — the same reason the route was renamed off `/lab/triple-screen` (2026-09-17) and the
+      column count was made viewport-derived. A single-row 7-column grid has no left/centre/right.
+
+   NOT RESERVED FOR #746. Epic #746 (widget-based dashboard / multi-screen cockpit, still OPEN) wants
+   to evolve the cockpit into a WIDGET HOST. Reactivating a preview pane is not part of that: a widget
+   host composes widgets, and if it needs a preview it will design one against the widget model. Dead
+   CSS is not a reserve — it is a thing nobody can tell from an intention.
+
+   ALL 18 WERE UNREFERENCED. Measured by grepping every `src/**/*.jsx` for each selector, not inferred
+   from git dates. Nothing rendered differently when they were removed — that is what "unreferenced"
+   means. `.cockpit-mode-full` is the one similarly-named class that IS used (the pop-out) and it is
+   kept, below.
+
+   ⚠️ One observation that is NOT a styling matter and is deliberately not resolved here: the
+   `.cockpit-panel-placeholder` group was the only expression of an EMPTY PANEL. It was never
+   reachable, so an empty column currently renders as blank with no explanation rather than as a
+   placeholder. If a panel can be empty, that is a real gap and it needs deciding on the page, not
+   restoring from this file.
+   ════════════════════════════════════════════════════════ */
 
 .cockpit-header {
   display: flex;
@@ -102,81 +134,10 @@
   color: var(--ink-soft);
 }
 
-/* Preview grid — shows the 3 slots */
-.cockpit-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  width: 100%;
-  margin-top: 1.5rem;
-}
-@media (max-width: 900px) {
-  .cockpit-preview-grid { grid-template-columns: 1fr; }
-}
-
-.cockpit-preview-slot {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 1rem;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-}
-
-.cockpit-slot-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-.cockpit-slot-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-.cockpit-slot-key {
-  font-size: 0.62rem;
-  padding: 0.1rem 0.4rem;
-  background: rgba(255,255,255,0.06);
-  border-radius: 4px;
-  color: var(--color-muted, var(--color-muted));
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-}
-.cockpit-slot-desc {
-  font-size: 0.72rem;
-  color: var(--ink-soft, var(--ink-soft));
-  margin: 0 0 0.75rem;
-}
-.cockpit-slot-placeholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.25);
-  border: 1px dashed var(--line);
-  border-radius: 6px;
-  font-size: 0.7rem;
-  color: var(--color-muted, var(--color-muted));
-}
-
-/* Slot accent borders */
-.cockpit-slot-left { border-color: var(--color-accent-blue, var(--color-accent-blue)); }
-.cockpit-slot-center { border-color: var(--accent, var(--accent)); }
-.cockpit-slot-right { border-color: var(--color-warning, var(--color-warning)); }
-
-/* ── Notes ──────────────────────────────────────────── */
-.cockpit-notes {
-  margin-top: 1.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font-size: 0.72rem;
-  color: var(--ink-soft, var(--ink-soft));
-}
-.cockpit-notes h4 { margin: 0 0 0.3rem; font-size: 0.82rem; }
-.cockpit-notes ol { margin: 0; padding-left: 1.2rem; }
-.cockpit-notes li { margin-bottom: 0.15rem; }
+/* ── Notes block: `.cockpit-notes` was ALSO deleted under #862 — it was missing from the issue's
+   list of 14. Same test, same result: grepping every `src/**/*.jsx` finds no `cockpit-notes`, and
+   the sibling page's notes block carries a different prefix (`screencockpit-notes`), so it was not
+   a cross-file use. ── */
 
 /* ════════════════════════════════════════════════════════
    META.STACK COCKPIT MODE — the pipeline's steps as columns
@@ -292,31 +253,6 @@
   display: flex;
   flex-direction: column;
 }
-
-.cockpit-panel-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: var(--color-muted, var(--color-muted));
-}
-.cockpit-placeholder-icon { font-size: 2.5rem; opacity: 0.3; }
-.cockpit-placeholder-label {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--ink-soft, var(--ink-soft));
-}
-.cockpit-placeholder-desc {
-  font-size: 0.72rem;
-  color: var(--color-muted, var(--color-muted));
-}
-
-/* Panel accent borders */
-.cockpit-panel-left { border-top: 2px solid var(--color-accent-blue, var(--color-accent-blue)); }
-.cockpit-panel-center { border-top: 2px solid var(--accent, var(--accent)); }
-.cockpit-panel-right { border-top: 2px solid var(--color-warning, var(--color-warning)); }
 
 /* ── In-page (non-fullscreen) column area ──────────────────────────────────────
    ⚠️ `.cockpit-columns` is `height: 100%`, which is right for the fullscreen pop-out but
