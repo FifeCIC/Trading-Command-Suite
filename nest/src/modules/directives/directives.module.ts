@@ -542,6 +542,15 @@ export class DirectivesModule implements OnModuleInit {
     private readonly insiderActivity: InsiderActivityDirective,
     private readonly dilutionImpact: DilutionImpactDirective,
     private readonly rolloverRisk: RolloverRiskDirective,
+    // Surge family (#663) + news catalyst (#4/#630/#512). ⚠️ These were added to `providers` and
+    // NOT injected or registered, so they never reached the registry and `GET /api/directives`
+    // reported 105 while the four classes existed and compiled. Injecting them is what makes
+    // `register()` below possible — see the #890 note further down: being in `providers` is not
+    // the same as being registered.
+    private readonly surgeDetection: SurgeDetectionDirective,
+    private readonly spikeHoldConfirmation: SpikeHoldConfirmationDirective,
+    private readonly surgeExhaustion: SurgeExhaustionDirective,
+    private readonly newsCatalyst: NewsCatalystDirective,
   ) {}
 
   async onModuleInit() {
@@ -693,6 +702,18 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.insiderActivity);
     this.directivesService.register(this.dilutionImpact);
     this.directivesService.register(this.rolloverRisk);
+
+    // ── Surge family (#663 "Trade a Surge") ────────────────────────────────────────────────────
+    // ⚠️ `readiness: 'alpha'` on all three. Registration makes them VISIBLE and callable; it does
+    // NOT attach them to any protocol. Attaching one would change what a live symbol scores —
+    // that is a maths change and needs a copied configuration, not an edit here.
+    this.directivesService.register(this.surgeDetection);
+    this.directivesService.register(this.spikeHoldConfirmation);
+    this.directivesService.register(this.surgeExhaustion);
+    // News catalyst (#4 / #630 / #512). ⚠️ INERT: correct and unit-tested, but it ABSTAINS
+    // (`unmeasured: true`) until a producer populates `input.news` from `news_item`. Registered
+    // so the surface can show it and so `requiredDataFeeds: ['news']` is queryable.
+    this.directivesService.register(this.newsCatalyst);
 
     // ── Seed directive table with latest class defaults (activates stubbed directives) ──
     await this.directivesService.seedToDatabase();
