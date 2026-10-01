@@ -83,6 +83,10 @@ import {
   isDormant,
 } from '../core/bot-stage-path';
 import { annotateSource, summarise } from '../core/diagram-claims';
+// ⚠️ #870 — the enforcement words/hints live in `core/bot-rule-enforcement.jsx`. They were HERE,
+// and the create form needs the same four meanings; a second copy would drift, and the whole point
+// of the exercise is that a field's enforcement has ONE home.
+import { ENFORCEMENT, UNDECLARED } from '../core/bot-rule-enforcement';
 import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/mermaid-theme';
 // Shared formatters — the app's ONE P&L sign/class pair and the number/currency/date helpers.
 // ⚠️ `formatPct` takes ALREADY-PERCENT values (it toFixed()s and appends '%', it does NOT ×100),
@@ -107,36 +111,9 @@ const TRADING = '/api/trading/strategies';
 const BOT_PERF = '/api/trading/bot-performance';
 
 /**
- * The four enforcement levels, in the badge's own words.
- *
- * ⚠️ The WORD is the meaning. The chip only tints it, because the semantic colour tokens are tuned
- * for a black background and would fail WCAG AA as text on a light panel. Keeping the meaning in
- * text also means the badge survives greyscale and colour-blind rendering.
+ * ⚠️ #870 — the four enforcement levels MOVED to `core/bot-rule-enforcement.jsx`, which the create
+ * form also imports. Do not re-declare them here.
  */
-const ENFORCEMENT = {
-  live: {
-    word: 'LIVE',
-    chip: 'chipLive',
-    hint: 'Can block or shape a trade on the live queue path.',
-  },
-  'legacy-only': {
-    word: 'EXECUTE ONLY',
-    chip: 'chipLegacy',
-    hint:
-      'Applies when you press Execute. The AUTOMATION LOOP DOES NOT APPLY IT, so this field ' +
-      'cannot stop a live trade.',
-  },
-  'display-only': {
-    word: 'DISPLAY ONLY',
-    chip: 'chipDisplay',
-    hint: 'Read and returned, but cannot affect a trade.',
-  },
-  none: {
-    word: 'NOT APPLIED',
-    chip: 'chipNone',
-    hint: 'No reader anywhere. Persisted and offered in the create form, and enforced nowhere.',
-  },
-};
 
 // STAGE_ORDER / STAGE_LABEL moved to `core/bot-stage-path.js` — the lifecycle diagram needs the
 // same order, and two copies would drift.
@@ -945,8 +922,8 @@ export default function ViewStrategyPage() {
             {stageRules.map((rule) => {
               // ⚠️ An unrecognised level must NOT render as if it applies.
               const meta = ENFORCEMENT[rule.enforcement] || {
+                ...UNDECLARED,
                 word: String(rule.enforcement || 'UNKNOWN').toUpperCase(),
-                chip: 'chipNone',
                 hint: 'Unrecognised enforcement level — treat as NOT applied.',
               };
               const raw = bot[rule.field];

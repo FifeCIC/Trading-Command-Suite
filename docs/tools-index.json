@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 171,
+  "count": 172,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1059,6 +1059,17 @@
       "purpose": "every config value that NAMES a database object must be valid",
       "selfTest": false,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-create-form-coverage.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a behavioural field cannot reach the create form without its",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },

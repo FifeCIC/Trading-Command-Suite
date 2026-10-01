@@ -24,6 +24,11 @@ import { barAboveCeiling as barAboveCeilingRule, ceilingKnown } from '../core/th
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import StrategyWizard from '../components/StrategyBuilder/StrategyWizard';
 import { noticeLine } from '../core/notices/registry.js';
+// ⚠️ #870 — the SAME enforcement words the truth view uses. Read from `bot-rules`, never restated:
+// this form used to offer every behavioural field with no indication that some do nothing at all
+// (8 of 29 declared columns had no live reader).
+import { useBotRules, BotRuleStatus, EnforcementLegend } from '../core/bot-rule-enforcement.jsx';
+import '../core/bot-rule-enforcement.css';
 import '../core/forms.css';
 import '../components/StrategyBuilder/strategy-wizard.css';
 import './strategy-create.css';
@@ -37,6 +42,13 @@ const TABS = [
 export default function StrategyCreatePage() {
   const [tab, setTab] = useState('form');
   const queryClient = useQueryClient();
+
+  /**
+   * #870 — the enforcement registry. One fetch, cached by react-query under `['bot-rules']`, shared
+   * with the truth view. `byField` turns the declaration list into a lookup so each field can carry
+   * its own marker.
+   */
+  const { byField: botRuleFields, counts: botRuleCounts } = useBotRules();
 
   // ── Form state ──
   const [name, setName] = useState('');
@@ -63,7 +75,10 @@ export default function StrategyCreatePage() {
   const [hotStockDetectionMode, setHotStockDetectionMode] = useState('');
   const [hotStockMaxHoldHours, setHotStockMaxHoldHours] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showHotStock, setShowHotStock] = useState(false);
+  // ⚠️ REMOVED 2026-10-01 (#870): `const [showHotStock, setShowHotStock] = useState(false)`. It was
+  // declared and NEVER read — the section renders on `hotStockEnabled`, not on this flag. Dead state
+  // beside a section whose whole problem is that it does nothing was a small joke at the reader's
+  // expense; eslint flagged it while this file was being edited.
   const [msg, setMsg] = useState('');
 
   // ── Data ──
@@ -284,17 +299,22 @@ export default function StrategyCreatePage() {
         <motion.div className="stratcreate-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           {protoLoading ? <LoadingSkeleton variant="text" lines={4} /> : (
             <form className="stratcreate-form" onSubmit={handleSubmit}>
+              {/* #870 — say up front that the markers exist and what they mean. Without this the
+                  chips read as decoration; with it, "NOT APPLIED" beside Hot Stock Allocation is
+                  the answer to the question the field's own label implies. */}
+              <EnforcementLegend counts={botRuleCounts} />
+
               {/* Name + Mode */}
               <div className="stratcreate-field-row">
                 <label className="stratcreate-field">
-                  <span>Strategy Name *</span>
+                  <span>Strategy Name * <BotRuleStatus field="name" byField={botRuleFields} /></span>
                   <input
                     className="stratcreate-input" type="text" placeholder="e.g. Gold Scalp v2"
                     value={name} onChange={e => setName(e.target.value)}
                   />
                 </label>
                 <label className="stratcreate-field">
-                  <span>Mode</span>
+                  <span>Mode <BotRuleStatus field="mode" byField={botRuleFields} /></span>
                   <select className="stratcreate-input" value={mode} onChange={e => { setMode(e.target.value); if (e.target.value === 'score') setSymbol(''); }}>
                     <option value="trade">Trade (single symbol)</option>
                     <option value="score">Score (watchlist)</option>
@@ -306,7 +326,7 @@ export default function StrategyCreatePage() {
               <div className="stratcreate-field-row">
                 {mode === 'trade' ? (
                   <label className="stratcreate-field">
-                    <span>Symbol</span>
+                    <span>Symbol <BotRuleStatus field="symbol" byField={botRuleFields} /></span>
                     <input
                       className="stratcreate-input" type="text" placeholder="e.g. XAUUSD"
                       value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())}
@@ -327,7 +347,7 @@ export default function StrategyCreatePage() {
                   </label>
                 )}
                 <label className="stratcreate-field">
-                  <span>Broker</span>
+                  <span>Broker <BotRuleStatus field="brokerId" byField={botRuleFields} /></span>
                   <select className="stratcreate-input" value={brokerId} onChange={e => setBrokerId(e.target.value)}>
                     {BROKER_LIST.map(b => (
                       <option key={b} value={b}>{b.toUpperCase()}</option>
@@ -341,7 +361,7 @@ export default function StrategyCreatePage() {
 
               {/* Protocol */}
               <label className="stratcreate-field">
-                <span>Protocol</span>
+                <span>Protocol <BotRuleStatus field="protocolId" byField={botRuleFields} /></span>
                 <select className="stratcreate-input" value={protocolId} onChange={e => setProtocolId(e.target.value)}>
                   <option value="">— Select —</option>
                   {protoList.map(p => (
@@ -365,19 +385,19 @@ export default function StrategyCreatePage() {
               <div className="stratcreate-section-label">Risk Parameters</div>
               <div className="stratcreate-field-row stratcreate-field-row-4">
                 <label className="stratcreate-field">
-                  <span>Base Size</span>
+                  <span>Base Size <BotRuleStatus field="baseSize" byField={botRuleFields} /></span>
                   <input className="stratcreate-input" type="number" step="0.01" min="0.01" value={baseSize} onChange={e => setBaseSize(Number(e.target.value))} />
                 </label>
                 <label className="stratcreate-field">
-                  <span>SL %</span>
+                  <span>SL % <BotRuleStatus field="slPct" byField={botRuleFields} /></span>
                   <input className="stratcreate-input" type="number" step="0.1" min="0.1" value={slPct} onChange={e => setSlPct(Number(e.target.value))} />
                 </label>
                 <label className="stratcreate-field">
-                  <span>TP %</span>
+                  <span>TP % <BotRuleStatus field="tpPct" byField={botRuleFields} /></span>
                   <input className="stratcreate-input" type="number" step="0.1" min="0.1" value={tpPct} onChange={e => setTpPct(Number(e.target.value))} />
                 </label>
                 <label className="stratcreate-field">
-                  <span>Min Composite</span>
+                  <span>Min Composite <BotRuleStatus field="minComposite" byField={botRuleFields} /></span>
                   {/* ⚠️ Bounds were min="40" max="95" (#839). The state now seeds from the server
                       (serverBarDefault = BOT_BAR_DEFAULT, 10), but the OLD bounds would have
                       rejected it: a corrected default of 10 cannot be entered into a field whose
@@ -414,7 +434,7 @@ export default function StrategyCreatePage() {
               </div>
 
               <label className="stratcreate-field">
-                <span>Timeframe</span>
+                <span>Timeframe <BotRuleStatus field="timeframe" byField={botRuleFields} /></span>
                 <select className="stratcreate-input" value={timeframe} onChange={e => setTimeframe(e.target.value)}>
                   {['5s','15s','1m','5m','15m','1h','4h','1d'].map(tf => (
                     <option key={tf} value={tf}>{tf}</option>
@@ -424,7 +444,7 @@ export default function StrategyCreatePage() {
 
               {/* Description */}
               <label className="stratcreate-field">
-                <span>Description</span>
+                <span>Description <BotRuleStatus field="description" byField={botRuleFields} /></span>
                 <textarea
                   className="stratcreate-input stratcreate-textarea" rows={2} placeholder="Optional notes about this strategy..."
                   value={description} onChange={e => setDescription(e.target.value)}
@@ -440,7 +460,7 @@ export default function StrategyCreatePage() {
                   <div className="stratcreate-section-label">Signal Filters</div>
                   <div className="stratcreate-field-row">
                     <label className="stratcreate-field">
-                      <span>Min Rarity Band</span>
+                      <span>Min Rarity Band <BotRuleStatus field="minRarityBand" byField={botRuleFields} /></span>
                       <select className="stratcreate-input" value={minRarityBand} onChange={e => setMinRarityBand(e.target.value)}>
                         <option value="">— Any —</option>
                         {['standard','strong','exceptional','cyclical','black-swan'].map(b => (
@@ -449,7 +469,7 @@ export default function StrategyCreatePage() {
                       </select>
                     </label>
                     <label className="stratcreate-field">
-                      <span>Require Direction</span>
+                      <span>Require Direction <BotRuleStatus field="requireDirection" byField={botRuleFields} /></span>
                       <select className="stratcreate-input" value={requireDirection} onChange={e => setRequireDirection(e.target.value)}>
                         <option value="">— Any —</option>
                         <option value="long">Long only</option>
@@ -462,45 +482,63 @@ export default function StrategyCreatePage() {
                   <div className="stratcreate-section-label">Position & Risk Management</div>
                   <div className="stratcreate-field-row stratcreate-field-row-4">
                     <label className="stratcreate-field">
-                      <span>Max Positions</span>
+                      <span>Max Positions <BotRuleStatus field="maxPositions" byField={botRuleFields} /></span>
                       <input className="stratcreate-input" type="number" min="1" max="20" value={maxPositions} onChange={e => setMaxPositions(Number(e.target.value))} />
+                      {/* ⚠️ #870 / #733 — the dangerous one. The LIVE cap is the GLOBAL
+                          `risk.maxOpenPositions` setting; this per-bot value does not cap anything
+                          on the automation loop. Saying so here is the whole point: a user who sets
+                          1 and believes they are capped has a risk control that is not applied. */}
+                      <span className="stratcreate-hint stratcreate-hint-warn">
+                        The cap that is applied live is the GLOBAL <code>risk.maxOpenPositions</code>{' '}
+                        setting. This per-bot value is not checked on the automation loop.
+                      </span>
                     </label>
                     <label className="stratcreate-field">
-                      <span>Max Size</span>
+                      <span>Max Size <BotRuleStatus field="maxSize" byField={botRuleFields} /></span>
                       <input className="stratcreate-input" type="number" step="0.01" min="0" placeholder="e.g. 0.5" value={maxSize} onChange={e => setMaxSize(e.target.value)} />
                     </label>
                     <label className="stratcreate-field">
-                      <span>Max Daily Loss ($)</span>
+                      <span>Max Daily Loss ($) <BotRuleStatus field="maxDailyLoss" byField={botRuleFields} /></span>
                       <input className="stratcreate-input" type="number" step="0.01" min="0" placeholder="e.g. 500" value={maxDailyLoss} onChange={e => setMaxDailyLoss(e.target.value)} />
                     </label>
                     <label className="stratcreate-field">
-                      <span>Cooldown (min)</span>
+                      <span>Cooldown (min) <BotRuleStatus field="cooldownMinutes" byField={botRuleFields} /></span>
                       <input className="stratcreate-input" type="number" min="0" max="1440" value={cooldownMinutes} onChange={e => setCooldownMinutes(Number(e.target.value))} />
                     </label>
                   </div>
                   <label className="stratcreate-field stratcreate-checkbox-field">
                     <label className="stratcreate-checkbox-label">
                       <input type="checkbox" checked={useRaritySizing} onChange={e => setUseRaritySizing(e.target.checked)} />
-                      <span>Use rarity-based position sizing</span>
+                      <span>Use rarity-based position sizing <BotRuleStatus field="useRaritySizing" byField={botRuleFields} /></span>
                     </label>
                   </label>
 
                   {/* ── Hot Stock Picks ── */}
                   <div className="stratcreate-section-label">Hot Stock Picks (#339)</div>
+                  {/* ⚠️ #870 — stated plainly, not only as a chip. This was the sharpest case in the
+                      issue: a labelled section, a checkbox and a reveal-on-tick sub-form, where the
+                      user ticks the box, fills in the allocation, and NOTHING HAPPENS. The four
+                      hotStock columns have NO READER ANYWHERE. Removing the section is a product
+                      decision (#339), so the honest thing is to say so where it is offered. */}
+                  <span className="stratcreate-hint stratcreate-hint-warn">
+                    ⚠️ These four settings are saved but read by NOTHING — no code applies them to a
+                    trade. They are declared <code>enforcement: none</code> in <code>bot-rules.ts</code>.
+                    See #339.
+                  </span>
                   <label className="stratcreate-field stratcreate-checkbox-field">
                     <label className="stratcreate-checkbox-label">
                       <input type="checkbox" checked={hotStockEnabled} onChange={e => setHotStockEnabled(e.target.checked)} />
-                      <span>Enable hot stock picks</span>
+                      <span>Enable hot stock picks <BotRuleStatus field="hotStockEnabled" byField={botRuleFields} /></span>
                     </label>
                   </label>
                   {hotStockEnabled && (
                     <div className="stratcreate-field-row stratcreate-field-row-3">
                       <label className="stratcreate-field">
-                        <span>Hot Stock Allocation %</span>
+                        <span>Hot Stock Allocation % <BotRuleStatus field="hotStockAllocation" byField={botRuleFields} /></span>
                         <input className="stratcreate-input" type="number" step="0.1" min="0" max="100" placeholder="e.g. 10" value={hotStockAllocation} onChange={e => setHotStockAllocation(e.target.value)} />
                       </label>
                       <label className="stratcreate-field">
-                        <span>Detection Mode</span>
+                        <span>Detection Mode <BotRuleStatus field="hotStockDetectionMode" byField={botRuleFields} /></span>
                         <select className="stratcreate-input" value={hotStockDetectionMode} onChange={e => setHotStockDetectionMode(e.target.value)}>
                           <option value="">— Select —</option>
                           <option value="top-scoring">Top Scoring</option>
@@ -509,7 +547,7 @@ export default function StrategyCreatePage() {
                         </select>
                       </label>
                       <label className="stratcreate-field">
-                        <span>Max Hold (hours)</span>
+                        <span>Max Hold (hours) <BotRuleStatus field="hotStockMaxHoldHours" byField={botRuleFields} /></span>
                         <input className="stratcreate-input" type="number" min="1" max="168" placeholder="24" value={hotStockMaxHoldHours} onChange={e => setHotStockMaxHoldHours(e.target.value)} />
                       </label>
                     </div>

@@ -1,0 +1,82 @@
+/**
+ * bot-rule-enforcement.css — the shared enforcement marker (#870).
+ *
+ * ⚠️ COLOUR IS NOT THE MEANING. Every chip carries a WORD ("LIVE", "EXECUTE ONLY", "NOT APPLIED"),
+ * so it survives greyscale, colour-blind rendering and a stylesheet that fails to load — which is
+ * exactly the WCAG 1.4.1 requirement, and also the reason these work as a form annotation rather
+ * than decoration. Do not replace the text with a coloured dot.
+ *
+ * Tokens only — no literals. See `ui-standards.instructions.md`; `validate-css-tokens.cjs` fails the
+ * build on an undefined `var()`.
+ */
+
+.brs-chip {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.32rem;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  cursor: help;
+}
+
+/* live — the only one that can stop or shape a trade. Quiet, because it is the expected case. */
+.brs-chip[data-enforcement='live'] {
+  color: var(--color-profit);
+  border-color: color-mix(in srgb, var(--color-profit) 45%, transparent 55%);
+}
+
+/* legacy-only — applies on Execute but NOT on the automation loop. Amber: easy to mistake. */
+.brs-chip[data-enforcement='legacy-only'] {
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent 55%);
+}
+
+/* display-only — read and returned, cannot affect a trade. Morin. */
+.brs-chip[data-enforcement='display-only'] {
+  color: var(--color-muted);
+  border-color: color-mix(in srgb, var(--color-muted) 45%, transparent 55%);
+}
+
+/* none — the loud one. Persisted, offered here, and enforced nowhere. */
+.brs-chip[data-enforcement='none'] {
+  color: var(--color-loss);
+  border-color: color-mix(in srgb, var(--color-loss) 55%, transparent 45%);
+  background: color-mix(in srgb, var(--color-loss) 10%, transparent 90%);
+}
+
+/**
+ * undeclared — the registry does not know this field. Deliberately NOT styled as a neutral chip: an
+ * unknown enforcement is not the same as a fine one, and rendering it quietly would be the exact
+ * "silence that reads as OK" this repo keeps finding.
+ */
+.brs-chip[data-enforcement='undeclared'] {
+  color: var(--color-loss);
+  border-color: var(--color-loss);
+  background: color-mix(in srgb, var(--color-loss) 18%, transparent 82%);
+}
+
+.brs-legend {
+  margin: 0 0 0.85rem;
+  padding: 0.5rem 0.65rem;
+  border-left: 2px solid var(--line);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.brs-legend code {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+.brs-legend strong {
+  color: var(--ink);
+  font-weight: 600;
+}
