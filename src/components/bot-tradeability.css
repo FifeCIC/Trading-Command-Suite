@@ -1,0 +1,107 @@
+/**
+ * bot-tradeability.css — the per-card bot-bar reconciliation (#911).
+ *
+ * ⚠️ The state is carried by a WORD (`ACTIONABLE` / `NO BOT WILL TAKE IT` / `NOTHING SUBSCRIBED` /
+ * `CANNOT JUDGE`) and only tinted by colour, so it survives greyscale and colour-blind rendering.
+ * The four states are genuinely different facts and must not be distinguishable by hue alone.
+ *
+ * Tokens only — `validate-css-tokens.cjs` fails the build on an undefined `var()`.
+ */
+
+.btr {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent 40%);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.btr-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btr-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.btr-chip {
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+/* clear — a bot's bar is met. Quiet: this is the expected, actionable case. */
+.btr-chip--clear {
+  color: var(--color-profit);
+  border-color: color-mix(in srgb, var(--color-profit) 45%, transparent 55%);
+}
+
+/* refused — the #911 case. A BUY that no subscribed bot will take. */
+.btr-chip--refused {
+  color: var(--color-loss);
+  border-color: color-mix(in srgb, var(--color-loss) 55%, transparent 45%);
+  background: color-mix(in srgb, var(--color-loss) 10%, transparent 90%);
+}
+
+/* unsubscribed — a finding: perfect signal, nothing listening. */
+.btr-chip--unsubscribed {
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent 55%);
+}
+
+/* unknown — we cannot judge. Not a neutral chip, because it is not a clean bill of health. */
+.btr-chip--unknown {
+  color: var(--color-muted);
+  border-color: color-mix(in srgb, var(--color-muted) 55%, transparent 45%);
+}
+
+.btr-reason {
+  color: var(--ink-soft);
+}
+
+.btr--warn .btr-reason,
+.btr--warn {
+  color: var(--color-warning);
+}
+
+.btr--muted {
+  color: var(--ink-soft);
+}
+
+.btr-bars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+  margin-top: 0.1rem;
+  color: var(--ink-soft);
+}
+
+.btr-bar strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.btr-bar--on strong {
+  color: var(--color-profit);
+}
+
+.btr-bar--off strong {
+  color: var(--color-loss);
+}
+
+.btr-short {
+  color: var(--color-loss);
+}
