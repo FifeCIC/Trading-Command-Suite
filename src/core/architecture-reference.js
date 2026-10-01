@@ -626,6 +626,160 @@ export const CURRENT_SLICE = [
 export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-30 (batch #24: 25 handoffs — the app now says WHICH ACCOUNT, WHICH MECHANISM and WHICH AUTHORITY. One authority replaced six partial mechanisms answering 2 / 8 / 3 / 0 for the same symbol; a position is addressed by the account that HOLDS it and carries an immutable per-bot magic; a bridge on the wrong account REFUSES orders; an exit mechanism declares the columns it reads and the build fails when the two registries disagree. Three refusals recorded rather than papered over: the exit premise replayed and REFUTED three ways (no acting exit built), the #927 floor re-measured and HELD while the panel reporting breaches is the defect, and a failed import now reports the real bar count instead of a zero.)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
+
+      {
+        route: 'GET /api/ai/logs',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'AiController (planned)',
+        contract: 'Returns AI request/response logs with pagination. Query params: provider (deepseek|gemini), feature, limit, offset. Used by AI Log Viewer page. Response: { logs: [{ id, provider, feature, model, prompt, response, tokens, cost, latency, status, timestamp }], totals: { requests, tokens, cost } }. Pending backend deployment.',
+        status: 'planned',
+      },
+  
+      {
+        route: 'GET /api/providers/mt5/history',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'Mt5Controller',
+        contract: 'Returns recent MT5 trade history. Used by Dashboard Recent Trades. Query param: limit (default 5). Returns ordered array of completed trades with symbol, type, volume, price, profit, time.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/directives/stats',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'DirectivesController',
+        contract: 'Per-directive performance stats from Score history: average normalized score, directional bias (bullish/bearish/neutral), protocol count, and recent activity count. Sorted by avg score descending.',
+        status: 'active',
+      },
+  
+      {
+        route: 'POST /api/earnings-whispers/parse',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'EarningsWhispersController',
+        contract: 'Parse an Earnings Whispers email dump. Body: { text, save? }. Rule-based parser splits by ### headings and extracts per-symbol consensus EPS/revenue, whisper EPS, guidance, beat %, short interest, implied move, vs 200dma, report date/time. Returns { count, entries, saved, batchId }. When save=true, persists to the generalised earnings_analysis tables linked to the earnings-whispers source in the sources table.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/earnings-whispers',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'EarningsWhispersController',
+        contract: 'List recent earnings-analysis batches (with source name/slug) and entries (newest first). Response: { batches, entries }. Backs the Research → Earnings Whispers page.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/system/data-retention/stats',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'DataRetentionController',
+        contract: 'Returns row counts and date ranges for all tracked tables (directiveoutcome, score_snapshot, marketbar, strategy_evaluation, decision_log, order).',
+        status: 'active',
+      },
+  
+      {
+        route: 'POST /api/system/data-retention/prune-directives',
+        method: 'POST',
+        permission: 'Admin access',
+        owner: 'DataRetentionController',
+        contract: 'Prunes directiveoutcome rows older than ?days=N (default 30). Batch-deletes in 5K-row chunks. Returns { deleted, cutoff }.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/scoring/protocols/:slug/directives',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'ProtocolsController',
+        contract: 'Returns grouped directives with enriched registry info (name, maxScore, description, active). Groups by category (technical, sentiment, risk, etc.) with risk gate flags. Used by DirectivesConfigPage.',
+        status: 'active',
+      },
+  
+      {
+        route: 'PATCH /api/scoring/protocols/:slug/directives/:directiveId',
+        method: 'PATCH',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController',
+        contract: 'Toggles active state on ProtocolDirectiveEntry. Accepts { active: boolean } and optional { maxScore: number }. Used by DirectivesConfigPage directive toggles.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/news/stats',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'NewsController',
+        contract: 'Returns daily budget, per-tier counts, and last run info for tiered news import. Used by future news settings dashboard.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/news/tracked-symbols',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'NewsController',
+        contract: 'Resolves per-tier symbol lists for the tiered news import system. Returns symbols grouped by tier (positions, protocols, macro, sector, other).',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/market-data/bars/refresh/status',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BarRefreshService / MarketDataController',
+        contract: 'Returns current BarRefresh state: liveLimit, recordLimit, intervalMs, running, symbols tracked. Used for monitoring refresh modes.',
+        status: 'active',
+      },
+  
+      {
+        route: 'POST /api/market-data/bars/refresh/start',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BarRefreshService / MarketDataController',
+        contract: 'Starts the live bar refresh timer. Fetches 5-10 bars per symbol for positions + active strategy symbols every 5min.',
+        status: 'active',
+      },
+  
+      {
+        route: 'POST /api/market-data/bars/refresh/stop',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BarRefreshService / MarketDataController',
+        contract: 'Stops the live bar refresh timer.',
+        status: 'active',
+      },
+  
+      {
+        route: 'POST /api/market-data/bars/record',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BarRefreshService / MarketDataController',
+        contract: 'Triggers on-demand record-mode refresh. Fetches 100 bars per symbol for all active DB symbols. Used for backtesting data seeding.',
+        status: 'active',
+      },
+  
+      {
+        route: 'GET /api/diversification/check',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'DiversificationController',
+        contract: 'Pre-trade diversification check. Query params: symbol, brokerId. Returns { allowed, blocked, severity, reason }. Used by automation loop before placeOrder().',
+        status: 'active',
+      },
+  
+      {
+        route: 'POST /api/symbols/enrich',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'SymbolNameEnricherService / SymbolsController',
+        contract: 'Triggers company name enrichment for a single ticker. Queries providers in priority order: Finnhub→FMP→Yahoo→Alpaca. Returns enriched Symbol with name set.',
+        status: 'active',
+      },
+  
       /* — batch #24 — new/changed endpoints (2026-09-27 to 09-30, 25 handoffs) — */
       {
         route: 'GET /api/symbols/:ticker/protocols',

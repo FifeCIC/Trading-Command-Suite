@@ -4,10 +4,10 @@
   "_method": "8-line whitespace-normalised windows appearing in 2+ distinct non-test files; new pair fails at >= 3",
   "totals": {
     "pairs": 156,
-    "windows": 1775
+    "windows": 1970
   },
   "pairs": {
-    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 1136,
+    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 1331,
     "src/components/SignalCard.jsx || src/pages/SignalsOverviewPage.jsx": 51,
     "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": 27,
     "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": 20,

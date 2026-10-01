@@ -763,6 +763,313 @@ export const CONTRACT_CARDS = [
 export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-30 (batch #24: 25 handoffs — the app now says WHICH ACCOUNT, WHICH MECHANISM and WHICH AUTHORITY. One authority replaced six partial mechanisms answering 2 / 8 / 3 / 0 for the same symbol; a position is addressed by the account that HOLDS it and carries an immutable per-bot magic; a bridge on the wrong account REFUSES orders; an exit mechanism declares the columns it reads and the build fails when the two registries disagree.)';
 
 export const CURRENT_ROUTE_CONTRACTS = [
+
+    {
+      route: 'GET|POST /api/scoring/strategy-registry | PATCH /api/scoring/strategy-registry/:id | POST /api/scoring/strategy-registry/:id/reaccept',
+      method: 'GET, POST, PATCH',
+      permission: 'Authenticated; writes require write access',
+      owner: 'StrategyRegistryController',
+      contract: 'Pins a stable id to a derived key so a strategy can be NAMED across config edits, and reports DRIFT when a bot changes what the key resolves to (#875). `reaccept` is the explicit act of adopting a new derivation as the baseline. ⚠️ Part B (automatic backup on a config change) is NOT started, and the drift display was built but never observed.',
+      status: 'active',
+    },
+    
+    {
+      route: 'POST /api/risk/monte-carlo',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'RiskController',
+      contract: 'Runs 10k-iteration Monte Carlo simulation on trade PnL sequence. Returns equity distribution, risk of ruin, optimal position size analysis, Sharpe, profit factor.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/performance/summary/full',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'PerformanceController',
+      contract: 'Full performance summary from Trade table (Prisma). Returns per-strategy stats, daily equity curve, monthly breakdown, overall win rate/P&L/profit factor. Query: ?days=90.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/performance',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'PerformanceController',
+      contract: 'Per-strategy performance stats from Trade table: win rate, P&L, profit factor, symbol list, avg holding time. Sorted by total P&L.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/trading/sessions/market-context',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'SessionTrackerController',
+      contract: '7-day market awareness: day-of-week profile, session timers (Asia/London/NY), upcoming events (earnings/FOMC/OpEx), pre-flight checklist, swap/warning alerts.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/paper-trading/order',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'PaperTradingController',
+      contract: 'Place simulated order in virtual account. Executes at current market price, tracks P&L, no real money at risk. Returns order with virtual fill.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/paper-trading/account',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'PaperTradingController',
+      contract: 'Virtual account summary: balance, equity, open positions, closed P&L, trade history.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/import-jobs/orchestrate',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'ImportJobsController',
+      contract: 'Unified data import orchestration. Checks freshness across all data types, triggers stale imports, returns status per data type. Replaces scattered per-module import endpoints.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/import-jobs/status',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'ImportJobsController',
+      contract: 'Current freshness status for all data types: market bars, earnings, news, portfolio, fundamentals. Per-symbol staleness with last import timestamps.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/scoring/logs',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'ScoringLogController',
+      contract: 'Unified scoring logs with filtering by symbol, protocol, date range. Structured entries with directive breakdown, signal class, confidence. Replaces scattered console.log output.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/portfolio/trading212/positions',
+      method: 'GET',
+      permission: 'Authenticated read access',
+      owner: 'PortfolioController',
+      contract: 'Live Trading212 positions imported via Trading212ImportService. Real-time pricing from PortfolioPriceService. Position values, P&L, allocation percentages.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /signals/:id/action',
+      method: 'GET',
+      permission: 'Authenticated local operator access',
+      owner: 'Signal actions service (#662)',
+      contract: 'Bot-action state for a signal (Score row UUID): none | pending | filled, correlated via decision_log and trade records.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /signals/:id/trade',
+      method: 'POST',
+      permission: 'Authenticated local operator access',
+      owner: 'Signal actions service (#662)',
+      contract: 'Places a MANUAL trade for a signal through the same safety chain as the bot (market-status gate, duplicate guard, diversification, 60s cooldown) then records it as origin=manual.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/speed/scan',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'Speed Scan controller',
+      contract: 'MICRO-TREND SCALPING (2026-07-29). Short timeframes (5s–1m), 4 timeframes per symbol, seasonal affinity. Heaviest per-symbol but runs on small set (~23 symbols). Distinct from main scoring — scalping only.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/backtest/benchmark',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'Backtest controller',
+      contract: 'BENCHMARK ANALYTICS (2026-07-29). Compares strategy returns vs buy-and-hold from MarketBar 1d. No directives run — reads historical data only. Analytics, not scoring.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/scoring/protocols',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'Protocols controller',
+      contract: 'Creates a new scoring protocol with directive groups, weight configuration, direction mode, and timeframe. Used by Protocol Builder page. Returns created protocol with group + entry details.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/scoring/strategies',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'Scoring strategies controller',
+      contract: 'Creates a new scoring strategy from a protocol. Configures gate toggles and threshold percentages per directive group. Used by Strategy Builder page. Returns created strategy with gate configuration.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/scoring/metastacks/ratings',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'Scoring controller',
+      contract: 'Returns all MetaStacks ranked by composite 0-100 rating with star bands (Elite/Strong/Average/Weak/Untested). Ratings computed from actual trade outcomes: PnL/hour effectiveness rate, profit factor, win rate, max drawdown, SHA-256 fingerprint of component state.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/scoring/metastacks/:id/fingerprint',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'Scoring controller',
+      contract: 'Checks whether a MetaStack component fingerprint (protocol, watchlist symbols, broker, thresholds, SL/TP) has changed since last persisted. Used by UI to warn when performance history may be stale.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/diversification/pre-trade',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'Diversification controller',
+      contract: 'Pre-trade diversification check for a symbol: returns diversification.granted (boolean) and diversification.blockingReasons[] if the trade would exceed limits. Query: ?symbol=NVDA&broker=mt5.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/providers/mt5/bridge-events',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'MT5 provider controller',
+      contract: 'Returns MT5 bridge state transition history from bridge_event table. Filters by event_type (connected/disconnected/error). Used by Bridge Reliability monitoring.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/system/health-dashboard',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'SystemHealthController',
+      contract: 'Runs 6 diagnostics in parallel via Promise.all(): system vitals (CPU/Mem/Uptime/Heap/Platform), provider health grid, API trends (24h AVG duration), DB tables vs retention, slow queries (>1s), trace correlations. Returns unified payload with fetchedAt timestamp. All methods try/catch guarded — returns [] on failure.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/system/health-summary',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'SystemHealthController',
+      contract: 'Returns ~300 char text blob summarizing system health: CPU%, Mem%, DB status, provider summary, error count. Designed for LLM context window consumption. Text-only, no JSON nesting.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/system/settings/health-checks',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'SettingsController',
+      contract: 'Returns HealthChecksConfig toggle state. 10 boolean toggles for diagnostic sections. Dashboard respects disabled checks — excluded sections are never computed.',
+      status: 'active',
+    },
+  
+    {
+      route: 'PUT /api/system/settings/health-checks',
+      method: 'PUT',
+      permission: 'Authenticated operator access',
+      owner: 'SettingsController',
+      contract: 'Updates HealthChecksConfig toggle state. Accepts partial update body. Persists to app-settings.json. Returns merged full health checks config.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/automation/events',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'AutomationController',
+      contract: 'Returns unified, time-sorted event stream from existing AutomationEvent + DecisionLog Prisma models. Query: ?limit=50&type=automation|decision. Type badges: automation/decision. Limit capped at 200. try/catch guards against missing tables.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/directives/seed',
+      method: 'POST',
+      permission: 'Admin access',
+      owner: 'DirectivesController',
+      contract: 'Idempotent seed of 102 directives into DB directive table. Upserts id, name, weight, config (description/directionBias/version), active, isDefault, nature. Returns {seeded:N, skipped:N}. Safe to re-run — no duplicates.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/scoring/gated/protocols/seed',
+      method: 'POST',
+      permission: 'Admin access',
+      owner: 'ProtocolGatingController',
+      contract: 'Idempotent seed of 37 protocols into DB (protocol + protocol_directive_group + protocol_directive_entry tables). Upserts slug, name, description, directionMode, tradingStyle, groups (weight, isRiskGate, multipliers), and entries (directiveId, maxScore). Returns {seeded:37, groups:111, entries:540}.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/providers/positions/sync',
+      method: 'POST',
+      permission: 'Automation loop (internal)',
+      owner: 'PositionSyncService',
+      contract: 'Broker-agnostic position sync. Accepts provider ID + positions array. Upserts into Position table by symbol+provider. Links Trade records by brokerTicket. Detects closed positions → finalizes Trade records. Called by automation loop on every tick.',
+      status: 'active',
+    },
+  
+    {
+      route: 'POST /api/system/reload-config',
+      method: 'POST',
+      permission: 'Authenticated operator access',
+      owner: 'ConfigReloadController',
+      contract: 'Two-tier reload policy (2026-07-29). Tier 1 hot-reload (~20ms): directive metadata and protocol caches from DB without restart. Returns {success, reloaded: ["directives","protocols"], ms, warnings}. For toggling directives, updating weights, or changing protocol status. Tier 2 restart: new directive classes, protocol restructures, new adapters, calibration overrides, Prisma schema changes, env variables.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/symbols/resolution',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'SymbolsController',
+      contract: 'Symbol Resolver debug endpoint (2026-07-29). Returns all symbols across all 8 tiers. Query: ?tier=positions|active-strategies|active-protocols|watchlist-starred|macro|sector|forex-floor|all-active or ?feature=news|bar-refresh|scoring|automation. Optional ?limit (default 200). Without params: returns all symbols across all tiers.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/automation/activity',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'AutomationController',
+      contract: 'Activity log feed (2026-07-29). Reads most recent automation_event rows via AuditLogService.getRecentActivity(). Returns { events[], currentTick, currentPhase, phaseStartedAt, totalEventsToday }. Each event: tickNumber, timestamp, step, symbol, decision, detail, durationMs. Zero new DB writes — reads existing audit trail. Query: ?limit=30.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/scoring/gated/protocols',
+      method: 'GET',
+      permission: 'Authenticated operator access',
+      owner: 'ProtocolGatingController',
+      contract: 'Returns all protocols with their directive groups. Includes derivedFrom field (parent protocol slug) for A/B variant tracking, and now theory (written intent, String? @db.Text, #689) for seeded protocols. Updated 2026-07-31 derivedFrom; 2026-08-26 theory.',
+      status: 'active',
+    },
+  
+    {
+      route: 'GET /api/health/setup',
+      method: 'GET',
+      permission: 'Public (no auth)',
+      owner: 'HealthController',
+      contract: 'First-run detection endpoint. Returns { setupComplete: boolean, missingSteps: string[] } based on DB state (providers configured, protocols seeded, strategies created). Used by SetupBanner component to show/hide first-run setup prompt. Added 2026-08-06.',
+      status: 'active',
+    },
+  
       /* — batch #24 — new/changed endpoints (2026-09-27 to 09-30, 25 handoffs) — */
       {
         route: 'GET /api/symbols/:ticker/protocols',
@@ -1200,14 +1507,6 @@ export const CURRENT_ROUTE_CONTRACTS = [
       permission: 'Authenticated',
       owner: 'ScoringController',
       contract: 'Returns the DERIVED strategy key per bot (#876). A "strategy" was whatever `scoring_strategy` held, so 14 FX bots shared ONE identity and their trades blended into a single rating. Yields 26 bots / 26 strategies and REPORTS duplicates rather than merging them.',
-      status: 'active',
-    },
-    {
-      route: 'GET|POST /api/scoring/strategy-registry | PATCH /:id | POST /:id/reaccept',
-      method: 'GET, POST, PATCH',
-      permission: 'Authenticated; writes require write access',
-      owner: 'StrategyRegistryController',
-      contract: 'Pins a stable id to a derived key, so a strategy can be NAMED across config edits, and reports DRIFT when a bot changes what the key resolves to (#875). ⚠️ Part B (automatic backup) is NOT started; the drift display was built but never observed.',
       status: 'active',
     },
     {
