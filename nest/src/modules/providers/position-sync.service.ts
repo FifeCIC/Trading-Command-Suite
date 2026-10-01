@@ -248,7 +248,7 @@ export class PositionSyncService {
         select: {
           id: true, symbol: true, openedAt: true,
           brokerTicket: true, side: true, pnl: true, exitPrice: true,
-          accountId: true,
+          accountId: true, quantity: true,
         },
       });
       if (!Array.isArray(stranded) || stranded.length === 0) return 0;
@@ -285,6 +285,12 @@ export class PositionSyncService {
             symbol: t.symbol,
             openedAt: t.openedAt,
             side: t.side,
+            // ⚠️ `quantity` is REQUIRED, not decorative (#1014). It is the NUMERATOR of the volume
+            // split (`rowQuantity / totalOpeningVolume`), and when the ticket resolves to a position
+            // the split is forced. Omitted, `splitPnlByVolume` gets `qty = 0`, returns null, and the
+            // row keeps a NULL P&L while showing a correct exit price — which reads as "the repair
+            // half worked", the hardest kind of result to notice.
+            quantity: t.quantity,
             currentPrice: t.exitPrice ?? null,
             pnl: t.pnl ?? null,
           }, accountId).catch(() => 0);
@@ -325,6 +331,119 @@ export class PositionSyncService {
       this.logger.warn(`[${provider}] Stranded-trade reap failed: ${(err as Error).message}`);
       return 0;
     }
+  }
+
+  /**
+   * repairClosedTradesWithUnknownPnl() — re-price rows that were finalised as "position vanished".
+   *
+   * ── WHY THIS EXISTS, AND WHY IT IS NOT PART OF THE NORMAL PASS ───────────────────────────────
+   *
+   * `reapStrandedTrades()` only looks at `status='open'`, and `finalizeClosedPosition()` is driven by
+   * rows still present in `position`. A row that was ALREADY wrongly closed — which is the whole
+   * population #1014 is about — is therefore reachable by neither, and stayed wrong. Measured
+   * 2026-10-01: the loop ticked with the fixed write sites and closed **0** rows, which is how this
+   * gap was found (a wrong answer and a negative answer look identical in a count).
+   *
+   * It is a SEPARATE, EXPLICIT pass rather than something the 2-minute loop does on its own, because
+   * it rewrites history. The issue's own rule applies: the record is the evidence, so a rewrite is a
+   * deliberate act with a count in the log — not a side effect of a routine tick.
+   *
+   * ⚠️ IDEMPOTENT BY CONSTRUCTION. Repairing a row clears `pnlInvalid`, so it is not selected again.
+   * A row whose ticket cannot be resolved is left exactly as it was and is COUNTED as unrepaired, so
+   * "not repairable" is distinguishable from "not reached".
+   *
+   * ⚠️ IT NEVER ERASES AN EXISTING P&L. Only rows flagged `pnlInvalid` with no computable result are
+   * candidates, and the finaliser preserves a known value.
+   */
+  async repairClosedTradesWithUnknownPnl(
+    provider: string,
+    accountId: string | null = null,
+    limit = 200,
+  ): Promise<{ examined: number; repaired: number; notRepairable: number }> {
+    const candidates: any[] = await (this.prisma as any).trade
+      .findMany({
+        where: { provider, status: 'closed', pnlInvalid: 1 },
+        select: {
+          id: true, symbol: true, openedAt: true, brokerTicket: true,
+          side: true, pnl: true, exitPrice: true, accountId: true, quantity: true,
+        },
+        orderBy: { openedAt: 'asc' },
+        take: limit,
+      })
+      .catch(() => []);
+
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      return { examined: 0, repaired: 0, notRepairable: 0 };
+    }
+
+    let repaired = 0;
+    let notRepairable = 0;
+    // ⚠️ WHY EACH ROW FAILED, COUNTED RATHER THAN SWALLOWED. The first version of this pass returned
+    // `examined 135, repaired 0, notRepairable 135` with NOTHING in the log — because the
+    // `finalizeClosedPosition` call was wrapped in `.catch(() => 0)`. A count with no reason is the
+    // defect this repo keeps re-finding: it cannot be told apart from a wrong answer, and it cost a
+    // rebuild-and-retry cycle to diagnose. The reasons are now carried out of the loop.
+    const reasons = new Map<string, number>();
+    const note = (k: string) => reasons.set(k, (reasons.get(k) ?? 0) + 1);
+
+    for (const t of candidates) {
+      // A row with no ticket at all is not this pass's business — there is no position to resolve.
+      // Those are the symbol-fallback / reaper population and they are counted elsewhere.
+      if (t.brokerTicket == null) {
+        notRepairable++;
+        note('no ticket — no position to resolve');
+        continue;
+      }
+
+      let done = 0;
+      let failure: string | null = null;
+      try {
+        done = await this.finalizeClosedPosition(
+          provider,
+          {
+            brokerTicket: String(t.brokerTicket),
+            symbol: t.symbol,
+            openedAt: t.openedAt,
+            side: t.side,
+            // ⚠️ The split's NUMERATOR. Omitted, every repaired row would show a correct exit price
+            // and a NULL P&L — measured on the first live run, and the reason it looked like the
+            // repair had partly worked.
+            quantity: t.quantity,
+            currentPrice: t.exitPrice ?? null,
+            pnl: null, // deliberately null: we do NOT feed back the unknown as if it were a result
+          },
+          accountId,
+          { allowClosed: true },
+        );
+      } catch (err) {
+        // ⚠️ Named and counted. The old `.catch(() => 0)` reported this row as merely
+        // "not repairable", which is indistinguishable from "the ticket did not resolve".
+        failure = `threw: ${(err as Error).message.slice(0, 80)}`;
+        done = 0;
+      }
+
+      if (done) {
+        repaired += done;
+        this.logger.warn(
+          `[${provider}] Repaired closed Trade ${t.symbol} (${t.id}, ticket ${t.brokerTicket}) — ` +
+            'was finalised with no computable P&L; re-priced from deal history',
+        );
+      } else {
+        notRepairable++;
+        // Exactly ONE reason per row — a bare `notRepairable` count is the thing that made the first
+        // run undiagnosable.
+        note(failure ?? 'finaliser returned 0 (ticket did not resolve, or no deal history)');
+      }
+    }
+
+    // A row that could not be repaired is REPORTED BY REASON, so the next reader does not have to
+    // re-derive why 135 rows produced nothing.
+    const breakdown = [...reasons.entries()].map(([k, v]) => `${v}× ${k}`).join('; ');
+    this.logger.log(
+      `[${provider}] P&L repair pass: examined ${candidates.length}, repaired ${repaired}, ` +
+        `not repairable ${notRepairable}${breakdown ? ` (${breakdown})` : ''}`,
+    );
+    return { examined: candidates.length, repaired, notRepairable };
   }
 
   /**
@@ -465,9 +584,28 @@ export class PositionSyncService {
    * Trade with the real exit price from broker deal history and notify.
    * Returns 1 if a Trade was finalized, else 0.
    */
-  private async finalizeClosedPosition(provider: string, dbPos: any, syncAccountId: string | null = null): Promise<number> {
+  private async finalizeClosedPosition(
+    provider: string,
+    dbPos: any,
+    syncAccountId: string | null = null,
+    /**
+     * ⚠️ `allowClosed` exists for the #1014 REPAIR PASS, and for nothing else.
+     *
+     * A row that was already finalised as "position vanished" holds `status='closed'`, so the
+     * `status: 'open'` filter below makes it unreachable — the reconciler can never revisit it and
+     * the real P&L stays lost forever. Relaxing the filter here (rather than writing a second
+     * deal-matching/split routine for closed rows) is deliberate: a copy of this pipeline is a
+     * second thing to drift, and drift in a money path is the defect the repo warns about most.
+     *
+     * ⚠️ It does NOT weaken the normal paths: both callers that close a live position pass nothing,
+     * so they keep the `status: 'open'` guarantee exactly as before.
+     */
+    opts: { allowClosed?: boolean } = {},
+  ): Promise<number> {
     // Find the open trade — by broker ticket first, then symbol fallback.
-    const where: any = { provider, status: 'open' };
+    // `status: undefined` is OMITTED by Prisma rather than rejected, which is what makes
+    // `allowClosed` a widening of the filter and not a broken one.
+    const where: any = opts.allowClosed ? { provider } : { provider, status: 'open' };
     let trade: any = null;
     if (dbPos.brokerTicket) {
       trade = await this.prisma.trade.findFirst({ where: { ...where, brokerTicket: dbPos.brokerTicket } }).catch(() => null);
@@ -753,7 +891,15 @@ export class PositionSyncService {
                 pnlInvalidReason:
                   'exit-unknown: position vanished; no broker deal history and no last price',
               }
-            : {}),
+            : {
+                // ⚠️ CLEARED WHEN THE P&L IS NOW KNOWN (#1014). Without this the repair pass writes
+                // a correct `pnl` and LEAVES `pnlInvalid: 1` standing — a row that reads as
+                // quarantined while holding a good number, and every view that excludes invalid
+                // rows would go on hiding the very P&L the repair just recovered. The flag and the
+                // value must move together or the repair is invisible.
+                pnlInvalid: 0,
+                pnlInvalidReason: null,
+              }),
         },
       });
 
@@ -771,7 +917,30 @@ export class PositionSyncService {
       }).catch(() => {});
     }
 
-    await (this.prisma as any).position.delete({ where: { id: dbPos.id } });
+    // ⚠️ ONLY DELETE A POSITION ROW THAT EXISTS (#1014, found live 2026-10-01).
+    //
+    // This method is called from two places, and only ONE of them has a `position` row:
+    //
+    //   • `syncPositions()` passes a row it read FROM `position` — it has an `id`, and deleting it
+    //     is the point (the position is gone from the broker).
+    //   • `reapStrandedTrades()` and the #1014 repair pass pass a SYNTHESISED object built from a
+    //     `trade` row — there is no `position` row at all, so `dbPos.id` is `undefined`.
+    //
+    // `delete({ where: { id: undefined } })` is not a no-op: Prisma REJECTS it
+    // (`PositionWhereUniqueInput needs at least one of id or provider_brokerTicket`) and THROWS —
+    // **after** the trade above has already been updated. Both callers wrap the call in
+    // `.catch(() => 0)`, so the throw is invisible: the row is correctly closed, the function
+    // reports 0, and the caller logs nothing.
+    //
+    // Measured live: the #871 ticketed reaper did exactly that — it closed a row and reported
+    // "0 reaped". Its spec passed because `position.delete` is a jest mock that accepts any argument,
+    // so the one case that mattered (a synthesised object) was never exercised.
+    if (dbPos.id != null) {
+      await (this.prisma as any).position.delete({ where: { id: dbPos.id } }).catch((err: Error) => {
+        // A failed cleanup must not undo a recorded close, but it must not be silent either.
+        this.logger.warn(`[${provider}] could not remove position row ${dbPos.id}: ${err.message}`);
+      });
+    }
     return 1;
   }
 

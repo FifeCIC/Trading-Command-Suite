@@ -60,7 +60,28 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     jest.clearAllMocks();
     position.upsert.mockResolvedValue({});
     position.findMany.mockResolvedValue([]);
-    position.delete.mockResolvedValue({});
+    /**
+     * ⚠️ `position.delete` MIRRORS PRISMA, AND THAT IS THE POINT (#1014).
+     *
+     * It used to be `mockResolvedValue({})` — a mock that accepts ANY argument. `finalizeClosedPosition`
+     * ends with `position.delete({ where: { id: dbPos.id } })`, and on the REAP path `dbPos` is
+     * synthesised from a `trade` row, so `dbPos.id` is `undefined`. Real Prisma REJECTS that
+     * (`needs at least one of id or provider_brokerTicket`) and throws — after the trade update — so
+     * the reaper closed a row, swallowed the throw via `.catch(() => 0)`, and reported **"0 reaped"**.
+     *
+     * The lenient mock is precisely why this suite passed while the behaviour was broken: it
+     * certified a call shape Prisma does not accept. A mock that cannot fail for the right reason is
+     * the same defect as a guard that cannot fail for the right reason.
+     */
+    position.delete.mockImplementation(({ where }: any) => {
+      if (where?.id == null) {
+        return Promise.reject(new Error(
+          'Argument `where` of type PositionWhereUniqueInput needs at least one of `id` or ' +
+          '`provider_brokerTicket` arguments.',
+        ));
+      }
+      return Promise.resolve({});
+    });
 
     trade.update.mockResolvedValue({});
     trade.updateMany.mockResolvedValue({ count: 0 });
@@ -107,8 +128,43 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     expect(updateArg.data.pnl).toBeCloseTo(-204, 2);
   });
 
-  it('⚠️ NEVER touches a ticketed Trade the broker still reports — a ticket is proof of life', async () => {
-    // THE safety test. Widening the reaper is only acceptable because a ticket present in the
+  /**
+   * The SYNTHESISED `dbPos` path — the one no test covered (#1014).
+   *
+   * `reapStrandedTrades()` builds its `dbPos` from a `trade` row rather than reading a `position`
+   * row, so it must supply every field the finaliser reads. It supplied five and NOT `quantity` —
+   * which is the split's NUMERATOR. Live, that produced the hardest result to notice: the exit price
+   * was repaired correctly and the P&L stayed NULL, so the repair looked half-done.
+   *
+   * ⚠️ A jest mock cannot catch a missing argument — it accepts whatever it is given. Only an
+   * assertion on the RESULT can, which is what this is.
+   */
+  it('prices a stranded row whose ticket is an ORDER id, by splitting the position (#1014)', async () => {
+    trade.findMany.mockResolvedValue([{
+      id: 'order-ticketed', symbol: 'XAUUSD', openedAt: new Date('2026-09-28T08:52:17Z'),
+      brokerTicket: '152690940846', side: 'buy', pnl: null, exitPrice: null, quantity: 0.01,
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 'order-ticketed', symbol: 'XAUUSD', side: 'buy', quantity: 0.01,
+    });
+    adapter.getDeals.mockResolvedValue([
+      // The stored ticket is an ORDER id, and it maps to the POSITION both scale-ins joined.
+      { positionId: '152690675067', orderId: '152690940846', side: 'buy', volume: 0.02, price: 4146.30, profit: 0, time: new Date('2026-09-28T08:52:17Z') },
+      { positionId: '152690675067', orderId: '152690940848', side: 'buy', volume: 0.02, price: 4145.83, profit: 0, time: new Date('2026-09-28T09:35:55Z') },
+      { positionId: '152690675067', orderId: '152690988172', side: 'sell', volume: 0.04, price: 4157.11, profit: 40, time: new Date('2026-09-28T12:28:00Z') },
+    ]);
+
+    const result = await service.syncPositions('mt5', [], { authoritative: true });
+
+    expect(result.reaped).toBe(1);
+    const updateArg: any = trade.update.mock.calls[0][0];
+    expect(updateArg.data.exitPrice).toBe(4157.11);
+    // A QUARTER of the net (0.01 of 0.04 opened) — not 40, and NOT null. `null` is what the missing
+    // `quantity` produced live, and it is the assertion that fails when the numerator is dropped.
+    expect(updateArg.data.pnl).toBe(10);
+  });
+
+  it('⚠️ NEVER touches a ticketed Trade the broker still reports — a ticket is proof of life', async () => {    // THE safety test. Widening the reaper is only acceptable because a ticket present in the
     // snapshot is an absolute stop. If this fails, an ordinary sync pass is closing LIVE trades.
     trade.findMany.mockResolvedValue([{
       id: 'live-trade', symbol: 'EURUSD', openedAt: new Date('2026-09-18T17:22:45Z'),

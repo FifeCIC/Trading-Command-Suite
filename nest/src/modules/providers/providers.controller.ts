@@ -12,6 +12,7 @@ import { ProvidersService } from './providers.service';
 import { AdapterFactory } from './adapter-factory';
 import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
+import { PositionSyncService } from './position-sync.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 import { Trading212Adapter } from './adapters/trading212.adapter';
 import { CapitalComAdapter } from './adapters/capital-com.adapter';
@@ -26,7 +27,34 @@ export class ProvidersController {
     private readonly capitalComAdapter: CapitalComAdapter,
     private readonly rateLimitGovernor: RateLimitGovernor,
     private readonly degradation: ProviderDegradationService,
+    private readonly positionSync: PositionSyncService,
   ) {}
+
+  /**
+   * POST /api/providers/repair-pnl — re-price rows finalised as "position vanished" (#1014).
+   *
+   * ⚠️ DELIBERATELY NOT PART OF THE AUTOMATION LOOP. It rewrites historical rows, and the repo's own
+   * rule is that the record is the evidence — a rewrite is an act with a count in the log, not a side
+   * effect of a 2-minute tick. The normal pass cannot reach these rows at all (it filters
+   * `status='open'`), which is why a separate, explicit call exists rather than a flag.
+   *
+   * Idempotent: a repaired row has `pnlInvalid` cleared and is not selected again. Returns the counts
+   * so "nothing to do" is distinguishable from "nothing happened".
+   */
+  @Post('repair-pnl')
+  @ApiOperation({ summary: 'Re-price closed trades whose P&L was never computable (#1014)' })
+  async repairPnl(
+    @Query('provider') provider = 'mt5',
+    @Query('accountId') accountId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const n = Number(limit);
+    return this.positionSync.repairClosedTradesWithUnknownPnl(
+      provider,
+      accountId ?? null,
+      Number.isFinite(n) && n > 0 ? n : undefined,
+    );
+  }
 
   @Get('degradation')
   getDegradation() {
