@@ -45,6 +45,11 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
   const trade = {
     findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn(),
     update: jest.fn(), updateMany: jest.fn(),
+    /** ⚠️ Required for #1014 — the reconciler counts rows sharing a position before booking P&L.
+     *  See the longer note in `position-sync.service.spec.ts`; the same false-pass argument applies
+     *  here: an unmocked Prisma method throws, the reconciler refuses to book, and a test asserting
+     *  a P&L then fails for a reason unrelated to what it is testing. */
+    count: jest.fn(),
   };
   const prisma = { isAvailable: true, position, trade };
   const adapter = { getDeals: jest.fn() };
@@ -61,6 +66,7 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     trade.updateMany.mockResolvedValue({ count: 0 });
     trade.findMany.mockResolvedValue([]);
     trade.findFirst.mockResolvedValue(null);
+    trade.count.mockResolvedValue(1);
     /**
      * ⚠️ `trade.create` MUST be mocked, and leaving it out is a FALSE-PASS generator, not an
      * omission. `reconcileTrade()` calls `trade.create()` whenever a broker position has no

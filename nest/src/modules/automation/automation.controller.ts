@@ -452,6 +452,12 @@ export class AutomationController {
       if (s.dataStatus) dataStatusMap.set(s.id, { dataStatus: s.dataStatus, dataStatusReason: s.dataStatusReason });
     }
 
+    // ⚠️ THE FIELD NAME IS A MISNOMER, KEPT FOR COMPATIBILITY (#878). These rows come from
+    // `tradingStrategy.findMany({ where: { active: true } })` — they are BOTS. The app calls the
+    // configuration a Protocol / Scoring Strategy / Trading Strategy, so "activeStrategies" read as
+    // a count of strategies on six surfaces and was wrong on every one (one measured "25
+    // strategies" for 25 bots). Renaming the field is a breaking change across those consumers and
+    // is deliberately NOT done here; the UI now labels it for what it is.
     const activeStrategies: any[] = [];
     if (this.prisma.isAvailable) {
       try {

@@ -63,5 +63,58 @@
     "autoRefreshSec": 15,
     "cronHeartbeats": true,
     "traceCorrelations": true
+  },
+  "uiReview": {
+    "entries": {
+      "/dashboard/dashboard": {
+        "hide": false,
+        "keen": 3,
+        "note": "strong page - needs slight improvement to autosize widgets but it might be complex as some widgets should have a minimum size else they will look messy",
+        "updatedAt": "2026-09-30T10:56:53.598Z",
+        "importance": "H"
+      },
+      "/trading212/t212-cfd": {
+        "hide": true,
+        "keen": 1,
+        "note": "Needs to be deleted. What I just added for the Stocks ISA comment explains how Accounts should work and this CFD placeholder is not required.",
+        "updatedAt": "2026-09-30T11:01:12.046Z",
+        "importance": "L"
+      },
+      "/trading212/t212-isa": {
+        "hide": true,
+        "keen": 2,
+        "note": "We need a system of displaying each registered account on it's own page. The current ISA Allowance page almost feels like that system but isn't. Currently it's not loading my Trading212 ISA detail anyway but I don't want the page to be hardcoded for Trading212. It has to be a general account template and until this is in place it needs hidden.",
+        "updatedAt": "2026-09-30T11:00:10.986Z",
+        "importance": "M"
+      },
+      "/trading212/order-testing": {
+        "hide": false,
+        "keen": 2,
+        "note": "Move this page to the Status area with the intention of offering all users the ability to test individual aspects of the app. This will support keen testers in the area days too. Lets also take the opportunity to examine the existing QA page and how we might create a system that can feedback to myself.",
+        "updatedAt": "2026-09-30T11:04:29.055Z",
+        "importance": "M"
+      },
+      "/trading212/t212-portfolio": {
+        "hide": false,
+        "keen": 3,
+        "note": "the table needs to match the most recent designs, links from symbols to the symbols own page, pages url includes \"t212\" but it's a view",
+        "updatedAt": "2026-09-30T10:57:25.760Z",
+        "importance": "H"
+      },
+      "/watchlists/active-symbols": {
+        "hide": false,
+        "keen": 3,
+        "note": "The protocols column shows zero for symbols that have current positons which means some basic wiring still hasn't been done. If it turns out that those positions were created in yet another separate system from META.Stack's path then I need to know asap - sometimes this does happen due to the way agent AI processes instructions. ",
+        "updatedAt": "2026-09-30T11:12:04.221Z",
+        "importance": "H"
+      },
+      "/watchlists/user-watchlists": {
+        "hide": false,
+        "keen": 3,
+        "note": "\"Built-in Watchlists\" should automatically display a watchlist for every separate stocks and shares account. This will extend the multi-accounts design and the UI automatically adapting to support that. It does require the database generation of the watchlist to match the account so that a protocol can use it. That might also involve the registration of symbols not yet in the database. Also, somehow there are two designes for the pills that display the symbols, some pills have the company name and some don't but it depeneds on the watchlist. ",
+        "updatedAt": "2026-09-30T11:15:35.450Z",
+        "importance": "H"
+      }
+    }
   }
 }

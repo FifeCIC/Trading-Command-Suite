@@ -774,6 +774,12 @@ export class Mt5Adapter implements IProviderAdapter {
       .map((d: any) => ({
         brokerTicket: d.ticket != null ? String(d.ticket) : '',
         positionId: d.positionId != null ? String(d.positionId) : undefined,
+        // ⚠️ #1014 — the ORDER id, carried so a LEGACY row can still be reconciled. Rows written
+        // before the write-site fix stored an ORDER ticket in `brokerTicket`, and the positional
+        // lookup (`deal.positionId === brokerTicket`) can never match one. With `orderId` present,
+        // the reconciler resolves order → position → deals, which repairs history instead of
+        // leaving it permanently unexplained. The bridge has always sent it (`orderId: d.order`).
+        orderId: d.orderId != null ? String(d.orderId) : undefined,
         symbol: d.symbol,
         side: d.type === 'buy' ? 'buy' as const : 'sell' as const,
         volume: Number(d.volume ?? 0),

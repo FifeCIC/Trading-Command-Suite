@@ -24,6 +24,9 @@ import { NotificationService } from '../notifications/notifications.service';
 import { AdapterFactory } from './adapter-factory';
 import { CLOSE_REASONS, closeReasonFromComment, closeReasonFromDealReason } from '../../common/trading/close-reason';
 import { resolveStrategyForClose } from './mt5-comment.util';
+// #1014 — the volume split that makes storing the POSITION id safe. Without it, N rows carrying one
+// `positionId` would EACH book the position's whole net (a 4x overstatement on a 4-order scale-in).
+import { splitPnlByVolume } from './pnl-split';
 
 /** Normalised position shape — any broker adapter should map to this. */
 export interface BrokerPosition {
@@ -502,9 +505,38 @@ export class PositionSyncService {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
         const deals = await adapter.getDeals(new Date(dbPos.openedAt));
-        const byPosition = deals.filter((d: any) =>
-          dbPos.brokerTicket && d.positionId === dbPos.brokerTicket,
-        );
+        // ── THE POSITION A ROW BELONGS TO, resolved from EITHER kind of ticket (#1014) ──
+        //
+        // `trade.brokerTicket` holds a POSITION id for every row written since #1014, and an ORDER
+        // id for rows written before it (the bug this issue is about). The two namespaces never
+        // intersect, so a direct positional match finds the new rows and NOTHING for the legacy
+        // ones — which is how 22 position-bearing rows were finalised as "position vanished" while
+        // the real position closed profitably.
+        //
+        // So: match on `positionId` first (the correct path), and when that yields nothing, treat
+        // the stored value as an ORDER id and resolve it to its position. The indirection is one
+        // hop and it is one-way — a legacy row can be repaired, and a row whose ticket is neither
+        // still falls through to the symbol fallback exactly as before.
+        const stored = dbPos.brokerTicket ? String(dbPos.brokerTicket) : null;
+        let byPosition = stored
+          ? deals.filter((d: any) => d.positionId === stored)
+          : [];
+        // ⚠️ True when this row's ticket names an ORDER, not the position — see the block below,
+        // where it decides what the P&L split is allowed to assume.
+        let resolvedFromOrder = false;
+        if (byPosition.length === 0 && stored) {
+          const asOrder = deals.find((d: any) => d.orderId === stored);
+          if (asOrder?.positionId != null) {
+            byPosition = deals.filter((d: any) => d.positionId === asOrder.positionId);
+            if (byPosition.length > 0) {
+              resolvedFromOrder = true;
+              this.logger.log(
+                `[${provider}] ${dbPos.symbol}: ticket ${stored} is an ORDER id written before #1014 — ` +
+                  `resolved to position ${asOrder.positionId} (${byPosition.length} deals) so the close can be priced`,
+              );
+            }
+          }
+        }
         // Legacy brokers may not expose a position id. The symbol fallback is
         // only safe when the returned window identifies ONE lifecycle — with
         // several lifecycles for the same symbol it would average unrelated
@@ -542,24 +574,92 @@ export class PositionSyncService {
           exitPrice = filledVolume > 0
             ? exitDeals.reduce((sum: number, d: any) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
             : Number(exitDeals[exitDeals.length - 1].price || 0);
-          // ── DECISION (2026-09-28, primary) ──
-          // WHAT:      `realizedPnl` below is the position's ENTIRE net, with NO split by the
-          //            row's volume. That is correct ONLY while one row owns one positionId.
+          // ── DECISION (2026-09-28, primary) · REVERSED IN PART 2026-10-01 (#1014) ──
+          // WHAT:      `realizedPnl` is now the row's SHARE of the position's net, not the whole
+          //            net, whenever more than one `trade` row carries the same position id.
           // WHY:       On a NETTING account every order on a symbol shares ONE positionId. If N
-          //            rows carry it, all N resolve to these same deals and EACH books the whole
-          //            net — a 4x overstatement on the 4-order A/B scale-ins, with plausible
-          //            numbers and no error. So the ORDER TICKET is still what the write sites
-          //            store (#1014 reverted, commit e7cb774); the bridge and adapter DO now carry
-          //            `positionId`, and the switch waits on this.
-          // INSTEAD OF: Storing `result.positionId` at the write sites, which is what #1014 asked
-          //            for and what the deal-match below appears to require.
-          // REVERSE BY: Split here — `rowShare = row.quantity / sum(OPENING deal volume)` — then
-          //            store the position id at the write sites. Verifiable only once a multi-row
-          //            position exists; measured 2026-09-28 that none does, so it is NOT verifiable yet.
-          // REGISTER:  docs/SETTLED-DECISIONS.md row 43
-          // GUARD:     nest/scripts/audit-trade-pnl-attribution.cjs (on demand)
-          realizedPnl = exitDeals.reduce((sum: number, d: any) =>
-            sum + Number(d.profit || 0) + Number(d.commission || 0) + Number(d.swap || 0) + Number(d.fee || 0), 0);
+          //            rows carry it, all N resolve to these same deals and EACH would book the
+          //            whole net — a 4x overstatement on the 4-order A/B scale-ins, with plausible
+          //            numbers and no error. `splitPnlByVolume` divides by the OPENING volume, so
+          //            the N rows sum to the position instead of each claiming it.
+          // INSTEAD OF: Booking the whole net to every row — what this site did before, and what
+          //            the original marker chose to keep rather than store `result.positionId`
+          //            without a split.
+          // REVERSE BY: Pass `rowsSharing: 1` unconditionally, or delete the split call below.
+          //            Both restore whole-net booking exactly; the module is pure and untouched.
+          // REGISTER:  docs/SETTLED-DECISIONS.md row 43 (status changes to 🟡 — the split is
+          //            volume-based, one-directional: it cannot yet be exercised by a live
+          //            multi-row position, so only the arithmetic is canaried)
+          // GUARD:     nest/src/modules/providers/pnl-split.spec.ts (18 cases, the incident's own
+          //            numbers) · nest/scripts/audit-trade-pnl-attribution.cjs (on demand)
+          //
+          // ⚠️ THE ROWS-SHARING COUNT IS QUERIED, NEVER ASSUMED. The entire safety argument rests
+          // on knowing whether more than one row owns this position, and a hardcoded 1 reintroduces
+          // the overstatement. It is a single indexed count on `brokerTicket`.
+          const openings = candidates.filter((d: any) => d.side !== closingSide);
+          // ⚠️ HOW MANY `trade` ROWS CARRY THIS POSITION. Queried, never assumed — the whole safety
+          // argument rests on it, and a hardcoded 1 reintroduces the overstatement.
+          //
+          // `rowsSharing` is a FACT about the data, and it stays `null` when we could not establish
+          // it. It is deliberately NOT defaulted to 1 (the overstatement path) and NOT set to a
+          // sentinel like 2 (which would be a fabricated fact — and the log below would print it as
+          // "2 rows", a false statement to whoever reads the log trying to work out why a P&L is
+          // missing). `null` means unknown, and `splitPnlByVolume` is given a count it refuses on.
+          let rowsSharing: number | null = null;
+          if (!dbPos.brokerTicket) {
+            // No position id → the symbol fallback is in use, and that window identifies ONE
+            // lifecycle by construction (`symbolFallbackSafe` above). One row owns it.
+            //
+            // ⚠️ This branch is why the count is not simply run anyway: `where: { brokerTicket:
+            // undefined }` does NOT mean "no ticket" to Prisma — it OMITS the clause, so the count
+            // would return EVERY trade for the provider. That is always > 1 and would send a
+            // fallback row down the split path with an unrelated denominator.
+            rowsSharing = 1;
+          } else {
+            try {
+              rowsSharing = await this.prisma.trade.count({
+                where: { brokerTicket: String(dbPos.brokerTicket), provider },
+              });
+            } catch {
+              // Left null on purpose — see above. The refusal below is the outcome, not a guess.
+              this.logger.warn(
+                `[${provider}] ${dbPos.symbol}: could not count rows sharing ticket ${dbPos.brokerTicket} — ` +
+                  'refusing to book a whole-net P&L; the row will read as unknown rather than overstated',
+              );
+            }
+          }
+
+          const split = splitPnlByVolume({
+            closingDeals: exitDeals as any,
+            openings: openings as any,
+            rowQuantity: (dbPos as any).quantity,
+            // `?? 2`: unknown sharing is passed as a count the split REFUSES on (its `rowsSharing <= 1`
+            // branch would book the whole net, which is exactly the overstatement we are guarding).
+            //
+            // ⚠️ AND THE SAME GUARD APPLIES TO A LEGACY ROW, FOR A DIFFERENT REASON. A count by
+            // `brokerTicket` is MEANINGLESS for a row whose ticket is an ORDER id: the four orders
+            // that built one position carry four DIFFERENT tickets, so each counts **1** and every
+            // one would take the sole-owner branch and book the whole net — the 4x overstatement
+            // restored through the side door, on exactly the rows this repair exists for. We know
+            // from the deal history that the row shares a position (that is how it was resolved),
+            // so the volume split is forced: `share = rowQuantity / totalOpeningVolume` is the
+            // authoritative division and it sums to the position whatever the ticket count says.
+            rowsSharing: resolvedFromOrder ? 2 : (rowsSharing ?? 2),
+          });
+          realizedPnl = split ? split.realizedPnl : null;
+          if (split) {
+            this.logger.log(
+              `[${provider}] ${dbPos.symbol}: booking ${split.realizedPnl.toFixed(2)} of ${split.netTotal.toFixed(2)} ` +
+                `(${split.basis}, share ${split.share.toFixed(4)}, ${rowsSharing} row(s) on this position)`,
+            );
+          } else if (rowsSharing !== 1) {
+            // ⚠️ Several rows — or an unknown number — with no computable share. `null` is the
+            // honest answer: NOT the whole net (the overstatement) and NOT 0 (a claimed break-even).
+            this.logger.warn(
+              `[${provider}] ${dbPos.symbol}: ${rowsSharing ?? 'an unknown number of'} row(s) share this position ` +
+                'but no volume share is computable — leaving P&L unset rather than booking the full net to one row',
+            );
+          }
           // `pnl` ALREADY includes these (it is profit + commission + swap + fee). Storing them
           // separately is what makes `grossPnl` computable without inventing a spread model.
           costComponents = {

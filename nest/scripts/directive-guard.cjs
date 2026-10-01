@@ -29,14 +29,24 @@
  *           DIRECTIVE recorded, so it fires for any cause of a too-small window
  *           (wrong cadence, mis-declared minBars, truncated fetch).
  *
+ * ⚠️ The RUNTIME half reads `dist/`, and it REFUSES TO RUN when `dist/` is stale (#881).
+ *    It used to treat an absent `dist/` and an out-of-date `dist/` differently: absent printed a
+ *    message, stale produced a full report drawn from code you had already changed. That meant the
+ *    guard could report CLEAN on a directive that was broken in source, because `dist/` still held
+ *    a good build - a check reporting on an artifact it is not testing. It now compares the newest
+ *    mtime under `src/.../implementations` against the newest under `dist/.../implementations` and
+ *    exits 1 with a `STALE BUILD` message rather than reporting results from older code.
+ *    A check that cannot read its input must ERROR, never pass.
+ *
  * Usage:
  *   node nest/scripts/directive-guard.cjs              # static + runtime
  *   node nest/scripts/directive-guard.cjs --static-only # skip runtime (no build)
  *   node nest/scripts/directive-guard.cjs --db          # + readiness evidence (local MySQL)
- *   node nest/scripts/directive-guard.cjs --self-test    # canary mode 8 only (no DB, no build)
+ *   node nest/scripts/directive-guard.cjs --self-test    # canary the pure classifiers (no DB, no build)
  *
- * Exit code: 1 if any ERROR-level finding (mode 1 static on a `ready` directive),
- * 0 otherwise. WARN findings are advisory and do not fail the run.
+ * Exit code: 1 if any ERROR-level finding (mode 1 static on a `ready` directive), or if the
+ * runtime half refused because `dist/` is stale. 0 otherwise. WARN findings are advisory and do
+ * not fail the run.
  *
  * Run from the `nest/` directory: `node scripts/directive-guard.cjs`.
  */
@@ -72,6 +82,13 @@ const NO_SIGNAL_PHRASES = /\b(no\s+\w+\s+(?:data|feed|signal|levels|support|resi
 
 /** @type {{file:string, directive:string, mode:number, severity:'ERROR'|'WARN', message:string}[]} */
 const findings = [];
+
+/**
+ * Set when the runtime half REFUSED to run because `dist/` is older than `src/` (#881).
+ * It forces exit 1 in `main()` even with zero findings, because "I could not test" must never be
+ * reported as "no problems found" - silence and success are different results.
+ */
+let runtimeRefused = false;
 
 function report(file, directive, mode, severity, message) {
   findings.push({ file: path.basename(file), directive, mode, severity, message });
@@ -205,14 +222,89 @@ function makeInput(daysAgo, trend) {
   return { symbol: 'GUARD', bars, dayBars: bars, hourBars: bars, min15Bars: bars };
 }
 
+// ── Build staleness gate (mode 1 runtime, #881) ────────────────────────────
+//
+// The runtime half exercises COMPILED classes, so its result is only meaningful if `dist/` was
+// built from the `src/` currently on disk. Before #881 the script distinguished "no dist" from
+// "dist", but not "dist built from older source" - so it could report CLEAN on a directive that
+// was broken in source, and it reported a rewritten `friday-drift` as still emitting score=8
+// because that was the value in the stale `.js`.
+//
+// The file sets deliberately MIRROR the two scans: `.ts` excluding `.spec.ts` on the source side,
+// `.js` excluding `.spec.js` on the compiled side. Broadening to every `.ts` would make a
+// test-only edit look like a stale build, and a guard that fires for unrelated reasons gets
+// allowlisted - which is worse than no guard.
+
+/** Newest mtime (ms) under `dir` for files matching `include`, ignoring `exclude`. 0 if none. */
+function newestMtimeMs(dir, include, exclude) {
+  if (!fs.existsSync(dir)) return 0;
+  let newest = 0;
+  for (const f of fs.readdirSync(dir)) {
+    if (!include.test(f)) continue;
+    if (exclude && exclude.test(f)) continue;
+    try {
+      const m = fs.statSync(path.join(dir, f)).mtimeMs;
+      if (m > newest) newest = m;
+    } catch {
+      /* unreadable entry cannot make source look newer */
+    }
+  }
+  return newest;
+}
+
+/**
+ * classifyStaleness() — PURE. No filesystem, so `--self-test` can canary it in BOTH directions.
+ *
+ *   sourceNewest — newest mtime (ms) under src/.../implementations (.ts, not .spec.ts)
+ *   distNewest   — newest mtime (ms) under dist/.../implementations (.js, not .spec.js)
+ *   distCount    — how many compiled directive files the runtime half would actually require()
+ *
+ * Three outcomes, and they must NOT collapse into each other - "absent" and "stale" are different
+ * facts, and `distCount === 0` means there is nothing to exercise whatever the mtimes say (an
+ * empty `dist/` directory would otherwise compare as "fresh", since 0 > 0 is false).
+ *
+ *   'no-dist' — nothing compiled; the caller prints how to build
+ *   'stale'   — source is NEWER than the build; refuse, do not probe
+ *   'fresh'   — safe to exercise the compiled classes
+ */
+function classifyStaleness(sourceNewest, distNewest, distCount) {
+  if (!distCount) return 'no-dist';
+  if (!sourceNewest) return 'fresh'; // no source mtimes readable -> nothing to disprove freshness
+  if (sourceNewest > distNewest) return 'stale';
+  return 'fresh';
+}
+
 function runtimeCheck() {
+  const inputA = makeInput(0, 0.1);
+  const inputB = makeInput(3, -0.6);
+
   if (!fs.existsSync(DIST_DIR)) {
     console.log(`\n[guard] dist not found at ${DIST_DIR} - run "npm run build" first (or use --static-only).`);
     return;
   }
-  const inputA = makeInput(0, 0.1);
-  const inputB = makeInput(3, -0.6);
-  const files = fs.readdirSync(DIST_DIR).filter((f) => /\.(?:directive|stub|directives)\.js$/.test(f));
+  const files = fs.readdirSync(DIST_DIR).filter((f) => /\.(?:directive|stub|directives)\.js$/.test(f) && !/\.spec\.js$/.test(f));
+
+  const sourceNewest = newestMtimeMs(IMPL_DIR, /\.ts$/, /\.spec\.ts$/);
+  const distNewest = newestMtimeMs(DIST_DIR, /\.js$/, /\.spec\.js$/);
+  const state = classifyStaleness(sourceNewest, distNewest, files.length);
+
+  if (state === 'no-dist') {
+    console.log(`\n[guard] dist holds no compiled directive files at ${DIST_DIR} - run "npm run build" first (or use --static-only).`);
+    return;
+  }
+  if (state === 'stale') {
+    const age = (ms) => (ms ? new Date(ms).toISOString() : 'n/a');
+    console.log(`\n[guard] STALE BUILD - the runtime half REFUSED to run (#881).`);
+    console.log(`[guard]   source newest: ${age(sourceNewest)}  (${IMPL_DIR})`);
+    console.log(`[guard]   dist   newest: ${age(distNewest)}  (${DIST_DIR})`);
+    console.log('[guard]   The compiled classes are older than the source they came from, so any');
+    console.log('[guard]   result here would describe code you have already changed. Rebuild and re-run:');
+    console.log('[guard]     npm --prefix nest run build:api        # or: cd nest && npm run build');
+    console.log('[guard]   Static findings above ARE current; only the runtime constant-output test was skipped.');
+    runtimeRefused = true;
+    return;
+  }
+
   let tested = 0;
   for (const f of files) {
     let mod;
@@ -579,8 +671,27 @@ function runBarStarvationSelfTest() {
   if (!tallyOk) failed++;
   console.log(`[self-test] ${tallyOk ? 'PASS' : 'FAIL'}  tally counts ticks AND starvation separately`);
 
-  const total = cases.length + 1;
-  console.log(`[self-test] mode 8: ${total - failed}/${total} passed.`);
+  // ── mode 1 runtime staleness gate (#881) ────────────────────────────────
+  // Both directions, because a one-directional canary cannot tell "the gate works" from "the gate
+  // never runs": 'fresh' must stay fresh, and a newer source must be refused.
+  const T0 = 1_700_000_000_000;
+  const staleCases = [
+    { name: 'source newer than dist -> STALE (the #881 case)', args: [T0 + 1000, T0, 112], expect: 'stale' },
+    { name: 'dist newer than source -> fresh', args: [T0, T0 + 1000, 112], expect: 'fresh' },
+    { name: 'identical mtimes -> fresh (a checkout stamps both)', args: [T0, T0, 112], expect: 'fresh' },
+    { name: 'empty dist is not "fresh" -> no-dist', args: [T0, T0, 0], expect: 'no-dist' },
+    { name: 'unreadable source mtimes cannot fabricate staleness', args: [0, T0, 112], expect: 'fresh' },
+  ];
+  for (const c of staleCases) {
+    const got = classifyStaleness(...c.args);
+    const ok = got === c.expect;
+    if (!ok) failed++;
+    console.log(`[self-test] ${ok ? 'PASS' : 'FAIL'}  ${c.name}` +
+      (ok ? '' : ` (expected ${c.expect}; got ${got})`));
+  }
+
+  const total = cases.length + 1 + staleCases.length;
+  console.log(`[self-test] mode 8 + mode 1 staleness gate: ${total - failed}/${total} passed.`);
   process.exit(failed === 0 ? 0 : 1);
 }
 
@@ -603,6 +714,13 @@ async function main() {
   if (!staticOnly) runtimeCheck();
   if (process.argv.includes('--db')) await readinessEvidenceCheck();
   if (process.argv.includes('--db')) await barStarvationCheck();
+
+  // ⚠️ Checked BEFORE the findings tally. A refusal is not "no findings" - reporting 0 errors after
+  // refusing to test would be a false clean, which is the defect #881 is about.
+  if (runtimeRefused) {
+    console.log('\n[guard] REFUSED: runtime constant-output test did not run (stale build). Others above are current.');
+    process.exit(1);
+  }
 
   if (findings.length === 0) {
     console.log('[guard] no findings.');

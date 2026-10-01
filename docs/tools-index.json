@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 160,
+  "count": 163,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -100,6 +100,16 @@
       "selfTest": true,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "audit-trade-pnl-attribution.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "is a position's realised P&L attributed to the rows that own it?",
+      "selfTest": true,
+      "reaches": [
+        "npm"
       ]
     },
     {
@@ -298,6 +308,16 @@
       "where": "nest",
       "category": "tool",
       "purpose": "prove the #986 guards can FAIL. (#986)",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "canary-trade-pnl-attribution.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Canary for audit-trade-pnl-attribution.cjs.",
       "selfTest": true,
       "reaches": [
         "npm"
@@ -946,6 +966,16 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-broker-symbol-pinned.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "an ENABLED MT5 route must name the venue's ticker (#1009).",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },
