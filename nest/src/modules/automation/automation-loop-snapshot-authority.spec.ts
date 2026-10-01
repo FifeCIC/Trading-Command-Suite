@@ -66,4 +66,43 @@ describe('authoritativeFromSnapshot — a partial snapshot is never authoritativ
     expect(authoritativeFromSnapshot({ authoritative: 1 } as any)).toBe(false);
     expect(authoritativeFromSnapshot({ authoritative: 'true' } as any)).toBe(false);
   });
+
+  /**
+   * ⚠️ THE CALL-SITE GUARD — and it is a SOURCE check on purpose.
+   *
+   * The signature above stops the function EXPRESSING the defect, but it cannot stop a future edit
+   * re-adding the `||` at the CALL SITE:
+   *     authoritativeFromSnapshot(snapshot) || positions.length > 0
+   * …which is exactly the shape that closed nine live trades. #1058's acceptance asks for a
+   * regression test that FAILS if `authoritative` is ever computed that way again, so this reads
+   * the real source rather than trusting the shape of the helper.
+   *
+   * ⚠️ DELIBERATELY NARROW: one file, the assignment to `authoritative` only. A broad "no .length
+   * near positions" rule would fire on `positions.length` used for the count log and would be
+   * allowlisted within a week — and an allowlisted guard is worse than none.
+   */
+  it('⚠️ THE SOURCE does not compute `authoritative` from the SIZE of anything', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, 'automation-loop.service.ts'),
+      'utf8',
+    ) as string;
+
+    const assignments = src
+      .split(/\r?\n/)
+      .filter((l: string) => /const\s+authoritative\s*=/.test(l));
+
+    // The assignment must exist — if it were renamed away, this test would silently pass on an
+    // empty list, which is the "a check that inspects nothing reports OK" defect.
+    expect(assignments.length).toBeGreaterThan(0);
+
+    for (const line of assignments) {
+      expect(line).not.toMatch(/\.length/);
+      expect(line).not.toMatch(/\|\|/);
+      expect(line).toContain('authoritativeFromSnapshot(');
+    }
+  });
 });
