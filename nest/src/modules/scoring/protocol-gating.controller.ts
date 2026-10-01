@@ -448,8 +448,27 @@ export class ProtocolGatingController {
     }
 
     for (const [id, proto] of Object.entries(allProtocols)) {
-      // Skip protocols with no directive groups — these are ghost entries
-      // from legacy seed data (e.g. "Signals Workbench", "Conviction Dip Accumulation")
+      // ⚠️ THE PREDICATE (#939): a protocol with NO directive groups is not served here.
+      //
+      // Reason: this endpoint feeds the GATED pipeline, and a protocol with no groups has no
+      // capacity to score against — a card for it would render with no denominator. The same
+      // predicate the scoring engine uses lives in `directive-inclusion.ts`.
+      //
+      // Measured 2026-10-01: 52 protocols exist and 50 are served; the two excluded are
+      // `signals-workbench` and `060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d`, and BOTH have zero rows in
+      // `protocol_directive_group`. Neither is an accident, and neither is a "ghost entry from
+      // legacy seed data" — the old comment here said that and it was wrong. Both are CURRENT,
+      // declared seed entries with `groups: []`, and both exclusions are SETTLED DECISIONS
+      // (docs/SETTLED-DECISIONS.md, 2026-09-11):
+      //
+      //   • `signals-workbench` — a WORKBENCH protocol, populated by
+      //     `SignalEnvelopeService.persistScores()` rather than scored through the gated pipeline.
+      //     Its `active: 1` is correct and its `ProtocolHealthService` "no risk-gate group" warning
+      //     is EXPECTED, not a fault. Do not "fix" it by deactivating the row.
+      //   • `060ed261-…` — an abandoned placeholder, `active: 0`, referenced by nothing. Its `slug`
+      //     IS a UUID, which is the #800 slug-or-UUID hazard; it is left in place deliberately
+      //     because deleting a protocol row is a data decision, not a lint fix.
+      //     `nest/scripts/validate-protocol-slugs.cjs` stops a NEW one being seeded.
       if (!proto.groups?.length) continue;
 
       const directionMode = (proto as any).directionMode || 'LONG_ONLY';

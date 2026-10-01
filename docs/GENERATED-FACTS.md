@@ -28,8 +28,8 @@ number that is not here, add a collector — do not type it into prose.
 | Protocols in the seed file | **48** | `nest/src/modules/scoring/protocols-seed-data.ts` | `curl -s localhost:3201/api/scoring/protocols | jq length` |
 | Provider adapter modules | **14** | `nest/src/modules/providers/adapters/*.adapter.ts (excludes specs)` | `Get-ChildItem nest/src/modules/providers/adapters -Filter *.adapter.ts` |
 | Live unmodelled tables with checked-in DDL | **4** | `nest/prisma/raw-managed/*.sql` | `npm --prefix nest run db:check   # authoritative, includes backups` |
-| Backend build-time validators | **32** | `nest/scripts/validate-*.cjs (run in prebuild)` | `Get-ChildItem nest/scripts/validate-*.cjs` |
-| Application version | **0.105.0** | `nest/package.json (+ package.json asserted in sync)` | `curl -s localhost:3201/api/version` |
+| Backend build-time validators | **33** | `nest/scripts/validate-*.cjs (run in prebuild)` | `Get-ChildItem nest/scripts/validate-*.cjs` |
+| Application version | **0.107.0** | `nest/package.json (+ package.json asserted in sync)` | `curl -s localhost:3201/api/version` |
 
 ## What is deliberately NOT here
 
