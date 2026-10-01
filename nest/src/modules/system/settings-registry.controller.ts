@@ -83,7 +83,12 @@ export class SettingsRegistryController {
           userChangeable: def.userChangeable,
         })),
         seeded: false,
-        note: 'Members have NO default, so ensureDefaults() never creates one. Read via GET .../family/:key',
+        // ⚠️ #872 — this string used to say "Read via GET .../family/:key", and THAT FORM 404s.
+        // The member is read with a QUERY PARAMETER (`?key=<full key>`), which is the route declared
+        // below as `@Get('family')`. A guidance string that does not run is worse than no guidance,
+        // because it is followed: the caller gets a 404 and concludes the feature is broken rather
+        // than the instruction. Any change to the route form must be made here too.
+        note: 'Members have NO default, so ensureDefaults() never creates one. Read one member via GET /api/system/settings/registry/family?key=<full key>',
       })),
       settings,
       // Present so the shape of the contract is self-describing — an API that documents its own
