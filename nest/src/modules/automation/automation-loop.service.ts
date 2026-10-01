@@ -281,6 +281,42 @@ function readWatchlistFromFile(name: string): string[] | null {
   }
 }
 
+/**
+ * authoritativeFromSnapshot() — #1058. Whether a position snapshot may be used for CLOSURE
+ * DETECTION. The snapshot's own answer, and nothing else.
+ *
+ * ⚠️ WHY THIS IS A NAMED FUNCTION AND NOT AN INLINE EXPRESSION
+ *
+ * It read `snapshot.authoritative || positions.length > 0` at the call site. The `||` was fatal:
+ * `authoritative` means "every source answered", and `fetchAllBrokerPositions()` computes it
+ * exactly that way — so `|| positions.length > 0` OVERRODE a correct `false` with a guess made
+ * from the size of a list that was short *because a source was missing*.
+ *
+ * MEASURED 2026-10-01 17:39:09.091Z (`nest/logs/tcs-2026-10-01.log`):
+ *
+ *     WARN [MT5Adapter] bridge[2] GET /positions FAILED: network: fetch failed
+ *     → 9 trades closed in the next 11 seconds, the ENTIRE broker-2 book, each
+ *       `closeReason='broker:unknown'`, `exitPrice NULL`, `pnlInvalid=1`
+ *
+ * Bridge 3 held ONE position, and that single non-empty row is what made the incomplete snapshot
+ * "authoritative". Three of the nine were still open at the broker 1.5 hours later — including the
+ * book's largest floating loss — while the journal recorded them as closed and break-even.
+ *
+ * ⚠️ SO THE SIGNATURE IS THE GUARD, not a comment beside it. This function is not given the
+ * position list at all, so there is nothing for a future edit to mistake for evidence. The same
+ * reasoning as `TickDecisionScore` above ("THE TYPE ENFORCES THIS; IT IS NOT A COMMENT"), which
+ * exists because a rule written only as prose was found not to be enforced.
+ *
+ * The fallback the `||` was reaching for is handled at the call site: an adapter with no
+ * `getPositionSnapshot` is given `{ positions, authoritative: false }` — the fallback path fails
+ * CLOSED, because missing a close is recoverable and inventing one is not.
+ *
+ * Guard: `automation-loop-snapshot-authority.spec.ts`, canaried in both directions.
+ */
+export function authoritativeFromSnapshot(snapshot: { authoritative: boolean }): boolean {
+  return snapshot.authoritative === true;
+}
+
 @Injectable()
 export class AutomationLoopService implements OnModuleInit {
   private readonly logger = new Logger(AutomationLoopService.name);
@@ -1144,7 +1180,16 @@ export class AutomationLoopService implements OnModuleInit {
             const account = await adapter.getAccount().catch(() => null);
             accountId = accountId ?? account?.accountId;
           }
-          const authoritative = snapshot.authoritative || positions.length > 0;
+          // ── ⚠️⚠️ #1058 — THE SNAPSHOT'S OWN ANSWER, NOT A GUESS FROM ITS SIZE ────────────────
+          //
+          // This read `snapshot.authoritative || positions.length > 0`. The `||` was fatal: it
+          // overrode a correct "a source did not answer" with a guess made from the size of a list
+          // that was short BECAUSE a source was missing. Nine trades were closed from one bridge
+          // outage; three were still open at the broker 1.5 hours later. Full evidence: #1058.
+          //
+          // `authoritativeFromSnapshot()` takes ONLY the snapshot, so the position list is not
+          // available to be mistaken for evidence. See its docblock.
+          const authoritative = authoritativeFromSnapshot(snapshot);
           const normalised = positions.map((p: any) => ({
             symbol: p.symbol,
             brokerTicket: String(p.brokerTicket ?? p.ticket ?? p.id ?? ''),

@@ -485,6 +485,64 @@ export class PositionSyncService {
         }).catch(() => {});
         return 0;
       }
+
+      // ── #1057 — the row EXISTS but is CLOSED, while the broker says the position is OPEN ────
+      //
+      // ⚠️ WHY THIS BLOCK IS HERE AND NOT A `create()`.
+      //
+      // The lookup above is scoped to `status: 'open'`, so a CLOSED row for the same ticket is
+      // invisible to it — and the old code then fell through to 2c and tried to `create` a second
+      // row. The unique index `Trade_provider_brokerTicket_key` is on `(provider, brokerTicket)`
+      // and is NOT status-scoped, so that create could only ever raise. Every cycle. For every
+      // affected position.
+      //
+      // MEASURED 2026-10-01: 56 occurrences across 8 symbols in one ~20-minute process lifetime —
+      // and those 8 symbols were exactly the 8 rows closed by the partial-snapshot defect (#1058).
+      // So the warn storm was the SOUND of #1058, not an independent fault. Both are fixed; this
+      // one because a write path whose normal outcome is a constraint violation does not know its
+      // own state, and because a genuine failure would have been indistinguishable from the 56.
+      //
+      // ── DECISION (2026-10-01, primary) ──
+      // WHAT:      a ticket the broker reports OPEN, whose row is closed, is REOPENED — not
+      //            skipped, and not duplicated.
+      // WHY:       the broker cannot be wrong about whether it holds a position. The disagreement
+      //            therefore means the DB is wrong, and the DB is the thing this path exists to
+      //            correct. Skipping would leave the journal claiming a live position is closed,
+      //            which is the state #1058 left three positions in for 1.5 hours.
+      // INSTEAD OF: reporting the disagreement and leaving the row closed (rejected: it silences
+      //            the warn but keeps the journal wrong, and the wrongness is invisible).
+      // REVERSE BY: replace the `update` below with a `return 0` and a warn — the disagreement is
+      //            then reported but not repaired.
+      // REGISTER:  docs/SETTLED-DECISIONS.md
+      // GUARD:     nest/src/modules/providers/position-sync-reopen.spec.ts
+      const closedRow: any = await this.prisma.trade
+        .findFirst({ where: { provider, brokerTicket: pos.brokerTicket } })
+        .catch(() => null);
+      if (closedRow) {
+        this.logger.warn(
+          `Position/DB DISAGREEMENT for ${provider} ${pos.symbol} ticket ${pos.brokerTicket}: ` +
+            `the broker reports it OPEN but the row is '${closedRow.status}' ` +
+            `(${closedRow.closeReason ?? 'no closeReason'}, closedAt ${closedRow.closedAt?.toISOString?.() ?? 'null'}). ` +
+            'Reopening to match the broker — a close is only ever written from an authoritative snapshot (#1058).',
+        );
+        await this.prisma.trade.update({
+          where: { id: closedRow.id },
+          data: {
+            status: 'open',
+            closedAt: null,
+            closeReason: null,
+            // The row is an OPEN position again, so it is not a (fabricated) closed result. The
+            // placeholder-zero P&L that accompanied the bogus close is left on the row because it
+            // is exactly what an open row carries (#1044) — the flag is what lied, not the number.
+            pnlInvalid: 0,
+            pnlInvalidReason: null,
+            sl: pos.sl ?? closedRow.sl,
+            tp: pos.tp ?? closedRow.tp,
+            brokerComment: pos.comment?.substring(0, 200) || closedRow.brokerComment,
+          },
+        }).catch(() => {});
+        return 0;
+      }
     }
 
     // 2b. Fallback — match by symbol+provider+side (legacy rows with no ticket).
