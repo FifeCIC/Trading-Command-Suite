@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 169,
+  "count": 170,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -955,6 +955,17 @@
       "purpose": "every `/api/...` URL the frontend calls must exist on a NestJS controller.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "validate-arch-surfaces.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the two architecture surfaces must AGREE on the facts that are",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
     },
     {
       "name": "validate-architecture-docs.cjs",
