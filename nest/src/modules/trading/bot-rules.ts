@@ -345,7 +345,15 @@ export const LIVE_RULES = BOT_RULES.filter((r) => r.enforcement === 'live');
 /** Rules a reader might reasonably assume are applied, but are not. */
 export const NOT_LIVE_RULES = BOT_RULES.filter((r) => r.enforcement !== 'live');
 
-/** Counts for a UI badge or a log line — see `GET /api/trading/bots/rules`. */
+/**
+ * Counts for a UI badge or a log line, served by `GET /api/trading/strategies/bot-rules`.
+ *
+ * ⚠️ CORRECTED 2026-10-01. This comment used to name `GET /api/trading/bots/rules`, which **404s**
+ * — measured, not assumed. The frontend (`useBotRules()`) already called the right one, so nothing
+ * was broken at runtime and nothing ever failed; the only cost was to whoever trusted the comment.
+ * A documented endpoint that does not exist is the same defect as a documented field with no
+ * reader: it reads as a capability and is not one.
+ */
 export function ruleEnforcementCounts() {
   return BOT_RULES.reduce<Record<string, number>>((acc, r) => {
     acc[r.enforcement] = (acc[r.enforcement] ?? 0) + 1;

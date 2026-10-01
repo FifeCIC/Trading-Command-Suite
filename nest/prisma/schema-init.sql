@@ -1263,6 +1263,7 @@ CREATE TABLE `trading_strategy` (
     `allocationAmount` DOUBLE NULL,
     `cooldownMinutes` INTEGER NOT NULL DEFAULT 5,
     `sessionWindow` VARCHAR(120) NULL,
+    `exitBeforeUtc` VARCHAR(5) NULL,
     `mode` VARCHAR(20) NOT NULL DEFAULT 'manual',
     `active` BOOLEAN NOT NULL DEFAULT false,
     `hotStockEnabled` BOOLEAN NOT NULL DEFAULT false,

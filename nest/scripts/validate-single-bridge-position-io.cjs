@@ -116,6 +116,47 @@ const NO_ARG_GETPOSITIONS = /\.getPositions\(\s*\)/;
 const NO_ARG_SERVICE_GETPOSITIONS = /\.mt5\.getPositions\(\s*\)|mt5TradingService\.getPositions\(\s*\)/;
 
 /**
+ * ⚠️ NARROWED 2026-10-01 — the `mt5` FIELD NAME is used for TWO DIFFERENT TYPES, and rule 4 was
+ * keyed on the name alone.
+ *
+ * `exit-consensus.service.ts` declares `private readonly mt5: Mt5Adapter`, whose `getPositions()`
+ * delegates to `fetchAllBrokerPositions()` — which asks EVERY active broker (#883). So
+ * `this.mt5.getPositions()` there is an ALL-BROKER read, and rule 4 flagged it as broker-less.
+ *
+ * Measured consequence: commit `4dea0d7` (the #1033 fix) left the build RED, and the guard's
+ * message told the reader to change a correct call to `getAllPositions()` — a method that does not
+ * exist on `Mt5Adapter`, which is the very defect #1033 had just fixed. A guard whose remedy is
+ * the bug is worse than no guard.
+ *
+ * So rule 4 now consults the DECLARED TYPE of the `mt5` field: `Mt5Adapter` is read through its own
+ * all-broker method and is correct; anything else keeps the original rule.
+ *
+ * ⚠️ AND THE EXEMPTION RE-VERIFIES ITS OWN PREMISE, because "the adapter is all-broker" is a claim
+ * about ANOTHER file that can silently stop being true. `adapterReadsEveryBroker()` below asserts on
+ * every run that `Mt5Adapter.getPositions()` still delegates to `fetchAllBrokerPositions()`. If that
+ * changes, the exemption is refused and this guard fails — so the exemption cannot rot into a hole.
+ */
+const MT5_FIELD_IS_ADAPTER = /\bmt5\s*:\s*Mt5Adapter\b/;
+
+/** The adapter whose all-broker guarantee the exemption depends on. */
+const ADAPTER_FILE = path.join(SRC, 'modules', 'providers', 'adapters', 'mt5.adapter.ts');
+
+/** The premise of the exemption above, re-measured from the source rather than assumed. */
+function adapterReadsEveryBroker() {
+  try {
+    const src = stripComments(fs.readFileSync(ADAPTER_FILE, 'utf8'));
+    // Locate `getPositions()` on the adapter and require its own body to reach the all-broker read.
+    const start = src.indexOf('async getPositions()');
+    if (start === -1) return false;
+    const body = src.slice(start, start + 400);
+    return /fetchAllBrokerPositions\s*\(/.test(body);
+  } catch {
+    // A verifier that cannot read its input must ERROR, never pass.
+    return false;
+  }
+}
+
+/**
  * The same rule, scoped to the file where `this` IS the trading service. Kept separate because the
  * receiver alone cannot distinguish it — inside an adapter `this.getPositions()` is correct, and
  * the file is the only thing that tells them apart.
@@ -184,6 +225,23 @@ function scanSource(src, rel) {
   /** An exception must match the LINE, so it cannot cover a sibling statement. */
   const isExempt = (line) => exemptions.some((e) => line.includes(e.contains));
 
+  /**
+   * #1030/#1033 — is `this.mt5` in THIS file an `Mt5Adapter`, and does that adapter still read
+   * every broker? Both halves are required: the declared type makes the call correct, and the
+   * adapter check proves the type still means what the exemption assumes.
+   */
+  const mt5IsAllBrokerAdapter = MT5_FIELD_IS_ADAPTER.test(clean) && adapterReadsEveryBroker();
+  if (MT5_FIELD_IS_ADAPTER.test(clean) && !mt5IsAllBrokerAdapter) {
+    // ⚠️ The exemption's premise has BROKEN. Reported as a finding rather than silently
+    // narrowing to "flag everything", because the reader needs to know the adapter stopped being
+    // all-broker — that is the fact that matters, not the call site that revealed it.
+    out.push({
+      rel,
+      rule: 'EXEMPTION INVALID — the field is Mt5Adapter but getPositions() no longer reads every broker',
+      text: 'see adapterReadsEveryBroker() in validate-single-bridge-position-io.cjs',
+    });
+  }
+
   for (const line of clean.split(/\r?\n/)) {
     const text = line.trim();
 
@@ -194,7 +252,15 @@ function scanSource(src, rel) {
 
     // Rule 4 (#1033) — a broker-less read on the trading service. ANY file, because the defect was
     // never about where it was called from: it was that the NAME invited any caller.
-    if (NO_ARG_SERVICE_GETPOSITIONS.test(line) && !CANONICAL.test(line)) {
+    //
+    // ⚠️ The `mt5IsAllBrokerAdapter` exemption is deliberately checked HERE rather than by
+    // excluding the file at the top, so that every OTHER rule still applies to such a file — a
+    // `bridgeUrl` field or a no-arg `getUrl()` in it is still a finding.
+    if (
+      NO_ARG_SERVICE_GETPOSITIONS.test(line) &&
+      !CANONICAL.test(line) &&
+      !mt5IsAllBrokerAdapter
+    ) {
       out.push({ rel, rule: 'broker-less Mt5TradingService position read', text: text.slice(0, 120) });
       continue;
     }
@@ -261,6 +327,33 @@ function selfTest() {
       () => scanSource(`      const positions = await this.mt5.getPositions();`, TRD).length === 1],
     ['flags it in a file that is NOT the trading module either (the name, not the location)',
       () => scanSource(`      const p = await this.mt5.getPositions();`, CTRL).length === 1],
+
+    /**
+     * ⚠️ #1030/#1033 CORRECTION — the `mt5` FIELD NAME is two types, and rule 4 assumed one.
+     *
+     * `exit-consensus.service.ts` holds `mt5: Mt5Adapter`, whose `getPositions()` asks EVERY active
+     * broker (#883). Flagging it left the build red on a CORRECT call, and the guard's remedy
+     * (`getAllPositions()`) does not exist on `Mt5Adapter` — the exact defect #1033 had just fixed.
+     * These two cases pin both sides so the narrowing cannot silently become a hole.
+     */
+    ['does NOT flag `mt5: Mt5Adapter` reading through its own ALL-BROKER method (#883)',
+      () => scanSource(
+        `  private readonly mt5: Mt5Adapter;\n  positions = await this.mt5.getPositions();`,
+        'nest/src/modules/scoring/exit-consensus.service.ts',
+      ).length === 0],
+    ['⚠️ STILL flags the same call when `mt5` is NOT declared as Mt5Adapter',
+      // The negative direction: the exemption must key on the TYPE, not on the file or the name.
+      () => scanSource(
+        `  private readonly mt5: Mt5TradingService;\n  positions = await this.mt5.getPositions();`,
+        'nest/src/modules/scoring/exit-consensus.service.ts',
+      ).length === 1],
+    ['⚠️ the Mt5Adapter exemption does not exempt OTHER rules in the same file',
+      () => scanSource(
+        `  private readonly mt5: Mt5Adapter;\n  this.bridgeUrl = this.mt5Connection.getUrl();`,
+        'nest/src/modules/automation/position-time-stop.service.ts',
+      ).length >= 1],
+    ['the exemption premise holds on the REAL adapter (all-broker delegation is intact)',
+      () => adapterReadsEveryBroker() === true],
 
     // ── must NOT fire: the false positives that would get this guard allowlisted ────────────
     ['does NOT flag getAllPositions()',
