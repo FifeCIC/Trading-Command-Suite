@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 170,
+  "count": 171,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1227,6 +1227,17 @@
       "purpose": "a closed trade whose P&L could not be computed must not be SILENT (#1003).",
       "selfTest": true,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-profile-honesty.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "an adapter must not claim a company profile it does not have (#966).",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },

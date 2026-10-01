@@ -32,6 +32,39 @@ function fmtMarketCap(usd) {
   return '—'
 }
 
+/**
+ * The company-profile OUTCOME, as a sentence (#966).
+ *
+ * ⚠️ 2026-10-01 — the API used to return a bare `null` for a dead API key, a 429, a timeout AND
+ * "this symbol has no company profile". All four rendered `—`, so the reader could not tell
+ * "we looked and there is nothing" from "we could not look" — `development-philosophy` §7. The
+ * snapshot now carries `profileStatus` + `profileReason`, and this turns them into words.
+ *
+ * Returns `{ text, tone }` where tone is 'ok' | 'muted' | 'warn', or null when there is nothing
+ * worth saying (a healthy profile with a known source is stated as its source).
+ */
+function profileNote(company) {
+  const status = company.profileStatus
+  const tried = company.profileTriedProviders ?? []
+  if (status === 'not-applicable') {
+    return { text: company.profileReason || 'Not applicable for this instrument type.', tone: 'muted' }
+  }
+  if (status === 'unavailable') {
+    // A FAILED lookup is a different fact from a missing profile — say which one this is.
+    return { text: `Lookup failed — ${company.profileReason || 'no provider answered.'}`, tone: 'warn' }
+  }
+  if (status === 'no-profile') {
+    return {
+      text: `No profile found${tried.length ? ` (asked ${tried.join(', ')})` : ''}.`,
+      tone: 'muted',
+    }
+  }
+  if (status === 'ok' && company.profileAnsweredBy) {
+    return { text: `Source: ${company.profileAnsweredBy}`, tone: 'ok' }
+  }
+  return null
+}
+
 export default function SymbolsBrowserPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
@@ -369,23 +402,38 @@ export default function SymbolsBrowserPage() {
             <section className="symbol-detail-section">
               <h3>Company</h3>
               <div className="detail-grid">
-                <div className="detail-item">
-                  <span className="detail-label">Sector</span>
-                  <span className="detail-value">{company.sector ?? '—'}</span>
-                </div>
+                {/**
+                  * ⚠️ ONE classification row, not two (#966). "Sector" and "Industry" both carried
+                  * Finnhub's single `finnhubIndustry` value, so they rendered the SAME string on
+                  * every populated row — and the one labelled "Sector" held an INDUSTRY ("Media",
+                  * "Electrical Equipment" are not sectors). The API no longer returns `sector`.
+                  */}
                 <div className="detail-item">
                   <span className="detail-label">Industry</span>
-                  <span className="detail-value">{company.industry ?? '—'}</span>
+                  <span className="detail-value">
+                    {company.industry ?? (company.profileStatus === 'not-applicable' ? 'Not applicable' : '—')}
+                  </span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Market Cap</span>
-                  <span className="detail-value">{fmtMarketCap(company.marketCapUsd)}</span>
+                  <span className="detail-value">
+                    {fmtMarketCap(company.marketCapUsd)}
+                    {/* A stale snapshot of a moving number must not read as current. */}
+                    {company.metricStale && company.metricAgeDays != null && (
+                      <span className="detail-stale"> ({company.metricAgeDays}d old)</span>
+                    )}
+                  </span>
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Price</span>
                   <span className="detail-value">{snap.price != null ? formatCurrency(snap.price) : '—'}</span>
                 </div>
               </div>
+              {(() => {
+                const note = profileNote(company)
+                if (!note) return null
+                return <p className={`detail-note detail-note--${note.tone}`}>{note.text}</p>
+              })()}
             </section>
 
             <section className="symbol-detail-section">

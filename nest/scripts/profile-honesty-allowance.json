@@ -1,0 +1,9 @@
+{
+  "_why": "Declared exceptions to validate-profile-honesty.cjs (#966). An entry here says: this literal is a VENUE FACT, not a fabrication. Each needs a reason — the guard exists because `InteractiveBrokersAdapter.getProfile()` returned `Technology / Software / $50B` for every symbol in the app.",
+  "_rule": "Anti-rot IS enforced: a declared entry that is no longer needed FAILS the guard (`stale allowance`). Delete it the moment the literal goes away — a stale exemption silently widens the allowance.",
+  "fabricatedFields": {
+    "binance.adapter.ts:sector": "VENUE FACT — every instrument Binance lists is a crypto asset, so 'Cryptocurrency' is true for all of them by construction, not a guess about a company. It is also unreachable for anything else: `toBinanceSymbol()` returns null for a non-Binance ticker, so the profile is never produced for an equity, FX pair or index.",
+    "binance.adapter.ts:industry": "VENUE FACT — as above. 'Digital Asset' is the venue's own classification of its whole catalogue, and `marketCap` is deliberately left null because Binance does not supply one."
+  },
+  "unfulfilledCapabilities": {}
+}

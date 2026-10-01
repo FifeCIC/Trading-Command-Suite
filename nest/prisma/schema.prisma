@@ -1956,7 +1956,18 @@ model CompanyMetric {
   sharesOutstanding Float    @default(0)       // in millions
   shareChange3m     Float    @default(0)       // % change over 3 months
   shareChange12m    Float    @default(0)       // % change over 12 months
-  marketCap         Float    @default(0)       // in millions
+  // ⚠️ TRILLIONS of USD — this said "in millions" until 2026-10-01 and was WRONG (#966).
+  // A column comment is a CLAIM, so it was checked against the WRITER, not believed:
+  // `FinnhubAdapter.getCompanyMetrics()` stores `m.marketCapitalization / 1_000_000`, and
+  // Finnhub's `marketCapitalization` is already in MILLIONS — so the stored value is
+  // millions-of-millions, i.e. trillions. Measured: AAPL 4.53, NVDA 4.71, MSFT 2.9, GOOGL 4.38.
+  // The wrong comment is what produced the 1,000,000× display bug in `SymbolsService.getSnapshot()`
+  // — the consumer read the comment instead of the writer. That method now disambiguates by
+  // magnitude and returns `marketCapUsd` (absolute USD, unit in the name).
+  // ⚠️ The NAME `marketCap` is therefore also misleading, but it is NOT renamed here: renaming a
+  // column in this repo needs `ALTER TABLE` (never `db push` — #769) plus every reader. Recorded
+  // instead; this comment is now the truthful one.
+  marketCap         Float    @default(0)
   source            String   @default("finnhub") @db.VarChar(30)
   fetchedAt         DateTime @default(now())
 

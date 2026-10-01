@@ -48,6 +48,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runCases } = require('./lib/self-test.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const REF_FILE = path.join(ROOT, 'src', 'core', 'architecture-reference.js');
@@ -339,24 +340,8 @@ export const CURRENT_ROUTE_CONTRACTS = [
       && !b.failures.some((f) => /only in architecture-reference\.js/.test(f));
   });
 
-  let passed = 0;
-  for (const c of cases) {
-    let ok = false;
-    let err = null;
-    try {
-      ok = c.fn() === true;
-    } catch (e) {
-      err = e.message;
-    }
-    if (ok) {
-      passed++;
-      console.log(`   ✓ ${c.name}`);
-    } else {
-      console.error(`   ✗ ${c.name}${err ? ` — threw: ${err}` : ''}`);
-    }
-  }
-  console.log(`\n[arch-surfaces] --self-test ${passed}/${cases.length} passed`);
-  return passed === cases.length ? 0 : 1;
+  // Shared harness — see scripts/lib/self-test.cjs.
+  return runCases(cases, 'arch-surfaces');
 }
 
 if (require.main === module) {

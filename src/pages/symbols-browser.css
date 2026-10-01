@@ -268,6 +268,33 @@
   word-break: break-word;
 }
 
+/**
+ * Company-profile outcome + metric freshness (#966).
+ *
+ * The three tones carry DIFFERENT MEANINGS, not decoration:
+ *   --warn   the lookup itself FAILED — we cannot judge whether a profile exists
+ *   --muted  a valid answer with nothing in it, or "not applicable" to this instrument
+ *   --ok     the name of the provider that answered
+ * Colour alone does not carry this (WCAG 1.4.1) — the sentence beside it says which case it is.
+ */
+.detail-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.detail-note--muted { color: var(--ink-soft); }
+.detail-note--ok { color: var(--color-muted); }
+.detail-note--warn { color: var(--color-warning); }
+
+/** Age suffix on a stale market cap — the value is real, its recency is the caveat. */
+.detail-stale {
+  font-size: 0.68rem;
+  color: var(--color-warning);
+  white-space: nowrap;
+}
+
 .symbol-id-code {
   font-family: monospace;
   font-size: 0.7rem;

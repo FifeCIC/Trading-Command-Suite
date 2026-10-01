@@ -1018,7 +1018,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
         method: 'GET',
         permission: 'Authenticated',
         owner: 'SymbolsService',
-        contract: 'CHANGED (2026-09-23). Company profile is normalised to absolute USD and returned as marketCapUsd. Two providers with different units previously fed one variable, rendering Apple as a 4.53-million-dollar company.',
+        contract: 'CHANGED (2026-10-01, #966). The company block REPORTS its outcome instead of returning a bare null: profileStatus is ok | not-applicable | no-profile | unavailable, with profileAnsweredBy, profileTriedProviders and a readable profileReason. The lookup goes through AdapterFactory.resolveProfile(), which picks candidates from the registry by the declared `profiles` capability in failover-priority order — previously ONE hardcoded provider (finnhub) was asked and a dead key, a 429, a timeout and "no profile exists" all collapsed into the same null. `sector` is REMOVED, not renamed: it and `industry` both carried Finnhub\'s single finnhubIndustry value, so the UI showed the same string twice and the one labelled "Sector" held an industry. Non-equities short-circuit to not-applicable. metricFetchedAt / metricAgeDays / metricStale surface the companyMetric row\'s age — all 187 rows were fetched 2026-07-03 and nothing refreshes them on a cadence.',
         status: 'active',
       },
       {

@@ -189,7 +189,20 @@ export class FinnhubAdapter implements IProviderAdapter {
       symbol,
       name: data.name || symbol,
       exchange: data.exchange || 'Unknown',
-      sector: data.finnhubIndustry || null,
+      /**
+       * ⚠️ `sector` is deliberately NULL, not a copy of `industry` (#966).
+       *
+       * Finnhub's `/stock/profile2` returns ONE classification field, `finnhubIndustry`. This
+       * used to be written into both. Measured consequence: every populated row had
+       * sector === industry (Technology/Technology, Semiconductors/Semiconductors, Media/Media,
+       * Electrical Equipment/Electrical Equipment) — so the Symbols Browser rendered two rows
+       * showing the same string, and the row LABELLED "Sector" held an INDUSTRY ("Media" and
+       * "Electrical Equipment" are not sectors).
+       *
+       * Finnhub does not supply a sector for this endpoint, so there is nothing honest to put
+       * here. `null` says "not provided"; a duplicate says "here are two facts".
+       */
+      sector: null,
       industry: data.finnhubIndustry || null,
       marketCap: data.marketCapitalization
         ? data.marketCapitalization * 1_000_000

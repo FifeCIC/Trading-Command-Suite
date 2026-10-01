@@ -14,7 +14,7 @@
 
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { IProviderAdapter } from './interfaces/provider-adapter.interface';
+import { IProviderAdapter, ProviderProfile } from './interfaces/provider-adapter.interface';
 import { RateLimitTracker, RateLimitState } from './rate-limit-tracker';
 import { RateLimitGovernor } from './rate-limit-governor.service';
 
@@ -66,6 +66,31 @@ interface AdapterRegistration {
 export type RateLimitView =
   | ({ source: 'tracker' } & RateLimitState)
   | ({ source: 'governor'; providerId: string } & Record<string, unknown>);
+
+/** One provider that was asked for a profile and could not complete the request (#966). */
+export interface ProfileFailure {
+  provider: string;
+  error: string;
+}
+
+/**
+ * The outcome of a profile lookup (#966). Deliberately NOT `ProviderProfile | null` — three
+ * genuinely different states collapse into that one shape, and the caller then renders them the
+ * same way. See `AdapterFactory.resolveProfile()`.
+ */
+export interface ProfileResolution {
+  profile: ProviderProfile | null;
+  /** Which provider produced the profile, or null. */
+  answeredBy: string | null;
+  /** Every provider that was asked, in the order they were asked. */
+  tried: string[];
+  /** Providers whose request FAILED — "we could not judge". */
+  failures: ProfileFailure[];
+  /** Providers that answered cleanly and had nothing — "there is nothing to find". */
+  emptyAnswers: string[];
+  /** Every provider whose registration declares the `profiles` capability. */
+  candidates: string[];
+}
 
 @Injectable()
 export class AdapterFactory {
@@ -151,6 +176,70 @@ export class AdapterFactory {
   /** Get tracker for a specific adapter instance. */
   getRateLimiter(instanceId: string): RateLimitTracker | undefined {
     return this.rateLimitTrackers.get(instanceId);
+  }
+
+  /**
+   * resolveProfile() — ask every registered provider that DECLARES the `profiles` capability,
+   * in failover-priority order, and REPORT what happened (#966).
+   *
+   * ⚠️ WHY THIS IS NOT `adapterFactory.create('finnhub').getProfile(...)` INLINE
+   * --------------------------------------------------------------------------
+   * That is what `SymbolsService.getSnapshot()` used to do, and it was wrong twice over:
+   *
+   *   1. **ONE hardcoded provider, no fallback.** Five registered adapters implement a real
+   *      profile (finnhub, fmp, polygon, yahoo, alpha-vantage) and 3 of them have their API key
+   *      set in `nest/.env`. A single name meant a Finnhub hiccup became "this company has no
+   *      sector".
+   *   2. **Every failure became the same `null`.** A dead key, a 429, a timeout and "this symbol
+   *      genuinely has no profile" were indistinguishable at the API and rendered `—` in the UI —
+   *      `development-philosophy` §7, "fine" and "cannot judge" must never render the same.
+   *
+   * The candidate list is DERIVED from the registry by declared capability, never typed here, so
+   * registering a new profile-capable adapter in `providers.module.ts` is the only change needed —
+   * the same rule #940 applied to `availableProviders`.
+   *
+   * Ordering is `failoverPriority` (low number = high priority), which is the existing meaning of
+   * that field. Providers that are `enabled: false` are skipped.
+   *
+   * The result distinguishes the three outcomes the caller must not collapse:
+   *   • `answeredBy` set           → a real profile
+   *   • `emptyAnswers` non-empty   → providers were asked and none had one ("no profile exists")
+   *   • `failures` non-empty       → providers were asked and the ASK FAILED (we cannot judge)
+   */
+  async resolveProfile(symbol: string): Promise<ProfileResolution> {
+    const candidates = this.listAdapters()
+      .filter((c) => c.enabled !== false && (c.capabilities || []).includes('profiles'))
+      .sort((a, b) => (a.failoverPriority ?? 50) - (b.failoverPriority ?? 50))
+      .map((c) => c.id);
+
+    const tried: string[] = [];
+    const failures: ProfileFailure[] = [];
+    const emptyAnswers: string[] = [];
+
+    for (const id of candidates) {
+      tried.push(id);
+      let adapter: IProviderAdapter | null = null;
+      try {
+        adapter = this.create(id);
+      } catch (e) {
+        failures.push({ provider: id, error: e instanceof Error ? e.message : String(e) });
+        continue;
+      }
+      if (!adapter || typeof adapter.getProfile !== 'function') continue;
+      try {
+        const profile = await adapter.getProfile(symbol);
+        // A profile counts as an ANSWER only if it carries a fundamental. A name-only response
+        // must not short-circuit the chain — every adapter can echo the ticker back.
+        if (profile && (profile.sector || profile.industry || profile.marketCap)) {
+          return { profile, answeredBy: id, tried, failures, emptyAnswers, candidates };
+        }
+        emptyAnswers.push(id);
+      } catch (e) {
+        failures.push({ provider: id, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    return { profile: null, answeredBy: null, tried, failures, emptyAnswers, candidates };
   }
 
   /**

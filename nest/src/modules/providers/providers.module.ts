@@ -154,7 +154,12 @@ export class ProvidersModule implements OnModuleInit {
       name: 'Interactive Brokers',
       apiKeyEnv: 'IBKR_MODE',
       baseUrl: 'http://localhost:4001',
-      capabilities: ['quotes', 'candles', 'profiles'],
+      // ⚠️ NOT 'profiles' (#966). The capability list is a CLAIM about what a provider can
+      // deliver, and this one used to deliver a hardcoded `Technology / Software / $50B` for
+      // every symbol. `getProfile()` now returns null, so declaring the capability would be a
+      // false claim — and `AdapterFactory.resolveProfile()` trusts this list to pick candidates.
+      // Re-add it only alongside a real TWS/Gateway fundamentals call.
+      capabilities: ['quotes', 'candles'],
       failoverPriority: 10,
     });
   }

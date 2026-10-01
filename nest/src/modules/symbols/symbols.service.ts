@@ -507,25 +507,80 @@ export class SymbolsService {
     });
     if (!symbol) throw new NotFoundException(`Symbol ${upperTicker} not found`);
 
-    // Best-effort company profile (sector / industry / market cap)
-    let sector: string | null = null;
+    /**
+     * ── COMPANY PROFILE — a provider CHAIN with a STATED OUTCOME (#966) ───────────────────────
+     *
+     * BEFORE: `this.adapterFactory.create('finnhub')` — ONE hardcoded provider with no fallback,
+     * wrapped in `catch { /* leave null *\/ }`. A dead API key, a 429, a timeout and "this symbol
+     * genuinely has no company profile" all produced the SAME `null`, and the UI rendered `—` for
+     * every one of them — so the reader could not tell "we looked and there is nothing" from "we
+     * could not look" (`development-philosophy` §7).
+     *
+     * AFTER: the chain lives in `AdapterFactory.resolveProfile()`, which derives its candidates
+     * from the REGISTRY by the declared `profiles` capability, in failover-priority order. This
+     * file therefore names no provider at all, and registering a new profile-capable adapter is a
+     * change in `providers.module.ts` only.
+     *
+     * ⚠️ Measured 2026-10-01 — five registered adapters implement a real profile
+     * (finnhub, fmp, polygon, yahoo, alpha-vantage) and three of them have their API key set in
+     * `nest/.env`. Before this change only `finnhub` was ever asked.
+     */
+    const isEquity = symbol.type === 'stock' || symbol.type === 'etf';
+
     let industry: string | null = null;
     let marketCap: number | null = null;
-    try {
-      const adapter = this.adapterFactory.create('finnhub') as any;
-      if (adapter && typeof adapter.getProfile === 'function') {
-        const profile = await adapter.getProfile(upperTicker);
-        sector = profile?.sector ?? null;
-        industry = profile?.industry ?? null;
-        if (profile?.marketCap) marketCap = Number(profile.marketCap);
-      }
-    } catch { /* profile unavailable — leave null */ }
+    let profileStatus: 'ok' | 'not-applicable' | 'no-profile' | 'unavailable' = 'unavailable';
+    let profileAnsweredBy: string | null = null;
+    let profileTriedProviders: string[] = [];
+    let profileReason: string | null = null;
 
+    if (!isEquity) {
+      /**
+       * Only equities HAVE a company profile. Measured 2026-10-01 — `symbol.type` holds
+       * stock(213) · forex(15) · etf(13) · index(9) · crypto(7) · commodity(3). Asking a provider
+       * for the sector of EURUSD spends a rate-limited call to learn nothing and then reports
+       * "no data", which is a DIFFERENT fact from "not applicable" and must not render the same.
+       */
+      profileStatus = 'not-applicable';
+      profileReason = `A ${symbol.type} instrument has no company profile — providers supply quotes and contract specs for it, not fundamentals.`;
+    } else {
+      const resolution = await this.adapterFactory.resolveProfile(upperTicker);
+      profileTriedProviders = resolution.tried;
+      profileAnsweredBy = resolution.answeredBy;
+
+      if (resolution.profile) {
+        profileStatus = 'ok';
+        // ⚠️ `industry` only. Finnhub's `/stock/profile2` supplies ONE classification field and
+        // it fills a sector-shaped hole with an INDUSTRY ("Media", "Electrical Equipment"), so
+        // the response no longer carries a `sector` key at all — see the return block below.
+        industry = resolution.profile.industry ?? null;
+        if (resolution.profile.marketCap) marketCap = Number(resolution.profile.marketCap);
+      } else if (resolution.candidates.length === 0) {
+        profileStatus = 'unavailable';
+        profileReason =
+          'No registered provider declares the "profiles" capability, so no lookup could be attempted.';
+      } else if (resolution.emptyAnswers.length === 0 && resolution.failures.length > 0) {
+        // EVERY attempt failed — we do NOT know whether a profile exists. Say so, do not say "none".
+        profileStatus = 'unavailable';
+        profileReason = `Every provider that was asked failed: ${resolution.failures
+          .map((f) => `${f.provider} (${f.error})`)
+          .join('; ')}`;
+      } else {
+        // At least one provider answered cleanly and had nothing — that IS information.
+        profileStatus = 'no-profile';
+        profileReason = resolution.failures.length
+          ? `${resolution.emptyAnswers.length} provider(s) reported no profile for this symbol; ${resolution.failures.length} failed.`
+          : `${resolution.tried.length} provider(s) reported no profile for this symbol.`;
+      }
+    }
+
+    let metricFetchedAt: Date | null = null;
     try {
       const metric = await this.prisma.companyMetric.findUnique({
         where: { symbol: upperTicker },
       });
       if (metric?.marketCap) marketCap = Number(metric.marketCap);
+      if (metric?.fetchedAt) metricFetchedAt = new Date(metric.fetchedAt);
     } catch { /* no company metric */ }
 
     /**
@@ -558,6 +613,21 @@ export class SymbolsService {
           marketCap < 1000
           ? marketCap * 1e12
           : marketCap;
+
+    /**
+     * ⚠️ `companyMetric` has NO refresh cadence — measured 2026-09-23 and re-measured 2026-10-01:
+     * 187 rows of ~258 symbols, every `fetchedAt` 2026-07-03, `sharesOutstanding = 0` on every
+     * sampled row, and a literal `marketCap = 0` on several (XAUUSD, QQQ, RDW, SNGX). Its ONLY
+     * writer is `ResearchImportService.importCompanyMetricsForSymbol()`, which runs when the
+     * `dilution-impact` directive happens to ask for one symbol — there is no scheduler.
+     *
+     * A stale number presented as current is the same defect class as a fabricated one, so the age
+     * is returned and rendered rather than left for the reader to assume. `metricStale` uses 30
+     * days: the row is a snapshot of a moving quantity, and a quarter of drift changes the answer.
+     */
+    const metricAgeDays = metricFetchedAt
+      ? Math.floor((Date.now() - metricFetchedAt.getTime()) / 86_400_000)
+      : null;
 
     // Day + historical ranges from stored daily bars
     let price: number | null = null;
@@ -593,18 +663,36 @@ export class SymbolsService {
         name: symbol.name,
         exchange: symbol.exchange,
         type: symbol.type,
-        // ⚠️ `sector` and `industry` both carry Finnhub's `finnhubIndustry` classification, so they
-        // are IDENTICAL on every populated row (measured: Technology/Technology,
-        // Semiconductors/Semiconductors, Media/Media, Electrical Equipment/Electrical Equipment).
-        // The value is an INDUSTRY label — "Media" and "Electrical Equipment" are not sectors —
-        // so `sector` is misnamed. Left as-is here because the rename is a data-semantics decision
-        // with other readers of `sector`; reported rather than silently changed.
-        sector,
+        // ⚠️ `sector` was REMOVED here, not renamed (#966). It and `industry` both carried
+        // Finnhub's single `finnhubIndustry` classification, so they were IDENTICAL on every
+        // populated row (measured: Technology/Technology, Semiconductors/Semiconductors,
+        // Media/Media, Electrical Equipment/Electrical Equipment). The UI rendered two rows
+        // showing the same string, and the one LABELLED "Sector" held an industry — "Media" and
+        // "Electrical Equipment" are not sectors.
+        //
+        // There is no second classification to put in it: Finnhub does not supply one. Adapters
+        // that DO supply both separately (fmp, yahoo, polygon) pass both through
+        // `AdapterFactory.resolveProfile()`; this field carries the industry. One honest field
+        // beats two where one is a duplicate. If a genuine sector source is added, add `sector`
+        // back WITH it rather than re-deriving it from `industry`.
         industry,
         // ⚠️ Unit is in the NAME. Absolute USD. See the normalisation block above — the previous
         // bare `marketCap` carried trillions from one source and dollars from the other, and the
         // consumer rendered Apple as "$4.53M".
         marketCapUsd,
+        // ── WHY the value is what it is. These must never be collapsed into a bare null. ──
+        //   `ok`              a provider produced a profile
+        //   `not-applicable`  this instrument has no company profile (FX / index / crypto / commodity)
+        //   `no-profile`      providers were asked and none had one
+        //   `unavailable`     the ask itself failed — we cannot judge
+        profileStatus,
+        profileAnsweredBy,
+        profileTriedProviders,
+        profileReason,
+        // ── Freshness of the DB-sourced market cap, so a stale figure cannot read as current ──
+        metricFetchedAt: metricFetchedAt ? metricFetchedAt.toISOString() : null,
+        metricAgeDays,
+        metricStale: metricAgeDays != null && metricAgeDays > 30,
       },
       price,
       ranges: { dayHigh, dayLow, historicalHigh, historicalLow },
