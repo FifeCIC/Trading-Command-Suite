@@ -21,6 +21,16 @@
 
 .stratcreate-field-row { display: flex; gap: 0.75rem; }
 .stratcreate-field-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+/* #928 — two columns for the session policy: the ENTRY window and the EXIT boundary sit side by
+   side so the pairing is visible. Collapses to one column on a narrow pane, because two 1fr columns
+   at phone width make the `HH:MM` input unusably small. */
+.stratcreate-field-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+@media (max-width: 640px) { .stratcreate-field-row-2 { grid-template-columns: 1fr; } }
+/* The session-tag checkboxes. `flex-wrap` so a fourth tag would not overflow, and a 44px minimum
+   tap target on each label per the accessibility policy — a 0.6rem label on its own is not
+   reliably tappable. */
+.stratcreate-tag-row { display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 4px 0; }
+.stratcreate-tag-row .stratcreate-checkbox-label { min-height: 44px; display: flex; align-items: center; }
 .stratcreate-field { flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .stratcreate-field span { font-size: 0.7rem; color: var(--ink-soft); font-weight: 600; }
 .stratcreate-input {

@@ -251,6 +251,29 @@ export const BOT_RULES: BotRule[] = [
       '⚠️ Was inert until 2026-09-17: it parsed an order-comment format nothing emits (0 of 76) and ' +
       'defaulted to dry-run. Now armed; no live close observed yet.' },
 
+  // ── #928 — the EXIT-SIDE SESSION GATE ───────────────────────────────────────────────────────
+  // `sessionWindow` above is `stage: 'entry'` and was the ONLY session gate, so a bot could be told
+  // when it may OPEN but not when it must HOLD. Measured 2026-09-21: bots gated to `asian` still
+  // held positions at 12:40 UTC, and "be flat over the boundary" was not expressible at all.
+  //
+  // ⚠️ `enforcement: 'live'` IS EARNED, NOT ASSERTED. `position-time-stop.service.ts` calls
+  // `checkExitBoundary(attribution.exitBeforeUtc)` on every position tick and closes on `due` with
+  // `closeReason = system:session-exit`. The declaration was added only AFTER that path existed —
+  // declaring a behavioural column before its reader does is the defect class #870/#966 exist to
+  // prevent.
+  { field: 'exitBeforeUtc', label: 'Exit before (UTC)', stage: 'exit', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/automation/position-time-stop.service.ts',
+    summary:
+      'Gate 7 (exit side, #928) — `HH:MM` in UTC: past this time the bot must not HOLD, so it ' +
+      'closes flat. NULL / empty = no boundary, so every existing bot is unchanged.',
+    caveat:
+      '⚠️ OPT-IN, AND THE MEASUREMENT DID NOT SUPPORT A BLANKET RULE. Counterfactual replay over ' +
+      '228 real trades measured 13:30 as ordinary: +0.045pp mean while CUTTING 23 winners and ' +
+      'turning 11 green trades red; 13:00 measured better and 20:00 was negative. So this is a ' +
+      'per-bot POLICY an operator may choose, NOT a fix for a measured effect. ⚠️ An unreadable ' +
+      'value triggers NO close (a typo must never flatten a position) and is reported in ' +
+      '`lastSummary.boundaryInvalid` instead of being silently ignored.' },
+
   // ── the DECISION MOMENT (#936, R20=A 2026-09-24) ────────────────────────────────────────────
   // ⚠️ `display-only` IS THE HONEST STATUS, not a placeholder. A reader exists and runs each
   // tick, so this is NOT `none` — but it places no order and moves no stop, so it is NOT `live`

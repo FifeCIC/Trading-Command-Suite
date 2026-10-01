@@ -1490,6 +1490,24 @@ model TradingStrategy {
   // NULL / empty = UNGATED: the bot may act any time. The gate is opt-in, so an
   // existing strategy's behaviour is unchanged until it declares a window.
   sessionWindow String?  @db.VarChar(120)
+  // EXIT-side boundary (#928) — `'HH:MM'` in UTC: past this time the bot must not HOLD.
+  //
+  // WHY IT EXISTS: `sessionWindow` above is declared `stage: 'entry'` and is the ONLY session gate,
+  // so a bot could be told when it may OPEN but not when it must HOLD. Measured consequence: bots
+  // gated to `asian` still held positions at 12:40 UTC, hours outside their session — being flat
+  // over a boundary was not expressible.
+  //
+  // ⚠️ OPT-IN, AND THE MEASUREMENT DID NOT SUPPORT A BLANKET RULE. `replay-exit-counterfactual`
+  // `--close-before 13:30` over 228 real trades improved the mean by +0.045pp while CUTTING 23
+  // winners and turning 11 green trades red; 13:00 measured better and 20:00 was negative. So this
+  // ships as a per-bot POLICY an operator may choose — never as a fix for a measured effect.
+  // NULL / empty = no boundary, so NO EXISTING BOT CHANGES BEHAVIOUR.
+  //
+  // Units are UTC minutes-of-day behind an `HH:MM` string, matching how an operator states it (an
+  // Int of "810" would be unreadable in the UI). `parseExitBoundary()` is the canonical parser and
+  // REFUSES anything that is not HH:MM — an unreadable value triggers NO exit and is reported,
+  // because a typo must never close a live position.
+  exitBeforeUtc String?  @db.VarChar(5)
   mode          String   @default("manual") @db.VarChar(20)
   active        Boolean  @default(false)
   // Hot Stock Picks integration (#339)

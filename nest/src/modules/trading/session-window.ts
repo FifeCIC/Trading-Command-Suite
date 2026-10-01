@@ -336,3 +336,111 @@ export function describeSessionWindow(raw: unknown): string {
   if (tags.length === 0) return 'any session';
   return tags.map((t) => BY_TAG.get(t)?.name ?? t).join(' / ');
 }
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE EXIT-SIDE BOUNDARY (#928) — "when must this bot STOP holding?"
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// `checkSessionWindow` above is ENTRY-ONLY (`bot-rules.ts`: `stage: 'entry'`). Measured consequence:
+// bots gated to `asian` still held positions at 12:40 UTC — hours outside their session. **A bot
+// could be told when it may OPEN but not when it must HOLD.**
+//
+// ⚠️ MEASURED BEFORE BUILDING, AND THE MEASUREMENT DID NOT SUPPORT IT. `replay-exit-counterfactual`
+// `--close-before 13:30` over 228 real closed trades: the rule improved the mean by **+0.045pp**
+// while **cutting 23 winners and turning 11 green trades red**; 13:00 measured BETTER (+0.071) and
+// 20:00 was NEGATIVE (−0.013). So this is built as an **OPT-IN POLICY** — a control an operator may
+// choose — and NOT as a fix for a measured effect. `NULL` is the default and means "no boundary",
+// so **no existing bot changes behaviour**.
+//
+// ⚠️ SAME AXIS AS `sessionWindow`. This is the BOT-POLICY axis ("what may THIS BOT do"), not the
+// venue axis or the FX-session axis. See the file header and #851.
+
+/** The parsed form of `exitBeforeUtc`, keeping "absent" and "unreadable" DISTINCT. */
+export type ExitBoundaryParse =
+  | { kind: 'none' }
+  | { kind: 'invalid'; raw: unknown }
+  | { kind: 'at'; minutes: number };
+
+/**
+ * Parse `exitBeforeUtc` — `'HH:MM'` in **UTC** — into minutes past UTC midnight.
+ *
+ * ⚠️ An unreadable value is `invalid`, NEVER `none`. Folding a typo into "no boundary" would
+ * silently discard an operator's declared rule — the failure this repo keeps re-finding (a
+ * declaration that is not validated by being well-formed). The caller decides what to do about it;
+ * `checkExitBoundary` chooses "do NOT close" plus a loud reason, because a typo must never close a
+ * live position, and must never be invisible either.
+ */
+export function parseExitBoundary(raw: unknown): ExitBoundaryParse {
+  if (raw == null) return { kind: 'none' };
+  const s = String(raw).trim();
+  if (s === '') return { kind: 'none' };
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+  if (!m) return { kind: 'invalid', raw };
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return { kind: 'invalid', raw };
+  return { kind: 'at', minutes: h * 60 + min };
+}
+
+export interface ExitBoundaryResult {
+  /** True → a boundary is declared AND it is now past, so the position must not be held. */
+  due: boolean;
+  /** The declared boundary in minutes past UTC midnight, or null. */
+  boundaryMin: number | null;
+  /** `none` = no rule declared · `before` = declared, not yet · `reached` = past it · `invalid`. */
+  status: 'none' | 'before' | 'reached' | 'invalid';
+  /** Set when `due === true`, or when the declaration could not be read. */
+  reason?: string;
+}
+
+/** `13:30` from 810. Kept local so the reason text cannot drift from the parse. */
+function fmtUtcMinutes(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+}
+
+/**
+ * THE EXIT BOUNDARY GATE — "past the declared UTC time, do not hold".
+ *
+ * ⚠️ A bot with no boundary always declines to act — the gate is opt-in, so adding it never changes
+ * the behaviour of a strategy that has not opted in. That is the same contract `checkSessionWindow`
+ * makes for entry.
+ *
+ * ⚠️ WHY "PAST" AND NOT "AT THE CROSSING". This is a live rule, evaluated on every position tick, so
+ * it must be idempotent and stateless: once the clock is past the boundary the answer stays `due`
+ * until the position closes. A crossing-edge rule would need the position's entry time and would
+ * stop being due after a restart — a rule that silently changes its mind.
+ */
+export function checkExitBoundary(raw: unknown, at: Date = new Date()): ExitBoundaryResult {
+  const parsed = parseExitBoundary(raw);
+  if (parsed.kind === 'none') return { due: false, boundaryMin: null, status: 'none' };
+  if (parsed.kind === 'invalid') {
+    return {
+      due: false,
+      boundaryMin: null,
+      status: 'invalid',
+      reason:
+        `exitBeforeUtc ${JSON.stringify(parsed.raw)} is not HH:MM in UTC — the boundary could not be ` +
+        'read, so NO exit is triggered by it. Fix the value; a typo must not close a position.',
+    };
+  }
+
+  const nowMin = at.getUTCHours() * 60 + at.getUTCMinutes();
+  if (nowMin < parsed.minutes) {
+    return { due: false, boundaryMin: parsed.minutes, status: 'before' };
+  }
+  return {
+    due: true,
+    boundaryMin: parsed.minutes,
+    status: 'reached',
+    reason: `past the declared exit boundary ${fmtUtcMinutes(parsed.minutes)} UTC`,
+  };
+}
+
+/** Human-readable boundary for logs/UI. */
+export function describeExitBoundary(raw: unknown): string {
+  const parsed = parseExitBoundary(raw);
+  if (parsed.kind === 'none') return 'holds through any time';
+  if (parsed.kind === 'invalid') return `UNREADABLE (${JSON.stringify(parsed.raw)}) — no boundary applied`;
+  return `flat by ${fmtUtcMinutes(parsed.minutes)} UTC`;
+}
+

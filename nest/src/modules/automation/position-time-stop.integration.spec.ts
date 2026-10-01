@@ -103,7 +103,93 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
         hoursHeld: 52,
         maxHoldHours: 12,
         overByHours: 40,
+        // #928 — the trigger is now part of the decision, so a reader can tell WHY without
+        // re-deriving it from the numbers.
+        trigger: 'max_hold',
       });
+    });
+  });
+
+  /**
+   * #928 — THE WIRING CANARY for the exit-side session boundary.
+   *
+   * ⚠️ This test exists to prove the boundary is REACHED from the real loop, not merely that the
+   * comparison works. The comparison is pinned by `exit-trigger.spec.ts`; what can only be observed
+   * here is that a bot declaring ONLY a boundary gets a candidate at all — the masking bug the
+   * original `maxHoldHours === null` early-`continue` would have caused.
+   *
+   * ⚠️ `'00:00'` IS USED DELIBERATELY, because this service reads the real clock and there is no
+   * injected clock at this level. `00:00` is always in the past for any observation time, so the
+   * case cannot flake — the alternative (`'23:59'`, hoping to be before it) would pass all morning
+   * and fail in the evening, which is a test passing for the wrong reason.
+   */
+  describe('#928 — the exit-side session boundary reaches the close path', () => {
+    const BOUNDARY_ONLY = {
+      id: 's-bound',
+      name: 'Tokyo EURJPY Session',
+      symbol: 'EURJPY',
+      maxHoldHours: null, // ⚠️ NO hold limit — the whole point
+      exitBeforeUtc: '00:00',
+    };
+
+    it('a BOUNDARY-ONLY bot produces a candidate (maxHoldHours null must not mask it)', async () => {
+      const { svc } = makeService({
+        positions: [{ ticket: 700, symbol: 'EURJPY', type: 'buy', volume: 0.01, profit: 3, openedAt: ago(2) }],
+        strategies: [BOUNDARY_ONLY],
+        dryRun: true,
+      });
+
+      await svc.tick();
+      expect(svc.state.candidates).toHaveLength(1);
+      expect(svc.state.candidates[0]).toMatchObject({
+        ticket: 700,
+        trigger: 'exit_boundary',
+        maxHoldHours: null,
+        // 0 rather than a fabricated figure — there is no hold limit to be over.
+        overByHours: 0,
+      });
+      expect(svc.state.lastSummary).toMatchObject({ boundaryConfigured: 1, boundaryDue: 1 });
+    });
+
+    it('a bot with NEITHER rule is still left completely alone', async () => {
+      // The opt-in contract, asserted at the integration level: adding the boundary must not have
+      // made an unbounded bot closeable.
+      const { svc } = makeService({
+        positions: [{ ticket: 701, symbol: 'EURJPY', type: 'buy', volume: 0.01, profit: 3, openedAt: ago(200) }],
+        strategies: [{ ...BOUNDARY_ONLY, exitBeforeUtc: null }],
+        dryRun: true,
+      });
+      await svc.tick();
+      expect(svc.state.candidates).toHaveLength(0);
+      expect(svc.state.lastSummary).toMatchObject({ noLimitConfigured: 1, boundaryConfigured: 0 });
+    });
+
+    it('an UNREADABLE boundary closes nothing and is counted as a fault', async () => {
+      const { svc } = makeService({
+        positions: [{ ticket: 702, symbol: 'EURJPY', type: 'buy', volume: 0.01, profit: 3, openedAt: ago(2) }],
+        strategies: [{ ...BOUNDARY_ONLY, exitBeforeUtc: '13:3' }],
+        dryRun: true,
+      });
+      await svc.tick();
+      expect(svc.state.candidates).toHaveLength(0);
+      expect(svc.state.lastSummary).toMatchObject({ boundaryInvalid: 1, boundaryConfigured: 0 });
+      // and it is named in `skipped`, so it cannot be mistaken for a healthy idle service
+      expect(svc.state.skipped.some((s) => s.reason.startsWith('exit_boundary_invalid:'))).toBe(true);
+    });
+
+    it('records the boundary-specific closeReason, not the time-stop one', async () => {
+      // The two mechanisms must be distinguishable after the fact — a guessed reason is the defect
+      // `close-reason.ts` exists to end.
+      const { svc, closeCalls, closeReasonWrites } = makeService({
+        positions: [{ ticket: 703, symbol: 'EURJPY', type: 'buy', volume: 0.01, profit: 3, openedAt: ago(2) }],
+        strategies: [BOUNDARY_ONLY],
+        dryRun: false,
+      });
+      await svc.tick();
+      expect(closeCalls).toEqual([703]);
+      const reasons = closeReasonWrites.map((w) => w?.data?.closeReason);
+      expect(reasons).toContain(CLOSE_REASONS.SYSTEM_SESSION_EXIT);
+      expect(reasons).not.toContain(CLOSE_REASONS.SYSTEM_TIME_STOP);
     });
   });
 
@@ -584,6 +670,13 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
         noLimitConfigured: 0,
         skipped: 0,
         candidates: 1,
+        // #928 — the exit boundary's own counters. Asserted explicitly rather than omitted: the
+        // whole point of this summary is that a zero is ATTRIBUTABLE, and `toEqual` failing here is
+        // how this spec caught the new counters the moment they were added. All zero because none
+        // of these fixtures declares `exitBeforeUtc` — which is also the opt-in contract holding.
+        boundaryConfigured: 0,
+        boundaryDue: 0,
+        boundaryInvalid: 0,
       });
     });
 
@@ -601,6 +694,11 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
         noLimitConfigured: 0,
         skipped: 0,
         candidates: 0,
+        // #928 — still zero when NOTHING was read. These are counters on the same summary, so an
+        // empty read must not imply a boundary was configured.
+        boundaryConfigured: 0,
+        boundaryDue: 0,
+        boundaryInvalid: 0,
       });
     });
 

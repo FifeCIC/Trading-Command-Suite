@@ -46,6 +46,23 @@
  *   logged rather than guessed.
  * - Dry-run by default (`POSITION_TIMESTOP_DRY_RUN=1`). A service that closes real
  *   positions should be observable before it is armed.
+ *
+ * A SECOND MECHANISM LIVES HERE (#928) — and it is NOT a time-stop
+ * ---------------------------------------------------------------
+ * `exitBeforeUtc` (`'HH:MM'` UTC) is the EXIT-side half of the session policy. `sessionWindow`
+ * gates ENTRY (Gate 5, `stage: 'entry'`) and there was nothing on the exit side, so a bot gated to
+ * `asian` still held positions at 12:40 UTC — "be flat over the boundary" was not expressible.
+ *
+ * ⚠️ It is served by this service because this is the only component that already reads EVERY
+ * position, attributes each to a strategy, and owns a close path. It is NOT a hold limit: the clock
+ * reaching a boundary is a different question from a position being too old, so the two carry
+ * different `closeReason` values and a `trigger` that names which one fired.
+ *
+ * ⚠️ THE MEASUREMENT DID NOT SUPPORT A BLANKET RULE, and that is why it is opt-in. Counterfactual
+ * replay over 228 real trades (`replay-exit-counterfactual.cjs --close-before 13:30`) improved the
+ * mean by +0.045pp while CUTTING 23 winners and turning 11 green trades red; 13:00 measured better
+ * and 20:00 was negative. So this ships as a per-bot POLICY an operator may choose — never as a fix
+ * for a measured effect.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -54,6 +71,24 @@ import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
 import { classifyMt5Comment } from '../providers/mt5-comment.util';
+// #928 — the EXIT-side session boundary, decided by a PURE function so it can be canaried without
+// a broker. `checkExitBoundary` is not called directly here any more: the hold limit and the
+// boundary must be evaluated TOGETHER or one can mask the other, and that combination is exactly
+// what `decideExitTrigger` owns.
+import { decideExitTrigger, type TimedStopTrigger } from './exit-trigger';
+
+/**
+ * WHY this position is being closed.
+ *
+ * ⚠️ WHY THE TRIGGER IS CARRIED RATHER THAN RE-DERIVED AT THE CLOSE: both mechanisms produce a
+ * candidate in the same loop and both end in one `closePosition()` call, so without this field the
+ * `closeReason` written to the trade would have to be guessed from fields that do not distinguish
+ * them (`maxHoldHours` is set on a boundary-driven candidate too). A guessed close reason is the
+ * defect `close-reason.ts` was created to end.
+ *
+ * The type itself lives in `exit-trigger.ts` — one definition, beside the function that produces it.
+ */
+export type { TimedStopTrigger };
 
 /** A position the bridge reports, plus the hold time we computed for it. */
 export interface TimedStopCandidate {
@@ -74,6 +109,15 @@ export interface TimedStopCandidate {
   maxHoldHours: number | null;
   overByHours: number;
   profit: number;
+  /** #928 — WHICH mechanism put this position in the list. Drives the close reason. */
+  trigger: TimedStopTrigger;
+  /**
+   * #928 — the boundary in UTC minutes-of-day, when `trigger === 'exit_boundary'`.
+   *
+   * Stored as minutes rather than the raw `'HH:MM'` so the log line and the UI can state the
+   * comparison the service actually made, instead of a string the reader has to parse.
+   */
+  exitBoundaryMin?: number | null;
 }
 
 export interface TimeStopState {
@@ -117,10 +161,31 @@ export interface TimeStopState {
     noLimitConfigured: number;
     skipped: number;
     candidates: number;
+    /**
+     * #928 — the EXIT boundary's own counters, kept separate from the hold-limit ones.
+     *
+     * ⚠️ WHY THESE EXIST: the boundary feature shipped OFF for every bot (NULL = no boundary), and
+     * "no bot has a boundary configured" and "every bot has one and none is due" produce the SAME
+     * `candidates: 0`. That is the buried-ability shape `change-completion` warns about, so the
+     * configuration is counted rather than inferred. `boundaryInvalid > 0` is the one to look at:
+     * a value that is not `HH:MM` disables the gate for that bot WITHOUT closing anything, on
+     * purpose, and must be visible rather than silently inert.
+     */
+    boundaryConfigured: number;
+    boundaryDue: number;
+    boundaryInvalid: number;
   } | null;
   /** Positions actually closed since start. */
   closedCount: number;
-  recentCloses: Array<{ timestamp: string; ticket: number; symbol: string; hoursHeld: number; profit: number }>;
+  recentCloses: Array<{
+    timestamp: string;
+    ticket: number;
+    symbol: string;
+    hoursHeld: number;
+    profit: number;
+    /** #928 — which mechanism closed it, so the two are distinguishable after the fact. */
+    trigger: TimedStopTrigger;
+  }>;
   lastError: string | null;
 }
 
@@ -307,6 +372,11 @@ export class PositionTimeStopService {
     let attributed = 0;
     let withinLimit = 0;
     let noLimit = 0;
+    // #928 — the exit boundary's counters. See `lastSummary` for why they are not folded into the
+    // hold-limit ones.
+    let boundaryConfigured = 0;
+    let boundaryDue = 0;
+    let boundaryInvalid = 0;
     // #1030 — which bridges actually contributed. Derived from the stamped rows, so it costs
     // nothing extra and shows a missing configured broker as an absent key.
     const brokersSeen: Record<number, number> = {};
@@ -323,6 +393,9 @@ export class PositionTimeStopService {
         noLimitConfigured: noLimit,
         skipped: skipCount,
         candidates: candidateCount,
+        boundaryConfigured,
+        boundaryDue,
+        boundaryInvalid,
       };
     };
     if (!positions.length) {
@@ -383,17 +456,51 @@ export class PositionTimeStopService {
       attributed++;
 
       const maxHoldHours = parseMaxHoldHours(attribution.maxHoldDuration);
-      if (maxHoldHours === null) {
-        // No limit configured → genuinely not our business. Still recorded, so an operator can
-        // tell "this bot opted out" apart from "this bot was never matched to the position".
-        noLimit++;
-        noteSkip(p, symbol, 'no_limit_configured', hoursHeld);
-        continue;
+
+      // ── THE DECISION (#928) ──────────────────────────────────────────────────────────────────
+      //
+      // BEFORE `exitBeforeUtc` existed, `sessionWindow` was declared `stage: 'entry'` and was the
+      // ONLY session gate, so a bot could be told when it may OPEN but not when it must HOLD.
+      // Measured 2026-09-21: bots gated to `asian` still held positions at 12:40 UTC, and "be flat
+      // over the boundary" was not expressible — the only ways to be flat were the stop, the time
+      // stop, or a human.
+      //
+      // ⚠️ `decideExitTrigger()` is a PURE function, extracted so it can be canaried without a
+      // broker. It evaluates the hold limit and the boundary INDEPENDENTLY, because a bot may
+      // declare either, both, or neither — the original code `continue`d the moment `maxHoldHours`
+      // was null, which would have made a boundary-only bot permanently inert.
+      const decision = decideExitTrigger({
+        maxHoldHours,
+        hoursHeld,
+        exitBeforeUtc: attribution.exitBeforeUtc,
+      });
+      const boundary = decision.boundary;
+
+      let boundaryProblem: string | null = null;
+      if (boundary.status === 'invalid') {
+        // ⚠️ A typo must NOT close a position, and must NOT be invisible either. Counted AND
+        // reported, so an operator who has a gate that cannot fire finds out from the service
+        // rather than from a position that never closed.
+        boundaryInvalid++;
+        boundaryProblem = `exit_boundary_invalid:${boundary.reason ?? '?'}`;
+      } else if (boundary.status !== 'none') {
+        boundaryConfigured++;
+        if (boundary.due) boundaryDue++;
       }
 
-      if (hoursHeld <= maxHoldHours) {
-        withinLimit++;
-        continue; // inside its limit — normal, not a skip
+      if (!decision.due) {
+        if (maxHoldHours === null && boundary.status === 'none') {
+          // NOTHING configured → genuinely not our business. Still recorded, so an operator can
+          // tell "this bot opted out of both" apart from "this bot was never matched at all".
+          noLimit++;
+          noteSkip(p, symbol, 'no_limit_configured', hoursHeld);
+        } else if (boundaryProblem) {
+          // Neither limit fired, and the reason we know that for the boundary is unreadable.
+          noteSkip(p, symbol, boundaryProblem, hoursHeld);
+        } else {
+          withinLimit++; // inside its limit(s) — normal, NOT a skip
+        }
+        continue;
       }
 
       candidates.push({
@@ -406,8 +513,10 @@ export class PositionTimeStopService {
         side: p.type === 'buy' ? 'BUY' : p.type === 'sell' ? 'SELL' : 'UNKNOWN',
         hoursHeld: Math.round(hoursHeld * 10) / 10,
         maxHoldHours,
-        overByHours: Math.round((hoursHeld - maxHoldHours) * 10) / 10,
+        overByHours: decision.overByHours,
         profit: Number(p.profit ?? 0),
+        trigger: decision.trigger,
+        exitBoundaryMin: boundary.boundaryMin,
       });
     }
 
@@ -429,21 +538,31 @@ export class PositionTimeStopService {
         // "read 6, all inside their limit" and "read 0" are only distinguishable with a count.
         this.logger.log(
           `Time-stop: ${positions.length} position(s) evaluated, ${attributed} attributed, ` +
-            `${withinLimit} inside limit, ${noLimit} without a configured limit — nothing to close.`,
+            `${withinLimit} inside limit, ${noLimit} without a configured limit, ` +
+            // #928 — stated so "nobody has a boundary" is distinguishable from "everyone has one
+            // and none is due", and so an unreadable value is visible rather than inert.
+            `${boundaryConfigured} with an exit boundary, ${boundaryInvalid} with an UNREADABLE one ` +
+            `— nothing to close.`,
         );
       }
       return;
     }
 
     this.logger.log(
-      `Time-stop: ${candidates.length} position(s) past their max hold — ` +
-      candidates.map((c) => `${c.symbol}#${c.ticket} ${c.hoursHeld}h/${c.maxHoldHours}h`).join(', '),
+      `Time-stop: ${candidates.length} position(s) past their limit — ` +
+      candidates
+        .map((c) =>
+          c.trigger === 'max_hold'
+            ? `${c.symbol}#${c.ticket} held ${c.hoursHeld}h/${c.maxHoldHours}h`
+            : `${c.symbol}#${c.ticket} past exit boundary ${c.exitBoundaryMin}min (held ${c.hoursHeld}h)`,
+        )
+        .join(', '),
     );
 
     if (this.state.dryRun) {
       this.logger.warn(
         `Time-stop DRY RUN — would close ${candidates.length} position(s): ` +
-        candidates.map((c) => `${c.symbol}#${c.ticket}`).join(', '),
+          candidates.map((c) => `${c.symbol}#${c.ticket}(${c.trigger})`).join(', '),
       );
       return;
     }
@@ -454,7 +573,9 @@ export class PositionTimeStopService {
         // closeReason write below: the deal survives even when the trade row is not matched yet.
         // #1030 — `c.brokerId` addresses the account that HOLDS the ticket. It used to be
         // `undefined`, which the manager resolves to the PRIMARY bridge.
-        const result = await (this.mt5Connection as any).closePosition(c.ticket, c.brokerId, 'time-stop');
+        // #928 — the origin follows the trigger, so the broker-side tag and the DB row agree.
+        const origin = c.trigger === 'exit_boundary' ? 'session-exit' : 'time-stop';
+        const result = await (this.mt5Connection as any).closePosition(c.ticket, c.brokerId, origin);
         if (result?.ok === false) {
           this.logger.warn(`Time-stop close rejected for ${c.symbol}#${c.ticket}: ${result?.error ?? 'unknown'}`);
           continue;
@@ -466,6 +587,7 @@ export class PositionTimeStopService {
           symbol: c.symbol,
           hoursHeld: c.hoursHeld,
           profit: c.profit,
+          trigger: c.trigger,
         });
         if (this.state.recentCloses.length > 50) this.state.recentCloses.length = 50;
 
@@ -485,7 +607,15 @@ export class PositionTimeStopService {
           .updateMany({
             where: { brokerTicket: String(c.ticket), status: 'open' },
             data: {
-              closeReason: CLOSE_REASONS.SYSTEM_TIME_STOP,
+              // #928 — the two mechanisms get DIFFERENT reasons. `system:time-stop` means "held too
+              // long"; `system:session-exit` means "the clock reached a boundary the bot named".
+              // Collapsing them would make the counterfactual replay unable to tell which
+              // mechanism produced an exit, and that replay is the evidence that decides whether
+              // the boundary earns its place.
+              closeReason:
+                c.trigger === 'exit_boundary'
+                  ? CLOSE_REASONS.SYSTEM_SESSION_EXIT
+                  : CLOSE_REASONS.SYSTEM_TIME_STOP,
               // #949 — WHAT it belonged to, not just why it closed. Without this the close path
               // writes `closeReason` but not `strategy`, so the Strategy Comparison page and the
               // bot rating (#894) have nothing to read for every time-stop exit.
@@ -503,8 +633,11 @@ export class PositionTimeStopService {
           });
 
         this.logger.log(
-          `Time-stop CLOSED ${c.symbol}#${c.ticket} after ${c.hoursHeld}h ` +
-          `(limit ${c.maxHoldHours}h, pnl ${c.profit.toFixed(2)}) — slot freed`,
+          `Time-stop CLOSED ${c.symbol}#${c.ticket} after ${c.hoursHeld}h via ${c.trigger}` +
+            (c.trigger === 'exit_boundary'
+              ? ` (exit boundary ${c.exitBoundaryMin}min UTC)`
+              : ` (limit ${c.maxHoldHours}h)`) +
+            `, pnl ${c.profit.toFixed(2)} — slot freed`,
         );
       } catch (err: any) {
         // One failure must not abandon the rest of the batch.
@@ -529,6 +662,16 @@ export class PositionTimeStopService {
     strategyId: string | null;
     strategyName: string | null;
     maxHoldDuration: unknown;
+    /**
+     * #928 — the strategy's EXIT boundary (`'HH:MM'` UTC), carried on the SAME read as
+     * `maxHoldDuration`.
+     *
+     * ⚠️ OPTIONAL, and deliberately so: every FAILURE return below omits it, and the caller only
+     * reads it on the `reason === 'ok'` path — so a boundary cannot possibly be applied to a
+     * position we failed to attribute. That is the safe direction for the omission: an absent
+     * value means "no boundary", which declines to act.
+     */
+    exitBeforeUtc?: string | null;
     /** Why attribution succeeded or failed — surfaced in `state.skipped`. */
     reason: string;
   }> {
@@ -570,6 +713,9 @@ export class PositionTimeStopService {
       strategyId: s.id ?? null,
       strategyName: s.name ?? null,
       maxHoldDuration: holdOf(s),
+      // #928 — carried beside the hold limit, from the SAME row. Reading it from anywhere else
+      // would risk the two mechanisms seeing different strategies for one position.
+      exitBeforeUtc: s?.exitBeforeUtc ?? null,
       reason: 'ok',
     });
 

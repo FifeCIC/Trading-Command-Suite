@@ -43,6 +43,9 @@ import {
   parseSessionWindow,
   getActiveSessions,
   toEtMinutes,
+  parseExitBoundary,
+  checkExitBoundary,
+  describeExitBoundary,
 } from './session-window';
 
 /** 2026-09-10 12:44 UTC = 08:44 ET — London open, Asian shut. The traced instant. */
@@ -193,5 +196,78 @@ describe('auditNameVsWindow — it must NEVER change a gate (#759)', () => {
     const r = checkSessionWindow('asian', LONDON_OPEN_ASIAN_SHUT);
     expect(r.reason).toBe('outside Asian session (open: London)');
     expect(r.reason).not.toMatch(/news|city|ambiguous/i);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// #928 — THE EXIT-SIDE BOUNDARY. Same axis, opposite end of the trade.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+describe('session-window — the exit boundary is OPT-IN (#928)', () => {
+  it('declines to act when no boundary is declared — the pre-existing behaviour', () => {
+    // This is the contract that lets the feature ship without touching a single existing bot.
+    for (const raw of [null, undefined, '']) {
+      const r = checkExitBoundary(raw, LONDON_OPEN_ASIAN_SHUT);
+      expect(r.due).toBe(false);
+      expect(r.status).toBe('none');
+    }
+  });
+
+  it('is NOT due before the boundary', () => {
+    const r = checkExitBoundary('13:30', new Date(Date.UTC(2026, 8, 10, 12, 44, 0)));
+    expect(r.due).toBe(false);
+    expect(r.status).toBe('before');
+    expect(r.boundaryMin).toBe(810);
+  });
+
+  it('IS due at the boundary minute exactly (inclusive)', () => {
+    const r = checkExitBoundary('13:30', new Date(Date.UTC(2026, 8, 10, 13, 30, 0)));
+    expect(r.due).toBe(true);
+    expect(r.status).toBe('reached');
+    expect(r.reason).toMatch(/13:30 UTC/);
+  });
+
+  it('stays due after the boundary — the rule is stateless and idempotent', () => {
+    // A crossing-edge rule would need the entry time and would stop being due after a restart.
+    const late = checkExitBoundary('13:30', new Date(Date.UTC(2026, 8, 10, 23, 59, 0)));
+    expect(late.due).toBe(true);
+  });
+
+  it('is due immediately for a boundary that has already passed today', () => {
+    const r = checkExitBoundary('00:05', new Date(Date.UTC(2026, 8, 10, 12, 44, 0)));
+    expect(r.due).toBe(true);
+  });
+
+  it('compares in UTC, not local time', () => {
+    // 13:30Z must be the boundary whatever the host offset. A local-time bug would shift it by hours
+    // and would still look plausible in every other test here.
+    expect(checkExitBoundary('13:30', new Date(Date.UTC(2026, 8, 10, 13, 29, 0))).due).toBe(false);
+    expect(checkExitBoundary('13:30', new Date(Date.UTC(2026, 8, 10, 13, 31, 0))).due).toBe(true);
+  });
+
+  it('⚠️ DOES NOT CLOSE ON A TYPO — an unreadable boundary is invalid, not "none"', () => {
+    for (const bad of ['1330', '25:00', '13:60', 'half one', '13:3']) {
+      const r = checkExitBoundary(bad, LONDON_OPEN_ASIAN_SHUT);
+      expect(r.due).toBe(false);
+      expect(r.status).toBe('invalid');
+      expect(r.reason).toMatch(/not HH:MM/);
+    }
+  });
+
+  it('tells "absent" and "unreadable" apart, so a typo is never silent', () => {
+    expect(parseExitBoundary(null)).toEqual({ kind: 'none' });
+    expect(parseExitBoundary('')).toEqual({ kind: 'none' });
+    expect(parseExitBoundary('1330')).toEqual({ kind: 'invalid', raw: '1330' });
+    expect(parseExitBoundary('13:30')).toEqual({ kind: 'at', minutes: 810 });
+  });
+
+  it('accepts both digits of a single-digit hour', () => {
+    expect(parseExitBoundary('09:05')).toEqual({ kind: 'at', minutes: 545 });
+    expect(parseExitBoundary('9:05')).toEqual({ kind: 'at', minutes: 545 });
+  });
+
+  it('describes itself for the UI without inventing a boundary', () => {
+    expect(describeExitBoundary(null)).toBe('holds through any time');
+    expect(describeExitBoundary('13:30')).toBe('flat by 13:30 UTC');
+    expect(describeExitBoundary('nonsense')).toMatch(/UNREADABLE/);
   });
 });

@@ -39,6 +39,15 @@ const TABS = [
   { id: 'wizard', label: 'Wizard', icon: '🧙' },
 ];
 
+/**
+ * The session tags, mirroring `SessionTag` in `nest/src/modules/trading/session-window.ts`.
+ *
+ * ⚠️ Kept as a literal list rather than fetched: the server REJECTS an unknown tag when it parses
+ * the window, so a tag added there without being added here would be a value the UI cannot offer —
+ * a capability no surface reaches. `validate-…` does not police this pair, so the note is the guard.
+ */
+const SESSION_TAGS = ['asian', 'london', 'us'];
+
 export default function StrategyCreatePage() {
   const [tab, setTab] = useState('form');
   const queryClient = useQueryClient();
@@ -70,6 +79,12 @@ export default function StrategyCreatePage() {
   const [maxPositions, setMaxPositions] = useState(1);
   const [maxDailyLoss, setMaxDailyLoss] = useState('');
   const [cooldownMinutes, setCooldownMinutes] = useState(5);
+  // ── Session policy (#928) ──
+  // BOTH halves live here. `sessionWindow` (entry) was declared `enforcement: 'live'` but was
+  // reachable from NO screen — the only way a bot ever got a window was the seed file — so the
+  // exit half would have been unpaired on the only surface that creates a bot.
+  const [sessionTags, setSessionTags] = useState([]);
+  const [exitBeforeUtc, setExitBeforeUtc] = useState('');
   const [hotStockEnabled, setHotStockEnabled] = useState(false);
   const [hotStockAllocation, setHotStockAllocation] = useState('');
   const [hotStockDetectionMode, setHotStockDetectionMode] = useState('');
@@ -238,6 +253,23 @@ export default function StrategyCreatePage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) { setMsg('❌ Name is required'); return; }
+    // ⚠️ The SERVER is authoritative (`parseExitBoundary` in session-window.ts refuses anything
+    // that is not HH:MM and triggers no close). This check exists only so a typo is caught while
+    // the operator is looking at the field, instead of creating a bot whose exit gate is silently
+    // inert. The pattern MIRRORS the server's, and deliberately accepts `9:30` — a stricter copy
+    // here would reject a value the engine happily honours, which is the worse disagreement.
+    const boundary = exitBeforeUtc.trim();
+    if (boundary && !/^(\d{1,2}):(\d{2})$/.test(boundary)) {
+      setMsg('❌ Exit before must be HH:MM in UTC (e.g. 13:30), or empty for no boundary.');
+      return;
+    }
+    if (boundary) {
+      const [h, m] = boundary.split(':').map(Number);
+      if (h > 23 || m > 59) {
+        setMsg('❌ Exit before must be a real UTC time — hours 00-23, minutes 00-59.');
+        return;
+      }
+    }
     createMutation.mutate({
       name: name.trim(),
       description: description.trim() || undefined,
@@ -258,6 +290,11 @@ export default function StrategyCreatePage() {
       maxPositions: Number(maxPositions),
       maxDailyLoss: maxDailyLoss ? Number(maxDailyLoss) : undefined,
       cooldownMinutes: Number(cooldownMinutes),
+      // #928 — JSON array, or null when ungated. `parseSessionWindow` on the server reads BOTH the
+      // JSON-array and the bare-string form (`london`), so a bot created here and one seeded as a
+      // bare string are the same configuration — which is why the write form is not a third one.
+      sessionWindow: sessionTags.length ? JSON.stringify(sessionTags) : null,
+      exitBeforeUtc: boundary || null,
       hotStockEnabled,
       hotStockAllocation: hotStockAllocation ? Number(hotStockAllocation) : undefined,
       hotStockDetectionMode: hotStockDetectionMode || undefined,
@@ -512,6 +549,59 @@ export default function StrategyCreatePage() {
                       <span>Use rarity-based position sizing <BotRuleStatus field="useRaritySizing" byField={botRuleFields} /></span>
                     </label>
                   </label>
+
+                  {/* ── Session Policy (#928) ── */}
+                  {/* ⚠️ THE TWO HALVES ARE OFFERED TOGETHER ON PURPOSE. `sessionWindow` gates ENTRY
+                      (Gate 5) and `exitBeforeUtc` gates HOLDING (Gate 7). Shipping the exit half
+                      alone would let an operator say "flat by 13:30" without being able to say
+                      "only trade asian" — half a policy, on the one screen that makes bots. */}
+                  <div className="stratcreate-section-label">Session Policy</div>
+                  <div className="stratcreate-field-row stratcreate-field-row-2">
+                    <label className="stratcreate-field">
+                      <span>Session Window (entry) <BotRuleStatus field="sessionWindow" byField={botRuleFields} /></span>
+                      <div className="stratcreate-tag-row">
+                        {SESSION_TAGS.map(tag => (
+                          <label key={tag} className="stratcreate-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={sessionTags.includes(tag)}
+                              onChange={e => setSessionTags(prev =>
+                                e.target.checked ? [...prev, tag] : prev.filter(t => t !== tag))}
+                            />
+                            <span>{tag}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {/* An empty list is a REAL declared state, not missing data — the engine reads
+                          NULL as "may open at any hour". Saying so beats an unexplained blank. */}
+                      <span className="stratcreate-hint">
+                        Tags this bot may OPEN in. None ticked = may open at any hour (ungated).
+                      </span>
+                    </label>
+                    <label className="stratcreate-field">
+                      <span>Exit Before (UTC) <BotRuleStatus field="exitBeforeUtc" byField={botRuleFields} /></span>
+                      <input
+                        className="stratcreate-input"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="e.g. 13:30"
+                        value={exitBeforeUtc}
+                        onChange={e => setExitBeforeUtc(e.target.value)}
+                      />
+                      <span className="stratcreate-hint">
+                        <code>HH:MM</code> UTC. Past this time the bot closes and stops holding.
+                        Empty = holds through any time.
+                      </span>
+                      {/* ⚠️ #928 — the measurement, stated where the choice is made. A blanket
+                          version of this rule did NOT pay: replaying 228 real trades closed before
+                          13:30 gained +0.045pp on the mean while CUTTING 23 winners. Offering it
+                          without that sentence invites the reader to assume it is an improvement. */}
+                      <span className="stratcreate-hint stratcreate-hint-warn">
+                        ⚠️ Opt-in policy, not a fix: closing before 13:30 measured 23 winners cut for
+                        +0.045pp. Use it where being flat over a boundary is the point.
+                      </span>
+                    </label>
+                  </div>
 
                   {/* ── Hot Stock Picks ── */}
                   <div className="stratcreate-section-label">Hot Stock Picks (#339)</div>

@@ -132,6 +132,16 @@ export interface StrategySummary {
    * exact failure mode this field exists to fix.
    */
   maxHoldHours?: number | null;
+  /**
+   * EXIT-side session boundary in UTC `'HH:MM'` (#928). null = no boundary.
+   *
+   * ⚠️ MUST be carried on the summary, for exactly the reason `maxHoldHours` above must be:
+   * `PositionTimeStopService` reads it off `findAll()`, so omitting it here makes the boundary
+   * unreadable and the exit gate silently no-ops — while the UI still shows the value the
+   * operator typed. That is a declared-but-unenforced field, which is the defect #870/#966 exist
+   * to prevent.
+   */
+  exitBeforeUtc?: string | null;
   /** #344 pyramid averaging — moved here from ScoringStrategy (2026-08-27). */
   maxPyramidTiers?: number;
   /**
@@ -406,6 +416,9 @@ export class TradingStrategyService {
         // Position time-stop (#773) — consumed by PositionTimeStopService. Without this the
         // limit is unreadable and the time-stop silently no-ops.
         maxHoldHours: (s as any).maxHoldHours ?? null,
+        // Exit-side session boundary (#928) — consumed by the SAME service. Carried for the same
+        // reason: a field the engine reads off this summary is invisible if the summary drops it.
+        exitBeforeUtc: (s as any).exitBeforeUtc ?? null,
         maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
         lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
         lastSignal: lastEval?.signal ?? null,
@@ -508,6 +521,9 @@ export class TradingStrategyService {
     // this method, plus the lineage pointer. All optional — existing callers are unchanged.
     sessionWindow?: string | null;
     maxHoldHours?: number | null;
+    // #928 — the exit-side boundary. Optional like the rest: an existing caller that does not know
+    // about it leaves the column NULL, which means "no boundary", so no bot changes behaviour.
+    exitBeforeUtc?: string | null;
     maxPyramidTiers?: number;
     duplicatedFromId?: string | null;
     /**
@@ -593,6 +609,7 @@ export class TradingStrategyService {
         hotStockMaxHoldHours: data.hotStockMaxHoldHours ?? null,
         sessionWindow: data.sessionWindow ?? null,
         maxHoldHours: data.maxHoldHours ?? null,
+        exitBeforeUtc: data.exitBeforeUtc ?? null,
         maxPyramidTiers: data.maxPyramidTiers ?? undefined,
         duplicatedFromId: data.duplicatedFromId ?? null,
         // #1018 — EVERY bot gets a magic, including one created through the API. An explicit value
@@ -935,6 +952,11 @@ export class TradingStrategyService {
         mode: source.mode ?? undefined,
         sessionWindow: source.sessionWindow ?? null,
         maxHoldHours: source.maxHoldHours ?? null,
+        // #928 — a COPY must inherit the exit boundary, or the A/B comparison this repo requires
+        // for a maths change would silently compare a gated configuration against an ungateable
+        // one. Copied with the rest of the exit policy, not omitted like `magic` (which must
+        // differ per bot on purpose).
+        exitBeforeUtc: source.exitBeforeUtc ?? null,
         maxPyramidTiers: source.maxPyramidTiers ?? undefined,
         hotStockEnabled: source.hotStockEnabled ?? undefined,
         hotStockAllocation: source.hotStockAllocation ?? undefined,
@@ -2490,6 +2512,12 @@ export class TradingStrategyService {
         if ((s as any).maxHoldHours !== undefined) {
           desired.maxHoldHours = (s as any).maxHoldHours;
         }
+        // #928 — optional on the same contract. A seeder that does not mention the boundary
+        // leaves whatever is on the row alone; only a real value (including an explicit null) is a
+        // declaration worth writing.
+        if ((s as any).exitBeforeUtc !== undefined) {
+          desired.exitBeforeUtc = (s as any).exitBeforeUtc;
+        }
         // #894 — the rating's risk base. Optional like the rest: a bot that does not declare it
         // keeps its current value, and there is no default to fall back to on purpose.
         if ((s as any).allocationAmount !== undefined) {
@@ -2612,6 +2640,8 @@ export class TradingStrategyService {
             // Position time-stop (#773) and start state — both optional in the seed,
             // defaulted here so every existing entry keeps its behaviour.
             maxHoldHours: (s as any).maxHoldHours ?? null,
+            // #928 — the exit-side boundary, on the same terms as the hold limit above.
+            exitBeforeUtc: (s as any).exitBeforeUtc ?? null,
             active: (s as any).active ?? true,
             // #894 — NULL, never a substituted default: "no allocation set" is a state the
             // rating reports by name (`allocation_not_set`) rather than a number to invent.

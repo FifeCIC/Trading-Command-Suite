@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 // forms (measured 2026-09-18: 9 bots bare `london`, 3 bots `["london"]`), and this function
 // normalises both AND resolves aliases (`sydney` -> `asian`, `zurich` -> `london`). Without it,
 // two bots that behave identically would hash differently and be counted as two strategies.
-import { parseSessionWindow } from '../trading/session-window';
+import { parseSessionWindow, parseExitBoundary } from '../trading/session-window';
 
 /**
  * StrategyDerivationService — renders STRATEGIES from the unique META.Stack combinations.
@@ -71,6 +71,16 @@ export interface StrategyTreatment {
   maxPyramidTiers: number;
   timeframe: string;
   sessionWindow: string | null;
+  /**
+   * #928 — the EXIT-side session boundary (`'HH:MM'` UTC), null = none.
+   *
+   * ⚠️ PART OF THE IDENTITY, on purpose. Two bots identical in every other respect but with
+   * different exit boundaries are NOT the same strategy — one is flat by 13:30 UTC and one is not.
+   * Omitting it would let exactly the error this service's header describes happen again: a field
+   * that is UNCHANGED across the bots you happen to be looking at gets treated as "not identity",
+   * and two genuinely different strategies are blended into one rating.
+   */
+  exitBeforeUtc: string | null;
   mode: string;
   maxPositions: number;
   maxDailyLoss: number | null;
@@ -159,6 +169,8 @@ interface BotRow {
   maxPyramidTiers: number;
   timeframe: string;
   sessionWindow: string | null;
+  /** #928 — the exit-side boundary. Part of the identity; see `StrategyTreatment`. */
+  exitBeforeUtc: string | null;
   mode: string;
   maxPositions: number;
   maxDailyLoss: number | null;
@@ -358,6 +370,7 @@ export class StrategyDerivationService {
       maxPyramidTiers: bot.maxPyramidTiers,
       timeframe: bot.timeframe,
       sessionWindow: bot.sessionWindow,
+      exitBeforeUtc: bot.exitBeforeUtc ?? null,
       mode: bot.mode,
       maxPositions: bot.maxPositions,
       maxDailyLoss: bot.maxDailyLoss,
@@ -399,6 +412,18 @@ export class StrategyDerivationService {
       mode: String(t.mode),
       // `ungated` is a real declared state (NULL = may act any time), distinct from any tag list.
       sessionWindow: tags.length ? tags.join(',') : 'ungated',
+      // #928 — CANONICALISED through the parser, never the raw string. `'13:30'` and `' 13:30 '`
+      // must key identically or the whitespace invents a strategy that does not exist — the same
+      // reason `sessionWindow` is normalised one line above. An unreadable value keys as
+      // `invalid:<raw>` rather than collapsing into `none`, so a typo is a DIFFERENT strategy
+      // rather than silently the same as having no rule at all.
+      exitBeforeUtc: (() => {
+        const p = parseExitBoundary(t.exitBeforeUtc);
+        if (p.kind === 'none') return 'none';
+        return p.kind === 'at'
+          ? `${String(Math.floor(p.minutes / 60)).padStart(2, '0')}:${String(p.minutes % 60).padStart(2, '0')}`
+          : `invalid:${String(p.raw)}`;
+      })(),
       slPct: num(t.slPct),
       timeframe: String(t.timeframe),
       tpPct: num(t.tpPct),

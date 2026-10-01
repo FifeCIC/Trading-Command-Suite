@@ -1,0 +1,344 @@
+
+> nest@0.109.0 build:api
+> pwsh -File ../scripts/build-api.ps1
+
+
+== Locating the API on port 3201
+   OK  Stopped API (PID 29340).
+   OK  Engine DLL released.
+
+== Building the API
+
+> nest@0.109.0 prebuild
+> node scripts/build-preflight.cjs && node scripts/validate-ticket-columns.cjs && node scripts/validate-protocol-directions.cjs && node scripts/validate-directive-group-kind.cjs && node scripts/validate-guardian-directive-ids.cjs && node scripts/validate-strategy-library-links.cjs && node scripts/validate-pipeline-contracts.cjs && node scripts/validate-threshold-sources.cjs && node scripts/validate-ab-inputs.cjs && node scripts/validate-close-attribution.cjs && node scripts/validate-manual-trade-gate.cjs && node ../scripts/validate-envelope-callers.cjs && node ../scripts/validate-readiness-verdict.cjs && node scripts/validate-timeframe-sources.cjs && node scripts/validate-timezone-sources.cjs && node scripts/validate-local-time-sources.cjs && node scripts/validate-retention-columns.cjs && node scripts/validate-archive-default-column.cjs && node scripts/validate-collation-consistency.cjs && node scripts/validate-seed-literals.cjs && node scripts/validate-protocol-slugs.cjs && node scripts/gen-schema-init.cjs --check && node scripts/validate-bot-rules.cjs && node scripts/validate-rule-enforcement.cjs && node scripts/validate-trailing-claims.cjs && node scripts/validate-signal-classification.cjs && node scripts/validate-signal-column-width.cjs && node scripts/validate-single-bridge-position-io.cjs && node ../scripts/validate-bridge-order-choke-point.cjs && node scripts/validate-risk-profile.cjs && node scripts/validate-fabricated-stats.cjs && node ../scripts/validate-agent-docs.cjs && node ../scripts/validate-text-encoding.cjs && node ../scripts/validate-output-style-sync.cjs --report && node ../scripts/validate-roadmap-columns.cjs && node ../scripts/validate-notices.cjs && node --test ../src/core/notices/notices.test.js && node --test ../src/core/score-display.test.js && node --test ../src/core/trade-readiness.test.js && node ../scripts/validate-css-tokens.cjs && node ../scripts/validate-duplication.cjs && node ../scripts/validate-arch-surfaces.cjs && node ../scripts/docs-facts.cjs --check && node ../scripts/tools-index.cjs --check && node scripts/validate-settings-access.cjs && node ../scripts/validate-qa-ids.cjs && node ../scripts/validate-decisions.cjs && npx rimraf dist && npx prisma generate
+
+[build-preflight] Ô£à Prisma engine DLL is free ÔÇö safe to build.
+[ticket-columns] Ô£à OK ÔÇö no ticket field is declared as a 32-bit integer
+[validate-protocol-directions] Scanned 48 protocols, 431 directive refs, 161 directives with a known bias.
+[validate-protocol-directions] Ô£à OK ÔÇö no direction-contract conflicts.
+[gate-membership] parsed 48 protocols, 137 groups, 45 risk gates, 68 gate placements
+[gate-membership] Ô£à OK ÔÇö every risk-gate member is a declared gate
+
+[guardian-directive-ids] Ô£à OK ÔÇö all 4 guardian directive(s) registered (atr-trailing-stop, supertrend, chandelier-exit, wick-filter) ┬À registry 109 directive(s)
+
+[strategy-library-links] Ô£ô 5 tcsProtocol link(s) resolve against 48 seeded protocol(s); 5 claimed-supported entr(ies) are linked (10 entr(ies) scanned)
+[pipeline-contracts] 26 invariants in the contracts doc; 0 whitelisted deviations
+[pipeline-contracts] four-page mirror coverage (QA is gated, these are reported):
+    Architecture   15/26 invariants named: INV-ADAPTIVE-TARGET-MONOTONIC, INV-BAR-ORDER, INV-BAR-WINDOW, INV-CANONICAL-LOADER, INV-GATE-FAILS-CLOSED, INV-GATE-MEMBERSHIP, INV-MTF-BUNDLE, INV-NO-FUTURE-ROWS, INV-NO-SYMBOL-GUESSING, INV-ONE-ROW-PER-RUN, INV-SCORE-MAGNITUDE, INV-SINGLE-CADENCE, INV-STABLE-DENOMINATOR, INV-UTC-TIMESTAMPS, INV-WATCHLIST-IDENTITY
+    Diagrams       2/26 invariants named: INV-NO-SYMBOL-GUESSING, INV-WATCHLIST-IDENTITY
+    CapabilityMap  0/26 invariants named
+[pipeline-contracts] Ô£à OK ÔÇö canonical mechanisms present, no banned patterns, invariants mirrored in QA
+
+
+Threshold source audit ÔÇö one value, one owner
+
+OWNERS (the only declarations allowed to exist):
+  classification  nest/src/modules/scoring/protocol-gating.service.ts
+                  exports: ENTRY_THRESHOLD, STRONG_PCT, SIGNAL_THRESHOLDS
+  styleBars       nest/src/common/utils/style-thresholds.ts
+                  exports: STYLE_THRESHOLDS, BOT_BAR_DEFAULT, SIGNALS_GATE_DEFAULT, resolveStyleThreshold
+
+Ôä╣ 2 legitimate owner declaration(s):
+  src/core/signal-utils.js:55 = 65  (The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) ÔÇö percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.)
+  src/core/signal-utils.js:56 = 40  (The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) ÔÇö percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.)
+
+ÔÜá 70 in-range hardcoded bar(s) ÔÇö second owners, will drift:
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:45  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:114  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:115  property = 20
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:128  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:129  property = 20
+  nest/src/modules/automation/ab-attribution-rejected.spec.ts:72  property = 10
+  nest/src/modules/automation/ab-trade-authority.spec.ts:37  property = 10
+  nest/src/modules/automation/ab-trade-authority.spec.ts:58  property = 20
+  nest/src/modules/automation/automation-loop-queue-freshness.spec.ts:34  property = 0
+  nest/src/modules/automation/automation-loop.service.ts:632  property = 3
+  nest/src/modules/automation/automation-loop.service.ts:1932  nullish-default = 0
+  nest/src/modules/scoring/scoring-strategy-seed.ts:59  property = 12
+  nest/src/modules/scoring/scoring-strategy-seed.ts:70  property = 10
+  nest/src/modules/scoring/scoring-strategy-seed.ts:81  property = 7
+  nest/src/modules/scoring/scoring-strategy-seed.ts:89  property = 12
+  nest/src/modules/scoring/strategy-registry.service.spec.ts:19  property = 8
+  nest/src/modules/scoring/strategy-registry.service.spec.ts:133  property = 9
+  nest/src/modules/signals/signal-envelope.service.ts:1062  nullish-default = 0
+  nest/src/modules/trading/bot-summary-mapping.spec.ts:81  property = 10
+  nest/src/modules/trading/strategy-seed-convergence.spec.ts:32  property = 9
+  nest/src/modules/trading/strategy-seed-convergence.spec.ts:99  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:118  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:137  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:154  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:183  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:203  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:235  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:252  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:278  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:304  property = 8
+  nest/src/modules/trading/strategy-seed-data.ts:324  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:342  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:379  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:420  property = 0
+  nest/src/modules/trading/strategy-seed-data.ts:471  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:489  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:507  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:525  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:543  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:561  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:579  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:597  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:615  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:635  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:653  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:686  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:704  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:726  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:768  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:826  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:844  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:862  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:880  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:898  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:916  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:934  property = 10
+  nest/src/modules/trading/trading-strategy-pair.spec.ts:29  property = 10
+  nest/src/modules/trading/trading-strategy-pair.spec.ts:33  property = 10
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:56  property = 9
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:105  property = 20
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:113  property = 7
+  src/components/MetaStackPipeline.jsx:329  or-default = 3
+  src/core/translators/focused-translator.js:134  or-default = 3
+  src/core/translators/focused-translator.js:134  or-default-coerced = 3
+  src/pages/MetaStackExplorerPage.jsx:452  or-default = 0
+  src/pages/MetaStackExplorerPage.jsx:452  or-default = 0
+  src/pages/MetaStackExplorerPage.jsx:458  or-default = 0
+  nest/prisma/schema.prisma:1464  prisma-default = 10
+  nest/prisma/schema.prisma:1634  prisma-default = 10
+  nest/prisma/schema.prisma:1764  prisma-default = 10
+
+Ô£à OK ÔÇö every threshold has exactly one owner and every consumer imports it.
+
+Ô£à validate-ab-inputs: A/B sources its mode from the bot and its cadence from the protocol (538 files scanned)
+Ô£à Close attribution ÔÇö every closeReason writer routes through the parser (6 declared exceptions).
+[manual-trade-gate] 6 exempt path(s):
+  ┬À modules/automation/ab-test.service.ts ÔÇö A/B side dispatch ÔÇö gate wiring scheduled with #929 (file mid-work by another agent)
+  ┬À modules/paper-trading/paper-trading.controller.ts ÔÇö paper trading ÔÇö records a simulated fill; no broker order is placed
+  ┬À modules/portfolio/trading212-portfolio.controller.ts ÔÇö T212 portfolio buy/sell ÔÇö portfolio operations, not signal-driven trading
+  ┬À modules/providers/mt5.controller.ts ÔÇö FINDING: raw MT5 order endpoint ÔÇö NOT gated (named in #945 close)
+  ┬À modules/scoring/speed-scan.controller.ts ÔÇö FINDING: speed-scan direct order path ÔÇö NOT gated (named in #945 close)
+  ┬À modules/trading/mt5-trading.controller.ts ÔÇö controller passthrough to Mt5TradingService ÔÇö the broker layer, not a signal path
+[manual-trade-gate] Ô£à OK ÔÇö every signal-driven order path runs assessGlobalRiskLimits()
+[envelope-callers] Ô£à OK ÔÇö every /api/signals/envelope caller passes a protocol
+[readiness-verdict] Ô£à OK ÔÇö readiness is not asserted from `preTradeReady` alone
+
+Timeframe / cadence axis ÔÇö one duration table, or it drifts
+
+OWNER: nest/src/common/utils/timeframe.ts  ->  barLengthMs()
+       (ADR-014: probe and writers share ONE definition)
+
+Standalone copies (allowed to exist, but must AGREE):
+  nest/scripts/contract-probe.cjs
+     agrees with owner on 8 cadences
+
+Frontend TIMEFRAMES arrays: 17
+     8  lowercase (canonical)
+     4  other
+     3  UPPERCASE (1M/5M/1H)
+     2  MT5-style (M5/H1/D1)
+
+   ÔÜá´©Å  More than one convention. Case matters: `barLengthMs("1M")` falls back to
+       ONE DAY (case-sensitive map) while a `/i` parser reads ONE MINUTE. Do not pass
+       an uppercase label into a duration path ÔÇö pass the canonical lowercase value.
+
+Ô£à OK ÔÇö one canonical cadence table; every other site imports or demonstrably agrees.
+
+
+Timezone axis ÔÇö one UTCÔåölocal conversion, and DST resolved not approximated
+
+OWNER: nest/src/common/utils/session-time.ts
+       exports: zoneOffsetMs, minutesInZone, zonedWallClockInstant, minutesFromOpen
+
+Ô£à OK ÔÇö no hand-rolled timezone conversions; DST is resolved by the owner.
+
+Local-time sources in SQL ÔÇö checked 578 file(s) under nest/src, nest/prisma
+
+Ô£à OK ÔÇö every SQL clock reference is UTC, and no DDL default uses the local clock.
+Retention columns ÔÇö intrinsic only, one owner
+
+  retention date columns checked: 10/10
+  files checked for a duplicated map: 3
+  retention columns checked for a usable index: 10/10
+
+Ô£à OK ÔÇö every retention bound uses a write-time column, and the map has one owner.
+[validate-archive-default-column] OK - the archive endpoint has ONE owner of the
+   prune column: retention.config.ts. A request omitting dateCol resolves to
+   directiveoutcome.createdAt, NOT the derived 'predictedAt'.
+   tables checked: 10; day counts derived for all of them
+[validate-collation-consistency] scanned 842 file(s), 152 CREATE TABLE statement(s), 22 InnoDB, 22 explicit COLLATE declaration(s)
+   majority collation: utf8mb4_unicode_ci
+
+   ÔÜá´©Å 26 stale COLLATE pin(s) to a non-majority collation.
+      These still WORK (MySQL coerces) but they now name a collation the schema
+      no longer uses, so the comment beside them is probably out of date too.
+        nest/src/modules/scoring/protocol-health.service.ts:~223 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~223 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~226 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~226 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~229 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~229 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~231 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~231 pins utf8mb4_0900_ai_ci
+        ÔÇª +18 more
+      NOT a failure ÔÇö removing a pin changes query semantics and is a decision.
+
+Ô£à OK ÔÇö no DDL declares a divergent collation, and every CREATE TABLE is explicit
+   about its collation rather than inheriting a server default that varies by
+   MySQL major version. The split cannot return through a reinstall.
+[seed-literals] Ô£à OK ÔÇö 14 seed file(s) scanned, no invented default literal.
+[protocol-slugs] Ô£à OK ÔÇö 48 seed key(s), all slugs (1 documented baseline).
+
+Ô£à schema-init.sql is current.
+
+[bot-rules] Ô£à OK ÔÇö columns=40 declared=35 display-only=13 live=13 legacy-only=5 none=4
+[bot-rules]   note: static check. It proves every column has a declared owner, NOT that a rule fires.
+  [rule-enforcement] Ô£à 35 declared rule(s); 13 guardian mechanism(s); 5 column(s) claim the guardian and every one is declared by exactly one mechanism
+  [rule-enforcement] ÔÜá´©Å  this checks the two DECLARATIONS agree ÔÇö it cannot prove the code reads the column it lists.
+Ô£à Trailing claims ÔÇö 931 source file(s), no announcement without a mechanism.
+[signal-classification] Ô£à OK ÔÇö no prefix or substring test on a signal class
+[signal-column-width] Ô£à OK ÔÇö every signal column can hold STRONG_SELL (11 chars)
+[single-bridge-position-io] Ô£à OK ÔÇö position I/O is addressed per broker
+Ô£à bridge order choke point (#1035) ÔÇö every order passes one gate
+   C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py: 1 real mt5.order_send(), inside order_send_checked()
+[risk-profile] Ô£à OK ÔÇö keys=6 declared=7 live=5 legacy-only=1 none=1
+[risk-profile]   note: static check. It proves every cap is declared and operator-movable, NOT that the value is right.
+
+[fabricated-stats] Ô£à OK ÔÇö no non-zero typed stat literal and no typed provider list in backend source.
+
+[agent-docs] scanned 18 instruction file(s)
+
+[agent-docs] ÔÜá 1 warning(s) ÔÇö advisory, does not fail the build:
+
+  ÔÜá [dangling-reference] AGENT-ATTENTION.md cites `dist/src/main.js` ÔÇö no file with that name exists anywhere in the repo
+      ÔåÆ A cited path whose file is gone for real means the reasoning it pointed at is unfindable ÔÇö which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+
+[agent-docs] Ô£à OK ÔÇö applyTo present, ONE handoff directory (no retired citations), no dangling citations, no duplicated or misnumbered rules, no doc task lists
+
+[text-encoding] scanned 1594 file(s) in 13 location(s)
+
+[text-encoding] Ô£à OK ÔÇö no mojibake signatures in source, seed or documentation files
+
+[style-sync] Ô£à OK ÔÇö mirror matches the portable source (9186 chars)
+[roadmap-columns] declared 5 column(s), snapshot matches
+[roadmap-columns] order: discussion , next-sprint , phase-2 , phase-3 , phase-4
+
+[roadmap-columns] Ô£à OK ÔÇö declared column order and generated snapshot agree
+
+[notices] 52 registered code(s), 1340 file(s) scanned, 8 declared as backend-emittable, locales: de:17 (+30 fields in English), UI: 9 raw error render(s) left in 4 file(s)
+[notices] Ôä╣ registered but not referenced yet (callers not migrated): TCS-SCORE-001, TCS-SYS-001
+
+[notices] Ô£à OK ÔÇö every code is well-formed and every referenced code is registered
+[notices]    behaviour checks (rendering, locales): npm run test:notices
+
+Ô£ö the catalogue is well formed (1.137ms)
+Ô£ö every code renders a title, a message and a non-empty line (1.3822ms)
+Ô£ö no template leaks an unsubstituted placeholder when its params are supplied (0.8734ms)
+Ô£ö an undeclared placeholder is left VISIBLE rather than blanked (anti-silence) (0.139ms)
+Ô£ö a failure with NO HTTP response never renders a template that needs a status (0.3536ms)
+Ô£ö an unknown code is never blank and names itself (0.1344ms)
+Ô£ö the SAME code renders in every locale ÔÇö only the wording differs (0.1605ms)
+Ô£ö a partial locale falls back PER FIELD, not per code (0.1572ms)
+Ô£ö an unrecognised locale degrades to English instead of blanking every message (0.1538ms)
+Ô£ö the German bundle only names registered codes, and its placeholders are declared (0.2977ms)
+Ô£ö listNotices() exposes the whole catalogue to tooling (0.1982ms)
+Ô£ö a trade refusal renders the SERVER code, not a hardcoded one (0.2091ms)
+Ô£ö server params are passed through, so richer codes render real values (0.1297ms)
+Ô£ö a refusal with NO server code falls back, and keeps the server wording (0.1303ms)
+Ô£ö a refusal with an empty result still renders a non-blank notice (anti-silence) (0.1843ms)
+Ô£ö bridge-emitted cap notices name the control that ACTUALLY binds (#901) (0.1705ms)
+Ô£ö no OTHER notice sends the user to a control that no longer controls anything (0.3172ms)
+Ôä╣ tests 17
+Ôä╣ suites 0
+Ôä╣ pass 17
+Ôä╣ fail 0
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 94.4033
+Ô£ö closed market is PAUSED even when the data is old ÔÇö never STALE (#774) (1.0083ms)
+Ô£ö open + behind is STALE, and it is the ONE state that asks for attention (0.1599ms)
+Ô£ö freshness is the SERVERÔÇÖs flag ÔÇö an old asOf alone must not produce STALE (0.1177ms)
+Ô£ö an absent stale flag is not a claim of staleness (0.8113ms)
+Ô£ö the four states are mutually exclusive, and the labels never collide (0.7441ms)
+Ô£ö legacy rows with no marketStatus stay Live ÔÇö unchanged behaviour (0.1073ms)
+Ô£ö the tooltip surfaces the SERVERÔÇÖs reason, and names the alarming state plainly (0.213ms)
+Ôä╣ tests 7
+Ôä╣ suites 0
+Ôä╣ pass 7
+Ôä╣ fail 0
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 98.3496
+Ô£ö #935 ÔÇö gate-ready but execution-blocked is NOT ready (the BTC case) (1.5649ms)
+Ô£ö gate-ready AND execution-clear is ready (0.1335ms)
+Ô£ö the pre-trade gate alone can block (0.1209ms)
+Ô£ö both sources are reported, gate reasons first (0.122ms)
+Ô£ö an ABSENT assessment is "unknown", never "ready" (0.1446ms)
+Ô£ö a missing envelope is "unknown" and does not throw (0.1171ms)
+Ô£ö `preTradeReady` is compared strictly, so a truthy non-true is not ready (1.0396ms)
+Ô£ö a blocker with only a fallback field still produces a reason (0.1575ms)
+Ô£ö a null executionBlockers is honoured as "no blockers", not as unknown (0.125ms)
+Ôä╣ tests 9
+Ôä╣ suites 0
+Ôä╣ pass 9
+Ôä╣ fail 0
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 98.5969
+Ô£à OK ÔÇö no NEW undefined CSS tokens. 9173 var() references checked, 152 tokens defined, 0 pre-existing finding(s) baselined.
+[duplication] Ô£à OK ÔÇö 1775 duplicated block(s) across 156 pair(s), none new and none grown (allowance: 1775 across 156, scanned 1318 files)
+
+[arch-surfaces] reference 198 routes ┬À page 182 routes ┬À baselined drift 52
+[arch-surfaces] CONTRACT_REGISTER_LAST_UPDATED marker: 2026-09-30 (batch #24)
+   Ôä╣ CONTRACT_REGISTER_LAST_UPDATED marker agrees (2026-09-30 (batch #24)); the trailing prose differs by -279 chars ÔÇö expected, the page paraphrases.
+[arch-surfaces] Ô£à OK ÔÇö the two architecture surfaces agree on every fact that is meant to be identical.
+[docs-facts] Ô£à OK ÔÇö 8 fact(s) match docs/GENERATED-FACTS.md and docs/generated-facts.json
+  [tools-index] Ô£à OK ÔÇö 170 tools, ÔÜá´©Å 74 ORPHAN(S) ÔÇö reachable from nothing, see docs/TOOLS-INDEX.md, rendering matches the filesystem.
+[settings-access] Ô£à OK ÔÇö no migrated env var is read (3 checked); 20 recorded raw settings-store access(es) in 9 file(s), none increased (globalSetting=13, appSetting=5, userPreferences=2)
+[qa-ids] 476 QA ids, all unique
+[qa-ids] 491 capability names, all unique
+
+[qa-ids] Ô£à OK ÔÇö no id or capability name is used twice
+
+  [decisions] Ô£à 52 register rows all carry a guard status (­ƒƒó 11 ┬À ­ƒƒí 27 ┬À ­ƒö┤ 14) ┬À 13 well-formed DECISION marker(s)
+  [decisions] Ô£à 2 settled subject(s) declared; no row names one without citing the row that settled it
+  [decisions] ÔÜá´©Å  this checks WELL-FORMEDNESS and RE-OPEN only ÔÇö it cannot know whether a decision was recorded at all.
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+
+Ô£ö Generated Prisma Client (v5.22.0) to .\node_modules\@prisma\client in 500ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Help us improve the Prisma ORM for everyone. Share your feedback in a short 2-min survey: https://pris.ly/orm/survey/release-5-22
+
+
+> nest@0.109.0 build
+> tsc -p tsconfig.build.json
+
+   OK  Build succeeded.
+
+== Restarting the API
+   OK  API starting in the background (node dist/src/main.js, PID 26540).
+
+   API IS DOWN on port 3201.
+   Nothing is listening on 3201 after 60s - the process did not bind the port.
+   Logs: C:\wamp64\www\trading-command-suite\nest\logs\console-build-api.log  |  C:\wamp64\www\trading-command-suite\nest\logs\console-build-api-err.log
+   Last lines of console-build-api-err.log:
+   Last lines of console-build-api.log:
+     [32m[Nest] 26540  - [39m01/10/2026, 13:18:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/roadmap/cards/:number/deps, POST} route[39m[38;5;3m +1ms[39m
+     [32m[Nest] 26540  - [39m01/10/2026, 13:18:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/roadmap/columns, POST} route[39m[38;5;3m +0ms[39m
+     [32m[Nest] 26540  - [39m01/10/2026, 13:18:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/roadmap/columns/:id, PATCH} route[39m[38;5;3m +0ms[39m
+     [32m[Nest] 26540  - [39m01/10/2026, 13:18:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/roadmap/columns/:id, DELETE} route[39m[38;5;3m +1ms[39m
+     [33m[Nest] 26540  - [39m01/10/2026, 13:21:25 [33m   WARN[39m [38;5;3m[PrismaService] [39m[33mPrisma connection attempt 1/3 failed. Retrying in 1500ms...[39m
+
+   Start it manually when ready:  node dist/src/main.js  (from C:\wamp64\www\trading-command-suite\nest)

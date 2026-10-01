@@ -46,6 +46,16 @@
 export const CLOSE_REASONS = {
   /** The #773 position time-stop closed it (maxHoldHours exceeded). */
   SYSTEM_TIME_STOP: 'system:time-stop',
+  /**
+   * The #928 EXIT-side session boundary closed it (`exitBeforeUtc` reached).
+   *
+   * ⚠️ A value of its own rather than reusing `SYSTEM_TIME_STOP`, because the two answer different
+   * questions: the time-stop means "held TOO LONG", this means "the clock reached a boundary the
+   * bot named". Measured 2026-10-01, collapsing them would have made the counterfactual replay
+   * unable to tell which mechanism produced a given exit — and the replay is the only evidence
+   * that decides whether this boundary earns its place.
+   */
+  SYSTEM_SESSION_EXIT: 'system:session-exit',
   /** The sync found a DB position with no broker counterpart and finalised the trade. */
   SYSTEM_RECONCILED: 'system:reconciled',
   /** Closed through the API/UI by a person. */

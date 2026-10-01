@@ -105,6 +105,31 @@ function payloadKeys(jsxSource) {
     }
     if (c === "'" || c === '"' || c === '`') { inString = c; continue; }
 
+    /**
+     * ⚠️ COMMENTS MUST BE SKIPPED AS COMMENTS — added 2026-10-01 (#928), after a measured
+     * silent under-read in this very scanner.
+     *
+     * The create page annotates its payload with `//` comments. The scanner treated a BACKTICK as a
+     * string delimiter, so a backtick inside a comment (`` `london` ``) opened a fake string that
+     * swallowed the following keys. Measured: adding ONE commented line to the payload took the
+     * read from **23 keys to 19** — and the guard still printed ✅ OK, because its only emptiness
+     * check is `payload.length === 0`.
+     *
+     * That is precisely the failure the `--self-test` in this file exists to catch, and it went
+     * unnoticed because no canary had a comment inside a payload. A verifier that silently reads
+     * less than it should is the same defect as one that reads nothing.
+     */
+    if (c === '/' && jsxSource[i + 1] === '/') {
+      const nl = jsxSource.indexOf('\n', i);
+      i = nl === -1 ? jsxSource.length : nl;
+      continue;
+    }
+    if (c === '/' && jsxSource[i + 1] === '*') {
+      const end = jsxSource.indexOf('*/', i + 2);
+      i = end === -1 ? jsxSource.length : end + 1;
+      continue;
+    }
+
     if (inValue && c === ',' && depth === 1) { inValue = false; expectKey = true; buffer = ''; continue; }
 
     if (expectKey && depth === 1) {
@@ -325,6 +350,67 @@ function selfTest() {
     const p = `createMutation.mutate({ baseSize, hotStockEnabled });`;
     const keys = payloadKeys(p);
     return keys.includes('baseSize') && keys.includes('hotStockEnabled');
+  });
+
+  /**
+   * ⚠️ THE CANARY FOR THE MEASURED UNDER-READ (2026-10-01, #928).
+   *
+   * Every key here is present, so the payload is COMPLETE — but the comment contains backticks,
+   * and before the fix the scanner treated a backtick as a string delimiter, opened a fake string
+   * inside the comment, and swallowed the keys after it. Reported 3 keys instead of 5 while the
+   * guard said OK.
+   *
+   * This is asserted as `BOTH directions`, because a guard checking cardinality has more ways to be
+   * wrong than one checking presence: the key set must MATCH, and the count must be exact — a
+   * scanner that also invented a spurious key would pass a set-based check alone.
+   */
+  t('CANARY a comment with backticks inside the payload does not swallow keys', () => {
+    const p = `
+      createMutation.mutate({
+        name: name.trim(),
+        // canonical value is \`london\` or \`["london"]\` — same config, two storage forms
+        baseSize,
+        exitBeforeUtc: boundary || null,
+        hotStockEnabled,
+      });
+    `;
+    const keys = payloadKeys(p);
+    const want = ['name', 'baseSize', 'exitBeforeUtc', 'hotStockEnabled'];
+    return (
+      keys.length === want.length &&
+      want.every((k) => keys.includes(k)) &&
+      // and nothing invented, so a scanner reading comment text as code cannot pass either
+      !keys.includes('london') &&
+      !keys.includes('canonical')
+    );
+  });
+
+  t('CANARY a BLOCK comment inside the payload does not swallow keys', () => {
+    const p = `
+      createMutation.mutate({
+        name: name.trim(),
+        /* a block comment: with a colon, and a \`backtick\`, and a { brace } */
+        baseSize,
+        hotStockEnabled,
+      });
+    `;
+    const keys = payloadKeys(p);
+    return keys.length === 3 && keys.includes('baseSize') && keys.includes('hotStockEnabled');
+  });
+
+  t('CANARY a COMMENTED-OUT property is not read as a submitted field', () => {
+    // The dangerous direction of the same bug: if a commented-out line were read as a key, the
+    // guard would demand an annotation for a field the form never sends. Absence must mean absence.
+    const p = `
+      createMutation.mutate({
+        name: name.trim(),
+        // exitBeforeUtc: exitBeforeUtc,
+        baseSize,
+        hotStockEnabled,
+      });
+    `;
+    const keys = payloadKeys(p);
+    return keys.length === 3 && !keys.includes('exitBeforeUtc');
   });
 
   return runCases(cases, 'create-form-coverage');

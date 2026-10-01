@@ -102,13 +102,13 @@ export default function AddSymbolPage() {
       <section className="tp-card">
         <div className="tp-control as-search-row">
           <div className="as-search-input-wrap">
-            <label htmlFor="symbol-search">Search by ticker or name...</label>
             <input
               id="symbol-search"
               type="text"
               value={query}
               onChange={handleSearchChange}
               placeholder="e.g. AAPL, NVDA, EURUSD..."
+              aria-label="Search by ticker or name"
               autoFocus
             />
             {searching && <span className="as-searching">Searching...</span>}
