@@ -388,6 +388,52 @@ export class Mt5ConnectionManager {
     return results.flat();
   }
 
+  /**
+   * findHoldingBroker() — WHICH bridge holds this ticket (#1033).
+   *
+   * ── WHY A RESOLVER, AND NOT JUST `getAllPositions()` AT THE CALL SITE ─────────────────────────
+   *
+   * A close/modify must be sent to the bridge that HOLDS the position. Sending it to the primary
+   * asks an account that has never heard of the ticket, and the broker answers a plausible
+   * "no such position" rather than anything that reads as a routing bug — the same shape as #914.
+   *
+   * `getAllPositions()` would find the ticket too, but it builds the whole book on every call
+   * (positions + a deal history per bridge in the callers that want it). This asks a narrower
+   * question and stops at the first bridge that answers yes.
+   *
+   * ⚠️ TICKETS ARE ONLY UNIQUE WITHIN AN ACCOUNT. Two bridges CAN report the same number — they are
+   * separate brokers with separate numbering. When more than one holds it, the FIRST registered
+   * bridge wins and the ambiguity is LOGGED rather than silently resolved, because "the ticket is on
+   * both" is a fact the operator needs: closing the wrong one closes a real position on the wrong
+   * account.
+   *
+   * Returns `null` when no bridge reports the ticket. ⚠️ `null` is "not found" and must NOT be read
+   * as "use the primary" — that is the fallback this method exists to remove.
+   */
+  async findHoldingBroker(ticket: number | string): Promise<number | null> {
+    const want = Number(ticket);
+    if (!Number.isFinite(want)) return null;
+
+    const perBroker = await Promise.all(
+      this.brokerIds.map(async (brokerId) => {
+        const positions = await this.getPositions(brokerId).catch(() => [] as any[]);
+        return { brokerId, holds: (positions as any[]).some((p) => Number(p?.ticket) === want) };
+      }),
+    );
+
+    const holders = perBroker.filter((b) => b.holds).map((b) => b.brokerId);
+    if (holders.length === 0) return null;
+    if (holders.length > 1) {
+      // Stated, not hidden: we are picking one, and the caller may be about to act on it.
+      console.warn(
+        `[mt5] ticket ${want} is reported by MORE THAN ONE bridge (${holders.join(', ')}) — ` +
+          `using ${holders[0]}. Ticket numbers are only unique within an account; a close sent to the ` +
+          'wrong one acts on a real position on the wrong account.',
+      );
+    }
+    return holders[0];
+  }
+
   async getAccountInfo(brokerId?: number) {
     const { ok, data } = await this.fetch('/account', undefined, brokerId);
     return ok ? data : null;

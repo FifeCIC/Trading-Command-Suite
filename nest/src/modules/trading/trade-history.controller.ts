@@ -234,7 +234,10 @@ export class TradeHistoryController {
     } else {
       // Fallback: query MT5 bridge directly
       try {
-        const mt5Positions = await this.mt5.getPositions();
+        // ⚠️ #1033 — EVERY BRIDGE. This builds the live-by-strategy view from the PRIMARY account
+        // only, so a strategy whose positions are held on the second account showed as flat while
+        // it was in the market. Display, so widening only ever adds true rows.
+        const mt5Positions = await this.mt5.getAllPositions();
         for (const p of mt5Positions) {
           // #884 — canonical parser (was a hand-rolled copy: prefix + score regex inline).
           const strategyKey = extractStrategyFromComment(p.comment) || 'unknown';
@@ -939,7 +942,10 @@ export class TradeHistoryController {
   async weekendChecklist() {
     try {
       const mt5 = this.mt5 as any;
-      const posData = await mt5.getPositions().catch(() => []);
+      // ⚠️ #1033 — EVERY BRIDGE. A weekend checklist built from one account's positions reports a
+      // clean book while the other account is still exposed, which is the one thing this report
+      // exists to prevent.
+      const posData = await mt5.getAllPositions().catch(() => []);
       const positions = Array.isArray(posData) ? posData : [];
 
       if (positions.length === 0) {

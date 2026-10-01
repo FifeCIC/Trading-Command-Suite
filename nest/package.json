@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.105.0",
+  "version": "0.106.0",
   "description": "",
   "author": "",
   "private": true,
@@ -44,6 +44,8 @@
     "audit:pnl-attribution": "node scripts/audit-trade-pnl-attribution.cjs",
     "audit:pnl-attribution:self-test": "node scripts/audit-trade-pnl-attribution.cjs --self-test",
     "canary:pnl-attribution": "node scripts/canary-trade-pnl-attribution.cjs",
+    "validate:position-io": "node scripts/validate-single-bridge-position-io.cjs",
+    "canary:position-io": "node scripts/canary-single-bridge-position-io.cjs",
     "canary:backtest-period": "node scripts/canary-backtest-period.cjs",
     "canary:backtest-period:self-test": "node scripts/canary-backtest-period.cjs --self-test",
     "audit:seed-drift": "node ../scripts/diff-seed-vs-db.cjs",

@@ -25,7 +25,15 @@ export class Mt5TradingController {
   getAccount() { return this.mt5.getAccount(); }
 
   @Get('positions')
-  getPositions() { return this.mt5.getPositions(); }
+  getAllPositions() {
+    // ⚠️ #1033 — THIS READS EVERY BRIDGE. It used to be `this.mt5.getPositions()`, the primary
+    // only, so with two accounts it answered with 7 of 9 positions and both of its consumers
+    // (`MetaStackExplorerPage`, `PerformanceLabPage`) rendered 7 as the whole book.
+    //
+    // ⚠️ The shape stays an ARRAY because that is what those consumers index into; `brokerId` is
+    // ADDED to each row. The broker-complete-but-richer view is `/managed` (#1037).
+    return this.mt5.getAllPositions();
+  }
 
   /**
    * GET /api/trading/mt5/positions/managed — EVERY open position on EVERY bridge (#1037).

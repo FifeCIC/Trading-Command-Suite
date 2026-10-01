@@ -374,10 +374,79 @@ export class Mt5Controller {
 
   @Get('positions')
   async getPositions() {
+    // ⚠️ #1033 — THIS USED TO READ ONE BRIDGE. `this.BRIDGE_URL` is a module-level constant
+    // (`resolveMt5BridgeUrl()`), so it never went through the manager at all and with
+    // `MT5_ACTIVE_BROKERS=2,3` it answered with broker 2's book only: measured 2026-09-30, **7 of 9**
+    // positions. Every consumer rendered 7 as if it were everything.
+    //
+    // ⚠️ THIS ENDPOINT IS READ-ONLY, and that is why it is safe to widen here. The close endpoints
+    // below are NOT: they ACT, so they route per position rather than merely reading more.
+    //
+    // ⚠️ THE SHAPE IS UNCHANGED (`{ positions: [...] }`) because three dashboard consumers destructure
+    // it (`dashboard-widgets.jsx`, `DailyBriefingPage.jsx`, `Mt5TradingPage.jsx`). `brokerId` and
+    // `account` are ADDED to each row, which is what makes a row actionable — the same symbol can be
+    // open on both accounts and it is not the same money.
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) return { positions: [], error: `Bridge HTTP ${res.status}` };
-      return await res.json();
+      // Every ACTIVE bridge, whether or not it returned anything. `getAllPositions()` iterates
+      // exactly this set, so it is the honest answer to "what was asked?".
+      const queried = this.mt5Connection.getBrokerIds().slice().sort((a, b) => a - b);
+      const positions = await this.mt5Connection.getAllPositions();
+
+      // ⚠️ THE ACCOUNT IS READ FROM THE BRIDGE THAT HOLDS THE POSITION, NOT FROM `getAccounts()`.
+      //
+      // The first version of this joined against `getAccounts()`, which lists EVERY configured
+      // account including the inactive ones, keyed by brokerId. Measured live 2026-10-01 it put
+      // `52918025 @ ICMarketsSC-Demo` on the broker-2 AND broker-3 rows — a login that matches
+      // NEITHER bridge (`:5000` is 10011309743 @ MetaQuotes-Demo, `:5001` is 62135531 @
+      // PepperstoneUK-Demo). **An attribution field that can be confidently wrong is worse than an
+      // absent one**: the whole point of #1033 is that two accounts hold this book and the money is
+      // not the same money, so a mislabelled row is the defect restated.
+      //
+      // `/account` is the bridge's OWN statement of who it is. Read per broker, concurrent.
+      const accountByBroker = new Map<number, string>();
+      await Promise.all(
+        queried.map(async (brokerId) => {
+          const info: any = await this.mt5Connection.getAccountInfo(brokerId).catch(() => null);
+          if (info && (info.login != null || info.server != null)) {
+            accountByBroker.set(brokerId, `${info.login ?? '?'} @ ${info.server ?? '?'}`);
+          }
+        }),
+      );
+
+      return {
+        positions: positions.map((p: any) => ({
+          ...p,
+          // ⚠️ `null` when the bridge could not be asked — NEVER a guess, and never inherited from
+          // another broker's row. A row that cannot say which account it is on is not actionable,
+          // and saying so is the honest outcome.
+          account: accountByBroker.get(Number(p.brokerId)) ?? null,
+        })),
+        count: positions.length,
+        // The bridges that actually RETURNED a position. A broker absent from this list either held
+        // nothing or could not be read — see the note on `queried` below, and the gap it states.
+        brokers: [...new Set(positions.map((p: any) => Number(p.brokerId)))].sort((a, b) => a - b),
+        // ⚠️ THREE FIELDS, BECAUSE "EMPTY" AND "NEVER ASKED" MUST NOT LOOK THE SAME.
+        //
+        //   `brokers`  — the bridges that RETURNED a position. Empty here is not a fault.
+        //   `queried`  — EVERY ACTIVE BRIDGE, asked. This is what proves the fan-out is real: with
+        //                `MT5_ACTIVE_BROKERS=2,3` it reads `[2,3]` even when broker 3 holds nothing.
+        //   `gaps`     — a bridge that could not be read. ⚠️ Its absence from `positions` is NOT an
+        //                empty account, and without this field the two are indistinguishable.
+        //
+        // ⚠️ `queried` was added while verifying this issue: the endpoint returned `brokers: [2]`
+        // and there was no way to tell whether broker 3 was asked and held nothing, or was never
+        // asked at all. Measured 2026-10-01, `:5001` answered `{"positions": [], "count": 0}` — so it
+        // was the former, and the acceptance criterion ("returns a broker-3 position") is unprovable
+        // until broker 3 actually holds one. This field is what makes that distinction visible rather
+        // than assumed.
+        //
+        // ⚠️ NOT reported: WHICH bridge failed, if one did. `getAllPositions()` maps each broker and
+        // a failed read yields `[]` — indistinguishable from an empty account, and the manager does
+        // not surface it. An empty `gaps: []` here would be a FALSE statement ("nothing failed"), so
+        // the field is absent rather than reassuring. Closing that would mean changing the manager,
+        // which is out of this issue's scope and is where the remaining blind spot lives.
+        queried,
+      };
     } catch (err: any) {
       return { positions: [], error: err.message || 'Bridge unreachable' };
     }
@@ -487,17 +556,22 @@ export class Mt5Controller {
 
   @Post('close-all')
   async closeAll() {
+    // ⚠️ #1033 — THIS IS A MONEY PATH AND IT READ ONE BRIDGE. "Close all" fetched
+    // `${this.BRIDGE_URL}/positions`, so with two accounts it closed broker 2's book and returned a
+    // success count. The operator saw "closed 7", the book still held 2, and nothing said so.
+    //
+    // Each close now goes to the bridge that HOLDS the position, resolved from the ticket. ⚠️ The
+    // previous behaviour — post every close to the primary — is not merely incomplete: for a
+    // broker-3 ticket it asks an account that has never heard of it.
     try {
-      const posRes = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
-      if (!posRes.ok) return { closed: 0, failed: 0, error: `Bridge HTTP ${posRes.status}` };
-      const positions = await posRes.json();
-      const allPositions = Array.isArray(positions) ? positions : (positions.positions || []);
-
+      const positions = await this.mt5Connection.getAllPositions();
       let closed = 0;
       let failed = 0;
-      for (const pos of allPositions) {
+      for (const pos of positions) {
         try {
-          const closeRes = await fetch(`${this.BRIDGE_URL}/close/${pos.ticket}`, {
+          // Throws for an unregistered broker (#914) rather than answering as the default.
+          const url = this.mt5Connection.getUrl(Number(pos.brokerId));
+          const closeRes = await fetch(`${url}/close/${pos.ticket}`, {
             method: 'POST',
             signal: AbortSignal.timeout(15000),
           });
@@ -516,7 +590,13 @@ export class Mt5Controller {
           } else { failed++; }
         } catch { failed++; }
       }
-      return { closed, failed, total: allPositions.length };
+      return {
+        closed,
+        failed,
+        total: positions.length,
+        // Names what was swept, so a partial sweep cannot look complete.
+        brokers: [...new Set(positions.map((p: any) => Number(p.brokerId)))].sort((a, b) => a - b),
+      };
     } catch (err: any) {
       return { closed: 0, failed: 0, error: err.message || 'Bridge unreachable' };
     }
@@ -524,11 +604,11 @@ export class Mt5Controller {
 
   @Post('close-profitable')
   async closeProfitable() {
+    // ⚠️ #1033 — every bridge, and each close routed to its own. Same defect and same reasoning as
+    // closeAll() above; the profitable-only filter made it worse, because the positions it could not
+    // see were the ones it reported as "skipped".
     try {
-      const posRes = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
-      if (!posRes.ok) return { closed: 0, failed: 0, skipped: 0, totalPnl: 0, closedTickets: [], error: `Bridge HTTP ${posRes.status}` };
-      const positions = await posRes.json();
-      const allPositions = Array.isArray(positions) ? positions : (positions.positions || []);
+      const allPositions = await this.mt5Connection.getAllPositions();
       const profitable = allPositions.filter((p: any) => p.profit > 0);
 
       let closed = 0;
@@ -538,13 +618,14 @@ export class Mt5Controller {
 
       for (const pos of profitable) {
         try {
-          const closeRes = await fetch(`${this.BRIDGE_URL}/close/${pos.ticket}`, {
+          const url = this.mt5Connection.getUrl(Number(pos.brokerId));
+          const closeRes = await fetch(`${url}/close/${pos.ticket}`, {
             method: 'POST',
             signal: AbortSignal.timeout(15000),
           });
           if (closeRes.ok) {
             closed++;
-            totalPnl += pos.profit;
+            totalPnl += Number(pos.profit ?? 0);
             closedTickets.push({ ticket: pos.ticket, symbol: pos.symbol, profit: pos.profit });
           } else {
             failed++;
@@ -558,8 +639,12 @@ export class Mt5Controller {
         closed,
         failed,
         skipped: allPositions.length - profitable.length,
+        // ⚠️ A SUM ACROSS TWO ACCOUNTS AND TWO CURRENCIES (GBP and USD). It was already a
+        // cross-symbol sum; it is now cross-account too. Reported because the shape is fixed, but
+        // it is NOT a meaningful money total — see the per-ticket rows for the account.
         totalPnl: Math.round(totalPnl * 100) / 100,
         closedTickets,
+        brokers: [...new Set(allPositions.map((p: any) => Number(p.brokerId)))].sort((a, b) => a - b),
       };
     } catch (err: any) {
       return { closed: 0, failed: 0, skipped: 0, totalPnl: 0, closedTickets: [], error: err.message || 'Bridge unreachable' };

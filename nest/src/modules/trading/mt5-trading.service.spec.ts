@@ -42,7 +42,7 @@ describe('Mt5TradingService broker contracts', () => {
       count: 1,
     })) as any;
 
-    const positions = await service.getPositions();
+    const positions = await service.getPrimaryPositions();
 
     expect(positions).toHaveLength(1);
     expect(positions[0]).toMatchObject({

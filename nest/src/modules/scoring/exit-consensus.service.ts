@@ -252,7 +252,14 @@ export class ExitConsensusService {
     this.barCache.clear();
     let positions: any[] = [];
     try {
-      positions = await (this.mt5 as any).getPositions();
+      // ⚠️ #1033 — EVERY BRIDGE. This read the PRIMARY only, so a position held on the second
+      // account received NO EXIT ASSESSMENT AT ALL. Measured 2026-09-30: 2 of 9 positions are on
+      // broker 3, and they held the two largest single losses — the verdict was blind to exactly
+      // the positions it exists to watch, and reported the remaining 7 as the whole picture.
+      //
+      // Safe to widen: the verdict is ADVISORY (settled decision, row 45) — it places nothing,
+      // moves no stop and closes nothing, so a wider input cannot act on the wrong account.
+      positions = await (this.mt5 as any).getAllPositions();
     } catch (err) {
       this.logger.warn(`Could not read broker positions: ${(err as Error).message}`);
       return [];

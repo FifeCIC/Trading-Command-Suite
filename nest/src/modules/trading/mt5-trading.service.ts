@@ -122,6 +122,59 @@ price, `price` came back `0`, and the per-symbol cap refused:
     return this.bridgeUrl;
   }
 
+  /**
+   * getAllPositions() — EVERY open position on EVERY bridge, MAPPED (#1033).
+   *
+   * ⚠️ The row mapper is applied here rather than each caller doing its own. `getPositions()`
+   * (primary-only) and this share `mapPosition()`, so a field added for one is added for both —
+   * the failure mode of two mappers is that the primary-only one gets the fix.
+   */
+  async getAllPositions(): Promise<Array<Mt5Position & { brokerId: number }>> {
+    const raw = await this.mt5Connection.getAllPositions();
+    const ordered = [...raw].sort((a, b) => (a.brokerId ?? 0) - (b.brokerId ?? 0));
+    return ordered.map((p: any) => ({ ...this.mapPosition(p), brokerId: Number(p.brokerId) }));
+  }
+
+  /**
+   * positionsFrom() — positions on ONE bridge, mapped. Private: callers decide WHICH, never "the
+   * default", which is the whole point of #1033.
+   */
+  private async positionsFrom(url: string): Promise<Mt5Position[]> {
+    try {
+      const res = await fetch(`${url}/positions`, { signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : data?.positions;
+      if (!Array.isArray(rows)) return [];
+      return rows.map((p: any) => this.mapPosition(p));
+    } catch { return []; }
+  }
+
+  /**
+   * bridgeForTicket() — the bridge that holds this ticket, with a FAIL-SAFE fallback (#1033).
+   *
+   * ⚠️ WHY IT FALLS BACK RATHER THAN REFUSING. `findHoldingBroker()` returns `null` for BOTH
+   * "no bridge reports this ticket" AND "a bridge could not be read". They are different facts, and
+   * refusing on the second would turn a transient read failure into a failed close that the old
+   * primary-only code would have completed.
+   *
+   * So: resolved → that bridge. Unresolved → the PRIMARY, exactly as before, WITH A WARNING. The
+   * fix therefore only ever changes behaviour in the case it was written for — a ticket that is
+   * genuinely held elsewhere — and can never be worse than the code it replaces.
+   */
+  private async bridgeForTicket(ticket: number): Promise<{ url: string; brokerId: number | null; resolved: boolean }> {
+    try {
+      const brokerId = await this.mt5Connection.findHoldingBroker(ticket);
+      if (brokerId != null) return { url: this.mt5Connection.getUrl(brokerId), brokerId, resolved: true };
+    } catch { /* registry unreachable — fall through to the primary, as before */ }
+    this.logger.warn(
+      `bridgeForTicket(${ticket}): no bridge reported this ticket — falling back to the PRIMARY ` +
+        'bridge. If the position is held by another account the broker will refuse it, which is the ' +
+        'same outcome as before #1033; a transient read failure looks identical from here.',
+    );
+    return { url: this.bridgeUrl, brokerId: null, resolved: false };
+  }
+
   async getAccount(): Promise<Mt5Account | null> {
     try {
       const res = await fetch(`${this.bridgeUrl}/account`);
@@ -142,29 +195,44 @@ price, `price` came back `0`, and the per-symbol cap refused:
     } catch { return null; }
   }
 
-  async getPositions(): Promise<Mt5Position[]> {
-    try {
-      const res = await fetch(`${this.bridgeUrl}/positions`, { signal: AbortSignal.timeout(10_000) });
-      if (!res.ok) return [];
-      const data = await res.json();
-      const rows = Array.isArray(data) ? data : data?.positions;
-      if (!Array.isArray(rows)) return [];
-      return rows.map((p: any) => ({
-        ticket: Number(p.ticket),
-        symbol: String(p.symbol ?? ''),
-        type: p.type,
-        volume: Number(p.volume ?? 0),
-        price_open: Number(p.price_open ?? p.priceOpen ?? 0),
-        sl: Number(p.sl ?? 0),
-        tp: Number(p.tp ?? 0),
-        price_current: Number(p.price_current ?? p.priceCurrent ?? 0),
-        profit: Number(p.profit ?? 0),
-        comment: String(p.comment ?? ''),
-        time: Number(p.time ?? (p.openTime ? Date.parse(p.openTime) / 1000 : 0)),
-        contractSize: p.contractSize != null ? Number(p.contractSize) : undefined,
-        currencyProfit: p.currencyProfit != null ? String(p.currencyProfit) : undefined,
-      }));
-    } catch { return []; }
+  /**
+   * getPrimaryPositions() — PRIMARY bridge only, and the NAME now says so (#1033).
+   *
+   * ⚠️ It used to be called `getPositions()`, and that bare name is why the defect spread: it read
+   * like "the positions" while returning one account's. Nine consumers reached for it, and the ones
+   * that ACTED on the result closed and modified positions on the wrong account.
+   *
+   * ⚠️ **Do not call this on a path that ACTS.** `closePosition()` / `modifyPosition()` /
+   * `closePartial()` resolve the holding bridge per ticket; `closeAll()` / `closeProfitable()` read
+   * `getAllPositions()`. Use `getAllPositions()` for anything book-wide.
+   *
+   * ⚠️ THE ONE REMAINING CALLER IS THE DRAWDOWN GATE, and it is primary-scoped BY CONSTRUCTION:
+   * it pairs these positions with `getAccount()`, which is genuinely a primary-account read (the
+   * manager's own docs say so). Widening only the positions there would count two accounts' exposure
+   * against one account's equity — a NEW inconsistency, so it is deliberately left consistent and
+   * narrow, and this name is what stops the next consumer from inheriting it by accident.
+   */
+  async getPrimaryPositions(): Promise<Mt5Position[]> {
+    return this.positionsFrom(this.bridgeUrl);
+  }
+
+  /** The ONE position row mapper. Shared so a field added for one caller exists for all. */
+  private mapPosition(p: any): Mt5Position {
+    return {
+      ticket: Number(p.ticket),
+      symbol: String(p.symbol ?? ''),
+      type: p.type,
+      volume: Number(p.volume ?? 0),
+      price_open: Number(p.price_open ?? p.priceOpen ?? 0),
+      sl: Number(p.sl ?? 0),
+      tp: Number(p.tp ?? 0),
+      price_current: Number(p.price_current ?? p.priceCurrent ?? 0),
+      profit: Number(p.profit ?? 0),
+      comment: String(p.comment ?? ''),
+      time: Number(p.time ?? (p.openTime ? Date.parse(p.openTime) / 1000 : 0)),
+      contractSize: p.contractSize != null ? Number(p.contractSize) : undefined,
+      currencyProfit: p.currencyProfit != null ? String(p.currencyProfit) : undefined,
+    };
   }
 
   /**
@@ -703,11 +771,18 @@ price, `price` came back `0`, and the per-symbol cap refused:
    */
   async closePosition(ticket: number): Promise<{ success: boolean; error?: string }> {
     try {
-      // Snapshot position before closing for audit trail
-      const positions = await this.getPositions();
+      // ⚠️ #1033 — SEND THE CLOSE TO THE BRIDGE THAT HOLDS THE TICKET, not to the primary.
+      // Before this, a broker-3 position was closed by asking broker 2, which has never heard of
+      // the ticket: the broker answered "no such position" and the operator saw a generic failure
+      // rather than a routing bug. `bridgeForTicket` falls back to the primary when nothing reports
+      // it, so this is strictly wider than the old behaviour and never narrower.
+      const bridge = await this.bridgeForTicket(ticket);
+      // Snapshot position before closing for audit trail — from the SAME bridge the close goes to,
+      // so the recorded exit/entry cannot come from a different account's row.
+      const positions = await this.positionsFrom(bridge.url);
       const pos = positions.find((p) => p.ticket === ticket);
 
-      const res = await fetch(`${this.bridgeUrl}/close/${ticket}?origin=manual`, { method: 'POST' });
+      const res = await fetch(`${bridge.url}/close/${ticket}?origin=manual`, { method: 'POST' });
       const data = await res.json();
       // MT5 returns multiple success retcodes: 10008 (placed), 10009 (done),
       // 10010 (partial). Treat all as success; anything else is a failure.
@@ -802,7 +877,9 @@ price, `price` came back `0`, and the per-symbol cap refused:
 
   async closePartial(ticket: number, volume: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const res = await fetch(`${this.bridgeUrl}/close/partial/${ticket}`, {
+      // #1033 — the holding bridge, same reasoning as closePosition().
+      const bridge = await this.bridgeForTicket(ticket);
+      const res = await fetch(`${bridge.url}/close/partial/${ticket}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ volume }),
@@ -817,9 +894,12 @@ price, `price` came back `0`, and the per-symbol cap refused:
 
   async modifyPosition(ticket: number, sl?: number, tp?: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const positions = await this.getPositions();
+      // #1033 — the holding bridge. A stop-loss moved on the wrong account is the worst version of
+      // this defect: it succeeds against a position the operator was not looking at.
+      const bridge = await this.bridgeForTicket(ticket);
+      const positions = await this.positionsFrom(bridge.url);
       const pos = positions.find((p) => p.ticket === ticket);
-      const res = await fetch(`${this.bridgeUrl}/order/modify`, {
+      const res = await fetch(`${bridge.url}/order/modify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticket, sl, tp }),
@@ -852,15 +932,28 @@ price, `price` came back `0`, and the per-symbol cap refused:
     } catch { return []; }
   }
 
-  async closeAll(): Promise<{ closed: number; failed: number }> {
-    const positions = await this.getPositions();
+  async closeAll(): Promise<{ closed: number; failed: number; brokers: number[] }> {
+    // ⚠️ #1033 — READ EVERY BRIDGE. This used to read the PRIMARY only, so "close all" closed 7 of
+    // 9 positions and reported success. The operator saw a flat book; two positions were still open.
+    //
+    // `closePosition()` resolves each ticket's own bridge, so no routing is repeated here.
+    const all = await this.getAllPositions();
+    // ⚠️ DEDUPED BY TICKET. Ticket numbers are unique only WITHIN an account, so the same number can
+    // appear on two bridges as two different positions. `closePosition(ticket)` resolves to the
+    // FIRST holder (`findHoldingBroker` logs the ambiguity), so a second attempt for the same number
+    // would re-address the same account and fail against an already-closed position — reported as a
+    // failure it is not. Deduping keeps the count honest; the ambiguity itself is logged where it is
+    // detected rather than being silently resolved here.
+    const seen = new Set<number>();
+    const unique = all.filter((p) => (seen.has(p.ticket) ? false : (seen.add(p.ticket), true)));
+
     let closed = 0;
     let failed = 0;
-    for (const pos of positions) {
+    for (const pos of unique) {
       const result = await this.closePosition(pos.ticket);
       result.success ? closed++ : failed++;
     }
-    return { closed, failed };
+    return { closed, failed, brokers: [...new Set(all.map((p) => p.brokerId))].sort() };
   }
 
   /** Close only positions that are currently in profit. */
@@ -871,7 +964,18 @@ price, `price` came back `0`, and the per-symbol cap refused:
     totalPnl: number;
     closedTickets: { ticket: number; symbol: string; profit: number }[];
   }> {
-    const positions = await this.getPositions();
+    // ⚠️ #1033 — EVERY BRIDGE, same reason as closeAll(). A profitable position on the second
+    // account was invisible here, which is the more expensive half: the sweep reported the profit it
+    // had taken and silently left the rest running.
+    //
+    // ⚠️ `totalPnl` is a SUM ACROSS ACCOUNTS AND CURRENCIES (MetaQuotes-Demo is GBP,
+    // PepperstoneUK-Demo is USD) — it was already a cross-symbol sum, and it is now a cross-account
+    // one too. Reported as a single figure because the endpoint's shape is fixed; ⚠️ it is NOT a
+    // meaningful money total and the per-ticket rows carry the account if it is ever needed.
+    const all = await this.getAllPositions();
+    // Deduped by ticket for the same reason as closeAll() — see the note there.
+    const seen = new Set<number>();
+    const positions = all.filter((p) => (seen.has(p.ticket) ? false : (seen.add(p.ticket), true)));
     const profitable = positions.filter((p) => p.profit > 0);
     const unprofitable = positions.length - profitable.length;
 

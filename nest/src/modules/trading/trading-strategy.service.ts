@@ -1604,7 +1604,10 @@ export class TradingStrategyService {
 
     // Position limit check
     if (strategy.mode === 'auto') {
-      const positions = await this.mt5.getPositions();
+      // ⚠️ #1033 — EVERY BRIDGE. Counting only the primary account made this cap UNDER-COUNT, so
+      // the bot was allowed MORE positions than `maxPositions` — the gate was permissive on the
+      // account it could not see. Widening can only make it refuse more, never fewer.
+      const positions = await this.mt5.getAllPositions();
       if (positions.length >= strategy.maxPositions) {
         return { executed: false, reason: `Max positions (${strategy.maxPositions}) reached` };
       }
@@ -1819,7 +1822,11 @@ export class TradingStrategyService {
     // ── 2. MT5_MAX_OPEN_POSITIONS ──
     const maxOpenPositions = await this.settings.get<number>('risk.maxOpenPositions');
     try {
-      const positions = await this.mt5.getPositions();
+      // ⚠️ #1033 — EVERY BRIDGE. Under-counting a position CAP permits more than it allows, and the
+      // second account's positions were invisible to it. It also feeds the #900 unprotected-position
+      // check below, so those positions are now examined for a missing stop rather than skipped.
+      // Widening can only make this gate refuse more, never fewer.
+      const positions = await this.mt5.getAllPositions();
       if (positions.length >= maxOpenPositions) {
         return { allowed: false, reason: `risk.maxOpenPositions (${maxOpenPositions}) reached — ${positions.length} currently open` };
       }
@@ -1909,7 +1916,7 @@ export class TradingStrategyService {
     }
 
     try {
-      const positions = await this.mt5.getPositions().catch(() => []);
+      const positions = await this.mt5.getPrimaryPositions().catch(() => []);
       const account = await this.mt5.getAccount().catch(() => null);
 
       // ⚠️ A DRAWDOWN CANNOT BE MEASURED WITHOUT A REAL ACCOUNT VALUE (#848, 2026-09-16).

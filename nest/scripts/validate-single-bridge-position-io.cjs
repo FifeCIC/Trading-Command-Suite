@@ -43,7 +43,11 @@
  * `trading/mt5-trading.service.ts` `getPositions()`). Those are display/fallback reads rather than
  * exit management, and they are deliberately NOT in #1030's scope or in this guard's exception
  * list: a broad exemption is how a guard stops being one. They are declared below as
- * `DECLARED_READ_PATH_INSTANCES` and tracked by their own issue.
+ * ⚠️ THE READ PATH WAS THE KNOWN GAP AND IS NOW COVERED. It used to sit outside this guard as
+ * declared `DECLARED_READ_PATH_INSTANCES` — `providers/mt5.controller.ts` `GET /api/mt5/positions`
+ * and its close loops, and `trading/mt5-trading.service.ts` `getPositions()`. **All three are fixed
+ * (#1033, 2026-10-01)** and rule 4 now covers the class on that path, so the list is gone rather
+ * than left describing a defect that no longer exists.
  *
  * ⚠️ TWO FURTHER BLIND SPOTS, stated so they are facts rather than surprises:
  *   · `mt5.controller.ts` binds a module-level `BRIDGE_URL` constant (`resolveMt5BridgeUrl()`)
@@ -89,6 +93,36 @@ const BRIDGE_URL_FIELD = /\bbridgeUrl\b/;
 /** A broker-less position read, matched only on the connection manager's receiver. */
 const NO_ARG_GETPOSITIONS = /\.getPositions\(\s*\)/;
 
+/**
+ * Rule 4 (#1033) — a broker-less position read on `Mt5TradingService`.
+ *
+ * ⚠️ THIS IS THE EXACT PATTERN THAT SPREAD. The service's primary-only accessor used to be called
+ * `getPositions()`, which reads like "the positions" while returning one account's — nine consumers
+ * reached for it and the ones that ACTED closed and modified on the wrong account. It is now
+ * `getPrimaryPositions()`, so this expression no longer occurs; the rule exists to make sure it
+ * cannot come back under the old name.
+ *
+ * ⚠️ MATCHED ON THE RECEIVER, deliberately, not on the method name. `adapter.getPositions()` is
+ * CORRECT (a per-broker adapter is already scoped) and `mt5Connection.getPositions(brokerId)` is
+ * correct (addressed). Flagging either would make this guard fire on the patterns that do it right,
+ * which is how a guard gets allowlisted.
+ *
+ * ⚠️ THE BARE `this.getPositions()` IS DELIBERATELY NOT MATCHED HERE — measured 2026-10-01, the
+ * first version did match it and reported TWO FALSE POSITIVES on the real tree: `mt5.adapter.ts`
+ * and `trading212.adapter.ts` both call `this.getPositions()` internally, where `this` is the
+ * adapter and the call is correct. It is caught instead by `NO_ARG_GETPOSITIONS_ON_SERVICE` below,
+ * which is scoped to the ONE file where `this` is the trading service.
+ */
+const NO_ARG_SERVICE_GETPOSITIONS = /\.mt5\.getPositions\(\s*\)|mt5TradingService\.getPositions\(\s*\)/;
+
+/**
+ * The same rule, scoped to the file where `this` IS the trading service. Kept separate because the
+ * receiver alone cannot distinguish it — inside an adapter `this.getPositions()` is correct, and
+ * the file is the only thing that tells them apart.
+ */
+const SERVICE_FILE = 'nest/src/modules/trading/mt5-trading.service.ts';
+const NO_ARG_GETPOSITIONS_ON_SERVICE = /this\.getPositions\(\s*\)/;
+
 /** The canonical multi-broker accessors. A line using one of these is never a finding. */
 const CANONICAL = /getAllPositions\s*\(\s*\)|getCandles\s*\(|modifyOrder\s*\(|closePosition\s*\(/;
 
@@ -107,21 +141,38 @@ const EXCEPTIONS = [
     file: 'nest/src/modules/trading/mt5-trading.service.ts',
     contains: 'return this.mt5Connection.getUrl();',
     reason:
-      'The `bridgeUrl` getter resolves the PRIMARY account deliberately, and `getAccount()` is ' +
-      'genuinely a primary-account read. It is the getter\'s OTHER consumer — `getPositions()` — ' +
-      'that is primary-only, and swapping it is not a two-line change: nine consumers, several of ' +
-      'them money-adjacent, would all change at once. Filed rather than drive-by\'d.',
+      'The `bridgeUrl` getter resolves the PRIMARY account deliberately (#1033, 2026-10-01). Its two '
+      + 'remaining consumers are BOTH primary-scoped by construction: `getAccount()` (a primary-'
+      + 'account read, which the manager\'s own docs say is genuine) and `getPrimaryPositions()`, '
+      + 'whose only caller is the drawdown gate — that gate pairs those positions with that account, '
+      + 'so widening the positions alone would count two accounts\' exposure against one account\'s '
+      + 'equity. Every POSITION I/O path now resolves the holding bridge per ticket instead: '
+      + '`closePosition` / `modifyPosition` / `closePartial` via `bridgeForTicket()`, and `closeAll` / '
+      + '`closeProfitable` via `getAllPositions()`. Rule 4 below makes the old `getPositions()` name '
+      + 'unavailable again.',
     issue: '#1033',
   },
 ];
 
 /**
- * The same class on the READ path. Listed so the blind spot is a stated fact rather than an
- * omission — a reader can see exactly what this guard does not cover.
+ * ⚠️ THE READ PATH IS NO LONGER A BLIND SPOT (#1033, 2026-10-01).
+ *
+ * This list used to name two instances the guard could not see — `providers/mt5.controller.ts`
+ * `GET /api/mt5/positions` and its close loops, and `trading/mt5-trading.service.ts`
+ * `getPositions()`. **All three are fixed**, so they are gone: an entry here is a statement that
+ * something is KNOWN-BROKEN, and leaving fixed items listed would read as an open gap and train the
+ * next reader to ignore the list.
+ *
+ * What remains genuinely outside this guard, stated as a fact rather than an omission:
+ *   · `mt5.controller.ts`'s module-level `BRIDGE_URL` constant. Rule 4 does not catch it — it is not
+ *     a service read — and it no longer FEEDS a position path, because `GET /positions` and both
+ *     close loops now go through the manager.
+ *   · A bridge captured into a local outside `automation/`. Only rule 1 (the field itself) catches
+ *     that, and only there.
  */
-const DECLARED_READ_PATH_INSTANCES = [
-  'nest/src/modules/providers/mt5.controller.ts — GET /api/mt5/positions and the close-all loop',
-  'nest/src/modules/trading/mt5-trading.service.ts — getPositions() via the bare bridgeUrl getter',
+const KNOWN_BLIND_SPOTS = [
+  'mt5.controller.ts module-level BRIDGE_URL — not a service read; no longer on a position path',
+  'a bridge captured into a local outside automation/ — only rule 1 catches it, and only there',
 ];
 
 /** Findings for one source string. `rel` decides which rules apply. Pure, so the self-test drives it. */
@@ -140,6 +191,20 @@ function scanSource(src, rel) {
     // .getUrl();` — the shipped line — matches BOTH the field rule and the no-arg rule, and
     // reporting it twice makes one defect look like two. The narrower automation rules are
     // therefore tried first and `continue` on a hit.
+
+    // Rule 4 (#1033) — a broker-less read on the trading service. ANY file, because the defect was
+    // never about where it was called from: it was that the NAME invited any caller.
+    if (NO_ARG_SERVICE_GETPOSITIONS.test(line) && !CANONICAL.test(line)) {
+      out.push({ rel, rule: 'broker-less Mt5TradingService position read', text: text.slice(0, 120) });
+      continue;
+    }
+    // Rule 4b (#1033) — the same call made from INSIDE the service. Scoped to the one file: the
+    // receiver cannot distinguish it there, because `this` is the service.
+    if (rel === SERVICE_FILE && NO_ARG_GETPOSITIONS_ON_SERVICE.test(line) && !CANONICAL.test(line)) {
+      out.push({ rel, rule: 'broker-less read inside Mt5TradingService', text: text.slice(0, 120) });
+      continue;
+    }
+
     if (inAutomation) {
       // Rule 1 — a single-URL field.
       if (BRIDGE_URL_FIELD.test(line) && !CANONICAL.test(line)) {
@@ -191,6 +256,12 @@ function selfTest() {
     ['flags a no-arg getUrl() at ANY path in nest/src, not just automation',
       () => scanSource(`    return this.mt5Connection.getUrl();`, CTRL).length === 1],
 
+    // ── rule 4: the broker-less SERVICE read, the pattern that actually spread (#1033) ───────
+    ['flags `this.mt5.getPositions()` — the name nine consumers reached for',
+      () => scanSource(`      const positions = await this.mt5.getPositions();`, TRD).length === 1],
+    ['flags it in a file that is NOT the trading module either (the name, not the location)',
+      () => scanSource(`      const p = await this.mt5.getPositions();`, CTRL).length === 1],
+
     // ── must NOT fire: the false positives that would get this guard allowlisted ────────────
     ['does NOT flag getAllPositions()',
       () => scanSource(`    const positions = await this.mt5Connection.getAllPositions();`, AUT).length === 0],
@@ -198,6 +269,12 @@ function selfTest() {
       () => scanSource(`    const p = await (this.mt5Connection as any).getPositions(brokerId);`, AUT).length === 0],
     ['does NOT flag a broker-ADDRESSED getUrl(brokerId)',
       () => scanSource(`      if (this.mt5Connection.isBroker(id)) return this.mt5Connection.getUrl(id);`, AUT).length === 0],
+    ['does NOT flag the RENAMED accessor — the fix must not trip its own rule',
+      () => scanSource(`      const positions = await this.mt5.getPrimaryPositions();`, TRD).length === 0],
+    ['does NOT flag `adapter.getPositions()` — a per-broker adapter is already scoped',
+      () => scanSource(`      const positions = await adapter.getPositions();`, AUT).length === 0],
+    ['does NOT flag `mt5Connection.getPositions(brokerId)` — addressed',
+      () => scanSource(`        const positions = await this.mt5Connection.getPositions(brokerId);`, TRD).length === 0],
     ['does NOT flag a per-broker ADAPTER read — the pattern that is already correct',
       () => scanSource(`          const result = await adapter.getPositions();`, AUT).length === 0],
     ['does NOT flag broker-addressed candles or a modify',
@@ -232,8 +309,8 @@ if (findings.length) {
   console.log('    await this.mt5Connection.modifyOrder(ticket, sl, undefined, pos.brokerId);');
   console.log("  ⚠️ getUrl() with no argument is the PRIMARY bridge — with MT5_ACTIVE_BROKERS=2,3 that");
   console.log('     silently excludes the other account (#1030).');
-  console.log('\n  Declared instances this guard does NOT cover (read path, tracked separately):');
-  for (const d of DECLARED_READ_PATH_INSTANCES) console.log(`    · ${d}`);
+  console.log('\n  Known blind spots of this guard (stated, not implied):');
+  for (const d of KNOWN_BLIND_SPOTS) console.log(`    · ${d}`);
   process.exit(1);
 }
 console.log('[single-bridge-position-io] ✅ OK — position I/O is addressed per broker');
