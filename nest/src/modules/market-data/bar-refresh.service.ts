@@ -69,6 +69,9 @@ import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.se
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 import { isBarFutureStamped, alignBarTimestamp, isStaleForCadence, cadenceStaleMs } from '../../common/utils/timeframe';
+// #1049 — a still-forming bar served with the last closed session's OHLCV is not a session. Measured:
+// 205 byte-identical daily bars, 166 of them Friday on a series with no Friday session.
+import { dropFormingDuplicate } from '../../common/utils/building-bar-duplicate';
 
 // Avoid importing the concrete adapter class
 interface BarProvider {
@@ -500,6 +503,11 @@ export class BarRefreshService {
     // cadence's tolerance. Mirrors `impossibleBars` so a skipped stale set is visible in
     // the completion log rather than looking like a clean refresh (#838).
     let staleRejected = 0;
+    // ⚠️ #1049 — forming bars dropped because they repeated the last closed bar, i.e. the broker's
+    // still-forming bucket served with the previous session's OHLCV. Counted and REPORTED for the
+    // same reason as the two above: a silently-skipped bar is indistinguishable from a fetch that
+    // returned one fewer bar.
+    let formingDropped = 0;
     const fetchBridgeCandles = async (url: string, symbol: string, tf: string, count: number): Promise<any[]> => {
       try {
         const res = await fetch(
@@ -547,6 +555,34 @@ export class BarRefreshService {
             }
           }
           if (!bars || bars.length === 0) continue;
+
+          // ⚠️ DROP THE FORMING BAR WHEN IT REPEATS THE LAST CLOSED ONE (#1049).
+          //
+          // `getCandles` returns the newest N bars, ENDING WITH THE ONE STILL FORMING. While the
+          // next session has not opened the broker has no data for it, and MT5 answers with a bar
+          // stamped at the NEXT session's start carrying the LAST CLOSED session's OHLCV — volume
+          // included. It is not a flat market; it is a copy, and storing it invents a trading day.
+          //
+          // Measured 2026-10-01: **205** such rows, of which **166 are Friday** — and there is no
+          // Friday session in this series at all (bars are stamped by their OPEN, so five sessions
+          // land Sun–Thu). The Friday stamp is the signature of exactly this mechanism.
+          //
+          // ⚠️ This is a WRITE-SIDE fix, deliberately narrow: only the newest bar, only on exact
+          // equality of open/high/low/close/volume, only when the timestamps differ. A forming bar
+          // is always the newest, so no settled row can be removed, and a quiet-but-real session
+          // still carries its own tick volume.
+          const deduped = dropFormingDuplicate(bars);
+          if (deduped.dropped) {
+            formingDropped++;
+            this.logger.debug(
+              `Dropped forming bar for ${symbol} (${tf}): ${String(deduped.dropped.timestamp)} is ` +
+              'byte-identical to the bar before it. MT5 serves the still-forming bar stamped at the ' +
+              'next session start; while the market is shut it carries the last closed session\'s ' +
+              'OHLCV, so storing it invents a session that has not opened (#1049).',
+            );
+            bars = deduped.bars;
+            if (!bars.length) continue;
+          }
 
           // ⚠️ RE-CHECK FRESHNESS AFTER THE FALLBACK (#838, mirrors #832).
           //
@@ -733,6 +769,7 @@ export class BarRefreshService {
       `Bar refresh complete (${this.mode}): ${upserted} bars for ${symbols.length} symbols` +
       (impossibleBars ? `, ${impossibleBars} impossible skipped` : '') +
       (staleRejected ? `, ${staleRejected} stale sets skipped` : '') +
+      (formingDropped ? `, ${formingDropped} forming duplicate(s) dropped` : '') +
       (errors.length ? ` (${errors.length} errors)` : ''),
     );
     return { upserted, symbols, errors };
