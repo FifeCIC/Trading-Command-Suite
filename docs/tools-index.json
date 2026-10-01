@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 164,
+  "count": 165,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -309,6 +309,16 @@
       "category": "tool",
       "purpose": "prove the #986 guards can FAIL. (#986)",
       "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "canary-single-bridge-position-io.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "Canary for the #1033 rule — proves `NO_ARG_SERVICE_GETPOSITIONS` fires on the REAL tree, not just",
+      "selfTest": false,
       "reaches": [
         "npm"
       ]
