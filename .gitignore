@@ -55,3 +55,18 @@ THIRD-PARTY-NOTICES.txt
 trading-command-suite-free-*.zip
 trading-command-suite-free-*.zip.sha256
 
+# Compiled leftovers sitting beside seed SOURCE — nest/prisma/ (#897).
+#
+# ⚠️ These were TRACKED (23 files: 12 `.d.ts` + 11 `.js.map`) and are removed in the same change,
+# so this block is what stops a stray `tsc` recommitting them. It does NOT untrack anything by
+# itself — see the `dist-free/` note above: an ignore rule is a declaration about files git has
+# never seen, and says nothing about files git already has.
+#
+# WHY THEY CANNOT BE BUILD OUTPUT: `nest/tsconfig.build.json` EXCLUDES `prisma`, and nothing under
+# `nest/src` imports these modules — measured, not assumed. So a `.js`, `.d.ts` or `.js.map` here
+# is never the executed file and never the compiled one; it is a copy that can silently disagree
+# with the `.ts` next to it. #959's lesson: the plausible file is not always the load-bearing one.
+nest/prisma/*.js
+nest/prisma/*.js.map
+nest/prisma/*.d.ts
+
