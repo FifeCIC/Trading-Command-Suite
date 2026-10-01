@@ -1,7 +1,11 @@
-import { Body, Controller, Get, Logger, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Param, Post, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { EvaluateSuitabilityDto } from './dto/evaluate-suitability.dto';
 import { SuitabilityService, SuitabilityVerdict } from './suitability.service';
+// #1051 — the ONE reader of DIRECTIVE_SUITABILITY. The registry declared instrumentTypes for 109
+// directives and was imported by NOTHING; this makes the declaration live as a REPORT, deliberately
+// not as a gate (that is a maths change and needs a copied configuration).
+import { auditSuitability, registryCoverage } from '../directives/directive-suitability';
 
 /**
  * SuitabilityController — static protocol/symbol metadata join (#646).
@@ -81,6 +85,63 @@ export class SuitabilityController {
       total: verdicts.length,
       protocols: verdicts,
     };
+  }
+
+  /**
+   * GET /api/suitability/directive-instrument-audit
+   *
+   * The blast radius of turning `DIRECTIVE_SUITABILITY.instrumentTypes` into a gate (#1051).
+   *
+   * ⚠️ WHY THIS IS READ-ONLY. The registry declared `instrumentTypes` for 109 directives and its own
+   * header said activation gates used it — measured 2026-10-01, **it was imported by nothing**. Making
+   * it fire CHANGES WHAT A SCORED SYMBOL SCORES, so it is a maths change: the owner's rule requires a
+   * COPIED configuration and a comparison, never an in-place edit. Measured blast radius: **111**
+   * pairs, of which **75 are `forex-session-v1`** — four directive slots would leave the flagship
+   * forex protocol. The rule reads correctly and could over-reject catastrophically; only measurement
+   * tells the two apart.
+   *
+   * ⚠️ DECLARED BEFORE `@Get(':ticker')` deliberately — a catch-all registered first shadows this
+   * route, and the failure is a silent 200 with a ticker-shaped body, not a 404.
+   */
+  @Get('directive-instrument-audit')
+  async directiveInstrumentAudit() {
+    try {
+      const placements = await (this.prisma as any).$queryRawUnsafe(`
+        SELECT p.slug AS protocolSlug, p.id AS protocolId, e.directiveId AS directiveId
+        FROM protocol p
+        JOIN protocol_directive_group g ON g.protocolId = p.id
+        JOIN protocol_directive_entry e ON e.groupId = g.id
+        WHERE p.active = 1`);
+      const symbols = await (this.prisma as any).$queryRawUnsafe(`
+        SELECT p.id AS protocolId, s.ticker AS ticker, s.type AS sType
+        FROM protocol p
+        JOIN symbol_protocol_assignment a ON a.protocolId = p.id
+        JOIN symbol s ON s.ticker = a.symbol
+        WHERE p.active = 1`);
+
+      const audit = auditSuitability(
+        placements.map((r: any) => ({ protocolSlug: r.protocolSlug, protocolId: r.protocolId, directiveId: r.directiveId })),
+        symbols.map((r: any) => ({ protocolId: r.protocolId, ticker: r.ticker, type: r.sType })),
+      );
+
+      return {
+        generatedAt: new Date().toISOString(),
+        enforced: false,
+        enforcementNote:
+          'READ-ONLY. Wiring instrumentTypes into a gate changes what a scored symbol scores, so it ' +
+          'needs a COPIED configuration and a comparison (maths-change-requires-ab). This endpoint ' +
+          'reports the blast radius that decision rests on; it does not apply it.',
+        registry: registryCoverage(),
+        ...audit,
+      };
+    } catch (err) {
+      // ⚠️ ERROR is not "nothing to report". An empty audit and a failed query must never look alike.
+      this.logger.warn(`directive-instrument-audit failed: ${(err as Error).message}`);
+      throw new ServiceUnavailableException(
+        `Could not read the protocol/directive/symbol tables: ${(err as Error).message}. ` +
+        'This is a FAILED READ, not an empty result.',
+      );
+    }
   }
 
   @Get(':ticker')
