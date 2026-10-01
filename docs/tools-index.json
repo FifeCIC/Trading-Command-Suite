@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 163,
+  "count": 164,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1273,6 +1273,17 @@
       "purpose": "Schema safety check — refuse to let `prisma db push` delete live data.",
       "selfTest": true,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-seed-literals.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a seeder must not INVENT a value with a default literal.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },

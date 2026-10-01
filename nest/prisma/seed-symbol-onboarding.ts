@@ -36,6 +36,25 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+/**
+ * The provider a `symbol_route` gets when its seed entry does not name one.
+ *
+ * ⚠️ NAMED, not an inline literal (#967). `provider` mirrors an EXTERNAL FACT — which adapter
+ * actually serves the route — so a fallback for it has to be *declared and checkable*, not typed
+ * at the call site. #959 is the cautionary case: `exchange: s.exchange ?? 'Xtrend'` invented a
+ * non-existent broker on 12% of symbols because the literal sat inside the assignment where no
+ * reviewer had to weigh it.
+ *
+ * `mt5` IS REAL AND CHECKABLE: `Mt5ConnectionManager` instantiates an MT5 instance per configured
+ * broker (`Multi-broker MT5: 2 instance(s) — #2→:5000, #3→:5001`) and `symbol_route.provider`
+ * selects the adapter used to resolve the venue's ticker. Every route in `ROUTES` is an MT5 CFD
+ * route. If a non-MT5 provider is ever added, that entry must NAME its provider rather than
+ * inheriting this default.
+ *
+ * Enforced by `nest/scripts/validate-seed-literals.cjs` (prebuild).
+ */
+const ROUTE_DEFAULT_PROVIDER = 'mt5';
+
 const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: string }> = [
   { ticker: 'UK100', name: 'FTSE 100 Index', type: 'index' },
   { ticker: 'GER40', name: 'DAX 40 Index', type: 'index' },
@@ -361,7 +380,7 @@ async function main() {
       update: {
         enabled: true,
         note: r.note,
-        provider: r.provider ?? 'mt5',
+        provider: r.provider ?? ROUTE_DEFAULT_PROVIDER,
         brokerSymbol: r.brokerSymbol ?? undefined,
       },
       create: {
@@ -369,7 +388,7 @@ async function main() {
         brokerId: r.brokerId,
         enabled: true,
         note: r.note,
-        provider: r.provider ?? 'mt5',
+        provider: r.provider ?? ROUTE_DEFAULT_PROVIDER,
         brokerSymbol: r.brokerSymbol ?? null,
       },
     });
