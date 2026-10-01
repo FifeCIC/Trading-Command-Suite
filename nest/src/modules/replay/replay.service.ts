@@ -3,6 +3,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService, SIGNAL_THRESHOLDS } from '../scoring/protocol-gating.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import { BacktestPeriodService } from '../backtest/backtest-period.service';
+// #1049 / register row 56 — the read-time exclusion. The write-side rule can only ever drop the
+// NEWEST bar (a refresh must never delete a settled row), so the 205 historical duplicates can only
+// be removed here, on the replay path.
+import { dropConsecutiveDuplicates } from '../../common/utils/building-bar-duplicate';
 import type { MarketBar } from '../directives/interfaces/directive.interface';
 
 export interface ReplayConfig {
@@ -141,7 +145,7 @@ export class ReplayService {
       return [];
     }
 
-    const rows = await this.prisma.marketBar.findMany({
+    const rawRows = await this.prisma.marketBar.findMany({
       where: {
         symbolId: sym.id,
         timeframe,
@@ -149,6 +153,30 @@ export class ReplayService {
       },
       orderBy: { timestamp: 'asc' },
     });
+
+    // ── #1049 / register row 56 — READ-TIME exclusion of the duplicate bars ──────────────────
+    //
+    // A replay walks the STORE. The 205 duplicate daily bars already written are historical, and
+    // the write-side rule deliberately cannot remove them (it only ever drops the newest, so a
+    // refresh can never delete a settled row). So the exclusion belongs HERE, on the read path.
+    //
+    // ⚠️ 166 of those 205 are FRIDAY, on a series stamped by session OPEN where no Friday session
+    // exists — so a daily replay would trade a day that never happened.
+    //
+    // ⚠️ Deliberately NOT applied in `MarketDataService.getBars()`. Removing a bar from a
+    // directive's window changes what a tradeable symbol scores — a maths change, needing a copied
+    // configuration and a comparison. A BACKTEST is not a live score, and this is where it belongs.
+    const { bars: rows, dropped: duplicateBars } = dropConsecutiveDuplicates(rawRows as any[]);
+    if (duplicateBars.length > 0) {
+      // Reported, never silent: a replay that ran on a different series than the store holds is
+      // itself a defect, and the operator has to be able to see that it happened.
+      this.logger.warn(
+        `Replay: dropped ${duplicateBars.length} bar(s) for ${symbol} (${timeframe}) that were ` +
+        'byte-identical to the bar before them. These are stray duplicate writes, not sessions ' +
+        '(#1049) — 166 of 205 measured are Friday, on a series with no Friday session. The replay ' +
+        'runs on the deduplicated series; the stored rows are unchanged.',
+      );
+    }
 
     if (rows.length < 30) {
       // Try MT5 bridge fallback
@@ -176,9 +204,22 @@ export class ReplayService {
           this.logger.log(
             `MT5 fallback: imported ${mt5Bars.length} bars for ${symbol}`,
           );
-          return mt5Bars.filter(
+          // ⚠️ The fallback is a SECOND import path, and it bypasses `bar-refresh.service.ts`
+          // entirely — so it needs the same treatment. Deduplicate before RETURNING (the replay must
+          // not walk a series the store would not have produced), and note that `skipDuplicates` in
+          // the `createMany` above only dedupes on the (symbol, timeframe, timestamp) KEY, which a
+          // repeated OHLCV at a NEW timestamp does not collide with.
+          const inWindow = mt5Bars.filter(
             (b) => b.timestamp >= from && b.timestamp <= to,
           );
+          const deduped = dropConsecutiveDuplicates(inWindow as any[]);
+          if (deduped.dropped.length > 0) {
+            this.logger.warn(
+              `MT5 fallback: dropped ${deduped.dropped.length} duplicate bar(s) for ${symbol} ` +
+              `(${timeframe}) before the replay sees them (#1049).`,
+            );
+          }
+          return deduped.bars as any;
         }
       } catch (err) {
         this.logger.warn(

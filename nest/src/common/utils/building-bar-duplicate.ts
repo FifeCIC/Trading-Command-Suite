@@ -68,7 +68,63 @@ export function isSameOhlcv(a: OhlcvBar, b: OhlcvBar): boolean {
 }
 
 /**
- * Drop the newest bar when it merely repeats the previous one.
+ * Drop EVERY bar that repeats the one before it — the READ-TIME variant (#1049, register row 56).
+ *
+ * ⚠️ Why this is separate from `dropFormingDuplicate()`, which drops only the newest.
+ *
+ * The write-side rule is deliberately narrow: a forming bar is always the NEWEST, so restricting to
+ * it means a refresh can never remove a settled row. That is right for a WRITER.
+ *
+ * A READER has the opposite requirement. The 205 duplicates already in the store are **historical**,
+ * and a backtest walking a daily series will happily trade a **Friday that never existed** — 166 of
+ * the 205 are Friday, on a series stamped by session OPEN where there is no Friday session at all.
+ * Restricting to the newest would leave every one of them in the replay.
+ *
+ * ⚠️ It is NOT wired into live scoring, and must not be. Removing a bar from a directive's window
+ * changes what a tradeable symbol scores — a maths change. The exclusion belongs on the
+ * backtest/replay read path only.
+ *
+ * @returns `{ bars, dropped }` — the dropped count is returned so a caller can surface it rather
+ *          than a replay silently running on a different series than the store holds.
+ */
+export function dropConsecutiveDuplicates<T extends OhlcvBar>(bars: T[]): { bars: T[]; dropped: T[] } {
+  if (!Array.isArray(bars) || bars.length < 2) return { bars: bars ?? [], dropped: [] };
+  const out: T[] = [bars[0]];
+  const dropped: T[] = [];
+  for (let i = 1; i < bars.length; i += 1) {
+    const prev = out[out.length - 1];
+    const cur = bars[i];
+    // Same timestamp is a different fault — keep both, exactly as the write-side rule does.
+    if (String(cur.timestamp) !== String(prev.timestamp) && isSameOhlcv(cur, prev)) {
+      dropped.push(cur);
+      continue;
+    }
+    out.push(cur);
+  }
+  return { bars: out, dropped };
+}
+
+/**
+ * The same rule as a predicate over an ALREADY-SORTED series — for a caller that wants to report
+ * how many it would remove without building a second array.
+ */
+export function countConsecutiveDuplicates(bars: OhlcvBar[]): number {
+  return dropConsecutiveDuplicates(bars).dropped.length;
+}
+
+/**
+ * Drop the newest bar when it merely repeats the previous one — the WRITE-SIDE rule (#1049).
+ *
+ * Only the newest, and only on exact equality of open, high, low, close AND volume. Three reasons
+ * this is safe where a general "drop duplicates anywhere" rule would not be:
+ *
+ *   1. A forming bar is ALWAYS the newest, so restricting to it cannot delete a historical row.
+ *   2. Exact equality on all FIVE fields is required, so a genuinely quiet session (which still has
+ *      its own tick volume) is never mistaken for one.
+ *   3. When the market is OPEN the forming bar moves, so the rule cannot fire — it only ever applies
+ *      to the one condition it is meant to describe.
+ *
+ * ⚠️ For a READER wanting the historical duplicates gone, use `dropConsecutiveDuplicates()` instead.
  *
  * @returns `{ bars, dropped }` — `dropped` is the rejected bar (or `null`), so the caller can name it
  *          in a log line instead of the rejection being invisible.
