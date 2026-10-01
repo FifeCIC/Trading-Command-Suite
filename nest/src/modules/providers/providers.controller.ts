@@ -69,6 +69,14 @@ export class ProvidersController {
     return this.rateLimitGovernor.getStatus();
   }
 
+  /**
+   * GET /api/providers/rate-limits — live rate-limit state per provider (#940).
+   *
+   * ⚠️ This route used to return `{"adapters":[]}`: it read only the factory's own trackers, which
+   * nothing ever registers. The state was real and available — in the RateLimitGovernor (#744) —
+   * it just was not read. `adapters` now carries governor state (tracker entries override and are
+   * marked `source`), and `registered` names every registered adapter so the COUNT has one source.
+   */
   @Get('rate-limits')
   @ApiOperation({ summary: 'Get rate limit state for all provider adapters' })
   @ApiOkResponse({ description: 'Rate limit states with tripped/warning flags' })
@@ -78,6 +86,7 @@ export class ProvidersController {
     const activeId = active ? this.findInstanceId(active) : null;
     return {
       adapters: states,
+      registered: this.adapterFactory.listAdapters().map((c) => c.id),
       activeAdapter: activeId,
       timestamp: new Date().toISOString(),
     };
@@ -156,10 +165,13 @@ export class ProvidersController {
     const adapter = this.providersService.getAdapter(providerId);
 
     if (!adapter) {
+      // ⚠️ #940 — this list is DERIVED from the registry, never typed. The literal it replaced
+      // (['alpaca','alphavantage','trading212']) named two providers that were not registered and
+      // omitted eight that were, so "available" read as "already supported" (see #697).
       return {
         error: 'Provider adapter not found',
         providerId,
-        availableProviders: ['alpaca', 'alphavantage', 'trading212'],
+        availableProviders: this.adapterFactory.listAdapters().map((c) => c.id),
       };
     }
 

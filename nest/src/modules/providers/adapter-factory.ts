@@ -58,6 +58,15 @@ interface AdapterRegistration {
   config: AdapterConfig;
 }
 
+/**
+ * A per-provider rate-limit view (#940). `source` names where the numbers came from, because the
+ * governor shape and the tracker shape are NOT the same — merging them silently would hide which
+ * fields are measured and which are a governor estimate.
+ */
+export type RateLimitView =
+  | ({ source: 'tracker' } & RateLimitState)
+  | ({ source: 'governor'; providerId: string } & Record<string, unknown>);
+
 @Injectable()
 export class AdapterFactory {
   private readonly logger = new Logger(AdapterFactory.name);
@@ -114,13 +123,29 @@ export class AdapterFactory {
     this.rateLimitTrackers.set(instanceId, tracker);
   }
 
-  /** Get rate limit state for all tracked instances. */
-  getAllRateLimits(): RateLimitState[] {
-    const states: RateLimitState[] = [];
-    for (const [id, tracker] of this.rateLimitTrackers) {
-      states.push(tracker.getState());
+  /**
+   * Get the live rate-limit state for every provider (#940).
+   *
+   * ⚠️ The GOVERNOR is the authoritative source (GH #744) — it holds a real per-provider limit
+   * table AND records live usage. This factory's own `rateLimitTrackers` were NEVER registered:
+   * nothing calls `setRateLimiter`, so returning only those produced an EMPTY array on
+   * `GET /api/providers/rate-limits` — the very surface the `provider-failover` diagram
+   * describes. Governor state is the base; a factory tracker, when one exists, overrides it.
+   *
+   * Each entry carries `source: 'governor' | 'tracker'` so the origin is visible rather than
+   * inferred — the two shapes differ, and silently merging them would hide which fields are real.
+   */
+  getAllRateLimits(): RateLimitView[] {
+    const byId = new Map<string, RateLimitView>();
+    const governorProviders = this.governor?.getStatus().providers ?? {};
+    for (const [id, state] of Object.entries(governorProviders)) {
+      byId.set(id, { source: 'governor', ...state });
     }
-    return states.sort((a, b) => a.providerId.localeCompare(b.providerId));
+    for (const tracker of this.rateLimitTrackers.values()) {
+      const state = tracker.getState();
+      byId.set(state.providerId, { source: 'tracker', ...state });
+    }
+    return [...byId.values()].sort((a, b) => a.providerId.localeCompare(b.providerId));
   }
 
   /** Get tracker for a specific adapter instance. */

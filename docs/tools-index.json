@@ -1129,7 +1129,7 @@
       "where": "nest",
       "category": "validator",
       "purpose": "a performance STAT must be computed, never typed.",
-      "selfTest": false,
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"
