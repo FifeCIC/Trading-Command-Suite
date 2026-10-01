@@ -6,7 +6,7 @@
  * Check freshness:  node scripts/generate-free-manifest.cjs --check
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3)
  *
- * 43 free · 98 premium · 141 total
+ * 40 free · 80 premium · 120 total
  */
 export const FREE_MANIFEST = {
   generatedFrom: 'src/core/view-meta.js',
@@ -20,7 +20,6 @@ export const FREE_MANIFEST = {
     '/education/candle-patterns',
     '/education/candle-patterns-guide',
     '/education/glossary',
-    '/education/mt5-demo-trading',
     '/education/settings-education',
     '/research/earnings-calendar',
     '/research/events-calendar',
@@ -39,7 +38,6 @@ export const FREE_MANIFEST = {
     '/settings/trading-settings',
     '/settings/user-preferences',
     '/status/setup',
-    '/trading/accounts-dashboard',
     '/trading/calculators',
     '/trading/market-context',
     '/trading/mt5-trading',
@@ -52,7 +50,6 @@ export const FREE_MANIFEST = {
     '/trading212/t212-isa',
     '/trading212/t212-portfolio',
     '/watchlists/active-symbols',
-    '/watchlists/add-symbol',
     '/watchlists/user-watchlists',
   ],
   // ⚠️ The premium PATH LIST is deliberately NOT emitted here (2026-09-23). This file is imported
@@ -60,7 +57,7 @@ export const FREE_MANIFEST = {
   // the free build ships the map of the app. Measured before the change: all 95 premium paths were
   // present as string literals in dist-free/assets/index-*.js. Only the COUNT stays; anything that
   // genuinely needs the premium list derives it from view-meta.js, which never ships.
-  premiumCount: 98,
+  premiumCount: 80,
 };
 
 /** True when a view-meta key ships in the free edition. */

@@ -37,9 +37,7 @@ import AbStrategiesPage from '../pages/AbStrategiesPage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
 import CalculatorsPage from '../pages/CalculatorsPage.jsx';
-import AccountsDashboardPage from '../pages/AccountsDashboardPage.jsx';
 import OrderTestingPage from '../pages/OrderTestingPage.jsx';
-import TradingTimelinePage from '../pages/TradingTimelinePage.jsx';
 import PortfolioPage from '../pages/PortfolioPage.jsx';
 import PortfolioEventsPage from '../pages/PortfolioEventsPage.jsx';
 import TradeHistoryPage from '../pages/TradeHistoryPage.jsx';
@@ -70,7 +68,6 @@ import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
 // ── Automation ──
 import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
-import AutomationOverviewPage from '../pages/AutomationOverviewPage.jsx';
 import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
 import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 
@@ -94,17 +91,18 @@ import EventsCalendarPage from '../pages/EventsCalendarPage.jsx';
 import SocialNetworksPage from '../pages/SocialNetworksPage.jsx';
 
 // ── Analysis / Speed ──
-import SpeedTradingPage from '../pages/SpeedTradingPage.jsx';
 import SpeedScannerPage from '../pages/SpeedScannerPage.jsx';
 import BtcSpeedTradingPage from '../pages/BtcSpeedTradingPage.jsx';
-import GoldSpeedTradingPage from '../pages/GoldSpeedTradingPage.jsx';
 
 // ── Portfolio / Trading212 ──
+// ⚠️ RESTORED 2026-10-01. This import was removed by scripts/delete-views.cjs when the
+// `mt5-demo-trading` map entry went: that page file is mapped to TWO ids, so removing one id must
+// not remove the import the other still needs. The script now checks whether any surviving map
+// entry still names the component before touching its import line.
 import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
 import Mt5StatusPage from '../pages/Mt5StatusPage.jsx';
 import T212PortfolioPage from '../pages/T212PortfolioPage.jsx';
 import T212ISAPage from '../pages/T212ISAPage.jsx';
-import T212CFDPage from '../pages/T212CFDPage.jsx';
 
 // ── Data ──
 import DataAreaLandingPage from '../pages/DataAreaLandingPage.jsx';
@@ -115,7 +113,6 @@ import DataElementsPage from '../pages/DataElementsPage.jsx';
 import DecoderPage from '../pages/DecoderPage.jsx';
 import CacheMonitorPage from '../pages/CacheMonitorPage.jsx';
 import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
-import AddSymbolPage from '../pages/AddSymbolPage.jsx';
 import SymbolsBrowserPage from '../pages/SymbolsBrowserPage.jsx';
 // #958 — what the BROKERS offer (14,000+ instruments) versus what the app has onboarded (~218).
 // Distinct from Symbols Browser, which lists only the ONBOARDED set — the difference between the
@@ -162,7 +159,6 @@ import MetaStackStatusPage from '../pages/MetaStackStatusPage.jsx';
 import QATestingPage from '../pages/QATestingPage.jsx';
 import TheoryRegistryPage from '../pages/TheoryRegistryPage.jsx';
 import DesignObservationsPage from '../pages/DesignObservationsPage.jsx';
-import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import UiReviewPage from '../pages/UiReviewPage.jsx';
@@ -175,27 +171,20 @@ import MetaStackExplorerPage from '../pages/MetaStackExplorerPage.jsx';
 import FileInventoryPage from '../pages/FileInventoryPage.jsx';
 
 // ── Lab ──
-import ComponentLabPage from '../pages/ComponentLabPage.jsx';
 import PositionLifecyclePage from '../pages/PositionLifecyclePage.jsx';
 import ResponsiveLayoutLabPage from '../pages/ResponsiveLayoutLabPage.jsx';
 import ChartsLabPage from '../pages/ChartsLabPage.jsx';
 import ThemeLabPage from '../pages/ThemeLabPage.jsx';
 import ThemeLabMotion from '../pages/ThemeLabMotion.jsx';
-import ThemeLabTransitions from '../pages/ThemeLabTransitions.jsx';
 import ThemeLabScroll from '../pages/ThemeLabScroll.jsx';
 import ThemeLabPopover from '../pages/ThemeLabPopover.jsx';
-import LabLandingPage from '../pages/LabLandingPage.jsx';
-import LabPage from '../pages/LabPage.jsx';
 import PipelineGraphLabPage from '../pages/PipelineGraphLabPage.jsx';
 import IdentityMapLabPage from '../pages/IdentityMapLabPage.jsx';
-import WidgetBoardLabPage from '../pages/WidgetBoardLabPage.jsx';
 import FeatureLabPage from '../pages/FeatureLabPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
 import MetaStackCockpitPage from '../pages/MetaStackCockpitPage.jsx';
-import HotStockPicksPage from '../pages/HotStockPicksPage.jsx';
-import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
 import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
 
 // ── Training ──
@@ -206,11 +195,8 @@ import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 
 // ── Other ──
-import ABTestingPage from '../pages/ABTestingPage.jsx';
-import AICostsPage from '../pages/AICostsPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
-import DailySummaryReportPage from '../pages/DailySummaryReportPage.jsx';
 import RiskControlsPage from '../pages/RiskControlsPage.jsx';
 import ThemePage from '../pages/ThemePage.jsx';
 import ScoringOverviewPage from '../pages/ScoringOverviewPage.jsx';
@@ -218,7 +204,6 @@ import SnapshotLibraryPage from '../pages/SnapshotLibraryPage.jsx';
 import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
 import TradingStylesPage from '../pages/TradingStylesPage.jsx';
 import ObjectivesPage from '../pages/ObjectivesPage.jsx';
-import GlobalAllocatorPage from '../pages/GlobalAllocatorPage.jsx';
 import RoadmapPage from '../pages/RoadmapPage.jsx';
 import MonitoringPage from '../pages/MonitoringPage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
@@ -244,19 +229,15 @@ export const VIEW_COMPONENTS = {
   'trade-journal': TradeJournalPage,
   'trading-plans': TradingPlansPage,
   'calculators': CalculatorsPage,
-  'accounts-dashboard': AccountsDashboardPage,
   'order-testing': OrderTestingPage,
   't212-portfolio': T212PortfolioPage,
   't212-isa': T212ISAPage,
-  't212-cfd': T212CFDPage,
-  'timeline': TradingTimelinePage,
   'portfolio-overview': PortfolioPage,
   'portfolio-events': PortfolioEventsPage,
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
   'strategy-library': StrategyLibraryPage,
   'mt5-trading': Mt5TradingPage,
-  'mt5-demo-trading': Mt5TradingPage,
   'mt5-status': Mt5StatusPage,
 
   // Scoring
@@ -286,7 +267,6 @@ export const VIEW_COMPONENTS = {
 
   // Automation
   'automation-dashboard': AutomationDashboardPage,
-  'automation-overview': AutomationOverviewPage,
   'automation-rules': AutomationRulesPage,
   'execution-queue': ExecutionQueuePage,
   'alert-center': AlertCenterPage,
@@ -312,10 +292,8 @@ export const VIEW_COMPONENTS = {
   'social-networks': SocialNetworksPage,
 
   // Speed Trading
-  'speed-trading': SpeedTradingPage,
   'speed-scanner': SpeedScannerPage,
   'btc-speed': BtcSpeedTradingPage,
-  'gold-speed': GoldSpeedTradingPage,
 
   // Data
   'data-landing': DataAreaLandingPage,
@@ -326,7 +304,6 @@ export const VIEW_COMPONENTS = {
   'decoder': DecoderPage,
   'transient-caches': CacheMonitorPage,
   'active-symbols': ActiveSymbolsPage,
-  'add-symbol': AddSymbolPage,
   'symbols-browser': SymbolsBrowserPage,
   'broker-catalogue': BrokerCataloguePage,
   'screener': ScreenerPage,
@@ -381,35 +358,24 @@ export const VIEW_COMPONENTS = {
   'file-inventory': FileInventoryPage,
 
   // Lab
-  'component-lab': ComponentLabPage,
-  'widget-library': WidgetBoardLabPage,
   'screen-assignment': ScreenCockpitPage,
   'responsive-layout-lab': ResponsiveLayoutLabPage,
   'charts-lab': ChartsLabPage,
   'theme-lab': ThemeLabPage,
   'theme-lab-motion': ThemeLabMotion,
-  'theme-lab-transitions': ThemeLabTransitions,
   'theme-lab-scroll': ThemeLabScroll,
   'theme-lab-popover': ThemeLabPopover,
-  'lab-landing': LabLandingPage,
   'pipeline-graph-lab': PipelineGraphLabPage,
   // Temporary diagnostic — see IdentityMapLabPage.jsx header. Remove once the identity
   // question is settled, or promote it to a permanent System page.
   'identity-map': IdentityMapLabPage,
-  'lab': LabPage,
   'feature-lab': FeatureLabPage,
   'preference-lab': PreferenceLab,
   'user-preferences': PreferenceLab,
   'performance-lab': PerformanceLabPage,
   'snapshot-replay': SnapshotReplayPage,
   'meta-stack-cockpit': MetaStackCockpitPage,
-  'hot-stock-picks': HotStockPicksPage,
   'daily-briefing': DailyBriefingPage,
-  'decision-trail': DecisionTrailPage,
-  'ab-testing': ABTestingPage,
-  'ai-costs': AICostsPage,
-  'daily-summary-report': DailySummaryReportPage,
-  'portfolio-lab': PortfolioLabPage,
   'dual-protocol-inspector': ScoringDebugLab,
   'snapshots': SnapshotLibraryPage,
   'position-lifecycle': PositionLifecyclePage,
@@ -429,5 +395,4 @@ export const VIEW_COMPONENTS = {
   'personal-finances': PersonalFinancesPage,
   'trading-styles': TradingStylesPage,
   'objectives': ObjectivesPage,
-  'allocator': GlobalAllocatorPage,
 };

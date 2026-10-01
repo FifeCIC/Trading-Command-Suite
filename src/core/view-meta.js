@@ -252,14 +252,6 @@ const VIEW_META = {
     css: 'src/pages/calculators.css',
     api: [],
   },
-  '/trading/accounts-dashboard': {
-    tier: 'free',
-    review: 'approved',
-    label: 'Accounts Dashboard',
-    file: 'src/pages/AccountsDashboardPage.jsx',
-    css: 'src/pages/accounts-dashboard.css',
-    api: ['GET /api/providers/mt5/accounts', 'GET /api/portfolio/summary', 'GET /api/isa/dashboard'],
-  },
   '/scoring/directives-registry': {
     tier: 'premium',
     review: 'approved',
@@ -376,22 +368,6 @@ const VIEW_META = {
     css: 'src/pages/alert-center.css',
     api: ['GET /api/alerts', 'GET /api/automation/status'],
   },
-  '/automation/decision-trail': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Decision Trail',
-    file: 'src/pages/DecisionTrailPage.jsx',
-    css: 'src/pages/decision-trail.css',
-    api: ['GET /api/automation/status', 'GET /api/automation/decisions'],
-  },
-  '/automation/automation-overview': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Automation Overview',
-    file: 'src/pages/AutomationOverviewPage.jsx',
-    css: 'src/pages/automation-overview.css',
-    api: ['GET /api/automation/status', 'GET /api/trading/strategies', 'GET /api/automation/scoring-strategies', 'GET /api/scoring/protocols'],
-  },
   '/watchlists/active-symbols': {
     tier: 'free',
     review: 'approved',
@@ -456,14 +432,6 @@ const VIEW_META = {
     file: 'src/pages/ArchitectureFrameworkPage.jsx',
     css: 'src/pages/architecture-framework.css',
     api: ['GET /api/architecture/index', 'GET /api/architecture/section/:key'],
-  },
-  '/development/hot-stock-picks': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Hot Stock Picks',
-    file: 'src/pages/HotStockPicksPage.jsx',
-    css: 'src/pages/hot-stock-picks-page.css',
-    api: ['GET /api/scoring/ranked'],
   },
   '/development/blocked-signals': {
     tier: 'premium',
@@ -594,14 +562,6 @@ const VIEW_META = {
     css: 'src/pages/t212-isa.css',
     api: [],
   },
-  '/trading212/t212-cfd': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'CFD',
-    file: 'src/pages/T212CFDPage.jsx',
-    css: 'src/pages/t212-cfd.css',
-    api: [],
-  },
 
   // ── Protocols ──
   '/protocols/configure-directives': {
@@ -649,15 +609,6 @@ const VIEW_META = {
 
   // ── Automation (already covered above) ──
 
-  // ── Education ──
-  '/education/mt5-demo-trading': {
-    tier: 'free',
-    review: 'approved',
-    label: 'MT5 Demo Trading',
-    file: 'src/pages/Mt5TradingPage.jsx',
-    css: 'src/pages/mt5-trading-page.css',
-    api: [],
-  },
   '/lab/backtest': {
     tier: 'premium',
     review: 'approved',
@@ -725,15 +676,6 @@ const VIEW_META = {
     api: [],
   },
 
-  // ── Lab ──
-  '/lab/timeline': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Timeline',
-    file: 'src/pages/TradingTimelinePage.jsx',
-    css: 'src/pages/trading-timeline-page.css',
-    api: [],
-  },
   '/trading/mt5-trading': {
     tier: 'free',
     review: 'approved',
@@ -748,22 +690,6 @@ const VIEW_META = {
     label: 'Strategy Wizard',
     file: 'src/pages/StrategyWizardPage.jsx',
     css: 'src/pages/strategy-wizard.css',
-    api: [],
-  },
-  '/lab/speed-trading': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Speed Trading',
-    file: 'src/pages/SpeedTradingPage.jsx',
-    css: 'src/pages/speed-trading.css',
-    api: [],
-  },
-  '/lab/gold-speed': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Gold Speed',
-    file: 'src/pages/GoldSpeedTradingPage.jsx',
-    css: 'src/pages/speed-cockpit.css',
     api: [],
   },
   '/development/diagrams': {
@@ -782,14 +708,6 @@ const VIEW_META = {
     css: 'src/pages/meta-stack-explorer.css',
     api: [],
   },
-  '/development/component-lab': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Component Lab',
-    file: 'src/pages/ComponentLabPage.jsx',
-    css: 'src/pages/component-lab.css',
-    api: [],
-  },
   // Identity Map — TEMPORARY diagnostic (see IdentityMapLabPage.jsx). Data is a SNAPSHOT in
   // src/data/identity-map.json, rebuilt by `node nest/scripts/identity-map.cjs`. `api: []` is
   // accurate: the page makes no live call, so it cannot go stale against a dead backend —
@@ -801,14 +719,6 @@ const VIEW_META = {
     file: 'src/pages/IdentityMapLabPage.jsx',
     css: 'src/pages/identity-map-lab.module.css',
     api: [],
-  },
-  '/development/widget-library': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Widget Library',
-    file: 'src/pages/WidgetBoardLabPage.jsx',
-    css: 'src/components/widget-board.css',
-    api: ['/api/health', '/api/signals/best', '/api/symbols/positions', '/api/trading/sessions/market-context'],
   },
   '/development/screen-assignment': {
     tier: 'premium',
@@ -842,14 +752,6 @@ const VIEW_META = {
     css: 'src/pages/theme-lab-motion.css',
     api: [],
   },
-  '/development/theme-lab-transitions': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Transitions Lab',
-    file: 'src/pages/ThemeLabTransitions.jsx',
-    css: 'src/pages/theme-lab-transitions.css',
-    api: [],
-  },
   '/development/theme-lab-scroll': {
     tier: 'premium',
     review: 'approved',
@@ -866,28 +768,12 @@ const VIEW_META = {
     css: 'src/pages/theme-lab-popover.css',
     api: [],
   },
-  '/lab/lab-landing': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Lab Directory',
-    file: 'src/pages/LabLandingPage.jsx',
-    css: 'src/pages/lab-landing.css',
-    api: [],
-  },
   '/development/pipeline-graph-lab': {
     tier: 'premium',
     review: 'approved',
     label: 'Pipeline Graph',
     file: 'src/pages/PipelineGraphLabPage.jsx',
     css: 'src/pages/pipeline-graph-lab.css',
-    api: [],
-  },
-  '/development/lab': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Lab Sandbox',
-    file: 'src/pages/LabPage.jsx',
-    css: 'src/pages/lab.css',
     api: [],
   },
   '/development/feature-lab': {
@@ -920,38 +806,6 @@ const VIEW_META = {
     label: 'Daily Briefing',
     file: 'src/pages/DailyBriefingPage.jsx',
     css: 'src/pages/daily-briefing.css',
-    api: [],
-  },
-  '/lab/ab-testing': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'A/B Protocol Testing',
-    file: 'src/pages/ABTestingPage.jsx',
-    css: 'src/pages/ab-testing.css',
-    api: [],
-  },
-  '/development/ai-costs': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'AI Costs',
-    file: 'src/pages/AICostsPage.jsx',
-    css: 'src/pages/ai-costs.css',
-    api: [],
-  },
-  '/development/daily-summary-report': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Daily Summary Report',
-    file: 'src/pages/DailySummaryReportPage.jsx',
-    css: 'src/pages/daily-summary-report.css',
-    api: [],
-  },
-  '/lab/portfolio-lab': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Portfolio Lab',
-    file: 'src/pages/PortfolioLabPage.jsx',
-    css: 'src/pages/portfolio-lab.css',
     api: [],
   },
   '/lab/snapshots': {
@@ -1015,14 +869,6 @@ const VIEW_META = {
     label: 'Objectives',
     file: 'src/pages/ObjectivesPage.jsx',
     css: 'src/pages/objectives.css',
-    api: [],
-  },
-  '/lab/allocator': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Strategy Allocator',
-    file: 'src/pages/GlobalAllocatorPage.jsx',
-    css: 'src/pages/global-allocator.css',
     api: [],
   },
 
@@ -1144,15 +990,6 @@ const VIEW_META = {
     api: [],
   },
 
-  // ── Watchlists ──
-  '/watchlists/add-symbol': {
-    tier: 'free',
-    review: 'approved',
-    label: 'Add Symbol',
-    file: 'src/pages/AddSymbolPage.jsx',
-    css: 'src/pages/add-symbol.css',
-    api: [],
-  },
 
   // ── REGISTERED 2026-09-22 — the NAV-LEAF METADATA GAP ─────────────────────────────────────────
   // Every sidebar link resolves to `/area/viewId` and the Dev Overlay reports "No metadata
@@ -1278,17 +1115,6 @@ const VIEW_META = {
       'GET /api/alerts/count',
       'GET /api/calibrations',
     ],
-  },
-  // INLINE VIEW — rendered by `App.jsx` renderMainContent() (INLINE_VIEWS: demos, use-cases,
-  // analytics, about). It has no page component and no stylesheet of its own; `file` names the
-  // shell that renders it so the overlay's component name and "open view file" stay truthful.
-  '/status/analytics': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Analytics',
-    file: 'src/App.jsx',
-    css: 'src/index.css',
-    api: [],
   },
   '/lab/position-lifecycle': {
     tier: 'premium',

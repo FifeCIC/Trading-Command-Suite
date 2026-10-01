@@ -56,7 +56,6 @@ export const NAV_TREE = {
     views: [
       { id: 't212-portfolio', label: 'Portfolio', icon: '🏦' },
       { id: 't212-isa', label: 'Stocks ISA', icon: '🏛️' },
-      { id: 't212-cfd', label: 'CFD', icon: '📉' },
       { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
     ],
   },
@@ -65,7 +64,6 @@ export const NAV_TREE = {
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
       { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
-      { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
     ],
   },
   // ── Research area (/research/ prefix) ──
@@ -177,7 +175,6 @@ export const NAV_TREE = {
       { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
       { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
-      { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },
       { id: 'trading-settings', label: 'Settings', icon: '⚙' },
     ],
   },
@@ -185,8 +182,6 @@ export const NAV_TREE = {
     label: 'Automation',
     views: [
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
-      { id: 'automation-overview', label: 'Overview', icon: '📋' },
-      { id: 'decision-trail', label: 'Decision Trail', icon: '🔗' },
       { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
       { id: 'automation-rules', label: 'Automation Rules', icon: '⚙' },
@@ -199,7 +194,6 @@ export const NAV_TREE = {
       { id: 'glossary', label: 'Glossary', icon: '📖' },
       { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
       { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
-      { id: 'mt5-demo-trading', label: 'MT5 Demo Trading', icon: '🎮' },
       // ⚠️ `backtest` MOVED to the Lab area (2026-09-23, owner direction). Backtesting is a
       // theory-and-data page — "what would have happened?" — which is what Lab is for, and the
       // owner's own instruction named backtesting as a Lab page. It sat in Education, where it
@@ -223,7 +217,6 @@ export const NAV_TREE = {
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
-      { id: 'analytics', label: 'Analytics', icon: '▦' },
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
     ],
   },
@@ -264,17 +257,7 @@ export const NAV_TREE = {
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       // ── Charts & data inspection ──
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
-      { id: 'timeline', label: 'Timeline', icon: '📅' },
       { id: 'position-lifecycle', label: 'Position Lifecycle', icon: '🛡️' },
-      // ── Trading theory ──
-      { id: 'speed-trading', label: 'Speed Trading', icon: '⚡' },
-      { id: 'gold-speed', label: 'Gold Speed', icon: '🔬' },
-      // ── Comparison & allocation experiments ──
-      { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
-      { id: 'allocator', label: 'Strategy Allocator', icon: '📊' },
-      { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
-      // ── Area guide ──
-      { id: 'lab-landing', label: 'Lab Directory', icon: '🗂️' },
     ],
   },
   planner: {
@@ -352,11 +335,8 @@ export const NAV_TREE = {
       { id: 'design-observations', label: 'Design Observations', icon: '👁' },
       // ── Engineering tools — build and inspect the UI itself ──
       { kind: 'section-header', id: 'dev-engineering', label: 'Engineering Tools', icon: '🛠' },
-      { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'ui-review', label: 'Page Walkthrough', icon: '📋' },
-      { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
-      { id: 'widget-library', label: 'Widget Library', icon: '⬚' },
       { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'identity-map', label: 'Identity Map', icon: '🧭' },
@@ -374,7 +354,6 @@ export const NAV_TREE = {
       { kind: 'section-header', id: 'dev-theme', label: 'Theme Engineering', icon: '🎨' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
       { id: 'theme-lab-motion', label: 'Motion Lab', icon: '◆' },
-      { id: 'theme-lab-transitions', label: 'Transitions Lab', icon: '⇢' },
       { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
       { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
       // ── META.Stack internals ──
@@ -385,9 +364,6 @@ export const NAV_TREE = {
       { kind: 'section-header', id: 'dev-prototypes', label: 'Prototypes', icon: '🧪' },
       { id: 'strategy-wizard', label: 'Strategy Wizard', icon: '🧙' },
       { id: 'daily-briefing', label: 'Daily Briefing', icon: '📋' },
-      { id: 'hot-stock-picks', label: 'Hot Stock Picks', icon: '🔥' },
-      { id: 'daily-summary-report', label: 'Daily Summary Report', icon: '📋' },
-      { id: 'ai-costs', label: 'AI Costs', icon: '🤖' },
     ],
   },
 };

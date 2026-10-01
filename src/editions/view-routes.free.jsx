@@ -6,13 +6,11 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 41 view(s) · 38 component(s) · 128 premium entry(ies) excluded.
+ * 37 view(s) · 35 component(s) · 111 premium entry(ies) excluded.
  */
 
 // ── Free pages ──
-import AccountsDashboardPage from '../pages/AccountsDashboardPage.jsx';
 import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
-import AddSymbolPage from '../pages/AddSymbolPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import AppearanceSettingsPage from '../pages/AppearanceSettingsPage.jsx';
 import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
@@ -26,7 +24,6 @@ import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 import GlossaryPage from '../pages/GlossaryPage.jsx';
 import MarketContextPage from '../pages/MarketContextPage.jsx';
 import MarketCorrelationsPage from '../pages/MarketCorrelationsPage.jsx';
-import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
 import NewsIntelPage from '../pages/NewsIntelPage.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
@@ -51,9 +48,7 @@ import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {
-  'accounts-dashboard': AccountsDashboardPage,
   'active-symbols': ActiveSymbolsPage,
-  'add-symbol': AddSymbolPage,
   'alert-center': AlertCenterPage,
   'appearance': AppearanceSettingsPage,
   'automation-dashboard': AutomationDashboardPage,
@@ -69,8 +64,6 @@ export const VIEW_COMPONENTS = {
   'glossary': GlossaryPage,
   'market-context': MarketContextPage,
   'market-correlations': MarketCorrelationsPage,
-  'mt5-demo-trading': Mt5TradingPage,
-  'mt5-trading': Mt5TradingPage,
   'news-intel': NewsIntelPage,
   'performance-lab': PerformanceLabPage,
   'positions-monitor': PositionsMonitorPage,

@@ -66,6 +66,90 @@
   },
   "uiReview": {
     "entries": {
+      "/lab/backtest": {
+        "hide": false,
+        "keen": 3,
+        "note": "I think there is a github issue covering important changes for this view. Else we need to have a discussion again. ",
+        "updatedAt": "2026-10-01T22:07:52.151Z",
+        "importance": "H"
+      },
+      "/lab/timeline": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this view for now",
+        "updatedAt": "2026-10-01T22:14:36.744Z",
+        "importance": "L"
+      },
+      "/status/setup": {
+        "hide": false,
+        "keen": 1,
+        "note": "",
+        "updatedAt": "2026-10-01T21:28:17.123Z",
+        "importance": "L"
+      },
+      "/lab/allocator": {
+        "hide": null,
+        "keen": null,
+        "note": "I cant understand the point to this page. Delete it unless you think there is a value to it. ",
+        "updatedAt": "2026-10-01T22:20:56.801Z",
+        "importance": null
+      },
+      "/lab/ab-testing": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this view because A/B protocol testing is handled on another view now",
+        "updatedAt": "2026-10-01T22:18:48.533Z",
+        "importance": null
+      },
+      "/lab/gold-speed": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this view and related github issues",
+        "updatedAt": "2026-10-01T22:16:07.549Z",
+        "importance": null
+      },
+      "/development/lab": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this page.",
+        "updatedAt": "2026-10-01T22:32:07.088Z",
+        "importance": null
+      },
+      "/lab/lab-landing": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this view ",
+        "updatedAt": "2026-10-01T22:26:23.161Z",
+        "importance": null
+      },
+      "/status/commands": {
+        "hide": false,
+        "keen": 1,
+        "note": "Move this page to the Development area",
+        "updatedAt": "2026-10-01T21:36:59.011Z",
+        "importance": "L"
+      },
+      "/status/analytics": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this page",
+        "updatedAt": "2026-10-01T22:05:31.794Z",
+        "importance": null
+      },
+      "/lab/portfolio-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this view ",
+        "updatedAt": "2026-10-01T22:26:13.606Z",
+        "importance": null
+      },
+      "/lab/speed-trading": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this view and related github issues",
+        "updatedAt": "2026-10-01T22:16:05.292Z",
+        "importance": null
+      },
       "/research/screener": {
         "hide": false,
         "keen": 3,
@@ -79,6 +163,27 @@
         "note": "There is a mistake in the design. It appears that the left and right columns order independent of one another. That is wrong. The left is meant to order only and the right column shows it's counterpart. Right now there are protocols sitting opposite different protocols.",
         "updatedAt": "2026-10-01T09:08:16.566Z",
         "importance": "H"
+      },
+      "/status/system-log": {
+        "hide": false,
+        "keen": 1,
+        "note": "",
+        "updatedAt": "2026-10-01T21:38:28.445Z",
+        "importance": "L"
+      },
+      "/education/glossary": {
+        "hide": false,
+        "keen": 1,
+        "note": "Styling is not correct on Element:  <button.glossary-entry-header> Text:     ▶pullbackPrice Actionaka pullbacks, pull back, retracement Source:   /education/glossary",
+        "updatedAt": "2026-10-01T20:45:51.109Z",
+        "importance": "L"
+      },
+      "/planner/objectives": {
+        "hide": false,
+        "keen": 2,
+        "note": "Change this to a free page. Add Education to Element:  <select.ob-select> Text:     Active TradingAccount GrowthInstrument TradingPortfolio Reco Source:   /planner/objectives",
+        "updatedAt": "2026-10-01T22:29:57.208Z",
+        "importance": "M"
       },
       "/trading/bot-create": {
         "hide": false,
@@ -101,6 +206,20 @@
         "updatedAt": "2026-10-01T08:29:48.703Z",
         "importance": "M"
       },
+      "/status/health-check": {
+        "hide": false,
+        "keen": 1,
+        "note": "Add report download for sending to developer for troubleshooting. ",
+        "updatedAt": "2026-10-01T21:29:35.229Z",
+        "importance": "L"
+      },
+      "/trading/calculators": {
+        "hide": true,
+        "keen": 2,
+        "note": "I would like Element:  <button.topbar-calc-btn> Text:     🧮 Source:   /trading/calculators to display an overlay of the calculators that replaces this page - delete this page itself. That way the user isnt taking to a different page that they're on and they should be able to copy the results of the calculation. ",
+        "updatedAt": "2026-10-01T19:55:50.799Z",
+        "importance": "L"
+      },
       "/trading/mt5-trading": {
         "hide": false,
         "keen": 1,
@@ -120,6 +239,13 @@
         "keen": 2,
         "note": "We need a system of displaying each registered account on it's own page. The current ISA Allowance page almost feels like that system but isn't. Currently it's not loading my Trading212 ISA detail anyway but I don't want the page to be hardcoded for Trading212. It has to be a general account template and until this is in place it needs hidden.",
         "updatedAt": "2026-09-30T11:00:10.986Z",
+        "importance": "M"
+      },
+      "/development/diagrams": {
+        "hide": false,
+        "keen": 2,
+        "note": "I would like to group and order diagrams that can be chained. So many different groups for selecting and flicking through the diagrams for that group, in order as they apply in code. At least as best as possible.",
+        "updatedAt": "2026-10-01T22:37:24.159Z",
         "importance": "M"
       },
       "/protocols/sees-arena": {
@@ -143,11 +269,32 @@
         "updatedAt": "2026-10-01T13:00:45.412Z",
         "importance": "H"
       },
+      "/status/file-inventory": {
+        "hide": false,
+        "keen": 1,
+        "note": "Move to the Development area",
+        "updatedAt": "2026-10-01T22:05:19.443Z",
+        "importance": "L"
+      },
       "/trading/ab-strategies": {
         "hide": false,
         "keen": 3,
         "note": "some of the pairs are invalud: different protocols but that's less about this page and more about the database data. Agentic AI might have created those pairs. I would like: Element:  <article._pairRow_18ja8_687> Text:     AGold Day-Trade M15 (copy)609a435bactivexau-speed-m15-copy(p Source:   /trading/ab-strategies to display the different between A and B. I would also like the ability to order by that value and search. Placed here: Element:  <div._listHeadRow_18ja8_861> Text:     Strategy pairsListTable Source:   /trading/ab-strategies",
         "updatedAt": "2026-10-01T13:22:05.370Z",
+        "importance": "H"
+      },
+      "/trading/stop-guardian": {
+        "hide": false,
+        "keen": 1,
+        "note": "",
+        "updatedAt": "2026-10-01T18:30:03.393Z",
+        "importance": "L"
+      },
+      "/trading/trade-journal": {
+        "hide": false,
+        "keen": 3,
+        "note": "I would like these to be accordions: Element:  <div.tj-card.tj-open> Text:     EURCADBUY#152712930991strategyOPENVol: 0.01Entry: $1.6001/10 Source:   /trading/trade-journal  displaying some of the information on the row and a bit more than we have now when opened. Im thinking a little bit more history of the position i.e. how many SL adjustments, how many simulated SL adjustments, peak price and reason for closing. ",
+        "updatedAt": "2026-10-01T18:32:01.079Z",
         "importance": "H"
       },
       "/trading/trading-plans": {
@@ -164,12 +311,40 @@
         "updatedAt": "2026-10-01T08:10:22.950Z",
         "importance": "L"
       },
+      "/lab/position-lifecycle": {
+        "hide": false,
+        "keen": 2,
+        "note": "Styling needs to match one of our better views with table",
+        "updatedAt": "2026-10-01T22:15:04.039Z",
+        "importance": "M"
+      },
+      "/planner/trading-styles": {
+        "hide": false,
+        "keen": 2,
+        "note": "Change this to a free page. It's a way to dynamically change the app and that will need as many users as we can to ensure it supports a positive experience. ",
+        "updatedAt": "2026-10-01T22:28:44.972Z",
+        "importance": "M"
+      },
       "/scoring/symbols-ladder": {
         "hide": true,
         "keen": 2,
         "note": "",
         "updatedAt": "2026-10-01T09:09:03.734Z",
         "importance": "M"
+      },
+      "/trading/market-context": {
+        "hide": false,
+        "keen": 2,
+        "note": "Isnt there more data and market status indicators online that can tell us what the market is like compared to normal? Just wondering if the view can be enhanced further and offer more value. ",
+        "updatedAt": "2026-10-01T18:34:09.366Z",
+        "importance": "H"
+      },
+      "/automation/alert-center": {
+        "hide": false,
+        "keen": 1,
+        "note": "Same again. Merge these entries into the Trading Journey. I suspect in a way there might be what looks like duplicates at that point because the journal will tell us the activity but the alert is meant to have a different purpose. There might need to be mechanism to compact related information. Treat compacted journal entries with an alert status attached as seen and the alert becomes seen. We have the alerts disc: Element:  <svg> Text:     (none) Source:   /development/ui-review and that is really the primary way to get alerts. Remove the link from that popover Delete this Alert Center page. This should result in no more Automation pages - delete the automation ared and related architecture documentation. Going forward anything frame was automation or scheduled will be within the area of what it is scheduling i.e. scheduling a trade, belongs in the Trading area. ",
+        "updatedAt": "2026-10-01T20:41:24.813Z",
+        "importance": "L"
       },
       "/research/analyse-symbol": {
         "hide": true,
@@ -191,6 +366,20 @@
         "note": "Add a symbol search and rename the page to Single Symbol",
         "updatedAt": "2026-10-01T09:11:01.582Z",
         "importance": "H"
+      },
+      "/trading/performance-lab": {
+        "hide": false,
+        "keen": 1,
+        "note": "",
+        "updatedAt": "2026-10-01T19:53:29.200Z",
+        "importance": "L"
+      },
+      "/automation/speed-scanner": {
+        "hide": false,
+        "keen": 2,
+        "note": "I think this view is intended for very quick trading based on quick scoring. What I notice is that the scores look a bit more like the original score sizes: please check and ensure there is not an additional scoring path. Also move this page to the Trading area. ",
+        "updatedAt": "2026-10-01T20:19:54.715Z",
+        "importance": "M"
       },
       "/protocols/protocol-trail": {
         "hide": false,
@@ -220,6 +409,20 @@
         "updatedAt": "2026-10-01T09:12:39.765Z",
         "importance": "H"
       },
+      "/status/meta-stack-status": {
+        "hide": false,
+        "keen": 3,
+        "note": "Another view with the 60/100 score which I asked for an investigation of Element:  <div.mss-priority-score-row> Text:     60Score / 100BUY Source:   /status/meta-stack-status  -  there is potential for META.Stack to be detailed even more on this page but it already looks good, the styling is a good example for some of the lesser styled pages. ",
+        "updatedAt": "2026-10-01T22:01:22.037Z",
+        "importance": "H"
+      },
+      "/trading/strategy-library": {
+        "hide": false,
+        "keen": 2,
+        "note": "Some strategies are labelled with Element:  <span.sl-badge> Text:     Fully Supported Source:   /trading/strategy-library but we need another one telling us if the supporting/linked strategy  active or not, in the initial row before opening the accordion: Element:  <article.sl-card> Text:     Cable Session Trading (GBPUSD)GBPUSD-specific session strate Source:   /trading/strategy-library ",
+        "updatedAt": "2026-10-01T18:36:20.174Z",
+        "importance": "M"
+      },
       "/trading/strategy-monitor": {
         "hide": false,
         "keen": 3,
@@ -227,11 +430,46 @@
         "updatedAt": "2026-10-01T09:14:42.687Z",
         "importance": "H"
       },
+      "/trading/trading-settings": {
+        "hide": false,
+        "keen": 1,
+        "note": "",
+        "updatedAt": "2026-10-01T20:05:14.689Z",
+        "importance": "M"
+      },
       "/trading212/order-testing": {
         "hide": false,
         "keen": 2,
         "note": "Move this page to the Status area with the intention of offering all users the ability to test individual aspects of the app. This will support keen testers in the area days too. Lets also take the opportunity to examine the existing QA page and how we might create a system that can feedback to myself.",
         "updatedAt": "2026-09-30T11:04:29.055Z",
+        "importance": "M"
+      },
+      "/automation/decision-trail": {
+        "hide": false,
+        "keen": 1,
+        "note": "Delete this view",
+        "updatedAt": "2026-10-01T20:16:00.158Z",
+        "importance": "L"
+      },
+      "/development/component-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this page.I believe the widgets registry is handled by the dashboard for the dashboard.",
+        "updatedAt": "2026-10-01T22:34:31.061Z",
+        "importance": null
+      },
+      "/education/candle-patterns": {
+        "hide": true,
+        "keen": 3,
+        "note": "This is not good enough yet as it does not show the patterns on the chart. I also want examples made-up using the other chart technology bundled with the app. This page should be hidden until complete.",
+        "updatedAt": "2026-10-01T20:46:57.376Z",
+        "importance": "H"
+      },
+      "/planner/personal-finances": {
+        "hide": false,
+        "keen": 2,
+        "note": "Change this to a free page. I would like to offer some basic finance management between registered accounts. Premium will get some additional perks and AI support.",
+        "updatedAt": "2026-10-01T22:28:02.036Z",
         "importance": "M"
       },
       "/research/broker-catalogue": {
@@ -261,6 +499,34 @@
         "note": "The protocols column shows zero for symbols that have current positons which means some basic wiring still hasn't been done. If it turns out that those positions were created in yet another separate system from META.Stack's path then I need to know asap - sometimes this does happen due to the way agent AI processes instructions. ",
         "updatedAt": "2026-09-30T11:12:04.221Z",
         "importance": "H"
+      },
+      "/automation/execution-queue": {
+        "hide": false,
+        "keen": 1,
+        "note": "Merge this page into View:       Trade Journal Route:      /trading/trade-journal File:       src/pages/TradeJournalPage.jsx CSS:        src/pages/trade-journal-page.css API:        GET /api/journal/entries, GET /api/journal/stats Component:  <TradeJournalPage /> - add some of the stats Element:  <section.eq-routine> Text:     Primary Loop⟳ every 2mTick #49last tick 9srisk ×1🟢 Protocol Source:   /automation/execution-queue to Element:  <div.tj-stats> Text:     367Total364Closed29%Win Rate$658.20Total P&L+$5.45Avg Win-$1 Source:   /trading/trade-journal and display the same data in the journal. Create controls for filtering journal entries including filter out  Element:  <span.eq-event-status> Text:     BLOCKED Source:   /automation/execution-queue  signals oh and dont forget these stats  Element:  <div.eq-event-stats> Text:     ⟳ Automation: 50⚡ Decisions: 50📋 Total: 100 Source:   /automation/execution-queue  and the result is essentially a journal of most activity, even rejected trades. Delete this page. ",
+        "updatedAt": "2026-10-01T20:33:54.888Z",
+        "importance": "L"
+      },
+      "/development/daily-briefing": {
+        "hide": false,
+        "keen": 2,
+        "note": "Move this to the Research area and improve styling on Element:  <div.db-event> Text:     📅AGSS earnings1h 15m Source:   /development/daily-briefing  and Element:  <div.db-brief-row> Text:     InvestedEURCAD58BUY▸ Source:   /development/daily-briefing   ",
+        "updatedAt": "2026-10-01T22:44:49.820Z",
+        "importance": "M"
+      },
+      "/development/widget-library": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this page.I believe the widgets registry is handled by the dashboard for the dashboard.",
+        "updatedAt": "2026-10-01T22:34:33.466Z",
+        "importance": null
+      },
+      "/education/mt5-demo-trading": {
+        "hide": true,
+        "keen": 1,
+        "note": "Delete this page. There is another trading page that is identical. ",
+        "updatedAt": "2026-10-01T20:50:03.103Z",
+        "importance": "L"
       },
       "/protocols/directive-viewer": {
         "hide": false,
@@ -297,6 +563,27 @@
         "updatedAt": "2026-10-01T08:27:42.256Z",
         "importance": "L"
       },
+      "/status/meta-stack-explorer": {
+        "hide": false,
+        "keen": 3,
+        "note": "Agent should review this page for potential new steps that isn't integrated. Especially around bots. I also notice something unusual, yet again, another hint to another scoring mechnism: Element:  <div.mse-signal-main> Text:     XAUUSDBUY60/100 Source:   /status/meta-stack-explorer  this is showing a scoring out of 100, now that might be percentage and if so it is a high percentage score but it should say so. This needs investigated and I need to know if the app is still generating a score using an approach outside of the primary (and meant to be ONLY) META.Stack scoring path. ",
+        "updatedAt": "2026-10-01T21:42:40.151Z",
+        "importance": "H"
+      },
+      "/status/meta-stack-pipeline": {
+        "hide": false,
+        "keen": 3,
+        "note": "I want the nodes on this view factored into View:       Pipeline Graph Route:      /development/pipeline-graph-lab File:       src/pages/PipelineGraphLabPage.jsx CSS:        src/pages/pipeline-graph-lab.css API:        None Component:  <PipelineGraphLabPage /> and then this page deleted. It's about showing the pathways in how the key data flows and the decisions made by algorithms in the loop, with the bot especially being clear. I would like View:       Pipeline Graph Route:      /development/pipeline-graph-lab File:       src/pages/PipelineGraphLabPage.jsx CSS:        src/pages/pipeline-graph-lab.css API:        None Component:  <PipelineGraphLabPage /> to continue showing real data, as much live ongoing activity as possible. ",
+        "updatedAt": "2026-10-01T21:59:39.116Z",
+        "importance": "H"
+      },
+      "/trading/accounts-dashboard": {
+        "hide": true,
+        "keen": 1,
+        "note": "Delete this page - there is an accounts area that offers more. ",
+        "updatedAt": "2026-10-01T20:04:43.583Z",
+        "importance": "L"
+      },
       "/trading/strategies-derived": {
         "hide": false,
         "keen": 3,
@@ -311,6 +598,27 @@
         "updatedAt": "2026-10-01T07:46:55.026Z",
         "importance": "H"
       },
+      "/automation/automation-rules": {
+        "hide": false,
+        "keen": 1,
+        "note": "These seem like global defaults. Ensure they exist in the settings area as they are styled on this page - I like this layout for what can be highly complex settings. I want this page deleted. ",
+        "updatedAt": "2026-10-01T20:35:25.915Z",
+        "importance": "L"
+      },
+      "/development/blocked-signals": {
+        "hide": null,
+        "keen": null,
+        "note": "MAke it so I can order by reason Element:  <th> Text:     Latest reason Source:   /development/blocked-signals",
+        "updatedAt": "2026-10-01T22:39:31.842Z",
+        "importance": null
+      },
+      "/development/hot-stock-picks": {
+        "hide": null,
+        "keen": null,
+        "note": "delete this page ",
+        "updatedAt": "2026-10-01T22:45:21.923Z",
+        "importance": null
+      },
       "/scoring/live-ordering-stack": {
         "hide": false,
         "keen": 3,
@@ -318,12 +626,33 @@
         "updatedAt": "2026-10-01T09:06:14.633Z",
         "importance": "H"
       },
+      "/status/platform-comparisons": {
+        "hide": false,
+        "keen": 1,
+        "note": "I would like all of this information added to the free projects github pages in the hopes it attracts some traffic. Does Github allow any statistics monitoring?",
+        "updatedAt": "2026-10-01T21:40:04.452Z",
+        "importance": "L"
+      },
       "/trading/strategy-comparison": {
         "hide": false,
         "keen": 3,
         "note": "The hover over affect is too dark. ",
         "updatedAt": "2026-10-01T13:30:03.341Z",
         "importance": "H"
+      },
+      "/development/theme-lab-motion": {
+        "hide": null,
+        "keen": null,
+        "note": "Add motion examples to the theme-lab page and delete this page",
+        "updatedAt": "2026-10-01T22:40:13.226Z",
+        "importance": null
+      },
+      "/development/theme-lab-scroll": {
+        "hide": null,
+        "keen": null,
+        "note": "Add a scroll animation example to theme-lab page and delete this page. ",
+        "updatedAt": "2026-10-01T22:42:12.648Z",
+        "importance": null
       },
       "/protocols/protocols-registry": {
         "hide": false,
@@ -346,11 +675,39 @@
         "updatedAt": "2026-10-01T08:37:17.423Z",
         "importance": "M"
       },
+      "/development/screen-assignment": {
+        "hide": null,
+        "keen": null,
+        "note": "Move to Settings. ",
+        "updatedAt": "2026-10-01T22:35:05.013Z",
+        "importance": null
+      },
+      "/development/theme-lab-popover": {
+        "hide": null,
+        "keen": null,
+        "note": "Add he popover examples to the theme-lab page and delete this page ",
+        "updatedAt": "2026-10-01T22:42:34.584Z",
+        "importance": null
+      },
       "/scoring/scoring-activity-logs": {
         "hide": false,
         "keen": 1,
         "note": "",
         "updatedAt": "2026-10-01T09:11:19.126Z",
+        "importance": "L"
+      },
+      "/status/architecture-framework": {
+        "hide": false,
+        "keen": 1,
+        "note": "Move to the Development area",
+        "updatedAt": "2026-10-01T22:05:09.994Z",
+        "importance": "L"
+      },
+      "/automation/automation-overview": {
+        "hide": false,
+        "keen": 1,
+        "note": "Delete this view",
+        "updatedAt": "2026-10-01T20:14:19.924Z",
         "importance": "L"
       },
       "/protocols/configure-directives": {
@@ -359,6 +716,34 @@
         "note": "Delete this page. The Protocol Builder offers the same thing. ",
         "updatedAt": "2026-10-01T08:56:50.260Z",
         "importance": "L"
+      },
+      "/automation/automation-dashboard": {
+        "hide": false,
+        "keen": 1,
+        "note": "We're going to delete this page. Consider which of the panels on this view would be good/unique widgets and create widgets using the same layout/data. Move the automation controls: Element:  <header.ad-header> Text:     AutomationℹMulti-broker command center — scores, strategies, Source:   /automation/automation-dashboard to the main dashboard: Element:  <div.wb-toolbar> Text:     + Add widgetDashboard17 widgets▦ GridResetClear Source:   /dashboard/dashboard and place them centre.",
+        "updatedAt": "2026-10-01T20:13:04.033Z",
+        "importance": "H"
+      },
+      "/education/candle-patterns-guide": {
+        "hide": true,
+        "keen": 3,
+        "note": "Depictions of candles are not good enough. The first image uses very thin lines and it looks dull. The larger TradingView based chart shows very wide candles. It all needs to appear more realistic to a chart like the Pattern Detection page. I dont know if we have a central chart class, our own library being forced, but I do think we need our own approach to consuming any of the chart tech and our own API that allows deployment of charts that share the same data, but might appear different from one another, but not different between all of our pages like this one. ",
+        "updatedAt": "2026-10-01T20:49:30.303Z",
+        "importance": "H"
+      },
+      "/development/daily-summary-report": {
+        "hide": null,
+        "keen": null,
+        "note": "delete this page ",
+        "updatedAt": "2026-10-01T22:45:42.475Z",
+        "importance": null
+      },
+      "/development/theme-lab-transitions": {
+        "hide": null,
+        "keen": null,
+        "note": "Delete this page. ",
+        "updatedAt": "2026-10-01T22:41:31.894Z",
+        "importance": null
       },
       "/protocols/dual-protocol-inspector": {
         "hide": false,
@@ -373,6 +758,13 @@
         "note": "",
         "updatedAt": "2026-10-01T08:48:22.416Z",
         "importance": "M"
+      },
+      "/development/ai-costs": {
+        "importance": null,
+        "hide": null,
+        "keen": null,
+        "note": "delete this page ",
+        "updatedAt": "2026-10-01T22:45:48.555Z"
       }
     }
   }

@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import TrailingStopDemo from '../components/FeatureLab/TrailingStopDemo';
 import TimezoneDecisionDemo from '../components/FeatureLab/TimezoneDecisionDemo';
@@ -33,7 +32,9 @@ export default function FeatureLabPage() {
         <p className="fl-desc">
           Visual demonstrations of trading automation concepts and design decisions. Each demo shows the logic and events before full implementation.
         </p>
-        <Link to="/lab/lab-landing" className="fl-back-link">← Back to Lab Overview</Link>
+        {/* "← Back to Lab Overview" REMOVED 2026-10-01: `/lab/lab-landing` (the Lab Directory) was
+            deleted at the owner's direction in the Page Walkthrough. The nav rail is the way back
+            now; a back-link to a deleted page is worse than no back-link. */}
       </header>
 
       <h2 className="fl-section-head">Feature Demos</h2>

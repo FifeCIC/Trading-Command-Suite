@@ -1125,7 +1125,10 @@ export default function App() {
               <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
               <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
               <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/status/meta-stack-pipeline" replace />} />
-              <Route path="/planner/allocator" element={<Navigate to="/lab/allocator" replace />} />
+              {/* `/planner/allocator` → `/lab/allocator` REMOVED 2026-10-01. The allocator view was
+                  deleted at the owner's direction in the Page Walkthrough ("delete unless you think
+                  there is value" — read: it survives as the Portfolio Assistant). A redirect to a
+                  route that no longer exists is a 404 with extra steps. */}
               <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />
               <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
               {/* `/trading/trading-strategies` RETIRED 2026-09-23 (owner, option A): its table +

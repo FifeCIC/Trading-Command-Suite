@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 43 of 141 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 40 of 120 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -148,18 +148,6 @@ export const VIEW_META = {
     css: "src/pages/calculators.css",
     api: [],
   },
-  "/trading/accounts-dashboard": {
-    tier: "free",
-    review: "approved",
-    label: "Accounts Dashboard",
-    file: "src/pages/AccountsDashboardPage.jsx",
-    css: "src/pages/accounts-dashboard.css",
-    api: [
-      "GET /api/providers/mt5/accounts",
-      "GET /api/portfolio/summary",
-      "GET /api/isa/dashboard",
-    ],
-  },
   "/automation/automation-dashboard": {
     tier: "free",
     review: "approved",
@@ -271,14 +259,6 @@ export const VIEW_META = {
     css: "src/pages/t212-isa.css",
     api: [],
   },
-  "/education/mt5-demo-trading": {
-    tier: "free",
-    review: "approved",
-    label: "MT5 Demo Trading",
-    file: "src/pages/Mt5TradingPage.jsx",
-    css: "src/pages/mt5-trading-page.css",
-    api: [],
-  },
   "/education/candle-patterns": {
     tier: "free",
     review: "approved",
@@ -387,14 +367,6 @@ export const VIEW_META = {
       "GET /api/providers/mt5/positions",
       "GET /api/scoring/ranked",
     ],
-  },
-  "/watchlists/add-symbol": {
-    tier: "free",
-    review: "approved",
-    label: "Add Symbol",
-    file: "src/pages/AddSymbolPage.jsx",
-    css: "src/pages/add-symbol.css",
-    api: [],
   },
   "/research/research-notes": {
     tier: "free",
