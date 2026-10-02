@@ -52,6 +52,10 @@ class _FakeMT5:
         self.terminal = None
         self.account = None
         self.raise_on_terminal_info = False
+        # #1036 — lets a test drive a FAILED reconnect. `initialize()` returning False is how MT5
+        # reports the canary's real error (`-10003 IPC initialize failed, Process create failed`),
+        # and without this switch the failure path could only be read, never exercised.
+        self.initialize_ok = True
 
     def terminal_info(self):
         if self.raise_on_terminal_info:
@@ -68,7 +72,7 @@ class _FakeMT5:
         return (1, 'simulated')
 
     def initialize(self, *a, **k):
-        return True
+        return self.initialize_ok
 
 
 def _terminal(connected):
@@ -76,7 +80,12 @@ def _terminal(connected):
 
 
 def _account():
-    return types.SimpleNamespace(login=10011309743, balance=1272.22, equity=1272.22)
+    # ⚠️ `server` is REQUIRED, not decoration. `connect_mt5()`'s success path logs
+    # `info.login @ info.server`, so a fixture without it raises AttributeError the moment a test
+    # drives a SUCCESSFUL reconnect — which no test did before #1036 added one.
+    return types.SimpleNamespace(
+        login=10011309743, balance=1272.22, equity=1272.22, server='MetaQuotes-Demo',
+    )
 
 
 def load_bridge():
@@ -295,6 +304,92 @@ class LogOnceTest(unittest.TestCase):
         self.fake.terminal = _terminal(False)  # outage again
         self.bridge.detect_server_utc_offset(force=True)
         self.assertEqual(len(warnings), 2, 'the second outage was suppressed')
+
+
+class ReconnectOutcomeRecordTest(unittest.TestCase):
+    """#1036 — a failed reconnect must leave the bridge's own state TRUTHFUL.
+
+    ⚠️ WHY THIS IS TESTED AT ALL, AND WHY IT IS NOT TESTED BY READING THE CODE.
+
+    `reconnect_mt5()` calls `mt5.shutdown()` FIRST, then `connect_mt5()`. When that second call
+    fails, the shutdown has already happened and nothing replaced it — so the bridge is now
+    `terminal-down` **because of its own reconnect attempt**, which is a different fact from the
+    terminal having gone away. Both render as the same `/health`, and that is exactly the
+    plausible-output-no-error shape this repo keeps re-finding.
+
+    ⚠️ HOW TO CANARY THIS CLASS (do it before trusting it).
+      1. Delete the `_RECONNECT_STATE['sessionLeftDown'] = True` line in `reconnect_mt5`.
+         `test_failed_reconnect_records_that_the_session_was_left_down` must FAIL.
+      2. Delete the `= False` reset on the success path.
+         `test_successful_reconnect_clears_session_left_down` must FAIL.
+      Restore byte-for-byte and confirm all pass again.
+
+    ⚠️ WHAT THIS CLASS DOES NOT CLAIM. It says nothing about whether a sibling bridge is affected.
+    #1036's co-outage did NOT reproduce on 2026-10-02, so the record publishes `UNMEASURED` — and
+    the last test pins that, so a later edit cannot quietly turn it into a claim.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.bridge, cls.fake = load_bridge()
+
+    def setUp(self):
+        for key, value in (
+            ('attempts', 0), ('failures', 0), ('lastAttemptAt', None), ('lastResult', None),
+            ('lastError', None), ('lastReason', None), ('sessionLeftDown', False),
+        ):
+            self.bridge._RECONNECT_STATE[key] = value
+        self.fake.initialize_ok = True
+        self.fake.terminal = _terminal(True)
+        self.fake.account = _account()
+        # A tripped breaker short-circuits connect_mt5() before initialize(), which would make the
+        # FAILED case pass for the wrong reason.
+        self.bridge.reset_circuit_breaker()
+
+    def test_failed_reconnect_records_that_the_session_was_left_down(self):
+        self.fake.initialize_ok = False
+        ok, err = self.bridge.reconnect_mt5('canary: forced failure')
+        self.assertFalse(ok)
+        state = self.bridge._RECONNECT_STATE
+        self.assertEqual(state['lastResult'], 'failed')
+        self.assertEqual(state['failures'], 1)
+        self.assertEqual(state['attempts'], 1)
+        self.assertTrue(state['lastError'])
+        self.assertTrue(
+            state['sessionLeftDown'],
+            'a failed reconnect leaves the session down — shutdown() already ran and was not '
+            'replaced; this flag is the only place that connection is recorded',
+        )
+
+    def test_successful_reconnect_clears_session_left_down(self):
+        # Start from a previous FAILURE, so this proves a RESET rather than merely a default.
+        self.bridge._RECONNECT_STATE['sessionLeftDown'] = True
+        self.bridge._RECONNECT_STATE['lastResult'] = 'failed'
+        self.fake.initialize_ok = True
+        ok, _ = self.bridge.reconnect_mt5('canary: forced success')
+        self.assertTrue(ok)
+        state = self.bridge._RECONNECT_STATE
+        self.assertEqual(state['lastResult'], 'ok')
+        self.assertEqual(state['lastError'], None)
+        self.assertFalse(state['sessionLeftDown'])
+
+    def test_attempt_is_recorded_even_when_the_reason_is_the_watchdog(self):
+        # The watchdog calls the SAME function (#992 extracted it for exactly this reason), so an
+        # unattended reconnect must be as visible as a manual one. Otherwise "who asked for this?"
+        # is unanswerable — which is half of what #1036 is about.
+        self.fake.initialize_ok = False
+        self.bridge.reconnect_mt5('watchdog: 3 consecutive bad polls')
+        state = self.bridge._RECONNECT_STATE
+        self.assertIn('watchdog', state['lastReason'])
+        self.assertTrue(state['lastAttemptAt'], 'the attempt must be timestamped')
+
+    def test_the_blast_radius_stays_unmeasured_and_is_never_a_claim(self):
+        # ⚠️ A guard against a FUTURE well-meaning edit. `siblingEffect: False` would read as
+        # "measured safe", which is not something anyone has measured — the co-outage did not
+        # reproduce, which is not the same as proving it cannot happen.
+        self.fake.initialize_ok = False
+        self.bridge.reconnect_mt5('canary')
+        self.assertEqual(self.bridge._RECONNECT_STATE['siblingEffect'], 'UNMEASURED')
 
 
 if __name__ == '__main__':

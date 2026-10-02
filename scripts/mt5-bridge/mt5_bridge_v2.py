@@ -914,6 +914,38 @@ def probe_connection_state():
     return STATE_OK, None
 
 
+# ── Reconnect outcome record (#1036) ─────────────────────────────────────────────────────────
+#
+# ⚠️ WHY A RECORD AND NOT JUST A LOG LINE. `reconnect_mt5()` calls `mt5.shutdown()` FIRST and only
+# then `connect_mt5()`. So a reconnect that FAILS leaves THIS process deliberately without an MT5
+# session — the shutdown already ran and nothing replaced it. Until this existed the only trace was
+# an ERROR line in the Python log plus a `/health` that had gone back to `terminal-down`. Both are
+# TRUE, and together they still cannot say that a reconnect was ATTEMPTED and that the attempt is
+# what left the session down.
+#
+# ⚠️ THE BLAST RADIUS IS UNMEASURED, AND THAT IS WHAT THIS PUBLISHES. #1036 reported that a
+# reconnect on one bridge coincided with EVERY bridge on the terminal dropping. Measured 2026-10-02:
+# the two live bridges do NOT share a terminal (different installs — see `/terminal/info`), and
+# neither a FAILED reconnect nor a SUCCESSFUL reconnect on a bridge sharing a terminal disturbed the
+# other. So the co-outage did not reproduce and its cause is unexplained.
+#
+# The honest output is therefore "this process lost its session; the effect on a sibling is
+# unmeasured" — not silence, and not a diagnosis. A field claiming a known blast radius would be
+# the plausible-number-with-no-error defect this repo keeps re-finding.
+_RECONNECT_STATE = {
+    'attempts': 0,
+    'failures': 0,
+    'lastAttemptAt': None,
+    'lastResult': None,        # 'ok' | 'failed'
+    'lastError': None,
+    'lastReason': None,
+    # True when the last reconnect FAILED: shutdown() ran and no session replaced it.
+    'sessionLeftDown': False,
+    # Deliberately a string, not a bool. `False` would read as "measured safe".
+    'siblingEffect': 'UNMEASURED',
+}
+
+
 def reconnect_mt5(reason):
     """The SAME sequence `POST /reconnect` runs, callable from the watchdog (#992).
 
@@ -922,6 +954,9 @@ def reconnect_mt5(reason):
     warns about most often.
     """
     logger.warning(f'Reconnecting MT5: {reason}')
+    _RECONNECT_STATE['attempts'] += 1
+    _RECONNECT_STATE['lastAttemptAt'] = datetime.now(timezone.utc).isoformat()
+    _RECONNECT_STATE['lastReason'] = reason
     try:
         mt5.shutdown()
     except Exception as err:  # a failed shutdown must not block the re-init
@@ -929,13 +964,27 @@ def reconnect_mt5(reason):
     time.sleep(1)
     ok, err = connect_mt5()
     if ok:
+        _RECONNECT_STATE['lastResult'] = 'ok'
+        _RECONNECT_STATE['lastError'] = None
+        _RECONNECT_STATE['sessionLeftDown'] = False
         info = mt5.account_info()
         logger.warning(
             f'MT5 reconnect SUCCEEDED — account={info.login if info else "?"} '
             f'balance={info.balance if info else "?"}'
         )
         return True, None
-    logger.error(f'MT5 reconnect FAILED: {err}')
+    _RECONNECT_STATE['failures'] += 1
+    _RECONNECT_STATE['lastResult'] = 'failed'
+    _RECONNECT_STATE['lastError'] = str(err)
+    # ⚠️ THE FACT THIS FIELD EXISTS FOR. `shutdown()` has already run and `connect_mt5()` did not
+    # replace it, so the session is gone BECAUSE OF THIS CALL — not merely "also absent".
+    _RECONNECT_STATE['sessionLeftDown'] = True
+    logger.error(
+        f'MT5 reconnect FAILED: {err} — shutdown() ran first and was NOT replaced, so THIS bridge '
+        'now has no MT5 session. Whether a sibling bridge on the same terminal is affected is '
+        'UNMEASURED (#1036); it did not reproduce on 2026-10-02. Remedy: POST '
+        f'http://127.0.0.1:{BRIDGE_PORT}/reconnect after fixing the cause, or start the terminal.'
+    )
     return False, err
 
 
@@ -1288,6 +1337,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'equity': float(acc.equity) if acc else None,
                     'connectionErrors': connection_errors,
                     'circuitBreaker': {'state': circuit_state, 'failures': circuit_failures, 'threshold': CIRCUIT_BREAKER_THRESHOLD, 'cooldown': CIRCUIT_BREAKER_COOLDOWN},
+                    # ⚠️ #1036 — what the last /reconnect (manual OR watchdog) actually did.
+                    # `sessionLeftDown` is true when the attempt FAILED, which means `shutdown()`
+                    # ran and nothing replaced the session: this bridge's own state is now
+                    # `terminal-down` BECAUSE OF a reconnect attempt, and that is otherwise
+                    # indistinguishable from the terminal simply having gone away.
+                    # `siblingEffect` is UNMEASURED rather than a claim — see _RECONNECT_STATE.
+                    'reconnect': dict(_RECONNECT_STATE),
                     # ⚠️ Effective risk limits (#773).
                     #
                     # These are read from the environment at IMPORT (see the constants at the
