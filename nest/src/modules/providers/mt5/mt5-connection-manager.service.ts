@@ -98,6 +98,45 @@ export interface Mt5BrokerInfo {
   connectionStateDetail?: string | null;
   /** The bridge's stated remedy for its own state — `POST .../reconnect`, or "start the terminal". */
   remedy?: string | null;
+  /**
+   * ⚠️ #1035 — the bridge is CONNECTED TO THE WRONG ACCOUNT.
+   *
+   * ⚠️ `connectionState` stays `ok`, and that is deliberate. The session IS up; it is on the wrong
+   * book. The issue's whole point is that "connected but wrong account" and "down" are different
+   * faults needing different remedies — and a bridge on the wrong account is arguably the WORSE of
+   * the two, because the down one REFUSES and the wrong one ACCEPTS. Folding this into
+   * `connectionState` would recreate the conflation this field exists to end.
+   *
+   * ⚠️ MEASURED 2026-10-02, and this is why the field is here at all: the bridge published
+   * `credentialMismatch` on `/health` and **nothing in the API read it** (a grep of `nest/src` for
+   * `credentialMismatch|orderReady` returned nothing). The bridge detected the wrong-account binding,
+   * refused every order, and no surface above it carried the fact. That is the buried-ability shape
+   * — correct behaviour nobody can see — on a money path.
+   */
+  credentialMismatch?: {
+    requestedAccount?: string | null;
+    requestedServer?: string | null;
+    actualAccount?: string | null;
+    actualServer?: string | null;
+    activeSlot?: string | null;
+    reasons?: string[];
+  } | null;
+  /**
+   * ⚠️ #1035 — the bridge's own readiness verdict. `false` when bound to the wrong account, and
+   * every order-placing route then refuses.
+   *
+   * ⚠️ THE REFUSAL IS RAISED BY THE BRIDGE, NOT BY THIS API. Its notice code is registered in
+   * `src/core/notices/registry.js` (frontend), not in `notice-catalogue.ts`, because nothing in
+   * `nest/src` emits it.
+   *
+   * ⚠️ THE CODE IS DELIBERATELY NOT WRITTEN HERE, and that is a lesson rather than a style choice.
+   * `validate-notices.cjs` treats a bare notice code in `nest/src` as a **backend emission** and
+   * fails the prebuild when it is missing from the server catalogue. Naming it in this comment
+   * created a false emitter and turned a green build RED — measured 2026-10-02, on this very
+   * comment. I first attributed that failure to another agent's commit before checking, which is
+   * the same mistake as attributing a fix you did not isolate, in the other direction.
+   */
+  orderReady?: boolean | null;
 }
 
 const BASE_PORT = 5000;
@@ -231,6 +270,10 @@ export class Mt5ConnectionManager {
           connectionState: data?.connectionState ?? null,
           connectionStateDetail: data?.connectionStateDetail ?? null,
           remedy: data?.remedy ?? null,
+          // ⚠️ #1035 — carried up so the wrong-account binding reaches a surface ABOVE the bridge.
+          // Before this the bridge published both fields and the API read neither.
+          credentialMismatch: data?.credentialMismatch ?? null,
+          orderReady: data?.orderReady ?? null,
         };
       }),
     );
