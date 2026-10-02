@@ -135,10 +135,19 @@ export const BOT_RULES: BotRule[] = [
   { field: 'timeframe', label: 'Timeframe', stage: 'scope', enforcement: 'display-only',
     enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
     summary: 'Surfaced on the bot list.',
+    // ⚠️ CORRECTED 2026-10-02 (#917). This caveat said data readiness "compares the PROTOCOL
+    // declared timeframe", which is WRONG and understates the gap: it derives the cadence from
+    // `selectBaseTimeframe(protocol.recommendedTimeframe)` (#908), and `recommendedTimeframe` is
+    // FREE TEXT that is usually a RANGE. So the cadence actually used can be a THIRD value matching
+    // neither the bot nor the protocol string — `5s–30s` resolves to `1m`.
     caveat:
-      '⚠️ NOT used for gating. Data readiness compares the PROTOCOL declared timeframe ' +
-      '(automation-loop readiness annotation), so a bot whose timeframe disagrees with its protocol ' +
-      'is read as ready on the protocol cadence. Label-only until wired.' },
+      '⚠️ NOT used for gating, and this VALUE is never read as a cadence. Data readiness derives ' +
+      'the cadence from the protocol via `selectBaseTimeframe(protocol.recommendedTimeframe)` ' +
+      '(#908) — measured: `5s–30s` resolves to `1m`, so a bot declaring `5m` on that protocol runs ' +
+      'on neither 5m nor 5s–30s. MEASURED 2026-10-02: of 39 active bots 21 matched their protocol ' +
+      'string, 18 did not, 1 protocol declares none; the bulk of the 18 is the RANGE-vs-single-value ' +
+      'artefact rather than 18 defects, which is why the fix is to MAKE THE CADENCE VISIBLE and not ' +
+      'to gate on it — gating would halt 18 of 39 live bots on a rule nobody has validated (#917).' },
 
   // ── routing ─────────────────────────────────────────────────────────────────────────────────
   { field: 'protocolId', label: 'Protocol', stage: 'routing', enforcement: 'display-only',
