@@ -374,4 +374,91 @@ describe('PositionSyncService', () => {
     expect(result.reaped).toBe(0);
     expect(trade.updateMany).not.toHaveBeenCalled();
   });
+
+  /**
+   * ── DURABLE PEAK, WRITTEN FROM THE PRICE ALREADY IN HAND (#998, #1065) ──
+   *
+   * ⚠️ THE PURE RULES ARE TESTED IN `common/trading/peak.spec.ts`. What is guarded HERE is the
+   * PLACEMENT — that the sync tick, which already receives a live broker price for every open
+   * position, is what records the peak.
+   *
+   * That placement is the fix for a real failure: the writer was first put in
+   * `PriceRefreshService.refreshPrices()`, which NOTHING schedules. It was correct, tested,
+   * deployed — and 0 of 26 positions ever got a peak, with no error and no log line. A better unit
+   * test would not have caught that; a test that the CALL SITE runs does.
+   *
+   * ⚠️ CANARY — deleting the `await this.recordPeak(provider, pos)` line from the sync loop fails
+   * the two tests below. Verified against the real tree.
+   */
+  describe('durable peak (#998)', () => {
+    const openPos = (over: Record<string, unknown> = {}) => ({
+      symbol: 'XAUUSD', side: 'buy' as const, quantity: 0.01, avgPrice: 4000,
+      currentPrice: 4010, pnl: 1, sl: null, tp: null, comment: '', openedAt: new Date(),
+      brokerTicket: '7001', ...over,
+    });
+
+    it('⚠️ CANARY — raises the stored peak from the broker price the tick already holds', async () => {
+      position.findFirst.mockResolvedValue({ id: 'pos-1', peakPrice: 4005, peakProfitPct: 0.125 });
+      position.findMany.mockResolvedValue([]);
+
+      await service.syncPositions('mt5', [openPos({ currentPrice: 4010 })], { authoritative: true });
+
+      const peakWrite = position.update.mock.calls
+        .map((c: any[]) => c[0])
+        .find((a: any) => a?.data && ('peakPrice' in a.data || 'peakProfitPct' in a.data));
+      expect(peakWrite).toBeDefined();
+      expect(peakWrite.data.peakPrice).toBe(4010);
+      // (4010 - 4000) / 4000 * 100
+      expect(peakWrite.data.peakProfitPct).toBeCloseTo(0.25, 6);
+    });
+
+    it('⚠️ CANARY — a LOWER later price does not lower the peak, so nothing is written', async () => {
+      position.findFirst.mockResolvedValue({ id: 'pos-1', peakPrice: 4050, peakProfitPct: 1.25 });
+      position.findMany.mockResolvedValue([]);
+
+      await service.syncPositions('mt5', [openPos({ currentPrice: 4010 })], { authoritative: true });
+
+      const peakWrite = position.update.mock.calls
+        .map((c: any[]) => c[0])
+        .find((a: any) => a?.data && ('peakPrice' in a.data || 'peakProfitPct' in a.data));
+      expect(peakWrite).toBeUndefined();
+
+      // ⚠️ POSITIVE CONTROL — WITHOUT THIS THE TEST PROVES NOTHING.
+      //
+      // Measured 2026-10-02, on this very test: with the `recordPeak` call REMOVED from the sync
+      // loop, this test still PASSED — "no peak was written" is trivially true when the writer is
+      // gone. An absence-only assertion cannot tell "correctly declined to move the peak" apart
+      // from "the feature does not exist", which is exactly the buried-ability failure (#1065) it
+      // was written to guard.
+      //
+      // So assert the READER RAN. A peak that was considered and declined is a decision; a peak
+      // that was never read is a missing feature — and only this assertion separates them.
+      expect(position.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ select: expect.objectContaining({ peakPrice: true }) }),
+      );
+    });
+
+    it('an UNPRICED position is skipped — it never invents or erases a peak', async () => {
+      position.findFirst.mockResolvedValue({ id: 'pos-1', peakPrice: 4050, peakProfitPct: 1.25 });
+      position.findMany.mockResolvedValue([]);
+
+      await service.syncPositions('mt5', [openPos({ currentPrice: 0 })], { authoritative: true });
+
+      const peakWrite = position.update.mock.calls
+        .map((c: any[]) => c[0])
+        .find((a: any) => a?.data && ('peakPrice' in a.data || 'peakProfitPct' in a.data));
+      expect(peakWrite).toBeUndefined();
+      expect(position.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('a peak failure NEVER breaks the sync — it warns and the loop continues', async () => {
+      position.findFirst.mockRejectedValue(new Error('peak boom'));
+      position.findMany.mockResolvedValue([]);
+
+      const result = await service.syncPositions('mt5', [openPos()], { authoritative: true });
+
+      // The measurement failed; the SYNC did not.
+      expect(result.synced).toBe(1);
+    });
+  });
 });

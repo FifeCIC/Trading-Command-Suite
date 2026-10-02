@@ -134,29 +134,33 @@ asserts the file set matches — because a command reporting success is a claim,
 file list is the evidence, and (3) reports anything staged that it is deliberately skipping. A named
 file with **no changes is refused**: naming a file claims it changed.
 
-### Commit cadence — one commit per logical change, and do not narrate it
+### Commit cadence — BATCH, and do not narrate it
 
-**Measured 2026-09-23:** 41 commits in 4.5 hours across all agents; **18** of them ≤2 minutes
-apart; 10 touched a single file. That is not agent indiscipline — three instruction files each
-*independently* force a commit (`change-completion` says land the code; the handoff rule said bump
-the version on every handoff; the close checklist says comment). One logical change therefore
-emitted six artefacts.
+> **Owner instruction, 2026-10-02:** *"I do not mind commits not happening straight away and agent
+> AI goes on about it too much. I commit manually myself 2-3 times a day… Maybe change the rules to
+> commit every 4 hours."*
 
-**The cost is the owner's attention, and attention is the safety net here.** Every rule in this repo
-rests on a human reading the evidence. A commit every 3 minutes trains that reader to skim — and a
-skimmed evidence trail is the same as no evidence trail. **Noise is a correctness problem here, not
-a cosmetic one.**
+**Agents do not commit per change.** The owner commits manually 2–3× a day. Uncommitted work is
+normal and expected here — do not treat it as a hazard, and do not mention it.
+
+**Why (measured 2026-09-23):** 41 commits in 4.5 hours across all agents; **18** of them ≤2 minutes
+apart; 10 touched a single file. Three instruction files each *independently* forced a commit, so
+one logical change emitted six artefacts. **The cost is the owner's attention — and a commit every
+3 minutes trains that reader to skim, which is the same as no evidence trail at all.**
 
 | Do | Don't |
 |---|---|
-| **One commit per logical change** — the files that only make sense together | A commit per file edit, or per green test |
-| Commit when the change is **complete and gated** | Commit intermediate states "to be safe" |
-| Commit **quietly** — report the SHA once, in the final summary | Echo `git log` / `git status` / `git show` output into the transcript |
-| Let the **closed issue + handoff** carry the narrative | Re-tell the same change in commit body, chat, and handoff |
+| Let changes **accumulate**; commit at a **~4-hour cadence at most** | A commit per issue, per file edit, or per green test |
+| Commit **silently** — at most one line naming the SHA, in the final summary | Echo `git log` / `git status` / `git diff --cached` into the transcript |
+| Let the **closed issue + handoff** carry the narrative | Narrate the commit in chat, then again in the handoff, then again in the commit body |
 
-**The one exception — commit early if another agent must build on it.** A file that does not compile
-makes the shared build red for everyone and blocks a concurrent agent from starting. If you commit
-mid-change for that reason, say so in one line.
+**The one exception — commit now if another agent is blocked.** A file that does not compile makes
+the shared build red for everyone and blocks a concurrent agent from starting. Say so in one line
+and move on.
+
+⚠️ **Batching does NOT relax the wrapper.** When you do commit, still use `commit-only.cjs` with
+explicit paths below — batching makes the shared-index trap *more* likely, not less, because more of
+your uncommitted work is sitting where another agent's `git add` can reach it.
 
 ⚠️ **Committing often is not the same as committing safely.** A commit is evidence that the change
 was gated — it is not a substitute for gating it (`change-completion.instructions.md`).
@@ -283,8 +287,26 @@ npm --prefix C:\wamp64\www\trading-command-suite\nest run build -SkipRestart   #
 start** rather than emitting the confusing EPERM — you get the PID, the command line, and the
 fix.
 
-**TypeScript only, no Prisma?** `npx tsc -p tsconfig.build.json --noEmit` works with the API
-running and is enough to verify a `.ts` change type-checks.
+**TypeScript only, no Prisma?** Use the npm script — it is cwd-safe:
+
+```powershell
+npm --prefix C:\wamp64\www\trading-command-suite\nest run typecheck
+```
+
+⚠️ **`npx tsc` FROM THE REPO ROOT DOES NOT RUN A TYPECHECK — IT DOWNLOADS THE WRONG PACKAGE.**
+Measured 2026-10-02: `npx tsc -p nest\tsconfig.build.json --noEmit` from the repo root printed
+`Need to install the following packages: tsc@2.0.4` and exited **-1**. There is a `tsc` package on
+npm that is **not** the TypeScript compiler, and npx resolved to it because the root has no local
+`tsc` binary to prefer. So:
+
+| Symptom | What it actually means |
+|---|---|
+| `Need to install the following packages: tsc@2.0.4` | **the typecheck never ran** — you are in the wrong directory |
+| exit **-1** | **the typecheck never ran** — this is NOT a compile failure and NOT a pass |
+
+A `-1` is the most dangerous of the three, because "non-zero" reads as "the code has errors" and
+sends the reader to fix code that may be fine. Run it from `nest/`, or use the script above, which
+cannot be got wrong. The **build** (`build:api`) also typechecks, so it is the authoritative gate.
 
 ⚠️ Don't confuse this with the frontend — `npm run build` **from the repo root** is Vite and
 involves no Prisma, so it works with everything running.

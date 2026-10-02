@@ -11,7 +11,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
-import { nextPeak, peakProfitPctFor } from '../../common/trading/peak';
 
 @Injectable()
 export class PriceRefreshService {
@@ -41,14 +40,6 @@ export class PriceRefreshService {
         if (!livePrice) continue;
 
         const changed = await this.maybeUpdateStoredPrice(symbol, livePrice.price);
-
-        // ⚠️ CALLED UNCONDITIONALLY, AND DELIBERATELY NOT INSIDE maybeUpdateStoredPrice().
-        // That method SKIPS its write when the move is under WRITE_THRESHOLD_PCT (0.1%), which is
-        // a sensible economy for a LAST price and a silent corruption of a PEAK: a maximum that
-        // can miss small increments is UNDERSTATED, and an understated peak makes every
-        // "did we give back profit?" answer read slightly too well. See #998.
-        await this.recordPeaks(symbol, livePrice.price);
-
         refreshed.push({
           symbol,
           price: livePrice.price,
@@ -107,60 +98,21 @@ export class PriceRefreshService {
   }
 
   /**
-   * recordPeaks() — write the durable high-water mark for every OPEN position on this symbol (#998).
+   * ⚠️ THE PEAK IS NOT RECORDED HERE — see `PositionSyncService.recordPeak()`. (#998, #1065)
    *
-   * BEFORE: a position's best price existed only as an in-memory Map in the StopGuardian
-   * (`simTslWatermark`), declared ephemeral in its own comment, and gated behind `simTslEnabled`
-   * — a flag ZERO of 39 bots had set. So the give-back measured for #998 had to be RECONSTRUCTED
-   * from `marketbar` highs, which is an indication rather than a record, and every future answer
-   * would move as the bar data moved.
+   * It was, briefly. This service is reachable ONLY from `market-data.controller.ts` (an HTTP
+   * endpoint) and the import orchestrator, and **nothing schedules it** — so the writer was
+   * correct, tested, deployed, and never ran. Measured after that deploy: **0 of 26 positions had
+   * a peak**, with no error and no log line. A buried ability.
    *
-   * AFTER: `peakPrice` + `peakProfitPct` are stored on the position row, written on EVERY refresh,
-   * independently of any exit control being armed.
+   * It moved to `PositionSyncService` because that loop already holds a LIVE broker `currentPrice`
+   * for every open position, on a cadence that actually runs.
    *
-   * ⚠️ WHY IT IS A SEPARATE METHOD and not folded into maybeUpdateStoredPrice(). Merging the two
-   * looks like a tidy saving of one query per symbol, and it would put the peak write behind the
-   * 0.1% threshold `continue` — the defect this method exists to avoid. If you are optimising
-   * here, the saving is available only by keeping the peak write OUTSIDE the gate.
-   *
-   * ⚠️ WHY NOT IN `position-sync`. That service UPSERTS the whole position row from the broker
-   * each poll, and its `update` block names a fixed field list. Writing a peak there would be
-   * fine (the columns are deliberately absent from that list) but it runs on the broker's cadence
-   * and would miss intra-poll excursions — which is precisely the data a peak is FOR.
+   * ⚠️ DO NOT ADD IT BACK HERE. A second price fetch for a price the sync loop already asked for is
+   * the duplication the owner's principle names — and two sources for one field can disagree.
+   * If this service ever gains a real cadence, the correct move is still to record the peak at the
+   * SINGLE place that receives the broker's price, not to add a second writer.
    */
-  private async recordPeaks(symbol: string, newPrice: number): Promise<void> {
-    if (!this.prisma.isAvailable) return;
-
-    try {
-      const positions = await this.prisma.position.findMany({
-        where: { symbol },
-        select: { id: true, side: true, avgPrice: true, peakPrice: true, peakProfitPct: true },
-      });
-
-      for (const pos of positions as any[]) {
-        const peakPrice = nextPeak(pos.peakPrice, newPrice);
-        const peakProfitPct = peakProfitPctFor(pos.peakProfitPct, pos.side, pos.avgPrice, newPrice);
-
-        // Only write when the record actually MOVES. A monotonic field that is re-written with an
-        // unchanged value every refresh is pure write amplification on a hot path.
-        const priceMoved = peakPrice != null && peakPrice !== pos.peakPrice;
-        const pctMoved = peakProfitPct != null && peakProfitPct !== pos.peakProfitPct;
-        if (!priceMoved && !pctMoved) continue;
-
-        await this.prisma.position.update({
-          where: { id: pos.id },
-          data: {
-            ...(priceMoved ? { peakPrice } : {}),
-            ...(pctMoved ? { peakProfitPct } : {}),
-          },
-        });
-      }
-    } catch (err) {
-      // A peak is a RECORD, not a risk control: failing to write one must never break a price
-      // refresh. Warn and continue rather than throwing into the caller's loop.
-      this.logger.warn(`Failed to record peak for ${symbol}: ${(err as Error).message}`);
-    }
-  }
 
   /**
    * Update the stored Position.currentPrice only if the change exceeds

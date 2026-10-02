@@ -23,6 +23,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { AdapterFactory } from './adapter-factory';
 import { CLOSE_REASONS, closeReasonFromComment, closeReasonFromDealReason } from '../../common/trading/close-reason';
+import { nextPeak, peakProfitPctFor } from '../../common/trading/peak';
 import { resolveStrategyForClose } from './mt5-comment.util';
 // #1014 — the volume split that makes storing the POSITION id safe. Without it, N rows carrying one
 // `positionId` would EACH book the position's whole net (a 4x overstatement on a 4-order scale-in).
@@ -124,6 +125,22 @@ export class PositionSyncService {
         }
         synced++;
 
+        // ── DURABLE PEAK (#998) — recorded HERE because the price is ALREADY IN HAND ──
+        //
+        // Owner direction, 2026-10-02: *"using what has already been imported and importing a
+        // primary source that satisfies many other things."* This loop already holds a LIVE broker
+        // `currentPrice` for every open position, on a cadence that actually runs.
+        //
+        // The first placement of this write was `PriceRefreshService.refreshPrices()` — which is
+        // reachable ONLY from an HTTP endpoint and the import orchestrator, and is scheduled by
+        // NOTHING. Measured after deploying it: 0 of 26 positions had a peak, with no error and no
+        // log line. A correct, tested writer that never runs is a buried ability (#1065).
+        //
+        // ⚠️ MOVING IT WAS THE FIX, NOT SCHEDULING A SECOND PRICE FETCH. A separate timer would
+        // have paid a provider call for a price this loop already asked for — the duplication the
+        // owner's principle names, and a second source that can disagree with the first.
+        await this.recordPeak(provider, pos);
+
         // 2. Link to — or CREATE — the Trade record for this position.
         created += await this.reconcileTrade(provider, pos);
       }
@@ -180,6 +197,56 @@ export class PositionSyncService {
     } catch (err) {
       this.logger.warn(`[${provider}] Position sync failed: ${(err as Error).message}`);
       return { synced: 0, created: 0, closed: 0, reaped: 0 };
+    }
+  }
+
+  /**
+   * recordPeak() — the durable high-water mark, written from the price the broker just gave us (#998).
+   *
+   * Runs immediately after the upsert, so the row exists and carries `peakPrice`/`peakProfitPct`
+   * from the previous tick. The arithmetic lives in `common/trading/peak.ts` — pure, and tested
+   * without a bridge, a database or a clock.
+   *
+   * ⚠️ IT WRITES ONLY WHEN THE RECORD MOVES. A monotonic field re-written with an unchanged value
+   * every tick is write amplification on a hot path, and this loop runs for every open position on
+   * every sync.
+   *
+   * ⚠️ IT MUST NEVER BREAK THE SYNC. A peak is a RECORD, not a risk control. `.catch()` and a warn
+   * line, never a throw into the caller — a failed measurement must not stop positions syncing.
+   *
+   * ⚠️ AN UNPRICED POSITION IS SKIPPED, NOT RECORDED AS ZERO. `currentPrice` null/0/NaN means
+   * "the broker did not price it", and feeding that to `nextPeak()` as a number would either lower
+   * a peak or invent one. Skipping leaves the previous peak standing, which is the honest state.
+   */
+  private async recordPeak(provider: string, pos: BrokerPosition): Promise<void> {
+    const price = Number(pos.currentPrice);
+    if (pos.currentPrice == null || !Number.isFinite(price) || price <= 0) return;
+
+    try {
+      const row: any = await (this.prisma as any).position.findFirst({
+        where: pos.brokerTicket
+          ? { provider, brokerTicket: pos.brokerTicket }
+          : { provider, symbol: pos.symbol, brokerTicket: null },
+        select: { id: true, peakPrice: true, peakProfitPct: true },
+      });
+      if (!row) return;
+
+      const peakPrice = nextPeak(row.peakPrice, price);
+      const peakProfitPct = peakProfitPctFor(row.peakProfitPct, pos.side, pos.avgPrice, price);
+
+      const priceMoved = peakPrice != null && peakPrice !== row.peakPrice;
+      const pctMoved = peakProfitPct != null && peakProfitPct !== row.peakProfitPct;
+      if (!priceMoved && !pctMoved) return;
+
+      await (this.prisma as any).position.update({
+        where: { id: row.id },
+        data: {
+          ...(priceMoved ? { peakPrice } : {}),
+          ...(pctMoved ? { peakProfitPct } : {}),
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`[${provider}] ${pos.symbol}: peak not recorded — ${(err as Error).message}`);
     }
   }
 
