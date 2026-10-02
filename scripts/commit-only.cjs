@@ -162,9 +162,24 @@ function main() {
     die('not inside a git repository', 'run this from the repo root');
   }
 
+  // ⚠️ A path that is ABSENT is either a DELETION or a typo, and the two are told apart by EVIDENCE
+  // rather than assumed. `git cat-file -e HEAD:<path>` answers it: HEAD holds the path and the
+  // working tree does not ⇒ a deletion to commit. Absent from BOTH ⇒ still a typo.
+  // Added 2026-10-02: the Execution Queue split produced `D src/pages/ExecutionQueuePage.jsx` and
+  // this script REFUSED it, so a real deletion could not go through the safe path at all.
   for (const p of files) {
-    if (!fs.existsSync(path.resolve(REPO_ROOT, p))) {
-      die(`${p} does not exist`, 'a named path that is absent is a typo, not a deletion to commit');
+    if (fs.existsSync(path.resolve(REPO_ROOT, p))) continue;
+    let inHead = true;
+    try {
+      git(['cat-file', '-e', `HEAD:${p}`]);
+    } catch {
+      inHead = false;
+    }
+    if (!inHead) {
+      die(
+        `${p} does not exist and is not in HEAD`,
+        'a named path absent from BOTH the working tree and HEAD is a typo, not a deletion',
+      );
     }
   }
 
@@ -362,6 +377,18 @@ function selfTest() {
     say(
       freshBack.length === 1 && freshBack[0] === 'brand-new.js',
       'and the commit contains only it',
+    );
+
+    // (7) A DELETION must commit. Case (5) covers the TYPO; this covers the deletion, and they are
+    //     the same input shape — an absent path. Evidence separates them: present in HEAD ⇒ a
+    //     deletion, absent from both ⇒ a typo. Added 2026-10-02 after a real deletion was refused.
+    fs.rmSync(path.join(tmp, 'brand-new.js'));
+    const del = cli(['-m', 'delete brand-new', '--', 'brand-new.js']);
+    say(del.code === 0, 'a DELETED file commits (absent from the tree, present in HEAD)');
+    const delBack = g(['show', '--name-only', '--format=', 'HEAD']).split('\n').filter(Boolean);
+    say(
+      delBack.length === 1 && delBack[0] === 'brand-new.js',
+      'and the deletion commit contains only it',
     );
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

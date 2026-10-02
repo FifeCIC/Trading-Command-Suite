@@ -102,6 +102,9 @@ export const NAV_TREE = {
       { id: 'protocol-trail', label: 'Protocol Trail', icon: '🔗' },
       { id: 'directive-viewer', label: 'Directive Viewer', icon: '🔍' },
       { id: 'dual-protocol-inspector', label: 'Dual-Protocol Inspector', icon: '🔬' },
+      // MOVED from /automation/execution-queue 2026-10-02 (owner: "put the Protocol Queue somewhere
+      // in the Protocol area"). ⚠️ This is the ONLY surface that can CANCEL a queued protocol run.
+      { id: 'protocol-queue', label: 'Protocol Queue', icon: '🏗' },
     ],
   },
   // ── Scoring area (/scoring/ prefix) ──
@@ -183,7 +186,6 @@ export const NAV_TREE = {
     views: [
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
       { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
-      { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
       { id: 'automation-rules', label: 'Automation Rules', icon: '⚙' },
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],
@@ -218,6 +220,9 @@ export const NAV_TREE = {
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
+      // MOVED from /automation/execution-queue 2026-10-02 (owner: "Schedule Jobs in the Status
+      // area"). The `scheduled_job` table is machinery health — what is due, what failed.
+      { id: 'scheduled-jobs', label: 'Scheduled Jobs', icon: '🗓' },
     ],
   },
   // ── Lab — the theory & data playground ──

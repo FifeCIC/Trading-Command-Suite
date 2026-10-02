@@ -69,7 +69,6 @@ import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 // ── Automation ──
 import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
 import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
-import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 
 // ── Research ──
 import ResearchNotesPage from '../pages/ResearchNotesPage.jsx';
@@ -100,6 +99,10 @@ import BtcSpeedTradingPage from '../pages/BtcSpeedTradingPage.jsx';
 // not remove the import the other still needs. The script now checks whether any surviving map
 // entry still names the component before touching its import line.
 import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
+// Moved out of the deleted /automation/execution-queue page, 2026-10-02 — the owner asked for the
+// Protocol Queue tab to live in Protocols and the Scheduled Jobs tab in Status.
+import ProtocolQueuePage from '../pages/ProtocolQueuePage.jsx';
+import ScheduledJobsPage from '../pages/ScheduledJobsPage.jsx';
 import Mt5StatusPage from '../pages/Mt5StatusPage.jsx';
 import T212PortfolioPage from '../pages/T212PortfolioPage.jsx';
 import T212ISAPage from '../pages/T212ISAPage.jsx';
@@ -236,6 +239,8 @@ export const VIEW_COMPONENTS = {
   'strategy-library': StrategyLibraryPage,
   'mt5-trading': Mt5TradingPage,
   'mt5-status': Mt5StatusPage,
+  'protocol-queue': ProtocolQueuePage,
+  'scheduled-jobs': ScheduledJobsPage,
 
   // Scoring
   'directives-registry': DirectivesManagerPage,
@@ -265,7 +270,6 @@ export const VIEW_COMPONENTS = {
   // Automation
   'automation-dashboard': AutomationDashboardPage,
   'automation-rules': AutomationRulesPage,
-  'execution-queue': ExecutionQueuePage,
   'alert-center': AlertCenterPage,
   'risk-controls': RiskControlsPage,
 

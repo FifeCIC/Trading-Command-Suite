@@ -6,7 +6,7 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 38 view(s) · 36 component(s) · 108 premium entry(ies) excluded.
+ * 39 view(s) · 37 component(s) · 108 premium entry(ies) excluded.
  */
 
 // ── Free pages ──
@@ -20,7 +20,6 @@ import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import EarningsCalendarPage from '../pages/EarningsCalendarPage.jsx';
 import EventsCalendarPage from '../pages/EventsCalendarPage.jsx';
-import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 import GlossaryPage from '../pages/GlossaryPage.jsx';
 import MarketContextPage from '../pages/MarketContextPage.jsx';
 import MarketCorrelationsPage from '../pages/MarketCorrelationsPage.jsx';
@@ -29,9 +28,11 @@ import NewsIntelPage from '../pages/NewsIntelPage.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
+import ProtocolQueuePage from '../pages/ProtocolQueuePage.jsx';
 import RecentlyAnalysedSymbolsPage from '../pages/RecentlyAnalysedSymbolsPage.jsx';
 import ResearchNotesPage from '../pages/ResearchNotesPage.jsx';
 import RiskControlsPage from '../pages/RiskControlsPage.jsx';
+import ScheduledJobsPage from '../pages/ScheduledJobsPage.jsx';
 import ScreenerPage from '../pages/ScreenerPage.jsx';
 import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
@@ -61,7 +62,6 @@ export const VIEW_COMPONENTS = {
   'dashboard': DashboardPage,
   'earnings-calendar': EarningsCalendarPage,
   'events-calendar': EventsCalendarPage,
-  'execution-queue': ExecutionQueuePage,
   'glossary': GlossaryPage,
   'market-context': MarketContextPage,
   'market-correlations': MarketCorrelationsPage,
@@ -70,9 +70,11 @@ export const VIEW_COMPONENTS = {
   'performance-lab': PerformanceLabPage,
   'positions-monitor': PositionsMonitorPage,
   'preference-lab': PreferenceLab,
+  'protocol-queue': ProtocolQueuePage,
   'recently-analysed-symbols': RecentlyAnalysedSymbolsPage,
   'research-notes': ResearchNotesPage,
   'risk-controls': RiskControlsPage,
+  'scheduled-jobs': ScheduledJobsPage,
   'screener': ScreenerPage,
   'settings': SettingsPage,
   'settings-education': SettingsEducationPage,

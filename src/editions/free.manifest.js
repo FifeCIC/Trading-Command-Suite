@@ -6,7 +6,7 @@
  * Check freshness:  node scripts/generate-free-manifest.cjs --check
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3)
  *
- * 40 free · 77 premium · 117 total
+ * 41 free · 77 premium · 118 total
  */
 export const FREE_MANIFEST = {
   generatedFrom: 'src/core/view-meta.js',
@@ -14,13 +14,13 @@ export const FREE_MANIFEST = {
     '/automation/alert-center',
     '/automation/automation-dashboard',
     '/automation/automation-rules',
-    '/automation/execution-queue',
     '/dashboard',
     '/dashboard/dashboard',
     '/education/candle-patterns',
     '/education/candle-patterns-guide',
     '/education/glossary',
     '/education/settings-education',
+    '/protocols/protocol-queue',
     '/research/earnings-calendar',
     '/research/events-calendar',
     '/research/market-correlations',
@@ -37,6 +37,7 @@ export const FREE_MANIFEST = {
     '/settings/theme-packs',
     '/settings/trading-settings',
     '/settings/user-preferences',
+    '/status/scheduled-jobs',
     '/status/setup',
     '/trading/calculators',
     '/trading/market-context',

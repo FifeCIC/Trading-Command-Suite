@@ -1,7 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { formatDuration, timeAgo } from '../core/format-utils';
+import { decisionScore } from '../core/decision-score';
 import './trade-journal-page.css';
+// ⚠️ RENAMED from execution-queue.css (2026-10-02). The Execution Queue page was DELETED — its
+// Live Events feed moved here, its Protocol Queue tab to /protocols/protocol-queue and its Scheduled
+// Jobs tab to /status/scheduled-jobs — so this stylesheet is now shared by three survivors and
+// belongs to no single page. The name follows the mechanism, not the page that used to own it.
+import './queue-ui.css';
 
 /**
  * Map a Trade row (the app's own audit trail — /api/trading/trade-history)
@@ -61,6 +68,56 @@ function mapTradeToEntry(t) {
   };
 }
 
+// ── Activity events ─────────────────────────────────────────────────────
+//
+// ⚠️ ABSORBED from the Execution Queue's "Live Events" tab, 2026-10-02. That page was the ONLY
+// surface that showed a BLOCKED signal — a symbol that was scored and then REFUSED. Deleting it
+// without moving this feed would have removed the ability to see a refusal, which is precisely the
+// case where nothing else in the app reports anything at all.
+const STATUS_COLORS = {
+  queued: '#f59e0b', running: '#3b82f6', complete: '#22c55e', failed: '#ef4444', cancelled: '#94a3b8',
+  success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b',
+  EXECUTED: '#22c55e', FAILED: '#ef4444', SCORED: '#8b5cf6', SKIP: '#94a3b8', BLOCKED: '#ef4444',
+  // #971 — an observation (no consumer). Same muted slate as SKIP: it states an absence of action,
+  // and it must not read as a signal that did something.
+  OBSERVED: '#94a3b8',
+};
+
+const EVENT_TYPE_STYLE = {
+  automation: { bg: '#3b82f618', border: '#3b82f6', label: 'Tick', icon: '⟳' },
+  decision: { bg: '#8b5cf618', border: '#8b5cf6', label: 'Decision', icon: '⚡' },
+  protocol: { bg: '#f59e0b18', border: '#f59e0b', label: 'Protocol', icon: '🏗' },
+};
+
+/** One row of the absorbed Live Events feed. Markup unchanged from the Execution Queue page. */
+function ActivityRow({ event }) {
+  const style = EVENT_TYPE_STYLE[event.type] || EVENT_TYPE_STYLE.automation;
+  const statusColor = STATUS_COLORS[event.status] || '#94a3b8';
+  return (
+    <div className="eq-event-row">
+      <div className="eq-event-left" style={{ borderColor: style?.border }}>
+        <span className="eq-event-type-badge" style={{ background: style?.bg, color: style?.border }}>
+          {style?.icon} {style?.label}
+        </span>
+        <span className="eq-event-time">{timeAgo(event.timestamp)}</span>
+        {event.symbol && <span className="eq-event-symbol">{event.symbol}</span>}
+      </div>
+      <div className="eq-event-main">
+        <span className="eq-event-task">{event.taskName}</span>
+        {event.detail && <span className="eq-event-detail">{event.detail}</span>}
+      </div>
+      <div className="eq-event-right">
+        <span className="eq-event-status" style={{ color: statusColor, borderColor: statusColor }}>{event.status}</span>
+        {event.durationMs > 0 && <span className="eq-event-dur">{formatDuration(event.durationMs)}</span>}
+        {/* #909 — unit-aware score (raw / percentage / historical-untyped), or nothing at all. */}
+        {decisionScore(event).text && (
+          <span className="eq-event-composite" title={decisionScore(event).title || undefined}>{decisionScore(event).text}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TradeJournalPage() {
   const [analyzing, setAnalyzing] = useState(null);
 
@@ -74,6 +131,37 @@ export default function TradeJournalPage() {
 
   const trades = historyQuery.data?.trades || [];
   const entries = useMemo(() => trades.map(mapTradeToEntry), [trades]);
+
+  // ── Activity: the Live Events feed absorbed from the Execution Queue page (2026-10-02) ──
+  const [view, setView] = useState('trades'); // trades | activity | all
+  const [hideBlocked, setHideBlocked] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const eventsQuery = useQuery({
+    queryKey: ['journal-activity-events'],
+    queryFn: () => apiGet('/api/automation/events?limit=100').catch(() => ({ events: [] })),
+    refetchInterval: 5000,
+  });
+  const loopQuery = useQuery({
+    queryKey: ['journal-automation-status'],
+    queryFn: () => apiGet('/api/automation/status').catch(() => null),
+    refetchInterval: 15_000,
+  });
+
+  const events = eventsQuery.data?.events || [];
+  const loopStatus = loopQuery.data || null;
+  const eventStats = { automation: 0, decision: 0, total: events.length };
+  for (const e of events) eventStats[e.type] = (eventStats[e.type] || 0) + 1;
+
+  // ⚠️ `hideBlocked` defaults OFF on purpose. BLOCKED is the most common refusal, and hiding it by
+  // default would make the journal read as though everything executed. The owner asked for the
+  // CONTROL ("Create controls for filtering journal entries including filter out BLOCKED signals"),
+  // not for a different default.
+  const activity = useMemo(() => events.filter((e) => {
+    if (hideBlocked && e.status === 'BLOCKED') return false;
+    if (statusFilter !== 'all' && e.status !== statusFilter) return false;
+    return true;
+  }), [events, hideBlocked, statusFilter]);
 
   // ── Compute stats from real data ──
   const stats = useMemo(() => {
@@ -141,6 +229,33 @@ export default function TradeJournalPage() {
         <p>Every closed trade now names <strong>who closed it</strong> — stop loss, take profit, time stop, the app, or the desktop terminal — taken from the broker's closing deal (#916).</p>
         <p className="tj-privacy">Source: <strong>database</strong> (live MT5 deals are shown on Trade History).</p>
       </header>
+
+      {/* ── Primary Loop (absorbed from the Execution Queue's `.eq-routine`) ──
+          ⚠️ `execution.willPlaceRealOrders` is the EFFECTIVE state and is kept verbatim, because the
+          layer flag ALONE once showed "🟢 Trading" while every dispatch was being diverted to paper
+          — which hid a months-long throughput collapse. The owner asked for "some of the stats"; the
+          per-step tick sequence stays with the dashboard's automation controls. */}
+      {loopStatus && (
+        <section className="eq-routine">
+          <div className="eq-routine-head">
+            <span className={`eq-routine-dot ${loopStatus.loopEnabled ? 'eq-on' : 'eq-off'}`} />
+            <strong>Primary Loop</strong>
+            <span className="eq-routine-chip">⟳ every {loopStatus.tickIntervalMs ? formatDuration(loopStatus.tickIntervalMs) : '—'}</span>
+            <span className="eq-routine-chip">Tick #{loopStatus.tickCount ?? 0}</span>
+            <span className="eq-routine-chip">last tick {formatDuration(loopStatus.lastTickMs)}</span>
+            <span className="eq-routine-chip">risk ×{loopStatus.globalRiskMultiplier ?? 1}</span>
+            {loopStatus.execution && (
+              <span
+                className={`eq-routine-chip ${loopStatus.execution.willPlaceRealOrders ? 'eq-on' : 'eq-off'}`}
+                title={`layer tradingEnabled=${loopStatus.execution.layerTradingEnabled}; brokers=${Object.entries(loopStatus.execution.brokerTradingEnabled || {}).map(([id, on]) => `${id}=${on}`).join(', ')}`}
+              >
+                {loopStatus.execution.willPlaceRealOrders ? '⚡ Real orders' : `🧾 ${loopStatus.execution.mode}`}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
       {stats.totalTrades > 0 && (
         <div className="tj-stats">
           <div className="tj-stat-card"><span className="tj-stat-num">{stats.totalTrades}</span><span>Total</span></div>
@@ -169,6 +284,41 @@ export default function TradeJournalPage() {
           )}
         </div>
       )}
+      {/* View switcher — the journal now carries TWO kinds of row: reconciled trades (its own data)
+          and the activity feed absorbed from the Execution Queue. The owner's instruction was that
+          this becomes "essentially a journal of most activity, even rejected trades". */}
+      <div className="eq-tabs">
+        <button className={`eq-tab ${view === 'trades' ? 'eq-tab-active' : ''}`} onClick={() => setView('trades')}>
+          ▤ Trades <span className="eq-tab-count">{entries.length}</span>
+        </button>
+        <button className={`eq-tab ${view === 'activity' ? 'eq-tab-active' : ''}`} onClick={() => setView('activity')}>
+          ⟳ Activity <span className="eq-tab-count">{events.length}</span>
+        </button>
+        <button className={`eq-tab ${view === 'all' ? 'eq-tab-active' : ''}`} onClick={() => setView('all')}>
+          ▤⟳ All
+        </button>
+      </div>
+
+      {view !== 'trades' && (
+        <div className="eq-event-stats">
+          <span className="eq-event-stat-chip">⟳ Automation: <b>{eventStats.automation}</b></span>
+          <span className="eq-event-stat-chip">⚡ Decisions: <b>{eventStats.decision}</b></span>
+          <span className="eq-event-stat-chip">📋 Total: <b>{eventStats.total}</b></span>
+          <label className="eq-event-stat-chip" style={{ cursor: 'pointer' }}>
+            <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} /> Hide BLOCKED
+          </label>
+          <label className="eq-event-stat-chip">
+            Status{' '}
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              {['all', 'EXECUTED', 'BLOCKED', 'SKIP', 'FAILED', 'SCORED', 'OBSERVED'].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {view !== 'activity' && (
       <div className="tj-entries">
         {historyQuery.isLoading && <p>Loading trades from the audit trail...</p>}
         {!historyQuery.isLoading && entries.length === 0 && (
@@ -214,6 +364,19 @@ export default function TradeJournalPage() {
           );
         })}
       </div>
+      )}
+
+      {view !== 'trades' && (
+        <div className="tj-entries">
+          {eventsQuery.isLoading && <p>Loading activity...</p>}
+          {!eventsQuery.isLoading && activity.length === 0 && (
+            <div className="tj-empty">
+              <p>{events.length === 0 ? 'No activity logged yet.' : 'No activity matches the current filter.'}</p>
+            </div>
+          )}
+          {activity.map((event) => <ActivityRow key={event.id} event={event} />)}
+        </div>
+      )}
     </div>
   );
 }

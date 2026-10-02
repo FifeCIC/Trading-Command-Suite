@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 40 of 117 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 41 of 118 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -168,17 +168,6 @@ export const VIEW_META = {
       "GET /api/automation/rules",
     ],
   },
-  "/automation/execution-queue": {
-    tier: "free",
-    review: "approved",
-    label: "Execution Queue",
-    file: "src/pages/ExecutionQueuePage.jsx",
-    css: "src/pages/execution-queue.css",
-    api: [
-      "GET /api/automation/status",
-      "GET /api/trading/mt5/positions",
-    ],
-  },
   "/automation/alert-center": {
     tier: "free",
     review: "approved",
@@ -188,6 +177,28 @@ export const VIEW_META = {
     api: [
       "GET /api/alerts",
       "GET /api/automation/status",
+    ],
+  },
+  "/protocols/protocol-queue": {
+    tier: "free",
+    review: "pending",
+    label: "Protocol Queue",
+    file: "src/pages/ProtocolQueuePage.jsx",
+    css: "src/pages/queue-ui.css",
+    api: [
+      "GET /api/automation/queue",
+      "POST /api/automation/queue/:id/cancel",
+    ],
+  },
+  "/status/scheduled-jobs": {
+    tier: "free",
+    review: "pending",
+    label: "Scheduled Jobs",
+    file: "src/pages/ScheduledJobsPage.jsx",
+    css: "src/pages/queue-ui.css",
+    api: [
+      "GET /api/automation/jobs",
+      "GET /api/automation/jobs/stats",
     ],
   },
   "/watchlists/active-symbols": {

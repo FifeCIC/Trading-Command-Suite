@@ -352,14 +352,6 @@ const VIEW_META = {
     css: 'src/pages/automation-rules.css',
     api: ['GET /api/automation/rules'],
   },
-  '/automation/execution-queue': {
-    tier: 'free',
-    review: 'approved',
-    label: 'Execution Queue',
-    file: 'src/pages/ExecutionQueuePage.jsx',
-    css: 'src/pages/execution-queue.css',
-    api: ['GET /api/automation/status', 'GET /api/trading/mt5/positions'],
-  },
   '/automation/alert-center': {
     tier: 'free',
     review: 'approved',
@@ -367,6 +359,27 @@ const VIEW_META = {
     file: 'src/pages/AlertCenterPage.jsx',
     css: 'src/pages/alert-center.css',
     api: ['GET /api/alerts', 'GET /api/automation/status'],
+  },
+  // Moved out of the deleted /automation/execution-queue page, 2026-10-02 (owner direction:
+  // "Preserve them and put the Protocol Queue somewhere in the Protocol area and Schedule Jobs in
+  // the Status area"). `tier` mirrors the page they came from, so the free edition is unchanged.
+  // `review: 'pending'` is the honest value — neither has been looked at since the move, so they
+  // appear in the Page Walkthrough as unreviewed rather than claiming an approval nobody gave.
+  '/protocols/protocol-queue': {
+    tier: 'free',
+    review: 'pending',
+    label: 'Protocol Queue',
+    file: 'src/pages/ProtocolQueuePage.jsx',
+    css: 'src/pages/queue-ui.css',
+    api: ['GET /api/automation/queue', 'POST /api/automation/queue/:id/cancel'],
+  },
+  '/status/scheduled-jobs': {
+    tier: 'free',
+    review: 'pending',
+    label: 'Scheduled Jobs',
+    file: 'src/pages/ScheduledJobsPage.jsx',
+    css: 'src/pages/queue-ui.css',
+    api: ['GET /api/automation/jobs', 'GET /api/automation/jobs/stats'],
   },
   '/watchlists/active-symbols': {
     tier: 'free',

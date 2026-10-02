@@ -202,10 +202,12 @@ function BotQueueSection() {
         <code>env: QUEUE_MODE</code>
       </SettingRow>
       <MovedNote>
-        Inspect and cancel individual queued jobs on <a href="/automation/execution-queue">Execution
-        Queue</a>. Live loop activity is on{' '}
-        <a href="/automation/automation-dashboard">Automation Dashboard</a>, and the rules table
-        itself is on <a href="/automation/automation-rules">Automation Rules</a>.
+        Inspect and cancel individual queued protocol runs on{' '}
+        <a href="/protocols/protocol-queue">Protocol Queue</a> and scheduled jobs on{' '}
+        <a href="/status/scheduled-jobs">Scheduled Jobs</a> — both moved out of the deleted
+        /automation/execution-queue page (2026-10-02, owner direction). Live loop activity is now on{' '}
+        <a href="/trading/trade-journal">the Trade Journal</a>, and the rules table itself is on{' '}
+        <a href="/automation/automation-rules">Automation Rules</a>.
       </MovedNote>
       {save.isError && (
         <NoticeBlock
