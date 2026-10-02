@@ -21,6 +21,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AlertsService, type AlertSeverity } from './alerts.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { PrismaService } from '../../database/prisma.service';
+import { stalenessReport, stalenessMessage } from '../../common/alerts/data-staleness';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import {
@@ -296,16 +297,75 @@ export class AlertTriggerService implements OnModuleInit {
     }
   }
 
+  /**
+   * checkDataStaleness() — is our market data stale? (#1067)
+   *
+   * ⚠️ WHAT THIS USED TO DO, AND WHY IT WAS A TRADING DEFECT. It ran:
+   *
+   *     const staleCount = await this.prisma.marketBar.count({
+   *       where: { timestamp: { lt: threshold } },
+   *     });
+   *     if (staleCount > 0) { …fire… }
+   *
+   * That counts EVERY bar older than the threshold — the whole historical table — and fires when
+   * the count is greater than zero. Measured 2026-10-02: `marketbar` holds **1,009,146** rows and
+   * **995,489** are older than 5 minutes, so the alert fired on **98.6% of the table, every poll,
+   * forever**. It was **structurally incapable of being false** and had fired **×2,621**.
+   *
+   * ⚠️ The cost is not the noise. Staleness is the failure that makes SCORING ACT ON STALE PRICES,
+   * and this was the only thing watching for it. A guard that always fires carries no information:
+   * a dead feed at 03:00 looked exactly like a working feed, because both produced the same alert.
+   *
+   * The question is now **"is the NEWEST bar for a symbol we are actually trading older than the
+   * threshold?"** — which is what staleness means. History is supposed to be old.
+   *
+   * ⚠️ SCOPED TO ACTIVELY-BOTTED SYMBOLS ON PURPOSE. Judging every symbol in `marketbar` would
+   * reproduce the same defect in a subtler form: a delisted ticker, or one whose feed we dropped
+   * long ago, has a permanently stale newest bar, so the alert would be permanently true again.
+   * `stalenessReport()` also reports symbols with NO bars as **cannot-judge**, never as stale — a
+   * bot subscribed this morning must not alert.
+   */
   private async checkDataStaleness(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string } | null> {
     if (!this.prisma.isAvailable) return null;
     try {
-      const threshold = new Date(Date.now() - (cfg.threshold || 300) * 1000);
-      const staleCount = await this.prisma.marketBar.count({
-        where: { timestamp: { lt: threshold } },
+      const thresholdMinutes = Math.round((cfg.threshold || 300) / 60);
+
+      // Which symbols would we ACT on? A stale bar only matters where a bot can trade.
+      const bots = await this.prisma.tradingStrategy.findMany({
+        where: { active: true },
+        select: { symbol: true },
       });
-      if (staleCount > 0) {
-        const minutes = Math.round((cfg.threshold || 300) / 60);
-        return { triggered: true, title: 'Market Data Stale', message: `${staleCount} market bar(s) older than ${minutes} minutes. Import fresh data.` };
+      const traded = [...new Set(bots.map((b: any) => String(b.symbol || '').toUpperCase()).filter(Boolean))];
+      if (!traded.length) return { triggered: false, title: '', message: '' };
+
+      const symbols = await this.prisma.symbol.findMany({
+        where: { ticker: { in: traded } },
+        select: { id: true, ticker: true },
+      });
+      if (!symbols.length) return { triggered: false, title: '', message: '' };
+
+      // Newest bar per symbol, in ONE query — not one query per symbol.
+      const latest = await this.prisma.marketBar.groupBy({
+        by: ['symbolId'],
+        where: { symbolId: { in: symbols.map((s: any) => s.id) } },
+        _max: { timestamp: true },
+      });
+      const byId = new Map<string, Date | null>(
+        (latest as any[]).map((r) => [String(r.symbolId), r._max?.timestamp ?? null]),
+      );
+
+      const report = stalenessReport(
+        symbols.map((s: any) => ({ symbol: String(s.ticker), latest: byId.get(String(s.id)) ?? null })),
+        thresholdMinutes,
+        new Date(),
+      );
+
+      if (report.stale.length) {
+        return {
+          triggered: true,
+          title: 'Market Data Stale',
+          message: stalenessMessage(report, thresholdMinutes),
+        };
       }
       return { triggered: false, title: '', message: '' };
     } catch { return null; }
