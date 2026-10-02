@@ -641,8 +641,7 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
                   // is exactly the contradiction this rewrite exists to remove.
                   listState === 'failed' ? (
                     <p className="notif-empty">
-                      Could not load alerts —{' '}
-                      <a className="notif-footer-link" href="/automation/alert-center">open the Alert Center</a>.
+                      Could not load alerts.
                       {alertActive > 0 && <> {alertActive} alert(s) are still recorded as active.</>}
                     </p>
                   ) : listState === 'loading' ? (
@@ -683,14 +682,17 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
                         A fetch that fails must SAY so, even when something else rendered fine. */}
                     {listState === 'failed' && (
                       <div className="notif-load-error">
-                        ⚠ Stored alerts could not be loaded —{' '}
-                        <a className="notif-footer-link" href="/automation/alert-center">open the Alert Center</a>
+                        ⚠ Stored alerts could not be loaded
                         {alertActive > 0 && <> ({alertActive} active)</>}
                       </div>
                     )}
                     <div className="notif-footer">
                       {popupHidden > 0 && <span className="notif-more">+{popupHidden} more</span>}
-                      <a className="notif-footer-link" href="/automation/alert-center">Open Alert Center →</a>
+                      {/* "Open Alert Center →" REMOVED 2026-10-02 (owner, Page Walkthrough): the
+                          notifications disc IS the primary way to get alerts, and the Alert Center
+                          page is being deleted with the whole Automation area. Every other link to
+                          it was removed in the same pass - one dead link in the popover is still a
+                          dead end. */}
                     </div>
                   </>
                 )}
