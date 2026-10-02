@@ -92,6 +92,54 @@ caution-language for dev-induced disturbance** — it is not permission to conce
 Found: <what> — <command that shows it> — <issue # if filed>.
 ```
 
+### 🛑 WHICH findings become ISSUES — measured 2026-10-02
+
+> Owner, 2026-10-02: *"For the last two weeks it's looked like we'll never again get back under 200
+> github issues, we almost reached 300."* And: *"is there a risk that it is inventing layers of
+> complexity that add little value?"*
+
+The owner's instinct was right and the cause is **inflow, not a stale backlog**:
+
+| Measure | Value |
+|---|---|
+| Open issues | **264** |
+| Untouched **30+ days** | **5** — there is no dead tail to close |
+| Touched in the last **7 days** | **68** — this is a live queue, not a graveyard |
+| Opened / closed, last 30 days | **348 / 249** → **+99/month** |
+
+⚠️ **A triage pass that "closed the stale tail" would have saved ~2% and would have destroyed
+signal.** The backlog is not rot; it is throughput. So the lever is the **rate at which findings
+become issues**, and that is the only thing this rule changes.
+
+**An issue is warranted ONLY when BOTH are true:**
+
+1. **The finding has a measured cost or a named observable** — a number, a count, an endpoint that
+   behaves wrongly, a screenshot, a reproduced command. *"This could be fragile"* is not a finding,
+   it is an opinion.
+2. **It affects a money path or blocks one** — scoring, gating, sizing, execution, position
+   management, exits, or data a trade depends on.
+
+**Everything else is a NOTE, not an issue.** Put it where the reader will meet it and stop:
+
+| Kind of finding | Where it goes |
+|---|---|
+| A trap in a tool or validator | the tool's own docblock + the one instruction file that names it |
+| A stale claim in an instruction | fix the instruction — that IS the record |
+| A code smell with no measured cost | a docblock at the site |
+| A "we should probably…" idea | nothing. It is not yet a finding |
+
+⚠️ **This is a DELETION rule, and it is deliberately the only new rule here.** The failure mode the
+owner named — *"inventing layers of complexity"* — is what happens when every finding spawns a
+tracking artefact. Governance grew faster than the code: **75 of 175 tools (43%) are orphans that
+nothing references**, which is the same defect in tooling form.
+
+⚠️ **Do not respond to a full queue by filing a triage issue, a backlog dashboard, or a
+prioritisation process.** Those are three more layers. The fix is to file fewer things.
+
+**A finding you can only describe as a risk is a note. A finding you can put a number on is an
+issue.**
+
+
 ---
 
 ## What "no users" means for engineering decisions
