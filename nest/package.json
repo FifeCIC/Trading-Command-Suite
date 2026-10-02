@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.113.0",
+  "version": "0.114.0",
   "description": "",
   "author": "",
   "private": true,
@@ -23,6 +23,7 @@
     "db:check": "node scripts/validate-schema-safety.cjs",
     "db:config-refs": "node scripts/validate-config-db-refs.cjs",
     "db:route-capability": "node scripts/validate-route-capability.cjs",
+    "db:bot-symbol-coverage": "node scripts/validate-protocol-covers-bot-symbol.cjs",
     "db:pnl-integrity": "node scripts/validate-pnl-integrity.cjs",
     "db:schema-drift": "node scripts/audit-schema-drift.cjs",
     "db:schema-drift:self-test": "node scripts/audit-schema-drift.cjs --self-test",

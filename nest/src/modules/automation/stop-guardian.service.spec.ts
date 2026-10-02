@@ -4,6 +4,7 @@ import {
   trailDistanceFor,
   trailDistanceProblem,
   resolvePositionOwner,
+  pickStrictestClaimant,
   stopAdjustmentReason,
 } from './stop-guardian.service';
 
@@ -940,5 +941,114 @@ describe('StopGuardianService — the per-position OUTCOME (#1056)', () => {
     const row = await guardedOutcome(build(flatBars(30)));
     expect(typeof row.outcome).toBe('string');
     expect(row.outcome.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * #1041 — a CONTESTED position is MANAGED, by its STRICTEST claimant.
+ *
+ * THE DEFECT. `resolvePositionOwner()` returned `null` for BOTH "nobody claims it" and "several
+ * do", and `tick()` reported both as "owner could not be established" — so the position was managed
+ * by **nothing**. Measured cost: a position built from three bots' orders sat unmanaged for
+ * **2 h 20 m**, and ticket `152703882760` lost **−322.67**.
+ *
+ * Owner ruling, 2026-09-30 (R31): *"a position built from several bots' orders is CONTESTED and
+ * MANAGED, not refused"* — by its **strictest claimant**, so it is protected soonest rather than by
+ * whichever bot happens to be looked at first.
+ *
+ * ⚠️ CANARY: delete the `else if (contested.length > 1)` branch in `tick()` and the position falls
+ * back into `unresolved` — `guardedPositions` empties and the first test below fails. That is
+ * precisely the pre-#1041 behaviour, so the guard proves the branch is what changed it.
+ */
+describe('StopGuardianService — contested positions (#1041)', () => {
+  const bars = Array.from({ length: 30 }, (_, i) => ({
+    timestamp: new Date(Date.now() - (30 - i) * 3600000).toISOString(),
+    open: 100 + i, high: 101 + i, low: 99 + i, close: 100.5 + i, volume: 1000,
+  }));
+
+  /** Four BULLISH signals against a BUY: aligned ~78, opposing 0 — the ordinary scoring case. */
+  const bullish = () =>
+    new Map([
+      ['atr-trailing-stop', { score: 75, confidence: 0.7, signalClass: 'bullish', reason: 'x' }],
+      ['supertrend', { score: 75, confidence: 0.7, signalClass: 'bullish', reason: 'x' }],
+      ['chandelier-exit', { score: 80, confidence: 0.55, signalClass: 'bullish', reason: 'x' }],
+      ['wick-filter', { score: 80, confidence: 0.7, signalClass: 'bullish', reason: 'x', metadata: { isFakeout: false } }],
+    ]);
+
+  // ⚠️ THE COMMENT IS THE INCIDENT SHAPE, NOT A CONTRIVANCE. `TCS A B` is not equal to either
+  // name, is not a prefix of either, and only collides once punctuation is stripped — which is the
+  // tier that exists because MT5 strips punctuation from comments (the 341-tick Gold Swing case).
+  const COMMENT = 'TCS A B';
+
+  const pickActual = (claimants: string[], strategies: Array<{ name?: string; slPct?: number }>) =>
+    pickStrictestClaimant(claimants, strategies);
+
+  it('⚠️ CANARY — a contested position is GUARDED, not refused', async () => {
+    const { manager } = mt5Double({
+      positions: [
+        { ticket: 7, symbol: 'XAUUSD', type: 'buy', volume: 1, priceOpen: 100, priceCurrent: 100, sl: 90, tp: null, profit: 0, comment: COMMENT, brokerId: 2 },
+      ],
+      bars,
+    });
+    const strategies = [
+      { active: true, mode: 'auto', symbol: 'XAUUSD', id: 's-loose', name: 'A-B', slPct: 3 },
+      { active: true, mode: 'auto', symbol: 'XAUUSD', id: 's-tight', name: 'AB', slPct: 0.3 },
+    ];
+    const service = new StopGuardianService(
+      { findAll: jest.fn().mockResolvedValue(strategies) } as any,
+      { runAll: jest.fn().mockResolvedValue(bullish()) } as any,
+      manager,
+      { recordAdjustment: jest.fn() } as any,
+    );
+    service.state.enabled = true;
+    try {
+      await service.tick();
+      const row = service.state.guardedPositions.find((g) => g.ticket === 7);
+
+      // ⚠️ THE ASSERTION THE OLD CODE FAILED: it is GUARDED.
+      expect(row).toBeDefined();
+      expect(row!.ownerVia).toBe('comment:contested');
+      // ...governed by the TIGHTEST declared stop, not the first bot iterated.
+      expect(row!.strategyName).toBe('AB');
+      // ...and the OTHER claimants are named, so the choice is visible rather than inferred.
+      expect(row!.claimants).toEqual(expect.arrayContaining(['A-B', 'AB']));
+      // ...and it is NOT reported as unowned.
+      expect(service.state.ownerAttribution?.unresolved ?? []).toHaveLength(0);
+    } finally {
+      service.stop();
+    }
+  });
+
+  it('strictest = the SMALLEST slPct (tightest stop), and ties are deterministic', () => {
+    const s = [
+      { name: 'loose', slPct: 3 },
+      { name: 'tight', slPct: 0.3 },
+      { name: 'mid', slPct: 1.5 },
+    ];
+    expect(pickActual(['loose', 'tight', 'mid'], s)).toBe('tight');
+  });
+
+  it('an UNKNOWN slPct sorts LAST — it must never outrank a known-tight stop', () => {
+    const s = [{ name: 'known', slPct: 3 }];
+    expect(pickActual(['known', 'ghost'], s)).toBe('known');
+  });
+
+  it('ties break on NAME, so the same position is not managed by a different bot each tick', () => {
+    const s = [{ name: 'bravo', slPct: 1 }, { name: 'alpha', slPct: 1 }];
+    expect(pickActual(['bravo', 'alpha'], s)).toBe('alpha');
+    expect(pickActual(['alpha', 'bravo'], s)).toBe('alpha');
+  });
+
+  it('an AMBIGUOUS comment is still refused as a SINGLE owner — the out-param is the only change', () => {
+    const claimants: string[] = [];
+    const owner = resolvePositionOwner(COMMENT, ['A-B', 'AB'], claimants);
+    expect(owner).toBeNull(); // unchanged: no single owner is GUESSED
+    expect(claimants).toEqual(expect.arrayContaining(['A-B', 'AB'])); // but the set is now visible
+  });
+
+  it('an UNKNOWN comment reports NO claimants — "nobody" and "several" stay distinguishable', () => {
+    const claimants: string[] = [];
+    expect(resolvePositionOwner('some broker note', ['A-B', 'AB'], claimants)).toBeNull();
+    expect(claimants).toEqual([]);
   });
 });

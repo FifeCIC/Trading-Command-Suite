@@ -183,7 +183,7 @@ export interface GuardedPosition {
    * owner is right" — which the comment path also satisfies — and could not show the magic path
    * had run at all.
    */
-  ownerVia: 'magic' | 'comment:exact' | 'comment:unique-prefix' | 'comment:normalised';
+  ownerVia: 'magic' | 'comment:exact' | 'comment:unique-prefix' | 'comment:normalised' | 'comment:contested';
   /**
    * #1030 — the MT5 account whose stop would be edited, i.e. the bridge this position came from.
    *
@@ -210,6 +210,18 @@ export interface GuardedPosition {
    * nothing, so inference cannot replace the statement.
    */
   outcome: GuardedPositionOutcome;
+  /**
+   * ⚠️ #1041 — the OTHER bots whose orders built this position, when more than one did.
+   *
+   * Present ⇒ the position was CONTESTED and is being managed by its STRICTEST claimant (the
+   * tightest declared stop), so it is protected soonest rather than by whichever bot happened to be
+   * looked at first (owner ruling R31, 2026-09-30). Absent ⇒ an ordinary single-owner position, or
+   * one nobody claims (those are reported in `ownerAttribution.unresolved` instead).
+   *
+   * Served so the choice is VISIBLE: the guardian now acts on a position whose ownership it cannot
+   * pin to one bot, so which rule it acted by must be readable rather than inferred.
+   */
+  claimants?: string[];
 }
 
 /**
@@ -458,9 +470,68 @@ const BRIDGE_DEFAULT_MAGIC = 234000;
  *
  * Pure and exported so the spec can drive every tier without a bridge, a position or a clock.
  */
+/**
+ * pickStrictestClaimant() — WHICH bot's rules govern a CONTESTED position (#1041).
+ *
+ * Owner ruling, 2026-09-30 (R31): a position built from several bots' orders is **managed, by its
+ * strictest claimant** — *"so it is protected soonest rather than by whichever bot happens to be
+ * looked at first."*
+ *
+ * ⚠️ STRICTEST = THE TIGHTEST DECLARED STOP = the SMALLEST `slPct`. `slPct` is the distance from
+ * entry, so the smaller it is the closer the stop sits and the sooner the position is protected.
+ * The xau bots alone span 0.3 / 0.5 / 1.5 / 3.0 — a 10x spread — so the choice is not academic.
+ *
+ * ⚠️ A claimant with NO usable `slPct` sorts LAST (`Infinity`), never first: an unknown distance
+ * must not outrank a known-tight one. Ties break on NAME so the answer is deterministic — a
+ * contested position must not be managed by a different bot on each tick.
+ *
+ * Pure and exported so the rule can be tested without a bridge, a position or a clock.
+ */
+// ── DECISION (2026-10-02, primary) ──
+// WHAT:      A CONTESTED position (>=2 claimants) is GUARDED, governed by its STRICTEST claimant
+//            (smallest slPct; unknown slPct sorts last; ties break on name).
+// WHY:       resolvePositionOwner() returned null for BOTH "nobody claims it" and "several do", so
+//            tick() reported both as "owner could not be established" and a contested position was
+//            managed by NOTHING. Measured cost: a three-bot position sat unmanaged 2h20m and ticket
+//            152703882760 lost -322.67 (docs/change-guide-position-lifecycle.md row 8).
+// INSTEAD OF: Returning null for the ambiguous case too (the pre-#1041 behaviour), which left the
+//            position unmanaged; and instead of "first claimant wins", which would protect it in
+//            whatever order the comment happened to parse.
+// REVERSE BY: Deleting the `contested` out-param and the `contested.length > 1` branch in tick(),
+//            so an ambiguous owner falls through to `unresolved` again. Guarded both directions —
+//            set that condition back to `> 99` and the canary test fails.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 59
+// GUARD:     nest/src/modules/automation/stop-guardian.service.spec.ts (contested positions, #1041)
+export function pickStrictestClaimant(
+  claimants: readonly string[],
+  strategies: ReadonlyArray<{ name?: string; slPct?: number }>,
+): string {
+  const slPct = new Map<string, number>();
+  for (const s of strategies) {
+    const n = String(s?.name ?? '');
+    if (!n) continue;
+    const v = Number(s?.slPct);
+    slPct.set(n, Number.isFinite(v) ? v : Number.POSITIVE_INFINITY);
+  }
+  return [...claimants]
+    .map((name) => ({ name, sl: slPct.get(name) ?? Number.POSITIVE_INFINITY }))
+    .sort((a, b) => (a.sl - b.sl) || a.name.localeCompare(b.name))[0].name;
+}
+
 export function resolvePositionOwner(
   comment: string | null | undefined,
   names: readonly string[],
+  /**
+   * ⚠️ #1041 — OPTIONAL out-parameter. When the comment is AMBIGUOUS (2+ names match) they are
+   * pushed here, so a caller can tell CONTESTED (several claim it) from UNKNOWN (nobody does).
+   *
+   * Omitted ⇒ every existing caller behaves exactly as before, and the return is still `null` for
+   * both cases — separating them is the caller's job, and refusing to GUESS an owner stays the
+   * default. It exists because the two states were collapsed into one answer and `tick()` then
+   * reported both as "owner could not be established": a position built from three bots' orders was
+   * managed by nothing for 2 h 20 m, and a ticket in that state lost −322.67 (#1041).
+   */
+  contestedOut?: string[],
 ): { name: string; via: 'exact' | 'unique-prefix' | 'normalised' } | null {
   const m = /^TCS\s+(.+)$/.exec(String(comment ?? '').trim());
   if (!m) return null;
@@ -496,9 +567,16 @@ export function resolvePositionOwner(
   // failure this function exists to prevent.
   const flat = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
   const target = flat(stamped);
-  if (target) {
-    const normalised = names.filter((n) => flat(n) === target);
-    if (normalised.length === 1) return { name: normalised[0], via: 'normalised' };
+  const normalised = target ? names.filter((n) => flat(n) === target) : [];
+  if (normalised.length === 1) return { name: normalised[0], via: 'normalised' };
+
+  // ⚠️ #1041 — REACHED ONLY WHEN NO SINGLE OWNER COULD BE ESTABLISHED. Record the ambiguous set so
+  // the caller can tell "several claim it" from "nobody does". `prefixed` wins the tie because it
+  // is the stronger evidence (the comment is a literal prefix); the two are never both populated
+  // with 2+, because a tier returning exactly 1 returns above.
+  if (contestedOut) {
+    if (prefixed.length > 1) contestedOut.push(...prefixed);
+    else if (normalised.length > 1) contestedOut.push(...normalised);
   }
   return null;
 }
@@ -1056,6 +1134,8 @@ export class StopGuardianService {
         if (s?.magic != null) nameByMagic.set(Number(s.magic), String(s.name ?? ''));
       }
       const ownerByTicket = new Map<number, { name: string; via: GuardedPosition['ownerVia'] }>();
+      // #1041 — ticket → the OTHER claimants, when more than one bot built the position.
+      const contestedByTicket = new Map<number, string[]>();
       const unresolved: string[] = [];
       let viaMagic = 0;
       let viaComment = 0;
@@ -1075,7 +1155,8 @@ export class StopGuardianService {
           unresolved.push(`${p.symbol} #${p.ticket} on broker ${p.brokerId ?? '?'} magic=${m} matches NO bot (comment "${String(p.comment).slice(0, 30)}")`);
           continue;
         }
-        const owner = resolvePositionOwner(p.comment, strategyNames);
+        const contested: string[] = [];
+        const owner = resolvePositionOwner(p.comment, strategyNames, contested);
         if (owner) {
           // The comment path's OWN sub-method is preserved: `unique-prefix` means a truncated name
           // was matched, which is the variant most likely to be wrong.
@@ -1083,6 +1164,25 @@ export class StopGuardianService {
             name: owner.name,
             via: `comment:${owner.via}` as GuardedPosition['ownerVia'],
           });
+          viaComment++;
+        } else if (contested.length > 1) {
+          // ── ⚠️ #1041 — CONTESTED: MANAGED, by the STRICTEST CLAIMANT ───────────────────────
+          //
+          // This branch used to fall into `unresolved` with the same message as "nobody claims it",
+          // and the position was then managed by NOTHING. Measured cost of that collapse: a
+          // position built from three bots' orders sat unmanaged for **2 h 20 m**, and ticket
+          // `152703882760` lost **−322.67**.
+          //
+          // `docs/change-guide-position-lifecycle.md` row 8: *"Several owners is a STATE, not an
+          // error. Name the claimants and act; do not resolve it by refusing."*
+          //
+          // ⚠️ The chosen bot's OWN rules then apply through the ordinary path below — including
+          // its `slPct` as the #927 declared-distance floor — because `ownerByTicket` is the only
+          // thing the strategy loop reads. This branch therefore changes WHO governs, and nothing
+          // else; it does not invent a stop of its own.
+          const strictest = pickStrictestClaimant(contested, strategies as any[]);
+          ownerByTicket.set(p.ticket, { name: strictest, via: 'comment:contested' });
+          contestedByTicket.set(p.ticket, contested);
           viaComment++;
         } else {
           unresolved.push(`${p.symbol} #${p.ticket} on broker ${p.brokerId ?? '?'} "${String(p.comment).slice(0, 40)}"`);
@@ -1352,6 +1452,14 @@ export class StopGuardianService {
             outcome,
           ),
         );
+      }
+
+      // #1041 — attach the OTHER claimants to any position governed by a contested owner, so the
+      // payload says WHICH RULE ACTED and who else had a stake. Done here rather than in
+      // `makeGuarded()` because that is called from three branches and only one carries a ticket.
+      for (const g of guarded) {
+        const c = contestedByTicket.get(g.ticket);
+        if (c) g.claimants = c;
       }
 
       this.state.guardedPositions = guarded;
