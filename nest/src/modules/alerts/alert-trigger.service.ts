@@ -22,6 +22,7 @@ import { AlertsService, type AlertSeverity } from './alerts.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { PrismaService } from '../../database/prisma.service';
 import { stalenessReport, stalenessMessage } from '../../common/alerts/data-staleness';
+import { pnlBreaches, worstBreach, pnlAlertMessage } from '../../common/alerts/pnl-alert';
 // ⚠️ THE CANONICAL BAR LENGTH, not a second map. A local `{ '5m': 5 }` here would be a copy of a
 // fact the repo already owns, and only one of the copies would get the next fix.
 import { BAR_LENGTH_MS } from '../../common/utils/timeframe';
@@ -399,21 +400,56 @@ export class AlertTriggerService implements OnModuleInit {
     } catch { return null; }
   }
 
+  /**
+   * checkPositionPnl() — every position past the P&L threshold (#1068).
+   *
+   * ⚠️ WHAT THIS USED TO DO. It looped the open positions and **returned on the FIRST match**:
+   *
+   *     for (const pos of positions) {
+   *       if (pnlPct > thresholdPct) return { title: `${pos.symbol} P&L Alert`, … };
+   *     }
+   *
+   * Measured 2026-10-02: one permanently-loss-making position (R3NK, −34.8%) always occupied that
+   * first slot, so the alert fired **872 times in two hours — every one naming R3NK**, and the other
+   * eight open positions could not be reported at all. The channel was not noisy, it was CONSUMED.
+   *
+   * ⚠️ AND THE TITLE WAS THE OTHER HALF. `"${symbol} P&L Alert"` makes the collapse key PER SYMBOL,
+   * so each breach became its own permanent row instead of one row reporting the state. The title is
+   * now STABLE and the message names every breach, worst first.
+   *
+   * ⚠️ THIS IS NOT TUNED FOR OUR BOOK. Nothing here compensates for our data — a fresh install with
+   * one position or ten gets the same rule: report them all. The old behaviour was simply wrong; it
+   * was merely most visible on us because we hold one outsized loser.
+   */
   private async checkPositionPnl(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity } | null> {
     if (!this.prisma.isAvailable) return null;
     try {
       const positions = await this.prisma.position.findMany({ where: { pnl: { not: null } } });
       const thresholdPct = cfg.threshold || 5;
-      for (const pos of positions) {
-        if (pos.pnl != null && pos.avgPrice > 0) {
-          const pnlPct = Math.abs(pos.pnl / (pos.avgPrice * pos.quantity)) * 100;
-          if (pnlPct > thresholdPct) {
-            const dir = pos.pnl > 0 ? 'profit' : 'loss';
-            return { triggered: true, title: `${pos.symbol} P&L Alert`, message: `${pos.symbol} ${dir}: ${pos.pnl.toFixed(2)} (${pnlPct.toFixed(1)}%).`, severity: pos.pnl < 0 ? 'warning' : 'info' };
-          }
-        }
-      }
-      return { triggered: false, title: '', message: '' };
+
+      const breaches = pnlBreaches(
+        positions.map((p: any) => ({
+          symbol: String(p.symbol),
+          pnl: p.pnl,
+          avgPrice: Number(p.avgPrice),
+          quantity: Number(p.quantity),
+        })),
+        thresholdPct,
+      );
+
+      if (!breaches.length) return { triggered: false, title: '', message: '' };
+
+      // Severity follows the WORST breach, so a book of small losses does not read as critical
+      // and one large one does.
+      const worst = worstBreach(breaches)!;
+      const severity: AlertSeverity = worst.pnl < 0 ? (worst.pnlPct > 25 ? 'critical' : 'warning') : 'info';
+
+      return {
+        triggered: true,
+        title: 'Position P&L Alert',
+        message: pnlAlertMessage(breaches),
+        severity,
+      };
     } catch { return null; }
   }
 
