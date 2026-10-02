@@ -923,3 +923,71 @@ regenerating `docs-facts`, so the gate was red for that reason too.
 safe way to build the API here. One stale artefact stops the whole fleet.
 
 - **Agent:** Copilot (2026-10-01), while closing #967 and #897.
+
+---
+
+## 2026-10-02 — The Market Data Stale alert is STILL FIRING, and its allowance is UNPROVEN
+
+**Agent:** alert audit (TCS) · **Open, unresolved. Do not tune this to fit the data.**
+
+**Where it stands.** The alert used to be structurally incapable of being false — it counted every
+historical bar. Measured: `marketbar` 1,009,146 rows, **995,489** older than 5 minutes, so it fired on
+**98.6% of the table** every poll (lifetime 731 rows / 1,557 firings). It now asks the right question:
+*is the NEWEST bar for a symbol we actively trade too old?* Committed as **#1067** and deployed.
+
+⚠️ **It still fires, and the reason is a bug in the fix.** The allowance is
+`max(configuredThreshold, 2 × interval)`. Every symbol's FINEST timeframe is `1m`, so that evaluates
+to `max(5, 2) = 5` minutes — but measured 1m bar age is **avg 24.2 min, max 53**. `2 × interval` is
+only correct where bars are fetched about as often as they form; a 1m bar is fetched far less often
+than it is generated.
+
+🔴 **DO NOT raise the multiplier to make it quiet.** That would encode an UNEXPLAINED observation as
+if it were a fact, and on a fresh install it would be silently too lax — hiding the exact staleness
+the alert exists to catch. **The cause of the 24-minute lag is not established.**
+
+**Ruled OUT by measurement** (so the next attempt does not repeat them): the refresh is NOT stalled —
+`bars/refresh/status` shows a **1.72 min** cycle every 5 min, upserting ~48,560 bars; `TIMEFRAMES`
+includes `1m`; the boot-time `AdapterFactory: No adapter registered for id: mt5` warning is transient.
+
+**Next step, one symbol at a time:** compare a single symbol's ingested `1m` bars against what the
+bridge itself returns for that symbol. One symbol, one endpoint; the discrepancy names the cause.
+
+**Also live:** 9 symbols (e.g. `XIACY`) hold **zero** bars in every timeframe — already visible via
+`GET /api/market-data/bars/refresh/status` (`starvedSymbols`), which is the #759 diagnostic.
+
+---
+
+## 2026-10-02 — Two commits are in git but NOT deployed
+
+**Agent:** alert fixes (TCS). The running API predates both.
+
+| Commit | What | Effect if unread |
+|---|---|---|
+| `3582d6b` | staleness message reports the ALLOWANCE, not the configured threshold | message contradicts its own decision |
+| `07d1e2d` | P&L alert reports EVERY breach (was `return` on first match) | **872 firings named one symbol; 8 positions invisible** |
+
+⚠️ Deploy with `npm --prefix nest run build:api`. ⚠️ **ONE build at a time** — see the concurrent
+`build:api` entry above; two runs delete each other's `dist/` and stop each other's API.
+
+---
+
+## 2026-10-02 — Two agents running `build:api` on the SHARED tree kill each other's API
+
+**Agent:** sprint #1060 work (TCS)
+**Observed 16:54Z.** My `npm --prefix nest run build:api` printed
+`OK Build succeeded` and `OK API healthy on http://localhost:3201` — and the API was gone seconds
+later: `curl -s -o NUL -w "%{http_code}" .../api/version` → `000`.
+
+**Cause:** `Get-CimInstance Win32_Process -Filter "Name=''node.exe''"` showed TWO concurrent npm
+build processes (one `--prefix nest run …`, one `run build`) plus two jest workers.
+`build:api` is stop API → prebuild → **rimraf dist** → prisma generate → tsc → restart, so two
+concurrent runs stop each other's API and DELETE each other's `dist/`. This is the **#767** class
+("backends race port 3201; served build unidentifiable") — on the BUILD side, not just the serve side.
+
+**Looks exactly like a broken build, and is not one.** No code was at fault.
+**Affected:** any agent that must SERVE a backend change. **DB-only work is unaffected** —
+`scripts/lib/mysql-cli.cjs` talks to MySQL directly and needs no API.
+
+**Second, separate trap found the same session:** `prebuild` fails when `docs/GENERATED-FACTS.*`
+are stale, and a failed `build:api` **leaves the API stopped by design**. Regenerate with
+`node scripts/docs-facts.cjs --write` (and `tools-index.cjs --write`) before building.

@@ -17,7 +17,10 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
-| — | *Nothing is waiting on you.* | | |
+| **R37** | **Symbols we cannot trade cost us bars every day. Deactivate them, or remove them?** 129 symbols hold bars; **31** have a bot. **28%** of bar ingestion serves symbols nothing can trade. | evidence: `AGENT-ATTENTION.md` 2026-10-02 | Deactivate (reversible) or delete outright — and what has to be true for a symbol to earn a place? |
+| **R38** | **Telemetry grows without a ceiling and nothing prunes it.** `apiactivitylog` **1,332,329** rows / **250 MB**; `directiveoutcome` adds **24,805** rows/day and is 4 days old. | evidence: `AGENT-ATTENTION.md` 2026-10-02 | How long do we keep telemetry — 7, 30 or 90 days — and is deleting old rows acceptable? |
+
+**R37 and R38 were raised by the agent on 2026-10-02** from the capacity measurement, not by a defect. Both are policy choices with no clear logical winner, so they are the owner's. Neither blocks work.
 
 **R35 and R36 were answered on 2026-10-01 — see DONE.** R35: *"I like experiments so go ahead."* R36: the general-FOREX-protocol shape is itself the likely problem — plan for per-pair strategies.
 
