@@ -87,6 +87,16 @@ function removeRouteEntry(src, id) {
 
   const component = lines[at].match(mapRe)[1];
   lines.splice(at, 1);
+
+  // ⚠️ A page file may back SEVERAL ids (Mt5TradingPage backs both `mt5-trading` and
+  // `mt5-demo-trading`). Removing one id must NOT remove the import the other still needs.
+  // Measured 2026-10-01: it left `'mt5-trading': Mt5TradingPage` pointing at nothing and the
+  // free-registry generator reported `no import line (skipped)`. THE BUILD DID NOT FAIL — which
+  // is exactly what made it dangerous.
+  const importStillNeeded = lines.some((l) => l.endsWith(': ' + component + ','));
+  if (importStillNeeded) {
+    return { ok: true, found: true, component, importKept: true, text: lines.join('\n') };
+  }
   const impRe = new RegExp('^import\\s+' + esc(component) + '\\s+from\\s');
   const impAt = lines.findIndex((l) => impRe.test(l));
   if (impAt !== -1) lines.splice(impAt, 1);
@@ -241,6 +251,21 @@ function selfTest() {
   const r7 = removeNavEntry(NAV, 'not-here');
   check('absent nav id is reported, not thrown', r7.ok && r7.found === false);
 
+  // two ids, ONE page file — removing one id must not take the import the other needs
+  const SHARED = [
+    "import SharedPage from '../pages/SharedPage.jsx';",
+    'const VIEW_COMPONENTS = {',
+    "  'shared-a': SharedPage,",
+    "  'shared-b': SharedPage,",
+    '};',
+  ].join('\n');
+  const s1 = removeRouteEntry(SHARED, 'shared-a');
+  check('shared: map entry removed', !s1.text.includes("'shared-a':"));
+  check('shared: import KEPT for the surviving id', s1.text.includes('import SharedPage'),
+    'the import the other id still needs was removed');
+  const s2 = removeRouteEntry(s1.text, 'shared-b');
+  check('shared: import removed once the LAST id goes', !s2.text.includes('import SharedPage'));
+
   // protection — the guard that stops "delete this view" from deleting the app shell
   check('unique page asset is deletable', protectionReason('src/pages/DeleteMePage.jsx', META) === null,
     'got ' + protectionReason('src/pages/DeleteMePage.jsx', META));
@@ -248,7 +273,7 @@ function selfTest() {
   const sharedMeta = "  '/a': {\n    css: 'src/pages/Shared.css',\n  },\n  '/b': {\n    css: 'src/pages/Shared.css',\n  },";
   check('shared asset REFUSED', /shared between views/.test(protectionReason('src/pages/Shared.css', sharedMeta) || ''));
 
-  console.log('self-test: ' + (fails.length ? 'FAILED' : 'passed') + ' (' + (fails.length ? fails.length : 23) + ' assertions)');
+  console.log('self-test: ' + (fails.length ? 'FAILED' : 'passed') + ' (' + (fails.length ? fails.length : 27) + ' assertions)');
   for (const f of fails) console.error('  ✗ ' + f);
   if (fails.length) process.exit(1);
   process.exit(0);
@@ -336,7 +361,11 @@ function main(argv) {
     for (let i = 0; i < lines.length; i++) {
       for (const r of results) {
         if (r.failed) continue;
-        if (lines[i].includes("'" + r.route + "'") || lines[i].includes('"' + r.route + '"')) {
+        // ⚠️ SUBSTRING, not a quoted form. Measured 2026-10-01: three live links were missed
+        // because they are template literals carrying a query string —
+        // `/automation/decision-trail?symbol=${ticker}`. Demanding quotes is the same blindness
+        // that once let 20 premium paths ship while the guard reported "0 visible".
+        if (lines[i].includes(r.route)) {
           dangling.push(rel + ':' + (i + 1) + '  →  ' + r.route);
         }
       }

@@ -504,7 +504,7 @@ function NewsSourcesWidget() {
 /* ── Hot Picks ───────────────────────────────────────────────── */
 function HotPicksWidget() {
   const navigate = useNavigate();
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: ['dash-hot-picks'],
     queryFn: () => apiGet('/api/scoring/ranked?limit=5'),
     refetchInterval: 60_000,
@@ -536,12 +536,10 @@ function HotPicksWidget() {
           </a>
         ))}
       </div>
-      {/* §9.14 — Hot Stock Picks is a PREMIUM view; omitted in the free build. */}
-      {import.meta.env.VITE_EDITION !== 'free' && (
-        <button className="dash-hp-link" onClick={() => navigate('/development/hot-stock-picks')}>
-          View all picks{isFetching ? ' ⟳' : ''} →
-        </button>
-      )}
+      {/* `/development/hot-stock-picks` DELETED 2026-10-01 (owner, Page Walkthrough). The button
+          that opened it went with the page — there is no "all picks" view to link to. §9.14 gated
+          this on edition; a deleted page needs no gate. `isFetching` left the destructure above
+          because this button was its only reader. */}
     </>
   );
 }

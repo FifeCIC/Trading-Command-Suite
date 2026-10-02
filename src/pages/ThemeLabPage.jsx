@@ -7,7 +7,10 @@ import PageInfoPopover from '../components/PageInfoPopover';
 
 const LAB_SECTIONS = [
   { id: 'theme-lab-motion', label: 'Motion Lab', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
-  { id: 'theme-lab-transitions', label: 'Transitions Lab', desc: 'Page-to-page crossfade via View Transitions API', icon: '⇢' },
+  // { id: 'theme-lab-transitions', ... } REMOVED 2026-10-01 — the Transitions Lab view was deleted
+  // at the owner's direction (Page Walkthrough). Asked whether its examples should move into Theme
+  // Lab first, the owner answered "all 21", so the examples were NOT migrated: recover them from git
+  // if that call is reversed. The other three theme labs are still pending the same decision.
   { id: 'theme-lab-scroll', label: 'Scroll Animations', desc: 'Scroll-driven effects — parallax, reveal, header shrink', icon: '⇣' },
   { id: 'theme-lab-popover', label: 'Popover API', desc: 'Native browser popovers — tooltips, menus, dialogs. In Development area.', icon: '◉' },
 ];

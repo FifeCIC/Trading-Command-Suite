@@ -87,9 +87,12 @@ function InfoPopover({ id, title, children }) {
 const PIPELINE = [
   // ── Prerequisites (Stage 0) ──
   {
-    id: 'prereq-symbols', title: 'Symbol Registration', linkTo: '/watchlists/add-symbol', linkLabel: 'Add Symbol',
+    // linkTo `/watchlists/add-symbol` REMOVED 2026-10-01: that page was deleted (owner, Page
+    // Walkthrough). The replacement is still open — #742 relocates symbol entry into Research and
+    // #743 adds an "Import new symbol" action when a search finds no match.
+    id: 'prereq-symbols', title: 'Symbol Registration',
     fn: 'SymbolsController.create() / POST /api/symbols',
-    fnDesc: 'Symbols must be registered in the database before they can be scored. Use the Add Symbol feature. Built-in symbols (EURUSD, GBPUSD, etc.) come pre-registered as part of the default installation.',
+    fnDesc: 'Symbols must be registered in the database before they can be scored. Built-in symbols (EURUSD, GBPUSD, etc.) come pre-registered as part of the default installation; any other symbol is registered through this endpoint.',
     dbTable: 'symbol',
     dbColumns: 'id (UUID), ticker, name, exchange, type, active',
   },
@@ -408,7 +411,7 @@ export default function MetaStackExplorerPage() {
     const vals = {
       'prereq-symbols': [
         { label: 'Any symbols registered', pass: symCount > 0, detail: `${symCount} total` },
-        { label: 'Non-default symbol added', pass: hasUserSymbols, detail: hasUserSymbols ? `${userSymbols.length} stock/ETF symbols` : 'only built-in forex/crypto — use Add Symbol', link: '/watchlists/add-symbol', linkLabel: 'Add Symbol' },
+        { label: 'Non-default symbol added', pass: hasUserSymbols, detail: hasUserSymbols ? `${userSymbols.length} stock/ETF symbols` : 'only built-in forex/crypto — register one via POST /api/symbols' },
       ],
       'prereq-watchlist': [
         { label: 'Any watchlist exists', pass: wlCount > 0, detail: `${wlCount} total (${allWatchlists.length - userWatchlists.length} built-in)` },

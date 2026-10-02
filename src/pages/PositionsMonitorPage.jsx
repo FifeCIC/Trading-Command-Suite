@@ -174,10 +174,9 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
           )
         )}
         <a className="pm-nav-link" href={`/research/symbol/${pos.symbol}`}>🔍 Details</a>
-        {/* §9.14 — the Decision Trail is a PREMIUM view; omitted in the free build. */}
-        {import.meta.env.VITE_EDITION !== 'free' && (
-          <a className="pm-nav-link" href={`/automation/decision-trail?symbol=${pos.symbol}`} title={`Decision trail for ${pos.symbol}`}>🔗 Trail</a>
-        )}
+        {/* 🔗 Trail → `/automation/decision-trail` REMOVED 2026-10-01: the view was deleted at the
+            owner's direction in the Page Walkthrough. The old §9.14 edition gate is gone with it —
+            a deleted page needs no gate. */}
       </div>
     </motion.div>
   );

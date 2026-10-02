@@ -329,14 +329,10 @@ export default function ActiveSymbolsPage() {
             <span>Search</span>
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter..." />
           </label>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => navigate('/watchlists/add-symbol')}
-            style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.82rem' }}
-          >
-            ➕ Add Symbol
-          </button>
+          {/* ➕ Add Symbol → `/watchlists/add-symbol` REMOVED 2026-10-01: the page was deleted at
+              the owner's direction in the Page Walkthrough. The replacement is still open — #742
+              relocates symbol entry into Research, #743 adds an "Import new symbol" action when a
+              symbol search finds no match. */}
           <button
             type="button"
             className="btn"
@@ -471,14 +467,9 @@ export default function ActiveSymbolsPage() {
                             so the path does not ship and no dead link is offered. */}
                         {import.meta.env.VITE_EDITION !== 'free' && (
                         <span style={{ fontSize: '0.7rem' }}>
-                          <a
-                            href={`/automation/decision-trail?symbol=${sym.ticker}`}
-                            onClick={(e) => { e.preventDefault(); navigate(`/automation/decision-trail?symbol=${sym.ticker}`); }}
-                            title={`Inspect decision trail for ${sym.ticker}`}
-                            style={{ color: 'var(--ink-soft)', textDecoration: 'none' }}
-                          >
-                            🔗 Trail
-                          </a>
+                          {/* 🔗 Trail → `/automation/decision-trail` REMOVED 2026-10-01: that view
+                              was deleted at the owner's direction in the Page Walkthrough. A link to
+                              a deleted route is a dead button, so it goes rather than pretending. */}
                         </span>
                         )}
                       </div>
