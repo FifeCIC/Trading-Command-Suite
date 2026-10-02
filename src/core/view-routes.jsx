@@ -175,9 +175,6 @@ import PositionLifecyclePage from '../pages/PositionLifecyclePage.jsx';
 import ResponsiveLayoutLabPage from '../pages/ResponsiveLayoutLabPage.jsx';
 import ChartsLabPage from '../pages/ChartsLabPage.jsx';
 import ThemeLabPage from '../pages/ThemeLabPage.jsx';
-import ThemeLabMotion from '../pages/ThemeLabMotion.jsx';
-import ThemeLabScroll from '../pages/ThemeLabScroll.jsx';
-import ThemeLabPopover from '../pages/ThemeLabPopover.jsx';
 import PipelineGraphLabPage from '../pages/PipelineGraphLabPage.jsx';
 import IdentityMapLabPage from '../pages/IdentityMapLabPage.jsx';
 import FeatureLabPage from '../pages/FeatureLabPage.jsx';
@@ -362,9 +359,6 @@ export const VIEW_COMPONENTS = {
   'responsive-layout-lab': ResponsiveLayoutLabPage,
   'charts-lab': ChartsLabPage,
   'theme-lab': ThemeLabPage,
-  'theme-lab-motion': ThemeLabMotion,
-  'theme-lab-scroll': ThemeLabScroll,
-  'theme-lab-popover': ThemeLabPopover,
   'pipeline-graph-lab': PipelineGraphLabPage,
   // Temporary diagnostic — see IdentityMapLabPage.jsx header. Remove once the identity
   // question is settled, or promote it to a permanent System page.

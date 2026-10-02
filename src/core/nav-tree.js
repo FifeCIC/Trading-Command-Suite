@@ -353,9 +353,6 @@ export const NAV_TREE = {
       // ── Theme engineering ──
       { kind: 'section-header', id: 'dev-theme', label: 'Theme Engineering', icon: '🎨' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
-      { id: 'theme-lab-motion', label: 'Motion Lab', icon: '◆' },
-      { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
-      { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
       // ── META.Stack internals ──
       { kind: 'section-header', id: 'dev-metastack', label: 'META.Stack Internals', icon: '🔗' },
       { id: 'meta-stack-cockpit', label: 'META.Stack Cockpit', icon: '🧭' },

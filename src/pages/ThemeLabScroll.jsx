@@ -29,7 +29,15 @@ function RevealCard({ index }) {
   );
 }
 
-export default function ThemeLabScroll() {
+/**
+ * ScrollLabSection — the Scroll Animations examples, rendered INSIDE Theme Lab.
+ *
+ * ⚠️ Was `ThemeLabScroll`, a PAGE at /development/theme-lab-scroll until 2026-10-01; the owner
+ * deleted the view and asked for its examples to move here. Exported as a SECTION: no `tl-page`
+ * wrapper, no `<h1>`. The progress bar below is `position: fixed` and stays that way — it was
+ * viewport-wide on its own page too.
+ */
+export default function ScrollLabSection() {
   const [scrollPct, setScrollPct] = useState(0);
 
   useEffect(() => {
@@ -43,15 +51,13 @@ export default function ThemeLabScroll() {
   }, []);
 
   return (
-    <div className="tl-page" style={{ paddingBottom: '4rem' }}>
-      <header className="tl-header">
-        <h1>Scroll-Driven Animations</h1>
-        <p className="tl-subtitle">
-          CSS + JavaScript animations tied to scroll position. Parallax, reveal-on-scroll, header shrink.
-          <br /><strong>Status: ✅ Stable</strong> — Uses IntersectionObserver + scroll events. Works in all modern browsers.
-          <br /><span style={{ fontSize: '0.82rem', color: 'var(--ink-soft)' }}>Used in: Strategy Builder protocol cards, Architecture Framework section reveals.</span>
-        </p>
-      </header>
+    <section className="tl-section" style={{ paddingBottom: '2rem' }}>
+      <h2>Scroll-Driven Animations</h2>
+      <p className="tl-subtitle">
+        CSS + JavaScript animations tied to scroll position. Parallax, reveal-on-scroll, header shrink.
+        <br /><strong>Status: ✅ Stable</strong> — Uses IntersectionObserver + scroll events. Works in all modern browsers.
+        <br /><span style={{ fontSize: '0.82rem', color: 'var(--ink-soft)' }}>Used in: Strategy Builder protocol cards, Architecture Framework section reveals.</span>
+      </p>
 
       {/* Scroll progress bar */}
       <div style={{
@@ -105,6 +111,6 @@ export default function ThemeLabScroll() {
           This provides reliable cross-browser support without experimental features.
         </p>
       </section>
-    </div>
+    </section>
   );
 }

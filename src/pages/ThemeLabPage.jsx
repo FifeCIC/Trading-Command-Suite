@@ -1,19 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './theme-lab.css';
 import '../core/forms.css'; // canonical shared Form System (.ff-*)
 import PageInfoPopover from '../components/PageInfoPopover';
-
-const LAB_SECTIONS = [
-  { id: 'theme-lab-motion', label: 'Motion Lab', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
-  // { id: 'theme-lab-transitions', ... } REMOVED 2026-10-01 — the Transitions Lab view was deleted
-  // at the owner's direction (Page Walkthrough). Asked whether its examples should move into Theme
-  // Lab first, the owner answered "all 21", so the examples were NOT migrated: recover them from git
-  // if that call is reversed. The other three theme labs are still pending the same decision.
-  { id: 'theme-lab-scroll', label: 'Scroll Animations', desc: 'Scroll-driven effects — parallax, reveal, header shrink', icon: '⇣' },
-  { id: 'theme-lab-popover', label: 'Popover API', desc: 'Native browser popovers — tooltips, menus, dialogs. In Development area.', icon: '◉' },
-];
+// The three lab SECTIONS, merged 2026-10-01. This page used to be a HUB that only linked out to them
+// (`LAB_SECTIONS.map` + `navigate('/development/' + id)`). The owner's instruction was "add the
+// examples to the theme-lab page and delete this page", so the examples now RENDER here and the hub
+// is gone. Each file exports a SECTION — no page wrapper, no <h1>.
+//
+// ⚠️ TRANSITIONS LAB was deleted 2026-10-01 with its examples NOT migrated: asked whether to move
+// them first, the owner answered "all 21". Recover from git if that call is reversed.
+import MotionLabSection from './ThemeLabMotion';
+import ScrollLabSection from './ThemeLabScroll';
+import PopoverLabSection from './ThemeLabPopover';
 
 // ── Shade presets from the task spec ────────────────────────
 const SHADE_PRESETS = [
@@ -81,7 +80,6 @@ const GLOW_PRESETS = [
 
 export default function ThemeLabPage() {
   const [activeBg, setActiveBg] = useState(null);
-  const navigate = useNavigate();
 
   return (
     <div className="tl-page">
@@ -94,27 +92,12 @@ export default function ThemeLabPage() {
         </h1>
       </header>
 
-      {/* ── Lab Sections Hub ─────────────────────────────── */}
-      <section className="tl-section">
-        <h2>Lab Sections</h2>
-        <div className="tl-lab-grid">
-          {LAB_SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="tl-lab-card"
-              onClick={() => navigate(`/development/${s.id}`)}
-            >
-              <span className="tl-lab-icon">{s.icon}</span>
-              <div className="tl-lab-info">
-                <strong>{s.label}</strong>
-                <span>{s.desc}</span>
-              </div>
-              <span className="tl-lab-arrow">→</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* ── Lab Sections — RENDERED, not linked (2026-10-01) ──────────────────
+          Formerly a hub of buttons that navigated to three separate views. Those views are deleted;
+          their examples render here instead, so nothing was lost and there is no second route in. */}
+      <MotionLabSection />
+      <ScrollLabSection />
+      <PopoverLabSection />
 
       {/* ── Best Practices ─────────────────────────────────── */}
       <section className="tl-section">

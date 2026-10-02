@@ -119,6 +119,26 @@ function removeNavEntry(src, id) {
 }
 
 /**
+ * True when a source line IMPORTS a file with this basename.
+ *
+ * ⚠️ The extension is OPTIONAL, and that is the whole point. This repo imports components WITHOUT
+ * one (`import MotionLabSection from './ThemeLabMotion'`). An earlier version required the specifier
+ * to end in the full filename, so it saw NO importer and marked three LIVE section files for
+ * deletion — measured 2026-10-01 while merging the theme labs, where the dry run is the only reason
+ * the work survived.
+ *
+ * An import LINE is also required: a MENTION is not a dependency. The architecture docs name deleted
+ * pages on purpose, and a plain substring test matched `lab.css` inside `charts-lab.css` (13 bogus
+ * importers on a single file).
+ */
+function importsFile(line, base) {
+  if (!/^\s*import\b/.test(line)) return false;
+  const stem = base.replace(/\.(jsx?|css)$/, '');
+  const q = '["' + String.fromCharCode(39) + '`]';
+  return new RegExp('/' + esc(stem) + '(\\.(jsx?|css))?' + q + '\\s*;?\\s*$').test(line);
+}
+
+/**
  * Why a declared asset must NOT be deleted. Returns null when it is safe to delete.
  *
  * ⚠️ This exists because the first dry run found FOUR of 21 views declaring an asset that is not
@@ -273,7 +293,15 @@ function selfTest() {
   const sharedMeta = "  '/a': {\n    css: 'src/pages/Shared.css',\n  },\n  '/b': {\n    css: 'src/pages/Shared.css',\n  },";
   check('shared asset REFUSED', /shared between views/.test(protectionReason('src/pages/Shared.css', sharedMeta) || ''));
 
-  console.log('self-test: ' + (fails.length ? 'FAILED' : 'passed') + ' (' + (fails.length ? fails.length : 27) + ' assertions)');
+  // the importer matcher — an extensionless import is this repo's convention, and getting it wrong
+  // marked three live section files for deletion
+  check('import: extensionless specifier counts', importsFile("import MotionLabSection from './ThemeLabMotion';", 'ThemeLabMotion.jsx'),
+    'extensionless imports were not detected');
+  check('import: explicit extension counts', importsFile("import X from '../pages/ThemeLabMotion.jsx';", 'ThemeLabMotion.jsx'));
+  check('import: substring is NOT an import', !importsFile("import './charts-lab.css';", 'lab.css'), 'charts-lab.css matched lab.css');
+  check('import: a mention is NOT an import', !importsFile("      file: 'src/pages/ThemeLabMotion.jsx',", 'ThemeLabMotion.jsx'));
+
+  console.log('self-test: ' + (fails.length ? 'FAILED' : 'passed') + ' (' + (fails.length ? fails.length : 31) + ' assertions)');
   for (const f of fails) console.error('  ✗ ' + f);
   if (fails.length) process.exit(1);
   process.exit(0);
@@ -410,7 +438,6 @@ function main(argv) {
   //                  and the guard protected all 42 assets, so nothing could be deleted at all.
   //   • mention    → the architecture docs name deleted pages on purpose, and blocking on that
   //                  makes deletion impossible. Only a real import line proves a live dependency.
-  const QCH = '["' + String.fromCharCode(39) + '`]';
   const candidateSet = new Set(results.map((r) => r.file).filter(Boolean));
   const plan = [];
   for (const r of results) {
@@ -420,10 +447,9 @@ function main(argv) {
       let reason = protectionReason(asset, original.meta);
       if (!reason) {
         const base = asset.split('/').pop();
-        const baseRe = new RegExp('/' + esc(base) + QCH + '\\s*;?\\s*$');
         const importers = Object.keys(srcAll).filter((rel) => {
           if (rel === asset || candidateSet.has(rel)) return false;
-          return srcAll[rel].split(/\r?\n/).some((l) => /^\s*import\b/.test(l) && baseRe.test(l));
+          return srcAll[rel].split(/\r?\n/).some((l) => importsFile(l, base));
         });
         if (importers.length) reason = 'imported by a surviving file: ' + importers.join(', ');
       }

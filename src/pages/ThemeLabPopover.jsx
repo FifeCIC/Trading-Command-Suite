@@ -1,16 +1,21 @@
 import PageInfoPopover from '../components/PageInfoPopover';
 
-export default function ThemeLabPopover() {
+/**
+ * PopoverLabSection — the Popover API examples, rendered INSIDE Theme Lab.
+ *
+ * ⚠️ Was `ThemeLabPopover`, a PAGE at /development/theme-lab-popover until 2026-10-01; the owner
+ * deleted the view and asked for its examples to move here. Exported as a SECTION: no `tl-page`
+ * wrapper, no `<h1>`.
+ */
+export default function PopoverLabSection() {
   return (
-    <div className="tl-page">
-      <header className="tl-header">
-        <h1>Popover API
-          <PageInfoPopover>
-            Native browser popovers — no JS needed for show/hide. Light dismiss, focus management, anchor positioning built in.
-          Status: 🧪 Experimental — Chrome/Edge only. Requires polyfill for Firefox/Safari.
-          </PageInfoPopover>
-        </h1>
-      </header>
+    <section className="tl-section">
+      <h2>Popover API
+        <PageInfoPopover>
+          Native browser popovers — no JS needed for show/hide. Light dismiss, focus management, anchor positioning built in.
+        Status: 🧪 Experimental — Chrome/Edge only. Requires polyfill for Firefox/Safari.
+        </PageInfoPopover>
+      </h2>
 
       <section className="tl-section">
         <h2>Basic Popover</h2>
@@ -100,6 +105,6 @@ export default function ThemeLabPopover() {
           ))}
         </div>
       </section>
-    </div>
+    </section>
   );
 }

@@ -137,18 +137,24 @@ const demos = [
   },
 ];
 
-export default function ThemeLabMotion() {
+/**
+ * MotionLabSection — the Motion Lab's examples, rendered INSIDE Theme Lab.
+ *
+ * ⚠️ This was `ThemeLabMotion`, a PAGE at /development/theme-lab-motion until 2026-10-01. The owner
+ * deleted that view and said "add motion examples to the theme-lab page". So this exports a SECTION:
+ * no `tl-page` wrapper and no `<h1>` — the host page owns the heading. The file is still imported by
+ * ThemeLabPage.jsx, which is why scripts/delete-views.cjs kept it rather than deleting it with the view.
+ */
+export default function MotionLabSection() {
   const [key, setKey] = useState(0);
   return (
-    <div className="tl-page">
-      <header className="tl-header">
-        <h1>Motion Lab
-          <PageInfoPopover>
-            motion.dev — 3.5KB animation library. Fade, slide, scale, stagger, AnimatePresence.
-          Status: ✅ Accepted for micro-interactions. Keep under 300ms, prefer GPU-friendly properties.
-          </PageInfoPopover>
-        </h1>
-      </header>
+    <section className="tl-section">
+      <h2>Motion Lab
+        <PageInfoPopover>
+          motion.dev — 3.5KB animation library. Fade, slide, scale, stagger, AnimatePresence.
+        Status: ✅ Accepted for micro-interactions. Keep under 300ms, prefer GPU-friendly properties.
+        </PageInfoPopover>
+      </h2>
 
       <button onClick={() => setKey((k) => k + 1)} className="tl-demo-btn" style={{ marginBottom: '1rem', padding: '0.4rem 0.85rem', fontSize: '0.78rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--line)', borderRadius: 6, color: 'var(--ink-soft)', cursor: 'pointer' }}>
         ⟳ Replay All
@@ -163,6 +169,6 @@ export default function ThemeLabMotion() {
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
