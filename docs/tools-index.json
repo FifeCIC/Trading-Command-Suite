@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 175,
+  "count": 176,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -912,6 +912,14 @@
       "where": "nest",
       "category": "tool",
       "purpose": "Verify that `remove-risk-group-directive.cjs` REFUSES to write invalid syntax.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "tmp-verify-peaks-998.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "(no header comment)",
       "selfTest": false,
       "reaches": null
     },

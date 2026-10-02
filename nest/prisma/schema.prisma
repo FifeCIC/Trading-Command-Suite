@@ -897,6 +897,22 @@ model Position {
   provider    String   @db.VarChar(50)
   accountId   String?  @db.VarChar(100)
   lastQuotedAt DateTime?
+  /// ── DURABLE PEAK (#998) ──
+  ///
+  /// The best price and best profit% this OPEN position has reached. Stored, not
+  /// reconstructed: before this, "did we give back profit?" could only be answered by
+  /// replaying `marketbar` highs, which is an indication and not a record.
+  ///
+  /// ⚠️ NULL means "no peak observed yet" — NOT "the peak is zero". The two must never
+  /// render the same; a position just opened has no peak, a peaked-badly one has a negative
+  /// one. See development-status → distinguish "fine" from "cannot judge".
+  ///
+  /// ⚠️ `PositionSyncService.syncPositions()` UPSERTS this table from the broker every sync
+  /// with a FIXED field list. These two columns are deliberately NOT in that list, which is
+  /// what makes them survive a re-sync. Adding them to that `update` block would silently
+  /// reset every peak on the next broker poll.
+  peakPrice     Float?
+  peakProfitPct Float?
   openedAt    DateTime @default(now())
   updatedAt   DateTime @updatedAt
   // Broker traceability (#616) — the 64-bit broker ticket is a STRING.
@@ -921,6 +937,16 @@ model Trade {
   entryPrice        Float
   exitPrice         Float?
   pnl               Float?
+  /// ── DURABLE PEAK (#998), copied from the `position` row at close time ──
+  ///
+  /// The `position` row does NOT survive closure, so a peak kept only there is lost
+  /// exactly when it becomes interesting. These are the historical record that makes
+  /// "this trade gave back X of its best move" answerable from `trade` alone.
+  ///
+  /// ⚠️ NULL here means the position closed before its peak was ever written — which is
+  /// NOT the same as "it never went into profit". Do not coalesce to 0.
+  peakPrice         Float?
+  peakProfitPct     Float?
   status            String   @default("open") @db.VarChar(50)
   provider          String   @db.VarChar(50)
   /// WHICH BROKER ACCOUNT this trade belongs to (#889).

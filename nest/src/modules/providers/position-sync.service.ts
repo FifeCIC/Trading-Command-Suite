@@ -988,6 +988,19 @@ export class PositionSyncService {
           // before reporting a duration.
           closedAt: closedAt ?? new Date(),
           closeReason,
+          // ── DURABLE PEAK (#998) — rescued from the position row before it is removed ──
+          //
+          // The `position` row does NOT survive closure. A peak kept only there would be lost
+          // exactly when it becomes interesting — at the close, where "this trade gave back X of
+          // its best move" is the question being asked. So it is copied onto the trade here.
+          //
+          // ⚠️ CONDITIONAL, and the condition is the point: a null peak means "never observed",
+          // NOT "the peak was zero". Spreading unconditionally would let a finalize pass that has
+          // no peak data (a repair pass, #1014, where the position row is long gone) OVERWRITE a
+          // peak recorded while the position was live. That is the same defect class as `||`
+          // treating an unknown as a value (#1058).
+          ...(dbPos.peakPrice != null ? { peakPrice: dbPos.peakPrice } : {}),
+          ...(dbPos.peakProfitPct != null ? { peakProfitPct: dbPos.peakProfitPct } : {}),
           ...(strategy ? { strategy } : {}),
           ...(costComponents
             ? {

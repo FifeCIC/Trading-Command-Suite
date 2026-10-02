@@ -11,6 +11,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { nextPeak, peakProfitPctFor } from '../../common/trading/peak';
 
 @Injectable()
 export class PriceRefreshService {
@@ -40,6 +41,14 @@ export class PriceRefreshService {
         if (!livePrice) continue;
 
         const changed = await this.maybeUpdateStoredPrice(symbol, livePrice.price);
+
+        // ⚠️ CALLED UNCONDITIONALLY, AND DELIBERATELY NOT INSIDE maybeUpdateStoredPrice().
+        // That method SKIPS its write when the move is under WRITE_THRESHOLD_PCT (0.1%), which is
+        // a sensible economy for a LAST price and a silent corruption of a PEAK: a maximum that
+        // can miss small increments is UNDERSTATED, and an understated peak makes every
+        // "did we give back profit?" answer read slightly too well. See #998.
+        await this.recordPeaks(symbol, livePrice.price);
+
         refreshed.push({
           symbol,
           price: livePrice.price,
@@ -95,6 +104,62 @@ export class PriceRefreshService {
       }
     }
     return null;
+  }
+
+  /**
+   * recordPeaks() — write the durable high-water mark for every OPEN position on this symbol (#998).
+   *
+   * BEFORE: a position's best price existed only as an in-memory Map in the StopGuardian
+   * (`simTslWatermark`), declared ephemeral in its own comment, and gated behind `simTslEnabled`
+   * — a flag ZERO of 39 bots had set. So the give-back measured for #998 had to be RECONSTRUCTED
+   * from `marketbar` highs, which is an indication rather than a record, and every future answer
+   * would move as the bar data moved.
+   *
+   * AFTER: `peakPrice` + `peakProfitPct` are stored on the position row, written on EVERY refresh,
+   * independently of any exit control being armed.
+   *
+   * ⚠️ WHY IT IS A SEPARATE METHOD and not folded into maybeUpdateStoredPrice(). Merging the two
+   * looks like a tidy saving of one query per symbol, and it would put the peak write behind the
+   * 0.1% threshold `continue` — the defect this method exists to avoid. If you are optimising
+   * here, the saving is available only by keeping the peak write OUTSIDE the gate.
+   *
+   * ⚠️ WHY NOT IN `position-sync`. That service UPSERTS the whole position row from the broker
+   * each poll, and its `update` block names a fixed field list. Writing a peak there would be
+   * fine (the columns are deliberately absent from that list) but it runs on the broker's cadence
+   * and would miss intra-poll excursions — which is precisely the data a peak is FOR.
+   */
+  private async recordPeaks(symbol: string, newPrice: number): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+
+    try {
+      const positions = await this.prisma.position.findMany({
+        where: { symbol },
+        select: { id: true, side: true, avgPrice: true, peakPrice: true, peakProfitPct: true },
+      });
+
+      for (const pos of positions as any[]) {
+        const peakPrice = nextPeak(pos.peakPrice, newPrice);
+        const peakProfitPct = peakProfitPctFor(pos.peakProfitPct, pos.side, pos.avgPrice, newPrice);
+
+        // Only write when the record actually MOVES. A monotonic field that is re-written with an
+        // unchanged value every refresh is pure write amplification on a hot path.
+        const priceMoved = peakPrice != null && peakPrice !== pos.peakPrice;
+        const pctMoved = peakProfitPct != null && peakProfitPct !== pos.peakProfitPct;
+        if (!priceMoved && !pctMoved) continue;
+
+        await this.prisma.position.update({
+          where: { id: pos.id },
+          data: {
+            ...(priceMoved ? { peakPrice } : {}),
+            ...(pctMoved ? { peakProfitPct } : {}),
+          },
+        });
+      }
+    } catch (err) {
+      // A peak is a RECORD, not a risk control: failing to write one must never break a price
+      // refresh. Warn and continue rather than throwing into the caller's loop.
+      this.logger.warn(`Failed to record peak for ${symbol}: ${(err as Error).message}`);
+    }
   }
 
   /**
