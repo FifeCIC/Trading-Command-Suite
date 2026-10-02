@@ -3,8 +3,42 @@
 /* ── View Transitions API ─────────────────────────────────── */
 /* Crossfade between SPA page navigations.
    Disabled when user sets pageTransitions=false in Preferences.
-   Speed controlled via --vt-old-duration, --vt-new-duration, --vt-new-delay
-   (set by Theme Lab Transitions slow-mo toggle). */
+   ⚠️ Speed is overridable via --vt-old-duration / --vt-new-duration / --vt-new-delay, declared
+   immediately below. */
+
+/* ⚠️ #1059/#1060 — THESE THREE ARE NOW DECLARED, AND THAT IS THE FIX FOR A WHOLE-TEAM BLOCKER.
+ *
+ * The comment here used to claim *"(set by Theme Lab Transitions slow-mo toggle)"*. **Nothing set
+ * them** — a repo-wide search finds `--vt-*` in this file and in built output, nowhere else. So they
+ * were referenced-but-never-declared, and `scripts/validate-css-tokens.cjs` (which runs in
+ * `prebuild`) reported **3 NEW undefined references** and exited 1 — **blocking every agent's
+ * rebuild** for a reason that is not a rendering defect at all: a custom-property reference WITH a
+ * fallback is valid CSS, and the fallback simply applies.
+ *
+ * ⚠️ Note for whoever owns the validator: it does not strip comments, so merely writing the
+ * offending syntax in prose here creates a NEW finding. That is why this paragraph describes the
+ * pattern instead of quoting it.
+ *
+ * THE REJECTED OPTIONS, and why this one wins:
+ *   - "narrow the validator" — would weaken the gate for EVERY future token, to excuse one pattern.
+ *     This repo's own rule is *"tighten the pattern; never widen the exemption."*
+ *   - "fix the comment only" — leaves the build red.
+ *   - "leave it to its owner" — keeps the whole team blocked meanwhile.
+ *
+ * ⚠️ Declaring them fixes the gate WITHOUT weakening it: `--vt-*` is now a real, checked token, so a
+ * future typo in the name STILL fails the build. The intent the stale comment described is also
+ * restored — anything may override these, and the defaults below apply otherwise. The inline
+ * fallbacks are kept as belt-and-braces on top of the declarations.
+ *
+ * REVERSE BY: delete this `:root` block — the three references become undefined again and the
+ * validator fails once more.
+ */
+:root {
+  --vt-old-duration: 0.2s;
+  --vt-new-duration: 0.25s;
+  --vt-new-delay: 0.05s;
+}
+
 ::view-transition-old(root) {
   animation: var(--vt-old-duration, 0.2s) ease-out both fade-out;
 }
