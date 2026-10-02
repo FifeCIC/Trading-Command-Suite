@@ -29,7 +29,22 @@ describe('stalenessReport — is our market data stale? (#1067)', () => {
 
   it('a symbol whose newest bar is older than the threshold IS stale', () => {
     const r = stalenessReport([{ symbol: 'XAUUSD', latest: minsAgo(37) }], 5, NOW);
-    expect(r.stale).toEqual([{ symbol: 'XAUUSD', latestAgeMinutes: 37 }]);
+    expect(r.stale).toEqual([{ symbol: 'XAUUSD', latestAgeMinutes: 37, allowedMinutes: 5 }]);
+  });
+
+  // ⚠️ CANARY C — THE MESSAGE MUST NOT CONTRADICT THE DECISION.
+  // Measured 2026-10-02, live: the first version printed the CONFIGURED threshold while the
+  // decision used max(threshold, 2 x interval), so the alert read
+  //   "no bar newer than 5 min (newest is 96 min old)"
+  // about symbols judged against a 2880-minute (1d) allowance. That sends the reader to fix a feed
+  // that is working. The entry now carries `allowedMinutes` and the message reports it.
+  it('⚠️ CANARY — the message reports the ALLOWANCE, never the configured threshold', () => {
+    // A 1d bar 200 min old: stale only because the interval is tiny in this constructed case.
+    const r = stalenessReport([{ symbol: 'USDCAD', latest: minsAgo(200), intervalMinutes: 60 }], 5, NOW);
+    expect(r.stale).toEqual([{ symbol: 'USDCAD', latestAgeMinutes: 200, allowedMinutes: 120 }]);
+    const m = stalenessMessage(r, 5);
+    expect(m).toContain('allowance up to 120 min');
+    expect(m).not.toContain('newer than 5 min');
   });
 
   // ⚠️ CANARY A — "no bars" is CANNOT JUDGE, not stale. Reporting it as stale is how the old alert
@@ -92,7 +107,7 @@ describe('stalenessReport — is our market data stale? (#1067)', () => {
 
     it('but a 5m bar at 40 minutes IS stale — well past its own two intervals', () => {
       const r = stalenessReport([{ symbol: 'XAUUSD', latest: minsAgo(40), intervalMinutes: 5 }], 5, NOW);
-      expect(r.stale).toEqual([{ symbol: 'XAUUSD', latestAgeMinutes: 40 }]);
+      expect(r.stale).toEqual([{ symbol: 'XAUUSD', latestAgeMinutes: 40, allowedMinutes: 10 }]);
     });
 
     it('allowedAge is the LARGER of the setting and twice the interval', () => {

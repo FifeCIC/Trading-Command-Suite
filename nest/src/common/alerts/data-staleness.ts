@@ -67,8 +67,17 @@ export interface SymbolLatest {
 }
 
 export interface StalenessReport {
-  /** Symbols with an active bot whose NEWEST bar is older than the threshold. */
-  stale: Array<{ symbol: string; latestAgeMinutes: number }>;
+  /**
+   * Symbols with an active bot whose NEWEST bar is older than their own allowance.
+   *
+   * ⚠️ `allowedMinutes` is carried ON THE ENTRY, not left for the caller to recompute.
+   * Measured 2026-10-02: the first version of the message printed the CONFIGURED threshold while
+   * the DECISION used `max(threshold, 2 x interval)`, so it read *"no bar newer than 5 min (newest
+   * is 96 min old)"* about a symbol judged against a 2880-minute allowance. **A message that
+   * contradicts the decision it reports is worse than no message** — it sends the reader to fix a
+   * feed that is working. Carrying the number makes that disagreement impossible to write.
+   */
+  stale: Array<{ symbol: string; latestAgeMinutes: number; allowedMinutes: number }>;
   /** Symbols with an active bot and NO bars at all — "cannot judge", NOT "stale". */
   cannotJudge: string[];
 }
@@ -84,7 +93,7 @@ export function stalenessReport(
   thresholdMinutes: number,
   now: Date,
 ): StalenessReport {
-  const stale: Array<{ symbol: string; latestAgeMinutes: number }> = [];
+  const stale: Array<{ symbol: string; latestAgeMinutes: number; allowedMinutes: number }> = [];
   const cannotJudge: string[] = [];
 
   for (const row of latestBySymbol) {
@@ -93,8 +102,13 @@ export function stalenessReport(
       continue;
     }
     const ageMinutes = (now.getTime() - row.latest.getTime()) / 60_000;
-    if (ageMinutes > allowedAgeMinutes(row, thresholdMinutes)) {
-      stale.push({ symbol: row.symbol, latestAgeMinutes: Math.round(ageMinutes) });
+    const allowedMinutes = allowedAgeMinutes(row, thresholdMinutes);
+    if (ageMinutes > allowedMinutes) {
+      stale.push({
+        symbol: row.symbol,
+        latestAgeMinutes: Math.round(ageMinutes),
+        allowedMinutes,
+      });
     }
   }
 
@@ -127,13 +141,19 @@ export function allowedAgeMinutes(row: SymbolLatest, thresholdMinutes: number): 
  * ⚠️ The old message printed a COUNT OF HISTORY (`995489 market bar(s) older than 5 minutes`), which
  * reads as alarming and means nothing. This names the SYMBOLS, because those are actionable.
  */
-export function stalenessMessage(report: StalenessReport, thresholdMinutes: number): string {
+export function stalenessMessage(report: StalenessReport, _thresholdMinutes: number): string {
   const names = report.stale.map((s) => s.symbol);
   const shown = names.slice(0, 8).join(', ');
   const more = names.length > 8 ? ` (+${names.length - 8} more)` : '';
   const worst = report.stale.reduce((m, s) => Math.max(m, s.latestAgeMinutes), 0);
+  // ⚠️ Report the LARGEST ALLOWANCE in play, not the configured threshold. The allowance is what
+  // the decision actually used; naming the setting instead is how the message came to say
+  // "5 min" about a symbol judged against 2880. Callers pass the threshold only for context, so it
+  // is deliberately ignored here rather than silently preferred.
+  const allowance = report.stale.reduce((m, s) => Math.max(m, s.allowedMinutes), 0);
   return (
-    `${names.length} traded symbol(s) have no bar newer than ${thresholdMinutes} min ` +
-    `(newest is ${worst} min old): ${shown}${more}. Scoring may be acting on stale prices.`
+    `${names.length} traded symbol(s) have no bar inside their own allowance ` +
+    `(worst is ${worst} min old; allowance up to ${allowance} min): ${shown}${more}. ` +
+    `Scoring may be acting on stale prices.`
   );
 }
