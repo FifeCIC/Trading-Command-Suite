@@ -15,6 +15,13 @@ import './trade-journal-page.css';
  * The CODE is the stable identity (quote it in a bug report); the LABEL is for people. The TONE is
  * what this page exists to show: WHO closed the trade — a broker stop, the time stop, the app, or
  * the desktop terminal — because that is what explains an exit that beat or betrayed its plan.
+ *
+ * ⚠️ #916 (2026-10-02) — `broker:terminal` was labelled "Desktop terminal", which ASSERTS a human.
+ * Measured, it is not one: the largest population behind that code arrives in batches of up to six
+ * positions inside two seconds, with an EMPTY closing comment — and our own bridge stamps
+ * `TCS:<origin>` on every close it sends, so an empty comment proves the close did NOT come from
+ * us. The label now says what is true: the actor is not identified. **The previous wording is why
+ * "something closes winners early" stayed unexplained for thirteen days — it read as an answer.**
  */
 const CLOSE_REASON_META = {
   'system:time-stop':  { label: 'Time stop',        tone: 'system' },
@@ -22,7 +29,7 @@ const CLOSE_REASON_META = {
   'user:manual':       { label: 'App close',        tone: 'app' },
   'broker:sl':         { label: 'Stop loss',        tone: 'sl' },
   'broker:tp':         { label: 'Take profit',      tone: 'tp' },
-  'broker:terminal':   { label: 'Desktop terminal', tone: 'terminal' },
+  'broker:terminal':   { label: 'Broker — actor unknown', tone: 'terminal' },
   'broker:stop-out':   { label: 'Margin stop-out',  tone: 'sl' },
   'broker:unknown':    { label: 'Not reported',     tone: 'unknown' },
 };

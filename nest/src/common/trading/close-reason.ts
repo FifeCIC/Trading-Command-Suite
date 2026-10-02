@@ -64,7 +64,44 @@ export const CLOSE_REASONS = {
   BROKER_SL: 'broker:sl',
   /** MT5 filled the take profit. */
   BROKER_TP: 'broker:tp',
-  /** MT5 closed it because it decided to — client terminal, web, expert, stop-out, rollover. */
+  /**
+   * MT5 closed it because it decided to — client terminal, web, expert, rollover.
+   *
+   * ⚠️⚠️ #916 (2026-10-02) — **THIS IS NOT AN ATTRIBUTION. It NAMES A BUCKET, not an actor.**
+   *
+   * This value read as an explanation for thirteen days and that is exactly what kept #916 open:
+   * `broker:terminal` was accepted as "a person closed it at the desktop", the search stopped, and
+   * "something closes winners early — unexplained" stayed unexplained. It is the LARGEST attributed
+   * bucket, so the thing nobody could name was also the thing wearing the most confident label.
+   *
+   * MEASURED 2026-10-02, from `/history` on BOTH live bridges (closing deals isolated by grouping
+   * on `positionId`):
+   *
+   * | deal reason | n (:5000) | what it actually was |
+   * |---|---|---|
+   * | 3 EXPERT | 33 | every one carried `TCS:time-stop` — OUR OWN time stop |
+   * | 4 SL | 9 | `[sl 4261.55]` — a real stop fill |
+   * | 5 TP | 1 | `[tp 8131.0]` — a real take-profit fill |
+   * | **0 CLIENT** | **34** | **EMPTY comment** — see below |
+   *
+   * So reason 3 and reason 0 — an EA and a client — map to ONE value, and only one of them is even
+   * plausibly a person. That conflation is the defect.
+   *
+   * ⚠️ **AN EMPTY CLOSING COMMENT IS NOW EVIDENCE, NOT MISSING DATA.** The bridge stamps
+   * `TCS:<origin>` on every close it sends (`mt5_bridge_v2.py`, `/close/<ticket>`), and that stamp is
+   * visible on the reason-3 deals above. **Therefore a closing deal with NO comment did not go
+   * through our API at all.** 46 of 107 closing deals across both bridges are in that state.
+   *
+   * And they arrive in batches that no person could produce — `:5001`, 2026-09-29 12:58:17→19:
+   * XAGUSD, US500, US30, FRA40, UK100, GER40 — **six positions, two seconds, all reason 0, all
+   * empty-comment, all small.** Across the book, 78 of the 90 `broker:terminal` rows sit inside a
+   * ≤5-second multi-close window.
+   *
+   * ⚠️ NOT the archive, checked: both ports run `mt5_bridge_v2.py` (the archived build's fixed
+   * `'Close by TCS'` comment is not in play). Combined with the earlier eliminations — StopGuardian,
+   * broker SL/TP, `closeAll`/`closeProfitable`, the time-stop — **the actor is outside this repo**,
+   * acting as MT5 *CLIENT*. The next step is the terminal's own Expert/Journal log, not this codebase.
+   */
   BROKER_TERMINAL: 'broker:terminal',
   /** Margin stop-out specifically: the account ran out of room. Worth its own name. */
   BROKER_STOP_OUT: 'broker:stop-out',
@@ -88,6 +125,9 @@ export type CloseReason = (typeof CLOSE_REASONS)[keyof typeof CLOSE_REASONS];
  * Deliberately NOT mapped to anything more specific than they are:
  *   CLIENT / MOBILE / WEB — a human closed it somewhere, but not necessarily OUR ui. Calling that
  *   `user:manual` would claim knowledge we do not have, so it is `broker:terminal`.
+ *   ⚠️ EXPERT (3) is folded in here too, and that is the sharper problem: reason 3 is an EA, and
+ *   measured 2026-10-02 it is OUR OWN time stop (`TCS:time-stop` on 33 of 33). An EA close and a
+ *   client close are not the same actor and must not share a value — see `BROKER_TERMINAL`.
  */
 export function closeReasonFromDealReason(reason: number | null | undefined): CloseReason {
   switch (reason) {
@@ -148,7 +188,7 @@ export const CLOSE_REASON_LABELS: Record<string, string> = {
   [CLOSE_REASONS.USER_MANUAL]: 'Closed manually',
   [CLOSE_REASONS.BROKER_SL]: 'Stop loss filled',
   [CLOSE_REASONS.BROKER_TP]: 'Take profit filled',
-  [CLOSE_REASONS.BROKER_TERMINAL]: 'Closed at the broker terminal',
+  [CLOSE_REASONS.BROKER_TERMINAL]: 'Closed at the broker — actor NOT identified',
   [CLOSE_REASONS.BROKER_STOP_OUT]: 'Broker stop-out (margin)',
   [CLOSE_REASONS.BROKER_UNKNOWN]: 'Closed at the broker — cause not reported',
 };
