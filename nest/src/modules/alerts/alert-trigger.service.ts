@@ -22,6 +22,9 @@ import { AlertsService, type AlertSeverity } from './alerts.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { PrismaService } from '../../database/prisma.service';
 import { stalenessReport, stalenessMessage } from '../../common/alerts/data-staleness';
+// ⚠️ THE CANONICAL BAR LENGTH, not a second map. A local `{ '5m': 5 }` here would be a copy of a
+// fact the repo already owns, and only one of the copies would get the next fix.
+import { BAR_LENGTH_MS } from '../../common/utils/timeframe';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import {
@@ -344,18 +347,43 @@ export class AlertTriggerService implements OnModuleInit {
       });
       if (!symbols.length) return { triggered: false, title: '', message: '' };
 
-      // Newest bar per symbol, in ONE query — not one query per symbol.
+      // Newest bar per symbol AND timeframe, in ONE query — not one query per symbol.
+      //
+      // ⚠️ THE TIMEFRAME IS NOT DECORATION. A flat threshold cannot work: a bar exists only once it
+      // has CLOSED, so a symbol is legitimately up to one whole interval behind before anything is
+      // wrong. Measured 2026-10-02, newest-bar age for actively-botted symbols: 5m -> 7 min,
+      // 1h -> 64 min, 1d -> 1422 min. A 5-minute threshold therefore sat BELOW the normal floor of
+      // every timeframe in use and would have fired permanently, reproducing the exact defect being
+      // fixed. `stalenessReport` scales the allowance by 2 x the interval.
       const latest = await this.prisma.marketBar.groupBy({
-        by: ['symbolId'],
+        by: ['symbolId', 'timeframe'],
         where: { symbolId: { in: symbols.map((s: any) => s.id) } },
         _max: { timestamp: true },
       });
-      const byId = new Map<string, Date | null>(
-        (latest as any[]).map((r) => [String(r.symbolId), r._max?.timestamp ?? null]),
-      );
+
+      // Per symbol, judge on its FINEST available timeframe — the one that updates most often. If
+      // the fastest bar is current the symbol is current; if it has stopped, that is the signal.
+      const finestById = new Map<string, { latest: Date | null; intervalMinutes: number }>();
+      for (const r of latest as any[]) {
+        const id = String(r.symbolId);
+        const ms = BAR_LENGTH_MS[String(r.timeframe)];
+        if (!ms) continue;
+        const iv = ms / 60_000;
+        const prev = finestById.get(id);
+        if (!prev || iv < prev.intervalMinutes) {
+          finestById.set(id, { latest: r._max?.timestamp ?? null, intervalMinutes: iv });
+        }
+      }
 
       const report = stalenessReport(
-        symbols.map((s: any) => ({ symbol: String(s.ticker), latest: byId.get(String(s.id)) ?? null })),
+        symbols.map((s: any) => {
+          const f = finestById.get(String(s.id));
+          return {
+            symbol: String(s.ticker),
+            latest: f?.latest ?? null,
+            intervalMinutes: f?.intervalMinutes,
+          };
+        }),
         thresholdMinutes,
         new Date(),
       );

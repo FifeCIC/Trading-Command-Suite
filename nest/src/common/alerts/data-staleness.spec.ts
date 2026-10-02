@@ -15,7 +15,7 @@
  * and counting the ROWS instead of the newest timestamp fails the history case. Both verified
  * against the real tree.
  */
-import { stalenessReport, stalenessMessage } from './data-staleness';
+import { stalenessReport, stalenessMessage, allowedAgeMinutes } from './data-staleness';
 
 const NOW = new Date('2026-10-02T12:00:00Z');
 const minsAgo = (n: number) => new Date(NOW.getTime() - n * 60_000);
@@ -71,6 +71,42 @@ describe('stalenessReport — is our market data stale? (#1067)', () => {
 
   it('an empty input reports nothing rather than everything', () => {
     expect(stalenessReport([], 5, NOW)).toEqual({ stale: [], cannotJudge: [] });
+  });
+
+  // ── THE THRESHOLD IS PER-TIMEFRAME (#1067, second correction) ──
+  //
+  // ⚠️ MEASURED 2026-10-02: newest-bar age for actively-botted symbols is 7 min for 5m bars,
+  // 64 min for 1h, 1422 min for 1d. A flat 5-minute threshold sits BELOW the floor of normal
+  // operation for EVERY timeframe in use — so the first correction would have fired permanently
+  // again, reproducing the defect it replaced, by a new route.
+  describe('⚠️ CANARY — the threshold must scale with the bar interval', () => {
+    it('a 5m bar at the MEASURED 7-minute lag is NOT stale', () => {
+      const r = stalenessReport([{ symbol: 'XAUUSD', latest: minsAgo(7), intervalMinutes: 5 }], 5, NOW);
+      expect(r.stale).toEqual([]);
+    });
+
+    it('an hour bar at 64 minutes of lag is NOT stale — the real average', () => {
+      const r = stalenessReport([{ symbol: 'XAUUSD', latest: minsAgo(64), intervalMinutes: 60 }], 5, NOW);
+      expect(r.stale).toEqual([]);
+    });
+
+    it('but a 5m bar at 40 minutes IS stale — well past its own two intervals', () => {
+      const r = stalenessReport([{ symbol: 'XAUUSD', latest: minsAgo(40), intervalMinutes: 5 }], 5, NOW);
+      expect(r.stale).toEqual([{ symbol: 'XAUUSD', latestAgeMinutes: 40 }]);
+    });
+
+    it('allowedAge is the LARGER of the setting and twice the interval', () => {
+      // Operator loosens the threshold -> looser alert.
+      expect(allowedAgeMinutes({ symbol: 'A', intervalMinutes: 60 }, 300)).toBe(300);
+      // Interval dominates -> the operator cannot tighten below the physical floor.
+      expect(allowedAgeMinutes({ symbol: 'A', intervalMinutes: 60 }, 5)).toBe(120);
+    });
+
+    it('an unknown interval falls back to the configured threshold, not to zero', () => {
+      expect(allowedAgeMinutes({ symbol: 'A' }, 5)).toBe(5);
+      expect(allowedAgeMinutes({ symbol: 'A', intervalMinutes: NaN }, 5)).toBe(5);
+      expect(allowedAgeMinutes({ symbol: 'A', intervalMinutes: 0 }, 5)).toBe(5);
+    });
   });
 });
 

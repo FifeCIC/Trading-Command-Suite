@@ -45,6 +45,25 @@
 export interface SymbolLatest {
   symbol: string;
   latest: Date | null;
+  /**
+   * The interval of the bar being judged, in minutes (5 for a 5m bar).
+   *
+   * ⚠️ REQUIRED, AND LEARNED THE HARD WAY. A flat threshold cannot work, because a bar exists only
+   * once it has CLOSED — so a symbol is legitimately up to one whole interval behind wall-clock
+   * before anything is wrong.
+   *
+   * Measured 2026-10-02, newest-bar age for actively-botted symbols, per timeframe:
+   *
+   *     5m   7 min (min 7, avg 7.0, max 7)     1h   47 / 64 / 107 min
+   *     1m   3 / 24 / 53 min                   4h   47 / 281 / 287 min
+   *     15m  17 / 35 / 62 min                  1d   1247 / 1422 / 1427 min
+   *
+   * ⚠️ A 5-minute threshold sits BELOW the floor of normal operation for EVERY timeframe in use —
+   * 5m bars are consistently 7 minutes behind. So a flat 5-min check would have fired permanently
+   * AGAIN, reproducing the very defect this file was written to replace, by a new route. The first
+   * correction moved the goalposts without moving them far enough; only the measurement showed it.
+   */
+  intervalMinutes?: number;
 }
 
 export interface StalenessReport {
@@ -74,12 +93,31 @@ export function stalenessReport(
       continue;
     }
     const ageMinutes = (now.getTime() - row.latest.getTime()) / 60_000;
-    if (ageMinutes > thresholdMinutes) {
+    if (ageMinutes > allowedAgeMinutes(row, thresholdMinutes)) {
       stale.push({ symbol: row.symbol, latestAgeMinutes: Math.round(ageMinutes) });
     }
   }
 
   return { stale, cannotJudge };
+}
+
+/**
+ * allowedAgeMinutes() — how old a symbol's newest bar may be before it is STALE.
+ *
+ * `max(configuredThreshold, 2 × interval)` — the larger of the operator's setting and twice the
+ * bar's own interval. Twice, not once, because one whole interval of lag is inherent to bars
+ * closing, and a second interval covers the fetch that follows the close. Measured 5m lag is 7
+ * minutes, comfortably inside 2 × 5 = 10.
+ *
+ * ⚠️ `max` and not the interval alone: an operator who loosens the configured threshold should get
+ * a looser alert, and an operator who tightens it must not be able to set it below the physical
+ * floor and silence the alert's ability to ever be false in the OTHER direction. A threshold that
+ * cannot fire is as useless as one that cannot stop firing.
+ */
+export function allowedAgeMinutes(row: SymbolLatest, thresholdMinutes: number): number {
+  const iv = Number(row.intervalMinutes);
+  const byInterval = Number.isFinite(iv) && iv > 0 ? iv * 2 : 0;
+  return Math.max(thresholdMinutes, byInterval);
 }
 
 /**
