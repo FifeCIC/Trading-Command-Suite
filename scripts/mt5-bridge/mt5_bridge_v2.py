@@ -946,6 +946,51 @@ _RECONNECT_STATE = {
 }
 
 
+def account_mismatch_refusal(state, detail):
+    """#1035 — the refusal for a connect/reconnect that bound to the WRONG account.
+
+    Returns `(body, http_status)` when `credential_mismatch` is set, else `None`, so a caller reads
+    `refusal = account_mismatch_refusal(...); if refusal: return json_response(self, *refusal)`.
+
+    ⚠️ THE NON-200 STATUS IS LOAD-BEARING, NOT DECORATION. `Mt5ConnectionManager.reconnectBroker()`
+    handles the response as `!res.ok -> success:false` … and as `{...body, success: true}` on an OK
+    response. So a **200** carrying `success: false` is OVERWRITTEN to `true` and the caller still
+    reads it as healthy — which is precisely the defect this issue is about, moved one layer up.
+    409 Conflict is the honest status: the request was understood and refused.
+
+    ⚠️ MEASURED 2026-10-02, live: before this, a canary configured for `99999999 @ NoSuchServer-Demo`
+    reconnected onto `10011309743 @ MetaQuotes-Demo` and `POST /reconnect` answered
+    `{"success": true, "state": "ok", "account": "10011309743"}`. The mismatch WAS detected
+    (`/health.credentialMismatch` was set, orders were refused) but the reconnect endpoint did not
+    consult it, so the one surface a caller reads to mean "recovered" said OK.
+
+    `:param state:` the connection state, kept so the body still describes connectivity.
+    `:param detail:` the state detail, may be None.
+    """
+    if credential_mismatch is None:
+        return None
+    m = credential_mismatch
+    return (
+        {
+            'success': False,
+            # A DISTINCT state value, not `ok` with a flag: a caller matching on `state` must not
+            # fall through to its healthy branch.
+            'state': 'account-mismatch',
+            'stateDetail': detail,
+            'connectionState': state,
+            # `error` is the field `reconnectBroker()` surfaces to ITS caller, so the mismatch must
+            # arrive here or the API cannot report it.
+            'error': (
+                f'Reconnect bound this bridge to {m["actualAccount"]} @ {m["actualServer"]}, not its '
+                f'configured {m["requestedAccount"]} @ {m["requestedServer"]} — ORDERS ARE REFUSED '
+                f'(#1035)'
+            ),
+            'credentialMismatch': m,
+        },
+        409,
+    )
+
+
 def reconnect_mt5(reason):
     """The SAME sequence `POST /reconnect` runs, callable from the watchdog (#992).
 
@@ -2100,6 +2145,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 ok, err = reconnect_mt5('explicit POST /reconnect')
                 state, detail = probe_connection_state()
                 if ok:
+                    # ⚠️ #1035 — a reconnect CAN succeed and still be wrong: `initialize()` falls back
+                    # to the terminal that is already running, so the bridge can come up on an
+                    # account it was not configured for. Success is not the same as CORRECT.
+                    refusal = account_mismatch_refusal(state, detail)
+                    if refusal:
+                        return json_response(self, refusal[0], refusal[1])
                     info = mt5.account_info()
                     return json_response(self, {'success': True, 'state': state, 'account': str(info.login) if info else None, 'balance': float(info.balance) if info else None})
                 return json_response(self, {'success': False, 'state': state, 'stateDetail': detail, 'error': str(err)}, 500)
@@ -2121,6 +2172,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 else:
                     ok = mt5.initialize(login=int(acct), password=pw, server=srv, timeout=MT5_INIT_TIMEOUT_MS)
                 if ok:
+                    # ⚠️ #1035 — the SAME hole as `/reconnect`, one route over, and it uses the same
+                    # fallback: `initialize(path=...)` attaches to whatever account the running
+                    # terminal holds. Switching to a slot and binding to a different account is the
+                    # same defect, so it gets the same refusal rather than a second, drifting copy
+                    # of the rule.
+                    refusal = account_mismatch_refusal('ok', None)
+                    if refusal:
+                        return json_response(self, refusal[0], refusal[1])
                     os.environ['MT5_ACTIVE_ACCOUNT'] = num
                     info = mt5.account_info()
                     return json_response(self, {'success': True, 'account': str(info.login) if info else acct, 'balance': float(info.balance) if info else None})

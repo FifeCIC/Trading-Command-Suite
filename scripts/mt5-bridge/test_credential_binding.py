@@ -161,5 +161,95 @@ class CredentialBindingTest(unittest.TestCase):
                       'the mismatch remedy must say orders are refused, not just name the account')
 
 
+class AccountMismatchRefusalTest(unittest.TestCase):
+    """#1035 criterion 2 — a reconnect onto the WRONG account must not report success.
+
+    ⚠️ WHY THIS IS A SEPARATE TEST FROM `verify_connection_identity`'s. Detecting the mismatch and
+    REPORTING it through the reconnect endpoint are two different things, and the second one was
+    missing: measured 2026-10-02, a canary configured for `99999999 @ NoSuchServer-Demo` came up on
+    `10011309743 @ MetaQuotes-Demo` and `POST /reconnect` answered
+    `{"success": true, "state": "ok"}`. `/health.credentialMismatch` was set and orders were refused,
+    but the endpoint a caller reads to mean "recovered" said OK.
+
+    ⚠️ HOW TO CANARY THIS CLASS.
+      1. Change `if credential_mismatch is None: return None` to an unconditional `return None`.
+         `test_a_mismatch_produces_a_refusal` must FAIL.
+      2. Change the returned status from `409` to `200`.
+         `test_the_status_is_NOT_200_or_the_manager_overwrites_it` must FAIL — and that failure is
+         the point of this class, not a formality.
+    """
+
+    def setUp(self):
+        bridge.credential_mismatch = None
+        bridge._last_mismatch_key = None
+        bridge.logger.disabled = True
+
+    def tearDown(self):
+        bridge.logger.disabled = False
+
+    def _set_mismatch(self):
+        bridge.credential_mismatch = {
+            'requestedAccount': '99999999',
+            'requestedServer': 'NoSuchServer-Demo',
+            'actualAccount': '10011309743',
+            'actualServer': 'MetaQuotes-Demo',
+            'activeSlot': '9',
+            'reasons': ['account: asked 99999999, got 10011309743'],
+        }
+
+    def test_no_mismatch_returns_None_so_the_caller_still_succeeds(self):
+        self.assertIsNone(bridge.account_mismatch_refusal('ok', None),
+                          'a correct binding must NOT be refused')
+
+    def test_a_mismatch_produces_a_refusal(self):
+        self._set_mismatch()
+        body, _status = bridge.account_mismatch_refusal('ok', 'detail')
+        self.assertFalse(body['success'])
+        # ⚠️ A DISTINCT state, so a caller matching on `state` cannot fall through to healthy.
+        self.assertEqual(body['state'], 'account-mismatch')
+        self.assertNotEqual(body['state'], 'ok')
+
+    def test_the_error_names_BOTH_the_requested_and_the_actual_account(self):
+        # The issue asks for a mismatch "reported as an error naming both". An error that named only
+        # one side would leave the reader unable to tell which is which.
+        self._set_mismatch()
+        body, _status = bridge.account_mismatch_refusal('ok', None)
+        self.assertIn('99999999', body['error'])
+        self.assertIn('NoSuchServer-Demo', body['error'])
+        self.assertIn('10011309743', body['error'])
+        self.assertIn('MetaQuotes-Demo', body['error'])
+
+    def test_the_mismatch_travels_with_the_refusal(self):
+        self._set_mismatch()
+        body, _status = bridge.account_mismatch_refusal('ok', None)
+        self.assertEqual(body['credentialMismatch']['activeSlot'], '9')
+
+    def test_the_status_is_NOT_200_or_the_manager_overwrites_it(self):
+        # ⚠️ THE LOAD-BEARING ASSERTION. `Mt5ConnectionManager.reconnectBroker()` does
+        # `{...body, success: true}` on an OK response, so a 200 with `success: false` comes back to
+        # the API as SUCCESS. Nothing about the body can fix that — only the status can.
+        self._set_mismatch()
+        _body, status = bridge.account_mismatch_refusal('ok', None)
+        self.assertNotEqual(status, 200, 'a 200 would be rewritten to success:true by the manager')
+        self.assertEqual(status, 409)
+
+    def test_both_connect_routes_consult_the_refusal(self):
+        # `/switch/<num>` shares the same fallback, so it must share the refusal rather than
+        # growing a second, drifting copy of the rule.
+        #
+        # ⚠️ Asserted on the two EXACT call forms, not on a total count of the name: a total also
+        # matches the `def` line and the docstring's example, so it reads as a precise check while
+        # actually being satisfied by prose. (It was written as `count(...) == 3` first and failed
+        # at 4 for exactly that reason — the failure cost one run, which is the point of asserting
+        # something specific.)
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mt5_bridge_v2.py'),
+                   encoding='utf-8').read()
+        self.assertEqual(src.count("refusal = account_mismatch_refusal(state, detail)"), 1,
+                         'POST /reconnect must consult the refusal')
+        self.assertEqual(src.count("refusal = account_mismatch_refusal('ok', None)"), 1,
+                         'POST /switch must consult the SAME refusal, not a second copy')
+        self.assertIn('def account_mismatch_refusal(', src, 'one definition remains')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
