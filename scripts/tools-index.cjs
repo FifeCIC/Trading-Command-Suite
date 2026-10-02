@@ -34,13 +34,19 @@
  *   node scripts/tools-index.cjs --write    # regenerate docs/TOOLS-INDEX.md + docs/tools-index.json
  *   node scripts/tools-index.cjs --check    # exit 1 if stale (runs in prebuild)
  *   node scripts/tools-index.cjs --orphans  # list only the unreferenced tools
+ *   node scripts/tools-index.cjs --find <keyword...>   # SEARCH name + purpose — "is there a tool for X?"
+ *   node scripts/tools-index.cjs --run <name> [args...] # RUN one, printing which file it resolved to
  *   node scripts/tools-index.cjs --self-test
+ *
+ * ⚠️ RUN `--find` BEFORE BUILDING A TOOL. Three separate proposals in one session were to build
+ * something already in this list. The library is only worth what can be found in it.
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 // ⚠️ THE SHARED HARNESS, NOT A LOCAL COPY — see validator-helpers.cjs. The loop that used to live
 // here was byte-identical to `scripts/lib/mysql-cli.cjs`'s, and the duplication guard failed the
 // build on the pair (2026-09-29).
@@ -318,9 +324,125 @@ function checkSummary(tools) {
   return `  [tools-index] ✅ OK — ${tools.length} tools, ${note}, rendering matches the filesystem.`;
 }
 
+/**
+ * pathOf(tool) — the tool's file on disk, from the scan label it came in under.
+ *
+ * ⚠️ The index record deliberately carries `where` (the LABEL, `repo` | `nest`) and not an absolute
+ * path: the record is written to `docs/tools-index.json`, which is committed, and a committed file
+ * holding `/Users/...` or `C:\\...` paths is machine-specific noise that rots on the next clone.
+ * The path is reconstructed here instead, at the one place that needs it.
+ *
+ * ⚠️ Measured 2026-10-02: the first version of `--run` read `tool.path`, which does not exist, and
+ * CRASHED with `Cannot read properties of undefined`. The unit tests passed because they only ever
+ * exercised `resolveTool`, never the printing that followed it — the same shape as an absence-only
+ * assertion. Hence the `fs.existsSync` guard at the call site: a wrong name ERRORS, it does not throw.
+ */
+function pathOf(tool) {
+  const scan = SCAN_DIRS.find((s) => s.label === tool.where);
+  return scan ? path.join(scan.dir, tool.name) : null;
+}
+
+/**
+ * matchesQuery(tool, terms) — the `--find` matcher, PURE so it can be canaried.
+ *
+ * Matches name OR purpose, case-insensitively; ALL terms must match (AND, not OR), so
+ * `--find audit signal` narrows instead of widening. A purpose match is the one that matters:
+ * an agent looking for "why is the denominator wrong" will never guess the filename
+ * `audit-signal-capacity.cjs`, but the purpose text contains the words they would search for.
+ *
+ * An empty query matches everything — deliberately, so `--find` with no term behaves as a listing
+ * rather than as a silent "no results".
+ */
+function matchesQuery(tool, terms) {
+  const list = (terms || []).map((t) => String(t).toLowerCase()).filter(Boolean);
+  if (!list.length) return true;
+  const haystack = `${tool.name} ${tool.purpose} ${tool.category}`.toLowerCase();
+  return list.every((t) => haystack.includes(t));
+}
+
+/**
+ * resolveTool(tools, wanted) — turn a user-typed name into exactly one tool, or an error.
+ *
+ * Accepts an exact filename, a name without the extension, or an UNAMBIGUOUS prefix. Ambiguity is
+ * refused with the candidates listed, never resolved by picking the first — `--run` executes real
+ * scripts, and silently choosing one is a guess presented as a command.
+ */
+function resolveTool(tools, wanted) {
+  const w = String(wanted || '').toLowerCase();
+  if (!w) return { error: 'no tool name given' };
+
+  const exact = tools.filter((t) => t.name.toLowerCase() === w || t.name.toLowerCase() === `${w}.cjs`);
+  if (exact.length === 1) return { tool: exact[0] };
+
+  const prefixed = tools.filter((t) => t.name.toLowerCase().startsWith(w));
+  if (prefixed.length === 1) return { tool: prefixed[0] };
+  if (prefixed.length > 1) {
+    return {
+      error:
+        `'${wanted}' matches ${prefixed.length} tools — refusing to guess:\n` +
+        prefixed.map((t) => `      ${t.name}`).join('\n'),
+    };
+  }
+
+  return {
+    error:
+      `no tool named '${wanted}'.\n` +
+      `      find one with:  node scripts/tools-index.cjs --find <keyword>`,
+  };
+}
+
 // ── self-test ────────────────────────────────────────────────────────────────────────────────
 function selfTest() {
   const cases = [
+    // ── THE LIBRARY SURFACE — `--find` / `--run` (2026-10-02) ──
+    //
+    // ⚠️ THE FIRST CASE IS THE WHOLE POINT OF `--find`. An agent asking "why is the denominator
+    // wrong?" will never guess the filename `audit-signal-capacity.cjs`. Matching the PURPOSE text
+    // is what makes the library reachable; matching only filenames would have left all 75 orphans
+    // exactly as unfindable as they were.
+    ['find matches on PURPOSE text, not just the filename', () =>
+      matchesQuery({ name: 'audit-signal-capacity.cjs', purpose: 'answers "why is the Signal denominator 725?"', category: 'audit' }, ['denominator'])],
+    ['find requires ALL terms (AND, not OR)', () => {
+      const t = { name: 'a.cjs', purpose: 'signal denominator audit', category: 'audit' };
+      return matchesQuery(t, ['signal', 'denominator']) && !matchesQuery(t, ['denominator', 'zzz']);
+    }],
+    ['find with no terms lists everything rather than nothing', () =>
+      matchesQuery({ name: 'a.cjs', purpose: 'x', category: 'tool' }, [])],
+    ['find does not match an unrelated tool', () =>
+      !matchesQuery({ name: 'commit-only.cjs', purpose: 'commit named files', category: 'tool' }, ['denominator'])],
+    ['run resolves an exact filename', () => {
+      const r = resolveTool([{ name: 'a.cjs' }, { name: 'b.cjs' }], 'a.cjs');
+      return r.tool && r.tool.name === 'a.cjs';
+    }],
+    ['run resolves a name without the extension', () => {
+      const r = resolveTool([{ name: 'audit-thing.cjs' }], 'audit-thing');
+      return r.tool && r.tool.name === 'audit-thing.cjs';
+    }],
+    // ⚠️ The case that was MISSING: every other case stopped at `resolveTool`, so the printing and
+    // spawning that followed it were never exercised — which is exactly where `tool.path` threw.
+    // These assert the RECORD carries what the caller needs to find the file.
+    ['a scanned tool carries the label its path is reconstructed from', () => {
+      // ⚠️ `scan()` is called HERE, not captured from `main()` — the self-test runs before the
+      // index is built, so a reference to an outer `tools` would be `undefined` and the case would
+      // throw rather than assert. A test that errors is not a passing test.
+      const t = scan().find((x) => x.name === 'tools-index.cjs');
+      return !!t && typeof t.where === 'string' && !!pathOf(t) && fs.existsSync(pathOf(t));
+    }],
+    ['pathOf returns null for an unknown label instead of guessing', () =>
+      pathOf({ name: 'x.cjs', where: 'nowhere' }) === null],
+    ['run resolves an UNAMBIGUOUS prefix', () => {
+      const r = resolveTool([{ name: 'audit-thing.cjs' }, { name: 'commit-only.cjs' }], 'audit');
+      return r.tool && r.tool.name === 'audit-thing.cjs';
+    }],
+    // ⚠️ The case that keeps `--run` honest: an ambiguous prefix must REFUSE, not pick the first.
+    ['run REFUSES an ambiguous prefix and names the candidates', () => {
+      const r = resolveTool([{ name: 'audit-a.cjs' }, { name: 'audit-b.cjs' }], 'audit');
+      return !!r.error && r.error.includes('audit-a.cjs') && r.error.includes('audit-b.cjs');
+    }],
+    ['run refuses an unknown name with a way to search', () => {
+      const r = resolveTool([{ name: 'a.cjs' }], 'nope');
+      return !!r.error && r.error.includes('--find');
+    }],
     ['classifies validators', () => categoryOf('validate-thing.cjs') === 'validator'],
     ['classifies audits', () => categoryOf('audit-thing.cjs') === 'audit'],
     ['classifies analysis', () => categoryOf('analyse-unreachable-capacity.cjs') === 'analysis'],
@@ -390,6 +512,77 @@ function main() {
     console.log(`\n  ${orphans.length} orphan(s) — named nowhere:\n`);
     for (const t of orphans) console.log(`    ${t.name}\n      ${t.purpose}\n`);
     return;
+  }
+
+  // ── THE LIBRARY SURFACE (2026-10-02) ────────────────────────────────────────────────────────
+  //
+  // `--write`/`--check` answer "is the index current?". Neither answers the question an agent
+  // actually has: **"is there already a tool that does X?"**
+  //
+  // ⚠️ THE MEASURED COST OF NOT ANSWERING IT. 75 of 175 tools were orphans — named in no
+  // instruction, no npm script, and not run by prebuild. `analyse-unreachable-capacity.cjs` was
+  // one of them, and it took an agent **three passes to find while actively looking for exactly
+  // that capability**. An orphan is not dead code; it is working code with no door.
+  //
+  // ⚠️ WHY THIS LIVES HERE AND NOT IN A NEW TOOL. A second index over the same directory is the
+  // duplication this repo warns about most — two copies of one fact, and only one gets the next
+  // fix. The index already holds the name, the purpose and the reachability; `--find` and `--run`
+  // are two readers over data that is already correct.
+  //
+  //   node scripts/tools-index.cjs --find denominator        # every tool whose name/PURPOSE matches
+  //   node scripts/tools-index.cjs --run audit-signal-capacity.cjs [args...]
+  if (argv.includes('--find')) {
+    const terms = argv.slice(argv.indexOf('--find') + 1).filter((a) => !a.startsWith('--'));
+    const hits = tools.filter((t) => matchesQuery(t, terms));
+    if (!hits.length) {
+      console.log(`\n  No tool matches ${JSON.stringify(terms.join(' '))}.`);
+      console.log('  ⚠️ That is a finding about the library, not about you: if this capability is');
+      console.log('     missing, building it is justified. Try a broader word first.\n');
+      return;
+    }
+    console.log(`\n  ${hits.length} tool(s) matching ${JSON.stringify(terms.join(' '))}:\n`);
+    for (const t of hits) {
+      const where = t.reaches ? t.reaches.join(',') : '⚠️ ORPHAN';
+      console.log(`    ${t.name}  [${t.category} · ${where}]`);
+      console.log(`      ${t.purpose}`);
+      if (t.selfTest) console.log('      self-test: --self-test');
+      console.log('');
+    }
+    console.log('  run one with:  node scripts/tools-index.cjs --run <name> [args...]\n');
+    return;
+  }
+
+  if (argv.includes('--run')) {
+    const rest = argv.slice(argv.indexOf('--run') + 1);
+    const wanted = rest[0];
+    if (!wanted) {
+      console.error('  ✖ --run needs a tool name.  find one with --find <keyword>');
+      process.exit(2);
+    }
+    const found = resolveTool(tools, wanted);
+    if (found.error) {
+      console.error(`\n  ✖ ${found.error}\n`);
+      process.exit(2);
+    }
+    const toolPath = pathOf(found.tool);
+    // ⚠️ REFUSE, DO NOT THROW. A dispatcher that crashes on a name it resolved is worse than one
+    // that says it cannot find the file — the first looks like a broken install, the second is
+    // actionable. This guard exists because the first version of this block did throw.
+    if (!toolPath || !fs.existsSync(toolPath)) {
+      console.error(`\n  ✖ resolved '${found.tool.name}' but no file at ${toolPath}\n`);
+      process.exit(2);
+    }
+    // ⚠️ PRINT WHAT IS ABOUT TO RUN. A dispatcher that silently chooses a file is a guess
+    // wearing a command's clothes — and `--run` runs REAL scripts with REAL side effects.
+    console.log(`\n  ▶ ${toolPath.replace(REPO_ROOT + path.sep, '')}`);
+    console.log(`    ${found.tool.purpose}`);
+    if (!found.tool.reaches) console.log('    ⚠️ ORPHAN — nothing else references this tool.');
+    console.log('');
+    const r = spawnSync('node', [toolPath, ...rest.slice(1)], {
+      cwd: REPO_ROOT,
+      stdio: 'inherit',
+    });
+    process.exit(r.status == null ? 1 : r.status);
   }
 
   const md = render(tools);

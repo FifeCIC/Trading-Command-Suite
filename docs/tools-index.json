@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 176,
+  "count": 175,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -48,7 +48,9 @@
       "category": "audit",
       "purpose": "what did the Signal denominator actually do over time?",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "audit-hint-dependency.cjs",
@@ -84,7 +86,9 @@
       "category": "audit",
       "purpose": "answers \"why is the Signal denominator 725?\" (#781 follow-up)",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "audit-signal-capacity2.cjs",
@@ -912,14 +916,6 @@
       "where": "nest",
       "category": "tool",
       "purpose": "Verify that `remove-risk-group-directive.cjs` REFUSES to write invalid syntax.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "tmp-verify-peaks-998.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "(no header comment)",
       "selfTest": false,
       "reaches": null
     },

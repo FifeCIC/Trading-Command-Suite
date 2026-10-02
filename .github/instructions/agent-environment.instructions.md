@@ -74,11 +74,22 @@ owner. That is the shape this rule exists to prevent.
 ### 🛑 Before building a tool, LOOK IT UP — the index is generated, and it counts orphans
 
 ```powershell
+node scripts/tools-index.cjs --find <keyword>         # ← START HERE. Searches NAME **and PURPOSE**.
+node scripts/tools-index.cjs --run <name> [args...]   # run one; prints the file it resolved to
+node scripts/tools-index.cjs --orphans  # list only the tools named NOWHERE
 node scripts/tools-index.cjs --write    # regenerate docs/TOOLS-INDEX.md + docs/tools-index.json
 node scripts/tools-index.cjs --check    # exit 1 if stale (runs in `prebuild`)
-node scripts/tools-index.cjs --orphans  # list only the tools named NOWHERE
 node scripts/tools-index.cjs --self-test
 ```
+
+⚠️ **`--find` searches the PURPOSE text, not just filenames, and that is the whole point.** An agent
+asking *"why is the Signal denominator 725?"* will never guess `audit-signal-capacity.cjs` — but
+`--find denominator` returns it, plus `audit-denominator-history.cjs` and two more. Canaried both
+ways: restricting the matcher to filenames fails **2** self-test cases.
+
+⚠️ **`--run` REFUSES an ambiguous prefix** and lists the candidates instead of picking the first.
+It executes real scripts, so silently choosing one is a guess wearing a command's clothes. It also
+prints the resolved path *before* running, and marks an orphan as an orphan.
 
 **`docs/TOOLS-INDEX.md`** lists every tool in `scripts/` and `nest/scripts/`, each marked with where
 it is reachable from: `prebuild` · `npm` · `docs` · **⚠️ ORPHAN** (named in none of them).
@@ -88,7 +99,12 @@ will find — `analyse-unreachable-capacity.cjs` was one, and it took three pass
 agent was actively looking for exactly that capability. **Three separate proposals in one session
 were to BUILD something already in this list.**
 
-**The rule: grep for the capability words first, then read the index. Then build.** A fourth surface
+⚠️ **Measured 2026-10-02: 175 tools, 75 orphans (43%).** The count has NOT moved — because
+`--find`/`--run` make the library **reachable**, not **referenced**. Reachability is the thing that
+mattered: an orphan with a working search is usable; the same orphan without one is lost. Do not
+chase a zero orphan count; chase *findability*.
+
+**The rule: `--find` the capability words FIRST. Then read the index. Then build.** A fourth surface
 for something that already exists makes the problem worse, not better.
 
 ⚠️ **The index is not a build gate for orphans** — 75 of them is a backlog to work through, not a
