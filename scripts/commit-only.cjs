@@ -34,6 +34,33 @@
  *   node scripts/commit-only.cjs -m "subject" -m "body para" -- <file>     (repeat -m)
  *   node scripts/commit-only.cjs --check -- <file> [<file>...]             (report, commit nothing)
  *   node scripts/commit-only.cjs --self-test
+ *   node scripts/commit-only.cjs -m "..." --why="<reason>" -- <file>...    (override a gate below)
+ *
+ * ── TWO GATES ON THE MESSAGE, ADDED 2026-10-02 AT THE OWNER'S REQUEST ───────────────────────
+ *
+ * > *"I do not mind commits not happening straight away and agent AI goes on about it too much.
+ * >  I commit manually myself 2-3 times a day. A lot of text is being output about commits and I
+ * >  want it to reduce."*
+ *
+ * The rule already existed in `agent-environment.instructions.md` and **agents kept breaking it
+ * anyway** — including the agent that wrote the rule into this file. A rule with no mechanism does
+ * not fire, so the two things that cost the owner reading time are now checked HERE:
+ *
+ *   1. **CADENCE** — WARN if the previous commit was under 4 hours ago. The owner reads every
+ *      commit; one every few minutes — 18 in 4.5 hours was measured on 2026-09-23 — trains them to
+ *      skim, which is identical to having no evidence trail. Batch instead.
+ *   2. **BODY SIZE** — WARN on a message over 1,500 characters. The reasoning belongs in the
+ *      HANDOFF or the ISSUE; the commit carries the what and the why in a few lines.
+ *
+ * ⚠️ **WARNINGS, NOT REFUSALS — owner's call, 2026-10-02:** *"I think 'warn' is fine — it would be
+ * good to be able to commit in special circumstances."* A gate that blocks a legitimate commit gets
+ * worked around, and a worked-around gate is worse than none. **The commit always proceeds.**
+ *
+ * ⚠️ The warnings fire at the ONE moment an agent is guaranteed to be looking at its own commit
+ * behaviour. `--why="<reason>"` records a deliberate exception in the message and silences them.
+ *
+ * ⚠️ Thresholds are env-overridable so `--self-test` can drive the gates — `COMMIT_ONLY_CADENCE_HOURS`
+ * and `COMMIT_ONLY_MAX_BODY`, either set to `0` to disable.
  *
  * Exit codes: 0 committed (or check clean) · 1 refused, with the reason.
  *
@@ -45,7 +72,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 
 /**
  * ⚠️ `COMMIT_ONLY_REPO` exists ONLY so `--self-test` can point the real CLI at a throwaway repo.
@@ -57,6 +84,13 @@ const REPO_ROOT = process.env.COMMIT_ONLY_REPO
   : path.resolve(__dirname, '..');
 
 const TAG = '[commit-only]';
+
+/**
+ * The two message gates. Env-overridable SOLELY so `--self-test` can drive them; `0` disables.
+ * See the USAGE note for why they exist and what `--why` is for.
+ */
+const CADENCE_HOURS = Number(process.env.COMMIT_ONLY_CADENCE_HOURS ?? 4);
+const MAX_BODY = Number(process.env.COMMIT_ONLY_MAX_BODY ?? 1500);
 
 function die(message, hint) {
   console.error(`[commit-only] \u2716 ${message}`);
@@ -95,11 +129,18 @@ function parseArgs(argv) {
   const files = [];
   let check = false;
   let selfTest = false;
+  let why = null;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--check') check = true;
     else if (a === '--self-test') selfTest = true;
+    else if (a.startsWith('--why=')) why = a.slice('--why='.length);
+    else if (a === '--why') {
+      const v = argv[++i];
+      if (v === undefined) die('--why needs a value');
+      why = v;
+    }
     else if (a === '-m' || a === '--message') {
       const v = argv[++i];
       if (v === undefined) die(`${a} needs a value`);
@@ -110,7 +151,7 @@ function parseArgs(argv) {
     } else if (a.startsWith('-')) die(`unknown flag ${a}`);
     else files.push(a);
   }
-  return { messages, files, check, selfTest };
+  return { messages, files, check, selfTest, why };
 }
 
 // ── The core: which named files actually have changes, and what else is staged ──
@@ -143,7 +184,7 @@ function inspect(files) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 function main() {
-  const { messages, files, check } = parseArgs(process.argv.slice(2));
+  const { messages, files, check, why } = parseArgs(process.argv.slice(2));
 
   if (files.length === 0) {
     die(
@@ -153,6 +194,55 @@ function main() {
   }
   if (!check && messages.length === 0) {
     die('no -m message given', 'a commit needs a message; use --check for a dry run');
+  }
+
+  // ── THE TWO MESSAGE WARNINGS (2026-10-02) ──────────────────────────────────────────────────
+  // ⚠️ WARNINGS, NOT REFUSALS — owner's call, 2026-10-02: *"I think 'warn' is fine - it would be
+  // good to be able to commit in special circumstances."* A gate that blocks a legitimate commit
+  // gets worked around, and a worked-around gate is worse than none. The commit proceeds.
+  //
+  // The point of saying it OUT LOUD at the moment of committing is that this is the only place an
+  // agent is guaranteed to be paying attention to its own commit behaviour.
+  if (!check) {
+    const body = messages.join('\n\n');
+
+    if (why) {
+      // A recorded reason silences the warnings — the exception is now visible in the message,
+      // which is what they were for.
+      messages.push(`(--why: ${why})`);
+    } else {
+      if (CADENCE_HOURS > 0) {
+        let lastAt = 0;
+        try {
+          lastAt = Number(git(['log', '-1', '--format=%ct'])) || 0;
+        } catch {
+          lastAt = 0; // no commits yet — nothing to batch against
+        }
+        if (lastAt > 0) {
+          const mins = Math.round((Date.now() / 1000 - lastAt) / 60);
+          if (mins < CADENCE_HOURS * 60) {
+            console.warn(
+              `${TAG} ⚠️  last commit was ${mins} min ago — the rule is ~${CADENCE_HOURS}h batching. ` +
+                'Committing anyway.',
+            );
+            console.warn(
+              '    The owner reads every commit; frequent small ones train them to skim. If this ' +
+                'one is deliberate, --why="<reason>" records it.',
+            );
+          }
+        }
+      }
+
+      if (MAX_BODY > 0 && body.length > MAX_BODY) {
+        console.warn(
+          `${TAG} ⚠️  message is ${body.length} chars (soft cap ${MAX_BODY}). Committing anyway.`,
+        );
+        console.warn(
+          '    The reasoning belongs in the HANDOFF or the ISSUE — keep the commit to the what and ' +
+            'the why in a few lines.',
+        );
+      }
+    }
   }
 
   // A verifier that cannot read its input must ERROR, never pass.
@@ -263,6 +353,16 @@ function main() {
     `[commit-only] \u2713 HEAD ${git(['rev-parse', '--short', 'HEAD'])} contains exactly the ` +
       `${inCommit.length} named file(s) — verified by reading the commit back`,
   );
+  // ── OWNER ASK, 2026-10-02: *"a noticable reduction in how often agents talk about commits."* ──
+  //
+  // The instruction already said "commit silently — at most one line naming the SHA, in the final
+  // summary", and agents kept narrating anyway. This is the ONE moment an agent is guaranteed to be
+  // thinking about its own commit, so the reminder is put here rather than in a document it may not
+  // re-read. It costs the owner nothing because it is console output, not a reply.
+  console.log(
+    `${TAG}   \u2192 do NOT report this commit in chat. No SHA, no file list, no "committed" line. ` +
+      'The owner reads every commit; restating it is the noise they asked to remove.',
+  );
 }
 
 // ── Self-test — canary in BOTH directions, driving the REAL CLI on a throwaway repo ─────────
@@ -273,6 +373,15 @@ function main() {
  *   1. a named file with NO changes               -> must REFUSE
  *   2. another agent's file staged but not named  -> must be EXCLUDED, and must survive staged
  *   3. the commit must contain EXACTLY the named file, read back from the commit
+ *   4. the CADENCE gate refuses, and `--why` overrides it AND records the reason
+ *   5. the BODY gate refuses, and `--why` overrides it
+ *
+ * ⚠️ KNOWN, UNEXPLAINED: on 2026-10-02 case 7 (a DELETED file commits) failed ONCE and then passed
+ * **nine consecutive runs**. The cause was NOT isolated — an earlier `git show` of this file's HEAD
+ * version passed, and so did every run after. Do not treat a single failure here as a verdict, and
+ * do not treat nine passes as proof it is fixed: **an unisolated flake is reported, not attributed.**
+ * If it recurs, the first thing to check is whether `git add -A -- <path>` actually staged the
+ * deletion before the CLI was invoked.
  */
 function selfTest() {
   const os = require('node:os');
@@ -280,19 +389,31 @@ function selfTest() {
 
   const g = (args) => execFileSync('git', args, { cwd: tmp, encoding: 'utf8' }).trim();
 
-  /** Run THIS script against the temp repo and capture stdout + exit code. */
-  const cli = (args) => {
-    try {
-      const out = execFileSync(process.execPath, [__filename, ...args], {
-        cwd: tmp,
-        encoding: 'utf8',
-        stdio: 'pipe',
-        env: { ...process.env, COMMIT_ONLY_REPO: tmp },
-      });
-      return { code: 0, out };
-    } catch (err) {
-      return { code: err.status ?? 1, out: String(err.stdout || '') + String(err.stderr || '') };
-    }
+  /**
+   * Run THIS script against the temp repo and capture stdout + exit code.
+   *
+   * ⚠️ The two message gates are DISABLED by default here and re-enabled per case. This suite
+   * commits seconds apart by construction, so leaving them on would make every unrelated case fail
+   * for a reason that has nothing to do with what it tests — and a canary that cannot isolate its
+   * subject reports a working guard as broken.
+   */
+  const cli = (args, env = {}) => {
+    // ⚠️ `spawnSync`, NOT `execFileSync`. The message warnings go to STDERR, and `execFileSync`
+    // only surfaces stderr when the process FAILS — so on the success path the warning text was
+    // invisible and two canaries failed while the behaviour they check was correct. Capturing both
+    // streams unconditionally is what makes a warning assertable at all.
+    const r = spawnSync(process.execPath, [__filename, ...args], {
+      cwd: tmp,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        COMMIT_ONLY_REPO: tmp,
+        COMMIT_ONLY_CADENCE_HOURS: '0',
+        COMMIT_ONLY_MAX_BODY: '0',
+        ...env,
+      },
+    });
+    return { code: r.status ?? 1, out: String(r.stdout || '') + String(r.stderr || '') };
   };
 
   let pass = true;
@@ -381,7 +502,12 @@ function selfTest() {
 
     // (7) A DELETION must commit. Case (5) covers the TYPO; this covers the deletion, and they are
     //     the same input shape — an absent path. Evidence separates them: present in HEAD ⇒ a
-    //     deletion, absent from both ⇒ a typo. Added 2026-10-02 after a real deletion was refused.
+    //     deletion, absent from both ⇒ a typo.
+    //     ⚠️ KNOWN LIMITATION, deliberately not hidden: this covers an UNSTAGED deletion. If the
+    //     deletion is ALREADY staged, `git add -- <path>` matches nothing and the script fails at the
+    //     staging step — measured 2026-10-02, one commit after this support was written. `-A` does not
+    //     fix it either (also measured), so the workaround is `git reset -- <path>` to unstage, then
+    //     name it. This canary covers what the code actually guarantees today.
     fs.rmSync(path.join(tmp, 'brand-new.js'));
     const del = cli(['-m', 'delete brand-new', '--', 'brand-new.js']);
     say(del.code === 0, 'a DELETED file commits (absent from the tree, present in HEAD)');
@@ -389,6 +515,40 @@ function selfTest() {
     say(
       delBack.length === 1 && delBack[0] === 'brand-new.js',
       'and the deletion commit contains only it',
+    );
+
+    // (8) THE CADENCE WARNING — fires UNDER the window and MUST NOT block the commit.
+    //     This suite's commits are seconds apart, which is exactly what the rule warns about.
+    fs.writeFileSync(path.join(tmp, 'cadence.js'), 'c\n');
+    const tooSoon = cli(['-m', 'too soon', '--', 'cadence.js'], { COMMIT_ONLY_CADENCE_HOURS: '4' });
+    say(
+      tooSoon.code === 0 && /min ago/.test(tooSoon.out),
+      '⚠️ a commit UNDER the cadence window WARNS and STILL COMMITS (owner: warn, never block)',
+    );
+    say(
+      g(['show', '--name-only', '--format=', 'HEAD']).split('\n').filter(Boolean).includes('cadence.js'),
+      'and the commit actually LANDED — the warning did not veto it',
+    );
+
+    // (9) --why RECORDS the reason and SILENCES the warning.
+    fs.writeFileSync(path.join(tmp, 'cadence2.js'), 'c2\n');
+    const withWhy = cli(
+      ['-m', 'deliberate', '--why=another agent is blocked by a red tree', '--', 'cadence2.js'],
+      { COMMIT_ONLY_CADENCE_HOURS: '4' },
+    );
+    say(withWhy.code === 0, '--why commits');
+    say(!/last commit was|min ago/.test(withWhy.out), 'and SILENCES the cadence warning');
+    say(
+      /--why: another agent is blocked/.test(g(['log', '-1', '--format=%B'])),
+      'and the reason is RECORDED in the message — an unrecorded exception is invisible',
+    );
+
+    // (10) THE BODY WARNING — the owner reads every commit, so the reasoning belongs in the handoff.
+    fs.writeFileSync(path.join(tmp, 'long.js'), 'l\n');
+    const longBody = cli(['-m', 'x'.repeat(2000), '--', 'long.js'], { COMMIT_ONLY_MAX_BODY: '1500' });
+    say(
+      longBody.code === 0 && /soft cap 1500/.test(longBody.out),
+      '⚠️ an over-long message WARNS and STILL COMMITS',
     );
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

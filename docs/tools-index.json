@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 172,
+  "count": 175,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -304,6 +304,16 @@
       "reaches": null
     },
     {
+      "name": "bump-version.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "bump the version in BOTH package.json files, and refresh the",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "canary-architecture-docs.cjs",
       "where": "repo",
       "category": "tool",
@@ -425,6 +435,14 @@
       "category": "tool",
       "purpose": "Cleanup/repair tooling for removing a directive.",
       "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "delete-views.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "(no header comment)",
+      "selfTest": true,
       "reaches": null
     },
     {
@@ -1249,6 +1267,16 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-protocol-covers-bot-symbol.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a bot's protocol must be configured to score the",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },

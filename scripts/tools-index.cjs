@@ -402,6 +402,34 @@ function main() {
     if (stale.length) {
       console.error(`\n  [tools-index] ✖ ${stale.length} generated artefact(s) are stale:`);
       for (const s of stale) console.error(`    ${s} is OUT OF DATE — regenerate: node scripts/tools-index.cjs --write`);
+
+      // ⚠️ NAME THE CAUSE, not just the remedy (added 2026-10-02). The old message said
+      // "regenerate" and stopped there — so an agent who had just ADDED a script to `scripts/`
+      // saw a failure naming a generated FILE and had no reason to connect it to their own
+      // change. Measured that day: adding scripts/bump-version.cjs turned the build red with a
+      // message that never mentioned it. The difference between an instruction and a diagnosis
+      // is whether the reader has to guess what they did.
+      //
+      // The cause is always the same: the tool SET changed, because a file was added to,
+      // removed from, renamed in, or edited inside `scripts/` or `nest/scripts/`.
+      try {
+        const prev = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
+        const prevNames = new Set((prev.tools || []).map((t) => t.path || t.name));
+        const nowNames = new Set(tools.map((t) => t.path || t.name));
+        const added = [...nowNames].filter((n) => !prevNames.has(n));
+        const removed = [...prevNames].filter((n) => !nowNames.has(n));
+        console.error('\n    CAUSE — the tool set changed. You most likely added/removed/renamed a');
+        console.error('    file in scripts/ or nest/scripts/, or edited a script\'s header:');
+        if (added.length) for (const n of added.slice(0, 8)) console.error(`      + ${n}   <-- NEW`);
+        if (removed.length) for (const n of removed.slice(0, 8)) console.error(`      - ${n}   <-- GONE`);
+        if (!added.length && !removed.length) {
+          console.error('      (same tool names — a header/description or reachability changed)');
+        }
+        console.error('    ⚠️ A new script is NOT an orphan-check failure: this is only staleness.');
+        console.error('       Run --write, then commit the regenerated files WITH your script.');
+      } catch {
+        console.error('\n    CAUSE — the tool set changed (could not diff against the previous index).');
+      }
       console.error('');
       process.exit(1);
     }

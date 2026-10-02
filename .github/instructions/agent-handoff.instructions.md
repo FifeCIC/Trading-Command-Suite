@@ -467,9 +467,11 @@ The UI shows a **stale version forever** if you only bump one file. There are TW
 > with the commit wrapper and the per-milestone comment habit, that produced **41 commits in 4.5
 > hours, 18 of them ≤2 minutes apart**. See `agent-environment.instructions.md` → *Commit cadence*.
 
-**Bump once per logical change — the same unit as the commit.** A bump exists so a change that
-alters behaviour is never silent; a third bump inside one hour of iterating on one feature adds no
-signal and dilutes the ones that do.
+**Bump once per BATCHED commit.** A bump exists so a change that alters behaviour is never silent;
+a third bump inside one hour of iterating on one feature adds no signal and dilutes the ones that
+do. Since 2026-10-02 the commit cadence is ~4-hourly (`agent-environment.instructions.md` →
+*Commit cadence*), so the bump rides that batch — **one bump per batched landing, not one per
+issue**.
 
 - **patch** (0.3.0 → 0.3.1): bugfix, small cleanup
 - **minor** (0.3.0 → 0.4.0): new feature / subsystem / capability, behaviour change
@@ -481,14 +483,46 @@ agent-instruction edit, or a change in an area another agent bumped within the s
 
 Steps:
 1. Decide patch vs minor vs major from the change (default: minor for features, patch for fixes).
-2. Bump `nest/package.json` `version` **and** root `package.json` `version` to the SAME
-   value — never bump one without the other. **One commit carries both.**
+2. **Bump with the tool, not by hand:**
+   ```powershell
+   npm run version:bump -- minor     # or patch | major | an exact x.y.z
+   ```
+   It sets **both** files to the SAME value, then **regenerates the derived artefacts the build
+   gates on**. ⚠️ By hand is how this goes wrong — see the note below.
 3. Rebuild the backend so the running `dist/` picks it up — **not with a plain `nest run build`**,
    which fails while the API is up (the engine DLL is locked). Use
    `npm --prefix nest run build:api` (stop → build → restart → health).
 4. Verify: `curl http://localhost:3201/api/version` returns the new version. *Verifying the
    **served** version needs a restart* — do not manufacture one to tick this box; record it as
    unverified and let the next natural restart confirm it.
+
+### ⚠️ Why step 2 is a command and not "edit two files"
+
+> **Measured 2026-10-02 (#1041).** The instruction said *"bump both `package.json` files to the SAME
+> value"* and stopped there. Doing exactly that turned the next build red:
+
+```
+[docs-facts] ✖ 2 generated artefact(s) are stale:
+  docs/GENERATED-FACTS.md is OUT OF DATE — regenerate it: node scripts/docs-facts.cjs --write
+BUILD FAILED (exit 1)
+```
+
+> `docs/GENERATED-FACTS.md` **derives the application version** from those files, and `prebuild`
+> runs `docs-facts.cjs --check` and `tools-index.cjs --check`. So the bump and the regeneration are
+> **one change, not two** — and the failure names a generated file, never the bump that made it
+> stale, so the cause is invisible to whoever hits it.
+>
+> **The lesson is not "read more carefully".** A documented procedure that is incomplete is *worse*
+> than an undocumented one, because it is followed. The fix is that the correct action is now one
+> command with no second step to forget.
+>
+> ⚠️ **The same trap catches a NEW SCRIPT.** Adding a file to `scripts/` or `nest/scripts/` stales
+> `docs/TOOLS-INDEX.md` for the same reason. `tools-index --check` now names the file it sees
+> (`+ your-script.cjs <-- NEW`) instead of only saying "regenerate". Whatever you add, run the
+> matching `--write` and commit the regenerated file **with** your change.
+>
+> Related: `node scripts/bump-version.cjs --check` reports whether the pair agrees and whether the
+> derived artefacts are current, without writing anything.
 
 ⚠️ Never hardcode a version literal in a controller or `main.ts` — import `APP_VERSION`
 from `nest/src/version.ts`. (The old `'0.1.0'` / `'nest-0.1.0'` literals are why the
