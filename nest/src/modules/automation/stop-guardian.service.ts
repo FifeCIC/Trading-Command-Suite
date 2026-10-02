@@ -193,7 +193,50 @@ export interface GuardedPosition {
    * from it not existing, which is exactly how this defect stayed invisible.
    */
   brokerId?: number;
+  /**
+   * ⚠️ #1056 — WHY this position was, or was NOT, adjusted on this tick.
+   *
+   * `guardedPositions` listed every position the guardian CONSIDERED and `recentAdjustments` listed
+   * what it DID. Nothing carried the DECLINE. So `stop_adjustment` answered "what did it do?" for
+   * every position it touched, and **"why did it leave this one alone?" was recorded nowhere** — not
+   * a table, not the structured log. "Nothing happened" and "it declined for a reason" rendered
+   * identically, which is the same hole #1030 closed one level up for unattributable owners.
+   *
+   * Found while closing #1056: FRA40 had ZERO `stop_adjustment` rows ever while its peers were
+   * trailed, and the live payload could not say whether the guardian had evaluated it at all.
+   *
+   * ⚠️ Set only from a branch that was ACTUALLY TAKEN, never inferred from the other fields —
+   * `stopConfidence === 0 && recommendedSl === null` is ALSO true of a genuine evaluation that found
+   * nothing, so inference cannot replace the statement.
+   */
+  outcome: GuardedPositionOutcome;
 }
+
+/**
+ * #1056 — the guardian's decision for ONE position on ONE tick. Every value is a branch that ran.
+ *
+ * | outcome | means |
+ * |---|---|
+ * | `adjusted` | a stop was modified this tick (trail tighten, or the protective floor) |
+ * | `protected` | the position was UNLOCKED (sl 0) and the disaster floor was set |
+ * | `no-protective-level` | unlocked, and no protective level could be computed |
+ * | `no-bars` | fewer than 14 bars from the position's own bridge — everything downstream skips |
+ * | `wick-fakeout` | the wick filter judged the move a fakeout, so the stop was deliberately left |
+ * | `distance-refused` | #927 — the trail was closer than the declared distance and was refused |
+ * | `below-threshold` | consensus below 55; no directional case to tighten on |
+ * | `no-recommendation` | no usable ATR/trail, so there was no level to compare against |
+ * | `at-target` | evaluated, and the recommended stop EQUALS the one already set |
+ */
+export type GuardedPositionOutcome =
+  | 'adjusted'
+  | 'protected'
+  | 'no-protective-level'
+  | 'no-bars'
+  | 'wick-fakeout'
+  | 'distance-refused'
+  | 'below-threshold'
+  | 'no-recommendation'
+  | 'at-target';
 
 export interface StopAdjustment {
   timestamp: string;
@@ -1093,7 +1136,7 @@ export class StopGuardianService {
         this.observeExhaustion(pos, strat, bars);
         if (bars.length < 14) {
           guarded.push(
-            this.makeGuarded(pos, strat, side, null, 0, true, ownerVia),
+            this.makeGuarded(pos, strat, side, null, 0, true, ownerVia, 'no-bars'),
           );
           continue;
         }
@@ -1156,7 +1199,7 @@ export class StopGuardianService {
 
         if (!wickPassed) {
           guarded.push(
-            this.makeGuarded(pos, strat, side, pos.sl, 15, false, ownerVia),
+            this.makeGuarded(pos, strat, side, pos.sl, 15, false, ownerVia, 'wick-fakeout'),
           );
           continue;
         }
@@ -1223,6 +1266,13 @@ export class StopGuardianService {
         //    (b) normal trailing: tighten toward the ATR stop — but NEVER closer to price than the
         //        declared distance, so a tighten can only ever improve WHERE the stop sits, never
         //        reduce the risk distance the strategy declared.
+        // ── #1056 — WHICH BRANCH RAN, recorded rather than inferred ────────────────────────────
+        //
+        // Every path below assigns `outcome` on the branch it ACTUALLY took, so a reader can tell
+        // "the guardian declined for this reason" from "nothing happened". Inferring it from
+        // `stopConfidence`/`recommendedSl` cannot work: a genuine evaluation that found nothing
+        // produces the same pair as one that skipped early.
+        let outcome: GuardedPositionOutcome;
         if (pos.sl == null || pos.sl <= 0) {
           const protective = this.protectiveSl(pos, side, strat);
           if (protective != null) {
@@ -1235,6 +1285,11 @@ export class StopGuardianService {
               adjustments,
               true,
             );
+            outcome = 'protected';
+          } else {
+            // Unlocked AND no computable protective level — the one case where the position is
+            // genuinely exposed and the guardian could not act. Never silent again.
+            outcome = 'no-protective-level';
           }
         } else {
           const shouldAdjust =
@@ -1272,6 +1327,16 @@ export class StopGuardianService {
                 wickFilter: wickScore,
               },
             );
+            outcome = 'adjusted';
+          } else if (distanceProblem) {
+            // #927 — refused rather than tightening inside the declared risk.
+            outcome = 'distance-refused';
+          } else if (stopConfidence < 55) {
+            outcome = 'below-threshold';
+          } else if (recommendedSl === null) {
+            outcome = 'no-recommendation';
+          } else {
+            outcome = 'at-target';
           }
         }
 
@@ -1284,6 +1349,7 @@ export class StopGuardianService {
             stopConfidence,
             true,
             ownerVia,
+            outcome,
           ),
         );
       }
@@ -1526,6 +1592,9 @@ export class StopGuardianService {
     stopConfidence: number,
     wickFilterPassed: boolean,
     ownerVia: GuardedPosition['ownerVia'],
+    // #1056 — REQUIRED, deliberately: a new push site must state its own outcome rather than
+    // inherit a default that would read as a decision nobody made.
+    outcome: GuardedPositionOutcome,
   ): GuardedPosition {
     return {
       ticket: pos.ticket,
@@ -1542,6 +1611,8 @@ export class StopGuardianService {
       // #1030 — which account this managed position sits on, so the guard's coverage is
       // checkable from the payload instead of inferred from a log.
       brokerId: pos.brokerId,
+      // #1056 — see `GuardedPositionOutcome`. Always a branch that RAN.
+      outcome,
     };
   }
 

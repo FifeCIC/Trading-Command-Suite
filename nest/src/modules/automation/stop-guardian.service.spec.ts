@@ -857,3 +857,88 @@ describe('#1030 — a second MT5 account is managed, not just the primary', () =
     }
   });
 });
+
+/**
+ * #1056 — the guardian must record WHY it left a position alone.
+ *
+ * WHY THIS SUITE EXISTS
+ *
+ * `guardedPositions` said which positions were CONSIDERED and `recentAdjustments` said what was
+ * DONE. Neither carried the DECLINE, so "why did it leave this one alone?" was recorded nowhere —
+ * not a table, not the structured log. FRA40 had **zero** `stop_adjustment` rows ever while its
+ * peers were trailed, and the live payload could not say whether the guardian had evaluated it.
+ *
+ * ⚠️ THE CANARY IS THE PAIR OF ASSERTIONS, NOT EITHER ONE ALONE.
+ *
+ * A `no-bars` position and an evaluated position that found nothing to do produce the SAME
+ * `stopConfidence` (0) and the SAME `recommendedSl` (null). So the fields a reader would naturally
+ * reach for **cannot** tell them apart — this suite asserts the pair matches and the outcomes do
+ * not. Delete the `'no-bars'` literal (or infer `outcome` from the other fields) and it fails.
+ */
+describe('StopGuardianService — the per-position OUTCOME (#1056)', () => {
+  /** Flat bars: ATR is genuinely 0, so no trail level can be computed. */
+  const flatBars = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      timestamp: new Date(Date.now() - (n - i) * 3600000).toISOString(),
+      open: 100, high: 100, low: 100, close: 100, volume: 1000,
+    }));
+
+  /** Four BEARISH signals against a BUY: aligned 0, opposing ~78 -> stopConfidence 0. */
+  const bearishEvidence = () =>
+    new Map([
+      ['atr-trailing-stop', { score: 75, confidence: 0.7, signalClass: 'bearish', reason: 'x' }],
+      ['supertrend', { score: 75, confidence: 0.7, signalClass: 'bearish', reason: 'x' }],
+      ['chandelier-exit', { score: 80, confidence: 0.55, signalClass: 'bearish', reason: 'x' }],
+      ['wick-filter', { score: 80, confidence: 0.7, signalClass: 'bearish', reason: 'x', metadata: { isFakeout: false } }],
+    ]);
+
+  const build = (bars: any[]) => {
+    const { manager } = mt5Double({
+      positions: [
+        { ticket: 1, symbol: 'XAUUSD', type: 'buy', volume: 1, priceOpen: 100, priceCurrent: 100, sl: 90, tp: null, profit: 0, comment: 'TCS s1', brokerId: 2 },
+      ],
+      bars,
+    });
+    return new StopGuardianService(
+      { findAll: jest.fn().mockResolvedValue([{ active: true, mode: 'auto', symbol: 'XAUUSD', id: 's1', name: 'S1', slPct: 1 }]) } as any,
+      { runAll: jest.fn().mockResolvedValue(bearishEvidence()) } as any,
+      manager,
+      { recordAdjustment: jest.fn() } as any,
+    );
+  };
+
+  const guardedOutcome = async (svc: any) => {
+    svc.state.enabled = true;
+    await svc.tick();
+    const row = svc.state.guardedPositions[0];
+    svc.stop();
+    return row;
+  };
+
+  it('⚠️ CANARY — identical stopConfidence AND recommendedSl, DIFFERENT outcomes', async () => {
+    // Too few bars: everything downstream skips.
+    const tooFew = await guardedOutcome(build(flatBars(5)));
+    // Bars are fine; the ATR is genuinely 0, so there is no level to recommend and the consensus
+    // is too low to tighten on anyway.
+    const flatAtr = await guardedOutcome(build(flatBars(30)));
+
+    // ⚠️ The pair a reader would infer from. IDENTICAL for both — so inference cannot work.
+    expect(tooFew.stopConfidence).toBe(0);
+    expect(flatAtr.stopConfidence).toBe(0);
+    expect(tooFew.recommendedSl).toBeNull();
+    expect(flatAtr.recommendedSl).toBeNull();
+
+    // ...and the ONLY thing that separates them is the recorded outcome.
+    expect(tooFew.outcome).toBe('no-bars');
+    expect(flatAtr.outcome).toBe('below-threshold');
+    expect(tooFew.outcome).not.toBe(flatAtr.outcome);
+  });
+
+  it('no considered position is left without an outcome', async () => {
+    // The field is REQUIRED on `makeGuarded`, so a new push site cannot omit it silently — this
+    // asserts the runtime consequence rather than the type.
+    const row = await guardedOutcome(build(flatBars(30)));
+    expect(typeof row.outcome).toBe('string');
+    expect(row.outcome.length).toBeGreaterThan(0);
+  });
+});
