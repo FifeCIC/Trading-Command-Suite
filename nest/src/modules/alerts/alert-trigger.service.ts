@@ -430,9 +430,10 @@ export class AlertTriggerService implements OnModuleInit {
       const breaches = pnlBreaches(
         positions.map((p: any) => ({
           symbol: String(p.symbol),
-          pnl: p.pnl,
+          side: p.side,
           avgPrice: Number(p.avgPrice),
-          quantity: Number(p.quantity),
+          currentPrice: p.currentPrice == null ? null : Number(p.currentPrice),
+          pnl: p.pnl == null ? null : Number(p.pnl),
         })),
         thresholdPct,
       );
@@ -442,7 +443,7 @@ export class AlertTriggerService implements OnModuleInit {
       // Severity follows the WORST breach, so a book of small losses does not read as critical
       // and one large one does.
       const worst = worstBreach(breaches)!;
-      const severity: AlertSeverity = worst.pnl < 0 ? (worst.pnlPct > 25 ? 'critical' : 'warning') : 'info';
+      const severity: AlertSeverity = worst.movePct < 0 ? (Math.abs(worst.movePct) > 25 ? 'critical' : 'warning') : 'info';
 
       return {
         triggered: true,
