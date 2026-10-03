@@ -4,6 +4,37 @@ Items needing human attention. Agents: read this at session start. Append confir
 
 ---
 
+## 2026-10-03
+
+### 🛑 The bar refresh used to FABRICATE bars. It is fixed — but 55,518 rows sharing the signature are NOT deleted.
+
+Removed the loop in `BarRefreshService.doRefresh()` that wrote a 5m bar from a live quote's
+`(bid+ask)/2` (`provider 'mt5'`, `o=h=l=c`, **`volume 1`**). Measured: **1,172 rows across 52 symbols**
+since Friday's close, all stamped at the *current* bucket — so **a feed that died on Friday measured
+as FRESH on Monday**, and it silently countermanded `#838`'s own `SKIPPED 209 stale bar set(s)` line.
+Proof: `:5000/quote?symbol=XAUUSD` → `bid 4147.62 / ask 4147.97` → **4147.795**, the exact value in
+every one of those rows. Deleted, guarded, deployed. Register row 61 · **issue #1068**.
+
+⚠️ **55,518 rows carry the SAME signature BEFORE Friday's close and are still there.** Almost
+certainly the same writer, but the market was open, so "no bar can exist" does not apply — that is an
+**indication, not a proof**, and deleting 9% of `marketbar` on an indication is not a silent decision.
+**Do not delete them without converting the indication into a measurement first** (see #1068).
+
+⚠️ **A trap for whoever writes the next guard here.** The first canary attempt was **INERT**: it
+inlined the INSERT's literals, so the spec's `$executeRaw` mock recorded **one** value instead of nine
+and checked `undefined` against the signature — and the suite went **green**, which would have read as
+*"the guard cannot fail"*. **Every field must be interpolated for a canary to land.** The spec now
+carries a positive control for exactly this reason.
+
+⚠️ **And read `bar-refresh-stale-recheck.spec.ts` before trusting any green suite on this service.**
+Its adapter mock omits `getQuote` and says why — *"so it cannot add writes"*. **A mock shaped so the
+defect cannot fire makes the suite indistinguishable from one that passes.** It passed while the live
+system fabricated 1,172 bars.
+
+- **Agent:** primary (2026-10-03), #1068.
+
+---
+
 ## 2026-09-23
 
 ### ⚠️ #874 findings for whoever lands `strategy-seed-data.ts` (file is mid-work — do not race)

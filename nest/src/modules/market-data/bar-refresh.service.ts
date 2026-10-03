@@ -711,37 +711,69 @@ export class BarRefreshService {
       }
     }
 
-    // ── Also upsert synthetic "current" bars from live quotes ──
-    for (const symbol of symbols) {
-      try {
-        const dbSymbol = await this.prisma.symbol.findFirst({ where: { ticker: symbol } });
-        if (!dbSymbol) continue;
-
-        const broker2 = this.adapterFactory.create('mt5') as any;
-        const quote = broker2?.getQuote ? await broker2.getQuote(symbol) : null;
-        if (!quote?.bid || !quote?.ask) continue;
-
-        const midPrice = (quote.bid + quote.ask) / 2;
-        // Floor to the current 5m bucket so the synthetic bar matches the
-        // timestamp MT5 will use for the real closed bar. This makes the
-        // ON DUPLICATE KEY UPDATE hit the same row every refresh (instead of
-        // inserting a new flat bar every 5 min), and lets the real bar
-        // overwrite the placeholder once it closes.
-        //
-            // This one needs no future-stamp check: it is derived from
-        // the LOCAL clock, so it is at most one 5m bucket ahead of now — i.e. a
-        // legitimate forming bar, indistinguishable from what the bridge serves.
-        const now = new Date();
-        now.setUTCSeconds(0, 0);
-        now.setUTCMinutes(Math.floor(now.getUTCMinutes() / 5) * 5);
-
-        await this.prisma.$executeRaw`
-          INSERT INTO marketbar (id, symbolId, provider, timeframe, timestamp, open, high, low, close, volume)
-          VALUES (UUID(), ${dbSymbol.id}, 'mt5', '5m', ${now}, ${midPrice}, ${midPrice}, ${midPrice}, ${midPrice}, 1)
-          ON DUPLICATE KEY UPDATE close=${midPrice}, high=GREATEST(high,${midPrice}), low=LEAST(low,${midPrice})
-        `;
-      } catch { /* quote fetch may fail if broker doesn't support it */ }
-    }
+    // ── REMOVED 2026-10-03: the SYNTHETIC "current" bar from a live quote ──────────────────────
+    //
+    // WHAT WAS HERE. A loop that called `getQuote(symbol)`, took `(bid+ask)/2`, floored the LOCAL
+    // clock to the current 5m bucket, and INSERTed a bar: `provider 'mt5'`, `timeframe '5m'`,
+    // `open = high = low = close = mid`, **`volume 1`**, `recordingSessionId NULL`.
+    //
+    // WHY IT WAS REMOVED — one measurement, and it falsifies the block's own stated purpose.
+    // MEASURED 2026-10-03, live database: **1,016 such rows across 52 symbols**, every one of them
+    // flat (`o=h=l=c`) and every one `volume <= 1`, all stamped after Friday's close:
+    //
+    //   XAUUSD 5m  21:05, 21:10, 21:15, ... 22:40  →  then  Sat 13:40, 13:45, ...
+    //              every row  open=high=low=close=4147.795, volume=1
+    //
+    // Its comment claimed flooring made `ON DUPLICATE KEY UPDATE` "hit the same row every refresh
+    // (instead of inserting a new flat bar every 5 min)". **It does the opposite**, and necessarily:
+    // the bucket changes every 5 minutes, so each refresh lands on a NEW key and inserts a NEW flat
+    // bar. The mechanism the comment says it prevents is the one it produces.
+    //
+    // ⚠️ THE PROOF, not an inference. `GET :5000/quote?symbol=XAUUSD` returns `bid 4147.62 / ask
+    // 4147.97` — mid **4147.795**, the exact value held by all 1,016 rows. The bridge's own `/candles`
+    // for the same symbol returns NOTHING after Fri 20:54, so the bars were never market data.
+    //
+    // ⚠️ AND IT DEFEATED A GUARD THAT WAS WORKING. The same refresh run correctly reported
+    // `SKIPPED 209 stale bar set(s)` (#838) — and this loop then wrote a fresh-looking row for those
+    // same symbols, because it bypassed `isStaleSet`, `alignBarTimestamp` and `isBarFutureStamped`
+    // (the comment says so explicitly: "needs no future-stamp check"). Two guards, contradicting
+    // each other, in one pass.
+    //
+    // ⚠️ THE HARM IS NOT THE ORPHAN ROWS — IT IS THAT THEY READ AS FRESH. The bar is stamped at the
+    // CURRENT bucket, so `MAX(timestamp)` is always ~now. A symbol whose feed died on Friday still
+    // measures as fresh on Monday, which is this repo's most expensive failure signature: plausible
+    // values, no error.
+    //
+    // WHY REMOVING IT LOSES NOTHING. When a market IS open, `/candles` already ends with the
+    // still-forming bar (`building-bar-duplicate.ts` records this as measured), and the main loop
+    // above writes it with REAL OHLCV and REAL volume. The placeholder was redundant when the feed
+    // was alive, and a fabrication when it was dead — and this loop ran LAST, so on an open market it
+    // overwrote a real bar's `close` with a quote MID and widened its high/low.
+    //
+    // ── DECISION (2026-10-03, primary) ─────────────────────────────────────────────────────────
+    // WHAT:      The synthetic "current" bar from `(bid+ask)/2` is DELETED, not gated. No bar is
+    //            written to `marketbar` that did not come from `getCandles()`.
+    // WHY:       Measured 2026-10-03 on the live database: it had written **1,172 rows across 52
+    //            symbols** since Friday's close, every one flat (`o=h=l=c`) and every one
+    //            `volume <= 1`, stamped at the CURRENT 5m bucket. Because the stamp is ~now,
+    //            `MAX(timestamp)` stayed current and a dead feed measured as LIVE — the repo's most
+    //            expensive signature: plausible values, no error. It also silently countermanded a
+    //            guard that was working: the same run reported `SKIPPED 209 stale bar set(s)`
+    //            (#838) and then wrote a fresh-looking row for those same symbols.
+    // INSTEAD OF: Gating it on market-open, or on `quote.timestamp`. BOTH WERE REJECTED BY
+    //            MEASUREMENT, not by preference — `GET :5000/quote?symbol=XAUUSD` returns
+    //            `13:52:05.876Z` against a clock of `13:52:06.4`, i.e. the timestamp is the
+    //            bridge's ANSWER time, not the last trade time, so a frozen quote is
+    //            indistinguishable from a live one. And a "does the feed have a current bar?" gate
+    //            is identical to deleting it: if the feed has a current bar the main loop already
+    //            wrote it, and if it does not, there is nothing to place a placeholder for.
+    // REVERSE BY: Reintroducing a synthetic bar ONLY with a signal that genuinely distinguishes a
+    //            frozen feed from a live one, and writing it somewhere that is not `marketbar`.
+    // REGISTER:  docs/SETTLED-DECISIONS.md — "the refresh stores only bars the bridge served"
+    // GUARD:     nest/src/modules/market-data/bar-refresh-no-synthetic.spec.ts (canaried: the
+    //            synthetic row fails 3 of its 6 cases; the guard's own positive control proves the
+    //            detector can fail, and the first canary attempt was INERT because it inlined
+    //            literals the `$executeRaw` mock never records)
 
     // Surface skipped impossible bars prominently. A dropped bar must not look
     // like a clean refresh: 226 of them once pinned 17 symbols' newest-bar time
