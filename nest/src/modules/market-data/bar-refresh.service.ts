@@ -315,9 +315,66 @@ export class BarRefreshService {
    * Resolve symbols for bar refresh.
    * Delegates to the shared SymbolResolverService (feature: bar-refresh).
    */
+  /**
+   * Which symbols get their bars refreshed — and the ONE control that bounds the app's workload.
+   *
+   * ── DECISION (2026-10-03, owner) — `symbol.active` is the core-set switch ─────────────────────
+   * WHAT:  A symbol is ingested when it is `active`, OR when we hold a position or run a bot on it.
+   * WHY:   Owner direction: *"reduce the app down to 40… I think 40 right now allows us erase a lot
+   *        of redundant data."* MEASURED 2026-10-03: 128 symbols hold bars but only **39** have a bot,
+   *        a protocol assignment or a route — so ~89 symbols were ingesting **because nothing said
+   *        not to**. `symbol.active` existed and gated the NEWS path (`resolveAllActive`) and
+   *        `getStarvedSymbols()`, but **not this one**, so setting it stopped news and left the bars
+   *        flowing. A control with no effect on the expensive path is a buried ability, not a switch.
+   *
+   * ⚠️ THE CARVE-OUT IS THE SAFETY-CRITICAL PART — DO NOT SIMPLIFY IT AWAY.
+   * A symbol with an OPEN POSITION or an ACTIVE BOT is fed **whatever its `active` flag says**. If
+   * deactivating a symbol could starve the feed of a position we hold, this change would silently
+   * break the stop guardian's ability to price that position — a money path — and the symptom would
+   * be "the stop did not fire", with no error and nothing pointing back here.
+   *
+   * The protected set is `'automation'` (positions + active-strategies + watchlist-starred), which
+   * already exists as a named tier — so this reuses the canonical resolution rather than adding a
+   * fourth definition of "a symbol we care about".
+   *
+   * REVERSE BY: delete the `.filter(...)` — every symbol returns to being ingested. One line.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 63.
+   */
   async resolveRefreshSymbols(): Promise<string[]> {
     const selection = await this.symbolResolver.getSymbolsForFeature('bar-refresh');
-    return selection.symbols;
+    const resolved = selection.symbols ?? [];
+
+    try {
+      const protectedSelection = await this.symbolResolver.getSymbolsForFeature('automation');
+      const keep = new Set(
+        (protectedSelection?.symbols ?? []).map((s: string) => String(s).toUpperCase()),
+      );
+
+      const activeRows = await this.prisma.symbol.findMany({
+        where: { active: true },
+        select: { ticker: true },
+      });
+      for (const row of activeRows) keep.add(String(row.ticker).toUpperCase());
+
+      const filtered = resolved.filter((s) => keep.has(String(s).toUpperCase()));
+      const dropped = resolved.length - filtered.length;
+      if (dropped > 0) {
+        this.logger.log(
+          `Bar refresh: ${resolved.length} resolved, ${dropped} not active and not protected ` +
+          `(no position, no active bot) — skipped. Core set via symbol.active (#R37).`,
+        );
+      }
+      return filtered;
+    } catch (err: any) {
+      // ⚠️ FAIL OPEN, and log it loudly. A failure to read `active` must not stop the feed for a
+      // symbol we are trading — a starved feed breaks the stop guardian, and that is worse than
+      // ingesting bars for a symbol we did not need.
+      this.logger.warn(
+        `Bar refresh: could not resolve the active core set (${err?.message ?? err}) — ` +
+        `falling back to the FULL resolved list so no held symbol is starved.`,
+      );
+      return resolved;
+    }
   }
 
   /**

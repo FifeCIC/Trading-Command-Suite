@@ -52,7 +52,14 @@ describe('BarRefreshService — post-fallback staleness re-check (#838)', () => 
 
     const prisma: any = {
       $queryRawUnsafe: jest.fn(async () => []), // no routes → every symbol defaults to mt5
-      symbol: { findFirst: jest.fn(async () => ({ id: 'sym-1', ticker: 'EURUSD' })) },
+      // ⚠️ MOCKED DELIBERATELY. `resolveRefreshSymbols()` reads `symbol.active` to bound the core
+      // set. If this is absent the read throws, the method falls back to the FULL list, and every
+      // test below silently exercises the FALLBACK rather than the filter — the same "mock shaped
+      // so the code under test cannot run" trap that hid the synthetic-bar writer.
+      symbol: {
+        findFirst: jest.fn(async () => ({ id: 'sym-1', ticker: 'EURUSD' })),
+        findMany: jest.fn(async () => [{ ticker: 'EURUSD' }]),
+      },
       $executeRaw: jest.fn(async (_strings: any, ...values: any[]) => {
         // Only marketbar writes count; record them so we can assert nothing was persisted.
         upserted.push(values);

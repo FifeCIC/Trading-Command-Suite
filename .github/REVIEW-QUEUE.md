@@ -17,8 +17,8 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
-| **R37** | **Symbols we cannot trade cost us bars every day. Deactivate them, or remove them?** 129 symbols hold bars; **31** have a bot. **28%** of bar ingestion serves symbols nothing can trade. | evidence: `AGENT-ATTENTION.md` 2026-10-02 | Deactivate (reversible) or delete outright — and what has to be true for a symbol to earn a place? |
-| **R38** | **Telemetry grows without a ceiling and nothing prunes it.** `apiactivitylog` **1,332,329** rows / **250 MB**; `directiveoutcome` adds **24,805** rows/day and is 4 days old. | evidence: `AGENT-ATTENTION.md` 2026-10-02 | How long do we keep telemetry — 7, 30 or 90 days — and is deleting old rows acceptable? |
+| **R37** | **90 of the 119 symbols holding bars have NO protocol assignment — nothing scores them (31% of all bars).** ⚠️ `watchlist_item` is **EMPTY** (0 rows against 50 watchlists), so *"nobody wanted them"* and *"their listing was lost"* cannot currently be told apart. | measured 2026-10-03 | **Deactivate the 90 (reversible) — but first: is `watchlist_item` empty because it was never filled, or because it was lost?** |
+| **R38** | **A retention system ALREADY exists for 10 tables and its prune works. `apiactivitylog` is the one large table with NO window — 1,332,329 rows / 249 MB.** | measured 2026-10-03 | **Give `apiactivitylog` a window — 7, 30 or 90 days? Does anything read its history beyond that?** |
 
 **R37 and R38 were raised by the agent on 2026-10-02** from the capacity measurement, not by a defect. Both are policy choices with no clear logical winner, so they are the owner's. Neither blocks work.
 

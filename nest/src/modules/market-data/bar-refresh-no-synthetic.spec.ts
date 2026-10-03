@@ -79,6 +79,9 @@ describe('BarRefreshService — only bars the BRIDGE SERVED may be stored', () =
   let writes: unknown[][];
   let candles: any[];
   let quote: any;
+  // Hoisted so the core-set tests can swap them per case.
+  let prismaMock: any;
+  let resolverMock: any;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -90,9 +93,15 @@ describe('BarRefreshService — only bars the BRIDGE SERVED may be stored', () =
     // produced the 1,016 rows: the bid/ask keep answering after the feed stops.
     quote = { bid: 4147.62, ask: 4147.97, last: 4147.62 };
 
-    const prisma: any = {
+    const prisma: any = prismaMock = {
       $queryRawUnsafe: jest.fn(async () => []),
-      symbol: { findFirst: jest.fn(async () => ({ id: 'sym-1', ticker: 'XAUUSD' })) },
+      // ⚠️ BOTH are required by `resolveRefreshSymbols()`. Without `findMany` the core-set read
+      // throws and the method falls back to the full list, so the tests would pass while never
+      // running the filter they appear to cover.
+      symbol: {
+        findFirst: jest.fn(async () => ({ id: 'sym-1', ticker: 'XAUUSD' })),
+        findMany: jest.fn(async () => [{ ticker: 'XAUUSD' }]),
+      },
       $executeRaw: jest.fn(async (_s: any, ...values: any[]) => { writes.push(values); return 1; }),
     };
     const adapterFactory: any = {
@@ -103,7 +112,7 @@ describe('BarRefreshService — only bars the BRIDGE SERVED may be stored', () =
         getQuote: jest.fn(async () => quote),
       })),
     };
-    const symbolResolver: any = { getSymbolsForFeature: jest.fn(async () => ({ symbols: ['XAUUSD'] })) };
+    const symbolResolver: any = resolverMock = { getSymbolsForFeature: jest.fn(async () => ({ symbols: ['XAUUSD'] })) };
     const mt5Conn: any = { getBrokerIds: jest.fn(() => [2]), getUrl: jest.fn(() => PRIMARY_URL) };
 
     service = new BarRefreshService(prisma, adapterFactory, symbolResolver, mt5Conn);
@@ -172,6 +181,37 @@ describe('BarRefreshService — only bars the BRIDGE SERVED may be stored', () =
         4137.45, 4139.72, 4136.68, 4139.36, 623,
       ];
       expect(fabricatedWrites([served], FRIDAY_NEWEST)).toEqual([]);
+    });
+  });
+
+  // ── THE CORE SET — `symbol.active` bounds the work, and MUST NOT starve a held position ──────
+  describe('resolveRefreshSymbols — the core-set gate (R37)', () => {
+    it('drops a symbol that is neither active nor protected', async () => {
+      resolverMock.getSymbolsForFeature = jest.fn(async (f: string) =>
+        ({ symbols: f === 'automation' ? [] : ['XAUUSD', 'SOMETHING'] }));
+      prismaMock.symbol.findMany = jest.fn(async () => [{ ticker: 'XAUUSD' }]);
+
+      await expect(service.resolveRefreshSymbols()).resolves.toEqual(['XAUUSD']);
+    });
+
+    // ⚠️ THE SAFETY-CRITICAL CASE. An inactive symbol we HOLD or TRADE must keep its feed: a
+    // starved feed stops the stop guardian pricing the position, and the symptom is "the stop did
+    // not fire" — no error, nothing pointing back here.
+    it('KEEPS an inactive symbol that has a position or an active bot', async () => {
+      resolverMock.getSymbolsForFeature = jest.fn(async (f: string) =>
+        ({ symbols: f === 'automation' ? ['BTC'] : ['XAUUSD', 'BTC'] }));
+      prismaMock.symbol.findMany = jest.fn(async () => [{ ticker: 'XAUUSD' }]);
+
+      const out = await service.resolveRefreshSymbols();
+      expect(out).toContain('BTC');      // protected despite being inactive
+      expect(out).toContain('XAUUSD');   // active
+    });
+
+    it('FAILS OPEN — if the active read throws, the full list survives', async () => {
+      resolverMock.getSymbolsForFeature = jest.fn(async () => ({ symbols: ['XAUUSD', 'BTC'] }));
+      prismaMock.symbol.findMany = jest.fn(async () => { throw new Error('db down'); });
+
+      await expect(service.resolveRefreshSymbols()).resolves.toEqual(['XAUUSD', 'BTC']);
     });
   });
 });

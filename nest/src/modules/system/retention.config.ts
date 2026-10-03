@@ -71,6 +71,24 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   portfolio_snapshot:  { dateCol: 'takenAt',      defaultDays: 365, envKey: 'DATA_RETENTION_PORTFOLIO_DAYS', label: 'Portfolio Snapshots' },
   order:               { dateCol: 'createdAt',    defaultDays: 365, envKey: 'DATA_RETENTION_ORDER_DAYS',     label: 'Orders' },
   bridge_event:        { dateCol: 'createdAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_BRIDGE_DAYS',    label: 'Bridge Events' },
+
+  // ── DECISION (2026-10-03, owner) — 30 days, and it was the ONLY large table with no bound ──────
+  // WHAT:  `apiactivitylog` gets a 30-day window.
+  // WHY:   MEASURED 2026-10-03: **1,332,329 rows / 249 MB** — the largest table in the database and
+  //        the only one of the top ten with no declared window (the next undeclared was 18 MB, 14×
+  //        smaller). It is pure telemetry: endpoint, method, status, duration. Nothing reads its
+  //        history.
+  // OWNER'S REASONING: *"nothing is reading 90 days and might not for a long time… 30 days by
+  //        default is suitable."* The 7/30/90 fork was put to them and 30 was chosen.
+  // ⚠️  THIS IS THE DEFAULT, NOT A CEILING. `DATA_RETENTION_APIACTIVITY_DAYS` overrides it, which is
+  //        the existing opt-in mechanism for a longer window.
+  // REVERSE BY: change `defaultDays`, or set the env key. One line either way.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 62.
+  // NOT BUILT — the owner also raised framing long-term storage as an OPT-IN FEATURE the user
+  //        switches on for analysis (*"the user has to initiate long term data storage"*). Noted as
+  //        #1070 rather than built here: a default bound and an opt-in feature are different sizes
+  //        of change, and only the first was decided.
+  apiactivitylog:      { dateCol: 'timestamp',    defaultDays: 30,  envKey: 'DATA_RETENTION_APIACTIVITY_DAYS', label: 'API Activity Log' },
 };
 
 /** Table → retention window, derived. Used by the health panel. */
