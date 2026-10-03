@@ -85,9 +85,14 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // REVERSE BY: change `defaultDays`, or set the env key. One line either way.
   // REGISTER:  docs/SETTLED-DECISIONS.md row 62.
   // NOT BUILT — the owner also raised framing long-term storage as an OPT-IN FEATURE the user
-  //        switches on for analysis (*"the user has to initiate long term data storage"*). Noted as
-  //        #1070 rather than built here: a default bound and an opt-in feature are different sizes
-  //        of change, and only the first was decided.
+  //        switches on for analysis (*"the user has to initiate long term data storage"*). Not done
+  //        here: a default bound and an opt-in feature are different sizes of change, and only the
+  //        first was decided. Recorded on **#1070** with the related finding below.
+  // ⚠️ #1070 ALSO FOUND THAT THIS TABLE'S 60-DAY BOUND IS NOT APPLIED AND IS TOO SHALLOW — the
+  //        oldest `marketbar` row measured 2026-10-03 is **295 days** old, so nothing is pruning it,
+  //        and `btc-halving-cycle` (in the ACTIVE `btc-speed-v1`) declares **365 daily bars**.
+  //        A fixed window cannot serve `1d` and `1m` at once; a per-timeframe window is the shape
+  //        that would. Do not tighten this number without reading #1070 first.
   apiactivitylog:      { dateCol: 'timestamp',    defaultDays: 30,  envKey: 'DATA_RETENTION_APIACTIVITY_DAYS', label: 'API Activity Log' },
 };
 
