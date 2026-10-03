@@ -6,15 +6,12 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 39 view(s) · 37 component(s) · 108 premium entry(ies) excluded.
+ * 39 view(s) · 37 component(s) · 105 premium entry(ies) excluded.
  */
 
 // ── Free pages ──
 import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
-import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import AppearanceSettingsPage from '../pages/AppearanceSettingsPage.jsx';
-import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
-import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
 import CalculatorsPage from '../pages/CalculatorsPage.jsx';
 import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
@@ -25,7 +22,9 @@ import MarketContextPage from '../pages/MarketContextPage.jsx';
 import MarketCorrelationsPage from '../pages/MarketCorrelationsPage.jsx';
 import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
 import NewsIntelPage from '../pages/NewsIntelPage.jsx';
+import ObjectivesPage from '../pages/ObjectivesPage.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
+import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
 import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import ProtocolQueuePage from '../pages/ProtocolQueuePage.jsx';
@@ -45,16 +44,14 @@ import ThemePage from '../pages/ThemePage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
 import TradingSettingsPage from '../pages/TradingSettingsPage.jsx';
+import TradingStylesPage from '../pages/TradingStylesPage.jsx';
 import TrainingCandlePatternsPage from '../pages/TrainingCandlePatternsPage.jsx';
 import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {
   'active-symbols': ActiveSymbolsPage,
-  'alert-center': AlertCenterPage,
   'appearance': AppearanceSettingsPage,
-  'automation-dashboard': AutomationDashboardPage,
-  'automation-rules': AutomationRulesPage,
   'calculators': CalculatorsPage,
   'candle-patterns': TrainingCandlePatternsPage,
   'candle-patterns-guide': CandlePatternsGuidePage,
@@ -67,7 +64,9 @@ export const VIEW_COMPONENTS = {
   'market-correlations': MarketCorrelationsPage,
   'mt5-trading': Mt5TradingPage,
   'news-intel': NewsIntelPage,
+  'objectives': ObjectivesPage,
   'performance-lab': PerformanceLabPage,
+  'personal-finances': PersonalFinancesPage,
   'positions-monitor': PositionsMonitorPage,
   'preference-lab': PreferenceLab,
   'protocol-queue': ProtocolQueuePage,
@@ -87,6 +86,7 @@ export const VIEW_COMPONENTS = {
   'trade-journal': TradeJournalPage,
   'trading-plans': TradingPlansPage,
   'trading-settings': TradingSettingsPage,
+  'trading-styles': TradingStylesPage,
   'user-preferences': PreferenceLab,
   'user-watchlists': UserWatchlistsPage,
 };

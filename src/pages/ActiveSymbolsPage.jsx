@@ -111,17 +111,27 @@ export default function ActiveSymbolsPage() {
     staleTime: 300_000,
   });
 
-  // Directives for protocol count per symbol
-  const directivesQuery = useQuery({
-    queryKey: ['directives-for-symbols'],
-    queryFn: () => apiGet('/api/directives').catch(() => []),
+  // ⚠️ RE-SOURCED 2026-10-02 — this column was rendering 0 for every symbol.
+  // It used to count `directive.symbols[]` entries, and measured that day: `GET /api/directives`
+  // returns **109** directives, **0** of which carry a non-empty `symbols[]`. So the count was
+  // always zero — INCLUDING for symbols with open positions — and nothing errored.
+  // It now reads the canonical authority (`SymbolProtocolAuthorityService`: assignment ∪ active
+  // bots ∪ FK watchlists ∪ observed snapshots), the same answer `GET /api/symbols/:ticker/protocols`
+  // gives per symbol, so the table and the symbol page cannot disagree.
+  const protocolCountsQuery = useQuery({
+    queryKey: ['symbol-protocol-counts'],
+    // ⚠️ No `.catch(() => [])`. A failure must stay `null` so it can render differently from zero.
+    queryFn: () => apiGet('/api/symbols/protocol-counts').catch(() => null),
     staleTime: 120_000,
   });
 
   const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : [];
   const mode = symbols.data?.mode ?? '...';
   const positions = Array.isArray(positionsQuery.data?.positions) ? positionsQuery.data.positions : [];
-  const directives = Array.isArray(directivesQuery.data) ? directivesQuery.data : [];
+  // ⚠️ `null` = the request failed, which is NOT the same as "no protocols". The column renders
+  // an em-dash for null and a number for a real zero, so a failed query cannot read as a symbol
+  // that nothing scores.
+  const protocolCounts = protocolCountsQuery.data?.counts ?? null;
 
   // Build lookup maps
   // One row per symbol (not an aggregate) — the endpoint already collapses per-symbol holdings.
@@ -146,18 +156,6 @@ export default function ActiveSymbolsPage() {
   // consumer filtering on `pnlInvalid` alone was booking each one as a break-even trade. Merging
   // the two counts would hide which cause is growing, and that is the only thing worth watching.
   const histExitUnknown = histSample?.excludedExitUnknown ?? null;
-
-  const protocolCountBySymbol = useMemo(() => {
-    const map = {};
-    for (const d of directives) {
-      const syms = d.symbols || [];
-      for (const s of syms) {
-        const key = (typeof s === 'string' ? s : s.ticker || s.symbol || '').toUpperCase();
-        if (key) map[key] = (map[key] || 0) + 1;
-      }
-    }
-    return map;
-  }, [directives]);
 
   const filtered = useMemo(() => {
     let list = [...syms];
@@ -441,7 +439,7 @@ export default function ActiveSymbolsPage() {
               {filtered.map((sym) => {
                 const isActive = sym.active !== false;
                 const tickerUpper = (sym.ticker || '').toUpperCase();
-                const protoCount = protocolCountBySymbol[tickerUpper] || 0;
+                const protoCount = protocolCounts ? (protocolCounts[tickerUpper] ?? 0) : null;
                 const hasOpenTrade = sym.hasPosition;
                 const currentPnl = sym.currentPnl;
                 const histPnl = sym.histPnl;
@@ -530,7 +528,13 @@ export default function ActiveSymbolsPage() {
                     )}
                     {cols.protocols && (
                       <td>
-                        <span className="tp-chip tp-chip--neutral">{protoCount}</span>
+                        {protoCount === null ? (
+                          // ⚠️ "Could not read" must not look like "none": a failed request would
+                          // otherwise render as a symbol with zero protocols.
+                          <span className="tp-chip tp-chip--neutral" title="Protocol counts unavailable — the request failed">—</span>
+                        ) : (
+                          <span className="tp-chip tp-chip--neutral">{protoCount}</span>
+                        )}
                       </td>
                     )}
                     {cols.exchange && (

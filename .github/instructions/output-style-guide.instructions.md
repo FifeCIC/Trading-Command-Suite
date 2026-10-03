@@ -126,6 +126,7 @@ When you cite a number or state, add provenance inline, e.g.:
 | Narrating what you are about to do | Do it, then report |
 | A summary section after a set of tables | The tables were the summary |
 | Caveats about dev-induced disruption | In dev mode, not news |
+| Narrating the commit, or echoing `git log` / `git status` | The owner commits manually 2–3× a day — the commit is not yours to report |
 
 - Prefer a **"Key numbers" strip** at the top when the reply has hard metrics.
 - Emoji are status markers, not decoration.

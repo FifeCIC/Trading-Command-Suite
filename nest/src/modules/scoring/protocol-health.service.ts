@@ -1,7 +1,68 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { execFile } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
 import { PrismaService } from '../../database/prisma.service';
+
+/**
+ * Resolve the `nest/` package root by walking up from `__dirname` until a directory holding
+ * `package.json` is found.
+ *
+ * ⚠️ NOT a hardcoded `'..'` depth. The compiled module lives at `dist/src/modules/scoring/`, so a
+ * fixed depth resolves to `nest/` from source and to something else entirely from `dist/`. This is
+ * exactly the bug `log.service.ts` documents — a path that worked in dev and silently pointed at
+ * the build-owned `dist/` at runtime. Walking to `package.json` is layout-independent.
+ */
+function resolveNestRoot(): string {
+  let dir = __dirname;
+  for (let i = 0; i < 8; i += 1) {
+    const parent = path.dirname(dir);
+    if (parent === dir) break; // filesystem root
+    dir = parent;
+    if (fs.existsSync(path.join(dir, 'package.json'))) return dir;
+  }
+  return process.cwd();
+}
+
+/**
+ * The coverage validator (#970).
+ *
+ * ⚠️ The rule is IMPLEMENTED ONCE, in this `.cjs` file, and this service SPAWNS it rather than
+ * re-implementing the same membership test in TypeScript. Two copies of one rule drift, and only
+ * one of them gets the next fix.
+ */
+const COVERAGE_VALIDATOR = path.join(
+  resolveNestRoot(),
+  'scripts',
+  'validate-protocol-covers-bot-symbol.cjs',
+);
+
+export interface CoveragePayload {
+  bots: number;
+  covered: number;
+  failures: { bot: string; symbol: string; protocol: string; set: string[] }[];
+  cannotJudge: { bot: string; symbol: string; protocol: string }[];
+}
+
+/**
+ * Turn the validator's `--json` payload into one warning line, or `null` when there is nothing to
+ * report. PURE, so it is exercised without spawning anything.
+ *
+ * ⚠️ Returns `null` ONLY for a well-formed payload with zero failures. A payload that cannot be
+ * read is NOT this function's job — the caller must report that as "could not run", never as "OK".
+ * Collapsing "fine" and "cannot judge" is the defect this repo names most often.
+ */
+export function formatCoverageWarning(payload: CoveragePayload | null | undefined): string | null {
+  if (!payload || !Array.isArray(payload.failures) || payload.failures.length === 0) return null;
+  const named = payload.failures
+    .slice(0, 5)
+    .map((f) => `${f.bot} trades ${f.symbol} but protocol '${f.protocol}' declares [${(f.set ?? []).join(', ')}]`)
+    .join('; ');
+  const more = payload.failures.length > 5 ? ` (+${payload.failures.length - 5} more)` : '';
+  return `${payload.failures.length} bot(s) score on a protocol that never declares their own symbol: ${named}${more}`;
+}
 
 /**
  * ProtocolHealthService — static protocol-config validation.
@@ -529,5 +590,69 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
     } catch (err) {
       this.logger.warn(`Protocol health validation failed: ${(err as Error).message}`);
     }
+
+    // ── Bot ↔ protocol symbol coverage (#970) ───────────────────────────────
+    // ⚠️ Deliberately NOT awaited. This spawns a child process that itself reads MySQL by CLI;
+    // awaiting it would make API READINESS depend on that read. A diagnostic must never delay boot,
+    // and it must never be fatal — every path below resolves.
+    void this.checkBotSymbolCoverage();
+  }
+
+  /**
+   * Log, once at boot, whether any ACTIVE bot scores on a protocol that never declares the bot's own
+   * symbol (#970). Such a bot produces scores it can never act on, and nothing else reports it.
+   *
+   * ⚠️ THREE outcomes, kept apart on purpose — because "found nothing" and "could not look" must
+   * never render the same:
+   *   • findings        → WARN, naming the bots
+   *   • zero findings   → a quiet LOG line
+   *   • could not run   → WARN saying so, explicitly "cannot judge", NOT "no findings"
+   */
+  private checkBotSymbolCoverage(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (!fs.existsSync(COVERAGE_VALIDATOR)) {
+        this.logger.warn(
+          `Bot-symbol coverage (#970): check DID NOT RUN — validator not found at ${COVERAGE_VALIDATOR}. ` +
+          'This is "cannot judge", NOT "no findings".',
+        );
+        return resolve();
+      }
+
+      execFile(
+        process.execPath,
+        [COVERAGE_VALIDATOR, '--json'],
+        { timeout: 30_000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
+        (err, stdout) => {
+          // ⚠️ A non-zero exit is EXPECTED when findings exist (the validator exits 1 for them), so
+          // `err` alone is not a failure. Only an unparseable payload means "could not run".
+          let payload: CoveragePayload | null = null;
+          try {
+            payload = JSON.parse(String(stdout ?? ''));
+          } catch {
+            payload = null;
+          }
+
+          if (!payload) {
+            this.logger.warn(
+              `Bot-symbol coverage (#970): check COULD NOT RUN (${err?.message ?? 'no JSON output'}). ` +
+              'Treated as "cannot judge", NOT as "no findings".',
+            );
+            return resolve();
+          }
+
+          const warning = formatCoverageWarning(payload);
+          if (warning) {
+            this.logger.warn(`Bot-symbol coverage (#970): ${warning}`);
+          } else {
+            this.logger.log(
+              `Bot-symbol coverage (#970): OK — ${payload.covered} bot(s) verified, ` +
+              `${payload.failures?.length ?? 0} unreachable, ` +
+              `${payload.cannotJudge?.length ?? 0} not judgeable.`,
+            );
+          }
+          resolve();
+        },
+      );
+    });
   }
 }

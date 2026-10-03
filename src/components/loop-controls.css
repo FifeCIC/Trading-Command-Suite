@@ -1,0 +1,64 @@
+/* LoopControls — the automation loop strip rendered on the Dashboard.
+   Centred, per the owner: "Move the automation controls ... to the main dashboard ... and place
+   them centre." It sits in the same visual band as the widget-board toolbar without being inside
+   the generic WidgetBoard. */
+
+.lc-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  max-width: 900px;
+  margin: 0 auto 0.85rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.lc-label {
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.lc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.lc-on { background: #22c55e; }
+.lc-off { background: #6b7280; }
+.lc-unknown { background: var(--text-dim); }
+
+.lc-chip {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lc-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-left: 0.25rem;
+}
+
+.lc-btn {
+  cursor: pointer;
+  padding: 0.25rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.lc-btn:hover:not(:disabled) { border-color: var(--accent); }
+.lc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.lc-btn-start { background: var(--risk-normal); border-color: transparent; color: #fff; }
+.lc-btn-stop { background: var(--risk-high); border-color: transparent; color: #fff; }

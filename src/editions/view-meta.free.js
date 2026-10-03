@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 41 of 118 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 41 of 115 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -148,37 +148,6 @@ export const VIEW_META = {
     css: "src/pages/calculators.css",
     api: [],
   },
-  "/automation/automation-dashboard": {
-    tier: "free",
-    review: "approved",
-    label: "Automation Dashboard",
-    file: "src/pages/AutomationDashboardPage.jsx",
-    css: "src/pages/automation-dashboard.css",
-    api: [
-      "GET /api/automation/status",
-    ],
-  },
-  "/automation/automation-rules": {
-    tier: "free",
-    review: "approved",
-    label: "Automation Rules",
-    file: "src/pages/AutomationRulesPage.jsx",
-    css: "src/pages/automation-rules.css",
-    api: [
-      "GET /api/automation/rules",
-    ],
-  },
-  "/automation/alert-center": {
-    tier: "free",
-    review: "approved",
-    label: "Alert Center",
-    file: "src/pages/AlertCenterPage.jsx",
-    css: "src/pages/alert-center.css",
-    api: [
-      "GET /api/alerts",
-      "GET /api/automation/status",
-    ],
-  },
   "/protocols/protocol-queue": {
     tier: "free",
     review: "pending",
@@ -300,6 +269,30 @@ export const VIEW_META = {
     label: "MT5 Trading",
     file: "src/pages/Mt5TradingPage.jsx",
     css: "src/pages/mt5-trading-page.css",
+    api: [],
+  },
+  "/planner/personal-finances": {
+    tier: "free",
+    review: "approved",
+    label: "Personal Finances",
+    file: "src/pages/PersonalFinancesPage.jsx",
+    css: "src/pages/personal-finances.css",
+    api: [],
+  },
+  "/planner/trading-styles": {
+    tier: "free",
+    review: "approved",
+    label: "Trading Styles",
+    file: "src/pages/TradingStylesPage.jsx",
+    css: "src/pages/trading-styles.css",
+    api: [],
+  },
+  "/planner/objectives": {
+    tier: "free",
+    review: "approved",
+    label: "Objectives",
+    file: "src/pages/ObjectivesPage.jsx",
+    css: "src/pages/objectives.css",
     api: [],
   },
   "/settings/risk-controls": {

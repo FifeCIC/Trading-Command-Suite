@@ -67,8 +67,6 @@ import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
 // ── Automation ──
-import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
-import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
 
 // ── Research ──
 import ResearchNotesPage from '../pages/ResearchNotesPage.jsx';
@@ -195,7 +193,6 @@ import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 
 // ── Other ──
-import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
 import RiskControlsPage from '../pages/RiskControlsPage.jsx';
 import ThemePage from '../pages/ThemePage.jsx';
@@ -268,9 +265,6 @@ export const VIEW_COMPONENTS = {
   'signals-overview': SignalsOverviewPage,
 
   // Automation
-  'automation-dashboard': AutomationDashboardPage,
-  'automation-rules': AutomationRulesPage,
-  'alert-center': AlertCenterPage,
   'risk-controls': RiskControlsPage,
 
   // Research

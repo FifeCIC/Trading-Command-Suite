@@ -328,37 +328,16 @@ const VIEW_META = {
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/scoring/breakdown/:symbol', 'GET /api/automation/status'],
   },
-  '/automation/automation-dashboard': {
-    tier: 'free',
-    review: 'approved',
-    label: 'Automation Dashboard',
-    file: 'src/pages/AutomationDashboardPage.jsx',
-    css: 'src/pages/automation-dashboard.css',
-    api: ['GET /api/automation/status', 'POST /api/automation/start', 'POST /api/automation/stop'],
-  },
-  '/automation/speed-scanner': {
+  // MOVED from /automation/speed-scanner 2026-10-02 — the Automation area was retired and the owner
+  // asked for this page "to the Trading area". The ROUTE changed with the area, because a route's
+  // first segment names where the view lives.
+  '/trading/speed-scanner': {
     tier: 'premium',
     review: 'approved',
     label: 'Speed Scanner',
     file: 'src/pages/SpeedScannerPage.jsx',
     css: 'src/pages/speed-scanner.css',
     api: ['POST /api/speed/scan'],
-  },
-  '/automation/automation-rules': {
-    tier: 'free',
-    review: 'approved',
-    label: 'Automation Rules',
-    file: 'src/pages/AutomationRulesPage.jsx',
-    css: 'src/pages/automation-rules.css',
-    api: ['GET /api/automation/rules'],
-  },
-  '/automation/alert-center': {
-    tier: 'free',
-    review: 'approved',
-    label: 'Alert Center',
-    file: 'src/pages/AlertCenterPage.jsx',
-    css: 'src/pages/alert-center.css',
-    api: ['GET /api/alerts', 'GET /api/automation/status'],
   },
   // Moved out of the deleted /automation/execution-queue page, 2026-10-02 (owner direction:
   // "Preserve them and put the Protocol Queue somewhere in the Protocol area and Schedule Jobs in
@@ -430,7 +409,9 @@ const VIEW_META = {
       'GET /api/market-data/bars/refresh/status',
     ],
   },
-  '/status/commands': {
+  // MOVED to the Development area 2026-10-02 (owner, Page Walkthrough). The route follows the area,
+  // because `/:area/:view` IS the URL — the two files move together or the coverage sweep goes red.
+  '/development/commands': {
     tier: 'premium',
     review: 'approved',
     label: 'Commands Reference',
@@ -551,7 +532,8 @@ const VIEW_META = {
   },
 
   // ── Accounts (trading212) ──
-  '/trading212/order-testing': {
+  // MOVED to the Status area 2026-10-02 (owner, Page Walkthrough).
+  '/status/order-testing': {
     tier: 'premium',
     review: 'approved',
     label: 'Order Testing',
@@ -680,7 +662,8 @@ const VIEW_META = {
     css: 'src/pages/meta-stack-status.css',
     api: [],
   },
-  '/status/file-inventory': {
+  // MOVED to the Development area 2026-10-02 (owner, Page Walkthrough) — engineering reference.
+  '/development/file-inventory': {
     tier: 'premium',
     review: 'approved',
     label: 'File Inventory',
@@ -733,7 +716,8 @@ const VIEW_META = {
     css: 'src/pages/identity-map-lab.module.css',
     api: [],
   },
-  '/development/screen-assignment': {
+  // MOVED to Settings 2026-10-02 (owner, Page Walkthrough) — a per-machine preference.
+  '/settings/screen-assignment': {
     tier: 'premium',
     review: 'approved',
     label: 'Screen Assignment',
@@ -789,7 +773,8 @@ const VIEW_META = {
     css: 'src/pages/metastack-cockpit.css',
     api: [],
   },
-  '/development/daily-briefing': {
+  // MOVED to the Research area 2026-10-02 (owner, Page Walkthrough).
+  '/research/daily-briefing': {
     tier: 'premium',
     review: 'approved',
     label: 'Daily Briefing',
@@ -837,7 +822,9 @@ const VIEW_META = {
     api: [],
   },
   '/planner/personal-finances': {
-    tier: 'premium',
+    // ⚠️ FREE as of 2026-10-02 (owner: "Change this to a free page. I would like to offer some basic
+    // finance management between..."). Was premium.
+    tier: 'free',
     review: 'approved',
     label: 'Personal Finances',
     file: 'src/pages/PersonalFinancesPage.jsx',
@@ -845,7 +832,9 @@ const VIEW_META = {
     api: [],
   },
   '/planner/trading-styles': {
-    tier: 'premium',
+    // ⚠️ FREE as of 2026-10-02 (owner: "Change this to a free page. It's a way to dynamically change
+    // the app and that will need..."). Was premium.
+    tier: 'free',
     review: 'approved',
     label: 'Trading Styles',
     file: 'src/pages/TradingStylesPage.jsx',
@@ -853,7 +842,10 @@ const VIEW_META = {
     api: [],
   },
   '/planner/objectives': {
-    tier: 'premium',
+    // ⚠️ FREE as of 2026-10-02 (owner: "Change this to a free page"). Was premium.
+    // ⚠️ The second half — "Add Education to <select.ob-select>" — is NOT done; it is a control
+    // change on the page, not a tier change.
+    tier: 'free',
     review: 'approved',
     label: 'Objectives',
     file: 'src/pages/ObjectivesPage.jsx',

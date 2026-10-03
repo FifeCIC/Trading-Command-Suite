@@ -111,7 +111,7 @@ const PIPELINE = [
     dbColumns: 'protocolId, watchlistName, watchlistId',
   },
   {
-    id: 'prereq-automation', title: 'Automation Loop', linkTo: '/automation/automation-dashboard', linkLabel: 'Automation Dashboard',
+    id: 'prereq-automation', title: 'Automation Loop', linkTo: '/settings/automation', linkLabel: 'Automation settings',
     fn: 'AutomationLoopService.tick() — 6-step cycle',
     fnDesc: 'The automation loop is a scheduler that ticks every 2 minutes. Each tick: (1) checks timeline events → global risk multiplier, (2) fetches broker portfolios, (3) discovers active trading strategies, (4) reorders by priority queue, (5) runs SEES scoring for strategy symbols, (6) evaluates each strategy for trading decisions. Also records decision trails and saves score snapshots.',
     dbTable: 'automation_state (runtime)',
@@ -424,8 +424,8 @@ export default function MetaStackExplorerPage() {
         ...(!activeSymbol ? [{ label: 'Examples (linked protocols)', pass: randomLinked.length > 0, detail: randomLinked.length > 0 ? randomLinked.map(p => p.name || p.id).join(', ') : 'none linked' }] : []),
       ],
       'prereq-automation': [
-        { label: 'Automation loop running', pass: autoRunning, detail: autoRunning ? `tick #${autoQuery.data?.tickCount || '?'}, every ${(autoQuery.data?.tickIntervalMs || 120000) / 1000}s` : 'paused — enable from Automation Dashboard', link: '/automation/automation-dashboard', linkLabel: 'Automation' },
-        { label: 'Trading strategies in loop', pass: activeStrats > 0, detail: activeStrats > 0 ? `${activeStrats} active (of ${totalTradingStrats} total)` : 'none active — enable from Automation page', link: '/automation/automation-dashboard', linkLabel: 'Automation' },
+        { label: 'Automation loop running', pass: autoRunning, detail: autoRunning ? `tick #${autoQuery.data?.tickCount || '?'}, every ${(autoQuery.data?.tickIntervalMs || 120000) / 1000}s` : 'paused — enable from Automation settings', link: '/settings/automation', linkLabel: 'Automation' },
+        { label: 'Trading strategies in loop', pass: activeStrats > 0, detail: activeStrats > 0 ? `${activeStrats} active (of ${totalTradingStrats} total)` : 'none active — enable from Automation settings', link: '/settings/automation', linkLabel: 'Automation' },
         { label: 'Strategies wired to protocols', pass: wiredStrats.length === activeStrats && activeStrats > 0, detail: activeStrats > 0 ? `${wiredStrats.length}/${activeStrats} have protocol + symbol` : '—' },
         // ── Data readiness per strategy (from automation loop PENDING state) ──
         (() => {

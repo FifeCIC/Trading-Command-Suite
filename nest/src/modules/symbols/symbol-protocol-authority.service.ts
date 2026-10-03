@@ -284,4 +284,134 @@ export class SymbolProtocolAuthorityService {
     const { protocols } = await this.resolve(ticker);
     return protocols.filter((p) => p.sources.length === 1 && p.sources[0] === 'observed').map((p) => p.protocolId);
   }
+
+  /**
+   * protocolCountsForSymbols() — the BATCH form of `resolve()`, for tables.
+   *
+   * ⚠️ WHY IT EXISTS (measured 2026-10-02). The Active Symbols table's Protocols column counted
+   * `directive.symbols[]` entries. `GET /api/directives` returns **109** directives and **0** of
+   * them carry a non-empty `symbols[]`, so the column rendered **0 for every symbol** — including
+   * symbols with open positions — and nothing errored. Same signature as the defects #926 was
+   * created for: a plausible number, no exception, wrong shape underneath.
+   *
+   * ⚠️ IT REUSES `resolve()`'s FOUR SOURCES rather than counting `symbol_protocol_assignment`
+   * alone. #926 measured that table reporting **2** protocols for XAUUSD when **8** applied, so a
+   * cheaper count here would swap one under-reporting number for another — and under-reporting is
+   * the harder failure to notice, because a smaller number still looks like a number.
+   *
+   * ⚠️ COST IS NOT UNIFORM ACROSS SOURCES. Assignment, bots and watchlists are bounded by the
+   * ticker list. `observed` reads `score_snapshot`, the large table (~85,400 rows for XAUUSD
+   * alone), so it is filtered by `symbol: { in }` AND de-duplicated in the query itself.
+   *
+   * ⚠️ `counts` is keyed by UPPERCASE ticker, and a symbol absent from it is genuinely zero —
+   * but a FAILED source is not zero. `sourcesQueried` carries that distinction to the caller, so
+   * a consumer can render "cannot read" differently from "none".
+   */
+  async protocolCountsForSymbols(tickers: string[]): Promise<{
+    counts: Record<string, number>;
+    unresolved: { id: string; from: ProtocolSource }[];
+    sourcesQueried: SourceReport[];
+  }> {
+    const wanted = [...new Set((tickers || []).map((t) => String(t ?? '').toUpperCase()).filter(Boolean))];
+    const counts: Record<string, number> = {};
+    const wantedSet = new Set(wanted);
+    for (const t of wanted) counts[t] = 0;
+    if (!wanted.length) return { counts, unresolved: [], sourcesQueried: [] };
+
+    const index = await this.buildProtocolIndex();
+    /** ticker → canonical slugs. The Set is what makes two ids for one protocol count ONCE. */
+    const found = new Map<string, Set<string>>();
+    const unresolved: { id: string; from: ProtocolSource }[] = [];
+    const reported: SourceReport[] = [];
+
+    /** Same canonicalisation as `resolve().note()`: UUIDs and slugs both land on one slug. */
+    const note = (symRaw: unknown, raw: unknown, from: ProtocolSource) => {
+      const sym = String(symRaw ?? '').toUpperCase();
+      if (!sym || !wantedSet.has(sym)) return;
+      if (raw === null || raw === undefined || String(raw).trim() === '') return;
+      const key = String(raw).trim();
+      const hit = index.get(key);
+      if (!hit) {
+        if (!unresolved.some((u) => u.id === key && u.from === from)) unresolved.push({ id: key, from });
+        return;
+      }
+      if (!found.has(sym)) found.set(sym, new Set());
+      found.get(sym)!.add(hit.slug);
+    };
+
+    const runSource = async (
+      source: ProtocolSource,
+      fn: () => Promise<{ symbol: unknown; id: unknown }[]>,
+    ) => {
+      try {
+        const rows = await fn();
+        for (const r of rows) note(r.symbol, r.id, source);
+        reported.push({ source, ids: rows.length, ok: true });
+      } catch (err) {
+        // Reported, never swallowed into an empty list — otherwise "could not ask" becomes "none".
+        reported.push({ source, ids: 0, ok: false, error: (err as Error).message });
+        this.logger.warn(
+          `symbol-protocol authority (batch): source '${source}' failed: ${(err as Error).message}`,
+        );
+      }
+    };
+
+    // ── rank 1 — explicit assignment rows ──
+    await runSource('assignment', async () => {
+      const rows: any[] = await (this.prisma as any).symbolProtocolAssignment.findMany({
+        where: { symbol: { in: wanted } },
+        select: { symbol: true, protocolId: true },
+      });
+      return rows.map((r) => ({ symbol: r.symbol, id: r.protocolId }));
+    });
+
+    // ── rank 2 — an ACTIVE bot trades it (`active: true` only, as in resolve()) ──
+    await runSource('bot', async () => {
+      const rows: any[] = await (this.prisma as any).tradingStrategy.findMany({
+        where: { symbol: { in: wanted }, active: true },
+        select: { symbol: true, protocolId: true },
+      });
+      return rows.map((r) => ({ symbol: r.symbol, id: r.protocolId }));
+    });
+
+    // ── rank 3 — the protocol's FK-linked watchlist holds the symbol. Read from the DB, not the
+    //    JSON files on disk, matching resolve() (#926 tracks moving /focus onto this authority). ──
+    await runSource('watchlist', async () => {
+      const rows: any[] = await (this.prisma as any).watchlist.findMany({
+        where: { protocolId: { not: null } },
+        select: { protocolId: true, symbols: true },
+      });
+      const out: { symbol: string; id: unknown }[] = [];
+      for (const wl of rows) {
+        let parsed: any = wl.symbols;
+        if (typeof parsed === 'string') {
+          try { parsed = JSON.parse(parsed); } catch { continue; }
+        }
+        if (!Array.isArray(parsed)) continue;
+        for (const t of wanted) {
+          const holds = parsed.some((s: any) => {
+            const v = typeof s === 'string' ? s : (s?.ticker || s?.symbol || '');
+            return String(v).toUpperCase() === t;
+          });
+          if (holds) out.push({ symbol: t, id: wl.protocolId });
+        }
+      }
+      return out;
+    });
+
+    // ── rank 4 — EVIDENCE: a score snapshot proves the protocol scored this symbol. ⚠️ This is
+    //    the one source that reads the large table, hence the `in` filter AND `distinct` in the
+    //    query rather than de-duplicating rows in memory after fetching them. ──
+    await runSource('observed', async () => {
+      const rows: any[] = await (this.prisma as any).scoreSnapshot.findMany({
+        where: { symbol: { in: wanted } },
+        select: { symbol: true, protocolId: true },
+        distinct: ['symbol', 'protocolId'],
+      });
+      return rows.map((r) => ({ symbol: r.symbol, id: r.protocolId }));
+    });
+
+    for (const t of wanted) counts[t] = found.get(t)?.size ?? 0;
+    return { counts, unresolved, sourcesQueried: reported };
+  }
 }

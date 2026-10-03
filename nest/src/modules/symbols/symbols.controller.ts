@@ -20,6 +20,7 @@ import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { SymbolsService } from './symbols.service';
 import { SymbolNameEnricherService } from './symbol-name-enricher.service';
 import { SymbolResolverService, type SymbolTier, type ResolutionFeature } from './symbol-resolver.service';
+import { SymbolProtocolAuthorityService } from './symbol-protocol-authority.service';
 
 @ApiTags('symbols')
 @Controller('symbols')
@@ -30,6 +31,7 @@ export class SymbolsController {
     private readonly prisma: PrismaService,
     private readonly enricher: SymbolNameEnricherService,
     private readonly symbolResolver: SymbolResolverService,
+    private readonly symbolProtocolAuthority: SymbolProtocolAuthorityService,
   ) {}
 
   private readonly logger = new Logger(SymbolsController.name);
@@ -144,6 +146,32 @@ export class SymbolsController {
   async positions() {
     const { positions, staleHoldings } = await this.symbolsService.getPositionMap();
     return { ...this.modeMeta(), positions, staleHoldings };
+  }
+
+  /**
+   * GET /api/symbols/protocol-counts — how many protocols apply to EACH symbol.
+   *
+   * ⚠️ DECLARED BEFORE `@Get(':id')` ON PURPOSE. A catch-all registered first shadows this route
+   * and the failure is a silent 200 with a symbol-shaped body, not a 404 — the same trap noted on
+   * `directiveInstrumentAudit` in the suitability controller.
+   *
+   * ⚠️ `tickers` is a query param rather than "all symbols" because one of the four sources reads
+   * `score_snapshot`, the large table. An unbounded call would scan it.
+   */
+  @Get('protocol-counts')
+  @ApiOperation({
+    summary:
+      'Per-symbol protocol counts from the canonical authority (assignment ∪ active bots ∪ ' +
+      'FK watchlists ∪ observed snapshots). `null` for a symbol is a real zero; `sourcesQueried` ' +
+      'records per-source success so "none" and "could not ask" stay distinguishable.',
+  })
+  async protocolCounts(@Query('tickers') tickers?: string) {
+    const list = (tickers || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const result = await this.symbolProtocolAuthority.protocolCountsForSymbols(list);
+    return { ...this.modeMeta(), ...result };
   }
 
   @Get(':id')

@@ -17,6 +17,7 @@
  * Board storage: `tcs:view-state:widgets-board:dashboard`, per breakpoint.
  */
 import SetupBanner from '../components/SetupBanner';
+import LoopControls from '../components/LoopControls';
 import WidgetBoard from '../components/WidgetBoard';
 import { boardLabel, defaultWidgetsFor } from '../core/board-defaults';
 import './home-dashboard.css';
@@ -25,6 +26,12 @@ export default function DashboardPage() {
   return (
     <div className="dash-page">
       <SetupBanner />
+      {/* ⚠️ MOVED here 2026-10-02 (owner, Page Walkthrough) from the header of
+          /automation/automation-dashboard, which is being deleted with the Automation area:
+          "Move the automation controls … to the main dashboard … and place them centre."
+          It sits in the board's visual band but NOT inside WidgetBoard — that component backs
+          several boards, and coupling it to the automation loop would be a layering fault. */}
+      <LoopControls />
       <WidgetBoard
         boardId="dashboard"
         title={boardLabel('dashboard')}

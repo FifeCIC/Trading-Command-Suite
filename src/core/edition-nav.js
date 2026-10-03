@@ -22,7 +22,57 @@ export function editionAllowsView(areaId, viewId) {
   return FREE_MANIFEST.freeViews.includes(`/${areaId}/${viewId}`);
 }
 
-/** True when a view-meta KEY (e.g. '/trading/positions-monitor') is allowed in this edition. */
+/** The hidden view IDS from a review-store payload: every entry whose `hide` is exactly true. */
+export function hiddenViewIdsFrom(reviewConfig) {
+  const ids = new Set();
+  const entries = reviewConfig?.entries || {};
+  for (const [route, entry] of Object.entries(entries)) {
+    if (entry && entry.hide === true) ids.add(route.split('/').filter(Boolean).pop());
+  }
+  return ids;
+}
+
+/**
+ * Filter the owner's "hide now" verdicts out of a nav tree.
+ *
+ * ⚠️ A SIBLING of the edition filter, not a new mechanism — both answer "may this be offered?", so
+ * they run in the same place, edition first. Before this existed the review store's `hide` field was
+ * read by NOTHING: the Page Walkthrough recorded the owner's verdicts and no code applied them.
+ *
+ * Section headers left with nothing real after them are dropped by the same rule the edition filter
+ * uses, so hiding the last view of a group cannot leave a dangling heading.
+ */
+export function filterHiddenViews(tree, hiddenIds) {
+  if (!hiddenIds || hiddenIds.size === 0) return tree;
+  const out = {};
+  for (const [areaId, area] of Object.entries(tree)) {
+    // ⚠️ TWO SHAPES, AND BOTH ARE LIVE — do not assume one. `NAV_TREE` is
+    // `{ area: { label, views } }` (the top nav), but `getNavStructure()` is `{ area: [views] }`
+    // (the left rail). Reading `area.views` on the ARRAY form yields `undefined`, so `kept` is
+    // empty and every area is dropped — measured 2026-10-02: **14 areas in, 0 out**, i.e. the
+    // whole navigation would vanish the moment a hide verdict existed.
+    const isArray = Array.isArray(area);
+    const views = isArray ? area : area?.views;
+    if (!Array.isArray(views)) {
+      // Unrecognised shape: pass it through UNTOUCHED. Hiding is a curation nicety; silently
+      // deleting a structure we failed to parse is not a recoverable failure.
+      out[areaId] = area;
+      continue;
+    }
+
+    const kept = views.filter((v) => v.kind === 'section-header' || !hiddenIds.has(v.id));
+    const cleaned = [];
+    for (let i = 0; i < kept.length; i++) {
+      const v = kept[i];
+      if (v.kind === 'section-header') {
+        if (!kept.slice(i + 1).some((x) => x.kind !== 'section-header')) continue;
+      }
+      cleaned.push(v);
+    }
+    if (areaHasViews(cleaned)) out[areaId] = isArray ? cleaned : { ...area, views: cleaned };
+  }
+  return out;
+}
 export function editionAllowsKey(viewMetaKey) {
   if (APP_EDITION !== 'free') return true;
   return FREE_MANIFEST.freeViews.includes(viewMetaKey);

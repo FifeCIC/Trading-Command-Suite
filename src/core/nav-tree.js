@@ -55,8 +55,9 @@ export const NAV_TREE = {
     label: 'Accounts',
     views: [
       { id: 't212-portfolio', label: 'Portfolio', icon: '🏦' },
-      { id: 't212-isa', label: 'Stocks ISA', icon: '🏛️' },
-      { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
+      // ⚠️ HIDDEN 2026-10-02 (owner: hide now) — "We need a system of displaying each registered
+      // account on its own page", so the ISA page waits for that rework instead of being deleted.
+      // ⚠️ `order-testing` MOVED to the Status area (see the Status block).
     ],
   },
   watchlists: {
@@ -79,11 +80,18 @@ export const NAV_TREE = {
       { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '📅' },
       { id: 'earnings-whispers', label: 'Earnings Whispers', icon: '🤫' },
       { id: 'news-intel', label: 'News Intel', icon: '📰' },
-      { id: 'events-calendar', label: 'Events Calendar', icon: '🗓️' },
+      // ⚠️ HIDDEN 2026-10-02 (owner: hide now) — "not a useful page at the moment and should be
+      // hidden pending development". Unhiding is one line.
       { id: 'stock-investigation', label: 'Stock Investigation', icon: '🕵️' },
       { id: 'market-correlations', label: 'Market Correlations', icon: '🔗' },
       { id: 'recently-analysed-symbols', label: 'Recently Analysed', icon: '🕘' },
-      { id: 'analyse-symbol', label: 'Analyse Symbol', icon: '🧪' },
+      // MOVED from Development 2026-10-02 (owner: "Move this to the Research area"). A daily
+      // market/portfolio briefing is research output, not engineering tooling.
+      // ⚠️ The other half of that instruction — "improve styling on <div.db-event>" — is NOT done.
+      { id: 'daily-briefing', label: 'Daily Briefing', icon: '📋' },
+      // ⚠️ HIDDEN 2026-10-02 (owner: hide now). One of THREE pages to be merged into a single
+      // notes-first page (with Stock Investigation and Notes); the merge needs a prototype first, so
+      // this is hidden rather than deleted meanwhile. Unhiding is one line.
     ],
   },
   // ── Protocols area (/protocols/ prefix) ──
@@ -133,6 +141,10 @@ export const NAV_TREE = {
     label: 'Trading',
     views: [
       { id: 'strategy-monitor', label: 'Strategy Monitor', icon: '📊' },
+      // MOVED from the Automation area 2026-10-02 (owner, Page Walkthrough: "Also move this page to
+      // the Trading area"). It scans for fast, score-driven entries, so it belongs with the thing it
+      // trades rather than with the machinery that ran it. Its route became /trading/speed-scanner.
+      { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       // ── BOTS ──
       // `Trading Bots` = a BOT, per `docs/trading-bot-model.md` §1: the EXECUTION POLICY (a
       // `TradingStrategy` row) - money management, risk, entry/exit rules, position building. The
@@ -181,21 +193,29 @@ export const NAV_TREE = {
       { id: 'trading-settings', label: 'Settings', icon: '⚙' },
     ],
   },
-  automation: {
-    label: 'Automation',
-    views: [
-      { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
-      { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
-      { id: 'automation-rules', label: 'Automation Rules', icon: '⚙' },
-      { id: 'alert-center', label: 'Alert Center', icon: '◈' },
-    ],
-  },
+  // ⚠️ THE AUTOMATION AREA WAS REMOVED 2026-10-02 (owner, Page Walkthrough) — this is the end of
+  // that programme. The owner's rule for it: *"Going forward anything that was automation or
+  // scheduled will be within the area of what it is scheduling i.e. scheduling a trade, belongs in
+  // the Trading area."* Its five views went as follows:
+  //   automation-dashboard  → loop controls on /dashboard; panels had existing homes (Portfolio
+  //                           page, Blocked Signals, Events Calendar, the journal); Broker Config →
+  //                           Settings; tick phase → the loop strip
+  //   speed-scanner         → Trading (below) — a scanner is what it scans
+  //   execution-queue       → Protocol Queue to Protocols, Scheduled Jobs to Status, Live Events to
+  //                           the Trade Journal
+  //   automation-rules      → Settings ("/settings/automation", section #rules)
+  //   alert-center          → the Trade Journal (Alerts)
+  // "Automation" named a MECHANISM, not a subject — which is why nothing is left for it to own.
   education: {
     label: 'Education',
     views: [
       { id: 'glossary', label: 'Glossary', icon: '📖' },
-      { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
-      { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
+      // ⚠️ HIDDEN 2026-10-02 (owner, Page Walkthrough — hide now). Both are wanted (importance H,
+      // keenness 3) and both are "not good enough yet": Pattern Detection "does not show the patterns
+      // on the chart", the guide's depictions "are not good enough". Hidden from the nav, NOT deleted
+      // — unhiding is one line.
+      // ⚠️ Hiding does NOT remove them from the free edition: the free build reads view-meta tiers,
+      // not the nav. Tier hardening for these two is deliberately a separate change.
       // ⚠️ `backtest` MOVED to the Lab area (2026-09-23, owner direction). Backtesting is a
       // theory-and-data page — "what would have happened?" — which is what Lab is for, and the
       // owner's own instruction named backtesting as a Lab page. It sat in Education, where it
@@ -209,8 +229,11 @@ export const NAV_TREE = {
       // ── System Health ──
       { id: 'setup', label: 'Setup & Diagnostics', icon: '◉' },
       { id: 'health-check', label: 'Health & Diagnostics', icon: '🩺' },
-      { id: 'commands', label: 'Commands Reference', icon: '💻' },
       { id: 'system-log', label: 'System Log', icon: '📋' },
+      // MOVED from the Accounts area 2026-10-02 (owner: "Move this page to the Status area with the
+      // intention of offering all users the ability to test orders"). It is a diagnostic harness that
+      // never belonged under Accounts.
+      { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
       // ── Platform ──
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
       // ── System Maps ──
@@ -218,7 +241,11 @@ export const NAV_TREE = {
       { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
-      { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
+      // ⚠️ `file-inventory` MOVED to Development 2026-10-02. ⚠️ `architecture-framework` was NOT moved
+      // even though the owner asked for it: /builder/architecture-framework is declared as the route in
+      // an API manifest (architecture-manifest.controller.ts), in two instruction files and in the
+      // update-architecture-framework skill. Moving it breaks a documented contract — that needs a
+      // decision, not a rename.
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
       // MOVED from /automation/execution-queue 2026-10-02 (owner: "Schedule Jobs in the Status
       // area"). The `scheduled_job` table is machinery health — what is due, what failed.
@@ -305,6 +332,10 @@ export const NAV_TREE = {
       { id: 'settings', label: 'General', icon: '⚙' },
       { id: 'appearance', label: 'Appearance', icon: '🎨' },
       { id: 'monitoring', label: 'Monitoring', icon: '🛰' },
+      // MOVED from Development 2026-10-02 (owner: "Move to Settings"). Assigning a board to a monitor
+      // is a per-machine preference the user sets once, which is what Settings is for; it sat in
+      // Development only because it began as a #746 prototype. Tier stays premium.
+      { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
       // ── Reference — the full lists, not the everyday surfaces ──
       { kind: 'section-header', id: 'settings-reference', label: 'Reference', icon: '' },
       { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
@@ -327,6 +358,11 @@ export const NAV_TREE = {
       // ── Project ──
       { id: 'roadmap', label: 'Roadmap', icon: '🗺' },
       { id: 'qa-testing', label: 'QA Checklist', icon: '🧪' },
+      // MOVED from the Status area 2026-10-02 (owner: "Move to the Development area"). Both are
+      // engineering reference — what the CLI can do, and what files exist — so they belong with the
+      // tooling rather than with system health.
+      { id: 'commands', label: 'Commands Reference', icon: '💻' },
+      { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
       // ── Decisions — the sandbox's OUTPUT (owner direction 2026-09-24) ──
       // The Development area is where an agent may build a competing approach, measure it, and produce
       // a decision. An experiment that does not end in a decision is a prototype, not an experiment —
@@ -342,7 +378,6 @@ export const NAV_TREE = {
       { kind: 'section-header', id: 'dev-engineering', label: 'Engineering Tools', icon: '🛠' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'ui-review', label: 'Page Walkthrough', icon: '📋' },
-      { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'identity-map', label: 'Identity Map', icon: '🧭' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
@@ -365,7 +400,6 @@ export const NAV_TREE = {
       // ── Prototypes — product features that are not yet real ──
       { kind: 'section-header', id: 'dev-prototypes', label: 'Prototypes', icon: '🧪' },
       { id: 'strategy-wizard', label: 'Strategy Wizard', icon: '🧙' },
-      { id: 'daily-briefing', label: 'Daily Briefing', icon: '📋' },
     ],
   },
 };

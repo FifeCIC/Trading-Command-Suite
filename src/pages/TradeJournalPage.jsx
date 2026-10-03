@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { normaliseAlert } from '../core/alerts';
 import { formatDuration, timeAgo } from '../core/format-utils';
 import { decisionScore } from '../core/decision-score';
 import './trade-journal-page.css';
@@ -118,6 +120,75 @@ function ActivityRow({ event }) {
   );
 }
 
+// ── Alerts (absorbed from the deleted /automation/alert-center, 2026-10-02) ───────────
+//
+// ⚠️ THE PAGE BEING REPLACED NEVER PERSISTED "READ". It kept `readIds` in local useState, so every
+// acknowledgement was thrown away on reload — while `POST /api/alerts/:id/acknowledge` had been
+// DB-backed since 2026-09-23. This merge does NOT copy that defect: marking a row seen calls the
+// endpoint. That is the owner's own instruction working as intended — "Treat compacted journal
+// entries with an alert status attached as seen and the alert becomes seen."
+const ALERT_LEVEL_SEVERITY = {
+  critical: 'high', high: 'high', warning: 'medium', medium: 'medium', info: 'low', low: 'low',
+};
+const SEVERITY_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#64748b' };
+
+/** Category → fallback route when an alert has no ticker and no link of its own. */
+const ALERT_FALLBACKS = {
+  // §9.14 — the Ladder is PREMIUM, so the free build is sent where a daily alert goes rather than to
+  // a path that does not ship. The define folds at build time.
+  signal: import.meta.env.VITE_EDITION === 'free' ? '/dashboard' : '/scoring/live-ordering-stack',
+  drawdown: '/trading/portfolio-overview',
+  system: '/status/setup',
+  daily: '/dashboard',
+};
+
+/**
+ * Compact CONSECUTIVE identical alerts into one row with a repeat count.
+ *
+ * ⚠️ This is the ONLY compaction that exists, and it is carried over rather than invented. The owner
+ * said "There might need to be mechanism to compact related information" — that is a design question
+ * (which alerts are 'related'?) and is NOT answered here. This does what the deleted page did.
+ */
+function compactAlerts(list) {
+  const out = [];
+  for (const a of list) {
+    const key = `${a.category || ''}|${a.title || ''}|${a.message || ''}`;
+    const prev = out[out.length - 1];
+    if (prev && prev.key === key) { prev.count += 1; continue; }
+    out.push({ ...a, key, count: 1 });
+  }
+  return out;
+}
+
+function AlertRow({ alert, onSeen, onOpen, acking }) {
+  const sev = ALERT_LEVEL_SEVERITY[alert.level] || 'low';
+  return (
+    <div className="eq-event-row" style={{ borderLeft: `3px solid ${SEVERITY_COLORS[sev]}` }}>
+      <div className="eq-event-left">
+        <span className="eq-event-type-badge" style={{ background: SEVERITY_COLORS[sev] + '22', color: SEVERITY_COLORS[sev] }}>
+          ⚑ {alert.category || 'alert'} · {sev}
+        </span>
+        <span className="eq-event-time">{timeAgo(alert.time || alert.timestamp)}</span>
+      </div>
+      <div className="eq-event-main" style={{ cursor: 'pointer' }} onClick={() => onOpen(alert)}>
+        <span className="eq-event-task">{alert.title}</span>
+        {alert.message && <span className="eq-event-detail">{alert.message}</span>}
+        {alert.count > 1 && <span className="eq-event-dur">×{alert.count} consecutive</span>}
+      </div>
+      <div className="eq-event-right">
+        <button
+          className="tj-btn-ai"
+          style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
+          disabled={acking}
+          onClick={() => onSeen(alert)}
+        >
+          {acking ? '…' : '✓ Seen'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function TradeJournalPage() {
   const [analyzing, setAnalyzing] = useState(null);
 
@@ -162,6 +233,30 @@ export default function TradeJournalPage() {
     if (statusFilter !== 'all' && e.status !== statusFilter) return false;
     return true;
   }), [events, hideBlocked, statusFilter]);
+
+  // ── Alerts: the Alert Center's subject, absorbed 2026-10-02 ──
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const alertsQuery = useQuery({
+    queryKey: ['journal-alerts'],
+    queryFn: () => apiGet('/api/alerts/active').catch(() => []),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+  // The acknowledge call, NOT local state — see the note above AlertRow.
+  const acknowledge = useMutation({
+    mutationFn: (id) => apiPost(`/api/alerts/${id}/acknowledge`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['journal-alerts'] }),
+  });
+
+  const rawAlerts = useMemo(() => (alertsQuery.data || []).map(normaliseAlert), [alertsQuery.data]);
+  const alerts = useMemo(() => compactAlerts(rawAlerts), [rawAlerts]);
+
+  const openAlert = (alert) => {
+    if (alert.ticker) navigate(`/research/symbol/${alert.ticker}`);
+    else if (alert.link) window.location.href = alert.link;
+    else if (ALERT_FALLBACKS[alert.category]) navigate(ALERT_FALLBACKS[alert.category]);
+  };
 
   // ── Compute stats from real data ──
   const stats = useMemo(() => {
@@ -294,6 +389,9 @@ export default function TradeJournalPage() {
         <button className={`eq-tab ${view === 'activity' ? 'eq-tab-active' : ''}`} onClick={() => setView('activity')}>
           ⟳ Activity <span className="eq-tab-count">{events.length}</span>
         </button>
+        <button className={`eq-tab ${view === 'alerts' ? 'eq-tab-active' : ''}`} onClick={() => setView('alerts')}>
+          ⚑ Alerts <span className="eq-tab-count">{alerts.length}</span>
+        </button>
         <button className={`eq-tab ${view === 'all' ? 'eq-tab-active' : ''}`} onClick={() => setView('all')}>
           ▤⟳ All
         </button>
@@ -318,7 +416,10 @@ export default function TradeJournalPage() {
         </div>
       )}
 
-      {view !== 'activity' && (
+      {/* ⚠️ The SAME loose-condition trap as the activity block, and the second half of the same
+          measurement: `view !== 'activity'` was also true for 'alerts', so the Alerts tab rendered
+          all 376 trade cards beneath 41 alerts. Each block now names the views it belongs to. */}
+      {(view === 'trades' || view === 'all') && (
       <div className="tj-entries">
         {historyQuery.isLoading && <p>Loading trades from the audit trail...</p>}
         {!historyQuery.isLoading && entries.length === 0 && (
@@ -366,7 +467,10 @@ export default function TradeJournalPage() {
       </div>
       )}
 
-      {view !== 'trades' && (
+      {/* ⚠️ `view === 'activity' || view === 'all'`, NOT `view !== 'trades'`. Measured: the loose
+          form also rendered the activity feed on the ALERTS tab — 141 rows where 41 were expected
+          (100 events + 41 alerts) — because 'alerts' is neither 'trades' nor 'activity'. */}
+      {(view === 'activity' || view === 'all') && (
         <div className="tj-entries">
           {eventsQuery.isLoading && <p>Loading activity...</p>}
           {!eventsQuery.isLoading && activity.length === 0 && (
@@ -375,6 +479,27 @@ export default function TradeJournalPage() {
             </div>
           )}
           {activity.map((event) => <ActivityRow key={event.id} event={event} />)}
+        </div>
+      )}
+
+      {/* Alerts — shown for the Alerts tab and for All. ⚠️ A refreshed list losing rows is the
+          ACKNOWLEDGE taking effect, not a fetch error: the endpoint removes the alert from
+          /api/alerts/active, which is the behaviour the owner described. */}
+      {(view === 'alerts' || view === 'all') && (
+        <div className="tj-entries">
+          {alertsQuery.isLoading && <p>Loading alerts...</p>}
+          {!alertsQuery.isLoading && alerts.length === 0 && (
+            <div className="tj-empty"><p>No active alerts.</p></div>
+          )}
+          {alerts.map((alert) => (
+            <AlertRow
+              key={alert.id || alert.key}
+              alert={alert}
+              acking={acknowledge.isPending && acknowledge.variables === alert.id}
+              onSeen={(a) => a.id && acknowledge.mutate(a.id)}
+              onOpen={openAlert}
+            />
+          ))}
         </div>
       )}
     </div>

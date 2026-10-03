@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView } from './analytics';
@@ -42,7 +42,8 @@ import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 // Edition (free spinoff): compile-time flag + nav filtering + view-meta key lookup — the free
 // build must never OFFER or RENDER a premium view (FREE-EDITION-PLAN.md §3). In the full build
 // everything here is an identity/compile-time constant.
-import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition } from './core/edition-nav.js';
+import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition, filterHiddenViews } from './core/edition-nav.js';
+import { useHiddenViews } from './core/hooks/useHiddenViews.js';
 import EditionNotice from './components/EditionNotice.jsx';
 
 /**
@@ -62,11 +63,14 @@ const FULL_EDITION_ONLY = import.meta.env.VITE_EDITION !== 'free';
 
 // Edition-filtered once at module scope: the free build hides premium views from the sidebar.
 // (Full build = identity; see src/core/edition-nav.js.)
-const NAV_STRUCTURE = filterNavStructureByEdition(getNavStructure());
+// ⚠️ Renamed `..._BY_EDITION` 2026-10-02: AppShell now shadows these with the SAME names after also
+// applying the owner's "hide now" verdicts, so every existing consumer inside AppShell picks up both
+// filters without touching a call site.
+const NAV_STRUCTURE_BY_EDITION = filterNavStructureByEdition(getNavStructure());
 // The TOP navigation bar enumerates NAV_TREE directly, so it needs the same filter — measured
 // live 2026-09-23: without this, the free build still offered Protocols/Scoring/Signals/Planner/
 // Development in the top bar while the sidebar was correctly filtered.
-const EDITION_NAV_TREE = filterNavTreeByEdition(NAV_TREE);
+const EDITION_NAV_TREE_BY_EDITION = filterNavTreeByEdition(NAV_TREE);
 
 /**
  * Views the SHELL renders inline, with access to App's own state.
@@ -158,6 +162,19 @@ function ContentCard({ title, children }) {
  * when the edition module exports it, so the free build still ships no premium page code.
  */
 function AppShell({ directContent = null, directArea = null, directView = null }) {
+  // ⚠️ MEMOISED, and it must stay that way. These shadow the module-scope edition-filtered
+  // constants, so without a stable reference the NAV_STRUCTURE effect below (the one that
+  // redirects an area with no first view) would re-run on every render once it is listed as a
+  // dependency — which it now must be, because the value is no longer module-constant.
+  const hiddenViews = useHiddenViews();
+  const NAV_STRUCTURE = useMemo(
+    () => filterHiddenViews(NAV_STRUCTURE_BY_EDITION, hiddenViews),
+    [hiddenViews],
+  );
+  const EDITION_NAV_TREE = useMemo(
+    () => filterHiddenViews(EDITION_NAV_TREE_BY_EDITION, hiddenViews),
+    [hiddenViews],
+  );
   const { area, view, symbolId, ticker, strategyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -371,7 +388,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
       }
     }
     pushActivity('NAV', `Primary changed to ${primaryArea}`);
-  }, [primaryArea, secondaryView, navigate]);
+  }, [primaryArea, secondaryView, navigate, NAV_STRUCTURE]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bg-tone', backgroundTone);

@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 16 of 78 tabs — a tab only renders for its own view, so non-free tabs are dropped
+ * 13 of 78 tabs — a tab only renders for its own view, so non-free tabs are dropped
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -59,21 +59,6 @@ export const PLUGIN_TAB_SKELETONS = {
     title: "Watchlists",
     subtitle: "Operator-defined watchlists with intent metadata and scope controls.",
     domain: "Watchlists / User",
-  },
-  "automation-dashboard": {
-    title: "Automation Dashboard",
-    subtitle: "At-a-glance automation posture, schedules, and queue state.",
-    domain: "Automation / Overview",
-  },
-  "automation-rules": {
-    title: "Automation Rules",
-    subtitle: "Global hard-rules for bots — entry, exit, lock, and safety automation.",
-    domain: "Automation / Rules",
-  },
-  "alert-center": {
-    title: "Alert Center",
-    subtitle: "Alert policy management and signal notification routing.",
-    domain: "Automation / Alerts",
   },
   "performance-lab": {
     title: "Performance Lab",
