@@ -61,6 +61,17 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+// ⚠️ #1061 — comments MUST be stripped before scanning, and the canonical stripper already existed
+// (`nest/scripts/lib/comment-stripper.cjs`, used by other validators). This one did not use it, so
+// any `var()` shape written in PROSE was scanned as a real reference: a comment that *explains* the
+// rule became a NEW finding, and because this runs in `prebuild` it blocked every agent's rebuild.
+// The fix's own explanatory comment created the next failure while #1059/#1060 were being cleared.
+//
+// ⚠️ AND IT MATTERS MOST FOR THE DEFINITION SIDE, not the reference side. A commented-out
+// declaration would falsely DEFINE a token and MASK a real missing one — trading a false positive
+// for a false NEGATIVE. For a gate, that is the worse direction to be wrong in.
+const { stripComments } = require('../nest/scripts/lib/comment-stripper.cjs');
+
 const REPO_ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(REPO_ROOT, 'src');
 const BASELINE_PATH = path.join(__dirname, 'css-token-baseline.json');
@@ -90,7 +101,7 @@ function collectDefinedTokens() {
 
   // 1. `--name: value` in any CSS file.
   for (const file of cssFiles) {
-    const text = fs.readFileSync(file, 'utf8');
+    const text = stripComments(fs.readFileSync(file, 'utf8'));
     for (const m of text.matchAll(/(^|[\s;{])(--[a-zA-Z0-9-]+)\s*:/g)) {
       if (!defined.has(m[2])) defined.set(m[2], path.relative(REPO_ROOT, file));
     }
@@ -98,7 +109,7 @@ function collectDefinedTokens() {
 
   // 2. `'--name':` object keys + 3. `setProperty('--name'` — both live in JS.
   for (const file of jsFiles) {
-    const text = fs.readFileSync(file, 'utf8');
+    const text = stripComments(fs.readFileSync(file, 'utf8'));
     for (const m of text.matchAll(/['"`](--[a-zA-Z0-9-]+)['"`]\s*:/g)) {
       if (!defined.has(m[1])) defined.set(m[1], path.relative(REPO_ROOT, file));
     }
@@ -117,7 +128,7 @@ function collectDefinedTokens() {
 function collectReferences() {
   const refs = [];
   for (const file of cssFiles) {
-    const text = fs.readFileSync(file, 'utf8');
+    const text = stripComments(fs.readFileSync(file, 'utf8'));
     const lines = text.split(/\r?\n/);
     lines.forEach((line, i) => {
       for (const m of line.matchAll(/var\(\s*(--[a-zA-Z0-9-]+)\s*(,)?/g)) {
