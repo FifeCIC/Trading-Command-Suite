@@ -60,11 +60,23 @@ export interface RetentionTableConfig {
  * derives and could get wrong. See the header for the two ways that goes wrong.
  */
 export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
+  // ═══════════════════════════════════════════════════════════════════════════════════════════
+  // CLASS 1 — ACTIVITY AND TRADING HISTORY: SHORT.
+  //
+  // Owner, 2026-10-04: *"When I said 60 days I meant general trading history and app activity —
+  // not strictly meaning everything or including bars for backtesting."*
+  //
+  // These tables describe WHAT THE APP DID. Nothing downstream reads them as input, so their depth
+  // buys nothing but diagnostics, and a recent window is enough to answer "what happened?" about
+  // anything still worth asking. ⚠️ **These are the tables to bound tightly.**
+  //
+  // THE OTHER CLASS IS AT THE BOTTOM OF THIS OBJECT — read it before changing a number here, because
+  // the two have OPPOSITE reasons and a single "retention policy" number cannot serve both.
+  // ═══════════════════════════════════════════════════════════════════════════════════════════
   // ⚠️ `createdAt`, NOT `predictedAt`. See the header — this is the fix, not an oversight.
   directiveoutcome:    { dateCol: 'createdAt',    defaultDays: 3,   envKey: 'DATA_RETENTION_DIRECTIVE_DAYS', label: 'Directive Outcomes' },
   score:               { dateCol: 'timestamp',    defaultDays: 30,  envKey: 'DATA_RETENTION_SCORE_DAYS',     label: 'Scores' },
   score_snapshot:      { dateCol: 'snappedAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_SNAPSHOT_DAYS',  label: 'Score Snapshots' },
-  marketbar:           { dateCol: 'timestamp',    defaultDays: 60,  envKey: 'DATA_RETENTION_BARS_DAYS',      label: 'Market Bars' },
   strategy_evaluation: { dateCol: 'evaluatedAt',  defaultDays: 90,  envKey: 'DATA_RETENTION_EVAL_DAYS',      label: 'Strategy Evaluations' },
   decision_log:        { dateCol: 'timestamp',    defaultDays: 90,  envKey: 'DATA_RETENTION_DECISION_DAYS',  label: 'Decision Log' },
   automation_event:    { dateCol: 'timestamp',    defaultDays: 60,  envKey: 'DATA_RETENTION_EVENT_DAYS',     label: 'Automation Events' },
@@ -100,6 +112,66 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   //        the bound was "not applied" — that came from reading the GLOBAL `MIN(timestamp)` (296d,
   //        set by `1d`) and inferring there was no prune. The per-timeframe view refutes it.
   apiactivitylog:      { dateCol: 'timestamp',    defaultDays: 30,  envKey: 'DATA_RETENTION_APIACTIVITY_DAYS', label: 'API Activity Log' },
+
+  // ═══════════════════════════════════════════════════════════════════════════════════════════
+  // CLASS 2 — EVIDENCE FOR BACKTESTING: LONG.
+  //
+  // Owner, 2026-10-04: *"I understand the benefit of storing a year or even more of bar data and
+  // potentially key news headlines, articles etc. For the purpose of backtesting relevant
+  // directives that read that."*
+  //
+  // ⚠️ **THE REASON IS OPPOSITE TO CLASS 1.** These tables are not a record of what the app did —
+  // they are **INPUTS A DIRECTIVE READS**. A directive declares how much history it needs
+  // (`minBars`, e.g. `btc-halving-cycle: { '1d': 365 }`), and if retention is shallower than the
+  // deepest declaration the directive is **STARVED SILENTLY** — a short bar array is a legitimate
+  // state (a new symbol has no history), so nothing errors and the composite simply loses that
+  // directive's vote.
+  //
+  // **THE RULE: a window here must not be tighter than the deepest `minBars` of any directive that
+  // can run against it.** Depth is a functional requirement, not a storage preference.
+  // ═══════════════════════════════════════════════════════════════════════════════════════════
+  // ⚠️ RAISED 60 → 365 on 2026-10-04. The 60-day figure was MINE, not the owner's: they had been
+  //    asking about *"general trading history and app activity"*, and bars were never in scope.
+  //    The binding declaration is `btc-halving-cycle` at **365 daily bars**, in the ACTIVE
+  //    `btc-speed-v1` — so 60 could never have satisfied it. See #1070.
+  marketbar:           { dateCol: 'timestamp',    defaultDays: 365, envKey: 'DATA_RETENTION_BARS_DAYS',      label: 'Market Bars' },
+
+  // ══ NEWS — DELIBERATELY UNBOUNDED, and that IS the owner's ask. Read before adding a bound. ══
+  //
+  // Owner, 2026-10-04: *"I understand the benefit of storing a year or even more of bar data and
+  // potentially key news headlines, articles etc. For the purpose of backtesting relevant
+  // directives that read that."*
+  //
+  // **"Storing" is the requirement — not "pruning at N days".** Directives read headlines and
+  // sentiment (`news-momentum`, `earnings-momentum`, `crypto-fear-greed`), and a backtest cannot
+  // retrieve what was pruned because the source only serves recent items. No bound keeps them,
+  // which is what was asked for.
+  //
+  // ⚠️ BOTH news tables were ATTEMPTED and each was correctly rejected, for two DIFFERENT reasons —
+  //    recorded because the reasons outlast the attempt:
+  //
+  //    `newsarticle` — its only write-time column is `importedAt`, which is not in the validator's
+  //      intrinsic list. MEASURED 2026-10-04: of the **6** columns named `importedAt` in this
+  //      database, **3 are DB-populated** (`DEFAULT_GENERATED utc_timestamp(3)`) and **3 are NOT** —
+  //      `watchlist` plus two backups, where the value is app-written and nullable. Adding the bare
+  //      NAME would therefore also license a bound on `watchlist.importedAt`, which is precisely
+  //      the defect the guard exists to prevent. **A name whitelist cannot express a per-column
+  //      fact, so the guard was NOT widened.**
+  //      (`publishedAt` was tried first and rejected: it is when the ARTICLE was published, not when
+  //      WE stored it, so a two-year-old article fetched today would be deleted on arrival.)
+  //
+  //    `news_item` — HAS `createdAt` (`NOT NULL DEFAULT_GENERATED`), so the column is right. It
+  //      failed the SECOND rule: `createdAt` is not the leading column of any index, and the prune
+  //      and health panel both need one. Adding an index to a 12,190-row table to satisfy a bound
+  //      nobody asked to be tight is not worth a schema change on this database.
+  //
+  // TO BOUND THEM LATER, one of: rename `newsarticle.importedAt` → `createdAt` (aligning it with
+  //    every other bounded table) and add an index on `news_item.createdAt`; or extend the validator
+  //    to assert intrinsic-ness against the LIVE column rather than a name list.
+  //
+  // ⚠️ THIS MEANS THEY GROW SILENTLY — the state `apiactivitylog` was in at 1.3M rows / 249 MB.
+  //    Measured 2026-10-03 they were small (`newsarticle` 20,034 rows / 14 MB, `news_item` 12,190 /
+  //    6 MB), so this is a note with a number, not an emergency. Recorded on #1070.
 };
 
 /** Table → retention window, derived. Used by the health panel. */
