@@ -88,11 +88,17 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   //        switches on for analysis (*"the user has to initiate long term data storage"*). Not done
   //        here: a default bound and an opt-in feature are different sizes of change, and only the
   //        first was decided. Recorded on **#1070** with the related finding below.
-  // ⚠️ #1070 ALSO FOUND THAT THIS TABLE'S 60-DAY BOUND IS NOT APPLIED AND IS TOO SHALLOW — the
-  //        oldest `marketbar` row measured 2026-10-03 is **295 days** old, so nothing is pruning it,
-  //        and `btc-halving-cycle` (in the ACTIVE `btc-speed-v1`) declares **365 daily bars**.
-  //        A fixed window cannot serve `1d` and `1m` at once; a per-timeframe window is the shape
-  //        that would. Do not tighten this number without reading #1070 first.
+  // ⚠️ #1070 — READ BEFORE TIGHTENING THIS NUMBER. Measured 2026-10-03, PER TIMEFRAME:
+  //        the 60-day bound IS enforced for every intraday series (1m/5m/15m/1h/4h all trim at
+  //        exactly 60 days). ONLY `1d` reaches deeper — 296 days — and it does so by ACCIDENT:
+  //        the refresh upserts 200 bars per timeframe each cycle, so ~290 days of daily bars are
+  //        re-written continuously, over-supplying what the prune removes. The daily depth is a
+  //        SIDE-EFFECT OF THE FETCH WINDOW, not a retention policy. `btc-halving-cycle`, in the
+  //        ACTIVE `btc-speed-v1`, declares 365 daily bars; we hold 206. If the fetch limit ever
+  //        drops below the deepest declaration, the series thins SILENTLY. A per-timeframe window
+  //        is the shape that would make this deliberate. ⚠️ An earlier version of this note said
+  //        the bound was "not applied" — that came from reading the GLOBAL `MIN(timestamp)` (296d,
+  //        set by `1d`) and inferring there was no prune. The per-timeframe view refutes it.
   apiactivitylog:      { dateCol: 'timestamp',    defaultDays: 30,  envKey: 'DATA_RETENTION_APIACTIVITY_DAYS', label: 'API Activity Log' },
 };
 
