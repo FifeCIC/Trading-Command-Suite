@@ -377,11 +377,57 @@ export class BarRefreshService {
     }
   }
 
+  // ── DECISION (2026-10-04, primary) — ONE REFRESH AT A TIME (#1067) ──────────────────────────
+  // WHAT:  `refresh()` now JOINS an in-flight cycle instead of starting a second one.
+  // WHY:   MEASURED 2026-10-02 in the running API: every fetch and upsert appeared TWICE,
+  //        interleaved, under ONE pid —
+  //          [Nest] 5588 LOG [Mt5Adapter] MT5: fetching 200 candles for EURCAD (1m) [broker 2]
+  //          [Nest] 5588 LOG [Mt5Adapter] MT5: fetching 200 candles for EURCAD (1m) [broker 2]
+  //        — for every symbol and every timeframe, MT5 and binance alike, and one automation tick
+  //        took **24.9 minutes**. Two API instances were RULED OUT: one listener on :3201, one
+  //        `dist/src/main.js` process, and both copies carry the same `[Nest] 5588` prefix.
+  //        The cause is **TWO INDEPENDENT DRIVERS**: `BarRefreshService.start()` owns a 5-minute
+  //        timer, AND the automation loop calls `refresh()` once per tick. Neither knew about the
+  //        other, and `refresh()` had **no in-flight guard**, so a slow cycle and the next driver's
+  //        cycle ran concurrently over the same symbols and the same rows.
+  // INSTEAD OF: guarding the CALLERS, or removing one driver. Both are wanted — the timer keeps
+  //        bars fresh when no tick is running, and the per-tick call keeps them fresh during a tick.
+  //        The defect is that they were unaware of each other, so the fix belongs at the ONE
+  //        function they share. (Two earlier hypotheses were already REFUTED on the issue: ticks
+  //        cannot overlap — `tick()` has a `tickInProgress` guard — and `setIntervalMs()`
+  //        `clearInterval`s before re-arming, so no duplicate interval survives.)
+  // REVERSE BY: delete the guard; `refresh()` reverts to starting a cycle unconditionally.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 65
+  // GUARD:     nest/src/modules/market-data/bar-refresh-single-flight.spec.ts
+  private refreshInFlight: Promise<{ upserted: number; symbols: string[]; errors: string[] }> | null = null;
+
   /**
-   * Run one LIVE refresh cycle.
-   * Fetches limited bars for active symbols — keeps directives fed.
+   * Run one LIVE refresh cycle — SINGLE-FLIGHT (#1067).
+   *
+   * A second caller arriving while a cycle is running **joins** it rather than starting a second.
+   * This reuses the pattern `symbols.service.ts` already established for the same shape
+   * (`refreshInFlight` set on entry, cleared in `finally`) rather than inventing a third one.
+   *
+   * ⚠️ JOINING, not SKIPPING. Returning early with `{ upserted: 0 }` would tell a caller a refresh
+   * happened and wrote nothing — those are different facts and must not collapse into one.
    */
   async refresh(): Promise<{ upserted: number; symbols: string[]; errors: string[] }> {
+    if (this.refreshInFlight) {
+      this.logger.debug(
+        'Bar refresh already in flight — joining the running cycle rather than starting a second ' +
+        '(#1067: two drivers share this method and neither knew about the other).',
+      );
+      return this.refreshInFlight;
+    }
+    this.refreshInFlight = this.runRefreshCycle();
+    try {
+      return await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
+  }
+
+  private async runRefreshCycle(): Promise<{ upserted: number; symbols: string[]; errors: string[] }> {
     const startMs = Date.now();
     const symbols = await this.resolveRefreshSymbols();
     const result = await this.doRefresh(symbols, LIVE_LIMIT);
