@@ -1,0 +1,49 @@
+{
+  // jsconfig.json — gives the FRONTEND a project, so VS Code can build a symbol map for it.
+  //
+  // WHY THIS EXISTS (2026-10-04)
+  // ----------------------------
+  // Reported: "the Outline section is blank". The cause was not a missing architecture map — it was
+  // a missing PROJECT. `nest/` has had `tsconfig.json` (and `tsconfig.build.json`) since it was
+  // created, so the BEHIND half of this repo has always had Outline, go-to-definition and
+  // find-references; `src/` had no config at all, so the language server had nothing to build
+  // symbols from and the frontend got none of it. 388 files.
+  //
+  // ⚠️ WHAT THIS IS AND IS NOT. It is a map derived from the CODE, by the language server, on
+  // demand — so it CANNOT drift. It is not a second hand-maintained description of the system;
+  // this repo already has four of those (`architecture-reference.js` at 340 KB, the Architecture
+  // Framework page, the Capability Map, and the pipeline graph lab), and a `prebuild` gate exists
+  // solely because two of them drift apart. Adding a fifth would be the defect, not the fix.
+  //
+  // WHAT IT UNLOCKS, at zero maintenance:
+  //   - Outline (document symbols) for every component, hook and function in `src/`
+  //   - Go to Definition and Find All References ACROSS the frontend
+  //   - Workspace symbol search (Ctrl+T) over the whole `src/` tree
+  //   - Breadcrumbs and sticky-scroll showing where you are
+  //   - Hover types inferred from JSDoc, where the code carries it
+  //
+  // ⚠️ `checkJs` IS DELIBERATELY FALSE. This is a JavaScript codebase with no type annotations
+  // planned; turning checking on would report thousands of inferred-type complaints that nobody
+  // asked for, and a gate that produces noise gets ignored — the same failure this repo has already
+  // documented twice for its own validators. Symbols and navigation do not require checking.
+  //
+  // ⚠️ `maxNodeModuleJsDepth: 0` KEEPS IT FAST. Anything above 0 makes the server crawl
+  // `node_modules` looking for types, which is slow enough on a project this size to be felt.
+  //
+  // REVERSE BY: delete this file. It changes nothing at runtime — Vite does not read it.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "maxNodeModuleJsDepth": 0
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "build", "coverage"]
+}
