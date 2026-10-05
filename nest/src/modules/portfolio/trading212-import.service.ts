@@ -59,6 +59,35 @@ export interface TradeHistorySummary {
   losingTrades: number;
 }
 
+/**
+ * sideFromQuantity() — the position's direction, ESTABLISHED from the holding rather than assumed.
+ *
+ * ⚠️ WHY THIS FUNCTION EXISTS (#1069 option C, 2026-10-05). This import path created **18**
+ * `position` rows with `side = NULL`, and the signed profit percentage is written **four times**
+ * with divergent edges: `profitPctFor()` (`peak.ts`, the canonical) treats an unrecognised side as
+ * LONG, while `exit-consensus.service.ts:373` and both `stop-guardian.service.ts` sites treat it as
+ * SHORT. So for those 18 rows the displayed direction was a **default, not a fact**, and nothing
+ * recorded which of the two defaults had been applied.
+ *
+ * Registering the side at the SOURCE is the one option of the three that changes no maths. The
+ * alternatives edited a money path to agree about a case it could not reach anyway.
+ *
+ * ⚠️ DERIVED FROM THE SIGN OF `quantity`, NOT HARDCODED TO `'buy'`. Measured 2026-10-05: all 18 rows
+ * held a positive quantity (min 0.61, max 66.05, **zero negatives**). That is an observation about
+ * today, and hardcoding it would be an assumption that has to survive the day the API reports
+ * something else. A negative quantity establishes `sell`.
+ *
+ * ⚠️ AND ZERO ESTABLISHES NOTHING. A holding with no size has no direction, so this returns `null`
+ * rather than picking one — the same rule as register row 60: *"NULL ≠ 0 — 'no peak observed' and
+ * 'the peak was break-even' are different facts."* A caller that cannot derive a side must leave the
+ * column alone rather than write a guess into it.
+ */
+export function sideFromQuantity(quantity: unknown): 'buy' | 'sell' | null {
+  const qty = Number(quantity);
+  if (!Number.isFinite(qty) || qty === 0) return null;
+  return qty < 0 ? 'sell' : 'buy';
+}
+
 @Injectable()
 export class Trading212ImportService {
   private readonly logger = new Logger(Trading212ImportService.name);
@@ -134,7 +163,7 @@ export class Trading212ImportService {
     positionsImported: number;
     symbolsCreated: number;
     account?: T212Account;
-    positions?: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number }>;
+    positions?: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number; side: 'buy' | 'sell' | null }>;
     error?: string;
     cooldown?: boolean;
   }> {
@@ -167,12 +196,22 @@ export class Trading212ImportService {
       this.logger.log(`Trading212: fetched ${positions.length} positions, account balance: ${account?.total}`);
 
       let symbolsCreated = 0;
-      const imported: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number }> = [];
+      // ⚠️ `side` IS IN THE RESULT SO THE WRITE IS VISIBLE. A sync that assigns a direction and
+      // reports only the quantity leaves the interesting half of the write unobservable — and the
+      // whole of #1069 began as a field that nothing wrote and nothing showed.
+      const imported: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number; side: 'buy' | 'sell' | null }> = [];
       const currentTickers = new Set<string>();
 
       for (const pos of positions) {
         const cleanTicker = cleanT212Ticker(pos.ticker);
         currentTickers.add(cleanTicker);
+
+        // ⚠️ THE SIDE IS WRITTEN HERE, AND IT WAS NEVER WRITTEN BEFORE (#1069). See
+        // `sideFromQuantity()`. `side` is spread in ONLY when it could be established, so a sync
+        // that cannot derive a direction leaves an existing value alone instead of overwriting it
+        // with a null it did not earn.
+        const side = sideFromQuantity(pos.quantity);
+        const sideData = side ? { side } : {};
 
         // Ensure symbol exists in our DB
         try {
@@ -190,6 +229,7 @@ export class Trading212ImportService {
           quantity: pos.quantity,
           ppl: pos.ppl,
           currentPrice: pos.currentPrice,
+          side,
         });
 
         // Update existing or create — no gap window (no delete-all-first)
@@ -207,6 +247,7 @@ export class Trading212ImportService {
                   currentPrice: pos.currentPrice,
                   pnl: pos.ppl ?? null,
                   accountId: `trading212-${this.t212Adapter.mode || 'demo'}`,
+                  ...sideData,
                 },
               });
             } else {
@@ -219,6 +260,7 @@ export class Trading212ImportService {
                   pnl: pos.ppl ?? null,
                   provider: 'trading212',
                   accountId: `trading212-${this.t212Adapter.mode || 'demo'}`, // live vs demo separation (#TBD)
+                  ...sideData,
                 },
               });
             }

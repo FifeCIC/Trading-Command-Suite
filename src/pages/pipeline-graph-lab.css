@@ -466,6 +466,32 @@
 .pg-overlay-section p { font-size: 0.75rem; color: var(--ink, #e5e7eb); margin: 0; }
 .pg-overlay-section code { font-size: 0.7rem; background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px; }
 
+/* ── Derived Inputs / Outputs (#1071, Phase 3) ──────────────────────────────────────────────
+   ⚠️ Every line these classes style is DERIVED from docs/PIPELINE-MAP.json, not written by hand.
+   No new colours are introduced: the file list and the source note reuse --ink-soft, the muted
+   token this overlay already uses for the same kind of secondary text (measured 7.3:1 against
+   #1a1a1a, 8.9:1 against #000 — above the 4.5:1 AA floor for body text).
+
+   ⚠️ SELECTORS ARE `.pg-overlay-section p.pg-io-note`, NOT `.pg-io-note`. `.pg-overlay-section p`
+   is (0,2,0); a bare class is (0,1,0) and would LOSE, so the note would silently render in the
+   default ink colour and read as body text rather than as a caveat. */
+.pg-io-src {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+  opacity: 0.75;
+}
+.pg-io-via { font-size: 0.68rem; color: var(--ink-soft, #a1a9b5); }
+.pg-io-none { font-size: 0.7rem; color: var(--ink-soft, #a1a9b5); font-style: italic; }
+.pg-overlay-section p.pg-io-note {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #a1a9b5);
+  line-height: 1.45;
+  margin: 8px 0 0;
+}
+.pg-overlay-section p.pg-io-note--warn { color: var(--color-warning, #f59e0b); }
+
 .pg-provider-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .pg-chip {
   font-size: 0.68rem;

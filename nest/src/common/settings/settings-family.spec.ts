@@ -180,12 +180,41 @@ describe('key families', () => {
     // prefix, subjectGroup/fieldGroup and fields), so the expectation is updated rather than the
     // family removed. It is declared so the WRITE path has an owner, not because anything reads it.
     //
-    // If a FOURTH family is added, this test fails again — update it only after confirming the
+    // If a FIFTH family is added, this test fails again — update it only after confirming the
     // new family is intentional.
+    //
+    // ⚠️ FOURTH FAMILY ADDED 2026-10-05 — `notificationEvent`, and the confirmation is recorded
+    // because this tripwire asks for it:
+    //   • It is a genuinely OPEN-ENDED shape: 11 events × 3 fields today (enabled/priority/channels),
+    //     and the event list grows. It is not one key wearing a pattern.
+    //   • It has NO declared defaults, so `ensureDefaults()` can never materialise one — adding it
+    //     cannot change a single value on any install. `DEFAULT_PREFERENCES` in
+    //     notifications.service.ts stays the ONLY source of per-event fallbacks.
+    //   • It exists so writes have an OWNER. Before it, `PUT /api/notifications/preferences` assigned
+    //     an instance field and the change reverted on the next restart.
+    //   • The alternative design — persisting the list as one JSON setting — was REJECTED because its
+    //     declared default would be a SECOND COPY of the event list, the drift defect #849 closed.
     expect(SETTING_FAMILIES.map((f) => f.id).sort()).toEqual([
       'brokerTrading',
       'directive',
+      'notificationEvent',
       'protocol',
     ]);
+  });
+
+  it('the per-event notification fields validate as declared', () => {
+    const family = SETTING_FAMILIES.find((f) => f.id === 'notificationEvent')!;
+    expect(family.pattern.test('notifications.event.position-closed.enabled')).toBe(true);
+    expect(family.pattern.test('notifications.event.position-closed.priority')).toBe(true);
+    // A hyphenated event name must survive the subject group, and the field must be captured whole.
+    const m = family.pattern.exec('notifications.event.position-closed.enabled')!;
+    expect(m[family.subjectGroup]).toBe('position-closed');
+    expect(m[family.fieldGroup]).toBe('enabled');
+
+    expect(validateFamilyValue(family.fields.enabled, 'true').ok).toBe(true);
+    expect(validateFamilyValue(family.fields.enabled, false).ok).toBe(true);
+    // Same rule as directionBias: `allowed` documents the four channel names, it does not enforce them.
+    expect(validateFamilyValue(family.fields.channels, 'windows,telegram').ok).toBe(true);
+    expect(family.fields.priority.allowed).toContain('critical');
   });
 });

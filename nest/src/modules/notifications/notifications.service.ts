@@ -5,7 +5,8 @@
  * Supports configurable rules for which events trigger which channels.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, OnModuleInit } from '@nestjs/common';
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { EmailChannel } from './channels/email.channel';
 import { WindowsChannel } from './channels/windows.channel';
 import { TelegramChannel } from './channels/telegram.channel';
@@ -16,6 +17,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { collapseOrCreateAlert } from '../../common/alerts/alert-collapse';
 
 export type NotificationChannel = 'email' | 'windows' | 'telegram' | 'discord';
+
+/**
+ * How much a notification says. `simple` is what the app has ALWAYS sent, which is why it is both the
+ * default and the registry's declared default — a level that changed the output by existing would be
+ * a behaviour change disguised as a new feature.
+ */
+export type NotificationDetailLevel = 'simple' | 'detailed' | 'advanced';
+export const DETAIL_LEVELS: readonly NotificationDetailLevel[] = ['simple', 'detailed', 'advanced'];
 export type NotificationEvent =
   | 'entry-signal'
   | 'drawdown-warning'
@@ -134,7 +143,7 @@ const DEFAULT_PREFERENCES: NotificationPreference[] = [
 ];
 
 @Injectable()
-export class NotificationService {
+export class NotificationService implements OnModuleInit {
   private readonly logger = new Logger(NotificationService.name);
   private history: NotificationHistoryEntry[] = [];
   private preferences: NotificationPreference[] = [...DEFAULT_PREFERENCES];
@@ -148,6 +157,8 @@ export class NotificationService {
    * mutes the routine traffic — and `trade-disabled` is exempt from the floor entirely.
    */
   private minPriority: NotificationPriority = 'low';
+  /** How much a notification says. Loaded from the registry in `onModuleInit`. */
+  private detailLevel: NotificationDetailLevel = 'simple';
   private emailRateLimit = 0; // 0 = not rate limited
   private lastEmailSent = 0;
 
@@ -157,7 +168,122 @@ export class NotificationService {
     private readonly telegramChannel: TelegramChannel,
     private readonly discordChannel: DiscordChannel,
     private readonly prisma?: PrismaService,
+    // ⚠️ OPTIONAL ON PURPOSE. This service is constructed directly by its own specs with the five
+    // positional arguments above; a required sixth would break them. It also means a notification
+    // system whose settings cannot be read degrades to the declared defaults instead of failing to
+    // boot — a notification channel is not worth taking the API down for.
+    @Optional() private readonly settings?: SettingsResolverService,
   ) {}
+
+  /**
+   * Load the persisted floor and detail level at boot.
+   *
+   * ⚠️ THE POINT OF THIS METHOD (2026-10-05). `setMinPriority()` used to write an instance field, so
+   * a change survived until the next restart and then silently reverted. Loading at boot is what
+   * makes the write in `setMinPriority()` mean anything.
+   *
+   * ⚠️ A STORED VALUE THAT IS NOT A VALID VALUE IS NOT ACCEPTED. `notifications.minPriority` is a
+   * `string` setting, so the registry validates that it IS a string and nothing more — `'urgent'`
+   * would be stored happily. Both reads below therefore check membership before assigning and keep
+   * the default while warning, because an unrecognised stored value silently becoming the floor is
+   * the same defect as an unreadable one becoming `false`.
+   */
+  async onModuleInit(): Promise<void> {
+    if (!this.settings) {
+      this.logger.warn('SettingsResolverService unavailable — notification settings will not persist');
+      return;
+    }
+    try {
+      const floor = await this.settings.resolve('notifications.minPriority');
+      const floorValue = String(floor.value);
+      if (PRIORITY_RANK[floorValue as NotificationPriority] != null) {
+        this.minPriority = floorValue as NotificationPriority;
+      } else {
+        this.logger.warn(
+          `Stored notifications.minPriority "${floorValue}" is not a known priority — keeping "${this.minPriority}".`,
+        );
+      }
+
+      const detail = await this.settings.resolve('notifications.detailLevel');
+      const detailValue = String(detail.value) as NotificationDetailLevel;
+      if (DETAIL_LEVELS.includes(detailValue)) {
+        this.detailLevel = detailValue;
+      } else {
+        this.logger.warn(
+          `Stored notifications.detailLevel "${detailValue}" is not a known level — keeping "${this.detailLevel}".`,
+        );
+      }
+      this.logger.log(
+        `Notification settings loaded: floor="${this.minPriority}" detail="${this.detailLevel}" ` +
+          `(source: floor=${floor.source}, detail=${detail.source})`,
+      );
+    } catch (err) {
+      // A settings read that fails must not stop the notification system from working.
+      this.logger.warn(`Could not load persisted notification settings: ${(err as Error).message}`);
+    }
+
+    // ── per-event overrides, read ONE FIELD AT A TIME ───────────────────────────────────────────
+    // ⚠️ `present === false` IS THE NORMAL STATE, NOT AN ERROR. A family member has no declared
+    // default (settings-registry.ts), so on a fresh install every one of these is absent and
+    // `DEFAULT_PREFERENCES` above is what applies. That is deliberate: it keeps the event list in ONE
+    // place instead of duplicating it into the registry as a second copy that drifts.
+    //
+    // ⚠️ An override applies only when its own field is present AND valid. A stored `priority` of
+    // 'urgent' is rejected here rather than silently becoming the floor's neighbour — the same rule
+    // the two scalar reads above follow.
+    let overrides = 0;
+    for (const pref of this.preferences) {
+      const enabled = await this.readEventField(pref.event, 'enabled');
+      if (enabled !== undefined) {
+        pref.enabled = enabled === true || enabled === 'true';
+        overrides++;
+      }
+      const priority = await this.readEventField(pref.event, 'priority');
+      if (priority !== undefined && PRIORITY_RANK[String(priority) as NotificationPriority] != null) {
+        pref.priority = String(priority) as NotificationPriority;
+        overrides++;
+      }
+      const channels = await this.readEventField(pref.event, 'channels');
+      if (channels !== undefined) {
+        const list = String(channels)
+          .split(',')
+          .map((c) => c.trim())
+          .filter((c): c is NotificationChannel =>
+            (['email', 'windows', 'telegram', 'discord'] as const).includes(c as NotificationChannel),
+          );
+        // An empty list would mean "delivered nowhere" — that is a mute, and a mute has its own field.
+        if (list.length) {
+          pref.channels = list;
+          overrides++;
+        }
+      }
+    }
+    if (overrides) {
+      this.logger.log(`Notification preferences: ${overrides} per-event override(s) applied from the store.`);
+    }
+  }
+
+  /**
+   * Read ONE field of one event's preference from the key family.
+   *
+   * ⚠️ RETURNS `undefined` FOR ABSENT, which is a third state — not `false`, not the current value. The
+   * caller must treat "no row" as "keep the default", or a fresh install would read as "everything off".
+   * A read that throws is reported and returned as absent, so an unreadable settings store degrades to
+   * the defaults rather than silencing every notification.
+   */
+  private async readEventField(
+    event: string,
+    field: 'enabled' | 'priority' | 'channels',
+  ): Promise<unknown | undefined> {
+    if (!this.settings) return undefined;
+    try {
+      const resolved = await this.settings.resolveFamily(`notifications.event.${event}.${field}`);
+      return resolved.present ? resolved.value : undefined;
+    } catch (err) {
+      this.logger.warn(`Could not read notifications.event.${event}.${field}: ${(err as Error).message}`);
+      return undefined;
+    }
+  }
 
   private getChannel(channel: NotificationChannel) {
     switch (channel) {
@@ -311,24 +437,73 @@ export class NotificationService {
     return this.minPriority;
   }
 
+  /** The detail level, so a channel or a settings surface can read what it should emit. */
+  getDetailLevel(): NotificationDetailLevel {
+    return this.detailLevel;
+  }
+
   /**
    * Update the floor. Returns what it actually became, so a caller cannot report a change that was
    * rejected — the same reason `notify()` returns a boolean rather than void.
+   *
+   * ⚠️ IT NOW PERSISTS, AND ASYNC IS THE COST OF THAT. Before 2026-10-05 this wrote an instance field
+   * and returned; the value reset on the next restart. A persistence failure is REPORTED rather than
+   * thrown: the floor has already taken effect for this process, and a settings write that cannot
+   * reach the database should degrade to "effective now, not durable" rather than refuse the change.
    */
-  setMinPriority(priority: NotificationPriority): NotificationPriority {
+  async setMinPriority(priority: NotificationPriority): Promise<NotificationPriority> {
     if (PRIORITY_RANK[priority] == null) {
       this.logger.warn(`Ignoring unknown minPriority "${priority}" — keeping "${this.minPriority}".`);
       return this.minPriority;
     }
     this.minPriority = priority;
-    this.logger.log(`Notification floor set to "${priority}".`);
+    if (this.settings) {
+      try {
+        await this.settings.set('notifications.minPriority', priority);
+        this.logger.log(`Notification floor set to "${priority}" and persisted.`);
+      } catch (err) {
+        this.logger.warn(
+          `Notification floor set to "${priority}" but NOT persisted (${(err as Error).message}) — ` +
+            'it will revert on the next restart.',
+        );
+      }
+    } else {
+      this.logger.warn(`Notification floor set to "${priority}" in memory only — no settings resolver.`);
+    }
     return this.minPriority;
   }
 
-  /** Update notification preferences. */
-  updatePreferences(prefs: NotificationPreference[]): void {
+  /**
+   * Update notification preferences — and PERSIST them.
+   *
+   * ⚠️ ASYNC IS THE COST OF THAT. This used to assign an instance field and return, so a saved
+   * preference survived exactly until the next API restart and then silently reverted. Written field
+   * by field through the `notificationEvent` key family, which has NO declared defaults — so these
+   * writes can never be undone by `ensureDefaults()` seeding a value back over them.
+   *
+   * ⚠️ A FAILED WRITE IS REPORTED PER EVENT, not thrown. The in-memory preference has already taken
+   * effect for this process; the honest outcome is "effective now, not durable", named for the event
+   * that failed, so a partial save is visible rather than reported as a clean success.
+   */
+  async updatePreferences(prefs: NotificationPreference[]): Promise<void> {
     this.preferences = prefs;
     this.logger.log(`Notification preferences updated: ${prefs.length} rules`);
+    if (!this.settings) {
+      this.logger.warn('Notification preferences changed in memory only — no settings resolver.');
+      return;
+    }
+    for (const pref of prefs) {
+      try {
+        await this.settings.set(`notifications.event.${pref.event}.enabled`, pref.enabled);
+        await this.settings.set(`notifications.event.${pref.event}.priority`, pref.priority);
+        await this.settings.set(`notifications.event.${pref.event}.channels`, pref.channels.join(','));
+      } catch (err) {
+        this.logger.warn(
+          `Preference for "${pref.event}" applied but NOT persisted (${(err as Error).message}) — ` +
+            'it will revert on the next restart.',
+        );
+      }
+    }
   }
 
   /** Send a test notification to a specific channel. */

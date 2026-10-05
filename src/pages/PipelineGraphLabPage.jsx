@@ -4,6 +4,9 @@ import { apiGet } from '../core/api/client';
 import './pipeline-graph-lab.css';
 import PIPELINE_POSITIONS from '../data/pipeline-graph-positions.json';
 import PageInfoPopover from '../components/PageInfoPopover';
+// ⚠️ THE INPUTS/OUTPUTS ON THIS PAGE ARE DERIVED, NOT WRITTEN. See `src/core/pipeline-map.js`.
+// The node list below is hand-curated and will drift; the IO block must not join it.
+import { loadPipelineMap, ioForFiles, unreferencedIn, divergentMathsIn } from '../core/pipeline-map';
 
 // ── Background icon SVG components (one per node type) ───
 function BgIconData() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><rect x="20" y="20" width="60" height="12" rx="3" opacity="0.5"/><rect x="20" y="38" width="45" height="12" rx="3" opacity="0.35"/><rect x="20" y="56" width="52" height="12" rx="3" opacity="0.25"/><rect x="20" y="74" width="38" height="10" rx="3" opacity="0.15"/></svg>; }
@@ -365,8 +368,129 @@ function ConnectionLines({ connections, nodes, mode, hoveredNode, hoveredConn, o
   );
 }
 
+// ── Inputs / Outputs — DERIVED FROM THE GENERATED MAP (#1071, Phase 3) ──────────────────────
+//
+// ⚠️ NOTHING IN THIS BLOCK IS TYPED BY HAND, and that is the point of the phase. The resources
+// come from `docs/PIPELINE-MAP.json`, which is generated from source and `--check`ed in the
+// backend prebuild — so if a service stops writing a table, this block changes on its own. The
+// node list above it is hand-curated; an IO line written beside it would be a fifth architecture
+// surface, and the repo already has four plus a gate checking that two of them agree.
+//
+// ⚠️ AND "CANNOT LOAD" IS RENDERED AS SUCH. An empty IO block on a failed fetch would read as
+// "this subsystem touches nothing", which is a confident false statement rather than a gap.
+function IOColumn({ title, arrow, rows, filesOf }) {
+  return (
+    <section>
+      <h4>{title}</h4>
+      {rows.length === 0 ? (
+        <ul><li className="pg-io-none">none from these files</li></ul>
+      ) : (
+        <ul>
+          {rows.map((r) => {
+            const names = r.files.map((f) => f.split('/').pop());
+            return (
+              <li key={r.resource}>
+                <code>{r.resource}</code>
+                <span className="pg-io-via" title={filesOf(r).join('\n')}> {arrow} {names.join(', ')}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function NodeIO({ node, pmap, pmapState }) {
+  const files = node.docs?.files || [];
+  const io = useMemo(
+    () => (pmap ? ioForFiles(pmap, files) : { inputs: [], outputs: [], untracked: [], missing: [] }),
+    [pmap, node.id], // eslint-disable-line react-hooks/exhaustive-deps -- `files` is a module constant on the node
+  );
+  const unref = useMemo(() => (pmap ? unreferencedIn(pmap, files) : []), [pmap, node.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const diverge = useMemo(() => (pmap ? divergentMathsIn(pmap, files) : []), [pmap, node.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ⚠️ THE SCOPE IS PART OF THE HEADING, AND IT IS NOT DECORATION. This block is derived from the
+  // node's DECLARED file list, and that list is hand-written. "Writes: none" is therefore a
+  // statement about three named files, not about the subsystem — measured on the first run, the
+  // Data Pipeline node declared three files and NONE of them writes a tracked resource, while the
+  // data pipeline obviously writes `marketbar` (through `import-jobs.service.ts`, which the node
+  // never listed). Without the scope this reads as a false claim about the subsystem; with it, it
+  // reads as what it is — a true statement about an incomplete list, which is the drift the whole
+  // phase exists to expose.
+  const head = (
+    <h4>
+      Inputs / Outputs
+      <span className="pg-io-src">
+        from docs/PIPELINE-MAP.json · {files.length} declared file(s)
+      </span>
+    </h4>
+  );
+
+  if (pmapState === 'loading') {
+    return <section className="pg-overlay-section">{head}<p>Reading the generated map…</p></section>;
+  }
+  if (pmapState === 'error') {
+    return (
+      <section className="pg-overlay-section">
+        {head}
+        <div className="pg-overlay-alert pg-overlay-alert--warn">
+          The generated map could not be loaded. Nothing is claimed here rather than guessed — run
+          <code> node scripts/generate-pipeline-map.cjs --write </code> if it is missing.
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="pg-overlay-section">
+      {head}
+      <div className="pg-overlay-grid">
+        <IOColumn title="Reads (in)" arrow="←" rows={io.inputs} filesOf={(r) => r.files} />
+        <IOColumn title="Writes (out)" arrow="→" rows={io.outputs} filesOf={(r) => r.files} />
+      </div>
+
+      {/* ⚠️ TWO DIFFERENT FACTS, TWO DIFFERENT MESSAGES. "This path is stale" and "this file is
+          real but touches nothing the dataset tracks" are not the same claim, and the first version
+          of this block made the second wear the first's wording — it flagged
+          `risk-gating-engine.service.ts` as a possible dead path, and the file exists. */}
+      {io.missing.length > 0 && (
+        <div className="pg-overlay-alert pg-overlay-alert--warn">
+          {io.missing.length} file(s) in this node&apos;s list are <strong>not in the scanned source</strong> —
+          a stale path, so nothing can be derived from them: {
+            io.missing.map((f) => f.split('/').pop()).join(', ')
+          }
+        </div>
+      )}
+      {io.untracked.length > 0 && (
+        <p className="pg-io-note">
+          {io.untracked.length} file(s) here are real but touch none of the {pmap ? pmap.resources.size : 11}{' '}
+          tracked pipeline resources, so the dataset has no row for them and no IO can be derived:{' '}
+          {io.untracked.map((f) => f.split('/').pop()).join(', ')}.
+        </p>
+      )}
+
+      {unref.length > 0 && (
+        <p className="pg-io-note">
+          <strong>{unref.length}</strong> function(s) in these files have no resolved consumer:{' '}
+          {unref.slice(0, 4).map((u) => u.name).join(', ')}
+          {unref.length > 4 ? ` and ${unref.length - 4} more` : ''}.
+        </p>
+      )}
+
+      {diverge.length > 0 && (
+        <p className="pg-io-note pg-io-note--warn">
+          <strong>{diverge.length}</strong> maths group(s) in these files are written with{' '}
+          <strong>different edges</strong> — same arithmetic, different conditions or guards. That is
+          the #1069 shape, and it is the reason to look rather than the answer.
+        </p>
+      )}
+    </section>
+  );
+}
+
 // ── Detail Overlay ───────────────────────────────────────
-function DetailOverlay({ node, onClose }) {
+function DetailOverlay({ node, onClose, pmap, pmapState }) {
   if (!node) return null;
   const h = HEALTH_COLORS[node.health] || HEALTH_COLORS.healthy;
   const d = node.docs;
@@ -391,6 +515,8 @@ function DetailOverlay({ node, onClose }) {
         {d.conflicts && (
           <div className="pg-overlay-alert pg-overlay-alert--warn">{d.conflicts}</div>
         )}
+
+        <NodeIO node={node} pmap={pmap} pmapState={pmapState} />
 
         <div className="pg-overlay-grid">
           {d.endpoints && (
@@ -516,6 +642,20 @@ export default function PipelineGraphLabPage() {
     refetchInterval: 30000,
   });
 
+  // ── The generated map (#1071 Phase 3) ─────────────────────────────────────────────
+  // Loaded on mount, lazily: the artefact is ~700 KB and this is the only page that reads it.
+  // ⚠️ 'error' is a separate state from 'ready with empty results' — the IO block renders them
+  // differently, because "could not load" and "touches nothing" are different facts.
+  const [pmap, setPmap] = useState(null);
+  const [pmapState, setPmapState] = useState('loading');
+  useEffect(() => {
+    let alive = true;
+    loadPipelineMap()
+      .then((m) => { if (alive) { setPmap(m); setPmapState('ready'); } })
+      .catch(() => { if (alive) setPmapState('error'); });
+    return () => { alive = false; };
+  }, []);
+
   // Apply saved positions, then merge live API data
   const positionedNodes = useMemo(() => applyPositions(SAMPLE_NODES), []);
   const liveNodes = positionedNodes.map((n) => {
@@ -622,7 +762,7 @@ export default function PipelineGraphLabPage() {
         <span>Click node → documentation · Drag to pan</span>
       </footer>
 
-      <DetailOverlay node={selected} onClose={() => setSelected(null)} />
+      <DetailOverlay node={selected} onClose={() => setSelected(null)} pmap={pmap} pmapState={pmapState} />
     </div>
   );
 }

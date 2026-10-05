@@ -9,6 +9,23 @@
   padding: 6px 0;
   position: relative;
   z-index: 10;
+  /* ⚠️ THE TAPE OWNS A FULL ROW — BELOW THE MENU. That is the design, and these two lines are
+     what enforce it, whichever display mode the header is in.
+
+     Measured 2026-10-04: with the header as a flex row, the tape sat BESIDE the nav and pushed to
+     the right (`sameRowAsNav: true`, `rightOfNav: true`, `tapeLeft: 1236` at a 1440px viewport) —
+     the owner's exact report. `flex-basis: 100%` + `.topbar { flex-wrap: wrap }` makes it wrap to
+     its own line instead; `grid-column: 1 / -1` makes it span every column if the header is ever a
+     multi-column grid. Both are inert with the header's normal single-column grid.
+
+     ⚠️ `min-width: 0` IS REQUIRED WITH THEM — the same trap as `.topbar-row-main` (#853). As a flex
+     item the tape's `min-width: auto` resolves to its MIN-CONTENT width, which is the marquee track
+     (~19,500px). Measured 2026-10-04 with the guard above and no `min-width`: the tape wrapped to
+     its own line but was **25,045px wide**, i.e. it traded "beside the nav" for "overflows the
+     page". With `min-width: 0` it shrinks to the row and `overflow: hidden` clips the marquee. */
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 /* The track holds N identical copies of the sections (N = --mkt-tape-copies, set

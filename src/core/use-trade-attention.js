@@ -60,9 +60,15 @@ export default function useTradeAttention() {
       try {
         // `tag` REPLACES rather than stacks, so a long outage leaves one entry in the notification
         // centre instead of dozens — the same reasoning as the backend's attention-key throttle.
+        //
+        // ⚠️ `icon` IS THE BRANDING. Without it Windows draws the browser's own default glyph and
+        // the notification says "Chrome" rather than the product name. Public asset, so it also
+        // works in the free build. `badge` is the same image for the tray/accent surface.
         const n = new Notification(title, {
           body,
           tag: 'tcs-trade-disabled',
+          icon: '/tcs-logo.png',
+          badge: '/tcs-logo.png',
           requireInteraction: true,
         });
         n.onclick = () => {

@@ -42,17 +42,23 @@ export class NotificationsController {
 
   @Put('preferences')
   @ApiOperation({ summary: 'Update notification preferences' })
-  updatePreferences(@Body() prefs: NotificationPreference[]): { ok: boolean } {
-    this.notificationService.updatePreferences(prefs);
+  async updatePreferences(@Body() prefs: NotificationPreference[]): Promise<{ ok: boolean }> {
+    // ⚠️ `await` — the service now persists every rule through the settings registry, so a response
+    // returned before the writes landed would report a save that had not happened.
+    await this.notificationService.updatePreferences(prefs);
     return { ok: true };
   }
 
   @Put('min-priority')
   @ApiOperation({ summary: 'Set the global notification floor (critical | high | normal | low)' })
-  setMinPriority(@Body('minPriority') minPriority: NotificationPriority) {
+  async setMinPriority(@Body('minPriority') minPriority: NotificationPriority) {
     // Returns what it ACTUALLY became, not what was asked for — an invalid value is refused rather
     // than silently stored, and the caller can see the difference.
-    return { ok: true, minPriority: this.notificationService.setMinPriority(minPriority) };
+    //
+    // ⚠️ `await` IS THE POINT (2026-10-05). The service now PERSISTS the floor through the settings
+    // registry, so responding before the write lands would report a change that might not have been
+    // saved — the same "accepted then forgotten" failure this change exists to fix.
+    return { ok: true, minPriority: await this.notificationService.setMinPriority(minPriority) };
   }
 
   @Post('test')

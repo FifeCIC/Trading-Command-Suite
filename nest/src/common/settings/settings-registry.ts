@@ -412,6 +412,46 @@ export const SETTINGS: SettingDefinition[] = [
     min: 1,
     max: 1440,
   },
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  // ⚠️ WHY THESE ARE HERE (2026-10-05). The notification module has had a priority floor and a
+  // per-event preference list since #972 — reachable at `GET|PUT /api/notifications/preferences` —
+  // but BOTH were plain instance fields (`this.minPriority`, `this.preferences`). Measured that day:
+  // `PrismaService` was injected into the service and NEVER CALLED, so every change was accepted and
+  // then forgotten on the next API restart. A settings control on top of that is editable, saves, and
+  // has no effect — the exact "lie on screen" #849 was created to end.
+  //
+  // They are declared here rather than given a store of their own because persistence, seeding and a
+  // single read path are precisely what this registry provides. A second mechanism would be the
+  // duplicated-source defect class this file exists to close.
+  {
+    key: 'notifications.minPriority',
+    type: 'string',
+    defaultValue: 'low',
+    class: 'runtime',
+    owner: 'notifications',
+    label: 'Notification floor',
+    description:
+      'Nothing quieter than this is delivered on ANY channel. `low` (the default) suppresses nothing, ' +
+      'deliberately: a control that starts active and silent is indistinguishable from a broken ' +
+      'notification system. `critical` is what mutes routine traffic. The `trade-disabled` event is ' +
+      'exempt from the floor entirely, because muting it reproduces the outage it exists for.',
+    userChangeable: true,
+  },
+  {
+    key: 'notifications.detailLevel',
+    type: 'string',
+    defaultValue: 'simple',
+    class: 'runtime',
+    owner: 'notifications',
+    label: 'Notification detail',
+    description:
+      'How much a notification says. `simple` = title and body (what the app has always sent); ' +
+      '`detailed` adds instrument and strategy context; `advanced` adds scores and richer styling. ' +
+      '`simple` is the default because it is the CURRENT behaviour — a default that changed the ' +
+      'output would be a behaviour change wearing a tidy-up\'s clothes.',
+    userChangeable: true,
+  },
 ];
 
 /** Fast lookup. Built once at module load; the registry is static by design. */
@@ -593,6 +633,47 @@ export interface SettingFamily {
  * while pretending to be a setting.
  */
 export const SETTING_FAMILIES: SettingFamily[] = [
+  {
+    id: 'notificationEvent',
+    label: 'Per-event notification preferences',
+    owner: 'notifications',
+    description:
+      'Which channels deliver one notification event, whether it is on at all, and how loud it is. ' +
+      'Read by notifications.service.ts, which keeps `DEFAULT_PREFERENCES` as its OWN fallback and lets ' +
+      'these rows override it. ⚠️ The event LIST is deliberately not declared anywhere in this file: a ' +
+      'family is a key SHAPE, so the 11 events live in one place (the service) and cannot drift into a ' +
+      'second copy here. ⚠️ `enabled: false` is REFUSED at send time for `mandatory` events (currently ' +
+      '`trade-disabled`) — muting that one reproduces the overnight outage it exists for.',
+    pattern: /^notifications\.event\.([a-z0-9-]+)\.([A-Za-z]+)$/,
+    prefix: 'notifications.event.',
+    subjectGroup: 1,
+    fieldGroup: 2,
+    fields: {
+      enabled: {
+        type: 'boolean',
+        description:
+          'Whether this event is delivered at all. Ignored for `mandatory` events, which cannot be muted.',
+        userChangeable: true,
+      },
+      priority: {
+        type: 'string',
+        // Documented, not enforced — see SettingFamilyField.allowed. An over-tight validator that
+        // rejected a valid value would turn a working preference into an unreadable row.
+        allowed: ['critical', 'high', 'normal', 'low'],
+        description:
+          'How loud this event is. Drives the global `notifications.minPriority` floor — an event quieter ' +
+          'than the floor is suppressed, which is why a muted event can still arrive.',
+        userChangeable: true,
+      },
+      channels: {
+        type: 'string',
+        description:
+          'Comma-separated delivery channels for this event: email, windows, telegram, discord. ' +
+          'Stored as one string because the family field types are scalar; split on read.',
+        userChangeable: true,
+      },
+    },
+  },
   {
     id: 'directive',
     label: 'Per-directive configuration',

@@ -235,6 +235,14 @@ If `detect-circular-work` shows an area with both CLOSED and OPEN issues, you ar
 
 ---
 
+## Settled 2026-10-05 — the architecture map STOPS AT D (Phase 4 of #1071)
+
+| # | Decision | What it means | Settled | Guard status |
+|---|---|---|---|---|
+| 66 | **The architecture map STOPS AT D — the generated dataset IS the deliverable.** B renders it (Phase 3) and no fifth architecture surface is added. | Phase 4 scored the three approaches against the three questions the plan set. **C+D answers 3 of 3:** #1068's writers (**8**, including the raw-SQL one a Prisma-only scan cannot see); R37's no-consumer (`order` — 6 write sites, **0 readers**; plus **129** node-level candidates, 78 with no same-name call anywhere); #1069's duplicate maths (**43** exact groups, **17** divergent, **1** idiom group of 5 sites — one of which, `exit-consensus.service.ts:374`, the manual audit had **not** listed). **B answers 0 of 3** — its nodes declare *tables*, not writers; they say nothing about consumers; and a value that touches no table at all is invisible to it. ⚠️ **B IS NOT DELETED, and that is not the reading.** It is the only surface rendering **LIVE** health (ticks, provider status, breaker state), which a static dataset cannot. What this row forbids is a *second hand-maintained node list*. **Cost carried, measured:** the prebuild gate takes **6.8 s** against 0.2 s + 0.1 s for the two it sits beside; it stales on any change to what touches the eleven resources or any new ratio; the maths scan is **ratios-only**; and each node's **file list is still hand-written** — Phase 3 measured the *Data Pipeline* node declaring three files, **none of which writes a tracked resource**, while the pipeline plainly writes `marketbar` through `import-jobs.service.ts`, which the node never lists. | **#1071, Phase 4, 2026-10-05** | 🟡 **PARTIAL, and the gap is stated.** `generate-pipeline-map.cjs --check` in prebuild fails on a stale artefact, and `--self-test` canaries the three known defects in **23/23** cases. ⚠️ **Neither can detect the thing this row actually forbids:** a new hand-maintained surface fails no gate at all. |
+
+---
+
 ## 🔒 Settled subjects — naming one REQUIRES citing the row that settled it
 
 > ⚠️ **Why this exists (2026-09-28).** An agent re-derived **row 23's** A/B netting finding as if it

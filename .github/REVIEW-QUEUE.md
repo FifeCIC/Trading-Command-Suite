@@ -19,6 +19,7 @@
 |---|---|---|---|
 | **R37** | **90 of the 119 symbols holding bars have NO protocol assignment — nothing scores them (31% of all bars).** ⚠️ `watchlist_item` is **EMPTY** (0 rows against 50 watchlists), so *"nobody wanted them"* and *"their listing was lost"* cannot currently be told apart. | measured 2026-10-03 | **Deactivate the 90 (reversible) — but first: is `watchlist_item` empty because it was never filled, or because it was lost?** |
 | **R38** | **A retention system ALREADY exists for 10 tables and its prune works. `apiactivitylog` is the one large table with NO window — 1,332,329 rows / 249 MB.** | measured 2026-10-03 | **Give `apiactivitylog` a window — 7, 30 or 90 days? Does anything read its history beyond that?** |
+| **R39** | **Pepperstone replacement demo 62148195 needs wiring into TCS — broker 3 stays dark until then. (Old demo died server-side at ~60 days: expiry-like, not abuse.)** | measured 2026-10-05 | **Shall I wire it — I update the account number, you add `MT5_PASSWORD_3`, then restart broker 3 — or will you do it all?** |
 
 **R37 and R38 were raised by the agent on 2026-10-02** from the capacity measurement, not by a defect. Both are policy choices with no clear logical winner, so they are the owner's. Neither blocks work.
 

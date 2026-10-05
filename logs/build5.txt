@@ -1,0 +1,7 @@
+
+> nest@0.114.0 build:api
+> pwsh -File ../scripts/build-api.ps1
+
+
+== Locating the API on port 3201
+   OK  Stopped API (PID 20684).

@@ -25,12 +25,40 @@
  * *describes* SQL ("reads from marketbar WHERE …") becomes a node — the exact false-positive class
  * that made `validate-css-tokens` fail every agent's build (#1061, fixed the same day).
  *
+ * ⚠️ EVERY EMITTED ARRAY IS TOTALLY ORDERED, AND THAT IS A CORRECTNESS PROPERTY, NOT TIDINESS.
+ * MEASURED 2026-10-05: two consecutive runs on an UNCHANGED tree produced the same 1,470 nodes and
+ * the same 129 unreferenced entries **in a different order**, so `--check` failed on a tree nobody
+ * had touched. The cause is that `program.getSourceFiles()` order is not stable, and the artefact
+ * carried it through. A gate that goes red for no reason is the failure this repo has documented
+ * twice — it gets switched off, and then it guards nothing.
+ * ⚠️ AND THE FIRST DIAGNOSIS WAS WRONG, which is why this note is long: the failure was blamed on a
+ * source edit made just before it, because that edit was the obvious difference. It had nothing to
+ * do with it. Sorting by a key that is unique per entry is what makes the output reproducible, and
+ * the self-test now asserts the order rather than trusting it.
+ *
  * USAGE
  *   node scripts/generate-pipeline-map.cjs              # report to stdout
  *   node scripts/generate-pipeline-map.cjs --write      # emit docs/PIPELINE-MAP.json + .md
  *   node scripts/generate-pipeline-map.cjs --check      # exit 1 if the emitted files are stale
  *   node scripts/generate-pipeline-map.cjs --self-test  # prove it can find the KNOWN writer
  */
+
+// ── DECISION (2026-10-05, primary) ──────────────────────────────────────────────────────────
+// WHAT:      The architecture map STOPS AT D. This generated artefact IS the deliverable; the
+//            lab page renders it (Phase 3) and no fifth architecture surface is added.
+// WHY:       Phase 4 scored the three approaches against the three questions the plan set, and
+//            the numbers decided it: C+D answers 3 of 3 (#1068's writers, R37's no-consumer,
+//            #1069's duplicate maths). The hand-maintained graph B answers 0 of 3. B is NOT
+//            deleted — it is the only surface rendering LIVE health, which a static dataset
+//            cannot — but a SECOND hand-maintained node list is what is rejected.
+// INSTEAD OF: Extending the lab's hand-curated SAMPLE_NODES into the source of truth, or adding
+//            a phase 5. Both were available and both add a surface instead of replacing one.
+// REVERSE BY: Re-opening #1071 and saying which question D failed to answer. The scoring table is
+//            in the Phase 4 comment on that issue, so the reversal is one read away.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 66
+// GUARD:     `--check` in prebuild fails on a stale artefact; `--self-test` canaries the three
+//            known defects in 23 cases. ⚠️ NEITHER CAN SEE THE THING THIS ROW FORBIDS — a new
+//            hand-maintained surface fails no gate. The guard is partial and says so.
 const fs = require('node:fs');
 const path = require('node:path');
 const { stripComments } = require('../nest/scripts/lib/comment-stripper.cjs');
@@ -40,6 +68,21 @@ const SRC = path.join(ROOT, 'nest', 'src');
 const SCHEMA = path.join(ROOT, 'nest', 'prisma', 'schema.prisma');
 const OUT_JSON = path.join(ROOT, 'docs', 'PIPELINE-MAP.json');
 const OUT_MD = path.join(ROOT, 'docs', 'PIPELINE-MAP.md');
+
+/**
+ * ⚠️ A CONSTANT, NOT `new Date()` — AND THE REASON IS THE GATE, NOT TIDINESS.
+ *
+ * `docs/` documents must carry a date or status header (`documentation-standards.instructions.md`
+ * §3). Emitting today's date would mean this file's content changes at midnight without a single
+ * line of source changing — and `--check` runs in `prebuild`, so **the build would go red every
+ * morning** until someone regenerated a file that had not actually changed. That is the "gate that
+ * fires for unrelated reasons" failure this repo has already documented twice, and it is how a
+ * gate gets switched off.
+ *
+ * The date therefore means *when this generator last changed* — which is the only thing about a
+ * generated file that can go stale. Bump it by hand with the change.
+ */
+const HEADER_DATE = '2026-10-05';
 
 /**
  * THE PIPELINE, declared once.
@@ -186,10 +229,13 @@ function build() {
 
 function render(m) {
   const lines = [
-    '# PIPELINE-MAP — the bars pipeline, generated from source',
+    '# PIPELINE-MAP — the bars pipeline and its maths, generated from source',
+    '',
+    `**Status:** active · **Category:** C (reference/contract) · **Owner:** generated — do not edit by hand`,
+    `**Created:** ${HEADER_DATE} · **Last updated:** ${HEADER_DATE}`,
     '',
     '> ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.',
-    '> Phase 1 of #1071. Reads the source, so it cannot drift from it.',
+    '> Phases 1–2 of #1071. Reads the source, so it cannot drift from it.',
     '',
     `Scanned **${m.scanned}** backend source files (specs excluded). Two access paths, because one`,
     'of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that',
@@ -606,28 +652,42 @@ function groupBy(sites, keyOf) {
       // burying it under whichever group happens to have the most sites.
       divergent: new Set(sites.map((s) => JSON.stringify(
         [...s.guards].sort().concat([...s.conditions].sort())))).size > 1,
-      sites: sites.map((s) => ({ file: s.file, line: s.line, in: s.in, name: s.name,
-        guards: s.guards, conditions: s.conditions, raw: s.raw })),
+      sites: sites
+        .map((s) => ({ file: s.file, line: s.line, in: s.in, name: s.name,
+          guards: s.guards, conditions: s.conditions, raw: s.raw }))
+        .sort((x, y) => x.file.localeCompare(y.file) || x.line - y.line),
     }))
-    .sort((a, b) => b.sites.length - a.sites.length);
+    // ⚠️ THE KEY IS THE TIEBREAK, AND WITHOUT IT THE ORDER IS WHATEVER THE SCAN PRODUCED.
+    .sort((a, b) => b.sites.length - a.sites.length || a.key.localeCompare(b.key));
 }
 
 function buildPhase2(pipelineFiles) {
   const { ts, program, checker } = createTsProgram();
   const sources = backendSources(program);
-  const sites = sources.flatMap((sf) => mathsSites(ts, sf));
+  // ⚠️ SORTED AT THE SOURCE, BECAUSE `getSourceFiles()` ORDER IS NOT STABLE — see the header note.
+  const sites = sources.flatMap((sf) => mathsSites(ts, sf))
+    .sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
   const { records, files } = buildNodes(ts, program, checker);
 
   // Keep the node set bounded AND useful: a node is in the artefact if the pipeline can reach it
   // (it lives in a file Phase 1 implicated) or if it computes a ratio we are reporting.
   const mathsFiles = new Set(sites.map((s) => s.file));
-  const nodes = records.filter((r) => pipelineFiles.has(r.file) || mathsFiles.has(r.file));
+  const nodes = records
+    .filter((r) => pipelineFiles.has(r.file) || mathsFiles.has(r.file))
+    .sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 
   return {
     tsFiles: sources.length,
     declFiles: files,
     declarations: records.length,
     sites: sites.length,
+    // ⚠️ THE SCANNED FILE LIST IS IN THE ARTEFACT SO THAT "NOT IN THE DATASET" IS DECIDABLE.
+    // Without it a consumer can only say "the dataset has no row for this file", which conflates
+    // two different facts: the file EXISTS and touches none of the eleven tracked resources, or the
+    // path is STALE and the file is gone. The lab page hit exactly this — it flagged
+    // `risk-gating-engine.service.ts` as a possible dead path, and the file exists. Measured
+    // 2026-10-05. 546 paths cost ~40 KB on a 694 KB artefact and turn a guess into an answer.
+    files: sources.map((sf) => relOf(sf.fileName)).sort(),
     maths: {
       exact: groupBy(sites, (s) => s.exact),
       coarse: groupBy(sites, (s) => s.coarse),
@@ -641,13 +701,14 @@ function buildPhase2(pipelineFiles) {
       file: r.file, line: r.line, name: r.name,
       exported: r.exported, frameworkHook: r.frameworkHook,
       inputs: r.inputs, returns: r.returns, returnsDeclared: r.returnsDeclared,
-      consumers: r.consumers.slice(0, 3),
+      consumers: [...r.consumers].sort().slice(0, 3),
       consumerCount: r.consumers.length,
     })),
     // ── Q2 at NODE level: a function nothing calls, and that the framework does not call either ──
     unreferenced: nodes
       .filter((r) => r.consumers.length === 0 && !r.frameworkHook && !r.exported)
-      .map((r) => `${r.file}:${r.line} ${r.name}`),
+      .map((r) => `${r.file}:${r.line} ${r.name}`)
+      .sort(),
   };
 }
 
@@ -714,6 +775,8 @@ function selfTestPhase2(check, phase1) {
   // zeros, and every check it had still passed. "Finds nothing" and "found nothing to find" must
   // not be able to look alike here.
   check('phase 2 reads a real program (floor: >300 files)', p2.tsFiles >= 300);
+  check('the artefact lists the scanned files (so "not in the dataset" is decidable, not a guess)',
+    p2.files.length >= 300);
   check('phase 2 found ratio sites (floor: >=20)', p2.sites >= 20);
   check('phase 2 resolved real call sites (floor: at least one function has a consumer)',
     p2.nodes.some((n) => n.consumerCount > 0));
@@ -786,6 +849,23 @@ function selfTestPhase2(check, phase1) {
     !!rec && rec.consumerCount >= 1);
   check('unreferenced is a SHORTLIST, not a majority (>160 means the resolver regressed)',
     p2.unreferenced.length < 160);
+
+  // ── DETERMINISM. A gate that goes red on an unchanged tree is worse than no gate, so the
+  // ORDER the artefact is emitted in is asserted rather than trusted. Sorting by a key that is
+  // unique per entry is what makes the output reproducible regardless of the order
+  // `program.getSourceFiles()` happened to hand back.
+  const fileLine = (a, b) => a.file.localeCompare(b.file) || a.line - b.line;
+  const isOrdered = (arr, cmp) => arr.every((v, i) => i === 0 || cmp(arr[i - 1], v) <= 0);
+
+  check('nodes are emitted in a TOTAL order (file, line) — this is what makes the artefact reproducible',
+    isOrdered(p2.nodes, fileLine));
+  check('unreferenced is sorted — same reason',
+    isOrdered(p2.unreferenced, (a, b) => a.localeCompare(b)));
+  check('every maths group lists its sites in (file, line) order',
+    [...p2.maths.exact, ...p2.maths.coarse, ...p2.maths.idiom].every((g) => isOrdered(g.sites, fileLine)));
+  // ⚠️ CANARY — the predicate must be able to FAIL, or the three checks above are decorations.
+  check('CANARY — the ordering predicate reports an unsorted list as unsorted',
+    p2.nodes.length > 1 && !isOrdered([...p2.nodes].reverse(), fileLine));
 }
 
 /**
@@ -880,6 +960,7 @@ const phase2 = buildPhase2(p1Files);
 const json = JSON.stringify({ generatedAt: 'SOURCE-DERIVED', pipeline: model.pipeline.name,
   scanned: model.scanned, resources: model.byResource,
   phase2: { tsFiles: phase2.tsFiles, declarations: phase2.declarations, sites: phase2.sites,
+    files: phase2.files,
     mathsGroups: { exact: phase2.maths.exact.length, coarse: phase2.maths.coarse.length,
       idiom: phase2.maths.idiom.length },
     maths: phase2.maths, nodes: phase2.nodes, unreferenced: phase2.unreferenced } });
