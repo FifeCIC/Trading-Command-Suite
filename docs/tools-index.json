@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 175,
+  "count": 176,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -237,6 +237,17 @@
       "selfTest": false,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "generate-pipeline-map.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "PHASE 1 of #1071 (option C, proved on ONE pipeline).",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
       ]
     },
     {
