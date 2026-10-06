@@ -19,6 +19,7 @@ import { NotificationService } from '../notifications/notifications.service';
 // thing. If you are looking for the service that TRAILS stops, it is this file.
 import { StopAdjustmentRecorder } from '../trading/stop-guardian.service';
 import { SystemLogService } from '../system/log.service';
+import { shadowSuperTrend } from './shadow-supertrend';
 
 interface Mt5RawPosition {
   ticket: number;
@@ -1384,10 +1385,23 @@ export class StopGuardianService {
         const alignedAvg = alignedCount > 0 ? alignedSum / alignedCount : 0;
         const opposingAvg = opposingCount > 0 ? opposingSum / opposingCount : 0;
         const stopConfidence = Math.max(0, Math.round(alignedAvg - opposingAvg));
+        // ⚠️ #1077 — SHADOW ONLY, and that is the whole point of it.
+        //
+        // `shadowSuperTrend` is computed from the SAME bars the four directives just scored, so
+        // both see one market view, and its reading is written beside the live breakdown. That is
+        // what turns "would a working indicator have cleared >= 55?" from an argument about source
+        // into a question a real window can answer.
+        //
+        // 🛑 NOTHING READS IT. It is not an input to `stopConfidence`, it changes no stop, and
+        // deleting this block changes no decision. When the comparison reports, either the
+        // incumbent is replaced (a maths change, with its own copied configuration) or this is
+        // deleted. Until then its output is UNMEASURED — do not cite it as a result.
+        const shadowSupertrend = shadowSuperTrend(bars);
         this.consensusBreakdown.set(
           pos.ticket,
           `aligned=[${alignedIds.join(',') || 'none'}] opposing=[${opposingIds.join(',') || 'none'}] ` +
-            `neutral=[${neutralIds.join(',') || 'none'}]`,
+            `neutral=[${neutralIds.join(',') || 'none'}] ` +
+            `shadow=[supertrend:${shadowSupertrend ?? 'undetermined'}]`,
         );
 
         // 8. ATR-based recommended SL — with the #927 DISTANCE FLOOR

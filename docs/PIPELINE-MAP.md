@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **546** backend source files (specs excluded). Two access paths, because one
+Scanned **547** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**546** source files · **2875** declarations · **361** ratio sites · **1472** nodes · **129** unreferenced
+**547** source files · **2878** declarations · **362** ratio sites · **1475** nodes · **129** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -124,9 +124,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:1884` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:1898` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:1885` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:1899` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:212` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
@@ -234,7 +234,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 7 sites — `((V1-V2)/V1)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:1861` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:1875` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
@@ -267,19 +267,19 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/automation-loop.service.ts:2330` — `recordPaperTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/stop-guardian.service.ts:1765` — `observeSimulatedTsl()` → `triggerPrice`
+- `nest/src/modules/automation/stop-guardian.service.ts:1779` — `observeSimulatedTsl()` → `triggerPrice`
   - `isBuy?best*(1-distancePct/100):best*(1+distancePct/100)`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:1985` — `protectiveSl()` → `protective`
+- `nest/src/modules/automation/stop-guardian.service.ts:1999` — `protectiveSl()` → `protective`
   - `side==='BUY'?entry*(1-slPct/100):entry*(1+slPct/100)`
   - conditions: `side==='BUY'`
 
 ### 4 sites — `(((C?V1-V2:V2-V1))/V2)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:1752` — `observeSimulatedTsl()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:1766` — `observeSimulatedTsl()` → `profitPct`
   - `((isBuy?pos.priceCurrent-pos.priceOpen:pos.priceOpen-pos.priceCurrent)/pos.priceOpen)*100`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:1870` — `observeExhaustion()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:1884` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
 - `nest/src/modules/scoring/exit-consensus.service.ts:373` — `assessOne()` → `profitPct`
@@ -420,9 +420,9 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:1884` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:1898` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:1885` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:1899` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:212` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
@@ -527,6 +527,26 @@ Identical after normalisation: variable names differ, the computation does not.
   - guarded by: `closes.length>11`
 - … and 4 more
 
+### 11 sites — `(V1+V2)/2`
+
+- `nest/src/modules/automation/shadow-supertrend.ts:100` — `shadowSuperTrend()` → `hl2`
+  - `(bars[i].high+bars[i].low)/2`
+- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
+  - `(gap.top+gap.bottom)/2`
+- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
+  - `(b.high+b.low)/2`
+- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
+  - `(bar.open+bar.close)/2`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `avgDist`
+  - `(dist20+dist50)/2`
+- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:51` — `calculate()` → `prevMidpoint`
+  - `(closes[last-1]+opens[last-1])/2`
+- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:69` — `calculate()` → `prevMidpoint`
+  - `(prev.high+prev.low)/2`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:332` — `calculate()` → `midBand`
+  - `(upperBand+lowerBand)/2`
+- … and 3 more
+
 ### 10 sites — `(V1-V2)/V2`
 
 - `nest/src/modules/directives/implementations/ema-structure.directive.ts:46` — `calculate()` → `priceSep`
@@ -545,26 +565,6 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(b2.close-b1.close)/b1.close`
 - `nest/src/modules/directives/implementations/three-soldiers-pattern.directive.ts:95` — `calculate()` → `progression2`
   - `(b3.close-b2.close)/b2.close`
-- … and 2 more
-
-### 10 sites — `(V1+V2)/2`
-
-- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
-  - `(gap.top+gap.bottom)/2`
-- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
-  - `(b.high+b.low)/2`
-- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
-  - `(bar.open+bar.close)/2`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `avgDist`
-  - `(dist20+dist50)/2`
-- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:51` — `calculate()` → `prevMidpoint`
-  - `(closes[last-1]+opens[last-1])/2`
-- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:69` — `calculate()` → `prevMidpoint`
-  - `(prev.high+prev.low)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:332` — `calculate()` → `midBand`
-  - `(upperBand+lowerBand)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:445` — `calculate()` → `midline`
-  - `(lastHigh+lastLow)/2`
 - … and 2 more
 
 ### 10 sites — `(V1+V2+V3)/3`
@@ -638,7 +638,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 37 sites — `((VN-VN)/VN)*N`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:1861` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:1875` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/backtest/backtest.controller.ts:415` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -666,9 +666,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:1884` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:1898` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:1885` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:1899` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:212` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
@@ -750,6 +750,26 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - guarded by: `closes.length>11`
 - … and 4 more
 
+### 11 sites — `(VN+VN)/N`
+
+- `nest/src/modules/automation/shadow-supertrend.ts:100` — `shadowSuperTrend()` → `hl2`
+  - `(bars[i].high+bars[i].low)/2`
+- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
+  - `(gap.top+gap.bottom)/2`
+- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
+  - `(b.high+b.low)/2`
+- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
+  - `(bar.open+bar.close)/2`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `avgDist`
+  - `(dist20+dist50)/2`
+- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:51` — `calculate()` → `prevMidpoint`
+  - `(closes[last-1]+opens[last-1])/2`
+- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:69` — `calculate()` → `prevMidpoint`
+  - `(prev.high+prev.low)/2`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:332` — `calculate()` → `midBand`
+  - `(upperBand+lowerBand)/2`
+- … and 3 more
+
 ### 11 sites — `Math.abs(VN-VN)/VN`
 
 - `nest/src/modules/directives/implementations/fibonacci-levels.directive.ts:94` — `calculate()` → `distPct`
@@ -769,26 +789,6 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/directives/implementations/ma-crossover.directive.ts:67` — `calculate()` → `separation`
   - `Math.abs(currFast-currSlow)/currSlow`
 - … and 3 more
-
-### 10 sites — `(VN+VN)/N`
-
-- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
-  - `(gap.top+gap.bottom)/2`
-- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
-  - `(b.high+b.low)/2`
-- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
-  - `(bar.open+bar.close)/2`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `avgDist`
-  - `(dist20+dist50)/2`
-- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:51` — `calculate()` → `prevMidpoint`
-  - `(closes[last-1]+opens[last-1])/2`
-- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:69` — `calculate()` → `prevMidpoint`
-  - `(prev.high+prev.low)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:332` — `calculate()` → `midBand`
-  - `(upperBand+lowerBand)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:445` — `calculate()` → `midline`
-  - `(lastHigh+lastLow)/2`
-- … and 2 more
 
 ### 10 sites — `(VN+VN+VN)/N`
 
@@ -845,10 +845,10 @@ A difference and its mirror in one expression. **This is the tier that finds a c
 - `nest/src/common/trading/peak.ts:96` — `profitPctFor()` → `raw`
   - `isShort?(entry-px)/entry:(px-entry)/entry`
   - conditions: `isShort`
-- `nest/src/modules/automation/stop-guardian.service.ts:1752` — `observeSimulatedTsl()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:1766` — `observeSimulatedTsl()` → `profitPct`
   - `((isBuy?pos.priceCurrent-pos.priceOpen:pos.priceOpen-pos.priceCurrent)/pos.priceOpen)*100`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:1870` — `observeExhaustion()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:1884` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
 - `nest/src/modules/scoring/exit-consensus.service.ts:373` — `assessOne()` → `profitPct`
@@ -892,8 +892,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/automation-loop.service.ts:1877 getClose`
 - `nest/src/modules/automation/automation-loop.service.ts:339 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:726 safe`
-- `nest/src/modules/automation/stop-guardian.service.ts:1845 progress`
-- `nest/src/modules/automation/stop-guardian.service.ts:568 flat`
+- `nest/src/modules/automation/stop-guardian.service.ts:1859 progress`
+- `nest/src/modules/automation/stop-guardian.service.ts:569 flat`
 - `nest/src/modules/backtest/backtest.controller.ts:310 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:238 pick`
 - `nest/src/modules/directives/directives.service.ts:243 prepare`
