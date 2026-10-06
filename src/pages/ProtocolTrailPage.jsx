@@ -14,6 +14,10 @@
 
 import { useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+// SymbolPickerField owns the shared "choose a symbol → write ?symbol=" behaviour. It lives in ONE
+// place because this page and SinglesMonitorPage had byte-identical copies of it
+// (INV-NO-NEW-DUPLICATION, 2026-10-06).
+import SymbolPickerField from '../components/SymbolPickerField';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
@@ -138,12 +142,22 @@ export default function ProtocolTrailPage() {
           </PageInfoPopover>
           </h1>
         </div>
+        {/**
+          * ⚠️ ENTRY POINT ADDED 2026-10-06.
+          * Owner, Page Walkthrough: *"It does not display anything."* The endpoint was never the
+          * problem — `GET /api/scoring/breakdown/:symbol` returns a full breakdown (verified live:
+          * score 8 for XAUUSD). The page read `?symbol=` and nothing else, so opening it from the
+          * navigation showed "No symbol selected" and pointed at the Symbols Ladder as the only way
+          * in. **A page whose only entrance is another page is invisible from the navigation it
+          * appears in** — the same defect as Single Symbol and Directive Viewer, fixed the same day.
+          */}
+        <SymbolPickerField value={symbol} />
       </header>
 
       {!symbol ? (
         <div className="dt-empty">
           <p>No symbol selected.</p>
-          <p className="dt-empty-hint">Click a score on the Symbols Ladder to see its directive breakdown here.</p>
+          <p className="dt-empty-hint">Search for a symbol above, or click a score on the Symbols Ladder.</p>
         </div>
       ) : isLoading ? (
         <LoadingSkeleton variant="card" count={4} />

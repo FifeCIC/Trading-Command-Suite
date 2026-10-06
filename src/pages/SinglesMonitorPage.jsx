@@ -16,6 +16,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+// SymbolPickerField owns the shared "choose a symbol → write ?symbol=" behaviour. It wraps
+// SymbolAutocomplete (a MULTI-symbol input by design) and takes the FIRST parsed ticker, which is
+// what this page did inline until the wrapper moved to one place (INV-NO-NEW-DUPLICATION, 2026-10-06).
+import SymbolPickerField from '../components/SymbolPickerField';
 import { useQuery } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
 import { motion } from 'motion/react';
@@ -117,18 +121,27 @@ export default function SinglesMonitorPage() {
 
       <header className="dt-header">
         <div>
-          <h1>Singles Monitor
+          <h1>Single Symbol
           <PageInfoPopover>
             Live directive-level breakdown of a single symbol scored by a single protocol. Refreshes in sync with the automation loop. Use Protocol Trail for fixed historical runs.
           </PageInfoPopover>
           </h1>
         </div>
+        {/**
+          * ⚠️ THE PAGE WAS REACHABLE ONLY BY URL UNTIL 2026-10-06 (owner, Page Walkthrough:
+          * "Add a symbol search and rename the page to Single Symbol"). It read `?symbol=` from the
+          * query string, so arriving from the nav produced "No symbol selected" with no way to pick
+          * one — a page whose only entrance was a link you had to already know.
+          * Selection writes the URL parameter rather than local state, so a chosen symbol stays
+          * deep-linkable and shareable, which is the property the page was built around.
+          */}
+        <SymbolPickerField value={symbol} />
       </header>
 
       {!symbol ? (
         <div className="dt-empty">
           <p>No symbol selected.</p>
-          <p className="dt-empty-hint">Open via ?symbol=XAUUSD&protocol=xau-speed-v1 to monitor a single symbol/protocol pair live.</p>
+          <p className="dt-empty-hint">Search for a symbol above to monitor it live, or open via ?symbol=XAUUSD&protocol=xau-speed-v1.</p>
         </div>
       ) : isLoading ? (
         <LoadingSkeleton variant="card" count={4} />

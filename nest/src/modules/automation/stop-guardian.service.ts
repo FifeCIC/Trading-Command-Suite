@@ -1465,6 +1465,9 @@ export class StopGuardianService {
       this.state.guardedPositions = guarded;
       // #1018 — the attribution OUTCOME, served beside the positions it produced.
       this.state.ownerAttribution = { viaMagic, viaComment, unresolved };
+      // #1056 — make the DECLINES durable. `guardedPositions` answers "why not?" only while the
+      // position is open, because the array is rebuilt every tick (L1104) and lives in memory.
+      this.logDeclines(guarded);
     } catch (err) {
       this.logger.error(`Guardian tick error: ${(err as Error).message}`);
     }
@@ -1480,6 +1483,74 @@ export class StopGuardianService {
   async runNow() {
     const adjustments = await this.tick();
     return { run: true, adjustments };
+  }
+
+  // ── #1056 — the guardian's DECLINES, made durable ──────────────────────────────────────────
+  /**
+   * `stop_adjustment` records what the guardian DID. Nothing recorded what it DECLINED, so once a
+   * position closed, *"why was this never trailed?"* was unanswerable — which is how FRA40 stayed
+   * unexplained while five of its six broker-3 peers were being trailed normally.
+   *
+   * `guardedPositions[].outcome` (#1145a33) answers it **only while the position is open**: the
+   * array is rebuilt each tick and held in memory, so the reason dies with the tick. This writes it
+   * somewhere durable.
+   *
+   * ⚠️ BOUNDED BY STATE CHANGES, NOT BY TICKS. A line is written when a position ENTERS a decline,
+   * when the decline REASON changes, and when the decline ENDS. A position sitting `below-threshold`
+   * for an hour writes one line, not thirty. `adjusted`/`at-target` oscillation writes none at all —
+   * neither is a decline, and actions are already durable in `stop_adjustment`.
+   *
+   * ⚠️ WHY THE REASONS ARE KEPT SEPARATE rather than collapsed into "declined": a reader deciding
+   * whether a position is protected needs to tell `no-bars` (the feed is short) from
+   * `below-threshold` (the guardian looked and chose not to act). Those are different facts and this
+   * is the repo's own rule about not collapsing them.
+   */
+  private static readonly DECLINE_OUTCOMES: ReadonlySet<GuardedPositionOutcome> = new Set([
+    'no-bars',
+    'no-protective-level',
+    'wick-fakeout',
+    'distance-refused',
+    'below-threshold',
+    'no-recommendation',
+  ]);
+
+  /** Last outcome SEEN per ticket, so a transition can be described rather than just stated. */
+  private lastOutcome = new Map<number, GuardedPositionOutcome>();
+
+  private logDeclines(guarded: GuardedPosition[]): void {
+    // `syslog` is an OPTIONAL injection (see the constructor) — its absence is not an error here.
+    if (!this.syslog) return;
+    const live = new Set<number>();
+
+    for (const g of guarded) {
+      live.add(g.ticket);
+      const now = g.outcome;
+      const was = this.lastOutcome.get(g.ticket);
+      const nowDeclined = StopGuardianService.DECLINE_OUTCOMES.has(now);
+      const wasDeclined = was !== undefined && StopGuardianService.DECLINE_OUTCOMES.has(was);
+      const where = `${g.symbol} broker=${g.brokerId ?? '?'} ticket=${g.ticket} side=${g.side}`;
+
+      if (nowDeclined && (!wasDeclined || was !== now)) {
+        this.syslog.info(
+          'StopGuardianService',
+          `DECLINED ${where} outcome=${now}${wasDeclined && was !== now ? ` (was ${was})` : ''} ` +
+            `consensus=${g.stopConfidence} sl=${g.currentSl ?? 'none'} rec=${g.recommendedSl ?? 'none'}`,
+          'trading',
+        );
+      } else if (wasDeclined && !nowDeclined) {
+        this.syslog.info(
+          'StopGuardianService',
+          `MANAGED ${where} outcome=${now} (was ${was}) — decline ended`,
+          'trading',
+        );
+      }
+
+      this.lastOutcome.set(g.ticket, now);
+    }
+
+    // A closed position must not pin memory forever, and must not let a recycled ticket inherit
+    // the old state — a new position on the same ticket starts with no history and logs afresh.
+    for (const t of [...this.lastOutcome.keys()]) if (!live.has(t)) this.lastOutcome.delete(t);
   }
 
   getState(): GuardianState {
