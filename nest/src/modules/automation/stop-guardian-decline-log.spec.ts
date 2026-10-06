@@ -143,4 +143,38 @@ describe('StopGuardianService — durable decline log (#1056)', () => {
     const bare = build(undefined);
     expect(() => call(bare, [pos()])).not.toThrow();
   });
+
+  // ── #1056, second half — the consensus INPUTS, because the number cannot be reconstructed ──────
+  //
+  // ⚠️ MEASURED BEFORE THIS WAS WRITTEN: re-deriving the live consensus from
+  // `POST /api/directives/:id/test` reproduced only **9 of 12** guarded positions. That route reads
+  // DB bars; the guardian reads 30 bars from the position's OWN bridge; and the value moves between
+  // the two observations. So a decline line carrying `consensus=0` and nothing else is a number a
+  // reader can neither check nor act on.
+
+  it('carries the directive breakdown that produced the consensus', () => {
+    service.consensusBreakdown.set(
+      92748259,
+      'aligned=[supertrend:55] opposing=[chandelier-exit:55] neutral=[atr-trailing-stop,wick-filter]',
+    );
+    call(service, [pos()]);
+
+    expect(lines(syslog)[0]).toContain('aligned=[supertrend:55]');
+    expect(lines(syslog)[0]).toContain('opposing=[chandelier-exit:55]');
+    expect(lines(syslog)[0]).toContain('neutral=[atr-trailing-stop,wick-filter]');
+  });
+
+  it('omits the breakdown when none was computed for that ticket, rather than inventing one', () => {
+    call(service, [pos()]);
+    expect(lines(syslog)[0]).not.toContain('aligned=[');
+  });
+
+  it('a closed position takes its breakdown with it — the map is pruned beside the outcome map', () => {
+    service.consensusBreakdown.set(92748259, 'aligned=[supertrend:55] opposing=[none] neutral=[wick-filter]');
+    call(service, [pos()]);
+    expect(service.consensusBreakdown.size).toBe(1);
+
+    call(service, []);
+    expect(service.consensusBreakdown.size).toBe(0);
+  });
 });

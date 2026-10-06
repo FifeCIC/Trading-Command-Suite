@@ -1308,26 +1308,52 @@ export class StopGuardianService {
         //    must be aligned with the position's side (bullish helps a BUY,
         //    bearish helps a SELL). Opposing evidence reduces confidence.
         //    Missing/neutral directives are "no evidence", never a neutral 50.
-        const directives = [atrStop, superTrend, chandelier, wickFilter];
+        //
+        // ⚠️ #1056 — THE NAMES ARE COLLECTED BESIDE THE SCORES, and that is the point: the number
+        // alone cannot be checked. Measured 2026-10-06, re-deriving this from
+        // `POST /api/directives/:id/test` reproduced only **9 of 12** live positions — because that
+        // route reads DB bars while this one reads 30 bars from the position's OWN bridge, and
+        // because the live value moves between the two observations. **So an outside reader cannot
+        // reconstruct which directives drove a decision, and the decision must therefore carry its
+        // own inputs.** The breakdown is written to the canonical log with the decline.
+        const directives: Array<[string, any]> = [
+          ['atr-trailing-stop', atrStop],
+          ['supertrend', superTrend],
+          ['chandelier-exit', chandelier],
+          ['wick-filter', wickFilter],
+        ];
         let alignedSum = 0;
         let alignedCount = 0;
         let opposingSum = 0;
         let opposingCount = 0;
-        for (const d of directives) {
-          if (!d || d.signalClass === 'neutral') continue;
+        const alignedIds: string[] = [];
+        const opposingIds: string[] = [];
+        const neutralIds: string[] = [];
+        for (const [id, d] of directives) {
+          if (!d || d.signalClass === 'neutral') {
+            neutralIds.push(id);
+            continue;
+          }
           const isBullish = d.signalClass === 'bullish';
           const aligned = side === 'BUY' ? isBullish : !isBullish;
           if (aligned) {
             alignedSum += d.score;
             alignedCount += 1;
+            alignedIds.push(`${id}:${d.score}`);
           } else {
             opposingSum += d.score;
             opposingCount += 1;
+            opposingIds.push(`${id}:${d.score}`);
           }
         }
         const alignedAvg = alignedCount > 0 ? alignedSum / alignedCount : 0;
         const opposingAvg = opposingCount > 0 ? opposingSum / opposingCount : 0;
         const stopConfidence = Math.max(0, Math.round(alignedAvg - opposingAvg));
+        this.consensusBreakdown.set(
+          pos.ticket,
+          `aligned=[${alignedIds.join(',') || 'none'}] opposing=[${opposingIds.join(',') || 'none'}] ` +
+            `neutral=[${neutralIds.join(',') || 'none'}]`,
+        );
 
         // 8. ATR-based recommended SL — with the #927 DISTANCE FLOOR
         //
@@ -1517,6 +1543,16 @@ export class StopGuardianService {
   /** Last outcome SEEN per ticket, so a transition can be described rather than just stated. */
   private lastOutcome = new Map<number, GuardedPositionOutcome>();
 
+  /**
+   * #1056 — WHICH directives produced `stopConfidence`, per ticket, captured where it is computed.
+   *
+   * ⚠️ Not derivable from outside, and that was MEASURED rather than assumed: re-deriving the live
+   * consensus from `POST /api/directives/:id/test` reproduced only **9 of 12** positions. That route
+   * reads DB bars while the guardian reads 30 bars from the position's OWN bridge, and the value
+   * moves between the two observations. A number nobody can reconstruct has to carry its inputs.
+   */
+  private consensusBreakdown = new Map<number, string>();
+
   private logDeclines(guarded: GuardedPosition[]): void {
     // `syslog` is an OPTIONAL injection (see the constructor) — its absence is not an error here.
     if (!this.syslog) return;
@@ -1529,12 +1565,16 @@ export class StopGuardianService {
       const nowDeclined = StopGuardianService.DECLINE_OUTCOMES.has(now);
       const wasDeclined = was !== undefined && StopGuardianService.DECLINE_OUTCOMES.has(was);
       const where = `${g.symbol} broker=${g.brokerId ?? '?'} ticket=${g.ticket} side=${g.side}`;
+      const inputs = this.consensusBreakdown.get(g.ticket);
 
       if (nowDeclined && (!wasDeclined || was !== now)) {
         this.syslog.info(
           'StopGuardianService',
           `DECLINED ${where} outcome=${now}${wasDeclined && was !== now ? ` (was ${was})` : ''} ` +
-            `consensus=${g.stopConfidence} sl=${g.currentSl ?? 'none'} rec=${g.recommendedSl ?? 'none'}`,
+            `consensus=${g.stopConfidence} sl=${g.currentSl ?? 'none'} rec=${g.recommendedSl ?? 'none'}` +
+            // The INPUTS to that consensus. Without them a reader can see that the gate failed but
+            // not what would have to change for it to pass.
+            (inputs ? ` ${inputs}` : ''),
           'trading',
         );
       } else if (wasDeclined && !nowDeclined) {
@@ -1550,7 +1590,12 @@ export class StopGuardianService {
 
     // A closed position must not pin memory forever, and must not let a recycled ticket inherit
     // the old state — a new position on the same ticket starts with no history and logs afresh.
-    for (const t of [...this.lastOutcome.keys()]) if (!live.has(t)) this.lastOutcome.delete(t);
+    for (const t of [...this.lastOutcome.keys()]) {
+      if (!live.has(t)) {
+        this.lastOutcome.delete(t);
+        this.consensusBreakdown.delete(t);
+      }
+    }
   }
 
   getState(): GuardianState {
