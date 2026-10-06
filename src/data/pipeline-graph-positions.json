@@ -8,5 +8,10 @@
   { "id": "portfolio", "x": 1028, "y": 489 },
   { "id": "risk", "x": 73, "y": 502 },
   { "id": "alerts", "x": 331, "y": 650 },
-  { "id": "providers", "x": 581, "y": 465 }
+  { "id": "providers", "x": 581, "y": 465 },
+  { "id": "directives", "x": 1340, "y": 60 },
+  { "id": "protocols", "x": 1340, "y": 260 },
+  { "id": "bots", "x": 1340, "y": 460 },
+  { "id": "bridge-mt5", "x": 940, "y": 700 },
+  { "id": "bridge-pepperstone", "x": 1200, "y": 700 }
 ]

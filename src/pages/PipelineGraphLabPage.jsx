@@ -19,20 +19,23 @@ function BgIconPortfolio() { return <svg viewBox="0 0 100 100" className="pg-bg-
 function BgIconRisk() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><polygon points="50,10 90,85 10,85" strokeWidth="1.8" fill="none" opacity="0.4"/><line x1="50" y1="40" x2="50" y2="70" strokeWidth="2.5" opacity="0.35"/><circle cx="50" cy="75" r="3" opacity="0.4"/><rect x="10" y="85" width="80" height="5" rx="2" opacity="0.2"/></svg>; }
 function BgIconAlerts() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><path d="M30,75 L45,35 L60,60 L75,20" strokeWidth="2" fill="none" opacity="0.45"/><circle cx="30" cy="75" r="4" opacity="0.5"/><circle cx="45" cy="35" r="4" opacity="0.4"/><circle cx="60" cy="60" r="4" opacity="0.35"/><circle cx="75" cy="20" r="4" opacity="0.3"/></svg>; }
 function BgIconProviders() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><circle cx="25" cy="30" r="15" strokeWidth="1.5" fill="none" opacity="0.4"/><circle cx="75" cy="30" r="15" strokeWidth="1.5" fill="none" opacity="0.35"/><circle cx="50" cy="70" r="15" strokeWidth="1.5" fill="none" opacity="0.3"/><line x1="38" y1="38" x2="52" y2="58" strokeWidth="1" opacity="0.25"/><line x1="62" y1="38" x2="52" y2="58" strokeWidth="1" opacity="0.22"/></svg>; }
-
-const BG_ICON_COMPONENTS = {
-  data: BgIconData,
-  scoring: BgIconScoring,
-  signals: BgIconSignals,
-  automation: BgIconAutomation,
-  execution: BgIconExecution,
-  db: BgIconDatabase,
-};
+// Used by the two per-bridge nodes. The bridges themselves are PYTHON (`scripts/mt5-bridge/`) and sit
+// outside the TypeScript map, so those nodes show LIVE health instead of a derived input/output block.
+function BgIconBridge() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><path d="M20,50 L45,50" strokeWidth="2.5" opacity="0.45"/><path d="M55,50 L80,50" strokeWidth="2.5" opacity="0.45"/><rect x="42" y="40" width="16" height="20" rx="3" strokeWidth="1.8" fill="none" opacity="0.5"/><circle cx="20" cy="50" r="5" strokeWidth="1.6" fill="none" opacity="0.4"/><circle cx="80" cy="50" r="5" strokeWidth="1.6" fill="none" opacity="0.4"/><path d="M30,28 L44,28" strokeWidth="1.2" opacity="0.25"/><path d="M56,72 L70,72" strokeWidth="1.2" opacity="0.25"/></svg>; }
 
 // ── Node position loading — JSON file is canonical, inline x/y are dev defaults ──
 function applyPositions(nodes) {
   const posMap = {};
-  try { for (const p of PIPELINE_POSITIONS) posMap[p.id] = { x: p.x, y: p.y }; } catch {}
+  try {
+    for (const p of PIPELINE_POSITIONS) posMap[p.id] = { x: p.x, y: p.y };
+  } catch (err) {
+    // ⚠️ WAS AN EMPTY `catch {}` UNTIL 2026-10-06. An empty catch is the exact defect this repo
+    // keeps re-finding: the nodes still render at their inline x/y, so a failure to read saved
+    // positions is indistinguishable from having none — plausible output, no error. It cannot
+    // throw in practice (PIPELINE_POSITIONS is a JSON module import, validated at build), which is
+    // why nobody noticed. Say so rather than assume.
+    console.warn('[pipeline-graph] saved positions could not be applied; using inline defaults', err);
+  }
   return nodes.map((n) => ({ ...n, x: posMap[n.id]?.x ?? n.x, y: posMap[n.id]?.y ?? n.y }));
 }
 
@@ -203,6 +206,112 @@ const SAMPLE_NODES = [
       files: ['nest/src/modules/providers/providers.service.ts', 'nest/src/modules/providers/provider-degradation.service.ts', 'nest/src/modules/providers/rate-limit-governor.service.ts'],
     },
   },
+
+  // ── ADDED 2026-10-06 at the owner's request ───────────────────────────────────────────────
+  // They asked to "break down the engineering and allow clicking on other features" — Directives,
+  // the protocol system, Bots at the trading end, and one node per bridge.
+  //
+  // ⚠️ THE IO ON EVERY ONE OF THESE IS DERIVED, not written here: it comes from this node's
+  // `docs.files` via `src/core/pipeline-map.js`, which reads the generated map. Adding a node costs
+  // one declared file list and nothing else — that is what keeps a growing node list from becoming
+  // a fifth hand-maintained surface.
+  {
+    id: 'directives',
+    label: 'Directive Library',
+    subtype: 'condition-detector · one input per idea',
+    icon: '📐', bgIcon: BgIconData,
+    color: '#22c55e', health: 'unknown',
+    variant: 'titlebar',
+    x: 1340, y: 60,
+    stats: { shape: 'pure scoring input', outcome: 'recorded per run' },
+    docs: {
+      description: 'Every input to a score is a directive — a small function that reads bars, and returns a magnitude with a DIRECTION. A directive never knows what it is voting on, and never sees the portfolio. The composite is the sum of their magnitudes, weighted by maxScore.',
+      endpoints: ['GET /api/directives', 'GET /api/directives/impact', 'GET /api/directives/outcomes'],
+      tables: ['DirectiveOutcome', 'SymbolProtocolAffinity', 'DirectiveConfig'],
+      files: [
+        'nest/src/modules/directives/directives.service.ts',
+        'nest/src/modules/directives/condition-detector.service.ts',
+        'nest/src/modules/scoring/directive-config.service.ts',
+        'nest/src/modules/scoring/directive-impact.service.ts',
+      ],
+    },
+  },
+  {
+    id: 'protocols',
+    label: 'Protocol System',
+    subtype: 'gating · health · consensus',
+    icon: '🧩', bgIcon: BgIconScoring,
+    color: '#22c55e', health: 'unknown',
+    variant: 'titlebar',
+    x: 1340, y: 260,
+    stats: { shape: 'a declared set of directives', unit: 'percent of CONFIGURED capacity' },
+    docs: {
+      description: 'A protocol is the declared set of directives a symbol is scored against, plus its gate. The percentage is earned ÷ CONFIGURED capacity — never an observed sum, which shrinks when a directive goes quiet and makes the same conditions score differently each tick.',
+      endpoints: ['GET /api/scoring/protocols', 'GET /api/scoring/gated/protocols', 'GET /api/scoring/gated/thresholds'],
+      tables: ['Protocol', 'ScoreSnapshot', 'StrategyProtocol', 'ProtocolRun'],
+      files: [
+        'nest/src/modules/scoring/protocol-gating.service.ts',
+        'nest/src/modules/scoring/protocol-health.service.ts',
+        'nest/src/modules/scoring/protocol-db.service.ts',
+        'nest/src/modules/scoring/protocol-consensus.service.ts',
+      ],
+    },
+  },
+  {
+    id: 'bots',
+    label: 'Bots & Strategies',
+    subtype: 'trading_strategy — the dispatch authority',
+    icon: '🤖', bgIcon: BgIconAutomation,
+    color: '#22c55e', health: 'unknown',
+    variant: 'titlebar',
+    x: 1340, y: 460,
+    stats: { bots: '—', mode: 'auto | semi-auto | manual' },
+    docs: {
+      description: 'A bot IS its whole configuration — protocol, role, market, broker and execution policy. Any difference makes a different bot; two byte-identical bots are a duplicate, not a merge. ⚠️ `trading_strategy.mode` is the ONLY dispatch authority — no other mode field decides whether an order is placed.',
+      endpoints: ['GET /api/trading/strategies', 'POST /api/trading/strategies/seed?dryRun=true'],
+      tables: ['TradingStrategy', 'StrategyProtocol', 'StrategyEvaluation', 'SignalQueue'],
+      files: [
+        'nest/src/modules/trading/trading-strategy.service.ts',
+        'nest/src/modules/trading/signal-queue.service.ts',
+        'nest/src/modules/trading/bot-performance.service.ts',
+        'nest/src/modules/trading/pyramid-policy.service.ts',
+      ],
+    },
+  },
+  {
+    id: 'bridge-mt5',
+    label: 'Bridge · MetaQuotes',
+    subtype: 'broker 2 · Python bridge',
+    icon: '🔌', bgIcon: BgIconBridge,
+    color: '#22c55e', health: 'unknown',
+    variant: 'titlebar',
+    x: 940, y: 700,
+    bridge: { brokerId: 2 },
+    stats: { account: '—', tradeAllowed: '—' },
+    docs: {
+      description: 'The Python bridge (scripts/mt5-bridge/) holding one MetaTrader terminal. It is single-threaded BY DESIGN, so a blocking mt5.initialize() holds the interpreter and a watchdog thread never runs — which is why recovery is bounded at the call, not supervised. ⚠️ It sits OUTSIDE the TypeScript map, so no input/output can be derived for it; this node shows LIVE health instead.',
+      endpoints: ['GET /api/providers/mt5/brokers', 'GET /api/providers/mt5/diagnostics', 'POST /api/providers/mt5/reconnect'],
+      tables: ['BridgeEvent'],
+      files: [],
+    },
+  },
+  {
+    id: 'bridge-pepperstone',
+    label: 'Bridge · Pepperstone',
+    subtype: 'broker 3 · Python bridge',
+    icon: '🔌', bgIcon: BgIconBridge,
+    color: '#f59e0b', health: 'unknown',
+    variant: 'titlebar',
+    x: 1200, y: 700,
+    bridge: { brokerId: 3 },
+    stats: { account: '—', tradeAllowed: '—' },
+    docs: {
+      description: 'The PepperstoneUK-Demo bridge, same Python process shape as broker 2. ⚠️ `tradeAllowed: false` here means the app CANNOT place orders on this account even though it is connected and pricing — that is the terminal\'s AutoTrading switch, not an app setting. Connected and tradeable are different facts and this node reports both.',
+      endpoints: ['GET /api/providers/mt5/brokers', 'GET /api/providers/mt5/diagnostics', 'POST /api/providers/mt5/reconnect'],
+      tables: ['BridgeEvent'],
+      files: [],
+    },
+  },
 ];
 
 // ── Connections ──────────────────────────────────────────
@@ -221,6 +330,15 @@ const CONNECTIONS = [
   { from: 'portfolio', to: 'risk', label: 'Exposure', flow: 'Position values → risk calculations' },
   { from: 'risk', to: 'alerts', label: 'Breaches', flow: 'Drawdown/exposure breaches → alert triggers' },
   { from: 'risk', to: 'automation', label: 'Circuit State', flow: 'Breaker status (READY/TRIPPED) → automation gate' },
+  // ── Connections for the nodes added 2026-10-06 ──
+  { from: 'directives', to: 'scoring', label: 'Directive Votes', flow: 'Every directive is an input to the composite — a magnitude and a direction, never a percentage' },
+  { from: 'protocols', to: 'scoring', label: 'Declared Sets', flow: 'The protocol declares WHICH directives run; the denominator is the CONFIGURED capacity, not an observed sum' },
+  { from: 'signals', to: 'bots', label: 'Queue', flow: 'Ranked signals enter strategy_signal_queue, routed BY SUBSCRIPTION — a bot with no strategy_protocol row never trades' },
+  { from: 'bots', to: 'automation', label: 'Dispatch Authority', flow: 'trading_strategy.mode decides dispatch; no other mode field is read' },
+  { from: 'bridge-mt5', to: 'execution', label: 'broker 2', flow: 'Orders, positions and candles for every symbol routed to broker 2' },
+  { from: 'bridge-pepperstone', to: 'execution', label: 'broker 3', flow: 'Orders, positions and candles for every symbol routed to broker 3' },
+  { from: 'providers', to: 'bridge-mt5', label: 'MetaQuotes', flow: 'The provider network talks to each bridge over HTTP' },
+  { from: 'providers', to: 'bridge-pepperstone', label: 'Pepperstone', flow: 'The provider network talks to each bridge over HTTP' },
 ];
 
 const HEALTH_COLORS = {
@@ -489,6 +607,105 @@ function NodeIO({ node, pmap, pmapState }) {
   );
 }
 
+/**
+ * NodeBridge() — the per-bridge nodes' equivalent of NodeIO.
+ *
+ * WHY THIS EXISTS SEPARATELY: the MT5 bridges are PYTHON (`scripts/mt5-bridge/`), so they are not in
+ * the TypeScript source the pipeline map scans. `ioForFiles()` would return empty for them, and an
+ * empty IO block reads as "this node touches nothing" — a false claim. So these two nodes show LIVE
+ * health instead, and SAY WHY they have no derived IO.
+ *
+ * ⚠️ TWO FACTS THAT ARE NOT THE SAME FACT, and the whole reason this block is worth having:
+ * `connected` is whether the bridge is talking to the terminal; `tradeAllowed` is whether the
+ * terminal will let it place an order. Measured 2026-10-06 — broker 3 was `connected: true,
+ * balance: 1000, connectionState: 'ok'` with `tradeAllowed: false`. The app could take prices from
+ * it and could not trade on it, and nothing on the screen said so.
+ *
+ * Data source: GET /api/providers/mt5/brokers (same-origin — the bridge itself listens on :5000/5001
+ * and sends no CORS headers, so it must be read through the API, not fetched directly).
+ */
+function NodeBridge({ brokerId }) {
+  const { data, isError, isLoading } = useQuery({
+    queryKey: ['pipeline-graph', 'brokers'],
+    queryFn: () => apiGet('/api/providers/mt5/brokers').catch(() => null),
+    refetchInterval: 15000,
+  });
+
+  const head = (
+    <h4>
+      Bridge Health
+      <span className="pg-io-src">live · GET /api/providers/mt5/brokers</span>
+    </h4>
+  );
+
+  if (isLoading) {
+    return <section className="pg-overlay-section">{head}<p>Reading bridge health…</p></section>;
+  }
+
+  const list = Array.isArray(data?.brokers) ? data.brokers : [];
+  const broker = list.find((b) => Number(b.brokerId) === Number(brokerId));
+
+  // ⚠️ "Cannot judge" must never render as "fine" — and the two ways of failing to judge are
+  // DIFFERENT FACTS: the API not answering says nothing at all, while an answer that omits this
+  // broker is a configuration finding. Collapse them and the reader draws the wrong conclusion.
+  if (!broker) {
+    return (
+      <section className="pg-overlay-section">
+        {head}
+        <div className="pg-overlay-alert pg-overlay-alert--warn">
+          {isError || data == null ? (
+            <>The API did not answer, so nothing was measured. This is <strong>not</strong> a
+              statement that the bridge is down.</>
+          ) : (
+            <>The API answered and returned no broker <strong>{brokerId}</strong>. That is a
+              <strong> configuration</strong> fact, not an outage — the account is not in
+              <code> MT5_ACTIVE_BROKERS</code>.</>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  const h = broker.health || {};
+  const rows = [
+    ['connected', h.connected ? 'yes' : 'NO'],
+    ['account', h.account || '—'],
+    ['server', h.server || broker.server || '—'],
+    ['balance / equity', `${h.balance ?? '—'} / ${h.equity ?? '—'}`],
+    ['tradeAllowed', h.tradeAllowed ? 'true' : 'FALSE — will refuse orders'],
+    ['orderReady', h.orderReady ? 'true' : 'false'],
+    ['connection state', h.connectionState || '—'],
+    ['circuit breaker', `${h.circuitBreaker?.state ?? '—'} · ${h.circuitBreaker?.failures ?? 0} failures`],
+    ['bridge url', broker.url || '—'],
+  ];
+
+  return (
+    <section className="pg-overlay-section">
+      {head}
+      <p className="pg-io-note">
+        The bridge is Python and sits outside the scanned TypeScript source, so this node has
+        <strong> no derived inputs or outputs</strong> — live health instead. <strong>Connected and
+        tradeable are different facts</strong>, and a bridge can be one without the other.
+      </p>
+      {h.tradeAllowed === false && (
+        <div className="pg-overlay-alert pg-overlay-alert--warn">
+          Connected, priced, and <strong>cannot place an order</strong>. Every order to this account
+          will be refused. This is the MT5 terminal&apos;s AutoTrading switch — a click in
+          MetaTrader, not an app setting.
+        </div>
+      )}
+      <div className="pg-overlay-stat-grid">
+        {rows.map(([key, val]) => (
+          <div key={key} className="pg-overlay-stat">
+            <span className="pg-overlay-stat-val">{String(val)}</span>
+            <span className="pg-overlay-stat-key">{key}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Detail Overlay ───────────────────────────────────────
 function DetailOverlay({ node, onClose, pmap, pmapState }) {
   if (!node) return null;
@@ -516,7 +733,11 @@ function DetailOverlay({ node, onClose, pmap, pmapState }) {
           <div className="pg-overlay-alert pg-overlay-alert--warn">{d.conflicts}</div>
         )}
 
-        <NodeIO node={node} pmap={pmap} pmapState={pmapState} />
+        {/* A bridge node has no derivable IO (Python, outside the scanned source) — it shows live
+            health instead. See NodeBridge for why those are not the same block. */}
+        {node.bridge
+          ? <NodeBridge brokerId={node.bridge.brokerId} />
+          : <NodeIO node={node} pmap={pmap} pmapState={pmapState} />}
 
         <div className="pg-overlay-grid">
           {d.endpoints && (
@@ -641,6 +862,13 @@ export default function PipelineGraphLabPage() {
     queryFn: () => apiGet('/api/risk/overview').catch(() => null),
     refetchInterval: 30000,
   });
+  // Per-bridge health for the two bridge nodes. Same key as NodeBridge uses, so this is ONE fetch
+  // shared between the canvas (node ring colour + hover stats) and the overlay (full health).
+  const { data: brokersHealth } = useQuery({
+    queryKey: ['pipeline-graph', 'brokers'],
+    queryFn: () => apiGet('/api/providers/mt5/brokers').catch(() => null),
+    refetchInterval: 15000,
+  });
 
   // ── The generated map (#1071 Phase 3) ─────────────────────────────────────────────
   // Loaded on mount, lazily: the artefact is ~700 KB and this is the only page that reads it.
@@ -695,6 +923,36 @@ export default function PipelineGraphLabPage() {
     if (n.id === 'execution' && autoStatus) {
       updated.health = autoStatus.brokerConnected ? 'healthy' : 'down';
     }
+    // ── The nodes added 2026-10-06 ──
+    if (n.id === 'bots' && autoStatus) {
+      // ⚠️ `autoStatus.activeStrategies` is `trading_strategy` rows with `active = true` (#878), so
+      // the count here is BOTS — the same number the automation node shows, under the node that owns
+      // them. `trading_strategy.mode` is the dispatch authority this node is about.
+      const bots = Array.isArray(autoStatus.activeStrategies)
+        ? autoStatus.activeStrategies.length
+        : (autoStatus.activeStrategies ?? '—');
+      updated.stats = { bots: String(bots), loop: autoStatus.loopEnabled ? 'RUNNING' : 'PAUSED' };
+      updated.health = 'healthy';
+    }
+    if (n.bridge && brokersHealth) {
+      const list = Array.isArray(brokersHealth.brokers) ? brokersHealth.brokers : [];
+      const b = list.find((x) => Number(x.brokerId) === Number(n.bridge.brokerId));
+      if (b) {
+        const h = b.health || {};
+        updated.stats = {
+          account: String(h.account ?? '—'),
+          balance: String(h.balance ?? '—'),
+          // ⚠️ Printed as a WORD, not a boolean: `tradeAllowed: false` is the single most
+          // consequential field on this node and `false` beside `connected: true` is easy to skim
+          // past. The node ring turns amber for it — connected-but-not-tradeable is not "healthy".
+          trade: h.tradeAllowed ? 'allowed' : 'BLOCKED',
+        };
+        updated.health = !h.connected ? 'down' : (h.tradeAllowed ? 'healthy' : 'degraded');
+      } else {
+        // The API answered without this broker — a configuration fact, not an outage.
+        updated.health = 'unknown';
+      }
+    }
     return updated;
   });
 
@@ -713,8 +971,9 @@ export default function PipelineGraphLabPage() {
 
   const onMouseUp = useCallback(() => setDragging(false), []);
 
-  // Resize canvas to fit new nodes
-  const canvasW = 1300, canvasH = 680;
+  // Resize canvas to fit new nodes — widened 2026-10-06 for the five nodes added at the owner's
+  // request. Three continue the right-hand column; the two bridges sit under the provider network.
+  const canvasW = 1620, canvasH = 900;
 
   return (
     <div className="pg-page">
