@@ -117,6 +117,21 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
   // Two-step delete: the first click only arms the confirm. Nothing is removed until the second
   // click names the bot explicitly — a destructive action should cost two deliberate clicks.
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /**
+   * Accordion state — owner, Page Walkthrough: *"Reduce the initial size of the containers and turn
+   * them into accordions."* (2026-10-01, applied 2026-10-06).
+   *
+   * ⚠️ WHAT DELIBERATELY STAYS VISIBLE WHEN COLLAPSED, and why it is not simply "everything below the
+   * header":
+   *   • the REGISTERED NAME — the human handle for the strategy. Collapsing it would leave a card
+   *     identifiable only by a SHA-256 key.
+   *   • the DRIFT NOTE and the unreachable/duplicate marker — these are FAULTS. A card with a problem
+   *     must not look identical to a healthy one just because it is collapsed; that is the "plausible
+   *     output, no error" shape this codebase keeps having to undo.
+   * Everything that is REFERENCE rather than identity — treatment fields, symbol chips, bot lists and
+   * the action row — is what collapses.
+   */
+  const [expanded, setExpanded] = useState(false);
 
   const nameEditor = (
     <>
@@ -142,7 +157,20 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
         unreachable.length || duplicates.length ? styles.cardUnreachable : '',
       ].filter(Boolean).join(' ')}
     >
-      <div className={styles.cardHead}>
+      <div
+        className={styles.cardHead}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        style={{ cursor: 'pointer' }}
+        onClick={() => setExpanded((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setExpanded((v) => !v);
+          }
+        }}
+      >
         {/* The stable identity — the "ID along with the IDs of each part" (#876/#875). */}
         <code className={styles.key} title="SHA-256 over protocol + role + market + broker + treatment.">
           {strategy.strategyKey}
@@ -156,6 +184,18 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
           {strategy.symbols.map((s) => (
             <span className={styles.symbol} key={s}>{s}</span>
           ))}
+        </span>
+        {/* ⚠️ FAULTS STAY VISIBLE WHEN COLLAPSED. Without this a collapsed broken card and a collapsed
+            healthy one are indistinguishable — see the note on `expanded` above. */}
+        {(unreachable.length > 0 || duplicates.length > 0) && (
+          <span
+            title={`${unreachable.length ? `${unreachable.length} unreachable bot(s)` : ''}${unreachable.length && duplicates.length ? ' · ' : ''}${duplicates.length ? `${duplicates.length} duplicate(s)` : ''}`}
+          >
+            ⚠️
+          </span>
+        )}
+        <span aria-hidden="true" style={{ marginLeft: 'auto', opacity: 0.6 }}>
+          {expanded ? '▾' : '▸'}
         </span>
       </div>
 
@@ -203,6 +243,8 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
           READ-ONLY (it passes no onReaccept). */}
       <DriftNote drift={drift} onReaccept={onReaccept} saving={saving} />
 
+      {expanded && (
+        <>
       {/* A/B LINEAGE (2026-09-22). Both directions are shown because the pair is a symmetric
           fact: the COPY says who it came from, the SOURCE says what was copied from it. The
           link is read from TradingStrategy.duplicatedFromId (bot level) and
@@ -291,6 +333,8 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
           </button>
         )}
       </div>
+        </>
+      )}
     </li>
   );
 }

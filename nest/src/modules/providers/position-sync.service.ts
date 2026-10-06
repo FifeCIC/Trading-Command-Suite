@@ -548,6 +548,16 @@ export class PositionSyncService {
             sl: pos.sl ?? byTicket.sl,
             tp: pos.tp ?? byTicket.tp,
             brokerComment: pos.comment?.substring(0, 200) || byTicket.brokerComment,
+            // ── #889 BACKFILL (2026-10-06) — FILL NULL ONLY, NEVER OVERWRITE ───────────────────
+            //
+            // Dispatch-created rows (`TradeRecorder`) carry `accountId = NULL`, and this update
+            // never touched the column — so every app-opened trade stayed anonymous while the
+            // sync knew its account on every pass. Measured 2026-10-06: 19 of 19 rows for one
+            // live bot had `accountId` NULL, and the row's own #889 comment above the external
+            // path says the column exists precisely so a trade can be attributed to an account.
+            // `byTicket.accountId ??` first: an already-known account is never overwritten (a
+            // ticket collision across the two `mt5` accounts must not reassign a row).
+            accountId: byTicket.accountId ?? pos.accountId ?? null,
           },
         }).catch(() => {});
         return 0;
@@ -625,6 +635,9 @@ export class PositionSyncService {
           sl: pos.sl ?? bySymbol.sl,
           tp: pos.tp ?? bySymbol.tp,
           brokerComment: pos.comment?.substring(0, 200) || bySymbol.brokerComment,
+          // #889 backfill, fill-only — see the 2a comment for why. A symbol-matched legacy row
+          // (no ticket) gains its account the moment any sync can name it.
+          accountId: bySymbol.accountId ?? pos.accountId ?? null,
         },
       }).catch(() => {});
       return 0;

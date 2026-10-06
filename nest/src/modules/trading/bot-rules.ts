@@ -152,7 +152,14 @@ export const BOT_RULES: BotRule[] = [
   // ── routing ─────────────────────────────────────────────────────────────────────────────────
   { field: 'protocolId', label: 'Protocol', stage: 'routing', enforcement: 'display-only',
     enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
-    summary: 'Legacy single protocol link; seeds one subscription and is used for the bot label.' },
+    summary: 'Legacy single protocol link; seeds one subscription and is used for the bot label.',
+    caveat:
+      '⚠️ Until 2026-10-06 this column was also READ by the pre-trade gate reconciliation ' +
+      '(`signal-envelope.service.ts`), making it a second source for "participating bots" while ' +
+      'routing joins `strategy_protocol` — the disagreement could starve a subscribed bot or let ' +
+      'a subscription-less bot lower the gate. All 40 active bots were measured to agree, and the ' +
+      'reconciliation now resolves subscriptions; display-only is now true in fact. Canary: ' +
+      '`signal-envelope-gate-reconciliation.spec.ts`.' },
   { field: 'shortProtocolId', label: 'Short protocol', stage: 'routing', enforcement: 'display-only',
     enforcedBy: 'nest/src/modules/scoring/protocols.controller.ts',
     summary: 'Legacy second link; the protocol list and symbol pages filter on it.',
@@ -194,11 +201,19 @@ export const BOT_RULES: BotRule[] = [
       'this field cannot stop a live trade despite being offered in the create form.' },
   { field: 'cooldownMinutes', label: 'Cooldown', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
-    summary: 'Gate 6 — minimum minutes between this bot taking signals.',
+    summary: 'Gate 5 — minimum minutes between this bot taking signals.',
     caveat: '⚠️ One of FOUR cooldowns (bot, global pacing, dispatch 3s, dispatch 60s/symbol).' },
   { field: 'sessionWindow', label: 'Session window', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/session-window.ts',
-    summary: 'Gate 5 — tags (asian/london/us) the bot may act in. NULL = ungated (opt-in).' },
+    summary: 'Gate 4.5 — tags (asian/london/us) the bot may act in. NULL = ungated (opt-in).',
+    caveat:
+      '⚠️ NULL is ambiguous by design and measured live 2026-10-06: of the four city-news pairs ' +
+      'in forex-session-v1, ONE twin is gated and the other is not (Tokyo USDJPY=asian vs EURJPY=NULL; ' +
+      'Sydney AUDUSD=asian vs AUDJPY=NULL; Wellington NZDUSD=asian vs NZDJPY=NULL; Zurich USDCHF=london ' +
+      'vs EURCHF=NULL) — the same name resolves two ways. `session-window.ts` records that the seeded ' +
+      'city names meant the NEWS-FLOW reading, so either the gated twins enforce a clock the name ' +
+      'never meant, or the NULL twins were simply never filled. Tracked by #981 (audit) and #982 ' +
+      '(make the slot declared); do NOT un-gate or re-gate on a name without the owner.' },
   { field: 'maxPyramidTiers', label: 'Max pyramid tiers', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/pyramid-policy.service.ts',
     summary: 'Scale-in cap: extra entries allowed when price is favourable. 1 = never add.' },
@@ -246,19 +261,33 @@ export const BOT_RULES: BotRule[] = [
   // ── exit ───────────────────────────────────────────────────────────────────────────────────
   { field: 'slPct', label: 'Stop loss %', stage: 'exit', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
-    summary: 'Initial stop, computed and sent to the broker with the order.' },
+    summary: 'Initial stop, computed and sent to the broker with the order.',
+    caveat:
+      '⚠️ Measured 2026-10-06: the % is applied to the REFERENCE 5m close at dispatch ' +
+      '(automation-loop `getClose()`), not to the fill — the broker stop can sit a close-to-fill ' +
+      'gap away from the executed price (observed ≤0.13% of price on one live bot). The guardian ' +
+      'later re-anchors: trail distance = max(3×ATR(5m), slPct × ENTRY), tighten-only (#927).' },
   { field: 'tpPct', label: 'Take profit %', stage: 'exit', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
     summary: 'Initial target, sent to the broker with the order.',
     caveat:
-      '⚠️ Measured: winners on forex-session-v1 exited at +0.02–0.15% against a tpPct of 1.0, while ' +
-      'losers reached the full stop. Something closes winners long before target — unexplained.' },
+      '⚠️ EXPLAINED 2026-10-06 — the earlier "winners exit at +0.02–0.15% against a tpPct of 1.0, ' +
+      'unexplained" note named the wrong suspect: nothing closes a winner EARLY. Measured on ' +
+      'forex-session-v1 (bot "Tokyo EURJPY Session", 18 closed trades): 0 exits at TP, 9 on ' +
+      '`system:time-stop` (maxHoldHours 12) and 6 at the broker (stop/trail) — peak profit before a ' +
+      'time-stop close was +0.44%. A 1% target needs a 1%+ run inside 12h; the 12h stop and the ' +
+      'guardian trail (≥ slPct from ENTRY) simply own the exit. TP is reachable but rarely reached.' },
   { field: 'maxHoldHours', label: 'Max hold (time stop)', stage: 'exit', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/position-time-stop.service.ts',
     summary: 'Closes a position held longer than this. NULL = no limit (opt-in).',
     caveat:
       '⚠️ Was inert until 2026-09-17: it parsed an order-comment format nothing emits (0 of 76) and ' +
-      'defaulted to dry-run. Now armed; no live close observed yet.' },
+      'defaulted to dry-run. ARMED AND FIRING, measured 2026-10-06: 9 closes on forex-session-v1\'s ' +
+      'EURJPY bot with `closeReason = system:time-stop` recorded (#949). ⚠️ Hold AT CLOSE was ' +
+      '12.1–52h against the 12h limit because the 5-minute sweep runs only while the API is up and ' +
+      'the dev machine is off overnight — closes land on the first sweeps after boot (2026-10-06: ' +
+      'no log activity 00:00–13:00 UTC, position closed 13:20). 12h is a floor enforced-or-pending, ' +
+      'not a promise of the close time.' },
 
   // ── #928 — the EXIT-SIDE SESSION GATE ───────────────────────────────────────────────────────
   // `sessionWindow` above is `stage: 'entry'` and was the ONLY session gate, so a bot could be told

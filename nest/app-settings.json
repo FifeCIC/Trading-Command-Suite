@@ -70,7 +70,8 @@
         "hide": false,
         "keen": 3,
         "note": "I think there is a github issue covering important changes for this view. Else we need to have a discussion again. ",
-        "updatedAt": "2026-10-01T22:07:52.151Z",
+        "uiScore": null,
+        "updatedAt": "2026-10-06T21:11:28.931Z",
         "importance": "H"
       },
       "/lab/timeline": {
@@ -241,6 +242,13 @@
         "updatedAt": "2026-09-30T11:00:10.986Z",
         "importance": "M"
       },
+      "/development/ai-costs": {
+        "hide": null,
+        "keen": null,
+        "note": "delete this page ",
+        "updatedAt": "2026-10-01T22:45:48.555Z",
+        "importance": null
+      },
       "/development/diagrams": {
         "hide": false,
         "keen": 2,
@@ -367,6 +375,14 @@
         "updatedAt": "2026-10-01T09:11:01.582Z",
         "importance": "H"
       },
+      "/status/broker-catalogue": {
+        "hide": false,
+        "keen": null,
+        "note": "Element:  <span.bc-broker-id> Text:     Broker 2 Source:   /research/broker-catalogue  extend that line with the name of the brokers account i.e. PepperstoneUK-Demo is one of the accounts in use. Also move the page to the Status area. ",
+        "uiScore": null,
+        "updatedAt": "2026-10-06T21:26:05.968Z",
+        "importance": "M"
+      },
       "/trading/performance-lab": {
         "hide": false,
         "keen": 1,
@@ -470,13 +486,6 @@
         "keen": 2,
         "note": "Change this to a free page. I would like to offer some basic finance management between registered accounts. Premium will get some additional perks and AI support.",
         "updatedAt": "2026-10-01T22:28:02.036Z",
-        "importance": "M"
-      },
-      "/research/broker-catalogue": {
-        "hide": false,
-        "keen": 2,
-        "note": "Element:  <span.bc-broker-id> Text:     Broker 2 Source:   /research/broker-catalogue  extend that line with the name of the brokers account i.e. PepperstoneUK-Demo is one of the accounts in use. Also move the page to the Status area. ",
-        "updatedAt": "2026-10-01T08:17:17.919Z",
         "importance": "M"
       },
       "/trading/positions-monitor": {
@@ -696,13 +705,6 @@
         "updatedAt": "2026-10-01T09:11:19.126Z",
         "importance": "L"
       },
-      "/status/architecture-framework": {
-        "hide": false,
-        "keen": 1,
-        "note": "Move to the Development area",
-        "updatedAt": "2026-10-01T22:05:09.994Z",
-        "importance": "L"
-      },
       "/automation/automation-overview": {
         "hide": false,
         "keen": 1,
@@ -752,19 +754,20 @@
         "updatedAt": "2026-10-01T09:03:08.835Z",
         "importance": "H"
       },
+      "/development/architecture-framework": {
+        "hide": false,
+        "keen": null,
+        "note": "Move to the Development area",
+        "uiScore": null,
+        "updatedAt": "2026-10-06T21:26:05.914Z",
+        "importance": "L"
+      },
       "/research/recently-analysed-symbols": {
         "hide": false,
         "keen": 1,
         "note": "",
         "updatedAt": "2026-10-01T08:48:22.416Z",
         "importance": "M"
-      },
-      "/development/ai-costs": {
-        "importance": null,
-        "hide": null,
-        "keen": null,
-        "note": "delete this page ",
-        "updatedAt": "2026-10-01T22:45:48.555Z"
       }
     }
   }

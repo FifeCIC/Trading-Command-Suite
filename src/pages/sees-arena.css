@@ -18,7 +18,22 @@
 .sa-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Protocol Toggles ── */
-.sa-protocol-toggles { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.sa-protocol-toggles { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: flex-start; }
+
+/* ── Chips grouped by linked watchlist (2026-10-06) ──
+   Owner (Page Walkthrough): *"the selection process needs to offer selection of protocols that use the
+   same watchlists so that they are symbol centric."* The grouping is the answer; this styles the
+   watchlist so it reads as the HEADING of a group rather than as one more chip in the row. */
+.sa-proto-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.sa-proto-group-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  border-bottom: 1px dotted color-mix(in srgb, var(--ink-soft) 40%, transparent);
+  padding-bottom: 0.15rem;
+}
+.sa-proto-group-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; }
 .sa-protocol-chip { padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 20px; font-size: 0.7rem; cursor: pointer; background: transparent; color: var(--ink-soft); font-family: inherit; transition: all 0.15s; white-space: nowrap; }
 .sa-protocol-chip:hover { border-color: var(--accent); color: var(--ink); }
 .sa-protocol-chip.sa-chip-active { background: rgba(14,165,166,0.12); border-color: var(--accent); color: var(--accent); }
@@ -54,8 +69,47 @@
 .sa-compare-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
 .sa-compare-table th { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--line); color: var(--ink-soft); font-weight: 600; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
 .sa-compare-table th.sa-th-protocol { text-align: center; min-width: 90px; }
-.sa-compare-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.08); text-align: center; }
-.sa-compare-table td.sa-td-symbol { text-align: left; font-weight: 700; }
+.sa-compare-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.08); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ⚠️ The symbol is the row's IDENTITY and this table is wide (one column per protocol), so it PINS to
+   the left edge while the score columns scroll beneath it. Without that, a row of eight scores cannot
+   be attributed to a symbol without counting back up the table. */
+.sa-compare-table td.sa-td-symbol {
+  text-align: left;
+  font-weight: 700;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel);
+  font-family: var(--font-mono);
+}
+.sa-compare-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--panel);
+}
+
+/* ⚠️ Matched to the table treatment the owner named as a good example — /status/meta-stack-status
+   (*"the styling is a good example for some of the lesser styled pages"*): a hover tint so the eye can
+   track one row across many columns, and a sub-label under a column header for the watchlist that
+   makes that column symbol-centric. */
+.sa-compare-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.sa-th-watchlist {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+.sa-sum-stat {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
 .sa-score-cell { font-weight: 700; border-radius: 4px; }
 .sa-score-high { background: rgba(34,197,94,0.15); color: var(--color-profit); }
 .sa-score-med { background: rgba(245,158,11,0.12); color: var(--color-warning); }

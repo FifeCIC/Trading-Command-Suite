@@ -118,14 +118,40 @@ export default function ActiveSymbolsPage() {
   // It now reads the canonical authority (`SymbolProtocolAuthorityService`: assignment ∪ active
   // bots ∪ FK watchlists ∪ observed snapshots), the same answer `GET /api/symbols/:ticker/protocols`
   // gives per symbol, so the table and the symbol page cannot disagree.
+  const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : [];
+
+  // ⚠️⚠️ THE TICKER LIST IS THE WHOLE POINT OF THE REQUEST (fixed 2026-10-06).
+  //
+  // `protocolCounts(@Query('tickers') tickers)` splits that param, and an ABSENT param yields an
+  // EMPTY LIST. The re-source described above chose the right SOURCE but never told the endpoint what
+  // to read it FOR, so the server answered `{"counts":{},"unresolved":[],"sourcesQueried":[]}` with a
+  // 200 and the table still rendered 0 for every symbol — including the symbols with open positions
+  // the owner reported. **Repairing the source did not repair the call**, and a live 200 is not
+  // evidence that a value arrived.
+  //
+  // Measured 2026-10-06 against the running API BEFORE this fix:
+  //   GET /api/symbols/protocol-counts   → counts had 0 keys, held symbols 13/13 would read 0
+  //
+  // ⚠️ URL length: ~260 tickers ≈ 1.8 KB, inside the transport limit. At roughly 1,000 registered
+  // symbols this becomes a multi-KB query string and wants chunking or a POST — the controller made
+  // it a param deliberately, to keep the `score_snapshot` source bounded, so that is the trade to
+  // revisit rather than to remove.
+  const tickerCsv = useMemo(
+    () => syms.map((s) => (s.ticker || '').toUpperCase()).filter(Boolean).join(','),
+    [syms],
+  );
+
   const protocolCountsQuery = useQuery({
-    queryKey: ['symbol-protocol-counts'],
+    queryKey: ['symbol-protocol-counts', tickerCsv],
+    // `enabled` — asking for nothing is exactly what produced the empty map that reads as "no
+    // protocols", so the request is not made until there are tickers to ask about.
+    enabled: tickerCsv.length > 0,
     // ⚠️ No `.catch(() => [])`. A failure must stay `null` so it can render differently from zero.
-    queryFn: () => apiGet('/api/symbols/protocol-counts').catch(() => null),
+    queryFn: () =>
+      apiGet(`/api/symbols/protocol-counts?tickers=${encodeURIComponent(tickerCsv)}`).catch(() => null),
     staleTime: 120_000,
   });
 
-  const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : [];
   const mode = symbols.data?.mode ?? '...';
   const positions = Array.isArray(positionsQuery.data?.positions) ? positionsQuery.data.positions : [];
   // ⚠️ `null` = the request failed, which is NOT the same as "no protocols". The column renders

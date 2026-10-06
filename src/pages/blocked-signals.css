@@ -100,6 +100,26 @@
   white-space: nowrap;
 }
 
+/* Sortable headers (2026-10-06). Owner request on /development/blocked-signals: *"MAke it so I can
+   order by reason"* — the hint pointed at the `<th>Latest reason</th>` cell.
+   ⚠️ The <th> keeps its own styling; a <button> INSIDE it does the work. A bare clickable <th> cannot
+   be reached by keyboard and cannot announce its sort state, and `aria-sort` is only meaningful on
+   the th — so the button carries the interaction and the th carries the semantics. */
+.bs-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bs-sort:hover { color: var(--ink); }
+.bs-sort-arrow { font-size: 0.7rem; color: var(--accent); }
+
 .bs-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);

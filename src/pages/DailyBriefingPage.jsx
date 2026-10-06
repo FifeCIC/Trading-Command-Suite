@@ -331,7 +331,23 @@ export default function DailyBriefingPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                 >
-                  <div className="db-brief-row" onClick={() => setExpanded(isExpanded ? null : item.symbol)}>
+                  {/* ⚠️ KEYBOARD-REACHABLE AS OF 2026-10-06. This row toggles the card from an `onClick`
+                  on a plain <div> with no `tabIndex`, so it could not be operated by keyboard at all —
+                  an accessibility defect (WCAG 2.1.1), not a style preference. Same pattern as the
+                  trade-journal and strategies cards. */}
+              <div
+                className="db-brief-row"
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                onClick={() => setExpanded(isExpanded ? null : item.symbol)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setExpanded(isExpanded ? null : item.symbol);
+                  }
+                }}
+              >
                     <span className="db-brief-tier" style={{ background: tier.color }}>{tier.label}</span>
                     <span className="db-brief-symbol">{item.symbol}</span>
                     <span className="db-brief-score" style={{ color: (item.score || 0) >= 50 ? '#22c55e' : (item.score || 0) >= 25 ? '#f59e0b' : '#ef4444' }}>

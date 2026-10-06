@@ -135,23 +135,41 @@
   gap: 0.35rem;
 }
 
+/* ── Events ──
+   ⚠️ REWORKED 2026-10-06. Owner (Page Walkthrough, /development/daily-briefing): *"improve styling on
+   <div.db-event>"*. Two of the problems were not taste:
+     1. `rgba(100,116,139,0.05)` and `#cbd5e1` are colours that exist in NO theme — the row ignored
+        every theme pack and the High Contrast Text preference.
+     2. Every row looked identical, so an earnings publication and a session open were
+        indistinguishable at a glance — which is the one thing this list is for.
+   Now: theme tokens, a tone-coded left edge that separates a scheduled publication from a session
+   boundary, and tabular figures so the times line up down the column. */
 .db-event {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.5rem;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
   border-radius: 6px;
-  background: rgba(100,116,139,0.05);
+  border-left: 3px solid color-mix(in srgb, var(--ink-soft) 45%, transparent);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
   font-size: 0.82rem;
 }
 
+/* A session boundary is a market OPEN/CLOSE, not a scheduled publication — it gets its own edge so
+   the two kinds are told apart without reading the label. `--risk-normal` is the app's own green. */
 .db-event-session {
-  background: rgba(34,197,94,0.06);
+  border-left-color: var(--risk-normal, #22c55e);
+  background: color-mix(in srgb, var(--risk-normal, #22c55e) 9%, var(--panel));
 }
 
-.db-event-icon { font-size: 0.85rem; flex-shrink: 0; }
-.db-event-label { flex: 1; color: #cbd5e1; }
-.db-event-time { font-size: 0.7rem; color: var(--color-muted); font-weight: 600; }
+.db-event-icon { font-size: 0.9rem; flex-shrink: 0; }
+.db-event-label { flex: 1; color: var(--ink); }
+.db-event-time {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Movers */
 .db-mover-list {
@@ -285,6 +303,10 @@
 .db-brief-card:hover { border-color: var(--color-muted); }
 .db-brief-card.expanded { border-color: var(--accent, #14b8b9); }
 
+/* Owner (Page Walkthrough, /development/daily-briefing): *"improve styling on <div.db-brief-row>"*.
+   The row packs several facts onto one line, so the win is ALIGNMENT rather than colour: tabular
+   figures so the numbers line up, plus the two states it had none of — hover (it IS clickable and
+   nothing said so) and focus (it is keyboard-reachable as of 2026-10-06, see DailyBriefingPage.jsx). */
 .db-brief-row {
   display: flex;
   align-items: center;
@@ -292,7 +314,12 @@
   padding: 10px 14px;
   cursor: pointer;
   user-select: none;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s;
 }
+.db-brief-row:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.db-brief-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .db-brief-tier {
   padding: 2px 8px;

@@ -35,6 +35,13 @@
 }
 .sl-badge--category { color: var(--ink-soft); border-color: var(--line); }
 
+/* Link state (2026-10-06) — see StrategyLibraryPage.jsx. Green when a bot running this entry's
+   protocol is ON, muted when one exists but is off, and the SAME muted tone when no bot is
+   configured. Both mean "nothing is trading this", and a third colour would imply a distinction the
+   reader cannot act on differently. `--risk-normal` is the runtime risk ramp's green. */
+.sl-badge--bot-on { color: var(--risk-normal); border-color: var(--risk-normal); }
+.sl-badge--bot-off { color: var(--ink-soft); border-color: var(--line); }
+
 .sl-chevron {
   font-size: 0.7rem; color: var(--ink-soft); transition: transform 0.2s;
   flex-shrink: 0; margin-top: 0.3rem;

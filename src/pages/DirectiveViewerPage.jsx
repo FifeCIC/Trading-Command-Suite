@@ -8,6 +8,7 @@
  *
  * Data: GET /api/directives/:id/viewer — one shot for the whole page.
  */
+import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
@@ -18,6 +19,91 @@ import { formatTimestamp } from '../core/format-utils';
 import './directive-viewer.css';
 
 const READINESS_LABELS = { ready: 'READY', beta: 'BETA', alpha: 'ALPHA' };
+
+/**
+ * DirectivePicker — the page's ENTRY POINT, and the search the owner asked for.
+ *
+ * ⚠️ WHY IT EXISTS (Page Walkthrough 2026-10-01, fixed 2026-10-06).
+ * Owner: *"This page does not load anything and I think its meant to offer a breakdown of directives.
+ * Ability to search directives."* The endpoint was fine — `GET /api/directives/:id/viewer` returns a
+ * full payload (readiness, nature, directionBias, requiredDataFeeds, scores, protocols). What was
+ * missing was a way IN: the page read `?id=` and nothing else, so opening it from the navigation
+ * produced "No directive selected" and no route forward. It was reachable only from a Protocol Trail
+ * row, i.e. only if you already knew it existed. (The same defect as Single Symbol, fixed the same day.)
+ *
+ * ⚠️ THREE STATES, RENDERED DIFFERENTLY: still loading, list unreadable, and no match. Collapsing
+ * them would make a failed request look like a directive registry that happened to be empty.
+ */
+function DirectivePicker({ currentId }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [term, setTerm] = useState('');
+
+  const list = useQuery({
+    queryKey: ['directives-for-picker'],
+    queryFn: () => apiGet('/api/directives').catch(() => null),
+    staleTime: 300_000,
+  });
+
+  // The endpoint has returned both a bare array and a wrapped object at different times; accept both
+  // rather than betting on one — a shape bet here renders an empty page that looks like "no data".
+  const raw = list.data;
+  const all = Array.isArray(raw) ? raw : (raw?.directives ?? raw?.items ?? []);
+  const q = term.trim().toLowerCase();
+  const shown = (
+    q
+      ? all.filter((d) =>
+          `${d?.id ?? ''} ${d?.name ?? ''} ${d?.category ?? ''}`.toLowerCase().includes(q),
+        )
+      : all
+  ).slice(0, 12);
+
+  const choose = (directiveId) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('id', directiveId);
+    setSearchParams(next);
+  };
+
+  return (
+    <div className="dv-picker">
+      <input
+        type="search"
+        value={term}
+        onChange={(e) => setTerm(e.target.value)}
+        placeholder="Search directives by name, id or category…"
+        aria-label="Search directives"
+      />
+      {list.isLoading ? (
+        <p className="dv-empty-hint">Loading directives…</p>
+      ) : all.length === 0 ? (
+        <p className="dv-empty-hint">
+          Could not read the directive list — the API did not answer. This is NOT &quot;no directives
+          exist&quot;.
+        </p>
+      ) : shown.length === 0 ? (
+        <p className="dv-empty-hint">No directive matches “{term}”.</p>
+      ) : (
+        <ul className="dv-picker-list">
+          {shown.map((d) => {
+            const directiveId = d?.id ?? d?.directiveId ?? '';
+            if (!directiveId) return null;
+            return (
+              <li key={directiveId}>
+                <button
+                  type="button"
+                  className={directiveId === currentId ? 'dv-picker-item is-current' : 'dv-picker-item'}
+                  onClick={() => choose(directiveId)}
+                >
+                  <span className="dv-picker-name">{d?.name ?? directiveId}</span>
+                  <span className="dv-picker-cat">{d?.category ?? directiveId}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function DirectiveViewerPage() {
   const [searchParams] = useSearchParams();
@@ -39,12 +125,9 @@ export default function DirectiveViewerPage() {
     return (
       <div className="dv-page">
         <header className="dv-header">
-          <h1>Directive Viewer<PageInfoPopover>Deep-dive on a single directive: metadata, recent scores, and the protocols that use it. Open via ?id=&lt;directiveId&gt;.</PageInfoPopover></h1>
+          <h1>Directive Viewer<PageInfoPopover>Deep-dive on a single directive: metadata, recent scores, and the protocols that use it. Search below, or open via ?id=&lt;directiveId&gt;.</PageInfoPopover></h1>
         </header>
-        <div className="dv-empty">
-          <p>No directive selected.</p>
-          <p className="dv-empty-hint">Open from a Protocol Trail directive row, or add <code>?id=&lt;directiveId&gt;</code> to this URL.</p>
-        </div>
+        <DirectivePicker currentId="" />
       </div>
     );
   }
@@ -72,6 +155,10 @@ export default function DirectiveViewerPage() {
       <header className="dv-header">
         <h1>Directive Viewer<PageInfoPopover>Single-directive deep-dive — metadata, live score history, and the protocols that include it.</PageInfoPopover></h1>
       </header>
+
+      {/* The picker stays available once a directive is chosen, so switching does not mean editing
+          the URL by hand. `currentId` marks the one you are looking at. */}
+      <DirectivePicker currentId={id} />
 
       {/* ── Identity ── */}
       <section className="dv-card dv-identity">

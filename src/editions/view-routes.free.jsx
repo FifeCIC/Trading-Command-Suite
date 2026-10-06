@@ -6,7 +6,7 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 39 view(s) · 37 component(s) · 105 premium entry(ies) excluded.
+ * 39 view(s) · 37 component(s) · 104 premium entry(ies) excluded.
  */
 
 // ── Free pages ──

@@ -2,7 +2,29 @@
 
 .hd-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
 
-.hd-header { margin-bottom: 0.75rem; }
+/* Flexed 2026-10-06 so the troubleshooting report button can sit top-right. `flex-wrap` matters: on a
+   narrow pane the button drops to its own line instead of crushing the title — the same failure the
+   topbar had. */
+.hd-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+
+/* The one control on this page a developer is meant to press. Secondary by design — it reports, it
+   does not act on the system — so it borrows the panel surface rather than the accent. */
+.hd-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.hd-report-btn:hover { color: var(--ink); border-color: var(--accent); }
 .hd-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
 .hd-subtitle { color: var(--ink-soft); font-size: 0.73rem; margin: 0; }
 

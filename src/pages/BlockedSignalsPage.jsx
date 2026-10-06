@@ -77,9 +77,34 @@ const WINDOWS = [
   { hours: 336, label: '14 days' },
 ];
 
+/**
+ * Sort accessors for the "By symbol" table (2026-10-06).
+ * Owner request on /development/blocked-signals: *"MAke it so I can order by reason"*, with the hint
+ * pointing at `<th>Latest reason</th>`.
+ *
+ * ⚠️ Each accessor returns a COMPARABLE — a string or a number — never the rendered text. Sorting the
+ * formatted output would order `1,048` before `999` (string comparison) and the times by their
+ * display format rather than by instant. Comparing the underlying values is what makes the visible
+ * order match what the reader expects.
+ *
+ * ⚠️ THE OBJECT IS ALSO THE COLUMN ORDER. The <thead> and the <tbody> are both built from this map,
+ * so a header and its cells cannot drift apart — but it also means reordering these keys reorders the
+ * table. That is the intended trade: one source of truth beats two lists that must be kept in step.
+ */
+const SORT_FIELDS = {
+  symbol: { label: 'Symbol', get: (r) => String(r.symbol ?? '') },
+  cause: { label: 'Cause', get: (r) => infoFor(r.cause).label },
+  count: { label: 'Count', get: (r) => Number(r.count) || 0, numeric: true, firstDir: 'desc' },
+  lastAt: { label: 'Last', get: (r) => new Date(r.lastAt ?? 0).getTime(), numeric: true, firstDir: 'desc' },
+  reason: { label: 'Latest reason', get: (r) => String(r.reason ?? '') },
+};
+
 export default function BlockedSignalsPage() {
   const [hours, setHours] = useState(24);
   const [tone, setTone] = useState('ALL');
+  // `key: null` = "the API's own order" (count desc). That is the most useful default, so the table
+  // looks exactly as it did before until someone deliberately sorts it.
+  const [sort, setSort] = useState({ key: null, dir: 'asc' });
 
   const blocksQuery = useQuery({
     queryKey: ['pre-trade-blocks', hours],
@@ -106,6 +131,32 @@ export default function BlockedSignalsPage() {
     () => (tone === 'ALL' ? bySymbol : bySymbol.filter((r) => infoFor(r.cause).tone === tone)),
     [bySymbol, tone],
   );
+
+  // The sort is applied to the ALREADY-FILTERED rows, so the tone filter and the sort compose rather
+  // than fight: changing the filter never silently drops the chosen order, and vice versa.
+  const sortedSymbols = useMemo(() => {
+    if (!sort.key) return visibleSymbols;
+    const { get, numeric } = SORT_FIELDS[sort.key];
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return [...visibleSymbols].sort((a, b) => {
+      const x = get(a);
+      const y = get(b);
+      const cmp = numeric ? x - y : String(x).localeCompare(String(y));
+      return cmp * dir;
+    });
+  }, [visibleSymbols, sort]);
+
+  // First click on a numeric column sorts descending (108 before 3 — the useful direction for a
+  // count); every other column sorts ascending. A second click always flips it.
+  const toggleSort = (key) =>
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: SORT_FIELDS[key].firstDir ?? 'asc' },
+    );
+  const ariaSortOf = (key) =>
+    sort.key !== key ? 'none' : sort.dir === 'asc' ? 'ascending' : 'descending';
+  const arrowOf = (key) => (sort.key !== key ? '' : sort.dir === 'asc' ? '▲' : '▼');
 
   return (
     <div className="trading-platforms-page blocked-signals-page">
@@ -255,15 +306,27 @@ export default function BlockedSignalsPage() {
               <table className="bs-table">
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Cause</th>
-                    <th className="bs-num">Count</th>
-                    <th>Last</th>
-                    <th>Latest reason</th>
+                    {Object.entries(SORT_FIELDS).map(([key, f]) => (
+                      <th
+                        key={key}
+                        className={f.numeric ? 'bs-num' : undefined}
+                        aria-sort={ariaSortOf(key)}
+                      >
+                        <button
+                          type="button"
+                          className="bs-sort"
+                          onClick={() => toggleSort(key)}
+                          title={`Sort by ${f.label.toLowerCase()}`}
+                        >
+                          {f.label}
+                          <span className="bs-sort-arrow" aria-hidden="true">{arrowOf(key)}</span>
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleSymbols.map((row) => {
+                  {sortedSymbols.map((row) => {
                     const info = infoFor(row.cause);
                     return (
                       <tr key={`${row.symbol}|${row.cause}`}>

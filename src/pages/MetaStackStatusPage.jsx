@@ -364,7 +364,12 @@ export default function MetaStackStatusPage() {
                         </span>
                         <span className="mss-breakdown-name">{d.name}</span>
                         <span className="mss-breakdown-score">{d.score}/{d.maxScore}</span>
-                        <span className="mss-breakdown-contrib" style={{ color: (d.contribution || 0) >= 0 ? 'var(--riskNormal)' : 'var(--riskHigh)' }}>
+                        {/* ⚠️ `--riskNormal` (camelCase) IS NOT A TOKEN — the runtime ramp is kebab-case
+                            (`--risk-normal`, applied by src/theme/adapters/vanilla.js). The misspelling
+                            resolved to nothing, so a positive contribution silently rendered in the
+                            inherited colour instead of green. `validate-css-tokens.cjs` catches this in
+                            .css files but cannot see an inline `style` in JSX, which is how it survived. */}
+                        <span className="mss-breakdown-contrib" style={{ color: (d.contribution || 0) >= 0 ? 'var(--risk-normal)' : 'var(--risk-high)' }}>
                           {d.contribution >= 0 ? '+' : ''}{d.contribution}
                         </span>
                       </div>

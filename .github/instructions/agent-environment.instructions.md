@@ -288,6 +288,17 @@ npm --prefix C:\wamp64\www\trading-command-suite\nest run build:api
 
 Stop API → build → restart API → verify health. This is the normal way to build the API now.
 
+⚠️ **A `build:api` THAT FAILS MID-WAY LEAVES `dist/` DELETED — observed 2026-10-06.** The prebuild
+chain ends with `npx rimraf dist && npx prisma generate`, in that order. When `generate` then fails
+(its usual cause: the engine DLL is held by ANOTHER agent's API process — a real race when two
+agents rebuild at once, which happened here across three attempts), the build fails **with the only
+build output already removed**. The previously running API keeps serving from memory — Windows lets
+a process keep deleted files — so nothing looks wrong until the next restart, when `start` refuses
+because there is no build at all. Recovery: stop every `dist/src/main.js` process, run `build:api`,
+verify health. Until one build succeeds the repo has **no launchable API build**, so completing the
+build is not optional — it is the unblock, and the one case where the batching rule's "commit now
+if another agent is blocked" spirit applies to a BUILD rather than a commit.
+
 Other useful forms:
 
 ```powershell

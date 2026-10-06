@@ -96,6 +96,37 @@ export default function SeesArenaPage() {
     queryKey: ['arena-filters'], queryFn: () => apiGet('/api/scoring/arena/filters'), staleTime: 60_000,
   });
 
+  /**
+   * The watchlists, purely to group protocols by the WATCHLIST they are symbol-centric for.
+   *
+   * ⚠️ MEASURED 2026-10-06 — THIS PAGE WAS READING A FIELD THAT DOES NOT EXIST.
+   * `/api/scoring/arena/filters` returns protocol keys: `id, name, description, tradingStyle,
+   * recommendedTimeframe, idealFor`. There is **no `linkedWatchlists`** on it, so
+   * `protocolMap[pid].linkedWatchlists` was always `[]` — which is why the `derivedSymbols` memo below
+   * has been dead code returning nothing since it was written, and why the symbols are in fact resolved
+   * per protocol by a separate endpoint at compare time.
+   * `/api/watchlists` DOES carry `protocolId` (34 of 50 rows), so the link is built from there. No
+   * backend change: the relationship was always available, just not on the endpoint this page read.
+   */
+  const watchlistsQuery = useQuery({
+    queryKey: ['arena-watchlists'], queryFn: () => apiGet('/api/watchlists'), staleTime: 120_000,
+  });
+
+  /** protocolId → [watchlist labels]. Built once; consumed by the chip grouping AND the column header,
+   *  so the two cannot disagree about which watchlist a protocol belongs to. */
+  const watchlistsByProtocol = useMemo(() => {
+    const rows = Array.isArray(watchlistsQuery.data)
+      ? watchlistsQuery.data
+      : (watchlistsQuery.data?.watchlists || []);
+    const map = new Map();
+    for (const w of rows) {
+      if (!w?.protocolId) continue;
+      if (!map.has(w.protocolId)) map.set(w.protocolId, []);
+      map.get(w.protocolId).push(w.label || w.name || w.id);
+    }
+    return map;
+  }, [watchlistsQuery.data]);
+
   // Live classification bars (#847) — the scale `vm.pct` is measured on. Read from the server, not
   // remembered: the 2026-09-15 rescale set entry/strong to 6/13, and a hand-copied bar is exactly
   // how the 65/40 copy this file used to carry survived it.
@@ -135,6 +166,34 @@ export default function SeesArenaPage() {
   );
 
   const activeProtocols = selectedProtocols || defaultProtocols;
+
+  /**
+   * Group the protocol chips by the WATCHLIST they draw symbols from (2026-10-06).
+   *
+   * Owner (Page Walkthrough, /protocols/sees-arena): *"The selection process needs to offer selection
+   * of protocols that use the same watchlists so that they are symbol centric."*
+   *
+   * ⚠️ The relationship already existed in the data — `symbolsFromWatchlists` resolves symbols from
+   * this very field — but the chips were one flat list, so two protocols watching the same symbols sat
+   * apart while two watching nothing alike sat together. Grouping makes the selection read as "which
+   * SYMBOLS am I comparing" instead of "which strategies do I like", which is the question this page
+   * exists to answer.
+   */
+  const protocolGroups = useMemo(() => {
+    const byWatchlist = new Map();
+    for (const p of protocols) {
+      const names = watchlistsByProtocol.get(p.id) || [];
+      const key = names.length ? names.join(' + ') : 'No linked watchlist';
+      if (!byWatchlist.has(key)) byWatchlist.set(key, []);
+      byWatchlist.get(key).push(p);
+    }
+    // "No linked watchlist" sorts LAST — it is the residual, not a peer of the real groups.
+    return [...byWatchlist.entries()].sort((a, b) => {
+      if (a[0] === 'No linked watchlist') return 1;
+      if (b[0] === 'No linked watchlist') return -1;
+      return a[0].localeCompare(b[0]);
+    });
+  }, [protocols, watchlistsByProtocol]);
 
   const arenaQuery = useQuery({
     queryKey: ['arena'], queryFn: () => apiGet('/api/scoring/arena'),
@@ -231,10 +290,19 @@ export default function SeesArenaPage() {
         </div>
 
         <div className="sa-protocol-toggles">
-          {protocols.map((p) => (
-            <ProtocolChip key={p.id} id={p.id} name={p.name} description={p.description}
-              active={activeProtocols.includes(p.id)} dataInsufficient={dataInsufficientIds.has(p.id)}
-              onToggle={toggleProtocol} />
+          {protocolGroups.map(([watchlist, group]) => (
+            <div className="sa-proto-group" key={watchlist}>
+              <span className="sa-proto-group-label" title={`Protocols whose symbols come from: ${watchlist}`}>
+                {watchlist}
+              </span>
+              <div className="sa-proto-group-chips">
+                {group.map((p) => (
+                  <ProtocolChip key={p.id} id={p.id} name={p.name} description={p.description}
+                    active={activeProtocols.includes(p.id)} dataInsufficient={dataInsufficientIds.has(p.id)}
+                    onToggle={toggleProtocol} />
+                ))}
+              </div>
+            </div>
           ))}
           {protocols.length === 0 && <span className="sa-hint">Loading protocols...</span>}
         </div>
@@ -250,6 +318,12 @@ export default function SeesArenaPage() {
                 {activeProtocols.map((pid) => (
                   <th key={pid} className="sa-th-protocol">
                     {protocolMap[pid]?.name || pid}
+                    {/* The watchlist that makes this COLUMN symbol-centric — the same fact the chips
+                        above are grouped by, so two similarly-named columns can be told apart, and so a
+                        reader can see at a glance when two columns are scoring the same symbols. */}
+                    {watchlistsByProtocol.get(pid)?.length > 0 && (
+                      <span className="sa-th-watchlist">{(watchlistsByProtocol.get(pid) || []).join(' + ')}</span>
+                    )}
                     <Tooltip content={
                       (protocolMap[pid]?.description || '') +
                       '\n\nStyle: ' + (protocolMap[pid]?.tradingStyle || '—') +
@@ -318,7 +392,20 @@ export default function SeesArenaPage() {
                       })
                       .filter((v) => v != null);
                     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-                    return <td key={pid}><strong>{vals.length ? `${avg.toFixed(0)}%` : '—'}</strong></td>;
+                    // ⚠️ More per-protocol stats (owner: *"can include more protocol stats"*). The
+                    // average alone hides the two things that change a decision: how many symbols it
+                    // is an average OF, and whether it ever scores well. An average over 2 symbols and
+                    // one over 30 are not the same evidence, and when an average looks mediocre the
+                    // best score is the number that says whether the protocol is capable at all.
+                    const best = vals.length ? Math.max(...vals) : 0;
+                    return (
+                      <td key={pid}>
+                        <strong>{vals.length ? `${avg.toFixed(0)}%` : '—'}</strong>
+                        {vals.length > 0 && (
+                          <span className="sa-sum-stat">n={vals.length} · best {best}%</span>
+                        )}
+                      </td>
+                    );
                   })}
                   <td><span className="sa-hint">
                     {compResult.comparison.filter((r) => r.consensus === 'strong_buy' || r.consensus === 'buy').length} buy / {compResult.comparison.length} total

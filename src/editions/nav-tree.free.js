@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 10 of 14 areas · 39 of 109 nav entries (premium ids AND labels removed)
+ * 10 of 14 areas · 39 of 108 nav entries (premium ids AND labels removed)
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -111,7 +111,7 @@ export const NAV_TREE = {
       },
       {
         id: "mt5-trading",
-        label: "MT5 Trading",
+        label: "Manual Trading",
         icon: "📈",
       },
       {

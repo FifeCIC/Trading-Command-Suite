@@ -1,7 +1,7 @@
 /**
  * BrokerCataloguePage — what the BROKERS offer, versus what the app has onboarded (#958).
  *
- * Route: /research/broker-catalogue
+ * Route: /status/broker-catalogue
  *
  * ⚠️ WHY THIS PAGE EXISTS. #958 built the capability — the broker's 12,373-instrument list is now
  * imported instead of being read into an in-memory cache and discarded. But a capability nobody

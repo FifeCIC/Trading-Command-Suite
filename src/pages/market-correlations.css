@@ -19,16 +19,34 @@
 .mc-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
 
 /* ── Heatmap ──────────────────────────────────────────────── */
-.mc-heatmap-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; margin-bottom: 0.5rem; }
-.mc-heatmap { border-collapse: collapse; font-size: 0.62rem; }
+/* Owner (Page Walkthrough, /research/market-correlations): *"Make this a bit larger … and make it so
+   the boxes <td.mc-cell> popout and resize larger when hovered over."*
+   ⚠️ The wrap is `overflow-x: auto`, and an overflow that is not `visible` on ONE axis makes the other
+   axis compute to `auto` too — so a scaled cell would be clipped by the wrap's edge. The padding buys
+   the room for the pop-out; without it the effect is invisible on the outermost rows and columns. */
+.mc-heatmap-wrap { overflow-x: auto; padding: 0.75rem; border: 1px solid var(--line, #1e2a45); border-radius: 8px; margin-bottom: 0.5rem; }
+.mc-heatmap { border-collapse: collapse; font-size: 0.74rem; }
 .mc-heatmap th, .mc-heatmap td {
   padding: 0.25rem 0.35rem; text-align: center; white-space: nowrap;
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
 }
 .mc-heatmap th { color: var(--ink-soft, var(--ink-soft)); font-weight: 500; font-size: 0.58rem; }
 .mc-heatmap tbody th { text-align: left; }
-.mc-cell { border-radius: 2px; min-width: 40px; transition: opacity 0.15s; }
-.mc-cell:hover { opacity: 0.85; }
+.mc-cell {
+  border-radius: 3px;
+  min-width: 52px;
+  position: relative;
+  transform-origin: center;
+  transition: transform 0.12s ease-out, box-shadow 0.12s, opacity 0.15s;
+}
+.mc-cell:hover {
+  opacity: 1;
+  transform: scale(1.22);
+  z-index: 5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .mc-diag { color: var(--ink-soft, var(--ink-soft)) !important; }
 
 .mc-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.65rem; }

@@ -74,7 +74,6 @@ export const NAV_TREE = {
     label: 'Research',
     views: [
       { id: 'symbols-browser', label: 'Symbols Browser', icon: '🔍' },
-      { id: 'broker-catalogue', label: 'Broker Catalogue', icon: '🌐' },
       { id: 'screener', label: 'Screener', icon: '🧲' },
       { id: 'research-notes', label: 'Notes', icon: '📝' },
       { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '📅' },
@@ -105,7 +104,6 @@ export const NAV_TREE = {
       { id: 'protocols-ladder', label: 'Protocols Ladder', icon: '🪜' },
       { kind: 'section-header', id: 'tools-header', label: 'Tools', icon: '' },
       { id: 'sees-arena', label: 'Protocol Comparison', icon: '⚖️' },
-      { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
       { id: 'protocol-builder', label: 'Protocol Builder', icon: '🧩' },
       { id: 'protocol-trail', label: 'Protocol Trail', icon: '🔗' },
       { id: 'directive-viewer', label: 'Directive Viewer', icon: '🔍' },
@@ -125,7 +123,7 @@ export const NAV_TREE = {
       { id: 'live-ordering-stack', label: 'Ladder', icon: '◉' },
       { id: 'ab-ladder', label: 'A/B Ladder', icon: '⚖️' },
       { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
-      { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
+      { id: 'singles-monitor', label: 'Single Symbol', icon: '🖥' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
     ],
   },
@@ -173,7 +171,7 @@ export const NAV_TREE = {
       // life as a prototype, and one free leaf kept the whole Development area alive in the free
       // build's nav. §9.2 called it "promoted to a first-class area"; this is that move. The
       // education-facing copy stays at /education/mt5-demo-trading.
-      { id: 'mt5-trading', label: 'MT5 Trading', icon: '📈' },
+      { id: 'mt5-trading', label: 'Manual Trading', icon: '📈' },
       { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
@@ -240,7 +238,6 @@ export const NAV_TREE = {
       { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔍' },
       { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
-      { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       // ⚠️ `file-inventory` MOVED to Development 2026-10-02. ⚠️ `architecture-framework` was NOT moved
       // even though the owner asked for it: /builder/architecture-framework is declared as the route in
       // an API manifest (architecture-manifest.controller.ts), in two instruction files and in the
@@ -250,6 +247,7 @@ export const NAV_TREE = {
       // MOVED from /automation/execution-queue 2026-10-02 (owner: "Schedule Jobs in the Status
       // area"). The `scheduled_job` table is machinery health — what is due, what failed.
       { id: 'scheduled-jobs', label: 'Scheduled Jobs', icon: '🗓' },
+      { id: 'broker-catalogue', label: 'Broker Catalogue', icon: '🌐' },
     ],
   },
   // ── Lab — the theory & data playground ──
@@ -400,6 +398,7 @@ export const NAV_TREE = {
       // ── Prototypes — product features that are not yet real ──
       { kind: 'section-header', id: 'dev-prototypes', label: 'Prototypes', icon: '🧪' },
       { id: 'strategy-wizard', label: 'Strategy Wizard', icon: '🧙' },
+      { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
     ],
   },
 };

@@ -4,10 +4,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
-  min-height: 22px;
+  /* ⚠️ 24px, not 22px. The a11y policy's AA tap-target minimum is 24×24 (WCAG 2.5.5), and the global
+     `button { min-height: 24px; min-width: 24px }` rule in index.css already said so — this rule
+     OVERRODE it downwards. It is the smallest control on every page header, so it is the one that
+     most needed the minimum. */
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
   border: none;
   border-radius: 50%;
   background: var(--ink-soft, var(--color-muted));
@@ -31,18 +35,39 @@
   outline: none;
 }
 
+/* ⚠️ FIXED 2026-10-06 — this popover rendered at the TOP-LEFT of the viewport, reading as a stray
+   text field. Owner report (Page Walkthrough, /trading/strategy-monitor): *"the overlay appears top
+   left and is not a notice its more like a text field, messy"*.
+
+   MEASURED CAUSE — and the decisive line is NOT the one it first appeared to be.
+   The UA stylesheet centres every `[popover]` with `position: fixed; inset: 0; margin: auto`. This
+   rule UNDID that centring in two ways and then pointed at nothing:
+     1. `margin: 0` — kills the `auto` margins that do the centring. **This is the load-bearing one.**
+        Removing it alone is what actually moves the panel off the top-left corner.
+     2. `inset: unset` plus `top: anchor(bottom)` / `left: anchor(left)`, where the `anchor()` values
+        need `anchor-name` on the TRIGGER and `.pip-trigger` never declared one — so both were invalid.
+   With no inset, no auto margin and no valid anchor, the element sat at the top layer's default:
+   (0, 0). Exactly the owner's report.
+
+   ⚠️ AND ANCHOR POSITIONING IS NOT USABLE HERE, so it is not restored. Declaring `anchor-name` and
+   wrapping `anchor()` in `@supports` was tried and MEASURED in this same session: the panel cleared
+   the corner but landed at y=2981 with its trigger at y=456. `anchor()` returns VIEWPORT coordinates
+   while a `[popover]` is `position: fixed`, and this app wraps page content in `motion` elements that
+   set `transform` — a transformed ancestor becomes the containing block for fixed descendants, so
+   viewport coordinates are resolved against the wrong origin. A centred panel is not a tooltip, but it
+   is predictable, and unpredictability was the complaint. Revisit only with JS positioning that
+   measures the trigger's own rect. */
 .pip-popover {
-  background: var(--panel, var(--panel));
-  border: 1px solid var(--accent, var(--accent));
+  background: var(--panel);
+  border: 1px solid var(--accent);
   border-radius: 10px;
   padding: 0.75rem 1rem;
   max-width: 400px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   animation: pip-fade-in 0.15s ease-out;
-  margin: 0;
-  inset: unset;
-  top: anchor(bottom);
-  left: anchor(left);
+  /* ⚠️ `auto`, NOT `0`. The UA centres a [popover] with `inset: 0; margin: auto`; `margin: 0` was
+     what pinned this to the top-left corner. Do not "tidy" this back to 0. */
+  margin: auto;
 }
 
 @keyframes pip-fade-in {
@@ -52,6 +77,6 @@
 
 .pip-content {
   font-size: 0.82rem;
-  color: var(--ink-soft, var(--ink-soft));
+  color: var(--ink-soft);
   line-height: 1.55;
 }

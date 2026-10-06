@@ -24,7 +24,7 @@ const VIEW_META = {
   // #958 — the BROKER's catalogue, not the app's onboarded set. Registered separately because the
   // gap between them (offered vs onboarded) is the capability this page exists to surface; there
   // is deliberately no "merge into Symbols Browser" here.
-  '/research/broker-catalogue': {
+  '/status/broker-catalogue': {
     tier: 'premium',
     review: 'approved',
     label: 'Broker Catalogue',
@@ -558,15 +558,6 @@ const VIEW_META = {
     api: [],
   },
 
-  // ── Protocols ──
-  '/protocols/configure-directives': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Protocol Editor',
-    file: 'src/pages/DirectivesConfigPage.jsx',
-    css: 'src/pages/directives-config.css',
-    api: [],
-  },
 
   // ── Scoring ──
   '/scoring/live-ordering-stack': {
@@ -675,7 +666,7 @@ const VIEW_META = {
   '/trading/mt5-trading': {
     tier: 'free',
     review: 'approved',
-    label: 'MT5 Trading',
+    label: 'Manual Trading',
     file: 'src/pages/Mt5TradingPage.jsx',
     css: 'src/pages/mt5-trading-page.css',
     api: [],
@@ -1082,7 +1073,7 @@ const VIEW_META = {
     css: 'src/pages/settings.css',
     api: [],
   },
-  '/status/architecture-framework': {
+  '/development/architecture-framework': {
     tier: 'premium',
     review: 'approved',
     label: 'Architecture',

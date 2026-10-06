@@ -15,7 +15,7 @@ import './ui-review.css';
  *
  * STEP IN THE PIPELINE:
  *   BEFORE: the app's view list exists only as code (`view-meta.js` + `nav-tree.js`).
- *   THIS:   the owner records importance / hide-now / keenness / a note per page.
+ *   THIS:   the owner records importance / hide-now / a 1–10 UI rating / a note per page.
  *   AFTER:  every interaction PUTs to `/api/system/settings/ui-review`, which persists to the
  *           `appsetting` row AND mirrors to `nest/app-settings.json` — the file an agent reads to
  *           work from. No export step, no "remember to save".
@@ -39,11 +39,23 @@ const IMPORTANCE = [
   { v: 'M', label: 'Medium' },
   { v: 'L', label: 'Low' },
 ];
-const KEEN = [
-  { v: 3, label: 'Very keen (3)' },
-  { v: 2, label: 'Keen (2)' },
-  { v: 1, label: 'Not bothered (1)' },
-];
+/**
+ * The UI-quality rating — 1–10.
+ *
+ * ⚠️ REPLACED `KEEN` (1–3, "how keen are you on this page") on 2026-10-06 at the owner's request:
+ * *"replace `<th>Keen</th>` with a 1 to 10 rating on how good the UI is … I will use that column to
+ * comment on which aspects of the page's UI is to be kept and make part of the core/default theme
+ * structure and styling."*
+ *
+ * ⚠️ IT WRITES A NEW FIELD (`uiScore`), IT DOES NOT WIDEN `keen`. 80 of the 100 stored verdicts carry
+ * a `keen` value meaning "keenness", so reusing that key would have re-rendered 27 "Very keen (3)"
+ * entries as **3/10**. Old values are left as they are.
+ *
+ * ⚠️ THE SCALE IS DELIBERATELY UNANCHORED. No words are attached to 8 or 3, because the rubric is the
+ * owner's to set — labelled bands ("8–10 = keep") would put a standard in their mouth and then get
+ * quoted back at them as if they had agreed to it.
+ */
+const UI_SCORE = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((v) => ({ v, label: String(v) }));
 
 /** Build the row set: nav leaves in nav order first, then every non-nav view alphabetically. */
 function buildRows() {
@@ -185,7 +197,10 @@ export default function UiReviewPage() {
    * an entry whose ONLY content is a timestamp — and `&&` binding tighter than `||` made the
    * intent unreadable. 'No' is an ANSWER, so a stored `false` counts; a stored `null` does not.
    */
-  const isAnswered = (e) => Boolean(e && (e.importance || e.keen || e.note || e.hide === true || e.hide === false));
+  // ⚠️ `e.keen` is kept in this test even though the column is gone: entries answered ONLY on the old
+  // keenness scale still hold a verdict, and dropping them would silently shrink the "answered" count
+  // and make the walkthrough look less complete than it is.
+  const isAnswered = (e) => Boolean(e && (e.importance || e.keen || e.uiScore || e.note || e.hide === true || e.hide === false));
 
   const answered = rows.filter((r) => isAnswered(entries[r.key])).length;
 
@@ -258,7 +273,14 @@ export default function UiReviewPage() {
             <th scope="col">Edition</th>
             <th scope="col">Importance</th>
             <th scope="col">Hide now</th>
-            <th scope="col">Keen</th>
+            {/* Replaced the `Keen` column 2026-10-06 — see UI_SCORE above for why the stored values
+                were not carried over. */}
+            <th
+              scope="col"
+              title="How good is this page's UI, 1–10 — theme match, layout, and how it handles its own unique needs. Null = not rated."
+            >
+              UI /10
+            </th>
             <th scope="col">Changes I suggest</th>
             <th scope="col">Saved</th>
           </tr>
@@ -325,12 +347,13 @@ export default function UiReviewPage() {
                   </td>
                   <td>
                     <select
-                      aria-label={`Keenness for ${r.label}`}
-                      value={e.keen || ''}
-                      onChange={(ev) => save(r.key, { keen: ev.target.value ? Number(ev.target.value) : null })}
+                      aria-label={`UI rating out of 10 for ${r.label}`}
+                      title="1–10: how good is this page's UI"
+                      value={e.uiScore ?? ''}
+                      onChange={(ev) => save(r.key, { uiScore: ev.target.value ? Number(ev.target.value) : null })}
                     >
                       <option value="">—</option>
-                      {KEEN.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+                      {UI_SCORE.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
                     </select>
                   </td>
                   <td>

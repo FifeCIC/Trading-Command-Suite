@@ -208,6 +208,26 @@ export default function TradeJournalPage() {
   const [hideBlocked, setHideBlocked] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
+  /**
+   * Accordion state for the journal cards — owner, Page Walkthrough: *"I would like these to be
+   * accordions"* (2026-10-01, applied 2026-10-06).
+   *
+   * ⚠️ A **Set**, not a single id. "Opening one card closes the one I was reading" is the behaviour
+   * people complain about in an accordion, and nothing in the note asks for single-open.
+   *
+   * ⚠️ THE NAME MATTERS HERE. The card already carries `tj-open` — which is the TRADE'S STATUS (the
+   * position is still open), NOT an expansion state. The two are easy to conflate, which is why this is
+   * `expandedIds` and never `openIds`.
+   */
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const toggleExpanded = (id) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const eventsQuery = useQuery({
     queryKey: ['journal-activity-events'],
     queryFn: () => apiGet('/api/automation/events?limit=100').catch(() => ({ events: [] })),
@@ -429,7 +449,31 @@ export default function TradeJournalPage() {
           const why = entry.isOpen ? null : closeReasonMeta(entry.closeReason);
           return (
           <div key={entry.id} className={`tj-card ${entry.isOpen ? 'tj-open' : entry.pnl >= 0 ? 'tj-win' : 'tj-loss'}`}>
-            <div className="tj-card-header">
+            {/**
+              * ⚠️ The header IS the accordion toggle (2026-10-06).
+              *
+              * It is a `<div>` with `role="button"` rather than a real `<button>` for two reasons:
+              *   1. The FOOTER below contains a real button ("AI Review") — wrapping the card in a
+              *      button would nest controls, which is invalid and unusable by keyboard.
+              *   2. It leaves `.tj-card-header`'s existing layout rules untouched.
+              * `tabIndex` + Enter/Space + `aria-expanded` are what stop this being a mouse-only control —
+              * a purely visual chevron would leave keyboard and screen-reader users with a card they
+              * cannot open.
+              */}
+            <div
+              className="tj-card-header"
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedIds.has(entry.id)}
+              style={{ cursor: 'pointer' }}
+              onClick={() => toggleExpanded(entry.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleExpanded(entry.id);
+                }
+              }}
+            >
               <span className="tj-symbol">{entry.symbol}</span>
               <span className={`tj-type ${entry.type === 'buy' ? 'tj-buy' : 'tj-sell'}`}>{entry.type?.toUpperCase()}</span>
               {entry.brokerTicket && <span className="tj-ticket" title={`MT5 ticket #${entry.brokerTicket}`}>#{entry.brokerTicket}</span>}
@@ -443,24 +487,31 @@ export default function TradeJournalPage() {
                 </span>
               )}
               <span className={`tj-pnl ${entry.isOpen ? '' : entry.pnl >= 0 ? 'tj-green' : 'tj-red'}`}>{entry.isOpen ? 'OPEN' : entry.pnl >= 0 ? '+' : ''}{!entry.isOpen ? currencySymbol + Math.abs(entry.pnl).toFixed(2) : ''}</span>
+              <span aria-hidden="true" style={{ marginLeft: 'auto', opacity: 0.6 }}>
+                {expandedIds.has(entry.id) ? '▾' : '▸'}
+              </span>
             </div>
-            <div className="tj-card-body">
-              <div className="tj-details">
-                <span>Vol: {entry.volume}</span><span>Entry: {currencySymbol}{Number(entry.entryPrice).toFixed(2)}</span>
-                {entry.exitPrice != null && <span>Exit: {currencySymbol}{Number(entry.exitPrice).toFixed(2)}</span>}
-                {entry.strategy && <span>Strategy: {entry.strategy}</span>}
-                {why && <span>Closed by: {why.label}</span>}
-                <span>{new Date(entry.date).toLocaleDateString()}</span>
-              </div>
-              {entry.tags && <div className="tj-tags">{entry.tags.map((tag) => <span key={tag} className="tj-tag">{tag}</span>)}</div>}
-              {entry.notes && <p className="tj-note">{entry.notes}</p>}
-            </div>
-            <div className="tj-card-footer">
-              <button className="tj-btn-ai" onClick={() => handleAnalyze(entry.id)} disabled={analyzing === entry.id}>
-                {analyzing === entry.id ? 'Analyzing...' : 'AI Review'}
-              </button>
-              {entry.aiAnalysis && <div className="tj-analysis"><pre>{entry.aiAnalysis}</pre></div>}
-            </div>
+            {expandedIds.has(entry.id) && (
+              <>
+                <div className="tj-card-body">
+                  <div className="tj-details">
+                    <span>Vol: {entry.volume}</span><span>Entry: {currencySymbol}{Number(entry.entryPrice).toFixed(2)}</span>
+                    {entry.exitPrice != null && <span>Exit: {currencySymbol}{Number(entry.exitPrice).toFixed(2)}</span>}
+                    {entry.strategy && <span>Strategy: {entry.strategy}</span>}
+                    {why && <span>Closed by: {why.label}</span>}
+                    <span>{new Date(entry.date).toLocaleDateString()}</span>
+                  </div>
+                  {entry.tags && <div className="tj-tags">{entry.tags.map((tag) => <span key={tag} className="tj-tag">{tag}</span>)}</div>}
+                  {entry.notes && <p className="tj-note">{entry.notes}</p>}
+                </div>
+                <div className="tj-card-footer">
+                  <button className="tj-btn-ai" onClick={() => handleAnalyze(entry.id)} disabled={analyzing === entry.id}>
+                    {analyzing === entry.id ? 'Analyzing...' : 'AI Review'}
+                  </button>
+                  {entry.aiAnalysis && <div className="tj-analysis"><pre>{entry.aiAnalysis}</pre></div>}
+                </div>
+              </>
+            )}
           </div>
           );
         })}

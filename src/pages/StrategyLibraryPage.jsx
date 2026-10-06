@@ -269,6 +269,38 @@ export default function StrategyLibraryPage() {
           const diffColor = DIFFICULTY_COLORS[strategy.difficulty] || DIFFICULTY_COLORS.Intermediate;
           const statusColor = STATUS_COLORS[strategy.status] || STATUS_COLORS.concept;
 
+          /**
+           * Link state — is anything actually RUNNING this entry's protocol? (added 2026-10-06)
+           *
+           * Owner (Page Walkthrough, /trading/strategy-library): *"we need another one telling us if
+           * the supporting/linked strategy [is] active or not, in the initial row before opening the
+           * accordion."*
+           *
+           * ⚠️ It reads the bots query the page ALREADY loads and matches on the SAME key
+           * (`b.protocolId === strategy.tcsProtocol`) that StrategyDecisionPath uses, so the badge and
+           * the decision-path diagram cannot disagree about which bot is being discussed. No new
+           * request, no backend change.
+           *
+           * ⚠️ `null` MEANS SAY NOTHING. An entry with no protocol, or one whose bots could not be read
+           * at all, must NOT be labelled "inactive" — that would be a claim about something we never
+           * looked at, and "inactive" is actionable while "unknown" is not.
+           */
+          const linkedBots = strategy.tcsProtocol
+            ? (bots || []).filter((b) => b.protocolId === strategy.tcsProtocol)
+            : [];
+          const activeLinked = linkedBots.find((b) => b.active === true);
+          const botState = botsNotice || !strategy.tcsProtocol
+            ? null
+            : activeLinked
+              ? { tone: 'bot-on', label: 'Bot active', title: `Running: ${activeLinked.name}` }
+              : linkedBots.length
+                ? {
+                    tone: 'bot-off',
+                    label: 'Bot inactive',
+                    title: `${linkedBots.length} bot(s) name ${strategy.tcsProtocol}, none of them active`,
+                  }
+                : { tone: 'bot-off', label: 'No bot', title: `No bot is configured for ${strategy.tcsProtocol}` };
+
           return (
             <article key={strategy.id} className={`sl-card ${isOpen ? 'sl-card--open' : ''}`}>
               {/* ── Card header (always visible) ── */}
@@ -284,6 +316,11 @@ export default function StrategyLibraryPage() {
                   <span className="sl-badge" style={{ color: statusColor, borderColor: statusColor }}>
                     {STATUS_LABELS[strategy.status]}
                   </span>
+                  {botState && (
+                    <span className={`sl-badge sl-badge--${botState.tone}`} title={botState.title}>
+                      {botState.label}
+                    </span>
+                  )}
                   <span className="sl-badge sl-badge--category">{strategy.category}</span>
                 </div>
                 <span className={`sl-chevron ${isOpen ? 'sl-chevron--open' : ''}`}>▼</span>

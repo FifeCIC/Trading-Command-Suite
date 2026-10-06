@@ -14,7 +14,7 @@ import { useUiStore } from '../stores/useUiStore';
 const FREE_EDITION = import.meta.env.VITE_EDITION === 'free';
 
 /** Context for the market-order keys — the screen they work on, less the premium one in free. */
-const TRADING_CONTEXT = FREE_EDITION ? 'MT5 Trading' : 'Speed Trading, MT5 Trading';
+const TRADING_CONTEXT = FREE_EDITION ? 'Manual Trading' : 'Speed Trading, Manual Trading';
 
 const SHORTCUTS = [
   {

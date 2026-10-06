@@ -234,9 +234,16 @@
   padding-bottom: 0.35rem;
 }
 
+/* ⚠️ THE HOVER WAS TOO DARK (owner, Page Walkthrough 2026-10-01; fixed 2026-10-06). It filled the
+   row with `--color-input-bg`, which is a FORM-FIELD colour — near-black on the dark themes — so
+   hovering a row made it read as a selected input and the row's text lost contrast against it.
+   A row hover should be a SUBTLE TINT of the existing surface, not a second surface.
+   `color-mix(... var(--ink) 4% ...)` is the treatment already used by `directive-viewer.css` and
+   `recently-analysed.css`, and it is theme-safe: it darkens on a light theme and lightens on a dark
+   one, because it mixes the TEXT colour into whatever is behind it. */
 .strategycmp-table tbody tr:hover td,
 .strategycmp-table tbody tr:hover th {
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
 .strategycmp-muted {

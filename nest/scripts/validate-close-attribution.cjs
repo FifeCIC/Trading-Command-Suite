@@ -55,6 +55,14 @@ const ALLOWLIST = [
     why: 'RECEIVES `strategy` as an explicit parameter (#884) — the parser belongs to its callers. ' +
       'If this ever becomes the ONLY file with a parser reference, the callers have regressed.',
   },
+  {
+    file: 'modules/trading/bot-rules.ts',
+    why: 'DECLARATION ONLY — it declares every behavioural trading_strategy column and its caveats; ' +
+      'it never writes a Trade. A caveat STRING quotes the recorded value ' +
+      '(`closeReason = system:time-stop`, #949), and the comment-stripper cannot tell a string ' +
+      'literal in a declaration from code. Added 2026-10-06 when a measurement note in the ' +
+      'maxHoldHours caveat tripped the build.',
+  },
 ];
 
 function walk(dir, out = []) {

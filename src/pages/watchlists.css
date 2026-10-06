@@ -281,6 +281,21 @@
   justify-content: center;
   padding: 0.45rem 0.75rem;
   min-width: 56px;
+  /* ⚠️ STABLE HEIGHT — THE "TWO DESIGNS" FIX (owner, Page Walkthrough: *"somehow there are two designs
+   for the pills that display the symbols, some pills have the company name and some don't but it depends
+   on the watchlist"*; fixed 2026-10-06).
+
+   The markup renders the name line CONDITIONALLY (`{companyName && <span className="wl-symbol-name">}`),
+   and this chip had no height of its own — so a chip that resolved a name was ~12px taller than one that
+   did not, and the two shapes sat side by side. That is why it "depends on the watchlist": each list
+   shows whichever of the two its symbols happen to resolve.
+
+   Measured cause, not guessed: 260 symbols in the table, and **79 of them have no usable name** (blank,
+   or the ticker repeated) — so any list holding one of those mixes both heights.
+
+   2.75rem is deliberately the 44px tap-target size, so the fix buys a consistent shape AND a compliant
+   target rather than trading one for the other. */
+  min-height: 2.75rem;
   border: 1px solid var(--line, var(--panel));
   border-radius: 8px;
   text-decoration: none;

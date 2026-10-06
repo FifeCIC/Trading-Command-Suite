@@ -341,7 +341,7 @@ export default function Mt5TradingPage() {
       {/* ── Header ── */}
       <div className="mt5u-header">
         <div className="mt5u-header-left">
-          <h1>MT5 Trading</h1>
+          <h1>Manual Trading</h1>
           {activeAccountInfo && (
             <span className={`mt5u-account-badge ${mode === 'demo' ? 'mt5u-badge-demo' : 'mt5u-badge-live'}`}>
               {mode === 'demo' ? '🟡' : '🟢'} {activeAccountInfo.login} @ {activeAccountInfo.server || '—'}

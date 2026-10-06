@@ -241,16 +241,75 @@ export default function HealthDashboardPage() {
     return Math.max(...data.apiTrends.map(p => p.avgMs), 1);
   }, [data?.apiTrends]);
 
+  /**
+   * downloadReport() — one file a developer can act on without asking a follow-up question.
+   *
+   * Owner request (Page Walkthrough, /status/health-check): *"Add report download for sending to
+   * developer for troubleshooting."*
+   *
+   * ⚠️ IT CARRIES THE APP VERSION AND THE MOMENT OF READING. A report from an unknown build cannot be
+   * matched to a fix or lined up against a log, so the identifiers are what make the numbers usable.
+   *
+   * ⚠️ `null` (the query failed) and `[]` (the section is genuinely empty) are kept as DIFFERENT
+   * values. Collapsing them would destroy the exact distinction this page exists to make (§7 — an
+   * empty list and a failed query must never render the same).
+   */
+  const downloadReport = async () => {
+    const version = await apiGet('/api/version').catch(() => null);
+    const snap = (q) => ({
+      state: q.status,
+      fetchedAt: q.dataUpdatedAt ? new Date(q.dataUpdatedAt).toISOString() : null,
+      error: q.error ? String(q.error?.message || q.error) : null,
+      data: q.data ?? null,
+    });
+    const report = {
+      generatedAt: new Date().toISOString(),
+      route: '/status/health-check',
+      version,
+      browser: {
+        userAgent: navigator.userAgent,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        language: navigator.language,
+      },
+      queries: {
+        healthDashboard: snap(dashQuery),
+        barsRefreshStatus: snap(feedQuery),
+      },
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tcs-health-${report.generatedAt.replace(/[:.]/g, '-').slice(0, 19)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   if (dashQuery.isLoading) return <div className="hd-page"><LoadingSkeleton variant="card" count={4} /></div>;
 
   return (
     <div className="hd-page">
       <motion.header className="hd-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>Health & Diagnostics
-          <PageInfoPopover>
-            System vitals, DB health, slow queries, API trends, provider status, and trace correlation — refreshed every 15s.
-          </PageInfoPopover>
-        </h1>
+        {/* ⚠️ THE ℹ POPOVER IS A SIBLING OF THE h1, NOT INSIDE IT (2026-10-06), and that is a fix.
+            Measured: the shell injects `.main-stage h1 { display: none }` — the breadcrumb already
+            names the page, so page-level h1s are hidden. A `PageInfoPopover` rendered INSIDE the h1 is
+            therefore `display: none` as well: a control nobody can see or click. It measured 0×0 on
+            this page while the same component measures 24×24 on `/research/screener`. Not introduced
+            by this batch — found while checking a header change and worth keeping fixed. */}
+        <h1>Health & Diagnostics</h1>
+        <PageInfoPopover>
+          System vitals, DB health, slow queries, API trends, provider status, and trace correlation — refreshed every 15s.
+        </PageInfoPopover>
+        <button
+          type="button"
+          className="hd-report-btn"
+          onClick={downloadReport}
+          title="Download every value on this page as JSON — stamped with the time, the app version and the browser — to send to a developer."
+        >
+          ⤓ Download report
+        </button>
       </motion.header>
 
       {!apiOnline && <ApiOfflineBanner />}

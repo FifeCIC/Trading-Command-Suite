@@ -59,7 +59,12 @@ export class SettingsController {
       clean.importance = p.importance;
     }
     if (typeof p.hide === 'boolean' || p.hide === null) clean.hide = p.hide;
-    if (p.keen === 1 || p.keen === 2 || p.keen === 3 || p.keen === null) clean.keen = p.keen;
+    // ⚠️ `keen` (1–3) was RETIRED 2026-10-06 and replaced by `uiScore` (1–10) — the walkthrough was
+    // its only writer, so a retired field left writable is a second path into data nothing reads.
+    // The 80 stored `keen` values are untouched by this line; only new writes are refused.
+    // ⚠️ The 1–10 RANGE is enforced in the service, not here, so a value that reaches the store by
+    // another route is still checked. This whitelist only decides WHICH fields may be written.
+    if (typeof p.uiScore === 'number' || p.uiScore === null) clean.uiScore = p.uiScore;
     if (typeof p.note === 'string') clean.note = p.note.slice(0, 2000);
     return this.settings.setUiReviewEntry(body.viewKey, clean);
   }

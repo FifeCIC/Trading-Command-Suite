@@ -14,6 +14,10 @@ const CATEGORY_LABELS = {
   'portfolio-recovery': 'Portfolio Recovery',
   'long-term': 'Long Term',
   'instrument-trading': 'Instrument Trading',
+  // Added 2026-10-06 at the owner's request (Page Walkthrough, /planner/objectives: "Add Education to
+  // <select.ob-select>"). Safe as a new value: the API stores `category` as a plain string with no
+  // enum, so an objective carrying it is accepted and rendered — see planner.service.ts.
+  'education': 'Education',
   'custom': 'Custom',
 };
 
@@ -201,6 +205,9 @@ export default function ObjectivesPage() {
               <option value="instrument-trading">Instrument Trading</option>
               <option value="portfolio-recovery">Portfolio Recovery</option>
               <option value="long-term">Long Term</option>
+              {/* Placed before `Custom` so the catch-all stays last — the owner asked for it to be
+                  added, not for it to displace anything. */}
+              <option value="education">Education</option>
               <option value="custom">Custom</option>
             </select>
           </div>

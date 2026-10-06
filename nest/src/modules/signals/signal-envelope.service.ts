@@ -1054,10 +1054,28 @@ export class SignalEnvelopeService {
     if (resolution.source === 'override') return resolution;
 
     try {
-      const bots = await this.prisma.tradingStrategy.findMany({
-        where: { protocolId, active: true },
-        select: { minComposite: true, mode: true, symbol: true },
+      // ── #759 CORRECTED 2026-10-06 — "participating" resolves through SUBSCRIPTIONS ────────────
+      //
+      // This read `tradingStrategy.protocolId` — the column `bot-rules.ts` declares `display-only`,
+      // whose own caveat says routing uses `strategy_protocol` — while `SignalQueueService.syncQueues()`,
+      // the thing that actually creates entries, joins `strategy_protocol`. Two sources for one
+      // question, with both failure modes live: a SUBSCRIBED bot whose `protocolId` column had
+      // drifted never lowered the gate (the #759 starvation, returning by another door), and a bot
+      // carrying the column but no subscription could lower the gate for a protocol it can never
+      // trade. Measured before this change: all 40 active bots AGREE between the two sources, so
+      // the gate value is unchanged today. Canaries pinning both directions:
+      // `signal-envelope-gate-reconciliation.spec.ts`.
+      const subscriptions = await this.prisma.strategyProtocol.findMany({
+        where: { protocolId },
+        select: { strategyId: true },
       });
+      const subscribedIds = [...new Set(subscriptions.map((s) => s.strategyId))];
+      const bots = subscribedIds.length === 0
+        ? []
+        : await this.prisma.tradingStrategy.findMany({
+            where: { id: { in: subscribedIds }, active: true },
+            select: { minComposite: true, mode: true, symbol: true },
+          });
       const bars = bots
         .map((b) => Number((b as { minComposite?: number | null }).minComposite ?? 0))
         .filter((n) => Number.isFinite(n) && n > 0);

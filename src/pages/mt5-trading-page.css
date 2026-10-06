@@ -29,8 +29,18 @@
 .mt5u-mode-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--line, var(--line)); }
 .mt5u-mode-btn { padding: 0.4rem 1rem; border: none; background: var(--panel, var(--bg)); color: var(--ink-soft, var(--ink-soft)); font-size: 0.82rem; cursor: pointer; font-weight: 600; transition: background 0.15s; }
 .mt5u-mode-btn:first-child { border-right: 1px solid var(--line, var(--line)); }
-.mt5u-mode-btn.active.demo { background: #78350f; color: #fbbf24; }
-.mt5u-mode-btn.active.live { background: #7f1d1d; color: #fca5a5; }
+/* ── Mode toggle: Demo vs Live ──
+   ⚠️ Was hardcoded (`#78350f`/`#fbbf24` demo, `#7f1d1d`/`#fca5a5` live) — colours that exist in NO
+   theme, so the toggle ignored every theme pack and the High Contrast Text preference. Owner report
+   (Page Walkthrough, /trading/mt5-trading): *"The style of this toggle does not fit in with the
+   theme."*
+
+   Now the DEMO state reuses the app's own warning tokens — the same amber the notice system uses for
+   "read this" — and LIVE uses `--danger`, which is deliberately contrast-tuned ("boosted for WCAG AA
+   body text, 5.1:1") rather than a raw red. The semantics are unchanged (demo = amber, live = red);
+   only the source of the colour is. */
+.mt5u-mode-btn.active.demo { background: var(--notice-warning-bg); color: var(--notice-warning-text); border-bottom: 2px solid var(--notice-warning-border); }
+.mt5u-mode-btn.active.live { background: color-mix(in srgb, var(--danger) 18%, var(--panel)); color: var(--danger); border-bottom: 2px solid color-mix(in srgb, var(--danger) 45%, transparent); }
 
 .mt5u-account-selector { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
 .mt5u-account-selector label { font-size: 0.7rem; color: var(--ink-soft, var(--color-muted)); text-transform: uppercase; }

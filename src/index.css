@@ -705,6 +705,23 @@ button {
   background: var(--panel);
   border: 1px solid var(--line);
   color: var(--ink);
+  /* ── Why `font-family: inherit` is here (added 2026-10-06) ──
+     A <button> does NOT inherit the page font — the UA stylesheet gives it the OS button font,
+     which measured **Arial** on this machine while the surrounding text rendered in
+     `"Segoe UI", Tahoma, …` (the app font). Owner report: *"Styling is not correct on
+     `<button.glossary-entry-header>`"* on /education/glossary, where the term and category read in
+     Arial directly above a definition paragraph in Segoe UI.
+
+     ⚠️ This is a CLASS-level fix, not a spot fix. The defect was never specific to the glossary:
+     the global rule set background/border/colour but not the font, so EVERY button that did not
+     individually opt in (`font-family: inherit` appears on a handful of selectors — .footer-col
+     button, .pf-source-select, …) has been rendering in Arial. That is why the same workaround
+     kept being re-added per component.
+
+     Safe because component declarations win on specificity (a class beats this element selector),
+     so buttons that deliberately want another font — a monospace code button, say — are unaffected
+     and only the un-set (broken) case changes. */
+  font-family: inherit;
 }
 
 .cta,

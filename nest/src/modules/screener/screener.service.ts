@@ -506,11 +506,42 @@ export class ScreenerService implements OnModuleInit {
     ranked.sort((a, b) => b.attentionWeight - a.attentionWeight);
 
     // Transparency counts (best-effort — never block ranking on them).
-    let universe = { totalSymbols: 0, hitSymbols: 0, quietSymbols: 0 };
+    // ⚠️ The two coverage stats are typed `number | null` ON PURPOSE: `null` means "the read failed",
+    // which the UI renders as an em-dash. Typing them `number` would force a 0 into that case, and a 0
+    // reads as "none scored" — the collapse this codebase keeps having to undo.
+    let universe: {
+      totalSymbols: number;
+      hitSymbols: number;
+      quietSymbols: number;
+      scoredSymbols: number | null;
+      tradedSymbols: number | null;
+    } = {
+      totalSymbols: 0,
+      hitSymbols: 0,
+      quietSymbols: 0,
+      scoredSymbols: null,
+      tradedSymbols: null,
+    };
     let inDbTickers = new Set<string>();
     let tickerMeta = new Map<string, { type: string; name: string; exchange: string; id: string }>();
     try {
-      const totalSymbols = await this.prisma.symbol.count({ where: { active: true } });
+      // ⚠️ THE WHOLE SYMBOL TABLE — NOT `active: true`. Owner ruling 2026-10-06:
+      // *"Screen the whole symbol table — opportunity should not be hidden unless it is filtered out by
+      // our strict filter process that aims to ignore the least likely opportunities based on the
+      // available information we have."*
+      //
+      // Measured before the change: **260** symbols in the table, of which only **57** are `active` —
+      // so the old denominator silently excluded **203**, which is exactly the population the screener
+      // exists to explore. The owner's stated purpose: *"screening is meant to process non-active
+      // symbols … a tool to offer insight into symbols that might offer potential."* `symbol.active` is
+      // a DATA-COVERAGE flag (R37 — it bounds the bar refresh), not a judgement about tradeability, so
+      // it was never the right denominator for a discovery tool.
+      //
+      // ⚠️ DISPLAY-ONLY, AND THAT IS WHY IT IS SAFE. These counts are computed AFTER `ranked` is built
+      // and sorted, and nothing in this block filters what is surfaced — `inDb` is already scoped to
+      // `ticker: { in: hitTickers }` with no active filter. Widening the denominator moves the
+      // transparency line and not one row of output. This is not a maths change.
+      const totalSymbols = await this.prisma.symbol.count();
       const hitTickers = [...new Set(ranked.map((r) => r.ticker))];
       const inDb = await this.prisma.symbol.findMany({
         where: { ticker: { in: hitTickers } },
@@ -520,10 +551,34 @@ export class ScreenerService implements OnModuleInit {
       for (const s of inDb) {
         tickerMeta.set(s.ticker.toUpperCase(), { type: s.type, name: s.name, exchange: s.exchange, id: s.id });
       }
+
+      // ── coverage stats the owner asked for (2026-10-06) ───────────────────────────────────────
+      // *"add a stat for how many symbols have been scored out of the symbols registered and another
+      // stat for how many have been traded out of the total symbols registered."* The denominator is now
+      // the WHOLE symbol table, so these read as coverage of everything the app knows about.
+      //
+      // ⚠️ `groupBy` RATHER THAN RAW SQL, DELIBERATELY: Prisma type-checks the field name, so a wrong
+      // column is a COMPILE error instead of a runtime throw that the surrounding `catch` swallows into a
+      // plausible `0`. "A stat that reads 0 because its column was misnamed" is this repo's most repeated
+      // defect, and a number on a page is the hardest kind of wrong number to notice.
+      //
+      // ⚠️ `null` IS NOT ZERO. A failed read returns `null` so the strip renders an em-dash, because
+      // collapsing "could not ask" into "none scored" is how a broken query becomes a finding.
+      const [scored, traded] = await Promise.all([
+        this.prisma.scoreSnapshot.groupBy({ by: ['symbol'] }).then((r) => r.length).catch(() => null),
+        // Traded = a PAST trade OR a CURRENT position — the owner's definition, 2026-10-06. Both are
+        // `trade` rows: PositionSyncService creates a row for externally-opened positions too
+        // (`origin=external`), so ONE distinct set covers both halves and there is no second source to
+        // union in. If that stops being true, this comment is the thing that is wrong.
+        this.prisma.trade.groupBy({ by: ['symbol'] }).then((r) => r.length).catch(() => null),
+      ]);
+
       universe = {
         totalSymbols,
         hitSymbols: inDbTickers.size,
         quietSymbols: Math.max(0, totalSymbols - inDbTickers.size),
+        scoredSymbols: scored,
+        tradedSymbols: traded,
       };
     } catch { /* leave zeroed */ }
 

@@ -1,0 +1,31 @@
+
+  THEORY REGISTRY
+
+  [refuted  ] weight-strategy-selects-denominator
+              evidence: measurement (n=3)   2026-09-24
+  [refuted  ] group-weights-weight-the-composite
+              evidence: code-read   2026-09-24
+  [testing  ] most-scoring-is-on-untradeable-symbols
+              evidence: measurement (n=6787)   2026-09-24
+  [supported] closed-market-scores-cannot-become-signals
+              evidence: measurement (n=5756)   2026-09-23
+  [testing  ] the-stop-loss-is-where-the-money-dies
+              evidence: cited (n=78)   2026-09-23
+  [testing  ] guardian-trail-cuts-winners-early
+              evidence: measurement (n=14)   2026-09-24
+  [refuted  ] the-book-loses-money-broadly
+              evidence: measurement (n=65)   2026-09-24
+  [refuted  ] ab-arm-pnl-can-be-attributed
+              evidence: measurement (n=19)   2026-09-24
+  [refuted  ] gold-is-the-loss-centre
+              evidence: measurement (n=11)   2026-09-24
+  [refuted  ] gold-bots-risk-over-the-ceiling
+              evidence: measurement (n=33)   2026-09-24
+  [supported] gold-dominates-the-books-loss
+              evidence: measurement (n=59)   2026-09-24
+  [refuted  ] pivot-resistance-predicts-the-turn
+              evidence: measurement (n=25131)   2026-09-25
+  [testing  ] upside-exhaustion-predicts-giveback
+              evidence: code-read   2026-09-25
+
+  [theories] Ô£à 13 entries valid ÔÇö untested: 0 ┬À testing: 4 ┬À supported: 2 ┬À refuted: 7

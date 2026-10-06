@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
 import * as fs from 'fs';
@@ -44,10 +44,29 @@ export interface AppSettings {
  * verdict must be distinguishable from a page judged "low importance" — collapsing "fine" and
  * "cannot judge" into one value is the defect this repo keeps re-finding.
  */
+/**
+ * UiScore — the owner's 1–10 verdict on how good a page's UI is (added 2026-10-06).
+ *
+ * ⚠️ WHY THIS IS A NEW FIELD AND NOT A WIDER `keen`. The store already held 80 entries with
+ * `keen ∈ {1,2,3}`, where 3 meant "very keen" — the owner's ENTHUSIASM FOR THE PAGE, not the quality
+ * of its UI. Widening that key to 1–10 would have re-rendered 27 stored "Very keen (3)" verdicts as
+ * **3/10**: a confident rating of a UI that nobody rated. Different question, different scale, so
+ * different key — and the old values are left exactly as they were rather than migrated by guesswork.
+ */
+export type UiScore = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
 export interface UiReviewEntry {
   importance: 'H' | 'M' | 'L' | null;
   hide: boolean | null;
+  /**
+   * ⚠️ LEGACY — superseded by `uiScore` on 2026-10-06. No longer written and no longer rendered.
+   * Kept in the type because the stored JSON still carries it, and an untyped dangling field is one
+   * somebody re-interprets later by guessing. Meaning: "how keen was the owner on this page", on a
+   * **1–3** scale. It is NOT a UI score and must never be read as one.
+   */
   keen: 1 | 2 | 3 | null;
+  /** 1–10 UI-quality rating. `null` = not rated yet, which is NOT the same as a low score. */
+  uiScore: UiScore | null;
   /** Free text — what the owner suggests changing about this page. */
   note: string;
   /** ISO timestamp of the last write, so a stale verdict is visible rather than implied. */
@@ -186,12 +205,31 @@ export class SettingsService {
    * an agent reads. No schema change: the table already exists.
    */
   async setUiReviewEntry(viewKey: string, patch: Partial<UiReviewEntry>): Promise<UiReviewEntry> {
+    // ⚠️ VALIDATED HERE BECAUSE A TYPE IS NOT ENFORCED AT RUNTIME. `UiScore` is a compile-time union;
+    // the PUT body arrives as JSON. `unknown` forces these checks to be real rather than a formality
+    // the compiler optimises away. Rejecting beats clamping: a clamp would record a rating nobody
+    // gave, and the owner would read it as their own verdict — the "plausible output, no error"
+    // shape this repo keeps paying for.
+    const rawUiScore: unknown = (patch as { uiScore?: unknown }).uiScore;
+    if (rawUiScore !== undefined && rawUiScore !== null) {
+      if (
+        typeof rawUiScore !== 'number' ||
+        !Number.isInteger(rawUiScore) ||
+        rawUiScore < 1 ||
+        rawUiScore > 10
+      ) {
+        throw new BadRequestException(
+          `uiScore must be a whole number 1–10, or null to clear it (received ${JSON.stringify(rawUiScore)})`,
+        );
+      }
+    }
     const settings = await this.get();
     const uiReview: UiReviewConfig = settings.uiReview || { entries: {} };
     const previous: UiReviewEntry = uiReview.entries[viewKey] || {
       importance: null,
       hide: null,
       keen: null,
+      uiScore: null,
       note: '',
       updatedAt: '',
     };

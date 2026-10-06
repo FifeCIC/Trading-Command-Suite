@@ -276,6 +276,17 @@ export default function ScreenerPage() {
           <strong>{universe.quietSymbols ?? '—'}</strong>
           <span>quiet — filtered out</span>
         </div>
+        {/* ⚠️ Coverage stats added 2026-10-06, from the owner's note. `null` renders an em-dash rather
+            than 0: a failed read must not read as "none scored". Both read against the WHOLE symbol
+            table, which is the denominator the owner chose — screening must not hide opportunity. */}
+        <div className="screener-trans-item">
+          <strong>{universe.scoredSymbols ?? '—'}</strong>
+          <span>scored of {universe.totalSymbols ?? '—'} registered</span>
+        </div>
+        <div className="screener-trans-item">
+          <strong>{universe.tradedSymbols ?? '—'}</strong>
+          <span>traded of {universe.totalSymbols ?? '—'} registered — past or held</span>
+        </div>
         <div className="screener-trans-item">
           <strong>{filtered.length}</strong>
           <span>shown · top {topN} picked</span>

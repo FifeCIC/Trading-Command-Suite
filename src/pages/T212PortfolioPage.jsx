@@ -225,7 +225,15 @@ export default function T212PortfolioPage() {
               <tbody>
                 {combinedPositions.slice(0, 100).map((p) => (
                   <tr key={p.key}>
-                    <td className="t212p-symbol">{p.ticker}</td>
+                    <td className="t212p-symbol">
+                      <a
+                        className="t212p-symbol-link"
+                        href={`/research/symbol/${encodeURIComponent(p.ticker)}`}
+                        title={`Research ${p.ticker}`}
+                      >
+                        {p.ticker}
+                      </a>
+                    </td>
                     <td className="t212p-account-cell">{p.account}</td>
                     <td>{p.quantity != null ? p.quantity.toFixed(2) : '—'}</td>
                     <td>{fmt(p.currentPrice)}</td>
@@ -262,7 +270,15 @@ export default function T212PortfolioPage() {
                 <tbody>
                   {trades.slice(0, 10).map((t, i) => (
                     <tr key={i}>
-                      <td className="t212p-symbol">{t.ticker || t.symbol}</td>
+                      <td className="t212p-symbol">
+                        <a
+                          className="t212p-symbol-link"
+                          href={`/research/symbol/${encodeURIComponent(t.ticker || t.symbol)}`}
+                          title={`Research ${t.ticker || t.symbol}`}
+                        >
+                          {t.ticker || t.symbol}
+                        </a>
+                      </td>
                       <td className={t.side === 'BUY' ? 't212p-profit' : 't212p-loss'}>{t.side || t.type}</td>
                       <td>{t.quantity?.toFixed(2) || '—'}</td>
                       <td>{fmt(t.price)}</td>

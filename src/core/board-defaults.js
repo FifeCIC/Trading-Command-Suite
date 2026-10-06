@@ -46,10 +46,10 @@ export const BOARD_DEFAULTS = {
  * Human labels for the board picker. Falls back to the raw id.
  *
  * ⚠️ These are SCREEN names, not page names (2026-09-17).
- * The picker on `/development/screen-assignment` assigns a BOARD to a physical monitor. It used to
+ * The picker on `/settings/screen-assignment` assigns a BOARD to a physical monitor. It used to
  * label them `dashboard: 'Cockpit'` and `lab: 'Widget Board (Lab)'` — both of which read
  * like page names, so choosing "Cockpit" looked like navigating to a Cockpit view when it
- * actually assigns the *dashboard* board to that monitor. Since `/development/screen-assignment` and
+ * actually assigns the *dashboard* board to that monitor. Since `/settings/screen-assignment` and
  * `/development/meta-stack-cockpit` are pages that both say "cockpit", a board also called "Cockpit"
  * was the third meaning of the word in one screen.
  *
@@ -57,7 +57,7 @@ export const BOARD_DEFAULTS = {
  */
 export const BOARD_LABELS = {
   dashboard: 'Dashboard',
-  // ⚠️ §9.14 — the lab board is only ever assigned on `/development/screen-assignment`, which is a
+  // ⚠️ §9.14 — the lab board is only ever assigned on `/settings/screen-assignment`, which is a
   // PREMIUM view, so this label never renders in the free edition. It also *repeats the premium page
   // name* ('Widget Library'), which is exactly what the rule above forbids — and the guard counts it
   // as a leaked view name. Spread, so the entry is dropped whole rather than the string being left
