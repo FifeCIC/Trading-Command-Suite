@@ -802,6 +802,35 @@ export class StopGuardianService {
   private readonly DIRECTIVE_SHORTFALL_LOG_MS = 30 * 60_000;
 
   /**
+   * ⚠️ #890's SIBLING — the shortfall guard above asks "is this directive REGISTERED?"; this one
+   * asks "is it SAYING anything?".
+   *
+   * They are different questions, and the first one PASSES while the second fails. Measured
+   * 2026-10-06: `atr-trailing-stop` is registered, `active=1` in the DB, and evaluated on every
+   * pass — and returned `signalClass: 'neutral'` in **133 of 133** live guardian evaluations.
+   * `resultsMap.size` read 4 of 4 throughout, so `INV-GUARDIAN-DIRECTIVE-RESOLVABLE` and the
+   * `GUARDIAN DIRECTIVES UNRESOLVED` error both reported healthy for the exact condition they
+   * exist to surface.
+   *
+   * It is not misregistration and it is not a stub — it is four branches whose conditions are
+   * unreachable at real market distances (`distAboveLong`/`distBelowShort` are compared against
+   * 0.03/0.1 as fractions of price; observed values across XAUUSD/EURUSD/US30 are 0.0001-0.0015,
+   * i.e. 20x-300x too small). See #1075.
+   *
+   * A permanently-neutral directive is indistinguishable from an absent one: both contribute
+   * nothing to `stopConfidence`. The `>= 55` threshold is calibrated for FOUR signals, so a
+   * silent one narrows the evidence base without changing any number a reader can see. This
+   * counts CONTRIBUTION, which is the property that actually matters.
+   *
+   * Unit: position-evaluations (the guardian's own logged unit), so N positions x one pass adds N.
+   * Throttled like the shortfall guard — a property of the declaration, not of one position.
+   */
+  private readonly directiveNeutralStreak = new Map<string, number>();
+  private lastDirectiveSilenceAt = 0;
+  private readonly DIRECTIVE_SILENCE_STREAK = 200;
+  private readonly DIRECTIVE_SILENCE_LOG_MS = 60 * 60_000;
+
+  /**
    * ⚠️ #892 — throttles the "a modify was blocked" warning.
    *
    * The per-position cadence (60s between edits on ONE position, against a 30s
@@ -1346,6 +1375,12 @@ export class StopGuardianService {
             opposingIds.push(`${id}:${d.score}`);
           }
         }
+
+        // ⚠️ #1075 — CONTRIBUTION, not presence. The #890 guard above reports 4 of 4 resolvable
+        // while a directive that can never speak contributes exactly as little as one that is
+        // missing. Symptom guard, deliberately: it does not need to know WHY a directive is silent
+        // (unreachable branch, too few bars, a stub, a future bug) — only THAT it is.
+        this.trackDirectiveContributions(directives);
         const alignedAvg = alignedCount > 0 ? alignedSum / alignedCount : 0;
         const opposingAvg = opposingCount > 0 ? opposingSum / opposingCount : 0;
         const stopConfidence = Math.max(0, Math.round(alignedAvg - opposingAvg));
@@ -1552,6 +1587,66 @@ export class StopGuardianService {
    * moves between the two observations. A number nobody can reconstruct has to carry its inputs.
    */
   private consensusBreakdown = new Map<number, string>();
+
+  /**
+   * trackDirectiveContributions() — #1075: is each declared directive actually SPEAKING?
+   *
+   * BEFORE: the guardian's tick has evaluated all four stop directives and knows which returned a
+   *         `bullish`/`bearish` class; this records that per directive id, per evaluation.
+   * AFTER:  a throttled `GUARDIAN DIRECTIVE SILENT` warning when one has been neutral for a long
+   *         run — which is the ONLY external evidence that a registered directive is inert.
+   * NEXT:   whoever reads the warning decides whether the silence is intended (see #1075 for the
+   *         measured case: `atr-trailing-stop`, 133 of 133, branches unreachable at real distances).
+   *
+   * ⚠️ THIS IS A SYMPTOM GUARD AND THAT IS THE POINT. It cannot know why a directive is silent — an
+   * unreachable threshold, too few bars, a stub, or a bug not yet written. It only asserts the thing
+   * that is true regardless: a silent directive's contribution to the `>= 55` consensus is ABSENT,
+   * not neutral, so the threshold is being applied to fewer signals than it was calibrated for.
+   *
+   * ⚠️ It must NOT be satisfied by `resultsMap.size`. That count answers "is it registered?" — the
+   * #890 question — and read 4 of 4 throughout the entire period `atr-trailing-stop` was silent.
+   *
+   * Counting unit is the position-evaluation, matching the guardian's own logged unit, so N open
+   * positions add N per pass. Five positions cross 200 in ~40 passes (~20 min at a 30s cadence).
+   * Streak resets to 0 the moment a directive speaks, so a directive is only reported on a run of
+   * silence — never on a single quiet tick.
+   *
+   * @returns the ids currently over the streak, for callers that want to assert without the log.
+   */
+  private trackDirectiveContributions(directives: Array<[string, any]>): string[] {
+    const silent: string[] = [];
+    for (const [id, d] of directives) {
+      const spoke = d?.signalClass === 'bullish' || d?.signalClass === 'bearish';
+      const streak = spoke ? 0 : (this.directiveNeutralStreak.get(id) ?? 0) + 1;
+      this.directiveNeutralStreak.set(id, streak);
+      if (!spoke && streak >= this.DIRECTIVE_SILENCE_STREAK) {
+        silent.push(`${id} ${streak}x — "${d?.reason ?? 'no result'}"`);
+      }
+    }
+
+    if (silent.length > 0) {
+      const now = Date.now();
+      if (now - this.lastDirectiveSilenceAt >= this.DIRECTIVE_SILENCE_LOG_MS) {
+        this.lastDirectiveSilenceAt = now;
+        const message =
+          `GUARDIAN DIRECTIVE SILENT — ${silent.join(' | ')}. Registered and active, but has ` +
+          `contributed no directional evidence across >= ${this.DIRECTIVE_SILENCE_STREAK} ` +
+          `evaluations, so its input to the >= 55 consensus is ABSENT rather than neutral. ` +
+          `Being registered is not the same as being heard (#1075, cf. #890).`;
+        this.logger.warn(message);
+        // ⚠️ ALSO THE CANONICAL LOG — applied here because THIS FILE already paid for the omission.
+        //
+        // `logger.warn` writes to STDOUT, captured in `nest/logs/console-*.log` — NOT the
+        // structured file the app serves at `/api/system/logs/file`. Measured 2026-09-29 on the
+        // owner-resolution warning ~40 lines above: **341 occurrences in `console-build-api.log`,
+        // ZERO in `tcs-2026-09-29.log`**. A silence report that cannot be found by a reader
+        // following the documented log path is the same defect wearing the fix's clothes, so this
+        // follows the established two-sink pattern rather than rediscovering it.
+        this.syslog?.warn('StopGuardianService', message, 'trading');
+      }
+    }
+    return silent;
+  }
 
   private logDeclines(guarded: GuardedPosition[]): void {
     // `syslog` is an OPTIONAL injection (see the constructor) — its absence is not an error here.
