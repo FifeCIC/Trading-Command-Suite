@@ -667,6 +667,14 @@ function NodeBridge({ brokerId }) {
   }
 
   const h = broker.health || {};
+  // ⚠️ `credentialMismatch` is THE field for "the terminal is logged in as somebody else", and until
+  // this node it had NO UI anywhere — the bridge detected it, refused every mutating call (#1035),
+  // and the API published it, so it was reachable and invisible at the same time. A wrong-account
+  // binding that nothing displays is a money-path fact with no surface.
+  // Three states, not two: null = matches, an object = mismatch, ABSENT = this bridge build does
+  // not report it, which is "cannot judge" and must not read as "fine".
+  const reportsMismatch = Object.prototype.hasOwnProperty.call(h, 'credentialMismatch');
+  const mismatch = h.credentialMismatch;
   const rows = [
     ['connected', h.connected ? 'yes' : 'NO'],
     ['account', h.account || '—'],
@@ -674,6 +682,11 @@ function NodeBridge({ brokerId }) {
     ['balance / equity', `${h.balance ?? '—'} / ${h.equity ?? '—'}`],
     ['tradeAllowed', h.tradeAllowed ? 'true' : 'FALSE — will refuse orders'],
     ['orderReady', h.orderReady ? 'true' : 'false'],
+    ['credential match', !reportsMismatch
+      ? 'not reported by this bridge build'
+      : (mismatch
+        ? `MISMATCH — terminal is on ${mismatch.actualAccount} @ ${mismatch.actualServer}`
+        : 'matches the configured account')],
     ['connection state', h.connectionState || '—'],
     ['circuit breaker', `${h.circuitBreaker?.state ?? '—'} · ${h.circuitBreaker?.failures ?? 0} failures`],
     ['bridge url', broker.url || '—'],
@@ -687,6 +700,17 @@ function NodeBridge({ brokerId }) {
         <strong> no derived inputs or outputs</strong> — live health instead. <strong>Connected and
         tradeable are different facts</strong>, and a bridge can be one without the other.
       </p>
+      {mismatch && (
+        <div className="pg-overlay-alert pg-overlay-alert--warn">
+          <strong>Wrong account bound.</strong> Configured for slot #{mismatch.activeSlot}
+          {' '}({mismatch.requestedAccount ?? '—'} @ {mismatch.requestedServer ?? '—'}), but the
+          terminal is logged in as <strong>{mismatch.actualAccount} @ {mismatch.actualServer}</strong>.
+          Every mutating call is refused (#1035) — reads stay open, so this bridge still answers with
+          prices.{' '}
+          {Array.isArray(mismatch.reasons) && mismatch.reasons.length > 0 &&
+            <>Reasons: {mismatch.reasons.join('; ')}.</>}
+        </div>
+      )}
       {h.tradeAllowed === false && (
         <div className="pg-overlay-alert pg-overlay-alert--warn">
           Connected, priced, and <strong>cannot place an order</strong>. Every order to this account
@@ -947,7 +971,12 @@ export default function PipelineGraphLabPage() {
           // past. The node ring turns amber for it — connected-but-not-tradeable is not "healthy".
           trade: h.tradeAllowed ? 'allowed' : 'BLOCKED',
         };
-        updated.health = !h.connected ? 'down' : (h.tradeAllowed ? 'healthy' : 'degraded');
+        updated.health = !h.connected
+          ? 'down'
+          // A credential mismatch is worse than AutoTrading being off: the terminal is on an account
+          // this bridge was never configured for, so the refusal is structural rather than a switch.
+          // Both refuse orders; only one of them means "somebody is logged into the wrong account".
+          : (h.credentialMismatch ? 'down' : (h.tradeAllowed ? 'healthy' : 'degraded'));
       } else {
         // The API answered without this broker — a configuration fact, not an outage.
         updated.health = 'unknown';
