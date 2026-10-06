@@ -27,11 +27,51 @@ Run:  python scripts/mt5-bridge/test_credential_binding.py
 
 import os
 import sys
+import ast
+import symtable
 import unittest
 from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mt5_bridge_v2 as bridge  # noqa: E402
+
+_BRIDGE_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mt5_bridge_v2.py')
+
+
+def shadowing_in(src):
+    """Functions that BOTH assign a name AND reference it, where that name is a module-level function.
+
+    Returns a sorted list of `(enclosing_function, shadowed_name)`.
+
+    WHY THIS IS A CLASS GUARD AND NOT A `refusal` CHECK. Python makes a name local to a function if
+    it is ASSIGNED anywhere in that function — so `refusal = account_mismatch_refusal(...)` inside
+    `do_POST` made `refusal` local for all ~1,000 lines of it, and every `refusal(NOTICE_*, ...)` call
+    below that raised `UnboundLocalError` instead of returning a structured refusal.
+    Asserting on the NAME would only catch this one instance; asserting on the SHAPE catches the next
+    one, whatever it is called.
+    """
+    tree = ast.parse(src)
+    module_functions = {
+        n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+
+    def walk(st):
+        yield st
+        for child in st.get_children():
+            yield from walk(child)
+
+    found = set()
+    top = symtable.symtable(src, 'mt5_bridge_v2.py', 'exec')
+    for st in walk(top):
+        if st.get_type() != 'function':
+            continue
+        syms = {s.get_name(): s for s in st.get_symbols()}
+        for name in module_functions & set(syms):
+            s = syms[name]
+            # local + assigned = the shadow; referenced = it is USED here, which is what breaks.
+            if s.is_local() and s.is_assigned() and s.is_referenced():
+                found.add((st.get_name(), name))
+    return sorted(found)
 
 
 class CredentialBindingTest(unittest.TestCase):
@@ -242,13 +282,79 @@ class AccountMismatchRefusalTest(unittest.TestCase):
         # actually being satisfied by prose. (It was written as `count(...) == 3` first and failed
         # at 4 for exactly that reason — the failure cost one run, which is the point of asserting
         # something specific.)
-        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mt5_bridge_v2.py'),
-                   encoding='utf-8').read()
-        self.assertEqual(src.count("refusal = account_mismatch_refusal(state, detail)"), 1,
+        src = open(_BRIDGE_SRC, encoding='utf-8').read()
+        # ⚠️ Asserted on the two EXACT call forms, not on a total count of the name: a total also
+        # matches the `def` line and the docstring's example, so it reads as a precise check while
+        # actually being satisfied by prose. (It was written as `count(...) == 3` first and failed
+        # at 4 for exactly that reason — the failure cost one run, which is the point of asserting
+        # something specific.)
+        #
+        # ⚠️ CORRECTED 2026-10-06. These two assertions used to pin the binding `refusal = ...`, and
+        # that exact assignment was the bug: it shadowed the module-level `refusal()` for all of
+        # `do_POST`. The test was enforcing the defect's spelling. Now `bind_refusal`, and
+        # `ShadowingTest` below is what stops the name drifting back.
+        self.assertEqual(src.count("bind_refusal = account_mismatch_refusal(state, detail)"), 1,
                          'POST /reconnect must consult the refusal')
-        self.assertEqual(src.count("refusal = account_mismatch_refusal('ok', None)"), 1,
+        self.assertEqual(src.count("bind_refusal = account_mismatch_refusal('ok', None)"), 1,
                          'POST /switch must consult the SAME refusal, not a second copy')
         self.assertIn('def account_mismatch_refusal(', src, 'one definition remains')
+
+
+class ShadowingTest(unittest.TestCase):
+    """⚠️ THE DEFECT THIS PINS — a regression that shipped on 2026-10-02 and activated 2026-10-06.
+
+    `8dc3dad` (#1035) added `refusal = account_mismatch_refusal(...)` inside `do_POST`. L1770–1864 of
+    the same function CALL `refusal(NOTICE_*, ...)` to build the pre-flight and post-send refusal
+    bodies (#826). Because Python scopes a name to the whole function once it is assigned anywhere,
+    every one of those nine call sites raised `UnboundLocalError`.
+
+    Observed 2026-10-06 — 10 order rejections whose message was a Python internal:
+
+        ORDER REJECTED US500 BUY ×0.1 — cannot access local variable 'refusal' where it ...
+
+    ⚠️ It sat LATENT for four days: the regression is in the source, but a Python bridge only picks
+    it up on restart, so `tcs-2026-10-02` … `10-05` show zero hits and `10-06` shows ten. A source
+    fix that has not been reloaded is not a fix.
+    """
+
+    def test_no_function_shadows_a_module_level_function_it_calls(self):
+        src = open(_BRIDGE_SRC, encoding='utf-8').read()
+        offenders = shadowing_in(src)
+        self.assertEqual(
+            offenders, [],
+            'these functions assign a name that is also a module-level function they call, so the '
+            'call raises UnboundLocalError instead of running: '
+            + ', '.join(f'{fn}() shadows {name}()' for fn, name in offenders),
+        )
+
+    def test_the_checker_can_actually_fail(self):
+        # ⚠️ A guard that has never been observed to fail is a decoration. Both directions here, and
+        # the BAD snippet is the real regression with its names changed so it cannot be confused
+        # with a language-level accident.
+        bad = (
+            'def refusal(code, msg=None, params=None, external=None):\n'
+            '    return {"code": code}\n'
+            '\n'
+            'def do_POST():\n'
+            '    refusal = account_mismatch_refusal()\n'
+            '    if refusal:\n'
+            '        return refusal\n'
+            '    return refusal("NOTICE_SIZE_CAP")\n'
+        )
+        good = (
+            'def refusal(code, msg=None, params=None, external=None):\n'
+            '    return {"code": code}\n'
+            '\n'
+            'def do_POST():\n'
+            '    bind_refusal = account_mismatch_refusal()\n'
+            '    if bind_refusal:\n'
+            '        return bind_refusal\n'
+            '    return refusal("NOTICE_SIZE_CAP")\n'
+        )
+        self.assertEqual(shadowing_in(bad), [('do_POST', 'refusal')],
+                         'the checker must FLAG the shadowing shape')
+        self.assertEqual(shadowing_in(good), [],
+                         'the checker must PASS the identical function once the name is distinct')
 
 
 if __name__ == '__main__':

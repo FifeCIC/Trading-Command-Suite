@@ -2148,9 +2148,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     # ⚠️ #1035 — a reconnect CAN succeed and still be wrong: `initialize()` falls back
                     # to the terminal that is already running, so the bridge can come up on an
                     # account it was not configured for. Success is not the same as CORRECT.
-                    refusal = account_mismatch_refusal(state, detail)
-                    if refusal:
-                        return json_response(self, refusal[0], refusal[1])
+                    #
+                    # 🛑 DO NOT NAME THIS `refusal`. `do_POST` also CALLS the module-level
+                    # `refusal()` to build NOTICE_* bodies, and a local assignment anywhere in a
+                    # function makes the name local for the WHOLE function — so every one of those
+                    # calls raised UnboundLocalError instead of returning a structured refusal.
+                    # Measured 2026-10-06: 10 order rejections carried a Python message where a
+                    # notice code belonged. Locked by `test_refusal_is_not_shadowed()`.
+                    bind_refusal = account_mismatch_refusal(state, detail)
+                    if bind_refusal:
+                        return json_response(self, bind_refusal[0], bind_refusal[1])
                     info = mt5.account_info()
                     return json_response(self, {'success': True, 'state': state, 'account': str(info.login) if info else None, 'balance': float(info.balance) if info else None})
                 return json_response(self, {'success': False, 'state': state, 'stateDetail': detail, 'error': str(err)}, 500)
@@ -2176,10 +2183,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     # fallback: `initialize(path=...)` attaches to whatever account the running
                     # terminal holds. Switching to a slot and binding to a different account is the
                     # same defect, so it gets the same refusal rather than a second, drifting copy
-                    # of the rule.
-                    refusal = account_mismatch_refusal('ok', None)
-                    if refusal:
-                        return json_response(self, refusal[0], refusal[1])
+                    # of the rule. ⚠️ `bind_refusal`, NOT `refusal` — see the /reconnect comment above.
+                    bind_refusal = account_mismatch_refusal('ok', None)
+                    if bind_refusal:
+                        return json_response(self, bind_refusal[0], bind_refusal[1])
                     os.environ['MT5_ACTIVE_ACCOUNT'] = num
                     info = mt5.account_info()
                     return json_response(self, {'success': True, 'account': str(info.login) if info else acct, 'balance': float(info.balance) if info else None})
