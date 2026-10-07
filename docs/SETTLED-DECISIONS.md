@@ -17,15 +17,17 @@ Hard evidence, from GitHub issue history:
 | Area | First settled | Re-opened | Gap |
 |---|---|---|---|
 | **Gate vs score separation** | **#638** — closed 2026-08-16, checklist asserts *"flat constants removed"* | **#789 / #790** — 2026-09-11 | **26 days** |
-| Signal denominator | #758 — fixed, then **fixed again** (first fix still read a runtime value) | #761 — still open | 1 day |
-| Classification thresholds | #638 removed the constants | #761 asks to recalibrate them | 26 days |
+| Signal denominator | #758 — fixed, then **fixed again** (first fix still read a runtime value) | #761 — recalibrated 2026-09-15, **closed 2026-10-07** | 1 day |
+| Classification thresholds | #638 removed the constants | #761 — rescaled against the frozen denominator 2026-09-15, **closed 2026-10-07** | 26 days |
 
 And the mechanism that made it silent:
 
 > **#638 was closed on INTENT, not on ENFORCEMENT.** Its pre-close checklist ticked
-> *"flat constants removed"*. `ENTRY_THRESHOLD = 40` is **still live** in
-> `protocol-gating.service.ts` today (L324), with a code comment beside it recording that this
-> exact constant already caused an incident on 2026-08-12. The box was ticked; nothing enforced it.
+> *"flat constants removed"*. `ENTRY_THRESHOLD = 40` was **still live** in
+> `protocol-gating.service.ts` (found 2026-09-11, L324), with a code comment beside it recording
+> that this exact constant already caused an incident on 2026-08-12 — and it stayed live until the
+> 2026-09-15 rescale, which is why trading stopped for five days. The box was ticked; nothing
+> enforced it. `#761` now carries the missing enforcement: `signal-threshold-scale.spec.ts`.
 
 **A checklist box is a claim. A build-time guard is a fact.** That distinction is the whole point
 of this file.
@@ -96,7 +98,7 @@ that are settled but **NOT yet enforceable** — which is exactly the set that g
 | 7 | **Group weights are NOT applied in assembly** | Aspirational until #718. Do not assume weights affect the composite | ADR-013 | 🔴 **UNGUARDED** |
 | 8 | **Re-seeding is ADDITIVE-ONLY** | Any removal/move needs explicit SQL. `entries: N` is not proof of a removal | #789 (2026-09-11) | 🟡 `diff-seed-vs-db.cjs` (manual run, not gated) |
 | 9 | **`!isGateGroup` alone is correct for capacity — do NOT add a `directionBias` test** | Tried and **reverted** 2026-09-10: declared bias massively understates what directives emit (e.g. `macd-crossover` declares `neutral`, fired directionally 5,252×). Gating on declaration excludes the directives doing the real work | #761 comment, ADR-011 | 🟢 `directional-capacity-contract.spec.ts` (5 tests; **proven to fail** when the reverted bug is reintroduced — 2 tests fail) |
-| 10 | **Classification thresholds must not be recalibrated while the denominator is moving** | Bands (#761's 80/40) were invalidated by the #758 denominator change. Recalibrating before freezing the denominator is the loop | #761 (OPEN) | 🔴 **UNGUARDED — actively contested.** No guard is possible until the denominator is frozen and measured |
+| 10 | **Thresholds are recalibrated ONLY against the frozen CONFIGURED denominator, from a measured distribution — and the resulting scale is PINNED by a test** | The bands (#761's 80/40) were invalidated by the #758 denominator change; recalibrating while the denominator moved is the loop. **Completed 2026-09-15**: entry 40→6, strong 80→13, gate 65→10 — a ÷~6.3 units migration (ordering preserved, derivation recorded at the code site), after which live executions resumed the same day (before: zero executions 09-11→09-14). ⚠️ Re-tuning afterwards is legitimate but must be DELIBERATE (maths-change policy: copied config + monitored comparison) and must update the spec | #761 + #758 (recalibration 2026-09-15; closed 2026-10-07) | 🟢 `signal-threshold-scale.spec.ts` — 5 tests, **canaried 2026-10-07**: reverting entry 6→40 fails 2; breaking the style ordering (swing 9→14) fails 1; both restored byte-for-byte |
 | 11 | **A bar gap after a bridge restart is EXPECTED during development — it is not a defect. It also self-heals.** | `BarRefreshService` re-fetches **by count** (200 bars ≈ **16.7h** at `5m`, 3.3h at `1m`), so a normal re-fetch reaches back **past** any plausible development gap and refills it. Nothing needs to be built to obtain the data. A gap is only unrecoverable if it **exceeds the fetch window**, or if a symbol stops being refreshed entirely | #795 (filed `priority-high`, **closed as NOT-A-BUG** 2026-09-11) | 🟡 `INV-BAR-ORDER` in `contract-probe.cjs` now **distinguishes** a data gap (passes, reports) from a scoring bug (fails) |
 | 12 | **A strategy IS a bot's whole configuration** — protocol + role + **market** + broker + execution policy. Any difference at all makes a different strategy; two byte-identical bots are a **DUPLICATE (a defect), not a merge** | Identity is `strategyKey = sha256(protocolId \| role \| symbol \| brokerId \| canonicalTreatment)`, 16 hex. `symbol` and `sessionWindow` are **in** the key: excluding `symbol` collapsed **26 strategies to 18**, and omitting `sessionWindow` gave **15**. Both were real errors by real agents, both are recorded in the guard. Canonicalisation is **behavioural, not textual** — `1` and `1.0`, bare `london` vs `["london"]`, and alias `sydney`→`asian` must all hash identically | `docs/trading-bot-model.md` **§1c / §1d**, owner-confirmed **2026-09-18**; #876 (derivation) / #875 (naming) | 🟡 `nest/scripts/verify-strategy-derivation.ts` — drives the **REAL** service against the **REAL** database and asserts the canonicalisation rules (24 pass). **Manual, not gated** — it needs a live DB and `ts-node`, which `prebuild` does not have, so this is by design and **not** an oversight. ⚠️ Its fixture counts are **dated**: measured **27** strategies on 2026-09-22 against the fixture's **26**; every invariant holds, so the movement is a bot being added, not an identity regression. The guard's own rule is *"if they move, that is a finding, not a test to update"* |
 
