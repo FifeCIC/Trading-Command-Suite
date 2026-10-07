@@ -43,6 +43,17 @@ interface TriggerConfig {
   threshold?: number;
 }
 
+/**
+ * The window a risk-cap breach is measured over, in minutes (#1086).
+ *
+ * ⚠️ Both caps refuse per ORDER ATTEMPT, so the raw rate is tens per minute once a bot family is
+ * trying — measured 2026-10-07: 440 refusals for `risk.maxDailyLoss` alone in a day. The window
+ * exists so the alert reports "this has been happening for half an hour" rather than reacting to a
+ * momentary over-cap on a single order. It is paired with each trigger's `threshold` (minimum
+ * refusals inside the window), so BOTH have to hold before anything is announced.
+ */
+const RISK_CAP_BREACH_WINDOW_MIN = 30;
+
 @Injectable()
 export class AlertTriggerService implements OnModuleInit {
   private readonly logger = new Logger(AlertTriggerService.name);
@@ -80,6 +91,28 @@ export class AlertTriggerService implements OnModuleInit {
     // the bridges never dropped. So this needs its own trigger; folding it in would have made the
     // existing one lie about what it detects.
     'trade-disabled':    { enabled: true, cooldownSeconds: 900, severity: 'critical' },
+    // ── Risk-cap breaches (#1086, added 2026-10-07) ────────────────────────────────────────
+    //
+    // ── DECISION (2026-10-07, primary) ──
+    // WHAT:       A breached risk cap announces itself, and the two caps are announced
+    //             DIFFERENTLY — `maxDailyLoss` is attended (Windows toast), `maxPortfolioRisk`
+    //             is not.
+    // WHY:        Measured 2026-10-07: 440 refusals for the daily-loss cap across 13 symbols and
+    //             ~282 for the portfolio cap across ~10, against 7 executions, and NOTHING was
+    //             said. `maxDailyLoss` is a LATCH (cannot clear until local midnight, so every bot
+    //             stays blocked for the rest of the day); `maxPortfolioRisk` is a CAPACITY STATE
+    //             that clears itself. One generic alert would collapse two different events.
+    // INSTEAD OF: Auto-escalating a breach to `emergencyStop()`. Considered and rejected: it also
+    //             halts the Stop Guardian (trailing-stop tightening) precisely when losses are
+    //             running, and it still could not reach a path that bypasses the caps (#1082).
+    //             ALSO NOT: moving either cap value (100 / 0.15) — that is the maths and needs a
+    //             copied configuration and a comparison.
+    // REVERSE BY: Removing the two registry keys and the `risk-daily-loss` entry from
+    //             ATTENTION_KEYS — the caps are untouched, so nothing else has to change.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 68
+    // GUARD:     nest/src/modules/alerts/alert-risk-cap-breach.spec.ts (8 tests, 5 canaries both ways)
+    'risk-daily-loss':     { enabled: true, cooldownSeconds: 1800, severity: 'critical', threshold: 5 },
+    'risk-portfolio-risk': { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 5 },
   };
 
   /**
@@ -90,7 +123,7 @@ export class AlertTriggerService implements OnModuleInit {
    * would spend the attention this feature exists to win. These are the conditions that make
    * TRADING IMPOSSIBLE while the app still looks healthy.
    */
-  private readonly ATTENTION_KEYS = new Set(['trade-disabled', 'mt5-disconnected']);
+  private readonly ATTENTION_KEYS = new Set(['trade-disabled', 'mt5-disconnected', 'risk-daily-loss']);
 
   constructor(
     private readonly alerts: AlertsService,
@@ -154,6 +187,8 @@ export class AlertTriggerService implements OnModuleInit {
         case 'bridge-clock-skew':  condition = await this.checkBridgeClockSkew(cfg); break;
         case 'symbol-silent':      condition = await this.checkSymbolSilent(cfg); break;
         case 'trade-disabled':     condition = await this.checkTradeDisabled(); break;
+        case 'risk-daily-loss':    condition = await this.checkRiskCapBreach('risk-daily-loss', cfg); break;
+        case 'risk-portfolio-risk':condition = await this.checkRiskCapBreach('risk-portfolio-risk', cfg); break;
       }
 
       if (condition?.triggered) {
@@ -792,6 +827,86 @@ export class AlertTriggerService implements OnModuleInit {
         severity: 'high' as AlertSeverity,
       };
     }
+  }
+
+  /**
+   * checkRiskCapBreach() — a risk cap has been refusing orders for a while (#1086).
+   *
+   * ⚠️ IT READS THE RECORDED REFUSAL, IT DOES NOT RE-DERIVE THE NUMBER.
+   *
+   * The alternative — recomputing the day's realised P&L, or the book's at-risk figure, inside this
+   * module — would be a SECOND implementation of a money calculation. Both caps already write a
+   * refusal into `decision_log` carrying the cap, the figure and the accountable positions:
+   *
+   *     Daily loss $178.02 exceeds risk.maxDailyLoss ($100)
+   *     Portfolio at risk 18.1% exceeds risk.maxPortfolioRisk 15% — #152730169965 AMZN |entry−SL|…
+   *
+   * That row IS the evidence, and it is the same row an operator would grep for. Reading it means
+   * the alert cannot disagree with the gate that produced it, and it needs no settings access, no
+   * account read and no position fetch.
+   *
+   * ⚠️ WHAT THIS CANNOT SEE, STATED: it fires only when something TRIED to trade. A breached cap
+   * with no signals arriving produces no rows and therefore no alert. That is the honest boundary —
+   * with nothing attempting entries there is nothing being locked out — and it is why the message
+   * reports a COUNT of refusals rather than claiming the cap is breached generally.
+   *
+   * ⚠️ UTC_TIMESTAMP(), never NOW(). `decision_log.timestamp` is UTC while the MySQL session runs in
+   * local time, so a window built from NOW() is an hour out and silently reports nothing — measured
+   * on 2026-09-22 in this very file (`checkSymbolSilent`), which is where this convention is from.
+   */
+  private async checkRiskCapBreach(
+    key: 'risk-daily-loss' | 'risk-portfolio-risk',
+    cfg: TriggerConfig,
+  ): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity }> {
+    const marker = key === 'risk-daily-loss' ? 'risk.maxDailyLoss' : 'risk.maxPortfolioRisk';
+    const minRefusals = cfg.threshold ?? 5;
+
+    const counts = await this.prisma.$queryRawUnsafe<Array<{ n: bigint; symbols: bigint }>>(
+      `SELECT COUNT(*) n, COUNT(DISTINCT symbol) symbols
+         FROM decision_log
+        WHERE decision = 'BLOCKED'
+          AND reason LIKE ?
+          AND timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${RISK_CAP_BREACH_WINDOW_MIN} MINUTE)`,
+      `%${marker}%`,
+    );
+    const n = Number(counts[0]?.n ?? 0);
+    const symbols = Number(counts[0]?.symbols ?? 0);
+
+    // Below the bar this is a TRANSIENT — the book momentarily over its cap, or one order — and
+    // reporting it would spend the attention the alert exists to win. Nothing to say yet.
+    if (n < minRefusals) return { triggered: false, title: '', message: '' };
+
+    const newest = await this.prisma.$queryRawUnsafe<Array<{ reason: string }>>(
+      `SELECT LEFT(reason, 300) reason
+         FROM decision_log
+        WHERE decision = 'BLOCKED'
+          AND reason LIKE ?
+          AND timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${RISK_CAP_BREACH_WINDOW_MIN} MINUTE)
+        ORDER BY timestamp DESC
+        LIMIT 1`,
+      `%${marker}%`,
+    );
+
+    const detail = newest[0]?.reason ?? '(reason not readable)';
+    const isLatch = key === 'risk-daily-loss';
+
+    return {
+      triggered: true,
+      // ⚠️ STABLE TITLE. The count goes in the MESSAGE, never here: a `${n} order(s)` title
+      // fractures one condition into a new alert row per count. The same mistake was made and
+      // corrected for `symbol-silent` (2026-09-23).
+      title: isLatch ? 'Trading blocked by the daily-loss cap' : 'Trading blocked by the portfolio-risk cap',
+      message:
+        `${n} order(s) refused across ${symbols} symbol(s) in the last ` +
+        `${RISK_CAP_BREACH_WINDOW_MIN} minutes by ${marker}. Newest: ${detail}` +
+        (isLatch
+          ? ' ⚠️ This is a LATCH — it cannot clear until local midnight, so every bot stays blocked' +
+            ' for the rest of the day. It is the one cap that means "something went wrong today",' +
+            ' not "the book is full".'
+          : ' This CLEARS ITSELF as positions close or their stops tighten — it is a capacity' +
+            ' ceiling, not a fault. No action unless the figure keeps rising.'),
+      severity: cfg.severity,
+    };
   }
 
   private fireAlert(key: string, cfg: TriggerConfig, title: string, message: string, severity: AlertSeverity) {
