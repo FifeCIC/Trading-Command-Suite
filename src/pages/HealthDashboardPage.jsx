@@ -7,6 +7,7 @@ import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './health-dashboard.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { notice } from '../core/notices/registry';
+import { noticeFromError } from '../core/notices/from-error.js';
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -259,7 +260,15 @@ export default function HealthDashboardPage() {
     const snap = (q) => ({
       state: q.status,
       fetchedAt: q.dataUpdatedAt ? new Date(q.dataUpdatedAt).toISOString() : null,
-      error: q.error ? String(q.error?.message || q.error) : null,
+      // ⚠️ #826 Phase 5 — A RAW `.message` IS NOT A REPORT FIELD.
+      //
+      // This was `String(q.error?.message || q.error)` — the last raw error render on this page,
+      // and a standing red gate (`validate-notices.cjs`, which runs in prebuild). `noticeFromError()`
+      // answers it properly: the server's own wording is ALWAYS preserved (as `detail` — the
+      // adapter's docblock is explicit that the code "must never be the reason a specific broker
+      // message is lost"), and the CODE is added beside it, which is what makes an entry here
+      // joinable to a log line, the UI, or an issue — the reason this report exists at all.
+      error: q.error ? noticeFromError(q.error) : null,
       data: q.data ?? null,
     });
     const report = {

@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**547** source files · **2878** declarations · **362** ratio sites · **1475** nodes · **129** unreferenced
+**547** source files · **2880** declarations · **362** ratio sites · **1477** nodes · **130** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -118,7 +118,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:478` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2488` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2656` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -257,14 +257,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:433` — `dispatchSideTrade()` → `sl`
   - `sideDir==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:477` — `dispatchTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:617` — `dispatchTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2221` — `confirmAction()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2389` — `confirmAction()` → `sl`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2330` — `recordPaperTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2498` — `recordPaperTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
 - `nest/src/modules/automation/stop-guardian.service.ts:1779` — `observeSimulatedTsl()` → `triggerPrice`
@@ -296,14 +296,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:434` — `dispatchSideTrade()` → `tp`
   - `sideDir==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:478` — `dispatchTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:618` — `dispatchTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2224` — `confirmAction()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2392` — `confirmAction()` → `tp`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2331` — `recordPaperTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2499` — `recordPaperTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
 
@@ -414,7 +414,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:478` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2488` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2656` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -660,7 +660,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:478` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2488` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2656` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -888,9 +888,10 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/ab-test.service.ts:300 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:359 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:590 summarize`
-- `nest/src/modules/automation/automation-loop.service.ts:1589 evalSide`
-- `nest/src/modules/automation/automation-loop.service.ts:1877 getClose`
-- `nest/src/modules/automation/automation-loop.service.ts:339 getWatchlistSymbols`
+- `nest/src/modules/automation/automation-loop.service.ts:1757 evalSide`
+- `nest/src/modules/automation/automation-loop.service.ts:2045 getClose`
+- `nest/src/modules/automation/automation-loop.service.ts:424 read`
+- `nest/src/modules/automation/automation-loop.service.ts:479 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:726 safe`
 - `nest/src/modules/automation/stop-guardian.service.ts:1859 progress`
 - `nest/src/modules/automation/stop-guardian.service.ts:569 flat`

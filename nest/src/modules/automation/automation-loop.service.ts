@@ -317,6 +317,144 @@ export function authoritativeFromSnapshot(snapshot: { authoritative: boolean }):
   return snapshot.authoritative === true;
 }
 
+/**
+ * The pair's two accounts, or the reason it must not run.
+ *
+ * ⚠️ ONE INTERFACE, NOT A DISCRIMINATED UNION — and the reason is measured, not stylistic.
+ * `nest/tsconfig.json` sets `strictNullChecks: false`, which ERASES `null`. A union of
+ * `{ok: true; accountA: string}` and `{ok: false; accountA: null}` therefore collapses to two
+ * members that differ only in their literal `ok`, and `if (!r.ok)` was observed NOT to narrow:
+ * tsc reported "Property 'refusal' does not exist on type 'AbArmAccounts'" at the call site in
+ * `ab-arm-accounts.spec.ts`. A guard the compiler cannot express is not a guard.
+ *
+ * So the call site is held by the SOURCE check in `ab-arm-accounts.spec.ts` instead, which fails
+ * if the refusal is not wired — the same division of labour as `authoritativeFromSnapshot`
+ * (#1058), whose own docblock says its signature cannot stop a future edit at the call site.
+ */
+export interface AbArmAccounts {
+  /** True only when both arms name an account AND the two differ. */
+  ok: boolean;
+  accountA: string | null;
+  accountB: string | null;
+  /** Set when `ok` is false. Names WHAT is missing — never a silent default. */
+  refusal: string | null;
+}
+
+/**
+ * How often the account refusal may be logged, per test. One hour, for the same reason as the
+ * Stop Guardian's directive-silence throttle: the check runs every tick, and a fault that is
+ * reported 1,440 times a day is a fault nobody reads. On expiry it is re-reported, so a pair left
+ * misconfigured overnight is not silently swallowed.
+ */
+const AB_ACCOUNT_REFUSAL_LOG_MS = 60 * 60_000;
+
+/**
+ * resolveAbArmAccounts() — WHICH ACCOUNT holds each arm's position? (#1079)
+ *
+ * ── DECISION (2026-10-07, primary) ──
+ * WHAT:       The live snapshot trial resolves TWO DISTINCT ACCOUNTS, one per arm, or it places
+ *             NO orders. The shared resolution
+ *                 `const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5')`
+ *             is REMOVED, not defaulted around.
+ * WHY:        Measured 2026-10-07 — both live snapshots of run `b50727ee` carried brokerId 'mt5',
+ *             so one account held both arms and the broker NETS them into one position (three
+ *             orders -> one position of 0.04; ~9 orders -> one netted position, #1080). The arms
+ *             are then one position wearing two labels, and the pair also locks the whole bot
+ *             family out of the symbol via the duplicate guard.
+ * INSTEAD OF: Treating the shared account as a measurement problem to be fixed so the live pair
+ *             can measure. It is a SAFETY problem. Row 23 already settled that the live pair
+ *             cannot produce a result, and row 26 that the measurement is the BACKTEST — the live
+ *             pair keeps its LOCK (row 25) as the final confirmation step. This is the precondition
+ *             for that confirmation to be safe, not a route back to measuring live.
+ *             ALSO NOT: the "hedging account" fix row 23 RETRACTED — that is an MT5
+ *             position-accounting TYPE; this is two separate accounts.
+ * REVERSE BY: Giving `ab_test` a real account binding (one per arm, from the account store
+ *             tracked by #1078) and setting both to two distinct, enabled accounts. The refusal
+ *             then passes without any change to this function — it is written to accept that.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 67
+ * GUARD:     nest/src/modules/automation/ab-arm-accounts.spec.ts (8 tests, 4 canaries both ways)
+ *
+ * ⚠️ THIS IS THE FIX FOR THE LIVE PAIR'S NETTING — and the SOURCE GUARD, not the signature, is
+ * what holds it (see "THE TYPE DOES NOT ENFORCE THE CALL SITE" below).
+ *
+ * The runner used to resolve ONE id for BOTH arms:
+ *
+ *     const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;
+ *
+ * Measured 2026-10-07 against the two live snapshots of run `b50727ee`
+ * (`SELECT JSON_EXTRACT(snapshot,'$.brokerId') FROM metastack_snapshot`):
+ *
+ *     038d897c… (A) -> 'mt5'        3c299cec… (B) -> 'mt5'
+ *
+ * With one account behind both arms the broker NETS them, so the two arms are not two
+ * observations — they are one position wearing two labels, which is why the live pair cannot
+ * measure anything. Measured 2026-09-23: three XAUUSD orders became ONE position of 0.04. Measured
+ * again 2026-09-30: ~9 orders booked into one netted position (#1080). The two arms also collide
+ * with the bots — `duplicate-guard.service.ts` counts any open position for `symbol + provider`,
+ * so while the pair held XAUUSD all 8 gold bots were locked out of it, and the pair was locked
+ * out while they held it.
+ *
+ * RULE (owner direction, 2026-10-07 — `external-systems-are-data.instructions.md`):
+ *   > The pair must refuse to run when it cannot get two distinct, viable accounts — never fall
+ *   > back to one.
+ *
+ * So the fallback chain is REMOVED, not reordered. `?? 'mt5'` was a silent guess about which
+ * account would hold the money, and a missing account is a REFUSAL, not a default.
+ *
+ * ⚠️ THE FIX TAKES ONLY THE TWO FROZEN CONFIGS. No `AbTest`, no position list, no live broker
+ * read — so a future edit cannot reach for a third source to break the tie. Same technique as
+ * `authoritativeFromSnapshot()` above, and for the same reason: a rule that lives only in prose
+ * was measured not to be enforced.
+ *
+ * ⚠️ THE TYPE DOES NOT ENFORCE THE CALL SITE. `strictNullChecks: false` erases `null`, so this
+ * cannot narrow and a future edit could read `accountA` without checking `ok`. What holds it is
+ * the SOURCE check in the guard spec, which fails if the refusal is unwired or if either side is
+ * handed the other's account. Stated rather than implied, because the first version of this
+ * docblock claimed the signature was the guard — and tsc said otherwise.
+ *
+ * ⚠️ WHAT THIS DOES NOT DO — stated, because the refusal is not the whole of #1079. Two distinct
+ * accounts stops the NETTING. It does not route the orders through `dispatchTrade()`'s safety
+ * chain (#1082: there is no app-level order choke point), and it does not make them
+ * time-stoppable — `position-time-stop.service.ts` matches the BOT NAME in the broker comment,
+ * and `TCS AB-A …` matches no bot. Those remain open on #1079.
+ *
+ * Guard: `ab-arm-accounts.spec.ts`, canaried in both directions.
+ */
+export function resolveAbArmAccounts(controlCfg: any, variantCfg: any): AbArmAccounts {
+  const read = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+  const a = read(controlCfg?.brokerId);
+  const b = read(variantCfg?.brokerId);
+
+  if (!a && !b) {
+    return {
+      ok: false, accountA: null, accountB: null,
+      refusal: 'neither snapshot names an account (brokerId is unset on both)',
+    };
+  }
+  if (!a) {
+    return {
+      ok: false, accountA: null, accountB: null,
+      refusal: `arm A names no account while arm B names '${b}' — a pair missing one side is not a comparison`,
+    };
+  }
+  if (!b) {
+    return {
+      ok: false, accountA: null, accountB: null,
+      refusal: `arm B names no account while arm A names '${a}' — a pair missing one side is not a comparison`,
+    };
+  }
+  if (a === b) {
+    return {
+      ok: false, accountA: null, accountB: null,
+      refusal:
+        `both arms name the same account '${a}' — the broker NETS them into one position, ` +
+        `so the pair would be comparing one position with itself`,
+    };
+  }
+
+  return { ok: true, accountA: a, accountB: b, refusal: null };
+}
+
 @Injectable()
 export class AutomationLoopService implements OnModuleInit {
   private readonly logger = new Logger(AutomationLoopService.name);
@@ -334,6 +472,8 @@ export class AutomationLoopService implements OnModuleInit {
   private lastBotTradeAnyAt = 0;
   /** Prevent overlapping interval/manual ticks from racing through pre-trade gates. */
   private tickInProgress = false;
+  /** #1079 — last account-refusal warn per A/B test id. The check runs every tick; see the gate. */
+  private lastAbAccountRefusalAt = new Map<string, number>();
 
   /** Get watchlist symbols — DB-first with case-insensitive matching + JSON fallback. */
   private async getWatchlistSymbols(name: string): Promise<string[] | null> {
@@ -1518,6 +1658,28 @@ export class AutomationLoopService implements OnModuleInit {
     const variantCfg = (variant.snapshot ?? {}) as any;
     const symbols = (Array.isArray(test.symbols) ? test.symbols : []) as string[];
 
+    // ⚠️ #1079 — TWO ACCOUNTS OR NO ORDERS. Refused BEFORE any scoring, because with one account
+    // behind both arms the broker NETS them into a single position: there is then nothing to
+    // measure, and every order placed is an order placed outside the safety chain for no result.
+    // The rule and its evidence are in `resolveAbArmAccounts()`.
+    //
+    // ⚠️ Warned at most once per hour per test. This runs every tick, so an unthrottled warn
+    // would be ~1,440 identical lines a day — the warn-storm `logging.collapseRepeats` exists to
+    // bound. The same throttle shape as the Stop Guardian's directive-silence warn (#1075).
+    const accounts = resolveAbArmAccounts(controlCfg, variantCfg);
+    if (!accounts.ok) {
+      const now = Date.now();
+      if (now - (this.lastAbAccountRefusalAt.get(test.id) ?? 0) >= AB_ACCOUNT_REFUSAL_LOG_MS) {
+        this.lastAbAccountRefusalAt.set(test.id, now);
+        this.logger.warn(
+          `A/B test "${test.name}": NO ORDERS — ${accounts.refusal}. ` +
+            `Two distinct accounts are required, one per arm; the live pair is final confirmation ` +
+            `only and the measurement is the BACKTEST (#1079, external-systems-are-data).`,
+        );
+      }
+      return;
+    }
+
     // ⚠️ #929 — the TRADING authority is resolved from the BOT, once per test, and NEVER from
     // `controlCfg.mode`. That field holds the SCORING style (`'score'`), which the runner used to
     // compare against `'auto'` — a comparison that is false for every snapshot in existence, so
@@ -1584,9 +1746,15 @@ export class AutomationLoopService implements OnModuleInit {
         this.protocolGating.scoreWithGating(sym, bars, variantCfg.protocolId, variantBundle ?? controlBundle, variantCfg.weightStrategy ?? 'group-weighted'),
       ]);
 
-      const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;
-
-      const evalSide = async (side: 'A' | 'B', cfg: any, score: any): Promise<void> => {
+      // ⚠️ #1079 — EACH ARM TRADES ON ITS OWN ACCOUNT, handed in as `brokerId`.
+      //
+      // This used to be ONE id resolved for both arms:
+      //     const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;
+      // Both live snapshots carried `'mt5'`, so both arms' orders landed on one account and the
+      // broker netted them — three orders became one position of 0.04 (#963), and ~9 orders were
+      // booked into one position on 2026-09-30 (#1080). The accounts are now resolved ONCE per
+      // test, above, and a single shared value cannot be expressed here.
+      const evalSide = async (side: 'A' | 'B', cfg: any, score: any, brokerId: string): Promise<void> => {
         if (!score || score.composite === undefined) return;
         // ⚠️ `BOT_BAR_DEFAULT`, not a literal.
         //
@@ -1673,8 +1841,8 @@ export class AutomationLoopService implements OnModuleInit {
         });
       };
 
-      await evalSide('A', controlCfg, scoreA);
-      await evalSide('B', variantCfg, scoreB);
+      await evalSide('A', controlCfg, scoreA, accounts.accountA);
+      await evalSide('B', variantCfg, scoreB, accounts.accountB);
     }
   }
 
