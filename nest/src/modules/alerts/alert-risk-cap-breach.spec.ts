@@ -87,14 +87,24 @@ describe('AlertTriggerService — risk-cap breach alerts (#1086)', () => {
     expect(String(a.addAlert.mock.calls[0][1])).not.toMatch(/\d/);
   });
 
-  it('⚠️ the LATCH cap says it cannot clear, and warns what it means', async () => {
+  it('⚠️ the daily-loss cap says what is actually true — and NOT the overstatement', async () => {
     const { svc, addAlert } = build({ n: 440, symbols: 13 }, [{ reason: REASON }]);
 
     await (svc as any).evaluateTrigger('risk-daily-loss', CFG());
 
     const detail = String(addAlert.mock.calls[0][2]);
-    expect(detail).toContain('LATCH');
-    expect(detail).toContain('midnight');   // the fact that makes it different from the other cap
+    expect(detail).toContain('does NOT clear by trading out of it');
+    expect(detail).toContain('midnight');
+
+    // ⚠️ THE OVERSTATEMENT GUARD. The FIRST version of this message read *"a LATCH — it cannot
+    // clear until local midnight"*, and that is FALSE: `trading-strategy.service.ts` recomputes
+    // `dailyPnl` from every trade closed today, so a GREEN close today RAISES it back above the
+    // cap and the gate reopens mid-day. A claim like that in an operator-facing alert is worse
+    // than no claim, so the wording that made it is asserted ABSENT.
+    expect(detail).not.toContain('cannot clear until');
+    expect(detail).not.toContain('LATCH');
+    // And the thing that IS true is stated: the recovery path, named.
+    expect(detail).toContain('ALREADY OPEN');
   });
 
   it('⚠️ the CAPACITY cap says it CLEARS ITSELF, and must not read as a fault', async () => {
@@ -106,7 +116,7 @@ describe('AlertTriggerService — risk-cap breach alerts (#1086)', () => {
 
     const detail = String(addAlert.mock.calls[0][2]);
     expect(detail).toContain('CLEARS ITSELF');
-    expect(detail).not.toContain('LATCH');
+    expect(detail).not.toContain('does NOT clear by trading out of it');
     // And the accountable position from the reason survives into the message.
     expect(detail).toContain('AMZN');
   });

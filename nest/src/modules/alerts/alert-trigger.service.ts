@@ -97,20 +97,22 @@ export class AlertTriggerService implements OnModuleInit {
     // WHAT:       A breached risk cap announces itself, and the two caps are announced
     //             DIFFERENTLY — `maxDailyLoss` is attended (Windows toast), `maxPortfolioRisk`
     //             is not.
-    // WHY:        Measured 2026-10-07: 440 refusals for the daily-loss cap across 13 symbols and
-    //             ~282 for the portfolio cap across ~10, against 7 executions, and NOTHING was
-    //             said. `maxDailyLoss` is a LATCH (cannot clear until local midnight, so every bot
-    //             stays blocked for the rest of the day); `maxPortfolioRisk` is a CAPACITY STATE
-    //             that clears itself. One generic alert would collapse two different events.
-    // INSTEAD OF: Auto-escalating a breach to `emergencyStop()`. Considered and rejected: it also
-    //             halts the Stop Guardian (trailing-stop tightening) precisely when losses are
-    //             running, and it still could not reach a path that bypasses the caps (#1082).
-    //             ALSO NOT: moving either cap value (100 / 0.15) — that is the maths and needs a
-    //             copied configuration and a comparison.
+    // WHY:        Measured 2026-10-07: 440 refusals for the daily-loss cap and ~282 for the
+    //             portfolio cap, against 7 executions, and NOTHING was said. `maxDailyLoss` is
+    //             SELF-BLOCKING — opening a position is the very thing it blocks, so it clears
+    //             only via a position ALREADY OPEN closing green, or at local midnight.
+    //             `maxPortfolioRisk` CLEARS ITSELF. One generic alert would collapse two
+    //             different events. ⚠️ THIS SAID "a LATCH — cannot clear until local midnight",
+    //             WHICH IS FALSE: `dailyPnl` is recomputed from today's closed trades, so a green
+    //             close reopens the gate mid-day. The spec asserts that wording ABSENT.
+    // INSTEAD OF: Auto-escalating to `emergencyStop()` — it also halts the Stop Guardian
+    //             (trailing-stop tightening) precisely when losses are running, and it still could
+    //             not reach a path that bypasses the caps (#1082). ALSO NOT: moving either cap
+    //             value (100 / 0.15), which is the maths and needs a copied configuration.
     // REVERSE BY: Removing the two registry keys and the `risk-daily-loss` entry from
     //             ATTENTION_KEYS — the caps are untouched, so nothing else has to change.
     // REGISTER:  docs/SETTLED-DECISIONS.md row 68
-    // GUARD:     nest/src/modules/alerts/alert-risk-cap-breach.spec.ts (8 tests, 5 canaries both ways)
+    // GUARD:     nest/src/modules/alerts/alert-risk-cap-breach.spec.ts
     'risk-daily-loss':     { enabled: true, cooldownSeconds: 1800, severity: 'critical', threshold: 5 },
     'risk-portfolio-risk': { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 5 },
   };
@@ -888,21 +890,28 @@ export class AlertTriggerService implements OnModuleInit {
     );
 
     const detail = newest[0]?.reason ?? '(reason not readable)';
-    const isLatch = key === 'risk-daily-loss';
+    const isDailyLossCap = key === 'risk-daily-loss';
 
     return {
       triggered: true,
       // ⚠️ STABLE TITLE. The count goes in the MESSAGE, never here: a `${n} order(s)` title
       // fractures one condition into a new alert row per count. The same mistake was made and
       // corrected for `symbol-silent` (2026-09-23).
-      title: isLatch ? 'Trading blocked by the daily-loss cap' : 'Trading blocked by the portfolio-risk cap',
+      title: isDailyLossCap ? 'Trading blocked by the daily-loss cap' : 'Trading blocked by the portfolio-risk cap',
       message:
         `${n} order(s) refused across ${symbols} symbol(s) in the last ` +
         `${RISK_CAP_BREACH_WINDOW_MIN} minutes by ${marker}. Newest: ${detail}` +
-        (isLatch
-          ? ' ⚠️ This is a LATCH — it cannot clear until local midnight, so every bot stays blocked' +
-            ' for the rest of the day. It is the one cap that means "something went wrong today",' +
-            ' not "the book is full".'
+        (isDailyLossCap
+          ? // ⚠️ NOT "a latch", and NOT "cannot clear until midnight" — the FIRST version of this
+            // message said exactly that and it was WRONG. `dailyPnl` is recomputed from every trade
+            // closed today, so a GREEN close today RAISES it back above the cap and the gate
+            // reopens mid-day. What is actually true is narrower and still worth attending: it
+            // cannot be cleared by trading out of it, because opening a position is the very thing
+            // it blocks.
+            ' ⚠️ This does NOT clear by trading out of it — opening a position is the very thing it' +
+            ' blocks. It clears only when a position ALREADY OPEN closes green enough to bring the' +
+            ' day back above the cap, or at local midnight. It is the cap that means "something' +
+            ' went wrong today", not "the book is full".'
           : ' This CLEARS ITSELF as positions close or their stops tighten — it is a capacity' +
             ' ceiling, not a fault. No action unless the figure keeps rising.'),
       severity: cfg.severity,
