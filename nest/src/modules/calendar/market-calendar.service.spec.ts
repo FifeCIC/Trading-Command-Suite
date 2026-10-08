@@ -100,6 +100,59 @@ describe('MarketCalendarService — venue status and instants', () => {
     });
   });
 
+  /**
+   * #1088 — WEEKDAY HOLIDAYS ON THE FX VENUE.
+   *
+   * ⚠️ THE DEFECT THIS PINS (measured 2026-10-08): the weekly-session path had NO holiday axis,
+   * so **Christmas Day 2026 — a Friday, inside the broker week — read as OPEN for every index
+   * CFD, metal and FX pair**. Fail-OPEN: instruments wrongly admitted where #850 was instruments
+   * wrongly refused. `venueForSymbol()` routes UK100/FRA40/GER40/US500/US30/VIX/XAUUSD/EURUSD to
+   * this venue, so one missing axis covered all of them.
+   *
+   * The dates below are the only UNIVERSAL closures declared (25 Dec, 1 Jan — see FX_HOLIDAYS for
+   * the source decision and for what is deliberately NOT claimed: family-specific holidays and
+   * early closes). The Sunday next-open values are derived from the zone rules for 2026/27
+   * (London = GMT in December and January), independently of the implementation.
+   */
+  describe('FX venue — weekday holidays (#1088)', () => {
+    it('Christmas Day 2026 (a Friday): CLOSED, named, next open the following Sunday', () => {
+      const status = cal.getMarketStatus('FX', new Date('2026-12-25T12:00:00Z'));
+      expect(status.isOpen).toBe(false);
+      expect(status.status).toBe('closed');
+      expect(status.holidayName).toBe('Christmas Day');
+      expect(status.nextOpen).toBe('2026-12-27T22:00:00.000Z'); // Sun 22:00 GMT
+      expect(status.nextClose).toBeNull();
+    });
+
+    it("New Year's Day 2027 (a Friday): CLOSED", () => {
+      const status = cal.getMarketStatus('FX', new Date('2027-01-01T10:00:00Z'));
+      expect(status.isOpen).toBe(false);
+      expect(status.holidayName).toBe("New Year's Day");
+      expect(status.nextOpen).toBe('2027-01-03T22:00:00.000Z'); // Sun 22:00 GMT
+    });
+
+    it('the DAY BEFORE is a normal trading day — the table is a closure, not a blanket', () => {
+      // 24 Dec 2026 is a US early-close; for FX it is (deliberately) a full trading day —
+      // reduced-hours handling is the declared gap, and this pins the declared behaviour so a
+      // later change cannot widen the closure silently (the canary's M1 targets this day's
+      // neighbour, 25 Dec).
+      const status = cal.getMarketStatus('FX', new Date('2026-12-24T12:00:00Z'));
+      expect(status.isOpen).toBe(true);
+      expect(status.holidayName).toBeNull();
+    });
+
+    it('the two venues read THEIR OWN tables — neither can leak into the other', () => {
+      // At 17:00Z (12:00 EST) the US venue is inside its shortened Christmas Eve session...
+      const us = cal.getMarketStatus('US', new Date('2026-12-24T17:00:00Z'));
+      expect(us.status).toBe('early-close');
+      expect(us.holidayName).toBe('Christmas Eve');
+      // ...while the FX venue, same instant, is a full ordinary day.
+      const fx = cal.getMarketStatus('FX', new Date('2026-12-24T17:00:00Z'));
+      expect(fx.status).toBe('open');
+      expect(fx.holidayName).toBeNull();
+    });
+  });
+
   describe('unknown venue', () => {
     it('fails CLOSED with no invented instants (pinned — see #850)', () => {
       const status = cal.getMarketStatus('XX', new Date('2026-09-16T14:00:00Z'));

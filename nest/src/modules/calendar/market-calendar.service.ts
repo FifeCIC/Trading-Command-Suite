@@ -99,6 +99,43 @@ const US_HOLIDAYS: HolidayEntry[] = [
   { date: '2027-12-24', exchange: 'US', status: 'early-close', name: 'Christmas Eve', closeTime: '13:00' },
 ];
 
+/**
+ * FX/CFD venue closures (#1088).
+ *
+ * ── DECISION (2026-10-08, primary) ──
+ * WHAT:      Weekday closures for the FX venue come from a CURATED STATIC TABLE (this one), the
+ *            same mechanism as US_HOLIDAYS; the WEEKLY-session path now consults it.
+ * WHY:       A broker-reported calendar is unavailable: measured 2026-10-08, the MT5 Python
+ *            binding exposes no session or holiday API (`dir(mt5)` — only `symbol_info` and
+ *            `symbol_info_tick`), so reading one would mean inventing a probe. Guessing
+ *            family-specific dates would be inventing market hours, which #850 forbids.
+ * REVERSE BY: Delete this table and the holiday branch in `getWeeklyStatus` — the venue goes back
+ *            to having no holiday axis (25 Dec reads OPEN).
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 73
+ * GUARD:     market-calendar.service.spec.ts ('FX venue — weekday holidays') ·
+ *            logs/canary-1088-fx-holidays.ps1 (M1 table row, M2 weekly check)
+ *
+ * ⚠️ The marker above is kept SHORT on purpose: `validate-decisions.cjs` reads only the 20 lines
+ * following a marker, so padding WHAT/WHY pushes REVERSE BY out of the check window — an observed
+ * failure, not a theory. The evidence lives here instead:
+ *
+ * ⚠️ ONLY UNIVERSAL CLOSURES ARE DECLARED: 25 Dec and 1 Jan apply to EVERY instrument riding this
+ * venue (FX, metals, and every index CFD — `venueForSymbol()`). Family-specific dates (Thanksgiving
+ * for US500/US30, German/UK holidays) are NOT guessed here: they need a per-family venue split.
+ * ⚠️ EARLY CLOSES ARE NOT SUPPORTED on a weekly venue and NONE are declared — 24/31 Dec trade
+ * reduced hours on some brokers and full days on others, and adding a date this issue has not
+ * sourced is exactly what it forbids. `getWeeklyStatus` WARNs if an `early-close` row ever appears
+ * for this venue rather than silently ignoring it.
+ * An `order_check` probe ("would the terminal accept a minimal order?") was considered and is
+ * recorded as a future option: heavy per gate evaluation, and carries the filling-mode trap of #824.
+ */
+const FX_HOLIDAYS: HolidayEntry[] = [
+  { date: '2025-12-25', exchange: 'FX', status: 'closed', name: 'Christmas Day' },
+  { date: '2026-01-01', exchange: 'FX', status: 'closed', name: "New Year's Day" },
+  { date: '2026-12-25', exchange: 'FX', status: 'closed', name: 'Christmas Day' },
+  { date: '2027-01-01', exchange: 'FX', status: 'closed', name: "New Year's Day" },
+];
+
 const US_SESSION: SessionInfo = {
   exchange: 'US',
   timezone: 'America/New_York',
@@ -259,7 +296,7 @@ export class MarketCalendarService {
 
   /** List all holidays for an exchange */
   listHolidays(exchange = 'US'): HolidayEntry[] {
-    return US_HOLIDAYS.filter(h => h.exchange === exchange);
+    return [...US_HOLIDAYS, ...FX_HOLIDAYS].filter(h => h.exchange === exchange);
   }
 
   /** Get session info */
@@ -270,7 +307,7 @@ export class MarketCalendarService {
   // ── Private helpers ──
 
   private findHoliday(dateStr: string, exchange: string): HolidayEntry | null {
-    return US_HOLIDAYS.find(h => h.date === dateStr && h.exchange === exchange) ?? null;
+    return [...US_HOLIDAYS, ...FX_HOLIDAYS].find(h => h.date === dateStr && h.exchange === exchange) ?? null;
   }
 
   private findNextOpen(exchange: string, from: Date, session: SessionInfo, todayStr: string): Date | null {
@@ -420,6 +457,34 @@ export class MarketCalendarService {
     const dow = this.getDayInZone(now, tz);
     const nowMin = this.localMinutes(now, tz);
 
+    // ── #1088 — WEEKDAY HOLIDAYS ON A WEEKLY VENUE. This path had NO holiday axis at all, so
+    // 25 Dec 2026 (a Friday) read as OPEN for every index CFD, metal and FX pair — the fail-OPEN
+    // direction, worse than the #850 defect it sits beside. Checked BEFORE the open computation,
+    // so a declared closure cannot be open by construction.
+    const holiday = this.findHoliday(this.formatDate(now, tz), exchange);
+    if (holiday?.status === 'closed') {
+      return {
+        exchange,
+        holidayName: holiday.name,
+        currentSession: null,
+        isOpen: false,
+        status: 'closed' as const,
+        nextOpen: this.nextWeeklyOpen(now, tz, session).toISOString(),
+        nextClose: null,
+        minutesUntilClose: null,
+      };
+    }
+    if (holiday?.status === 'early-close') {
+      // ⚠️ IGNORED, LOUDLY — NOT silently. A weekly session has no intraday close to shorten, so
+      // an early-close row filed against this venue would otherwise read as a full trading day
+      // (the same defect at smaller scale). None are declared; if a broker's reduced-hours table
+      // is ever added, implement the closeTime path HERE first.
+      this.logger.warn(
+        `Weekly venue ${exchange}: holiday ${holiday.date} (${holiday.name}) is declared 'early-close', ` +
+          'but a weekly session has no intraday close to shorten — treating it as a FULL trading day (#1088).',
+      );
+    }
+
     const midWeekOpen = dow > w.openDay && dow < w.closeDay;   // Mon–Thu for the FX week
     const openDayAfterOpen = dow === w.openDay && nowMin >= openMinutes;      // Sun from 22:00
     const closeDayBeforeClose = dow === w.closeDay && nowMin < closeMinutes;  // Fri before 22:00
@@ -440,10 +505,10 @@ export class MarketCalendarService {
       };
     }
 
-    // Closed: the weekend, Sunday before the open, or Friday after the close.
-    // Next open: Sunday if we are past Friday's close or it is Saturday, else today.
-    const daysToOpen = dow === w.closeDay || dow === 6 ? (7 - dow + w.openDay) % 7 : 0;
-    const openInstant = this.wallClockOnDayOffset(now, tz, daysToOpen, openMinutes);
+    // Closed: the weekend, Sunday before the open, Friday after the close — or a holiday on any
+    // of those days (handled above). The next open SKIPS any further closed holidays (#1088): a
+    // weekly venue opens ONCE a week, so a shut open-day must skip a whole week.
+    const openInstant = this.nextWeeklyOpen(now, tz, session);
     return {
       ...base,
       isOpen: false,
@@ -452,6 +517,33 @@ export class MarketCalendarService {
       nextClose: null,
       minutesUntilClose: null,
     };
+  }
+
+  /**
+   * The next instant a WEEKLY venue opens, skipping days it is closed (#1088).
+   *
+   * ⚠️ WHY ENUMERATED, NOT DERIVED. The previous formula computed "days to open" from the current
+   * day's position in the week and returned TODAY when the current day was the open day — correct
+   * for "Sunday before the open", wrong for a holiday ON the open day (it would answer "opens
+   * today" for a day the venue never opens). Candidate open instants are walked instead; the
+   * venue opens once a week, so at most three candidates matter.
+   */
+  private nextWeeklyOpen(now: Date, tz: string, session: SessionInfo): Date {
+    const w = session.weekly!;
+    const [oh, om] = w.openTime.split(':').map(Number);
+    const openMinutes = oh * 60 + om;
+    const dow = this.getDayInZone(now, tz);
+    const firstOffset = ((w.openDay - dow) + 7) % 7;
+    for (let offset = firstOffset; offset <= firstOffset + 14; offset += 7) {
+      const instant = this.wallClockOnDayOffset(now, tz, offset, openMinutes);
+      if (instant.getTime() <= now.getTime()) continue; // today's open is already behind us
+      const holiday = this.findHoliday(this.formatDate(instant, tz), session.exchange);
+      if (holiday?.status === 'closed') continue; // a shut venue does not open
+      return instant;
+    }
+    // Three consecutive closed open-days means the holiday table itself is wrong; return the
+    // nearest candidate rather than inventing a fourth week of closure.
+    return this.wallClockOnDayOffset(now, tz, firstOffset, openMinutes);
   }
 
   /** Minutes past local midnight in a zone. */
