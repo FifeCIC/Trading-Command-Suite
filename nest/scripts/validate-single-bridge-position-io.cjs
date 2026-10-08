@@ -242,16 +242,30 @@ const ADAPTER_REL = 'nest/src/modules/providers/adapters/mt5.adapter.ts';
  * The body of `async <name>(…)` — sliced from the declaration to the next line that closes at
  * class-member indentation.
  *
- * Deliberately simple, because the two shapes rule 5 inspects are flat methods. The self-test pins
- * BOTH directions on real-shaped snippets, so a reformat that broke the slice would be observed
- * (the fan-out would read as missing and the guard would fail loudly) rather than silently
- * narrowing the rule into a hole.
+ * ⚠️ A `\n  }` FOLLOWED BY `>` IS NOT THE END OF A METHOD — it closes a multi-line RETURN TYPE.
+ * Measured 2026-10-08 (the day `recoverDeals` was added, with `Promise<{ deals; recovered; … }>`):
+ * the slice stopped inside the signature, so the body read as EMPTY and the rule reported the real
+ * adapter as broken. The scanner walks to the next candidate instead of trusting the first hit.
+ *
+ * The self-test pins both shapes on real-shaped snippets — a multi-line return type AND a flat one
+ * — so a reformat that broke the slice is observed rather than silently narrowing the rule.
  */
 function methodBody(src, name) {
   const start = src.indexOf(`async ${name}(`);
   if (start === -1) return null;
   const rest = src.slice(start);
-  const end = rest.indexOf('\n  }');
+  let end = -1;
+  for (let from = 0; ; ) {
+    const hit = rest.indexOf('\n  }', from);
+    if (hit === -1) break;
+    if (rest[hit + 4] === '>') {
+      // `}> …` — the close of a return-type object literal. Keep scanning.
+      from = hit + 1;
+      continue;
+    }
+    end = hit;
+    break;
+  }
   return end === -1 ? rest : rest.slice(0, end);
 }
 
@@ -302,6 +316,27 @@ function scanSource(src, rel) {
         rel,
         rule: 'deal-history fan-out missing or unaddressed (#1089)',
         text: 'fetchAllBrokerDeals() must enumerate brokerIds AND pass a route on its /history call',
+      });
+    }
+
+    // ⚠️ #1093 — the EXIT-DATA RECOVERY request is the same class one route further out, and its
+    // first live run found the failure mode the rule above cannot see: the fan-out ASKED every
+    // broker, but a refusal from the first aborted the loop, so the second was never consulted
+    // while the caller's note still spoke for it. The shape pinned here is the precondition —
+    // enumerate `brokerIds`, address every call with a `route`. (The per-target catch that keeps a
+    // refusal from aborting the loop is canaried in mt5-adapter-multibroker.spec.ts instead; a
+    // regex cannot pin control flow honestly.)
+    const recover = methodBody(clean, 'recoverDeals');
+    if (
+      !recover ||
+      !/brokerIds/.test(recover) ||
+      !/\/history\/recover/.test(recover) ||
+      !/\broute\b/.test(recover)
+    ) {
+      out.push({
+        rel,
+        rule: 'exit-data recovery fan-out missing or unaddressed (#1093)',
+        text: 'recoverDeals() must enumerate brokerIds AND address each /history/recover call with a route',
       });
     }
   }
@@ -375,6 +410,30 @@ function selfTest() {
   const TRD = 'nest/src/modules/trading/mt5-trading.service.ts';
   const CTRL = 'nest/src/modules/providers/mt5.controller.ts';
 
+  /**
+   * The HEALTHY rule-5 shape — every method the rule inspects, in the form that must pass.
+   * Shared by the "does NOT flag" cases so they cannot drift from each other; each failing case
+   * below departs from this in exactly ONE way, which is what makes the failure diagnosable.
+   */
+  const R5_HEALTHY =
+    '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
+    + '    return this.fetchAllBrokerDeals(2);\n'
+    + '  }\n'
+    + '  private async fetchAllBrokerDeals(days: number): Promise<any[]> {\n'
+    + '    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];\n'
+    + '    for (const b of brokerIds) {\n'
+    + '      const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`, route);\n'
+    + '    }\n'
+    + '    return [];\n'
+    + '  }\n'
+    + '  async recoverDeals(positions: string[], from: Date): Promise<any> {\n'
+    + '    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];\n'
+    + '    for (const b of brokerIds) {\n'
+    + '      const data = await this.bridgePost<any>(\'/history/recover\', { positions }, t.route);\n'
+    + '    }\n'
+    + '    return [];\n'
+    + '  }';
+
   const cases = [
     // ── the SHIPPED defect, verbatim in shape ───────────────────────────────────────────────
     ['flags the single-URL field the guardian held (#1030)',
@@ -447,7 +506,12 @@ function selfTest() {
     ['⚠️ the exception does NOT cover a DIFFERENT no-arg getUrl() in the same file',
       () => scanSource(`    return this.mt5Connection.getUrl();\n    const other = this.mt5Connection.getUrl();`, TRD).length === 1],
 
-    // ── rule 5 (#1089): the deal read must fan out — the exit-attribution fix's guard ──────────
+    // ── rule 5 (#1089, extended #1093): the deal read AND the exit-data recovery must fan out ──
+    //
+    // ⚠️ A rule-5 "does NOT flag" snippet must contain ALL THREE methods — getDeals,
+    // fetchAllBrokerDeals, recoverDeals. The rule checks the file that OWNS the fan-out, so a
+    // missing method is a finding ("the route is gone"), exactly as a mis-shaped one is. This
+    // shape is shared so the three healthy cases cannot drift apart.
     ['⚠️ flags the REVERTED single-URL deal read (#1089)',
       () => scanSource(
         '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
@@ -457,21 +521,8 @@ function selfTest() {
         + '  }',
         'nest/src/modules/providers/adapters/mt5.adapter.ts',
       ).length >= 1],
-    ['does NOT flag the FIXED fan-out (getDeals delegates, helper routes the history call)',
-      () => scanSource(
-        '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
-        + '    const deals = await this.fetchAllBrokerDeals(2);\n'
-        + '    return deals;\n'
-        + '  }\n'
-        + '  private async fetchAllBrokerDeals(days: number): Promise<any[]> {\n'
-        + '    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];\n'
-        + '    for (const brokerId of brokerIds) {\n'
-        + '      const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`, route);\n'
-        + '    }\n'
-        + '    return [];\n'
-        + '  }',
-        'nest/src/modules/providers/adapters/mt5.adapter.ts',
-      ).length === 0],
+    ['does NOT flag the healthy fan-out — getDeals delegates, both helpers route their calls',
+      () => scanSource(R5_HEALTHY, 'nest/src/modules/providers/adapters/mt5.adapter.ts').length === 0],
     ['⚠️ flags a fan-out whose history call STOPPED passing the route (asks one URL N times)',
       () => scanSource(
         '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
@@ -493,6 +544,32 @@ function selfTest() {
         + '    return [];\n'
         + '  }',
         'nest/src/modules/trading/mt5-trading.service.ts',
+      ).length === 0],
+    ['⚠️ flags a recovery call that stopped enumerating brokers (#1093)',
+      () => scanSource(
+        '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
+        + '    return this.fetchAllBrokerDeals(2);\n'
+        + '  }\n'
+        + '  private async fetchAllBrokerDeals(days: number): Promise<any[]> {\n'
+        + '    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];\n'
+        + '    const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`, route);\n'
+        + '    return [];\n'
+        + '  }\n'
+        + '  async recoverDeals(positions: string[], from: Date): Promise<any> {\n'
+        + '    const data = await this.bridgePost<any>(\'/history/recover\', { positions }, undefined, 45_000);\n'
+        + '    return data;\n'
+        + '  }',
+        'nest/src/modules/providers/adapters/mt5.adapter.ts',
+      ).length >= 1],
+    ['does NOT mistake a multi-line return type for the end of the method (#1093)',
+      // The exact shape that broke the methodBody slice on 2026-10-08: only the SIGNATURE differs
+      // from the healthy file, so a slice that stops inside the return type is observed here.
+      () => scanSource(
+        R5_HEALTHY.replace(
+          '  async recoverDeals(positions: string[], from: Date): Promise<any> {',
+          '  async recoverDeals(positions: string[]): Promise<{\n    deals: any[];\n  }> {',
+        ),
+        'nest/src/modules/providers/adapters/mt5.adapter.ts',
       ).length === 0],
     ['the REAL adapter passes rule 5 (the fan-out is intact)',
       () => scanSource(fs.readFileSync(ADAPTER_FILE, 'utf8'), 'nest/src/modules/providers/adapters/mt5.adapter.ts').length === 0],

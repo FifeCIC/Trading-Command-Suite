@@ -45,6 +45,10 @@ interface BridgeQuoteResponse {
   ask: number;
   last: number;
   timestamp: string;
+  /** #1085 — the BROKER's own last-tick time (offset-corrected UTC), distinct from `timestamp`
+   *  (response time). Absent from a bridge older than the #1085 contract; `null` when the
+   *  terminal reports no tick time. */
+  tickTime?: string | null;
 }
 
 interface BridgeCandlesResponse {
@@ -432,6 +436,10 @@ export class Mt5Adapter implements IProviderAdapter {
       ask: data.ask ?? null,
       last: data.last ?? null,
       timestamp: new Date(data.timestamp),
+      // #1085 — parsed only when present; `undefined` (old bridge) and `null` (no tick time)
+      // must stay distinguishable from a real Date, because the sizing check refuses both
+      // while NAMING which one it was.
+      tickTime: data.tickTime ? new Date(data.tickTime) : (data.tickTime === null ? null : undefined),
     };
   }
 
@@ -875,6 +883,118 @@ export class Mt5Adapter implements IProviderAdapter {
     return merged;
   }
 
+  /**
+   * recoverDeals() — ask EVERY active broker's terminal to serve deals it has not returned yet (#1093).
+   *
+   * ⚠️ WHY THIS IS A SEPARATE CALL FROM `getDeals()` (#1093)
+   * -------------------------------------------------------
+   * `getDeals()` READS the terminal's local history. This one REQUESTS: the bridge re-asks the
+   * range and then asks PER TICKET (`history_deals_get(position=…)` AND `history_deals_get(ticket=…)`)
+   * with bounded retries — the app's only lever over terminal-side history depth.
+   *
+   * MEASURED 2026-10-08, the day it was built: for three deals dated 2026-09-16/23 that broker 3's
+   * terminal no longer serves, this call returned **0 recovered of 3** — so it is the honest probe
+   * too. When the terminal DOES hold the deals (any recent close, and every broker-2 close) the
+   * ordinary fan-out already finds them; this exists for the case where it did not.
+   *
+   * ⚠️ WHAT THE FIRST LIVE RUN TAUGHT IT (same day, and both are fixed here):
+   *   1. A 404 from a bridge on an older script aborted the whole fan-out — the second broker was
+   *      never asked. Each target is now caught individually and a refusal is recorded in `failed`.
+   *   2. `trade.brokerTicket` matched a deal's ORDER id in 20 of 20 sampled rows (only 8 of those
+   *      20 also matched a position id), so a position-only "served" check under-reported. The
+   *      bridge now indexes both and answers with `recoveredIds`, keyed by the ids sent.
+   *
+   * The ticket list goes to EVERY active broker deliberately: a ticket only resolves on the
+   * broker that owns it, so a broader ask costs one cheap call and needs no account→broker map.
+   *
+   * `failed` is not decoration: the caller's honest note must be able to say "broker 2 could not be
+   * asked" instead of claiming its terminal served nothing.
+   */
+  async recoverDeals(
+    positions: string[],
+    from: Date,
+    to?: Date,
+    opts: { attempts?: number; delaySec?: number } = {},
+  ): Promise<{
+    deals: any[];
+    recovered: string[];
+    stillMissing: string[];
+    byBroker: Record<number, { recovered: number; stillMissing: number }>;
+    failed: Record<string, string>;
+  }> {
+    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];
+    const targets: Array<{ brokerId?: number; route?: ResolvedSymbolRoute }> =
+      brokerIds.length === 0
+        ? [{ brokerId: undefined }]
+        : brokerIds.map((b) => ({ brokerId: b, route: this.symbolRouter?.routeForBroker(b) }));
+
+    const all: any[] = [];
+    const recovered = new Set<string>();
+    const byBroker: Record<number, { recovered: number; stillMissing: number }> = {};
+    const failed: Record<string, string> = {};
+    for (const t of targets) {
+      const label = String(t.brokerId ?? 'default');
+      let data: any = null;
+      try {
+        data = await this.bridgePost<any>(
+          '/history/recover',
+          {
+            positions,
+            from: from.toISOString(),
+            ...(to ? { to: to.toISOString() } : {}),
+            attempts: opts.attempts ?? 2,
+            delaySec: opts.delaySec ?? 1.5,
+          },
+          t.route,
+          // The bridge may legitimately spend attempts × delaySec inside the call; the default 10 s
+          // budget would abort a request that is doing exactly what it was asked to do.
+          45_000,
+        );
+      } catch (err) {
+        // ── PER-BROKER ISOLATION (#1093, measured on the first live use — 2026-10-08) ──
+        // `bridgePost` THROWS on any non-OK response. That contract is deliberate — an order path
+        // must never read a refusal as silence — but this is a FAN-OUT, and without this catch the
+        // FIRST bridge that refuses aborts the loop. Measured live: broker 2 was still running a
+        // bridge script older than this route, answered 404 `not found`, and broker 3 was never
+        // asked at all — while the caller's note said "the terminals did not serve any of the 81
+        // missing exit records", a statement about terminals that had not been consulted.
+        //
+        // A ticket resolves on the broker that owns it, so one broker's refusal must not hide
+        // another's answer — the #1089 rule, in the other direction. The refusal is RECORDED
+        // rather than swallowed, because "not asked" and "asked and empty" are different facts.
+        const message = (err as Error).message;
+        failed[label] = message;
+        this.logger.warn(`MT5: recoverDeals — broker ${label} could not be asked: ${message}`);
+        continue;
+      }
+      if (!data) {
+        failed[label] = 'no response (circuit breaker open or route is not an active MT5 bridge)';
+        continue;
+      }
+      all.push(...(data.deals ?? []));
+      // `recoveredIds` is keyed by the ids WE sent (the shape every current bridge returns).
+      // The `perPosition` fallback covers a bridge on the intermediate script, and is only
+      // consulted when `recoveredIds` is absent.
+      const servedIds: string[] = Array.isArray(data.recoveredIds)
+        ? data.recoveredIds
+        : Object.keys(data.perPosition ?? {});
+      for (const p of servedIds) recovered.add(String(p));
+      if (t.brokerId !== undefined) {
+        byBroker[t.brokerId] = {
+          recovered: Number(data.recovered ?? 0),
+          stillMissing: Array.isArray(data.stillMissing) ? data.stillMissing.length : 0,
+        };
+      }
+    }
+    return {
+      deals: all,
+      recovered: [...recovered],
+      stillMissing: positions.filter((p) => !recovered.has(p)),
+      byBroker,
+      failed,
+    };
+  }
+
   async getAccount(): Promise<BrokerAccount | null> {
     const data = await this.bridgeGet<any>('/account');
     if (!data) return null;
@@ -1191,7 +1311,7 @@ export class Mt5Adapter implements IProviderAdapter {
     return out;
   }
 
-  private async bridgePost<T>(path: string, body: unknown, route?: ResolvedSymbolRoute): Promise<T | null> {
+  private async bridgePost<T>(path: string, body: unknown, route?: ResolvedSymbolRoute, timeoutMs = 10_000): Promise<T | null> {
     // ⚠️ #914 — see bridgeGet. A non-MT5 route must never be answered by the default bridge.
     if (route && !route.mt5) {
       this.logger.warn(
@@ -1222,7 +1342,7 @@ export class Mt5Adapter implements IProviderAdapter {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!res.ok) {
         const isClientError = res.status >= 400 && res.status < 500 && res.status !== 429;

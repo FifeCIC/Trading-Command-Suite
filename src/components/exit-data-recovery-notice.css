@@ -1,0 +1,104 @@
+/**
+ * ExitDataRecoveryNotice styles (#1093).
+ *
+ * ⚠️ FULL COLOURED BORDER, not a left-hand stripe — the owner rejected side-striped cards
+ * (ui-standards.instructions.md, 2026-09-18): "I prefer ones we have in theme, full coloured
+ * borders." The tone sits on the BORDER; body text stays ink tokens (semantic tones fail AA as
+ * text on a panel).
+ *
+ * All colours are CSS variables (accessibility-policy: no hex literals in component CSS).
+ */
+.edrn {
+  margin: 12px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-warning);
+  border-radius: 10px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-card);
+}
+
+.edrn-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.edrn-icon {
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.edrn-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.edrn-title {
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.edrn-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.edrn-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.edrn-btn {
+  min-height: 44px; /* WCAG 2.5.5 tap target */
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-input-bg);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.edrn-btn:hover {
+  border-color: var(--color-accent-blue);
+}
+
+.edrn-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.edrn-btn-primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.edrn-result {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.edrn-result-line {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  color: var(--ink);
+}
+
+.edrn-result-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 768px) {
+  .edrn-head {
+    flex-direction: column;
+  }
+}

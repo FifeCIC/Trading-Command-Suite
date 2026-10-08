@@ -5,6 +5,9 @@ import { apiGet, apiPost } from '../core/api/client';
 import { normaliseAlert } from '../core/alerts';
 import { formatDuration, timeAgo } from '../core/format-utils';
 import { decisionScore } from '../core/decision-score';
+// #1093 — the optional in-app prompt + button for closed trades with no recorded exit. Renders
+// only while the gap exists; it is the app-side replacement for the MT5 terminal ritual (R48).
+import ExitDataRecoveryNotice from '../components/ExitDataRecoveryNotice';
 import './trade-journal-page.css';
 // ⚠️ RENAMED from execution-queue.css (2026-10-02). The Execution Queue page was DELETED — its
 // Live Events feed moved here, its Protocol Queue tab to /protocols/protocol-queue and its Scheduled
@@ -344,6 +347,8 @@ export default function TradeJournalPage() {
         <p>Every closed trade now names <strong>who closed it</strong> — stop loss, take profit, time stop, the app, or the desktop terminal — taken from the broker's closing deal (#916).</p>
         <p className="tj-privacy">Source: <strong>database</strong> (live MT5 deals are shown on Trade History).</p>
       </header>
+
+      <ExitDataRecoveryNotice />
 
       {/* ── Primary Loop (absorbed from the Execution Queue's `.eq-routine`) ──
           ⚠️ `execution.willPlaceRealOrders` is the EFFECTIVE state and is kept verbatim, because the

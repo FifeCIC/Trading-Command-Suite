@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **548** backend source files (specs excluded). Two access paths, because one
+Scanned **549** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**548** source files · **2887** declarations · **362** ratio sites · **1481** nodes · **130** unreferenced
+**549** source files · **2897** declarations · **362** ratio sites · **1485** nodes · **131** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -932,7 +932,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:508 getCapabilities`
 - `nest/src/modules/providers/adapters/trading212.adapter.ts:534 getCapabilities`
 - `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:371 getBrokerSymbol`
-- `nest/src/modules/providers/position-sync.service.ts:468 note`
+- `nest/src/modules/providers/position-sync.service.ts:667 note`
 - `nest/src/modules/providers/provider-cache.service.ts:62 getStatus`
 - `nest/src/modules/replay/replay.service.ts:483 computeReturn`
 - `nest/src/modules/replay/replay.service.ts:508 avg`
@@ -1003,7 +1003,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:767 median`
 - `nest/src/modules/trading/trade-history.controller.ts:773 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:167 reject`
-- `nest/src/modules/trading/trading-strategy.service.ts:1081 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:2349 evaluateAllActive`
-- `nest/src/modules/trading/trading-strategy.service.ts:252 num`
+- `nest/src/modules/trading/trading-strategy.service.ts:1084 shape`
+- `nest/src/modules/trading/trading-strategy.service.ts:2366 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:255 num`
+- `nest/src/modules/watchlists/watchlists.controller.ts:381 has`
 

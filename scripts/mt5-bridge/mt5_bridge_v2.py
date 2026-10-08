@@ -1220,8 +1220,15 @@ def quote_payload(symbol):
         tick = mt5.symbol_info_tick(symbol)
     if not tick:
         return None, f'{symbol} not available'
+    # #1085 — `tickTime` is the BROKER's own last-tick time, distinct from `timestamp` (the
+    # response time, machine clock). It is what makes a FROZEN quote distinguishable from a live
+    # one: with only `timestamp`, a quote that has not moved in an hour reports itself as one
+    # second old, and the sizing path silently trusts it while an ABSENT quote is refused.
+    # ⚠️ `utc_iso()` here is the file's rule: MT5 epochs are SERVER time and go through the
+    # measured offset correction. `timestamp` stays `utc_now_iso()` (machine clock) — unchanged.
     return {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask,
-            'last': tick.last or tick.bid, 'timestamp': utc_now_iso()}, None
+            'last': tick.last or tick.bid, 'timestamp': utc_now_iso(),
+            'tickTime': utc_iso(tick.time) if tick.time else None}, None
 
 def candles_payload(symbol, tf='1h', limit=100):
     """(payload, error) for one symbol's OHLCV. Always returns a payload shape
@@ -1431,7 +1438,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     # answer was a claim nothing verified.
                     'credentialMismatch': credential_mismatch,
                     'orderReady': credential_mismatch is None,
-                    'features': {'bulkQuotes': True, 'bulkCandles': True, 'perSymbolOverrides': True},
+                    'features': {'bulkQuotes': True, 'bulkCandles': True, 'perSymbolOverrides': True, 'quoteTickTime': True},
                 })
 
             # /quote?symbol=X
@@ -1445,7 +1452,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     mt5.symbol_select(symbol, True)
                     tick = mt5.symbol_info_tick(symbol)
                 if not tick: return json_response(self, {'error': f'{symbol} not available'}, 404)
-                return json_response(self, {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask, 'last': tick.last or tick.bid, 'timestamp': utc_now_iso()})
+                # #1085 — `tickTime` = the broker's own last-tick time (offset-corrected UTC);
+                # `timestamp` stays the response time. See quote_payload() for why both exist.
+                return json_response(self, {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask, 'last': tick.last or tick.bid, 'timestamp': utc_now_iso(), 'tickTime': utc_iso(tick.time) if tick.time else None})
 
             # /candles?symbol=X&timeframe=1d&limit=100
             if path == '/candles':
@@ -1724,6 +1733,91 @@ class BridgeHandler(BaseHTTPRequestHandler):
         body = read_body(self)
 
         try:
+            # /history/recover   (POST) — #1093: ask the terminal for deals it has not served.
+            #
+            # WHY THIS EXISTS. The python API reads the TERMINAL's local trade history, not the
+            # broker's server. Broker 3's terminal was measured serving only ~3 days of deals
+            # (17 deals for a 30-day request, oldest 2026-10-05) while broker 2 served 30+ days
+            # (482 deals, oldest 2026-09-08). A close whose deal the terminal will not return
+            # cannot be priced by any app-side code — so this endpoint is the app's ONE lever:
+            # re-request the range, then ask PER POSITION (the shape the close handler already
+            # uses), with bounded retries, and report exactly what became visible.
+            #
+            # body: {positions: ["89649760", ...], from?: ISO, to?: ISO, attempts?: 1-6, delaySec?: 0-10}
+            # out:  {deals: <same shape as /history>, perPosition: {id: n}, requested, recovered, stillMissing}
+            if path == '/history/recover':
+                ok, err = ensure_mt5()
+                if not ok: return json_response(self, unavailable_response(err), 503)
+                positions = [str(x) for x in (body.get('positions') or [])][:200]
+                attempts = max(1, min(int(body.get('attempts', 3)), 6))
+                delay = max(0.0, min(float(body.get('delaySec', 2)), 10))
+                try:
+                    frm = body.get('from'); to = body.get('to')
+                    from_date = datetime.fromisoformat(frm.replace('Z', '')) if frm else datetime.now() - timedelta(days=30)
+                    to_date = datetime.fromisoformat(to.replace('Z', '')) if to else datetime.now() + timedelta(days=1)
+                except (TypeError, ValueError):
+                    return json_response(self, {'error': 'bad from/to (use ISO dates)'}, 400)
+
+                by_ticket = {}
+                per_position = {}
+                by_order = {}
+
+                def absorb(deals):
+                    for d in deals or []:
+                        by_ticket[d.ticket] = d
+                        pid = str(getattr(d, 'position_id', '') or '')
+                        if pid:
+                            per_position[pid] = per_position.get(pid, 0) + 1
+                        # ⚠️ MEASURED 2026-10-08, on the first live use of this route: EVERY
+                        # `trade.brokerTicket` sampled (20 of 20) matched a deal's ORDER id, and only
+                        # 8 of 20 also matched a position id — on some servers the two namespaces
+                        # coincide, on others they do not. So a position-only check reported rows as
+                        # "not served" while their deals were sitting in this very response, and the
+                        # caller re-finalised nothing. Both indexes are required for the answer to
+                        # be true — the app stores POSITION ids for rows written since #1014 and
+                        # ORDER ids for rows written before it.
+                        oid = str(getattr(d, 'order', '') or '')
+                        if oid:
+                            by_order[oid] = by_order.get(oid, 0) + 1
+
+                def served(p):
+                    return per_position.get(p, 0) > 0 or by_order.get(p, 0) > 0
+
+                for attempt in range(attempts):
+                    try:
+                        absorb(mt5.history_deals_get(from_date, to_date))
+                    except Exception:
+                        pass
+                    for p in [x for x in positions if not served(x)]:
+                        # `position=` matches a position id; `ticket=` matches the order that
+                        # produced the deal. Both are probed because the app stores either kind.
+                        # An unsupported kwarg raises and is swallowed — the other probe still runs.
+                        for probe in ('position', 'ticket'):
+                            try:
+                                absorb(mt5.history_deals_get(**{probe: int(p)}))
+                            except Exception:
+                                pass
+                    if not [x for x in positions if not served(x)]:
+                        break
+                    if attempt < attempts - 1 and delay:
+                        time.sleep(delay)
+
+                deal_list = [{'ticket': d.ticket, 'symbol': d.symbol, 'type': 'buy' if d.type == 0 else 'sell',
+                              'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
+                              'positionId': d.position_id, 'orderId': d.order,
+                              'commission': float(d.commission), 'swap': float(d.swap), 'fee': float(d.fee),
+                              'time': utc_iso(d.time), 'comment': d.comment,
+                              'reason': int(d.reason) if d.reason is not None else None}
+                             for d in by_ticket.values()]
+                # `recoveredIds` is keyed by the ids the CALLER sent — that is what it must check.
+                # `perPosition` stays for diagnostics and for callers of the older shape.
+                recovered_ids = [x for x in positions if served(x)]
+                still_missing = [x for x in positions if not served(x)]
+                return json_response(self, {'deals': deal_list, 'perPosition': per_position,
+                    'recoveredIds': recovered_ids,
+                    'requested': len(positions), 'recovered': len(recovered_ids),
+                    'stillMissing': still_missing, 'attempts': attempts})
+
             # /quotes   (bulk quotes — POST body {symbols:[...]}; preferred at scale)
             if path == '/quotes':
                 return handle_bulk_quotes(self, q, body)

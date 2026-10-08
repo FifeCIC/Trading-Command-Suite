@@ -56,6 +56,27 @@ export class ProvidersController {
     );
   }
 
+  /**
+   * GET /api/providers/exit-data/gaps (#1093) — closed trades with no attributed exit record.
+   * The UI renders its recovery notice + button only while `count > 0`.
+   */
+  @Get('exit-data/gaps')
+  @ApiOperation({ summary: 'Closed trades whose exit record is missing or unattributed (#1093)' })
+  async exitDataGaps(@Query('provider') provider = 'mt5') {
+    return this.positionSync.exitDataGaps(provider);
+  }
+
+  /**
+   * POST /api/providers/exit-data/recover (#1093) — the optional in-app recovery attempt.
+   * The owner's direction, 2026-10-08: the app owns this, not a terminal ritual. The response is
+   * honest about what could not be recovered — see `note`.
+   */
+  @Post('exit-data/recover')
+  @ApiOperation({ summary: 'Ask the broker terminals for missing deal history, then re-price what is readable (#1093)' })
+  async recoverExitData(@Query('provider') provider = 'mt5') {
+    return this.positionSync.recoverExitDataGaps(provider);
+  }
+
   @Get('degradation')
   getDegradation() {
     return {

@@ -213,4 +213,84 @@ describe('Mt5Adapter — multi-broker deal history (#1089)', () => {
     expect(calls).toBe(1);
     expect(deals).toHaveLength(1);
   });
+
+  /**
+   * #1093 — `recoverDeals()` is the REQUEST half (per-position retries inside the bridge).
+   * The ticket list travels to EVERY active broker on purpose: a ticket only resolves on the
+   * broker that owns it, so the broader ask needs no account→broker map — and the response must
+   * report `stillMissing` as it is (the honest half of the in-app recovery button).
+   */
+  it('recoverDeals fans the ticket list to EVERY broker and reports stillMissing honestly', async () => {
+    const posts: Array<{ url: string; body: any }> = [];
+    global.fetch = jest.fn().mockImplementation((url: string, init: any) => {
+      posts.push({ url: String(url), body: JSON.parse(init.body) });
+      const isBroker3 = String(url).includes(':5001');
+      return Promise.resolve(ok({
+        deals: isBroker3 ? [deal(62463631, 93621464, 'GER40', 4)] : [],
+        perPosition: isBroker3 ? { '93621464': 2 } : {},
+        // Keyed by the ids the CALLER sent — the shape every current bridge returns (#1093).
+        recoveredIds: isBroker3 ? ['93621464'] : [],
+        requested: 3,
+        recovered: isBroker3 ? 1 : 0,
+        stillMissing: isBroker3 ? ['89649760', '91105906'] : ['89649760', '91105906', '93621464'],
+      }));
+    }) as any;
+
+    const adapter = new Mt5Adapter(undefined, undefined, undefined, router([2, 3]) as any);
+    const res = await adapter.recoverDeals(['89649760', '91105906', '93621464'], new Date('2026-09-15T00:00:00Z'));
+
+    expect(posts.some((p) => p.url.includes(':5000') && p.url.includes('/history/recover'))).toBe(true);
+    expect(posts.some((p) => p.url.includes(':5001') && p.url.includes('/history/recover'))).toBe(true);
+    // The SAME ticket list reaches both — resolving on the owner is the broker's job.
+    expect(posts.every((p) => Array.isArray(p.body.positions) && p.body.positions.length === 3)).toBe(true);
+    expect(res.recovered).toEqual(['93621464']);
+    expect(res.stillMissing.sort()).toEqual(['89649760', '91105906']);
+    expect(res.deals).toHaveLength(1);
+    expect(res.failed).toEqual({});
+  });
+
+  /**
+   * ⚠️ MEASURED DEFECT, first live run of the #1093 recovery (2026-10-08).
+   *
+   * `bridgePost` throws on any non-OK response — deliberately, because an order path must never
+   * read a refusal as silence. But this fan-out had no per-target catch, so broker 2 (still on a
+   * bridge script older than this route) answered 404 and the loop DIED before broker 3 was ever
+   * asked. The caller's note then said "the terminals did not serve any of the 81 missing exit
+   * records" — a statement about a terminal that had not been consulted. This is #1089's own rule
+   * (one broker's failure must not hide another's answer) in the opposite direction.
+   */
+  it('keeps asking the other brokers when one REFUSES, and records the refusal as a refusal', async () => {
+    const posts: string[] = [];
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      posts.push(String(url));
+      if (String(url).includes(':5000')) {
+        // An old bridge: the route does not exist. bridgePost turns this into a thrown refusal.
+        return Promise.resolve({ ok: false, status: 404, text: jest.fn().mockResolvedValue('{"error": "not found"}') } as any);
+      }
+      return Promise.resolve(ok({
+        deals: [deal(62463631, 93621464, 'GER40', 4)],
+        perPosition: { '93621464': 2 },
+        recoveredIds: ['93621464'],
+        requested: 3,
+        recovered: 1,
+        stillMissing: ['89649760', '91105906'],
+      }));
+    }) as any;
+
+    const adapter = new Mt5Adapter(undefined, undefined, undefined, router([2, 3]) as any);
+    const warnings: string[] = [];
+    (adapter as any).logger.warn = (msg: string) => warnings.push(String(msg));
+
+    const res = await adapter.recoverDeals(['89649760', '91105906', '93621464'], new Date('2026-09-15T00:00:00Z'));
+
+    // The broker AFTER the refusing one was still asked — the defect was that it was not.
+    expect(posts.some((u) => u.includes(':5001') && u.includes('/history/recover'))).toBe(true);
+    // And its answer is used: the served ticket is reported recovered, the rest still missing.
+    expect(res.recovered).toEqual(['93621464']);
+    expect(res.stillMissing.sort()).toEqual(['89649760', '91105906']);
+    // The refusal is RECORDED — "not asked" must never render the same as "asked and empty".
+    expect(res.failed['2']).toContain('not found');
+    expect(res.failed['3']).toBeUndefined();
+    expect(warnings.some((w) => w.includes('broker 2') && w.includes('could not be asked'))).toBe(true);
+  });
 });

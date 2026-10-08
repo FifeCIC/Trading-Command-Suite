@@ -325,4 +325,55 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     // FAILS — which is exactly what happened to 50 rows on 2026-10-08.
     expect(updateArg.data.closedAt).toEqual(CLOSED_AT);
   });
+
+  /**
+   * #1093 (2026-10-08) — the repair path RE-DERIVES `broker:unknown` when a deal becomes readable.
+   *
+   * `broker:unknown` is the ABSENCE of evidence, not evidence — and the repair pass itself writes
+   * it back for any row it cannot price, so without this rule a later recovery could never
+   * overwrite it (measured shaping of the #1089 staging, which had to clear the reason by SQL).
+   * Every OTHER reason stays sacred; the second case below proves it is NOT a blanket re-derive.
+   */
+  it('⭐ the repair pass RE-DERIVES broker:unknown when the closing deal is now readable (#1093)', async () => {
+    trade.findMany.mockResolvedValue([{
+      id: 'rederive-1', symbol: 'GER40', openedAt: new Date('2026-09-15T19:28:37Z'),
+      brokerTicket: '89649760', side: 'buy', pnl: null, exitPrice: null,
+      accountId: '62148195', quantity: 0.1,
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 'rederive-1', symbol: 'GER40', side: 'buy',
+      closeReason: 'broker:unknown', closedAt: new Date('2026-09-16T09:00:00Z'),
+    });
+    adapter.getDeals.mockResolvedValue([
+      { positionId: '89649760', symbol: 'GER40', side: 'buy', volume: 0.1, price: 23700, profit: 0, commission: 0, swap: 0, time: new Date('2026-09-15T19:28:37Z') },
+      { positionId: '89649760', symbol: 'GER40', side: 'sell', volume: 0.1, price: 23500, profit: -200, commission: -3, swap: -1, reason: 4, comment: '[sl 23500]', time: new Date('2026-09-16T09:00:00Z') },
+    ]);
+
+    await service.repairClosedTradesWithUnknownPnl('mt5', null, 10);
+
+    const updateArg: any = trade.update.mock.calls[0][0];
+    // The deal says reason 4 — a real stop fill the row can finally name.
+    expect(updateArg.data.closeReason).toBe('broker:sl');
+    expect(updateArg.data.exitPrice).toBe(23500);
+  });
+
+  it('does NOT re-derive a reason a mechanism named itself — only broker:unknown', async () => {
+    trade.findMany.mockResolvedValue([{
+      id: 'keep-1', symbol: 'GER40', openedAt: new Date('2026-09-15T19:28:37Z'),
+      brokerTicket: '89649760', side: 'buy', pnl: null, exitPrice: null,
+      accountId: '62148195', quantity: 0.1,
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 'keep-1', symbol: 'GER40', side: 'buy',
+      closeReason: 'system:time-stop', closedAt: new Date('2026-09-16T09:00:00Z'),
+    });
+    adapter.getDeals.mockResolvedValue([
+      { positionId: '89649760', symbol: 'GER40', side: 'sell', volume: 0.1, price: 23500, profit: -200, commission: -3, swap: -1, reason: 4, comment: '[sl 23500]', time: new Date('2026-09-16T09:00:00Z') },
+    ]);
+
+    await service.repairClosedTradesWithUnknownPnl('mt5', null, 10);
+
+    const updateArg: any = trade.update.mock.calls[0][0];
+    expect(updateArg.data.closeReason).toBe('system:time-stop');
+  });
 });

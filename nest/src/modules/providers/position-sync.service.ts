@@ -415,6 +415,205 @@ export class PositionSyncService {
   }
 
   /**
+   * exitDataGaps() — the #1093 gap set: closed trades whose exit record is missing or unattributed.
+   *
+   * `broker:unknown` and `null` are both "we do not know why this closed" — the two shapes the
+   * close-attribution work (#916/#1059/#1089) exists to shrink. This is the READ half of the
+   * in-app recovery prompt: the UI renders a notice + button only while this is non-zero.
+   */
+  async exitDataGaps(provider = 'mt5'): Promise<{
+    count: number;
+    bySymbol: Array<{ symbol: string; n: number }>;
+    sample: Array<{ id: string; symbol: string; closedAt: Date | null; closeReason: string | null }>;
+  }> {
+    const rows: any[] = await (this.prisma as any).trade
+      .findMany({
+        where: { provider, status: 'closed', OR: [{ closeReason: null }, { closeReason: CLOSE_REASONS.BROKER_UNKNOWN }] },
+        select: { id: true, symbol: true, closeReason: true, closedAt: true },
+        orderBy: { closedAt: 'asc' },
+        take: 1000,
+      })
+      .catch(() => []);
+    const by = new Map<string, number>();
+    for (const r of rows) by.set(r.symbol, (by.get(r.symbol) ?? 0) + 1);
+    return {
+      count: rows.length,
+      bySymbol: [...by.entries()].map(([symbol, n]) => ({ symbol, n })).sort((a, b) => b.n - a.n),
+      sample: rows.slice(0, 10),
+    };
+  }
+
+  /**
+   * recoverExitDataGaps() — the #1093 BUTTON: ask the terminals again, then re-price whatever
+   * became readable.
+   *
+   * Data flow: gap rows → their tickets → `adapter.recoverDeals()` (every broker, per-ticket
+   * retries) → for each ticket the terminal ACTUALLY served, the ordinary finaliser is re-run on
+   * the row with `allowClosed` (the #1014 repair path — one pricing pipeline, never a second).
+   *
+   * ⚠️ HONEST BY CONSTRUCTION, AND THAT TOOK TWO CORRECTIONS THE FIRST LIVE RUN FORCED:
+   *
+   *   1. "The terminals did not serve any…" is a claim about terminals that were ASKED. When a
+   *      broker's bridge could not be asked at all (measured, first live run: broker 2 was on an
+   *      older bridge script and 404'd, while the note above still spoke for it), the note now
+   *      names it and `unasked` carries the labels. "Not asked" and "asked and empty" are
+   *      different facts and must never render the same.
+   *   2. The gap count the UI shows counts ALL unattributed closes, but only ticket-bearing rows
+   *      can be chased. The unticketed remainder is stated in the note so 192 vs 81 do not read
+   *      as a bug to whoever does the arithmetic.
+   *
+   * ⚠️ THE FIRST LIVE RUNS, IN FULL (2026-10-08) — the whole sequence is kept because the first
+   * three answers were wrong and each correction found the next:
+   *   · 0 of 3 (single probes) → read as "the terminal withholds old deals". Half true.
+   *   · 0 of 81 → bridge 2 was never asked: a 404 aborted the fan-out (defect in `recoverDeals`,
+   *     fixed — per-target catch). The note had still spoken for the unasked broker.
+   *   · 34 of 81 → with both bridges asked AND order-id tickets resolved (the other defect: the
+   *     served check compared tickets to POSITION ids, so most served rows were silently skipped),
+   *     **21 gaps closed** immediately; 13 more re-finalised but stay unattributed (their closing
+   *     deal has no reason the enum can map).
+   *   · Second run then reported "13 recovered" while the gap count did not move — the counter
+   *     counted re-finalisations, not closed gaps. Fixed above: the count is read back from the
+   *     rows, and the unattributable remainder is named instead of re-advertised.
+   *
+   * The residual wall IS real for the rest (broker-3 terminal ~3 days, broker-2 terminal ~30), and
+   * the 111 unticketed rows predate #1014 with nothing to chase. "New closes are unaffected" held
+   * throughout: three closes landed after the #1089 fix and all three attributed.
+   */
+  async recoverExitDataGaps(provider = 'mt5'): Promise<{
+    requested: number;
+    recovered: number;
+    stillMissing: number;
+    unasked: string[];
+    note: string;
+  }> {
+    const gapWhere = {
+      provider,
+      status: 'closed',
+      OR: [{ closeReason: null }, { closeReason: CLOSE_REASONS.BROKER_UNKNOWN }],
+    };
+    const rows: any[] = await (this.prisma as any).trade
+      .findMany({
+        where: {
+          ...gapWhere,
+          // Only ticket-bearing rows can be chased — and `''` is a value, not an absence.
+          AND: [{ brokerTicket: { not: null } }, { brokerTicket: { not: '' } }],
+        },
+        select: { id: true, symbol: true, side: true, brokerTicket: true, openedAt: true, exitPrice: true, quantity: true, accountId: true },
+        orderBy: { closedAt: 'asc' },
+        take: 200,
+      })
+      .catch(() => []);
+
+    if (rows.length === 0) {
+      return { requested: 0, recovered: 0, stillMissing: 0, unasked: [], note: 'No closed trades are missing their exit record.' };
+    }
+
+    const adapter: any = this.adapterFactory?.create(provider);
+    if (!adapter?.recoverDeals) {
+      return { requested: rows.length, recovered: 0, stillMissing: rows.length, unasked: [], note: 'This provider has no deal-history recovery path.' };
+    }
+    const from = new Date(Math.min(...rows.map((r) => new Date(r.openedAt).getTime())));
+    let result: any = null;
+    try {
+      result = await adapter.recoverDeals(rows.map((r: any) => String(r.brokerTicket)), from);
+    } catch (err) {
+      return { requested: rows.length, recovered: 0, stillMissing: rows.length, unasked: [], note: `Recovery request failed: ${(err as Error).message}` };
+    }
+    const served = new Set<string>((result?.recovered ?? []).map((p: any) => String(p)));
+
+    const reFinalised: string[] = [];
+    for (const r of rows) {
+      if (!served.has(String(r.brokerTicket))) continue;
+      try {
+        const done = await this.finalizeClosedPosition(
+          provider,
+          {
+            brokerTicket: String(r.brokerTicket),
+            symbol: r.symbol,
+            openedAt: r.openedAt,
+            side: r.side,
+            quantity: r.quantity,
+            currentPrice: r.exitPrice ?? null,
+            pnl: null, // never feed an unknown back in as a result
+          },
+          r.accountId ?? null,
+          { allowClosed: true },
+        );
+        if (done) reFinalised.push(r.id);
+      } catch (err) {
+        this.logger.warn(`[${provider}] exit-data recovery could not re-finalise ${r.symbol} (${r.id}): ${(err as Error).message}`);
+      }
+    }
+    // ── "RECOVERED" MEANS THE GAP CLOSED — NOT THAT THE FINALISER RAN (#1093, measured) ─────────
+    // ⚠️ The first version counted re-finalisations, and the second live run exposed it: it
+    // reported "Recovered 13 of the 60" while the gap list did not move by a single row (171 →
+    // 171). Those 13 rows DO have their deals — the finaliser re-prices the P&L — but the closing
+    // deal carries no reason the enum can map (`default` → `broker:unknown`), so the row stays
+    // unattributed. A button that reports 13 on every press while nothing changes is this repo's
+    // own "plausible output, no error" signature. So the count is re-READ from the rows, and the
+    // read-back is also what supplies the honest remainder below.
+    const after: any[] = reFinalised.length
+      ? await (this.prisma as any).trade
+          .findMany({ where: { id: { in: reFinalised } }, select: { id: true, closeReason: true } })
+          .catch(() => [])
+      : [];
+    const gapClosed = after.filter(
+      (a: any) => a.closeReason && a.closeReason !== CLOSE_REASONS.BROKER_UNKNOWN && a.closeReason !== null,
+    ).length;
+    const reReadUnattributed = reFinalised.length - gapClosed;
+    const recovered = gapClosed;
+    // Rows that cannot be chased at all — no ticket means no terminal can be asked about them.
+    // Counted so the note can reconcile with the (larger) number the gap notice shows.
+    const unticketed: number = await (this.prisma as any).trade
+      .count({
+        where: {
+          ...gapWhere,
+          AND: [{ OR: [{ brokerTicket: null }, { brokerTicket: '' }] }],
+        },
+      })
+      .catch(() => 0);
+
+    const unasked = Object.keys(result?.failed ?? {});
+    const stillMissing = rows.length - recovered;
+    // ⚠️ ONE SERVED/UNSERVED SPLIT, STATED ONCE. An earlier wording put "did not serve any" beside
+    // "N further rows were re-read" in the same note — a contradiction, and the same defect class
+    // this whole report exists to avoid (a sentence that is not checkable against the numbers).
+    const servedCount = reFinalised.length;
+    const notServed = rows.length - servedCount;
+    const parts: string[] = [];
+    parts.push(`Recovered ${recovered} of the ${rows.length} requested exit records.`);
+    if (servedCount > 0) {
+      if (reReadUnattributed > 0 && recovered > 0) {
+        parts.push(
+          `The terminals served ${servedCount} of them; ${reReadUnattributed} of those carry a closing deal` +
+            ' with no reason the app can map, so they stay unattributed (their prices and P&L are refreshed).',
+        );
+      } else if (reReadUnattributed > 0) {
+        parts.push(
+          `The terminals served ${servedCount} of them, but those closing deals carry no reason the app can` +
+            ' map, so they stay unattributed (their prices and P&L are refreshed).',
+        );
+      } else {
+        parts.push(`The terminals served ${servedCount} of them, and every served row was attributed.`);
+      }
+    }
+    if (notServed > 0) {
+      parts.push(`${notServed} were not served — some accounts keep only a few days of deal history.`);
+    }
+    if (unasked.length > 0) {
+      parts.push(
+        `Broker(s) ${unasked.join(', ')} could not be asked (${(result?.failed ?? {})[unasked[0]]})` +
+          ' — the result above covers only the brokers that answered.',
+      );
+    }
+    if (unticketed > 0) {
+      parts.push(`A further ${unticketed} closed trades have no broker ticket recorded, so there is nothing to chase for them.`);
+    }
+    parts.push('New closes are unaffected.');
+    return { requested: rows.length, recovered, stillMissing, unasked, note: parts.join(' ') };
+  }
+
+  /**
    * repairClosedTradesWithUnknownPnl() — re-price rows that were finalised as "position vanished".
    *
    * ── WHY THIS EXISTS, AND WHY IT IS NOT PART OF THE NORMAL PASS ───────────────────────────────
@@ -1010,7 +1209,25 @@ export class PositionSyncService {
       // on the closing deal (names the actor, #916) > the broker's deal-reason enum > honest unknown.
       const fromComment = closeReasonFromComment(dealComment);
       const derivedCloseReason = fromComment ?? closeReasonFromDealReason(dealReason);
-      const closeReason = trade.closeReason ?? derivedCloseReason;
+      // ── DECISION (2026-10-08, primary) ──
+      // WHAT:      A REPAIR-path re-finalisation (opts.allowClosed) MAY overwrite `broker:unknown`
+      //            with a freshly derived reason. Every OTHER reason is never overwritten.
+      // WHY:       `broker:unknown` is the ABSENCE of evidence, not evidence. Measured the same day
+      //            it was written: the #1089 repair staged rows by clearing the reason, but this
+      //            very line wrote `broker:unknown` BACK for any row it could not yet price — so
+      //            without this rule a later recovery could never replace it, and 21 recoverable
+      //            rows stayed unattributed. A mechanism that NAMED itself at close time
+      //            (broker:sl, user:manual, system:time-stop) is strictly better evidence than
+      //            anything derivable on a later tick, so those stay sacred.
+      // REVERSE BY: Deleting the `rederivable` term — `closeReason` then keeps the existing value
+      //            for every closed row exactly as before this change.
+      // REGISTER:  docs/SETTLED-DECISIONS.md row 72
+      // GUARD:     nest/src/modules/providers/position-sync-ticketed-reap.spec.ts (⭐ re-derives
+      //            broker:unknown / does NOT re-derive a named reason) · canaried both directions
+      //            by logs/canary-1093-recovery.ps1 (M1)
+      const existingReason = trade.closeReason;
+      const rederivable = opts.allowClosed && existingReason === CLOSE_REASONS.BROKER_UNKNOWN;
+      const closeReason = (existingReason && !rederivable) ? existingReason : derivedCloseReason;
 
       // ── WHAT it belonged to, not just why it closed (#949) ─────────────────
       //
