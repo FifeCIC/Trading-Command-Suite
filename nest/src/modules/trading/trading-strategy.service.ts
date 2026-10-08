@@ -1881,6 +1881,26 @@ export class TradingStrategyService {
     } catch { /* MT5 may be unreachable — proceed with caution */ }
 
     // ── 3. MT5_MAX_DAILY_LOSS ──
+    //
+    // ⚠️ THE MESSAGE NAMES THE UNIT BECAUSE IT DOES NOT KNOW THE CURRENCY — and it must not pretend.
+    // It read `Daily loss $${…} exceeds risk.maxDailyLoss ($${…})`, and the `$` was a LIE: both live
+    // accounts are **GBP** (`GET :5000/account` → `currency=GBP`, `:5001` → `currency=GBP`), so the
+    // operator was shown £270.72 labelled as dollars — a wrong unit on a money figure, in the reason
+    // string that the risk-cap alerts now QUOTE VERBATIM (#1086). A symbol that is never checked is a
+    // claim, so it is gone; `[account currency]` says what is actually known.
+    //
+    // ⚠️ TWO REACHABLE LIMITATIONS, STATED RATHER THAN HIDDEN:
+    //   1. THE SUM SPANS EVERY MT5 ACCOUNT. The query filters on `provider: 'mt5'` with NO broker
+    //      filter, and `trade` has no account column at all, so both bridges' P&L is added into one
+    //      pot — a loss on broker 3 blocks broker 2. That is deliberate for a single book, but it is
+    //      the reason this cannot be read as a per-account figure.
+    //   2. IT ASSUMES ONE CURRENCY. Summing raw `pnl` across accounts is only valid while those
+    //      accounts share a currency, and nothing checks that. Both live accounts are GBP today, so
+    //      this is REACHABLE, not active — but the owner's stated direction is *"prepare for many
+    //      users that will input different accounts"* (`external-systems-are-data`), and the first
+    //      account in a second currency makes this sum meaningless without a conversion. Not fixed
+    //      here: it needs the conversion the margin estimator already has, and it is a money-path
+    //      change that deserves its own comparison rather than being folded into a message fix.
     const maxDailyLoss = await this.settings.get<number>('risk.maxDailyLoss');
     try {
       const today = new Date();
@@ -1895,7 +1915,9 @@ export class TradingStrategyService {
       });
       const dailyPnl = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
       if (dailyPnl < -maxDailyLoss) {
-        return { allowed: false, reason: `Daily loss $${Math.abs(dailyPnl).toFixed(2)} exceeds risk.maxDailyLoss ($${maxDailyLoss})` };
+        // ⚠️ `[account currency]` on BOTH figures — the cap is declared in the same unit as the P&L
+        // it is compared against, so labelling one and not the other would invite the same mistake.
+        return { allowed: false, reason: `Daily loss ${Math.abs(dailyPnl).toFixed(2)} exceeds risk.maxDailyLoss (${maxDailyLoss}) [account currency]` };
       }
     } catch { /* DB may be unavailable */ }
 

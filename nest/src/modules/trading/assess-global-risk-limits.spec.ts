@@ -128,6 +128,22 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
       return last != null ? { bid: last, ask: last, last } : null; // null = "broker does not quote it"
     });
 
+    // ⚠️ #1033 (2026-10-01) — THE HARNESS WENT STALE AND SIX MONEY-PATH TESTS STOPPED TESTING.
+    //
+    // The service now reads `getAllPositions()` (the position caps and the unprotected-stop check)
+    // and `getPrimaryPositions()` (the portfolio gates, beside `getAccount()`), while this harness
+    // only ever defined `getPositions`. Both misses THROW — and the service's own outer catch logs
+    // `Risk gate check failed: this.mt5.getPrimaryPositions is not a function — proceeding with
+    // caution` and returns `allowed: true`. So the six tests that expect a REFUSAL were asserting
+    // against a gate that never ran, and were **RED from 2026-10-01 until this was noticed on
+    // 2026-10-08**. Nothing failed the build, because a unit suite is not in `prebuild`.
+    //
+    // ⚠️ Bound as THUNKS, not as copies: several tests re-mock `getPositions` AFTER `build()` to
+    // simulate an outage mid-scenario, and a captured reference would ignore the re-mock — which is
+    // how a "Bridge unreachable" test would quietly keep returning a healthy empty position list.
+    mt5.getAllPositions = mt5.getAllPositions ?? (() => mt5.getPositions());
+    mt5.getPrimaryPositions = mt5.getPrimaryPositions ?? (() => mt5.getPositions());
+
     return new TradingStrategyService(
       prisma,
       mt5 as any,
@@ -503,5 +519,59 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     };
     const allowed = await assess(build(mt5b));
     expect(allowed.allowed).toBe(true);
+  });
+});
+
+/**
+ * ⚠️ NO HARDCODED CURRENCY SYMBOL IN A MONEY REASON (#1086 follow-up).
+ *
+ * The daily-loss refusal read `Daily loss $${…} exceeds risk.maxDailyLoss ($${…})`, and the `$` was
+ * a lie: **both live accounts are GBP** (`GET :5000/account` → `currency=GBP`; `:5001` → `currency=GBP`),
+ * so an operator was shown £270.72 labelled as dollars. It matters more than cosmetics because the
+ * risk-cap alerts now QUOTE THIS STRING VERBATIM, so the false unit reaches a Windows notification.
+ *
+ * The message cannot know the currency at that point — the account read happens later in the same
+ * method — so the honest form names it as unknown: `[account currency]`.
+ *
+ * ⚠️ THIS IS A SOURCE CHECK, deliberately. The defect is a literal inside a template string, which
+ * no behavioural test observes: the assertion above would pass just as happily with the wrong symbol
+ * because it only checks the text CONTAINS the cap name. Nothing else in the suite can see it.
+ */
+describe('money reasons carry no assumed currency (#1086)', () => {
+  it('⚠️ THE SOURCE — the daily-loss refusal names no currency symbol it cannot verify', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, 'trading-strategy.service.ts'),
+      'utf8',
+    ) as string;
+
+    const line = src
+      .split(/\r?\n/)
+      // ⚠️ COMMENT LINES ARE EXCLUDED, AND THIS IS THE THIRD TIME THIS HAS BEEN THE FIX.
+      // The docblock above the gate QUOTES the old string so the next reader can see what was
+      // replaced — and on the first run of this guard that quote was the only thing it matched.
+      // A guard that fails on its own explanation is a false positive, and the standard repair for
+      // a false positive is an allowlist, which is worse than no guard. (The same thing happened to
+      // `ab-arm-accounts.spec.ts` on 2026-10-07, where the sentence saying so is now written down.)
+      // So: code only.
+      .filter((l: string) => {
+        const t = l.trim();
+        return !t.startsWith('*') && !t.startsWith('//') && !t.startsWith('/*');
+      })
+      .filter((l: string) => /Daily loss/.test(l) && /risk\.maxDailyLoss/.test(l));
+
+    // A check that inspects nothing must not report OK — a renamed message would otherwise pass on
+    // an empty list, which is the very failure this guard exists to prevent.
+    expect(line.length).toBeGreaterThan(0);
+
+    for (const l of line) {
+      // `$` immediately before an interpolation is the defect; `$$` in the old form was the tell.
+      expect(l).not.toMatch(/\$\$\{/);
+      expect(l).not.toMatch(/[$£€¥]\$\{/);
+      expect(l).toContain('[account currency]');
+    }
   });
 });

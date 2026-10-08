@@ -24,6 +24,20 @@
  */
 jest.retryTimes(2, { logErrorsBeforeRetry: false });
 
+/**
+ * ⚠️ A DB-BACKED ASSERTION CANNOT RUN IN JEST'S DEFAULT 5 SECONDS (#1086 follow-up, 2026-10-08).
+ *
+ * Two of these tests aggregate over `marketbar`, which is a large real table — so they were failing
+ * on **`Exceeded timeout of 5000 ms`**, not on a wrong answer. A suite that is red for a reason
+ * nobody reads is worse than no suite: a REAL failure would land inside the same red and be
+ * indistinguishable from it. Measured 2026-10-08: the full nest unit run is 36 s, and this suite
+ * alone took 33 s of it — chiefly the retry wrapper re-attempting two timing-out tests.
+ *
+ * 30 s is chosen to be comfortably above the observed query time while still failing a genuine hang.
+ * It is a TIMEOUT, not a tolerance: the assertions themselves are unchanged.
+ */
+jest.setTimeout(30_000);
+
 import { PrismaService } from '../../database/prisma.service';
 import { alignBarTimestamp, barLengthMs } from './timeframe';
 
