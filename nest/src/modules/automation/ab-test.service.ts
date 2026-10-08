@@ -206,7 +206,23 @@ export class AbTestService {
     }
   }
 
-  /** Start a test — enforces the max-1-active rule. */
+  /**
+   * Start a test — enforces the max-1-active rule.
+   *
+   * ── DECISION (2026-10-08, primary) ──
+   * WHAT:      A previously-run live pair is NOT restarted as routine business. The sanctioned
+   *            measurement path for #929-class questions is the BACKTEST (#965); a live pair is a
+   *            decision the OWNER makes, and the recorded posture (2026-10-08) is: stay parked.
+   * WHY:       #1079's live run (b50727ee) proved the old path could destroy a leg's record on a
+   *            shared account — fixed since (two distinct accounts or refuse) — while #1082 (no
+   *            app-level order choke point) and the pair's non-time-stoppable positions (#1079
+   *            find #5) remain OPEN. The owner chose "A" 2026-10-08: measure via backtest.
+   * REVERSE BY: The owner authorises a restart. A future restart needs arms on TWO distinct
+   *            accounts (the config currently reads 'mt5' for both — a restart places NOTHING)
+   *            and should wait on #1082 + the time-stop attribution fix.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 74
+   * GUARD:     none enforced, by design — a restart is the owner's to authorise (see #1079)
+   */
   async start(id: string): Promise<AbTest> {
     const test = await this.prisma.abTest.findUnique({ where: { id } });
     if (!test) throw new NotFoundException(`A/B test ${id} not found`);
