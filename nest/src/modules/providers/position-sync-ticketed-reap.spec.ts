@@ -290,4 +290,39 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     expect(written.pnlInvalid).toBe(1);
     expect(String(written.pnlInvalidReason)).toContain('#1044');
   });
+
+  /**
+   * #1089 (2026-10-08) — THE REPAIR PASS MUST NOT MOVE A CLOSE DATE.
+   *
+   * `finalizeClosedPosition` wrote `closedAt: closedAt ?? new Date()`. For a LIVE close that is
+   * correct — the row has no value yet. For the #1014 repair pass it is damage: the row was closed
+   * long ago, and when its deal cannot be re-read the RUN TIME was stamped over the real close
+   * date. Measured live during the #1089 repair: one run moved **50** rows' close dates to
+   * "today" — every one restored from a pre-run snapshot (`logs/restore-1089-closedat.ps1`), which
+   * is evidence the behaviour was real and not hypothetical.
+   *
+   * The fix under test: `closedAt ?? trade.closedAt ?? new Date()`.
+   */
+  it('⚠️ the repair pass KEEPS the row\'s existing closedAt when no deal resolves (#1089)', async () => {
+    const CLOSED_AT = new Date('2026-09-25T10:00:00.000Z');
+    trade.findMany.mockResolvedValue([{
+      id: 'repair-1', symbol: 'GER40', openedAt: new Date('2026-09-25T08:00:00Z'),
+      brokerTicket: '89649760', side: 'buy', pnl: null, exitPrice: null,
+      accountId: '10011309743', quantity: 0.1,
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 'repair-1', symbol: 'GER40', side: 'buy', closeReason: null, closedAt: CLOSED_AT,
+    });
+    // The deal is NOT re-readable — the path that used to stamp the run time over the real date.
+    adapter.getDeals.mockResolvedValue([]);
+
+    const out = await service.repairClosedTradesWithUnknownPnl('mt5', null, 10);
+
+    expect(out.examined).toBe(1);
+    const updateArg: any = trade.update.mock.calls[0][0];
+    expect(updateArg.where).toEqual({ id: 'repair-1' });
+    // ⚠️ THE CANARY ASSERTION. With `closedAt ?? new Date()` this is the RUN TIME and the test
+    // FAILS — which is exactly what happened to 50 rows on 2026-10-08.
+    expect(updateArg.data.closedAt).toEqual(CLOSED_AT);
+  });
 });

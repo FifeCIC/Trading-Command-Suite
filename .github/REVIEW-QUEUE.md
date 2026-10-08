@@ -17,7 +17,8 @@
 
 | id | the decision, in one breath | where | question |
 |---|---|---|---|
-| *(none open — R45 executed 10-06 · R46 answered 10-07, both in DONE below)* |
+| **R47** | Two risk **caps** gate almost every entry — the sprint's "app opens at the worst times" is largely these two numbers, not the signatures | [#1081 measurement](https://github.com/FifeCIC/Trading-Command-Suite/issues/1081) · decision home **#943** | On 10-07 the caps (`maxDailyLoss` $100, `maxPortfolioRisk` 15%) blocked **nearly every** entry attempt — raise one, both, or leave? A change needs a copied A/B, so the answer sets what gets built next. |
+| **R48** | The **Pepperstone terminal exposes only ~3 days of trade history** (broker 2 holds a full month) — the 44 residual `broker:unknown` rows cannot be re-priced until it holds more | [#1089 probe](https://github.com/FifeCIC/Trading-Command-Suite/issues/1089) | ~2-minute action: open Pepperstone MT5 → Toolbox → History → right-click → Period → **Custom, 15 Sep → now**, then ask for the repair re-run. Safe now — #1091's date-stamp fix is deployed. |
 
 ⚠️ **THREE ROW IDS COLLIDED, AND IT IS CORRECTED (2026-10-06).** The three rows raised on 2026-10-02/03 were numbered **R37, R38 and R39** — and all three were **already used** by the 2026-10-01 block further down. Two of them the owner has since answered: both moved to DONE as **R42** and **R43**, each naming the id it used to carry. The one still open was renumbered **R44**. Nothing was deleted. ⚠️ The cause is worth one line: ids were allocated by looking at the **OPEN** table, which is the shortest part of the file — the ids were in the long DONE block underneath.
 

@@ -1083,7 +1083,14 @@ export class PositionSyncService {
           // trade is closed" predicate across the app, so a null RE-OPENS the trade. The value
           // stays; consumers ask `closeTimeIsBrokerDerived()` (`common/trading/close-time.ts`)
           // before reporting a duration.
-          closedAt: closedAt ?? new Date(),
+          //
+          // ⚠️ #1089 (2026-10-08) — the row's EXISTING closedAt is the middle fallback, and its
+          // absence here was measured as damage: the #1014 repair pass RE-finalises rows that were
+          // closed long ago, and for every candidate whose deal could not be re-read this line
+          // stamped the RUN TIME — 50 rows' close dates moved to "today" in one run, restored from
+          // the TSV snapshot taken beforehand (`logs/restore-1089-closedat.ps1`). A LIVE close has
+          // no existing value, so `new Date()` still applies exactly where it was always correct.
+          closedAt: closedAt ?? trade.closedAt ?? new Date(),
           closeReason,
           // ── DURABLE PEAK (#998) — rescued from the position row before it is removed ──
           //

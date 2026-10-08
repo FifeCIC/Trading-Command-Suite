@@ -767,10 +767,10 @@ export class Mt5Adapter implements IProviderAdapter {
   /** Executed deals (fills) since a date — real exit price + realised PnL (#470). */
   async getDeals(since: Date): Promise<BrokerDeal[]> {
     const days = Math.max(1, Math.ceil((Date.now() - since.getTime()) / 86_400_000) + 1);
-    const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`);
-    if (!data?.deals?.length) return [];
+    const deals = await this.fetchAllBrokerDeals(days);
+    if (deals.length === 0) return [];
     const sinceMs = since.getTime();
-    return data.deals
+    return deals
       .map((d: any) => ({
         brokerTicket: d.ticket != null ? String(d.ticket) : '',
         positionId: d.positionId != null ? String(d.positionId) : undefined,
@@ -800,6 +800,79 @@ export class Mt5Adapter implements IProviderAdapter {
         comment: typeof d.comment === 'string' ? d.comment : undefined,
       }))
       .filter((d: BrokerDeal) => d.time.getTime() >= sinceMs);
+  }
+
+  /**
+   * Ask EVERY active broker for its deal history (#1089).
+   *
+   * ⚠️ WHY THIS IS NOT A SINGLE CALL — and it was, until 2026-10-08
+   * -----------------------------------------------------------------
+   * `getDeals()` used to call `bridgeGet('/history?days=N')` with NO route, which resolves to
+   * `this.bridgeUrl` — the PRIMARY bridge (`MT5_BRIDGE_URL` = `:5000`, broker 2). With
+   * `MT5_ACTIVE_BROKERS=2,3` every finalisation of a broker-3 position therefore read broker 2's
+   * history, found no closing deal, and wrote the row from the stale snapshot:
+   * `closeReason='broker:unknown'`, exit price = last snapshot, pnl = floating snapshot pnl.
+   *
+   * MEASURED 2026-10-08 — every symbol routed to broker 3 (`symbol_route` brokerId=3):
+   *
+   *   | symbol | closes | broker:unknown | any other reason |
+   *   |--------|--------|----------------|------------------|
+   *   | VIX / GER40 / FRA40 / US30 / UK100 / XAGUSD | 48 (all time) | **48** | **0** |
+   *
+   * while broker-2 FX families carry real `broker:sl` attributions. Four rows were traced to their
+   * real closing deals on `:5001` — all `reason 4 (SL)` — with realised profit different from the
+   * stored value (GER40: real −8.18 vs stored −7.19). One VIX row was written **6.5 hours after**
+   * its deal existed, so this was never a timing race: the deal was simply never asked for at the
+   * right bridge.
+   *
+   * This mirrors `fetchAllBrokerPositions()` (the #883 fix) deliberately — a second, differently
+   * shaped fan-out would be a second thing to drift, and this exact single-URL defect has already
+   * been fixed in three other services (stop-guardian, position-time-stop, positions).
+   *
+   * ⚠️ A broker that answers with NO deals list is warned about, not silently skipped: its
+   * positions would fall back to the snapshot exactly as this defect did, so the incompleteness is
+   * made visible. Finalisation is NOT refused here (behaviour preserved) — see #1089 for the
+   * open decision on whether a missing broker's deals should defer a close entirely.
+   */
+  // ── DECISION (2026-10-08, primary) ──
+  // WHAT:      `getDeals()` fans out across EVERY active broker and merges; a broker that
+  //            answers no deals is WARNED about, and finalisation is NOT deferred for it.
+  // WHY:       The single-URL call read broker 2's history for every broker-3 position, so
+  //            48 of 48 broker-3 closes were stored `broker:unknown` with the SNAPSHOT price
+  //            and pnl (GER40 −7.19 stored vs −8.18 real, deal reason 4). Measured 2026-10-08.
+  // INSTEAD OF: Mirroring #883's refusal for THIS path — refusing to finalise while a
+  //            broker's deals are missing. That question stays OPEN in #1089 rather than
+  //            being decided by default here.
+  // REVERSE BY: Reverting `fetchAllBrokerDeals` to the single `bridgeGet('/history')` call.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 69
+  // GUARD:     src/modules/providers/adapters/mt5-adapter-multibroker.spec.ts (3 cases) ·
+  //            logs/canary-1089-getdeals-fanout.ps1 (mutated: 2 failed · restored: 8 passed) ·
+  //            BUILD GATE rule 5 in nest/scripts/validate-single-bridge-position-io.cjs —
+  //            getDeals() delegating + the fan-out enumerating brokerIds and passing a route;
+  //            tree canary observed both ways (mutated → exit 1, restored → exit 0)
+  private async fetchAllBrokerDeals(days: number): Promise<any[]> {
+    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];
+
+    // No router (tests, or a single-bridge install): keep the original single-URL path.
+    if (brokerIds.length === 0) {
+      const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`);
+      return data?.deals ?? [];
+    }
+
+    const merged: any[] = [];
+    for (const brokerId of brokerIds) {
+      const route = this.symbolRouter?.routeForBroker(brokerId);
+      const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`, route);
+      if (!data?.deals) {
+        this.logger.warn(
+          `MT5 broker ${brokerId} returned no deal history — a close on this broker may be ` +
+          'finalised against the last snapshot instead of its real closing deal (#1089)',
+        );
+        continue;
+      }
+      merged.push(...data.deals);
+    }
+    return merged;
   }
 
   async getAccount(): Promise<BrokerAccount | null> {

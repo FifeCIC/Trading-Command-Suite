@@ -38,6 +38,11 @@
  * ambiguous. Rules 1 and 3 are scanned across `nest/src/modules/automation`, which is where the
  * position MANAGERS live.
  *
+ * Rule 5 (the DEAL-history fan-out, #1089) is scoped to `providers/adapters/mt5.adapter.ts` — the
+ * one file that owns the per-broker deal read. It exists because this guard's other rules cannot
+ * see that site: rule 1 is automation-scoped, rule 2 matches a `.getUrl()` CALL while the adapter
+ * reads its own FIELD, and rules 3/4 match position reads by receiver.
+ *
  * ⚠️ KNOWN INSTANCES OUTSIDE THIS GUARD, NOT HIDDEN BY IT — the same class also exists on the
  * READ path (`providers/mt5.controller.ts` `GET /api/mt5/positions` and its close-all loop, and
  * `trading/mt5-trading.service.ts` `getPositions()`). Those are display/fallback reads rather than
@@ -57,6 +62,17 @@
  *     so only rule 1 (the field itself) catches it — and only inside `automation/`.
  *   Both are covered by the issue that owns the read path, not by a widened pattern here.
  *
+ * ⚠️ THE ONE THIS LIST MISSED AND IT MATTERED MOST IN THE EXIT PATH (#1089, 2026-10-08).
+ * `mt5.adapter.ts` held its own `this.bridgeUrl` field and, in `getDeals()`, read DEAL HISTORY
+ * through it with NO route — so the fallback `route?.url ?? this.bridgeUrl` resolved to the
+ * primary bridge for every finalisation. A broker-3 position's closing deal was never read, and
+ * the row was written from the snapshot: `closeReason='broker:unknown'`, exit = last snapshot
+ * price. Measured: all six broker-3-routed symbol families were **48 of 48 `broker:unknown`**
+ * all-time. The instance is FIXED (fan-out, mirroring #883) and rule 5 now guards the shape in
+ * the one file that owns it — the field itself stays, because it is the legitimate last-resort
+ * fallback for a single-bridge install.
+ *
+
  * Usage:
  *   node nest/scripts/validate-single-bridge-position-io.cjs              # check (build gate)
  *   node nest/scripts/validate-single-bridge-position-io.cjs --self-test  # prove it can fail
@@ -190,7 +206,10 @@ const EXCEPTIONS = [
       + 'equity. Every POSITION I/O path now resolves the holding bridge per ticket instead: '
       + '`closePosition` / `modifyPosition` / `closePartial` via `bridgeForTicket()`, and `closeAll` / '
       + '`closeProfitable` via `getAllPositions()`. Rule 4 below makes the old `getPositions()` name '
-      + 'unavailable again.',
+      + 'unavailable again. ⚠️ A THIRD consumer is named for accuracy (#1089, 2026-10-08): '
+      + '`getHistory()` reads `${this.bridgeUrl}/history` — a raw bridge-history read whose UI '
+      + 'caller was measured unreachable (`fetchMt5History()` has no frontend reference), so it is '
+      + 'named here rather than quietly uncounted, and left unchanged.',
     issue: '#1033',
   },
 ];
@@ -216,6 +235,26 @@ const KNOWN_BLIND_SPOTS = [
   'a bridge captured into a local outside automation/ — only rule 1 catches it, and only there',
 ];
 
+/** The adapter that owns the per-broker deal read. Rule 5 (#1089) is scoped to this one file. */
+const ADAPTER_REL = 'nest/src/modules/providers/adapters/mt5.adapter.ts';
+
+/**
+ * The body of `async <name>(…)` — sliced from the declaration to the next line that closes at
+ * class-member indentation.
+ *
+ * Deliberately simple, because the two shapes rule 5 inspects are flat methods. The self-test pins
+ * BOTH directions on real-shaped snippets, so a reformat that broke the slice would be observed
+ * (the fan-out would read as missing and the guard would fail loudly) rather than silently
+ * narrowing the rule into a hole.
+ */
+function methodBody(src, name) {
+  const start = src.indexOf(`async ${name}(`);
+  if (start === -1) return null;
+  const rest = src.slice(start);
+  const end = rest.indexOf('\n  }');
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
 /** Findings for one source string. `rel` decides which rules apply. Pure, so the self-test drives it. */
 function scanSource(src, rel) {
   const out = [];
@@ -240,6 +279,31 @@ function scanSource(src, rel) {
       rule: 'EXEMPTION INVALID — the field is Mt5Adapter but getPositions() no longer reads every broker',
       text: 'see adapterReadsEveryBroker() in validate-single-bridge-position-io.cjs',
     });
+  }
+
+  // ── Rule 5 (#1089) — the DEAL-history read fans out across every active broker ────────────────
+  //
+  // ⚠️ The other rules cannot see this site (see the header). Measured 2026-10-08: with the call
+  // taking the `route?.url ?? this.bridgeUrl` fallback, every broker-3 finalisation read broker
+  // 2's history and was written from the snapshot — 48 of 48 closes on the six broker-3 symbols.
+  if (rel === ADAPTER_REL) {
+    const direct = methodBody(clean, 'getDeals');
+    if (direct && /bridgeGet\s*[<(]/.test(direct)) {
+      out.push({
+        rel,
+        rule: 'single-bridge DEAL read — getDeals() calls the bridge directly (#1089)',
+        text: 'delegate to fetchAllBrokerDeals(), which asks EVERY active broker',
+      });
+    }
+    const fanOut = methodBody(clean, 'fetchAllBrokerDeals');
+    const routesHistory = !!fanOut && /bridgeGet\s*<[^\n]*\/history[^\n]*route/.test(fanOut);
+    if (!fanOut || !/brokerIds/.test(fanOut) || !routesHistory) {
+      out.push({
+        rel,
+        rule: 'deal-history fan-out missing or unaddressed (#1089)',
+        text: 'fetchAllBrokerDeals() must enumerate brokerIds AND pass a route on its /history call',
+      });
+    }
   }
 
   for (const line of clean.split(/\r?\n/)) {
@@ -382,6 +446,56 @@ function selfTest() {
       () => scanSource(`    return this.mt5Connection.getUrl();`, TRD).length === 0],
     ['⚠️ the exception does NOT cover a DIFFERENT no-arg getUrl() in the same file',
       () => scanSource(`    return this.mt5Connection.getUrl();\n    const other = this.mt5Connection.getUrl();`, TRD).length === 1],
+
+    // ── rule 5 (#1089): the deal read must fan out — the exit-attribution fix's guard ──────────
+    ['⚠️ flags the REVERTED single-URL deal read (#1089)',
+      () => scanSource(
+        '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
+        + '    const days = 1;\n'
+        + '    const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`);\n'
+        + '    return [];\n'
+        + '  }',
+        'nest/src/modules/providers/adapters/mt5.adapter.ts',
+      ).length >= 1],
+    ['does NOT flag the FIXED fan-out (getDeals delegates, helper routes the history call)',
+      () => scanSource(
+        '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
+        + '    const deals = await this.fetchAllBrokerDeals(2);\n'
+        + '    return deals;\n'
+        + '  }\n'
+        + '  private async fetchAllBrokerDeals(days: number): Promise<any[]> {\n'
+        + '    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];\n'
+        + '    for (const brokerId of brokerIds) {\n'
+        + '      const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`, route);\n'
+        + '    }\n'
+        + '    return [];\n'
+        + '  }',
+        'nest/src/modules/providers/adapters/mt5.adapter.ts',
+      ).length === 0],
+    ['⚠️ flags a fan-out whose history call STOPPED passing the route (asks one URL N times)',
+      () => scanSource(
+        '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
+        + '    return this.fetchAllBrokerDeals(2);\n'
+        + '  }\n'
+        + '  private async fetchAllBrokerDeals(days: number): Promise<any[]> {\n'
+        + '    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];\n'
+        + '    for (const brokerId of brokerIds) {\n'
+        + '      const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`);\n'
+        + '    }\n'
+        + '    return [];\n'
+        + '  }',
+        'nest/src/modules/providers/adapters/mt5.adapter.ts',
+      ).length >= 1],
+    ['does NOT fire outside the adapter — scoped to the file that owns the fan-out',
+      () => scanSource(
+        '  async getDeals(since: Date): Promise<BrokerDeal[]> {\n'
+        + '    const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=1`);\n'
+        + '    return [];\n'
+        + '  }',
+        'nest/src/modules/trading/mt5-trading.service.ts',
+      ).length === 0],
+    ['the REAL adapter passes rule 5 (the fan-out is intact)',
+      () => scanSource(fs.readFileSync(ADAPTER_FILE, 'utf8'), 'nest/src/modules/providers/adapters/mt5.adapter.ts').length === 0],
 
     // ── the tree itself ─────────────────────────────────────────────────────────────────────
     ['the REAL tree is clean', () => scanTree().length === 0],

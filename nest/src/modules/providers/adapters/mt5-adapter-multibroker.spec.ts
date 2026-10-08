@@ -135,3 +135,82 @@ describe('Mt5Adapter — multi-broker position snapshot (#883)', () => {
     expect(snapshot.positions).toHaveLength(1);
   });
 });
+
+/**
+ * #1089 — the deal twin of #883. `getDeals()` asked ONLY the primary bridge (:5000 / broker 2),
+ * so every finalisation of a broker-3 position found no closing deal at all and wrote the row from
+ * the stale snapshot: `closeReason='broker:unknown'`, exit = last snapshot price, pnl = floating.
+ *
+ * MEASURED 2026-10-08: 48 of 48 broker-3 closes (VIX/GER40/FRA40/US30/UK100/XAGUSD) carried
+ * `broker:unknown` and ZERO any other reason — while broker-2 FX carried real `broker:sl` rows.
+ * The first test below is the defect itself: the deals for the broker-3 symbol MUST come back.
+ */
+describe('Mt5Adapter — multi-broker deal history (#1089)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  /** A bridge deal as `/history` returns it (shape verified live 2026-10-08 on :5001). */
+  const deal = (ticket: number, positionId: number, symbol: string, reason: number) => ({
+    ticket, symbol, type: 'sell', volume: 0.1, price: 25073.9, profit: -8.18,
+    positionId, orderId: positionId + 500000, commission: 0, swap: 0, fee: 0,
+    time: '2026-10-07T13:43:32Z', comment: '[sl 25073.9]', reason,
+  });
+
+  it('queries EVERY active broker and merges the deals', async () => {
+    const seen: string[] = [];
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      seen.push(String(url));
+      // Broker 2 → EURGBP deals, broker 3 → GER40 deal. Distinct position ids, as live.
+      return Promise.resolve(
+        String(url).includes(':5001')
+          ? ok({ deals: [deal(62463631, 93621464, 'GER40', 4)], orders: [], orderCount: 0, dealCount: 1 })
+          : ok({ deals: [deal(15264871, 90555750, 'EURGBP', 4)], orders: [], orderCount: 0, dealCount: 1 }),
+      );
+    }) as any;
+
+    const adapter = new Mt5Adapter(undefined, undefined, undefined, router([2, 3]) as any);
+    const deals = await adapter.getDeals(new Date('2026-10-01T00:00:00Z'));
+
+    // Both bridges were actually asked for DEALS — the defect was that only broker 2 ever was.
+    expect(seen.some((u) => u.includes(':5000') && u.includes('/history'))).toBe(true);
+    expect(seen.some((u) => u.includes(':5001') && u.includes('/history'))).toBe(true);
+    // THE regression: the broker-3 position's closing deal must be present, or its close is
+    // finalised against the snapshot as `broker:unknown` exactly as it was until 2026-10-08.
+    expect(deals.map((d) => d.positionId).sort()).toEqual(['90555750', '93621464']);
+    const ger40 = deals.find((d) => d.positionId === '93621464')!;
+    expect(ger40.reason).toBe(4);
+    expect(ger40.profit).toBeCloseTo(-8.18);
+  });
+
+  it('keeps the other broker\'s deals when one broker answers none', async () => {
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (String(url).includes(':5001')) return Promise.reject(new Error('connection refused'));
+      return Promise.resolve(ok({ deals: [deal(15264871, 90555750, 'EURGBP', 4)], orders: [], orderCount: 0, dealCount: 1 }));
+    }) as any;
+
+    const adapter = new Mt5Adapter(undefined, undefined, undefined, router([2, 3]) as any);
+    const warnings: string[] = [];
+    (adapter as any).logger.warn = (msg: string) => warnings.push(String(msg));
+
+    const deals = await adapter.getDeals(new Date('2026-10-01T00:00:00Z'));
+
+    // The survivor's deals still resolve — a broker outage must not blank the whole outcome.
+    expect(deals.map((d) => d.positionId)).toEqual(['90555750']);
+    // ...and the incompleteness is visible, not silent: that missing broker's positions fall back
+    // to the snapshot exactly as the #1089 defect did.
+    expect(warnings.some((w) => w.includes('broker 3') && w.includes('no deal history'))).toBe(true);
+  });
+
+  it('falls back to the single default bridge when no router is injected', async () => {
+    let calls = 0;
+    global.fetch = jest.fn().mockImplementation(() => {
+      calls++;
+      return Promise.resolve(ok({ deals: [deal(1, 2, 'EURUSD', 0)], orders: [], orderCount: 0, dealCount: 1 }));
+    }) as any;
+
+    const adapter = new Mt5Adapter();
+    const deals = await adapter.getDeals(new Date('2026-10-01T00:00:00Z'));
+
+    expect(calls).toBe(1);
+    expect(deals).toHaveLength(1);
+  });
+});
