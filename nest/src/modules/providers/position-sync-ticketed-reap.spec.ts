@@ -357,6 +357,67 @@ describe('PositionSyncService — ticketed orphans (#871)', () => {
     expect(updateArg.data.exitPrice).toBe(23500);
   });
 
+  /**
+   * #1093 follow-up (2026-10-08, same day) — THE OPENING DEAL FALLS BEFORE `openedAt`.
+   *
+   * Measured: 13 XAUUSD rows re-finalised on every press with the diagnostics reading
+   * `byPosition=0 candidates=0 exitDeals=0` — 25 deals fetched, none resolving the ticket. Cause:
+   * `openedAt` is the APP'S FIRST SIGHTING; the broker stamps the fill EARLIER; and `getDeals`'
+   * `time >= since` filter dropped the OPENING deal — the only bridge from an ORDER ticket to its
+   * position. The closing deal (reason 4, present!) was in that same response, unreachable.
+   */
+  it('⭐ looks BEFORE openedAt when a ticket exists — the order→position bridge deal (#1093)', async () => {
+    const openedAt = new Date('2026-10-07T10:05:00.902Z');
+    trade.findMany.mockResolvedValue([{
+      id: 'window-drop', symbol: 'XAUUSD', openedAt, brokerTicket: '152733639383',
+      side: 'buy', pnl: null, exitPrice: null, accountId: '10011309743', quantity: 0.01,
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 'window-drop', symbol: 'XAUUSD', side: 'buy',
+      closeReason: 'broker:unknown', closedAt: new Date('2026-10-07T12:30:35Z'),
+    });
+    adapter.getDeals.mockResolvedValue([]);
+
+    await service.repairClosedTradesWithUnknownPnl('mt5', null, 10);
+
+    // Removing the grace (canary M3) makes this the run's exact `openedAt` — the value that
+    // dropped the bridge deal — and this assertion fails.
+    //
+    // ⚠️ ASSERTED AS A PROPERTY, NOT AS `openedAt - DEAL_LOOKBACK_GRACE_MS`. The first version
+    // mirrored the constant, so zeroing it moved BOTH sides of the equality and the case was
+    // impossible to fail — the canary's own first run caught that, which is the entire reason a
+    // canary exists. The requirement is "the window reaches at least a day before the first
+    // sighting"; that is what this pins, at any margin.
+    const since: Date = adapter.getDeals.mock.calls[0][0];
+    expect(openedAt.getTime() - since.getTime()).toBeGreaterThanOrEqual(86_400_000);
+  });
+
+  it('keeps the NARROW window when there is no ticket — the symbol fallback depends on it (#1093)', async () => {
+    // ⚠️ The other half of the rule. The unticketed path counts lifecycles in the returned set
+    // (`symbolFallbackSafe`); a widened window could flip it and change which rows reconcile.
+    //
+    // ⚠️ Driven through the SYNC path, not the repair pass: the repair pass REFUSES unticketed
+    // rows outright ("no position to resolve" — observed in its own log line while writing this
+    // case), so it can never exercise this branch. The sync path finalises an unticketed legacy
+    // position row, and that is where a widened `since` would do its damage.
+    const openedAt = new Date('2026-10-07T10:05:00.902Z');
+    position.findMany.mockResolvedValue([{
+      id: 'p-noticket', symbol: 'EURUSD', brokerTicket: null, side: 'buy', quantity: 0.1,
+      avgPrice: 1.1, currentPrice: 1.1, pnl: 0, sl: null, tp: null, comment: '',
+      openedAt, accountId: '10011309743',
+    }]);
+    trade.findFirst.mockResolvedValue({
+      id: 't-noticket', symbol: 'EURUSD', side: 'buy',
+      closeReason: 'broker:unknown', closedAt: new Date('2026-10-07T12:30:35Z'),
+    });
+    adapter.getDeals.mockResolvedValue([]);
+
+    await service.syncPositions('mt5', [], { authoritative: true });
+
+    const since: Date = adapter.getDeals.mock.calls[0][0];
+    expect(since.getTime()).toBe(openedAt.getTime());
+  });
+
   it('does NOT re-derive a reason a mechanism named itself — only broker:unknown', async () => {
     trade.findMany.mockResolvedValue([{
       id: 'keep-1', symbol: 'GER40', openedAt: new Date('2026-09-15T19:28:37Z'),

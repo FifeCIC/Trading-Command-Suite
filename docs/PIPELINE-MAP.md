@@ -932,7 +932,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:508 getCapabilities`
 - `nest/src/modules/providers/adapters/trading212.adapter.ts:534 getCapabilities`
 - `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:371 getBrokerSymbol`
-- `nest/src/modules/providers/position-sync.service.ts:667 note`
+- `nest/src/modules/providers/position-sync.service.ts:692 note`
 - `nest/src/modules/providers/provider-cache.service.ts:62 getStatus`
 - `nest/src/modules/replay/replay.service.ts:483 computeReturn`
 - `nest/src/modules/replay/replay.service.ts:508 avg`

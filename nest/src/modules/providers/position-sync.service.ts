@@ -29,6 +29,24 @@ import { resolveStrategyForClose } from './mt5-comment.util';
 // `positionId` would EACH book the position's whole net (a 4x overstatement on a 4-order scale-in).
 import { splitPnlByVolume } from './pnl-split';
 
+/**
+ * How far BEFORE a row's `openedAt` the finaliser looks for deals (#1093, measured 2026-10-08).
+ *
+ * ⚠️ WHY THIS EXISTS. `openedAt` is the APP'S FIRST SIGHTING of the position — for an app-placed
+ * order it trails the broker's fill by seconds; for an externally-opened one it trails by the whole
+ * poll interval (or longer if the sync was down). `getDeals(openedAt)` then filters deals to
+ * `time >= openedAt`, which DROPPED THE OPENING DEAL — and for a row whose `brokerTicket` is an
+ * ORDER id, that deal is the ONLY bridge from order → position → closing deal. Measured: 13 rows
+ * re-finalised with `byPosition=0 candidates=0 exitDeals=0` while the closing deal (with its
+ * reason!) sat in the very response that excluded the opening one — the button therefore reported
+ * "no reason the app can map", which was FALSE.
+ *
+ * Exact ticket/position matching cannot be corrupted by extra deals, so a generous margin is safe
+ * here; the SYMBOL-fallback path keeps the narrow window (its `symbolFallbackSafe` lifecycle count
+ * depends on the returned set — hence the ticket test at the call site).
+ */
+export const DEAL_LOOKBACK_GRACE_MS = 2 * 86_400_000;
+
 /** Normalised position shape — any broker adapter should map to this. */
 export interface BrokerPosition {
   symbol: string;
@@ -469,11 +487,14 @@ export class PositionSyncService {
    *     fixed — per-target catch). The note had still spoken for the unasked broker.
    *   · 34 of 81 → with both bridges asked AND order-id tickets resolved (the other defect: the
    *     served check compared tickets to POSITION ids, so most served rows were silently skipped),
-   *     **21 gaps closed** immediately; 13 more re-finalised but stay unattributed (their closing
-   *     deal has no reason the enum can map).
+   *     **21 gaps closed** immediately. The remaining 13 re-finalised with `byPosition=0
+   *     candidates=0` — measured 2026-10-08 via the repair re-derivation log line: the OPENING
+   *     deal that bridges order → position was being dropped by `getDeals`'s `since` filter
+   *     (`openedAt` is app-sighting time, later than the fill). Fixed with `DEAL_LOOKBACK_GRACE_MS`,
+   *     applied only to ticketed rows.
    *   · Second run then reported "13 recovered" while the gap count did not move — the counter
    *     counted re-finalisations, not closed gaps. Fixed above: the count is read back from the
-   *     rows, and the unattributable remainder is named instead of re-advertised.
+   *     rows, and the un-closed remainder is stated without claiming why.
    *
    * The residual wall IS real for the rest (broker-3 terminal ~3 days, broker-2 terminal ~30), and
    * the 111 unticketed rows predate #1014 with nothing to chase. "New closes are unaffected" held
@@ -584,14 +605,18 @@ export class PositionSyncService {
     parts.push(`Recovered ${recovered} of the ${rows.length} requested exit records.`);
     if (servedCount > 0) {
       if (reReadUnattributed > 0 && recovered > 0) {
+        // ⚠️ CAUSE-AGNOSTIC ON PURPOSE. This text used to claim "no reason the app can map" — a
+        // cause that was MEASURED FALSE for all 13 rows it first described (the resolution never
+        // reached their closing deal; the reason was 4, plain as day). A note may only state what
+        // was observed: rows were re-processed and the gap remains. WHY is in the repair
+        // re-derivation log line, per ticket.
         parts.push(
-          `The terminals served ${servedCount} of them; ${reReadUnattributed} of those carry a closing deal` +
-            ' with no reason the app can map, so they stay unattributed (their prices and P&L are refreshed).',
+          `The terminals served ${servedCount} of them; ${reReadUnattributed} were re-processed but their` +
+            ' exits still could not be attributed.',
         );
       } else if (reReadUnattributed > 0) {
         parts.push(
-          `The terminals served ${servedCount} of them, but those closing deals carry no reason the app can` +
-            ' map, so they stay unattributed (their prices and P&L are refreshed).',
+          `The terminals served ${servedCount} of them, but their exits still could not be attributed.`,
         );
       } else {
         parts.push(`The terminals served ${servedCount} of them, and every served row was attributed.`);
@@ -966,6 +991,19 @@ export class PositionSyncService {
         .findFirst({ where: { ...where, symbol: dbPos.symbol, brokerTicket: null }, orderBy: { openedAt: 'desc' } })
         .catch(() => null);
     }
+    if (!trade) {
+      // ⚠️ #1093 — a repair that matched NO row still reaches `return 1` at the bottom of this
+      // method, so its caller counts a NO-OP as "re-finalised". Measured consequence: the
+      // recovery button reported "13 rows were re-read" while the row lookup may never have
+      // touched them. The success return is left as-is (live paths count on it); the silence is not.
+      if (opts.allowClosed) {
+        this.logger.warn(
+          `[${provider}] ${dbPos.symbol}: repair targeted ticket ${dbPos.brokerTicket ?? '-'} but matched NO trade row — nothing written`,
+        );
+      } else {
+        this.logger.debug(`[${provider}] ${dbPos.symbol}: no trade row matched ticket ${dbPos.brokerTicket ?? '-'}`);
+      }
+    }
 
     // ⚠️ Out of scope — do NOT judge a trade this sync cannot see (#889). Checked BEFORE the deal
     // history lookup so an out-of-scope row costs nothing and cannot be finalised by a later path.
@@ -986,6 +1024,10 @@ export class PositionSyncService {
     // `undefined` until the bridge is redeployed with the field; see close-reason.ts.
     let dealReason: number | undefined;
     let dealComment: string | undefined;
+    // #1093 — repair-path diagnosis. Set inside the deal block, logged with the derivation below,
+    // so ONE log line answers "why could this re-derivation not attribute the exit": the fetch
+    // counts per resolution step plus the raw reason/comment. Null unless a repair re-runs this.
+    let dealStats: string | null = null;
     // #777 — the COST COMPONENTS of the close, from the same deals the net is summed from.
     // NULL until (and unless) closing deals are found: "not captured" must be distinguishable
     // from "charged nothing", because on 0.01-lot FX a few pence decides whether a scalp works.
@@ -993,7 +1035,13 @@ export class PositionSyncService {
     try {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
-        const deals = await adapter.getDeals(new Date(dbPos.openedAt));
+        // ⚠️ #1093 — the GRACE applies only when a TICKET exists. A ticketed row resolves by exact
+        // id match, which extra deals cannot corrupt; an unticketed row keeps the narrow window
+        // because the symbol fallback's safety check counts lifecycles in the returned set.
+        const since = dbPos.brokerTicket
+          ? new Date(new Date(dbPos.openedAt).getTime() - DEAL_LOOKBACK_GRACE_MS)
+          : new Date(dbPos.openedAt);
+        const deals = await adapter.getDeals(since);
         // ── THE POSITION A ROW BELONGS TO, resolved from EITHER kind of ticket (#1014) ──
         //
         // `trade.brokerTicket` holds a POSITION id for every row written since #1014, and an ORDER
@@ -1051,6 +1099,9 @@ export class PositionSyncService {
         const positionSide = String(trade?.side ?? dbPos.side ?? '').toLowerCase();
         const closingSide = positionSide === 'sell' ? 'buy' : 'sell';
         const exitDeals = candidates.filter((d: any) => d.side === closingSide);
+        if (opts.allowClosed) {
+          dealStats = `deals=${(deals as any[]).length} byPosition=${byPosition.length} candidates=${candidates.length} exitDeals=${exitDeals.length}`;
+        }
         if (exitDeals.length > 0) {            const lastDeal: any = exitDeals[exitDeals.length - 1];
             // The broker's own reason for the close, when it reports one.
             if (typeof lastDeal?.reason === 'number') dealReason = lastDeal.reason;
@@ -1228,6 +1279,18 @@ export class PositionSyncService {
       const existingReason = trade.closeReason;
       const rederivable = opts.allowClosed && existingReason === CLOSE_REASONS.BROKER_UNKNOWN;
       const closeReason = (existingReason && !rederivable) ? existingReason : derivedCloseReason;
+      if (opts.allowClosed) {
+        // ⚠️ PERMANENT, repair-only (#1093). The recovery button's note claims the terminals
+        // "carry no reason the app can map" — this is the line that makes that claim checkable,
+        // and it exists because a whole afternoon of deduction could not explain 13 rows that
+        // SHOULD have derived `broker:sl` (deals present, reason 4, window covering). If a
+        // re-derivation fails again, read THIS line instead of re-deriving from the terminals.
+        this.logger.log(
+          `[${provider}] repair re-derivation — ${dbPos.symbol} ticket=${dbPos.brokerTicket ?? '-'}: ` +
+            `${dealStats ?? 'deal block not reached'} dealReason=${dealReason ?? 'unset'} ` +
+            `comment=${JSON.stringify(dealComment ?? null)} derived=${derivedCloseReason} existing=${existingReason ?? 'null'}`,
+        );
+      }
 
       // ── WHAT it belonged to, not just why it closed (#949) ─────────────────
       //

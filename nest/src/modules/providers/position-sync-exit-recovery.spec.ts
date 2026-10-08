@@ -90,9 +90,11 @@ describe('PositionSyncService — exit-data recovery (#1093)', () => {
     expect(res.requested).toBe(4);
     expect(res.stillMissing).toBe(2);
     expect(res.note).toContain('Recovered 2 of the 4');
-    // The unattributable remainder is NAMED, and never counted as recovered.
-    expect(res.note).toContain('The terminals served 4 of them');
-    expect(res.note).toContain('2 of those carry a closing deal');
+    // The un-closed remainder is NAMED — and without claiming a cause it was never measured to
+    // have (the first wording said "no reason the app can map", which was FALSE for every row it
+    // described: their closes carried reason 4; the resolution had simply never reached them).
+    expect(res.note).toContain('The terminals served 4 of them; 2 were re-processed but their');
+    expect(res.note).not.toContain('no reason the app can map');
     // Nothing was unserved, so the note must not say anything was.
     expect(res.note).not.toContain('were not served');
     expect(res.unasked).toEqual([]);
@@ -118,7 +120,7 @@ describe('PositionSyncService — exit-data recovery (#1093)', () => {
 
     expect(res.recovered).toBe(0);
     expect(res.note).toContain('Recovered 0 of the 4');
-    expect(res.note).toContain('The terminals served 2 of them, but those closing deals carry no reason');
+    expect(res.note).toContain('The terminals served 2 of them, but their exits still could not be attributed');
     expect(res.note).toContain('2 were not served');
     // Neither half may claim the other's territory.
     expect(res.note).not.toContain('did not serve any');
