@@ -216,10 +216,44 @@ async function checkStaleness(windowHours = 48) {
 }
 
 /**
+ * classifyReachability() — the PURE core of the outage guard, so `--self-test` can canary it.
+ *
+ * Given the two measured ceilings for one bot's protocol — the SCORE window (breakdown-derived
+ * percentage) and the SIGNAL PATH (`score_snapshot.signalPct`, the number the bot's own gate
+ * compares) — decide whether the bot has cleared its bar in the window.
+ *
+ * ⚠️ WHY TWO SOURCES, and why the snapshot can only VETO a failure (measured 2026-10-08, #999):
+ * `score` ROTATES. Measured: for `xau-speed-m15` the table held ~2 days while this check asked
+ * for 7 — max 77 raw = 8.46% — so the audit reported `Gold Day-Trade M15` (bar 10%) as
+ * "CANNOT FIRE". The signal path told a different, checkable story: `score_snapshot` max
+ * `signalPct` 15.16% in the same 7 days, and `decision_log` shows the bot QUALIFYING every
+ * tick 2026-10-07 12:40→13:59 at compositePct 11-14 — blocked by the DAILY-LOSS guard, a
+ * correct gate, not a bar problem. A ceiling read from a rotating table understates by
+ * construction; the snapshot is the value the gate actually compares.
+ *
+ * The snapshot does NOT pass a bot on its own word: a bot below BOTH sources is still the
+ * true condition this check exists to surface. When ONLY the snapshot clears, the finding is
+ * a WARNING (the score window understates), never silent and never a failure —
+ * "cannot judge" stays distinct from "cannot fire".
+ *
+ * @returns 'cleared' | 'cleared-by-snapshot' | 'below' | 'no-data'
+ */
+function classifyReachability(scorePct, snapPct, bar) {
+  const s = scorePct == null ? null : Number(scorePct);
+  const p = snapPct == null ? null : Number(snapPct);
+  const b = Number(bar);
+  if (s == null && p == null) return 'no-data';
+  const best = Math.max(Number.isFinite(s) ? s : -Infinity, Number.isFinite(p) ? p : -Infinity);
+  if (!Number.isFinite(best)) return 'no-data';
+  if (best >= b) return (Number.isFinite(s) && s >= b) ? 'cleared' : 'cleared-by-snapshot';
+  return 'below';
+}
+
+/**
  * THE OUTAGE GUARD.
  *
- * An active bot whose bar exceeds the highest score its protocol has EVER produced cannot
- * fire. That is exactly the 2026-09-10 -> 09-15 condition, and it was invisible.
+ * An active bot whose bar exceeds the highest score its protocol has produced cannot fire.
+ * That is exactly the 2026-09-10 -> 09-15 condition, and it was invisible.
  *
  * ⚠️ CORRECTED 2026-10-07 (#999) — the ceiling is a WINDOW observation, and the numerator is
  * MARKET-CONDITIONAL: a directive emits a direction only in some states. Measured: gold 1h
@@ -228,6 +262,12 @@ async function checkStaleness(windowHours = 48) {
  * "cannot trade". And it is NOT the 2026-09-10->15 condition: that outage was the denominator
  * SCALE change, which is fixed and verified (#761 — do not "fix" style-thresholds.ts).
  *
+ * ⚠️ CORRECTED AGAIN 2026-10-08 (#999) — "the window" was a lie for any protocol whose
+ * `score` rows had rotated away, and that produced a FALSE "CANNOT FIRE" on
+ * `Gold Day-Trade M15` (see classifyReachability above for the full measurement). The check
+ * now reads TWO sources, names the coverage it actually read, and a score-below /
+ * signal-path-cleared bot is a WARNING, not a failure.
+ *
  * ⚠️ `no-data` is reported as a WARNING, never a failure. "Unmeasured" and "structurally
  * blocked" are different problems with different fixes; conflating them either panics over
  * a quiet protocol or ignores a dead one.
@@ -235,6 +275,8 @@ async function checkStaleness(windowHours = 48) {
 async function checkThresholdReachability(windowDays = 7) {
   console.log(`\n[3/4] threshold reachability — active bots whose bar exceeds their achieved ceiling`);
   let rows;
+  let coverage = null;
+  let snapBySlug = new Map();
   try {
     rows = await prisma.$queryRawUnsafe(`
       SELECT ts.name, ts.symbol, ts.protocolId, ts.minComposite,
@@ -247,23 +289,57 @@ async function checkThresholdReachability(windowDays = 7) {
       WHERE ts.active = 1
       GROUP BY ts.id, ts.name, ts.symbol, ts.protocolId, ts.minComposite
       ORDER BY ts.minComposite ASC`);
+
+    // Name the coverage actually read (#999 part 2 — "7 days" from a rotating table is a claim).
+    const cov = await prisma.$queryRawUnsafe(`SELECT MIN(timestamp) AS oldest, MAX(timestamp) AS newest FROM score`);
+    coverage = cov && cov[0] ? cov[0] : null;
+
+    // The signal path's own percentage — what the bot gate compares. Can veto, never pass.
+    const snaps = await prisma.$queryRawUnsafe(`
+      SELECT ts.protocolId AS slug, MAX(ss.signalPct) AS snapPct, MAX(ss.composite) AS snapRaw
+      FROM trading_strategy ts
+      JOIN score_snapshot ss
+        ON ss.protocolId COLLATE utf8mb4_unicode_ci = ts.protocolId COLLATE utf8mb4_unicode_ci
+       AND ss.snappedAt >= DATE_SUB(NOW(), INTERVAL ${windowDays} DAY)
+      WHERE ts.active = 1
+      GROUP BY ts.protocolId`);
+    snapBySlug = new Map(snaps.map((x) => [String(x.slug), x]));
   } catch (e) {
     warnings.push(`threshold reachability could not run: ${e.message.split('\n')[0]}`);
     return;
   }
 
-  const cannotFire = rows.filter((r) => r.achieved != null && Number(r.achieved) < Number(r.minComposite));
-  const noData = rows.filter((r) => r.achieved == null);
-
-  console.log('      active bots: ' + rows.length + '   clearing: ' + (rows.length - cannotFire.length - noData.length) +
-              '   CANNOT FIRE: ' + cannotFire.length + '   no data: ' + noData.length);
-
-  for (const r of cannotFire) {
-    console.log(`      CANNOT FIRE  ${String(r.name).padEnd(34)} bar=${r.minComposite}%  achieved=${Number(r.achieved).toFixed(1)}%`);
+  const fmt = (d) => (d ? new Date(d).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : '—');
+  if (coverage && coverage.oldest) {
+    console.log(`      score table actually covers ${fmt(coverage.oldest)} → ${fmt(coverage.newest)} (asked for ${windowDays}d — the table ROTATES)`);
   }
-  if (cannotFire.length) {
+
+  const below = [];
+  const vetoed = [];
+  const noData = [];
+  for (const r of rows) {
+    const snap = snapBySlug.get(String(r.protocolId)) || null;
+    const state = classifyReachability(r.achieved, snap ? snap.snapPct : null, r.minComposite);
+    const measured =
+      `bar=${r.minComposite}%  score=${r.achieved == null ? '—' : Number(r.achieved).toFixed(1) + '%'}` +
+      `  signalPath=${snap && snap.snapPct != null ? Number(snap.snapPct).toFixed(1) + '%' : '—'}`;
+    if (state === 'below') below.push({ ...r, measured });
+    else if (state === 'cleared-by-snapshot') vetoed.push({ ...r, measured });
+    else if (state === 'no-data') noData.push(r);
+  }
+
+  console.log('      active bots: ' + rows.length + '   clearing: ' + (rows.length - below.length - noData.length) +
+              '   below in window: ' + below.length + '   no data: ' + noData.length);
+
+  for (const r of below) {
+    console.log(`      below        ${String(r.name).padEnd(34)} ${r.measured}`);
+  }
+  for (const r of vetoed) {
+    console.log(`      below score window, CLEARED by signal path  ${String(r.name).padEnd(34)} ${r.measured}`);
+  }
+  if (below.length) {
     failures.push(
-      `${cannotFire.length} active bot(s) have a bar ABOVE the highest score their protocol produced in ${windowDays} days.\n` +
+      `${below.length} active bot(s) have a bar ABOVE the highest score their protocol produced in the window (all sources that measured them agree).\n` +
       `        NOT PROOF THEY CAN NEVER TRADE: the numerator is market-conditional (a directive\n` +
       `        emits a direction only in some states — gold produced ~8 raw all week, then 80-138\n` +
       `        within an hour of RSI going oversold, and QUEUED signals the same day).\n` +
@@ -272,8 +348,20 @@ async function checkThresholdReachability(windowDays = 7) {
       `        verified (#761). Do not "fix" style-thresholds.ts.`,
     );
   }
+  if (vetoed.length) {
+    warnings.push(
+      `${vetoed.length} bot(s) sit below the RETAINED score window but CLEARED in the pipeline's own signal path:\n` +
+      vetoed.map((r) => `          ${String(r.name).padEnd(34)} ${r.measured}`).join('\n') +
+      `\n        The score table ROTATES — the window understates, and the signal path is the\n` +
+      `        number the bot gate compares. This is NOT a failure and NOT a bar defect; it is\n` +
+      `        evidence the score window must never be read as "7 days" (measured 2026-10-08 on\n` +
+      `        Gold Day-Trade M15: score 8.5% vs signalPct 15.2%; its signal exceeded the 10%\n` +
+      `        bar on 2026-10-07 12:40-13:59 and the dispatch was refused by the account-wide\n` +
+      `        daily-loss cap — a correct guard, not a bar problem). (#999)`,
+    );
+  }
   for (const r of noData) {
-    console.log(`      no data      ${String(r.name).padEnd(34)} bar=${r.minComposite}%  (no scores in ${windowDays}d)`);
+    console.log(`      no data      ${String(r.name).padEnd(34)} bar=${r.minComposite}%  (no scores in ${windowDays}d, neither source)`);
   }
   if (noData.length) {
     warnings.push(
@@ -431,8 +519,8 @@ async function checkDailyBarDuplicates() {
   );
 }
 
-/** `--self-test` — canary the pure classifier in BOTH directions. No database needed. */
-function selfTestDailyBarDuplicates() {
+/** `--self-test` — canary the pure classifiers in BOTH directions. No database needed. */
+function selfTest() {
   const bar = (t, o, h, l, c, v, provider = 'mt5', symbolId = 's1') => ({
     symbolId, provider, timestamp: t, open: o, high: h, low: l, close: c, volume: v,
   });
@@ -492,12 +580,35 @@ function selfTestDailyBarDuplicates() {
   );
   check('no bars is not a failure', classifyDailyBarDuplicates([]).length, 0);
 
-  console.log(`[self-test] daily-bar duplicate classifier: ${failed === 0 ? 'all canaries passed' : `${failed} FAILED`}.`);
+  // ── classifyReachability (#999, added 2026-10-08) ─────────────────────────
+  // MUST fire, positive direction: the snapshot vetoes a score-window 'below'.
+  check('score 8.5 vs bar 10, signal path 15.16 -> CLEARED by signal path (the real m15 shape)',
+    classifyReachability(8.5, 15.16, 10), 'cleared-by-snapshot');
+  check('score silent, signal path 12 vs bar 10 -> CLEARED by signal path',
+    classifyReachability(null, 12, 10), 'cleared-by-snapshot');
+  check('score 12 vs bar 10 -> cleared on the score alone',
+    classifyReachability(12, null, 10), 'cleared');
+  check('both sources at/above the bar -> cleared, score first',
+    classifyReachability(12, 15, 10), 'cleared');
+  // MUST fire, negative direction: both sources under the bar is STILL 'below' —
+  // the snapshot can never manufacture a pass.
+  check('score 8.5 AND signal path 9.9 vs bar 10 -> below (veto is not a pass)',
+    classifyReachability(8.5, 9.9, 10), 'below');
+  check('score 9.9 alone vs bar 10 -> below (one silent source cannot clear it)',
+    classifyReachability(9.9, null, 10), 'below');
+  check('signal path 3 alone vs bar 10 -> below',
+    classifyReachability(null, 3, 10), 'below');
+  check('neither source measured -> no-data, not a failure',
+    classifyReachability(null, null, 10), 'no-data');
+  check('boundary: exactly at the bar counts as cleared',
+    classifyReachability(10, null, 10), 'cleared');
+
+  console.log(`[self-test] classifiers (daily-bar duplicates + reachability): ${failed === 0 ? 'all canaries passed' : `${failed} FAILED`}.`);
   process.exit(failed === 0 ? 0 : 1);
 }
 
 (async () => {
-  if (process.argv.includes('--self-test')) selfTestDailyBarDuplicates();
+  if (process.argv.includes('--self-test')) selfTest();
 
   console.log('='.repeat(72));
   console.log('  DATA HEALTH AUDIT');
