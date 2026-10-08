@@ -19,8 +19,19 @@
  * so a future constant cannot creep back in.
  */
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
+import { resolveBaseBarCount } from '../scoring/protocol-db.service';
 
-/** Mirrors `ProtocolRunnerService.resolveCadence()` — the logic under test. */
+/**
+ * The composition `ProtocolRunnerService.resolveCadence()` performs — cadence mapping plus the
+ * REAL sizing rule.
+ *
+ * ⚠️ The bar-count half calls the EXPORTED `resolveBaseBarCount()` (#1013). It used to be a
+ * hand-kept mirror, and this suite's own comment recorded the consequence — *"if the mirror
+ * ever diverges the suite passes while the real runner is wrong"*. A guard that cannot fail
+ * when its code regresses is a decoration, so the arithmetic under test is now the shipped
+ * function. Canaried 2026-10-08: restoring the old fall-through in `resolveBaseBarCount`
+ * fails this suite (2 tests), and making the fallback unconditional fails it too.
+ */
 function resolveCadence(
   protocolId: string,
   db: {
@@ -31,14 +42,7 @@ function resolveCadence(
   const FALLBACK_TIMEFRAME = '1d';
   const declared = db.getCached(protocolId)?.recommendedTimeframe;
   const timeframe = selectBaseTimeframe(declared) || FALLBACK_TIMEFRAME;
-  const required = db.getRequiredBars(protocolId);
-  // ⚠️ MIRROR of `ProtocolDbService.getBaseBarCount()` (#1013). This suite defines its own
-  // copy of the logic rather than exercising the private method, so the two MUST be kept in
-  // step BY HAND — if the mirror ever diverges the suite passes while the real runner is
-  // wrong. The rule is a MAXIMUM, not a fall-through: the generic `'1d'` key is how a
-  // directive declares a requirement it cannot key to a runtime cadence (74 of 108 do), so
-  // `required[tf] ?? required['1d']` let ONE base-cadence declaration suppress every larger one.
-  const barCount = Math.max(required[timeframe] ?? 0, required['1d'] ?? 0) || 100;
+  const barCount = resolveBaseBarCount(db.getRequiredBars(protocolId), timeframe);
   return { timeframe, barCount };
 }
 

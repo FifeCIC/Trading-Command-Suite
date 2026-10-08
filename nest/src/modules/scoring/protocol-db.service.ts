@@ -92,6 +92,28 @@ export interface ProtocolConfig {
   symbolResolution?: { type: 'single'; symbol: string } | { type: 'watchlist'; name: string };
 }
 
+/**
+ * resolveBaseBarCount() — the ONE sizing rule for a protocol's base bar fetch (#1013).
+ *
+ * PURE and EXPORTED so the cadence suite can exercise THE REAL FUNCTION rather than a
+ * hand-kept mirror. The mirror this replaced admitted its own failure mode: *"if the mirror
+ * ever diverges the suite passes while the real runner is wrong"* — and a suite that cannot
+ * fail when the guarded code regresses is a decoration, not a guard.
+ *
+ * The rule is a MAXIMUM, not a fall-through:
+ *   - `required[tf]`   — the base-cadence declaration, when a directive made one;
+ *   - `required['1d']` — the GENERIC key 74 of 108 directives use, because a directive
+ *     cannot know the protocol's runtime cadence.
+ * ONE base-cadence declaration must never suppress a larger generic requirement (`btc-speed-v1`
+ * returned 20 where 72 was declared — 4 of 13 directives starved on 99.6% of ticks).
+ * `|| 100` matches `getRequiredBars()`'s documented fallback.
+ */
+export function resolveBaseBarCount(required: Record<string, number>, baseTimeframe: string): number {
+  const own = required[baseTimeframe] ?? 0;
+  const generic = required['1d'] ?? 0;
+  return Math.max(own, generic) || 100;
+}
+
 @Injectable()
 export class ProtocolDbService implements OnModuleInit {
   private readonly logger = new Logger(ProtocolDbService.name);
@@ -185,11 +207,10 @@ export class ProtocolDbService implements OnModuleInit {
     const required = this.getRequiredBars(protocolSlug);
     const baseTf =
       timeframe || selectBaseTimeframe(this.getCached(protocolSlug)?.recommendedTimeframe) || '1d';
-    const own = required[baseTf] ?? 0;
-    const generic = required['1d'] ?? 0;
-    // `|| 100` is effectively unreachable (getRequiredBars never returns an empty map) — it is
-    // kept so this returns a usable number rather than 0 if that guarantee ever changes.
-    return Math.max(own, generic) || 100;
+    // ⚠️ The rule itself lives in `resolveBaseBarCount()` (exported, pure) so the cadence suite
+    // can guard THE REAL CODE rather than a mirror of it (#1013). This method only derives the
+    // timeframe; the arithmetic has ONE home.
+    return resolveBaseBarCount(required, baseTf);
   }
 
   /** Clear the cache at start of each tick. */
