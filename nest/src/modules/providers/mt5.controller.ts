@@ -530,7 +530,10 @@ export class Mt5Controller {
   async closePosition(@Param('ticket') ticket: string) {
     this.logger.warn(`DEPRECATED — POST /api/providers/mt5/close/${ticket} called. Redirect to DELETE /api/trading/mt5/close/${ticket}.`);
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/close/${ticket}`, {
+      // `origin=manual` — a person invoked this endpoint (#916, 2026-10-07). Every bridge close
+      // must stamp its closer now: an unstamped close is assumed to be the owner (R46 direction),
+      // and this one is deliberate.
+      const res = await fetch(`${this.BRIDGE_URL}/close/${ticket}?origin=manual`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
@@ -571,7 +574,9 @@ export class Mt5Controller {
         try {
           // Throws for an unregistered broker (#914) rather than answering as the default.
           const url = this.mt5Connection.getUrl(Number(pos.brokerId));
-          const closeRes = await fetch(`${url}/close/${pos.ticket}`, {
+          // `origin=close-all` stamps `TCS:close-all` (#916, 2026-10-07) — the operator invoked
+          // this endpoint; the record should say WHICH bulk action closed the position.
+          const closeRes = await fetch(`${url}/close/${pos.ticket}?origin=close-all`, {
             method: 'POST',
             signal: AbortSignal.timeout(15000),
           });
@@ -619,7 +624,8 @@ export class Mt5Controller {
       for (const pos of profitable) {
         try {
           const url = this.mt5Connection.getUrl(Number(pos.brokerId));
-          const closeRes = await fetch(`${url}/close/${pos.ticket}`, {
+          // `origin=close-profitable` stamps `TCS:close-profitable` (#916, 2026-10-07).
+          const closeRes = await fetch(`${url}/close/${pos.ticket}?origin=close-profitable`, {
             method: 'POST',
             signal: AbortSignal.timeout(15000),
           });

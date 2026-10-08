@@ -18,6 +18,11 @@ by *reading*. A decision nobody can find is a decision nobody can reverse.
 
 **Full rules: `.github/instructions/decision-authority.instructions.md` — read it before deciding.**
 
+**Environment rule (owner, 2026-10-07):** this workspace and its database are **development** — the
+data is **not precious**, and care mode exists only when the owner declares a real-money setup or
+"greater care" for a named scope. Full text:
+`.github/instructions/development-status.instructions.md` (top section).
+
 ---
 
 ## What you may do that other agents may not

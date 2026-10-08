@@ -66,6 +66,8 @@ export class SettingsController {
     // another route is still checked. This whitelist only decides WHICH fields may be written.
     if (typeof p.uiScore === 'number' || p.uiScore === null) clean.uiScore = p.uiScore;
     if (typeof p.note === 'string') clean.note = p.note.slice(0, 2000);
+    // ⚠️ The SECOND comments column (2026-10-07). A separate field on purpose — see UiReviewEntry.
+    if (typeof p.noteNew === 'string') clean.noteNew = p.noteNew.slice(0, 2000);
     return this.settings.setUiReviewEntry(body.viewKey, clean);
   }
 

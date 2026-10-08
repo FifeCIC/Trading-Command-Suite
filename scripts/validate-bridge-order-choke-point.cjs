@@ -36,6 +36,14 @@
  * | R2 | It is inside `order_send_checked()` | the one call was moved out of the wrapper |
  * | R3 | `BridgeRefusal` is raised AND caught twice | the gate cannot fire, or a refusal becomes a 500 |
  * | R4 | `ensure_mt5()` does NOT carry the gate | reads got gated too — the app could no longer SEE the position |
+ * | R5 | Every CLOSE request stamps `TCS:<origin>` | an unattributed close would read as "the owner did it" |
+ *
+ * ⚠️ R5's CONTEXT (owner direction, 2026-10-07, R46): *"The app should assume that it was me if
+ * there is no record of the bot closing a position."* That assumption is only SAFE while every close
+ * path of ours leaves a record — a close through our own bridge with no `TCS:` stamp would be
+ * silently attributed to the owner. Measured before this rule: `/close/partial` stamped
+ * `'Partial close'` and `/orders/bulk` stamped `'TCS Bulk Close'` — neither matches the parser's
+ * `TCS:<origin>` shape, so both parsed as foreign and fell through to the deal-reason enum.
  *
  * ⚠️ R4 IS A REAL DESIGN DECISION, NOT PADDING. Gating `ensure_mt5()` would look tidier and would
  * break `/health`, `/positions`, `/account` and the quote routes — hiding the very position someone
@@ -56,8 +64,22 @@ const path = require('path');
 const { runSelfTest } = require('./lib/validator-helpers.cjs');
 
 const BRIDGE = path.join(__dirname, 'mt5-bridge', 'mt5_bridge_v2.py');
+const NEST_ROOT = path.join(__dirname, '..', 'nest', 'src');
 const BARE_CALL = /mt5\.order_send\s*\(/;
 const WRAPPER_DEF = 'def order_send_checked(';
+
+/** Every non-spec `.ts` under nest/src, recursively. */
+function walkTs(dir) {
+  const out = [];
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const e of entries) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) out.push(...walkTs(p));
+    else if (e.name.endsWith('.ts') && !e.name.endsWith('.spec.ts')) out.push(p);
+  }
+  return out;
+}
 
 /**
  * isProse() — a line that MENTIONS `mt5.order_send(` but cannot CALL it.
@@ -94,6 +116,50 @@ function bodyOf(src, defPrefix) {
     rest.push(lines[i]);
   }
   return rest.join('\n');
+}
+
+/**
+ * requestDicts() — every `req = { … }` dict literal in the source, joined with its start line.
+ *
+ * Deliberately shallow: the bridge builds its requests as plain multi-line dict literals that end
+ * with `}` at column zero-ish, and a rule that asks "does THIS request carry a stamp?" does not
+ * need a Python parser. A dict that never closes on `}` simply swallows the rest of the file — the
+ * rule below then sees whatever stamps those lines contain, which is conservative for a REQUIRED
+ * stamp (it can only miss, never invent, a violation) — and the self-test proves the rule fires.
+ */
+function requestDicts(src) {
+  const lines = src.split(/\r?\n/);
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!/\breq\w*\s*=\s*\{/.test(lines[i]) || /^\s*#/.test(lines[i])) continue;
+    let text = lines[i];
+    let j = i;
+    while (!/}\s*$/.test(lines[j]) && j + 1 < lines.length) { j++; text += '\n' + lines[j]; }
+    out.push({ line: i + 1, text });
+    i = j;
+  }
+  return out;
+}
+
+/**
+ * nestCloseViolations() — a NestJS source file whose `/close/…` call site does not mention `origin`.
+ *
+ * PURE, so `--self-test` can drive it. The manager's form (`?origin=${...}` on the line, or a
+ * `query` variable built from `origin` 2 lines above) passes via a small window; anything else is
+ * a close that would be recorded as "the owner" by default (R46 direction) when it is really ours.
+ */
+function nestCloseViolations(text) {
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  lines.forEach((line, i) => {
+    // ONLY real calls: a backticked ROUTE MENTION (e.g. a `_migrateTo` doc string) is not a call
+    // site — narrowing here is the difference between a guard and a false-positive generator.
+    if (!/(fetch|positionAction)\s*\(/.test(line)) return;
+    if (!/\/close\/(partial\/)?\$\{/.test(line)) return;
+    const window = lines.slice(Math.max(0, i - 8), i + 1).join('\n');
+    if (!/origin/.test(window)) out.push({ line: i + 1, text: line.trim() });
+  });
+  return out;
 }
 
 /**
@@ -155,6 +221,29 @@ function checkSource(src) {
           `order_send_checked() (L${defLine}-${bodyEnd}).`,
       );
     }
+  }
+
+  // ── R5 — every CLOSE stamps its closer (#916; owner direction 2026-10-07, R46). ──
+  // A position-targeting MARKET request (DEAL + 'position') is a close. Each one must carry a
+  // `TCS:` comment — otherwise `closeReasonFromComment()` parses it as foreign and the close is
+  // attributed to the OWNER by the new default. Opens carry no 'position' key and are skipped.
+  for (const d of requestDicts(src)) {
+    if (!d.text.includes('TRADE_ACTION_DEAL') || !/'position':/.test(d.text)) continue;
+    const m = /'comment':\s*([^\n]+)/.exec(d.text);
+    if (!m || !m[1].includes('TCS:')) {
+      errors.push(
+        `R5 the position-targeting market request at L${d.line} carries NO \`TCS:\` comment — an ` +
+          'unattributed close reads as "the owner did it" (owner direction 2026-10-07). Every ' +
+          'bridge close must stamp `TCS:<origin>`.',
+      );
+    }
+  }
+  const legacyStamp = /'comment':\s*'(?:Partial close|TCS Bulk Close)'/.exec(src);
+  if (legacyStamp) {
+    errors.push(
+      `R5 the old UNSTAMPED comment form ${legacyStamp[0]} is back — it parses as a foreign comment ` +
+        '(the shape must be `TCS:<origin>`, #916).',
+    );
   }
 
   return errors;
@@ -228,6 +317,31 @@ const cases = [
 
   ['a REAL call IS found', () => bareOrderSends('    return mt5.order_send(req)').length === 1],
 
+  ['R5 catches a position close whose comment is not a TCS stamp',
+    () => checkSource(REAL_SRC.replace("'comment': f'TCS:{close_origin}',", "'comment': 'Close by TCS',"))
+      .some((e) => e.startsWith('R5'))],
+
+  ['R5 catches the legacy unstamped comment form reappearing',
+    () => checkSource(
+      REAL_SRC + "\n                req = {'action': mt5.TRADE_ACTION_DEAL, 'position': 1, 'comment': 'Partial close'}\n",
+    ).some((e) => e.startsWith('R5'))],
+
+  // ── R5 (nest side) — close call sites must carry origin. ──
+  ['nest: a /close/ call site without origin is flagged',
+    () => nestCloseViolations('await fetch(`${url}/close/${t}`, { method: "POST" });').length === 1],
+
+  ['nest: the manager form (origin inside a query built above) passes',
+    () => nestCloseViolations(
+      'const query = origin ? `?origin=${encodeURIComponent(origin)}` : "";\n' +
+      'const { ok } = await this.fetch(`/close/${ticket}${query}`, {}, brokerId);',
+    ).length === 0],
+
+  ['nest: an inline ?origin= passes',
+    () => nestCloseViolations('fetch(`${bridge.url}/close/${ticket}?origin=manual`, { method: "POST" });').length === 0],
+
+  ['nest: a backticked route mention (not a call) is NOT flagged',
+    () => nestCloseViolations('return { ...data, _migrateTo: `DELETE /api/trading/mt5/close/${ticket}` };').length === 0],
+
   [
     'the self-test can reach the real file',
     () => fs.existsSync(BRIDGE) && REAL_SRC.length > 1000,
@@ -238,12 +352,23 @@ if (process.argv.includes('--self-test')) {
   runSelfTest(cases);
 } else {
   const errors = checkSource(REAL_SRC);
-  if (errors.length) {
+  const nestErrors = [];
+  for (const file of walkTs(NEST_ROOT)) {
+    for (const v of nestCloseViolations(fs.readFileSync(file, 'utf8'))) {
+      nestErrors.push(
+        `R5 ${path.relative(process.cwd(), file)}:${v.line} — /close call site without \`origin=\` ` +
+          '(an unattributed close would read as "the owner", R46 direction): ' + v.text,
+      );
+    }
+  }
+  const all = [...errors, ...nestErrors];
+  if (all.length) {
     console.error('\n🛑 bridge order choke point (#1035) — FAILED\n');
-    for (const e of errors) console.error(`  ✗ ${e}\n`);
-    console.error(`  Checked: ${BRIDGE}\n`);
+    for (const e of all) console.error(`  ✗ ${e}\n`);
+    console.error(`  Checked: ${BRIDGE} + nest/src/**/*.ts\n`);
     process.exit(1);
   }
   console.log('✅ bridge order choke point (#1035) — every order passes one gate');
   console.log(`   ${BRIDGE.replace(process.cwd() + path.sep, '')}: 1 real mt5.order_send(), inside order_send_checked()`);
+  console.log('   close stamping (#916 / R46): every close request carries `TCS:<origin>`; every nest /close call site names one');
 }

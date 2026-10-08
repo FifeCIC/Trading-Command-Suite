@@ -40,6 +40,16 @@
  * and does not report why, "the broker did it and I cannot say why" is the honest answer. It is
  * strictly better than a guess, because a guess stops the next reader from looking — which is
  * exactly how the 2026-09-18 defect stayed invisible in the first place.
+ *
+ * ⚠️ OWNER DIRECTION, 2026-10-07 (review queue R46): **"The app should assume that it was me if
+ * there is no record of the bot closing a position."** A close the app cannot attribute to one of
+ * its own mechanisms is therefore reported as `user:manual`. This is not a guess in the dark: asked
+ * who produced the unexplained batches, the owner answered *"Yes I think that was me bulk closing
+ * the positions."* The mechanical details live in `closeReasonFromDealReason`; `broker:terminal`
+ * remains for broker-DRIVEN reasons (rollover / vmargins / split) and for the 93 historic rows.
+ * ⚠️ The precondition this rests on: **every close path of ours must stamp `TCS:<origin>`** — the
+ * bridge does so for `/close`, `/close/partial` and `/orders/bulk` closes, and a validator fails
+ * the build if a NestJS `/close` call site appears without `origin=`.
  */
 
 /** `<authority>:<mechanism>` — see the table in the file header. */
@@ -101,6 +111,14 @@ export const CLOSE_REASONS = {
    * `'Close by TCS'` comment is not in play). Combined with the earlier eliminations — StopGuardian,
    * broker SL/TP, `closeAll`/`closeProfitable`, the time-stop — **the actor is outside this repo**,
    * acting as MT5 *CLIENT*. The next step is the terminal's own Expert/Journal log, not this codebase.
+   *
+   * ⚠️⚠️ **RESOLVED 2026-10-07 — THE ACTOR WAS THE OWNER.** Asked directly (R46): *"Yes I think that
+   * was me bulk closing the positions."* The batches were manual bulk closes from the MT5 side, and
+   * they **STOPPED 2026-10-02** (0 in the five days after; 2-13/day before). Per the owner's same-day
+   * direction, the deal-reason fallback now reports a no-comment CLIENT/MOBILE/WEB/EXPERT close as
+   * `user:manual` instead of parking it here — this value stays for broker-driven reasons
+   * (7 rollover / 8 vmargins / 9 split) and for the 93 historic rows, so the 13-day record is not
+   * rewritten. Reversal: restore the `case 0 … case 3` grouping in `closeReasonFromDealReason`.
    */
   BROKER_TERMINAL: 'broker:terminal',
   /** Margin stop-out specifically: the account ran out of room. Worth its own name. */
@@ -122,12 +140,18 @@ export type CloseReason = (typeof CLOSE_REASONS)[keyof typeof CLOSE_REASONS];
  * ⚠️ PREFER `closeReasonFromComment()` when a comment is available: the enum cannot distinguish our
  * own bridge closes (reason 3 / 0) from anything else the terminal did.
  *
- * Deliberately NOT mapped to anything more specific than they are:
- *   CLIENT / MOBILE / WEB — a human closed it somewhere, but not necessarily OUR ui. Calling that
- *   `user:manual` would claim knowledge we do not have, so it is `broker:terminal`.
- *   ⚠️ EXPERT (3) is folded in here too, and that is the sharper problem: reason 3 is an EA, and
- *   measured 2026-10-02 it is OUR OWN time stop (`TCS:time-stop` on 33 of 33). An EA close and a
- *   client close are not the same actor and must not share a value — see `BROKER_TERMINAL`.
+ * ⚠️ **CHANGED 2026-10-07 — OWNER DIRECTION, reversing the paragraph that used to sit here.**
+ * The old text argued that mapping 0/1/2 (client/mobile/web) to `user:manual` "would claim
+ * knowledge we do not have". The owner has since said the assumption IS wanted: *"The app should
+ * assume that it was me if there is no record of the bot closing a position."* And it is no longer
+ * a guess in the dark — asked who produced the batches, the owner answered *"Yes I think that was
+ * me bulk closing the positions."* So CLIENT / MOBILE / WEB / EXPERT **without one of our stamps** →
+ * `user:manual`. ⚠️ EXPERT is included deliberately: an EA close WITHOUT `TCS:<origin>` is not our
+ * bridge, so it is the owner's desktop automation. A close WITH our stamp never reaches here — a
+ * parsed comment wins (precedence: row's own reason > our comment > this enum > unknown).
+ * ⚠️ This is a DATED ASSUMPTION and it is reversible in one line — restore the `case 0 … case 3`
+ * grouping to `BROKER_TERMINAL` below. `BROKER_UNKNOWN` is unchanged and still means "no closing
+ * deal was even observable" — absence of a record is NOT the same as a record that names nobody.
  */
 export function closeReasonFromDealReason(reason: number | null | undefined): CloseReason {
   switch (reason) {
@@ -141,10 +165,14 @@ export function closeReasonFromDealReason(reason: number | null | undefined): Cl
     case 1:
     case 2:
     case 3:
+      // client | mobile | web | expert — no stamp of ours on the closing deal, so per owner
+      // direction (2026-10-07) this is the owner's own action, not an unknown stranger.
+      return CLOSE_REASONS.USER_MANUAL;
     case 7:
     case 8:
     case 9:
-      // client | mobile | web | expert | rollover | vmargins | split
+      // rollover | vmargins | split — broker-DRIVEN events, not a person. These stay in the
+      // non-attributing bucket; folding them into user:manual would claim a person acted.
       return CLOSE_REASONS.BROKER_TERMINAL;
     default:
       // Including `undefined`. Naming that honestly is the point; see the header.
@@ -173,7 +201,17 @@ export function closeReasonFromComment(comment: string | null | undefined): Clos
   switch (m[1]) {
     case 'time-stop':
       return CLOSE_REASONS.SYSTEM_TIME_STOP;
+    case 'session-exit':
+      // #928 — the exit-side session boundary. Was parsed to null until 2026-10-07, so a
+      // session-exit close fell through to the deal-reason enum (3) and landed in
+      // broker:terminal — OUR OWN close wearing the non-attributing bucket.
+      return CLOSE_REASONS.SYSTEM_SESSION_EXIT;
     case 'manual':
+      return CLOSE_REASONS.USER_MANUAL;
+    case 'close-all':
+    case 'close-profitable':
+      // The mt5.controller bulk endpoints — invoked through our API by the operator (or their
+      // tooling). That is a person's instruction, not a bot mechanism.
       return CLOSE_REASONS.USER_MANUAL;
     default:
       // An origin we do not know yet — fall through rather than inventing a mapping.

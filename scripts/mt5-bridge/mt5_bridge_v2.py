@@ -2018,8 +2018,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 cp = tick.bid if is_buy else tick.ask
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': vol,
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
-                       'price': cp, 'deviation': 20, 'magic': DEFAULT_MAGIC, 'comment': 'Partial close',
+                       'price': cp, 'deviation': 20, 'magic': DEFAULT_MAGIC, 'comment': f'TCS:{(body.get("origin", "partial") or "partial").strip()[:24]}',
                        'type_time': mt5.ORDER_TIME_GTC}
+                # ⚠️ EVERY BRIDGE CLOSE STAMPS ITS CLOSER (2026-10-07). This used to read
+                # 'Partial close' — no `TCS:` prefix — so a partial close through our OWN api was
+                # indistinguishable from a terminal action. The owner's 2026-10-07 direction
+                # (R46) makes an UNATTRIBUTED close read as *the owner*; an app close must never
+                # wear that label. `body.origin` names the caller; 'partial' is the fallback.
                 # #824 — partial close is a market deal as well.
                 filling_name, filling_mask = apply_filling(req, pos.symbol)
                 result = order_send_checked(req)
@@ -2085,7 +2090,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                                    'volume': float(pos.volume), 'position': ticket,
                                    'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY,
                                    'price': cp, 'deviation': 20, 'magic': DEFAULT_MAGIC,
-                                   'comment': 'TCS Bulk Close', 'type_time': mt5.ORDER_TIME_GTC}
+                                   'comment': f'TCS:{(op.get("origin", "bulk-close") or "bulk-close").strip()[:24]}', 'type_time': mt5.ORDER_TIME_GTC}
+                            # ⚠️ `TCS:<origin>`, not 'TCS Bulk Close' (2026-10-07): the parser
+                            # (`closeReasonFromComment`) requires the `TCS:<origin>` shape — the
+                            # space-separated form parsed as a FOREIGN comment and the close fell
+                            # through to the deal-reason enum.
                             # #824 — bulk close is a market deal.
                             filling_name, filling_mask = apply_filling(req, pos.symbol)
                             res = order_send_checked(req)

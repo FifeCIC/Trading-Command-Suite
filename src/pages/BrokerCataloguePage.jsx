@@ -48,6 +48,32 @@ export default function BrokerCataloguePage() {
       ),
   });
 
+  /**
+   * The MT5 accounts — for the one fact this catalogue could not show: which ACCOUNT a brokerId IS.
+   *
+   * Owner (Page Walkthrough, /research/broker-catalogue): *"extend that line with the name of the
+   * brokers account i.e. PepperstoneUK-Demo is one of the accounts in use."*
+   *
+   * ⚠️ `/api/providers/mt5/accounts` returns EVERY configured account against EVERY broker id — 8 rows
+   * for 2 brokers — so a naive lookup would hang four names on one broker. `active && connected` is what
+   * disambiguates. Measured 2026-10-06: broker 2 → MetaQuotes-Demo, broker 3 → PepperstoneUK-Demo; the
+   * other six rows are all `active: false, connected: false`. A wrong account name is worse than none,
+   * so this REFUSES TO GUESS: no active+connected row means no name is shown. A brokerId that is a
+   * broker TYPE, not a live instance, gets nothing — which is correct.
+   */
+  const accountsQuery = useQuery({
+    queryKey: ['mt5-accounts'],
+    queryFn: () => apiGet('/api/providers/mt5/accounts').catch(() => null),
+    staleTime: 120_000,
+  });
+
+  const accountByBroker = new Map();
+  for (const a of (Array.isArray(accountsQuery.data) ? accountsQuery.data : (accountsQuery.data?.accounts || []))) {
+    if (a?.active && a?.connected && !accountByBroker.has(a.brokerId)) {
+      accountByBroker.set(a.brokerId, a.server || a.name || null);
+    }
+  }
+
   const listPath = () => {
     const params = new URLSearchParams();
     if (brokerFilter) params.set('brokerId', brokerFilter);
@@ -120,6 +146,14 @@ export default function BrokerCataloguePage() {
             <article key={b.brokerId} className={`bc-broker bc-broker-${b.state}`}>
               <div className="bc-broker-head">
                 <span className="bc-broker-id">Broker {b.brokerId}</span>
+                {accountByBroker.get(b.brokerId) && (
+                  <span
+                    className="bc-broker-account"
+                    title={`The active, connected account on broker ${b.brokerId}`}
+                  >
+                    {accountByBroker.get(b.brokerId)}
+                  </span>
+                )}
                 <span className={`bc-broker-state bc-state-${b.state}`}>{b.state}</span>
               </div>
               {b.reason && <p className="bc-broker-reason">{b.reason}</p>}

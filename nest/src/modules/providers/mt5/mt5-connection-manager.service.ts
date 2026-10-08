@@ -532,9 +532,15 @@ export class Mt5ConnectionManager {
     return { ok, ...data };
   }
 
-  async closePartial(ticket: number, volume: number, brokerId?: number) {
+  /**
+   * Close PART of a position. `origin` lands in the closing deal's comment as `TCS:<origin>`
+   * (#916; stamped since 2026-10-07 — before that, a partial close through our API carried the
+   * comment 'Partial close', which parsed as a FOREIGN comment). Defaults to 'manual': every
+   * caller today is the operator's close-partial action.
+   */
+  async closePartial(ticket: number, volume: number, brokerId?: number, origin = 'manual') {
     const { ok, data } = await this.fetch(`/close/partial/${ticket}`, {
-      method: 'POST', body: JSON.stringify({ volume }),
+      method: 'POST', body: JSON.stringify({ volume, origin }),
     }, brokerId);
     return { ok, ...data };
   }

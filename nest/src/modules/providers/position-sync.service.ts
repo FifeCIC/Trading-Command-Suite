@@ -919,6 +919,20 @@ export class PositionSyncService {
             }
           }
 
+          // ── #1080 (2026-10-07) — THE MIRROR OF THAT SIDE DOOR: the row whose ticket IS the
+          // position id. Its ticket count is **1 by construction** while its siblings carry ORDER
+          // tickets, so it takes the sole-owner branch and books the WHOLE net. Measured live on
+          // the 2026-09-30 A/B pile: ten rows over ONE position (net −322.67); nine booked their
+          // 0.10 share (−32.267) and this row booked the full −322.67 — the ledger read −613.07
+          // for a −322.67 position. A position whose OPENING deals comprise more than one ORDER
+          // cannot be sole-owned by any single row, so the split is forced from the DEAL evidence
+          // itself — the one source that cannot be confused by which ticket a row happens to carry.
+          const openingOrders = new Set(
+            openings
+              .map((d: any) => String(d.orderId ?? d.positionId ?? ''))
+              .filter(Boolean),
+          );
+          const multiOrderPosition = openingOrders.size > 1;
           const split = splitPnlByVolume({
             closingDeals: exitDeals as any,
             openings: openings as any,
@@ -934,7 +948,10 @@ export class PositionSyncService {
             // from the deal history that the row shares a position (that is how it was resolved),
             // so the volume split is forced: `share = rowQuantity / totalOpeningVolume` is the
             // authoritative division and it sums to the position whatever the ticket count says.
-            rowsSharing: resolvedFromOrder ? 2 : (rowsSharing ?? 2),
+            // #1080 adds the mirror case: `multiOrderPosition` forces the same split for a row
+            // whose ticket IS the position id. A single-order position still books its whole net
+            // via the sole-owner branch — the regression canary pins exactly that.
+            rowsSharing: (resolvedFromOrder || multiOrderPosition) ? 2 : (rowsSharing ?? 2),
           });
           realizedPnl = split ? split.realizedPnl : null;
           if (split) {

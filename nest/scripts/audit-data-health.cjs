@@ -221,6 +221,13 @@ async function checkStaleness(windowHours = 48) {
  * An active bot whose bar exceeds the highest score its protocol has EVER produced cannot
  * fire. That is exactly the 2026-09-10 -> 09-15 condition, and it was invisible.
  *
+ * ⚠️ CORRECTED 2026-10-07 (#999) — the ceiling is a WINDOW observation, and the numerator is
+ * MARKET-CONDITIONAL: a directive emits a direction only in some states. Measured: gold 1h
+ * produced 8 raw points all week, then 80-138 within an hour when RSI went oversold — and it
+ * QUEUED signals the same day. So a below-bar bot has "not cleared in the window", NOT
+ * "cannot trade". And it is NOT the 2026-09-10->15 condition: that outage was the denominator
+ * SCALE change, which is fixed and verified (#761 — do not "fix" style-thresholds.ts).
+ *
  * ⚠️ `no-data` is reported as a WARNING, never a failure. "Unmeasured" and "structurally
  * blocked" are different problems with different fixes; conflating them either panics over
  * a quiet protocol or ignores a dead one.
@@ -256,10 +263,13 @@ async function checkThresholdReachability(windowDays = 7) {
   }
   if (cannotFire.length) {
     failures.push(
-      `${cannotFire.length} active bot(s) have a bar ABOVE the highest score their protocol has produced.\n` +
-      `        These can NEVER trade. This is the 2026-09-10 -> 09-15 outage condition.\n` +
-      `        Most likely cause: a denominator/scale change orphaned the thresholds. See\n` +
-      `        common/utils/style-thresholds.ts for the rescale derivation.`,
+      `${cannotFire.length} active bot(s) have a bar ABOVE the highest score their protocol produced in ${windowDays} days.\n` +
+      `        NOT PROOF THEY CAN NEVER TRADE: the numerator is market-conditional (a directive\n` +
+      `        emits a direction only in some states — gold produced ~8 raw all week, then 80-138\n` +
+      `        within an hour of RSI going oversold, and QUEUED signals the same day).\n` +
+      `        This is a bar exceeding the OBSERVED ceiling — review the protocol + bar (#999).\n` +
+      `        It is NOT the 2026-09-10 -> 09-15 condition: that scale defect is fixed and\n` +
+      `        verified (#761). Do not "fix" style-thresholds.ts.`,
     );
   }
   for (const r of noData) {

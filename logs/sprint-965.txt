@@ -1,0 +1,137 @@
+title:	[Sprint] A/B measurement - run it through BACKTESTING, and make a verdict refuse to speak on a thin sample
+state:	OPEN
+author:	RyanBayne
+labels:	enhancement, META.Stack, priority-medium, requires:pro, sprint
+comments:	6
+assignees:	
+projects:	
+milestone:	
+number:	965
+--
+# [Sprint] A/B measurement ÔÇö run it through BACKTESTING, and make a verdict refuse to speak on a thin sample
+
+> **Created 2026-09-23** so this does not have to be re-derived. Read this before touching #929, #963
+> or #962.
+>
+> **Parent epic: #816** (Edge Validation & Backtesting) ┬À **Workstream: #823** (inventory ÔåÆ setup ÔåÆ
+> design the replay view) ┬À **NOT a new epic ÔÇö #816 already exists.**
+
+---
+
+## Why this sprint exists ÔÇö an attempt to make A/B *runnable* found three blockers
+
+#929 was Tier 0 of **#960** and was assumed to be a small unlock ("no bot has a second version").
+It was not. Three separate faults, each found by measurement:
+
+1. **The trading mode came from a SCORING field.** `snapshot.mode` holds `'score'` and was compared
+   against the trading mode `'auto'`. Measured on the live DB: `scoring_strategy.mode` is
+   `score`├ù18 / `semi-auto`├ù7 / `manual`├ù2 and **`auto` ├ù0** ÔÇö so `mode !== 'auto'` was true for
+   every stack that has ever existed and **the order branch was unreachable**. Fixed.
+2. **The cadence was a literal `'5m'`** in a system whose canonical resolver is
+   `selectBaseTimeframe()`. Measured, same protocol, same second: 15m bars ÔåÆ `94/BUY`; 5m bars ÔåÆ
+   `15/HOLD`. The runner was measuring a configuration that does not exist. Fixed.
+3. **ÔÜá´©Å THE ACCOUNT NETS.** Two bots on one symbol merge into a SINGLE broker position. Measured:
+   three XAUUSD orders became one position of `vol 0.04` (bot `0.02` + side A `0.01` + side B
+   `0.01`) under the last-written comment; both side rows were then left `exit-unknown` with
+   `pnl = NULL`, 48 seconds after opening.
+
+**And the owner identified the consequence:** *"most A/B protocols will score similar at least if the
+changes are minor, which means two signals for trading at the same time."*
+
+**A/B exists to test a MINOR change. So the two sides signal together almost every time.** The live
+pair therefore **cannot** be the measuring instrument ÔÇö it keeps its LOCK (#963) and becomes the
+**final confirmation step**. The measurement is the **backtest**, where there is no broker, no merge
+and no collision, and both sides are scored over the **identical** bars.
+
+---
+
+## Order of work ÔÇö do not reorder
+
+### 1. THE SAMPLE BAR ÔÇö do this FIRST, before any new entry point
+
+**Evidence (measured 2026-09-23):**
+
+```
+xau-speed-m15  totalTrades: 3   winRate: 100   sharpeRatio: 42.31
+xau-speed-m5   totalTrades: 0   winRate: 0
+best: { id: <m15>, metric: "sharpeRatio", value: 42.31 }     <- POST /api/backtest/runs/compare
+```
+
+**The comparison named a winner on THREE trades**, presented identically to a result from three
+hundred. This is the exact defect `AB_MIN_TRADES_FOR_VERDICT` was added for in the snapshot trial
+(*"noise wearing a result's clothes"*) ÔÇö **and the backtest comparison has no such bar.**
+
+**A winner named on three trades is worse than no winner, because it gets acted on.** Every entry
+point below feeds this verdict, so building them first multiplies the problem.
+
+- **Deliverable:** `runs/compare` refuses to name a `best` below a stated per-side trade count, and
+  says `insufficient-data` **with the counts** when it does.
+- **Guard:** a spec proving both directions, canaried ÔÇö plant a 3-trade sample, confirm no winner;
+  raise it above the bar, confirm a winner *with its method named*.
+
+### 2. `compare` disagrees with the run it compares
+
+Same run, two stories: `run` reported `netPnl ÔêÆ0.0009`; `compare` shows `totalPnl: 0` and
+`maxDrawdown: 27` (vs the run's `maxTradeDrawdown ÔêÆ0.0003`). **Find which is right before building on
+either** ÔÇö the compare view is reading different fields, and a viewer that disagrees with its source
+cannot be trusted as a second source.
+
+### 3. Backtest a STRATEGY (bot) ÔÇö not currently expressible
+
+`BacktestRunRequest` takes `symbol / days / timeframe / protocolId / slPct / tpPct / ÔÇª` ÔÇö **no bot id**.
+Needs a `botId` that resolves to protocol + `slPct`/`tpPct` + sizing, so *"backtest this bot"* is one
+call rather than a hand-assembled request.
+
+ÔÜá´©Å Read **#843** first ÔÇö the backtester models position sizing **4 ways** and the live path sizes it
+**1 way**. A strategy backtest that sizes differently from the live bot is measuring a different bot.
+
+### 4. Test a PAIR ÔÇö the pieces exist, they are just not joined
+
+`POST /runs/compare` genuinely works (verified: both runs side by side, plus a `best`). And a pair
+**already materialises its change as a second protocol** ÔÇö `duplicate()` copies the source protocol
+and records `Protocol.derivedFrom`, so the two sides are already two distinct `protocolId`s that
+`POST /run` already accepts. **This is probably wiring, not a new override mechanism** ÔÇö but do not
+assume it; run both protocols of a real pair and compare.
+
+### 5. Then the surfaces ÔÇö #819, then #606
+
+- **#819 ÔÇö the replay view.** *"a visually generated list, with speed control so that I can watch
+  trade actions as they happen"*, and the owner has already said *"I think you should build this
+  now."* **Nothing new is needed here; it is outstanding.**
+- **#606 ÔÇö Chart Indicator System** ÔÇö library-agnostic indicator rendering. **ADR-005 chose
+  Lightweight Charts over the TradingView widget**; this is not an open 2ÔÇô3 way question.
+
+### 6. Then the rename ÔÇö #962
+
+`ab_test` / `AbTestService` / the `TCS AB-A`/`AB-B` broker tags, out of "A/B". **87 references across
+30 files**, and **two different things share the substring** (`/lab/ab-testing` is the protocol
+comparison page; `ab_test` is the snapshot trial), plus ~22 historical doc references that must
+**not** be rewritten. Scoped in the issue with the step list.
+
+---
+
+## What NOT to do
+
+- **Do NOT create another sprint or epic.** #816 is the epic, #823 is the workstream, #819 and #606
+  are the surfaces. A fourth surface is the churn this repo keeps paying for.
+- **Do NOT build a live-pair measurement.** It was measured and it cannot work (blocker 3).
+- **Do NOT build the two mechanisms the owner deferred.** Recorded on #963, explicitly not requested:
+  **(a)** divergence *recording* (*"if A signalled for entry many minutes before B ÔÇª then that needs
+  to be recognised"*), and **(b)** first-mover ownership between paired bots (*"the blocker then owns
+  the additional profit or loss from that point onwards"* ÔÇö owner's own words: *"That is complex."*).
+- **Do NOT move #929 / #963 back into #960.** They are A/B *measurement*; #960 is strategy
+  establishment and is being advanced separately.
+
+## Related
+
+| Issue | Role |
+|---|---|
+| **#816** | **Parent epic** ÔÇö Edge Validation & Backtesting |
+| **#823** | Workstream ÔÇö inventory (Stage 1 **posted 2026-09-23**), basic setup, then the replay design |
+| **#819** | The replay view ÔÇö decision list + speed control. **Already requested; build it** |
+| **#606** | Chart Indicator System (ADR-005: Lightweight Charts) |
+| **#843** | Position sizing ÔÇö 4 models in the backtester, 1 in the live path |
+| **#929** | The three blockers above; **open**, now blocked on *this* issue's item 1 |
+| **#963** | The pair LOCK ÔÇö built and canaried. Keeps the lock; loses the measuring role |
+| **#962** | The snapshot-trial rename |
+

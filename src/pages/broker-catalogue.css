@@ -56,7 +56,11 @@
 .bc-broker-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* ⚠️ `flex-start`, NOT `space-between`, since 2026-10-06: a third child (the account name) joined
+     this row, and space-between would push it into the middle of the card. The state pill keeps the
+     right-hand edge via `margin-left: auto` below, so id + account read as one identity and the state
+     stays where the eye already expects it. */
+  justify-content: flex-start;
   gap: 8px;
   margin-bottom: 6px;
 }
@@ -65,7 +69,24 @@
   font-weight: 600;
 }
 
+/* The account a brokerId refers to — owner: *"extend that line with the name of the brokers account
+   i.e. PepperstoneUK-Demo is one of the accounts in use."* Monospace and muted: it is an identifier,
+   not a second title competing with the broker number. Rendered ONLY when
+   `/api/providers/mt5/accounts` reports one active+connected row for that brokerId — the endpoint
+   returns every configured account against every broker, so a name shown without that filter could be
+   the wrong account, which is worse than no name. */
+.bc-broker-account {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
 .bc-broker-state {
+  margin-left: auto;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;

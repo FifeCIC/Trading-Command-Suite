@@ -10,6 +10,36 @@ on work that has no value yet, and stop reverting fixes that were deliberate.
 
 ---
 
+## 🛑 THE WORKSPACE AND DATABASE ARE DEVELOPMENT — THE DATA IS NOT PRECIOUS (owner direction, 2026-10-07)
+
+> Owner, 2026-10-07: *"Please recognise that this development environment (the workspace folder and
+> database) is just that: development. Agentic AI needs to stop treating this project and its data
+> as precious — I've stated this before. Add it to the primary file or rules for the entire
+> project. I will state when I'm using agentic AI to work with me on a real money setup and I will
+> make it clear when we need to take greater care."*
+
+**Default = DEVELOPMENT. Care mode exists only when the owner declares it, in words, for a named
+task, account or session.** Until that declaration:
+
+| Do — freely, without asking | Don't — the preciousness this rule removes |
+|---|---|
+| Change, rebuild, restart, re-seed, re-import, migrate, repair, rewrite, truncate or delete dev data; drop and recreate; cancel or relaunch experiments | Narrate caution about "the live app" or "the live data" — it is a dev workstation |
+| Repair rows directly when that is the cheapest correct fix — a backup is optional convenience, never required ceremony | Backup rituals, preservation steps, "leave it untouched" defaults, or asking permission for disruptive dev actions |
+| Treat demo trades, positions, scores, snapshots and account history as disposable | Inventing preservation of a known-broken state "in case" — if it is worth keeping, the owner will say so |
+| Expect the shared tree to be disturbed by other agents, and carry on | Apology paragraphs for downtime or disturbed runs |
+
+⚠️ **What this does NOT relax — because it protects the MACHINE, not the data:**
+- Engineering care on paths that place or manage orders (risk limits, order guards, duplicate
+guard, stop guardian, sizing, margin checks). That standard exists so the machine is trustworthy
+**when real money is declared** — not because the demo data matters.
+- Mechanism-specific guards (e.g. the `db push` ban, the prebuild validators) stay exactly as they are.
+
+⚠️ **When the owner declares a real-money setup, or "greater care":** this rule inverts **for the
+named scope** — say what you will touch, make destructive steps reversible, and ask before them.
+Outside that scope, development mode continues. Do not infer care mode; it is declared.
+
+---
+
 ## Status (2026-09-10)
 
 | Fact | Value |

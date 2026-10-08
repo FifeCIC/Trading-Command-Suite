@@ -1,0 +1,308 @@
+title:	[Sprint] Schema, seeds & data hygiene - S10 (plan only, UNCLAIMED)
+state:	OPEN
+author:	RyanBayne
+labels:	data-system, enhancement, priority-medium, requires:pro, sprint
+comments:	2
+assignees:	
+projects:	
+milestone:	
+number:	1043
+--
+# [Sprint] Schema, seeds & data hygiene ÔÇö S10
+
+> **PLAN ONLY ÔÇö UNCLAIMED.** Written 2026-10-01 by the database agent at the owner's request:
+> *"I only want you to plan the work so make sure it directs the primary agent very well."*
+> No item in this sprint has been started. Nothing here has been executed, converted or repaired.
+> Claim it with `­ƒñû Claimed by ÔÇª` before the first edit.
+
+**Sprint source:** #934 (backlog roadmap) ÔåÆ **S10 "Schema, seeds & data hygiene"**, theme *the database must match the repo*.
+**Batch size:** **12 open** items. **5 more were closed** after the plan was written ÔÇö verify, do not redo (┬º6).
+**Detail/home of record:** the individual issues. This document carries the ORDER, the DEPENDENCIES and the TRAPS.
+
+---
+
+## 1. For the primary agent ÔÇö the thesis in five lines
+
+1. **This sprint is about making the database answerable, not about making it tidy.** Every item here is "we cannot currently tell X", and the fix is a detector first, a change second.
+2. **Nothing is safe to edit until you know which file runs (#897) and what is actually corrupt (#961).** Phases 0 and 1 are instruments. Doing Phase 3 first means you cannot prove you fixed anything.
+3. **The order below is a dependency order, not a preference.** Two edges are hard: `#897 ÔåÆ every seed item`, and `#613 ÔåÆ #1042`.
+4. **Two of the twelve are decisions, not patches** (#836, #855). For those, the deliverable is a recorded ruling, and a partial honesty is a pass.
+5. **The largest item (#613) is mostly mechanical** ÔÇö 101 tables, but **35 of them are empty**. Only **12** carry real risk.
+
+ÔÜá´©Å **You have a free canary today.** `macrosnapshot` is `Corrupt` right now (`ERROR 145` on any read). That is a real, present fault that #961's script must detect on its first run. Do not repair it first ÔÇö it is the only live corruption this database has, and it is the cheapest proof the detector works. Owner ruling 2026-10-01: **leave it crashed.**
+
+---
+
+## 2. The batch
+
+| # | State | What it is | Exit condition (observable) |
+|---|---|---|---|
+| **#961** | open | nothing runs `CHECK TABLE` | `db:check-tables` exits non-zero naming `macrosnapshot`; a status surface shows it |
+| **#948** | open | a Prisma model can silently miss DB columns | a check reports DB-vs-model column gaps in both directions |
+| **#769** | open | no migration history; `db push` is destructive | a schema change has a recorded, re-runnable path + the baseline decision is written |
+| **#897** | open | 11 `.js` seed twins; the `.ts` may be inert | **measured** seed-path ÔåÆ executed-file table; the losing twin deleted |
+| **#836** | open | `global_setting` has no seed path | fresh install reproduces today's manual-trade behaviour, or the path clamps |
+| **#1009** | open | 6 of 7 broker-3 routes have `brokerSymbol NULL` | seeded + a guard refuses an enabled mt5 route with a NULL brokerSymbol |
+| **#855** | open | threshold pair has no owner | one named owner, or retired; the guard widened to the controller literal |
+| **#951** | open | `ScoringStrategy` conflates scoring with bot execution | vocabulary fixed **and** a build check fails on the wrong layer claim |
+| **#880** | open | daily bars labelled SunÔÇôThu | a weekday filter and a day-of-week directive measure the right day |
+| **#939** | open | API omits a live seeded protocol; a `slug` holds a UUID | served set reconciles with the table; a check prevents a non-slug `slug` |
+| **#613** | open | 101 of 132 tables are MyISAM (crash-unsafe) | crash-recovery **observed**: kill MySQL mid-write ÔåÆ all `CHECK TABLE` OK |
+| **#1042** | open | no reference-data layer; 1 FK in 132 tables | allowed values enumerated + FKs enforced on the six small domains |
+
+---
+
+## 3. Execution order ÔÇö and why this order
+
+| Phase | Items | Why it is here and not elsewhere |
+|---|---|---|
+| **0 ÔÇö instruments** | #961 ┬À #948 ┬À #769 | Every later item needs a detector to prove it worked. These three are the detectors. They are also the cheapest. |
+| **1 ÔÇö the seed contract** | **#897 (gate)** ÔåÆ #836 ┬À #1009 | You cannot safely edit a seeder while two versions of it are committed and nothing declares which runs. #897 is a **hard gate**. |
+| **2 ÔÇö config ownership** | #855 ┬À #951 | Both are DECISIONS. #951 must land before #1042 ÔÇö renaming a table after its FKs exist means doing the FKs twice. |
+| **3 ÔÇö data correctness** | #880 ┬À #939 | Independent of the seed work, but both need #948's column check to prove the fix. |
+| **4 ÔÇö structure** | **#613** ÔåÆ **#1042** | The two large ones, in this order and no other. Row 51 of `docs/SETTLED-DECISIONS.md`. |
+
+**Two hard edges ÔÇö do not reorder across them:**
+
+```
+#897 ÔöÇÔöÇÔû║ #836, #1009          (a seeder you cannot name is a change that does nothing)
+#613 ÔöÇÔöÇÔû║ #1042                (a MyISAM table SILENTLY DISCARDS a foreign key ÔÇö measured)
+```
+
+**Everything else can interleave.** If you are blocked on one item, the rest of its phase is still workable.
+
+---
+
+## 4. Phase 0 ÔÇö instruments first
+
+### #961 ÔÇö `db:check-tables` and a status surface
+
+**The gap.** `CHECK TABLE` is run by nothing. Measured 2026-10-01: `macrosnapshot` (271,491 rows / 44.8 MB) is `Corrupt` and **unreadable**. The full timeline matters:
+
+| When | Event | Evidence |
+|---|---|---|
+| 2026-09-21 | `alert` + `macrosnapshot` corrupt ÔåÆ repaired ÔåÆ `CHECK TABLE` OK | #933 |
+| 2026-09-23 | #933 closed on a sweep where **all 100 MyISAM tables returned clean** | #933 `closedAt` |
+| 2026-10-01 | `macrosnapshot` corrupt **again** | `CHECK TABLE` run today |
+
+**So a MyISAM repair holds about 8 days and nothing notices the regression.** That is the case for this item.
+
+**Work.** A script that `CHECK TABLE`s a **declared** list ÔÇö the ~10ÔÇô15 tables whose unavailability breaks the API, not all 101 ÔÇö exits non-zero on corruption, and prints each failing table with its size. Surface it on a status page.
+
+**Traps.** ÔÜá´©Å Three states, not two: **OK ┬À corrupt ┬À cannot check** (DB unreachable). *"Cannot check" must never render as OK.* ÔÜá´©Å A table named in the declared list that does not exist is an **error**, not a silent skip.
+
+**Guard + canary.** `--self-test` that proves the classifier can fail in both directions. Then the live canary: run it, expect a non-zero exit naming `macrosnapshot`.
+
+### #948 ÔÇö the column-level drift detector
+
+**The gap.** #769 is the *table*-level blind spot; this is the *column* one. A **modelled** table can be missing columns that exist in the DB ÔÇö Prisma then cannot read them, a filter on them cannot be written, and every query silently under-reports.
+
+**Both known instances were found by accident:** `symbol_route.provider` (blocked binance route seeding) and `Trade.pnlInvalid` + `pnlInvalidReason` + `pnlRaw` + `exitPriceRaw` ÔÇö which caused **#805**: the P&L report counted 82 fabricated rows as trades and reported **8.77% win rate against an actual 31.3%**.
+
+**Work.** Extend `db:check` (or a sibling) to diff DB columns against Prisma model fields and report the gap in **both** directions.
+
+**Why it is in Phase 0.** It is the detector for #1042's entire premise. Ship it before any normalisation, or the normalisation is unprovable.
+
+### #769 ÔÇö DDL discipline and the migration baseline
+
+**Already done:** `nest/scripts/validate-schema-safety.cjs` (`npm run db:check`) fails on any non-empty unmodelled table not declared in `RAW_MANAGED_TABLES`; `npm run db:push` is blocked.
+
+**Remaining ÔÇö one deliberate decision.** Baselining a **drifted** database is not the same as baselining a clean one, and getting it wrong leaves the history claiming things that never happened. The issue says it plainly: *"should be done deliberately, not as a side task."* That is the deliverable.
+
+**Traps.** ÔÜá´©Å **Do not put `db:check` in `prebuild`** ÔÇö it needs a live database, and a build that requires a live DB is a build nobody can run offline. It stays a preflight.
+
+**Done when.** A schema change has a recorded, re-runnable path, and the baseline decision is written down with its reasoning.
+
+---
+
+## 5. Phase 1 ÔÇö the seed contract
+
+### #897 ÔÇö which seed file actually executes? **(HARD GATE)**
+
+**The gap.** `nest/prisma/` holds **11 committed `.js` files (1,262 lines)**, not gitignored, and **10 have a `.ts` sibling of the same name**. Both are in git. **Nothing declares which one runs.**
+
+**Work.** Establish, **per seed path**, which file executes ÔÇö **measure it, do not infer it.** The issue is explicit, and inferring from imports is how this class survives (`#890` a providers entry never registered; `#892` a response body never read).
+
+**Done when.** A table of `seed path ÔåÆ executed file`, and the losing twin deleted.
+
+ÔÜá´©Å **Nothing in Phase 1+ should be edited before this lands.** Editing a seeder you cannot prove is the executed one is a change that does nothing, and it will look like a change that worked.
+
+### #836 ÔÇö `global_setting` has no seed path *(decision)*
+
+**The gap.** It is the only config table with no seed path. Values survive a restart and are **lost on reinstall**, silently reverting to the code default. Concretely: `signals.manualTrade.size` is **0.1** today so an index click is not refused; on reinstall it reverts to **0.01** and index manual trades fail the `volumeMin 0.1` floor. The failure is **loud** (blocker + hint) ÔÇö a durability gap, not corruption.
+
+**Traps ÔÇö read before deciding.** ÔÜá´©Å **SETTLED row 19:** `global_setting` is seeded with **current** values (persistence, not re-sizing); the first run is a **dry run** whose `changes` are read before writing. ÔÜá´©Å **Per-instrument sizing stays a maths change (#943)** ÔÇö do not settle it here.
+
+**Done when.** Either a fresh install reproduces today's behaviour, or the manual path clamps to the symbol floor so the stored value is not load-bearing ÔÇö and **the choice is documented**, so `global_setting` is not left as an unseeded table with no stated reason.
+
+### #1009 ÔÇö broker-3 `brokerSymbol NULL`
+
+**The gap.** 6 of 7 broker-3 rows have `brokerSymbol = NULL` and are `enabled = 1`, so the bridge sends the **bare ticker**. Measured: broker 3 quotes all six bare tickers, so orders resolve. **LATENT, not ACTIVE** ÔÇö it is correct by coincidence, under a live `auto` bot, and nothing would report it if the venue's naming changed.
+
+**Traps.** ÔÜá´©Å **Seed-first.** `symbol_route`'s only writer is `nest/prisma/seed-symbol-onboarding.ts`. A direct DB write is **lost on reinstall** and is not a completed change (`database-seed-discipline.instructions.md`). ÔÜá´©Å Make the upsert carry `provider` on **update** as well as create, or a re-seed cannot repair an existing row.
+
+**Guard.** Refuse an `enabled` route whose `provider = 'mt5'` and `brokerSymbol IS NULL`, unless the bare ticker is **verified present** in that broker's `/symbols`. `NULL` should mean *"unresolved"*, not *"probably fine"*. Related invariant: `INV-TRADEABLE-ROUTE`.
+
+---
+
+## 6. Phase 2 ÔÇö config ownership (decisions, not patches)
+
+### #855 ÔÇö the old-scale threshold pair
+
+**The contradiction.** Three sources disagree about whether `signal.buy_threshold` / `signal.hold_threshold` have a server owner: `src/core/signal-utils.js:22-27` says the endpoint *"does NOT exist and never did"*; `nest/src/app.controller.ts:191-211` exposes it and it **responds**; `global_setting` holds both rows. `validate-threshold-sources.cjs` reports **OK** ÔÇö because it does not look here.
+
+**The real finding.** The endpoint is not acted on: `setSignalThresholds()` has **no caller**, so the frontend never consumes it. *A setting whose only reader has no caller is not a setting.* And `app.controller.ts:190` holds another copy of the old scale (`let buy = 65, hold = 40`) that the guard does not flag. Measured `compositePct` peaks at **~33**.
+
+**Traps.** ÔÜá´©Å This sits inside the **UNSETTLED** `capacity-threshold` area (#761 open). **Do not settle #761 sideways.** ÔÜá´©Å Thresholds are the maths: any **value** change needs a copied configuration and a monitored comparison. **This item is a retire-or-wire decision, not a value edit.**
+
+**Done when.** The pair has one named owner or is retired, and the guard is widened to cover the controller-level literal.
+
+### #951 ÔÇö terminology drift *(must land before #1042)*
+
+**Why it is priority-high.** Every other item here is a defect in the system. **This one is a defect in how the system describes itself**, read by every agent on every task.
+
+**The rule to establish:**
+
+> **A PROTOCOL scores a symbol. A BOT consumes the score and decides whether to trade. Bots do not score.**
+
+Corollary: `score` rows are written per **`(symbol, protocol)`**, never per bot ÔÇö so every score count is the *symbol's*, not any bot's.
+
+**The evidence that bites.** `scoring_strategy` is **populated, uniform, and not read**; the loop reads `trading_strategy`. The type name describes a table the code does not use.
+
+**Traps.** ÔÜá´©Å Renaming a Prisma model is a schema change ÔåÆ #769's discipline applies (ALTER, not `db push`). ÔÜá´©Å Run it **before** #1042: renaming a table after adding FKs means adding the FKs twice.
+
+**Done when.** The vocabulary is fixed **and** a build check fails when a type or table name claims the wrong layer. A rename without the guard is the instance, not the class.
+
+---
+
+## 7. Phase 3 ÔÇö data correctness
+
+### #880 ÔÇö daily bars are labelled SunÔÇôThu
+
+**The gap.** Daily bars are labelled **SundayÔåÆThursday**, not MondayÔåÆFriday. Only **8 "Friday" bars per symbol** against ~40 for every other day, and two of those are byte-identical duplicates of the preceding day. It blocked the first `friday-drift` test entirely ÔÇö which returned **zero symbols** rather than failing.
+
+**Traps.** ÔÜá´©Å **Read `INV-BAR-ALIGNED` first.** `1d` alignment is judged **per provider** (mt5 21:00, binance 00:00, yahoo 07:00) and this is the same neighbourhood as #783, where a 30-minute offset wrote **~27,376 phantom bars (10%)** and made a daily series read a `30m` median interval ÔÇö which then silently resized every staleness window. ÔÜá´©Å The issue states the *labelling-only* fix and the *import* fix are **different fixes**, and **which applies is not established**. Establish it before editing.
+
+**Guard the class:** a check that the daily-bar weekday distribution has no day with < 50% of the median count. A 6.5├ù deficit is not subtle.
+
+**Done when.** A weekday filter and a day-of-week directive measure the correct day.
+
+### #939 ÔÇö the API omits a live, seeded protocol
+
+**The gap.** Seed and table reconcile **perfectly** (47/47, zero discrepancies either way) but `GET /api/scoring/gated/protocols` serves **45**. `signals-workbench` is live and seeded yet **not served**; and one row's `slug` **is a raw UUID**, not a slug.
+
+**Traps.** ÔÜá´©Å **Which filter drops the two is NOT established** ÔÇö measure it. Do not assume `active` is the predicate: `active=1` rows number 21 while the endpoint returns 45. ÔÜá´©Å The **silent-empty rule** applies: `count: 0` currently means both *"none"* and *"cannot resolve"*, and those must not render the same.
+
+**Done when.** The served set reconciles with the table, the UUID slug is corrected or deleted, and a check prevents a non-slug `slug` from being inserted again.
+
+---
+
+## 8. Phase 4 ÔÇö structure
+
+### #613 ÔÇö MyISAM ÔåÆ InnoDB *(before #1042, never after)*
+
+**Why it is not hygiene.** Measured 2026-10-01: a `FOREIGN KEY` clause on a `MyISAM` table is **silently discarded** ÔÇö no error, no warning:
+
+```sql
+CREATE TABLE _tmp_fk_b (ÔÇª CONSTRAINT fk_tmp FOREIGN KEY (aId) REFERENCES _tmp_fk_a(id)) ENGINE=MyISAM;
+SELECT CONSTRAINT_NAME, CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_NAME='_tmp_fk_b';
+--> only:  PRIMARY | PRIMARY KEY
+```
+
+So **101 of 132 tables cannot enforce referential integrity at all**, while `schema.prisma` declares **34** `@relation` clauses with `onDelete: Cascade`. The database enforces **1**.
+
+**Scope, honestly sized.** 101 tables ÔÇö but **35 are empty** (instant, no data movement) and only **12 are over 1 MB** (all the risk).
+
+**Order.**
+1. `macrosnapshot` (271,491 / 44.8 MB) ÔÇö corrupt now.
+2. Telemetry, written every tick: `apiactivitylog` (1.27M / 237 MB) ┬À `marketbar` (868k / 225 MB) ┬À `score` ┬À `decision_log` ┬À `automation_event` ┬À `bridge_event`.
+3. Trading records: `directiveoutcome` ┬À `order` ┬À `trade` ┬À `stop_adjustment` ┬À `position` ┬À `portfolio_snapshot`.
+4. Configuration: `protocol` ┬À `protocol_directive_group` ┬À `protocol_directive_entry` ┬À `watchlist` ┬À `symbol` ┬À `symbol_route` ┬À `scoring_strategy` ┬À `strategy` ┬À `broker_config`.
+5. News/research ┬À then the 35 empty tables ┬À then the 9 backups.
+
+**Traps.**
+- ÔÜá´©Å A **crashed table cannot be converted**. Converting an unreadable MyISAM table only works after accepting its rows as lost ÔÇö a decision, **not** an agent's call. Owner ruling 2026-10-01: **leave it crashed**; take it in order 1 above when #613 is pulled.
+- ÔÜá´©Å **Never drop the 9 backup tables.** They are the only rollback path for the #750 timestamp repair.
+- ÔÜá´©Å `apiactivitylog` is both the largest and the most write-active ÔÇö it locks for the duration. Prefer a quiet window.
+- ÔÜá´©Å File-level backup before each batch: Windows releases `.MYD`/`.MYI` only when MySQL stops, and `mysqldump` **cannot read a crashed table at all**.
+- **FTS is not a concern here** ÔÇö `INDEX_TYPE='FULLTEXT'` returns 0 rows in this database. Re-measure; do not assume either way.
+
+**Done when.** Crash-recovery is **OBSERVED, not asserted**: kill MySQL mid-write, restart, every table `CHECK TABLE`-clean, scoring continues with no manual `REPAIR`; and the 12 tables over 1 MB are converted and clean.
+
+### #1042 ÔÇö the reference-data layer
+
+**Only after #613.** Dependency recorded in `docs/SETTLED-DECISIONS.md` **row 51**.
+
+**The gap.** Classification is held as free text in ~120 columns across 8 domains with no enumerating table: `provider` (17 tables, 3 widths) ┬À `brokerId` (**`int` in 3, `varchar(50)` in 5**) ┬À `source` (21, five widths) ┬À `status` (26, three widths) ┬À `type` (10) ┬À `category` (7) ┬À `symbol`/`symbolId` (57 columns) ┬À `protocolId` (20, **four widths, slug *or* UUID**).
+
+**Do the six small ones first** ÔÇö `symbol.type` (6 values), `directive.type` (5), `alert.type` (6), `provider` (4), `status`, `category`. A single `ref_code(domain, code, label, sortOrder)` covers all six, and the conversion is checkable by comparing `COUNT(DISTINCT)` before and after.
+
+**Then** one identifier per entity, **then** retire duplicates with a written ruling each ÔÇö never a bulk drop.
+
+ÔÜá´©Å `broker_config` is **unreachable from every table that references a broker** (`broker_config.id` is `varchar(50)`; `symbol_route.brokerId` is `int`). Fix the type divergence before adding an FK to it, or the FK will simply refuse the rows.
+
+---
+
+## 9. Traps that will bite ÔÇö the do-not list
+
+| Do not | Because |
+|---|---|
+| `prisma db push` | It drops every table with no model ÔÇö 13 of them, including the trade execution queue. Blocked by `npm run db:push`. |
+| Run `prisma generate` / `nest run build` with the API up | EPERM on the locked query-engine DLL. Use `npm --prefix nest run build:api`. |
+| Put `db:check` in `prebuild` | It needs a live DB. A build that cannot run offline is a build nobody runs. |
+| Bare `git commit` / `git commit -a` | **The git index is shared between agents.** Use `node scripts/commit-only.cjs` with a pathspec. |
+| Call `REPAIR TABLE` a "preview" | It is a **write that drops rows** (`12,667 ÔåÆ 12,665` measured). Back up at file level first. |
+| Force-kill the API mid-write without noting it | MyISAM is not crash-safe ÔÇö that is how the last two corruptions happened. |
+| `roadmap:sync` | It regenerates roadmap data from labels and would clobber placements. |
+| Add an invariant without its QA entry | The build **fails** ÔÇö `INV-*` needs an ID, a guard, and a line in `src/data/qa-checklist.js`. |
+| Trust a memory note over the record | This sprint's own first draft did exactly that, and published a false claim about `macrosnapshot` having "not been repaired" ÔÇö it **had** been, and crashed again. |
+
+---
+
+## 10. Standing gates ÔÇö every item, every time
+
+1. **Structural** ÔÇö `npx tsc -p tsconfig.build.json --noEmit` (works with the API up) or `build:api`.
+2. **Contract** ÔÇö the `prebuild` validators; `nest run db:check` must print `Ô£à OK` after **any** schema change.
+3. **State** ÔÇö does the running system agree with the config? `node scripts/diff-seed-vs-db.cjs` for anything seed-related.
+4. **Behaviour** ÔÇö the thing demonstrated end to end, not asserted.
+
+Plus:
+- **Run `db:check` at session START** ÔÇö it detects drift another agent created, which is otherwise invisible.
+- **Before touching a settled area:** `node scripts/detect-circular-work.cjs <area>`. Settled areas this sprint brushes: `seed-db-drift` (settled by **#789**) and `stale-data`. ÔÜá´©Å `capacity-threshold` is **NOT settled** ÔÇö #761 is open, and #855 sits inside it.
+- **Pre-close checklist** posted as an issue comment before closing. No agent discretion.
+- **`node scripts/docs-facts.cjs --write`** after adding a Prisma model, or `prebuild` fails on stale generated facts.
+- **Guards over fixes.** A fix closes an instance; a canaried guard closes the class. Every guard must be observed to **fail** in both directions.
+- **Honest-partial is a pass.** Say what you did **not** do, with the reason.
+
+---
+
+## 11. Already closed ÔÇö verify, do not redo
+
+Five S10 items closed between the plan (2026-09-21) and now. Per runbook step 4, **verify the claim and the open state at sprint start**; if genuinely done, note it in the close-out rather than re-working it.
+
+| # | Closed | The claim to spot-check |
+|---|---|---|
+| **#804** | binance crypto routes have no seeder | delete-and-rebuild round-trip recorded |
+| **#926** | three sources disagree about applicable protocols | an orphan guard exists |
+| **#925** | three pages call `/envelope` with no protocol | a guard prevents a new caller shipping without one |
+| **#833** | bot config could not be seeded convergently | `trading_strategy` 27 rows vs seed 27; re-seed reports `created=0, unchanged=27` |
+| **#933** | `alert` corrupt + `build:api` leaves the API down | corruption fixed (but see #961); the restart path reports DOWN and exits non-zero |
+
+---
+
+## 12. What is NOT in this sprint
+
+- **#800** (protocolId slug-or-UUID) ÔÇö S8. **#710** (log-table `symbol_id` FK) ÔÇö S12. Do not pull them in; they are sequenced elsewhere for a reason.
+- **The swallowed `.catch()` at the two macro-snapshot call sites** (`scoring.service.ts:345`, `protocol-gating.service.ts:556`). A persistence failure should not be a `warn` line. Recorded in #613 ┬º6 and **not filed** ÔÇö a candidate for a new issue, not for this sprint.
+- **The 9 backup tables' disposition** ÔÇö declared raw-managed, kept (#769).
+- **#1009** is the only symbol-route data item here; the wider routing work is #759/#1030/#1033.
+
+---
+
+## 13. Close-out
+
+- **Batch close-out on this issue:** what closed, what moved, what was learned.
+- **Independent verification** (runbook step 7): hand the closes to a read-only verifier that issues **VERIFIED / PARTIAL / UNVERIFIABLE / FAILED** per claim. `UNVERIFIABLE` is a finding, never a pass.
+- **Guards shipped** ÔÇö list them with evidence they were observed to fail.
+- **Correct the record:** if a claim in this plan was wrong when you re-measured it, **fix the plan** and say so. Two of this plan's own numbers came from a memory note and one of them was wrong (┬º9, final row).
+

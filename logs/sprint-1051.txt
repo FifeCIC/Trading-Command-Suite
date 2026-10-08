@@ -1,0 +1,115 @@
+title:	R29 SPRINT - Instrument form, advanced exit management and hold ceilings
+state:	OPEN
+author:	RyanBayne
+labels:	enhancement, epic, META.Stack, priority-high, requires:pro, trading
+comments:	3
+assignees:	
+projects:	
+milestone:	
+number:	1051
+--
+# R29 ÔÇö Instrument form, advanced exit management, and hold ceilings
+
+> **Origin:** owner answers to review-queue R29, 2026-10-01. The owner called it *"A sprint in
+> itself."* This issue is that sprint's home. The hold-limit slice lives separately in **#1048**;
+> this issue owns the rest and links it.
+
+---
+
+## R29.1 ÔÇö Instrument form: the direct answer first
+
+**The owner asked:** *"a protocol can probably signal for both stocks and CFD ÔÇö if there is a
+difference please tell me because it means we need different protocols for one symbol."*
+
+### Answer: today there is **no difference on this platform**, and here is the measurement.
+
+| Fact | Evidence |
+|---|---|
+| `symbol.type` holds an **asset class**, not a **trading form** | `stock` 213 ┬À `forex` 15 ┬À `etf` 13 ┬À `index` 9 ┬À `crypto` 7 ┬À `commodity` 3 (`symbol` table, 2026-10-01) |
+| MT5 is the only live venue for those symbols | `symbol_route`: `mt5` 8 routes ┬À `binance` 4 routes |
+| A "stock" on MT5 is a **CFD on the equity**, not the share | MT5 is a CFD/leveraged venue; there is no cash-equity book in this app |
+| No options, futures or cash equities exist in the app | no instrument-form field exists anywhere |
+
+**Consequence:** `stock`, `index`, `commodity`, `forex` all resolve to **one form** here ÔÇö a CFD
+executed through MT5. So a single protocol **can** signal for a "stock" and a "CFD" without conflict,
+because the app never trades the same underlying two different ways. **No separate protocols per
+symbol are needed today.**
+
+### But the owner's instinct is correct ÔÇö the hazard is LATENT, and the hooks are declared but dead
+
+| Level | Field | State |
+|---|---|---|
+| **Directive** | `SuitabilityProfile.instrumentTypes` | **Declared in 118 places, branched on in ZERO.** A buried ability. `research-import.service.ts` even notes it *"would stop the FX"* use of `insider-activity` ÔÇö i.e. it is not wired. |
+| **Protocol** | `SuitabilityService` compares `symbol.type` to `protocol.symbolTypes` | ÔÜá´©Å `protocol.symbolTypes` **is not a column**. It is heuristically *inferred* from slug/name/tradingStyle (`inferProtocolSymbolTypes()`). |
+| **Bot** | (none) | `trading_strategy` has **no** instrument-class column at all. |
+
+So the enforcement the owner wants ("warning/prevention to stop a CFD protocol's scores being
+executed by an options bot") **has no working input today** ÔÇö the declarations exist and nothing
+reads them.
+
+### Proposed scope
+
+1. **Wire `instrumentTypes` into the activation gate** (it exists; make it fire). A directive
+   declaring `['stocks']` must not contribute to a symbol whose form it does not fit.
+2. **Add an explicit `instrumentForm`** distinct from `symbol.type` ÔÇö values `cfd | spot | cash |
+   future | option`. `symbol.type` stays the *underlying*; the form is *how it is traded*. This is
+   the field that makes "stock vs CFD" answerable at all.
+3. **Protocol declares the form(s) it is valid for** (a real column, replacing the inferred guess).
+4. **Bot declares the form it trades**, and a protocolÔåöbot mismatch is a **warning at config time**
+   and a **refusal at execution time**.
+5. **CFD overnight awareness** ÔÇö see R29.3 below (overnight fees, holding past the close).
+
+**Deferred (noted for preparation):** **options** get custom directives eventually. No option
+handling is to be built now ÔÇö only the form field that makes room for them.
+
+---
+
+## R29.2 ÔÇö The exit process is *advanced*, not a literal new algorithm
+
+> Owner: *"Caution on my 'new exit algorithm' expression ÔÇö there was already work done and I imagine
+> it as an algorithm. Do not take my words literal. The exit process needs to be advanced, going
+> through a series of checks, and many per-bot settings that make a strategy unique. It is my
+> understanding risk management falls under the exit management part of bots."*
+
+Existing exit machinery (do **not** rebuild ÔÇö advance it): `stop-guardian.service.ts` (the ONE
+post-entry mechanism, #913), `exit-consensus.service.ts` (verdict over exit directives, #990/#1027),
+`position-time-stop.service.ts` (max-hold sweep, #773), and the 5 exit directives
+(`momentum-exhaustion`, `target-achieved`, `regime-shift-exit`, `time-stop`, `chandelier-exit`).
+
+**Scope:** the exit path is a **chain of checks** with **per-bot settings**, and **risk management
+is a member of that chain**, not a separate subsystem. Each stage must log its decision to the DB
+and be visible on the bot detail view.
+
+---
+
+## R29.3 ÔÇö Hard ceilings, the override, and the overnight question
+
+> Owner: *"The hard ceilings are the final hour of trading on the market the symbol belongs to
+> UNLESS this is overridden by the user through selection of option, at which case they should also
+> be asked if they will allow over-night holding (if CFD) on a position in profit only or do they
+> wish to override for all positions? (Which should come with a strong risk warning, don't you
+> think?)"*
+
+Captured in full on **#1048**. This issue owns the **session-calendar** dependency it rests on:
+"the final hour of the market the symbol belongs to" is only meaningful with **correct per-symbol
+market/session timezones** ÔÇö the owner's words: *"this could go very wrong."*
+
+---
+
+## Acceptance criteria
+
+- [ ] `instrumentForm` exists on `symbol`; `symbol.type` documented as *underlying*, not *form*.
+- [ ] `instrumentTypes` on directives is **read** by the gate (canary proves it fires).
+- [ ] Protocol carries a real declared form; the `inferProtocolSymbolTypes()` guess is retired.
+- [ ] Bot carries a form; a protocolÔåöbot mismatch is a config warning **and** an execution refusal.
+- [ ] Exit path documented as a chain; risk management shown as a member of it.
+- [ ] Session calendar resolves the correct market close per symbol, in the correct timezone.
+- [ ] Every exit decision is logged and visible on the bot detail view.
+
+## Related
+
+- **#1048** ÔÇö hold limits (R29.3 slice; the override + overnight prompt)
+- **#1047** ÔÇö pages rendering outside the app shell (a bot-detail surface)
+- **#646** ÔÇö suitability filter (the protocolÔåösymbol join this extends)
+- `docs/SETTLED-DECISIONS.md`, `.github/instructions/maths-change-requires-ab.instructions.md`
+

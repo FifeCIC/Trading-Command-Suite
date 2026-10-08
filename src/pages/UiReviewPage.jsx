@@ -15,7 +15,7 @@ import './ui-review.css';
  *
  * STEP IN THE PIPELINE:
  *   BEFORE: the app's view list exists only as code (`view-meta.js` + `nav-tree.js`).
- *   THIS:   the owner records importance / hide-now / a 1–10 UI rating / a note per page.
+ *   THIS:   the owner records importance / hide-now / a 1–10 UI rating / two rounds of notes per page.
  *   AFTER:  every interaction PUTs to `/api/system/settings/ui-review`, which persists to the
  *           `appsetting` row AND mirrors to `nest/app-settings.json` — the file an agent reads to
  *           work from. No export step, no "remember to save".
@@ -124,12 +124,19 @@ export default function UiReviewPage() {
     }
   };
 
-  /** The note is typed, so it waits for a pause; the three selectors write at once. */
-  const saveNoteDebounced = (viewKey, note) => {
-    setEntries((e) => ({ ...e, [viewKey]: { ...(e[viewKey] || {}), note } }));
+  /**
+   * Both note columns are typed, so they wait for a pause; the selectors write at once.
+   *
+   * ⚠️ `field` IS A PARAMETER because there are now TWO note columns — "Old …" writes `note`, "New …"
+   * writes `noteNew`. The timer is keyed by FIELD as well as row: one timer per row would let a
+   * keystroke in the New column cancel a pending save in the Old column, which is silent data loss.
+   */
+  const saveNoteDebounced = (viewKey, field, value) => {
+    setEntries((e) => ({ ...e, [viewKey]: { ...(e[viewKey] || {}), [field]: value } }));
     setStatus((s) => ({ ...s, [viewKey]: 'typing' }));
-    clearTimeout(noteTimers.current[viewKey]);
-    noteTimers.current[viewKey] = setTimeout(() => save(viewKey, { note }), 700);
+    const timerKey = `${viewKey}::${field}`;
+    clearTimeout(noteTimers.current[timerKey]);
+    noteTimers.current[timerKey] = setTimeout(() => save(viewKey, { [field]: value }), 700);
   };
 
   /**
@@ -200,7 +207,7 @@ export default function UiReviewPage() {
   // ⚠️ `e.keen` is kept in this test even though the column is gone: entries answered ONLY on the old
   // keenness scale still hold a verdict, and dropping them would silently shrink the "answered" count
   // and make the walkthrough look less complete than it is.
-  const isAnswered = (e) => Boolean(e && (e.importance || e.keen || e.uiScore || e.note || e.hide === true || e.hide === false));
+  const isAnswered = (e) => Boolean(e && (e.importance || e.keen || e.uiScore || e.note || e.noteNew || e.hide === true || e.hide === false));
 
   const answered = rows.filter((r) => isAnswered(entries[r.key])).length;
 
@@ -281,7 +288,22 @@ export default function UiReviewPage() {
             >
               UI /10
             </th>
-            <th scope="col">Changes I suggest</th>
+            {/* ⚠️ TWO comment columns since 2026-10-07. The first is the pre-existing `note` field,
+                renamed IN THE UI ONLY — the stored values keep their meaning. The owner keeps both side
+                by side to judge whether the first round was actually followed:
+                *"This is how I'm going to determine how well agentic AI followed my instructions."* */}
+            <th
+              scope="col"
+              title="The comments from the first review round. The field behind it is still `note` — the header changed, the data did not."
+            >
+              Old Changes I suggest
+            </th>
+            <th
+              scope="col"
+              title="New comments, for the next round. Stored separately (`noteNew`) so the first round survives as the baseline."
+            >
+              New Changes I suggest
+            </th>
             <th scope="col">Saved</th>
           </tr>
         </thead>
@@ -294,7 +316,7 @@ export default function UiReviewPage() {
               <Fragment key={r.key}>
                 {newArea ? (
                   <tr className="uir-area-row" key={`area-${r.area}`}>
-                    <th colSpan={7} scope="colgroup">{r.area}</th>
+                    <th colSpan={8} scope="colgroup">{r.area}</th>
                   </tr>
                 ) : null}
                 <tr key={r.key}>
@@ -360,10 +382,20 @@ export default function UiReviewPage() {
                     <input
                       type="text"
                       className="uir-note"
-                      aria-label={`Suggested changes for ${r.label}`}
+                      aria-label={`Old suggested changes for ${r.label}`}
                       value={e.note || ''}
-                      placeholder="what would you change?"
-                      onChange={(ev) => saveNoteDebounced(r.key, ev.target.value)}
+                      placeholder="first round"
+                      onChange={(ev) => saveNoteDebounced(r.key, 'note', ev.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      className="uir-note uir-note--new"
+                      aria-label={`New suggested changes for ${r.label}`}
+                      value={e.noteNew || ''}
+                      placeholder="next round"
+                      onChange={(ev) => saveNoteDebounced(r.key, 'noteNew', ev.target.value)}
                     />
                   </td>
                   <td className={`uir-status uir-status--${st || 'idle'}`}>

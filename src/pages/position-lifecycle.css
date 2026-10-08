@@ -4,34 +4,44 @@
 .pl-sub { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
 
 .pl-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 1.25rem; }
-.pl-stat { padding: 0.6rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; text-align: center; }
+/* ⚠️ THEME TOKENS, NOT HEX (2026-10-06). Owner (Page Walkthrough, /lab/position-lifecycle):
+   *"Styling needs to match one of our better views with table"*. The deeper problem was that every
+   colour here was a literal — `#1e2030`, `#0d1117`, `#cbd5e1`, `#161b22`, `#93c5fd`, and six more —
+   so the page ignored every theme pack and the High Contrast Text preference, and looked like a
+   different app from the views it is meant to match. Now derived from the same tokens as
+   /status/meta-stack-status, which the owner named as a good example.
+   ⚠️ The `#0d1117` surfaces were the worst of it: a hardcoded near-black panel on a themed page. */
+.pl-stat { padding: 0.6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); text-align: center; }
 .pl-stat-num { display: block; font-size: 1.15rem; font-weight: 700; color: var(--ink); }
 .pl-stat-time { font-size: 0.8rem !important; }
 .pl-stat span:last-child { font-size: 0.7rem; color: var(--color-muted); }
 
 .pl-section { margin-bottom: 1.25rem; }
-.pl-section h3 { margin: 0 0 0.5rem; color: #cbd5e1; font-size: 0.95rem; }
+.pl-section h3 { margin: 0 0 0.5rem; color: var(--ink); font-size: 0.95rem; }
 .pl-hint { font-size: 0.7rem; color: var(--color-muted); font-weight: 400; }
-.pl-empty { color: var(--color-muted); font-size: 0.85rem; padding: 0.75rem; border: 1px dashed #1e2030; border-radius: 8px; }
+.pl-empty { color: var(--color-muted); font-size: 0.85rem; padding: 0.75rem; border: 1px dashed var(--line); border-radius: 8px; }
 
 .pl-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.pl-table th { text-align: left; padding: 0.4rem 0.6rem; color: var(--color-muted); font-weight: 600; border-bottom: 1px solid #1e2030; }
-.pl-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #161b22; }
+.pl-table th { text-align: left; padding: 8px 12px; color: var(--ink-soft); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pl-table td { padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); vertical-align: middle; font-variant-numeric: tabular-nums; }
 .pl-symbol { font-weight: 700; color: var(--ink); }
-.pl-mono { font-family: ui-monospace, monospace; color: #93c5fd; }
+.pl-mono { font-family: ui-monospace, monospace; color: var(--accent); }
 .pl-muted { color: var(--ink-soft); }
 .pl-green { color: var(--color-profit); }
 .pl-red { color: var(--color-loss); }
 
 .pl-side { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; }
-.pl-side-buy { background: #064e3b44; color: #6ee7b7; }
-.pl-side-sell { background: #7f1d1d44; color: #fca5a5; }
+.pl-side-buy { background: color-mix(in srgb, var(--risk-normal) 18%, transparent); color: var(--risk-normal); }
+.pl-side-sell { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
 
-.pl-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: #cbd5e1; }
-.pl-origin-external { background: #7c2d12; color: #fdba74; }
-.pl-origin-manual { background: #1e3a8a; color: #93c5fd; }
-.pl-origin-strategy { background: #14532d; color: #86efac; }
+.pl-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: var(--ink); }
+.pl-origin-external { background: var(--notice-warning-bg); color: var(--notice-warning-text); border: 1px solid var(--notice-warning-border); }
+.pl-origin-manual { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+.pl-origin-strategy { background: color-mix(in srgb, var(--risk-normal) 20%, transparent); color: var(--risk-normal); }
 
 .pl-adjustments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; }
-.pl-adjustments li { display: flex; gap: 0.75rem; align-items: center; padding: 0.4rem 0.6rem; border: 1px solid #161b22; border-radius: 6px; background: #0d1117; flex-wrap: wrap; }
+.pl-adjustments li { display: flex; gap: 0.75rem; align-items: center; padding: 0.4rem 0.6rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); flex-wrap: wrap; }
+
+/* Row hover — the exemplar treatment, and the thing that makes a wide row trackable. */
+.pl-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .pl-reason { color: var(--ink-soft); font-style: italic; flex: 1; }

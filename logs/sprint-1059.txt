@@ -1,0 +1,93 @@
+title:	[Sprint] Exit integrity - realised payoff is 0.54 against a declared 2.0, and ONE take-profit close in 377
+state:	OPEN
+author:	RyanBayne
+labels:	epic, priority-high, requires:pro, sprint, trading
+comments:	0
+assignees:	
+projects:	
+milestone:	
+number:	1059
+--
+# Sprint ÔÇö Exit integrity: why the realised payoff is 0.54 against a declared 2.0
+
+> **Owner:** `primary`. **Label:** `sprint`. One per agent per week.
+> **Theme (owner, 2026-10-01):** *"bot handling of existing positions, exits, or faults ÔÇö anything
+> that adds strength to trading."*
+
+---
+
+## Why this is the sprint, in one measurement
+
+Every **active** bot declares `tpPct / slPct = 2.0`. Measured 2026-10-01 on `trade`, valid P&L only:
+
+| | |
+|---|---|
+| wins / losses | **109 / 125** ÔåÆ win rate **46.6%** |
+| average win / average loss | **+5.47 / ÔêÆ10.07** ÔåÆ **payoff 0.54** |
+| net | **ÔêÆ663** |
+| break-even win rate at this payoff | **64.8%** |
+
+**And the mechanism question is now answerable, because every close is attributed:**
+
+| closeReason | all closed | since 2026-09-18 |
+|---|---|---|
+| `(NULL)` | 111 | **0** |
+| `broker:terminal` | 90 | 63 |
+| `broker:unknown` | 74 | 72 |
+| `system:time-stop` | 52 | 52 |
+| `broker:sl` | 35 | 29 |
+| `system:reconciled` | 14 | 14 |
+| **`broker:tp`** | **1** | **1** |
+
+> **ÔÜá´©Å ONE take-profit close out of 377.** The close-reason prerequisite #916 asked for **has
+> shipped** (zero NULLs since 2026-09-18), so "something closes winners early ÔÇö unexplained" is no
+> longer unexplained *in principle*. The remaining work is to read the now-present evidence and name
+> the actor.
+
+This outranks the entry-side backlog: at a payoff of 0.54, **being right twice as often as wrong
+still loses.** Tuning `minComposite` or adding protocols cannot fix the right-hand side.
+
+---
+
+## The items, in order
+
+| # | What | Why it is in THIS sprint |
+|---|---|---|
+| **#916** | **Identify the early-exit mechanism** ÔÇö item 2, the headline | 229 of 231 closes are not take-profit. `system:time-stop` alone accounts for **52**, and the time stop is documented as having **zero recorded closes** (#917) ÔÇö those two facts cannot both be true |
+| **#917** | Scalp cadence is display-only; the time stop's real close count | Directly implicated by the 52 `system:time-stop` rows. A cadence that is a label means the bot is managed on a clock it was not configured for |
+| **#998** | Durable peak tracking + time-decaying trail distance | The owner's own observation: *"a drift into the red after sitting with profitÔÇª we bled that instead of slowly bringing trailing stop up in reaction to time passing"*. This is the payoff problem seen from one position |
+| **#1041** | Contested positions managed by the **strictest claimant** | A position nothing manages is a winner that never trails. `152703882760` lost **ÔêÆ322.67** |
+| **#1056** | The guardian records what it DID, never why it DECLINED | Found while closing #1030. Without it, "this position was never trailed" stays invisible ÔÇö the same hole one level down |
+| ÔÜÖ´©Å | The 10 rows #1058 damaged (`closedAt` is the bogus 17:39 time, true exit price and P&L lost) | Small, same area, and they are 10 of the closes this sprint is measuring |
+
+## Explicitly NOT in this sprint
+
+- **Any maths change.** Changing a threshold, weight, `slPct` or `tpPct` requires a **copied
+  configuration** and a monitored comparison (`maths-change-requires-ab`) ÔÇö and #916 is the reason
+  that rule exists. This sprint **names the mechanism**; whether the behaviour is intended is a
+  separate decision.
+- **Entry-side work** ÔÇö `minComposite`, protocol additions, signal rescaling. Stated because the
+  backlog is heavily skewed that way and it is not where the loss is.
+- **#915** (signal strength capped at 11ÔÇô44%) and **#956** (scoring symbols that cannot trade) ÔÇö
+  both real, both entry-side, both large.
+
+## Definition of done
+
+- The actor closing winners is **named**, with the `closeReason`/`stop_adjustment`/log evidence that
+  identifies it ÔÇö or the residual uncertainty is stated with the row counts that bound it.
+- Realised payoff is reported **per bot beside win rate**, and a bot whose payoff makes it
+  unprofitable cannot be promoted by a high win rate (**#916 item 3**, which is a rating defect).
+- Every claim carries its command and output. `honest-partial` is a pass; a ticked box that was not
+  observed is not.
+- One handoff, one register row per settled decision, guards canaried **both directions**.
+
+## ÔÜá´©Å Claim override ÔÇö recorded, not silent
+
+**#916 has been claimed by `TCS-Dev` since 2026-09-20 (11 days).** Its item 1 (close-reason
+recording) **shipped** ÔÇö measured above, zero NULLs since 09-18 ÔÇö so the claim is spent, and the
+remaining work is the multi-file trace #916 itself asks for. Taking it here per
+`decision-authority.instructions.md`.
+
+**REVERSE BY:** hand #916 back to `TCS-Dev` and remove it from this sprint. The measurement above
+stays valid either way.
+

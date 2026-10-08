@@ -1,0 +1,13 @@
+The A/B runner places orders through a path that never touches the app's own trade-safety chain — and the positions it opens escape the declared hold limit.
+
+**Measured 2026-10-07, test `b50727ee` (XAUUSD, RUNNING):**
+
+1. **No duplicate guard.** At 09:44:04 the runner opened **both arms simultaneously** — tickets `152733559978` (A) and `152733559984` (B), same entry 4119.77, both 0.01 lots. On the bot path the second order for a symbol with an open position is refused (`Duplicate blocked for XAUUSD: 1 open position(s) on MT5. Close existing or wait for cooldown.` — the exact line the bots themselves log moments later).
+2. **22 ms later the bot family was locked out.** `Gold Day-Trade M15 (copy)` logged the duplicate block at 09:44:04.740 — the duplicate guard counts ANY broker position on the symbol, so while the AB pair holds XAUUSD **all 8 gold bots are frozen out of it**, and vice versa during their holds.
+3. **The path stacks orders.** On 2026-09-30 the same runner placed ~9 orders into ONE netted XAUUSD position (rows from `152703882760` onward, all closed together at 14:37:00 — see the companion booking issue).
+4. **Code path (read, not inferred):** `automation-loop.service.ts` `runAbTest` → `evalSide` → `abTestService.dispatchSideTrade` → `adapter.placeOrder`. The safety chain (symbol cooldown 60s, global 3s, duplicate guard, diversification, portfolio-risk gate) lives in **`dispatchTrade`**, which this path does NOT call. `dispatchSideTrade` checks only: trade-authority mode `=== 'auto'`, adapter capability.
+5. **Positions cannot be time-stopped.** `position-time-stop.service.ts` attributes by exact strategy-name match on the broker comment; AB orders carry `TCS AB-A/AB-B <test name>` (`ab-test.service.ts` L~432), which matches no bot → `comment_no_match_multi_strategy` on multi-bot symbols. The Stop Guardian *does* manage them (2026-09-30 trail ran at `dist=2.980%` — the then-owner's `slPct`), and **which bot owns the stack changed between runs** ("Gold Position 4H (copy)" on 09-30 → "Gold Day-Trade M15" now), so the management profile of an AB order is neither fixed by the experiment nor tracked.
+
+**Impact:** orders placed outside every guard the app built to prevent exactly this; positions held with no enforced max-hold; and a running test silently disables the bot family on its symbol — a contaminant for both the experiment and the bots.
+
+**R45 note:** the owner's queue row asked whether to run this pair and what it spends. It is running (started 2026-10-06 20:36). This issue is not a request to stop it — it is the safety gap it exposed.

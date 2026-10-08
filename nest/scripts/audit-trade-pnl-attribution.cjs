@@ -30,6 +30,12 @@
  * differently, or a position whose other rows live in a different `provider`. Grouping is by
  * `(provider, brokerTicket)`, and the audit says so rather than implying global coverage.
  *
+ * ⚠️ MEASURED LIMIT (2026-10-07, #1080): a pile whose sibling rows carry ORDER tickets forms NO
+ * group here — grouping is by ticket, so the ×1.9 overstatement on the 2026-09-30 A/B pile (ten
+ * rows summing −613.07 for a −322.67 position) was invisible to this report. It was found by
+ * summing rows in a `closedAt` group instead. Grouping by the RESOLVED positionId needs deal
+ * history; that is deliberate future work, not an oversight.
+ *
  * Usage:
  *   node nest/scripts/audit-trade-pnl-attribution.cjs               # report
  *   node nest/scripts/audit-trade-pnl-attribution.cjs --self-test   # prove the detector can fail

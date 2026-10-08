@@ -201,6 +201,70 @@ describe('PositionSyncService', () => {
   });
 
   /**
+   * #1080 — THE MIRROR CASE: the row carrying the POSITION id while its siblings carry ORDER
+   * tickets. `trade.count` by ticket returns 1 for it BY CONSTRUCTION, so the sole-owner branch
+   * booked the WHOLE net.
+   *
+   * MEASURED LIVE (2026-09-30, reproducing the incident's shape at 1/2.5 scale in this fixture):
+   * ten rows over one position, net −322.67; nine booked their 0.10 share (−32.267) and the
+   * position-ticket row booked the full −322.67 — the ledger read −613.07 for a −322.67 position.
+   *
+   * THE FIX READS THE ORDER COUNT FROM THE DEAL HISTORY ITSELF — a position opened by more than
+   * one order cannot be sole-owned, whatever any ticket count says.
+   */
+  it('books the SHARE for a position-ticket row of a multi-order position (#1080)', async () => {
+    position.findMany.mockResolvedValue([{
+      id: 'position-pile', symbol: 'XAUUSD', provider: 'mt5', brokerTicket: '152703882760',
+      side: 'buy', quantity: 0.01, currentPrice: 4166.68, pnl: null,
+      openedAt: new Date('2026-09-30T10:16:10Z'),
+    }]);
+    trade.findFirst.mockResolvedValue({ id: 'pile-1', symbol: 'XAUUSD', side: 'buy', quantity: 0.01 });
+    // The side door: the nine siblings carry ORDER tickets, so THIS row's ticket count is 1.
+    trade.count.mockResolvedValue(1);
+    adapter.getDeals.mockResolvedValue([
+      // Four opening orders of 0.01 → denominator 0.04 (a 1/2.5-scale copy of the live pile's
+      // shape; the incident had ten). ⚠️ `orderId`s are NOT the stored ticket, so the row takes
+      // the DIRECT position-id path — the one that never set `resolvedFromOrder`.
+      { positionId: '152703882760', orderId: 'ORDA7', side: 'buy', volume: 0.01, price: 4187.82, profit: 0, time: new Date('2026-09-30T10:16:10Z') },
+      { positionId: '152703882760', orderId: 'ORDL4', side: 'buy', volume: 0.01, price: 4216.90, profit: 0, time: new Date('2026-09-30T12:32:28Z') },
+      { positionId: '152703882760', orderId: 'ORDK0', side: 'buy', volume: 0.01, price: 4210.68, profit: 0, time: new Date('2026-09-30T12:34:29Z') },
+      { positionId: '152703882760', orderId: 'ORDX4', side: 'buy', volume: 0.01, price: 4213.61, profit: 0, time: new Date('2026-09-30T12:42:25Z') },
+      { positionId: '152703882760', side: 'sell', volume: 0.04, price: 4166.68, profit: -40, time: new Date('2026-09-30T14:37:00Z') },
+    ]);
+
+    await service.syncPositions('mt5', [], { authoritative: true });
+
+    const data: any = trade.update.mock.calls[0][0].data;
+    expect(data.status).toBe('closed');
+    // 0.01 / 0.04 = 0.25 → −10. NOT −40 — the whole net booked to one of the pile's rows is the
+    // measured live overstatement this test exists to prevent.
+    expect(data.pnl).toBe(-10);
+  });
+
+  /**
+   * The regression canary for #1080: a SINGLE-order position whose row carries the position id
+   * must still book the whole net — the sole-owner branch is not collateral of the fix.
+   */
+  it('a single-order position ticket still books the whole net (#1080 regression canary)', async () => {
+    position.findMany.mockResolvedValue([{
+      id: 'position-solo', symbol: 'XAUUSD', provider: 'mt5', brokerTicket: '152600000001',
+      side: 'buy', quantity: 0.02, currentPrice: 4170, pnl: null,
+      openedAt: new Date('2026-10-01T08:00:00Z'),
+    }]);
+    trade.findFirst.mockResolvedValue({ id: 'solo-1', symbol: 'XAUUSD', side: 'buy', quantity: 0.02 });
+    trade.count.mockResolvedValue(1);
+    adapter.getDeals.mockResolvedValue([
+      { positionId: '152600000001', orderId: 'SOLO9', side: 'buy', volume: 0.02, price: 4157.11, profit: 0, time: new Date('2026-10-01T08:00:00Z') },
+      { positionId: '152600000001', side: 'sell', volume: 0.02, price: 4170, profit: 26, time: new Date('2026-10-01T10:00:00Z') },
+    ]);
+
+    await service.syncPositions('mt5', [], { authoritative: true });
+
+    const data: any = trade.update.mock.calls[0][0].data;
+    expect(data.pnl).toBe(26);
+  });
+
+  /**
    * The refusal path, and the reason it is a REFUSAL rather than a fallback.
    *
    * If the share cannot be computed with several rows involved, the reconciler writes NO P&L. The

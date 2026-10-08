@@ -1022,14 +1022,21 @@ export class Mt5Adapter implements IProviderAdapter {
     return this.symbolRouter && brokerId !== undefined ? this.symbolRouter.routeForBroker(brokerId) : undefined;
   }
 
-  /** Close an open position by broker ticket. */
-  async closePosition(ticket: string, volume?: number, brokerId?: number): Promise<BrokerOrderResult> {
-    return this.positionAction(`/close/${encodeURIComponent(ticket)}`, volume !== undefined ? { volume } : {}, brokerId, 'CLOSE');
+  /**
+   * Close an open position by broker ticket.
+   *
+   * `origin` names the CLOSER and rides in the query (`/close` reads `q.get('origin')`) so the
+   * closing deal is stamped `TCS:<origin>` (#916). Default 'manual': an unstamped close is now
+   * ASSUMED to be the owner (owner direction 2026-10-07, R46) — an app close must name itself
+   * deliberately. Enforced by `validate-bridge-order-choke-point.cjs` R5.
+   */
+  async closePosition(ticket: string, volume?: number, brokerId?: number, origin = 'manual'): Promise<BrokerOrderResult> {
+    return this.positionAction(`/close/${encodeURIComponent(ticket)}?origin=${encodeURIComponent(origin)}`, volume !== undefined ? { volume } : {}, brokerId, 'CLOSE');
   }
 
-  /** Partially close an open position by broker ticket. */
-  async closePartial(ticket: string, volume: number, brokerId?: number): Promise<BrokerOrderResult> {
-    return this.positionAction(`/close/partial/${encodeURIComponent(ticket)}`, { volume }, brokerId, 'CLOSE_PARTIAL');
+  /** Partially close an open position by broker ticket. `origin` rides in the body → `TCS:<origin>`. */
+  async closePartial(ticket: string, volume: number, brokerId?: number, origin = 'manual'): Promise<BrokerOrderResult> {
+    return this.positionAction(`/close/partial/${encodeURIComponent(ticket)}`, { volume, origin }, brokerId, 'CLOSE_PARTIAL');
   }
 
   /** Modify SL/TP on an open position by broker ticket. */

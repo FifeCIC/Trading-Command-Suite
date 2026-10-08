@@ -115,8 +115,18 @@ export default function MarketCorrelationsPage() {
 
       {!isLoading && !isError && flags.length > 0 && (
       <section className="mc-section">
-        <h2>Position Risk Flags</h2>
+        <h2>Position Risk Flags <span className="mc-tf-label">{flags.length} pair(s)</span></h2>
+        {/* Tidied 2026-10-06. Owner (Page Walkthrough, /research/market-correlations): *"Tidy up this
+            list"*. It was one unaligned flex row per pair, so the correlation numbers never lined up
+            down the column and the warning text started wherever the pair name happened to end — three
+            facts per row with no columns to read them down. Now a grid with a header, so the list can
+            be SCANNED rather than read. */}
         <div className="mc-flags">
+          <div className="mc-flag mc-flag--head" aria-hidden="true">
+            <span>Pair</span>
+            <span>Corr</span>
+            <span>Why it is flagged</span>
+          </div>
           {flags.map((f, i) => (
             <div key={i} className="mc-flag">
               <span className="mc-flag-pair">{f.pair}</span>

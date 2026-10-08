@@ -67,8 +67,25 @@ export interface UiReviewEntry {
   keen: 1 | 2 | 3 | null;
   /** 1–10 UI-quality rating. `null` = not rated yet, which is NOT the same as a low score. */
   uiScore: UiScore | null;
-  /** Free text — what the owner suggests changing about this page. */
+  /**
+   * Free text — what the owner suggested changing about this page, from the FIRST review round.
+   * Rendered as **"Old Changes I suggest"** since 2026-10-07.
+   *
+   * ⚠️ THE FIELD IS STILL `note` AND MUST STAY `note`. The COLUMN HEADER changed; the meaning of the
+   * stored values did not. Renaming it to `noteOld` would have forced a migration of every existing
+   * entry to buy nothing but symmetry — and the last time a field's meaning shifted here (`keen` → a
+   * 1–10 UI rating) the whole point was that stored values are NOT reinterpreted.
+   */
   note: string;
+  /**
+   * Free text — the owner's SECOND round of comments, added 2026-10-07.
+   *
+   * ⚠️ Deliberately a SEPARATE field, not a longer `note`. The owner keeps the two columns side by side
+   * to judge whether the first round was actually followed: *"This is how I'm going to determine how
+   * well agentic AI followed my instructions."* Overwriting `note` would destroy the very evidence the
+   * comparison depends on.
+   */
+  noteNew: string;
   /** ISO timestamp of the last write, so a stale verdict is visible rather than implied. */
   updatedAt: string;
 }
@@ -231,6 +248,7 @@ export class SettingsService {
       keen: null,
       uiScore: null,
       note: '',
+      noteNew: '',
       updatedAt: '',
     };
     const entry: UiReviewEntry = { ...previous, ...patch, updatedAt: new Date().toISOString() };

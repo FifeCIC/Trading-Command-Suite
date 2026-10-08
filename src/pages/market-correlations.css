@@ -67,6 +67,37 @@
 .mc-corr-value { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 1.5rem; font-weight: 700; }
 .mc-corr-desc { font-size: 0.7rem; color: var(--ink-soft, var(--ink-soft)); }
 
+/* ── Position Risk Flags as columns (2026-10-06) ──
+   Owner: *"Tidy up this list"*. Three fixed tracks so the correlation numbers align down the column
+   and the reason has a stable left edge. `auto` on the middle track, not a fixed width, so a
+   three-digit correlation cannot push the reason out of line. */
+.mc-flag {
+  display: grid;
+  /* ⚠️ FIXED tracks, not `minmax(7rem, auto)`. Each `.mc-flag` is its OWN grid container — one grid per
+     row — so an `auto` track is sized per row and a longer pair name shifts that row's numbers out of
+     line with the others. Measured 2026-10-06: three rows at x=428 and one at x=433. Fixed tracks are
+     what make the column align across rows, which is the entire point of the tidy-up. */
+  grid-template-columns: 7rem 4rem 1fr;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+}
+.mc-flag:last-child { border-bottom: none; }
+.mc-flag:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.mc-flag--head {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+.mc-flag--head:hover { background: none; }
+.mc-flag-corr { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; }
+/* A pair name longer than its track shortens rather than re-flowing the row. */
+.mc-flag-pair { font-weight: 600; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── Scatter plot ─────────────────────────────────────────── */
 .mc-scatter-wrap {
   background: var(--panel, #141a2e); border: 1px solid var(--line, #1e2a45);
