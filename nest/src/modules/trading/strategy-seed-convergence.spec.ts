@@ -30,6 +30,10 @@ const SEEDED = {
   slPct: 1.5,
   tpPct: 3.0,
   minComposite: 9,
+  // ⚠️ Deliberately `null` in THIS FIXTURE even though the typed seed forbids it since #982 — the
+  // fixture exercises the serialiser's defensive null branch ("explicit null clears"), which the
+  // update DTO can still reach. Real seed entries must declare `'all-hours'` or tags; that is gated
+  // by `strategy-seed-session-declared.spec.ts`.
   sessionWindow: null,
   maxHoldHours: 72,
 };

@@ -1,0 +1,78 @@
+# The build gate runs 5 of 172 unit suites — so two red suites sat invisible, one of them for 7 days on a money path
+
+**Found 2026-10-08** while adding a one-line guard to a risk suite. The guard failed — and the reason was not the guard.
+
+---
+
+## The measurement
+
+`nest/package.json` → `prebuild` runs:
+
+- 4 `node --test` frontend suites (`notices`, `score-display`, `trade-readiness`, `tradeability`)
+- **5 named jest suites**: `session-window` · `exit-trigger` · `position-time-stop.integration` · `protocol-health.coverage` · `mt5-broker-health-credential`
+
+Everything else is reachable only by running `npm test` by hand. Measured today:
+
+```
+npx jest --silent   →   172 suites · 1615 tests · 28s
+```
+
+**So 167 of 172 suites are not in any automatic gate.** A stale or broken one is invisible until somebody happens to run the full set — which is precisely what this issue is.
+
+## What that hid, and for how long
+
+### 1. `assess-global-risk-limits.spec.ts` — RED SINCE 2026-10-01, on a money path
+
+**6 of its 13 tests were failing, and had been for 7 days.** Not on assertions — on a **stale test double**:
+
+```
+WARN [TradingStrategyService] Risk gate check failed:
+  this.mt5.getPrimaryPositions is not a function — proceeding with caution
+```
+
+`#1033` (`ab72d12`, 2026-10-01) moved the service's position reads to `getAllPositions()` and
+`getPrimaryPositions()`. The harness still defined only `getPositions`. Both misses **throw**, and the
+service's own outer catch logs *"proceeding with caution"* and returns **`allowed: true`** — so six
+tests that expect a risk gate to **refuse** were observing a gate that **never ran**.
+
+⚠️ **The suite was not "passing for the wrong reason" — it was red, in a place nothing looks.**
+Fixed by completing the harness (`getAllPositions`/`getPrimaryPositions` as **thunks**, so the tests
+that re-mock `getPositions` mid-scenario still take effect).
+
+### 2. `import-bars-alignment.spec.ts` — RED on a timeout, not on an answer
+
+Two DB-backed tests aggregate over `marketbar` and were failing
+`Exceeded timeout of 5000 ms` — jest's default, against a real table. Fixed with a **30 s suite
+timeout** (a timeout, not a tolerance; the assertions are unchanged). It also removed 8 s from the
+full run, because `retryTimes(2)` was re-attempting two tests that could never finish.
+
+## The result
+
+```
+Test Suites: 172 passed, 172 total
+Tests:       1615 passed, 1615 total
+Time:        28.083 s
+```
+
+**The whole unit suite is green and costs 28 seconds.**
+
+## The proposal — and why it is not being done here
+
+⚠️ **Adding the full set to `prebuild` would have caught the 7-day regression on day one**, at
+roughly **+28s on a build that already takes 3–5 minutes** (~10%). The repo's own rules point the same
+way: *"a test is not validated by existing, only by failing when the code breaks"* and *"a rule that
+does not load is indistinguishable from one that does not exist."*
+
+**Not done in this change, deliberately:** it alters a gate **every agent** builds through, and that is
+a decision for its own line rather than a rider on a message fix. What this issue establishes is the
+measurement that makes the decision easy — **28s, 1,615 tests, currently green.**
+
+⚠️ **A second option worth weighing, and cheaper:** gate a **named subset** that must always be green —
+the risk, trading and automation suites — rather than everything. The failure above was on a money
+path, and that is the class worth the seconds.
+
+## Acceptance criteria
+
+- [ ] Decide: full-suite gate, named-subset gate, or leave it manual
+- [ ] If a subset is chosen, it names the money-path suites and cites the measured cost
+- [ ] The two suites fixed here stay green (they are the reason this issue exists)

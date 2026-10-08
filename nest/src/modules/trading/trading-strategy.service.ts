@@ -56,10 +56,13 @@ import { ProtocolHealthService } from '../scoring/protocol-health.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { TcsNoticeException } from '../../common/notices/tcs-notice.exception';
 import { MarketBar } from '../directives/interfaces/directive.interface';
-// ⚠️ The CANONICAL session parser. Used to NORMALISE `sessionWindow` for display, because the
-// column is stored in two forms (`london` and `["london"]`) meaning the same gate. Do not
-// hand-roll a second parser — it would drift from the one the engine enforces with.
-import { parseSessionWindow } from './session-window';
+// ⚠️ The CANONICAL session parser + serialiser (#982 — ONE owner for the storage format). Used to
+// NORMALISE `sessionWindow` for display, because the column is stored in two forms (`london` and
+// `["london"]`) meaning the same gate. Do not hand-roll a second parser — it would drift from the
+// one the engine enforces with.
+import { parseSessionWindow, serialiseSessionWindow } from './session-window';
+// #1085 — the quote-freshness refusal: a stale quote must not size an order (see the file header).
+import { checkQuoteFreshness } from '../../common/trading/quote-freshness';
 // ⚠️ #849 (2026-09-17): the three risk caps below were `process.env.MT5_MAX_*`. They are now declared
 // settings read through this resolver — see settings-registry.ts for why, and for the carried-over defaults.
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
@@ -2039,6 +2042,20 @@ export class TradingStrategyService {
           const symbolInfo = await this.mt5.getSymbolInfo(symbol);
           const symbolQuote = await this.mt5.getQuote(symbol);
 
+          // ── #1085 — a FROZEN quote must not size an order ────────────────────────────────
+          // An ABSENT quote was already refused (`price 0` → `unavailable`); a STALE one used to
+          // succeed silently and slice risk on a price that is no longer the market. The check
+          // refuses with the condition NAMED ('stale 3600s' ≠ 'no tick time' ≠ 'no quote'), and
+          // may not proceed on a freshness it could not establish. The throw lands in the inner
+          // catch below, which refuses the order and quotes the reason.
+          const quoteFreshness = checkQuoteFreshness(
+            symbolQuote,
+            await this.settings.get<number>('trading.maxQuoteAgeSeconds'),
+          );
+          if (!quoteFreshness.ok) {
+            throw new Error(`quote cannot price this order — ${quoteFreshness.reason}`);
+          }
+
           // Profit currency, most authoritative first: broker spec → an open position of this
           // symbol (MT5's own value) → the documented XXXYYY convention. Never a guess.
           const profitCurrency =
@@ -2408,8 +2425,11 @@ export class TradingStrategyService {
     name: string; symbol: string; protocolId: string;
     brokerId: string; mode: string; timeframe: string;
     baseSize: number; slPct: number; tpPct: number; minComposite: number; magic?: number;
-    /** Session gate window (see session-window.ts). null/absent = ungated. */
-    sessionWindow?: string[] | null;
+    /** Session gate window (see session-window.ts). Tags, the DECLARED `'all-hours'`, or absent.
+     *  ⚠️ `null` remains ACCEPTED here only because the update path and older callers can still
+     *  present it — the typed seed itself no longer allows it (#982) and the build gate fails on an
+     *  unfilled slot; NULL written here reads as `unfilled` on the audit, never as a choice. */
+    sessionWindow?: string[] | string | null;
     /**
      * Direction the bot may act on ('BUY' | 'SELL'). null/absent = unconstrained.
      * Required for SHORT_ONLY protocols so a seeded short bot cannot open longs.
@@ -2523,10 +2543,13 @@ export class TradingStrategyService {
         // it is true for a key that exists holding `undefined`, which is exactly the shape a
         // spread produces (`{ ...entry, maxHoldHours: undefined }`), so it would clear the field.
         if (s.sessionWindow !== undefined) {
-          // `s.sessionWindow && ...` — an entry may legitimately declare `sessionWindow: null`
-          // (ungated), and `null.length` throws. That mistake was caught by these tests.
-          desired.sessionWindow =
-            s.sessionWindow && s.sessionWindow.length ? JSON.stringify(s.sessionWindow) : null;
+          // #982 — ONE serialiser for the storage format: `'all-hours'` stores bare (the DECLARED
+          // bypass), tag arrays store as JSON, anything else stores NULL — and NULL now READS as
+          // `unfilled` on the audit (`sessionSlotKind()`), never as an implied choice. The typed
+          // seed no longer permits null; the branch survives because the update DTO can still set
+          // the column directly and this must not crash on `null.length` (the mistake the old
+          // comment here recorded).
+          desired.sessionWindow = serialiseSessionWindow(s.sessionWindow as any);
         }
         if ((s as any).requireDirection !== undefined) {
           desired.requireDirection = (s as any).requireDirection;
@@ -2654,8 +2677,9 @@ export class TradingStrategyService {
             tpPct: s.tpPct,
             minComposite: s.minComposite,
             scoringStrategyId: scoringId,
-            // Session gate — JSON array of tags, or null when ungated.
-            sessionWindow: s.sessionWindow?.length ? JSON.stringify(s.sessionWindow) : null,
+            // Session gate — JSON array of tags, `'all-hours'` (declared bypass), or null when the
+            // slot is unfilled (which the audit reports by name — #982).
+            sessionWindow: serialiseSessionWindow(s.sessionWindow as any),
             // Direction constraint. A SHORT_ONLY protocol must not be allowed to
             // open longs; null = unconstrained (legacy behaviour).
             requireDirection: (s as any).requireDirection ?? null,

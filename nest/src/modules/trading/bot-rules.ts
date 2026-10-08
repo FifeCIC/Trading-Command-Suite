@@ -205,15 +205,18 @@ export const BOT_RULES: BotRule[] = [
     caveat: '⚠️ One of FOUR cooldowns (bot, global pacing, dispatch 3s, dispatch 60s/symbol).' },
   { field: 'sessionWindow', label: 'Session window', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/session-window.ts',
-    summary: 'Gate 4.5 — tags (asian/london/us) the bot may act in. NULL = ungated (opt-in).',
+    summary: 'Gate 4.5 — tags (asian/london/us) the bot may act in. `\'all-hours\'` = declared bypass; NULL = UNFILLED (#982).',
     caveat:
-      '⚠️ NULL is ambiguous by design and measured live 2026-10-06: of the four city-news pairs ' +
-      'in forex-session-v1, ONE twin is gated and the other is not (Tokyo USDJPY=asian vs EURJPY=NULL; ' +
+      '⚠️ NULL used to be ambiguous by design — measured live 2026-10-06: of the four city-news pairs ' +
+      'in forex-session-v1, ONE twin was gated and the other was not (Tokyo USDJPY=asian vs EURJPY=NULL; ' +
       'Sydney AUDUSD=asian vs AUDJPY=NULL; Wellington NZDUSD=asian vs NZDJPY=NULL; Zurich USDCHF=london ' +
-      'vs EURCHF=NULL) — the same name resolves two ways. `session-window.ts` records that the seeded ' +
-      'city names meant the NEWS-FLOW reading, so either the gated twins enforce a clock the name ' +
-      'never meant, or the NULL twins were simply never filled. Tracked by #981 (audit) and #982 ' +
-      '(make the slot declared); do NOT un-gate or re-gate on a name without the owner.' },
+      'vs EURCHF=NULL). RESOLVED AS A CLASS (#982, 2026-10-08): NULL now reads as UNFILLED ' +
+      '(`sessionSlotKind()`, surfaced on GET /api/automation/status) while the deliberate case is the ' +
+      'positive literal `\'all-hours\'`; the seed no longer permits null and the build gate ' +
+      '`strategy-seed-session-declared.spec.ts` fails on an unfilled slot. GATE BEHAVIOUR IS ' +
+      'UNCHANGED — every no-tag form still passes. ⚠️ The TWIN DISAGREEMENT ITSELF IS STILL OPEN: the ' +
+      'NULL twins kept all-hours (behaviour-preserving); which of a twin pair is right is the OWNER\'s ' +
+      'call on the name-vs-news reading — do NOT re-gate on a name alone.' },
   { field: 'maxPyramidTiers', label: 'Max pyramid tiers', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/pyramid-policy.service.ts',
     summary: 'Scale-in cap: extra entries allowed when price is favourable. 1 = never add.' },

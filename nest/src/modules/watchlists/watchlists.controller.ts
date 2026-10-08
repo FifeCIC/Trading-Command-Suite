@@ -350,6 +350,57 @@ export class WatchlistsController {
     return { deleted: true, id };
   }
 
+  /**
+   * POST /api/watchlists/:id/symbols/:ticker — add ONE symbol to an existing watchlist.
+   *
+   * ⚠️ WHY THIS EXISTS (2026-10-08). There was a DELETE for a single symbol but no POST, so the only
+   * way to add one to an existing watchlist was `POST /api/watchlists`. **That is not a safe
+   * substitute**: `saveWatchlist()` derives the row id from the *name* it is given
+   * (`name.replace(/[^a-zA-Z0-9_-]/g,'-').toLowerCase()`), so passing a watchlist's `label` adds a
+   * DUPLICATE watchlist whenever the id is not already that label slugged — silently, with a 200.
+   *
+   * This mirrors `removeSymbol` exactly (same lookup, same tolerance for both stored shapes) so the
+   * two halves cannot drift: `symbols` is a JSON column that has held plain strings and `{ticker}`
+   * objects, and a writer that handled only one shape would report success and store nothing useful.
+   *
+   * `added: false` + `alreadyPresent: true` is reported rather than written — the caller must be able
+   * to tell "we added it" from "it was already there", because only one of those changed the row.
+   */
+  @Post(':id/symbols/:ticker')
+  @HttpCode(200)
+  async addSymbol(@Param('id') id: string, @Param('ticker') ticker: string) {
+    const wl = await this.prisma.watchlist.findUnique({ where: { id } });
+    if (!wl) throw new NotFoundException(`Watchlist "${id}" not found`);
+
+    const upperTicker = (ticker || '').trim().toUpperCase();
+    // Matches this file's own convention for a bad body (`saveWatchlist` returns `{ error }`
+    // rather than throwing) so the caller sees the reason instead of a bare 400.
+    if (!upperTicker) return { added: false, error: 'ticker is required' };
+
+    const symbols = (Array.isArray(wl.symbols) ? wl.symbols : []) as Array<Record<string, unknown> | string>;
+    const has = (s: Record<string, unknown> | string) => {
+      if (typeof s === 'string') return s.toUpperCase() === upperTicker;
+      if (isPlainObject(s) && typeof s.ticker === 'string') return s.ticker.toUpperCase() === upperTicker;
+      return false;
+    };
+
+    if (symbols.some(has)) {
+      return { added: false, alreadyPresent: true, id, ticker: upperTicker, count: symbols.length };
+    }
+
+    // ⚠️ APPENDED AS A PLAIN STRING. `GET /api/watchlists/:id` returns `symbols` as strings today
+    // (measured: 97 entries, first "ACHR"), and `removeSymbol` compares against both shapes. Writing
+    // the string form keeps a single convention rather than introducing a third.
+    const next = [...symbols, upperTicker];
+    // ⚠️ `as any` IS LOAD-BEARING, not laziness. Prisma's generated JSON input type rejects a
+    // `(string | Record<string, unknown>)[]` union because it cannot prove an index signature, and
+    // this column genuinely holds both shapes (see the DELETE below, which tolerates both). The cast
+    // states that reality; narrowing the array to one shape would instead make the writer silently
+    // incompatible with rows the reader still supports.
+    await this.prisma.watchlist.update({ where: { id }, data: { symbols: next as any } });
+    return { added: true, id, ticker: upperTicker, count: next.length };
+  }
+
   /** DELETE /api/watchlists/:id/symbols/:ticker — remove a single symbol */
   @Delete(':id/symbols/:ticker')
   async removeSymbol(@Param('id') id: string, @Param('ticker') ticker: string) {

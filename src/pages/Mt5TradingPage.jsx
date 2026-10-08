@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
+import { PAGE_WIDTHS, readPageWidth } from '../core/page-width';
 import './mt5-trading-page.css';
 
 const PLATFORMS = [
@@ -15,14 +16,16 @@ export default function Mt5TradingPage() {
   const [platform, setPlatform] = useState('mt5');
 
   // ── Layout ──
-  const [layoutWidth, setLayoutWidth] = useState('desktop'); // 'full' | '4k' | 'desktop' | 'laptop' | 'tablet'
-  const LAYOUT_WIDTHS = {
-    full: { label: 'Full Width', maxWidth: 'none' },
-    '4k': { label: '4K', maxWidth: '2560px' },
-    desktop: { label: 'Desktop', maxWidth: '1440px' },
-    laptop: { label: 'Laptop', maxWidth: '1200px' },
-    tablet: { label: 'Tablet', maxWidth: '960px' },
-  };
+  // ⚠️ THE WIDTH CONTROL MOVED TO SCREEN OPTIONS (owner direction, 2026-10-08). It was an in-page
+  // bar (`.mt5u-layout-bar`) — a page-layout preference sitting somewhere different from every other
+  // page's settings. It now lives in the global Screen Options rail, under the key declared in
+  // src/core/page-width.js, which the registry imports too so the two cannot disagree.
+  //
+  // Read DURING RENDER, not into state: the Screen Options rail writes localStorage and then closes,
+  // which re-renders this page and picks the new value up. This mirrors ScreenerPage's readTopPicks().
+  // Do NOT convert it to a mount-time effect — the width would then only change on a full reload,
+  // which reads as "the setting does nothing".
+  const layoutWidth = readPageWidth();
 
   // ── Data State ──
   const [account, setAccount] = useState(null);
@@ -322,21 +325,8 @@ export default function Mt5TradingPage() {
   }
 
   return (
-    <div className="mt5u-page" style={{ '--page-max-width': LAYOUT_WIDTHS[layoutWidth].maxWidth }}>
-      {/* ── Layout Width Toggle ── */}
-      <div className="mt5u-layout-bar">
-        <span className="mt5u-layout-label">Width:</span>
-        {Object.entries(LAYOUT_WIDTHS).map(([key, val]) => (
-          <button
-            key={key}
-            className={`mt5u-layout-btn ${layoutWidth === key ? 'active' : ''}`}
-            onClick={() => setLayoutWidth(key)}
-            title={val.maxWidth === 'none' ? 'Use all available screen width' : `Max width: ${val.maxWidth}`}
-          >
-            {val.label}
-          </button>
-        ))}
-      </div>
+    <div className="mt5u-page" style={{ '--page-max-width': PAGE_WIDTHS[layoutWidth].maxWidth }}>
+      {/* Width is set in the global Screen Options rail — see the note on `layoutWidth` above. */}
 
       {/* ── Header ── */}
       <div className="mt5u-header">

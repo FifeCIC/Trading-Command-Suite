@@ -216,6 +216,20 @@ function SummaryBanner({ positions }) {
   const best = positions.reduce((a, b) => (b.pnl || 0) > (a.pnl || 0) ? b : a, positions[0]);
   const worst = positions.reduce((a, b) => (b.pnl || 0) < (a.pnl || 0) ? b : a, positions[0]);
 
+  // ── Added stats (owner request, 2026-10-08: "there is probably more stats") ──
+  // Each is DERIVED FROM WHAT IS ALREADY ON THE PAGE — no new fetch and no new field, so a reader
+  // can reconcile every number against the cards below it.
+  //
+  // ⚠️ `decided` EXCLUDES BREAK-EVEN. A position with exactly 0 P&L is neither a win nor a loss, and
+  // counting it in the denominator would report a win rate that is lower than what was won — the
+  // same shape of error as the score denominator in #1090.
+  const decided = winners + losers;
+  const winRate = decided > 0 ? Math.round((winners / decided) * 100) : null;
+  // ⚠️ THE SAME 20% THRESHOLD THE RISK BAR DRAWS (RiskBar's title and .pm-risk-threshold). Counting
+  // above it is the point of drawing it; until now the line was on every card and counted nowhere.
+  const aboveRiskLine = positions.filter(p => (p.riskPct || 0) > 20).length;
+  const oldest = positions.reduce((a, b) => ((b.daysHeld || 0) > (a.daysHeld || 0) ? b : a), positions[0]);
+
   if (positions.length === 0) return null;
 
   return (
@@ -243,6 +257,28 @@ function SummaryBanner({ positions }) {
         <span className="pm-summary-label">Losers</span>
         <span className="pm-summary-value pm-loss">{losers}</span>
       </div>
+      {winRate != null && (
+        <div className="pm-summary-stat">
+          <span className="pm-summary-label">Win rate</span>
+          <span className={`pm-summary-value ${winRate >= 50 ? 'pm-profit' : 'pm-loss'}`} title={`${winners} of ${decided} decided positions. Break-even positions are excluded.`}>
+            {winRate}%
+          </span>
+        </div>
+      )}
+      <div className="pm-summary-stat">
+        <span className="pm-summary-label">Above 20% risk</span>
+        <span className={`pm-summary-value ${aboveRiskLine > 0 ? 'pm-loss' : 'pm-profit'}`} title="Positions past the 20% line the risk bar on each card draws.">
+          {aboveRiskLine}
+        </span>
+      </div>
+      {oldest && (
+        <div className="pm-summary-stat">
+          <span className="pm-summary-label">Oldest</span>
+          <span className="pm-summary-value" title={`${oldest.symbol} has been held ${oldest.daysHeld} days.`}>
+            {oldest.symbol} · {oldest.daysHeld}d
+          </span>
+        </div>
+      )}
       {best && (
         <div className="pm-summary-stat">
           <span className="pm-summary-label">Best</span>
@@ -468,6 +504,25 @@ export default function PositionsMonitorPage() {
 
       {/* Portfolio Summary Banner */}
       <SummaryBanner positions={allPositions} />
+
+      {/* ⚠️ `gaps` WAS FETCHED AND NEVER RENDERED (fixed 2026-10-08). Every bridge fan-out returns a
+          `gaps` array alongside the positions; this page stored it in the query result and drew
+          nothing with it. That is the "plausible output, no error" shape this repo keeps
+          re-finding — the page looks complete while a broker that did not answer is silently
+          missing, so its positions read as ABSENT rather than UNKNOWN.
+
+          Rendered only when non-empty, so a healthy fan-out adds no noise; the wording says
+          "may be missing" rather than "is missing", because a gap proves the broker did not answer,
+          not what it held. */}
+      {Array.isArray(mt5Query.data?.gaps) && mt5Query.data.gaps.length > 0 && (
+        <div className="pm-warning" role="status">
+          ⚠ {mt5Query.data.gaps.length} gap{mt5Query.data.gaps.length === 1 ? '' : 's'} in the broker
+          fan-out — the positions below may be INCOMPLETE:{' '}
+          {mt5Query.data.gaps
+            .map((g) => g?.brokerLabel || g?.brokerId || g?.reason || g?.message || JSON.stringify(g))
+            .join(', ')}
+        </div>
+      )}
 
       {/* T212 rate-limit / fetch warning */}
       {t212Query.data === null && !t212Query.isLoading && (

@@ -1513,8 +1513,10 @@ model TradingStrategy {
   cooldownMinutes Int    @default(5)
   // Session gate (2026-09-10) — declared market session(s) this bot may act in.
   // JSON array or comma list of tags: 'asian' | 'london' | 'us' (see session-window.ts).
-  // NULL / empty = UNGATED: the bot may act any time. The gate is opt-in, so an
-  // existing strategy's behaviour is unchanged until it declares a window.
+  // 'all-hours' (synonym 'bypass') = DECLARED bypass; NULL / empty = UNFILLED (#982).
+  // The GATE still passes every no-tag form (ungated) — NULL is now a VISIBLE "nobody chose",
+  // not an implied opt-in. Enforcement: strategy-seed-session-declared.spec.ts (prebuild jest list)
+  // for the seed; sessionSlotKind() surfaces live rows on GET /api/automation/status.
   sessionWindow String?  @db.VarChar(120)
   // EXIT-side boundary (#928) — `'HH:MM'` in UTC: past this time the bot must not HOLD.
   //

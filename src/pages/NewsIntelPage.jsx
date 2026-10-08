@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import RegisterSymbolOverlay from '../components/RegisterSymbolOverlay.jsx';
 import './news-intel.css';
 
 const DEFAULT_CATEGORIES = [
@@ -21,6 +22,10 @@ export default function NewsIntelPage() {
   const [sourceFilter, setSourceFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
+  // The shared symbol overlay is opened from an expanded article's meta (owner request, 2026-10-08:
+  // "add ability to register the symbol"). It holds a TICKER, not an article id — the same overlay
+  // the Earnings Calendar uses, so there is one implementation to keep working.
+  const [registerSym, setRegisterSym] = useState(null);
   const [importing, setImporting] = useState(false);
   const qc = useQueryClient();
 
@@ -248,6 +253,15 @@ export default function NewsIntelPage() {
               key={article.id}
               className={`ni-article ${isExpanded ? 'ni-expanded' : ''}`}
               onClick={() => setExpandedId(isExpanded ? null : article.id)}
+              /* ⚠️ KEYBOARD PATH (accessibility policy): a pointer-only article is unopenable without
+                 a mouse. `tabIndex` + Enter/Space without changing the element's role. */
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setExpandedId(isExpanded ? null : article.id);
+                }
+              }}
             >
               <div className="ni-article-header">
                 <div className="ni-article-meta">
@@ -285,6 +299,21 @@ export default function NewsIntelPage() {
                     {article.url && article.url !== '#' && (
                       <span><a href={article.url} target="_blank" rel="noopener noreferrer">Open source ↗</a></span>
                     )}
+                    {/* Registering matters MORE for news than elsewhere (owner's own note): a
+                        catalyst names a symbol that may not be onboarded, and the reader is looking
+                        at it right now. The cost of not offering it here is that the reader has to
+                        remember the ticker and go somewhere else. */}
+                    {article.symbol && (
+                      <span>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => setRegisterSym(article.symbol)}
+                        >
+                          Register {article.symbol}…
+                        </button>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -293,6 +322,10 @@ export default function NewsIntelPage() {
         })}
       </div>
       </>
+      )}
+
+      {registerSym && (
+        <RegisterSymbolOverlay ticker={registerSym} onClose={() => setRegisterSym(null)} />
       )}
     </div>
   );

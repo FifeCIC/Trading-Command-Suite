@@ -288,7 +288,7 @@ export default function MetaStackStatusPage() {
           </h3>
           {freshScoreResult && (
             <div className="mss-fresh-result">
-              Fresh scoring complete — {freshScoreResult?.ranked?.find(r => r.ticker === PRIORITY_SYMBOL)?.score ?? '?'}/100, signal: {freshScoreResult?.ranked?.find(r => r.ticker === PRIORITY_SYMBOL)?.signal ?? '?'}
+              Fresh scoring complete — {freshScoreResult?.ranked?.find(r => r.ticker === PRIORITY_SYMBOL)?.score ?? '?'}, signal: {freshScoreResult?.ranked?.find(r => r.ticker === PRIORITY_SYMBOL)?.signal ?? '?'}
             </div>
           )}
           {priorityResult ? (
@@ -296,7 +296,22 @@ export default function MetaStackStatusPage() {
               <div className="mss-priority-score-row">
                 <div className="mss-priority-score">
                   <div className="mss-priority-score-value">{priorityResult.score}</div>
-                  <div className="mss-priority-score-label">Score / {priorityResult.maxPossibleScore || 100}</div>
+                  {/* ⚠️ THIS SAID "Score / {maxPossibleScore || 100}" (removed 2026-10-08). Measured:
+                      the ranked payload reports `maxPossibleScore: 100` for EVERY row while the same
+                      row's `score` exceeds it (XAUUSD = 106) and the protocol declares `maxScore: 1010`
+                      — so the printed denominator was wrong, and the `|| 100` also meant a MISSING
+                      field silently rendered as 100. The real maximum is not on this payload, so this
+                      labels the value for what it is and shows the API's own normalised percentage
+                      instead of inventing a base. Full measurements: #1090. */}
+                  <div
+                    className="mss-priority-score-label"
+                    title="Raw composite score. The percentage is the API's own normalisedScore — this is not a score out of 100."
+                  >
+                    Composite score
+                    {typeof priorityResult.normalizedScore === 'number'
+                      ? ` · ${priorityResult.normalizedScore.toFixed(1)}% normalised`
+                      : ''}
+                  </div>
                 </div>
                 <div className="mss-priority-signal-wrap">
                   <span className={`mss-priority-signal mss-signal--${(priorityResult.signal || 'HOLD').toLowerCase()}`}>

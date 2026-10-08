@@ -67,7 +67,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import TypeTag from '../components/TypeTag';
 import { StrategyBots, StrategyWarnings, DriftNote } from '../components/StrategyBits';
 import { useStrategyRegistry } from '../hooks/useStrategyRegistry';
-import { usePersistentChoice } from '../hooks/usePersistentState';
+import { usePersistentChoice, usePersistentState } from '../hooks/usePersistentState';
 import { pnlClass, pnlSign } from '../core/signal-utils.js';
 import NoticeBlock from '../components/NoticeBlock';
 import '../core/forms.css'; // canonical Form System (.ff-seg) — the List | Table toggle
@@ -646,6 +646,51 @@ export default function AbStrategiesPage() {
   // The preference persists; the P&L fetch only runs while the table is open.
   const [view, setView] = usePersistentChoice('abstrategies:view', 'list', ['list', 'table']);
   const [deltaSort, setDeltaSort] = usePersistentChoice('abstrategies:sort', 'desc', ['desc', 'asc']);
+  // ── List-view filter and ordering (owner request, 2026-10-08) ──
+  // The owner asked the pair row to "display the difference between A and B", with "the ability to
+  // order by that value and search". The DIFFERENCE here is `p.diffs.length` — how many
+  // configuration fields differ — which is what the row's `≠ n` chip counts. It is NOT the Table
+  // view's delta, which is realised profit (B − A); the two are different questions and the
+  // controls are labelled so they cannot be confused.
+  //
+  // ⚠️ `usePersistentState`, not React's `useState`: this page imports no `useState` at all, because
+  // every control on it survives a reload. A plain `useState` here would be the only control that
+  // silently forgets — the kind of one-off difference nobody notices until they compare pages.
+  const [listSearch, setListSearch] = usePersistentState('abstrategies:search', '');
+  const [listSort, setListSort] = usePersistentChoice('abstrategies:listsort', 'closest', ['closest', 'different']);
+
+  /**
+   * listGroups — the LIST view's groups, filtered by `listSearch` and ordered by difference.
+   *
+   * ⚠️ THE ORDERING IS TWICE OVER, and both halves matter. Pairs are sorted WITHIN their symbol
+   * group, and the groups themselves are ordered by their most (or least) different pair. Sorting
+   * only within a group would leave the groups in symbol order, so the pair the reader is looking
+   * for could still be three screens down — which is the complaint the ordering answers.
+   *
+   * ⚠️ A group with no matching pair is DROPPED, and the counts in the meta line are reported
+   * against `pairGroups.length` so the reader can see the filter is active. An empty group header
+   * would read as "this symbol has no pairs", which is a different and wrong statement.
+   */
+  const listGroups = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    const hit = (p, symbol) =>
+      !q ||
+      symbol.toLowerCase().includes(q) ||
+      labelFor(p.a.strategyKey).toLowerCase().includes(q) ||
+      labelFor(p.b.strategyKey).toLowerCase().includes(q);
+    const edgeOf = listSort === 'different' ? Math.max : Math.min;
+    return pairGroups
+      .map((g) => ({ ...g, pairs: g.pairs.filter((p) => hit(p, g.symbol)) }))
+      .filter((g) => g.pairs.length > 0)
+      .map((g) => ({
+        ...g,
+        pairs: [...g.pairs].sort((x, y) =>
+          listSort === 'different' ? y.diffs.length - x.diffs.length : x.diffs.length - y.diffs.length,
+        ),
+        edge: edgeOf(...g.pairs.map((p) => p.diffs.length)),
+      }))
+      .sort((x, y) => (listSort === 'different' ? y.edge - x.edge : x.edge - y.edge));
+  }, [pairGroups, listSearch, listSort, labelFor]);
   const perfQuery = useQuery({
     queryKey: ['bot-performance'],
     queryFn: () => apiGet(API_BOT_PERF),
@@ -821,12 +866,45 @@ export default function AbStrategiesPage() {
                   Table
                 </button>
               </div>
+              {/* Owner request 2026-10-08 — "the ability to order by that value and search". Both
+                  live in the head row beside the List | Table toggle, because that is where the
+                  owner pointed when asking for them. */}
+              <input
+                type="search"
+                className="ff-input"
+                placeholder="Filter by symbol or strategy…"
+                aria-label="Filter strategy pairs by symbol or strategy name"
+                value={listSearch}
+                onChange={(e) => setListSearch(e.target.value)}
+              />
+              <div className="ff-seg" role="group" aria-label="Order strategy pairs by difference">
+                <button
+                  type="button"
+                  className={`ff-seg-btn ${listSort === 'closest' ? 'ff-seg-btn--active' : ''}`}
+                  aria-pressed={listSort === 'closest'}
+                  onClick={() => setListSort('closest')}
+                  title="Order by how few configuration fields differ between A and B"
+                >
+                  Closest first
+                </button>
+                <button
+                  type="button"
+                  className={`ff-seg-btn ${listSort === 'different' ? 'ff-seg-btn--active' : ''}`}
+                  aria-pressed={listSort === 'different'}
+                  onClick={() => setListSort('different')}
+                  title="Order by how many configuration fields differ between A and B"
+                >
+                  Most different
+                </button>
+              </div>
             </div>
             <p className={styles.listMeta}>
               {totalPairs} eligible {totalPairs === 1 ? 'pair' : 'pairs'} · every pair trades ONE
               symbol — the playbook is what may differ · {view === 'table'
                 ? 'ordered by realised profit difference (B − A) — click Δ to flip'
-                : 'closest matches first'}
+                : listSort === 'different'
+                  ? `ordered by configuration difference — most different first (${listGroups.length} of ${pairGroups.length} symbols shown)`
+                  : `ordered by configuration difference — closest first (${listGroups.length} of ${pairGroups.length} symbols shown)`}
             </p>
             {view === 'table' ? (
               <PairTable
@@ -839,7 +917,12 @@ export default function AbStrategiesPage() {
               />
             ) : (
               <>
-            {pairGroups.map((g) => (
+            {listGroups.length === 0 && (
+              <p className={styles.listMeta}>
+                No pair matches “{listSearch}”. Clear the filter to see all {totalPairs}.
+              </p>
+            )}
+            {listGroups.map((g) => (
               <div className={styles.pairGroup} key={g.symbol}>
                 <div className={styles.groupHead}>
                   <span className={styles.groupSymbol}>{g.symbol}</span>
@@ -852,8 +935,12 @@ export default function AbStrategiesPage() {
                     <PairSide side="a" strategy={p.a} name={labelFor(p.a.strategyKey)} />
                     <PairSide side="b" strategy={p.b} name={labelFor(p.b.strategyKey)} />
                     <div className={styles.pairTail}>
+                      {/* Owner request 2026-10-08 — the row should "display the difference between A
+                          and B". The count alone read as a value; naming the fields makes the pair
+                          legible without opening it. The count is kept because it is the sort key
+                          this list now orders by. */}
                       <span className={styles.diffChip} title={`differs in: ${p.diffs.join(', ')}`}>
-                        ≠ {p.diffs.length}
+                        ≠ {p.diffs.length} · {p.diffs.join(', ')}
                       </span>
                       <Link
                         className={styles.officialLink}

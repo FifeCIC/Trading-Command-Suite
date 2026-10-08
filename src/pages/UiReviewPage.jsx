@@ -225,6 +225,23 @@ export default function UiReviewPage() {
 
   const hiddenWanted = rows.filter((r) => entries[r.key]?.hide === true).length;
 
+  /**
+   * Applied-status tallies — the headline number for *"how well did agentic AI follow my instructions"*.
+   *
+   * ⚠️ Each count is over JUDGED rows, not all rows. "3 of 12 applied" and "3 of 200 applied" say
+   * different things, and only the second invites the wrong conclusion. A row nobody has judged yet is
+   * counted in neither half, so the ratio cannot be diluted by rows the owner has not reached.
+   */
+  const judged = (field) =>
+    rows.filter((r) => {
+      const v = entries[r.key]?.[field];
+      return v === true || v === false;
+    });
+  const oldJudged = judged('noteApplied');
+  const newJudged = judged('noteNewApplied');
+  const oldApplied = oldJudged.filter((r) => entries[r.key].noteApplied === true).length;
+  const newApplied = newJudged.filter((r) => entries[r.key].noteNewApplied === true).length;
+
   return (
     <div className="uir-page">
       <header className="uir-header">
@@ -246,6 +263,12 @@ export default function UiReviewPage() {
         <span><b>{answered}</b> answered</span>
         <span><b>{rows.length - answered}</b> to go</span>
         <span><b>{hiddenWanted}</b> marked hide</span>
+        <span title="First round of comments: applied, out of those judged so far">
+          <b>{oldApplied}</b> of {oldJudged.length} old changes applied
+        </span>
+        <span title="Second round of comments: applied, out of those judged so far">
+          <b>{newApplied}</b> of {newJudged.length} new changes applied
+        </span>
         <span className="uir-summary-note">
           You are seeing <b>{visible.length}</b> of {rows.length} (filters applied)
         </span>
@@ -300,9 +323,21 @@ export default function UiReviewPage() {
             </th>
             <th
               scope="col"
+              title="Agent-reported: has the first round been applied? ✅ appplied · ❌ outstanding · — not assessed yet (which is NOT the same as outstanding). Set via the API by the agent that did the work."
+            >
+              Old Applied?
+            </th>
+            <th
+              scope="col"
               title="New comments, for the next round. Stored separately (`noteNew`) so the first round survives as the baseline."
             >
               New Changes I suggest
+            </th>
+            <th
+              scope="col"
+              title="Agent-reported: has the second round been applied? ✅ applied · ❌ outstanding · — not assessed yet. Set via the API."
+            >
+              New Applied?
             </th>
             <th scope="col">Saved</th>
           </tr>
@@ -316,7 +351,7 @@ export default function UiReviewPage() {
               <Fragment key={r.key}>
                 {newArea ? (
                   <tr className="uir-area-row" key={`area-${r.area}`}>
-                    <th colSpan={8} scope="colgroup">{r.area}</th>
+                    <th colSpan={10} scope="colgroup">{r.area}</th>
                   </tr>
                 ) : null}
                 <tr key={r.key}>
@@ -389,6 +424,27 @@ export default function UiReviewPage() {
                     />
                   </td>
                   <td>
+                    {/* ⚠️ AN INDICATOR, NOT A CONTROL. Owner, 2026-10-08: *"I meant an indicator for
+                        agentic AI - not a menu for the user to select."* Nothing here is clickable —
+                        the value is written through the API by whichever agent did the work, and this
+                        cell only reports it. ⚠️ The three states must stay visually distinct: `—`
+                        (nobody has assessed this round yet) is NOT the same as ❌ (assessed, and the
+                        work is outstanding), and the owner is using exactly that difference to see what
+                        is left. */}
+                    <span
+                      className={`uir-applied uir-applied--${e.noteApplied === true ? 'done' : e.noteApplied === false ? 'outstanding' : 'unassessed'}`}
+                      title={
+                        e.noteApplied === true
+                          ? 'An agent reports the first round of comments has been applied'
+                          : e.noteApplied === false
+                            ? 'Assessed by an agent — this round is NOT fully applied'
+                            : 'Not assessed yet — no agent has reported on this round'
+                      }
+                    >
+                      {e.noteApplied === true ? '✅ applied' : e.noteApplied === false ? '❌ outstanding' : '—'}
+                    </span>
+                  </td>
+                  <td>
                     <input
                       type="text"
                       className="uir-note uir-note--new"
@@ -397,6 +453,21 @@ export default function UiReviewPage() {
                       placeholder="next round"
                       onChange={(ev) => saveNoteDebounced(r.key, 'noteNew', ev.target.value)}
                     />
+                  </td>
+                  <td>
+                    {/* Same indicator, second round — see the Old column above for why it is not a control. */}
+                    <span
+                      className={`uir-applied uir-applied--${e.noteNewApplied === true ? 'done' : e.noteNewApplied === false ? 'outstanding' : 'unassessed'}`}
+                      title={
+                        e.noteNewApplied === true
+                          ? 'An agent reports the second round of comments has been applied'
+                          : e.noteNewApplied === false
+                            ? 'Assessed by an agent — this round is NOT fully applied'
+                            : 'Not assessed yet — no agent has reported on this round'
+                      }
+                    >
+                      {e.noteNewApplied === true ? '✅ applied' : e.noteNewApplied === false ? '❌ outstanding' : '—'}
+                    </span>
                   </td>
                   <td className={`uir-status uir-status--${st || 'idle'}`}>
                     {st === 'saving' ? 'saving…' : st === 'saved' ? 'saved' : st === 'typing' ? '…' : st === 'error' ? 'FAILED' : ''}

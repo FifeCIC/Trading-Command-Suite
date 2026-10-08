@@ -167,26 +167,10 @@
 .mt5u-close-all { margin-left: auto !important; margin-right: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.7rem; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 5px; color: var(--color-loss); cursor: pointer; font-weight: 600; }
 .mt5u-close-all:hover { background: rgba(239,68,68,.25); }
 
-/* ── Layout Width Toggle ── */
-.mt5u-layout-bar {
-  display: flex; align-items: center; gap: 6px; margin-bottom: 0.75rem;
-  padding: 6px 12px; background: var(--panel, var(--panel));
-  border: 1px solid var(--line, var(--line)); border-radius: 8px;
-}
-.mt5u-layout-label {
-  font-size: 0.68rem; color: var(--ink-soft, var(--color-muted));
-  text-transform: uppercase; margin-right: 4px;
-}
-.mt5u-layout-btn {
-  padding: 3px 10px; border: 1px solid var(--line, var(--line)); border-radius: 5px;
-  background: none; color: var(--ink-soft, var(--ink-soft)); font-size: 0.7rem;
-  cursor: pointer; font-family: inherit; transition: all 0.15s;
-}
-.mt5u-layout-btn:hover { border-color: var(--accent, var(--color-accent-blue)); color: var(--ink, var(--ink)); }
-.mt5u-layout-btn.active {
-  background: rgba(59,130,246,0.15); color: var(--accent, var(--color-accent-blue));
-  border-color: var(--accent, var(--color-accent-blue));
-}
+/* ── `.mt5u-layout-bar` / `-label` / `-btn` were DELETED 2026-10-08 ──
+   The width control moved to the global Screen Options rail (src/core/page-width.js).
+   The rules went with the markup: leaving them would describe a control that no longer
+   exists, and the next reader would hunt for its `mt5u-layout-bar` element. */
 
 .mt5u-table-wrap { padding: 0; overflow-x: auto; }
 

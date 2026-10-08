@@ -99,6 +99,12 @@ const ALIASES: Record<string, SessionTag | null> = {
   frankfurt: 'london', paris: 'london',
   us: 'us', usa: 'us', newyork: 'us', ny: 'us', america: 'us',
   always: null, any: null, '24/7': null, '24h': null, none: null,
+  // ── DECLARED all-hours (#982) ──
+  // The EXPLICIT positive choice, distinguishable from an unfilled slot. `NULL` stopped meaning
+  // "opt-in" and now reads as UNFILLED (see sessionSlotKind below); these words are how a bot says
+  // "I may act at any hour" on purpose. Same gate semantics as the legacy null-aliases above
+  // (no tag ⇒ ungated) — the difference is VISIBILITY, not behaviour.
+  'all-hours': null, bypass: null,
 };
 
 /**
@@ -335,6 +341,149 @@ export function describeSessionWindow(raw: unknown): string {
   const tags = parseSessionWindow(raw);
   if (tags.length === 0) return 'any session';
   return tags.map((t) => BY_TAG.get(t)?.name ?? t).join(' / ');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE PER-BOT STATE RECORD (#981) — "what is this bot's session state RIGHT NOW?"
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ⚠️ WHY THIS EXISTS — THE AUDIT THAT COULD NEVER FIRE
+// ---------------------------------------------------
+// `auditNameVsWindow()` was written to catch a bot whose NAME implies a session window its CONFIG
+// does not declare. It was called from ONE place: inside `logSessionSkip()`, which only runs when
+// `checkSessionWindow()` returns a SKIP. Measured 2026-09-23 — and this is the defect #981 names:
+//
+//     sessionWindow: NULL  →  ungated (documented opt-in)  →  checkSessionWindow returns ok
+//                          →  no skip logged               →  audit NEVER runs
+//
+// So the check written to catch an unfilled slot was structurally unable to observe one. Three bots
+// sat with `sessionWindow = NULL` while their names implied `asian`/`london` — "Sydney AUDJPY
+// Session" opened a position 14-17 minutes before the US cash open, carrying a 298-minute-old
+// signal, and nothing on any surface said why.
+//
+// THE FIX IS A SEPARATE, PER-TICK EVALUATION over EVERY active bot — gated, ungated, or open —
+// recorded on the loop's per-bot state and exposed via `GET /api/automation/status`. The gate
+// itself is untouched: this function only CLASSIFIES, it never changes a bot's trading hours
+// (the same boundary `auditNameVsWindow()` draws for itself).
+//
+// ⚠️ `gated: false` is NOT the same as "the audit found nothing". Three distinct readings are kept
+// apart on purpose, because collapsing them is how a NULL slot hid for weeks:
+//   • `gated: false`, `reason: 'ungated — no session window declared'`  → the slot is EMPTY
+//   • `gated: false`, `reason: 'within window (...)'`                   → declared, and open now
+//   • `gated: true`,  `reason: 'outside ...'`                           → declared, and shut now
+
+export interface BotWindowState {
+  strategyId: string;
+  name: string;
+  symbol: string;
+  reason: string;
+  allowed: SessionTag[];
+  active: SessionTag[];
+  nameWindowAgreement: NameWindowAgreement;
+  nameWindowNote: string;
+  /** True when the session gate is holding this bot shut at `at`. */
+  gated: boolean;
+  /** Machine-readable slot state — see `sessionSlotKind()` (#982). */
+  slotKind: SessionSlotKind;
+  /** False ONLY for `slotKind: 'unfilled'` — a deliberate declaration of any kind is `true`. */
+  declared: boolean;
+  /** ISO timestamp the state was computed — so a stale record is visible as stale. */
+  at: string;
+}
+
+/**
+ * The four readings of a stored `sessionWindow` value (#982).
+ *
+ * ── DECISION (2026-10-08, primary) ──
+ * WHAT:      `NULL` stops meaning "deliberately all-hours (opt-in)" and becomes `unfilled`.
+ *            `'all-hours'` (synonym `'bypass'`) is the DECLARED bypass value. The gate itself is
+ *            UNCHANGED: every no-tag form still passes (ungated) — this separates two states that
+ *            were previously indistinguishable, it does not move a trading boundary.
+ * WHY:       #982 — NULL carried both "I chose any hour" and "nobody filled this in", with no error
+ *            either way. Measured 2026-10-06: four city-named TWIN bots disagree inside one
+ *            protocol (USDJPY gated `asian` vs EURJPY NULL; …), and nothing could say which NULL
+ *            was intent and which was an omission.
+ * INSTEAD OF: Editing trading hours — inferring windows for the NULL twins would have changed
+ *            gating on a guess about what a NAME meant (#759 forbids exactly that).
+ * REVERSE BY: Reverting the seed entries to `null` and dropping `'all-hours'`/`'bypass'` from
+ *            ALIASES; the gate behaviour is identical in both directions.
+ * REGISTER:  docs/SETTLED-DECISIONS.md, row 70
+ * GUARD:     nest/src/modules/trading/strategy-seed-session-declared.spec.ts (in prebuild)
+ */
+export type SessionSlotKind = 'tags' | 'all-hours' | 'unfilled' | 'unreadable';
+
+/** The canonical DECLARED all-hours value — what the seed and UI write (#982). */
+export const ALL_HOURS_VALUE = 'all-hours';
+
+/**
+ * Classify a stored `sessionWindow` value (#982).
+ *
+ * ⚠️ `unreadable` is a FOURTH state on purpose. An unknown word used to be silently dropped and the
+ * bot read as ungated — the same shape as any other undeclared read. A value nobody can parse is
+ * not a declaration, and saying so is cheaper than discovering it as a trading surprise.
+ */
+export function sessionSlotKind(raw: unknown): SessionSlotKind {
+  if (raw === null || raw === undefined) return 'unfilled';
+  const s = String(raw).trim();
+  if (s === '') return 'unfilled';
+  if (parseSessionWindow(raw).length > 0) return 'tags';
+  if (s === '[]') return 'unfilled'; // an empty array is a non-declaration, same as NULL
+  const word = s.toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(ALIASES, word) && ALIASES[word] === null) {
+    return 'all-hours';
+  }
+  return 'unreadable';
+}
+
+/**
+ * Serialise a seed/API value for `trading_strategy.sessionWindow` (#982).
+ * ONE owner for the storage format: `'all-hours'` stores bare; tag arrays store as JSON; anything
+ * else stores NULL — and NULL is now visible as `unfilled`, never as an implied choice.
+ */
+export function serialiseSessionWindow(raw: SessionTag[] | typeof ALL_HOURS_VALUE | null | undefined): string | null {
+  if (raw === ALL_HOURS_VALUE) return ALL_HOURS_VALUE;
+  if (Array.isArray(raw) && raw.length > 0) return JSON.stringify(raw);
+  return null;
+}
+
+/**
+ * Compute one active bot's session state for the status surface (#981).
+ * Pure: no DI, no Prisma, no clock — the caller passes `at`.
+ */
+export function botWindowState(
+  strategy: { id?: unknown; name?: unknown; symbol?: unknown; sessionWindow?: unknown },
+  at: Date = new Date(),
+): BotWindowState {
+  const strategyId = String(strategy?.id ?? '');
+  const name = String(strategy?.name ?? strategyId);
+  const symbol = String(strategy?.symbol ?? '');
+  const sess = checkSessionWindow(strategy?.sessionWindow, at);
+  const audit = auditNameVsWindow(strategy?.name, strategy?.sessionWindow);
+  const gated = !sess.ok;
+  const slotKind = sessionSlotKind(strategy?.sessionWindow);
+  const reason = gated
+    ? sess.reason ?? 'session closed'
+    : slotKind === 'unfilled'
+      ? `undecided — the session slot was never filled (NULL): declare a window or '${ALL_HOURS_VALUE}'`
+      : slotKind === 'all-hours'
+        ? 'all-hours (declared bypass) — no clock is enforced'
+        : slotKind === 'unreadable'
+          ? `unreadable session window ${JSON.stringify(String(strategy?.sessionWindow))} — treated as ungated; fix the value`
+          : `within window (${sess.active.join('/')})`;
+  return {
+    strategyId,
+    name,
+    symbol,
+    reason,
+    allowed: sess.allowed,
+    active: sess.active,
+    nameWindowAgreement: audit.agreement,
+    nameWindowNote: audit.note,
+    gated,
+    slotKind,
+    declared: slotKind !== 'unfilled',
+    at: at.toISOString(),
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════

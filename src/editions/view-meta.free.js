@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 41 of 114 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 42 of 113 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -261,6 +261,14 @@ export const VIEW_META = {
     label: "Setup & Diagnostics",
     file: "src/pages/SetupWizardPage.jsx",
     css: "src/pages/setup-wizard.css",
+    api: [],
+  },
+  "/status/platform-comparisons": {
+    tier: "free",
+    review: "approved",
+    label: "API Comparisons",
+    file: "src/pages/PlatformComparisonsPage.jsx",
+    css: "src/pages/platform-comparisons.css",
     api: [],
   },
   "/trading/mt5-trading": {

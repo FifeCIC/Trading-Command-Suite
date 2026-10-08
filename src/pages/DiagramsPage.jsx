@@ -1750,6 +1750,39 @@ const DIAGRAMS = [
   },
 ];
 
+/* ── Diagram grouping and ORDER (owner request, 2026-10-08) ────────────────────────
+   Owner: *"I would like to group and order diagrams that can be chained. So many different groups for
+   selecting and flicking through the diagrams for that group, in order as they apply in code."*
+
+   ⚠️ THE ORDER LIVES HERE, NOT IN THE `DIAGRAMS` ARRAY. That array is ~1,700 lines of diagram source;
+   reordering it would rewrite every entry to express a presentation concern, and the next person to
+   add a diagram would have to guess where it belongs.
+
+   ⚠️ A DIAGRAM MISSING FROM THIS MAP IS NOT DROPPED. It sorts into "Other" at the end. A diagram
+   added tomorrow must not vanish from the tab strip just because nobody updated this list — that is
+   the silent-omission failure this repo keeps re-finding, and it would be invisible here. */
+const DIAGRAM_STAGES = [
+  ['Platform & Architecture', ['component-arch', 'data-arch', 'data-flow-architecture', 'deployment']],
+  ['Data & Providers', ['provider-adapters', 'provider-failover', 'earnings-pipeline', 't212-portfolio-flow', 'protocol-calendar', 'seasonality-heatmap']],
+  ['Symbols & Protocols', ['protocol-symbol-resolution', 'symbol-protocol-authority', 'protocol-direction', 'scoring-dual-score', 'activation-gate']],
+  ['Scoring (SEES)', ['sees-research', 'sees-trading', 'sees-automation', 'scoring-gating', 'scoring-paths', 'speed-scanner', 'adaptive-loop-timing']],
+  ['Signals & Alerts', ['signal-state-machine', 'alert-center', 'calibration']],
+  ['Trading, Exit & A/B', ['mt5-execution', 'automation-orchestration', 'exit-signals', 'ab-duplication', 'ab-contract']],
+  ['META.Stack', ['metastack-product', 'metastack-rating', 'metastack-signature', 'metastack-lifecycle']],
+];
+
+const STAGED_DIAGRAMS = (() => {
+  const byId = new Map(DIAGRAMS.map((d) => [d.id, d]));
+  const used = new Set();
+  const groups = DIAGRAM_STAGES.map(([group, ids]) => ({
+    group,
+    items: ids.filter((id) => { const hit = byId.has(id); if (hit) used.add(id); return hit; }).map((id) => byId.get(id)),
+  })).filter((g) => g.items.length > 0);
+  const leftover = DIAGRAMS.filter((d) => !used.has(d.id));
+  if (leftover.length > 0) groups.push({ group: 'Other', items: leftover });
+  return groups;
+})();
+
 export default function DiagramsPage() {
   const [active, setActive] = useState(DIAGRAMS[0].id);
   const containerRef = useRef(null);
@@ -1853,19 +1886,31 @@ export default function DiagramsPage() {
       </div>
 
       {/* ── Diagram Tabs ───────────────────────────────────── */}
-      <div className="dg-tabs">
-        {DIAGRAMS.map((d) => (
-          <button
-            key={d.id}
-            type="button"
-            className={`dg-tab${active === d.id ? ' dg-tab--active' : ''}`}
-            aria-pressed={active === d.id}
-            onClick={() => setActive(d.id)}
+      {/* ── Diagram Tabs — grouped, ordered as they apply in code ─────────────
+          One `.dg-tabs` row per stage; the existing class already wraps, so groups stack. */}
+      {STAGED_DIAGRAMS.map(({ group, items }) => (
+        <div className="dg-tabs" key={group}>
+          <span
+            style={{
+              fontSize: 11, color: 'var(--ink-soft)', textTransform: 'uppercase',
+              letterSpacing: '0.05em', alignSelf: 'center', marginRight: 6, whiteSpace: 'nowrap',
+            }}
           >
-            {d.label}
-          </button>
-        ))}
-      </div>
+            {group}
+          </span>
+          {items.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              className={`dg-tab${active === d.id ? ' dg-tab--active' : ''}`}
+              aria-pressed={active === d.id}
+              onClick={() => setActive(d.id)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      ))}
 
       {(active === 'sees-trading' || active === 'sees-automation') && live.loop !== undefined && (
         <div className="dg-live">

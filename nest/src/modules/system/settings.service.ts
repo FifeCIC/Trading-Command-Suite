@@ -86,6 +86,18 @@ export interface UiReviewEntry {
    * comparison depends on.
    */
   noteNew: string;
+  /**
+   * Has the FIRST round's suggestion been applied? `true | false | null`.
+   *
+   * ⚠️ THREE STATES, NOT TWO. `null` means "not judged yet" and must stay distinguishable from `false`
+   * ("judged, and not done"). That is the rule this whole store already follows for `hide` and
+   * `uiScore`, and it is what makes a count like "3 of 12 applied" trustworthy — a two-state boolean
+   * would silently count "nobody has looked yet" as "not done", which reads as a failure to follow
+   * instructions when the truth is that judgement is pending.
+   */
+  noteApplied: boolean | null;
+  /** Has the SECOND round's suggestion been applied? Same three states as `noteApplied`. */
+  noteNewApplied: boolean | null;
   /** ISO timestamp of the last write, so a stale verdict is visible rather than implied. */
   updatedAt: string;
 }
@@ -249,6 +261,8 @@ export class SettingsService {
       uiScore: null,
       note: '',
       noteNew: '',
+      noteApplied: null,
+      noteNewApplied: null,
       updatedAt: '',
     };
     const entry: UiReviewEntry = { ...previous, ...patch, updatedAt: new Date().toISOString() };

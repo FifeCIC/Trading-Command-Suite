@@ -1,0 +1,149 @@
+id	symbol	side	brokerTicket	closeReason	exitPrice	pnl	pnlInvalid	pnlInvalidReason	closedAt	status	abTestSide
+69523ae5-f189-4bca-85f9-61c4f6e15caa	AUDJPY	buy	152712137290	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:17.398	closed	NULL
+a7c6a12f-2182-42a6-ab4e-c18573fd3436	AUDUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 01:31:06.369	closed	NULL
+b5974fad-4c7c-4171-8cda-27a23e1ee6b1	AUDUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 01:31:06.369	closed	NULL
+559929a4-94df-44da-aa28-cb2e32e47af8	AUDUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 01:31:06.369	closed	NULL
+3906b3ec-6a78-4f13-b060-bdc308aca27a	AUDUSD	buy	152709017598	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:09.214	closed	NULL
+cbba6d8f-7d06-4c17-9d06-bacb23af21f0	EURCAD	buy	152687596863	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:35.859	closed	NULL
+f40f1af7-0a3c-4dfc-a9a6-67698f4af893	EURCHF	buy	152686613093	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:35.841	closed	NULL
+4bad280d-26d6-48cc-a89e-17d66f8ea274	EURCHF	buy	152712285787	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:20.619	closed	NULL
+e5ccdbe2-ac5d-4713-b2e1-fbdcd2b4aa29	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+abe70800-4d17-499f-9fb6-d0ee0de1e277	EURUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+b7d20664-6d5f-475a-9784-01fd070b4213	EURUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+17489ce0-8d70-4528-bc0b-1371dd548be2	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+c997f559-9249-44d1-aad8-b7abca182083	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+0f4fbdd5-661c-4b88-9f64-0aa18556dcd3	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+c9d658be-764f-494e-b24d-e3bc87daf232	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+0f9a3216-1ecc-4e97-80d4-72403b866a85	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+5d964b91-c25b-4200-901c-d5a13a150c73	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+a70f7142-54b9-45d7-ba83-8303faf18305	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+657915a9-fb13-406c-9c46-0037deb8ec14	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+1ad43f35-823f-4762-9d38-78fb64b662bb	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+bba63ea3-6382-42bc-9208-4ee29d54c102	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+008961ce-8446-4680-a6ca-9a6216a3930d	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+73b5a8a9-70fd-4cd0-af54-65ec9c9f32be	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+9880a911-aaa2-4df7-8086-c15f86ea1cdb	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+569a7711-e493-48b5-ade7-8d35125dc49b	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+652fc047-1718-491a-9346-9f4f19142132	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+cc8e1f01-9af2-4fdb-9452-13be98f58926	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+db2530ad-7c13-4db7-b20f-70a5593f692f	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+f1297a16-881f-4748-bd15-ad58fbce8a69	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+9987e853-6cdb-4f23-b225-6f3e62fd6965	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+9a5ee153-76f1-4e38-9b5b-649f034600c9	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+9b7ea8af-d116-4f7e-a3bd-73ae5dfa3095	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+34cc7d06-62ec-4e71-8203-55da850891b2	EURUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+e7cefa40-d4a6-4061-8a6f-0d1ece466fe8	EURUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-19 12:41:45.351	closed	NULL
+ba576b45-43b8-4d59-ac0f-1c952a04cbd1	FRA40	buy	92357381	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-29 12:59:22.575	closed	NULL
+4dbffc41-a4b9-48c7-897e-d5f8f709e255	GBPCAD	buy	152686202507	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:33.287	closed	NULL
+86a46679-53b0-4a98-ae43-ce5e6121c59d	GBPJPY	buy	152709531913	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:13.532	closed	NULL
+221c9c97-3820-4d18-8dcd-4cd590462e2e	GBPUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+6881079f-eb6f-422d-b512-4d17acc05466	GBPUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+fb4404be-9163-4d64-81de-5c70c21e9d63	GBPUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+539605eb-c861-4b37-a233-6a43ba8ec386	GBPUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+9599f557-81ea-4707-90fb-dbaeba2c8bea	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+35134ff5-974e-4413-8c0e-ceb06e14c7df	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+7b41f167-37f6-41c0-8881-0bfc297e0367	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+bc87fc5d-de23-49e2-8c66-4463b791d285	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+369d64a5-7866-4e39-b176-6d569e03d7ca	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+61901931-a533-4fee-aecd-e6af967b610a	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+15f3b2a3-913b-4e05-98c1-d8c2ea164912	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+61e5b2a0-ac05-4747-8fc0-2cf6ad4a33da	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+e14fa319-6acc-4768-b515-a7d78985a021	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+56c18b6c-b1fe-4087-a84c-0ebb8383408c	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+762ffef0-fe38-4f44-8ae8-a3f391e51811	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+b791881e-f5b6-49cf-9d8f-0730dd03fa82	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+54a95175-8254-4f71-abdf-e9a74e00dbae	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+716eddca-c308-4db8-a9e1-35eb5e112278	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+1596c85b-e0ca-4e29-bcc8-fd5cc565bae4	GBPUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.798	closed	NULL
+b199a035-ec72-4f53-b569-4b52164e5409	GER40	buy	92151210	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-28 13:25:13.772	closed	NULL
+0f636e75-40b6-438e-96bf-9c2946e25597	GER40	buy	92397191	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-29 12:59:24.002	closed	NULL
+484d4149-d296-4bad-88c0-458ec1f8de5f	GOOGL	buy	152686247719	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:33.296	closed	NULL
+66abe070-3820-44a9-921d-192c1868558d	MSFT	buy	152686062299	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:33.249	closed	NULL
+3aa580ad-cef1-4eea-ba90-b3e9ea18e52f	NVDA	buy	152687078102	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:35.849	closed	NULL
+f905af79-a912-4a22-bfe2-67a816b47e05	NZDUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-30 21:47:35.672	closed	NULL
+67155639-313c-4a6d-a398-8b50e2efbe3e	NZDUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-30 21:47:35.672	closed	NULL
+89ef20f2-5b46-46d6-9188-b92c05d36ec8	NZDUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-30 21:47:35.672	closed	NULL
+04958687-e645-4767-a3e6-d6d7915c1a01	NZDUSD	buy	152709243949	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:09.238	closed	NULL
+4907d8f1-93ce-447d-9330-a6074e65abdc	TSLA	buy	152686169037	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:33.280	closed	NULL
+7e772e5e-90ac-4d97-8670-e84fb21d81c6	UK100	buy	91105906	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-23 11:24:03.865	closed	NULL
+4eeb6696-f212-4efb-be13-d9b046f47f57	UK100	buy	91390595	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 08:48:05.585	closed	NULL
+d35e98fc-f543-4da1-97f9-f5b48a2739c4	UK100	buy	92370776	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-29 12:59:23.289	closed	NULL
+5f0e8353-1468-4cac-8910-cfffdd1d3daf	US30	buy	92272824	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-29 12:59:22.239	closed	NULL
+0c4db463-e373-4c2e-aadd-0cd7b87b4a4a	US30	buy	92807212	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 13:42:49.291	closed	NULL
+7c3d5b4a-43df-44dc-9d67-aa33a7eadb25	US500	buy	92271505	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-29 12:59:22.227	closed	NULL
+db67c820-d350-40ab-af93-760c66c7216c	US500	buy	92411185	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-30 15:04:45.835	closed	NULL
+a2cdf941-076a-46ea-91b5-bff35f44b72e	US500	buy	92811315	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-02 13:24:05.982	closed	NULL
+1aa9c20e-d081-4031-ac58-3112187c351d	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.429	closed	NULL
+eacc00b3-523e-425c-96fc-9845e55331f2	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.431	closed	NULL
+698f7d43-32a7-467a-ab90-505ad0824b9c	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.433	closed	NULL
+566cfa2b-aa1d-4683-9666-da8af285717f	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.435	closed	NULL
+e5f109f8-5b26-487d-987a-8ec7c0e49e27	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.436	closed	NULL
+dee0825e-9e05-4951-a78d-e4b5bfe14329	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.437	closed	NULL
+5b427ddd-6c2f-41ab-87d2-f121d07fd79d	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.438	closed	NULL
+c92cd7b7-e1e5-4a6c-941b-9ea5acbdc198	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.439	closed	NULL
+8c277bd5-03f3-4cc4-bae9-51fec11a7a71	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.440	closed	NULL
+120e23bd-a36d-4ed0-992d-0e08d1bccebd	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.442	closed	NULL
+2b0d4ea5-ff2c-4c27-b20f-e526872c8d81	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.444	closed	NULL
+20750017-1aa0-4df8-b0a4-00eeb6b4a9af	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.445	closed	NULL
+5c4b36c7-b70d-488c-9705-e13ad45f0bb1	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.446	closed	NULL
+53f797c3-0a54-48b0-b37a-6670e3b0e9d7	USDCAD	sell	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.447	closed	NULL
+cc199887-2157-4500-a2b8-8135e0e89f4f	USDCAD	buy	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.448	closed	NULL
+cfb3094b-5c6d-4bf3-8fc6-cb9f60f6fbee	USDCAD	buy	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.450	closed	NULL
+ccb2fad2-fb49-4ccf-83a2-f4cfed73a10a	USDCAD	buy	NULL	NULL	NULL	0	1	Structural phantom - closed with no brokerTicket and no exitPrice (#931)	2026-09-10 12:24:20.453	closed	NULL
+2730343d-8187-4e8e-b418-d1709849328d	USDCAD	buy	152709695608	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:14.767	closed	NULL
+f5acfeda-f405-4399-84e5-dfc75094ddea	USDCHF	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 00:04:08.507	closed	NULL
+a23b0939-2295-41b2-9c68-9e245ba62778	USDCHF	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 00:04:08.507	closed	NULL
+7deb047d-8384-4369-820a-105b81d55e6a	USDCHF	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 00:04:08.507	closed	NULL
+42b4d92e-acfb-45de-8b5e-3addaf53c172	USDCHF	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 00:04:08.507	closed	NULL
+ce83b76b-f09b-4b00-a0ab-b200598e8a0f	USDCHF	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-07-29 00:04:08.507	closed	NULL
+ca653337-9add-4183-83a9-f912f9c6eb57	USDCHF	buy	152686384862	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-25 21:23:33.305	closed	NULL
+f2a505bc-cde4-406a-b877-c07dbab40f77	USDCHF	buy	152709476321	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 17:39:13.008	closed	NULL
+eb628953-f9a2-4b12-ad71-0edf6018c362	VIX	sell	91982773	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-28 09:05:03.653	closed	NULL
+ab34b398-ad80-4f72-8345-961af345b727	VIX	sell	92684841	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-10-01 07:24:08.574	closed	NULL
+6215083d-675d-4695-8e32-15ad7632f7e5	VIX	sell	93058998	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-06 17:17:16.293	closed	NULL
+19f45637-4e75-4ac8-abef-f8d1aa4e558a	XAGUSD	buy	91152887	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-23 13:10:36.873	closed	NULL
+a18999c2-e561-4e95-8b74-ffe9f1fd5f82	XAGUSD	buy	92365494	broker:unknown	NULL	0	1	Structural phantom - closed with no exit price and no broker counterpart (#931, #1044)	2026-09-29 12:59:23.280	closed	NULL
+8c723d29-7f6c-42aa-a7b1-5882f381005d	XAGUSD	buy	92797354	broker:unknown	NULL	0	1	exit-unknown: closed with no exit price; pnl = 0 is a placeholder, not a break-even (#1044)	2026-10-01 13:42:48.693	closed	NULL
+888af6b4-325d-4516-bbaa-f8eefaa19616	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+e776054a-5afa-49ea-a878-1c3d1fb734c2	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+42d4a813-752b-4a2b-96b7-de189e70b968	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+973a21c0-fad4-4e5b-ba2f-51144db08f3a	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+a1cf3dc2-7697-4bee-b2ec-26ac5a764444	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+bd3d9287-cb20-4b6e-8ddd-8d4e674e7a5e	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+4d027d8e-c197-491a-9803-34df3a2d14b7	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+0ff5f4c2-b0ed-484c-b3cd-4c86fef30408	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+c9a6995a-fb38-4fbd-bb31-ef4238c9ec4f	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+da0be1dd-b85a-4668-8802-b0dbf01127be	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+982656b9-2b28-4f43-8de6-06c99372b01f	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+6e2c8e8f-386e-4dba-a022-dca8e56a7b51	XAUUSD	sell	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+381b1aac-7f7e-4471-910e-29a628d69a67	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+d0afd5f9-a51f-41a4-a310-9da31ad52537	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+13f94a84-b728-4283-8631-5fb15ea8490a	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+0330b836-060c-4421-a4bd-316032ca3719	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+2ee0f1f5-2599-4b60-968e-02a95636e46e	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+0c72cad4-c8db-44e0-ba10-ccb4a023c2c6	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+f8c22d78-1b15-42c7-b7ed-47b26fbdafeb	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+f61ccb8b-b2be-4402-9995-f3111de5db9d	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+7d2ce4b4-1a84-4910-b186-0245be8f01ae	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+187c6a93-22cc-4117-927a-5b949562ead1	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+7af716c4-825e-4dd7-85af-5b6d29c237ed	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+4eb6c88c-5fe2-4f97-a8f8-eac5c250b578	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+14b59729-b13a-4190-8f43-4328818fc036	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+167b4948-312a-4c72-aa3f-4e60482cbf09	XAUUSD	buy	NULL	NULL	NULL	0	1	Shared exitPrice across batch - pre-close floating value (bridge bug pre-2026-09-10)	2026-08-12 19:32:00.810	closed	NULL
+d89cc257-a2fe-4315-9cc9-0ae26a919f85	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:11:49.024	closed	NULL
+ade7682a-411a-4c42-8010-a179c90c9ab0	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:11:49.025	closed	NULL
+8b10b2d0-9f33-4487-9f82-e948f1976c8b	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:13:49.870	closed	NULL
+28ce0eb9-8e07-4956-b6ba-2893c8e43260	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:13:49.875	closed	NULL
+c93cc209-34ea-4a44-aa85-eb9b125ad15a	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:15:49.052	closed	NULL
+792e9bb5-7592-45e0-8ed1-aab475ec2f93	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:15:49.054	closed	NULL
+9a3a46bf-82be-43e0-bbce-0587c5852dfb	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:17:49.069	closed	NULL
+1a224a40-0b90-4208-a68a-da4add7d9649	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:17:49.071	closed	NULL
+55f9dec7-9fbb-4f49-bd73-287ebf5dd7c8	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:19:49.047	closed	NULL
+1dd6874c-8e09-452e-b037-3f6a9caeb664	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-22 18:19:49.048	closed	NULL
+5f4ea3dc-14ec-4b0c-b06d-1a08e63934af	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-23 08:16:11.498	closed	NULL
+29879c9d-91ac-48e8-a925-12c7b4cad7dc	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-23 08:16:11.500	closed	NULL
+7377a515-099b-4662-931f-e1760fef9ba3	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-23 08:18:11.253	closed	NULL
+6af24205-7f4e-49de-a38f-713c3d662e33	XAUUSD	buy	NULL	system:reconciled	NULL	0	1	A/B intent only - no order placed (#929 pre-fix)	2026-09-23 08:18:11.256	closed	NULL
+3c77b5bc-98cc-405d-8214-20de86b816e8	XAUUSD	buy	152733559984	broker:unknown	NULL	NULL	1	exit-unknown: position vanished; no broker deal history and no last price	2026-10-07 09:45:57.893	closed	B
+8ea860a2-72d8-4e32-99d0-f5046e6f0431	XAUUSD	buy	152733569074	broker:unknown	NULL	NULL	1	exit-unknown: position vanished; no broker deal history and no last price	2026-10-07 09:47:57.809	closed	A
+8cc6eaad-16f4-4271-922f-28c6593cf733	XAUUSD	buy	152733639383	broker:unknown	NULL	NULL	1	exit-unknown: position vanished; no broker deal history and no last price	2026-10-07 10:05:58.269	closed	A

@@ -3,6 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './pipeline-graph-lab.css';
 import PIPELINE_POSITIONS from '../data/pipeline-graph-positions.json';
+// ⚠️ The META.Stack lane board was a PAGE and is now a SECTION of this one (owner direction,
+// 2026-10-08). The file still carries its original name; it is no longer a route. Its own CSS is
+// imported by that module, so nothing needs importing here.
+import MetaStackPipelineBoard from './MetaStackPipelinePage.jsx';
 import PageInfoPopover from '../components/PageInfoPopover';
 // ⚠️ THE INPUTS/OUTPUTS ON THIS PAGE ARE DERIVED, NOT WRITTEN. See `src/core/pipeline-map.js`.
 // The node list below is hand-curated and will drift; the IO block must not join it.
@@ -1013,7 +1017,8 @@ export default function PipelineGraphLabPage() {
             Click a node for documentation · Drag to pan · Hover for stats · Real-time health from APIs
           </PageInfoPopover>
           <span style={{ marginLeft: 12, fontSize: '0.72rem' }}>
-            <a href="/status/meta-stack-pipeline" style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ META.Stack Pipeline</a>
+            {/* Link to the META.Stack board REMOVED 2026-10-08 — the board is rendered further down
+                this same page, so the link was a self-reference. */}
           </span>
         </h1>
         </div>
@@ -1044,6 +1049,19 @@ export default function PipelineGraphLabPage() {
           {connPopover && <ConnectionPopover conn={connPopover.conn} position={{ x: connPopover.x, y: connPopover.y }} onClose={() => setConnPopover(null)} />}
         </div>
       </div>
+
+      {/* ── META.Stack lane board — MERGED IN (owner direction, 2026-10-08) ──
+          Owner: *"I want the nodes on this view factored into /development/pipeline-graph-lab and then
+          this page deleted."* The board is the SAME component, rendered here rather than on its own
+          route; that route, its nav entry and its view-meta row are removed, so the app has one
+          pipeline surface instead of two that drift apart.
+
+          ⚠️ THE GRAPH ABOVE STAYS THE PRIMARY VIEW and keeps its live data. The board below is the
+          human-readable lane summary — it holds no live feed of its own, so it must not become the
+          thing a reader lands on. */}
+      <section className="pg-lane-board">
+        <MetaStackPipelineBoard />
+      </section>
 
       <footer className="pg-footer">
         <span>Prototype — Pipeline Graph Lab</span>

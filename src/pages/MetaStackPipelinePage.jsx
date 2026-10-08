@@ -183,7 +183,7 @@ function laneBgIcon(laneId) {
   return <div className="msp-lane-bg">{icons[laneId] || null}</div>;
 }
 
-export default function MetaStackPipelinePage() {
+export default function MetaStackPipelineBoard() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showPlanned, setShowPlanned] = useState(true);
 
@@ -205,14 +205,19 @@ export default function MetaStackPipelinePage() {
     <div className="msp-page">
       <header className="msp-header">
         <div>
-          <h1>META.Stack Pipeline
+          {/* ⚠️ `h2`, NOT `h1` (2026-10-08). This board is now EMBEDDED in Pipeline Graph Lab, which
+              owns the page's single `h1` — two `h1`s on one page is a heading-structure defect, and
+              the accessibility policy applies to `src/**`. The page's own route was removed, so this
+              is never the top-level heading. */}
+          <h2>META.Stack Pipeline
             <PageInfoPopover>
               Shortest path to a live trade. Numbered nodes = the critical path (all implemented). Amber nodes need one user action. Dashed = roadmap.
             </PageInfoPopover>
-          </h1>
+          </h2>
           <p className="msp-subtitle">
             Every numbered step exists in code today. The two amber steps are configuration, not code: bind a trading strategy, and opt in to trading. Directive-level gates are research (#657/#658).
-            {' '}<a href="/development/pipeline-graph-lab" style={{ color: 'var(--accent)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Detailed Node View</a>
+            {/* The "→ Detailed Node View" link was REMOVED 2026-10-08: this board now lives INSIDE
+                Pipeline Graph Lab, so the link pointed at the page that was rendering it. */}
             {' '}<a href="/development/diagrams" style={{ color: 'var(--ink-soft)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Conceptual Diagrams</a>
           </p>
         </div>

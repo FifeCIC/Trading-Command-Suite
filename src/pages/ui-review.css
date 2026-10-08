@@ -198,6 +198,21 @@
   min-width: 160px;
 }
 
+/* Agent-reported applied-status. ⚠️ READ-ONLY by design — the owner asked for an indicator, not a
+   control: *"I meant an indicator for agentic AI - not a menu for the user to select."* Agents set the
+   value through the API; this only shows it.
+   ⚠️ The three states are visually distinct on purpose. `—` (unassessed) must not be mistaken for
+   ❌ (assessed and outstanding) — the owner reads this column to find what is left to do, so quietly
+   collapsing "nobody looked" into "not done" would make the list wrong in the direction that matters. */
+.uir-applied {
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.uir-applied--done { color: var(--risk-normal); }
+.uir-applied--outstanding { color: var(--notice-warning-text); }
+.uir-applied--unassessed { color: var(--ink-soft); font-weight: 400; }
+
 /* The second round of comments. A faint accent tint is the only thing distinguishing it from the
    first at a glance down a wide row — the headers say which is which, but a reader scanning the
    COLUMNS should not have to look up to tell where the first round ends. */

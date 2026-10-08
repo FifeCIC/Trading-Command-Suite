@@ -68,7 +68,8 @@ import { SignalEnvelopeService } from '../signals/signal-envelope.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { PositionTimeStopService } from './position-time-stop.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
-import { checkSessionWindow, auditNameVsWindow, SessionGateResult } from '../trading/session-window';
+import { checkSessionWindow, auditNameVsWindow, botWindowState, parseSessionWindow, SessionGateResult } from '../trading/session-window';
+import type { BotWindowState } from '../trading/session-window';
 import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 // ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Replacing local predicates here because
 // `score.signal === 'SELL'` misses `STRONG_SELL`, which dispatched a BUY on the strongest bearish
@@ -82,6 +83,13 @@ import { computeMarketStatus } from '../directives/market-status';
 // ⚠️ The DEFAULTS in settings-registry.ts are load-bearing: `automation.tradingEnabled` is false, and it
 // must stay false. See the warning comment there before changing any of them.
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
+// #981 — the FX-session axis (New York open) and the ADVISORY pre-open planner. The planner is
+// pure; this file only writes an alert row and a status block. No trade effect on any path.
+import { MarketSessionsService } from '../calendar/market-sessions.service';
+import { planPreOpenSession, PRE_OPEN_SESSION } from '../calendar/pre-open-session';
+// ⚠️ THE ONE alert write path (#981 scope 3). Both alert writers must go through this collapse;
+// inserting directly is how the alert table reached 12,865 undismissed rows.
+import { collapseOrCreateAlert } from '../../common/alerts/alert-collapse';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -738,6 +746,9 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly diversification: GlobalDiversificationService,
     private readonly marketData: MarketDataService,
     private readonly barRefresh: BarRefreshService,
+    // #981 — FX-session roster (New York open) for the advisory pre-open alert. CalendarModule
+    // already exports this service and AutomationModule imports CalendarModule.
+    private readonly marketSessions: MarketSessionsService,
     private readonly auditLog: AuditLogService,
     private readonly settings: SettingsResolverService,
     private readonly directivesService: DirectivesService,
@@ -1430,6 +1441,12 @@ export class AutomationLoopService implements OnModuleInit {
       }
       this.state.activeStrategyIds = activeStrategies.map((s: any) => s.id);
 
+      // ── #981 — per-tick session surfaces: the name-vs-window audit for EVERY bot, and the
+      //    advisory pre-open alert. Both are read-only with respect to trading: the audit
+      //    classifies, the alert writes one collapsing alert row. Neither can gate an entry.
+      this.auditBotWindows(activeStrategies, new Date());
+      await this.checkPreOpenSessionAlert(allPositions.length);
+
       // ── Priority reorder: put prioritized strategies first ──
       this.cleanPriorityQueue();
       activeStrategies = this.getPrioritizedStrategies(activeStrategies);
@@ -1877,29 +1894,157 @@ export class AutomationLoopService implements OnModuleInit {
   private readonly sessionSkipLog = new Map<string, string>();
 
   /**
-   * Bots currently held shut by the session gate (#759). Keyed by strategyId.
+   * Per-bot session state for EVERY active bot (#981). Keyed by strategyId.
    *
-   * This is the observable counterpart to `sessionSkipLog`'s dedupe: the log
-   * reports the TRANSITION, this reports the STATE. Without it a gated bot looks
-   * identical to an idle one from every surface, which is how three of six forex
-   * bots stayed shut through London and the US session without anyone noticing.
+   * ⚠️ EVOLVED FROM "GATED ONLY" TO "ALL BOTS" (2026-10-08, #981). It used to hold only bots the
+   * gate was HOLDING SHUT, written from `logSessionSkip()` on a transition. That made the check
+   * `auditNameVsWindow()` unable to see the case it was written for: a bot with
+   * `sessionWindow = NULL` is UNGATED, so it is never skipped, so the audit never ran — and the
+   * three bots named "… Session" with an empty slot stayed invisible (one opened 14 minutes before
+   * the US cash open carrying a 298-minute-old signal).
+   *
+   * `auditBotWindows()` now rewrites an entry for every active bot each tick: gated, ungated, or
+   * in-window — each with a distinct `reason` so the three readings can never collapse into one.
+   * The transition LOG still lives in `logSessionSkip()`; this map is the STATE.
    */
-  private readonly sessionGated = new Map<string, {
-    strategyId: string;
-    name: string;
-    symbol: string;
-    reason: string;
-    allowed: string[];
-    active: string[];
-    /** 'ambiguous' means the NAME could mean a clock or a news flow — see auditNameVsWindow. */
-    nameWindowAgreement: string;
-    nameWindowNote: string;
-    at: string;
-  }>();
+  private readonly sessionGated = new Map<string, BotWindowState>();
 
-  /** Bots the session gate is currently holding shut — for the status payload. */
-  getSessionGated(): Array<ReturnType<typeof Object> & Record<string, unknown>> {
+  /**
+   * Per-bot session state for every active bot — for the status payload (#981).
+   * Every entry carries `gated`; `nameWindowAgreement`/`nameWindowNote` carry the name-vs-window
+   * audit for that bot, which is how an UNGATED bot with a session-shaped name becomes visible.
+   */
+  getSessionGated(): BotWindowState[] {
     return [...this.sessionGated.values()];
+  }
+
+  /**
+   * auditBotWindows() — the name-vs-window audit for EVERY active bot, every tick (#981).
+   *
+   * ⚠️ WHY IT IS HERE AND NOT IN `logSessionSkip()`. That function is only reached when
+   * `checkSessionWindow()` returns a SKIP — so for a NULL-window bot (ungated → always `ok`) it was
+   * never called, and the audit written to catch an unfilled slot could not observe one. Measured
+   * 2026-09-23: three bots named for a session declared none, and nothing anywhere said so.
+   *
+   * Read-only with respect to trading. It never changes a gate or writes a decision row; it
+   * classifies so the state is VISIBLE (see `botWindowState()` for the three distinct readings).
+   */
+  private auditBotWindows(strategies: any[], at: Date): void {
+    for (const strategy of strategies || []) {
+      const state = botWindowState(strategy, at);
+      if (state.strategyId) this.sessionGated.set(state.strategyId, state);
+    }
+  }
+
+  /**
+   * #981 — advisory pre-open session state, for `GET /api/automation/status`.
+   *
+   * ⚠️ `state: 'unknown'` is a FIRST-CLASS reading: a failed or unresolvable session read must not
+   * render the same as "no alert pending". Absence is not a negative.
+   */
+  private preOpenSession: {
+    state: 'ok' | 'unknown' | 'disabled';
+    session?: string;
+    minutesUntilOpen?: number | null;
+    alertActive?: boolean;
+    alertTitle?: string;
+    reason?: string;
+    checkedAt?: string;
+  } = { state: 'unknown', reason: 'not evaluated yet' };
+
+  /** Set once per transition to `unknown` so a failed read is loud without spamming every tick. */
+  private preOpenUnknownLogged = false;
+
+  getPreOpenSession() {
+    return this.preOpenSession;
+  }
+
+  /**
+   * checkPreOpenSessionAlert() — raise ONE collapsing alert ahead of the New York open (#981).
+   *
+   * ⚠️ ADVISORY ONLY — the owner's words: "alert of market opening ahead, no automatic effect".
+   * This method writes an alert row and a status block. It does not gate, pause, close or size
+   * anything, and no caller may build on it as if it did (#928 measured the window; it did not
+   * reach significance, so a gate is not justified — the alert is also how the sample is
+   * collected deliberately).
+   *
+   * Collapse: `collapseOrCreateAlert()` folds repeat observations into the SAME undismissed row
+   * keyed by (type, title) — the title is day-scoped and carries no minute count, so a full window
+   * of ticks is ONE row (see the header of `pre-open-session.ts`).
+   */
+  private async checkPreOpenSessionAlert(openPositions: number): Promise<void> {
+    try {
+      const thresholdMinutes = await this.settings.get<number>('automation.preOpenAlertMinutes');
+      const states = this.marketSessions.getSessionStates();
+      const botNames = (this.state.activeStrategies || [])
+        .filter((s: any) => parseSessionWindow(s.sessionWindow).includes(PRE_OPEN_SESSION.botTag))
+        .map((s: any) => String(s.name ?? s.id));
+
+      const outcome = planPreOpenSession({ states, thresholdMinutes, botNames, openPositions });
+      const checkedAt = new Date().toISOString();
+
+      if (outcome.kind === 'alert') {
+        await collapseOrCreateAlert(this.prisma, {
+          type: 'system',
+          title: outcome.title,
+          detail: outcome.detail,
+          severity: 'info',
+          link: '/trading/trading-bots',
+        });
+        this.preOpenUnknownLogged = false;
+        this.preOpenSession = {
+          state: 'ok',
+          session: PRE_OPEN_SESSION.scope,
+          minutesUntilOpen: outcome.minutesUntilOpen,
+          alertActive: true,
+          alertTitle: outcome.title,
+          checkedAt,
+        };
+        return;
+      }
+
+      if (outcome.kind === 'none') {
+        this.preOpenUnknownLogged = false;
+        this.preOpenSession = {
+          state: 'ok',
+          session: PRE_OPEN_SESSION.scope,
+          minutesUntilOpen: outcome.minutesUntilOpen,
+          alertActive: false,
+          reason: outcome.reason,
+          checkedAt,
+        };
+        return;
+      }
+
+      if (outcome.kind === 'disabled') {
+        this.preOpenSession = { state: 'disabled', checkedAt };
+        return;
+      }
+
+      // `unknown` — loud once per transition, and the payload says `unknown` rather than omitting
+      // the alert and reading as "nothing pending".
+      this.preOpenSession = { state: 'unknown', reason: outcome.reason, checkedAt };
+      if (!this.preOpenUnknownLogged) {
+        this.preOpenUnknownLogged = true;
+        this.logger.warn(
+          `[PreOpenAlert] session read could not be judged — ${outcome.reason}. ` +
+          `The alert state is UNKNOWN, not "none" (absence is not a negative).`,
+        );
+      }
+    } catch (err) {
+      this.preOpenSession = {
+        state: 'unknown',
+        reason: (err as Error).message,
+        checkedAt: new Date().toISOString(),
+      };
+      if (!this.preOpenUnknownLogged) {
+        this.preOpenUnknownLogged = true;
+        this.logger.warn(
+          `[PreOpenAlert] check failed — ${(err as Error).message}. ` +
+          `The alert state is UNKNOWN, not "none" (absence is not a negative).`,
+        );
+      }
+    }
   }
 
   /**
@@ -1964,23 +2109,12 @@ export class AutomationLoopService implements OnModuleInit {
     // the bot's trading hours.
     const audit = auditNameVsWindow(strategy?.name, strategy?.sessionWindow);
 
-    // Record the block so it is VISIBLE, not just logged once. The dedupe above is
-    // deliberate (a standing condition should not write a row per bot per tick),
-    // but on its own it made a gated bot indistinguishable from an idle one: the
-    // single log line scrolled away and no surface reported that three of six
-    // forex bots were shut. AUDUSD scored 100% STRONG_BUY with zero pre-trade
-    // blockers while this line was the ONLY evidence, and it was not being read.
-    this.sessionGated.set(key, {
-      strategyId: key,
-      name: strategy?.name ?? key,
-      symbol,
-      reason,
-      allowed: sess.allowed,
-      active: sess.active,
-      nameWindowAgreement: audit.agreement,
-      nameWindowNote: audit.note,
-      at: new Date().toISOString(),
-    });
+    // ⚠️ The per-bot STATE record is NOT written here any more (#981). This function only runs on a
+    // TRANSITION into a skip, so a continuously-gated bot's record went stale and an ungated bot had
+    // NO record at all — the exact blind spot #981 names (a NULL-window bot is never skipped, so
+    // this function was never reached for the bots the audit was written for). `auditBotWindows()`
+    // now owns the `sessionGated` map and rewrites every active bot's entry each tick.
+    // What stays here is the TRANSITION LOG — the audit still enriches the line when ambiguous.
     this.logger.log(
       `  [SessionGate] ${strategy?.name ?? key} (${symbol}) skipped — ${reason}`
       + (audit.agreement === 'ambiguous' ? ` ⚠ ${audit.note}` : ''),
@@ -2170,7 +2304,11 @@ export class AutomationLoopService implements OnModuleInit {
           continue;
         }
         this.sessionSkipLog.delete(String(strategy.id));
-        this.sessionGated.delete(String(strategy.id));
+        // ⚠️ #981 — NO `sessionGated.delete()` here. The map is now the per-bot STATE record for
+        // every active bot (`auditBotWindows()` owns it, rewritten each tick), so deleting this
+        // bot's entry on a pass would hide the very audit record #981 exists to surface — a
+        // NULL-window bot always passes, and its `ungated` entry is the finding. The next tick's
+        // pass rewrites the entry as `gated: false` with the state that applies then.
 
         // Gate 5 — strategy cooldown (shared with the legacy path).
         const lastTrade = this.lastTradeTime.get(strategy.id);

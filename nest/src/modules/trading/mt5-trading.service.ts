@@ -522,8 +522,15 @@ price, `price` came back `0`, and the per-symbol cap refused:
    * CURRENCY PAIR for the profit→account conversion. Note the broker quotes one direction only —
    * this account has GBPUSD and GBPJPY, and neither USDGBP nor JPYGBP — so callers must be prepared
    * to invert.
+   *
+   * ⚠️ #1085 — `tickTime` is the BROKER's own last-tick time (offset-corrected UTC), distinct from
+   * when this response was assembled. `undefined` = the bridge predates the contract; `null` = the
+   * terminal reported no tick time. Both are refused by the sizing check, which NAMES which it saw
+   * (`common/trading/quote-freshness.ts`) — do not collapse them into the `timestamp`.
    */
-  async getQuote(symbol: string): Promise<{ bid: number; ask: number; last: number } | null> {
+  async getQuote(symbol: string): Promise<{
+    symbol?: string; bid: number; ask: number; last: number; tickTime?: Date | null;
+  } | null> {
     try {
       const res = await fetch(
         `${this.urlFor(symbol)}/quote?symbol=${encodeURIComponent(symbol)}`,
@@ -532,7 +539,13 @@ price, `price` came back `0`, and the per-symbol cap refused:
       if (!res.ok) return null;
       const d = await res.json();
       if (d?.error || d?.last == null) return null;
-      return { bid: Number(d.bid ?? 0), ask: Number(d.ask ?? 0), last: Number(d.last) };
+      return {
+        symbol: typeof d.symbol === 'string' ? d.symbol : symbol,
+        bid: Number(d.bid ?? 0),
+        ask: Number(d.ask ?? 0),
+        last: Number(d.last),
+        tickTime: d.tickTime ? new Date(d.tickTime) : (d.tickTime === null ? null : undefined),
+      };
     } catch { return null; }
   }
 

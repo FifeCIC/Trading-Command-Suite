@@ -580,8 +580,19 @@ export class Mt5ConnectionManager {
     }));
   }
 
-  /** Get a quote (bid/ask) from a specific broker */
-  async getQuote(symbol: string, brokerId?: number) {
+  /**
+   * Get a quote (bid/ask) from a specific broker.
+   *
+   * ⚠️ The shape is the BRIDGE payload verbatim, and it is annotated here because that is the
+   * boundary: `tickTime` (#1085 — the broker's own last-tick time, offset-corrected UTC) arrives
+   * only from a bridge that implements the contract. `undefined` = an old bridge, `null` = the
+   * terminal had no tick time; the sizing check refuses both and names which one it saw
+   * (`common/trading/quote-freshness.ts`).
+   */
+  async getQuote(symbol: string, brokerId?: number): Promise<{
+    symbol?: string; bid?: number; ask?: number; last?: number;
+    timestamp?: string; tickTime?: string | null;
+  } | null> {
     const { ok, data } = await this.fetch(`/quote?symbol=${encodeURIComponent(symbol)}`, undefined, brokerId);
     return ok ? data : null;
   }

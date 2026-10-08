@@ -36,8 +36,8 @@
  *   title          — optional heading
  *   editable       — set false for a locked/read-only board
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Responsive, useContainerWidth, verticalCompactor } from 'react-grid-layout';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Responsive, verticalCompactor } from 'react-grid-layout';
 import { GridBackground } from 'react-grid-layout/extras';
 // Library CSS: `.react-grid-item` transitions + the `.react-resizable-handle`
 // affordance. We override its greys/red placeholder in widget-board.css.
@@ -143,7 +143,73 @@ export default function WidgetBoard({
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [interacting, setInteracting] = useState(false);
   const [keysFor, setKeysFor] = useState(null);
-  const { width, containerRef, mounted } = useContainerWidth({ initialWidth: 1200 });
+  /**
+   * Container width — OUR OWN measurement, replacing the library's `useContainerWidth`.
+   *
+   * ⚠️ WHY, MEASURED 2026-10-08. The dashboard scrolled horizontally on a narrow window: the grid's
+   * content measured **1188px inside an 817px box**, with 6 of 13 tiles past its right edge and the
+   * document 1222px wide. The tiles' inline widths were computed for a **~1200px container** — exactly
+   * the library's `initialWidth` — so the layout was being built for a width the container never had.
+   *
+   * `useContainerWidth` measures through a ResizeObserver. When that observer does not fire, the
+   * initial value simply STANDS, and nothing corrects it. The failure is silent by construction: a
+   * layout that is too wide still renders perfectly, just past the edge of the page.
+   *
+   * Measuring here and re-measuring on BOTH the observer and a plain `resize` event means a missed
+   * observer callback is recoverable rather than permanent. Same class as the `.market-tape` / #853
+   * trap: one measurement taken once and never revisited.
+   *
+   * ⚠️ `mounted` is set AFTER the first measure, so the grid's first paint already uses the real width
+   * rather than the fallback — the library's own latch could mount before it had measured.
+   */
+  const containerRef = useRef(null);
+  const [width, setWidth] = useState(1200);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // ⚠️ `mounted` IS SET UNCONDITIONALLY, FIRST. An earlier version returned early when the shell was
+    // not yet in the DOM, which skipped this line — so the board rendered NOTHING. That failure is
+    // worth recording because it looked like success: `document.scrollWidth` fell to exactly the
+    // viewport width, i.e. "no overflow", and the real reason was that there was no grid to overflow.
+    // A measurement that reads as a fix while the thing under test is absent is worse than no
+    // measurement.
+    setMounted(true);
+
+    let cleanup = () => {};
+    const attach = () => {
+      const el = containerRef.current;
+      if (!el) return false;
+      const measure = () => {
+        const w = Math.round(el.getBoundingClientRect().width);
+        // A zero width (display:none, mid-unmount) would collapse every tile — ignore it.
+        if (w > 0) setWidth((prev) => (prev === w ? prev : w));
+      };
+      measure();
+      let ro = null;
+      if (typeof ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(measure);
+        ro.observe(el);
+      }
+      window.addEventListener('resize', measure);
+      cleanup = () => {
+        if (ro) ro.disconnect();
+        window.removeEventListener('resize', measure);
+      };
+      return true;
+    };
+
+    // The shell only exists once the board is in grid mode, so the first pass can find no element.
+    // Retry briefly rather than depending on the name of the flag that gates it — and stop after ~2s
+    // so a board that never mounts does not leave a timer running.
+    if (!attach()) {
+      let tries = 0;
+      const t = setInterval(() => {
+        tries += 1;
+        if (attach() || tries > 40) clearInterval(t);
+      }, 50);
+      cleanup = () => clearInterval(t);
+    }
+    return () => cleanup();
+  }, []);
 
   const items = board.items;
   const layouts = board.layouts;

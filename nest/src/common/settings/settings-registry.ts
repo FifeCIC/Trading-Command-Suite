@@ -339,6 +339,39 @@ export const SETTINGS: SettingDefinition[] = [
     min: 0,
     max: 1440,
   },
+  {
+    key: 'automation.preOpenAlertMinutes',
+    type: 'number',
+    defaultValue: 30,
+    class: 'runtime',
+    owner: 'automation',
+    label: 'Pre-open session alert (minutes before)',
+    description:
+      'Raise ONE collapsing advisory alert this many minutes before the New York session opens ' +
+      '(#981). Advisory ONLY — it gates nothing: no pause, no entry block, no close (the owner: ' +
+      '"alert of market opening ahead, no automatic effect"). 0 disables the alert. The alert title ' +
+      'is day-scoped and carries no minute count, so the collapse key keeps a full window to one row.',
+    userChangeable: true,
+    min: 0,
+    max: 240,
+  },
+  {
+    key: 'trading.maxQuoteAgeSeconds',
+    type: 'number',
+    defaultValue: 300,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Max quote age for sizing (seconds)',
+    description:
+      'An order is REFUSED when the broker\'s own last-tick time is older than this (#1085): a ' +
+      'frozen quote must not size a position while a missing one is refused. 0 disables the check ' +
+      '(an explicit choice, not a default). ⚠️ The bridge\'s rounded server-offset correction can ' +
+      'over-state the age by up to ~7.5 min in its worst case — if false refusals appear on liquid ' +
+      'symbols, check the bridge offset-probe logs BEFORE raising this.',
+    userChangeable: true,
+    min: 0,
+    max: 86400,
+  },
 
   // ── Log retention and volume (#1023) ─────────────────────────────────────────
   //

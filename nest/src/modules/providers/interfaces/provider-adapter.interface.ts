@@ -29,6 +29,20 @@ export interface ProviderQuote {
   ask: number | null;
   last: number | null;
   timestamp: Date;
+  /**
+   * #1085 — the SOURCE's own last-tick time, when the source has one.
+   *
+   * ⚠️ DISTINCT FROM `timestamp` ON PURPOSE. `timestamp` is the response time (machine clock):
+   * with it alone, a quote that has not moved in an hour reports itself as one second old. The
+   * sizing path refuses an ABSENT quote (`price <= 0`) but used to TRUST a frozen one —
+   * plausible value, no error. `tickTime` is what lets the two conditions render differently.
+   *   • a real `Date` → the broker's last tick (MT5 bridges, offset-corrected);
+   *   • `null`       → the source has no tick time to give;
+   *   • `undefined`  → the source predates this contract (an old bridge process).
+   * Consumers that do not care about staleness ignore it; the sizing check treats `null` and
+   * `undefined` as refusals and NAMES which one it saw.
+   */
+  tickTime?: Date | null;
 }
 
 export interface ProviderProfile {

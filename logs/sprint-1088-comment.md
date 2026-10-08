@@ -1,0 +1,7 @@
+## 2026-10-08 — holiday-gating round: #1088 fixed and closed
+
+- **#1088 closed, all 5 acceptance criteria verified** — the FX venue gained a holiday axis (it had none), so **Christmas Day 2026 (a Friday) no longer reads OPEN** for any index CFD, metal or FX pair. Verified live: `GET /api/calendar/market-status?exchange=FX&at=2026-12-25T12:00:00Z` → `closed, holiday=Christmas Day, nextOpen Sun 22:00Z`; holidays endpoint 0 → 4 rows.
+- **Source of truth decided by measurement**: the MT5 Python binding exposes no session/holiday API (`dir(mt5)`), so a curated static table (same mechanism as US_HOLIDAYS) with only UNIVERSAL closures (25 Dec, 1 Jan). Register row 73; `DECISION` marker; 4 spec cases; canary both halves (M1 table, M2 weekly-path integration — M2 probed alone too).
+- **Deliberately not guessed**: family-specific holidays (Thanksgiving for US500/US30 — the CFD reality is murky) and 24/31 Dec early closes. Declared on the issue, not silently skipped.
+- **Gate wiring confirmed** (#850's): `protocol-gating.service.ts:1085` reads `venueForSymbol(...).exchange`, so the closure reaches decisions, not just the endpoint. The other two `getMarketStatus('US')` call sites were examined and are correctly US-scoped.
+- Sprint §2 line ticked; next items unchanged: #1079 (needs the owner decision on the running pair), #835/#836, #725, #943, #956; §4's #1068 (historic flat-row re-derivation + staleness-vs-closure) remains open with its writer already deleted and guarded.

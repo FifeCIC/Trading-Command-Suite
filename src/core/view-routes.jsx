@@ -62,7 +62,8 @@ import SinglesMonitorPage from '../pages/SinglesMonitorPage.jsx';
 import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
 import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
 import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
-import MetaStackPipelinePage from '../pages/MetaStackPipelinePage.jsx';
+// MetaStackPipelinePage import REMOVED 2026-10-08 — the view was merged into Pipeline Graph Lab,
+// which imports the board directly. The file still exists as that board.
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
@@ -256,7 +257,7 @@ export const VIEW_COMPONENTS = {
   'protocols-ladder': ProtocolsLadderPage,
   'symbols-ladder': SymbolsLadderPage,
   'protocols-performance': ProtocolsPerformancePage,
-  'meta-stack-pipeline': MetaStackPipelinePage,
+  // 'meta-stack-pipeline' REMOVED 2026-10-08 — merged into 'pipeline-graph-lab'.
   'create-protocols': CreateProtocolsPage,
   'protocol-builder': CreateProtocolsPage,
   'strategy-wizard': StrategyWizardPage,

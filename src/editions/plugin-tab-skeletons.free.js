@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 13 of 78 tabs — a tab only renders for its own view, so non-free tabs are dropped
+ * 14 of 78 tabs — a tab only renders for its own view, so non-free tabs are dropped
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -59,6 +59,11 @@ export const PLUGIN_TAB_SKELETONS = {
     title: "Watchlists",
     subtitle: "Operator-defined watchlists with intent metadata and scope controls.",
     domain: "Watchlists / User",
+  },
+  "platform-comparisons": {
+    title: "API Provider Comparisons",
+    subtitle: "Side-by-side provider capability matrix to guide architecture decisions.",
+    domain: "Trading Platforms / Architecture",
   },
   "performance-lab": {
     title: "Performance Lab",

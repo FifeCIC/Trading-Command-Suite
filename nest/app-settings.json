@@ -127,8 +127,10 @@
         "hide": false,
         "keen": 1,
         "note": "Move this page to the Development area",
-        "updatedAt": "2026-10-01T21:36:59.011Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.267Z",
+        "importance": "L",
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/status/analytics": {
         "hide": null,
@@ -155,8 +157,9 @@
         "hide": false,
         "keen": 3,
         "note": "Element:  <section.screener-transparency> Text:     256symbols in DB109with recent catalysts147quiet — filtered  Source:   /research/screener  add a stat for how many symbols have been scored out of the symbols registered and another stat for how many have been traded out of the total symbols registered. ",
-        "updatedAt": "2026-10-01T08:19:38.868Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.543Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/scoring/ab-ladder": {
         "hide": false,
@@ -176,15 +179,17 @@
         "hide": false,
         "keen": 1,
         "note": "Styling is not correct on Element:  <button.glossary-entry-header> Text:     ▶pullbackPrice Actionaka pullbacks, pull back, retracement Source:   /education/glossary",
-        "updatedAt": "2026-10-01T20:45:51.109Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.524Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/planner/objectives": {
         "hide": false,
         "keen": 2,
         "note": "Change this to a free page. Add Education to Element:  <select.ob-select> Text:     Active TradingAccount GrowthInstrument TradingPortfolio Reco Source:   /planner/objectives",
-        "updatedAt": "2026-10-01T22:29:57.208Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.779Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/trading/bot-create": {
         "hide": false,
@@ -198,22 +203,25 @@
         "keen": 3,
         "note": "strong page - needs slight improvement to autosize widgets but it might be complex as some widgets should have a minimum size else they will look messy",
         "noteNew": "",
-        "updatedAt": "2026-10-07T13:46:21.914Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T21:55:49.164Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/research/news-intel": {
         "hide": false,
         "keen": 2,
         "note": "Element:  <div.ni-expanded-meta> Text:     Sentiment: NEUTRALImpact: MEDIUMCategory: earningsOpen sourc Source:   /research/news-intel  add ability to register the symbol. There is another view getting such an action and they should share the approach. A standard overlay was requested to allow selection of watchlist and eventually AI suggestions based on the context. In the case of news thats more important. ",
-        "updatedAt": "2026-10-01T08:29:48.703Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T13:33:08.537Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/status/health-check": {
         "hide": false,
         "keen": 1,
         "note": "Add report download for sending to developer for troubleshooting. ",
-        "updatedAt": "2026-10-01T21:29:35.229Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.661Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/trading/calculators": {
         "hide": true,
@@ -226,8 +234,9 @@
         "hide": false,
         "keen": 1,
         "note": "The style of this toggle does not fit in with the theme: Element:  <div.mt5u-mode-toggle> Text:     🟡 Demo🔴 Live Source:   /trading/mt5-trading  Move Element:  <div.mt5u-layout-bar> Text:     Width:Full Width4KDesktopLaptopTablet Source:   /trading/mt5-trading to the global screen options  sidebar Element:  <button.so-gear-btn> Text:     ⚙ Source:   /trading/mt5-trading and rename from \"MT5 Trading\" to \"Manual Trading\". It already has a disabled button for both Trading212 and Alpaca. ",
-        "updatedAt": "2026-10-01T13:29:24.923Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:17:34.331Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/trading212/t212-cfd": {
         "hide": true,
@@ -250,19 +259,43 @@
         "updatedAt": "2026-10-01T22:45:48.555Z",
         "importance": null
       },
+      "/development/commands": {
+        "hide": null,
+        "keen": null,
+        "note": "Move this page to the Development area",
+        "noteNew": "",
+        "uiScore": null,
+        "updatedAt": "2026-10-08T08:03:33.113Z",
+        "importance": null,
+        "noteApplied": true,
+        "noteNewApplied": null
+      },
       "/development/diagrams": {
         "hide": false,
         "keen": 2,
         "note": "I would like to group and order diagrams that can be chained. So many different groups for selecting and flicking through the diagrams for that group, in order as they apply in code. At least as best as possible.",
-        "updatedAt": "2026-10-01T22:37:24.159Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T20:34:01.886Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/protocols/sees-arena": {
         "hide": false,
         "keen": 2,
         "note": "The selection process needs to offer selection of protocols that use the same watchlists so that they are symbol centric: Element:  <div.sa-protocol-toggles> Text:     BTC Investment Monitor V1BTC Tick Scalp V1Gold Speed Scalp V Source:   /protocols/sees-arena   also the entire table Element:  <th> Text:     Symbol Source:   /protocols/sees-arena  needs improvement and can include more protocol stats.  ",
-        "updatedAt": "2026-10-01T08:53:54.088Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.854Z",
+        "importance": "M",
+        "noteApplied": true
+      },
+      "/status/order-testing": {
+        "hide": null,
+        "keen": null,
+        "note": "Move this page to the Status area with the intention of offering all users the ability to test individual aspects of the app. This will support keen testers in the area days too. Lets also take the opportunity to examine the existing QA page and how we might create a system that can feedback to myself.",
+        "noteNew": "",
+        "uiScore": null,
+        "updatedAt": "2026-10-08T21:47:39.352Z",
+        "importance": null,
+        "noteApplied": true,
+        "noteNewApplied": null
       },
       "/trading/exit-signals": {
         "hide": false,
@@ -275,22 +308,26 @@
         "hide": false,
         "keen": 2,
         "note": "This column and its value feels wrong to me: Element:  <th._thNum_1avwi_397> Text:     Score Source:   /trading/trading-bots this is about more than the column of this table though. I dont trust our approach to generating that score. I assume it's the signal scorend we use a forumalue based on a reduced threshold. The whole thing needs re-examined. Lets create a UI for the scoring mechanism - wire all of it to a view that merges diagram with a dynamic page. We will do this with every approach to scoring so that the maths is broken down and it makes it easier for me to understand. I want this to be very high priority - done soon.",
-        "updatedAt": "2026-10-01T13:00:45.412Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T21:41:21.579Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/status/file-inventory": {
         "hide": false,
         "keen": 1,
         "note": "Move to the Development area",
-        "updatedAt": "2026-10-01T22:05:19.443Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.297Z",
+        "importance": "L",
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/trading/ab-strategies": {
         "hide": false,
         "keen": 3,
         "note": "some of the pairs are invalud: different protocols but that's less about this page and more about the database data. Agentic AI might have created those pairs. I would like: Element:  <article._pairRow_18ja8_687> Text:     AGold Day-Trade M15 (copy)609a435bactivexau-speed-m15-copy(p Source:   /trading/ab-strategies to display the different between A and B. I would also like the ability to order by that value and search. Placed here: Element:  <div._listHeadRow_18ja8_861> Text:     Strategy pairsListTable Source:   /trading/ab-strategies",
-        "updatedAt": "2026-10-01T13:22:05.370Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:17:34.357Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/trading/stop-guardian": {
         "hide": false,
@@ -303,15 +340,17 @@
         "hide": false,
         "keen": 3,
         "note": "I would like these to be accordions: Element:  <div.tj-card.tj-open> Text:     EURCADBUY#152712930991strategyOPENVol: 0.01Entry: $1.6001/10 Source:   /trading/trade-journal  displaying some of the information on the row and a bit more than we have now when opened. Im thinking a little bit more history of the position i.e. how many SL adjustments, how many simulated SL adjustments, peak price and reason for closing. ",
-        "updatedAt": "2026-10-01T18:32:01.079Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.503Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/trading/trading-plans": {
         "hide": false,
         "keen": 2,
         "note": "I want this to be clever but I'm not sure how. I've wondered if this is where we list limit orders too and potentially allow bots to create limit orders based on a new type of protocol score or maybe even the scoring and data we already have would suggest a good entry point: not sure if we have a good mechanism for finding the support level yet? I asked for a view that shows us the levels so I can visually test them, especially during backtesting. ",
-        "updatedAt": "2026-10-01T13:33:21.889Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T21:47:39.449Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/watchlists/add-symbol": {
         "hide": false,
@@ -324,15 +363,17 @@
         "hide": false,
         "keen": 2,
         "note": "Styling needs to match one of our better views with table",
-        "updatedAt": "2026-10-01T22:15:04.039Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.759Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/planner/trading-styles": {
         "hide": false,
         "keen": 2,
         "note": "Change this to a free page. It's a way to dynamically change the app and that will need as many users as we can to ensure it supports a positive experience. ",
-        "updatedAt": "2026-10-01T22:28:44.972Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.816Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/scoring/symbols-ladder": {
         "hide": true,
@@ -345,15 +386,18 @@
         "hide": false,
         "keen": 2,
         "note": "Isnt there more data and market status indicators online that can tell us what the market is like compared to normal? Just wondering if the view can be enhanced further and offer more value. ",
-        "updatedAt": "2026-10-01T18:34:09.366Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T18:26:57.072Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/automation/alert-center": {
         "hide": false,
         "keen": 1,
         "note": "Same again. Merge these entries into the Trading Journey. I suspect in a way there might be what looks like duplicates at that point because the journal will tell us the activity but the alert is meant to have a different purpose. There might need to be mechanism to compact related information. Treat compacted journal entries with an alert status attached as seen and the alert becomes seen. We have the alerts disc: Element:  <svg> Text:     (none) Source:   /development/ui-review and that is really the primary way to get alerts. Remove the link from that popover Delete this Alert Center page. This should result in no more Automation pages - delete the automation ared and related architecture documentation. Going forward anything frame was automation or scheduled will be within the area of what it is scheduling i.e. scheduling a trade, belongs in the Trading area. ",
-        "updatedAt": "2026-10-01T20:41:24.813Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.394Z",
+        "importance": "L",
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/research/analyse-symbol": {
         "hide": true,
@@ -362,27 +406,41 @@
         "updatedAt": "2026-10-01T08:46:56.081Z",
         "importance": "H"
       },
+      "/research/daily-briefing": {
+        "hide": null,
+        "keen": null,
+        "note": "Move this to the Research area and improve styling on Element:  <div.db-event> Text:     📅AGSS earnings1h 15m Source:   /development/daily-briefing  and Element:  <div.db-brief-row> Text:     InvestedEURCAD58BUY▸ Source:   /development/daily-briefing   ",
+        "noteNew": "",
+        "uiScore": null,
+        "updatedAt": "2026-10-08T08:03:33.160Z",
+        "importance": null,
+        "noteApplied": true,
+        "noteNewApplied": null
+      },
       "/research/research-notes": {
         "hide": false,
         "keen": 1,
         "note": "When AI is fully integrated I would add a toggle for automatic AI response to note submission but we arent in the AI phase yet. ",
-        "updatedAt": "2026-10-01T08:21:15.170Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:17.393Z",
+        "importance": "L",
+        "noteApplied": false
       },
       "/scoring/singles-monitor": {
         "hide": false,
         "keen": 3,
         "note": "Add a symbol search and rename the page to Single Symbol",
-        "updatedAt": "2026-10-01T09:11:01.582Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.563Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/status/broker-catalogue": {
         "hide": false,
         "keen": null,
         "note": "Element:  <span.bc-broker-id> Text:     Broker 2 Source:   /research/broker-catalogue  extend that line with the name of the brokers account i.e. PepperstoneUK-Demo is one of the accounts in use. Also move the page to the Status area. ",
         "uiScore": null,
-        "updatedAt": "2026-10-06T21:26:05.968Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.720Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/trading/performance-lab": {
         "hide": false,
@@ -402,8 +460,9 @@
         "hide": false,
         "keen": 1,
         "note": "It does not display anything and I believe it's meant to display all activity by the protocol which will include a breakdown of each directives score within each scoring run. This could be a busy page so should be limited to a few entries by default but the ability to search and filter. ",
-        "updatedAt": "2026-10-01T08:59:13.119Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.585Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/research/events-calendar": {
         "hide": true,
@@ -423,22 +482,25 @@
         "hide": false,
         "keen": 3,
         "note": "Lets consider more filters and ordering that overrides the default ordering: Element:  <div.sig-toolbar> Text:     ↻ RefreshShow dismissed Source:   /signals/signals-overview  ability to priortise symbols with highest past profit",
-        "updatedAt": "2026-10-01T09:12:39.765Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T21:49:32.546Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/status/meta-stack-status": {
         "hide": false,
         "keen": 3,
         "note": "Another view with the 60/100 score which I asked for an investigation of Element:  <div.mss-priority-score-row> Text:     60Score / 100BUY Source:   /status/meta-stack-status  -  there is potential for META.Stack to be detailed even more on this page but it already looks good, the styling is a good example for some of the lesser styled pages. ",
-        "updatedAt": "2026-10-01T22:01:22.037Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T17:35:58.031Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/trading/strategy-library": {
         "hide": false,
         "keen": 2,
         "note": "Some strategies are labelled with Element:  <span.sl-badge> Text:     Fully Supported Source:   /trading/strategy-library but we need another one telling us if the supporting/linked strategy  active or not, in the initial row before opening the accordion: Element:  <article.sl-card> Text:     Cable Session Trading (GBPUSD)GBPUSD-specific session strate Source:   /trading/strategy-library ",
-        "updatedAt": "2026-10-01T18:36:20.174Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.681Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/trading/strategy-monitor": {
         "hide": false,
@@ -458,8 +520,10 @@
         "hide": false,
         "keen": 2,
         "note": "Move this page to the Status area with the intention of offering all users the ability to test individual aspects of the app. This will support keen testers in the area days too. Lets also take the opportunity to examine the existing QA page and how we might create a system that can feedback to myself.",
-        "updatedAt": "2026-09-30T11:04:29.055Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.373Z",
+        "importance": "M",
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/automation/decision-trail": {
         "hide": false,
@@ -479,50 +543,70 @@
         "hide": true,
         "keen": 3,
         "note": "This is not good enough yet as it does not show the patterns on the chart. I also want examples made-up using the other chart technology bundled with the app. This page should be hidden until complete.",
-        "updatedAt": "2026-10-01T20:46:57.376Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:17:34.270Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/planner/personal-finances": {
         "hide": false,
         "keen": 2,
         "note": "Change this to a free page. I would like to offer some basic finance management between registered accounts. Premium will get some additional perks and AI support.",
-        "updatedAt": "2026-10-01T22:28:02.036Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.797Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/trading/positions-monitor": {
         "hide": false,
         "keen": 2,
         "note": "The design of containers need better design and there is probably more stats ",
-        "updatedAt": "2026-10-01T13:24:22.144Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T18:26:57.050Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/trading212/t212-portfolio": {
         "hide": false,
         "keen": 3,
         "note": "the table needs to match the most recent designs, links from symbols to the symbols own page, pages url includes \"t212\" but it's a view",
-        "updatedAt": "2026-09-30T10:57:25.760Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.834Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/watchlists/active-symbols": {
         "hide": false,
         "keen": 3,
         "note": "The protocols column shows zero for symbols that have current positons which means some basic wiring still hasn't been done. If it turns out that those positions were created in yet another separate system from META.Stack's path then I need to know asap - sometimes this does happen due to the way agent AI processes instructions. ",
-        "updatedAt": "2026-09-30T11:12:04.221Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.462Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/automation/execution-queue": {
         "hide": false,
         "keen": 1,
         "note": "Merge this page into View:       Trade Journal Route:      /trading/trade-journal File:       src/pages/TradeJournalPage.jsx CSS:        src/pages/trade-journal-page.css API:        GET /api/journal/entries, GET /api/journal/stats Component:  <TradeJournalPage /> - add some of the stats Element:  <section.eq-routine> Text:     Primary Loop⟳ every 2mTick #49last tick 9srisk ×1🟢 Protocol Source:   /automation/execution-queue to Element:  <div.tj-stats> Text:     367Total364Closed29%Win Rate$658.20Total P&L+$5.45Avg Win-$1 Source:   /trading/trade-journal and display the same data in the journal. Create controls for filtering journal entries including filter out  Element:  <span.eq-event-status> Text:     BLOCKED Source:   /automation/execution-queue  signals oh and dont forget these stats  Element:  <div.eq-event-stats> Text:     ⟳ Automation: 50⚡ Decisions: 50📋 Total: 100 Source:   /automation/execution-queue  and the result is essentially a journal of most activity, even rejected trades. Delete this page. ",
-        "updatedAt": "2026-10-01T20:33:54.888Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.416Z",
+        "importance": "L",
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/development/daily-briefing": {
         "hide": false,
         "keen": 2,
         "note": "Move this to the Research area and improve styling on Element:  <div.db-event> Text:     📅AGSS earnings1h 15m Source:   /development/daily-briefing  and Element:  <div.db-brief-row> Text:     InvestedEURCAD58BUY▸ Source:   /development/daily-briefing   ",
-        "updatedAt": "2026-10-01T22:44:49.820Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.326Z",
+        "importance": "M",
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/development/file-inventory": {
+        "hide": null,
+        "keen": null,
+        "note": "Move to the Development area",
+        "noteNew": "",
+        "uiScore": null,
+        "updatedAt": "2026-10-08T08:03:33.135Z",
+        "importance": null,
+        "noteApplied": true,
+        "noteNewApplied": null
       },
       "/development/widget-library": {
         "hide": null,
@@ -542,8 +626,9 @@
         "hide": false,
         "keen": 1,
         "note": "This page does not load anything and I think its meant to offer a breakdown of directives. Ability to search directives. It should then display examples or diagrams and maths to explain how the directive works - what market data it uses and the theory. Some directives are gates and some are rules for bots too, they can be included but their type should be very clear.",
-        "updatedAt": "2026-10-01T09:01:06.844Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:16.603Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/protocols/protocol-builder": {
         "hide": false,
@@ -556,15 +641,17 @@
         "hide": false,
         "keen": 3,
         "note": "There is not one SELL position and I suspect that it is a lack of SELL protocols but please make sure. ",
-        "updatedAt": "2026-10-01T08:51:27.128Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.894Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/research/earnings-calendar": {
         "hide": false,
         "keen": 3,
         "note": "Element:  <div.ec-table-wrap> Text:     SymbolCompanyDateTimeEPS EstPrior EPSRev EstMkt CapNKENike,  Source:   /research/earnings-calendar add ability to click on row and an overlay appears with option to register the symbol and to select an existing watchlist to add the symbol too. Additionally, when we are in the AI integration phase, add an option for AI anlysis of the stock, to establish the best protocol and bot and to advise on scheduling an entry, within app and a limit order. The AI phase is not actually defined so we might need to create an epic sprint issue that references other related issues.",
-        "updatedAt": "2026-10-01T08:26:09.833Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T13:33:08.504Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/research/earnings-whispers": {
         "hide": false,
@@ -573,19 +660,32 @@
         "updatedAt": "2026-10-01T08:27:42.256Z",
         "importance": "L"
       },
+      "/settings/screen-assignment": {
+        "hide": null,
+        "keen": null,
+        "note": "Move to Settings. ",
+        "noteNew": "",
+        "uiScore": null,
+        "updatedAt": "2026-10-08T08:03:33.181Z",
+        "importance": null,
+        "noteApplied": true,
+        "noteNewApplied": null
+      },
       "/status/meta-stack-explorer": {
         "hide": false,
         "keen": 3,
         "note": "Agent should review this page for potential new steps that isn't integrated. Especially around bots. I also notice something unusual, yet again, another hint to another scoring mechnism: Element:  <div.mse-signal-main> Text:     XAUUSDBUY60/100 Source:   /status/meta-stack-explorer  this is showing a scoring out of 100, now that might be percentage and if so it is a high percentage score but it should say so. This needs investigated and I need to know if the app is still generating a score using an approach outside of the primary (and meant to be ONLY) META.Stack scoring path. ",
-        "updatedAt": "2026-10-01T21:42:40.151Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T18:26:57.012Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/status/meta-stack-pipeline": {
         "hide": false,
         "keen": 3,
         "note": "I want the nodes on this view factored into View:       Pipeline Graph Route:      /development/pipeline-graph-lab File:       src/pages/PipelineGraphLabPage.jsx CSS:        src/pages/pipeline-graph-lab.css API:        None Component:  <PipelineGraphLabPage /> and then this page deleted. It's about showing the pathways in how the key data flows and the decisions made by algorithms in the loop, with the bot especially being clear. I would like View:       Pipeline Graph Route:      /development/pipeline-graph-lab File:       src/pages/PipelineGraphLabPage.jsx CSS:        src/pages/pipeline-graph-lab.css API:        None Component:  <PipelineGraphLabPage /> to continue showing real data, as much live ongoing activity as possible. ",
-        "updatedAt": "2026-10-01T21:59:39.116Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T21:11:42.720Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/trading/accounts-dashboard": {
         "hide": true,
@@ -598,8 +698,9 @@
         "hide": false,
         "keen": 3,
         "note": "Reduce the initial size of the containers and turn them into accordions: Element:  <li._card_1y1bd_225._cardActive_1y1bd_241> Text:     df217b0d4af07ca4btc-speed-v1(proto)longBTCBitcoin Investment Source:   /trading/strategies-derived  also add more information to them such as most recent trade or current position, and most recent signal+scores. ",
-        "updatedAt": "2026-10-01T13:14:08.167Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.483Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/watchlists/user-watchlists": {
         "hide": false,
@@ -612,15 +713,18 @@
         "hide": false,
         "keen": 1,
         "note": "These seem like global defaults. Ensure they exist in the settings area as they are styled on this page - I like this layout for what can be highly complex settings. I want this page deleted. ",
-        "updatedAt": "2026-10-01T20:35:25.915Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.440Z",
+        "importance": "L",
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/development/blocked-signals": {
         "hide": null,
         "keen": null,
         "note": "MAke it so I can order by reason Element:  <th> Text:     Latest reason Source:   /development/blocked-signals",
-        "updatedAt": "2026-10-01T22:39:31.842Z",
-        "importance": null
+        "updatedAt": "2026-10-08T08:03:16.642Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/development/hot-stock-picks": {
         "hide": null,
@@ -633,22 +737,25 @@
         "hide": false,
         "keen": 3,
         "note": "There is still a serious flaw in our scoring system and this is where we come to examine the output. SIGNAL is far too low, and I'm wondering if we should trial the ability to switch between a single score and dual - how much work would that involve? Also would there be any benefit in designing and trialing a scoring system that is broken down into 3-5 stages, like gates made-up of groups of directives. Just explore these ideas for now. As for the page itself it does not need changes. ",
-        "updatedAt": "2026-10-01T09:06:14.633Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T21:47:39.094Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/status/platform-comparisons": {
         "hide": false,
         "keen": 1,
         "note": "I would like all of this information added to the free projects github pages in the hopes it attracts some traffic. Does Github allow any statistics monitoring?",
-        "updatedAt": "2026-10-01T21:40:04.452Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T20:34:01.952Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/trading/strategy-comparison": {
         "hide": false,
         "keen": 3,
         "note": "The hover over affect is too dark. ",
-        "updatedAt": "2026-10-01T13:30:03.341Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.622Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/development/theme-lab-motion": {
         "hide": null,
@@ -668,29 +775,34 @@
         "hide": false,
         "keen": 3,
         "note": "This view currently has an Old/New comparison. Delete the old and accept the newer design.",
-        "updatedAt": "2026-10-01T08:49:57.419Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:17:34.306Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/research/market-correlations": {
         "hide": false,
         "keen": 1,
         "note": "Create an issue for discussion the possibility of forming protocols and bots specifically for pairs. Also do we have a directive to benefit from pairs or would this require a custom directive per pair - create an issue to discuss that and con Tidy up this list: Element:  <section.mc-section> Text:     Position Risk FlagsCRWV + CHPT1.00High positive correlation  Source:   /research/market-correlations Make this a bit larger: Element:  <div.mc-heatmap-wrap> Text:     8XPdNVDAXIACY3LNVlMSTRRTPACICPTGEFRBLXAIRpSOUNMETCR3NKd3NVDl Source:   /research/market-correlations  and make it so the boxes: Element:  <td.mc-cell> Text:     0.77 Source:   /research/market-correlations popout and resize larger when hovered over.",
-        "updatedAt": "2026-10-01T08:42:44.511Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.740Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/research/stock-investigation": {
         "hide": false,
         "keen": 2,
         "note": "This is essentially like a report on a stock. It will require the AI phase to be started.",
-        "updatedAt": "2026-10-01T08:37:17.423Z",
-        "importance": "M"
+        "updatedAt": "2026-10-08T08:03:17.373Z",
+        "importance": "M",
+        "noteApplied": false
       },
       "/development/screen-assignment": {
         "hide": null,
         "keen": null,
         "note": "Move to Settings. ",
-        "updatedAt": "2026-10-01T22:35:05.013Z",
-        "importance": null
+        "updatedAt": "2026-10-08T08:03:16.348Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/development/theme-lab-popover": {
         "hide": null,
@@ -731,8 +843,9 @@
         "hide": true,
         "keen": 3,
         "note": "Depictions of candles are not good enough. The first image uses very thin lines and it looks dull. The larger TradingView based chart shows very wide candles. It all needs to appear more realistic to a chart like the Pattern Detection page. I dont know if we have a central chart class, our own library being forced, but I do think we need our own approach to consuming any of the chart tech and our own API that allows deployment of charts that share the same data, but might appear different from one another, but not different between all of our pages like this one. ",
-        "updatedAt": "2026-10-01T20:49:30.303Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:17.257Z",
+        "importance": "H",
+        "noteApplied": false
       },
       "/development/daily-summary-report": {
         "hide": null,
@@ -752,16 +865,18 @@
         "hide": false,
         "keen": 3,
         "note": "This should be assessed very soon because nothing seems to show as having a SHORT Protocol. We need more shorting protocols and there is another comment regarding creating pairs. Lets change this page to allow selection of special paired protocols too so that Dual has two meanings. ",
-        "updatedAt": "2026-10-01T09:03:08.835Z",
-        "importance": "H"
+        "updatedAt": "2026-10-08T08:03:16.874Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/development/architecture-framework": {
         "hide": false,
         "keen": null,
         "note": "Move to the Development area",
         "uiScore": null,
-        "updatedAt": "2026-10-06T21:26:05.914Z",
-        "importance": "L"
+        "updatedAt": "2026-10-08T08:03:16.951Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/research/recently-analysed-symbols": {
         "hide": false,

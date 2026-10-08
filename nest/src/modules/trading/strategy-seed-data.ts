@@ -13,7 +13,7 @@
  * @created 2026-07-31 — 24/7 session coverage
  */
 
-import { SessionTag } from './session-window';
+import { SessionTag, ALL_HOURS_VALUE } from './session-window';
 
 export interface SeedTradingStrategy {
   name: string;
@@ -39,13 +39,23 @@ export interface SeedTradingStrategy {
   /**
    * SESSION GATE (2026-09-10) — canonical session tags this bot may act in.
    * Persisted to trading_strategy.sessionWindow and enforced by Gate 4.5 in
-   * automation-loop.service.ts. `null` = ungated (may act any time).
+   * automation-loop.service.ts.
+   *
+   * ⚠️ EVERY entry must DECLARE this slot (#982, 2026-10-08). `null` is not a valid value here any
+   * more — the union below excludes it as the declared contract, and because this project compiles
+   * with `strictNullChecks` OFF the ENFORCEMENT is the build-gate spec
+   * (`strategy-seed-session-declared.spec.ts`), not the type. NULL in the DATABASE now means
+   * "UNFILLED — nobody chose" and is surfaced as such by the audit (`sessionSlotKind()`), while the
+   * deliberate case is the positive value `'all-hours'` (synonym `'bypass'`). The GATE treats both
+   * `'all-hours'` and NULL as ungated — identical behaviour — so this change moved visibility, not
+   * trading boundaries.
+   * The build gate for this rule: `strategy-seed-session-declared.spec.ts` (in the prebuild list).
    *
    * Replaces the old `session: 'tokyo' | 'london' | 'us' | 'always'` field,
    * which was declared here but consumed by no runtime code — a label with no
    * rule behind it. 'tokyo' → 'asian', 'always' → null.
    */
-  sessionWindow: SessionTag[] | null;
+  sessionWindow: SessionTag[] | typeof ALL_HOURS_VALUE;
   /**
    * Direction constraint ('BUY' | 'SELL'). null/absent = unconstrained.
    *
@@ -233,7 +243,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 0.3,
     tpPct: 0.5,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 4,
     style: 'Scalp',
   },
@@ -250,7 +260,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 0.5,
     tpPct: 1.0,
     minComposite: 10,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 24,
     style: 'Day Trade',
   },
@@ -276,7 +286,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1.5,
     tpPct: 3.0,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 72,
     style: 'Swing',
   },
@@ -302,7 +312,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 3.0,
     tpPct: 6.0,
     minComposite: 8,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 120,
     style: 'Position',
   },
@@ -418,7 +428,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 2.0,
     tpPct: 4.0,
     minComposite: 0,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     // Must be SELL — vix-short-v1 is SHORT_ONLY. The API create() path also sets
     // this; the seeder previously had no such field, so a seeded short bot would
     // have been created without a declared direction.
@@ -487,7 +497,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -505,7 +515,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -559,7 +569,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -595,7 +605,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -633,7 +643,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -651,7 +661,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -684,7 +694,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -702,7 +712,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1,
     tpPct: 1,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
@@ -724,7 +734,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1.5,
     tpPct: 3,
     minComposite: 9,
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     maxHoldHours: 12,
     active: false,
   },
@@ -768,7 +778,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     minComposite: 10,
     // 24/7 — ungated. session-window.ts maps 'always'/'24-7' to null, and this is
     // the only instrument that trades when FX is closed.
-    sessionWindow: null,
+    sessionWindow: 'all-hours',
     // btc-speed-v1 is LONG_ONLY — declared so the subscription role comes from a
     // statement rather than the protocol-name heuristic.
     requireDirection: 'BUY',

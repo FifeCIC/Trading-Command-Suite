@@ -252,6 +252,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
       'screener': 'screener',
       'signals-overview': 'signals-overview',
       't212-portfolio': 't212-portfolio',
+      'mt5-trading': 'mt5-trading',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
@@ -1141,7 +1142,10 @@ export default function App() {
               <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
               <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
               <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
-              <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/status/meta-stack-pipeline" replace />} />
+              {/* ⚠️ This redirected to /status/meta-stack-pipeline, which was MERGED into this lab
+                  (2026-10-08). The old URL now lands on the graph itself rather than 404ing — a
+                  bookmark or a link in an older issue keeps working. */}
+              <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/development/pipeline-graph-lab" replace />} />
               {/* `/planner/allocator` → `/lab/allocator` REMOVED 2026-10-01. The allocator view was
                   deleted at the owner's direction in the Page Walkthrough ("delete unless you think
                   there is value" — read: it survives as the Portfolio Assistant). A redirect to a

@@ -555,15 +555,20 @@ export class AutomationController {
       activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),
       recentDecisions: (loopState.recentDecisions || []).slice(0, 20),
       priorityQueue: loopState.priorityQueue || [],
-      // ── Session-gated bots (#759) ──
-      // Bots the session gate is holding shut right now. Present so a gated bot
-      // is never mistaken for an idle one: before this, three of six forex bots
-      // could be shut through London and the US session and every surface
-      // reported nothing at all. `ambigutyHint: 'news-flow?'` means the window
-      // resolved through a CITY alias, so the gate may be reading a news-flow
-      // name as a trading clock — a question for the operator, not a decision
-      // this endpoint makes.
+      // ── Session state per bot (#759, #981) ──
+      // One entry per ACTIVE bot — not only the gated ones (#981): an UNGATED bot whose name
+      // looks like a session was the invisible case (the audit could never fire for it), so it
+      // must appear here with `gated: false` and `reason: 'ungated — no session window declared'`.
+      // `nameWindowAgreement: 'ambiguous'` means the window resolved through a CITY alias, so the
+      // gate may be reading a news-flow name as a trading clock — a question for the operator, not
+      // a decision this endpoint makes. `at` on each entry says when it was computed, so a stale
+      // record (loop stopped) is visible as stale rather than silently wrong.
       sessionGatedBots: this.loop.getSessionGated(),
+      // ── Pre-open session alert state (#981) ──
+      // ⚠️ `state: 'unknown'` ≠ `alertActive: false`. A failed or unresolvable session read must
+      // never render as "no alert pending" — absence is not a negative. `disabled` means the
+      // threshold setting is 0, which is a deliberate configuration, not a failure.
+      preOpenSession: this.loop.getPreOpenSession(),
       positionSync: {
         lastSyncedAt: this.positionSync.getLastSyncTime(),
         lastResult: this.positionSync.getLastSyncResult(),

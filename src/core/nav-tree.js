@@ -236,7 +236,8 @@ export const NAV_TREE = {
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
       // ── System Maps ──
       { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔍' },
-      { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
+      // META.Stack Pipeline WAS a nav entry here and was REMOVED (2026-10-08): the view is now a
+      // section of Pipeline Graph Lab, so the entry pointed at a route that no longer exists.
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       // ⚠️ `file-inventory` MOVED to Development 2026-10-02. ⚠️ `architecture-framework` was NOT moved
       // even though the owner asked for it: /builder/architecture-framework is declared as the route in

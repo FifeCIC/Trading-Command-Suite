@@ -136,6 +136,31 @@
   z-index: 1;
 }
 
+/* ⚠️ A SHRINK GUARD. Keep it, but it is NOT what fixes the dashboard overflow — see below.
+   A grid/flex item defaults to `min-width: auto`, which resolves to its MIN-CONTENT width, so a
+   chain of them can set a floor the container cannot go below. That is a real trap (`.market-tape`,
+   market-tape.css, and #853) and these four levels are all in that chain.
+
+   ⚠️ MEASURED FALSE HYPOTHESIS, 2026-10-08 — recorded so it is not re-tried. `/dashboard/dashboard`
+   scrolls horizontally at narrow viewports: at 900px the document is **1222** wide, and hiding
+   `.react-grid-layout` drops it to exactly **900**, which made the grid look like the cause. Adding
+   these `min-width: 0` rules changed the number from **1222 to 1222** — it is OBSERVED to be applied
+   (computed `min-width: 0px`) and OBSERVED to have no effect on the symptom. So the overflow is not
+   an unshrinkable item; the tiles are being given widths WIDER than their container (a `w:6` tile
+   measured 582 inside an 817 grid, and `w:4` tiles measured 434 — two of those already exceed 817).
+   That points at the grid's own computed column widths being stale rather than at CSS min-widths.
+
+   ⚠️ UNCONFIRMED, and it gates the whole claim: the integrated browser runs with
+   `visibilityState: 'hidden'`, where ResizeObserver may not fire — so the stale-width reading might
+   be an artefact of that harness rather than a real defect. Re-measure in a focused window before
+   treating the 1222 as a user-visible bug. */
+.wb-grid-shell,
+.wb .react-grid-layout,
+.wb .react-grid-item,
+.wb-tile {
+  min-width: 0;
+}
+
 /* Library defaults are greys/red — re-theme them with our tokens. */
 .wb .react-grid-item.react-grid-placeholder {
   background: var(--accent);

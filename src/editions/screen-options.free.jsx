@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 4 of 10 keys — premium-view keys dropped (their titles named premium pages), shared keys kept
+ * 5 of 11 keys — premium-view keys dropped (their titles named premium pages), shared keys kept
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -276,6 +276,46 @@ const OPTIONS_REGISTRY = {
         label: "Accounts & Totals",
         description: "Choose which accounts (and Live/Demo categories) are included in the total.",
         type: "accounts",
+      },
+    ],
+  },
+  "mt5-trading": {
+    title: "Manual Trading",
+    sections: [
+      {
+        id: "pageWidth",
+        label: "Page Width",
+        description: "How wide the Manual Trading page renders. A wider page fits more of the order form and positions table on one screen.",
+        type: "radio",
+        key: "mt5-page-width",
+        defaultValue: "desktop",
+        options: [
+          {
+            value: "full",
+            label: "Full Width",
+            desc: "Use all available screen width",
+          },
+          {
+            value: "4k",
+            label: "4K",
+            desc: "Max width 2560px",
+          },
+          {
+            value: "desktop",
+            label: "Desktop",
+            desc: "Max width 1440px — default",
+          },
+          {
+            value: "laptop",
+            label: "Laptop",
+            desc: "Max width 1200px",
+          },
+          {
+            value: "tablet",
+            label: "Tablet",
+            desc: "Max width 960px",
+          },
+        ],
       },
     ],
   },

@@ -11,6 +11,7 @@ import {
 import '../core/forms.css'; // canonical Form System (.ff-*) — segmented + compact .ff-bar
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
+import RegisterSymbolOverlay from '../components/RegisterSymbolOverlay.jsx';
 import './earnings-calendar.css';
 
 /** Hard cap on rendered rows — 5k+ DOM rows chokes the page. */
@@ -611,6 +612,18 @@ export default function EarningsCalendarPage() {
                       key={r.symbol + '-' + idx}
                       className={`ec-row ${isExpanded ? 'ec-row-expanded' : ''} ${isToday ? 'ec-row-today' : ''}`}
                       onClick={() => setExpandedSym(isExpanded ? null : r.symbol)}
+                      /* ⚠️ KEYBOARD PATH (accessibility policy). A row that only answers a pointer is
+                         one a keyboard user cannot open. `tabIndex` + Enter/Space is the fix that does
+                         NOT change the row's role — setting `role="button"` here would remove the row
+                         from the table and break screen-reader table navigation, which is worse. */
+                      tabIndex={0}
+                      title="Open symbol actions — register this symbol or add it to a watchlist"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setExpandedSym(isExpanded ? null : r.symbol);
+                        }
+                      }}
                     >
                       <td className="ec-sym">
                         {r.tracked ? <span className="ec-tracked-star" title="In your watchlist or portfolio">★</span> : null}
@@ -642,6 +655,14 @@ export default function EarningsCalendarPage() {
           </div>
         </section>
       ))}
+
+      {/* ⚠️ THE SHARED OVERLAY, driven by the row state that already existed. Clicking a row set
+          `expandedSym` before this change and NOTHING rendered from it — a buried ability. Rather
+          than add a second piece of state, the row toggle now opens the overlay and `onClose`
+          clears it, so Escape, the close button and re-clicking the row all agree. */}
+      {expandedSym && (
+        <RegisterSymbolOverlay ticker={expandedSym} onClose={() => setExpandedSym(null)} />
+      )}
     </div>
   );
 }

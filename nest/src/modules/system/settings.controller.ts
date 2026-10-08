@@ -68,6 +68,10 @@ export class SettingsController {
     if (typeof p.note === 'string') clean.note = p.note.slice(0, 2000);
     // ⚠️ The SECOND comments column (2026-10-07). A separate field on purpose — see UiReviewEntry.
     if (typeof p.noteNew === 'string') clean.noteNew = p.noteNew.slice(0, 2000);
+    // ⚠️ Applied-status per round (2026-10-08). Booleans or `null` and nothing else — a string 'true'
+    // must not pass, or the store ends up with a value that renders as neither Yes nor No.
+    if (typeof p.noteApplied === 'boolean' || p.noteApplied === null) clean.noteApplied = p.noteApplied;
+    if (typeof p.noteNewApplied === 'boolean' || p.noteNewApplied === null) clean.noteNewApplied = p.noteNewApplied;
     return this.settings.setUiReviewEntry(body.viewKey, clean);
   }
 

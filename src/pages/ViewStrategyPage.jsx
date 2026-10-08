@@ -174,8 +174,15 @@ function BotLifecyclePath({ bot, rules }) {
   // A stage with nothing declared is an ABSENCE, not a failure, so it earns neither a red node nor
   // a red pill. It is still worth counting and stating: in this picture an undeclared stage is
   // drawn as a bare node precisely so the gap is visible, and this line says how many there are.
+  //
+  // ⚠️ `n.tally &&` IS LOAD-BEARING (#1092, measured 2026-10-08). The brake-layer nodes carry
+  // `tally: null` BY DESIGN (`bot-stage-path.js`: "tally: null marks these as NOT stages"), and
+  // `botStageClaims()` guards for exactly that (`if (!n.tally) continue`). This filter did not —
+  // so `null.declared` crashed the ENTIRE per-bot view on every bot, silently from the reader's
+  // point of view ("Something went wrong rendering this view"). Any new consumer of `path.nodes`
+  // must apply the same guard.
   const stagesWithoutRules = useMemo(
-    () => path.nodes.filter((n) => n.tally.declared === 0).length,
+    () => path.nodes.filter((n) => n.tally && n.tally.declared === 0).length,
     [path],
   );
   const hostRef = useRef(null);

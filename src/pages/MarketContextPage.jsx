@@ -79,6 +79,22 @@ export default function MarketContextPage() {
     refetchInterval: 120_000,
   });
 
+  // ── Market breadth (owner request, 2026-10-08) ──
+  // Owner: *"Isnt there more data and market status indicators online that can tell us what the
+  // market is like compared to normal?"*
+  //
+  // ⚠️ "COMPARED TO NORMAL" IS NOT CLAIMED. This app has no historical-baseline endpoint to compare
+  // against, and inventing a baseline would put a judgement on screen that nothing measured — the
+  // failure shape this repo keeps re-finding. What CAN be said truthfully from data the app already
+  // holds is BREADTH: the live directional split across every scored symbol. The panel is labelled
+  // "right now" so it cannot be misread as a trend or a comparison.
+  const rankedQuery = useQuery({
+    queryKey: ['mc-ranked-breadth'],
+    queryFn: () => apiGet('/api/scoring/ranked?limit=200').catch(() => null),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
   // Portfolio positions for session strength + checklist verification
   const portfolioQuery = useQuery({
     queryKey: ['portfolio-for-market-context'],
@@ -227,6 +243,41 @@ export default function MarketContextPage() {
       )}
 
       {/* ── Sessions with multi-factor indicators ── */}
+      {/* Breadth — computed inline rather than in a `useMemo` so this file needs no new import. */}
+      {(() => {
+        const rows = rankedQuery.data?.ranked || rankedQuery.data?.rows || [];
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const isBuy = (s) => s === 'BUY' || s === 'STRONG_BUY';
+        const isSell = (s) => s === 'SELL' || s === 'STRONG_SELL';
+        const buys = rows.filter((r) => isBuy(r.signal)).length;
+        const sells = rows.filter((r) => isSell(r.signal)).length;
+        const holds = rows.length - buys - sells;
+        const pcts = rows.map((r) => Number(r.normalizedScore)).filter((n) => !Number.isNaN(n)).sort((a, b) => a - b);
+        const median = pcts.length ? pcts[Math.floor(pcts.length / 2)] : null;
+        const pctOf = (n) => Math.round((n / rows.length) * 100);
+        return (
+          <motion.section className="mc-panel" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <h2>Market breadth <span className="mc-tag">right now</span></h2>
+            <p className="mc-section-hint">
+              {rows.length} scored symbols · median {median != null ? median.toFixed(1) : '—'}% of protocol capacity
+            </p>
+            <div className="mc-sessions-grid">
+              {[['Bullish', buys, '#22c55e'], ['Bearish', sells, '#ef4444'], ['Flat', holds, '#94a3b8']].map(([label, n, color]) => (
+                <div className="mc-session-card" key={label}>
+                  <div className="mc-session-card-head">
+                    <span className="mc-session-name" style={{ color }}>{label}</span>
+                    <span className="mc-session-region">{n} · {pctOf(n)}%</span>
+                  </div>
+                  <div className="mc-risk-bar" style={{ height: 6, background: 'color-mix(in srgb, var(--ink) 12%, transparent)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${pctOf(n)}%`, height: '100%', background: color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        );
+      })()}
+
       <motion.section className="mc-panel mc-sessions-panel" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <h2>Sessions — Strength Ranking</h2>
         <p className="mc-section-hint">Ranked by combined scoring, position exposure, and timing quality</p>

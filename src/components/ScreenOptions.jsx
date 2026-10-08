@@ -17,6 +17,7 @@ import EmptyState from './EmptyState';
 import GlossaryPage from '../pages/GlossaryPage';
 import { SB_OPTIONAL_COLUMNS, sbColumnKey } from '../core/symbols-browser-columns';
 import { SCR_OPTIONAL_COLUMNS, scrColumnKey } from '../core/screener-columns';
+import { PAGE_WIDTHS, PAGE_WIDTH_STORAGE_KEY, DEFAULT_PAGE_WIDTH } from '../core/page-width';
 // ⚠️ Alert rows arrive in TWO column layouts (legacy rows were written with shifted positional
 // args) — read them through normaliseAlert(), never straight off `title`/`severity`.
 import { normaliseAlert, ALERT_LEVEL_WEIGHT } from '../core/alerts';
@@ -399,6 +400,27 @@ const OPTIONS_REGISTRY = {
         label: 'Accounts & Totals',
         description: 'Choose which accounts (and Live/Demo categories) are included in the total.',
         type: 'accounts',
+      },
+    ],
+  },
+  // ⚠️ THE WIDTH CONTROL LIVES HERE NOW (2026-10-08), not on the page. It was an in-page bar on
+  // Manual Trading, so a page-layout preference sat somewhere different from every other page's
+  // settings. The values and the storage key are imported from src/core/page-width.js, which the
+  // page reads with the SAME helpers — one definition, so the control cannot silently stop working.
+  'mt5-trading': {
+    title: 'Manual Trading',
+    sections: [
+      {
+        id: 'pageWidth',
+        label: 'Page Width',
+        description:
+          'How wide the Manual Trading page renders. A wider page fits more of the order form and positions table on one screen.',
+        type: 'radio',
+        key: PAGE_WIDTH_STORAGE_KEY,
+        defaultValue: DEFAULT_PAGE_WIDTH,
+        options: Object.entries(PAGE_WIDTHS).map(function (e) {
+          return { value: e[0], label: e[1].label, desc: e[1].desc };
+        }),
       },
     ],
   },

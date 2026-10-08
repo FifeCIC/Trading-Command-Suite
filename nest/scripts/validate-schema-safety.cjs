@@ -123,6 +123,14 @@ const RAW_MANAGED_TABLES = {
     owner: 'migration',
     reason: 'Backup of future-dated / orphaned market bars taken during #780 work. Rollback path — delete once #780 is confirmed complete.',
   },
+  // Caught by this guard 2026-10-08 — created while working #1080 (the netted-position P&L split).
+  // Same disposition as the entries above: it is someone's rollback path, so it is declared rather
+  // than dropped — a backup deleted by a different agent than the one who took it is unrecoverable
+  // for its original purpose. #1080 is closed; the takers may drop this once they are satisfied.
+  trade_repair_1080_backup: {
+    owner: 'migration',
+    reason: 'Pre-repair backup of the affected trade row(s) taken during #1080 work (netted-position P&L split, 2026-10-07). Rollback path — delete once #1080\u2019s repair is confirmed good by its author.',
+  },
 };
 
 /**

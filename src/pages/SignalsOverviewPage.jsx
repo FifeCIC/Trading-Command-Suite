@@ -16,7 +16,7 @@
  *   GET /api/signals/:id/action  — bot-action state per signal
  *   POST /api/signals/:id/trade  — manual trade via the bot's safety chain
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -608,6 +608,81 @@ export default function SignalsOverviewPage() {
   const data = bestQuery.data;
   const envelopes = Array.isArray(data?.envelopes) ? data.envelopes : [];
 
+  // ── Filters and an ordering OVERRIDE (owner request, 2026-10-08) ──
+  // Owner: *"Lets consider more filters and ordering that overrides the default ordering"*.
+  //
+  // ⚠️ THE DEFAULT IS THE SERVER'S ORDER, and it is not arbitrary: `/api/signals/best` returns
+  // envelopes sorted by `combinedStrength` desc (signal-envelope.service.ts:1554), which is
+  // 0.5×signalPct + 0.5×opportunityPct. So every other option here is an explicit OVERRIDE of a
+  // meaningful ranking, and the default button says so rather than reading as "unsorted".
+  //
+  // ⚠️ WHAT IS *NOT* HERE — "prioritise symbols with highest past profit" (same note). No per-symbol
+  // P&L reaches this page: `getAnalytics()` aggregates the `trade` table by PROTOCOL, not by symbol,
+  // and `SignalEnvelope` carries no profit field. Inventing a client-side proxy for it would put a
+  // number on screen that nothing measured. It needs a server aggregate — see the walkthrough note.
+  const [dirFilter, setDirFilter] = useState('all');
+  const [protoFilter, setProtoFilter] = useState('all');
+  const [listOrder, setListOrder] = useState('strength');
+
+  // ── Past profit per symbol (owner request: "ability to priortise symbols with highest past profit") ──
+  // ⚠️ THE FIGURE ALREADY EXISTED — this reads it rather than computing a second one.
+  // `journal.service` already builds `bySymbol: { symbol, trades, winRate, totalPnl }` and serves it at
+  // GET /api/journal/stats. ⚠️ Its SCOPE is the journal's, which this page does not control, so the
+  // control is labelled as that figure rather than claiming "signals only" — a label that overstates
+  // what a number covers is the same defect as a wrong denominator (#1090).
+  const statsQuery = useQuery({
+    queryKey: ['sig-journal-stats'],
+    queryFn: () => apiGet('/api/journal/stats').catch(() => null),
+    staleTime: 60_000,
+  });
+  const pnlBySymbol = useMemo(() => {
+    const rows = statsQuery.data?.bySymbol;
+    const m = new Map();
+    if (Array.isArray(rows)) {
+      rows.forEach((r) => {
+        if (r?.symbol) m.set(String(r.symbol).toUpperCase(), Number(r.totalPnl ?? 0));
+      });
+    }
+    return m;
+  }, [statsQuery.data]);
+  // ⚠️ MEASURED 2026-10-08: the endpoint answers with `bySymbol` present but EMPTY (0 rows) — the
+  // journal has no closed trades to summarise yet. Sorting on it would place every symbol at
+  // `-Infinity`, so the order would look applied while changing nothing. The control is therefore
+  // rendered DISABLED with the reason, not silently inert: a filter that quietly does nothing is the
+  // failure this repo keeps re-finding, and the reader cannot tell it apart from working code.
+  const hasProfitData = pnlBySymbol.size > 0;
+
+  const protocolOptions = useMemo(() => {
+    const m = new Map();
+    envelopes.forEach((e) => { if (e.protocolId) m.set(e.protocolId, e.protocolName || e.protocolId); });
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [envelopes]);
+
+  const visibleEnvelopes = useMemo(() => {
+    const isBuy = (e) => e.signal === 'BUY' || e.signal === 'STRONG_BUY';
+    const isSell = (e) => e.signal === 'SELL' || e.signal === 'STRONG_SELL';
+    const filtered = envelopes.filter((e) =>
+      (dirFilter === 'all' || (dirFilter === 'buy' ? isBuy(e) : isSell(e))) &&
+      (protoFilter === 'all' || e.protocolId === protoFilter),
+    );
+    // A null `signalPct`/`opportunityPct` sorts LAST, not first: `-1` keeps a missing measurement
+    // below every real one instead of letting `null` coerce to 0 and outrank a genuine 0.
+    const cmp = {
+      strength: (a, b) => b.combinedStrength - a.combinedStrength,
+      signal: (a, b) => (b.signalPct ?? -1) - (a.signalPct ?? -1),
+      opportunity: (a, b) => (b.opportunityPct ?? -1) - (a.opportunityPct ?? -1),
+      confidence: (a, b) => (b.confidence ?? -1) - (a.confidence ?? -1),
+      symbol: (a, b) => a.symbol.localeCompare(b.symbol),
+      // ⚠️ `-Infinity`, NOT 0, for a symbol with no recorded history. Using 0 would place an
+      // UNMEASURED symbol level with one that genuinely broke even, and above every symbol that lost
+      // money — the ordering would look confident while resting on absent data.
+      profit: (a, b) =>
+        (pnlBySymbol.get(String(b.symbol).toUpperCase()) ?? -Infinity) -
+        (pnlBySymbol.get(String(a.symbol).toUpperCase()) ?? -Infinity),
+    }[listOrder];
+    return [...filtered].sort(cmp);
+  }, [envelopes, dirFilter, protoFilter, listOrder, pnlBySymbol]);
+
   return (
     <div className="sig-page">
       <motion.header className="sig-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
@@ -638,6 +713,69 @@ export default function SignalsOverviewPage() {
         >
           Show dismissed
         </button>
+
+        {/* Direction filter — the signal class is the envelope's own field, so this is a real
+            filter, not a text match on a label. */}
+        {[['all', 'All'], ['buy', 'Buys'], ['sell', 'Sells']].map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            className={`sig-tool ${dirFilter === v ? 'sig-tool--active' : ''}`}
+            aria-pressed={dirFilter === v}
+            onClick={() => setDirFilter(v)}
+          >
+            {label}
+          </button>
+        ))}
+
+        {protocolOptions.length > 1 && (
+          <select
+            className="sig-tool"
+            aria-label="Filter by protocol"
+            value={protoFilter}
+            onChange={(e) => setProtoFilter(e.target.value)}
+          >
+            <option value="all">All protocols</option>
+            {protocolOptions.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
+
+        <span className="sig-sub">Order</span>
+        {[
+          ['strength', 'Best of (default)', 'The server\u2019s own ranking — 50% signal + 50% opportunity'],
+          ['signal', 'Signal %', 'Highest pre-gate directional strength first'],
+          ['opportunity', 'Opportunity %', 'Highest additive screening score first'],
+          ['confidence', 'Confidence', 'Highest confidence score first'],
+          ['profit', 'Past profit', 'Highest realised P&L for that symbol, taken from the trade journal'],
+          ['symbol', 'Symbol A–Z', 'Alphabetical, to find a known ticker'],
+        ].map(([v, label, title]) => {
+          const unavailable = v === 'profit' && !hasProfitData;
+          return (
+            <button
+              key={v}
+              type="button"
+              className={`sig-tool ${listOrder === v ? 'sig-tool--active' : ''}`}
+              aria-pressed={listOrder === v}
+              disabled={unavailable}
+              title={
+                unavailable
+                  ? 'No per-symbol P&L yet — the trade journal has no closed trades to summarise, so this would sort every symbol equally.'
+                  : title
+              }
+              onClick={() => setListOrder(v)}
+            >
+              {label}{unavailable ? ' · no data' : ''}
+            </button>
+          );
+        })}
+
+        {(dirFilter !== 'all' || protoFilter !== 'all') && (
+          <span className="sig-sub">
+            Showing {visibleEnvelopes.length} of {envelopes.length}
+          </span>
+        )}
       </div>
 
       {bestQuery.isLoading && <LoadingSkeleton rows={4} />}
@@ -665,9 +803,19 @@ export default function SignalsOverviewPage() {
         </div>
       )}
 
+      {data && envelopes.length > 0 && visibleEnvelopes.length === 0 && (
+        <div className="sig-empty">
+          <p>No signals match the current filter.</p>
+          <p className="sig-empty-sub">
+            {envelopes.length} opportunit{envelopes.length === 1 ? 'y' : 'ies'} are loaded — clear the
+            direction or protocol filter to see them.
+          </p>
+        </div>
+      )}
+
       <div className="sig-opp-grid">
         <AnimatePresence>
-          {envelopes.map((env) => (
+          {visibleEnvelopes.map((env) => (
             <Card
               key={`${env.symbol}|${env.protocolId}|${env.directionMode}`}
               envelope={env}

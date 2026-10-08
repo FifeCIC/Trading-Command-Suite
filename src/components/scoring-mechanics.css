@@ -1,0 +1,212 @@
+/**
+ * scoring-mechanics.css — styles for ScoringMechanicsPanel.
+ *
+ * ⚠️ TOKENS ONLY, no literal colours — the panel must follow the theme pack and high-contrast mode
+ * like every other surface (ui-standards). The three signal stops use the profit/loss/warning tokens
+ * that already mean "good / bad / caution" elsewhere, so the scale reads without a legend.
+ */
+
+.sm-panel {
+  margin-top: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.sm-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.sm-title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.sm-sub {
+  flex: 1;
+  min-width: 12rem;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.sm-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.sm-picker-label {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* The chain is an ordered list on purpose: the STEPS ARE SEQUENTIAL, and a reader checking the maths
+   needs to know which number feeds the next. */
+.sm-chain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-md);
+}
+
+.sm-chain > li {
+  border-left: 2px solid var(--line);
+  padding-left: var(--space-md);
+}
+
+.sm-step {
+  display: block;
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.sm-step-note {
+  display: block;
+  margin: 0.15rem 0 var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.sm-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.sm-ratio {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 8rem;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.sm-ratio-label {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sm-ratio-value {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.sm-ratio-max {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.sm-ratio-pct {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+
+.sm-ratio-note {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.sm-verdict {
+  margin: var(--space-sm) 0 0;
+  font-size: var(--text-sm);
+}
+
+.sm-chainlist {
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.sm-chainlist li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+}
+
+.sm-chip {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* Signal scale — position, not decoration. The marker shows where THIS symbol sits. */
+.sm-stops {
+  position: relative;
+  display: flex;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 0;
+  padding-top: 14px;
+}
+
+.sm-stop {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--text-xs);
+}
+
+.sm-stop--strong { border-color: var(--risk-normal); }
+.sm-stop--trade { border-color: var(--accent); }
+.sm-stop--hold { border-color: var(--line); }
+
+.sm-stop-at {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.sm-stop-label {
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sm-stop-marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 12px;
+  background: var(--accent);
+  transform: translateX(-1px);
+}
+
+.sm-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.sm-error {
+  color: var(--notice-warning-text, var(--ink));
+}
+
+.sm-foot {
+  margin: var(--space-md) 0 0;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}

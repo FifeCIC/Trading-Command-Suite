@@ -472,14 +472,10 @@ const VIEW_META = {
     css: 'src/pages/theme-lab.css',
     api: [],
   },
-  '/status/meta-stack-pipeline': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'META.Stack Pipeline',
-    file: 'src/pages/MetaStackPipelinePage.jsx',
-    css: 'src/pages/meta-stack-pipeline.css',
-    api: ['GET /api/health'],
-  },
+  // ⚠️ '/status/meta-stack-pipeline' WAS HERE AND IS DELETED (2026-10-08, owner direction).
+  // Its board is now a SECTION of /development/pipeline-graph-lab, so there is no page to describe.
+  // A stale row here is not harmless: scripts/verify-view-meta-routes.cjs compares view-meta against
+  // the live routes, and nav renders from the same list.
   '/settings/settings-database': {
     tier: 'premium',
     review: 'approved',
@@ -638,7 +634,13 @@ const VIEW_META = {
     api: [],
   },
   '/status/platform-comparisons': {
-    tier: 'premium',
+    // ⚠️ PREMIUM → FREE (2026-10-08, owner direction on the Page Walkthrough): *"I would like all of
+    // this information added to the free projects github pages in the hopes it attracts some traffic."*
+    // `tier` here is the SINGLE SOURCE OF TRUTH for the free edition — both generators read it
+    // (scripts/generate-free-manifest.cjs, generate-free-map.cjs), and the free manifest is an
+    // allow-list, so this one field is the whole change. Regenerate after editing it or the free
+    // build keeps the old list.
+    tier: 'free',
     review: 'approved',
     label: 'API Comparisons',
     file: 'src/pages/PlatformComparisonsPage.jsx',

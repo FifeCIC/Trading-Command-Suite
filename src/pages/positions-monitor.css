@@ -100,7 +100,10 @@
 }
 
 /* Win/loss left border */
-.pm-pos-card.pm-win { border-color: var(--color-profit); }
+.pm-pos-card.pm-win { border-left: 3px solid var(--color-profit); }
+/* ⚠️ SYMMETRIC WITH THE WIN ACCENT ABOVE. The loss state was a class heavier than the win state
+   (`border-left: 3px` on loss only), so a winning card and a losing card did not read as the same
+   component in two states. Both are 3px left accents now. */
 .pm-pos-card.pm-lose { border-left: 3px solid var(--color-loss); }
 
 .pm-option { border-color: #8b5cf6; }
@@ -256,23 +259,32 @@
 }
 .pm-nav-link:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Portfolio summary banner */
+/* Portfolio summary banner — now 9 stats, so it lays out as a GRID.
+   ⚠️ Was `display: flex; flex-wrap: wrap` with a 12px gap, which packed the stats unevenly and
+   left a ragged trailing row once the count grew (2026-10-08). `auto-fit` + `minmax` gives every
+   stat the same box and wraps cleanly at any width.
+   ⚠️ The gradient hardcoded `#1e2139` and sat outside the token set, so it ignored the theme pack
+   and high-contrast mode. Token background now. */
 .pm-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-sm);
   padding: 12px 16px;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--panel), #1e2139);
+  background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .pm-summary-stat {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 80px;
+  min-width: 0;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
 }
 
 .pm-summary-label {
@@ -283,9 +295,13 @@
 }
 
 .pm-summary-value {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--ink);
+  /* "ACIC · 74d" is a VALUE, not a bare number, so a fixed 1.5rem made it the loudest thing in
+     the row. Wrapping is allowed and the box cannot be pushed out by a long ticker. */
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 /* Sort controls */

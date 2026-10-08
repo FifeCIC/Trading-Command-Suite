@@ -224,6 +224,58 @@ const PIPELINE = [
     dbTable: 'trade (execution), decision_log (permission), trade_journal (outcome)',
     dbColumns: 'trade: symbol, type, volume, entryPrice, exitPrice, pnl | decision_log: strategyId, symbol, decision, composite, reason',
   },
+
+  // ── Bot-layer steps added 2026-10-08 (owner: "review this page for potential new steps that isn't
+  //    integrated. Especially around bots."). Findings tracked in #1094. The page previously went
+  //    straight from evaluation to execution; everything the bot layer does around those two — queue,
+  //    permission, guards, exits, attribution — was invisible on the one page meant to show the path.
+  {
+    id: 'subscription-gate', title: 'Subscription Gate', linkTo: '/trading/trading-bots', linkLabel: 'Trading Bots',
+    fn: 'SignalQueueService.syncQueues() — routing reads strategy_protocol',
+    fnDesc: 'A bot is routed to a protocol through a SUBSCRIPTION row (strategy_protocol), not through trading_strategy.protocolId. ⚠️ A bot with no subscription row SILENTLY NEVER TRADES: it appears active in the UI, produces no queue entries, and reports no error. This is the single most common reason a correctly-configured bot does nothing, and it sits between "evaluation" and "execution" where nothing else explains the silence.',
+    dbTable: 'strategy_protocol (the routing authority), trading_strategy',
+    dbColumns: 'strategyId, protocolId, role (long|short)',
+  },
+  {
+    id: 'signal-queue', title: 'Signal Queue', linkTo: '/automation/execution-queue', linkLabel: 'Execution Queue',
+    fn: 'SignalQueueService.syncQueues() → strategy_signal_queue',
+    fnDesc: 'The step BETWEEN evaluation and execution: a permitted signal is written to a queue row, which carries its own status, and is consumed on a later tick. Rows expire (they do not live forever) and are subject to a freshness bound, so a signal that ages out is dropped rather than executed late. A blocked queue row records WHY it was blocked, which is the only place that reason is preserved.',
+    dbTable: 'strategy_signal_queue',
+    dbColumns: 'strategyId, symbol, protocolId, direction, signal, combinedStrength, status, blockCause, createdAt, updatedAt',
+  },
+  {
+    id: 'execution-guards', title: 'Execution Guards', linkTo: '/trading/positions-monitor', linkLabel: 'Positions Monitor',
+    fn: 'preTradeReady / executionBlockers → DuplicateGuardService → position cap',
+    fnDesc: 'Between "the bot wants to trade" and "an order is sent" sit guards that can refuse it: execution feasibility (volume floor, whether this broker can trade this instrument at all, venue mismatch), the duplicate guard (an open position on the same symbol/provider, or a trade inside a cooldown window), and the position cap. ⚠️ The duplicate guard is direction-UNAWARE: a live LONG on an instrument blocks a SHORT on the same instrument. These refuse a trade the score permitted, so a "no trade" here is a decision, not a failure.',
+    dbTable: 'trade (open positions), position, symbol_route (venue)',
+    dbColumns: 'duplicate guard: symbol + provider + cooldownMinutes | cap: maxPositions',
+    isComplex: true,
+    subs: [
+      { id: 'feasibility', label: 'Execution Feasibility', desc: 'Can this broker trade this instrument at this size? Volume floor and venue capability. Assessed at generation AND re-checked at execution.', color: '#06b6d4' },
+      { id: 'duplicate', label: 'Duplicate Guard', desc: 'Blocks a second position on the same symbol/provider, and re-entry inside a cooldown. ⚠️ Symbol+provider only — not direction-aware.', color: '#ef4444' },
+      { id: 'position-cap', label: 'Position Cap', desc: 'A hard ceiling on open positions. Can refuse a trade the score allowed.', color: '#f59e0b' },
+    ],
+  },
+  {
+    id: 'exit-authority', title: 'Post-Entry Exit Authority', linkTo: '/lab/position-lifecycle', linkLabel: 'Position Lifecycle',
+    fn: 'StopGuardianService → PositionTimeStopService → ExhaustionObserver',
+    fnDesc: 'Once a position is open, THREE authorities can close it, and none of them is the signal that opened it: stop management (directive-based trailing stops — the ONE canonical implementation), the time stop (positions are not held indefinitely), and exhaustion observation. A position closing is therefore not evidence that the original signal was wrong.',
+    dbTable: 'position, trade, stop_adjustment (via StopGuardianService)',
+    dbColumns: 'sl, tp, trailing state, openedAt (time stop basis)',
+    isComplex: true,
+    subs: [
+      { id: 'stop-guardian', label: 'Stop Guardian', desc: 'Directive-based trailing stop management. The single canonical implementation for post-entry stops.', color: '#8b5cf6' },
+      { id: 'time-stop', label: 'Time Stop', desc: 'Closes a position that has been held too long, independent of price.', color: '#f59e0b' },
+      { id: 'exhaustion', label: 'Exhaustion Observer', desc: 'Watches for a move losing energy and feeds the exit decision.', color: '#06b6d4' },
+    ],
+  },
+  {
+    id: 'attribution', title: 'Close Reason & Attribution', linkTo: '/trading/trade-journal', linkLabel: 'Trade Journal',
+    fn: 'common/trading/close-reason.ts → ExitDataRecovery → trade.abTestSide',
+    fnDesc: 'WHY a trade closed is derived, not assumed, and it is the input to every later "did the strategy work?" question. ⚠️ An unclassified close reads as broker:unknown — absence of evidence, not a named reason — so a repair path may overwrite it, while a NAMED reason is evidence and stays. Attribution to an A/B arm comes from the recorded side, never from an editable broker comment.',
+    dbTable: 'trade (closeReason, pnl, abTestSide), trade_journal',
+    dbColumns: 'closeReason, closedAt, pnl, abTestId, abTestSide',
+  },
 ];
 
 /* ── Main component ────────────────────────────────────── */
@@ -839,7 +891,20 @@ export default function MetaStackExplorerPage() {
               <div className="mse-signal-main">
                 <span className="mse-signal-symbol">{scored.symbol}</span>
                 <span className={`mse-signal-badge mse-signal-badge-${signalClass}`}>{scored.signal}</span>
-                <span className="mse-signal-composite">{scored.composite}/100</span>
+                {/* ⚠️ THE DENOMINATOR IS `signalMax`, NOT 100 (measured 2026-10-08). The payload
+                    carries `composite` (8), `signalRaw` (8), **`signalMax` (910)** and `signalPct`
+                    (0.879%) — 8/910 agrees with the percentage, so signalMax is the real maximum.
+                    Printing "/100" rendered "8/100", i.e. a raw score against a denominator the
+                    protocol does not have. Same defect as /status/meta-stack-status (#1090), except
+                    there the maximum is absent from the payload and so cannot be shown at all. */}
+                <span
+                  className="mse-signal-composite"
+                  title="Raw composite out of this protocol's signal maximum — not a score out of 100"
+                >
+                  {scored.composite}
+                  {typeof scored.signalMax === 'number' ? `/${scored.signalMax}` : ''}
+                  {typeof scored.signalPct === 'number' ? ` · ${Number(scored.signalPct).toFixed(2)}%` : ''}
+                </span>
               </div>
               <div className="mse-signal-meta">
                 <span>Risk: ×{scored.riskMultiplier?.toFixed?.(3) || '—'}</span>

@@ -20,6 +20,9 @@ import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
+// The scoring mechanics panel (owner request, 2026-10-08): the maths behind the Score column, shown
+// on live numbers rather than described.
+import ScoringMechanicsPanel from '../components/ScoringMechanicsPanel.jsx';
 import styles from './strategies-list.module.css';
 
 const API = '/api/trading/strategies';
@@ -363,6 +366,13 @@ export default function StrategiesListPage() {
           })()}
         </aside>
       </div>
+
+      {/* ⚠️ MOUNTED BELOW THE TABLE ON PURPOSE. The owner's complaint began at the Score column and
+          then said "this is about more than the column of this table" — so the panel sits under the
+          table it explains, reading the same `strategies` list, rather than on a separate route the
+          reader has to know about. */}
+      <ScoringMechanicsPanel strategies={strategies} />
+
     </div>
   );
 }

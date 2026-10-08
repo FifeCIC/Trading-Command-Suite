@@ -1,0 +1,154 @@
+/**
+ * register-symbol-overlay.css — styles for the shared RegisterSymbolOverlay.
+ *
+ * ⚠️ TOKENS ONLY (ui-standards). No literal colours, spacing or radii — the overlay must follow the
+ * theme pack and the high-contrast mode like every other surface. `--notice-warning-text` and
+ * `--risk-normal` are the same pair `.uir-applied` uses, so "warning" and "done" read identically
+ * wherever they appear.
+ *
+ * ⚠️ Z-INDEX IS DELIBERATELY THE PANEL BAND, not a token. There is no z-index scale in the token set,
+ * so this picks a value above the screen-options rail and the dev overlay and says so, rather than
+ * inventing a variable that nothing else honours.
+ *
+ * ⚠️ MOTION IS OPTIONAL. The backdrop fade is inside `prefers-reduced-motion: no-preference`, so a
+ * reader who has asked for reduced motion gets the panel instantly — it does not merely animate
+ * faster (accessibility policy).
+ */
+
+.rso-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200; /* above .so-* rail and the dev overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: color-mix(in srgb, #000 55%, transparent);
+}
+
+.rso-panel {
+  width: 100%;
+  max-width: 30rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-lg);
+  color: var(--ink);
+}
+
+.rso-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.rso-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.rso-ticker {
+  font-family: var(--font-mono);
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0 0.35rem;
+}
+
+/* 44px target (accessibility policy) — the glyph is small, the hit area is not. */
+.rso-close {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--ink-soft);
+  font-size: var(--text-md);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rso-close:hover {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.rso-state {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.rso-section {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.rso-section-title {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.rso-fields {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.rso-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.rso-label {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.rso-action {
+  justify-self: start;
+  margin-top: var(--space-xs);
+}
+
+.rso-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.rso-error {
+  margin: var(--space-md) 0 0;
+  font-size: var(--text-sm);
+  color: var(--notice-warning-text, var(--ink));
+}
+
+.rso-ok {
+  margin: var(--space-md) 0 0;
+  font-size: var(--text-sm);
+  color: var(--risk-normal, var(--ink));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rso-backdrop {
+    animation: rso-in 0.12s ease-out;
+  }
+}
+
+@keyframes rso-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
