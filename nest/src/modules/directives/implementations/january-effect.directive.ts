@@ -2,36 +2,42 @@ import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 
 /**
- * January Effect Directive
- * January small-cap outperformance — historically strongest month for small-caps.
+ * JanuaryEffectDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
+ *
+ * CLAIMED: "January small-cap outperformance — historically strongest month" — unmeasured.
+ * RETURNED: `score: isJanuary ? 12 : 3` with `directionBias: 'bullish'` — fixed 12 in
+ *           Januaries and a permanent 3-point floor all year (mode-3 breach).
+ *
+ * WHY IT CANNOT BE TESTED HERE (measured 2026-10-09): the daily history spans
+ * 2025-12-25 -> 2026-10-08 — ONE January (n=1), and a small-cap claim additionally needs
+ * a size benchmark the bars do not carry. Unmeasured; zero. See #879.
  */
 @Injectable()
 export class JanuaryEffectDirective implements IDirective {
   readonly id = 'january-effect';
-  readonly name = 'January Effect';
-  readonly description = 'January small-cap outperformance bias. Historically the strongest month for small-cap indices.';
+  readonly name = 'January Effect (retired)';
+  readonly description =
+    'RETIRED — the asserted January bullish bias is unmeasured: one January (n=1) in the history, and no size benchmark for a small-cap claim. See #879.';
   readonly category = 'pattern' as const;
   readonly priority = 30;
   readonly maxScore = 12;
-  readonly minScore = 1;
+  readonly minScore = 0;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.1.0';
-  readonly readiness = 'ready' as const;
-  readonly directionBias = 'bullish' as const;
+  readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
+  /** The bullish assertion is withdrawn pending measurement. */
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const now = input.asOf ?? new Date();
-    const month = now.getMonth(); // 0=Jan
-
-    const isJanuary = month === 0;
-
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
-      signalClass: isJanuary ? 'bullish' : 'neutral',
-      score: isJanuary ? 12 : 3,
-      confidence: isJanuary ? 0.55 : 0.3,
-      reason: isJanuary
-        ? 'January Effect — historical small-cap outperformance'
-        : 'Outside January Effect window',
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason:
+        'January effect retired: unmeasured — one January in the available history and no '
+        + 'size benchmark for the small-cap claim. No basis to assert; see #879.',
     };
   }
 }

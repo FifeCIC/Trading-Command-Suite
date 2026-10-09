@@ -2,62 +2,46 @@ import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 
 /**
- * Turnaround Tuesday Directive
- * Tuesday tends to reverse Monday's direction.
- * This is a context-dependent directive — it signals the OPPOSITE of Monday.
+ * TurnaroundTuesdayDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
+ *
+ * CLAIMED: "Tuesday tends to reverse Monday's direction — bullish after a red Monday, bearish
+ * after a green one" — unmeasured (score 12 on the reversal branch).
+ *
+ * MEASURED 2026-10-09 by the family's method — P(Tuesday UP | Monday closed DOWN) minus the
+ * unconditional Tuesday UP rate, same symbol as its own control (difference-in-differences):
+ *
+ *     45 symbols; mean lift +0.35pp (t = 0.30 across symbols)
+ *     0 of 45 at >= 2 sigma;  0 of 45 at >= 3.2 sigma (Bonferroni)
+ *
+ * The reversal does not appear in this data. Returns an explicit zero with `unmeasured: true`.
+ * (Note: the non-Tuesday path ALREADY returned 0 — this directive never carried a floor.)
  */
 @Injectable()
 export class TurnaroundTuesdayDirective implements IDirective {
   readonly id = 'turnaround-tuesday';
-  readonly name = 'Turnaround Tuesday';
-  readonly description = 'Tuesday reversal bias — tends to reverse Monday direction. Bullish after red Monday, bearish after green Monday.';
+  readonly name = 'Turnaround Tuesday (retired)';
+  readonly description =
+    'RETIRED — the asserted Tuesday reversal did not reproduce (45 symbols, mean lift +0.35pp, 0 at the honest threshold). See #879.';
   readonly category = 'pattern' as const;
   readonly priority = 28;
   readonly maxScore = 15;
-  readonly minScore = 1;
+  readonly minScore = 0;
   readonly minBars = { '1d': 2 };
-  readonly version = '1.1.0';
-  readonly readiness = 'ready' as const;
-  readonly directionBias = 'bullish' as const;
+  readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
+  /** The reversal assertion is withdrawn: the claim did not survive measurement. */
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const now = input.asOf ?? new Date();
-    const dayOfWeek = now.getUTCDay(); // 2=Tue
-
-    if (dayOfWeek !== 2) {
-      return {
-        signalClass: 'neutral',
-        score: 0,
-        confidence: 0.3,
-        reason: 'Not Tuesday — Turnaround Tuesday not active',
-      };
-    }
-
-    // Check Monday's direction from recent bars
-    const bars = input.bars || [];
-    if (bars.length < 2) {
-      return {
-        signalClass: 'neutral',
-        score: 0,
-        confidence: 0.3,
-        reason: 'Turnaround Tuesday — insufficient data to determine Monday direction',
-      };
-    }
-
-    // Look for Monday's close relative to Friday's close
-    const recentBar = bars[bars.length - 1];
-    const prevBar = bars[bars.length - 2];
-    const mondayDirection = recentBar.close > prevBar.close ? 'up' : 'down';
-
-    const isReversal = mondayDirection === 'down'; // Bullish reversal after red Monday
-
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
-      signalClass: isReversal ? 'bullish' : 'bearish',
-      score: isReversal ? 12 : 0,
-      confidence: 0.5,
-      reason: isReversal
-        ? 'Turnaround Tuesday — reversing Monday weakness (historical pattern)'
-        : `Turnaround Tuesday — Monday was ${mondayDirection}, no bullish reversal setup`,
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason:
+        'Turnaround Tuesday retired: measured 45 symbols, P(Tue up | red Mon) lift +0.35pp '
+        + '(t=0.30), 0 of 45 at the honest threshold. No reversal found. See #879.',
     };
   }
 }

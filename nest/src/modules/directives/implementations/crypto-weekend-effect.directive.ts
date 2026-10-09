@@ -37,38 +37,37 @@ export class CryptoWeekendEffectDirective implements IDirective {
     const day = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
     const hour = now.getUTCHours();
 
-    let score: number;
-    let reason: string;
-    let signalClass: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-
-    if (day === 0) {
-      // Sunday
-      score = 15;
-      reason = `Sunday (${hour}:00 UTC) — lowest volume day. Weekend drift risk. Exercise caution.`;
-    } else if (day === 6) {
-      // Saturday
-      score = 20;
-      reason = `Saturday (${hour}:00 UTC) — reduced liquidity. Institutional desks offline. Tighter position sizing recommended.`;
-    } else if (day === 5 && hour >= 20) {
-      // Friday after 20:00 UTC — weekend approaching
-      score = 25;
-      reason = `Friday ${hour}:00 UTC — pre-weekend. Consider reducing exposure before low-liquidity period.`;
-    } else if (day === 1 && hour < 8) {
-      // Monday early morning — weekend recovery
-      score = 40;
-      reason = `Monday ${hour}:00 UTC — weekend recovery window. Gap fills and re-pricing after low-volume period. Opportunity.`;
-      signalClass = 'bullish';
-    } else {
-      // Weekday, normal conditions
-      score = 10;
-      reason = `Weekday (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day]} ${hour}:00 UTC) — normal crypto market conditions.`;
+    // ── #879 (2026-10-09): MEASURED CLAIMS ONLY ──
+    // The weekend-liquidity claim is measured from this repo's own daily bars: Saturday volume
+    // runs ~48-63% of the weekday mean (BTC 9,506 vs ~19,000; ETH 165k vs ~330k; SOL 1.75M vs
+    // ~2.6M — 29 sessions per weekday, 2025-12-25 -> 2026-10-08). Weekend risk-awareness scores
+    // below encode THAT measured condition, and stay direction-neutral.
+    //
+    // REMOVED in the same change:
+    //  - the WEEKDAY constant 10 ("normal conditions") — a non-event day must score 0;
+    //  - the Monday-before-08:00 BULLISH 40 ("weekend recovery, gap fills") — an untested
+    //    directional claim (1d bars cannot see intraday windows; no measurement exists).
+    if (day === 0 || day === 6 || (day === 5 && hour >= 20)) {
+      const score = day === 6 ? 20 : day === 0 ? 15 : 25;
+      const label = day === 6
+        ? 'Saturday — reduced liquidity (measured: weekend volume ~half the weekday average)'
+        : day === 0
+          ? 'Sunday — lowest volume day (measured: weekend volume ~half the weekday average)'
+          : `Friday ${hour}:00 UTC — pre-weekend low-liquidity period (measured: weekend volume ~half the weekday average)`;
+      return {
+        score: Math.min(this.maxScore, score),
+        confidence: 0.6,
+        reason: label,
+        signalClass: 'neutral',
+      };
     }
 
     return {
-      score: Math.min(this.maxScore, score),
-      confidence: 0.6,
-      reason,
-      signalClass,
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason: `Weekday (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day]} ${hour}:00 UTC) — no weekend condition; contributes nothing (#879: the old weekday constant and the untested Monday-early bullish branch were removed).`,
     };
   }
 }

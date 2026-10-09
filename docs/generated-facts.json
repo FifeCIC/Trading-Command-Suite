@@ -55,7 +55,7 @@
     },
     "version": {
       "label": "Application version",
-      "value": "0.122.0",
+      "value": "0.123.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

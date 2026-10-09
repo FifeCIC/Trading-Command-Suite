@@ -269,7 +269,52 @@ function checkStaleWhitelist() {
  * `MarketDataService.getBars()`), leaving only the two #755 score-unit reviews. The build
  * failing on those stale entries is what proved the migration complete.
  */
-const WHITELIST = [];
+const WHITELIST = [
+  {
+    // #879 — STRUCTURAL use of a calendar getter, not a dated-bias claim: it gates
+    // market-OPEN state (weekend/gold-session structure), and the score comes from session
+    // quality measured from bars, not from the day itself.
+    file: 'src/modules/directives/implementations/gold-session-profile.directive.ts',
+    rule: 'no-unmeasured-calendar-claim',
+    issue: '#879',
+    reason: 'dayOfWeek gates weekend/session STRUCTURE (market closed → neutral); scoring is session quality from bars.',
+  },
+  {
+    // #879 — day-of-week appears in the reason TEXT for context; the score is up/down volume
+    // accumulation measured from the bars themselves.
+    file: 'src/modules/directives/implementations/volume-rhythm.directive.ts',
+    rule: 'no-unmeasured-calendar-claim',
+    issue: '#879',
+    reason: 'day-of-week is reason-text context only; the score is measured from up/down volume.',
+  },
+  {
+    // #879 — STRUCTURAL gate: the weekday check skips weekends ("no rollover risk"), and the
+    // scoring branch is the broker-set rollover WINDOW (hour-scoped). FX rollover is a real
+    // settlement mechanic, not a dated bias.
+    file: 'src/modules/directives/implementations/rollover-risk.directive.ts',
+    rule: 'no-unmeasured-calendar-claim',
+    issue: '#879',
+    reason: 'structural risk gate: weekend skip + rollover window (broker settlement mechanic).',
+  },
+  {
+    // #879 — dayOfWeek gates weekends; the scoring is proximity to session OPENS derived from
+    // each session's IANA timezone (DST-aware) — real market events, not dated biases.
+    file: 'src/modules/directives/implementations/session-open-effect.directive.ts',
+    rule: 'no-unmeasured-calendar-claim',
+    issue: '#879',
+    reason: 'dayOfWeek gates weekends; scoring is session-open proximity — a real market event.',
+  },
+  {
+    // #879 — session quality comes from the canonical DST-aware session service; the two
+    // day-of-week touches are the weekend gate and 0.7 LIQUIDITY dampeners (direction-neutral).
+    // ⚠️ Residual recorded in #879: the 0.7 Monday-early / Friday-late modifiers are liquidity
+    // heuristics, not measurements — they scale a structural score and assert no direction.
+    file: 'src/modules/directives/implementations/session-timing-filter.directive.ts',
+    rule: 'no-unmeasured-calendar-claim',
+    issue: '#879',
+    reason: 'weekend gate + direction-neutral liquidity dampeners on a canonical session-quality score.',
+  },
+];
 
 /**
  * Canaries — the mechanism each invariant depends on must still be present.
@@ -461,6 +506,7 @@ const SCAN_ENFORCED = {
   'INV-MTF-BUNDLE': 'no-bundle-less-scoring',
   'INV-CADENCE-COVERAGE': 'timeframe-refresh-coverage',
   'INV-NO-FABRICATED-READING': 'no-fabricated-baseline',
+  'INV-NO-UNMEASURED-CALENDAR-CLAIM': 'no-unmeasured-calendar-claim',
   // Enforced by a scan that checks POSITION and CARDINALITY, not merely presence: the one
   // writer of `directiveoutcome` must call `everyCadenceStale()` BEFORE it records (#841).
   'INV-NO-STALE-SCORING': 'no-stale-scoring',
@@ -683,6 +729,89 @@ function scanFabricatedReadings() {
   }
 }
 
+/**
+ * INV-NO-UNMEASURED-CALENDAR-CLAIM (#879) — a dated bias must be MEASURED or silent.
+ *
+ * The calendar family asserted a market bias from the DATE ALONE (Monday bearish, January
+ * bullish, September bearish…) with a fixed score. The one that was tested did not reproduce
+ * (friday-drift: 50.7% vs a 52.7% baseline), and three more measured the same way were equally
+ * absent (monday-effect +0.44pp t=0.36; turnaround-tuesday +0.35pp t=0.30 — 0 of 45 symbols
+ * at the honest 3.2-sigma threshold). All are retired to `score: 0, unmeasured: true`.
+ *
+ * The rule: a class that BRANCHES ON THE CALENDAR (day-of-week / month / year getters) and
+ * emits ANY non-`0` score must carry a `MEASURED` citation in its source. A citation is a
+ * claim too — but a checkable one, which is the point: the failure mode here is an unmarked
+ * assertion, not a wrong number.
+ *
+ * ⚠️ Precision over reach, as everywhere in this file:
+ *   - hours are NOT calendar claims (session-time logic is a different axis — `getUTCHours`
+ *     alone does not fire this scan);
+ *   - `getDate`/`getUTCDate` alone does not fire it (day-of-MONTH is calendar arithmetic,
+ *     not a dated bias — opex windows etc. still need a day-of-week/month getter to match);
+ *   - an all-zero class passes by construction (nothing asserted).
+ *
+ * Whitelist entries are the pressure valve for STRUCTURAL uses of the getters (a day-of-week
+ * read that gates market-open state rather than asserting a bias); each entry carries a reason
+ * and the list only shrinks (a stale entry fails the guard).
+ */
+const CALENDAR_CLAIM_SCOPE = ['src/modules/directives/implementations'];
+const CALENDAR_GETTER = /get(?:UTC)?Day\s*\(|get(?:UTC)?Month\s*\(|get(?:UTC)?FullYear\s*\(/;
+
+/** Split a source into `{ name, body }` class slices on `export class` anchors. */
+function splitClasses(src) {
+  const out = [];
+  const re = /export\s+class\s+(\w+)[^{]*\{/g;
+  let m;
+  const starts = [];
+  while ((m = re.exec(src)) !== null) starts.push({ name: m[1], at: m.index });
+  for (let i = 0; i < starts.length; i++) {
+    out.push({
+      name: starts[i].name,
+      body: src.slice(starts[i].at, i + 1 < starts.length ? starts[i + 1].at : src.length),
+    });
+  }
+  return out;
+}
+
+function scanUnmeasuredCalendarClaims() {
+  for (const scope of CALENDAR_CLAIM_SCOPE) {
+    for (const file of walk(path.join(NEST_ROOT, scope))) {
+      if (/\.spec\.ts$/.test(file)) continue;
+      const raw = fs.readFileSync(file, 'utf8');
+      const fileRel = rel(file);
+      const cleanByName = new Map(splitClasses(stripComments(raw)).map((c) => [c.name, c.body]));
+
+      for (const cls of splitClasses(raw)) {
+        if (!/readonly\s+id\s*=/.test(cls.body)) continue;
+        const clean = cleanByName.get(cls.name) ?? '';
+        if (!CALENDAR_GETTER.test(clean)) continue;
+
+        // Any score expression other than exactly `0` is a claim.
+        let asserts = false;
+        for (const sm of clean.matchAll(/score\s*:\s*([^\n,}]+)/g)) {
+          if (sm[1].trim() !== '0') { asserts = true; break; }
+        }
+        if (!asserts) continue; // an all-zero class claims nothing — this is the retirement state
+
+        if (/MEASURED/i.test(cls.body)) continue; // the claim carries its citation
+
+        const idMatch = cls.body.match(/readonly\s+id\s*=\s*'([^']+)'/);
+        const id = idMatch ? idMatch[1] : cls.name;
+        const w = whitelistEntryFor('no-unmeasured-calendar-claim', fileRel);
+        if (w) {
+          held.push(`no-unmeasured-calendar-claim  ${fileRel} (${id})  (held by ${w.issue})`);
+          continue;
+        }
+        fail(
+          'INV-NO-UNMEASURED-CALENDAR-CLAIM',
+          `${fileRel} (${id}) branches on the calendar and emits a non-zero score without a MEASURED citation`,
+          'A dated bias asserted from the calendar alone is an unmeasured claim (friday-drift 58%-claimed vs 50.7%-measured; monday-effect +0.44pp t=0.36; turnaround-tuesday +0.35pp t=0.30 — all retired by #879). Either retire the class to `score: 0, unmeasured: true`, cite the measurement with a `MEASURED` marker in the source, or add a whitelist entry explaining the STRUCTURAL use.',
+        );
+      }
+    }
+  }
+}
+
 function scanBundleLessScoring() {
   for (const scope of MTF_SCORING_SCOPE) {
     for (const file of walk(path.join(NEST_ROOT, scope))) {
@@ -873,6 +1002,7 @@ function whitelistEntry(rule, file) {
  *   no-score-clamp          — clamping a score magnitude to 100
  *   no-score-clamp-review   — same, but the operand's units need a human read to classify
  *   no-fabricated-baseline  — a directive fabricating a reading it did not measure
+ *   no-unmeasured-calendar-claim — a dated bias asserted with a non-zero score and no MEASURED citation (#879)
  *
  * Entry FIELDS are `{ file, rule, issue, reason }`. `issue` is not part of the key.
  */
@@ -1269,6 +1399,7 @@ scanObservedDenominator();
 scanStaleScoringGuard();
 scanBundleLessScoring();
 scanFabricatedReadings();
+scanUnmeasuredCalendarClaims();
 checkTimeframeCoverage();
 checkCapabilityRegistry();
 checkStaleWhitelist();

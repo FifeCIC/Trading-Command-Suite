@@ -2918,6 +2918,18 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-10 — analyst-adjustments +30 fabrication, liquidity-check false hard gate, stubResult zero',
   },
   {
+    id: 'qa-contract-035',
+    invariant: 'INV-NO-UNMEASURED-CALENDAR-CLAIM',
+    area: 'Pipeline Contracts',
+    system: 'Directives / Calendar effects',
+    name: 'A dated bias must be MEASURED or silent - a false calendar claim fails the build',
+    procedure: 'Run `node nest/scripts/validate-pipeline-contracts.cjs` (green, 5 whitelisted structural uses named). Then prove the guard bites: add a class with `const dow = new Date().getDay(); return { score: dow === 1 ? 3 : 0, ... }` and no MEASURED marker — the build fails naming INV-NO-UNMEASURED-CALENDAR-CLAIM. Remove it; a retired claim (e.g. `POST /api/directives/monday-effect/test`) returns score 0, unmeasured true.',
+    expected: 'Validator green with 5 held entries; the canary class FAILS the build (observed 2026-10-09, exit 1 naming the class); all 17 retired calendar claims return `score: 0, unmeasured: true` with the measurement state in the reason.',
+    category: 'Contract',
+    priority: 'critical',
+    versionNote: '2026-10-09 - #879: friday-drift 50.7% vs 52.7% baseline; monday +0.44pp t=0.36; turnaround-tuesday +0.35pp t=0.30; 17 retirements; whitelist for structural session/gate uses',
+  },
+  {
     id: 'qa-contract-021',
     invariant: 'INV-BAR-ALIGNED',
     area: 'Pipeline Contracts',

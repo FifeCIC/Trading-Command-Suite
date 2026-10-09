@@ -327,46 +327,31 @@ export class PinBarPatternDirective implements IDirective {
 
 @Injectable()
 export class FridayPositioningDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "end-of-week profit-taking" — a day-of-week lookup table (Friday 30, other days
+  // 8-20) that SCORED ON EVERY DAY OF THE WEEK with no measurement behind any cell.
+  // MEASURED: the family's dated biases were tested with difference-in-differences and did not
+  // reproduce (friday-drift 50.7% vs a 52.7% baseline; monday-effect +0.44pp t=0.36;
+  // turnaround-tuesday +0.35pp t=0.30 — 0 of 45 symbols at the honest threshold). Unmeasured.
   readonly id = 'friday-positioning';
-  readonly name = 'Friday Positioning';
-  readonly description = 'End-of-week profit-taking and position squaring.';
+  readonly name = 'Friday Positioning (retired)';
+  readonly description =
+    'RETIRED — the asserted end-of-week positioning effect is unmeasured; the old form scored every day of the week from a lookup table. See #879.';
   readonly priority = 30;
   readonly maxScore = 50;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const bars = input.bars;
-    if (bars.length < 2) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 2+ bars' };
-    const lastBar = bars[bars.length - 1];
-    const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
-
-    // BASE (10-30): day-of-week scoring
-    const dayScore: Record<number, number> = { 0: 8, 1: 12, 2: 15, 3: 18, 4: 20, 5: 30, 6: 8 };
-    const baseScore = dayScore[day] || 15;
-
-    // BONUS: Friday + elevated volume
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (day === 5) {
-      const volumes = bars.map(b => b.volume || 0);
-      const avgVol = volumes.slice(-11, -1).reduce((a, b) => a + b, 0) / Math.max(1, volumes.length - 2);
-      const currentVol = volumes[volumes.length - 1];
-      const volRatio = avgVol > 0 ? currentVol / avgVol : 1;
-      if (volRatio > 1.3) { bonusScore = 20; bonusLabel = 'Friday afternoon volume surge'; }
-      else if (volRatio > 1.1) { bonusScore = 10; bonusLabel = 'Friday elevated volume'; }
-    }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
+      score: 0,
+      confidence: 0,
       signalClass: 'neutral',
-      score: total,
-      confidence: Number((0.2 + (day === 5 ? 0.15 : 0) + (bonusScore > 0 ? 0.1 : 0)).toFixed(2)),
-      reason: `Friday positioning: day ${day}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day },
+      unmeasured: true,
+      reason: 'Friday positioning retired: unmeasured day-of-week claim (#879). Contributes nothing.',
     };
-
   }
 }
 
@@ -550,88 +535,63 @@ export class AdvancedWeeklyRhythmDirective implements IDirective {
 
 @Injectable()
 export class SpyOptionsExpiryDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "OpEx week (3rd Friday proximity)" — unmeasured, with a base of 10-30 by
+  // calendar day (a non-zero score EVERY day of the month), and `dow === 5` can never match
+  // the Sun-Thu stamped bars anyway (#880). Same shape as opex-gamma, retired with it.
   readonly id = 'spy-options-expiry';
-  readonly name = 'SPY Options Expiry Effect';
-  readonly description = 'OpEx week detection via date proximity (3rd Friday of month).';
+  readonly name = 'SPY Options Expiry Effect (retired)';
+  readonly description =
+    'RETIRED — the asserted OpEx-week effect is unmeasured; scored every calendar day and no Friday-stamped bars exist (#880). See #879.';
   readonly priority = 28;
   readonly maxScore = 45;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const now = new Date();
-    const day = now.getUTCDate();
-    const dow = now.getUTCDay();
-    const isOpexWeek = day >= 12 && day <= 21;
-    const isOpexFriday = dow === 5 && day >= 15 && day <= 21;
-    const daysToOpex = isOpexWeek ? (dow <= 5 ? 5 - dow : 0) : 99;
-
-    // BASE (10-30): proximity to expiry
-    let baseScore = 10;
-    if (isOpexFriday) baseScore = 30;
-    else if (isOpexWeek && daysToOpex <= 3) baseScore = 25;
-    else if (isOpexWeek) baseScore = 18;
-
-    // BONUS: expiry week
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (isOpexFriday) { bonusScore = 15; bonusLabel = 'OpEx Friday — max gamma'; }
-    else if (isOpexWeek) { bonusScore = 10; bonusLabel = 'expiry week hedging flows'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
+      score: 0,
+      confidence: 0,
       signalClass: 'neutral',
-      score: total,
-      confidence: Number((0.15 + (isOpexWeek ? 0.2 : 0)).toFixed(2)),
-      reason: `SPY OpEx: ${isOpexFriday ? 'expiry Friday' : isOpexWeek ? 'expiry week' : 'outside window'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, isOpexWeek, isOpexFriday, daysToOpex },
+      unmeasured: true,
+      reason: 'SPY options expiry retired: unmeasured OpEx-week claim (#879). Contributes nothing.',
     };
-
   }
 }
 
 @Injectable()
 export class SpyMonthEndRebalancingDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "month-end institutional rebalancing flow (last 3 trading days)" — unmeasured.
+  // RETURNED: base scores of 10/15/22/30 by calendar day — i.e. a NON-ZERO SCORE ON EVERY DAY
+  // OF THE MONTH, with no bar of market evidence behind any of them (mode-3 breach by design).
+  // MEASURED 2026-10-09: ~10 month-end windows exist in the daily history (2025-12-25 ->
+  // 2026-10-08) — far below what an honest threshold (>=3.2 sigma) needs. Unmeasured; zero.
+  // Kept so protocol references resolve. See #879.
   readonly id = 'spy-month-end-rebalancing';
-  readonly name = 'SPY Month-End Rebalancing';
-  readonly description = 'Month-end institutional flow proxy (last 3 trading days).';
+  readonly name = 'SPY Month-End Rebalancing (retired)';
+  readonly description =
+    'RETIRED — the asserted month-end rebalancing flow is unmeasured (~10 windows vs a threshold that needs years); it also scored on every day of the month. See #879.';
   readonly priority = 28;
   readonly maxScore = 45;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly minScore = 0;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const now = new Date();
-    const day = now.getUTCDate();
-    const dow = now.getUTCDay();
-    const isMonthEnd = day >= 26;
-    const daysToMonthEnd = Math.max(0, 30 - day);
-    const closes = input.bars.map(b => b.close);
-    const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
-
-    // BASE (10-30): proximity to month end
-    let baseScore = 10;
-    if (isMonthEnd && daysToMonthEnd <= 2) baseScore = 30;
-    else if (isMonthEnd) baseScore = 22;
-    else if (day >= 20) baseScore = 15;
-
-    // BONUS: last 2 days + drawdown bounce
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (isMonthEnd && daysToMonthEnd <= 2 && recentReturn < -2) { bonusScore = 15; bonusLabel = 'month-end drawdown bounce setup'; }
-    else if (isMonthEnd && daysToMonthEnd <= 2) { bonusScore = 10; bonusLabel = 'last 2 trading days'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
-      signalClass: recentReturn < -2 && isMonthEnd ? 'bullish' : 'neutral',
-      score: total,
-      confidence: Number((0.15 + (isMonthEnd ? 0.2 : 0)).toFixed(2)),
-      reason: `Month-end rebal: ${isMonthEnd ? 'month-end (d' + daysToMonthEnd + ' left)' : day + 'th of month'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, isMonthEnd, daysToMonthEnd, recentReturn },
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason:
+        'Month-end rebalancing retired: unmeasured — ~10 windows in the available history, and '
+        + 'the old form scored on every calendar day. No basis to assert; see #879.',
     };
-
   }
 }
 
@@ -900,43 +860,36 @@ export class TimeBasedSupportDirective implements IDirective {
 
 @Injectable()
 export class IsaResetDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "UK ISA tax-year reset timing (April 6th)" — unmeasured. The claim is also the
+  // STRANGEST in the family for a trading direct: a UK tax-wrapper administration date is not
+  // a market mechanism.
+  // RETURNED: base scores of 5/12/15/20 by calendar day — a NON-ZERO SCORE ON EVERY DAY OF THE
+  // YEAR (mode-3 breach by design).
+  // MEASURED 2026-10-09: ONE 6 April exists in the daily history (2026-04-06) — unmeasurable.
+  // Unmeasured; zero. Kept so protocol references resolve. See #879.
   readonly id = 'isa-reset';
-  readonly name = 'ISA Reset';
-  readonly description = 'UK ISA tax-year reset timing (April 6th).';
+  readonly name = 'ISA Reset (retired)';
+  readonly description =
+    'RETIRED — the asserted UK ISA tax-year reset effect is unmeasured (one occurrence in the history), and a tax-administration date is not a market mechanism. See #879.';
   readonly priority = 20;
   readonly maxScore = 30;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly minScore = 0;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const now = new Date();
-    const month = now.getUTCMonth();
-    const day = now.getUTCDate();
-    const isIsaWindow = month === 3 && day >= 6 && day <= 20;
-    const daysIntoTaxYear = month === 3 && day >= 6 ? day - 6 : -1;
-
-    // BASE (5-20): proximity to ISA reset
-    let baseScore = 5;
-    if (isIsaWindow && daysIntoTaxYear <= 3) baseScore = 20;
-    else if (isIsaWindow && daysIntoTaxYear <= 7) baseScore = 15;
-    else if (isIsaWindow) baseScore = 12;
-
-    // BONUS: new tax year
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (isIsaWindow && daysIntoTaxYear <= 3) { bonusScore = 10; bonusLabel = 'new ISA tax year (first 3 days)'; }
-    else if (isIsaWindow) { bonusScore = 5; bonusLabel = 'ISA reset window'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
-      signalClass: isIsaWindow ? 'bullish' : 'neutral',
-      score: total,
-      confidence: Number((0.1 + (isIsaWindow ? 0.2 : 0)).toFixed(2)),
-      reason: `ISA reset: ${isIsaWindow ? 'within ISA window (Apr ' + day + ')' : 'outside window'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, isIsaWindow, daysIntoTaxYear },
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason:
+        'ISA reset retired: unmeasured — one 6 April in the available history; a tax-wrapper date '
+        + 'is not a measured market mechanism. No basis to assert; see #879.',
     };
-
   }
 }
 
@@ -950,44 +903,28 @@ export class IsaResetDirective implements IDirective {
 
 @Injectable()
 export class BasicWeeklyRhythmDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "day-of-week statistical edge + volume pattern" — unmeasured; the lookup table
+  // scored EVERY day (8-22) and asserted a midweek bullish bias from the calendar.
   readonly id = 'basic-weekly-rhythm';
-  readonly name = 'Basic Weekly Rhythm Composite';
-  readonly description = 'Day-of-week + volume pattern composite.';
+  readonly name = 'Basic Weekly Rhythm Composite (retired)';
+  readonly description =
+    'RETIRED — the asserted day-of-week edge is unmeasured; the old form scored every day of the week. See #879.';
   readonly priority = 34;
   readonly maxScore = 55;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const bars = input.bars;
-    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
-    const lastBar = bars[bars.length - 1];
-    const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
-    const volumes = bars.map(b => b.volume || 0);
-    const avgVol = volumes.slice(0, -1).reduce((a,b) => a+b, 0) / Math.max(1, volumes.length - 1);
-    const volRatio = avgVol > 0 ? volumes[volumes.length-1] / avgVol : 1;
-
-    // BASE (10-35): day-of-week + volume
-    const dayBase: Record<number, number> = { 0: 8, 1: 12, 2: 18, 3: 22, 4: 18, 5: 14, 6: 8 };
-    const baseScore = Math.round(mapRange((dayBase[day] || 15) + volRatio * 5, 5, 35, 10, 35));
-
-    // BONUS: volume confirmation
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (volRatio > 1.5 && day >= 2 && day <= 4) { bonusScore = 20; bonusLabel = 'midweek vol surge'; }
-    else if (volRatio > 1.3) { bonusScore = 10; bonusLabel = 'above-avg volume'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = day >= 2 && day <= 4 && volRatio > 1 ? 'bullish' : 'neutral';
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
-      signalClass,
-      score: total,
-      confidence: Number((0.2 + (volRatio > 1.2 ? 0.1 : 0) + (day >= 2 && day <= 4 ? 0.05 : 0)).toFixed(2)),
-      reason: `Basic rhythm: day ${day}, vol ${volRatio.toFixed(1)}x avg, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, volRatio },
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason: 'Basic weekly rhythm retired: unmeasured day-of-week claim (#879). Contributes nothing.',
     };
-
   }
 }
 
@@ -1041,45 +978,29 @@ export class IntradayUPatternDirective implements IDirective {
 
 @Injectable()
 export class InstitutionalTimingDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "quarter-end / month-end institutional rebalancing" — unmeasured; base 10-35 by
+  // calendar day with a weekday proxy, i.e. a non-zero score EVERY trading day. Same shape as
+  // spy-month-end-rebalancing, retired with it.
   readonly id = 'institutional-timing';
-  readonly name = 'Institutional Timing';
-  readonly description = 'Quarter-end and month-end institutional rebalancing proxy.';
+  readonly name = 'Institutional Timing (retired)';
+  readonly description =
+    'RETIRED — the asserted quarter/month-end rebalancing proxy is unmeasured; the old form scored every trading day. See #879.';
   readonly priority = 30;
   readonly maxScore = 50;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const now = new Date();
-    const month = now.getUTCMonth();
-    const day = now.getUTCDate();
-    const dow = now.getUTCDay();
-    const isQuarterEnd = (month === 2 || month === 5 || month === 8 || month === 11) && day >= 25;
-    const isMonthEnd = day >= 26;
-    const isLONNYOverlap = dow >= 1 && dow <= 5; // weekday proxy for session overlap
-
-    // BASE (10-35): session timing score
-    let baseScore = 10;
-    if (isQuarterEnd) baseScore = 35;
-    else if (isMonthEnd) baseScore = 25;
-    else if (isLONNYOverlap) baseScore = 20;
-
-    // BONUS: key windows
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (isQuarterEnd) { bonusScore = 15; bonusLabel = 'quarter-end rebalancing'; }
-    else if (isMonthEnd && dow === 5) { bonusScore = 10; bonusLabel = 'month-end Friday'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
+      score: 0,
+      confidence: 0,
       signalClass: 'neutral',
-      score: total,
-      confidence: Number((0.2 + (isQuarterEnd ? 0.2 : isMonthEnd ? 0.1 : 0)).toFixed(2)),
-      reason: `Institutional timing: ${isQuarterEnd ? 'quarter-end' : isMonthEnd ? 'month-end' : 'standard'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, isQuarterEnd, isMonthEnd, month, day },
+      unmeasured: true,
+      reason: 'Institutional timing retired: unmeasured quarter/month-end claim (#879). Contributes nothing.',
     };
-
   }
 }
 
@@ -1777,53 +1698,31 @@ export class VixStrategyDirective implements IDirective {
 
 @Injectable()
 export class WeeklyRhythmStrategyDirective implements IDirective {
+  // ── RETIRED 2026-10-09 (#879) ──
+  // CLAIMED: "day-of-week statistical edges" — an unmeasured lookup table ("Tuesday
+  // turnaround", "Wednesday strongest day") scoring every day 12-55 AND asserting direction
+  // from the calendar. The Tuesday claim is the one just REFUTED by measurement (#879:
+  // P(Tue up | red Mon) lift +0.35pp, t=0.30, 0 of 45 at the honest threshold).
   readonly id = 'weekly-rhythm-strategy';
-  readonly name = 'Weekly Rhythm Strategy';
-  readonly description = 'Day-of-week statistical edges for entry/exit timing.';
+  readonly name = 'Weekly Rhythm Strategy (retired)';
+  readonly description =
+    'RETIRED — the asserted day-of-week edges are unmeasured (the Tuesday turnaround was measured and did not reproduce). See #879.';
   readonly priority = 62;
   readonly maxScore = 85;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly version = '3.0.0';
+  readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const bars = input.bars;
-    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
-    const lastBar = bars[bars.length - 1];
-    if (!lastBar.timestamp) return { signalClass: 'neutral', score: 0, confidence: 0.15, reason: 'No timestamp data' };
-    const day = new Date(lastBar.timestamp).getUTCDay();
-    const closes = bars.map(b => b.close);
-    const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
-
-    // BASE (15-55): day-of-week statistical edge
-    const dayEdges: Record<number, { base: number; label: string }> = {
-      0: { base: 15, label: 'Sunday low liquidity' },
-      1: { base: 20, label: 'Monday gap digestion' },
-      2: { base: 45, label: 'Tuesday turnaround' },
-      3: { base: 55, label: 'Wednesday strongest day' },
-      4: { base: 45, label: 'Thursday continuation' },
-      5: { base: 25, label: 'Friday profit-taking' },
-      6: { base: 12, label: 'Saturday minimal' },
-    };
-    const edge = dayEdges[day] || { base: 20, label: 'unknown' };
-    const baseScore = edge.base;
-
-    // BONUS: strong pattern alignment
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if ((day === 2 || day === 3 || day === 4) && recentReturn > 1.5) { bonusScore = 30; bonusLabel = 'strong bullish midweek pattern'; }
-    else if ((day === 2 || day === 3 || day === 4) && recentReturn > 0.5) { bonusScore = 15; bonusLabel = 'midweek bullish bias confirmed'; }
-    else if (day === 1 && recentReturn < -1) { bonusScore = 20; bonusLabel = 'Monday bearish pattern active'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = (day >= 2 && day <= 4) ? 'bullish' : day === 1 ? 'bearish' : 'neutral';
+  calculate(_input: DirectiveInput): DirectiveResult {
+    void _input;
     return {
-      signalClass,
-      score: total,
-      confidence: Number((0.3 + Math.abs(recentReturn) * 0.04).toFixed(2)),
-      reason: `Weekly rhythm strategy: ${edge.label}, ${recentReturn.toFixed(1)}% recent, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, recentReturn },
+      score: 0,
+      confidence: 0,
+      signalClass: 'neutral',
+      unmeasured: true,
+      reason:
+        'Weekly rhythm strategy retired: unmeasured day-of-week edges; the Tuesday turnaround '
+        + 'was measured and did not reproduce (+0.35pp, t=0.30). See #879.',
     };
-
   }
 }

@@ -81,12 +81,12 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**549** source files · **2899** declarations · **361** ratio sites · **1486** nodes · **131** unreferenced
+**549** source files · **2901** declarations · **357** ratio sites · **1487** nodes · **131** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
-| `exact` | the identical computation after normalisation | 43 |
-| `coarse` | the identical **shape**, different constants | 40 |
+| `exact` | the identical computation after normalisation | 42 |
+| `coarse` | the identical **shape**, different constants | 39 |
 | `idiom` | `(A−B)` **and** `(B−A)` in one expression | 1 |
 
 ## Divergent edges — the same maths, DIFFERENT rules
@@ -118,7 +118,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2794` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2851` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -133,7 +133,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:217` — `calculate()` → `percentile`
   - `rank>=0?(rank/sortedAtr.length)*100:50`
   - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1162` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1083` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
@@ -188,28 +188,27 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - guarded by: `trades.length>0`
 - … and 9 more
 
-### 12 sites — `(V1-V2)/Math.max(0.01,V2)*100`
+### 10 sites — `(V1-V2)/Math.max(0.01,V2)*100`
 
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:498` — `calculate()` → `recentReturn`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:483` — `calculate()` → `recentReturn`
   - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
   - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `recentReturn`
-  - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
-  - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:652` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:653` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:613` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:710` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:670` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:804` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:764` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1264` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1185` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1265` — `calculate()` → `ret5prev`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1186` — `calculate()` → `ret5prev`
   - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
   - guarded by: `closes.length>11`
-- … and 4 more
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1407` — `calculate()` → `ret5`
+  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
+- … and 2 more
 
 ### 7 sites — `((V1-V2)/V1)*100`
 
@@ -255,14 +254,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:449` — `dispatchSideTrade()` → `sl`
   - `sideDir==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:625` — `dispatchTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:674` — `dispatchTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2527` — `confirmAction()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2584` — `confirmAction()` → `sl`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2636` — `recordPaperTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2693` — `recordPaperTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
 - `nest/src/modules/automation/stop-guardian.service.ts:1770` — `observeSimulatedTsl()` → `triggerPrice`
@@ -294,14 +293,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:450` — `dispatchSideTrade()` → `tp`
   - `sideDir==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:626` — `dispatchTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:675` — `dispatchTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2530` — `confirmAction()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2587` — `confirmAction()` → `tp`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2637` — `recordPaperTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2694` — `recordPaperTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
 
@@ -412,7 +411,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2794` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2851` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -427,7 +426,7 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:217` — `calculate()` → `percentile`
   - `rank>=0?(rank/sortedAtr.length)*100:50`
   - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1162` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1083` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
@@ -502,28 +501,27 @@ Identical after normalisation: variable names differ, the computation does not.
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - … and 5 more
 
-### 12 sites — `(V1-V2)/Math.max(0.01,V2)*100`
+### 10 sites — `(V1-V2)/Math.max(0.01,V2)*100`
 
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:498` — `calculate()` → `recentReturn`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:483` — `calculate()` → `recentReturn`
   - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
   - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `recentReturn`
-  - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
-  - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:652` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:653` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:613` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:710` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:670` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:804` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:764` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1264` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1185` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1265` — `calculate()` → `ret5prev`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1186` — `calculate()` → `ret5prev`
   - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
   - guarded by: `closes.length>11`
-- … and 4 more
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1407` — `calculate()` → `ret5`
+  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
+- … and 2 more
 
 ### 10 sites — `(V1-V2)/V2`
 
@@ -569,7 +567,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:305` — `computeVwap()` → `tp`
   - `(b.high+b.low+b.close)/3`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:865` — `calculate()` → `tp`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:825` — `calculate()` → `tp`
   - `(bar.high+bar.low+bar.close)/3`
 - `nest/src/modules/directives/implementations/multi-timeframe-trend.directive.ts:325` — `vwap()` → `tp`
   - `(highs[i]+lows[i]+closes[i])/3`
@@ -605,7 +603,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
-_… and 33 further group(s)._
+_… and 32 further group(s)._
 
 ## Q3b — the same shape, differing constants
 
@@ -657,7 +655,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2794` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2851` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -672,7 +670,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:217` — `calculate()` → `percentile`
   - `rank>=0?(rank/sortedAtr.length)*100:50`
   - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1162` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1083` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
@@ -724,29 +722,6 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - … and 5 more
 
-### 12 sites — `(VN-VN)/Math.max(N,VN)*N`
-
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:498` — `calculate()` → `recentReturn`
-  - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
-  - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `recentReturn`
-  - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
-  - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:652` — `calculate()` → `ret5`
-  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:653` — `calculate()` → `ret20`
-  - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:710` — `calculate()` → `ret5`
-  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:804` — `calculate()` → `ret20`
-  - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1264` — `calculate()` → `ret5`
-  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1265` — `calculate()` → `ret5prev`
-  - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
-  - guarded by: `closes.length>11`
-- … and 4 more
-
 ### 11 sites — `Math.abs(VN-VN)/VN`
 
 - `nest/src/modules/directives/implementations/fibonacci-levels.directive.ts:94` — `calculate()` → `distPct`
@@ -766,6 +741,28 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/directives/implementations/ma-crossover.directive.ts:67` — `calculate()` → `separation`
   - `Math.abs(currFast-currSlow)/currSlow`
 - … and 3 more
+
+### 10 sites — `(VN-VN)/Math.max(N,VN)*N`
+
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:483` — `calculate()` → `recentReturn`
+  - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
+  - guarded by: `closes.length>5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `ret5`
+  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:613` — `calculate()` → `ret20`
+  - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:670` — `calculate()` → `ret5`
+  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:764` — `calculate()` → `ret20`
+  - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1185` — `calculate()` → `ret5`
+  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1186` — `calculate()` → `ret5prev`
+  - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
+  - guarded by: `closes.length>11`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1407` — `calculate()` → `ret5`
+  - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
+- … and 2 more
 
 ### 10 sites — `(VN+VN)/N`
 
@@ -791,7 +788,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:305` — `computeVwap()` → `tp`
   - `(b.high+b.low+b.close)/3`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:865` — `calculate()` → `tp`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:825` — `calculate()` → `tp`
   - `(bar.high+bar.low+bar.close)/3`
 - `nest/src/modules/directives/implementations/multi-timeframe-trend.directive.ts:325` — `vwap()` → `tp`
   - `(highs[i]+lows[i]+closes[i])/3`
@@ -831,7 +828,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `total>0?Math.round((correct/total)*1000)/1000:0`
   - guarded by: `total>0`
 
-_… and 30 further group(s)._
+_… and 29 further group(s)._
 
 ## Q3c — the same idea, re-derived
 
@@ -885,10 +882,10 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
-- `nest/src/modules/automation/automation-loop.service.ts:1774 evalSide`
-- `nest/src/modules/automation/automation-loop.service.ts:2179 getClose`
-- `nest/src/modules/automation/automation-loop.service.ts:432 read`
-- `nest/src/modules/automation/automation-loop.service.ts:487 getWatchlistSymbols`
+- `nest/src/modules/automation/automation-loop.service.ts:1831 evalSide`
+- `nest/src/modules/automation/automation-loop.service.ts:2236 getClose`
+- `nest/src/modules/automation/automation-loop.service.ts:481 read`
+- `nest/src/modules/automation/automation-loop.service.ts:536 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/stop-guardian.service.ts:1850 progress`
 - `nest/src/modules/automation/stop-guardian.service.ts:568 flat`
@@ -983,9 +980,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:283 observedOnly`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:328 note`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:342 runSource`
-- `nest/src/modules/symbols/symbols.service.ts:1053 readWatchlist`
-- `nest/src/modules/symbols/symbols.service.ts:897 parseLatest`
-- `nest/src/modules/symbols/symbols.service.ts:904 num`
+- `nest/src/modules/symbols/symbols.service.ts:1076 readWatchlist`
+- `nest/src/modules/symbols/symbols.service.ts:920 parseLatest`
+- `nest/src/modules/symbols/symbols.service.ts:927 num`
 - `nest/src/modules/trading/bot-performance.service.ts:362 empty`
 - `nest/src/modules/trading/bot-performance.service.ts:438 readAll`
 - `nest/src/modules/trading/duplicate-guard.service.ts:149 isBlocked`
