@@ -137,7 +137,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
-### 20 sites — `(V1-V2)/V3`
+### 22 sites — `(V1-V2)/V3`
 
 - `nest/src/modules/automation/ab-test.service.ts:788` — `twoProportionZ()`
   - `se===0?0:(p1-p2)/se`
@@ -158,7 +158,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - guarded by: `mid>0`
 - `nest/src/modules/directives/implementations/market-entropy.directive.ts:60` — `calculate()` → `entropyDelta`
   - `(earlyEntropy-lateEntropy)/ENTROPY_MAX`
-- … and 12 more
+- … and 14 more
 
 ### 17 sites — `Math.round((V1/V2)*100)`
 
@@ -211,27 +211,6 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - guarded by: `closes.length>11`
 - … and 4 more
 
-### 9 sites — `(V1-V2)/V1`
-
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:107` — `calculate()` → `depth`
-  - `(OVERSOLD-currentRsi)/OVERSOLD`
-- `nest/src/modules/directives/implementations/falling-risk-pyramid.directive.ts:93` — `calculate()` → `drawdownFromHigh`
-  - `(recentHigh-currentPrice)/recentHigh`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:546` — `calculate()` → `dist`
-  - `(lastClose-lastSAR)/lastClose`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:698` — `calculate()` → `distAboveLong`
-  - `(lastClose-longStop)/lastClose`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:699` — `calculate()` → `distBelowShort`
-  - `(lastClose-shortStop)/lastClose`
-- `nest/src/modules/risk/risk.service.ts:76` — `calculateTakeProfit()` → `slDistance`
-  - `(entryPrice-stopLossPrice)/entryPrice`
-- `nest/src/modules/risk/risk.service.ts:183` — `checkDrawdown()` → `drawdown`
-  - `peakValue>0?(peakValue-currentValue)/peakValue:0`
-  - guarded by: `peakValue>0`
-- `nest/src/modules/scoring/averaging-scorer.ts:73` — `evaluate()` → `priceDrop`
-  - `(position.averageEntry-position.currentPrice)/position.averageEntry`
-- … and 1 more
-
 ### 7 sites — `((V1-V2)/V1)*100`
 
 - `nest/src/modules/automation/stop-guardian.service.ts:1866` — `observeExhaustion()` → `decelPct`
@@ -251,6 +230,25 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/trading/trade-history.controller.ts:182` — `(anonymous)()` → `dd`
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
+
+### 7 sites — `(V1-V2)/V1`
+
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:107` — `calculate()` → `depth`
+  - `(OVERSOLD-currentRsi)/OVERSOLD`
+- `nest/src/modules/directives/implementations/falling-risk-pyramid.directive.ts:93` — `calculate()` → `drawdownFromHigh`
+  - `(recentHigh-currentPrice)/recentHigh`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:546` — `calculate()` → `dist`
+  - `(lastClose-lastSAR)/lastClose`
+- `nest/src/modules/risk/risk.service.ts:76` — `calculateTakeProfit()` → `slDistance`
+  - `(entryPrice-stopLossPrice)/entryPrice`
+- `nest/src/modules/risk/risk.service.ts:183` — `checkDrawdown()` → `drawdown`
+  - `peakValue>0?(peakValue-currentValue)/peakValue:0`
+  - guarded by: `peakValue>0`
+- `nest/src/modules/scoring/averaging-scorer.ts:73` — `evaluate()` → `priceDrop`
+  - `(position.averageEntry-position.currentPrice)/position.averageEntry`
+- `nest/src/modules/scoring/scoring.controller.ts:102` — `getDegradation()` → `coverage`
+  - `allProviders.length>0?(allProviders.length-failedProviders.length)/allProviders.length:1.0`
+  - guarded by: `allProviders.length>0`
 
 ### 6 sites — `(C?V1*(1-V2/100):V1*(1+V2/100))`
 
@@ -372,7 +370,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:640` — `calculate()` → `pctB`
   - `(lastClose-lower)/(upper-lower||1)`
   - conditions: `upper-lower||1`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:872` — `calculate()` → `adSlope`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:904` — `calculate()` → `adSlope`
   - `(recent[recent.length-1]-recent[0])/(Math.abs(recent[0])||1)`
   - conditions: `Math.abs(recent[0])||1`
 
@@ -433,7 +431,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
-### 20 sites — `(V1-V2)/V3`
+### 22 sites — `(V1-V2)/V3`
 
 - `nest/src/modules/automation/ab-test.service.ts:788` — `twoProportionZ()`
   - `se===0?0:(p1-p2)/se`
@@ -454,7 +452,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - guarded by: `mid>0`
 - `nest/src/modules/directives/implementations/market-entropy.directive.ts:60` — `calculate()` → `entropyDelta`
   - `(earlyEntropy-lateEntropy)/ENTROPY_MAX`
-- … and 12 more
+- … and 14 more
 
 ### 17 sites — `Math.round((V1/V2)*100)`
 
@@ -537,7 +535,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(currentPrice-nearestSupport.price)/nearestSupport.price`
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:236` — `calculate()` → `distPct`
   - `(nearestResistance.price-currentPrice)/currentPrice`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:873` — `calculate()` → `priceSlope`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:905` — `calculate()` → `priceSlope`
   - `(recentPrices[recentPrices.length-1]-recentPrices[0])/recentPrices[0]`
 - `nest/src/modules/directives/implementations/session-open-effect.directive.ts:147` — `calculate()` → `preOpenReturn`
   - `(preOpenEnd-preOpenStart)/preOpenStart`
@@ -587,26 +585,25 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(prev.high+prev.low+prev.close)/3`
 - … and 2 more
 
-### 9 sites — `(V1-V2)/V1`
+### 7 sites — `((V1-V2)/V1)*100`
 
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:107` — `calculate()` → `depth`
-  - `(OVERSOLD-currentRsi)/OVERSOLD`
-- `nest/src/modules/directives/implementations/falling-risk-pyramid.directive.ts:93` — `calculate()` → `drawdownFromHigh`
-  - `(recentHigh-currentPrice)/recentHigh`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:546` — `calculate()` → `dist`
-  - `(lastClose-lastSAR)/lastClose`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:698` — `calculate()` → `distAboveLong`
-  - `(lastClose-longStop)/lastClose`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:699` — `calculate()` → `distBelowShort`
-  - `(lastClose-shortStop)/lastClose`
-- `nest/src/modules/risk/risk.service.ts:76` — `calculateTakeProfit()` → `slDistance`
-  - `(entryPrice-stopLossPrice)/entryPrice`
-- `nest/src/modules/risk/risk.service.ts:183` — `checkDrawdown()` → `drawdown`
-  - `peakValue>0?(peakValue-currentValue)/peakValue:0`
-  - guarded by: `peakValue>0`
-- `nest/src/modules/scoring/averaging-scorer.ts:73` — `evaluate()` → `priceDrop`
-  - `(position.averageEntry-position.currentPrice)/position.averageEntry`
-- … and 1 more
+- `nest/src/modules/automation/stop-guardian.service.ts:1866` — `observeExhaustion()` → `decelPct`
+  - `((prior-recent)/prior)*100`
+- `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
+  - `((lastClose-shortExit)/lastClose)*100`
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:116` — `calculate()` → `dist`
+  - `((currentPrice-nearestSupport)/currentPrice)*100`
+- `nest/src/modules/directives/implementations/panic-exhaustion.directive.ts:52` — `calculate()` → `panicDrop`
+  - `((panicStart-panicEnd)/panicStart)*100`
+- `nest/src/modules/paper-trading/paper-trading.service.ts:281` — `updateDrawdown()` → `drawdown`
+  - `this.peakEquity>0?((this.peakEquity-equity)/this.peakEquity)*100:0`
+  - guarded by: `this.peakEquity>0`
+- `nest/src/modules/risk/monte-carlo.service.ts:107` — `simulate()` → `drawdown`
+  - `peak>0?((peak-equity)/peak)*100:0`
+  - guarded by: `peak>0`
+- `nest/src/modules/trading/trade-history.controller.ts:182` — `(anonymous)()` → `dd`
+  - `peak>0?((peak-cum)/peak)*100:0`
+  - guarded by: `peak>0`
 
 _… and 33 further group(s)._
 
@@ -903,7 +900,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/directives/implementations/market-regime.directive.ts:116 smooth`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:236 extract`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:60 stubResult`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1029 mid`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1061 mid`
 - `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:40 avg`
 - `nest/src/modules/directives/implementations/pattern-density-sr.directive.ts:100 binPrice`
 - `nest/src/modules/directives/implementations/session-open-effect.directive.ts:50 s`
@@ -1003,8 +1000,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:767 median`
 - `nest/src/modules/trading/trade-history.controller.ts:773 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:167 reject`
-- `nest/src/modules/trading/trading-strategy.service.ts:1084 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:2366 evaluateAllActive`
-- `nest/src/modules/trading/trading-strategy.service.ts:255 num`
+- `nest/src/modules/trading/trading-strategy.service.ts:1105 shape`
+- `nest/src/modules/trading/trading-strategy.service.ts:2387 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:268 num`
 - `nest/src/modules/watchlists/watchlists.controller.ts:381 has`
 
