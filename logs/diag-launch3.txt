@@ -1,0 +1,16 @@
+== 3201/5173 owners ==
+
+LocalPort OwningProcess
+--------- -------------
+     3201         20980
+     5173          4988
+
+
+PID 4988 started 10/10/2026 00:53:24 name=node.exe
+  cmd: "node"   "C:\wamp64\www\trading-command-suite\node_modules\.bin\\..\vite\bin\vite.js" --host --port 5173 --strictPort
+PID 20980 started 10/10/2026 00:53:22 name=node.exe
+  cmd: "C:\Program Files\nodejs\node.exe" C:\wamp64\www\trading-command-suite\nest\dist\src\main.js
+== api health ==
+{"version":"0.125.0","status":"ok","timestamp":"2026-10-09T23:54:41.058Z","mode":"fallback","services":{"database":true,"databaseConnected":true,"queue":false,"redis":false}}
+== 5001 bridge log size ==
+

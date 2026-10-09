@@ -1,0 +1,43 @@
+now: 2026-10-10T00:54:10.7928675+01:00
+== supervisor procs 5048/28100 ==
+
+   Id ProcessName StartTime
+   -- ----------- ---------
+ 5048 python      10/10/2026 00:51:56
+28100 python      10/10/2026 00:51:56
+
+
+== terminal64 procs ==
+
+   Id StartTime           Path
+   -- ---------           ----
+21744 09/10/2026 15:49:00 C:\Program Files\MetaTrader 5\terminal64.exe
+25660 10/10/2026 00:45:28 C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+
+
+== python procs ==
+
+ProcessId       : 5048
+ParentProcessId : 9488
+CommandLine     : "C:\Users\squee\AppData\Local\Python\bin\python.exe" "C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\bridge_supervisor.py"
+
+ProcessId       : 28100
+ParentProcessId : 9488
+CommandLine     : "C:\Users\squee\AppData\Local\Python\bin\python.exe" "C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\bridge_supervisor.py"
+
+ProcessId       : 25868
+ParentProcessId : 28100
+CommandLine     : C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+
+ProcessId       : 26628
+ParentProcessId : 5048
+CommandLine     : C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+
+
+== 3201 ==
+
+LocalAddress                        LocalPort RemoteAddress
+------------                        --------- -------------                     
+::                                  3201      ::                                
+
+

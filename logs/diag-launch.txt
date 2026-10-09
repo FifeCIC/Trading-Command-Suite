@@ -1,0 +1,15 @@
+== ports ==
+
+LocalPort OwningProcess
+--------- -------------
+     5000         26628
+     5001         25868
+     5173          4988
+
+
+== health 5000 ==
+{"connected": true, "mt5Package": true, "credentialMismatch": null, "orderReady": true, "tradeAllowed": true, "tradeapiDisabled": false, "connectionState": "ok", "connectionStateDetail": null, "remedy": null, "serverUtcOffsetSeconds": 900, "serverUtcOffsetHours": 0.25, "activeAccount": "2", "account": "10011309743", "server": "MetaQuotes-Demo", "balance": 733.76, "equity": 735.35, "connectionErrors": 0, "circuitBreaker": {"state": "closed", "failures": 0, "threshold": 10, "cooldown": 300}, "reconnect": {"attempts": 0, "failures": 0, "lastAttemptAt": null, "lastResult": null, "lastError": null, "lastReason": null, "sessionLeftDown": false, "siblingEffect": "UNMEASURED"}, "riskLimits": {"maxOpenPositions": 20, "maxPositionSize": 1.0, "maxDailyLoss": 100.0}}
+== health 5001 ==
+{"connected": false, "mt5Package": true, "credentialMismatch": null, "orderReady": true, "tradeAllowed": null, "tradeapiDisabled": null, "connectionState": "terminal-down", "connectionStateDetail": "terminal_info() is None \u2014 terminal not running or not reachable", "remedy": "POST http://127.0.0.1:5001/reconnect \u2014 or start the MT5 terminal", "serverUtcOffsetSeconds": 0, "serverUtcOffsetHours": 0.0, "activeAccount": "3", "account": null, "server": null, "balance": null, "equity": null, "connectionErrors": 58, "circuitBreaker": {"state": "closed", "failures": 2, "threshold": 10, "cooldown": 300}, "reconnect": {"attempts": 1, "failures": 1, "lastAttemptAt": "2026-10-09T23:53:27.413868+00:00", "lastResult": "failed", "lastError": "(-6, 'Terminal: Authorization failed')", "lastReason": "watchdog: 3 consecutive bad polls in state terminal-down (terminal_info() is None \u2014 terminal not running or not reachable) [terminal-down attempt 1/5]", "sessionLeftDown": true, "siblingEffect": "UNMEASURED"}, "riskLimits": {"maxOpenPositions": 20, "maxPositionSize": 1.0, "maxDailyLoss": 100.0}}
+== 5001 err tail ==
+== 5001 out tail ==

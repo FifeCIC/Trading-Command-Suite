@@ -1,0 +1,26 @@
+== parent chains ==
+PID 4988 (node.exe) parent=27108 start=10/10/2026 00:53:24
+PID 26628 (python.exe) parent=5048 start=10/10/2026 00:51:57
+PID 25868 (python.exe) parent=28100 start=10/10/2026 00:51:57
+PID 20980 (node.exe) parent=3876 start=10/10/2026 00:53:22
+PID 5048 (python.exe) parent=9488 start=10/10/2026 00:51:56
+PID 28100 (python.exe) parent=9488 start=10/10/2026 00:51:56
+== supervisor-5001.log tail ==
+2026-10-09 22:20:35 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-09 22:24:46 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-09 22:31:24 [supervisor:5001] bridge died: code 4294967295, ran 398s — restarting in 5s (restart 1/6 in window)
+2026-10-09 22:31:29 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-10 00:41:19 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-10 00:45:28 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-10 00:50:06 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-10 00:50:18 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+2026-10-10 00:51:57 [supervisor:5001] launching bridge: C:\Users\squee\AppData\Local\Python\pythoncore-3.14-64\python.exe C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py
+== sentinels ==
+
+Name                Length
+----                ------
+supervisor-5000.log   1365
+supervisor-5001.log   1683
+supervisor-5002.log    907
+
+
