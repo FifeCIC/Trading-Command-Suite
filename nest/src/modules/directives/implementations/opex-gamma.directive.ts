@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * OpexGammaDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -31,14 +32,7 @@ export class OpexGammaDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'OpEx gamma retired: unmeasured — ~10 third-Friday events in the available history, '
-        + 'and daily bars carry no Friday stamp (#880). No basis to assert; see #879.',
-    };
+    return retiredCalendarClaim('OpEx gamma retired: unmeasured — ~10 third-Friday events in the available history, '
+        + 'and daily bars carry no Friday stamp (#880). No basis to assert; see #879.');
   }
 }

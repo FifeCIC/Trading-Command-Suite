@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * TripleWitchingDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -29,14 +30,7 @@ export class TripleWitchingDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Triple witching retired: unmeasured — three quarterly events in the available history '
-        + 'and no Friday-stamped daily bars (#880). No basis to assert; see #879.',
-    };
+    return retiredCalendarClaim('Triple witching retired: unmeasured — three quarterly events in the available history '
+        + 'and no Friday-stamped daily bars (#880). No basis to assert; see #879.');
   }
 }

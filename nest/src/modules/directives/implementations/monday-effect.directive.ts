@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * MondayEffectDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -37,15 +38,8 @@ export class MondayEffectDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Monday effect retired: measured 45 symbols x 41-42 Mondays, Monday-vs-other down '
+    return retiredCalendarClaim('Monday effect retired: measured 45 symbols x 41-42 Mondays, Monday-vs-other down '
         + 'excess +0.44pp (t=0.36), 0 of 45 at the honest 3.2-sigma threshold. No Monday '
-        + 'effect found in the available history. See #879.',
-    };
+        + 'effect found in the available history. See #879.');
   }
 }

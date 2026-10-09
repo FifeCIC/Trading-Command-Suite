@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **549** backend source files (specs excluded). Two access paths, because one
+Scanned **550** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**549** source files · **2901** declarations · **357** ratio sites · **1487** nodes · **131** unreferenced
+**550** source files · **2902** declarations · **357** ratio sites · **1487** nodes · **131** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -107,10 +107,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `((longExit-lastClose)/lastClose)*100`
 - `nest/src/modules/directives/implementations/gap-scanner.directive.ts:83` — `evaluateGap()` → `gapPct`
   - `((currentOpen-prevClose)/prevClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:123` — `calculate()` → `dist20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:124` — `calculate()` → `dist20`
   - `sma20>0?((lastClose-sma20)/sma20)*100:0`
   - guarded by: `sma20>0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:171` — `calculate()` → `pctAbove`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:172` — `calculate()` → `pctAbove`
   - `((lastPrice-s50)/s50)*100`
 - … and 20 more
 
@@ -128,12 +128,12 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:1890` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:212` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:213` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:217` — `calculate()` → `percentile`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:218` — `calculate()` → `percentile`
   - `rank>=0?(rank/sortedAtr.length)*100:50`
   - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1083` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1046` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
@@ -190,23 +190,23 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 10 sites — `(V1-V2)/Math.max(0.01,V2)*100`
 
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:483` — `calculate()` → `recentReturn`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:478` — `calculate()` → `recentReturn`
   - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
   - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:594` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:613` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:595` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:670` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:652` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:764` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:746` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1185` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1148` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1186` — `calculate()` → `ret5prev`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1149` — `calculate()` → `ret5prev`
   - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
   - guarded by: `closes.length>11`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1407` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1370` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
 - … and 2 more
 
@@ -348,7 +348,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 2 sites — `(C?((V1-V2)/V2)*100:V3)`
 
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:124` — `calculate()` → `dist50`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `dist50`
   - `sma50>0?((lastClose-sma50)/sma50)*100:dist20`
   - conditions: `sma50>0`
 - `nest/src/modules/directives/implementations/support-resistance.directive.ts:78` — `calculate()` → `resistDist`
@@ -400,10 +400,10 @@ Identical after normalisation: variable names differ, the computation does not.
   - `((longExit-lastClose)/lastClose)*100`
 - `nest/src/modules/directives/implementations/gap-scanner.directive.ts:83` — `evaluateGap()` → `gapPct`
   - `((currentOpen-prevClose)/prevClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:123` — `calculate()` → `dist20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:124` — `calculate()` → `dist20`
   - `sma20>0?((lastClose-sma20)/sma20)*100:0`
   - guarded by: `sma20>0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:171` — `calculate()` → `pctAbove`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:172` — `calculate()` → `pctAbove`
   - `((lastPrice-s50)/s50)*100`
 - … and 20 more
 
@@ -421,12 +421,12 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:1890` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:212` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:213` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:217` — `calculate()` → `percentile`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:218` — `calculate()` → `percentile`
   - `rank>=0?(rank/sortedAtr.length)*100:50`
   - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1083` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1046` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
@@ -503,23 +503,23 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 10 sites — `(V1-V2)/Math.max(0.01,V2)*100`
 
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:483` — `calculate()` → `recentReturn`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:478` — `calculate()` → `recentReturn`
   - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
   - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:594` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:613` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:595` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:670` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:652` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:764` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:746` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1185` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1148` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1186` — `calculate()` → `ret5prev`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1149` — `calculate()` → `ret5prev`
   - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
   - guarded by: `closes.length>11`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1407` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1370` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
 - … and 2 more
 
@@ -551,7 +551,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(b.high+b.low)/2`
 - `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
   - `(bar.open+bar.close)/2`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `avgDist`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:126` — `calculate()` → `avgDist`
   - `(dist20+dist50)/2`
 - `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:51` — `calculate()` → `prevMidpoint`
   - `(closes[last-1]+opens[last-1])/2`
@@ -567,7 +567,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:305` — `computeVwap()` → `tp`
   - `(b.high+b.low+b.close)/3`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:825` — `calculate()` → `tp`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:807` — `calculate()` → `tp`
   - `(bar.high+bar.low+bar.close)/3`
 - `nest/src/modules/directives/implementations/multi-timeframe-trend.directive.ts:325` — `vwap()` → `tp`
   - `(highs[i]+lows[i]+closes[i])/3`
@@ -665,12 +665,12 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:1890` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:212` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:213` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:217` — `calculate()` → `percentile`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:218` — `calculate()` → `percentile`
   - `rank>=0?(rank/sortedAtr.length)*100:50`
   - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1083` — `calculate()` → `atrPct`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1046` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
@@ -744,23 +744,23 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 10 sites — `(VN-VN)/Math.max(N,VN)*N`
 
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:483` — `calculate()` → `recentReturn`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:478` — `calculate()` → `recentReturn`
   - `closes.length>5?(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100:0`
   - guarded by: `closes.length>5`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:612` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:594` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:613` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:595` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[closes.length-21])/Math.max(0.01,closes[closes.length-21])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:670` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:652` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:764` — `calculate()` → `ret20`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:746` — `calculate()` → `ret20`
   - `(closes[closes.length-1]-closes[0])/Math.max(0.01,closes[0])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1185` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1148` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1186` — `calculate()` → `ret5prev`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1149` — `calculate()` → `ret5prev`
   - `closes.length>11?(closes[closes.length-6]-closes[closes.length-11])/Math.max(0.01,closes[closes.length-11])*100:0`
   - guarded by: `closes.length>11`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1407` — `calculate()` → `ret5`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1370` — `calculate()` → `ret5`
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
 - … and 2 more
 
@@ -772,7 +772,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(b.high+b.low)/2`
 - `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
   - `(bar.open+bar.close)/2`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:125` — `calculate()` → `avgDist`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:126` — `calculate()` → `avgDist`
   - `(dist20+dist50)/2`
 - `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:51` — `calculate()` → `prevMidpoint`
   - `(closes[last-1]+opens[last-1])/2`
@@ -788,7 +788,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:305` — `computeVwap()` → `tp`
   - `(b.high+b.low+b.close)/3`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:825` — `calculate()` → `tp`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:807` — `calculate()` → `tp`
   - `(bar.high+bar.low+bar.close)/3`
 - `nest/src/modules/directives/implementations/multi-timeframe-trend.directive.ts:325` — `vwap()` → `tp`
   - `(highs[i]+lows[i]+closes[i])/3`
@@ -895,8 +895,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/directives/directives.service.ts:462 evaluateGate`
 - `nest/src/modules/directives/directives.service.ts:878 refreshActiveStatuses`
 - `nest/src/modules/directives/implementations/market-regime.directive.ts:116 smooth`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:236 extract`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:60 stubResult`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:237 extract`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:61 stubResult`
 - `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1061 mid`
 - `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:40 avg`
 - `nest/src/modules/directives/implementations/pattern-density-sr.directive.ts:100 binPrice`

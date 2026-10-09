@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * JanuaryEffectDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -30,14 +31,7 @@ export class JanuaryEffectDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'January effect retired: unmeasured — one January in the available history and no '
-        + 'size benchmark for the small-cap claim. No basis to assert; see #879.',
-    };
+    return retiredCalendarClaim('January effect retired: unmeasured — one January in the available history and no '
+        + 'size benchmark for the small-cap claim. No basis to assert; see #879.');
   }
 }

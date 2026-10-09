@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * FridayDriftDirective — RETIRED 2026-09-18. Kept only so existing protocol references resolve.
@@ -59,16 +60,9 @@ export class FridayDriftDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Friday drift retired: the asserted +58% Friday close bias measured 50.7% against a ' +
+    return retiredCalendarClaim('Friday drift retired: the asserted +58% Friday close bias measured 50.7% against a ' +
         '52.7% all-session baseline (37 symbols, 42 sessions each, difference-in-differences). ' +
-        'No Friday session effect found. See weekend-gap-bias for the measured weekend effect.',
-    };
+        'No Friday session effect found. See weekend-gap-bias for the measured weekend effect.');
   }
 }
 

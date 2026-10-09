@@ -47,6 +47,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 import { rsi, sma, ema, bollingerBands, macd, atr } from '../utils/indicators';
 
 /**
@@ -345,13 +346,7 @@ export class FridayPositioningDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason: 'Friday positioning retired: unmeasured day-of-week claim (#879). Contributes nothing.',
-    };
+    return retiredCalendarClaim('Friday positioning retired: unmeasured day-of-week claim (#879). Contributes nothing.');
   }
 }
 
@@ -551,13 +546,7 @@ export class SpyOptionsExpiryDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason: 'SPY options expiry retired: unmeasured OpEx-week claim (#879). Contributes nothing.',
-    };
+    return retiredCalendarClaim('SPY options expiry retired: unmeasured OpEx-week claim (#879). Contributes nothing.');
   }
 }
 
@@ -583,15 +572,8 @@ export class SpyMonthEndRebalancingDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Month-end rebalancing retired: unmeasured — ~10 windows in the available history, and '
-        + 'the old form scored on every calendar day. No basis to assert; see #879.',
-    };
+    return retiredCalendarClaim('Month-end rebalancing retired: unmeasured — ~10 windows in the available history, and '
+        + 'the old form scored on every calendar day. No basis to assert; see #879.');
   }
 }
 
@@ -881,15 +863,8 @@ export class IsaResetDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'ISA reset retired: unmeasured — one 6 April in the available history; a tax-wrapper date '
-        + 'is not a measured market mechanism. No basis to assert; see #879.',
-    };
+    return retiredCalendarClaim('ISA reset retired: unmeasured — one 6 April in the available history; a tax-wrapper date '
+        + 'is not a measured market mechanism. No basis to assert; see #879.');
   }
 }
 
@@ -918,13 +893,7 @@ export class BasicWeeklyRhythmDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason: 'Basic weekly rhythm retired: unmeasured day-of-week claim (#879). Contributes nothing.',
-    };
+    return retiredCalendarClaim('Basic weekly rhythm retired: unmeasured day-of-week claim (#879). Contributes nothing.');
   }
 }
 
@@ -994,13 +963,7 @@ export class InstitutionalTimingDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason: 'Institutional timing retired: unmeasured quarter/month-end claim (#879). Contributes nothing.',
-    };
+    return retiredCalendarClaim('Institutional timing retired: unmeasured quarter/month-end claim (#879). Contributes nothing.');
   }
 }
 
@@ -1715,14 +1678,7 @@ export class WeeklyRhythmStrategyDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Weekly rhythm strategy retired: unmeasured day-of-week edges; the Tuesday turnaround '
-        + 'was measured and did not reproduce (+0.35pp, t=0.30). See #879.',
-    };
+    return retiredCalendarClaim('Weekly rhythm strategy retired: unmeasured day-of-week edges; the Tuesday turnaround '
+        + 'was measured and did not reproduce (+0.35pp, t=0.30). See #879.');
   }
 }

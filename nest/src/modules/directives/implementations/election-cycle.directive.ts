@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * ElectionCycleDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -31,14 +32,7 @@ export class ElectionCycleDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Election cycle retired: unmeasured — not one completed 4-year cycle exists in the '
-        + 'available history, so none of the year-phase claims has a sample. No basis; see #879.',
-    };
+    return retiredCalendarClaim('Election cycle retired: unmeasured — not one completed 4-year cycle exists in the '
+        + 'available history, so none of the year-phase claims has a sample. No basis; see #879.');
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * TurnaroundTuesdayDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -34,14 +35,7 @@ export class TurnaroundTuesdayDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Turnaround Tuesday retired: measured 45 symbols, P(Tue up | red Mon) lift +0.35pp '
-        + '(t=0.30), 0 of 45 at the honest threshold. No reversal found. See #879.',
-    };
+    return retiredCalendarClaim('Turnaround Tuesday retired: measured 45 symbols, P(Tue up | red Mon) lift +0.35pp '
+        + '(t=0.30), 0 of 45 at the honest threshold. No reversal found. See #879.');
   }
 }

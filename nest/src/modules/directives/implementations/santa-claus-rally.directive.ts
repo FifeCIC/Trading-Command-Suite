@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { retiredCalendarClaim } from './retired-calendar-claim';
 
 /**
  * SantaClausRallyDirective — RETIRED 2026-10-09 (#879). Kept so protocol references resolve.
@@ -30,14 +31,7 @@ export class SantaClausRallyDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     void _input;
-    return {
-      score: 0,
-      confidence: 0,
-      signalClass: 'neutral',
-      unmeasured: true,
-      reason:
-        'Santa Claus rally retired: unmeasured — one partial window (~4 sessions) in the '
-        + 'available history against a claim that needs many year-cycles. No basis; see #879.',
-    };
+    return retiredCalendarClaim('Santa Claus rally retired: unmeasured — one partial window (~4 sessions) in the '
+        + 'available history against a claim that needs many year-cycles. No basis; see #879.');
   }
 }
