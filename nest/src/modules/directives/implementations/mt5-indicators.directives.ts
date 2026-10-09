@@ -660,20 +660,35 @@ export class BollingerPctBDirective implements IDirective {
 }
 
 // =====================================================================
-// 11. ATR Trailing Stop — Volatility-based stop distance
+// 11. ATR Trailing Stop — Volatility-based stop distance (ATR-UNIT GAPS since 2026-10-09)
 // =====================================================================
 
+/**
+ * ── DECISION (2026-10-09, primary — owner ruling "B" on #1075) ──
+ * WHAT:      The gap between price and each trailing stop is expressed in ATR UNITS:
+ *            longGap = (close − longStop)/ATR, shortGap = (close − shortStop)/ATR.
+ *            Grades: ≥ 2 ATR beyond the stop = strong (75); ≥ 0.5 ATR = moderate (60);
+ *            else neutral (30). When both gaps fire (bands overlap — common), the side
+ *            with the LARGER gap wins; ties resolve to the long side.
+ * WHY:       The fraction thresholds (0.03 / 0.1 of price) were unreachable BY CONSTRUCTION:
+ *            (close − longStop) ≤ 3×ATR, so the bullish branch needed ATR > 1% of price
+ *            while 5m ATR measures 0.02–0.07% — 0 contributions in every measured window.
+ * INSTEAD OF: Recalibrating the fractions (issue option A) — re-fits per instrument and
+ *            keeps the units trap; ATR units are scale-free and match the directive's name.
+ * REVERSE BY: Restore the fraction thresholds (recorded verbatim in #1075).
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 77
+ * GUARD:     atr-trailing-stop.directive.spec.ts (canaried both directions)
+ */
 @Injectable()
 export class ATRTrailingStopDirective implements IDirective {
   readonly id = 'atr-trailing-stop';
   readonly name = 'ATR Trailing Stop Signal';
   readonly description =
-    'Dual ATR trailing stop: long stop = highest high(20) − 3×ATR, short stop = lowest low(20) + 3×ATR. Symmetric bullish/bearish trend evidence. Derived from MT5 ATR Trailing Stop.';
+    'Dual ATR trailing stop: long stop = highest high(20) − 3×ATR, short stop = lowest low(20) + 3×ATR. The gap between price and each stop is graded in ATR units (≥2 ATR beyond = strong, ≥0.5 = moderate) — symmetric bullish/bearish evidence. Derived from MT5 ATR Trailing Stop.';
   readonly priority = 48;
   readonly maxScore = 100;
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
-
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -690,31 +705,48 @@ export class ATRTrailingStopDirective implements IDirective {
     const lastClose = closes[closes.length - 1];
     const lastATR = atrVals[atrVals.length - 1];
 
+    if (!(lastATR > 0)) {
+      return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: 'ATR unavailable — cannot judge the trailing-stop gaps' };
+    }
+
     // Two trailing stops: long = highest high − 3×ATR, short = lowest low + 3×ATR.
     const highestHigh = Math.max(...highs.slice(-20));
     const lowestLow = Math.min(...lows.slice(-20));
     const longStop = highestHigh - 3 * lastATR;
     const shortStop = lowestLow + 3 * lastATR;
-    const distAboveLong = (lastClose - longStop) / lastClose;
-    const distBelowShort = (lastClose - shortStop) / lastClose;
 
-    if (distAboveLong > 0.1) {
-      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Strong uptrend — ${(distAboveLong * 100).toFixed(1)}% above long trailing stop` };
+    // ⚠️ ATR UNITS, not fractions of price (#1075 ruling B). Positive = beyond the stop in
+    // that side's direction. longGap is capped at 3 by construction (close ≤ hh20); the
+    // short side is symmetric.
+    const longGap = (lastClose - longStop) / lastATR;
+    const shortGap = (lastClose - shortStop) / lastATR;
+
+    const STRONG_ATR = 2;
+    const MODERATE_ATR = 0.5;
+    const longGraded = longGap >= MODERATE_ATR ? (longGap >= STRONG_ATR ? 'strong' : 'moderate') : null;
+    const shortGraded = -shortGap >= MODERATE_ATR ? (-shortGap >= STRONG_ATR ? 'strong' : 'moderate') : null;
+
+    const longText = `${longGap.toFixed(2)}×ATR above long stop`;
+    const shortText = `${(-shortGap).toFixed(2)}×ATR below short stop`;
+
+    // ── Overlap rule: both stops can fire when range(20) < 6×ATR — the side with the LARGER
+    // gap beyond its stop wins; ties resolve to the LONG side (documented in the DECISION
+    // marker above). ONE pick path, so every geometry exercises the same code.
+    const graded: Array<{ gap: number; side: 'long' | 'short'; grade: 'strong' | 'moderate' }> = [];
+    if (longGraded) graded.push({ gap: longGap, side: 'long', grade: longGraded });
+    if (shortGraded) graded.push({ gap: -shortGap, side: 'short', grade: shortGraded });
+    if (graded.length === 0) {
+      return { score: 30, confidence: 0.3, signalClass: 'neutral', reason: `Price inside ATR trailing-stop channel (long ${longText}, short ${shortText}) — no clear trend` };
     }
-
-    if (distAboveLong > 0.03) {
-      return { score: 60, confidence: 0.55, signalClass: 'bullish', reason: `Moderate uptrend — ${(distAboveLong * 100).toFixed(1)}% above long trailing stop` };
-    }
-
-    if (distBelowShort < -0.1) {
-      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `Strong downtrend — ${(distBelowShort * 100).toFixed(1)}% below short trailing stop` };
-    }
-
-    if (distBelowShort < -0.03) {
-      return { score: 60, confidence: 0.55, signalClass: 'bearish', reason: `Moderate downtrend — ${(distBelowShort * 100).toFixed(1)}% below short trailing stop` };
-    }
-
-    return { score: 30, confidence: 0.3, signalClass: 'neutral', reason: 'Price inside ATR trailing-stop channel — no clear trend' };
+    // Array.prototype.sort is STABLE — equal gaps keep insertion order, i.e. the long side wins ties.
+    graded.sort((a, b) => b.gap - a.gap);
+    const pick = graded[0];
+    const strong = pick.grade === 'strong';
+    const overlap = graded.length > 1 ? ' (overlap: larger gap wins)' : '';
+    const text = pick.side === 'long' ? longText : shortText;
+    return pick.side === 'long'
+      ? { score: strong ? 75 : 60, confidence: strong ? 0.7 : 0.55, signalClass: 'bullish', reason: `${strong ? 'Strong' : 'Moderate'} uptrend — close ${text}${overlap}` }
+      : { score: strong ? 75 : 60, confidence: strong ? 0.7 : 0.55, signalClass: 'bearish', reason: `${strong ? 'Strong' : 'Moderate'} downtrend — close ${text}${overlap}` };
   }
 }
 
