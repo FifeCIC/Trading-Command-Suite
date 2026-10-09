@@ -269,6 +269,39 @@ test('listNotices() exposes the whole catalogue to tooling', () => {
     }
   });
 
+  test('a TIMED-OUT order renders UNKNOWN, not a refusal (#866)', () => {
+    // Measured 2026-09-17: a manual trade on the VIX card hit a bridge timeout. The adapter said
+    // { status: 'UNKNOWN' } — the order was SENT and the response was lost — and the UI rendered
+    // it with a refusal notice. "The order was not placed" is a claim nobody can make there, and
+    // the retry the user is invited to do can double the position.
+    const unknown = {
+      success: false,
+      error: 'socket hang up',
+      status: 'UNKNOWN', // adapter casing
+      code: 'TCS-INTEG-001', // "check the bridge" — true, but not the FIRST thing to do
+    };
+
+    const n = tradeFailureNotice(unknown, 'VIX');
+
+    assert.equal(n.code, 'TCS-TRADE-022', 'an unknown outcome outranks the server code');
+    assert.match(n.message, /VIX/, 'names the symbol whose position must be checked');
+    assert.match(n.action, /before retrying/i, 'the retry hazard is the point of this notice');
+    assert.match(n.action, /position/i);
+    assert.equal(n.cause, 'socket hang up', "the server's own sentence is never discarded");
+
+    // The canary for the branch: the SAME result minus the status field still falls through to
+    // the server's code, proving the new branch keys on `status` and not on the code.
+    const withoutStatus = tradeFailureNotice({ ...unknown, status: undefined }, 'VIX');
+    assert.equal(withoutStatus.code, 'TCS-INTEG-001');
+  });
+
+  test('the lowercase spelling from mt5-trading.service is treated the same (#866)', () => {
+    // Two writers record an unknown outcome: the adapter says 'UNKNOWN', the mt5-trading service
+    // says 'unknown'. Both mean the same thing, so both must reach the same notice.
+    const n = tradeFailureNotice({ success: false, error: 'read ECONNRESET', status: 'unknown' }, 'XAUUSD');
+    assert.equal(n.code, 'TCS-TRADE-022');
+  });
+
   test('bridge-emitted cap notices name the control that ACTUALLY binds (#901)', () => {
     // ⚠️ CORRECTED 2026-09-19 (#901) — the previous version of this test banned the three
     // `MT5_MAX_*` env names from EVERY notice, on the belief that #849 ("the caps moved into the

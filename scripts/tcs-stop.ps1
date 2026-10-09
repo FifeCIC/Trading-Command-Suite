@@ -8,11 +8,24 @@
 
 Write-Host "`n  Stopping Trading Command Suite services…" -ForegroundColor DarkGray
 
+# #866 — the stop-sentinel directory hangs off the repo root (same constant as tcs-launch).
+$ROOT = 'C:\wamp64\www\trading-command-suite'
+
+# 0) #866 — write the bridge supervisors' stop-sentinels FIRST. The supervisor relaunches a
+#    bridge that dies, which is correct for an ACCIDENT and wrong for a deliberate stop —
+#    without this, tcs-stop would kill each bridge once and watch it come straight back.
+$stopSentinelDir = Join-Path $ROOT 'logs\mt5-bridge'
+New-Item -ItemType Directory -Path $stopSentinelDir -Force | Out-Null
+foreach ($bp in @(5000, 5001, 5002)) {
+    $null = New-Item -ItemType File -Path (Join-Path $stopSentinelDir "supervisor-${bp}.stop") -Force
+}
+
 # 1) Kill MT5 bridges by process identity — port-based killing below only
 #    catches the process holding the LISTEN socket; zombies that crashed or
 #    raced to bind survive and keep serving stale candles (issue #643).
+#    #866: match the supervisor too, or it would relaunch the bridge we just killed.
 $zombieBridges = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like '*mt5_bridge_v2.py*' }
+    Where-Object { $_.CommandLine -like '*mt5_bridge_v2.py*' -or $_.CommandLine -like '*bridge_supervisor.py*' }
 foreach ($bp in $zombieBridges) {
     try { Stop-Process -Id $bp.ProcessId -Force -ErrorAction Stop } catch {}
     $null = cmd /c "taskkill /F /PID $($bp.ProcessId) 2>nul"

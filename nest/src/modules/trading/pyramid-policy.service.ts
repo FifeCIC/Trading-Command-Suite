@@ -79,14 +79,26 @@ export class PyramidPolicyService {
     side: 'BUY' | 'SELL';
     brokerId: string;
     positions: PyramidOpenPosition[];
+    /**
+     * #1079 — the account the INCOMING order will trade on. When given, a position whose own
+     * `accountId` is a DIFFERENT non-empty account is not this account's position and does not
+     * block. Rows with no accountId still block (unknown must never read as "no position").
+     */
+    accountId?: string | null;
   }): Promise<PyramidDecision> {
     const { symbol, side, brokerId } = params;
     const ticker = symbol.toUpperCase();
     const blockers: PyramidBlocker[] = [];
 
-    const open = (params.positions ?? []).filter(p =>
-      String(p.symbol ?? '').toUpperCase() === ticker,
-    );
+    const open = (params.positions ?? []).filter(p => {
+      if (String(p.symbol ?? '').toUpperCase() !== ticker) return false;
+      // #1079 — cross-account isolation: one provider id (`mt5`) spans several accounts, and a
+      // position on another account is not a duplicate of this order. A row WITHOUT an accountId
+      // is unknown, and unknown keeps blocking (the conservative direction).
+      const rowAccount = (p as { accountId?: string | null }).accountId;
+      if (params.accountId && rowAccount && String(rowAccount) !== String(params.accountId)) return false;
+      return true;
+    });
 
     if (open.length === 0) {
       return {

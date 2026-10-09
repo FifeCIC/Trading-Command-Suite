@@ -232,6 +232,42 @@ export class Mt5Adapter implements IProviderAdapter {
     return process.env[key];
   }
 
+  /**
+   * getConfiguredAccountId(brokerId) — #1079: the ACCOUNT NUMBER a given route trades on.
+   *
+   * One provider id (`mt5`) covers several bridges with DIFFERENT accounts, so a check that
+   * scopes only by `provider` treats another account's position as this account's duplicate.
+   * Measured 2026-10-07 (#1079): the A/B pair holding XAUUSD locked all 8 gold bots out of the
+   * symbol — and the pair was locked out while the bots held it.
+   *
+   * ⚠️ CONFIGURED, not bridge-reported. That is deliberate: #1035 refuses every order while a
+   * bridge's actual account disagrees with its configured one, so on any path that can place an
+   * order the two are equal — and the configured value costs no bridge call per dispatch.
+   * Returns null when the slot names no account (callers must treat null as "unknown" and NOT
+   * loosen their check — unknown must never read as "no position").
+   */
+  getConfiguredAccountId(brokerId?: number): string | null {
+    return this.brokerEnv(brokerId, 'MT5_ACCOUNT') ?? null;
+  }
+
+  /**
+   * getAccountIdForSymbol(symbol) — #1079: the account THIS SYMBOL's orders will land on.
+   *
+   * Uses the same `resolveForOrder()` resolution `placeOrder()` will use, so the account the
+   * guard checks against is the account the order will actually reach — not a guess from the
+   * adapter's primary slot. Resolves through symbol_route, so it is correct for a symbol routed
+   * to a non-default broker (VIX -> broker 3).
+   */
+  getAccountIdForSymbol(symbol: string): string | null {
+    try {
+      const route = this.resolveRoute(symbol, undefined, true);
+      if (route?.brokerId === undefined) return null;
+      return this.getConfiguredAccountId(route.brokerId);
+    } catch {
+      return null;
+    }
+  }
+
   private get authHeaders(): Record<string, string> {
     return { 'Content-Type': 'application/json' };
   }
@@ -364,10 +400,14 @@ export class Mt5Adapter implements IProviderAdapter {
     } catch (error: unknown) {
       const err = error as Error;
       const category = this.classifyBridgeError(err);
-      const isTransient = category === 'refused' || category === 'dns' || category === 'network';
-      if (!isTransient) {
-        breaker.consecutiveErrors++;
-      }
+      // ── #866 (2026-10-09) — EVERY failure counts toward the breaker ──
+      // refused/dns/network used to be EXEMPTED as "transient", so a bridge that was simply
+      // GONE never tripped it: measured 2026-09-17, the counter stayed at 1 across ~10
+      // consecutive connect-refused failures and the app polled a dead bridge at full rate
+      // forever. A breaker that cannot trip on its own failure mode is a decoration.
+      // Transience is handled by the RESET — one success clears the streak (line above) —
+      // not by excusing the most common outage. Threshold unchanged (MAX_ERRORS = 10).
+      breaker.consecutiveErrors++;
       this.logBridgeDiag('GET', path, `${category}: ${err.message}`, undefined, brokerId);
       if (breaker.consecutiveErrors >= Mt5Adapter.MAX_ERRORS) {
         this.tripBreaker(`${category}: ${err.message}`, brokerId);
@@ -746,6 +786,24 @@ export class Mt5Adapter implements IProviderAdapter {
   async getPositionSnapshot(): Promise<BrokerPositionSnapshot> {
     const positions = await this.getPositions();
     return { positions, authoritative: this.lastPositionSnapshotAuthoritative };
+  }
+
+  /**
+   * getQueriedAccountIds() — the accounts a snapshot from THIS adapter covers (#1101).
+   *
+   * ⚠️ DERIVED FROM THE SAME SOURCE `fetchAllBrokerPositions()` ITERATES — `symbolRouter.brokerIds()`
+   * mapped through the same `brokerEnv` the position rows are stamped with. A second derivation
+   * would be a second answer to "which brokers were asked", free to drift from the one that
+   * actually fetches.
+   *
+   * Empty when there is no router (single-bridge install): the caller then keeps its previous
+   * single-account resolution.
+   */
+  getQueriedAccountIds(): string[] {
+    const brokerIds = this.symbolRouter?.brokerIds?.() ?? [];
+    return brokerIds
+      .map((id) => this.brokerEnv(id, 'MT5_ACCOUNT'))
+      .filter((a): a is string => !!a);
   }
 
   /**

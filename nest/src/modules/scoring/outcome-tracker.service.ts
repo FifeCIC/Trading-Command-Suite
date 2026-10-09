@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
+import { SystemLogService } from '../system/log.service';
 // ⚠️ SINGLE SOURCE for cadence→duration. See validate-timeframe-sources.cjs.
 //
 // A private `timeframeToMilliseconds()` used to live at the bottom of this file. It was a
@@ -75,6 +76,23 @@ const DEDUP_IDENTITY_RETENTION_MS = 60 * 60 * 1000;
  * queries, so 250 rows now cost ~250-500 queries instead of 2,000.
  */
 const MATURATION_BATCH = 250;
+
+/**
+ * #1099 (2026-10-09) — per-tick drain ceiling and politeness.
+ *
+ * ⚠️ THE DEFECT THESE REPLACE: one 250-row pass per 15 min = a 24k/day ceiling against a
+ * ~31k/day inflow — capacity BELOW the input rate, so the frontier could never advance
+ * (measured: ~90k rows stuck behind a clean cut at 2026-10-06 17:54 while the sweep ran).
+ *
+ * The batch SIZE stays 250 — it was chosen FOR POOL HEALTH after a measured self-inflicted
+ * DoS (see the note above), and raising it would re-create that. Capacity instead comes from
+ * CADENCE (5 min) + a bounded number of small passes per tick, with a YIELD between passes so
+ * the sweep never occupies the pool in one unbroken run.
+ * Ceiling: 250 × 6 × 288 ticks ≈ 432k/day — ~14× the inflow.
+ */
+const MATURATION_MAX_ROWS_PER_TICK = 1500;
+const MATURATION_TICK_BUDGET_MS = 150_000;
+const MATURATION_INTER_PASS_YIELD_MS = 5_000;
 
 /**
  * How long a ticker → symbol.id resolution stays cached (MST-012).
@@ -198,7 +216,26 @@ export class OutcomeTrackerService {
   private identityDropped = 0;
   private readonly recordedTotal = { n: 0 };
 
-  constructor(private readonly prisma: PrismaService) {}
+  /**
+   * In-flight guard (#1099): a @Cron tick must never stack drain passes on the shared pool.
+   */
+  private maturationDraining = false;
+
+  /**
+   * Inter-pass yield (#1099). A field, not the constant directly, so a spec can zero it —
+   * real 5s sleeps made the saturated-batch spec take half a minute and left the timer
+   * handle open after the run finished.
+   */
+  private maturationYieldMs = MATURATION_INTER_PASS_YIELD_MS;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    // ⚠️ #1099 acceptance 3 — the sweep's own summary must reach the CANONICAL log
+    // (`tcs-<date>.log`). The Nest logger writes to stdout only, which is why
+    // `Outcome maturation:` never appeared there despite thousands of finalisations.
+    // @Optional so unit tests can keep constructing with one argument.
+    @Optional() private readonly syslog?: SystemLogService,
+  ) {}
 
   /**
    * Report the running record:drop ratio (#825).
@@ -423,10 +460,94 @@ export class OutcomeTrackerService {
    * stay cheap. (MST-007) Without this sweep no directive outcome is ever
    * matured, so directive "performance"/accuracy stays permanently empty.
    */
-  @Cron('*/15 * * * *', { name: 'directive-outcome-maturation' })
+  @Cron('*/5 * * * *', { name: 'directive-outcome-maturation' })
   async computeOutcomes(): Promise<number> {
     if (!this.prisma.isAvailable) return 0;
 
+    // ── #1099 (2026-10-09) — TICK-LEVEL DRAIN ──────────────────────────────────────────────
+    // ⚠️ THE DEFECT THIS REPLACES: ONE 250-row pass per 15 min = a 24k/day ceiling against a
+    // ~31k/day inflow — capacity BELOW the input rate, so the frontier could never advance
+    // (measured: ~90k rows stuck behind a clean cut at 2026-10-06 17:54).
+    //
+    // The batch SIZE stays 250: it was chosen FOR POOL HEALTH after a measured self-inflicted
+    // DoS (1000-row batches ≈ 2,000 serial queries over 57s starved the 13-connection pool;
+    // see the note on MATURATION_BATCH) and raising it would re-create that. Capacity instead
+    // comes from CADENCE (5 min) + a bounded number of small passes per tick, with a 5s YIELD
+    // between passes so the sweep never occupies the pool in one unbroken run.
+    if (this.maturationDraining) {
+      // A previous tick is still draining. Stacking passes on the shared pool is exactly the
+      // contention the batch-size note warns about, so the later tick stands down and says so.
+      this.logger.warn('Outcome maturation skipped — the previous tick is still draining');
+      return 0;
+    }
+    this.maturationDraining = true;
+    const tickStart = Date.now();
+    const backlogBefore = await this.countMaturableBacklog();
+    let visited = 0;
+    let filled = 0;
+    let finalised = 0;
+    let passes = 0;
+    let saturated = false;
+    try {
+      do {
+        const pass = await this.runMaturationPass();
+        passes++;
+        visited += pass.visited;
+        filled += pass.filled;
+        finalised += pass.finalised;
+        saturated = pass.batchFull;
+        if (pass.visited === 0) break; // queue empty to the frontier — nothing more to drain
+        if (
+          saturated &&
+          visited < MATURATION_MAX_ROWS_PER_TICK &&
+          Date.now() - tickStart < MATURATION_TICK_BUDGET_MS
+        ) {
+          await new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, this.maturationYieldMs);
+            // unref: a pending yield must never hold the process open (specs hit this as
+            // "Jest did not exit one second after the test run has completed").
+            if (typeof (timer as { unref?: () => void }).unref === 'function') {
+              (timer as { unref: () => void }).unref();
+            }
+          });
+        }
+      } while (
+        saturated &&
+        visited < MATURATION_MAX_ROWS_PER_TICK &&
+        Date.now() - tickStart < MATURATION_TICK_BUDGET_MS
+      );
+
+      if (visited === 0) return 0; // quiet when there is nothing to do
+
+      const backlogAfter = await this.countMaturableBacklog();
+      // ONE summary per tick, in BOTH logs: stdout via the Nest logger, and the canonical
+      // `tcs-<date>.log` via SystemLogService — the absence of this line from the canonical
+      // log is why the starvation went unnoticed (#1099 acceptance 3).
+      const summary =
+        `Outcome maturation tick: visited ${visited}, filled ${filled}, finalised ${finalised} ` +
+        `in ${passes} pass(es) — backlog ${backlogBefore ?? '?'} -> ${backlogAfter ?? '?'}`;
+      this.logger.log(summary);
+      this.syslog?.info('OutcomeTrackerService', summary, 'scoring');
+      if (saturated && visited >= MATURATION_MAX_ROWS_PER_TICK) {
+        this.logger.warn(
+          `Outcome maturation batch saturated — ${backlogAfter ?? '?'} rows pending, ` +
+          `drained ${visited} this tick (ceiling ${MATURATION_MAX_ROWS_PER_TICK}); continues next tick`,
+        );
+      }
+      return filled;
+    } finally {
+      this.maturationDraining = false;
+    }
+  }
+
+  /**
+   * runMaturationPass() — ONE 250-row batch of the drain (#1099).
+   *
+   * Extracted from the previous single-pass `computeOutcomes()`: the body below is the
+   * original sweep, unchanged except that the saturation branch now RETURNS `batchFull`
+   * instead of logging (the tick wrapper owns the backlog count and the once-per-tick warn).
+   */
+  private async runMaturationPass(): Promise<{ visited: number; filled: number; finalised: number; batchFull: boolean }> {
     const now = Date.now();
     // ⚠️ THREE separate counters, deliberately (MST-012). `count` is rows visited,
     // `filled` is rows where at least one horizon gained a price, `finalised` is rows
@@ -473,17 +594,9 @@ export class OutcomeTrackerService {
       orderBy: { predictedAt: 'asc' },
     });
 
-    if (pending.length === MATURATION_BATCH) {
-      // A saturated batch is not a quiet one — report the true backlog so rows
-      // stuck behind an unfillable queue head are visible instead of silent.
-      const backlog = await this.prisma.directiveOutcome
-        .count({ where: { outcomeComputedAt: null, predictedAt: { lte: new Date(now - 15 * 60 * 1000) } } })
-        .catch(() => null);
-      this.logger.warn(
-        `Outcome maturation batch saturated (${MATURATION_BATCH} rows)` +
-        (backlog != null ? ` — ${backlog} rows pending` : ''),
-      );
-    }
+    // A saturated batch is not a quiet one — the tick wrapper reports the backlog and
+    // continues with the next-oldest rows (#1099); this pass just tells it the queue is deep.
+    const batchFull = pending.length === MATURATION_BATCH;
 
     for (const rec of pending) {
       try {
@@ -579,7 +692,14 @@ export class OutcomeTrackerService {
         (computed.filled > 0 ? `, ${this.marketGapResolutions} via next-session bar` : ''),
       );
     }
-    return computed.filled;
+    return { visited: computed.count, filled: computed.filled, finalised: computed.finalised, batchFull };
+  }
+
+  /** Maturable backlog — the count the tick summary reports before and after (#1099). */
+  private async countMaturableBacklog(): Promise<number | null> {
+    return this.prisma.directiveOutcome
+      .count({ where: { outcomeComputedAt: null, predictedAt: { lte: new Date(Date.now() - 15 * 60 * 1000) } } })
+      .catch(() => null);
   }
 
   /**

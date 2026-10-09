@@ -326,6 +326,55 @@ export function authoritativeFromSnapshot(snapshot: { authoritative: boolean }):
 }
 
 /**
+ * resolveSyncAccountScope() — WHICH accounts may a position sync JUDGE? (#1101)
+ *
+ * ── WHY THIS IS A NAMED FUNCTION AND NOT AN INLINE TEST ──────────────────────────────────────
+ *
+ * The call site asked "how many accounts are PRESENT in this payload?" and narrowed when the
+ * answer was 1. That is the wrong proxy. The question the sync scope must answer is "which
+ * accounts does this snapshot COVER?" — and the two answers differ in exactly one direction,
+ * the fatal one: a routed broker that legitimately holds NOTHING contributes no rows, so a
+ * payload-only test EXCLUDES it from its own reconciliation.
+ *
+ * MEASURED 2026-10-08/09 (#1101). Broker 3's three positions (US30 / US500 / VIX) were closed by
+ * hand at 22:10:54Z. From the next tick the payload held only broker 2's account, the scope
+ * collapsed to broker 2, and broker 3's `trade` + `position` rows became invisible to closure
+ * detection and to `reapStrandedTrades()` — `mayJudgeTrade()` refuses to judge another account.
+ * They sat `status='open'` with no broker counterpart for 20h+, no error anywhere. The collapse
+ * is self-defeating: the EMPTIER a routed broker becomes — i.e. exactly after its positions all
+ * close — the more certainly its last rows are excluded from being finalised.
+ *
+ * ── THE RULE ────────────────────────────────────────────────────────────────────────────────
+ *
+ * A merged snapshot is authoritative for EVERY routed broker (`fetchAllBrokerPositions()`
+ * refuses to be authoritative when any bridge misses), so more than one QUERIED account keeps
+ * the all-accounts scope (`undefined` — "every account for this provider", #883). Narrowing is
+ * only valid when a single account was queried.
+ *
+ * ⚠️ `queriedAccountIds` is EMPTY on the single-bridge path (no router) — the previous
+ * resolution is kept there: narrow to the one account present.
+ *
+ * Guard: `automation-loop-sync-scope.spec.ts`, canaried in both directions.
+ */
+export function resolveSyncAccountScope(args: {
+  /** Accounts the adapter actually ASKED — one per routed broker. Empty = single-bridge path. */
+  queriedAccountIds: string[];
+  /** Accounts present in the payload — evidence about liveness, never the scope. */
+  payloadAccountIds: Array<string | null | undefined>;
+}): { merged: boolean; singleAccount: string | null } {
+  if (args.queriedAccountIds.length > 1) {
+    // Merged multi-broker snapshot: keep the all-accounts scope. Narrowing to the accounts
+    // PRESENT excludes an empty broker from its own reconciliation — measured, see above.
+    return { merged: true, singleAccount: null };
+  }
+  const present = new Set(args.payloadAccountIds.filter((a): a is string => !!a));
+  return {
+    merged: false,
+    singleAccount: present.size === 1 ? ([...present][0] as string) : null,
+  };
+}
+
+/**
  * The pair's two accounts, or the reason it must not run.
  *
  * ⚠️ ONE INTERFACE, NOT A DISCRIMINATED UNION — and the reason is measured, not stylistic.
@@ -580,6 +629,11 @@ export class AutomationLoopService implements OnModuleInit {
     } catch { /* unknown — policy will treat as no open position */ }
     const pyramid = await this.pyramidPolicy.evaluate({
       symbol, side, brokerId, positions: openPositions,
+      // #1079 — scope to the account THIS order will land on, resolved through the same
+      // symbol→route logic the adapter's placeOrder uses. Without it, one provider id covering
+      // several accounts counted another account's position as a duplicate: measured 2026-10-07,
+      // the A/B pair holding XAUUSD locked all 8 gold bots out of the symbol.
+      accountId: (broker as any)?.getAccountIdForSymbol?.(symbol) ?? null,
     });
     if (!pyramid.allowed) {
       const first = pyramid.blockers[0];
@@ -1321,13 +1375,21 @@ export class AutomationLoopService implements OnModuleInit {
           // id while the payload also holds broker 3's positions would leave broker 3's rows
           // unreconciled. `null` means "all accounts for this provider", which is what a merged
           // multi-broker snapshot actually is.
-          const distinctAccounts = new Set(
-            positions.map((p: any) => p.accountId).filter((a: any) => !!a),
-          );
-          let accountId = distinctAccounts.size === 1
-            ? ([...distinctAccounts][0] as string)
-            : undefined;
-          if (adapter.getAccount && distinctAccounts.size <= 1) {
+          //
+          // ⚠️⚠️ #1101 — "SPANS SEVERAL ACCOUNTS" IS ABOUT THE QUERIED SET, NOT THE PAYLOAD.
+          // Measured 2026-10-09, on `b77ecfc`'s own heuristic (the #883 fix): broker 3's three
+          // positions were hand-closed, the payload then held only broker 2's rows, the scope
+          // collapsed to broker 2 — and broker 3's `trade`/`position` rows could never be
+          // reconciled again (`mayJudgeTrade()` refuses another account). They sat open for 20h+.
+          // The resolved scope, and why, live in `resolveSyncAccountScope()`.
+          const scope = resolveSyncAccountScope({
+            queriedAccountIds: adapter.getQueriedAccountIds?.() ?? [],
+            payloadAccountIds: positions.map((p: any) => p.accountId),
+          });
+          let accountId: string | undefined = scope.merged
+            ? undefined
+            : scope.singleAccount ?? undefined;
+          if (!scope.merged && !scope.singleAccount && adapter.getAccount) {
             const account = await adapter.getAccount().catch(() => null);
             accountId = accountId ?? account?.accountId;
           }

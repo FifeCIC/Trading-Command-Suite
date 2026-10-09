@@ -120,6 +120,13 @@ export class ExecutionFeasibilityService {
     // check exists to prevent.
     const route = adapterId === 'mt5' ? (this.symbolRouter?.resolveForOrder(ticker) ?? null) : null;
     const routedBrokerId = route?.brokerId;
+    // #1079 — the account THIS order will trade on, resolved from the SAME route above. One
+    // provider id (`mt5`) spans several accounts, so the duplicate checks below must scope by
+    // account or a position on broker 3 blocks an order routed to broker 2. `null` (no route /
+    // no configured account) keeps the checks in their conservative provider-wide mode.
+    const routedAccountId = routedBrokerId !== undefined
+      ? ((adapter as any)?.getConfiguredAccountId?.(routedBrokerId) ?? null)
+      : null;
     const brokerSymbol = route?.brokerSymbol || ticker;
     const routeProblems = adapterId === 'mt5'
       ? orderRouteProblems(
@@ -225,6 +232,7 @@ export class ExecutionFeasibilityService {
       side,
       brokerId,
       positions,
+      accountId: routedAccountId,
     });
     for (const b of pyramid.blockers) {
       blockers.push({ key: b.key, message: b.message, hint: b.hint });
@@ -264,7 +272,7 @@ export class ExecutionFeasibilityService {
     // Duplicate guard as final structural check (execution-phase parity).
     if (blockers.length === 0 && !pyramid.hasOpenPosition) {
       try {
-        const dup = await this.duplicateGuard.checkDuplicate(ticker, brokerId, protocolId ?? undefined);
+        const dup = await this.duplicateGuard.checkDuplicate(ticker, brokerId, protocolId ?? undefined, undefined, routedAccountId);
         if (dup.blocked) {
           blockers.push({
             key: 'duplicate-position',

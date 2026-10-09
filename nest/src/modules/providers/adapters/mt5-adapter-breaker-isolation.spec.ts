@@ -207,4 +207,28 @@ describe('Mt5Adapter circuit breaker — per-broker isolation (#846)', () => {
     expect(adapter.tripped).toBe(false);
     expect(adapter.consecutiveErrors).toBe(0);
   });
+
+  /**
+   * ⚠️ #866 — a bridge that is GONE must trip the breaker; it must not be exempted as "transient".
+   *
+   * Measured 2026-09-17: the counter stayed at 1 across ~10 consecutive connect-refused
+   * failures, so a bridge with no process behind it was polled at full rate indefinitely. A
+   * breaker that cannot trip on its own failure mode is a decoration — and a refusal is the
+   * MOST COMMON outage, not an exception to the rule. Transience is handled by the RESET
+   * (one success clears the streak — asserted above), not by excusing the failure.
+   *
+   * Drives REJECTED fetches specifically: the 500-response path already counted, so only this
+   * transport-level failure proves the exemption is gone.
+   */
+  it('counts connect-refused failures toward the trip threshold (#866)', async () => {
+    const adapter = new Mt5Adapter(undefined, undefined, undefined, routerStub());
+
+    for (let i = 0; i < 10; i++) {
+      global.fetch = jest.fn().mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5000')) as any;
+      await adapter.getSymbols(2);
+    }
+
+    expect(adapter.consecutiveErrors).toBe(10);
+    expect(adapter.tripped).toBe(true);
+  });
 });

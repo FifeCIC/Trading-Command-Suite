@@ -8,8 +8,11 @@ export class JournalController {
   @Get('entries')
   getEntries() { return this.journal.getEntries(); }
 
-  @Get('stats')
-  getStats() { return this.journal.getStats(); }
+  // ── #1100 (2026-10-09) — `@Get('stats')` DELETED, not ported ──
+  // It served four hardcoded fabrications + a "NaN%" win rate computed over an empty array
+  // (measured against 440 closed trades). Realised P&L is canonical at
+  // `GET /api/scoring/edge/pnl` (PnlReport — quarantine-aware, reliability bands); consumers
+  // read that. Re-adding a stat route here would be a second implementation of P&L.
 
   @Post('entries/:id/note')
   addNote(@Param('id') id: string, @Body() body: { notes: string }) {

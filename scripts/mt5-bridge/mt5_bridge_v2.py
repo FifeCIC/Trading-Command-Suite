@@ -8,10 +8,11 @@ Usage:
     python mt5_bridge_v2.py
 """
 
-import os, json, logging, threading, time
+import os, json, logging, socket, threading, time
+import faulthandler
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta, timezone
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # ─── Config ───────────────────────────────────────────────
@@ -47,6 +48,53 @@ if _cli_broker:
     os.environ['BRIDGE_ACCOUNT'] = _cli_broker
 
 BRIDGE_PORT = int(os.environ.get('BRIDGE_PORT', 5000))
+
+# ── #866 — wedge containment (2026-10-09) ───────────────────────────────────────────────────
+# The server was a plain single-threaded HTTPServer: ONE handler that blocks takes the accept
+# loop with it — permanently. Measured 2026-09-17: broker 3 wedged inside POST /order AFTER
+# its `order_placed` journal write; CPU frozen, socket bound, /health dead, nothing recovered
+# it, and the order the bridge had actually placed was reported to the app as failed.
+# Two changes make that state impossible:
+#   1. ThreadingHTTPServer — a blocked handler no longer stops the accept loop; /health keeps
+#      answering, so the app can always see the bridge (and the wedge) from outside.
+#   2. ONE lock (_MT5_HTTP_LOCK) around every non-/health request — the `mt5` package is not
+#      thread-safe, and the old single-threaded server was (accidentally) serialising it.
+#      Threading for liveness, a lock for mt5 safety: semantics preserved, liveness gained.
+# A blocked NATIVE call cannot be interrupted from Python — so `http_wedge_monitor` dumps every
+# thread's stack and EXITS (code 75) once a request exceeds the bound, and
+# `bridge_supervisor.py` relaunches the process. Set MT5_BRIDGE_WEDGE_EXIT_SECONDS=0 to disable.
+WEDGE_EXIT_SECONDS = int(os.environ.get('MT5_BRIDGE_WEDGE_EXIT_SECONDS', '300'))
+WEDGE_POLL_SECONDS = int(os.environ.get('MT5_BRIDGE_WEDGE_POLL_SECONDS', '10'))
+HEALTH_LOCK_TIMEOUT_S = float(os.environ.get('MT5_BRIDGE_HEALTH_LOCK_TIMEOUT', '2'))
+_MT5_HTTP_LOCK = threading.RLock()
+_INFLIGHT = {}                      # thread ident -> (started_at, path)
+_INFLIGHT_LOCK = threading.Lock()
+
+
+def http_wedge_monitor():
+    """#866 — bounded wedge: a stuck request ends this process loudly, never silently."""
+    while True:
+        time.sleep(WEDGE_POLL_SECONDS)
+        if WEDGE_EXIT_SECONDS <= 0:
+            continue
+        now = time.time()
+        wedged = []
+        with _INFLIGHT_LOCK:
+            for tid, (started, path) in list(_INFLIGHT.items()):
+                age = now - started
+                if age >= WEDGE_EXIT_SECONDS:
+                    wedged.append((tid, age, path))
+        if wedged:
+            for tid, age, path in wedged:
+                logger.critical(
+                    f'WEDGE: request {path} in thread {tid} has run {int(age)}s '
+                    f'(limit {WEDGE_EXIT_SECONDS}s) — dumping stacks and exiting 75 for restart'
+                )
+            try:
+                faulthandler.dump_traceback()
+            except Exception:
+                pass
+            os._exit(75)
 # BRIDGE_ACCOUNT lets multiple instances target different account slots
 # (e.g. 2=MetaQuotes, 3=Pepperstone) — applied before anything reads credentials.
 if os.environ.get('BRIDGE_ACCOUNT'):
@@ -1297,6 +1345,127 @@ def handle_bulk_candles(handler, q, body=None):
 
 class BridgeHandler(BaseHTTPRequestHandler):
 
+    # ── #866 — request serialisation + in-flight registry ──────────────────────────────
+    def parse_request(self):
+        """
+        #866 — classify THIS request the moment the request line is parsed.
+
+        `handle_one_request()` must know the path BEFORE dispatching, and the base class only
+        sets `self.path` inside this method. Reading `self.path` at the top of
+        `handle_one_request()` raises AttributeError on the FIRST request of every connection
+        (measured 2026-10-09 on the canary bridge, port 5002: every request was accepted and
+        then closed with zero bytes — an empty reply, which reads exactly like the wedge this
+        change exists to fix). So the classification happens here, once, where the attribute
+        is real.
+        """
+        ok = super().parse_request()
+        self._is_health_request = bool(ok) and (self.path or '').split('?', 1)[0].rstrip('/') == '/health'
+        return ok
+
+    def handle_one_request(self):
+        """
+        Every request except /health runs under ONE lock — preserving the mt5 serialisation
+        the old single-threaded server gave for free. /health gets a SHORT timeout and a
+        'busy' answer instead of going silent while a request holds the lock.
+        In-flight entries feed http_wedge_monitor, /health included (see the note below).
+
+        ⚠️ The base `handle_one_request()` cannot be called from here: it would parse the
+        request line a SECOND time, consuming the body of a POST (or the next pipelined
+        request). Its body is therefore inlined below, dispatching `do_*` directly.
+        """
+        try:
+            self.raw_requestline = self.rfile.readline(65537)
+            if len(self.raw_requestline) > 65536:
+                self.requestline = ''
+                self.request_version = ''
+                self.command = ''
+                self.send_error(414)
+                return
+            if not self.raw_requestline:
+                self.close_connection = True
+                return
+            if not self.parse_request():  # sets self._is_health_request; sends its own error
+                return
+            mname = 'do_' + self.command
+            if not hasattr(self, mname):
+                self.send_error(501, f'Unsupported method ({self.command!r})')
+                return
+            method = getattr(self, mname)
+
+            if self._is_health_request:
+                acquired = _MT5_HTTP_LOCK.acquire(timeout=HEALTH_LOCK_TIMEOUT_S)
+                if not acquired:
+                    # Honest busy state: the server IS answering, mt5 is occupied.
+                    # `connected: null` — UNKNOWN, not false (the bridge contradicting itself
+                    # was how a wedged bridge used to read as "terminal switched off").
+                    try:
+                        busy_since = min((s for s, _ in _INFLIGHT.values()), default=None)
+                        body = json.dumps({
+                            'connected': None,
+                            'connectionState': 'busy',
+                            'connectionStateDetail': 'mt5 request in flight — bridge thread occupied',
+                            'busySeconds': (time.time() - busy_since) if busy_since else None,
+                        }).encode()
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json')
+                        self.send_header('Content-Length', str(len(body)))
+                        self.end_headers()
+                        self.wfile.write(body)
+                        self.wfile.flush()
+                    except Exception:
+                        pass
+                    return
+                # ⚠️ #866 — /health is WATCHED TOO, and this is not symmetry for its own sake.
+                # Measured 2026-10-09 (canary, port 5002): a bridge with no terminal attached
+                # hung INSIDE this handler — `ensure_mt5()` / `mt5.terminal_info()` block
+                # natively when the terminal is unreachable, and a wrapping try/except cannot
+                # interrupt a native block. Because only non-health paths registered in
+                # _INFLIGHT, the wedge monitor never saw it: socket bound, no CPU, /health
+                # dead, forever. That is the original wedge, reached through the one route
+                # every caller uses, and the monitor was blind to it. Registering health
+                # closes it: the request that would go silent now ends the process loudly
+                # (exit 75) and the supervisor relaunches a fresh one.
+                tid = threading.get_ident()
+                with _INFLIGHT_LOCK:
+                    _INFLIGHT[tid] = (time.time(), self.path)
+                try:
+                    method()
+                    self.wfile.flush()
+                finally:
+                    with _INFLIGHT_LOCK:
+                        _INFLIGHT.pop(tid, None)
+                    _MT5_HTTP_LOCK.release()
+                return
+
+            tid = threading.get_ident()
+            with _INFLIGHT_LOCK:
+                _INFLIGHT[tid] = (time.time(), self.path)
+            try:
+                _MT5_HTTP_LOCK.acquire()
+                try:
+                    method()
+                    self.wfile.flush()
+                finally:
+                    _MT5_HTTP_LOCK.release()
+            finally:
+                with _INFLIGHT_LOCK:
+                    _INFLIGHT.pop(tid, None)
+        except socket.timeout as e:
+            # Same semantics as the base class — a silent keep-alive socket is not an error.
+            self.log_error('Request timed out: %r', e)
+            self.close_connection = True
+        except Exception:
+            # #866 — a crashed handler must leave a trace that SURVIVES. Under the supervisor
+            # a child's stderr goes to a hidden window, so the traceback also goes to the
+            # bridge's own file log; the caller sees a 500 rather than a silent empty reply.
+            self.close_connection = True
+            logger.error('request handler crashed: %s %s',
+                         getattr(self, 'command', '?'), getattr(self, 'path', '?'), exc_info=True)
+            try:
+                self.send_error(500, 'bridge request handler crashed - see the bridge log')
+            except Exception:
+                pass
+
     def do_GET(self):
         p = urlparse(self.path)
         q = parse_qs(p.query)
@@ -1731,6 +1900,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
         path = p.path.rstrip('/')
         parts = [x for x in path.split('/') if x]
         body = read_body(self)
+
+        # #866 canary hook — present ONLY when MT5_BRIDGE_TEST_HOOKS=1 (never in normal runs).
+        # It runs INSIDE the request lock and the in-flight registry, i.e. it simulates exactly
+        # the 2026-09-17 wedge: a non-returning handler holding the mt5 lock.
+        if path == '/__test_hang' and os.environ.get('MT5_BRIDGE_TEST_HOOKS') == '1':
+            _secs = float((q.get('seconds') or ['3600'])[0])
+            logger.warning(f'TEST HOOK /__test_hang: simulating a wedged request for {_secs}s')
+            time.sleep(_secs)
+            return
 
         try:
             # /history/recover   (POST) — #1093: ask the terminal for deals it has not served.
@@ -2421,9 +2599,13 @@ if __name__ == '__main__':
     # answering, this covers criterion 1 and 3 of #1000; if it shows the port NOT answering, the
     # conclusion is that the connect must also be bounded and run out of process, and that is
     # recorded rather than hand-waved.
-    server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
-    logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port} (binding BEFORE connect, #1000)')
+    server_obj = ThreadingHTTPServer(('127.0.0.1', port), BridgeHandler)
+    logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port} (binding BEFORE connect, #1000; threading + mt5 lock, #866)')
     threading.Thread(target=server_obj.serve_forever, name='mt5-http', daemon=True).start()
+
+    if WEDGE_EXIT_SECONDS > 0:
+        threading.Thread(target=http_wedge_monitor, name='http-wedge-monitor', daemon=True).start()
+        logger.info(f'HTTP wedge monitor started — stuck request exits (75) after {WEDGE_EXIT_SECONDS}s')
 
     logger.info('Connecting to MT5 at startup...')
     ok, err = connect_mt5()

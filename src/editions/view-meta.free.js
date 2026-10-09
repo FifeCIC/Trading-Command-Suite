@@ -137,7 +137,6 @@ export const VIEW_META = {
     css: "src/pages/trade-journal-page.css",
     api: [
       "GET /api/journal/entries",
-      "GET /api/journal/stats",
     ],
   },
   "/trading/calculators": {

@@ -44,7 +44,16 @@ $activeBrokers = ($envVars['MT5_ACTIVE_BROKERS'] -split ',').Trim() | Where-Obje
 if (-not $activeBrokers) { $activeBrokers = @('2') }
 $pythonPath = $envVars['MT5_PYTHON_PATH'] ?? 'python'
 $bridgeScript = "$ROOT\scripts\mt5-bridge\mt5_bridge_v2.py"
+# #866 — bridges are STARTED via the supervisor, which relaunches them if they die (including
+# the wedge exit, code 75). tcs-stop writes the stop-sentinel this supervisor obeys.
+$supervisorScript = "$ROOT\scripts\mt5-bridge\bridge_supervisor.py"
 $bridgeCwd = Split-Path $bridgeScript -Parent
+
+# A launch clears any previous stop-sentinel — its presence means "tcs-stop ran", which
+# must not suppress a bridge that is being deliberately started NOW.
+$stopSentinelDir = Join-Path $ROOT 'logs\mt5-bridge'
+New-Item -ItemType Directory -Path $stopSentinelDir -Force | Out-Null
+Get-ChildItem -Path $stopSentinelDir -Filter 'supervisor-*.stop' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
 # Build list of bridge ports to kill/start
 $bridgePorts = @()
@@ -61,7 +70,7 @@ Write-Host "`n  Stopping existing services…" -ForegroundColor DarkGray
 # crashed-but-didn't-exit, or raced to bind, survive as zombies and keep
 # serving stale candles (issue #643).
 $zombieBridges = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like '*mt5_bridge_v2.py*' }
+    Where-Object { $_.CommandLine -like '*mt5_bridge_v2.py*' -or $_.CommandLine -like '*bridge_supervisor.py*' }
 foreach ($bp in $zombieBridges) {
     try { Stop-Process -Id $bp.ProcessId -Force -ErrorAction Stop } catch {}
     $null = cmd /c "taskkill /F /PID $($bp.ProcessId) 2>nul"
@@ -149,7 +158,8 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     # empty. `-RedirectStandardOutput/-Error` redirect the actual process.
     $bridgeLog = Join-Path $LOG_DIR "console-mt5-${bridgePort}.log"
     $bridgeErr = Join-Path $LOG_DIR "console-mt5-${bridgePort}-err.log"
-    $bridgeArgs = "`"$bridgeScript`""
+    # #866 — the SUPERVISOR is launched; it spawns the bridge and relaunches it on death.
+    $bridgeArgs = "`"$supervisorScript`""
     $started = Start-Process -FilePath $pythonPath `
         -ArgumentList $bridgeArgs `
         -WorkingDirectory $bridgeCwd `
@@ -157,7 +167,7 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
         -RedirectStandardOutput $bridgeLog `
         -RedirectStandardError $bridgeErr
     $mt5Pids += $started.Id
-    Write-Host "    launcher PID $($started.Id) (detached; bridge on port ${bridgePort})" -ForegroundColor DarkGray
+    Write-Host "    launcher PID $($started.Id) (detached supervisor; bridge on port ${bridgePort})" -ForegroundColor DarkGray
 }
 
 # ── Wait for the bridges to be READY before starting the API ─
@@ -345,7 +355,15 @@ if ($allUp) {
         $owner = (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
             Select-Object -First 1).OwningProcess
         if ($owner -and $expected -and $owner -ne $expected) {
-            $impostors += "port $port is owned by PID $owner, but we started PID $expected"
+            # ⚠️ #866 — the BRIDGE ports are owned by a GRANDCHILD now. This launcher starts
+            # `bridge_supervisor.py` (that pid is in $startedPids) and the supervisor starts the
+            # bridge, so the LISTEN owner is the supervisor's child. One parent lookup settles it —
+            # and only when the expected pid did not match directly, so the check still catches a
+            # genuinely stale process answering the port (#1026).
+            $parent = (Get-CimInstance Win32_Process -Filter "ProcessId=$owner" -ErrorAction SilentlyContinue).ParentProcessId
+            if ($parent -ne $expected) {
+                $impostors += "port $port is owned by PID $owner, but we started PID $expected"
+            }
         } elseif (-not $owner -and $expected) {
             $impostors += "port $port has no LISTEN owner, but we started PID $expected"
         }

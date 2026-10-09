@@ -229,10 +229,17 @@ export class SpeedScanController {
 
         return {
           success: result?.success ?? false,
-          status: result?.success ? 'EXECUTED' : 'FAILED',
+          // #866 (2026-10-09) — do NOT collapse UNKNOWN into FAILED. The adapter returns
+          // status 'UNKNOWN' when the order was SENT and the response was lost; that is not a
+          // failure, it is an unknown outcome, and the UI warns "check the position before
+          // retrying" for it. Mapping it to FAILED here stated "the order was not placed" — a
+          // fact this code cannot know — and the previous line proved it: it already sent a
+          // clientOrderId, so the retry it invited could double the position.
+          status: result?.success ? 'EXECUTED' : result?.status === 'UNKNOWN' ? 'UNKNOWN' : 'FAILED',
           ticket: result?.ticket ?? null,
           price: price ?? undefined,
           error: result?.error ?? undefined,
+          code: result?.code ?? undefined,
         };
       } catch (err: any) {
         return { success: false, status: 'FAILED', reason: err.message };

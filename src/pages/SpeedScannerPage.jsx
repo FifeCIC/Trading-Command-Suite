@@ -148,11 +148,12 @@ export default function SpeedScannerPage() {
       {!isLoading && (
         <>
           {tradeResult && (
-            <div className={`ss-trade-result ${tradeResult.status === 'EXECUTED' || tradeResult.status === 'QUEUED_FOR_AUTOMATION' ? 'ss-trade-success' : 'ss-trade-error'}`}>
+            <div className={`ss-trade-result ${tradeResult.status === 'EXECUTED' || tradeResult.status === 'QUEUED_FOR_AUTOMATION' ? 'ss-trade-success' : tradeResult.status === 'UNKNOWN' ? 'ss-trade-unknown' : 'ss-trade-error'}`}>
               {tradeResult.status === 'EXECUTED' && <span>✅ Trade executed: {tradeResult.symbol} @ {tradeResult.price} — Order #{tradeResult.orderId}</span>}
               {tradeResult.status === 'QUEUED_FOR_AUTOMATION' && <span>🤖 Queued: {tradeResult.symbol} — will execute on next loop ({tradeResult.protocol || 'default'} protocol)</span>}
               {tradeResult.status === 'DUPLICATE' && <span>⚠️ {tradeResult.message}</span>}
               {tradeResult.status === 'ERROR' && <span>❌ {tradeResult.message}</span>}
+              {tradeResult.status === 'UNKNOWN' && <span>⚠️ Outcome UNKNOWN: {tradeResult.symbol} may have been placed — check positions BEFORE retrying. ({tradeResult.error || 'response lost'})</span>}
               {tradeResult.status === 'ONE_CLICK_READY' && <span>🎯 Ready: {tradeResult.symbol} — {tradeResult.executeAction || 'confirm in terminal'}</span>}
               {tradeResult.status === 'KEYBOARD_READY' && <span>⌨️ {tradeResult.symbol} mapped to {tradeResult.hotkey || 'default key'} — press to execute</span>}
             </div>

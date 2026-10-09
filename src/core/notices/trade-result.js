@@ -49,6 +49,20 @@ export const TRADE_FAILURE_FALLBACK = 'TCS-TRADE-005';
  * @returns a rendered notice object (never null, never blank)
  */
 export function tradeFailureNotice(result, symbol) {
+  // ── #866 (2026-10-09) — a TIMEOUT is not a refusal, and it OUTRANKS the server's code ──
+  // `status: 'UNKNOWN'` (adapter) / `'unknown'` (mt5-trading service) means the request LEFT
+  // and the response was lost — the broker MAY have filled it. Both writers record the attempt
+  // with status 'unknown' for exactly this reason. Rendering it with a refusal code would claim
+  // "the order was not placed", which is a fact nobody has — and the user's natural next move
+  // (retry) is the one that can double the position. So it gets its own notice, and it is
+  // checked BEFORE the server's code: TCS-INTEG-001's own action talks about the bridge, not
+  // about the position this trade may now hold.
+  if (result?.status === 'unknown' || result?.status === 'UNKNOWN') {
+    return notice('TCS-TRADE-022', {
+      symbol,
+      detail: result?.error || 'The response was lost before it arrived.',
+    });
+  }
   const code = result?.code || TRADE_FAILURE_FALLBACK;
   return notice(code, {
     symbol,

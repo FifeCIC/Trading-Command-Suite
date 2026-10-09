@@ -242,7 +242,7 @@ const VIEW_META = {
     label: 'Trade Journal',
     file: 'src/pages/TradeJournalPage.jsx',
     css: 'src/pages/trade-journal-page.css',
-    api: ['GET /api/journal/entries', 'GET /api/journal/stats'],
+    api: ['GET /api/journal/entries'],
   },
   '/trading/calculators': {
     tier: 'free',

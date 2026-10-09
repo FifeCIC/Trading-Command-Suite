@@ -136,6 +136,9 @@ describe('OutcomeTrackerService — maturation', () => {
     const warn = jest.spyOn(require('@nestjs/common').Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     const service = new OutcomeTrackerService(prisma as any);
+    // #1099 — zero the inter-pass yield: the saturated mock makes the tick drain its full
+    // ceiling (6 passes), and real 5s sleeps would add ~25s and an open timer handle.
+    (service as any).maturationYieldMs = 0;
     await service.computeOutcomes();
 
     expect(warn.mock.calls.map((c) => String(c[0])).join('\n')).toMatch(/batch saturated.*37120 rows pending/s);

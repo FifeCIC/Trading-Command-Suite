@@ -344,6 +344,20 @@ export const NOTICES = {
     refs: [],
   },
 
+  // ── Outcome unknown, not refused (#866) ──────────────────
+  'TCS-TRADE-022': {
+    severity: 'warning',
+    area: 'TRADE',
+    title: 'Order outcome UNKNOWN — it may have been placed',
+    message: 'The order for {symbol} was sent, but the response was lost before it arrived. Whether the broker placed it is not known.',
+    cause: '{detail}',
+    action:
+      'Check open positions for {symbol} BEFORE retrying — a retry can double the position. ' +
+      'The attempt is on the order audit trail with status "unknown".',
+    params: ['symbol', 'detail'],
+    refs: [],
+  },
+
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {
     severity: 'critical',

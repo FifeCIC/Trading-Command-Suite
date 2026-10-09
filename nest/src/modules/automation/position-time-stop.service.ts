@@ -217,6 +217,27 @@ export function parseMaxHoldHours(raw: unknown): number | null {
 }
 
 /**
+ * parseAbArmName(name) — recognise an A/B arm comment, e.g. `AB-A Gold Day-Trade`.
+ *
+ * ⚠️ #1079 (2026-10-09). The pair's orders carry `TCS AB-A <test name>` / `TCS AB-B <test name>`
+ * (`ab-test.service.ts` `dispatchSideTrade`). `classifyMt5Comment()` classes that as a STRATEGY
+ * with that name, and no bot has ever been called `AB-A ...` — so measured 2026-10-07, every
+ * pair position was unattributable and nothing could EVER time-stop it. This parser is the key
+ * that lets the service attribute those positions to the TEST and arm instead.
+ *
+ * ⚠️ The stored comment is TRUNCATED (the composer caps it at 27 characters), so `testName`
+ * here may be a prefix of the real test name — callers must match with a prefix comparison.
+ */
+export function parseAbArmName(name: string | null | undefined): { side: 'A' | 'B'; testName: string } | null {
+  if (!name) return null;
+  const m = /^AB-([AB])\s+(.+)$/i.exec(String(name).trim());
+  if (!m) return null;
+  const testName = m[2].trim();
+  if (!testName) return null;
+  return { side: m[1].toUpperCase() as 'A' | 'B', testName };
+}
+
+/**
  * HISTORICAL — this service's retired second parser (#949). Kept because it explains WHY the
  * canonical `classifyMt5Comment()` must accept the real `TCS <name>` form AND the legacy colon form.
  *
@@ -655,6 +676,73 @@ export class PositionTimeStopService {
    * trades the symbol we use it; if several do, we DO NOT GUESS — closing the wrong
    * ticket is worse than leaving a slot occupied, so we return no limit and log it.
    */
+  /**
+   * attributeToAbArm() — #1079: attribute an A/B position to its TEST and arm.
+   *
+   * ── DECISION (2026-10-09, primary) ──
+   * WHAT:      An AB position's hold policy comes from the ARM'S OWN STACK SNAPSHOT
+   *            (`controlStackId` / `variantStackId`), and "the arm declares no hold" is a NAMED
+   *            outcome (`ab_no_hold_declared`), not a silent skip.
+   * WHY:       `TCS AB-A <test name>` matched no bot, so pair positions were unattributable and
+   *            nothing could ever time-stop them (measured 2026-10-07). Borrowing a same-symbol
+   *            bot's limit was rejected: the pair and the bot family shared XAUUSD, and one
+   *            experiment's policy must not silently manage another's positions.
+   * INSTEAD OF: Matching the comment against bot names on the symbol (the pre-existing path).
+   * REVERSE BY: Deleting the `parseAbArmName` branch in `attributeToStrategy()` — pair positions
+   *            then fall back to bot-name matching, which matches nothing (the old state).
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 80
+   * GUARD:     nest/src/modules/automation/position-time-stop.service.spec.ts
+   */
+  private async attributeToAbArm(
+    arm: { side: 'A' | 'B'; testName: string },
+  ): Promise<{
+    strategyId: string | null;
+    strategyName: string | null;
+    maxHoldDuration: unknown;
+    exitBeforeUtc?: string | null;
+    reason: string;
+  }> {
+    let tests: any[] = [];
+    try {
+      tests = (await (this.prisma as any)?.abTest?.findMany?.({
+        where: { name: { startsWith: arm.testName } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      })) ?? [];
+    } catch {
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'ab_test_lookup_failed' };
+    }
+    // The comment is truncated at the composer (27 chars), so either side may be a prefix of
+    // the other. Exact match first, then prefix either way.
+    const test =
+      tests.find((t) => String(t?.name ?? '') === arm.testName) ??
+      tests.find((t) => String(t?.name ?? '').startsWith(arm.testName)) ??
+      tests.find((t) => arm.testName.startsWith(String(t?.name ?? '\u0000'))) ??
+      null;
+    if (!test) {
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'ab_test_unresolved' };
+    }
+
+    const stackId = arm.side === 'A' ? test.controlStackId : test.variantStackId;
+    let cfg: any = null;
+    try {
+      const snap = await (this.prisma as any)?.metaStackSnapshot?.findUnique?.({ where: { id: stackId } });
+      cfg = snap?.snapshot ?? null;
+    } catch {
+      return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'ab_arm_config_unreadable' };
+    }
+
+    const hold = cfg?.maxHoldHours ?? cfg?.tradeManagement?.maxHoldDuration ?? cfg?.maxHoldDuration ?? null;
+    const exitBeforeUtc = cfg?.exitBeforeUtc ?? cfg?.tradeManagement?.exitBeforeUtc ?? null;
+    const label = `AB-${arm.side} ${test.name}`;
+
+    if (hold == null && exitBeforeUtc == null) {
+      // Attributed, but nothing to enforce — named so it cannot read as "unattributable".
+      return { strategyId: null, strategyName: label, maxHoldDuration: null, exitBeforeUtc: null, reason: 'ab_no_hold_declared' };
+    }
+    return { strategyId: null, strategyName: label, maxHoldDuration: hold, exitBeforeUtc, reason: 'ok' };
+  }
+
   private async attributeToStrategy(
     symbol: string,
     comment?: string,
@@ -681,6 +769,18 @@ export class PositionTimeStopService {
       // configured us to manage.
       return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'manual_trade' };
     }
+
+    // ── #1079 (2026-10-09) — A/B pair arms ─────────────────────────────────────────────
+    // `TCS AB-A <test name>` matches NO bot, so pair positions used to be unattributable.
+    // They are attributed to the TEST and arm here, with the hold policy resolved from the
+    // arm's own STACK SNAPSHOT — never from a bot whose name happens to sit on the same
+    // symbol, because the pair and the bot family shared XAUUSD and borrowing a bot's 30-day
+    // limit would silently apply one experiment's policy to another's positions.
+    const abArm = parseAbArmName(parsed.name);
+    if (abArm) {
+      return this.attributeToAbArm(abArm);
+    }
+
     const wanted = parsed.name ?? null;
 
     let strategies: any[] = [];

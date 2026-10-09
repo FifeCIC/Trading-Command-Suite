@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**550** source files · **2902** declarations · **357** ratio sites · **1487** nodes · **131** unreferenced
+**550** source files · **2906** declarations · **357** ratio sites · **1489** nodes · **131** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -118,7 +118,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2851` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2856` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -254,14 +254,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:449` — `dispatchSideTrade()` → `sl`
   - `sideDir==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:674` — `dispatchTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:679` — `dispatchTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2584` — `confirmAction()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2589` — `confirmAction()` → `sl`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2693` — `recordPaperTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2698` — `recordPaperTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
 - `nest/src/modules/automation/stop-guardian.service.ts:1770` — `observeSimulatedTsl()` → `triggerPrice`
@@ -293,14 +293,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:450` — `dispatchSideTrade()` → `tp`
   - `sideDir==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:675` — `dispatchTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:680` — `dispatchTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2587` — `confirmAction()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2592` — `confirmAction()` → `tp`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2694` — `recordPaperTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2699` — `recordPaperTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
 
@@ -378,7 +378,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/ai/portfolio-lab.service.ts:154` — `analyze()`
   - `totalCost>0?Math.round((totalPnl/totalCost)*1000)/10:0`
   - guarded by: `totalCost>0`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:239` — `getRecordingStats()`
+- `nest/src/modules/scoring/outcome-tracker.service.ts:276` — `getRecordingStats()`
   - `considered>0?Math.round((identity/considered)*1000)/10:0`
   - guarded by: `considered>0`
 
@@ -411,7 +411,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2851` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2856` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -655,7 +655,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:2851` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:2856` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -821,10 +821,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/performance/performance.service.ts:245` — `computeStrategyStats()`
   - `losses.length>0?Math.round((totalLoss/losses.length)*100)/100:0`
   - guarded by: `losses.length>0`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:239` — `getRecordingStats()`
+- `nest/src/modules/scoring/outcome-tracker.service.ts:276` — `getRecordingStats()`
   - `considered>0?Math.round((identity/considered)*1000)/10:0`
   - guarded by: `considered>0`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:712` — `getAccuracy()`
+- `nest/src/modules/scoring/outcome-tracker.service.ts:832` — `getAccuracy()`
   - `total>0?Math.round((correct/total)*1000)/1000:0`
   - guarded by: `total>0`
 
@@ -882,8 +882,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
-- `nest/src/modules/automation/automation-loop.service.ts:1831 evalSide`
-- `nest/src/modules/automation/automation-loop.service.ts:2236 getClose`
+- `nest/src/modules/automation/automation-loop.service.ts:1836 evalSide`
+- `nest/src/modules/automation/automation-loop.service.ts:2241 getClose`
 - `nest/src/modules/automation/automation-loop.service.ts:481 read`
 - `nest/src/modules/automation/automation-loop.service.ts:536 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
@@ -949,7 +949,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/averaging-scorer.ts:56 getPolicy`
 - `nest/src/modules/scoring/averaging-scorer.ts:60 evaluate`
 - `nest/src/modules/scoring/exit-consensus.service.ts:264 assessAll`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:724 trimOldOutcomes`
+- `nest/src/modules/scoring/outcome-tracker.service.ts:844 trimOldOutcomes`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:135 empty`
 - `nest/src/modules/scoring/protocol-db.service.ts:456 getAllSlugs`
 - `nest/src/modules/scoring/protocol-db.service.ts:968 protocolNeedsEurUsd`
@@ -985,7 +985,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/symbols/symbols.service.ts:927 num`
 - `nest/src/modules/trading/bot-performance.service.ts:362 empty`
 - `nest/src/modules/trading/bot-performance.service.ts:438 readAll`
-- `nest/src/modules/trading/duplicate-guard.service.ts:149 isBlocked`
+- `nest/src/modules/trading/duplicate-guard.service.ts:173 isBlocked`
 - `nest/src/modules/trading/trade-history.controller.ts:1073 distOf`
 - `nest/src/modules/trading/trade-history.controller.ts:1077 consensusOf`
 - `nest/src/modules/trading/trade-history.controller.ts:1082 sorted`

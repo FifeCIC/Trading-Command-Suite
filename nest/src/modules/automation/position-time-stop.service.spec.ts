@@ -1,4 +1,4 @@
-import { parseMaxHoldHours } from './position-time-stop.service';
+import { parseMaxHoldHours, parseAbArmName, PositionTimeStopService } from './position-time-stop.service';
 
 /**
  * Why these tests matter (#773)
@@ -105,5 +105,85 @@ describe('parseMaxHoldHours — #773 position time-stop', () => {
     it('treats numeric 0 as no limit, not as close-everything', () => {
       expect(parseMaxHoldHours(0)).toBeNull();
     });
+  });
+});
+
+/**
+ * #1079 (2026-10-09) — A/B arm attribution.
+ *
+ * The pair's orders carry `TCS AB-A <test name>` / `TCS AB-B <test name>`, which matches no bot.
+ * Measured 2026-10-07: every pair position was unattributable, so nothing could ever time-stop
+ * it. These tests pin the recognition AND the three named outcomes — most importantly that "the
+ * arm declares no hold" is DISTINGUISHABLE from "we could not attribute this at all".
+ */
+describe('parseAbArmName — #1079', () => {
+  it('recognises both arms and keeps the test name', () => {
+    expect(parseAbArmName('AB-A Gold Day-Trade')).toEqual({ side: 'A', testName: 'Gold Day-Trade' });
+    expect(parseAbArmName('AB-B Gold Day-Trade')).toEqual({ side: 'B', testName: 'Gold Day-Trade' });
+  });
+
+  it('is not fooled by bot names or empty tails', () => {
+    expect(parseAbArmName('Gold Swing 1H')).toBeNull();
+    expect(parseAbArmName('AB-C Something')).toBeNull();
+    expect(parseAbArmName('AB-A ')).toBeNull();
+    expect(parseAbArmName(null)).toBeNull();
+  });
+});
+
+describe('attributeToAbArm — #1079', () => {
+  function make(opts: { test?: any; snapshot?: any; testThrows?: boolean } = {}) {
+    const svc = Object.create(PositionTimeStopService.prototype) as PositionTimeStopService;
+    (svc as any).logger = { warn: jest.fn(), log: jest.fn() };
+    (svc as any).prisma = {
+      abTest: {
+        findMany: jest.fn(async () => opts.testThrows ? [] : (opts.test ? [opts.test] : [])),
+      },
+      metaStackSnapshot: {
+        findUnique: jest.fn(async () => opts.snapshot ?? null),
+      },
+    };
+    return svc;
+  }
+
+  const call = (svc: PositionTimeStopService, name = 'AB-A My Test') =>
+    (svc as any).attributeToAbArm({ side: 'A' as const, testName: name.replace(/^AB-A\s+/, '') });
+
+  it('attributes to the test and reads the hold from the ARM snapshot (#1079)', async () => {
+    const svc = make({
+      test: { name: 'My Test', controlStackId: 'stack-a', variantStackId: 'stack-b' },
+      snapshot: { snapshot: { maxHoldHours: 48 } },
+    });
+    const res = await call(svc);
+    expect(res.reason).toBe('ok');
+    expect(res.maxHoldDuration).toBe(48);
+    expect(res.strategyName).toContain('AB-A');
+  });
+
+  it('accepts a truncated comment against the full test name (#1079)', async () => {
+    const svc = make({
+      test: { name: 'Gold Day-Trade Experiment', controlStackId: 'stack-a', variantStackId: 'stack-b' },
+      snapshot: { snapshot: { tradeManagement: { maxHoldDuration: '6h' } } },
+    });
+    const res = await call(svc, 'AB-A Gold Day-Trade');
+    expect(res.reason).toBe('ok');
+    expect(res.maxHoldDuration).toBe('6h');
+  });
+
+  it('an arm with NO declared hold is attributed and NAMED — not silently unmatched (#1079)', async () => {
+    const svc = make({
+      test: { name: 'My Test', controlStackId: 'stack-a', variantStackId: 'stack-b' },
+      snapshot: { snapshot: { brokerId: '3' } },
+    });
+    const res = await call(svc);
+    expect(res.reason).toBe('ab_no_hold_declared');
+    expect(res.strategyName).toContain('AB-A');
+    expect(res.maxHoldDuration).toBeNull();
+  });
+
+  it('an unknown test is a named skip, never a guess (#1079)', async () => {
+    const svc = make({});
+    const res = await call(svc);
+    expect(res.reason).toBe('ab_test_unresolved');
+    expect(res.maxHoldDuration).toBeNull();
   });
 });

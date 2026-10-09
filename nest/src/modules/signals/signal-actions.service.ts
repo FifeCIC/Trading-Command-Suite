@@ -311,6 +311,15 @@ export class SignalActionsService {
         error: result.error || 'Order failed',
         code: result.code,
         params: result.params,
+        // #866 (2026-10-09) — forward the OUTCOME STATE, not just the refusal detail.
+        // The adapter distinguishes "refused" from "UNKNOWN: sent but the response was lost";
+        // dropping `status` here made every timeout reach the client as a plain refusal, which
+        // reads as "the order was not placed" — the one claim nobody can make. The client's
+        // tradeFailureNotice() branches on this field and renders the unknown-outcome notice.
+        // (Deliberately no notice code named here: the backend never emits one for this — the
+        // client picks it — and naming it made the notices validator require a server-catalogue
+        // entry for a code this side cannot produce.)
+        status: result.status,
         external: result.external,
       };
     }

@@ -46,6 +46,13 @@ export class DuplicateGuardService {
     brokerId: string,
     protocolId?: string,
     cooldownMinutes?: number,
+    /**
+     * #1079 — the account the INCOMING order will trade on (e.g. '10011309743'). When given,
+     * positions and trades whose own `accountId` is a DIFFERENT non-empty account are not this
+     * account's duplicates. Rows with an empty/null accountId still block — unknown must never
+     * read as "nothing there".
+     */
+    accountId?: string | null,
   ): Promise<DuplicateCheckResult> {
     const ticker = symbol.toUpperCase();
     const cooldown = cooldownMinutes ?? this.DEFAULT_COOLDOWN_MINUTES;
@@ -78,13 +85,22 @@ export class DuplicateGuardService {
       try {
         const positions = await this.prisma.position.findMany({
           where: { symbol: ticker, provider: brokerId },
-          select: { id: true, quantity: true, lastQuotedAt: true },
+          select: { id: true, quantity: true, lastQuotedAt: true, accountId: true },
         });
-        const live = positions.filter((p: any) => isLivePosition(p.lastQuotedAt));
-        staleIgnoredPositions = positions.length - live.length;
+        // #1079 — scope to the incoming order's account. Filtered in JS rather than in the
+        // WHERE clause so a row with a NULL accountId still counts (a scoped query would drop
+        // nulls silently — the defect class this repo keeps re-finding).
+        const scoped = accountId
+          ? positions.filter((p: any) => !p.accountId || String(p.accountId) === String(accountId))
+          : positions;
+        const live = scoped.filter((p: any) => isLivePosition(p.lastQuotedAt));
+        staleIgnoredPositions = scoped.length - live.length;
         existingPositions = live.length;
         if (existingPositions > 0) {
-          reasons.push(`${existingPositions} open position(s) on ${brokerId.toUpperCase()}`);
+          reasons.push(
+            `${existingPositions} open position(s) on ${brokerId.toUpperCase()}` +
+              (accountId ? ` account ${accountId}` : ''),
+          );
         }
         if (staleIgnoredPositions > 0) {
           // VISIBLE, not silent: ignoring rows is a decision, and a decision nobody can see is
@@ -112,12 +128,20 @@ export class DuplicateGuardService {
 
         const trades = await this.prisma.trade.findMany({
           where,
-          select: { id: true, openedAt: true },
+          select: { id: true, openedAt: true, accountId: true },
           orderBy: { openedAt: 'desc' },
         });
-        recentTrades = trades.length;
+        // #1079 — same account scoping as the position check above, same conservative rule for
+        // rows whose accountId is empty.
+        const scopedTrades = accountId
+          ? trades.filter((t: any) => !t.accountId || String(t.accountId) === String(accountId))
+          : trades;
+        recentTrades = scopedTrades.length;
         if (recentTrades > 0) {
-          reasons.push(`${recentTrades} recent trade(s) in last ${cooldown}min`);
+          reasons.push(
+            `${recentTrades} recent trade(s) in last ${cooldown}min` +
+              (accountId ? ` on account ${accountId}` : ''),
+          );
         }
       } catch (err) {
         this.logger.warn(`Trade check failed for ${ticker}: ${(err as Error).message}`);

@@ -219,6 +219,26 @@ async function main() {
       // server/UTC mix-up produced ~3h leads), so `2 × cadence` still catches it by a wide
       // margin while removing the boundary race.
       //
+      // ⚠️ RECONCILED AGAINST #837 (2026-10-09). #837 asked whether `2 ×` is still needed, on
+      // the grounds that it lets the #832 duplicate-bucket row (a 4h bar 52 minutes ahead)
+      // through. Measured before deciding:
+      //   - At measurement time ZERO rows led the clock (`WHERE timestamp > NOW()` matched no
+      //     row in `marketbar`), and the documented legitimate peak for `1m` is ~50s (the
+      //     21:58:10/21:58:34 case in the note above).
+      //   - The 52-minute #832 lead is INSIDE `4h × 2` BY DESIGN — this check is an
+      //     HOURS-scale skew detector (#750 measured ~3h), not the #832 detector. Tightening
+      //     it to minutes would re-introduce the boundary race this allowance exists to
+      //     remove, and the race is STRUCTURAL (a provider publishes the just-opened next
+      //     bar). The #832 class is caught at WRITE time by `isBarFutureStamped` (2-minute
+      //     bound, `common/utils/timeframe.ts`), which is wired into BOTH writer paths
+      //     (`bar-refresh.service.ts`, `import-jobs.service.ts`) and pinned by
+      //     `bar-future-stamp.spec.ts`. The two checks are not rivals: one stops the row at
+      //     write time, this one detects HOURS-scale skew that a bypassed writer produces.
+      //   - A form-based duplicate invariant was measured and REFUTED — see the
+      //     DUPLICATE-BUCKET-COUNT line below.
+      // DECISION: `2 ×` stays. The reasoning is recorded here so it is not re-loosened a
+      // third time on the basis of a case it was never built to catch.
+      //
       // ⚠️ SCOPE OF THE TOLERANCE — do not read this as "any lead up to 2 cadences is fine"
       // in a general sense. `<cadence?>` is only loosely bounded by the provider's own
       // lookback: `BarRefreshService.LIVE_LIMIT` defaults to 200 bars
@@ -271,6 +291,60 @@ async function main() {
   } else {
     record('INV-NO-FUTURE-ROWS',
       'no row is dated beyond its own bar length (forming bars excluded)',
+      true, 'skipped — no DB connection', true);
+  }
+
+  // ── DUPLICATE-BUCKET-COUNT — INFORMATIONAL, deliberately NOT a gate (#837) ─────────────
+  //
+  // ⚠️ #837 PROPOSED a failing invariant here: "for each symbol+timeframe, no adjacent pair of
+  // bars may share an identical `open`". IT WAS MEASURED AND REFUTED — the rule cannot
+  // distinguish a duplicated bucket from ordinary price movement on a quoted grid. Live data,
+  // `marketbar`, 3-day window (measured 2026-10-09):
+  //
+  //     proposed rule   (open == prevOpen AND prevClose <> prevOpen)   1797 pairs
+  //     narrower        (+ close == prevClose)                          3992 pairs
+  //     narrowest       (+ close/high/low all == previous)              2860 pairs
+  //
+  // A sample of the first form: `open 109.10 / prevOpen 109.10 / prevClose 109.09` — the price
+  // moved one tick and came back. On 1m bars of a quiet symbol that happens hundreds of times a
+  // day. Shipping it as a gate would fire ~600×/day on HEALTHY data, be allowlisted within a
+  // day, and an allowlisted guard is worse than none.
+  //
+  // The #832 defect it was written for is REAL, but the two cases are only separable at WRITE
+  // time, where the row's lead against the wall clock distinguishes "the next bar was published
+  // early" from "this period was re-described" — that is `isBarFutureStamped` (2-minute bound),
+  // wired into BOTH writers and pinned by `bar-future-stamp.spec.ts`.
+  //
+  // So this line COUNTS and never fails. It is the number an investigator greps for when a bar
+  // anomaly is suspected; it is not a gate, and `ok: true` here is not a claim of health.
+  if (prisma) {
+    try {
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const dup = await prisma.$queryRawUnsafe(`
+        SELECT COUNT(*) AS n FROM (
+          SELECT symbolId, timeframe, provider, open,
+            LAG(open) OVER (PARTITION BY symbolId, timeframe, provider ORDER BY timestamp) AS prevOpen,
+            LAG(close) OVER (PARTITION BY symbolId, timeframe, provider ORDER BY timestamp) AS prevClose
+          FROM marketbar
+          WHERE timestamp > ?
+        ) t
+        WHERE prevOpen IS NOT NULL AND open = prevOpen AND prevClose <> prevOpen
+      `, since);
+      const n = Number(dup?.[0]?.n ?? 0);
+      record('DUPLICATE-BUCKET-COUNT',
+        'adjacent bars sharing an identical open (informational — NOT a gate, see #837)',
+        true,
+        `pairs=${n} in the last 24h (expected non-zero on healthy data: a one-tick retrace ` +
+        `recreates the open. #832-class rows are stopped at write time by ` +
+        `isBarFutureStamped, not by this count)`);
+    } catch (err) {
+      record('DUPLICATE-BUCKET-COUNT',
+        'adjacent bars sharing an identical open (informational — NOT a gate, see #837)',
+        true, `count unavailable: ${err.message}`, true);
+    }
+  } else {
+    record('DUPLICATE-BUCKET-COUNT',
+      'adjacent bars sharing an identical open (informational — NOT a gate, see #837)',
       true, 'skipped — no DB connection', true);
   }
 

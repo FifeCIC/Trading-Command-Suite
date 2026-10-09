@@ -73,8 +73,9 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-019` | success | TRADE | A/B copy created |
 | `TCS-TRADE-020` | info | TRADE | Bot deleted |
 | `TCS-TRADE-021` | critical | TRADE | Bridge is on the wrong account — orders refused |
+| `TCS-TRADE-022` | warning | TRADE | Order outcome UNKNOWN — it may have been placed |
 
-**52 codes** — 3 critical, 26 error, 12 warning, 5 info, 6 success.
+**53 codes** — 3 critical, 26 error, 13 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -287,6 +288,16 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Action:** Check which account the terminal at this bridge’s MT5_PATH_<slot> is logged into. Log it into {requestedAccount} @ {requestedServer}, or point the slot at the right terminal, then POST /reconnect on this bridge. Reads still work, so the app can still see what the attached account holds.
 - **Params:** `requestedAccount`, `requestedServer`, `actualAccount`, `actualServer`
 - **Call:** `notice('TCS-TRADE-021', { requestedAccount, requestedServer, actualAccount, actualServer })`
+- **Related:** *none*
+
+#### `TCS-TRADE-022` — Order outcome UNKNOWN — it may have been placed
+
+- **Severity:** warning
+- **Message:** The order for {symbol} was sent, but the response was lost before it arrived. Whether the broker placed it is not known.
+- **Cause:** {detail}
+- **Action:** Check open positions for {symbol} BEFORE retrying — a retry can double the position. The attempt is on the order audit trail with status "unknown".
+- **Params:** `symbol`, `detail`
+- **Call:** `notice('TCS-TRADE-022', { symbol, detail })`
 - **Related:** *none*
 
 ### SCORE — Scoring and signals

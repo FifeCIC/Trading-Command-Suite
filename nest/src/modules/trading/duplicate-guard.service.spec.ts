@@ -74,4 +74,52 @@ describe('DuplicateGuardService (#745)', () => {
     expect(res.blocked).toBe(true);
     expect(res.recentTrades).toBe(1);
   });
+
+  /**
+   * ⚠️ #1079 — one provider id (`mt5`) covers SEVERAL accounts, and the guard used to scope
+   * only by provider: a position on broker 3 blocked an order routed to broker 2. Measured
+   * 2026-10-07: the A/B pair holding XAUUSD locked all 8 gold bots out of the symbol, and the
+   * pair was locked out while the bots held it.
+   *
+   * The conservative rule is asserted explicitly: a row whose accountId is EMPTY still blocks,
+   * because "unknown account" must never read as "no position".
+   */
+  it('a position on a DIFFERENT account does not block when the order names its account (#1079)', async () => {
+    const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE, accountId: '62148195' }]);
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, '10011309743');
+    expect(res.blocked).toBe(false);
+    expect(res.existingPositions).toBe(0);
+  });
+
+  it('a position on the SAME account still blocks (#1079 control)', async () => {
+    const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE, accountId: '10011309743' }]);
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, '10011309743');
+    expect(res.blocked).toBe(true);
+    expect(res.reason).toContain('account 10011309743');
+  });
+
+  it('a position with NO accountId still blocks — unknown is not "clear" (#1079)', async () => {
+    const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE, accountId: null }]);
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, '10011309743');
+    expect(res.blocked).toBe(true);
+  });
+
+  it('without an account argument the legacy provider-wide behaviour is unchanged (#1079)', async () => {
+    const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE, accountId: '62148195' }]);
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5');
+    expect(res.blocked).toBe(true);
+  });
+
+  it('the cooldown check scopes to the account too (#1079)', async () => {
+    const { svc } = make([], {
+      trades: [
+        { id: 't1', accountId: '62148195' },
+        { id: 't2', accountId: null },
+      ],
+    });
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, '10011309743');
+    // t1 is another account's trade; t2 is unknown and keeps blocking.
+    expect(res.recentTrades).toBe(1);
+    expect(res.blocked).toBe(true);
+  });
 });
