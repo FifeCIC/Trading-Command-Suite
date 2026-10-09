@@ -29,9 +29,9 @@
 - [ ] #766 Directives can fabricate scores (analyst-adjustments invented a floor) — build guard
 - [x] #999 ✅ **RESOLVED 2026-10-08** — denominator settled (register rows 2/3/5/9; the reachable-capacity variant was tried and reverted 2026-09-10). The "m15 can't trade" premise measured FALSE: signalPath peaked 15.2%, the bot's signal exceeded its 10% bar on 10-07 (refused by the daily-loss cap), 5 trades on record. `audit:data-health` [3/4] fixed — two-source classifier (score + score_snapshot), coverage named, canaried M1/M2, self-test 16 canaries, live exit 0.
 - [x] #1013 ✅ **CLOSED 2026-10-08** — 09-28 fix re-verified live (the 4 directives score again; 0 starvation reasons in 24h; Opportunity 698). Guard made REAL: `resolveBaseBarCount()` exported + spec exercises the shipped function — canaried M1 (2 failures) / M2 (4 failures), restore SHA256-verified. Suite 177/177 · 1659 tests.
-- [ ] #1077 supertrend does not compute SuperTrend — bands from one bar
+- [x] #1077 ✅ **CLOSED 2026-10-09 — owner ruled "B" (queue R50).** The directive is REPLACED by a canonical ratcheting SuperTrend (`directives/utils/supertrend.ts` — ONE home), flat 55 both directions, unestablished = named neutral; the shadow module deleted. Canaried both ways (old formula fails 1 case, dead ratchet fails 2). Register row 75. Deployed — API 0.121.5, live lines show the retired shadow field gone.
 - [ ] #1075 atr-trailing-stop is permanently inert — four branches unreachable
-- [ ] #996 Index protocols score under 6×/hour on a declared 5s–30s cadence
+- [x] #996 ✅ **CLOSED 2026-10-09 — cause isolated; NOT a cadence problem.** Every tick already scores every protocol (`protocol_score_status.lastTickAt` advances for all, incl. these). A no-direction tick is `NO_DATA` and persists nothing (#758); the five are LONG_ONLY so bearish readings are ineligible; their designed voice (analyst-adjustments) reports UNMEASURED (no feed). `scoreIntervalMs` is the issue hypothesis — **refuted and dead**: read by nothing. Remaining lever = directional capacity/eligibility → queue R51.
 - [ ] #879 12 calendar-effect directives assert unmeasured date biases
 - [ ] #803 (+ #802 duplicate) Inactive protocols still score via SpeedScanService
 - [ ] #775 BOTH protocols can only emit BUY — a boolean for a three-state direction

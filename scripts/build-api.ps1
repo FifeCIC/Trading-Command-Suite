@@ -59,7 +59,8 @@
 
 param(
     [switch]$SkipRestart,
-    [switch]$SelfTest
+    [switch]$SelfTest,
+    [switch]$LockSelfTest
 )
 
 $ErrorActionPreference = 'Continue'
@@ -125,6 +126,89 @@ if ($SelfTest) {
     Write-Ok 'SELFTEST PASSED — the failure path reports API IS DOWN and exits non-zero.'
     exit 1
 }
+
+# ---------------------------------------------------------------------------------
+# THE BUILD LOCK (#767 build-side). One build at a time, or deploys fail for everyone.
+#
+# OBSERVED 2026-10-09: two agents launched `build:api` within seconds of each other — TWICE
+# (19:11Z and 19:14Z). Both runs stop the API and race `rimraf dist` + `prisma generate`
+# in the same working tree. First race: both builds died; API left down. Second race: one
+# generate hit EPERM on the query engine held by the other run while the winner restarted
+# the API into the loser's build — and the loser's `rimraf` had ALREADY deleted dist, so
+# for a window the repo had no launchable build at all.
+#
+# The lock is a file carrying the holder's PID. A LIVE holder refuses new runs; a STALE one
+# (holder gone) is taken over with a note — so a killed build can never wedge the tool.
+# Canary: -LockSelfTest (both directions, fabricated states, no build, API untouched).
+# ---------------------------------------------------------------------------------
+$script:buildLockPath = Join-Path $repoRoot 'logs\build-api.lock'
+
+function Enter-BuildLock {
+    <# $true when the lock was acquired; $false while a LIVE holder exists. #>
+    $existing = $null
+    if (Test-Path $script:buildLockPath) {
+        try { $existing = Get-Content $script:buildLockPath -Raw | ConvertFrom-Json } catch { $existing = $null }
+    }
+    if ($existing -and $existing.pid) {
+        $holder = Get-Process -Id ([int]$existing.pid) -ErrorAction SilentlyContinue
+        if ($holder) { return $false }
+        Write-Warn2 "Stale build lock (PID $($existing.pid), started $($existing.startedUtc)) — holder is gone; taking over."
+        Remove-Item $script:buildLockPath -ErrorAction SilentlyContinue
+    }
+    @{ pid = $PID; startedUtc = [DateTime]::UtcNow.ToString('o'); cmd = 'build:api' } |
+        ConvertTo-Json -Compress | Set-Content -Path $script:buildLockPath -Encoding utf8
+    return $true
+}
+
+function Release-BuildLock {
+    if ($script:buildLockPath -and (Test-Path $script:buildLockPath)) {
+        Remove-Item $script:buildLockPath -ErrorAction SilentlyContinue
+    }
+}
+
+if ($LockSelfTest) {
+    # Both directions, fabricated states — no build runs, the API is never touched.
+    Write-Step 'LOCK SELFTEST — refuse a LIVE holder, take over a DEAD one'
+    if (Test-Path $script:buildLockPath) {
+        Write-Host '   LOCK SELFTEST INVALID — a real lock exists; refusing to interfere.' -ForegroundColor Red
+        exit 2
+    }
+    $passed = $true
+    @{ pid = $PID; startedUtc = 'selftest'; cmd = 'selftest' } | ConvertTo-Json -Compress | Set-Content -Path $script:buildLockPath -Encoding utf8
+    if (Enter-BuildLock) {
+        Write-Host '   FAIL — acquired a lock while a LIVE holder existed.' -ForegroundColor Red
+        $passed = $false
+    } else {
+        Write-Host '   OK  refused a LIVE holder.' -ForegroundColor Green
+    }
+    if ($passed) {
+        @{ pid = 999999; startedUtc = 'selftest-dead'; cmd = 'selftest' } | ConvertTo-Json -Compress | Set-Content -Path $script:buildLockPath -Encoding utf8
+        if (Enter-BuildLock) {
+            Write-Host '   OK  took over a STALE lock.' -ForegroundColor Green
+        } else {
+            Write-Host '   FAIL — refused a DEAD holder; a killed build would wedge the tool.' -ForegroundColor Red
+            $passed = $false
+        }
+    }
+    Release-BuildLock
+    if ($passed) {
+        Write-Ok 'LOCK SELFTEST PASSED — refusal and takeover both behave.'
+        exit 0
+    }
+    Write-Host '   LOCK SELFTEST FAILED.' -ForegroundColor Red
+    exit 1
+}
+
+# ── 0. One build at a time (#767 build-side; observed twice on 2026-10-09) ────────
+if (-not (Enter-BuildLock)) {
+    $holder = $null
+    try { $holder = Get-Content $script:buildLockPath -Raw | ConvertFrom-Json } catch { }
+    Write-Warn2 "Another build:api is RUNNING (PID $($holder.pid), started $($holder.startedUtc))."
+    Write-Warn2 'Refusing — two concurrent runs stop each other''s API and race rimraf/prisma over the same tree.'
+    Write-Warn2 "Wait for it to finish (health on :3201), or delete $($script:buildLockPath) if you are sure it is dead."
+    exit 1
+}
+Write-Ok "Build lock acquired (PID $PID)."
 
 # ── 1. Find what is listening on 3201 ─────────────────────────────────────────────
 Write-Step 'Locating the API on port 3201'
@@ -215,6 +299,7 @@ if ($buildExit -ne 0) {
     Write-Host '   The API has been left STOPPED on purpose — restarting into a failed' -ForegroundColor Yellow
     Write-Host '   build would serve stale code and hide the error.' -ForegroundColor Yellow
     Write-Host "`n   Restart when ready:  npm --prefix `"$nestDir`" run start" -ForegroundColor Yellow
+    Release-BuildLock
     exit $buildExit
 }
 Write-Ok 'Build succeeded.'
@@ -222,6 +307,7 @@ Write-Ok 'Build succeeded.'
 # ── 3. Restart ────────────────────────────────────────────────────────────────────
 if ($SkipRestart) {
     Write-Host "`n   -SkipRestart set — API left down." -ForegroundColor Yellow
+    Release-BuildLock
     exit 0
 }
 
@@ -247,6 +333,8 @@ Write-Ok "API starting in the background (node dist/src/main.js, PID $($apiProc.
 # The post-restart assertion (#933): a REAL request must answer, or the script fails LOUDLY.
 if (Assert-ApiUp -Port 3201 -TimeoutSeconds 60 -Proc $apiProc) {
     Write-Ok 'API healthy on http://localhost:3201 — /api/version answered.'
+    Release-BuildLock
 } else {
+    Release-BuildLock
     exit 1
 }

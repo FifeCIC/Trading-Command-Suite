@@ -177,7 +177,12 @@ const PIPELINE = [
   {
     id: 'composite', title: 'Composite Score & Signal', linkTo: '/scoring/live-ordering-stack', linkLabel: 'Scoring Ladder',
     fn: 'ProtocolGatingService.scoreWithGating() — composite phase',
-    fnDesc: 'Computes final composite: (technical×0.40 + sentiment×0.35) × riskMultiplier, clamped 0–100. Assigns signal: ≥80 STRONG, ≥40 BUY, ≥20 HOLD, <20 → direction-dependent. Stores snapshot in score_snapshot for rarity percentile computation.',
+    // #1090 (2026-10-10): this line said "(technical×0.40 + sentiment×0.35) × riskMultiplier,
+    // clamped 0–100" — BOTH halves were wrong (measured XAUUSD composite = 106, no clamp).
+    // The composite is an additive raw sum; classification is percentage-based against the
+    // protocol's own capacity (signalPct = signalRaw ÷ directional capacity).
+    // Live number-by-number breakdown: ScoringMechanicsPanel (/trading/trading-bots).
+    fnDesc: 'Computes the composite as an additive sum of directive raw scores — no 0–100 clamp. Signal classification is percentage-based against the protocol\'s own capacity: signalPct = signalRaw ÷ directional capacity (≥13% STRONG, ≥6% BUY, <6% HOLD). Stores snapshot in score_snapshot for rarity percentile computation.',
     dbTable: 'score_snapshot (output)',
     dbColumns: 'protocolId, symbol, composite, signal, rarityPercentile, snappedAt',
   },

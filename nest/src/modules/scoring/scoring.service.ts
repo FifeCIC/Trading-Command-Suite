@@ -113,7 +113,8 @@ export interface RankedSymbol {
   ticker: string;
   score: number;
   normalizedScore: number;
-  maxPossibleScore: number;
+  /** Denominator that pairs with `score`. **null** on the DB-read path — see `rankFromDb` (#1090). */
+  maxPossibleScore: number | null;
   totalDirectives: number;
   activeDirectives: number;
   coverage: number;
@@ -130,7 +131,7 @@ export interface RankedSymbol {
 export interface RankedResult {
   mode: string;
   services: { database: boolean; queue: boolean; redis: boolean };
-  strategy: { name: string; entryThreshold: number; watchThreshold: number; maxPossibleScore: number; directiveCount: number };
+  strategy: { name: string; entryThreshold: number; watchThreshold: number; maxPossibleScore: number | null; directiveCount: number };
   summary: { symbolsWithData: number; symbolsWithoutData: number; totalSymbols: number };
   degradation: {
     overallCoverage: number;
@@ -634,10 +635,18 @@ export class ScoringService implements OnModuleInit {
     const modeInfo = this.modeService.getModeInfo();
     // Directive count drives coverage figures — derived, never hardcoded (issue #25).
     const directiveCount = this.directivesService.list().length;
+    // ── #1090 — maxPossibleScore is NULL here, deliberately ──
+    // This header previously carried a flat `100`, which matched nothing: DB-read rows span
+    // MULTIPLE protocols with different capacities, and `score` (composite) has no denominator
+    // on this payload at all. MEASURED 2026-10-10: `signalPct` = signalRaw / configured
+    // DIRECTIONAL capacity (xau-speed-v1: 10/910 = 1.0989%) while `composite` is a broader raw
+    // sum (BTC btc-scalp-v1: composite 30 but its stored signalPct 3.21951% implies signalRaw
+    // 33 over capacity 1025). The real percentage is on each row as `normalizedScore`; nothing
+    // pairs with `score`, so no denominator is fabricated here.
     const base = {
       mode: modeInfo.mode,
       services: { database: modeInfo.database, queue: modeInfo.queue, redis: modeInfo.redis },
-      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: 100, directiveCount },
+      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: null, directiveCount },
     };
 
     if (!this.prisma.isAvailable) {
@@ -675,7 +684,8 @@ export class ScoringService implements OnModuleInit {
             ticker: (s as any).symbol?.ticker ?? s.symbolId,
             score: s.value,
             normalizedScore,
-            maxPossibleScore: 100,
+            // null — the denominator does not exist on this payload; see the header comment (#1090).
+            maxPossibleScore: null,
             totalDirectives: directiveCount,
             activeDirectives: directiveCount,
             coverage: 1,
@@ -705,13 +715,16 @@ export class ScoringService implements OnModuleInit {
         const sym = s.symbol?.toUpperCase?.() ?? s.symbol;
         if (!sym || seen.has(sym)) continue;
         seen.add(sym);
+        // `signalPct` is the classifier's own percentage (`protocol-gating.service.ts` sets
+        // `compositePct: signalPct`) — the number ENTRY_THRESHOLD is compared against. It is the
+        // ONLY real percentage on this row; `score` (composite) has no denominator here (#1090).
         const normalizedScore = Number.isFinite(Number(s.signalPct)) ? Number(s.signalPct) : 0;
         ranked.push({
           symbolId: s.id,
           ticker: sym,
           score: s.composite ?? 0,
           normalizedScore,
-          maxPossibleScore: 100,
+          maxPossibleScore: null,
           totalDirectives: directiveCount,
           activeDirectives: directiveCount,
           coverage: 1,

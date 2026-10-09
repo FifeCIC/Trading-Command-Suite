@@ -74,8 +74,9 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-020` | info | TRADE | Bot deleted |
 | `TCS-TRADE-021` | critical | TRADE | Bridge is on the wrong account — orders refused |
 | `TCS-TRADE-022` | warning | TRADE | Order outcome UNKNOWN — it may have been placed |
+| `TCS-TRADE-023` | error | TRADE | Position size could not be computed — no order sent |
 
-**53 codes** — 3 critical, 26 error, 13 warning, 5 info, 6 success.
+**54 codes** — 3 critical, 27 error, 13 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -298,6 +299,16 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Action:** Check open positions for {symbol} BEFORE retrying — a retry can double the position. The attempt is on the order audit trail with status "unknown".
 - **Params:** `symbol`, `detail`
 - **Call:** `notice('TCS-TRADE-022', { symbol, detail })`
+- **Related:** *none*
+
+#### `TCS-TRADE-023` — Position size could not be computed — no order sent
+
+- **Severity:** error
+- **Message:** The {model} sizing model for {symbol} was refused: {reason}. No order was sent.
+- **Cause:** A sized model needs the account equity, the stop distance and the broker’s volume constraints (step, minimum) from the bridge. Any of them missing or unusable means the size cannot be made valid — and an unvalidated size would either be rejected by the terminal or silently risk the wrong amount.
+- **Action:** Check the bridge is the current build (it reports volumeStep/tickValue/tickSize), that the bot has a riskPct configured, and that the account is reachable. The bot skips this tick — it does not fall back to another size.
+- **Params:** `model`, `symbol`, `reason`
+- **Call:** `notice('TCS-TRADE-023', { model, symbol, reason })`
 - **Related:** *none*
 
 ### SCORE — Scoring and signals

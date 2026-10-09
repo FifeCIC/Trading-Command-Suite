@@ -351,9 +351,21 @@ export default function MetaStackStatusPage() {
                 <div className="mss-checklist-item mss-checklist--ok">
                   ✅ Bar data — 200 bars all timeframes (5m/15m/1h/4h/1d)
                 </div>
-                <div className={`mss-checklist-item ${priorityResult.score >= 60 ? 'mss-checklist--ok' : 'mss-checklist--warn'}`}>
-                  {priorityResult.score >= 60 ? '✅' : '⚠️'} Scoring threshold — score {priorityResult.score}/{scoringStrategy.entryThreshold || 60} needed for BUY
-                </div>
+              {/* #1090 — this compared the RAW composite (e.g. 106) against a PERCENTAGE threshold,
+                  so it printed "106/6" and passed unconditionally. The system classifies on the
+                  row's normalisedScore (signalPct = signalRaw ÷ protocol capacity) — compare like
+                  with like, and say the units. Measured 2026-10-10. */}
+              {(() => {
+                const thr = Number(scoringStrategy.entryThreshold);
+                const pct = Number(priorityResult.normalizedScore);
+                const has = Number.isFinite(thr) && Number.isFinite(pct);
+                const pass = has && pct >= thr;
+                return (
+                  <div className={`mss-checklist-item ${pass ? 'mss-checklist--ok' : 'mss-checklist--warn'}`}>
+                    {pass ? '✅' : '⚠️'} Scoring threshold — {has ? `${pct.toFixed(1)}% normalised vs ${thr}% needed for BUY` : 'normalised score or threshold unavailable'}
+                  </div>
+                );
+              })()}
                 <div className={`mss-checklist-item ${priorityResult.signal === 'BUY' || priorityResult.signal === 'SELL' ? 'mss-checklist--ok' : 'mss-checklist--warn'}`}>
                   {priorityResult.signal === 'BUY' || priorityResult.signal === 'SELL' ? '✅' : '⚠️'} Signal generation — currently {priorityResult.signal || 'HOLD'}
                 </div>
@@ -422,7 +434,7 @@ export default function MetaStackStatusPage() {
               <tr>
                 <th>Symbol</th>
                 <th>Score</th>
-                <th>Max</th>
+                <th>Norm %</th>
                 <th>Signal</th>
                 <th>Confidence</th>
                 <th>Data</th>
@@ -440,11 +452,16 @@ export default function MetaStackStatusPage() {
                       {r.ticker === PRIORITY_SYMBOL && <span className="mss-badge">PRIORITY</span>}
                     </td>
                     <td>
-                      <span className={`mss-score ${r.score >= 60 ? 'mss-score--high' : r.score >= 30 ? 'mss-score--mid' : 'mss-score--low'}`}>
+                      {/* Colour by the row's REAL percentage (normalizedScore = signalPct), not the raw
+                          composite — the old `score >= 60 / 30` bands assumed a 0–100 scale while
+                          capacities are 910–1295, so every row coloured "high" (#1090, 2026-10-10). */}
+                      <span className={`mss-score ${Number(r.normalizedScore) >= 13 ? 'mss-score--high' : Number(r.normalizedScore) >= 6 ? 'mss-score--mid' : 'mss-score--low'}`}>
                         {r.score}
                       </span>
                     </td>
-                    <td className="mss-dim">{r.maxPossibleScore || 100}</td>
+                    {/* Was `{r.maxPossibleScore || 100}` — a fabricated denominator (#1090). The only
+                        real percentage on the row is normalizedScore (signalRaw ÷ protocol capacity). */}
+                    <td className="mss-dim">{Number.isFinite(Number(r.normalizedScore)) ? `${Number(r.normalizedScore).toFixed(1)}%` : '—'}</td>
                     <td>
                       <span className={`mss-signal-chip mss-signal--${(r.signal || 'HOLD').toLowerCase()}`}>
                         {r.signal || 'HOLD'}

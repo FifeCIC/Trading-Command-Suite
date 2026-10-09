@@ -7,6 +7,8 @@ import { DirectivesService } from '../directives/directives.service';
 import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+// #843 — the ONE sizing implementation, shared with the live automation loop.
+import { computeSizing } from '../trading/position-sizing';
 import { BacktestPeriodService } from './backtest-period.service';
 // #1021 — ONE derivation of the trade win rate. This existed in FOUR places in TWO unit
 // conventions (three `groupBy` pairs producing a PERCENT, one in-memory producing a FRACTION), and
@@ -699,12 +701,15 @@ export class BacktestService {
           const exitCost = exitPrice - (spread / 2) - slippage;
           const rawPnlPerShare = exitCost - entryCost;
 
-          // ── Position sizing (#50, #269, #271) ──
+          // ── Position sizing (#50, #269, #271) — #843: ONE implementation ──
+          // The model maths now lives in `trading/position-sizing.ts`, which the LIVE loop also
+          // calls. This site keeps what is genuinely its own: ATR is measured HERE (from its own
+          // bars), units are SHARES (so it floors to whole units and keeps its historical
+          // `min 1` floor), and the Kelly no-edge policy stays `size 1` (the live path refuses
+          // instead — each caller owns that policy, see the core's header).
           let positionSize: number;
-          if (positionModel === 'fixedDollar') {
-            positionSize = Math.floor(fixedAmount / entryCost);
-          } else if (positionModel === 'atrEqualRisk') {
-            // ATR-based equal risk (#271): stop = ATR * multiplier
+          if (positionModel === 'atrEqualRisk') {
+            // ATR-based equal risk (#271): stop = ATR * multiplier, measured from this run's bars.
             const windowBars = bars.slice(Math.max(0, day - windowSize), day + 1);
             const atrValues = this.computeATR(
               windowBars.map(b => b.high),
@@ -714,38 +719,44 @@ export class BacktestService {
             );
             const currentAtr = atrValues[atrValues.length - 1] || 0;
             const atrStopDistance = currentAtr * atrMultiplier;
-            if (currentAtr > 0 && atrStopDistance > 0) {
-              positionSize = Math.floor((accountSize * (riskPct / 100)) / atrStopDistance);
-            } else {
-              positionSize = Math.floor((accountSize * (riskPct / 100)) / currentClose);
-            }
+            const sized = computeSizing({
+              model: 'atrEqualRisk',
+              equity: accountSize,
+              entryPrice: entryCost,
+              riskPct,
+              atrStopDistance: atrStopDistance > 0 ? atrStopDistance : null,
+            });
+            positionSize = sized.rawSize != null
+              ? Math.floor(sized.rawSize)
+              : Math.floor((accountSize * (riskPct / 100)) / currentClose); // kept: no ATR history yet
+          } else if (positionModel === 'fixedDollar') {
+            const sized = computeSizing({ model: 'fixedDollar', equity: accountSize, entryPrice: entryCost, fixedAmount });
+            positionSize = sized.rawSize != null ? Math.floor(sized.rawSize) : 0;
           } else if (positionModel === 'kellyFull' || positionModel === 'kellyHalf') {
-            // Kelly criterion (#269): f = (bp - q) / b
-            // b = tpPct/slPct (reward:risk ratio), p = estimated win rate, q = 1-p
-            // Conservative estimate: use tp/sl ratio as b, assume 50% win rate
-            // Full Kelly: position = accountEquity * f / price, capped at kellyCapPct%
-            const b = tpPct / slPct; // reward:risk ratio from SL/TP params
-            const p = 0.5;            // neutral prior — real traders estimate their edge
-            const q = 1 - p;
-            const kellyFraction = (b * p - q) / b;
-            const cappedFraction = Math.min(kellyFraction, kellyCapPct / 100);
-            const effectiveFraction = positionModel === 'kellyHalf'
-              ? cappedFraction / 2
-              : cappedFraction;
-            if (effectiveFraction <= 0) {
-              // Kelly says don't trade — fall back to minimal position
-              positionSize = 1;
-            } else {
-              positionSize = Math.floor((accountSize * effectiveFraction) / entryCost);
-            }
+            // Kelly criterion (#269). Neutral 50% prior; the no-edge case keeps its historical
+            // `size 1` here (documented divergence — the live path refuses visibly instead).
+            const sized = computeSizing({
+              model: positionModel,
+              equity: accountSize,
+              entryPrice: entryCost,
+              tpPct,
+              slPct,
+              kellyCapPct,
+            });
+            positionSize = sized.rawSize != null ? Math.floor(sized.rawSize) : 1;
           } else {
-            // fixedPercent: risk accountSize * riskPct% on the stop distance
+            // fixedPercent: risk accountSize * riskPct% on the stop distance (entry as fallback).
+            // ⚠️ The fallback denominator is `currentClose`, NOT `entryCost` — preserved exactly
+            // from the pre-#843 extraction; `entryCost` carries half-spread + slippage.
             const stopDistance = currentClose - slPrice;
-            if (stopDistance <= 0) {
-              positionSize = Math.floor((accountSize * (riskPct / 100)) / currentClose);
-            } else {
-              positionSize = Math.floor((accountSize * (riskPct / 100)) / stopDistance);
-            }
+            const sized = computeSizing({
+              model: 'fixedPercent',
+              equity: accountSize,
+              entryPrice: entryCost,
+              riskPct,
+              stopDistance: stopDistance > 0 ? stopDistance : currentClose,
+            });
+            positionSize = sized.rawSize != null ? Math.floor(sized.rawSize) : 0;
           }
           if (positionSize < 1) positionSize = 1;
 

@@ -224,7 +224,20 @@ export const BOT_RULES: BotRule[] = [
   // ── sizing ─────────────────────────────────────────────────────────────────────────────────
   { field: 'baseSize', label: 'Base size', stage: 'sizing', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
-    summary: 'Order volume before any risk cap is applied.' },
+    summary: 'Order volume before any risk cap is applied. Also the volume sent unchanged when no sizing model is selected.' },
+  { field: 'sizingModel', label: 'Sizing model', stage: 'sizing', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
+    summary: 'Which model computes the order volume: fixedLot (NULL, the pre-#843 behaviour) | fixedPercent | atrEqualRisk | kellyFull | kellyHalf. Sized models run through the shared maths in trading/position-sizing.ts.',
+    caveat:
+      '⚠️ A sized model REQUIRES bridge-reported constraints (volumeStep + tickValue/tickSize) and '
+      + 'the account equity. Anything missing refuses the dispatch visibly (TCS-TRADE-023) rather '
+      + 'than sending a size it cannot validate. NULL is the default for every existing bot.' },
+  { field: 'sizingRiskPct', label: 'Risk per trade (%)', stage: 'sizing', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
+    summary: 'Risk per trade as % of EQUITY for the fixedPercent / atrEqualRisk models.',
+    caveat:
+      '⚠️ NULL = not configured, and a sized model with no riskPct refuses visibly. There is no '
+      + 'default on purpose: a guessed risk fraction would be a number nobody chose.' },
   { field: 'useRaritySizing', label: 'Rarity sizing', stage: 'sizing', enforcement: 'legacy-only',
     enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
     summary: 'Scales size by signal rarity.',

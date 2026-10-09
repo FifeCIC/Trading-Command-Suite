@@ -1668,8 +1668,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 #
                 # ⚠️ Keep this list in step with the /order pre-flight. A constraint
                 # tested there but missing here is a constraint the app cannot see.
+                #
+                # #843 (2026-10-10): `volumeStep`, `tickValue` and `tickSize` are shipped so the
+                # API can SIZE an order (round to the lot step; convert a money risk into lots).
+                # Additive only — an older API ignores the extra keys, and an older BRIDGE simply
+                # omits them, which the API treats as UNKNOWN (it refuses to size, visibly).
                 result = [{'name': s.name, 'path': s.path, 'tradeMode': s.trade_mode,
                            'volumeMin': float(s.volume_min), 'volumeMax': float(s.volume_max),
+                           'volumeStep': float(s.volume_step),
+                           'tickValue': float(s.trade_tick_value), 'tickSize': float(s.trade_tick_size),
+                           'contractSize': float(s.trade_contract_size),
                            'digits': s.digits} for s in (syms or [])]
                 return json_response(self, {'symbols': result, 'count': len(result)})
 

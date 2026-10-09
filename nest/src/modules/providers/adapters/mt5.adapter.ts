@@ -74,6 +74,11 @@ interface BridgeSymbolListResponse {
     /** Absent on bridges older than 2026-09-15 — see `SymbolTradability.volumeMin`. */
     volumeMin?: number;
     volumeMax?: number;
+    /** #843 — absent on bridges older than 2026-10-10; UNKNOWN, never "no step". */
+    volumeStep?: number;
+    tickValue?: number;
+    tickSize?: number;
+    contractSize?: number;
     digits?: number;
   }>;
   count?: number;
@@ -263,6 +268,51 @@ export class Mt5Adapter implements IProviderAdapter {
       const route = this.resolveRoute(symbol, undefined, true);
       if (route?.brokerId === undefined) return null;
       return this.getConfiguredAccountId(route.brokerId);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * getSizingContext(symbol) — everything the live sizing maths needs, from the SAME bridge that
+   * will receive the order (#843).
+   *
+   * ⚠️ ROUTE RESOLUTION IS SHARED WITH `placeOrder` (`resolveForOrder`). Sizing against broker A
+   * and sending the order to broker B is the kind of divergence that produces a plausible size
+   * nobody can reproduce — so the route comes from the same call the order path uses.
+   *
+   * ⚠️ A FIELD THE BRIDGE DID NOT REPORT IS `null`, NEVER A DEFAULT. `volumeStep`/`tickValue`/
+   * `tickSize` are new (2026-10-10); an older bridge omits them, and the sizing path treats null
+   * as UNKNOWN and REFUSES visibly (`TCS-TRADE-023`) rather than sending an off-step order or
+   * mis-sizing by orders of magnitude on metals and indices.
+   *
+   * Returns null when the bridge is unreachable or the symbol is absent from its list.
+   */
+  async getSizingContext(symbol: string): Promise<{
+    equity: number | null;
+    volumeMin: number | null;
+    volumeMax: number | null;
+    volumeStep: number | null;
+    tickValue: number | null;
+    tickSize: number | null;
+  } | null> {
+    try {
+      const route = this.resolveRoute(symbol, undefined, true);
+      if (!route?.url) return null;
+      const native = (route.brokerSymbol || symbol).toUpperCase();
+      const list = await this.bridgeGet<BridgeSymbolListResponse>('/symbols', route);
+      const entry = list?.symbols?.find((s) => String(s.name).toUpperCase() === native) ?? null;
+      if (!entry) return null;
+      const account = await this.bridgeGet<{ equity?: number }>('/account', route);
+      const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+      return {
+        equity: num(account?.equity),
+        volumeMin: num(entry.volumeMin),
+        volumeMax: num(entry.volumeMax),
+        volumeStep: num(entry.volumeStep),
+        tickValue: num(entry.tickValue),
+        tickSize: num(entry.tickSize),
+      };
     } catch {
       return null;
     }
@@ -547,6 +597,11 @@ export class Mt5Adapter implements IProviderAdapter {
             tradeMode: s.tradeMode,
             volumeMin: typeof s.volumeMin === 'number' ? s.volumeMin : null,
             volumeMax: typeof s.volumeMax === 'number' ? s.volumeMax : null,
+            // #843 — sizing inputs. `undefined` (old bridge) and `null` both mean UNKNOWN; the
+            // sizing path refuses on unknown rather than guessing a step or a tick value.
+            volumeStep: typeof s.volumeStep === 'number' ? s.volumeStep : null,
+            tickValue: typeof s.tickValue === 'number' ? s.tickValue : null,
+            tickSize: typeof s.tickSize === 'number' ? s.tickSize : null,
           });
         }
       }

@@ -103,6 +103,19 @@ export interface StrategySummary {
    * added to the schema but not to this list.
    */
   magic?: number | null;
+  /**
+   * ── OBSERVER SLOTS (#936 sim-TSL, #995 up-move exhaustion) ───────────────────────────────
+   * ⚠️ SAME DEFECT CLASS AS `magic` ABOVE, measured live 2026-10-09 while enabling #995:
+   * `StopGuardianService` loads strategies via THIS summary, and the explicit mapping named NONE
+   * of these fields — so `strat.simTslEnabled` and `strat.exhaustionObserveEnabled` were ALWAYS
+   * `undefined` and BOTH observers bailed on every position. An observer configured ON that can
+   * never fire, with nothing in any log to say so: plausible output, no error.
+   */
+  simTslEnabled?: boolean;
+  simTslActivationPct?: number | null;
+  simTslDistancePct?: number | null;
+  exhaustionObserveEnabled?: boolean;
+  exhaustionDecelPct?: number | null;
   minComposite?: number;
   baseSize?: number | null;
   slPct?: number | null;
@@ -405,6 +418,14 @@ export class TradingStrategyService {
         // bridge's DEFAULT_MAGIC (234000 = "no bot attributed") and left `trade.magic` NULL.
         // See the field's docblock for the full chain; guarded by bot-summary-mapping.spec.ts.
         magic: (s as any).magic ?? null,
+        // #936/#995 — the OBSERVER slots `StopGuardianService` reads off THIS summary. Omitting
+        // them made both observers bail silently (they were `undefined` on every position) —
+        // see the StrategySummary docblock. Guarded by bot-summary-mapping.spec.ts.
+        simTslEnabled: (s as any).simTslEnabled ?? false,
+        simTslActivationPct: (s as any).simTslActivationPct ?? null,
+        simTslDistancePct: (s as any).simTslDistancePct ?? null,
+        exhaustionObserveEnabled: (s as any).exhaustionObserveEnabled ?? false,
+        exhaustionDecelPct: (s as any).exhaustionDecelPct ?? null,
         minComposite: s.minComposite,
         baseSize: s.baseSize,
         slPct: s.slPct,
@@ -2461,6 +2482,10 @@ export class TradingStrategyService {
      * declare a value here are converged.
      */
     allocationAmount?: number | null;
+    /** #995 — up-move exhaustion OBSERVER (display-only). Absent = no opinion. */
+    exhaustionObserveEnabled?: boolean;
+    /** #995 — observer decelPct threshold (percent). Absent = no opinion. */
+    exhaustionDecelPct?: number | null;
   }>, opts?: {
     /**
      * Report drift but write NOTHING (#833 acceptance criterion 3).
@@ -2567,6 +2592,14 @@ export class TradingStrategyService {
         // keeps its current value, and there is no default to fall back to on purpose.
         if ((s as any).allocationAmount !== undefined) {
           desired.allocationAmount = (s as any).allocationAmount;
+        }
+        // #995 — the up-move exhaustion OBSERVER (display-only). Same optional contract as
+        // every slot above: absent means "no opinion", declared means "converge".
+        if ((s as any).exhaustionObserveEnabled !== undefined) {
+          desired.exhaustionObserveEnabled = (s as any).exhaustionObserveEnabled;
+        }
+        if ((s as any).exhaustionDecelPct !== undefined) {
+          desired.exhaustionDecelPct = (s as any).exhaustionDecelPct;
         }
         if ((s as any).active !== undefined) {
           desired.active = (s as any).active;
@@ -2692,6 +2725,14 @@ export class TradingStrategyService {
             // #894 — NULL, never a substituted default: "no allocation set" is a state the
             // rating reports by name (`allocation_not_set`) rather than a number to invent.
             allocationAmount: (s as any).allocationAmount ?? null,
+            // #995 — observer slots, present only when the seed declares them (a fresh install
+            // of a declared bot carries the same observation settings as the live one).
+            ...((s as any).exhaustionObserveEnabled !== undefined
+              ? { exhaustionObserveEnabled: (s as any).exhaustionObserveEnabled }
+              : {}),
+            ...((s as any).exhaustionDecelPct !== undefined
+              ? { exhaustionDecelPct: (s as any).exhaustionDecelPct }
+              : {}),
           },
         });
 

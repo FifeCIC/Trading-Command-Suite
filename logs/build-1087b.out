@@ -1,0 +1,1038 @@
+
+> nest@0.123.0 build:api
+> pwsh -File ../scripts/build-api.ps1
+
+   OK  Build lock acquired (PID 29344).
+
+== Locating the API on port 3201
+   OK  Nothing listening on 3201 - the engine DLL is already free.
+
+== Building the API
+
+> nest@0.123.0 prebuild
+> node scripts/build-preflight.cjs && node scripts/validate-ticket-columns.cjs && node scripts/validate-protocol-directions.cjs && node scripts/validate-directive-group-kind.cjs && node scripts/validate-guardian-directive-ids.cjs && node scripts/validate-strategy-library-links.cjs && node scripts/validate-pipeline-contracts.cjs && node scripts/validate-threshold-sources.cjs && node scripts/validate-ab-inputs.cjs && node scripts/validate-close-attribution.cjs && node scripts/validate-manual-trade-gate.cjs && node ../scripts/validate-envelope-callers.cjs && node ../scripts/validate-readiness-verdict.cjs && node scripts/validate-timeframe-sources.cjs && node scripts/validate-timezone-sources.cjs && node scripts/validate-local-time-sources.cjs && node scripts/validate-retention-columns.cjs && node scripts/validate-archive-default-column.cjs && node scripts/validate-collation-consistency.cjs && node scripts/validate-seed-literals.cjs && node scripts/validate-protocol-slugs.cjs && node scripts/gen-schema-init.cjs --check && node scripts/validate-bot-rules.cjs && node scripts/validate-create-form-coverage.cjs && node scripts/validate-rule-enforcement.cjs && node scripts/validate-trailing-claims.cjs && node scripts/validate-signal-classification.cjs && node scripts/validate-signal-column-width.cjs && node scripts/validate-single-bridge-position-io.cjs && node ../scripts/validate-bridge-order-choke-point.cjs && node scripts/validate-risk-profile.cjs && node scripts/validate-fabricated-stats.cjs && node scripts/validate-profile-honesty.cjs && node ../scripts/validate-agent-docs.cjs && node ../scripts/validate-text-encoding.cjs && node ../scripts/validate-output-style-sync.cjs --report && node ../scripts/validate-roadmap-columns.cjs && node ../scripts/validate-notices.cjs && node --test ../src/core/notices/notices.test.js && node --test ../src/core/score-display.test.js && node --test ../src/core/trade-readiness.test.js && node --test ../src/core/tradeability.test.js && npx jest --silent && node ../scripts/validate-css-tokens.cjs && node ../scripts/validate-duplication.cjs && node ../scripts/validate-arch-surfaces.cjs && node ../scripts/docs-facts.cjs --check && node ../scripts/tools-index.cjs --check && node ../scripts/generate-pipeline-map.cjs --check && node scripts/validate-settings-access.cjs && node ../scripts/validate-qa-ids.cjs && node ../scripts/validate-decisions.cjs && npx rimraf dist && npx prisma generate
+
+[build-preflight] ✅ Prisma engine DLL is free — safe to build.
+[ticket-columns] ✅ OK — no ticket field is declared as a 32-bit integer
+[validate-protocol-directions] Scanned 48 protocols, 431 directive refs, 161 directives with a known bias.
+[validate-protocol-directions] ✅ OK — no direction-contract conflicts.
+[gate-membership] parsed 48 protocols, 137 groups, 45 risk gates, 68 gate placements
+[gate-membership] ✅ OK — every risk-gate member is a declared gate
+
+[guardian-directive-ids] ✅ OK — all 4 guardian directive(s) registered (atr-trailing-stop, supertrend, chandelier-exit, wick-filter) · registry 109 directive(s)
+
+[strategy-library-links] ✓ 5 tcsProtocol link(s) resolve against 48 seeded protocol(s); 5 claimed-supported entr(ies) are linked (10 entr(ies) scanned)
+[pipeline-contracts] 29 invariants in the contracts doc; 5 whitelisted deviations
+[pipeline-contracts] held (tracked debt, does not fail the build):
+    - no-unmeasured-calendar-claim  src/modules/directives/implementations/gold-session-profile.directive.ts (gold-session-profile)  (held by #879)
+    - no-unmeasured-calendar-claim  src/modules/directives/implementations/rollover-risk.directive.ts (rollover-risk)  (held by #879)
+    - no-unmeasured-calendar-claim  src/modules/directives/implementations/session-open-effect.directive.ts (session-open-effect)  (held by #879)
+    - no-unmeasured-calendar-claim  src/modules/directives/implementations/session-timing-filter.directive.ts (session-timing-filter)  (held by #879)
+    - no-unmeasured-calendar-claim  src/modules/directives/implementations/volume-rhythm.directive.ts (volume-rhythm)  (held by #879)
+[pipeline-contracts] four-page mirror coverage (QA is gated, these are reported):
+    Architecture   17/29 invariants named: INV-ADAPTIVE-TARGET-MONOTONIC, INV-ARCH-DOCS-1, INV-ARCH-DOCS-2, INV-BAR-ORDER, INV-BAR-WINDOW, INV-CANONICAL-LOADER, INV-GATE-FAILS-CLOSED, INV-GATE-MEMBERSHIP, INV-MTF-BUNDLE, INV-NO-FUTURE-ROWS, INV-NO-SYMBOL-GUESSING, INV-ONE-ROW-PER-RUN, INV-SCORE-MAGNITUDE, INV-SINGLE-CADENCE, INV-STABLE-DENOMINATOR, INV-UTC-TIMESTAMPS, INV-WATCHLIST-IDENTITY
+    Diagrams       2/29 invariants named: INV-NO-SYMBOL-GUESSING, INV-WATCHLIST-IDENTITY
+    CapabilityMap  0/29 invariants named
+[pipeline-contracts] ✅ OK — canonical mechanisms present, no banned patterns, invariants mirrored in QA
+
+
+Threshold source audit — one value, one owner
+
+OWNERS (the only declarations allowed to exist):
+  classification  nest/src/modules/scoring/protocol-gating.service.ts
+                  exports: ENTRY_THRESHOLD, STRONG_PCT, SIGNAL_THRESHOLDS
+  styleBars       nest/src/common/utils/style-thresholds.ts
+                  exports: STYLE_THRESHOLDS, BOT_BAR_DEFAULT, SIGNALS_GATE_DEFAULT, resolveStyleThreshold
+
+ℹ 2 legitimate owner declaration(s):
+  src/core/signal-utils.js:55 = 65  (The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) — percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.)
+  src/core/signal-utils.js:56 = 40  (The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) — percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.)
+
+⚠ 74 in-range hardcoded bar(s) — second owners, will drift:
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:45  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:114  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:115  property = 20
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:128  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:129  property = 20
+  nest/src/modules/automation/ab-attribution-rejected.spec.ts:72  property = 10
+  nest/src/modules/automation/ab-trade-authority.spec.ts:37  property = 10
+  nest/src/modules/automation/ab-trade-authority.spec.ts:58  property = 20
+  nest/src/modules/automation/automation-loop-queue-freshness.spec.ts:34  property = 0
+  nest/src/modules/automation/automation-loop.service.ts:873  property = 3
+  nest/src/modules/automation/automation-loop.service.ts:2341  nullish-default = 0
+  nest/src/modules/scoring/scoring-strategy-seed.ts:59  property = 12
+  nest/src/modules/scoring/scoring-strategy-seed.ts:70  property = 10
+  nest/src/modules/scoring/scoring-strategy-seed.ts:81  property = 7
+  nest/src/modules/scoring/scoring-strategy-seed.ts:89  property = 12
+  nest/src/modules/scoring/strategy-registry.service.spec.ts:19  property = 8
+  nest/src/modules/scoring/strategy-registry.service.spec.ts:133  property = 9
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:59  property = 7
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:82  property = 7
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:92  property = 25
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:103  property = 0
+  nest/src/modules/signals/signal-envelope.service.ts:1080  nullish-default = 0
+  nest/src/modules/trading/bot-summary-mapping.spec.ts:86  property = 10
+  nest/src/modules/trading/strategy-seed-convergence.spec.ts:32  property = 9
+  nest/src/modules/trading/strategy-seed-convergence.spec.ts:103  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:137  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:156  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:173  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:202  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:226  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:262  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:283  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:313  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:343  property = 8
+  nest/src/modules/trading/strategy-seed-data.ts:367  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:385  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:422  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:467  property = 0
+  nest/src/modules/trading/strategy-seed-data.ts:522  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:540  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:558  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:576  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:598  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:616  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:638  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:656  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:674  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:694  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:712  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:745  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:763  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:785  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:827  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:885  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:903  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:921  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:939  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:957  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:975  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:993  property = 10
+  nest/src/modules/trading/trading-strategy-pair.spec.ts:29  property = 10
+  nest/src/modules/trading/trading-strategy-pair.spec.ts:33  property = 10
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:56  property = 9
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:105  property = 20
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:113  property = 7
+  src/components/MetaStackPipeline.jsx:329  or-default = 3
+  src/core/translators/focused-translator.js:134  or-default = 3
+  src/core/translators/focused-translator.js:134  or-default-coerced = 3
+  src/pages/MetaStackExplorerPage.jsx:507  or-default = 0
+  src/pages/MetaStackExplorerPage.jsx:507  or-default = 0
+  src/pages/MetaStackExplorerPage.jsx:513  or-default = 0
+  nest/prisma/schema.prisma:1490  prisma-default = 10
+  nest/prisma/schema.prisma:1680  prisma-default = 10
+  nest/prisma/schema.prisma:1810  prisma-default = 10
+
+✅ OK — every threshold has exactly one owner and every consumer imports it.
+
+✅ validate-ab-inputs: A/B sources its mode from the bot and its cadence from the protocol (550 files scanned)
+✅ Close attribution — every closeReason writer routes through the parser (4 declared exceptions).
+[manual-trade-gate] 6 exempt path(s):
+  · modules/automation/ab-test.service.ts — A/B side dispatch — gate wiring scheduled with #929 (file mid-work by another agent)
+  · modules/paper-trading/paper-trading.controller.ts — paper trading — records a simulated fill; no broker order is placed
+  · modules/portfolio/trading212-portfolio.controller.ts — T212 portfolio buy/sell — portfolio operations, not signal-driven trading
+  · modules/providers/mt5.controller.ts — FINDING: raw MT5 order endpoint — NOT gated (named in #945 close)
+  · modules/scoring/speed-scan.controller.ts — FINDING: speed-scan direct order path — NOT gated (named in #945 close)
+  · modules/trading/mt5-trading.controller.ts — controller passthrough to Mt5TradingService — the broker layer, not a signal path
+[manual-trade-gate] ✅ OK — every signal-driven order path runs assessGlobalRiskLimits()
+[envelope-callers] ✅ OK — every /api/signals/envelope caller passes a protocol
+[readiness-verdict] ✅ OK — readiness is not asserted from `preTradeReady` alone
+
+Timeframe / cadence axis — one duration table, or it drifts
+
+OWNER: nest/src/common/utils/timeframe.ts  ->  barLengthMs()
+       (ADR-014: probe and writers share ONE definition)
+
+Standalone copies (allowed to exist, but must AGREE):
+  nest/scripts/contract-probe.cjs
+     agrees with owner on 8 cadences
+
+Frontend TIMEFRAMES arrays: 15
+     6  lowercase (canonical)
+     4  other
+     3  UPPERCASE (1M/5M/1H)
+     2  MT5-style (M5/H1/D1)
+
+   ⚠️  More than one convention. Case matters: `barLengthMs("1M")` falls back to
+       ONE DAY (case-sensitive map) while a `/i` parser reads ONE MINUTE. Do not pass
+       an uppercase label into a duration path — pass the canonical lowercase value.
+
+✅ OK — one canonical cadence table; every other site imports or demonstrably agrees.
+
+
+Timezone axis — one UTC↔local conversion, and DST resolved not approximated
+
+OWNER: nest/src/common/utils/session-time.ts
+       exports: zoneOffsetMs, minutesInZone, zonedWallClockInstant, minutesFromOpen
+
+✅ OK — no hand-rolled timezone conversions; DST is resolved by the owner.
+
+Local-time sources in SQL — checked 590 file(s) under nest/src, nest/prisma
+
+✅ OK — every SQL clock reference is UTC, and no DDL default uses the local clock.
+Retention columns — intrinsic only, one owner
+
+  retention date columns checked: 11/11
+  files checked for a duplicated map: 3
+  retention columns checked for a usable index: 11/11
+
+✅ OK — every retention bound uses a write-time column, and the map has one owner.
+[validate-archive-default-column] OK - the archive endpoint has ONE owner of the
+   prune column: retention.config.ts. A request omitting dateCol resolves to
+   directiveoutcome.createdAt, NOT the derived 'predictedAt'.
+   tables checked: 11; day counts derived for all of them
+[validate-collation-consistency] scanned 891 file(s), 152 CREATE TABLE statement(s), 22 InnoDB, 22 explicit COLLATE declaration(s)
+   majority collation: utf8mb4_unicode_ci
+
+   ⚠️ 26 stale COLLATE pin(s) to a non-majority collation.
+      These still WORK (MySQL coerces) but they now name a collation the schema
+      no longer uses, so the comment beside them is probably out of date too.
+        nest/src/modules/scoring/protocol-health.service.ts:~263 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~263 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~266 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~266 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~269 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~269 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~271 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~271 pins utf8mb4_0900_ai_ci
+        … +18 more
+      NOT a failure — removing a pin changes query semantics and is a decision.
+
+✅ OK — no DDL declares a divergent collation, and every CREATE TABLE is explicit
+   about its collation rather than inheriting a server default that varies by
+   MySQL major version. The split cannot return through a reinstall.
+[seed-literals] ✅ OK — 14 seed file(s) scanned, no invented default literal.
+[protocol-slugs] ✅ OK — 48 seed key(s), all slugs (1 documented baseline).
+
+✅ schema-init.sql is current.
+
+[bot-rules] ✅ OK — columns=41 declared=36 display-only=13 live=14 legacy-only=5 none=4
+[bot-rules]   note: static check. It proves every column has a declared owner, NOT that a rule fires.
+[create-form-coverage] 25 submitted · 24 annotated · 36 declared
+   ℹ 25 submitted field(s), 24 annotated, 36 declared.
+[create-form-coverage] ✅ OK — every field the form submits carries its enforcement status.
+  [rule-enforcement] ✅ 36 declared rule(s); 13 guardian mechanism(s); 5 column(s) claim the guardian and every one is declared by exactly one mechanism
+  [rule-enforcement] ⚠️  this checks the two DECLARATIONS agree — it cannot prove the code reads the column it lists.
+✅ Trailing claims — 932 source file(s), no announcement without a mechanism.
+[signal-classification] ✅ OK — no prefix or substring test on a signal class
+[signal-column-width] ✅ OK — every signal column can hold STRONG_SELL (11 chars)
+[single-bridge-position-io] ✅ OK — position I/O is addressed per broker
+✅ bridge order choke point (#1035) — every order passes one gate
+   C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py: 1 real mt5.order_send(), inside order_send_checked()
+   close stamping (#916 / R46): every close request carries `TCS:<origin>`; every nest /close call site names one
+[risk-profile] ✅ OK — keys=6 declared=7 live=5 legacy-only=1 none=1
+[risk-profile]   note: static check. It proves every cap is declared and operator-movable, NOT that the value is right.
+
+[fabricated-stats] ✅ OK — no non-zero typed stat literal and no typed provider list in backend source.
+
+[profile-honesty] 12 getProfile() implementation(s) · 10 adapter registration(s)
+[profile-honesty] ✅ OK — every advertised profile is looked up, never typed.
+[agent-docs] scanned 19 instruction file(s)
+
+[agent-docs] ⚠ 4 warning(s) — advisory, does not fail the build:
+
+  ⚠ [dangling-reference] agent-environment.instructions.md cites `dist/src/main.js` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+  ⚠ [dangling-reference] AGENT-ATTENTION.md cites `dist/src/main.js` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+  ⚠ [dangling-reference] AGENT-ATTENTION.md cites `nest/dist/src/main.js` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+  ⚠ [dangling-reference] AGENT-ATTENTION.md cites `src/pages/AutomationDashboardPage.jsx` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+
+[agent-docs] ✅ OK — applyTo present, ONE handoff directory (no retired citations), no dangling citations, no duplicated or misnumbered rules, no doc task lists
+
+[text-encoding] scanned 1632 file(s) in 13 location(s)
+
+[text-encoding] ✅ OK — no mojibake signatures in source, seed or documentation files
+
+[style-sync] ✅ OK — mirror matches the portable source (9324 chars)
+[roadmap-columns] declared 5 column(s), snapshot matches
+[roadmap-columns] order: discussion , next-sprint , phase-2 , phase-3 , phase-4
+
+[roadmap-columns] ✅ OK — declared column order and generated snapshot agree
+
+[notices] 53 registered code(s), 1388 file(s) scanned, 8 declared as backend-emittable, locales: de:17 (+30 fields in English), UI: 12 raw error render(s) left in 6 file(s)
+[notices] ℹ registered but not referenced yet (callers not migrated): TCS-SCORE-001, TCS-SYS-001
+
+[notices] ✅ OK — every code is well-formed and every referenced code is registered
+[notices]    behaviour checks (rendering, locales): npm run test:notices
+
+✔ the catalogue is well formed (1.2139ms)
+✔ every code renders a title, a message and a non-empty line (1.413ms)
+✔ no template leaks an unsubstituted placeholder when its params are supplied (0.9812ms)
+✔ an undeclared placeholder is left VISIBLE rather than blanked (anti-silence) (0.1536ms)
+✔ a failure with NO HTTP response never renders a template that needs a status (0.3726ms)
+✔ an unknown code is never blank and names itself (0.1483ms)
+✔ the SAME code renders in every locale — only the wording differs (0.238ms)
+✔ a partial locale falls back PER FIELD, not per code (0.292ms)
+✔ an unrecognised locale degrades to English instead of blanking every message (0.2426ms)
+✔ the German bundle only names registered codes, and its placeholders are declared (0.5243ms)
+✔ listNotices() exposes the whole catalogue to tooling (0.5056ms)
+✔ a trade refusal renders the SERVER code, not a hardcoded one (0.69ms)
+✔ server params are passed through, so richer codes render real values (0.1956ms)
+✔ a refusal with NO server code falls back, and keeps the server wording (0.2429ms)
+✔ a refusal with an empty result still renders a non-blank notice (anti-silence) (0.2171ms)
+✔ a TIMED-OUT order renders UNKNOWN, not a refusal (#866) (0.3196ms)
+✔ the lowercase spelling from mt5-trading.service is treated the same (#866) (0.1175ms)
+✔ bridge-emitted cap notices name the control that ACTUALLY binds (#901) (0.2097ms)
+✔ no OTHER notice sends the user to a control that no longer controls anything (0.3237ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 132.1023
+✔ closed market is PAUSED even when the data is old — never STALE (#774) (1.7112ms)
+✔ open + behind is STALE, and it is the ONE state that asks for attention (0.2201ms)
+✔ freshness is the SERVER’s flag — an old asOf alone must not produce STALE (0.1389ms)
+✔ an absent stale flag is not a claim of staleness (0.2307ms)
+✔ the four states are mutually exclusive, and the labels never collide (0.8127ms)
+✔ legacy rows with no marketStatus stay Live — unchanged behaviour (0.1105ms)
+✔ the tooltip surfaces the SERVER’s reason, and names the alarming state plainly (0.222ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 119.109
+✔ #935 — gate-ready but execution-blocked is NOT ready (the BTC case) (1.6874ms)
+✔ gate-ready AND execution-clear is ready (0.145ms)
+✔ the pre-trade gate alone can block (0.1256ms)
+✔ both sources are reported, gate reasons first (0.1193ms)
+✔ an ABSENT assessment is "unknown", never "ready" (0.1647ms)
+✔ a missing envelope is "unknown" and does not throw (0.1418ms)
+✔ `preTradeReady` is compared strictly, so a truthy non-true is not ready (0.6995ms)
+✔ a blocker with only a fallback field still produces a reason (0.2486ms)
+✔ a null executionBlockers is honoured as "no blockers", not as unknown (0.1302ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 128.1032
+✔ #911 — no reading means CANNOT JUDGE, not "refused" (1.7377ms)
+✔ #911 — undefined signalPct behaves like null (0.2231ms)
+✔ #911 — a BUY that nothing listens to is a FINDING, not silence (0.2553ms)
+✔ #911 — a bot on a DIFFERENT protocol is not a subscriber (0.3785ms)
+✔ #911 — an INACTIVE bot is not a subscriber (it cannot trade) (0.1829ms)
+✔ #911 — the reported case: 8% reading against a 10% bar is REFUSED with a shortfall (0.3244ms)
+✔ #911 — clearing ONE bot is enough to be actionable, even if others refuse (0.2174ms)
+✔ #911 — BOUNDARY: a reading exactly equal to the bar CLEARS (inclusive) (0.1663ms)
+✔ #911 — the shortfall is measured against the LOWEST bar, the one worth naming (0.2495ms)
+✔ #911 — a bot with no declared bar is neither clearing nor blocking (0.7716ms)
+✔ family matching: the -v1 card matches the timeframe-variant bot (0.2121ms)
+✔ family matching does NOT join unrelated protocols (0.1257ms)
+✔ the subscription list is ordered by bar, lowest first (0.7626ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 131.0657
+PASS src/modules/directives/implementations/analyst-adjustments-honesty.spec.ts
+PASS src/common/route-order.spec.ts
+PASS src/modules/automation/ab-test-verdict.spec.ts
+PASS src/modules/providers/mt5.controller.spec.ts
+PASS src/modules/providers/mt5-reconnect-broker.spec.ts
+PASS src/modules/screener/screener.service.spec.ts
+[33m[Nest] 22380  - [39m09/10/2026, 23:05:34 [33m   WARN[39m [38;5;3m[Mt5Controller] [39m[33mDEPRECATED — POST /api/providers/mt5/order called for BTC. Redirect to POST /api/trading/mt5/order.[39m
+[33m[Nest] 22380  - [39m09/10/2026, 23:05:34 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mRefusing to send BTC to MT5: the route targets broker 0 (binance), which is not an active MT5 bridge (active: 2, 3); the route's brokerSymbol is the BARE ticker 'BTC' — MT5 resolves names fuzzily and 'BTC' matches a different instrument (measured: 'BTC' → Nasdaq\ETF\BTC, ~$35.86). A symbol may only travel a route whose broker is an active MT5 bridge and whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:34 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[33m[Nest] 22380  - [39m09/10/2026, 23:05:34 [33m   WARN[39m [38;5;3m[Mt5Controller] [39m[33mDEPRECATED — POST /api/providers/mt5/order called for XAUUSD. Redirect to POST /api/trading/mt5/order.[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:34 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 order [broker 3]: buy XAUUSD ×0.01 sl=null tp=null [tripped=false errors=0][39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:34 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:34 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:34 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:34 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:35 [32m    LOG[39m [38;5;3m[SystemLogService] [39m[32mLog directory: C:\Users\squee\AppData\Local\Temp\tcs-log-lEFBMq (exists: true)[39m
+PASS src/modules/directives/implementations/ema-structure.directive.spec.ts
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:35 [32m    LOG[39m [38;5;3m[SystemLogService] [39m[32mLog directory: C:\Users\squee\AppData\Local\Temp\tcs-log-MGm8Ng (exists: true)[39m
+PASS src/modules/automation/automation-loop.persist-decisions.spec.ts
+PASS src/modules/automation/automation-loop-queue-freshness.spec.ts
+PASS src/modules/automation/automation-loop-weekend.spec.ts
+PASS src/modules/automation/ab-arm-accounts.spec.ts
+PASS src/modules/trading/trading-strategy-pair.spec.ts
+PASS src/modules/strategies/strategies.controller.spec.ts
+PASS src/modules/automation/automation-loop-adapter-readiness.spec.ts
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[SystemLogService] [39m[32mLog directory: C:\Users\squee\AppData\Local\Temp\tcs-log-XKlrgc (exists: true)[39m
+PASS src/app.controller.spec.ts
+PASS src/modules/automation/ab-attribution-rejected.spec.ts
+PASS src/modules/automation/automation-loop-snapshot-authority.spec.ts
+[31m[Nest] 13144  - [39m09/10/2026, 23:05:36 [31m  ERROR[39m [38;5;3m[TradingStrategyService] [39m[31mPer-symbol cap could not be evaluated for XAUUSD: bridge exploded[39m
+PASS src/modules/trading/assess-global-risk-limits.spec.ts
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[TradingStrategyService] [39m[33mPortfolio risk gates SKIPPED — MT5 account value unavailable (bridge unreachable?). No peak recorded: a fabricated value would become a permanent high-water mark and block every subsequent trade (#848).[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3.25 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 USD × 0.747172 (1/GBPUSD) ÷ 100) = 0.2% of 1389.37[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1389.37) vs cap 15% — no open positions[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[TradingStrategyService] [39m[33mPortfolio risk gates SKIPPED — MT5 account value unavailable (bridge unreachable?). No peak recorded: a fabricated value would become a permanent high-water mark and block every subsequent trade (#848).[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3.25 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 USD × 0.747172 (1/GBPUSD) ÷ 100) = 0.6% of 500[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 500.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3.25 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 USD × 0.747172 (1/GBPUSD) ÷ 100) = 0.3% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1000.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3.25 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 USD × 0.747172 (1/GBPUSD) ÷ 100) = 0.5% of 600[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3.25 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 USD × 0.747172 (1/GBPUSD) ÷ 100) = 0.3% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1000.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for UK100: 153.41 GBP (vol 0.1 × contract 10 × px 10227.4 = 10227.40 GBP ÷ 100 ⚠️ ASSUMED GBP (broker reports none) — up-rated ×1.5 from 102.27) = 15.3% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1000.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3.25 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 USD × 0.747172 (1/GBPUSD) ÷ 100) = 0.3% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1000.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for NZDJPY: 0.43 GBP (vol 0.001 × contract 100000 × px 89.343 = 8934.30 JPY × 0.00476717 (1/GBPJPY) ÷ 100) = 0.0% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1000.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 3247.25 GBP (vol 1 × contract 100 × px 4346.06 = 434606.00 USD × 0.747172 (1/GBPUSD) ÷ 100) = 324.7% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 86.92 GBP (vol 0.02 × contract 100 × px 4346.06 = 8692.12 GBP ÷ 100) = 8.7% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 64.95 GBP (vol 0.02 × contract 100 × px 4346.06 = 8692.12 USD × 0.747172 (1/GBPUSD) ÷ 100) = 6.5% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 0.00 GBP (0.0% of 1000.00) vs cap 15% — no open positions[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 4.35 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 GBP ÷ 100) = 0.4% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 4.60 GBP (0.5% of 1000.00) vs cap 15% — #7 XAUUSD |entry−SL|×vol×contract = 4.60 GBP (same-currency)[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 4.35 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 GBP ÷ 100) = 0.4% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 230.00 GBP (23.0% of 1000.00) vs cap 15% — #9 XAUUSD |entry−SL|×vol×contract = 230.00 GBP (same-currency)[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mrisk estimate for XAUUSD: 4.35 GBP (vol 0.001 × contract 100 × px 4346.06 = 434.61 GBP ÷ 100) = 0.4% of 1000[39m
+[95m[Nest] 13144  - [39m09/10/2026, 23:05:36 [95m  DEBUG[39m [38;5;3m[TradingStrategyService] [39m[95mbook at risk 5.00 GBP (0.5% of 1000.00) vs cap 15% — #9 XAUUSD |entry−SL|×vol×contract = 5.00 GBP (same-currency)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[SystemLogService] [39m[32mLog directory: C:\Users\squee\AppData\Local\Temp\tcs-log-48o00P (exists: true)[39m
+PASS src/modules/system/log-writer.spec.ts
+[31m[Nest] 29292  - [39m09/10/2026, 23:05:36 [31m  ERROR[39m [38;5;3m[StopGuardianService] [39m[31mStop modify refused by broker 2: XAUUSD #1 — HTTP 400 Market closed[39m
+[31m[Nest] 29292  - [39m09/10/2026, 23:05:36 [31m  ERROR[39m [38;5;3m[StopGuardianService] [39m[31mStop modify refused by broker 2: XAUUSD #1 — HTTP 400 Invalid stops[39m
+[31m[Nest] 29292  - [39m09/10/2026, 23:05:36 [31m  ERROR[39m [38;5;3m[StopGuardianService] [39m[31mStop modify NOT SENT for GER40 #5001 (broker 3): connect ECONNREFUSED 127.0.0.1:5001 — no broker response, so this is a transport failure, NOT a market-closed signal (no backoff armed).[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: XAUUSD #1 SL 90 → 94 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: XAUUSD #1 SL 90 → 94 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[33m[Nest] 29292  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[StopGuardianService] [39m[33mStop edits for XAUUSD paused 0m — broker refused with "Market closed" (#893)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[33m[Nest] 29292  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[StopGuardianService] [39m[33mStop modify blocked: XAUUSD #1 — market closed (broker refusal) — next probe in 1m (#893)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #2: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[33m[Nest] 29292  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[StopGuardianService] [39m[33mStop edits for XAUUSD paused 0m — broker refused with "Market closed" (#893)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #3: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #2: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (0 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[33m[Nest] 29292  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[StopGuardianService] [39m[33mOwner could not be established for 1 TCS position(s) — not managed this tick (the broker-side stop stands): XAUUSD #7 on broker 2 magic=999999 matches NO bot (comment "TCS Comment Bot")[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 0 guarded (0 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (0 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: XAUUSD #7 SL 99 → 102 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: XAUUSD #7 SL 99 → 100 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: GER40 #5001 SL 99 → 102 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: GER40 #5001 SL 99 → 102 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: GER40 #5001 SL 99 → 102 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: GER40 #5001 SL 99 → 102 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[31m[Nest] 29292  - [39m09/10/2026, 23:05:36 [31m  ERROR[39m [38;5;3m[StopGuardianService] [39m[31mStop modify NOT SENT for GER40 #5001 (broker 3): connect ECONNREFUSED 127.0.0.1:5001 — no broker response, so this is a transport failure, NOT a market-closed signal (no backoff armed).[39m
+PASS src/modules/risk/risk-circuit-breaker.spec.ts
+PASS src/modules/automation/stop-guardian.service.spec.ts
+PASS src/modules/backtest/backtest.service.spec.ts
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #2: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (0 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 0 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 1ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop: XAUUSD #7 SL 90 → 94 (78%)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mGuardian #1: 1 adjusted, 1 guarded (4 directives evaluated in 0ms, pass 0ms)[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[StopGuardianService] [39m[32mStop Guardian stopped[39m
+PASS src/modules/scoring/signal-threshold-scale.spec.ts
+PASS src/modules/automation/ab-arms-can-differ.spec.ts
+[31m[Nest] 15124  - [39m09/10/2026, 23:05:36 [31m  ERROR[39m [38;5;3m[PositionTimeStopService] [39m[31mTime-stop close failed for AUDUSD#10: bridge refused[39m
+PASS src/modules/signals/signal-envelope-stale-symbol.spec.ts
+PASS src/modules/automation/position-time-stop.integration.spec.ts
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#111 held 52h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#111(max_hold)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — EURJPY#700 past exit boundary 0min (held 2h)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): EURJPY#700(exit_boundary)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — EURJPY#701(no_limit_configured)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — EURJPY#702(exit_boundary_invalid:exitBeforeUtc "13:3" is not HH:MM in UTC — the boundary could not be read, so NO exit is triggered by it. Fix the value; a typo must not close a position.)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — EURJPY#703 past exit boundary 0min (held 2h)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED EURJPY#703 after 2h via exit_boundary (exit boundary 0min UTC), pnl 3.00 — slot freed[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) evaluated, 1 attributed, 1 inside limit, 0 without a configured limit, 0 with an exit boundary, 0 with an UNREADABLE one — nothing to close.[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) evaluated, 1 attributed, 1 inside limit, 0 without a configured limit, 0 with an exit boundary, 0 with an UNREADABLE one — nothing to close.[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#444(no_limit_configured)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#555 held 99h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#555(max_hold)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 2 position(s) past their limit — AUDUSD#1 held 52h/12h, AUDUSD#2 held 20h/12h[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#1 after 52h via max_hold (limit 12h), pnl -4.00 — slot freed[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#2 after 20h via max_hold (limit 12h), pnl -1.00 — slot freed[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 2 position(s) past their limit — AUDUSD#10 held 50h/12h, AUDUSD#20 held 40h/12h[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#20 after 40h via max_hold (limit 12h), pnl 0.00 — slot freed[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#42 held 52h/12h[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#42 after 52h via max_hold (limit 12h), pnl 1.23 — slot freed[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#42 held 52h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#42(max_hold)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment did not disambiguate — skipping rather than guessing which hold limit applies.[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — XAUUSD#666(ambiguous_multi_strategy)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — XAUUSD#777 held 200h/4h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): XAUUSD#777(max_hold)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#888(no_usable_open_time)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#999 held 52h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#999(max_hold)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#1000 held 30h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#1000(max_hold)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — XAUUSD#1 held 9h/4h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): XAUUSD#1(max_hold)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — XAUUSD#152646482933 held 40h/12h[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED XAUUSD#152646482933 after 40h via max_hold (limit 12h), pnl -17.50 — slot freed[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#12(manual_trade)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment 'A Bot That Was Renamed' did not match any of them — skipping rather than guessing.[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — XAUUSD#13(comment_no_match_multi_strategy)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment did not disambiguate — skipping rather than guessing which hold limit applies.[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — XAUUSD#15(ambiguous_multi_strategy)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#16(no_limit_configured)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#4 held 40h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#4(max_hold)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment did not disambiguate — skipping rather than guessing which hold limit applies.[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:36 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#5 held 30h/12h[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:36 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#5(max_hold)[39m
+PASS src/modules/system/system-health.risk-caps.spec.ts
+PASS src/modules/automation/automation-loop-sync-scope.spec.ts
+PASS src/modules/providers/position-sync-exit-recovery.spec.ts
+[31m[Nest] 5468  - [39m09/10/2026, 23:05:37 [31m  ERROR[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[31mBroker 2 symbol sync errored — Bridge call threw: ECONNREFUSED[39m
+PASS src/modules/symbols/broker-symbol-discovery.spec.ts
+PASS src/modules/market-data/bar-refresh-stale-recheck.spec.ts
+PASS src/modules/scoring/exit-consensus.service.spec.ts
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[33mBroker 2 symbol sync: Bridge returned no symbol list (unreachable or empty) — catalogue left untouched[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[33mBroker 2 symbol sync: Bridge returned no symbol list (unreachable or empty) — catalogue left untouched[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[33mBroker 2 symbol sync: Bridge returned no symbol list (unreachable or empty) — catalogue left untouched[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[33mBroker 2 symbol sync: Bridge returned no symbol list (unreachable or empty) — catalogue left untouched[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 2 offered, 2 tradeable, 0 already onboarded[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 2 offered, 2 tradeable, 0 already onboarded[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 1 offered, 1 tradeable, 0 already onboarded[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 2 offered, 2 tradeable, 1 already onboarded[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 2 offered, 1 tradeable, 0 already onboarded[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 1 offered, 1 tradeable, 0 already onboarded[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BrokerSymbolDiscoveryService] [39m[32mBroker 2 symbol catalogue synced: 2 offered, 2 tradeable, 1 already onboarded[39m
+[33m[Nest] 20388  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[ExitConsensusService] [39m[33mCould not read broker positions: this.mt5.getAllPositions is not a function[39m
+PASS src/modules/signals/signal-actions.service.spec.ts
+PASS src/modules/automation/ab-trade-authority.spec.ts
+PASS src/modules/trading/mt5-trading.service.spec.ts
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod created: 'Greenland Mining surge' GML 5m 2026-03-11T00:00:00.000Z → 2026-03-13T00:00:00.000Z[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 1, filled 1, finalised 1 (of 1 in batch), 4 via next-session bar[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation tick: visited 1, filled 1, finalised 1 in 1 pass(es) — backlog 0 -> 0[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 1, filled 1, finalised 0 (of 1 in batch), 3 via next-session bar[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation tick: visited 1, filled 1, finalised 0 in 1 pass(es) — backlog 0 -> 0[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[OutcomeTrackerService] [39m[33mOutcome maturation: visited 1, filled 0, finalised 1 (of 1 in batch)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation tick: visited 1, filled 0, finalised 1 in 1 pass(es) — backlog 0 -> 0[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(42): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 250, filled 250, finalised 250 (of 250 in batch), 1000 via next-session bar[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(42): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mclosePosition(42): bridge returned no realised P&L — recomputed 1.00 from entry=2400 exit=2410 side=buy. If this recurs, the bridge build is predating the realised-profit fix.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(42): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mRefusing to send BTC to MT5: the MT5 symbol router is unavailable, so the broker-native name cannot be verified. A crypto order may only travel an explicit symbol_route whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) on an active MT5 bridge — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 250, filled 250, finalised 250 (of 250 in batch), 1000 via next-session bar[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(42): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(1): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(2): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(77): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mclosePosition(77): bridge returned no realised P&L — recomputed 0.00 from entry=1.1 exit=1.12 side=buy. If this recurs, the bridge build is predating the realised-profit fix.[39m
+[33m[Nest] 13144  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mbridgeForTicket(42): no bridge reported this ticket — falling back to the PRIMARY bridge. If the position is held by another account the broker will refuse it, which is the same outcome as before #1033; a transient read failure looks identical from here.[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod created: 'GML surge' GML 5m 2026-03-11T00:00:00.000Z → 2026-03-13T00:00:00.000Z (symbol registered)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 250, filled 250, finalised 250 (of 250 in batch), 1000 via next-session bar[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod import 'Greenland Mining surge': 576 fetched from yahoo, 576 inserted, 0 already present (576 bars now in window)[39m
+PASS src/modules/backtest/backtest-period.service.spec.ts
+PASS src/modules/scoring/outcome-tracker.service.spec.ts
+PASS src/modules/trading/bot-summary-mapping.spec.ts
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod import 'Greenland Mining surge': 576 fetched from yahoo, 576 inserted, 0 already present (576 bars now in window)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 250, filled 250, finalised 250 (of 250 in batch), 1000 via next-session bar[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod import 'Greenland Mining surge': 576 fetched from yahoo, 0 inserted, 576 already present (576 bars now in window)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 250, filled 250, finalised 250 (of 250 in batch), 1000 via next-session bar[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod import 'Greenland Mining surge': 288 fetched from yahoo, 288 inserted, 0 already present (288 bars now in window)[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[BacktestPeriodService] [39m[32mPeriod import 'Greenland Mining surge': 100 fetched from mt5, 100 inserted, 0 already present (100 bars now in window)[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation: visited 250, filled 250, finalised 250 (of 250 in batch), 1000 via next-session bar[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation tick: visited 1500, filled 1500, finalised 1500 in 6 pass(es) — backlog 37120 -> 37120[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mOutcome maturation tick: visited 1, filled 0, finalised 1 in 1 pass(es) — backlog 0 -> 0[39m
+[32m[Nest] 15124  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[OutcomeTrackerService] [39m[32mRecorded 1 directive outcomes[39m
+PASS src/modules/providers/position-sync-reopen.spec.ts
+PASS src/modules/trading/mt5-trading.routed-reads.spec.ts
+PASS src/modules/trading/strategy-seed-convergence.spec.ts
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:37 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33mPosition/DB DISAGREEMENT for mt5 XAUUSD ticket 152710812706: the broker reports it OPEN but the row is 'closed' (broker:unknown, closedAt 2026-10-01T17:39:15.000Z). Reopening to match the broker — a close is only ever written from an authoritative snapshot (#1058).[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32mCreated Trade for externally-opened mt5 position XAUUSD (152710812706)[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:37 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 1 created, 0 closed, 0 stranded trade row(s) reaped[39m
+PASS src/modules/portfolio/side-from-quantity.spec.ts
+PASS src/modules/scoring/protocol-health.coverage.spec.ts
+PASS src/modules/scoring/edge.controller.spec.ts
+PASS src/modules/providers/position-sync-partial-snapshot.spec.ts
+PASS src/modules/trading/protocol-profitability.spec.ts
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Non-authoritative position snapshot — closure detection skipped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade t-xauusd (XAUUSD) exit=4176.6 PnL=-11.28 why=broker:unknown[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade t-xauusd (XAUUSD) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade XAUUSD (t-xauusd, ticket 152710812706) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 1 closed, 1 stranded trade row(s) reaped[39m
+[33m[Nest] 29580  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Non-authoritative position snapshot — closure detection skipped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] EURUSD: booking 11.00 of 11.00 (sole-owner, share 1.0000, 1 row(s) on this position)[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mRefusing to send BTC to MT5: no explicit symbol_route row exists for BTC; the route's brokerSymbol is the BARE ticker 'BTC' — MT5 resolves names fuzzily and 'BTC' matches a different instrument (measured: 'BTC' → Nasdaq\ETF\BTC, ~$35.86). A crypto order may only travel an explicit symbol_route whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) on an active MT5 bridge — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade trade-1 (EURUSD) exit=1.09 PnL=11.00 why=broker:unknown[39m
+PASS src/modules/trading/trading-strategy.activation-gate.spec.ts
+PASS src/modules/trading/mt5-trading.crypto-route-guard.spec.ts
+PASS src/modules/market-data/bar-refresh-no-synthetic.spec.ts
+PASS src/modules/providers/position-sync.service.spec.ts
+PASS src/modules/providers/adapter-factory.rate-limit.spec.ts
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mRefusing to send BTC to MT5: the route targets broker 0, which is not an active MT5 bridge (active: 2, 3). A crypto order may only travel an explicit symbol_route whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) on an active MT5 bridge — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mRefusing to send ETHUSD to MT5: the symbol_route row carries no brokerSymbol. A crypto order may only travel an explicit symbol_route whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) on an active MT5 bridge — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: ticket 152690940846 is an ORDER id written before #1014 — resolved to position 152690675067 (3 deals) so the close can be priced[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5TradingService] [39m[33mRefusing to send BTC to MT5: the MT5 symbol router is unavailable, so the broker-native name cannot be verified. A crypto order may only travel an explicit symbol_route whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) on an active MT5 bridge — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: booking 10.00 of 40.00 (volume-split, share 0.2500, 1 row(s) on this position)[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade legacy-1 (XAUUSD) exit=4157.11 PnL=10.00 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade bogus-1 (XAUUSD) exit=4157.11 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: booking 10.00 of 40.00 (volume-split, share 0.2500, 4 row(s) on this position)[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade trade-1 (XAUUSD) exit=4157.11 PnL=10.00 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: booking -10.00 of -40.00 (volume-split, share 0.2500, 1 row(s) on this position)[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade pile-1 (XAUUSD) exit=4166.68 PnL=-10.00 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: booking 26.00 of 26.00 (sole-owner, share 1.0000, 1 row(s) on this position)[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade solo-1 (XAUUSD) exit=4170 PnL=26.00 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[33m[Nest] 29580  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] XAUUSD: 4 row(s) share this position but no volume share is computable — leaving P&L unset rather than booking the full net to one row[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade trade-1 (XAUUSD) exit=4157.11 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 2 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade trade-xau (XAUUSD) exit=4402.48 PnL=56.13 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade trade-aud (AUDUSD) exit=0.72176 PnL=0.86 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: booking 55.49 of 55.49 (sole-owner, share 1.0000, 1 row(s) on this position)[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade trade-xau (XAUUSD) exit=4403.27 PnL=55.49 why=broker:unknown[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[33m[Nest] 29580  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Reaped stranded open Trade USDCAD (stranded-1) — unticketed and absent from broker snapshot[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 0 closed, 1 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: finnhub[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: mt5[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[33m[Nest] 29580  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] XAUUSD: peak not recorded — peak boom[39m
+[32m[Nest] 29580  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: finnhub[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: mt5[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: finnhub[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: finnhub[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: mt5[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: finnhub[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: some-unlisted-provider[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: finnhub[39m
+[32m[Nest] 5468  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[AdapterFactory] [39m[32mCreated adapter instance: mt5[39m
+PASS src/modules/providers/position-sync-broker-scope.spec.ts
+[95m[Nest] 20388  - [39m09/10/2026, 23:05:38 [95m  DEBUG[39m [38;5;3m[PositionSyncService] [39m[95m[mt5] trade vix-b (VIX) belongs to account 62135531 — NOT judged by an account-10011309743 sync[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade legacy (EURGBP) exit=0.862 PnL=1.00 why=broker:unknown[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade gone-a (EURGBP) exit=0.862 PnL=1.00 why=broker:unknown[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade gone (EURGBP) exit=0.862 PnL=1.00 why=broker:unknown[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[95m[Nest] 20388  - [39m09/10/2026, 23:05:38 [95m  DEBUG[39m [38;5;3m[PositionSyncService] [39m[95m[mt5] trade vix-b (VIX) belongs to account 62135531 — NOT judged by an account-10011309743 sync[39m
+[95m[Nest] 20388  - [39m09/10/2026, 23:05:38 [95m  DEBUG[39m [38;5;3m[PositionSyncService] [39m[95m[mt5] trade legacy-b (USDCAD) belongs to account 62135531 — NOT judged by an account-10011309743 sync[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32mCreated Trade for externally-opened mt5 position EURGBP (152648715111)[39m
+[32m[Nest] 20388  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 1 created, 0 closed, 0 stranded trade row(s) reaped[39m
+PASS src/modules/strategies/strategies.service.spec.ts
+PASS src/modules/providers/mt5/mt5-route-capability.spec.ts
+PASS src/modules/alerts/trade-disabled.spec.ts
+PASS src/modules/scoring/protocol-gating.venue-standby.spec.ts
+PASS src/modules/providers/adapters/mt5-adapter-breaker-isolation.spec.ts
+[33m[Nest] 29292  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[AlertTriggerService] [39m[33mtrade-disabled check failed: bridge down[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): HTTP 500: {"error":"terminal not connected"}[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 order [broker 3]: buy VIX ×0.1 sl=null tp=null [tripped=false errors=0][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): HTTP 500: {"error":"terminal not connected"}[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 order [broker 2]: buy EURUSD ×0.1 sl=null tp=null [tripped=true errors=10][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] POST /order FAILED: circuit breaker active (skipped) [body={"symbol":"EURUSD","type":"buy","volume":0.1,"sl":null,"tp":null,"comment":"TCS auto"}][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 order FAILED — Bridge unreachable (circuit breaker active for broker 2) [url=http://localhost:5000 broker=2 tripped=true consecutiveErrors=10][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): HTTP 500: {"error":"terminal not connected"}[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 order [broker 2]: buy EURUSD ×0.1 sl=null tp=null [tripped=true errors=10][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] POST /order FAILED: circuit breaker active (skipped) [body={"symbol":"EURUSD","type":"buy","volume":0.1,"sl":null,"tp":null,"comment":"TCS auto"}][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 order FAILED — Bridge unreachable (circuit breaker active for broker 2) [url=http://localhost:5000 broker=2 tripped=true consecutiveErrors=10][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): HTTP 500: {"error":"terminal not connected"}[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5: fetching quote for VIX (broker 3)[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): HTTP 500: {"error":"terminal not connected"}[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 circuit breaker manually reset for ALL brokers[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): HTTP 500: {"error":"terminal not connected"}[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 circuit breaker manually reset for broker 3[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:38 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 circuit breaker manually reset for broker 2[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: HTTP 500: {"error":"terminal not connected"} [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 2] GET /symbols FAILED: refused: connect ECONNREFUSED 127.0.0.1:5000 [body=(no body)][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:38 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge circuit breaker TRIPPED for broker 2 (10 errors): refused: connect ECONNREFUSED 127.0.0.1:5000[39m
+PASS src/modules/providers/mt5/mt5-session-recovery.spec.ts
+PASS src/modules/automation/stop-guardian-decline-log.spec.ts
+PASS src/modules/calendar/market-calendar.service.spec.ts
+PASS src/modules/automation/position-time-stop.service.spec.ts
+PASS src/modules/providers/adapters/mt5-adapter-multibroker.spec.ts
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:39 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker 3] GET /positions FAILED: refused: connection refused [body=(no body)][39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:39 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 broker 3 returned no position snapshot — the combined snapshot is INCOMPLETE and closure detection will be skipped for this pass[39m
+PASS src/modules/alerts/alert-risk-cap-breach.spec.ts
+PASS src/modules/research/research-import.negative-cache.spec.ts
+PASS src/modules/market-data/bar-refresh-single-flight.spec.ts
+PASS src/common/notices/notice.filter.spec.ts
+PASS src/modules/signals/signal-queue-block-cause.spec.ts
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [critical] Trading blocked by the daily-loss cap: 440 order(s) refused across 13 symbol(s) in the last 30 minutes by risk.maxDailyLoss. Newest: Daily loss $178.02 exceeds risk.maxDailyLoss ($100) ⚠️ This does NOT clear by trading out of it — opening a position is the very thing it blocks. It clears only when a position ALREADY OPEN closes green enough to bring the day back above the cap, or at local midnight. It is the cap that means "something went wrong today", not "the book is full".[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [critical] Trading blocked by the daily-loss cap: 6 order(s) refused across 2 symbol(s) in the last 30 minutes by risk.maxDailyLoss. Newest: Daily loss $178.02 exceeds risk.maxDailyLoss ($100) ⚠️ This does NOT clear by trading out of it — opening a position is the very thing it blocks. It clears only when a position ALREADY OPEN closes green enough to bring the day back above the cap, or at local midnight. It is the cap that means "something went wrong today", not "the book is full".[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [critical] Trading blocked by the daily-loss cap: 440 order(s) refused across 13 symbol(s) in the last 30 minutes by risk.maxDailyLoss. Newest: Daily loss $178.02 exceeds risk.maxDailyLoss ($100) ⚠️ This does NOT clear by trading out of it — opening a position is the very thing it blocks. It clears only when a position ALREADY OPEN closes green enough to bring the day back above the cap, or at local midnight. It is the cap that means "something went wrong today", not "the book is full".[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [critical] Trading blocked by the daily-loss cap: 440 order(s) refused across 13 symbol(s) in the last 30 minutes by risk.maxDailyLoss. Newest: Daily loss $178.02 exceeds risk.maxDailyLoss ($100) ⚠️ This does NOT clear by trading out of it — opening a position is the very thing it blocks. It clears only when a position ALREADY OPEN closes green enough to bring the day back above the cap, or at local midnight. It is the cap that means "something went wrong today", not "the book is full".[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [warning] Trading blocked by the portfolio-risk cap: 282 order(s) refused across 10 symbol(s) in the last 30 minutes by risk.maxPortfolioRisk. Newest: Portfolio at risk 18.1% exceeds risk.maxPortfolioRisk 15% — #152730169965 AMZN This CLEARS ITSELF as positions close or their stops tighten — it is a capacity ceiling, not a fault. No action unless the figure keeps rising.[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [critical] Trading blocked by the daily-loss cap: 440 order(s) refused across 13 symbol(s) in the last 30 minutes by risk.maxDailyLoss. Newest: Daily loss $178.02 exceeds risk.maxDailyLoss ($100) ⚠️ This does NOT clear by trading out of it — opening a position is the very thing it blocks. It clears only when a position ALREADY OPEN closes green enough to bring the day back above the cap, or at local midnight. It is the cap that means "something went wrong today", not "the book is full".[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [warning] Trading blocked by the portfolio-risk cap: 282 order(s) refused across 10 symbol(s) in the last 30 minutes by risk.maxPortfolioRisk. Newest: Portfolio at risk … This CLEARS ITSELF as positions close or their stops tighten — it is a capacity ceiling, not a fault. No action unless the figure keeps rising.[39m
+PASS src/modules/automation/stop-guardian-directive-silence.spec.ts
+PASS src/modules/providers/adapters/mt5.adapter.spec.ts
+PASS src/modules/trading/weekend-defense.service.spec.ts
+PASS src/modules/automation/exhaustion-observer.spec.ts
+PASS src/modules/scoring/outcome-tracker-dedup.spec.ts
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:39 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mMT5 bridge [broker default] GET /positions FAILED: refused: connection refused [body=(no body)][39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 order [broker 2]: buy EURUSD ×0.1 sl=null tp=null [tripped=false errors=0][39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:39 [33m   WARN[39m [38;5;3m[Mt5Adapter] [39m[33mRefusing to send BTC to MT5: the route targets broker 0 (binance), which is not an active MT5 bridge (active: 2, 3); the route's brokerSymbol is the BARE ticker 'BTC' — MT5 resolves names fuzzily and 'BTC' matches a different instrument (measured: 'BTC' → Nasdaq\ETF\BTC, ~$35.86). A symbol may only travel a route whose broker is an active MT5 bridge and whose brokerSymbol is the broker's real symbol (e.g. BTCUSD) — until the crypto execution route is decided and verified, crypto stays score-only (#903).[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[Mt5Adapter] [39m[32mMT5 order [broker 3]: buy XAUUSD ×0.01 sl=null tp=null [tripped=false errors=0][39m
+PASS src/modules/alerts/alert-trigger.service.spec.ts
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [critical] MT5 Clock-Offset Telemetry Missing: MetaQuotes-Demo: /health reports no serverUtcOffsetSeconds, so the bridge is stamping broker SERVER time as UTC again (pre-#750 build). Timestamps will run ~3h ahead and the market-status gate will fail open. Redeploy scripts/mt5-bridge/mt5_bridge_v2.py.[39m
+[32m[Nest] 22380  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[AlertTriggerService] [39m[32mALERT [high] MT5 Clock-Offset Implausible: Measured server-clock offset beyond ±14h: MetaQuotes-Demo 20.00h. Every MT5-sourced timestamp is being shifted by a suspect offset — check GET :5000/health.[39m
+PASS src/modules/directives/implementations/stoch-rsi.directive.spec.ts
+PASS src/modules/providers/position-sync-account-backfill.spec.ts
+PASS src/modules/directives/implementations/sigma-score.directive.spec.ts
+PASS src/modules/trading/trade-recorder.service.spec.ts
+[32m[Nest] 11504  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 11504  - [39m09/10/2026, 23:05:39 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] GER40: booking -204.00 of -204.00 (sole-owner, share 1.0000, 1 row(s) on this position)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade orphan-1 (GER40) exit=23500 PnL=-204.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade GER40 (orphan-1, ticket 89649760) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 0 closed, 1 stranded trade row(s) reaped[39m
+PASS src/modules/alerts/alert-bridge-name.spec.ts
+PASS src/modules/trading/execution-feasibility.service.spec.ts
+PASS src/modules/providers/position-sync-ticketed-reap.spec.ts
+PASS src/modules/signals/signal-envelope-gate-reconciliation.spec.ts
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade phantom-zero (US500) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade US500 (phantom-zero, ticket 92271505) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 0 closed, 1 stranded trade row(s) reaped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: ticket 152690940846 is an ORDER id written before #1014 — resolved to position 152690675067 (3 deals) so the close can be priced[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] XAUUSD: booking 10.00 of 40.00 (volume-split, share 0.2500, 1 row(s) on this position)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade order-ticketed (XAUUSD) exit=4157.11 PnL=10.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade XAUUSD (order-ticketed, ticket 152690940846) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 0 closed, 1 stranded trade row(s) reaped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32mCreated Trade for externally-opened mt5 position EURUSD (152654644455)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 1 created, 0 closed, 0 stranded trade row(s) reaped[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Non-authoritative position snapshot — closure detection skipped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade x (X) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade GER40 (o1, ticket 89649760) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade x (X) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade VIX (o2, ticket 89657501) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade x (X) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade XAUUSD (o3, ticket 152646338241) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade x (X) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade VIX (o4, ticket 90555750) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade x (X) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade VIX (o5, ticket 90563535) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 0 closed, 5 stranded trade row(s) reaped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade orphan-vix (VIX) exit=null PnL=0.00 why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Finalised abandoned Trade VIX (orphan-vix, ticket 90555750) — ticketed but absent from the broker snapshot; exit taken from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 1 upserted, 0 created, 0 closed, 1 stranded trade row(s) reaped[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Reaped stranded open Trade USDCAD (phantom) — unticketed and absent from broker snapshot[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 0 closed, 1 stranded trade row(s) reaped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] repair re-derivation — GER40 ticket=89649760: deals=0 byPosition=0 candidates=0 exitDeals=0 dealReason=unset comment=null derived=broker:unknown existing=null[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade repair-1 (GER40) exit=null why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Repaired closed Trade GER40 (repair-1, ticket 89649760) — was finalised with no computable P&L; re-priced from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] P&L repair pass: examined 1, repaired 1, not repairable 0[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] GER40: booking -204.00 of -204.00 (sole-owner, share 1.0000, 1 row(s) on this position)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] repair re-derivation — GER40 ticket=89649760: deals=2 byPosition=2 candidates=2 exitDeals=1 dealReason=4 comment="[sl 23500]" derived=broker:sl existing=broker:unknown[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade rederive-1 (GER40) exit=23500 PnL=-204.00 why=broker:sl[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Repaired closed Trade GER40 (rederive-1, ticket 89649760) — was finalised with no computable P&L; re-priced from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] P&L repair pass: examined 1, repaired 1, not repairable 0[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] repair re-derivation — XAUUSD ticket=152733639383: deals=0 byPosition=0 candidates=0 exitDeals=0 dealReason=unset comment=null derived=broker:unknown existing=broker:unknown[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade window-drop (XAUUSD) exit=null why=broker:unknown[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Repaired closed Trade XAUUSD (window-drop, ticket 152733639383) — was finalised with no computable P&L; re-priced from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] P&L repair pass: examined 1, repaired 1, not repairable 0[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade t-noticket (EURUSD) exit=1.1 PnL=0.00 why=broker:unknown[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Position sync: 0 upserted, 0 created, 1 closed, 0 stranded trade row(s) reaped[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] GER40: booking -204.00 of -204.00 (sole-owner, share 1.0000, 1 row(s) on this position)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] repair re-derivation — GER40 ticket=89649760: deals=1 byPosition=1 candidates=1 exitDeals=1 dealReason=4 comment="[sl 23500]" derived=broker:sl existing=system:time-stop[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] Closed trade keep-1 (GER40) exit=23500 PnL=-204.00 why=system:time-stop[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[PositionSyncService] [39m[33m[mt5] Repaired closed Trade GER40 (keep-1, ticket 89649760) — was finalised with no computable P&L; re-priced from deal history[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[PositionSyncService] [39m[32m[mt5] P&L repair pass: examined 1, repaired 1, not repairable 0[39m
+PASS src/modules/automation/protocol-runner-cadence.spec.ts
+PASS src/modules/symbols/symbols-position-freshness.spec.ts
+PASS src/modules/scoring/strategy-registry.service.spec.ts
+PASS src/modules/scoring/mtf-bundle-contract.spec.ts
+PASS src/modules/directives/implementations/stop-directives.spec.ts
+PASS src/modules/providers/mt5/mt5-connection-manager.service.spec.ts
+PASS src/modules/directives/implementations/atr-dip.directive.spec.ts
+PASS src/modules/directives/directives.service.spec.ts
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: a (a)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: b (b)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: invalid (invalid)[39m
+[33m[Nest] 11700  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[DirectivesService] [39m[33mDirective invalid emitted invalid/out-of-range values; clamped at boundary[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: latest (latest)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: latest (latest)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: latest (latest)[39m
+[32m[Nest] 11700  - [39m09/10/2026, 23:05:40 [32m    LOG[39m [38;5;3m[DirectivesService] [39m[32mRegistered directive: counted (counted)[39m
+PASS src/modules/diversification/global-diversification-position-freshness.spec.ts
+PASS src/modules/scoring/directive-dedupe.spec.ts
+PASS src/modules/directives/implementations/market-entropy.directive.spec.ts
+PASS src/modules/scoring/weight-strategy-inert.spec.ts
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mProtocol test-protocol: directive "dup-directive" appears in multiple groups (group "risk") — skipping the duplicate so it is not double-counted. Fix the protocol config; ProtocolHealthService reports this as duplicate-directive.[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mProtocol test-protocol: directive "dup-directive" appears in multiple groups (group "sentiment") — skipping the duplicate so it is not double-counted. Fix the protocol config; ProtocolHealthService reports this as duplicate-directive.[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mProtocol test-protocol: directive "dup-directive" appears in multiple groups (group "risk") — skipping the duplicate so it is not double-counted. Fix the protocol config; ProtocolHealthService reports this as duplicate-directive.[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mProtocol test-protocol: directive "dup-directive" appears in multiple groups (group "risk2") — skipping the duplicate so it is not double-counted. Fix the protocol config; ProtocolHealthService reports this as duplicate-directive.[39m
+[33m[Nest] 5468  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+[33m[Nest] 15124  - [39m09/10/2026, 23:05:40 [33m   WARN[39m [38;5;3m[ProtocolGatingService] [39m[33mRarity computation failed: Cannot read properties of undefined (reading 'findMany')[39m
+PASS src/modules/signals/signal-queue-expiry.spec.ts
+PASS src/modules/scoring/edge-statistics.service.spec.ts
+PASS src/modules/directives/implementations/rsi-oversold.directive.spec.ts
+PASS src/modules/risk/risk.service.spec.ts
+PASS src/modules/directives/implementations/hurst-memory.directive.spec.ts
+PASS src/modules/trading/bot-performance.service.spec.ts
+PASS src/modules/trading/pyramid-policy.account-scope.spec.ts
+PASS src/modules/scoring/metastack-versioning-variant.spec.ts
+PASS src/modules/calendar/market-sessions.service.spec.ts
+PASS src/modules/directives/implementations/session-open-effect.directive.spec.ts
+PASS src/modules/directives/implementations/candle-pressure.directive.spec.ts
+PASS src/modules/directives/implementations/volume-confirmation.directive.spec.ts
+PASS src/modules/providers/mt5/mt5-symbol-router.service.spec.ts
+PASS src/modules/directives/implementations/market-structure-bos.directive.spec.ts
+PASS src/modules/scoring/score-history.tier.spec.ts
+PASS src/modules/directives/implementations/news-catalyst.directive.spec.ts
+PASS src/modules/directives/implementations/volatility-envelope.directive.spec.ts
+PASS src/modules/directives/implementations/market-memory-zones.directive.spec.ts
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5SymbolRouter] [39m[32mMt5SymbolRouter: 1 explicit route(s) cached[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:41 [33m   WARN[39m [38;5;3m[Mt5SymbolRouter] [39m[33mMt5SymbolRouter: could not load broker_symbol capability — capability stays UNKNOWN (never assumed tradeable) (Cannot read properties of undefined (reading 'findMany'))[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5SymbolRouter] [39m[32mMt5SymbolRouter: 1 explicit route(s) cached[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:41 [33m   WARN[39m [38;5;3m[Mt5SymbolRouter] [39m[33mMt5SymbolRouter: could not load broker_symbol capability — capability stays UNKNOWN (never assumed tradeable) (Cannot read properties of undefined (reading 'findMany'))[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5SymbolRouter] [39m[32mMt5SymbolRouter: 0 explicit route(s) cached[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:41 [33m   WARN[39m [38;5;3m[Mt5SymbolRouter] [39m[33mMt5SymbolRouter: could not load broker_symbol capability — capability stays UNKNOWN (never assumed tradeable) (Cannot read properties of undefined (reading 'findMany'))[39m
+[32m[Nest] 22328  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5SymbolRouter] [39m[32mMt5SymbolRouter: 0 explicit route(s) cached[39m
+[33m[Nest] 22328  - [39m09/10/2026, 23:05:41 [33m   WARN[39m [38;5;3m[Mt5SymbolRouter] [39m[33mMt5SymbolRouter: could not load broker_symbol capability — capability stays UNKNOWN (never assumed tradeable) (Cannot read properties of undefined (reading 'findMany'))[39m
+PASS src/common/utils/timeframe.spec.ts
+PASS src/modules/scoring/pnl-statistics.service.spec.ts
+PASS src/modules/trading/duplicate-guard.service.spec.ts
+PASS src/modules/directives/implementations/supertrend.directive.spec.ts
+PASS src/modules/directives/implementations/indicator-symmetry.spec.ts
+PASS src/modules/directives/implementations/liquidity-sweep.directive.spec.ts
+PASS src/modules/directives/implementations/session-timing-filter.directive.spec.ts
+PASS src/modules/directives/implementations/volume-boundary.directive.spec.ts
+PASS src/modules/directives/implementations/fair-value-gap.directive.spec.ts
+PASS src/modules/directives/implementations/pattern-density-sr.directive.spec.ts
+PASS src/modules/market-data/market-data.service.spec.ts
+PASS src/modules/trading/position-claimants.spec.ts
+PASS src/modules/symbols/symbol-hint-validity.spec.ts
+PASS src/modules/scoring/risk-gating-engine.service.spec.ts
+PASS src/modules/scoring/risk-unmeasured-gate.spec.ts
+PASS src/modules/directives/implementations/range-contraction.directive.spec.ts
+PASS src/modules/suitability/suitability.service.spec.ts
+PASS src/modules/symbols/symbol-protocol-authority.counts.spec.ts
+PASS src/modules/calendar/market-patterns.spec.ts
+PASS src/modules/providers/mt5/mt5-broker-health-credential.spec.ts
+PASS src/modules/directives/implementations/directive-floor-contracts.spec.ts
+PASS src/common/utils/signal-direction.spec.ts
+PASS src/modules/symbols/watchlist-identity.spec.ts
+[33m[Nest] 22380  - [39m09/10/2026, 23:05:41 [33m   WARN[39m [38;5;3m[SymbolProtocolAuthorityService] [39m[33msymbol-protocol authority (batch): source 'observed' failed: boom[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 29292  - [39m09/10/2026, 23:05:41 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+PASS src/modules/directives/implementations/macd-crossover.directive.spec.ts
+PASS src/modules/trading/bot-rules.spec.ts
+PASS src/modules/market-data/bar-refresh-alignment.spec.ts
+PASS src/common/alerts/data-staleness.spec.ts
+PASS src/modules/directives/directive-suitability.spec.ts
+PASS src/common/utils/building-bar-duplicate.spec.ts
+PASS src/common/trading/close-reason.spec.ts
+PASS src/modules/system/log-policy.spec.ts
+PASS src/modules/backtest/run-metrics.spec.ts
+PASS src/modules/directives/implementations/atr-trailing-stop.directive.spec.ts
+PASS src/modules/automation/automation-loop-decision-units.spec.ts
+PASS src/common/utils/position-pnl.spec.ts
+PASS src/modules/trading/session-window.spec.ts
+PASS src/modules/risk/position-intent.spec.ts
+PASS src/modules/trading/session-window-dst.spec.ts
+PASS src/common/utils/bar-future-stamp.spec.ts
+PASS src/common/settings/settings-seeder.spec.ts
+PASS src/modules/automation/exit-trigger.spec.ts
+PASS src/modules/trading/strategy-seed-session-declared.spec.ts
+PASS src/modules/directives/market-status.spec.ts
+PASS src/modules/scoring/adaptive-target.spec.ts
+PASS src/modules/calendar/pre-open-session.spec.ts
+PASS src/modules/signals/signal-envelope-closed-market-gate.spec.ts
+PASS src/common/settings/settings-family.spec.ts
+PASS src/common/trading/position-margin.spec.ts
+PASS src/common/trading/close-time.spec.ts
+PASS src/common/utils/bar-length-guard.spec.ts
+PASS src/common/trading/peak-equity.spec.ts
+PASS src/modules/trading/bot-window-state.spec.ts
+PASS src/modules/directives/market-status-timeframe.spec.ts
+PASS src/modules/scoring/directional-capacity-contract.spec.ts
+PASS src/common/utils/session-time.spec.ts
+PASS src/modules/providers/pnl-split.spec.ts
+PASS src/common/trading/quote-freshness.spec.ts
+PASS src/modules/directives/implementations/zigzag.spec.ts
+PASS src/modules/risk/risk-profile-rules.spec.ts
+PASS src/modules/risk/risk-drawdown.spec.ts
+PASS src/modules/scoring/score-units.spec.ts
+PASS src/modules/backtest/backtest-trade-clock.spec.ts
+PASS src/modules/providers/mt5-comment.util.spec.ts
+PASS src/common/alerts/pnl-alert.spec.ts
+PASS src/common/trading/pnl-population.spec.ts
+PASS src/modules/directives/utils/indicators.spec.ts
+PASS src/common/trading/peak.spec.ts
+PASS src/common/trading/drawdown.spec.ts
+PASS src/common/utils/import-bars-alignment.spec.ts (21.297 s)
+
+Test Suites: 180 passed, 180 total
+Tests:       1697 passed, 1697 total
+Snapshots:   0 total
+Time:        22.455 s, estimated 28 s
+✅ OK — no NEW undefined CSS tokens. 8505 var() references checked, 152 tokens defined, 0 pre-existing finding(s) baselined.
+[duplication] ✅ OK — 1924 duplicated block(s) across 156 pair(s), none new and none grown (allowance: 1975 across 157, scanned 1319 files)
+
+[arch-surfaces] reference 215 routes · page 215 routes · baselined drift 0
+[arch-surfaces] CONTRACT_REGISTER_LAST_UPDATED marker: 2026-09-30 (batch #24)
+   ℹ CONTRACT_REGISTER_LAST_UPDATED marker agrees (2026-09-30 (batch #24)); the trailing prose differs by -279 chars — expected, the page paraphrases.
+[arch-surfaces] ✅ OK — the two architecture surfaces agree on every fact that is meant to be identical.
+[docs-facts] ✅ OK — 8 fact(s) match docs/GENERATED-FACTS.md and docs/generated-facts.json
+  [tools-index] ✅ OK — 176 tools, ⚠️ 73 ORPHAN(S) — reachable from nothing, see docs/TOOLS-INDEX.md, rendering matches the filesystem.
+[pipeline-map] ✅ 550 file(s) scanned, map current.
+[settings-access] ✅ OK — no migrated env var is read (3 checked); 20 recorded raw settings-store access(es) in 9 file(s), none increased (globalSetting=13, appSetting=5, userPreferences=2)
+[qa-ids] 479 QA ids, all unique
+[qa-ids] 491 capability names, all unique
+
+[qa-ids] ✅ OK — no id or capability name is used twice
+
+  [decisions] ✅ 81 register rows all carry a guard status (🟢 26 · 🟡 37 · 🔴 18) · 36 well-formed DECISION marker(s)
+  [decisions] ✅ 2 settled subject(s) declared; no row names one without citing the row that settled it
+  [decisions] ⚠️  this checks WELL-FORMEDNESS and RE-OPEN only — it cannot know whether a decision was recorded at all.
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to .\node_modules\@prisma\client in 571ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to react to database changes in your app as they happen? Discover how with Pulse: https://pris.ly/tip-1-pulse
+
+
+> nest@0.123.0 build
+> tsc -p tsconfig.build.json
+
+   OK  Build succeeded.
+
+== Restarting the API
+   OK  API starting in the background (node dist/src/main.js, PID 29308).
+   OK  API healthy on http://localhost:3201 - /api/version answered.

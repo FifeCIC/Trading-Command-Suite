@@ -1,0 +1,432 @@
+
+> nest@0.122.0 build:api
+> pwsh -File ../scripts/build-api.ps1
+
+
+== Locating the API on port 3201
+   OK  Stopped API (PID 25924).
+   OK  Engine DLL released.
+
+== Building the API
+
+> nest@0.122.0 prebuild
+> node scripts/build-preflight.cjs && node scripts/validate-ticket-columns.cjs && node scripts/validate-protocol-directions.cjs && node scripts/validate-directive-group-kind.cjs && node scripts/validate-guardian-directive-ids.cjs && node scripts/validate-strategy-library-links.cjs && node scripts/validate-pipeline-contracts.cjs && node scripts/validate-threshold-sources.cjs && node scripts/validate-ab-inputs.cjs && node scripts/validate-close-attribution.cjs && node scripts/validate-manual-trade-gate.cjs && node ../scripts/validate-envelope-callers.cjs && node ../scripts/validate-readiness-verdict.cjs && node scripts/validate-timeframe-sources.cjs && node scripts/validate-timezone-sources.cjs && node scripts/validate-local-time-sources.cjs && node scripts/validate-retention-columns.cjs && node scripts/validate-archive-default-column.cjs && node scripts/validate-collation-consistency.cjs && node scripts/validate-seed-literals.cjs && node scripts/validate-protocol-slugs.cjs && node scripts/gen-schema-init.cjs --check && node scripts/validate-bot-rules.cjs && node scripts/validate-create-form-coverage.cjs && node scripts/validate-rule-enforcement.cjs && node scripts/validate-trailing-claims.cjs && node scripts/validate-signal-classification.cjs && node scripts/validate-signal-column-width.cjs && node scripts/validate-single-bridge-position-io.cjs && node ../scripts/validate-bridge-order-choke-point.cjs && node scripts/validate-risk-profile.cjs && node scripts/validate-fabricated-stats.cjs && node scripts/validate-profile-honesty.cjs && node ../scripts/validate-agent-docs.cjs && node ../scripts/validate-text-encoding.cjs && node ../scripts/validate-output-style-sync.cjs --report && node ../scripts/validate-roadmap-columns.cjs && node ../scripts/validate-notices.cjs && node --test ../src/core/notices/notices.test.js && node --test ../src/core/score-display.test.js && node --test ../src/core/trade-readiness.test.js && node --test ../src/core/tradeability.test.js && npx jest --silent src/common/trading/quote-freshness.spec.ts src/modules/trading/session-window.spec.ts src/modules/trading/strategy-seed-session-declared.spec.ts src/modules/automation/exit-trigger.spec.ts src/modules/automation/position-time-stop.integration.spec.ts src/modules/scoring/protocol-health.coverage.spec.ts src/modules/providers/mt5/mt5-broker-health-credential.spec.ts && node ../scripts/validate-css-tokens.cjs && node ../scripts/validate-duplication.cjs && node ../scripts/validate-arch-surfaces.cjs && node ../scripts/docs-facts.cjs --check && node ../scripts/tools-index.cjs --check && node ../scripts/generate-pipeline-map.cjs --check && node scripts/validate-settings-access.cjs && node ../scripts/validate-qa-ids.cjs && node ../scripts/validate-decisions.cjs && npx rimraf dist && npx prisma generate
+
+[build-preflight] ✅ Prisma engine DLL is free — safe to build.
+[ticket-columns] ✅ OK — no ticket field is declared as a 32-bit integer
+[validate-protocol-directions] Scanned 48 protocols, 431 directive refs, 161 directives with a known bias.
+[validate-protocol-directions] ✅ OK — no direction-contract conflicts.
+[gate-membership] parsed 48 protocols, 137 groups, 45 risk gates, 68 gate placements
+[gate-membership] ✅ OK — every risk-gate member is a declared gate
+
+[guardian-directive-ids] ✅ OK — all 4 guardian directive(s) registered (atr-trailing-stop, supertrend, chandelier-exit, wick-filter) · registry 109 directive(s)
+
+[strategy-library-links] ✓ 5 tcsProtocol link(s) resolve against 48 seeded protocol(s); 5 claimed-supported entr(ies) are linked (10 entr(ies) scanned)
+[pipeline-contracts] 28 invariants in the contracts doc; 0 whitelisted deviations
+[pipeline-contracts] four-page mirror coverage (QA is gated, these are reported):
+    Architecture   17/28 invariants named: INV-ADAPTIVE-TARGET-MONOTONIC, INV-ARCH-DOCS-1, INV-ARCH-DOCS-2, INV-BAR-ORDER, INV-BAR-WINDOW, INV-CANONICAL-LOADER, INV-GATE-FAILS-CLOSED, INV-GATE-MEMBERSHIP, INV-MTF-BUNDLE, INV-NO-FUTURE-ROWS, INV-NO-SYMBOL-GUESSING, INV-ONE-ROW-PER-RUN, INV-SCORE-MAGNITUDE, INV-SINGLE-CADENCE, INV-STABLE-DENOMINATOR, INV-UTC-TIMESTAMPS, INV-WATCHLIST-IDENTITY
+    Diagrams       2/28 invariants named: INV-NO-SYMBOL-GUESSING, INV-WATCHLIST-IDENTITY
+    CapabilityMap  0/28 invariants named
+[pipeline-contracts] ✅ OK — canonical mechanisms present, no banned patterns, invariants mirrored in QA
+
+
+Threshold source audit — one value, one owner
+
+OWNERS (the only declarations allowed to exist):
+  classification  nest/src/modules/scoring/protocol-gating.service.ts
+                  exports: ENTRY_THRESHOLD, STRONG_PCT, SIGNAL_THRESHOLDS
+  styleBars       nest/src/common/utils/style-thresholds.ts
+                  exports: STYLE_THRESHOLDS, BOT_BAR_DEFAULT, SIGNALS_GATE_DEFAULT, resolveStyleThreshold
+
+ℹ 2 legitimate owner declaration(s):
+  src/core/signal-utils.js:55 = 65  (The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) — percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.)
+  src/core/signal-utils.js:56 = 40  (The declared owner of the legacy 0-100 DISPLAY scale (65/40). It is deliberately NOT the ADR-011 percent scale (entry 6 / strong 13) — percentages are classified by thresholdGeometry() in src/core/score-display.js. Two scales, two owners, both named.)
+
+⚠ 74 in-range hardcoded bar(s) — second owners, will drift:
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:45  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:114  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:115  property = 20
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:128  property = 10
+  nest/src/modules/automation/ab-arms-can-differ.spec.ts:129  property = 20
+  nest/src/modules/automation/ab-attribution-rejected.spec.ts:72  property = 10
+  nest/src/modules/automation/ab-trade-authority.spec.ts:37  property = 10
+  nest/src/modules/automation/ab-trade-authority.spec.ts:58  property = 20
+  nest/src/modules/automation/automation-loop-queue-freshness.spec.ts:34  property = 0
+  nest/src/modules/automation/automation-loop.service.ts:819  property = 3
+  nest/src/modules/automation/automation-loop.service.ts:2279  nullish-default = 0
+  nest/src/modules/scoring/scoring-strategy-seed.ts:59  property = 12
+  nest/src/modules/scoring/scoring-strategy-seed.ts:70  property = 10
+  nest/src/modules/scoring/scoring-strategy-seed.ts:81  property = 7
+  nest/src/modules/scoring/scoring-strategy-seed.ts:89  property = 12
+  nest/src/modules/scoring/strategy-registry.service.spec.ts:19  property = 8
+  nest/src/modules/scoring/strategy-registry.service.spec.ts:133  property = 9
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:59  property = 7
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:82  property = 7
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:92  property = 25
+  nest/src/modules/signals/signal-envelope-gate-reconciliation.spec.ts:103  property = 0
+  nest/src/modules/signals/signal-envelope.service.ts:1080  nullish-default = 0
+  nest/src/modules/trading/bot-summary-mapping.spec.ts:86  property = 10
+  nest/src/modules/trading/strategy-seed-convergence.spec.ts:32  property = 9
+  nest/src/modules/trading/strategy-seed-convergence.spec.ts:103  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:137  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:156  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:173  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:202  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:226  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:262  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:283  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:313  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:343  property = 8
+  nest/src/modules/trading/strategy-seed-data.ts:367  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:385  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:422  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:467  property = 0
+  nest/src/modules/trading/strategy-seed-data.ts:522  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:540  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:558  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:576  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:598  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:616  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:638  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:656  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:674  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:694  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:712  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:745  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:763  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:785  property = 9
+  nest/src/modules/trading/strategy-seed-data.ts:827  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:885  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:903  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:921  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:939  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:957  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:975  property = 10
+  nest/src/modules/trading/strategy-seed-data.ts:993  property = 10
+  nest/src/modules/trading/trading-strategy-pair.spec.ts:29  property = 10
+  nest/src/modules/trading/trading-strategy-pair.spec.ts:33  property = 10
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:56  property = 9
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:105  property = 20
+  nest/src/modules/trading/trading-strategy.activation-gate.spec.ts:113  property = 7
+  src/components/MetaStackPipeline.jsx:329  or-default = 3
+  src/core/translators/focused-translator.js:134  or-default = 3
+  src/core/translators/focused-translator.js:134  or-default-coerced = 3
+  src/pages/MetaStackExplorerPage.jsx:507  or-default = 0
+  src/pages/MetaStackExplorerPage.jsx:507  or-default = 0
+  src/pages/MetaStackExplorerPage.jsx:513  or-default = 0
+  nest/prisma/schema.prisma:1490  prisma-default = 10
+  nest/prisma/schema.prisma:1680  prisma-default = 10
+  nest/prisma/schema.prisma:1810  prisma-default = 10
+
+✅ OK — every threshold has exactly one owner and every consumer imports it.
+
+✅ validate-ab-inputs: A/B sources its mode from the bot and its cadence from the protocol (549 files scanned)
+✅ Close attribution — every closeReason writer routes through the parser (4 declared exceptions).
+[manual-trade-gate] 6 exempt path(s):
+  · modules/automation/ab-test.service.ts — A/B side dispatch — gate wiring scheduled with #929 (file mid-work by another agent)
+  · modules/paper-trading/paper-trading.controller.ts — paper trading — records a simulated fill; no broker order is placed
+  · modules/portfolio/trading212-portfolio.controller.ts — T212 portfolio buy/sell — portfolio operations, not signal-driven trading
+  · modules/providers/mt5.controller.ts — FINDING: raw MT5 order endpoint — NOT gated (named in #945 close)
+  · modules/scoring/speed-scan.controller.ts — FINDING: speed-scan direct order path — NOT gated (named in #945 close)
+  · modules/trading/mt5-trading.controller.ts — controller passthrough to Mt5TradingService — the broker layer, not a signal path
+[manual-trade-gate] ✅ OK — every signal-driven order path runs assessGlobalRiskLimits()
+[envelope-callers] ✅ OK — every /api/signals/envelope caller passes a protocol
+[readiness-verdict] ✅ OK — readiness is not asserted from `preTradeReady` alone
+
+Timeframe / cadence axis — one duration table, or it drifts
+
+OWNER: nest/src/common/utils/timeframe.ts  ->  barLengthMs()
+       (ADR-014: probe and writers share ONE definition)
+
+Standalone copies (allowed to exist, but must AGREE):
+  nest/scripts/contract-probe.cjs
+     agrees with owner on 8 cadences
+
+Frontend TIMEFRAMES arrays: 15
+     6  lowercase (canonical)
+     4  other
+     3  UPPERCASE (1M/5M/1H)
+     2  MT5-style (M5/H1/D1)
+
+   ⚠️  More than one convention. Case matters: `barLengthMs("1M")` falls back to
+       ONE DAY (case-sensitive map) while a `/i` parser reads ONE MINUTE. Do not pass
+       an uppercase label into a duration path — pass the canonical lowercase value.
+
+✅ OK — one canonical cadence table; every other site imports or demonstrably agrees.
+
+
+Timezone axis — one UTC↔local conversion, and DST resolved not approximated
+
+OWNER: nest/src/common/utils/session-time.ts
+       exports: zoneOffsetMs, minutesInZone, zonedWallClockInstant, minutesFromOpen
+
+✅ OK — no hand-rolled timezone conversions; DST is resolved by the owner.
+
+Local-time sources in SQL — checked 589 file(s) under nest/src, nest/prisma
+
+✅ OK — every SQL clock reference is UTC, and no DDL default uses the local clock.
+Retention columns — intrinsic only, one owner
+
+  retention date columns checked: 11/11
+  files checked for a duplicated map: 3
+  retention columns checked for a usable index: 11/11
+
+✅ OK — every retention bound uses a write-time column, and the map has one owner.
+[validate-archive-default-column] OK - the archive endpoint has ONE owner of the
+   prune column: retention.config.ts. A request omitting dateCol resolves to
+   directiveoutcome.createdAt, NOT the derived 'predictedAt'.
+   tables checked: 11; day counts derived for all of them
+[validate-collation-consistency] scanned 888 file(s), 152 CREATE TABLE statement(s), 22 InnoDB, 22 explicit COLLATE declaration(s)
+   majority collation: utf8mb4_unicode_ci
+
+   ⚠️ 26 stale COLLATE pin(s) to a non-majority collation.
+      These still WORK (MySQL coerces) but they now name a collation the schema
+      no longer uses, so the comment beside them is probably out of date too.
+        nest/src/modules/scoring/protocol-health.service.ts:~263 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~263 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~266 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~266 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~269 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~269 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~271 pins utf8mb4_0900_ai_ci
+        nest/src/modules/scoring/protocol-health.service.ts:~271 pins utf8mb4_0900_ai_ci
+        … +18 more
+      NOT a failure — removing a pin changes query semantics and is a decision.
+
+✅ OK — no DDL declares a divergent collation, and every CREATE TABLE is explicit
+   about its collation rather than inheriting a server default that varies by
+   MySQL major version. The split cannot return through a reinstall.
+[seed-literals] ✅ OK — 14 seed file(s) scanned, no invented default literal.
+[protocol-slugs] ✅ OK — 48 seed key(s), all slugs (1 documented baseline).
+
+✅ schema-init.sql is current.
+
+[bot-rules] ✅ OK — columns=41 declared=36 display-only=13 live=14 legacy-only=5 none=4
+[bot-rules]   note: static check. It proves every column has a declared owner, NOT that a rule fires.
+[create-form-coverage] 25 submitted · 24 annotated · 36 declared
+   ℹ 25 submitted field(s), 24 annotated, 36 declared.
+[create-form-coverage] ✅ OK — every field the form submits carries its enforcement status.
+  [rule-enforcement] ✅ 36 declared rule(s); 13 guardian mechanism(s); 5 column(s) claim the guardian and every one is declared by exactly one mechanism
+  [rule-enforcement] ⚠️  this checks the two DECLARATIONS agree — it cannot prove the code reads the column it lists.
+✅ Trailing claims — 931 source file(s), no announcement without a mechanism.
+[signal-classification] ✅ OK — no prefix or substring test on a signal class
+[signal-column-width] ✅ OK — every signal column can hold STRONG_SELL (11 chars)
+[single-bridge-position-io] ✅ OK — position I/O is addressed per broker
+✅ bridge order choke point (#1035) — every order passes one gate
+   C:\wamp64\www\trading-command-suite\scripts\mt5-bridge\mt5_bridge_v2.py: 1 real mt5.order_send(), inside order_send_checked()
+   close stamping (#916 / R46): every close request carries `TCS:<origin>`; every nest /close call site names one
+[risk-profile] ✅ OK — keys=6 declared=7 live=5 legacy-only=1 none=1
+[risk-profile]   note: static check. It proves every cap is declared and operator-movable, NOT that the value is right.
+
+[fabricated-stats] ✅ OK — no non-zero typed stat literal and no typed provider list in backend source.
+
+[profile-honesty] 12 getProfile() implementation(s) · 10 adapter registration(s)
+[profile-honesty] ✅ OK — every advertised profile is looked up, never typed.
+[agent-docs] scanned 19 instruction file(s)
+
+[agent-docs] ⚠ 3 warning(s) — advisory, does not fail the build:
+
+  ⚠ [dangling-reference] agent-environment.instructions.md cites `dist/src/main.js` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+  ⚠ [dangling-reference] AGENT-ATTENTION.md cites `dist/src/main.js` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+  ⚠ [dangling-reference] AGENT-ATTENTION.md cites `src/pages/AutomationDashboardPage.jsx` — no file with that name exists anywhere in the repo
+      → A cited path whose file is gone for real means the reasoning it pointed at is unfindable — which is how four handoffs were lost on 2026-09-11. Either restore the file, or update the citation to where the content actually lives.
+
+[agent-docs] ✅ OK — applyTo present, ONE handoff directory (no retired citations), no dangling citations, no duplicated or misnumbered rules, no doc task lists
+
+[text-encoding] scanned 1628 file(s) in 13 location(s)
+
+[text-encoding] ✅ OK — no mojibake signatures in source, seed or documentation files
+
+[style-sync] ✅ OK — mirror matches the portable source (9324 chars)
+[roadmap-columns] declared 5 column(s), snapshot matches
+[roadmap-columns] order: discussion , next-sprint , phase-2 , phase-3 , phase-4
+
+[roadmap-columns] ✅ OK — declared column order and generated snapshot agree
+
+[notices] 52 registered code(s), 1384 file(s) scanned, 8 declared as backend-emittable, locales: de:17 (+30 fields in English), UI: 12 raw error render(s) left in 6 file(s)
+[notices] ℹ registered but not referenced yet (callers not migrated): TCS-SCORE-001, TCS-SYS-001
+
+[notices] ✅ OK — every code is well-formed and every referenced code is registered
+[notices]    behaviour checks (rendering, locales): npm run test:notices
+
+✔ the catalogue is well formed (1.5578ms)
+✔ every code renders a title, a message and a non-empty line (1.4799ms)
+✔ no template leaks an unsubstituted placeholder when its params are supplied (0.9334ms)
+✔ an undeclared placeholder is left VISIBLE rather than blanked (anti-silence) (0.1538ms)
+✔ a failure with NO HTTP response never renders a template that needs a status (0.3949ms)
+✔ an unknown code is never blank and names itself (0.1467ms)
+✔ the SAME code renders in every locale — only the wording differs (0.1694ms)
+✔ a partial locale falls back PER FIELD, not per code (0.1882ms)
+✔ an unrecognised locale degrades to English instead of blanking every message (0.2673ms)
+✔ the German bundle only names registered codes, and its placeholders are declared (0.319ms)
+✔ listNotices() exposes the whole catalogue to tooling (0.2205ms)
+✔ a trade refusal renders the SERVER code, not a hardcoded one (0.2278ms)
+✔ server params are passed through, so richer codes render real values (0.2114ms)
+✔ a refusal with NO server code falls back, and keeps the server wording (0.1654ms)
+✔ a refusal with an empty result still renders a non-blank notice (anti-silence) (0.136ms)
+✔ bridge-emitted cap notices name the control that ACTUALLY binds (#901) (0.2285ms)
+✔ no OTHER notice sends the user to a control that no longer controls anything (0.3324ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 140.1995
+✔ closed market is PAUSED even when the data is old — never STALE (#774) (1.7099ms)
+✔ open + behind is STALE, and it is the ONE state that asks for attention (0.2738ms)
+✔ freshness is the SERVER’s flag — an old asOf alone must not produce STALE (0.301ms)
+✔ an absent stale flag is not a claim of staleness (0.1465ms)
+✔ the four states are mutually exclusive, and the labels never collide (1.5795ms)
+✔ legacy rows with no marketStatus stay Live — unchanged behaviour (0.1266ms)
+✔ the tooltip surfaces the SERVER’s reason, and names the alarming state plainly (0.2383ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 224.6745
+✔ #935 — gate-ready but execution-blocked is NOT ready (the BTC case) (1.5712ms)
+✔ gate-ready AND execution-clear is ready (0.1342ms)
+✔ the pre-trade gate alone can block (0.1223ms)
+✔ both sources are reported, gate reasons first (0.1516ms)
+✔ an ABSENT assessment is "unknown", never "ready" (0.4729ms)
+✔ a missing envelope is "unknown" and does not throw (0.1461ms)
+✔ `preTradeReady` is compared strictly, so a truthy non-true is not ready (1.7104ms)
+✔ a blocker with only a fallback field still produces a reason (0.2772ms)
+✔ a null executionBlockers is honoured as "no blockers", not as unknown (0.1933ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 134.6269
+✔ #911 — no reading means CANNOT JUDGE, not "refused" (3.4516ms)
+✔ #911 — undefined signalPct behaves like null (0.2518ms)
+✔ #911 — a BUY that nothing listens to is a FINDING, not silence (0.2474ms)
+✔ #911 — a bot on a DIFFERENT protocol is not a subscriber (0.2136ms)
+✔ #911 — an INACTIVE bot is not a subscriber (it cannot trade) (0.1435ms)
+✔ #911 — the reported case: 8% reading against a 10% bar is REFUSED with a shortfall (0.2733ms)
+✔ #911 — clearing ONE bot is enough to be actionable, even if others refuse (0.1713ms)
+✔ #911 — BOUNDARY: a reading exactly equal to the bar CLEARS (inclusive) (0.1369ms)
+✔ #911 — the shortfall is measured against the LOWEST bar, the one worth naming (0.2234ms)
+✔ #911 — a bot with no declared bar is neither clearing nor blocking (0.2053ms)
+✔ family matching: the -v1 card matches the timeframe-variant bot (0.1333ms)
+✔ family matching does NOT join unrelated protocols (0.1449ms)
+✔ the subscription list is ordered by bar, lowest first (0.9585ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.7586
+PASS src/common/trading/quote-freshness.spec.ts
+PASS src/modules/trading/strategy-seed-session-declared.spec.ts
+PASS src/modules/automation/exit-trigger.spec.ts
+PASS src/modules/trading/session-window.spec.ts
+PASS src/modules/providers/mt5/mt5-broker-health-credential.spec.ts
+[32m[Nest] 16788  - [39m09/10/2026, 18:33:56 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+[32m[Nest] 16788  - [39m09/10/2026, 18:33:56 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+[32m[Nest] 16788  - [39m09/10/2026, 18:33:56 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+[32m[Nest] 16788  - [39m09/10/2026, 18:33:56 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 2 instance(s) — #2→http://localhost:5000, #3→http://localhost:5001[39m
+[32m[Nest] 16788  - [39m09/10/2026, 18:33:56 [32m    LOG[39m [38;5;3m[Mt5ConnectionManager] [39m[32mMulti-broker MT5: 1 instance(s) — #2→http://localhost:5000[39m
+PASS src/modules/scoring/protocol-health.coverage.spec.ts
+[31m[Nest] 3480  - [39m09/10/2026, 18:33:57 [31m  ERROR[39m [38;5;3m[PositionTimeStopService] [39m[31mTime-stop close failed for AUDUSD#10: bridge refused[39m
+PASS src/modules/automation/position-time-stop.integration.spec.ts
+
+Test Suites: 7 passed, 7 total
+Tests:       102 passed, 102 total
+Snapshots:   0 total
+Time:        4.974 s
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#111 held 52h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#111(max_hold)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — EURJPY#700 past exit boundary 0min (held 2h)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): EURJPY#700(exit_boundary)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — EURJPY#701(no_limit_configured)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — EURJPY#702(exit_boundary_invalid:exitBeforeUtc "13:3" is not HH:MM in UTC — the boundary could not be read, so NO exit is triggered by it. Fix the value; a typo must not close a position.)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — EURJPY#703 past exit boundary 0min (held 2h)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED EURJPY#703 after 2h via exit_boundary (exit boundary 0min UTC), pnl 3.00 — slot freed[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) evaluated, 1 attributed, 1 inside limit, 0 without a configured limit, 0 with an exit boundary, 0 with an UNREADABLE one — nothing to close.[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) evaluated, 1 attributed, 1 inside limit, 0 without a configured limit, 0 with an exit boundary, 0 with an UNREADABLE one — nothing to close.[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#444(no_limit_configured)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#555 held 99h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#555(max_hold)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 2 position(s) past their limit — AUDUSD#1 held 52h/12h, AUDUSD#2 held 20h/12h[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#1 after 52h via max_hold (limit 12h), pnl -4.00 — slot freed[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#2 after 20h via max_hold (limit 12h), pnl -1.00 — slot freed[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 2 position(s) past their limit — AUDUSD#10 held 50h/12h, AUDUSD#20 held 40h/12h[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#20 after 40h via max_hold (limit 12h), pnl 0.00 — slot freed[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#42 held 52h/12h[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED AUDUSD#42 after 52h via max_hold (limit 12h), pnl 1.23 — slot freed[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#42 held 52h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#42(max_hold)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment did not disambiguate — skipping rather than guessing which hold limit applies.[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — XAUUSD#666(ambiguous_multi_strategy)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — XAUUSD#777 held 200h/4h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): XAUUSD#777(max_hold)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#888(no_usable_open_time)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#999 held 52h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#999(max_hold)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#1000 held 30h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#1000(max_hold)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — XAUUSD#1 held 9h/4h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): XAUUSD#1(max_hold)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — XAUUSD#152646482933 held 40h/12h[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop CLOSED XAUUSD#152646482933 after 40h via max_hold (limit 12h), pnl -17.50 — slot freed[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#12(manual_trade)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment 'A Bot That Was Renamed' did not match any of them — skipping rather than guessing.[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — XAUUSD#13(comment_no_match_multi_strategy)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment did not disambiguate — skipping rather than guessing which hold limit applies.[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — XAUUSD#15(ambiguous_multi_strategy)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: no position is past its limit, but 1 could not be evaluated — AUDUSD#16(no_limit_configured)[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#4 held 40h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#4(max_hold)[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop: XAUUSD is traded by 2 strategies and the order comment did not disambiguate — skipping rather than guessing which hold limit applies.[39m
+[32m[Nest] 3480  - [39m09/10/2026, 18:33:57 [32m    LOG[39m [38;5;3m[PositionTimeStopService] [39m[32mTime-stop: 1 position(s) past their limit — AUDUSD#5 held 30h/12h[39m
+[33m[Nest] 3480  - [39m09/10/2026, 18:33:57 [33m   WARN[39m [38;5;3m[PositionTimeStopService] [39m[33mTime-stop DRY RUN — would close 1 position(s): AUDUSD#5(max_hold)[39m
+✅ OK — no NEW undefined CSS tokens. 8504 var() references checked, 152 tokens defined, 0 pre-existing finding(s) baselined.
+[duplication] ✅ OK — 1968 duplicated block(s) across 154 pair(s), none new and none grown (allowance: 1968 across 154, scanned 1317 files)
+
+[arch-surfaces] reference 215 routes · page 215 routes · baselined drift 0
+[arch-surfaces] CONTRACT_REGISTER_LAST_UPDATED marker: 2026-09-30 (batch #24)
+   ℹ CONTRACT_REGISTER_LAST_UPDATED marker agrees (2026-09-30 (batch #24)); the trailing prose differs by -279 chars — expected, the page paraphrases.
+[arch-surfaces] ✅ OK — the two architecture surfaces agree on every fact that is meant to be identical.
+[docs-facts] ✅ OK — 8 fact(s) match docs/GENERATED-FACTS.md and docs/generated-facts.json
+  [tools-index] ✅ OK — 176 tools, ⚠️ 73 ORPHAN(S) — reachable from nothing, see docs/TOOLS-INDEX.md, rendering matches the filesystem.
+[pipeline-map] ✅ 549 file(s) scanned, map current.
+[settings-access] ✅ OK — no migrated env var is read (3 checked); 20 recorded raw settings-store access(es) in 9 file(s), none increased (globalSetting=13, appSetting=5, userPreferences=2)
+[qa-ids] 478 QA ids, all unique
+[qa-ids] 491 capability names, all unique
+
+[qa-ids] ✅ OK — no id or capability name is used twice
+
+  [decisions] ✅ 78 register rows all carry a guard status (🟢 26 · 🟡 36 · 🔴 16) · 33 well-formed DECISION marker(s)
+  [decisions] ✅ 2 settled subject(s) declared; no row names one without citing the row that settled it
+  [decisions] ⚠️  this checks WELL-FORMEDNESS and RE-OPEN only — it cannot know whether a decision was recorded at all.
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to .\node_modules\@prisma\client in 693ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+
+
+> nest@0.122.0 build
+> tsc -p tsconfig.build.json
+
+   OK  Build succeeded.
+
+== Restarting the API
+   OK  API starting in the background (node dist/src/main.js, PID 27384).
+   OK  API healthy on http://localhost:3201 - /api/version answered.

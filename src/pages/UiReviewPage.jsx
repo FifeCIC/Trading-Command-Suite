@@ -327,15 +327,21 @@ export default function UiReviewPage() {
             >
               Old Applied?
             </th>
+            {/* ⚠️ RENAMED 2026-10-10 at the owner's request — and the column's PURPOSE changed with the
+                label, it is not a cosmetic rename: *"the field in the column will be used to note which
+                parts of the page I think are strong."* It previously held round-2 change suggestions.
+                ⚠️ The STORED FIELD is still `noteNew` and existing values are untouched — the header
+                changed, the data did not. Do not "tidy" the key to match the header: that would orphan
+                every note already written here. */}
             <th
               scope="col"
-              title="New comments, for the next round. Stored separately (`noteNew`) so the first round survives as the baseline."
+              title="Which parts of this page do you consider STRONG? Stored in `noteNew` — the field name is historical; the data did not change when the header did."
             >
-              New Changes I suggest
+              Preferred Elements
             </th>
             <th
               scope="col"
-              title="Agent-reported: has the second round been applied? ✅ applied · ❌ outstanding · — not assessed yet. Set via the API."
+              title="Agent-reported: has the agent acted on the preferred-element notes? ✅ applied · ❌ outstanding · — not assessed yet (which is NOT the same as outstanding). Set via the API."
             >
               New Applied?
             </th>
@@ -448,9 +454,9 @@ export default function UiReviewPage() {
                     <input
                       type="text"
                       className="uir-note uir-note--new"
-                      aria-label={`New suggested changes for ${r.label}`}
+                      aria-label={`Preferred elements for ${r.label} — the parts of this page you consider strong`}
                       value={e.noteNew || ''}
-                      placeholder="next round"
+                      placeholder="strong parts"
                       onChange={(ev) => saveNoteDebounced(r.key, 'noteNew', ev.target.value)}
                     />
                   </td>
@@ -460,10 +466,10 @@ export default function UiReviewPage() {
                       className={`uir-applied uir-applied--${e.noteNewApplied === true ? 'done' : e.noteNewApplied === false ? 'outstanding' : 'unassessed'}`}
                       title={
                         e.noteNewApplied === true
-                          ? 'An agent reports the second round of comments has been applied'
+                          ? 'An agent reports the preferred-element notes have been acted on'
                           : e.noteNewApplied === false
-                            ? 'Assessed by an agent — this round is NOT fully applied'
-                            : 'Not assessed yet — no agent has reported on this round'
+                            ? 'Assessed by an agent — the preferred-element notes are NOT fully addressed'
+                            : 'Not assessed yet — no agent has reported on the preferred-element notes'
                       }
                     >
                       {e.noteNewApplied === true ? '✅ applied' : e.noteNewApplied === false ? '❌ outstanding' : '—'}

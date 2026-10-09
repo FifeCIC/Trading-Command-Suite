@@ -394,10 +394,12 @@ export default function MarketTape() {
   //
   // ⚠️ Field names verified against the live endpoint (2026-09-11). `/api/scoring/ranked`
   // returns `{ ranked: [...] }` — NOT `scores[]` or `rows[]` (both were wrong first time
-  // and produced a section that silently rendered nothing). A row carries `ticker`,
-  // `signal`, `score` and `maxPossibleScore`; there is NO precomputed percentage, so it
-  // is derived here. Shows the signal word AND the percentage: a bare percentage is not
-  // actionable without knowing which side it favours.
+  // and produced a section that silently rendered nothing). // #1090 (2026-10-10): a row
+  // carries its own percentage — `normalizedScore` (signalPct = signalRaw ÷ protocol
+  // capacity, the number ENTRY_THRESHOLD compares against). Do NOT re-derive `score/100`:
+  // the old derivation printed "106%" because `maxPossibleScore` was a flat 100 while real
+  // protocol capacities are 910–1295. Shows the signal word AND the percentage: a bare
+  // percentage is not actionable without knowing which side it favours.
   if (userPrefs.tapeScore && scoreQuery.data) {
     const d = scoreQuery.data;
     const row = Array.isArray(d) ? d[0] : (d.ranked?.[0] || d.scores?.[0] || d.rows?.[0] || null);
@@ -406,9 +408,8 @@ export default function MarketTape() {
       const sym = escapeHtml(symRaw);
       const sigRaw = String(row.signal || '').replace('STRONG_', '') || '—';
       const sig = escapeHtml(sigRaw);
-      const max = Number(row.maxPossibleScore) || 0;
-      const raw = Number(row.score);
-      const pct = Number.isFinite(raw) && max > 0 ? Math.round((raw / max) * 100) : null;
+      const pctNum = Number(row.normalizedScore);
+      const pct = Number.isFinite(pctNum) ? Math.round(pctNum) : null;
       const sigColor = sigRaw === 'BUY' ? 'var(--color-profit, #22c55e)'
         : sigRaw === 'SELL' ? 'var(--color-loss, #f87171)'
           : 'var(--ink-soft, #94a3b8)';

@@ -1493,6 +1493,20 @@ model TradingStrategy {
   slPct         Float?   @default(1.0)
   tpPct         Float?   @default(1.0)
   baseSize      Float?   @default(0.01)
+  // ── #843 (2026-10-10) — the SELECTABLE sizing model ──
+  //
+  // WHY: the backtester implemented four sizing models while the live loop sent `baseSize`
+  // unchanged, so a backtest could not describe the system it tested. Both paths now call
+  // `nest/src/modules/trading/position-sizing.ts`; these two columns say WHICH model a bot uses
+  // and what it risks.
+  //
+  // ⚠️ NULL = fixed-lot, which is the PRE-#843 BEHAVIOUR — no existing bot changes when this
+  // ships (`baseSize` continues to be sent unchanged). Migration is deliberate, per bot.
+  sizingModel   String?  @db.VarChar(20)  // fixedLot | fixedPercent | atrEqualRisk | kellyFull | kellyHalf
+  // Risk per trade as % of equity, for fixedPercent / atrEqualRisk. NULL = NOT CONFIGURED, and a
+  // sized model with no riskPct REFUSES visibly (TCS-TRADE-023) — there is deliberately no
+  // default, because a guessed risk fraction would trade a fiction.
+  sizingRiskPct Float?
   useRaritySizing Boolean @default(true)
   maxSize       Float?
   maxPositions  Int      @default(1)

@@ -50,6 +50,12 @@ function PatternChartWidget({ data, width = 500, height = 200 }) {
     const ohlc = chartToOHLC(data);
     const chart = createChart(containerRef.current, {
       width, height,
+      // ⚠️ AN EXPLICIT BAR SPACING (owner: *"the larger TradingView based chart shows very wide
+      // candles"*). Left unset, lightweight-charts fits the bars to the pane width — so a pattern of
+      // four candles in a 680px panel drew four enormous ones, which reads as a diagram rather than a
+      // chart. A fixed spacing keeps the candles candle-sized and leaves the empty space to the right,
+      // which is what a real chart does.
+      timeScale: { barSpacing: 9, rightOffset: 2 },
       layout: {
         background: { color: '#0f172a' },
         textColor: '#64748b',
@@ -93,7 +99,12 @@ function PatternChartWidget({ data, width = 500, height = 200 }) {
 
 // ── SVG Candle Chart Component (collapsed mini view) ────────────────────────
 function CandleChart({ data, width = 280, height = 90 }) {
-  const pad = { top: 4, right: 8, bottom: 16, left: 40 };
+  // ⚠️ THE GUTTER SCALES WITH THE CHART (owner report: *"The first image uses very thin lines and it
+  // looks dull"*). A fixed `pad.left: 40` is a QUARTER of the 160px the list renders this at — so 25%
+  // of a small chart was reserved for two price labels and the candles were squeezed into what was
+  // left. A fixed gutter cannot be right at both 160px and 680px; the label is fontSize 7 either way.
+  const small = width < 240;
+  const pad = { top: 4, right: 6, bottom: small ? 8 : 16, left: small ? 26 : 40 };
   const chartW = width - pad.left - pad.right;
   const chartH = height - pad.top - pad.bottom;
   const slotW = chartW / data.length;
@@ -108,17 +119,19 @@ function CandleChart({ data, width = 280, height = 90 }) {
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}
-      style={{ display: 'block', background: 'rgba(0,0,0,0.18)', borderRadius: '6px' }}>
+      style={{ display: 'block', background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: '6px' }}>
       {[0.25, 0.5, 0.75].map(frac => (
         <line key={`h-${frac}`} x1={pad.left} x2={width - pad.right}
           y1={pad.top + frac * chartH} y2={pad.top + frac * chartH}
-          stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+          stroke="rgba(255,255,255,0.10)" strokeWidth="0.5" />
       ))}
       <line x1={pad.left} x2={width - pad.right} y1={height - pad.bottom} y2={height - pad.bottom}
-        stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+        stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
       {data.map((c, i) => {
         const cx = pad.left + slotW * i + slotW / 2;
-        const bodyW = Math.max(slotW * 0.45, 4);
+        // ⚠️ 0.45 → 0.6, and a 5px floor. The body is the thing that reads as a candle; at 0.45 of a
+        // slot in a 160px chart they were a few pixels wide and read as hatch marks.
+        const bodyW = Math.max(slotW * 0.6, 5);
         const bodyTop = y(Math.max(c.bodyTop, c.bodyBottom));
         const bodyBot = y(Math.min(c.bodyTop, c.bodyBottom));
         const wickTop = y(c.wickTop);
@@ -130,18 +143,20 @@ function CandleChart({ data, width = 280, height = 90 }) {
         const opacity = c.faded ? 0.35 : 1;
         return (
           <g key={i} opacity={opacity}>
+            {/* ⚠️ 1px WICKS READ AS HAIRLINES at this size. The wick is half a candle; it needs enough
+                weight to be seen next to a 5px body. */}
             <line x1={cx} x2={cx} y1={wickTop} y2={wickBot}
-              stroke={fill} strokeWidth={c.highlighted ? 1.5 : 1} />
+              stroke={fill} strokeWidth={c.highlighted ? 2 : 1.6} />
             {Math.abs(bodyBot - bodyTop) < 1.5 ? (
               <line x1={cx - bodyW / 2} x2={cx + bodyW / 2} y1={bodyTop} y2={bodyTop}
-                stroke={fill} strokeWidth={c.highlighted ? 2 : 1.5} />
+                stroke={fill} strokeWidth={c.highlighted ? 2.5 : 2} />
             ) : (
-              <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={Math.max(bodyBot - bodyTop, 1)}
+              <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={Math.max(bodyBot - bodyTop, 2)}
                 fill={fill} rx={0.5} />
             )}
             {c.highlighted && (
               <rect x={cx - bodyW / 2 - 3} y={bodyTop - 2} width={bodyW + 6}
-                height={Math.max(bodyBot - bodyTop, 1) + 4}
+                height={Math.max(bodyBot - bodyTop, 2) + 4}
                 fill="none" stroke="#f59e0b" strokeWidth="1.2" rx="2" strokeDasharray="2,1" />
             )}
           </g>
@@ -283,7 +298,7 @@ export default function CandlePatternsGuidePage() {
                 background: 'transparent', color: '#e2e8f0', textAlign: 'left', fontFamily: 'inherit',
               }}>
                 <div style={{ flexShrink: 0 }}>
-                  <CandleChart data={p.chart} width={160} height={56} />
+                  <CandleChart data={p.chart} width={200} height={72} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

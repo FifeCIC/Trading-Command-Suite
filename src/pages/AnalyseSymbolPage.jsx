@@ -152,7 +152,10 @@ export default function AnalyseSymbolPage() {
               <div className="as-score-row">
                 <div className="as-score-main">
                   <span className="as-score-value">{symbolScore.score}</span>
-                  <span className="as-score-max">/ {symbolScore.maxPossibleScore} max</span>
+                  {/* #1090 — was "/ {maxPossibleScore} max": the ranked payload's maxPossibleScore is
+                      now null (it was a flat 100, so this printed "106 / 100 max"). The row's real
+                      percentage is normalizedScore (signalRaw ÷ protocol capacity). */}
+                  <span className="as-score-max">{Number.isFinite(Number(symbolScore.normalizedScore)) ? `${Number(symbolScore.normalizedScore).toFixed(1)}% of capacity` : 'composite score'}</span>
                 </div>
                 <span className={`as-signal as-signal--${symbolScore.signal}`}>
                   {symbolScore.signal?.toUpperCase()}

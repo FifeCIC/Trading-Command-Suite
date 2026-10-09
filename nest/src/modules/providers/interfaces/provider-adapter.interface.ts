@@ -73,6 +73,20 @@ export interface SymbolTradability {
   volumeMin: number | null;
   /** Maximum order volume in lots; `null` = unknown. */
   volumeMax: number | null;
+  /**
+   * Lot increment in lots; `null` = UNKNOWN (bridge older than 2026-10-10, or the field was not
+   * reported). A sized order CANNOT be made valid without it — the sizing path refuses visibly
+   * rather than sending an off-step order (#843).
+   */
+  volumeStep?: number | null;
+  /**
+   * Account-currency value of ONE `tickSize` price move on ONE lot (#843). `null` = unknown.
+   * `tickValue / tickSize` is the money risk of a 1.0 price move per lot — the conversion the
+   * live sizing path needs to turn a money-risk target into lots.
+   */
+  tickValue?: number | null;
+  /** Price increment the `tickValue` is quoted for; `null` = unknown. */
+  tickSize?: number | null;
 }
 
 export interface IProviderAdapter {
@@ -241,6 +255,17 @@ export interface IProviderAdapter {
 
   /** Fetch positions together with proof that an empty result is complete. */
   getPositionSnapshot?(): Promise<BrokerPositionSnapshot>;
+
+  /**
+   * The account ids a position snapshot from this adapter COVERS — one per routed broker it
+   * will ask, whether or not that broker holds anything.
+   *
+   * ⚠️ WHY (#1101): "which accounts does this snapshot cover" is NOT answerable from the payload —
+   * an empty routed broker contributes no rows, and inferring the sync scope from rows-present
+   * excluded exactly that broker from reconciliation (three hand-closed positions sat `open`
+   * for 20h+). Optional: an adapter that cannot answer keeps the previous one-account behaviour.
+   */
+  getQueriedAccountIds?(): string[];
 
   /**
    * Fetch account summary (balance, equity, margin).

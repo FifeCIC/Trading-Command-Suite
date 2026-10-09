@@ -70,6 +70,29 @@ export class SymbolsService {
   /** How long a source map is trusted before it is rebuilt. See `sourceCache`. */
   private static readonly SOURCE_TTL_MS = 10 * 60 * 1000;
 
+  // ── DECISION (2026-10-09, primary) ──
+  // WHAT:      Runtime symbol registration is a RECORD OF USER DATA and is deliberately NOT seeded.
+  //            It is written here, straight to the database, and a reinstall does not restore it.
+  // WHY:       `database-seed-discipline.instructions.md` states the rule — a direct DB write that is
+  //            not in a seeder is a change to ONE MACHINE. That rule exists so config does not vanish
+  //            silently. It does NOT mean this write belongs in a seed file: what a USER registers is
+  //            not the shipped catalogue, and putting user data in a repo seed would make one user's
+  //            registrations part of everyone's install. The catalogue that IS shipped is seeded
+  //            (`seed-symbol-onboarding.ts`) and the broker's own catalogue is synced into
+  //            `broker_symbol` (#958 — 12,373 offered, 218 onboarded). So the distinction is:
+  //            SHIPPED CATALOGUE = seed; WHAT A USER REGISTERS = a record.
+  //            ⚠️ The consequence must be VISIBLE, not silent: the overlay therefore tells the user
+  //            the registration is machine-local. Silence would be the defect — a symbol that exists
+  //            and then quietly does not is the same class as an unmarked settled decision.
+  //            ⚠️ This method writes a `symbol` row and NOTHING else — no `symbol_route`, no catalogue
+  //            link. Whether the ticker is tradeable is decided at routing time by what a broker CAN
+  //            do (register row 38), so nothing here may claim "it can be traded".
+  // INSTEAD OF: Writing registrations into a seeder, or a second import path.
+  // REVERSE BY: Adding an export/import route for registrations (export the rows, re-import after a
+  //            reinstall). That is a feature, not a fix, and needs its own decision.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 79
+  // GUARD:     none — a guard would have to assert the ABSENCE of a seed entry, which is a shape this
+  //            file cannot see.
   async create(dto: CreateSymbolDto): Promise<Symbol> {
     if (!this.prisma.isAvailable) {
       throw new Error(

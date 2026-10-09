@@ -90,6 +90,14 @@ import { planPreOpenSession, PRE_OPEN_SESSION } from '../calendar/pre-open-sessi
 // ⚠️ THE ONE alert write path (#981 scope 3). Both alert writers must go through this collapse;
 // inserting directly is how the alert table reached 12,865 undismissed rows.
 import { collapseOrCreateAlert } from '../../common/alerts/alert-collapse';
+// #843 — the ONE sizing implementation, shared with the backtester.
+import {
+  computeSizing,
+  applyVolumeConstraints,
+  valuePerPriceUnitPerLot,
+  SIZING_MODELS,
+  type SizingModel,
+} from '../trading/position-sizing';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -249,6 +257,22 @@ export interface ScoringStrategy {
 type TickDecisionScore =
   | { compositeRaw: number | null; compositePct?: never }
   | { compositePct: number | null; compositeRaw?: never };
+
+/**
+ * Sizing outcome for ONE dispatch (#843).
+ *
+ * ⚠️ Callers must narrow with `isSizingFailure()` — this project compiles with `strict: false`,
+ * where `if (!result.ok)` does NOT narrow a boolean-literal union (the same reason
+ * `isSettingFailure` exists in `settings-registry.ts`). A guessed `.noticeCode` on the success
+ * branch is exactly the kind of silent shape error these guards exist to stop.
+ */
+type DispatchVolumeResult =
+  | { ok: true; volume: number; evidence: string }
+  | { ok: false; noticeCode: string; reason: string };
+
+function isSizingFailure(v: DispatchVolumeResult): v is { ok: false; noticeCode: string; reason: string } {
+  return v.ok === false;
+}
 
 export type TickDecision = {
   timestamp: string;
@@ -581,6 +605,96 @@ export class AutomationLoopService implements OnModuleInit {
    * Phase B.2: extracted from step 3b so scoring never trades directly.
    * Portfolio snapshot (#477) captured on successful execution.
    */
+  /**
+   * resolveDispatchVolume() — THE live sizing decision (#843), computed BEFORE any risk gate.
+   *
+   * WHAT THIS FIXES. The live path used to send `strategy.baseSize ?? 0.01` unchanged, while the
+   * backtester implemented four sizing models — so a backtest could not describe the live system,
+   * and 0.01 lots of EURUSD and of gold were treated as the same risk. Both paths now call
+   * `trading/position-sizing.ts`; this method supplies the live inputs and the broker's own
+   * constraints.
+   *
+   * INPUTS, AND WHERE EACH COMES FROM (all measured at dispatch time, never remembered):
+   *   - equity            → the ROUTED bridge's `/account` (the same route `placeOrder` uses)
+   *   - stop distance     → `entryPrice × slPct/100` — the stop the order will actually carry
+   *   - constraints       → the routed bridge's `/symbols` row: volumeMin/volumeMax/volumeStep
+   *   - money-per-lot     → tickValue/tickSize from the same row (risk of a 1.0 price move/lot)
+   *
+   * ⚠️ EVERY MISSING INPUT IS A VISIBLE REFUSAL (TCS-TRADE-023), NOT A FALLBACK. A guessed step,
+   * a defaulted riskPct, or a silently-reverted fixed lot would each produce a plausible size
+   * nobody chose — this repo's signature failure shape. The bot skips the tick; it does not
+   * dispatch a different size than configured.
+   *
+   * ⚠️ `fixedLot` (NULL sizingModel, every existing bot) RETURNS `baseSize` UNCHANGED — no rounding,
+   * no clamping — so shipping this changes nothing until a bot is deliberately migrated.
+   */
+  private async resolveDispatchVolume(params: {
+    strategy: any;
+    symbol: string;
+    brokerId: string;
+    entryPrice: number;
+  }): Promise<DispatchVolumeResult> {
+    const configured = params.strategy?.baseSize ?? 0.01;
+    const modelRaw = params.strategy?.sizingModel;
+    const model: SizingModel = (modelRaw == null || modelRaw === '') ? 'fixedLot' : String(modelRaw) as SizingModel;
+
+    if (model === 'fixedLot') {
+      return { ok: true, volume: configured, evidence: 'fixedLot — baseSize sent unchanged (pre-#843 behaviour)' };
+    }
+    if (!SIZING_MODELS.includes(model)) {
+      return { ok: false, noticeCode: 'TCS-TRADE-023', reason: `unknown sizingModel "${modelRaw}"` };
+    }
+
+    const broker = this.adapterFactory.create(params.brokerId);
+    const ctx = await (broker as any)?.getSizingContext?.(params.symbol);
+    if (!ctx) {
+      return { ok: false, noticeCode: 'TCS-TRADE-023', reason: `no sizing context for ${params.symbol} — bridge unreachable, or the symbol is not on the routed broker's list` };
+    }
+
+    const slPct = params.strategy?.slPct ?? 1.0;
+    const stopDistance = params.entryPrice > 0 ? params.entryPrice * (slPct / 100) : null;
+    const sized = computeSizing({
+      model,
+      equity: ctx.equity,
+      entryPrice: params.entryPrice,
+      fixedLot: configured,
+      riskPct: params.strategy?.sizingRiskPct ?? null,
+      tpPct: params.strategy?.tpPct ?? 1.0,
+      slPct,
+      kellyCapPct: 25, // matches the backtester's default cap; a bot-level cap column does not exist yet
+      stopDistance,
+    });
+    if (sized.rawSize == null) {
+      const u = sized.unusable;
+      return { ok: false, noticeCode: 'TCS-TRADE-023', reason: `${u?.code ?? 'SIZING-FAILED'}: ${u?.reason ?? 'sizing produced no size'}` };
+    }
+
+    const moneyPerPriceUnitPerLot = valuePerPriceUnitPerLot(ctx.tickValue, ctx.tickSize);
+    if (moneyPerPriceUnitPerLot == null) {
+      return { ok: false, noticeCode: 'TCS-TRADE-023', reason: 'tickValue/tickSize unknown on this bridge — cannot convert a money risk into lots (bridge older than 2026-10-10?)' };
+    }
+    const rawLots = sized.rawSize / moneyPerPriceUnitPerLot;
+
+    const resolved = applyVolumeConstraints(rawLots, {
+      volumeMin: ctx.volumeMin,
+      volumeMax: ctx.volumeMax,
+      volumeStep: ctx.volumeStep,
+    });
+    if (!resolved.ok || resolved.volume == null) {
+      return { ok: false, noticeCode: resolved.noticeCode ?? 'TCS-TRADE-023', reason: resolved.reason ?? 'volume could not be made valid for this venue' };
+    }
+
+    // Evidence string — the whole calculation in one line, so a decision log can be audited
+    // without re-deriving the numbers (rawSize and lots are BOTH shown; they differ by the
+    // instrument's money-per-lot, which is exactly the conversion people get wrong).
+    const evidence =
+      `${model}: equity ${ctx.equity} × ${params.strategy?.sizingRiskPct ?? '—'}% risk`
+      + (sized.usedStopDistance != null ? ` / stop ${Number(sized.usedStopDistance.toFixed(6))}` : '')
+      + ` = ${Number(sized.rawSize.toFixed(4))} risk-units ÷ ${Number(moneyPerPriceUnitPerLot.toFixed(6))}/lot`
+      + ` = ${Number(rawLots.toFixed(4))} lots → ${resolved.action} → ${resolved.volume}`;
+    return { ok: true, volume: resolved.volume, evidence };
+  }
+
   private async dispatchTrade(params: {
     strategyId: string;
     strategyName: string;
@@ -597,6 +711,8 @@ export class AutomationLoopService implements OnModuleInit {
     mode: string;
     protocolId: string | null;
     executionId?: string;
+    /** #843 — the sizing calculation, carried into the decision record so a sized trade is auditable. */
+    sizingEvidence?: string;
     /** #1018 — the bot's MT5 magic. OMITTED when unknown. */
     magic?: number;
     decisions: TickDecision[];
@@ -691,7 +807,7 @@ export class AutomationLoopService implements OnModuleInit {
       };
       this.state.pendingActions.push(action);
       await this.persistPendingAction(action);
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', compositePct, signal: side, actionId: aid });
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'QUEUED', reason: params.sizingEvidence ? `Awaiting confirmation — sizing: ${params.sizingEvidence}` : 'Awaiting confirmation', compositePct, signal: side, actionId: aid });
       return;
     }
 
@@ -751,7 +867,7 @@ export class AutomationLoopService implements OnModuleInit {
         this.capturePortfolioSnapshot(allPos, this.state.tickCount, 'trade');
       } catch { /* non-critical */ }
     }
-    decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), compositePct, signal: side, ticket: result.ticket, price: result.price, quantity: baseSize });
+    decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}${params.sizingEvidence ? ` — sizing: ${params.sizingEvidence}` : ''}`:(result.error||'Unknown'), compositePct, signal: side, ticket: result.ticket, price: result.price, quantity: baseSize });
   }
 
   state: LoopState = {
@@ -1878,13 +1994,29 @@ export class AutomationLoopService implements OnModuleInit {
           return;
         }
         const entryPrice = bars[bars.length - 1]?.close ?? 0;
+        // #843 — same sizing decision as the queue path, same refusal semantics. An A/B arm's
+        // snapshot predating the sizing columns resolves to `fixedLot` and is unchanged.
+        const abSizing = await this.resolveDispatchVolume({ strategy: cfg, symbol: sym, brokerId, entryPrice });
+        if (isSizingFailure(abSizing)) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: `ab-test:${side}`,
+            symbol: sym,
+            brokerId,
+            decision: 'SKIP',
+            reason: `[${abSizing.noticeCode}] AB-${side} ${test.name}: ${abSizing.reason}`,
+            compositeRaw: score.composite,
+            signal: score.signal ?? 'HOLD',
+          });
+          return;
+        }
         const result = await this.abTestService.dispatchSideTrade({
           test,
           side,
           symbol: sym,
           brokerId,
           sideDir,
-          quantity: cfg.baseSize ?? 0.01,
+          quantity: abSizing.volume,
           slPct: cfg.slPct ?? 1.0,
           tpPct: cfg.tpPct ?? 1.0,
           entryPrice,
@@ -2399,7 +2531,23 @@ export class AutomationLoopService implements OnModuleInit {
         }
 
         const entryPrice = await getClose(symbol, head.protocolId);
-        const baseSize = strategy.baseSize ?? 0.01;
+        // #843 — THE SIZING DECISION, before any risk gate: `assessGlobalRiskLimits(baseSize)`
+        // inside dispatchTrade must see the REAL exposure, not a placeholder. A sized model that
+        // cannot be computed skips the tick VISIBLY (TCS-TRADE-023) — never a fallback size.
+        const sizing = await this.resolveDispatchVolume({
+          strategy, symbol, brokerId: strategy.brokerId || 'mt5', entryPrice,
+        });
+        if (isSizingFailure(sizing)) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'SKIP',
+            reason: `[${sizing.noticeCode}] ${sizing.reason}`,
+            compositePct: gatePct, signal: side,
+          });
+          continue;
+        }
+        const baseSize = sizing.volume;
         const slPct = strategy.slPct ?? 1.0;
         const tpPct = strategy.tpPct ?? 1.0;
 
@@ -2460,6 +2608,7 @@ export class AutomationLoopService implements OnModuleInit {
           mode: strategy.mode,
           protocolId: head.protocolId,
           executionId: `queue-${head.id}`,
+          sizingEvidence: sizing.evidence,
         magic: strategy.magic ?? undefined,
           decisions,
         });

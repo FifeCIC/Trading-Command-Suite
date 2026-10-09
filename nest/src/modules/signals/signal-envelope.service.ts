@@ -193,6 +193,48 @@ export interface ProtocolScoreStatus {
   symbolsScored?: number;
 }
 
+/**
+ * #735 — the MTF-readiness rule, as a PURE function.
+ *
+ * WHY IT IS EXTRACTED: a protocol containing a multi-timeframe directive must not report
+ * READY when it was scored from an incomplete 1d/1h/15m series — the directives would have
+ * evaluated partially and the composite is not comparable with a full-bundle reading. The
+ * rule existed inline and was pinned by NO spec; extraction makes both directions testable
+ * (see `signal-envelope.mtf-readiness.spec.ts`, canaried).
+ *
+ * Thresholds are the bundle requirements (`1d ≥ 2`, `1h ≥ 10`, `15m ≥ 10`) — the 15m/1h
+ * counts are the smallest sets the MTF directives themselves need, so an "almost complete"
+ * bundle is still incomplete for their purposes.
+ *
+ * The blocker TEXT names the actual counts: a reader must be able to tell WHICH series is
+ * short without querying anything else.
+ */
+export const MTF_REQUIRING_DIRECTIVES = [
+  'multi-timeframe-trend',
+  'mtf-confluence-conservative',
+  'mtf-confluence-weighted',
+  'micro-sr-levels',
+] as const;
+
+export function evaluateMtfReadiness(
+  directiveIds: Set<string> | readonly string[],
+  dayBars: number,
+  hourBars: number,
+  min15Bars: number,
+): { blocker: string | null; code: 'INCOMPLETE_MTF' | null } {
+  const has = (id: string) =>
+    directiveIds instanceof Set ? directiveIds.has(id) : (directiveIds as readonly string[]).includes(id);
+  const needsMtf = MTF_REQUIRING_DIRECTIVES.some((id) => has(id));
+  if (!needsMtf) return { blocker: null, code: null };
+  if (dayBars < 2 || hourBars < 10 || min15Bars < 10) {
+    return {
+      blocker: `Incomplete timeframe bundle (1d=${dayBars}, 1h=${hourBars}, 15m=${min15Bars})`,
+      code: 'INCOMPLETE_MTF',
+    };
+  }
+  return { blocker: null, code: null };
+}
+
 @Injectable()
 export class SignalEnvelopeService {
   private readonly logger = new Logger(SignalEnvelopeService.name);
@@ -576,14 +618,14 @@ export class SignalEnvelopeService {
 
     const envelope = await this.enrichEnvelope(cleanTicker, gated, protocolId);
     const directiveIds = new Set(protocol?.groups.flatMap(group => group.directiveIds) ?? []);
-    const needsMtf = ['multi-timeframe-trend', 'mtf-confluence-conservative', 'mtf-confluence-weighted', 'micro-sr-levels']
-      .some(id => directiveIds.has(id));
-    if (needsMtf && (dayBars.length < 2 || hourBars.length < 10 || min15Bars.length < 10)) {
+    // #735 — the rule is a PURE function (`evaluateMtfReadiness`) so it can be pinned without
+    // this method's I/O. It used to be three inline lines whose failure mode — an MTF protocol
+    // scored from incomplete series and still reported READY — was pinned by nothing.
+    const mtf = evaluateMtfReadiness(directiveIds, dayBars.length, hourBars.length, min15Bars.length);
+    if (mtf.blocker) {
       envelope.preTradeReady = false;
-      envelope.preTradeBlockers.push(
-        `Incomplete timeframe bundle (1d=${dayBars.length}, 1h=${hourBars.length}, 15m=${min15Bars.length})`,
-      );
-      (envelope.preTradeBlockerCodes ??= []).push('INCOMPLETE_MTF');
+      envelope.preTradeBlockers.push(mtf.blocker);
+      (envelope.preTradeBlockerCodes ??= []).push(mtf.code);
     }
     return envelope;
   }

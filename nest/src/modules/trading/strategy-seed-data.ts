@@ -86,6 +86,15 @@ export interface SeedTradingStrategy {
    */
   allocationAmount?: number | null;
   /**
+   * #995 — UP-MOVE EXHAUSTION OBSERVER (display-only). `true` enables recording of
+   * deceleration-at-new-highs for this bot's open positions; nothing is acted on.
+   * The threshold is PROVISIONAL while `upside-exhaustion-predicts-giveback` accrues;
+   * rows store raw progress halves so any threshold can be re-applied to them later.
+   */
+  exhaustionObserveEnabled?: boolean;
+  /** #995 — the observer's decelPct threshold (percent). Absent = the bot keeps its value. */
+  exhaustionDecelPct?: number | null;
+  /**
    * Whether the bot starts ENABLED. Absent = true (the historical behaviour).
    *
    * Exists so a deliberately-inactive bot (the `hourly-3dir-v1` A/B control) can be
@@ -193,6 +202,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     minComposite: 10,
     sessionWindow: ['us'],
     style: 'Tick Scalp',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
 
   // ── XAUUSD Variants (derived from xau-speed-v1) ──────────
@@ -213,6 +226,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     minComposite: 10,
     sessionWindow: ['london'],
     style: 'Tick Scalp',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
   {
     // ═══════════════════════════════════════════════════════════════════════════════════════
@@ -246,6 +263,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: 'all-hours',
     maxHoldHours: 4,
     style: 'Scalp',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
   {
     name: 'Gold Day-Trade M15',
@@ -263,6 +284,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: 'all-hours',
     maxHoldHours: 24,
     style: 'Day Trade',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
   {
     name: 'Gold Swing 1H',
@@ -289,6 +314,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: 'all-hours',
     maxHoldHours: 72,
     style: 'Swing',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
   {
     name: 'Gold Position 4H',
@@ -315,6 +344,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: 'all-hours',
     maxHoldHours: 120,
     style: 'Position',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
 
   // ── Session Strategies ──────────────────────────────────
@@ -389,6 +422,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     minComposite: 9,
     sessionWindow: ['us'],
     style: 'Position',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
 
   // ── Short-side proof (#772) ─────────────────────────────
@@ -434,6 +471,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // have been created without a declared direction.
     requireDirection: 'SELL',
     style: 'Scalp',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -537,6 +578,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
   {
     name: 'London GBPJPY Session',
@@ -573,6 +618,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     maxHoldHours: 12,
     active: true,
     style: 'Session / Mean Reversion',
+    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
+    // rows store raw progress halves so any threshold can be re-applied to them later.
+    exhaustionObserveEnabled: true,
+    exhaustionDecelPct: 20,
   },
   {
     name: 'Zurich USDCHF Session',

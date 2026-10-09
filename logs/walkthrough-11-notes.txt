@@ -1,0 +1,55 @@
+
+====================================================================================================
+/lab/backtest   importance=H  uiScore=-  hide=-  noteApplied=null
+-- note (115 chars) --
+I think there is a github issue covering important changes for this view. Else we need to have a discussion again. 
+
+====================================================================================================
+/scoring/ab-ladder   importance=H  uiScore=-  hide=-  noteApplied=null
+-- note (270 chars) --
+There is a mistake in the design. It appears that the left and right columns order independent of one another. That is wrong. The left is meant to order only and the right column shows it's counterpart. Right now there are protocols sitting opposite different protocols.
+
+====================================================================================================
+/research/analyse-symbol   importance=H  uiScore=-  hide=true  noteApplied=null
+-- note (321 chars) --
+Lets merge this page and Stock Investigation and Notes into one page. Essentially starting with a notes entry field as we have. The list will simply have a variety of different forms of content i.e. user notes, AI generated comments. Lets create a prototype of that merge first before abolishing the three existing pages.
+
+====================================================================================================
+/research/symbols-browser   importance=H  uiScore=-  hide=-  noteApplied=null
+-- note (19 chars) --
+Nothing right now. 
+
+====================================================================================================
+/trading/strategy-monitor   importance=H  uiScore=-  hide=-  noteApplied=null
+-- note (193 chars) --
+This feature needs examined as the overlay appears top left and is not a notice its more like a text field, messy: Element:  <button.pip-trigger> Text:     Ôä╣ Source:   /trading/strategy-monitor
+
+====================================================================================================
+/watchlists/user-watchlists   importance=H  uiScore=-  hide=-  noteApplied=null
+-- note (610 chars) --
+Some watchlist's symbols do not appear. I suspect recent d don"Built-in Watchlists" should automatically display a watchlist for every separate stocks and shares account. This will extend the multi-accounts design and the UI automatically adapting to support that. It does require the database generation of the watchlist to match the account so that a protocol can use it. That might also involve the registration of symbols not yet in the database. Also, somehow there are two designes for the pills that display the symbols, some pills have the company name and some don't but it depeneds on the watchlist. 
+
+====================================================================================================
+/trading/bot-create   importance=M  uiScore=-  hide=-  noteApplied=null
+-- note (131 chars) --
+The page lacks vaThis menu is not populatedElement:  <select.stratcreate-input> Text:     ÔÇö Select ÔÇö Source:   /trading/bot-create 
+
+====================================================================================================
+/trading212/t212-isa   importance=M  uiScore=-  hide=true  noteApplied=null
+-- note (345 chars) --
+We need a system of displaying each registered account on it's own page. The current ISA Allowance page almost feels like that system but isn't. Currently it's not loading my Trading212 ISA detail anyway but I don't want the page to be hardcoded for Trading212. It has to be a general account template and until this is in place it needs hidden.
+
+====================================================================================================
+/research/events-calendar   importance=M  uiScore=-  hide=true  noteApplied=null
+-- note (181 chars) --
+This is not a useful page at the moment and should be hidden pending development. We required more and stronger sources of data OR betting tie to our registered and active symbols. 
+
+====================================================================================================
+/trading/calculators   importance=L  uiScore=-  hide=true  noteApplied=null
+-- note (314 chars) --
+I would like Element:  <button.topbar-calc-btn> Text:     ­ƒº« Source:   /trading/calculators to display an overlay of the calculators that replaces this page - delete this page itself. That way the user isnt taking to a different page that they're on and they should be able to copy the results of the calculation. 
+
+====================================================================================================
+/research/earnings-whispers   importance=L  uiScore=-  hide=-  noteApplied=null
+-- note (252 chars) --
+This should not be released free or premium. We need to come up with a plan for a custom version OR our first add-on/extension. We don't have such a system so that would be a new epic. Such a system is also going to require the first hooks and filters.

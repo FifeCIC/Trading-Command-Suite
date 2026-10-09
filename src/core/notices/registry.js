@@ -357,7 +357,24 @@ export const NOTICES = {
     params: ['symbol', 'detail'],
     refs: [],
   },
-
+  // ── Sizing refused (#843, 2026-10-10) ──────────
+  'TCS-TRADE-023': {
+    severity: 'error',
+    area: 'TRADE',
+    title: 'Position size could not be computed — no order sent',
+    message: 'The {model} sizing model for {symbol} was refused: {reason}. No order was sent.',
+    cause:
+      'A sized model needs the account equity, the stop distance and the broker\u2019s volume ' +
+      'constraints (step, minimum) from the bridge. Any of them missing or unusable means the size ' +
+      'cannot be made valid — and an unvalidated size would either be rejected by the terminal or ' +
+      'silently risk the wrong amount.',
+    action:
+      'Check the bridge is the current build (it reports volumeStep/tickValue/tickSize), that the ' +
+      'bot has a riskPct configured, and that the account is reachable. The bot skips this tick — ' +
+      'it does not fall back to another size.',
+    params: ['model', 'symbol', 'reason'],
+    refs: [],
+  },
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {
     severity: 'critical',

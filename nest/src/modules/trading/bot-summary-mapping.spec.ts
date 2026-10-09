@@ -49,6 +49,11 @@ const PATH_FIELDS: Array<[string, string]> = [
   ['active', 'an inactive bot is treated as live, or a live one as inactive'],
   ['maxHoldHours', 'the position time-stop silently NO-OPS (#773 — this exact defect)'],
   ['mode', 'auto / semi-auto dispatch cannot be decided'],
+  ['simTslEnabled', 'the simulated-TSL observer silently NEVER fires (#936) — configured, armed, and blind'],
+  ['simTslActivationPct', 'the sim-TSL decision moment can never be detected'],
+  ['simTslDistancePct', 'the sim-TSL decision moment can never be detected'],
+  ['exhaustionObserveEnabled', 'the up-move exhaustion observer bails on EVERY position — it can never fire (#995, measured live 2026-10-09)'],
+  ['exhaustionDecelPct', 'the observer cannot arm — and a dropped threshold is indistinguishable from an unconfigured bot'],
 ];
 
 function make(row: Record<string, any>) {
@@ -107,6 +112,19 @@ describe('findAll() must carry every column the trade path reads', () => {
     const [summary] = await make({ ...BOT_ROW, magic: null }).findAll();
     expect(Object.prototype.hasOwnProperty.call(summary, 'magic')).toBe(true);
     expect(summary.magic).toBeNull();
+  });
+
+  it('the observer slots carry VALUES, not merely keys — a mapping that always defaults is the same defect', async () => {
+    const [summary] = await make({
+      ...BOT_ROW,
+      simTslEnabled: true, simTslActivationPct: 0.5, simTslDistancePct: 0.25,
+      exhaustionObserveEnabled: true, exhaustionDecelPct: 20,
+    }).findAll();
+    expect(summary.simTslEnabled).toBe(true);
+    expect(summary.simTslActivationPct).toBe(0.5);
+    expect(summary.simTslDistancePct).toBe(0.25);
+    expect(summary.exhaustionObserveEnabled).toBe(true);
+    expect(summary.exhaustionDecelPct).toBe(20);
   });
 
   it('the summary still renders when the watchlist enrichment FAILS (best-effort, not required)', async () => {

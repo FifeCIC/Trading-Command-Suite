@@ -75,6 +75,10 @@ export const SERVER_NOTICES: Record<string, ServerNotice> = {
   // work). 409: the request conflicts with the resource's current state; the remedy is deactivate
   // first. Declared here because the SERVER throws it; the client only renders it.
   'TCS-TRADE-018': { httpStatus: 409, severity: 'error', label: 'Bot is still active' },
+  // #843 — the sizing path (automation loop) refuses to dispatch when the size cannot be made
+  // valid; the decision record carries this code. 400: the refusal is configuration/venue-shaped,
+  // and the remedy is client-actionable.
+  'TCS-TRADE-023': { httpStatus: 400, severity: 'error', label: 'Position size could not be computed' },
 };
 
 /** Fallback for a code that is not declared above. Deliberately loud rather than blank. */

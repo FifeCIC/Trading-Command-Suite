@@ -49,6 +49,29 @@ const MARKS = ['🟢', '🟡', '🔴'];
 const MARKER_RE = /DECISION\s*\((\d{4}-\d{2}-\d{2})\s*,\s*([^)]+)\)/;
 const REQUIRED_FIELDS = ['WHAT:', 'WHY:', 'REVERSE BY:'];
 
+/**
+ * The marks that actually DECLARE a row's guard status: those at the START OF A TABLE CELL.
+ *
+ * ⚠️ WHY NOT `line.includes(mark)` — measured 2026-10-09 (#1098). A row's prose quotes another
+ * row's status ("the 🔴 'a verdict can be issued on 1 trade' is NO LONGER TRUE"), and a bare
+ * substring test counted that QUOTE as the row's own status. Both directions then went wrong:
+ *
+ *   1. FALSE POSITIVE on "2 guard statuses" — a quoted mark plus the real one read as two.
+ *   2. ⚠️ FALSE NEGATIVE, and this is the one that matters: row 26's REAL guard cell had its
+ *      emoji destroyed to U+FFFD by an encoding round-trip, and the check PASSED it — satisfied
+ *      by the prose mention elsewhere in the same row. A row whose status is UNREADABLE was being
+ *      reported as marked, which is the exact defect RULE A exists to catch, reached by a second
+ *      route. Test: a guard cell with no �, and every row counts exactly one cell-leading mark.
+ *
+ * Anchoring to a cell is what distinguishes a DECLARATION from a MENTION. This is a TIGHTENING of
+ * the pattern, never a widening of the exemption — an allowlisted guard is worse than none.
+ */
+const STATUS_AT_CELL = /\|\s*\*{0,2}\s*([\u{1F7E2}\u{1F7E1}\u{1F534}])/gu;
+const statusMarks = (line) => [...line.matchAll(STATUS_AT_CELL)].map((m) => m[1]);
+
+/** A guard cell whose emoji survived an encoding round-trip as a replacement character. */
+const DAMAGED_STATUS = /\|\s*\*{0,2}\s*\uFFFD/u;
+
 /** RULE A — parse the register. Pure: the self-test calls this with injected text. */
 function checkRegister(text) {
   const errors = [];
@@ -68,7 +91,7 @@ function checkRegister(text) {
       // immediately produced 3 false positives on PROSE — a "**Legend:** 🟢 … 🟡 … 🔴 …" line, a
       // blockquote, and a numbered list item. A guard that fires on prose gets allowlisted, which
       // is worse than no guard, so the pattern was TIGHTENED rather than the exemption widened.
-      const orphaned = line.trimStart().startsWith('|') ? MARKS.filter((mk) => line.includes(mk)) : [];
+      const orphaned = line.trimStart().startsWith('|') ? statusMarks(line) : [];
       if (orphaned.length) {
         errors.push(`SETTLED-DECISIONS.md:${i + 1}: carries ${orphaned.join(' ')} but NO row number — this check cannot see it. Number the row.`);
       }
@@ -80,8 +103,10 @@ function checkRegister(text) {
     if (seen.has(n)) errors.push(`${where}: duplicate row number`);
     seen.add(n);
 
-    const found = MARKS.filter((mk) => line.includes(mk));
-    if (found.length === 0) {
+    const found = statusMarks(line);
+    if (DAMAGED_STATUS.test(line)) {
+      errors.push(`${where}: the guard status is a REPLACEMENT CHARACTER (U+FFFD) — an encoding round-trip destroyed the emoji. Rewrite the real mark at the start of the guard cell; an unreadable status is indistinguishable from an unguarded row, and a mark quoted in the row's own prose must not stand in for it.`);
+    } else if (found.length === 0) {
       errors.push(`${where}: no guard status — add exactly one of ${MARKS.join(' / ')} (an unmarked row reads as neither guarded nor unguarded)`);
     } else if (found.length > 1) {
       errors.push(`${where}: ${found.length} guard statuses (${found.join(' ')}) — a row has exactly one`);
@@ -217,7 +242,15 @@ function selfTest() {
     ['a well-formed register row', () => checkRegister(goodRow).errors, false],
     ['a row with NO guard status', () => checkRegister('| 30 | **A thing** | because | #1 | — |').errors, true],
     ['a row carrying a status but NO row number (invisible to the check)', () => checkRegister('| **A thing** | because | 🟢 gated |').errors, true],
-    ['a row with TWO guard statuses', () => checkRegister('| 30 | **A thing** | 🟢 ok 🔴 also | #1 |').errors, true],
+    ['a row with TWO guard statuses, each declaring in its own cell', () => checkRegister('| 30 | **A thing** | because | 🟢 ok | 🔴 also |').errors, true],
+    // ── The cell-anchored rule, canaried in BOTH directions. The first two are the same row with
+    //    one difference — whether the mark declares (own cell) or merely quotes (prose) — which is
+    //    the whole distinction the rule draws.
+    ['a row whose PROSE quotes another row\'s status (a MENTION is not a declaration)', () => checkRegister('| 30 | **A thing** | the 🔴 verdict is stale | #1 | 🟢 gated |').errors, false],
+    ['a row whose ONLY mark is quoted in prose (so it declares NOTHING)', () => checkRegister('| 30 | **A thing** | the 🔴 verdict is stale | #1 | — |').errors, true],
+    // ⚠️ THE REGRESSION CANARY for the real 2026-10-09 defect: a prose quote SATISFIED the old
+    //    `includes` check while the guard cell itself was an unreadable U+FFFD. Must now fail.
+    ['a guard cell destroyed to U+FFFD while the prose quotes a valid mark', () => checkRegister('| 30 | **A thing** | the 🔴 verdict is stale | #1 | \uFFFD **PARTIAL** |').errors, true],
     ['a register with no rows at all', () => checkRegister('# empty').errors, true],
     ['duplicate row numbers', () => checkRegister(goodRow + '\n' + goodRow).errors, true],
     ['a well-formed marker', () => checkMarkers([{ file: 'a.ts', text: '// DECISION (2026-09-24, primary)\n// WHAT: x\n// WHY: y\n// REVERSE BY: z' }]).errors, false],
@@ -272,7 +305,7 @@ function main() {
     registerText.split(/\r?\n/).forEach((line, i) => {
       const m = line.match(/^\|\s*(\d+)\s*\|\s*\*\*(.{0,58})/);
       if (!m) return;
-      const mark = MARKS.find((k) => line.includes(k)) || '??';
+      const mark = statusMarks(line)[0] || '??';
       console.log(`  ${mark}  row ${String(m[1]).padStart(2)}  ${m[2].replace(/\*\*/g, '')}…`);
     });
     console.log('');
@@ -285,12 +318,11 @@ function main() {
     process.exit(1);
   }
 
-  const guarded = MARKS[0], partial = MARKS[1], unguarded = MARKS[2];
-  const tally = [
-    `${guarded} ${registerText.split(/\r?\n/).filter((l) => /^\|\s*\d+\s*\|/.test(l) && l.includes(guarded)).length}`,
-    `${partial} ${registerText.split(/\r?\n/).filter((l) => /^\|\s*\d+\s*\|/.test(l) && l.includes(partial)).length}`,
-    `${unguarded} ${registerText.split(/\r?\n/).filter((l) => /^\|\s*\d+\s*\|/.test(l) && l.includes(unguarded)).length}`,
-  ].join(' · ');
+  // Count CELL-LEADING marks, not any substring — see statusMarks. A prose quote of another row's
+  // mark would otherwise inflate the tally while the quoted row is counted once.
+  const rows = registerText.split(/\r?\n/).filter((l) => /^\|\s*\d+\s*\|/.test(l));
+  const byMark = (mk) => rows.filter((l) => statusMarks(l)[0] === mk).length;
+  const tally = MARKS.map((mk) => `${mk} ${byMark(mk)}`).join(' · ');
   console.log(`  [decisions] ✅ ${reg.rows} register rows all carry a guard status (${tally}) · ${mk.markers} well-formed DECISION marker(s)`);
   console.log(`  [decisions] ✅ ${ro.subjects} settled subject(s) declared; no row names one without citing the row that settled it`);
   console.log(`  [decisions] ⚠️  this checks WELL-FORMEDNESS and RE-OPEN only — it cannot know whether a decision was recorded at all.`);

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 176,
+  "count": 177,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1462,6 +1462,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "INV-POSITION-IO-IS-BROKER-ADDRESSED (build-time)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-single-scoring-path.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "#803: ONE scoring path, and `active = 0` is a kill switch.",
       "selfTest": true,
       "reaches": [
         "prebuild",

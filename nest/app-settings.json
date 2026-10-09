@@ -78,8 +78,9 @@
         "hide": null,
         "keen": null,
         "note": "Delete this view for now",
-        "updatedAt": "2026-10-01T22:14:36.744Z",
-        "importance": "L"
+        "updatedAt": "2026-10-09T22:47:24.627Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/status/setup": {
         "hide": false,
@@ -92,36 +93,41 @@
         "hide": null,
         "keen": null,
         "note": "I cant understand the point to this page. Delete it unless you think there is a value to it. ",
-        "updatedAt": "2026-10-01T22:20:56.801Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.661Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/lab/ab-testing": {
         "hide": null,
         "keen": null,
         "note": "Delete this view because A/B protocol testing is handled on another view now",
-        "updatedAt": "2026-10-01T22:18:48.533Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.693Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/lab/gold-speed": {
         "hide": null,
         "keen": null,
         "note": "Delete this view and related github issues",
-        "updatedAt": "2026-10-01T22:16:07.549Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.715Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/development/lab": {
         "hide": null,
         "keen": null,
         "note": "Delete this page.",
-        "updatedAt": "2026-10-01T22:32:07.088Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.738Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/lab/lab-landing": {
         "hide": null,
         "keen": null,
         "note": "Delete this view ",
-        "updatedAt": "2026-10-01T22:26:23.161Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.759Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/status/commands": {
         "hide": false,
@@ -136,22 +142,25 @@
         "hide": null,
         "keen": null,
         "note": "Delete this page",
-        "updatedAt": "2026-10-01T22:05:31.794Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.780Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/lab/portfolio-lab": {
         "hide": null,
         "keen": null,
         "note": "Delete this view ",
-        "updatedAt": "2026-10-01T22:26:13.606Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.802Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/lab/speed-trading": {
         "hide": null,
         "keen": null,
         "note": "Delete this view and related github issues",
-        "updatedAt": "2026-10-01T22:16:05.292Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.823Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/research/screener": {
         "hide": false,
@@ -195,8 +204,9 @@
         "hide": false,
         "keen": 2,
         "note": "The page lacks vaThis menu is not populatedElement:  <select.stratcreate-input> Text:     — Select — Source:   /trading/bot-create ",
-        "updatedAt": "2026-10-01T13:05:58.318Z",
-        "importance": "M"
+        "updatedAt": "2026-10-09T22:53:09.370Z",
+        "importance": "M",
+        "noteApplied": true
       },
       "/dashboard/dashboard": {
         "hide": false,
@@ -256,8 +266,9 @@
         "hide": null,
         "keen": null,
         "note": "delete this page ",
-        "updatedAt": "2026-10-01T22:45:48.555Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.845Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/development/commands": {
         "hide": null,
@@ -394,9 +405,9 @@
         "hide": false,
         "keen": 1,
         "note": "Same again. Merge these entries into the Trading Journey. I suspect in a way there might be what looks like duplicates at that point because the journal will tell us the activity but the alert is meant to have a different purpose. There might need to be mechanism to compact related information. Treat compacted journal entries with an alert status attached as seen and the alert becomes seen. We have the alerts disc: Element:  <svg> Text:     (none) Source:   /development/ui-review and that is really the primary way to get alerts. Remove the link from that popover Delete this Alert Center page. This should result in no more Automation pages - delete the automation ared and related architecture documentation. Going forward anything frame was automation or scheduled will be within the area of what it is scheduling i.e. scheduling a trade, belongs in the Trading area. ",
-        "updatedAt": "2026-10-08T08:03:16.394Z",
+        "updatedAt": "2026-10-09T22:47:24.865Z",
         "importance": "L",
-        "noteApplied": null,
+        "noteApplied": true,
         "noteNewApplied": null
       },
       "/research/analyse-symbol": {
@@ -506,8 +517,9 @@
         "hide": false,
         "keen": 3,
         "note": "This feature needs examined as the overlay appears top left and is not a notice its more like a text field, messy: Element:  <button.pip-trigger> Text:     ℹ Source:   /trading/strategy-monitor",
-        "updatedAt": "2026-10-01T09:14:42.687Z",
-        "importance": "H"
+        "updatedAt": "2026-10-09T22:58:11.974Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/trading/trading-settings": {
         "hide": false,
@@ -529,15 +541,17 @@
         "hide": false,
         "keen": 1,
         "note": "Delete this view",
-        "updatedAt": "2026-10-01T20:16:00.158Z",
-        "importance": "L"
+        "updatedAt": "2026-10-09T22:47:24.888Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/development/component-lab": {
         "hide": null,
         "keen": null,
         "note": "Delete this page.I believe the widgets registry is handled by the dashboard for the dashboard.",
-        "updatedAt": "2026-10-01T22:34:31.061Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.909Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/education/candle-patterns": {
         "hide": true,
@@ -583,9 +597,9 @@
         "hide": false,
         "keen": 1,
         "note": "Merge this page into View:       Trade Journal Route:      /trading/trade-journal File:       src/pages/TradeJournalPage.jsx CSS:        src/pages/trade-journal-page.css API:        GET /api/journal/entries, GET /api/journal/stats Component:  <TradeJournalPage /> - add some of the stats Element:  <section.eq-routine> Text:     Primary Loop⟳ every 2mTick #49last tick 9srisk ×1🟢 Protocol Source:   /automation/execution-queue to Element:  <div.tj-stats> Text:     367Total364Closed29%Win Rate$658.20Total P&L+$5.45Avg Win-$1 Source:   /trading/trade-journal and display the same data in the journal. Create controls for filtering journal entries including filter out  Element:  <span.eq-event-status> Text:     BLOCKED Source:   /automation/execution-queue  signals oh and dont forget these stats  Element:  <div.eq-event-stats> Text:     ⟳ Automation: 50⚡ Decisions: 50📋 Total: 100 Source:   /automation/execution-queue  and the result is essentially a journal of most activity, even rejected trades. Delete this page. ",
-        "updatedAt": "2026-10-08T08:03:16.416Z",
+        "updatedAt": "2026-10-09T22:47:24.930Z",
         "importance": "L",
-        "noteApplied": null,
+        "noteApplied": true,
         "noteNewApplied": null
       },
       "/development/daily-briefing": {
@@ -612,15 +626,17 @@
         "hide": null,
         "keen": null,
         "note": "Delete this page.I believe the widgets registry is handled by the dashboard for the dashboard.",
-        "updatedAt": "2026-10-01T22:34:33.466Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:24.951Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/education/mt5-demo-trading": {
         "hide": true,
         "keen": 1,
         "note": "Delete this page. There is another trading page that is identical. ",
-        "updatedAt": "2026-10-01T20:50:03.103Z",
-        "importance": "L"
+        "updatedAt": "2026-10-09T22:47:24.972Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/protocols/directive-viewer": {
         "hide": false,
@@ -691,8 +707,9 @@
         "hide": true,
         "keen": 1,
         "note": "Delete this page - there is an accounts area that offers more. ",
-        "updatedAt": "2026-10-01T20:04:43.583Z",
-        "importance": "L"
+        "updatedAt": "2026-10-09T22:47:24.993Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/trading/strategies-derived": {
         "hide": false,
@@ -730,8 +747,9 @@
         "hide": null,
         "keen": null,
         "note": "delete this page ",
-        "updatedAt": "2026-10-01T22:45:21.923Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:25.014Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/scoring/live-ordering-stack": {
         "hide": false,
@@ -761,15 +779,17 @@
         "hide": null,
         "keen": null,
         "note": "Add motion examples to the theme-lab page and delete this page",
-        "updatedAt": "2026-10-01T22:40:13.226Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:25.034Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/development/theme-lab-scroll": {
         "hide": null,
         "keen": null,
         "note": "Add a scroll animation example to theme-lab page and delete this page. ",
-        "updatedAt": "2026-10-01T22:42:12.648Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:25.056Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/protocols/protocols-registry": {
         "hide": false,
@@ -808,8 +828,9 @@
         "hide": null,
         "keen": null,
         "note": "Add he popover examples to the theme-lab page and delete this page ",
-        "updatedAt": "2026-10-01T22:42:34.584Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:25.076Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/scoring/scoring-activity-logs": {
         "hide": false,
@@ -822,44 +843,49 @@
         "hide": false,
         "keen": 1,
         "note": "Delete this view",
-        "updatedAt": "2026-10-01T20:14:19.924Z",
-        "importance": "L"
+        "updatedAt": "2026-10-09T22:47:25.097Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/protocols/configure-directives": {
         "hide": false,
         "keen": 2,
         "note": "Delete this page. The Protocol Builder offers the same thing. ",
-        "updatedAt": "2026-10-01T08:56:50.260Z",
-        "importance": "L"
+        "updatedAt": "2026-10-09T22:47:25.117Z",
+        "importance": "L",
+        "noteApplied": true
       },
       "/automation/automation-dashboard": {
         "hide": false,
         "keen": 1,
         "note": "We're going to delete this page. Consider which of the panels on this view would be good/unique widgets and create widgets using the same layout/data. Move the automation controls: Element:  <header.ad-header> Text:     AutomationℹMulti-broker command center — scores, strategies, Source:   /automation/automation-dashboard to the main dashboard: Element:  <div.wb-toolbar> Text:     + Add widgetDashboard17 widgets▦ GridResetClear Source:   /dashboard/dashboard and place them centre.",
-        "updatedAt": "2026-10-01T20:13:04.033Z",
-        "importance": "H"
+        "updatedAt": "2026-10-09T22:47:25.139Z",
+        "importance": "H",
+        "noteApplied": true
       },
       "/education/candle-patterns-guide": {
         "hide": true,
         "keen": 3,
         "note": "Depictions of candles are not good enough. The first image uses very thin lines and it looks dull. The larger TradingView based chart shows very wide candles. It all needs to appear more realistic to a chart like the Pattern Detection page. I dont know if we have a central chart class, our own library being forced, but I do think we need our own approach to consuming any of the chart tech and our own API that allows deployment of charts that share the same data, but might appear different from one another, but not different between all of our pages like this one. ",
-        "updatedAt": "2026-10-08T08:03:17.257Z",
+        "updatedAt": "2026-10-09T15:17:51.379Z",
         "importance": "H",
-        "noteApplied": false
+        "noteApplied": true
       },
       "/development/daily-summary-report": {
         "hide": null,
         "keen": null,
         "note": "delete this page ",
-        "updatedAt": "2026-10-01T22:45:42.475Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:25.159Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/development/theme-lab-transitions": {
         "hide": null,
         "keen": null,
         "note": "Delete this page. ",
-        "updatedAt": "2026-10-01T22:41:31.894Z",
-        "importance": null
+        "updatedAt": "2026-10-09T22:47:25.179Z",
+        "importance": null,
+        "noteApplied": true
       },
       "/protocols/dual-protocol-inspector": {
         "hide": false,

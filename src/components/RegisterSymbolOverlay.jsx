@@ -136,11 +136,27 @@ export default function RegisterSymbolOverlay({ ticker, onClose }) {
         </header>
 
         <p className="rso-state" role="status">
-          {registered === true && '✅ Already registered — it can be scored and traded.'}
+          {registered === true && '✅ Already registered — it can be scored.'}
           {registered === false && '⚠️ Not registered yet — register it before it can be scored.'}
           {registered === null && (checkFailed
             ? '❓ Could not check whether this symbol is registered.'
             : 'Checking registration…')}
+        </p>
+
+        {/* ⚠️ TWO CLAIMS DELIBERATELY NOT MADE HERE (2026-10-09, #1098).
+            (1) "…and traded". This panel previously said a registered symbol "can be scored and
+                traded". Registering writes a `symbol` row and NOTHING else — no `symbol_route`, no
+                catalogue entry (`symbols.service.ts` `create()`). Whether a ticker is TRADEABLE is
+                decided at routing time by what a broker CAN do (register row 38), which this panel
+                has not measured, so stating it here would be a claim with no observation behind it.
+                The honest thing to state is what the registry HOLDS, not what will happen to it.
+            (2) "…saved". The row is written straight to the database and is in NO seeder
+                (`database-seed-discipline.instructions.md`), so it survives restarts and is lost on
+                a reinstall. A reader who registers a symbol and later reinstalls would have no way
+                to know it is gone — silence about that is the defect, hence the note below it. */}
+        <p className="rso-note">
+          ⓘ Registration is recorded on this machine's database only — it is not part of the shipped
+          catalogue, so a reinstall would not restore it.
         </p>
 
         {/* ── 1. Register ─────────────────────────────────────────────── */}

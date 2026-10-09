@@ -135,7 +135,7 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
  *
  * Also returns `active` status so the frontend can filter inactive protocols.
  */
-async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ slug: string; active: boolean } | null> {
+export async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ slug: string; active: boolean } | null> {
   // Try DB first — join to Protocol table to get the slug (NOT the UUID) + active status
   try {
     if (prisma.isAvailable) {
@@ -148,15 +148,41 @@ async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ 
     }
   } catch { /* DB may not have table yet */ }
 
-  // Fall back to hardcoded map — all hardcoded protocols are active by default
-  if (SYMBOL_PROTOCOL_MAP[symbol]) return { slug: SYMBOL_PROTOCOL_MAP[symbol], active: true };
+  // Fall back to the hardcoded map — but the DATABASE is the truth about `active` (#803).
+  //
+  // ⚠️ This used to return `{ slug, active: true }` with the comment "all hardcoded protocols
+  // are active by default" — a claim nobody verified. Measured 2026-10-09: `usdcad-oil-v1`
+  // (active = 0, no bot, no symbol assignment) was scored and PERSISTED every ~3.5 minutes
+  // through this fallback. A slug that does not resolve to a protocol row is refused outright:
+  // an unknown protocol cannot be shown to be active, and "cannot judge" must not read as "on".
+  const fallbackSlug = SYMBOL_PROTOCOL_MAP[symbol];
+  if (fallbackSlug) return withDbActive(fallbackSlug, prisma);
 
-  // Pattern-match leverage products
+  // Pattern-match leverage products — verified against the database the same way.
   if (/^3[A-Z]{2,3}$/.test(symbol) || /^[A-Z]{2,3}3$/.test(symbol) ||
       ['TECS','SQQQ','SPXS','SOXS','FNGD','YANG','SRTY'].includes(symbol)) {
-    return { slug: 'leverage-v2', active: true };
+    return withDbActive('leverage-v2', prisma);
   }
   return null; // no protocol assigned — unscoped 'default' scoring removed (2026-08-22)
+}
+
+/**
+ * #803 — verify a fallback slug against the database before it may score.
+ *
+ * Returns `null` (refuse) when the protocol row is missing OR the flag cannot be read. This is
+ * the FAIL-SAFE direction, deliberately opposite to the write guard in `protocol-gating`
+ * (`isActiveProtocol`, fail-open): a scan can safely skip a symbol and re-run, but a score
+ * already computed must not be discarded on a transient read failure.
+ */
+async function withDbActive(slug: string, prisma: any): Promise<{ slug: string; active: boolean } | null> {
+  try {
+    if (prisma?.isAvailable) {
+      const row = await prisma.protocol.findFirst({ where: { slug }, select: { active: true } });
+      if (!row) return null; // no such protocol — refuse to score an imaginary one
+      return { slug, active: row.active !== false };
+    }
+  } catch { /* fall through to the refusal */ }
+  return null; // cannot verify → cannot score
 }
 
 /** Default Tier A/B speed trading symbols */
@@ -229,6 +255,13 @@ export class SpeedScanService {
           return { symbol, skipped: true, reason: 'No protocol assigned — unscoped default scoring removed' };
         }
         const { slug: protocol, active: protocolActive } = resolved;
+        // ── #803 — `active = 0` is a kill switch, enforced BEFORE scoring. ──
+        // The scan previously scored the symbol anyway and merely LABELLED the result inactive
+        // for the frontend. A retired protocol must not be scored at all: the score is computed
+        // from live data, persisted by scoreWithGating, and reads as a signal wherever it lands.
+        if (!protocolActive) {
+          return { symbol, skipped: true, reason: `Protocol ${protocol} is inactive (active = 0) — not scored` };
+        }
         const barCount = bars ?? this.protocolDb.getBaseBarCount(protocol, timeframe);
 
         // Try requested timeframe first, fall back to 1d if insufficient bars.

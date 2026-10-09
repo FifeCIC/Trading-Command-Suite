@@ -109,7 +109,21 @@ export default function StrategyCreatePage() {
     queryFn: () => apiGet('/api/watchlists').catch(() => ({ watchlists: [] })),
     staleTime: 30_000,
   });
-  const wlList = watchlists?.watchlists || watchlists || [];
+  // ⚠️ THE FIELDS ARE `id` AND `label` — THERE IS NO `name` (measured 2026-10-09, #1098).
+  // This list previously rendered `value={w.name}>{w.name}`, and `w.name` is `undefined` for every
+  // row, so all ~50 options carried an EMPTY value and EMPTY text: a select holding 50 options that
+  // looked completely unpopulated, with no error anywhere. Reported from the walkthrough as "this
+  // menu is not populated".
+  //
+  // ⚠️ `value` must be the **id**, not the label. `readWatchlist(name)` on the backend resolves
+  // `WATCHLISTS_DIR/${name}.json`, so the stored `watchlistName` is used as a FILE STEM — submitting
+  // the label ("Primary") would look for `Primary.json` and would appear to work only on a
+  // case-insensitive filesystem. The label is what a human should READ, hence id-as-value.
+  // The filter drops malformed rows so one bad item cannot render a blank option.
+  const wlList = useMemo(() => {
+    const raw = watchlists?.watchlists || watchlists || [];
+    return (Array.isArray(raw) ? raw : []).filter((w) => w && (w.id || w.label));
+  }, [watchlists]);
 
   // Broker configs — from API
   const { data: brokerData } = useQuery({
@@ -378,9 +392,16 @@ export default function StrategyCreatePage() {
                     <select className="stratcreate-input" value={watchlistName} onChange={e => setWatchlistName(e.target.value)}>
                       <option value="">— Select —</option>
                       {wlList.map(w => (
-                        <option key={w.id || w.name} value={w.name}>{w.name}</option>
+                        <option key={w.id || w.label} value={w.id}>{w.label || w.id}</option>
                       ))}
                     </select>
+                    {/* ⚠️ An empty list must SAY it is empty. The API call above swallows its own error
+                        (`.catch(() => ({watchlists: []}))`), so a failure and a genuinely empty list
+                        are indistinguishable — and an unpopulated menu with no message is exactly
+                        the defect this control was reported for. */}
+                    {wlList.length === 0 && (
+                      <span className="stratcreate-hint">No watchlists were returned — the list could not be loaded, or none exist yet.</span>
+                    )}
                   </label>
                 )}
                 <label className="stratcreate-field">
@@ -407,6 +428,10 @@ export default function StrategyCreatePage() {
                     </option>
                   ))}
                 </select>
+                {/* Same rule as the watchlist select: an empty menu states that it is empty. */}
+                {protoList.length === 0 && !protoLoading && (
+                  <span className="stratcreate-hint">No protocols were returned — the list could not be loaded, or none are registered.</span>
+                )}
               </label>
 
               {/* Broker compatibility */}

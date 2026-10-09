@@ -1460,6 +1460,46 @@ export class ProtocolGatingService {
     return symbols.includes(symbol.toUpperCase());
   }
 
+  /** TTL cache of protocol slug → active flag for the active-persist guard (#803). */
+  private protocolActiveCache = new Map<string, { at: number; active: boolean }>();
+
+  /**
+   * #803 — `active = 0` is a KILL SWITCH for score writes, enforced HERE because this is
+   * the ONE place rows are written (`storeSnapshot` → `score` + `score_snapshot`).
+   *
+   * Measured 2026-10-09: `usdcad-oil-v1` and `oil-supply-v1` — BOTH `active = 0`, one with no
+   * bot and no symbol assignment — were writing rows every few minutes (newest that day). The
+   * cause was the CALLERS: `speed-scan.service.ts` fell back to a hardcoded symbol→protocol
+   * map that stamped `active: true` without asking the database, and even the flag it HAD read
+   * was only used to label the result, never to gate scoring. So any caller could persist for
+   * any slug.
+   *
+   * Gating at the write point closes the CLASS rather than the instance: a future path that
+   * forgets to check `active` still cannot write a row for a retired protocol. This is the
+   * owner's rule — ONE scoring path, and `active = 0` means silent.
+   *
+   * Fail-OPEN on lookup failure, matching `isCanonicalProtocolSymbol`: the write itself needs
+   * the database, so a transient read failure must not silently discard a legitimate score.
+   * `active = 0` is a deliberate state; an unreadable flag is not.
+   */
+  private async isActiveProtocol(protocolId: string): Promise<boolean> {
+    const cached = this.protocolActiveCache.get(protocolId);
+    if (cached && Date.now() - cached.at < 60_000) return cached.active;
+    try {
+      const row = await (this.prisma as any).protocol.findFirst({
+        where: { slug: protocolId },
+        select: { active: true },
+      });
+      // Unknown slug: leave the decision to the canonical-symbol guard, which refuses rows
+      // for a protocol it cannot resolve. This guard answers only "was this protocol retired".
+      const active = row ? row.active !== false : true;
+      this.protocolActiveCache.set(protocolId, { at: Date.now(), active });
+      return active;
+    } catch {
+      return true; // unreadable — see the fail-open note above
+    }
+  }
+
   /**
    * Fold a reading into a protocol's Adaptive Target peak (2026-09-10).
    *
@@ -1540,6 +1580,15 @@ export class ProtocolGatingService {
       // Canonical-symbol guard — only persist symbols this protocol resolves.
       const canonical = await this.isCanonicalProtocolSymbol(protocolId, symbol);
       if (!canonical) return;
+
+      // ── #803 — a retired protocol must not write. `active = 0` is a kill switch and this is
+      // the ONE write point, so it closes the class on every path. See `isActiveProtocol()`. ──
+      if (!(await this.isActiveProtocol(protocolId))) {
+        this.logger.warn(
+          `Score write REFUSED for inactive protocol ${protocolId} (${symbol}) — active = 0 is a kill switch (#803)`,
+        );
+        return;
+      }
 
       // Write to score_snapshot (rarity history)
       this.prisma.scoreSnapshot.create({
