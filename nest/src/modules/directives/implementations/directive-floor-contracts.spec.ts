@@ -1,5 +1,6 @@
 import { CadUsdOilCorrelationDirective } from './cad-usd-oil-correlation.directive';
 import { EarningsProximityDirective } from './earnings-proximity.directive';
+import { Sp500RegimeDirective, LikeZacksDirective } from './momentum-and-macro.directives';
 import { MarketBar } from '../interfaces/directive.interface';
 
 /**
@@ -100,5 +101,51 @@ describe('earnings-proximity — no contribution without the feed', () => {
     expect(r.score).toBeGreaterThan(0);
     expect(r.score).toBeLessThanOrEqual(d.maxScore);
     expect(d.minScore).toBe(0);
+  });
+});
+
+// ── #766 (2026-10-09): PRO-RATED FLOORS on could-not-measure paths ──────────
+//
+// The floor here is invisible to the literal scans because it is COMPUTED:
+//   sp500-regime returned `Math.round(15 * closes.length / 200)` — 5 at 72 bars —
+//   under a reason that said it could not measure. Measured live: 241 records/day
+//   at exactly that value. The build gate now flags any non-`0` score expression
+//   on an admits-no-measurement path (canaried: restoring the formula fails it).
+describe('sp500-regime — no pro-rated floor when the window is short', () => {
+  const d = new Sp500RegimeDirective();
+
+  it('contributes nothing (unmeasured) below 200 bars instead of a pro-rated constant', () => {
+    const r = d.calculate({ symbol: 'US500', bars: bars(72) });
+
+    expect(r.score).toBe(0); // was Math.round(15 * 72 / 200) = 5
+    expect(r.unmeasured).toBe(true);
+    expect(r.signalClass).toBe('neutral');
+    expect(r.reason).toContain('unmeasured');
+  });
+
+  it('still scores a real regime with a full window', () => {
+    const r = d.calculate({ symbol: 'US500', bars: bars(210) });
+
+    expect(r.score).toBeGreaterThan(0);
+    expect(r.score).toBeLessThanOrEqual(d.maxScore);
+  });
+});
+
+describe('like-zacks — no pro-rated floor when the window is short', () => {
+  const d = new LikeZacksDirective();
+
+  it('contributes nothing (unmeasured) below 50 bars instead of a pro-rated constant', () => {
+    const r = d.calculate({ symbol: 'AAPL', bars: bars(25) });
+
+    expect(r.score).toBe(0); // was Math.round(10 * 25 / 50) = 5
+    expect(r.unmeasured).toBe(true);
+    expect(r.signalClass).toBe('neutral');
+  });
+
+  it('stays within its declared ceiling with a full window', () => {
+    const r = d.calculate({ symbol: 'AAPL', bars: bars(60) });
+
+    expect(r.score).toBeGreaterThanOrEqual(0);
+    expect(r.score).toBeLessThanOrEqual(d.maxScore);
   });
 });

@@ -633,15 +633,41 @@ function scanFabricatedReadings() {
         const block = lines.slice(i, i + 12).join('\n');
         const reasonMatch = block.match(/reason\s*:\s*(`[^`]*`|'[^']*'|"[^"]*")/);
         if (!reasonMatch) continue;
-        const reason = reasonMatch[1].toLowerCase();
+        // ⚠️ 2026-10-09 (#766): TWO evasions closed, both found by canarying then measuring live.
+        //   (1) The reason test ran on the raw template, so `Need ${MIN} bars` never matched
+        //       `need \d+ bars`. Placeholders are normalised to a number.
+        //   (2) The score match was LITERAL-ONLY, so a COMPUTED score escaped — sp500-regime
+        //       returned `Math.round(15 * closes.length / 200)` (a pro-rated floor, 5 at 72
+        //       bars) with "could not measure" in its own reason, recorded 241x/day in
+        //       production. Any expression other than exactly `0` on this path is now flagged.
+        //   The `failed` term was also narrowed to FAILURES OF THE MEASURING ACT — a market
+        //   outcome phrased as "Spike FAILED" is a real measurement and must not fire
+        //   (surge.directive.ts holds that shape; observed NOT to fire after this change).
+        const reason = reasonMatch[1].toLowerCase().replace(/\$\{[^}]*\}/g, '25');
         const admitsNoData =
-          /insufficient|no data|not enough|need \d+\+? bars|could not|failed|unavailable|not scored/.test(reason);
+          /insufficient|no data|not enough|need \d+\+? bars|could not|failed to (?:read|fetch|load|measure|import|compute)|(?:calculation|fetch|query|read|import|measurement) failed|unavailable|not scored/.test(reason);
         if (!admitsNoData) continue;
 
-        const scoreMatch = block.match(/\bscore\s*:\s*(-?\d+(?:\.\d+)?)/);
+        const scoreMatch = block.match(/\bscore\s*:\s*([^\n,}]+)/);
         if (!scoreMatch) continue;
-        const literal = Number(scoreMatch[1]);
-        if (literal === 0) continue; // a zero is an honest "no reading"
+        const expr = scoreMatch[1].trim();
+        if (expr === '0') continue; // a zero is an honest "no reading"
+
+        if (!/^-?\d+(?:\.\d+)?$/.test(expr)) {
+          const w2 = whitelistEntryFor('no-fabricated-baseline', fileRel);
+          if (w2) held.push(`no-fabricated-baseline  ${fileRel}:${i + 1}  (held by ${w2.issue})`);
+          else {
+            fail(
+              'INV-NO-FABRICATED-READING',
+              `${fileRel}:${i + 1} computes a score (\`${expr}\`) on a path whose own reason says it could not measure`,
+              'Return `score: 0` with `unmeasured: true` (that is the convention documented on `DirectiveResult.unmeasured`), or if the expression IS a real measurement, say so in the reason and this scan will stop flagging it. See INV-NO-FABRICATED-READING.',
+            );
+          }
+          continue;
+        }
+
+        const literal = Number(expr);
+        if (literal === 0) continue; // unreachable (expr === '0' handled above) — kept for clarity
 
         const w = whitelistEntryFor('no-fabricated-baseline', fileRel);
         if (w) held.push(`no-fabricated-baseline  ${fileRel}:${i + 1}  (held by ${w.issue})`);

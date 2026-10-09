@@ -1190,7 +1190,21 @@ export class AdaptiveRiskMonitorDirective implements IDirective {
 @Injectable()
 export class AnalystAdjustmentsDirective implements IDirective {
   readonly id = 'analyst-adjustments';
-  readonly name = 'Analyst Adjustments';
+
+  // ── DECISION (2026-10-09, primary) ──
+  // WHAT:      The DISPLAY NAME is 'Momentum Acceleration'. The ID stays `analyst-adjustments`.
+  // WHY:       The name was the last dishonest artefact of this directive — there is no analyst
+  //            feed (the description has said so since 2026-09-10), it is a price-momentum proxy.
+  //            The ID is a load-bearing KEY: measured today, 11 ACTIVE protocols reference it via
+  //            protocol_directive_entry, and it is written into score breakdowns and seeds. A
+  //            half-done ID migration orphans protocol entries SILENTLY — the repo's most
+  //            expensive failure signature. The user reads the NAME; fix the lie where it is read.
+  // INSTEAD OF: Renaming the id to `momentum-acceleration` (#766 criterion 4's other reading).
+  // REVERSE BY: Restoring `readonly name = 'Analyst Adjustments'` — one line. The DB converges
+  //            from the class on boot (`directives.module.ts` → `seedToDatabase()` upserts `name`).
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 78.
+  // GUARD:     none — 🔴 unguarded by design; a spec pinning a display string would be ceremony.
+  readonly name = 'Momentum Acceleration';
   readonly description = 'Price momentum proxy for sentiment shifts (analyst revisions unavailable).';
   readonly priority = 50;
   readonly maxScore = 80;
@@ -1465,7 +1479,10 @@ export class LikeZacksDirective implements IDirective {
   calculate(input: DirectiveInput): DirectiveResult {
 
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 50) return { signalClass: 'neutral', score: Math.round(10 * closes.length / 50), confidence: 0.1, reason: `Need 50+ bars, have ${closes.length}` };
+    // 2026-10-09 (#766): same shape as sp500-regime — the old form returned a pro-rated
+    // floor (`Math.round(10 * closes.length / 50)`, up to 10) on a could-not-measure path.
+    // 0 + unmeasured: a number the directive cannot derive does not enter the composite.
+    if (closes.length < 50) return { signalClass: 'neutral', score: 0, unmeasured: true, confidence: 0.1, reason: `Insufficient data: need 50 bars, have ${closes.length} — unmeasured` };
     const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
     const ret10 = (closes[closes.length-1] - closes[closes.length-11]) / Math.max(0.01, closes[closes.length-11]) * 100;
     const ret20 = (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100;
@@ -1646,7 +1663,13 @@ export class Sp500RegimeDirective implements IDirective {
   calculate(input: DirectiveInput): DirectiveResult {
 
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 200) return { signalClass: 'neutral', score: Math.round(15 * closes.length / 200), confidence: 0.1, reason: `Need 200+ bars, have ${closes.length}` };
+    // 2026-10-09 (#766): the old form returned `Math.round(15 * closes.length / 200)` — a
+    // PRO-RATED FLOOR of up to 15 on a path whose own reason says it could not measure
+    // (measured live: 241 records/day at exactly 5 with "Need 200+ bars, have 72"). A value
+    // the directive cannot derive must not enter the composite or a risk gate; the honest
+    // return is 0 + unmeasured (interfaces/directive.interface.ts: "Set `unmeasured: true`
+    // on any zero that means 'no reading'").
+    if (closes.length < 200) return { signalClass: 'neutral', score: 0, unmeasured: true, confidence: 0.1, reason: `Insufficient data: need 200 bars, have ${closes.length} — unmeasured` };
     const lastClose = closes[closes.length - 1];
     const s200 = sma(closes, 200);
     if (s200 <= 0) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'SMA200 calculation failed' };

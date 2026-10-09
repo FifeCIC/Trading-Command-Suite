@@ -28,6 +28,13 @@
  *           into an additive composite. Cause-agnostic — it reads the reason the
  *           DIRECTIVE recorded, so it fires for any cause of a too-small window
  *           (wrong cadence, mis-declared minBars, truncated fetch).
+ *   MODE 9  Unreachable maxScore   — declared capacity the class's own return
+ *           arithmetic can never produce (#766, the rsi-oversold shape). Judged
+ *           ONLY when every non-zero `score:` expression is literal arithmetic
+ *           (numbers, ternaries, sums of number-assigned locals). A dynamic
+ *           expression (indicator calls, `this.x`, input-derived) makes the
+ *           directive MANUAL — a "cannot judge" state reported as such, never
+ *           counted as judged-clean.
  *
  * ⚠️ The RUNTIME half reads `dist/`, and it REFUSES TO RUN when `dist/` is stale (#881).
  *    It used to treat an absent `dist/` and an out-of-date `dist/` differently: absent printed a
@@ -128,6 +135,93 @@ function fieldOf(body, name) {
 /** id -> file that first defined it (for MODE 6 duplicate detection). */
 const idOwners = new Map();
 
+// ── MODE 9 — maxScore reachability (#766) ───────────────────────────────────
+
+/** Tally so `main()` can report the split — a cannot-judge is NOT a judged-clean. */
+const maxScoreStats = { judged: 0, manual: [] };
+
+/** Every assignment right-hand side for `name` in a class body (const/let and mutations). */
+function assignmentExprs(body, name) {
+  const out = [];
+  const reConst = new RegExp(`(?:const|let|var)\\s+${name}\\s*=\\s*([^;\\n]+)`, 'g');
+  const reMut = new RegExp(`(?<![.\\w])${name}\\s*=\\s*([^;\\n]+)`, 'g');
+  let m;
+  while ((m = reConst.exec(body)) !== null) out.push(m[1]);
+  while ((m = reMut.exec(body)) !== null) out.push(m[1]);
+  return out;
+}
+
+/**
+ * upperBound(expr) — the highest value an expression can produce, or **null** when it cannot
+ * be judged from literals alone.
+ *
+ * ⚠️ The contract is asymmetric ON PURPOSE: `null` means CANNOT JUDGE (dynamic term found),
+ * never "zero" and never "fine". Callers must treat it as a refusal, not a pass — the same
+ * rule as the runtime half's stale-build refusal (#881).
+ */
+function upperBound(expr, body, depth = 0) {
+  if (expr == null || depth > 3) return null;
+  const e = String(expr).trim().replace(/;\s*$/, '');
+  if (!e) return null;
+  const wrap = e.match(/^Math\.(?:round|abs|floor|ceil|trunc)\s*\(([\s\S]*)\)$/);
+  if (wrap) return upperBound(wrap[1], body, depth + 1);
+  const tern = e.match(/^(.+?)\?(.+?):(.+)$/);
+  if (tern) {
+    const a = upperBound(tern[2], body, depth + 1);
+    const b = upperBound(tern[3], body, depth + 1);
+    if (a === null || b === null) return null;
+    return Math.max(a, b);
+  }
+  const terms = e.split('+');
+  if (terms.length > 1) {
+    let sum = 0;
+    for (const t of terms) {
+      const v = upperBound(t, body, depth + 1);
+      if (v === null) return null;
+      sum += v;
+    }
+    return sum;
+  }
+  const mn = e.match(/^Math\.min\s*\(([\s\S]+)\)$/);
+  if (mn) {
+    let best = null;
+    for (const p of mn[1].split(',')) {
+      const v = upperBound(p, body, depth + 1);
+      if (v === null) return null;
+      best = best === null ? v : Math.min(best, v);
+    }
+    return best;
+  }
+  const mx = e.match(/^Math\.max\s*\(([\s\S]+)\)$/);
+  if (mx) {
+    let best = null;
+    for (const p of mx[1].split(',')) {
+      const v = upperBound(p, body, depth + 1);
+      if (v === null) return null;
+      best = best === null ? v : Math.max(best, v);
+    }
+    return best;
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(e)) return Number(e);
+  if (/^[A-Za-z_$][\w$]*$/.test(e)) {
+    // `x += N` ACCUMULATES — a single bound cannot be taken from the assignment list.
+    // Refuse rather than under-read: a wrong "reachable" figure here would be reported as a
+    // defect in the directive. (The shorthand fix above was found by spot-checking
+    // gold-session-profile; this is the second net for the same shape.)
+    if (new RegExp(`(?<![.\\w])${e}\\s*\\+=`).test(body)) return null;
+    const assigns = assignmentExprs(body, e);
+    if (assigns.length === 0) return null;
+    let best = null;
+    for (const a of assigns) {
+      const v = upperBound(a, body, depth + 1);
+      if (v === null) return null; // one dynamic assignment makes the variable unbounded
+      best = best === null ? v : Math.max(best, v);
+    }
+    return best;
+  }
+  return null; // calls, this.x, multiplication by an unknown — cannot judge
+}
+
 // ── Static checks ─────────────────────────────────────────────────────────
 
 function staticCheckFile(file) {
@@ -197,6 +291,44 @@ function staticCheckFile(file) {
       if (scoreLit && Number(scoreLit[1]) > 0 && NO_SIGNAL_PHRASES.test(ret)) {
         report(file, id, 3, 'WARN', `"no signal" branch returns non-zero score ${scoreLit[1]}`);
         break;
+      }
+    }
+
+    // MODE 9 — declared maxScore unreachable by the class's own return arithmetic (#766).
+    const maxScoreLit = cls.body.match(/readonly\s+maxScore\s*=\s*(\d+)/);
+    if (maxScoreLit) {
+      const declared = Number(maxScoreLit[1]);
+      const exprs = [];
+      const scoreRe = /score\s*:\s*([^,\n}]+)/g;
+      let sm;
+      while ((sm = scoreRe.exec(cls.body)) !== null) exprs.push(sm[1]);
+      const nonZero = exprs.filter((x) => x.trim() !== '0');
+      // ⚠️ SHORTHAND RETURNS — `return { score, confidence, … }` never matches the
+      // `score:` pattern, so a class using shorthand looked all-literal while its real
+      // return value sat in a resolved variable. Found by spot-checking gold-session-profile
+      // (reported reachable-20 against a real ~90). Detect any return shorthand and treat
+      // the variable as one more score expression.
+      const shorthandScore = /return\s*\{[^}]*?\bscore\s*[,}]/.test(cls.body) || /\breturn\s*\{\s*score\s*[,}]/.test(cls.body);
+      if (nonZero.length > 0 || shorthandScore) {
+        let bound = null;
+        let manual = false;
+        const judge = (x) => {
+          const v = upperBound(x, cls.body);
+          if (v === null) { manual = true; return; }
+          bound = bound === null ? v : Math.max(bound, v);
+        };
+        if (shorthandScore) judge('score');
+        for (const x of nonZero) {
+          if (manual) break;
+          judge(x);
+        }
+        if (manual) maxScoreStats.manual.push(id);
+        else {
+          maxScoreStats.judged++;
+          if (bound < declared) {
+            report(file, id, 9, 'WARN', `declared maxScore ${declared} exceeds the highest reachable score ${bound} (all-literal return arithmetic)`);
+          }
+        }
       }
     }
   }
@@ -710,6 +842,11 @@ async function main() {
     staticCheckFile(path.join(IMPL_DIR, f));
   }
   console.log(`[guard] static scan complete: ${files.length} files.\n`);
+  console.log(
+    `[guard] mode 9 maxScore reachability: ${maxScoreStats.judged} judged, ` +
+    `${maxScoreStats.manual.length} manual (dynamic arithmetic — cannot judge)` +
+    (maxScoreStats.manual.length ? `: ${maxScoreStats.manual.join(', ')}` : '') + '\n',
+  );
 
   if (!staticOnly) runtimeCheck();
   if (process.argv.includes('--db')) await readinessEvidenceCheck();
