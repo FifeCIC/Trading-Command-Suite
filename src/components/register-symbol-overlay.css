@@ -57,7 +57,9 @@
 
 .rso-ticker {
   font-family: var(--font-mono);
-  background: var(--panel-2, var(--panel));
+  /* ⚠️ `--panel-2` was never defined anywhere — an undefined custom property is dropped,
+     so this always resolved to the fallback. Declare the real token instead of a dead name. */
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm, 4px);
   padding: 0 0.35rem;

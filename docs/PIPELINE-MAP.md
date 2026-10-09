@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**549** source files · **2898** declarations · **362** ratio sites · **1485** nodes · **131** unreferenced
+**549** source files · **2899** declarations · **362** ratio sites · **1486** nodes · **131** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -139,7 +139,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 20 sites — `(V1-V2)/V3`
 
-- `nest/src/modules/automation/ab-test.service.ts:772` — `twoProportionZ()`
+- `nest/src/modules/automation/ab-test.service.ts:788` — `twoProportionZ()`
   - `se===0?0:(p1-p2)/se`
   - guarded by: `se===0`
 - `nest/src/modules/directives/implementations/accumulation-distribution.directive.ts:47` — `calculate()` → `adSlope`
@@ -254,7 +254,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 6 sites — `(C?V1*(1-V2/100):V1*(1+V2/100))`
 
-- `nest/src/modules/automation/ab-test.service.ts:433` — `dispatchSideTrade()` → `sl`
+- `nest/src/modules/automation/ab-test.service.ts:449` — `dispatchSideTrade()` → `sl`
   - `sideDir==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `sideDir==='BUY'`
 - `nest/src/modules/automation/automation-loop.service.ts:625` — `dispatchTrade()` → `sl`
@@ -293,7 +293,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 4 sites — `(C?V1*(1+V2/100):V1*(1-V2/100))`
 
-- `nest/src/modules/automation/ab-test.service.ts:434` — `dispatchSideTrade()` → `tp`
+- `nest/src/modules/automation/ab-test.service.ts:450` — `dispatchSideTrade()` → `tp`
   - `sideDir==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `sideDir==='BUY'`
 - `nest/src/modules/automation/automation-loop.service.ts:626` — `dispatchTrade()` → `tp`
@@ -435,7 +435,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 20 sites — `(V1-V2)/V3`
 
-- `nest/src/modules/automation/ab-test.service.ts:772` — `twoProportionZ()`
+- `nest/src/modules/automation/ab-test.service.ts:788` — `twoProportionZ()`
   - `se===0?0:(p1-p2)/se`
   - guarded by: `se===0`
 - `nest/src/modules/directives/implementations/accumulation-distribution.directive.ts:47` — `calculate()` → `adSlope`
@@ -616,7 +616,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 39 sites — `(VN-VN)/VN`
 
-- `nest/src/modules/automation/ab-test.service.ts:772` — `twoProportionZ()`
+- `nest/src/modules/automation/ab-test.service.ts:788` — `twoProportionZ()`
   - `se===0?0:(p1-p2)/se`
   - guarded by: `se===0`
 - `nest/src/modules/directives/implementations/accumulation-distribution.directive.ts:47` — `calculate()` → `adSlope`
@@ -885,9 +885,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/alerts/alert-trigger.service.ts:278 canTrade`
 - `nest/src/modules/alerts/alert-trigger.service.ts:286 definitelyBlocked`
 - `nest/src/modules/alerts/alert-trigger.service.ts:785 toMap`
-- `nest/src/modules/automation/ab-test.service.ts:300 getActiveTest`
-- `nest/src/modules/automation/ab-test.service.ts:359 isActive`
-- `nest/src/modules/automation/ab-test.service.ts:590 summarize`
+- `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
+- `nest/src/modules/automation/ab-test.service.ts:375 isActive`
+- `nest/src/modules/automation/ab-test.service.ts:606 summarize`
 - `nest/src/modules/automation/automation-loop.service.ts:1774 evalSide`
 - `nest/src/modules/automation/automation-loop.service.ts:2179 getClose`
 - `nest/src/modules/automation/automation-loop.service.ts:432 read`
@@ -957,9 +957,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/exit-consensus.service.ts:264 assessAll`
 - `nest/src/modules/scoring/outcome-tracker.service.ts:724 trimOldOutcomes`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:135 empty`
-- `nest/src/modules/scoring/protocol-db.service.ts:435 getAllSlugs`
-- `nest/src/modules/scoring/protocol-db.service.ts:947 protocolNeedsEurUsd`
-- `nest/src/modules/scoring/protocol-db.service.ts:963 getName`
+- `nest/src/modules/scoring/protocol-db.service.ts:456 getAllSlugs`
+- `nest/src/modules/scoring/protocol-db.service.ts:968 protocolNeedsEurUsd`
+- `nest/src/modules/scoring/protocol-db.service.ts:984 getName`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:479 isIncluded`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:484 effectiveMax`
 - `nest/src/modules/scoring/protocol-gating.service.ts:1273 worker`

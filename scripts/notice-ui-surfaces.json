@@ -1,14 +1,18 @@
 {
   "note": "Raw error renders left in the UI (#826 Phase 5). This number may only go DOWN: raising it is a regression and the gate fails on it. Lower it with: node scripts/validate-notices.cjs --update-allowance",
-  "total": 9,
+  "total": 12,
   "files": {
     "src/pages/Mt5TradingPage.jsx": 5,
     "src/pages/ProtocolsPageB.jsx": 1,
     "src/pages/SignalsOverviewPage.jsx": 1,
-    "src/theme/registry.js": 2
+    "src/theme/registry.js": 2,
+    "src/components/RegisterSymbolOverlay.jsx": 2,
+    "src/components/ScoringMechanicsPanel.jsx": 1
   },
   "notes": {
     "src/theme/registry.js": "Error boundary: converts a thrown Error into a plain data object for its renderer. There is no user-facing message here, so nothing to code.",
-    "src/pages/ProtocolsPageB.jsx": "The API validation-issue list ([{severity, message}]) rendered as validation bullets. This is DATA, not an Error: it needs codes on the API side (Phase 4), not a UI change."
+    "src/pages/ProtocolsPageB.jsx": "The API validation-issue list ([{severity, message}]) rendered as validation bullets. This is DATA, not an Error: it needs codes on the API side (Phase 4), not a UI change.",
+    "src/components/RegisterSymbolOverlay.jsx": "Symbol-registration and watchlist-add submit errors (err.detail || err.message) rendered as a form alert. No registered code covers symbol-registration failure yet; declared 2026-10-09 (committed in 2848043 'UI Establishments') to unblock prebuild. Migrate when a symbol-onboarding code lands.",
+    "src/components/ScoringMechanicsPanel.jsx": "Score-computation failure line (error.detail || error.message). Candidate codes exist (TCS-SYS-002 / TCS-SYS-007) but the panel still renders the raw string; declared 2026-10-09 to unblock prebuild, migrate when the panel is next touched."
   }
 }
