@@ -32,6 +32,8 @@ import {
   macd,
   rsi,
 } from '../utils/indicators';
+// #1077 (owner ruling "B", 2026-10-09) — the canonical ratcheting SuperTrend, ONE home.
+import { computeSuperTrend } from '../utils/supertrend';
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -408,58 +410,57 @@ export class KeltnerChannelDirective implements IDirective {
 }
 
 // =====================================================================
-// 7. SuperTrend — ATR-based trailing stop/trend
+// 7. SuperTrend — ATR-based trailing stop/trend (CANONICAL RATCHET since 2026-10-09)
 // =====================================================================
 
+/**
+ * ── DECISION (2026-10-09, primary — owner ruling "B" on #1077 / review-queue R50) ──
+ * WHAT:      Bands come from `computeSuperTrend()` (utils/supertrend.ts) — a canonical
+ *            RATCHETING SuperTrend. Direction maps to bullish/bearish at a flat score 55.
+ *            The old `score 75` "strong" branches are REMOVED, not re-invented — the measured
+ *            comparison assumed a flat 55, and a new strength threshold would be tuning.
+ * WHY:       The one-bar formula decided ±55 by ~0.9 of a pip on XAUUSD and its 75-grade
+ *            branches were unreachable by construction (midline ± 3×ATR exceeds the bar).
+ * INSTEAD OF: Keeping the one-bar formula shadowed (#1077 option A — 2 days measured: 475
+ *            gate-crosses, 9 real stop-moves, none reached by later price).
+ * REVERSE BY: Restore the one-bar midpoint formula (recorded verbatim in #1077; git history).
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 75
+ * GUARD:     supertrend.directive.spec.ts (canaried both directions)
+ */
 @Injectable()
 export class SuperTrendDirective implements IDirective {
   readonly id = 'supertrend';
   readonly name = 'SuperTrend Indicator';
   readonly description =
-    'ATR(10) × 3 multiplier trailing stop. Price above upper band = strong uptrend; below lower band = strong downtrend. Symmetric bullish/bearish evidence. Derived from MT5 SuperTrend.';
+    'ATR(10) × 3 ratcheting SuperTrend. Direction comes from the canonical trailing band (the trend flips only when price closes through the ratified line); an unestablished trend is neutral, never guessed. Symmetric bullish/bearish evidence at equal magnitude. Derived from MT5 SuperTrend.';
   readonly priority = 50;
   readonly maxScore = 100;
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
-
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
-    const highs = bars.map((b) => b.high);
-    const lows = bars.map((b) => b.low);
-    const closes = bars.map((b) => b.close);
     const MIN = 15;
 
-    if (closes.length < MIN) {
-      return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${closes.length}` };
+    if (!bars || bars.length < MIN) {
+      return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${bars?.length ?? 0}` };
     }
 
-    const period = 10;
-    const multiplier = 3;
-    const atrVals = atr(highs, lows, closes, period);
-    const lastClose = closes[closes.length - 1];
-    const lastATR = atrVals[atrVals.length - 1];
-    const lastHigh = highs[highs.length - 1];
-    const lastLow = lows[lows.length - 1];
+    const { direction, trendLine, atr: lastATR } = computeSuperTrend(bars, 10, 3);
 
-    const midline = (lastHigh + lastLow) / 2;
-    const basicUpper = midline + multiplier * lastATR;
-    const basicLower = midline - multiplier * lastATR;
-
-    // Above upper band = strong uptrend; below lower band = strong downtrend.
-    if (lastClose > basicUpper) {
-      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `SuperTrend — strong uptrend (price ${lastClose} > ${basicUpper.toFixed(2)})` };
+    if (direction === null || trendLine === null) {
+      // A THIRD state, reported rather than folded into a direction — the old code had none
+      // (#1077: every tick became a coin-flip call).
+      return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: 'SuperTrend — trend not established in this window' };
     }
 
-    if (lastClose > midline) {
-      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `SuperTrend — moderate uptrend` };
+    const lastClose = bars[bars.length - 1].close;
+    const line = trendLine.toFixed(5);
+    const atrText = lastATR == null ? '' : `, ATR ${lastATR.toFixed(5)}`;
+    if (direction === 'up') {
+      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `SuperTrend — uptrend (close ${lastClose} holds above the ratified line ${line}${atrText})` };
     }
-
-    if (lastClose < basicLower) {
-      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `SuperTrend — strong downtrend (price ${lastClose} < ${basicLower.toFixed(2)})` };
-    }
-
-    return { score: 55, confidence: 0.5, signalClass: 'bearish', reason: `SuperTrend — moderate downtrend` };
+    return { score: 55, confidence: 0.5, signalClass: 'bearish', reason: `SuperTrend — downtrend (close ${lastClose} holds below the ratified line ${line}${atrText})` };
   }
 }
 

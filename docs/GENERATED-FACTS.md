@@ -29,7 +29,7 @@ number that is not here, add a collector — do not type it into prose.
 | Provider adapter modules | **14** | `nest/src/modules/providers/adapters/*.adapter.ts (excludes specs)` | `Get-ChildItem nest/src/modules/providers/adapters -Filter *.adapter.ts` |
 | Live unmodelled tables with checked-in DDL | **4** | `nest/prisma/raw-managed/*.sql` | `npm --prefix nest run db:check   # authoritative, includes backups` |
 | Backend build-time validators | **36** | `nest/scripts/validate-*.cjs (run in prebuild)` | `Get-ChildItem nest/scripts/validate-*.cjs` |
-| Application version | **0.121.4** | `nest/package.json (+ package.json asserted in sync)` | `curl -s localhost:3201/api/version` |
+| Application version | **0.121.5** | `nest/package.json (+ package.json asserted in sync)` | `curl -s localhost:3201/api/version` |
 
 ## What is deliberately NOT here
 
