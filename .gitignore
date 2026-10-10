@@ -70,3 +70,21 @@ nest/prisma/*.js
 nest/prisma/*.js.map
 nest/prisma/*.d.ts
 
+
+# Bridge logs used to be written NEXT TO the bridge source and COMMITTED — measured
+# 2026-10-10: 10 tracked files x 5 MB (two brokers x 5 rotations) = 50 MB of log churn
+# synced with every commit. The bridge now writes to logs/mt5-bridge/ (gitignored); this
+# rule stops a stray old-build process from recommitting anything here (#703).
+scripts/mt5-bridge/*.log
+scripts/mt5-bridge/*.log.*
+
+# Root logs/ is agent + session WORKING SCRATCH — never repository material (owner direction, 2026-10-10).
+#
+# Measured that day: 576 files / 21.7 MB, of which 435 were TRACKED — issue-body drafts, close-comment
+# drafts, canary scripts, build captures and probe outputs from many sessions, in five different naming
+# styles. None of it is needed after the issue it serves is written; the durable record is the issue.
+#
+# New files under logs/ are therefore not tracked. Existing tracked files stay tracked until deliberately
+# removed (this rule cannot untrack them) — see logs/README.md for the naming convention.
+logs/
+

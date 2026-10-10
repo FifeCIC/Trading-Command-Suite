@@ -1,1 +1,0 @@
-Ô£à OK ÔÇö no NEW undefined CSS tokens. 9066 var() references checked, 152 tokens defined, 0 pre-existing finding(s) baselined.

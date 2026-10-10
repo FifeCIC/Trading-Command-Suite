@@ -47,7 +47,17 @@ def log(msg: str) -> None:
     print(line, flush=True)
     try:
         STOP_DIR.mkdir(parents=True, exist_ok=True)
-        with open(STOP_DIR / f'supervisor-{os.environ.get("BRIDGE_PORT", "0")}.log', 'a', encoding='utf-8') as fh:
+        path = STOP_DIR / f'supervisor-{os.environ.get("BRIDGE_PORT", "0")}.log'
+        # #703 — cap this file. It is append-only across every launch and nothing pruned it;
+        # the same class as the 436 MB stderr runaway. Keep the most recent 500 lines once
+        # it passes 2 MB — events are sparse, so this trigger is rare and the rewrite cheap.
+        if path.exists() and path.stat().st_size > 2_000_000:
+            try:
+                tail = path.read_text(encoding='utf-8', errors='replace').splitlines()[-500:]
+                path.write_text('\n'.join(tail) + '\n', encoding='utf-8')
+            except OSError:
+                pass
+        with open(path, 'a', encoding='utf-8') as fh:
             fh.write(line + '\n')
     except OSError:
         pass

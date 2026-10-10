@@ -1,9 +1,0 @@
-
-> tradingcs@0.117.0 version:bump
-> node ./scripts/bump-version.cjs minor
-
-  0.117.0 ÔåÆ 0.118.0
-  Ô£à package.json
-  Ô£à nest\package.json
-
-  refreshing derived artefacts (prebuild gates on these):

@@ -436,3 +436,25 @@ Measured 2026-09-29: `logs/` **191 files / 12.6 MB**, `nest/logs/` **62 files / 
 173–572 KB, and the cause is repetition: **4,800 identical `bridge[2] GET /symbols FAILED`** lines
 plus 1,738 for one symbol's quotes. Nothing deduplicates, rate-limits or summarises repeated
 identical warnings.
+
+### 🧹 Root `logs/` — agent WORKING SCRATCH, gitignored, and named one way (2026-10-10)
+
+Measured that day and cleared: **576 files / 21.7 MB, 435 of them TRACKED in git** — issue-body
+drafts, close-comment drafts, canary scripts, build captures and probe outputs in five naming
+styles. None of it is needed after the issue it serves is written; the durable record is the issue.
+Registered as: `logs/` is now in `.gitignore` (new files stop being tracked), and the ONE naming
+standard (also in `logs/README.md`, untracked) is:
+
+| Purpose | Name |
+|---|---|
+| Analysis / probe output | `YYYY-MM-DD-<topic>-<what>.<ext>` |
+| Canary / guard script | `canary-<issue-or-guard>.<ext>` |
+| Build capture | `build-<issue>.out` |
+| Issue draft | `<issue>-body.md` / `<issue>-close.md` |
+| One-off measurement script | `measure-<topic>.cjs` |
+
+**Delete your own working files when the issue closes** — the folder is a bench, not a shelf.
+Permanent residents are only: `scoring/` (served by the API), `mt5-bridge/` (supervisor sentinels),
+`parked-scratch-*/`. The logging-hygiene focus is **#703** (Sprint 4); the app-side pruning +
+retention settings already exist (`logging.retentionDays` et al, #1023) — the gap this fixes was
+the ROOT folder, which nothing pruned and nothing untracked.

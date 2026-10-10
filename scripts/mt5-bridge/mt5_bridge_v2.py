@@ -106,12 +106,65 @@ BROKER_ID = (os.environ.get('MT5_BROKER_ID')
 BROKER_TAG = f'broker{BROKER_ID}'
 
 log_dir = os.path.dirname(os.path.abspath(__file__))
+
+# ⚠️ #703 (2026-10-10): the rotating log used to live NEXT TO THIS FILE, inside the repo —
+# measured: 10 tracked files x 5 MB (two brokers x 5 rotations, `bridge-brokerN.log.1…5`) =
+# **50 MB of git-tracked log churn**, rewritten on every rotation and synced with every commit.
+# Console output is already redirected to `nest/logs/` (gitignored); this file handler was the
+# last log writer inside the source tree. It now lands in the repo-root `logs/mt5-bridge/`
+# (gitignored, and the same directory the supervisor already uses).
+log_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'logs', 'mt5-bridge'))
+os.makedirs(log_dir, exist_ok=True)
 # One log file per instance so multiple bridges never interleave or race rotation.
 log_file = os.path.join(log_dir, f'bridge-{BROKER_TAG}.log')
+
+class _ConsecutiveRepeatFilter(logging.Filter):
+    """Collapse consecutive identical messages on ONE handler (#703).
+
+    WHY THIS EXISTS: a single repeating WARNING (the offset-probe REJECTED path, #1072)
+    filled **436 MB** of redirected stderr in 8h19m — ~8 lines/s at idle. #1072 fixed that
+    message; THIS bounds the class: no message family can run away again, on any handler.
+
+    Behaviour: the first occurrence passes; consecutive identical messages are suppressed;
+    a reminder re-emits the message WITH a count every REMIND seconds, so a still-broken
+    state stays visible in both the rotating file and the console tail.
+    """
+    REMIND_SECONDS = 1800  # one reminder per 30 min — a broken state must not go silent
+
+    def __init__(self):
+        super().__init__()
+        self._last_msg = None
+        self._suppressed = 0
+        self._last_shown = 0.0
+
+    def filter(self, record):
+        try:
+            msg = record.getMessage()
+        except Exception:
+            return True  # never let formatting break logging
+        now = time.time()
+        if msg == self._last_msg:
+            self._suppressed += 1
+            if now - self._last_shown < self.REMIND_SECONDS:
+                return False
+            record.msg = f'{msg} [{self._suppressed} identical repetitions suppressed]'
+            record.args = ()
+            self._suppressed = 0
+            self._last_shown = now
+            return True
+        self._last_msg = msg
+        self._suppressed = 0
+        self._last_shown = now
+        return True
+
 handler = RotatingFileHandler(log_file, maxBytes=5_242_880, backupCount=5)
 handler.setFormatter(logging.Formatter(f'%(asctime)s [%(levelname)s] [{BROKER_TAG}] %(message)s'))
 _stream = logging.StreamHandler()
 _stream.setFormatter(logging.Formatter(f'%(asctime)s [%(levelname)s] [{BROKER_TAG}] %(message)s'))
+# A filter instance per handler: each channel collapses independently (the file keeps its own
+# count while the console tail keeps its own).
+handler.addFilter(_ConsecutiveRepeatFilter())
+_stream.addFilter(_ConsecutiveRepeatFilter())
 logger = logging.getLogger('mt5_bridge_v2')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
@@ -140,6 +193,17 @@ logger.addHandler(_stream)
 SERVER_UTC_OFFSET_SECONDS = 0
 _SERVER_OFFSET_MEASURED_AT = 0.0
 _SERVER_OFFSET_TTL_SECONDS = 1800  # re-measure twice an hour — DST moves twice a year
+
+# ⚠️ #1072 (measured 2026-10-10): the REJECTED warning below re-fired on EVERY data call
+# while ticks were stale — ~8 lines/s sustained on a closed market, **436 MB in 8h19m** on
+# one bridge's stderr. Two causes, both fixed here:
+#   1. The REJECTED branch never set `_SERVER_OFFSET_MEASURED_AT`, so the TTL cache above
+#      never engaged and every call re-ran the probe (and its native `symbol_info_tick`s —
+#      the terminal was being asked ~30x/s).
+#   2. Unlike Guard 1 (#992), the REJECTED warning had no once-per-state-change guard.
+# Remedy: set the attempt timestamp on rejection, and warn once per stale period — the flag
+# clears when a measurement succeeds, so the next genuine rejection is still reported.
+_OFFSET_REJECT_WARNED = False
 
 # The rounding step used when deriving the offset from a tick, and the tolerance it
 # implies. Rounded to 900s (15 min) because MT5 gives no cleaner source, but a
@@ -213,7 +277,7 @@ def detect_server_utc_offset(force=False):
     here against the two measurable failure modes only; the heuristic change is
     deliberately NOT made silently.
     """
-    global SERVER_UTC_OFFSET_SECONDS, _SERVER_OFFSET_MEASURED_AT, _OFFSET_PROBE_WARNED
+    global SERVER_UTC_OFFSET_SECONDS, _SERVER_OFFSET_MEASURED_AT, _OFFSET_PROBE_WARNED, _OFFSET_REJECT_WARNED
     now = time.time()
     if not force and _SERVER_OFFSET_MEASURED_AT and (now - _SERVER_OFFSET_MEASURED_AT) < _SERVER_OFFSET_TTL_SECONDS:
         return SERVER_UTC_OFFSET_SECONDS
@@ -275,15 +339,22 @@ def detect_server_utc_offset(force=False):
     # `>= 0` guards against a tick that is genuinely ahead of the wall clock.
     tick_age = max(0, now - (freshest_epoch - SERVER_UTC_OFFSET_SECONDS))
     if tick_age > ROUNDING_HALF_STEP_SECONDS:
-        logger.warning(
-            f'Server UTC offset probe REJECTED — freshest tick ({freshest_symbol}) is '
-            f'{tick_age:.0f}s old, beyond the {ROUNDING_HALF_STEP_SECONDS}s tolerance budget '
-            f'of the {ROUNDING_STEP_SECONDS}s rounding step. Retaining '
-            f'{SERVER_UTC_OFFSET_SECONDS}s rather than applying a biased measurement (#845).'
-        )
+        # #1072 — record the ATTEMPT so the TTL window applies to rejections too. Without this
+        # the probe re-ran on every call for the whole duration of a stale period (weekend).
+        _SERVER_OFFSET_MEASURED_AT = now
+        if not _OFFSET_REJECT_WARNED:
+            _OFFSET_REJECT_WARNED = True
+            logger.warning(
+                f'Server UTC offset probe REJECTED — freshest tick ({freshest_symbol}) is '
+                f'{tick_age:.0f}s old, beyond the {ROUNDING_HALF_STEP_SECONDS}s tolerance budget '
+                f'of the {ROUNDING_STEP_SECONDS}s rounding step. Retaining '
+                f'{SERVER_UTC_OFFSET_SECONDS}s rather than applying a biased measurement (#845). '
+                'Further occurrences suppressed until the probe succeeds.'
+            )
         return SERVER_UTC_OFFSET_SECONDS
 
     measured = int(round((freshest_epoch - now) / ROUNDING_STEP_SECONDS) * ROUNDING_STEP_SECONDS)
+    _OFFSET_REJECT_WARNED = False  # a successful measurement re-arms the warning for the next stale period
     if measured != SERVER_UTC_OFFSET_SECONDS:
         logger.info(
             f'Server UTC offset measured: {measured}s ({measured / 3600.0:.2f}h) from '

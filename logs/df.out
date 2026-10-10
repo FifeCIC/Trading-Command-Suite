@@ -1,9 +1,0 @@
-[docs-facts] wrote docs/GENERATED-FACTS.md and docs/generated-facts.json ÔÇö 8 fact(s)
-  Directive implementation files: 110
-  Glossary entries: 99 across 12 categories
-  Prisma models (declared): 119
-  Protocols in the seed file: 48
-  Provider adapter modules: 14
-  Live unmodelled tables with checked-in DDL: 4
-  Backend build-time validators: 36
-  Application version: 0.118.0
