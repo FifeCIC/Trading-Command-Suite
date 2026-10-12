@@ -112,7 +112,7 @@ function readActiveBrokersFromEnv() {
  * The rule, as a PURE function so it can be exercised without a database.
  *
  * @param bots        [{ name, symbol, active, baseSize }]  — active bots only
- * @param routes      [{ symbol, brokerId, enabled }]
+ * @param routes      [{ symbol, brokerId, enabled, brokerSymbol? }]
  * @param capability  [{ brokerId, name, tradeMode, volumeMin }]
  * @param activeBrokers number[]
  * @returns {{ failures, notes, sizeFailures, sizeNotes }}
@@ -143,7 +143,9 @@ function evaluate(bots, routes, capability, activeBrokers) {
     // trade — on a symbol that is deliberately traded through binance.
     if (String(r.provider ?? 'mt5') !== 'mt5') { nonMt5Routed.add(key); continue; }
     if (!activeBrokers.includes(Number(r.brokerId))) continue;
-    if (!routeOf.has(key)) routeOf.set(key, Number(r.brokerId));
+    // ⚠️ The WHOLE route is kept, not just the brokerId: `brokerSymbol` is the capability KEY
+    // (see the loop below) — USTEC is `NAS100` on broker 3 (#1112).
+    if (!routeOf.has(key)) routeOf.set(key, { brokerId: Number(r.brokerId), brokerSymbol: r.brokerSymbol ?? null });
   }
 
   const bySymbol = new Map(); // SYMBOL -> [bot]  (the whole bot, so `baseSize` is available)
@@ -172,20 +174,28 @@ function evaluate(bots, routes, capability, activeBrokers) {
   const sizeNotes = [];
   for (const [symbol, botList] of bySymbol) {
     const names = botList.map((b) => b.name);
-    const tradeable = [...(canTrade.get(symbol) || [])].filter((id) => activeBrokers.includes(id));
+    // ⚠️ The capability KEY is the BROKER'S name for the symbol, not ours (#1112). `canTrade` is
+    // keyed by `broker_symbol.name`, and an explicit route maps USTEC → NAS100; asking under the
+    // canonical ticker finds nothing and publishes a DEFINITE "cannot trade" for a live route.
+    // Measured 2026-10-12: this script reported USTEC as a bot that can never trade while the
+    // router (fixed the same day) answered canTrade=true for broker 3.
+    const routeEntry = routeOf.get(symbol);
+    const nativeKey = String(routeEntry?.brokerSymbol || symbol).toUpperCase();
+    const tradeable = [...(canTrade.get(nativeKey) || [])].filter((id) => activeBrokers.includes(id));
     let usable = [];
 
     // ── An EXPLICIT active-MT5 route is a capability fact someone verified by hand, and #1002
     //    never second-guesses it. So this check does not either: if that broker cannot trade the
     //    symbol, that IS the failure, and there is no fallback to note.
-    if (routeOf.has(symbol)) {
-      const routed = routeOf.get(symbol);
+    if (routeEntry) {
+      const routed = routeEntry.brokerId;
       if (!tradeable.includes(routed)) {
+        const asClause = nativeKey !== symbol ? ` as ${nativeKey}` : '';
         failures.push({
           symbol,
           bots: names,
           reason:
-            `routed to broker ${routed}, which reports tradeMode=0 (or does not list it), and an ` +
+            `routed to broker ${routed}${asClause}, which reports tradeMode=0 (or does not list it), and an ` +
             `explicit route is never overridden — this bot can never trade`,
         });
         continue;
@@ -223,7 +233,8 @@ function evaluate(bots, routes, capability, activeBrokers) {
     //    CONSTRUCTION rather than by an extra check: the non-MT5 branch above `continue`s first, so
     //    an MT5 floor is never applied to a symbol routed elsewhere (the BTC false positive that
     //    audit-bot-activation.cjs was corrected for on 2026-09-26).
-    const floors = [...(floorOf.get(symbol) ?? new Map())].filter(([id]) => usable.includes(id));
+    // ⚠️ Same key rule as `tradeable` above: the floor lives under the BROKER'S name (#1112).
+    const floors = [...(floorOf.get(nativeKey) ?? new Map())].filter(([id]) => usable.includes(id));
     if (floors.length === 0) continue; // no KNOWN floor — unknown must never read as a failure
     for (const bot of botList) {
       const size = Number(bot.baseSize);
@@ -348,10 +359,34 @@ function selfTest() {
     console.error('❌ self-test: a non-MT5 symbol must NOT be judged against an MT5 floor (the BTC regression)');
     return 1;
   }
-  console.log('✅ self-test: 9 cases — the rule was observed to FAIL a dead bot, an explicit route to');
-  console.log('   a broker that cannot trade it, and a baseSize below the floor on every capable broker;');
-  console.log('   PASS a tradeable bot and one AT the floor; NOTE a #1002 redirect; and treat a non-MT5');
-  console.log('   route and an UNKNOWN floor as NOT failures.');
+  // Directions 6+7 — a MAPPED route (#1112): capability is asked under the BROKER'S name.
+  // ⚠️ This pair exists because the script reported USTEC as a bot that can never trade while the
+  // live router answered canTrade=true — the check asked under the canonical ticker.
+  const mappedRoute = evaluate(
+    [{ name: 'USTEC QQQ Speed', symbol: 'USTEC', active: true, baseSize: 0.1 }],
+    [{ symbol: 'USTEC', brokerId: 3, enabled: true, provider: 'mt5', brokerSymbol: 'NAS100' }],
+    [{ brokerId: 3, name: 'NAS100', tradeMode: 4, volumeMin: 0.1 }],
+    [2, 3],
+  );
+  if (mappedRoute.failures.length !== 0) {
+    console.error('❌ self-test: a MAPPED route (USTEC → NAS100) must PASS — capability is keyed by the broker\'s name');
+    return 1;
+  }
+  const mappedDisabled = evaluate(
+    [{ name: 'USTEC QQQ Speed', symbol: 'USTEC', active: true, baseSize: 0.1 }],
+    [{ symbol: 'USTEC', brokerId: 3, enabled: true, provider: 'mt5', brokerSymbol: 'NAS100' }],
+    [{ brokerId: 3, name: 'NAS100', tradeMode: 0, volumeMin: 0.1 }],
+    [2, 3],
+  );
+  if (mappedDisabled.failures.length !== 1 || !/as NAS100/.test(mappedDisabled.failures[0].reason)) {
+    console.error('❌ self-test: a mapped route whose NATIVE listing is tradeMode=0 must FAIL, naming the native name');
+    return 1;
+  }
+  console.log('✅ self-test: 11 cases — the rule was observed to FAIL a dead bot, an explicit route to');
+  console.log('   a broker that cannot trade it, a baseSize below the floor on every capable broker, and');
+  console.log('   a mapped route whose broker-native listing disables it; PASS a tradeable bot, one AT the');
+  console.log('   floor and a healthy MAPPED route; NOTE a #1002 redirect; and treat a non-MT5 route and an');
+  console.log('   UNKNOWN floor as NOT failures.');
   return 0;
 }
 
@@ -382,7 +417,7 @@ async function main() {
   try {
     [bots, routes, capability] = await Promise.all([
       prisma.tradingStrategy.findMany({ where: { active: true }, select: { name: true, symbol: true, baseSize: true } }),
-      prisma.symbolRoute.findMany({ select: { symbol: true, brokerId: true, enabled: true, provider: true } }),
+      prisma.symbolRoute.findMany({ select: { symbol: true, brokerId: true, enabled: true, provider: true, brokerSymbol: true } }),
       prisma.brokerSymbol.findMany({ select: { brokerId: true, name: true, tradeMode: true, volumeMin: true } }),
     ]);
   } catch (err) {

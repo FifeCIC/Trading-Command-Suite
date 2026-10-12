@@ -114,7 +114,15 @@ export function createThemeRegistry({ packs = [], adapters = [], initialDiagnost
       };
     }
 
-    const fallbackPackId = packMap.has('core') ? 'core' : listPacks()[0];
+    // ⚠️ SLATE, NOT CORE (2026-10-12). This is the pack used when the stored id is unknown or missing
+    // — the app's real default. It read `core` until the owner asked for slate to be the default and
+    // `ai-original` to be removed: leaving it as `core` would have dropped every browser with
+    // `ai-original` stored onto a DIFFERENT pack than the one asked for, and that would have looked
+    // like "the default did not change" rather than like a bug. Packs are discovered by filename
+    // (`packs/*.js`), so deleting the old pack file is what removes it from `packMap`.
+    const fallbackPackId = packMap.has('slate')
+      ? 'slate'
+      : (packMap.has('core') ? 'core' : listPacks()[0]);
 
     if (!fallbackPackId) {
       throw new Error('No valid theme packs registered.');
@@ -150,7 +158,9 @@ export function createThemeRegistry({ packs = [], adapters = [], initialDiagnost
         })
       );
 
-      const fallbackPackId = packMap.has('core') ? 'core' : listPacks()[0];
+      const fallbackPackId = packMap.has('slate')
+      ? 'slate'
+      : (packMap.has('core') ? 'core' : listPacks()[0]);
       const fallbackPack = packMap.get(fallbackPackId);
       tokens = fallbackPack.createTokens(resolvedMode);
     }
@@ -162,7 +172,9 @@ export function createThemeRegistry({ packs = [], adapters = [], initialDiagnost
         })
       );
 
-      const fallbackPackId = packMap.has('core') ? 'core' : listPacks()[0];
+      const fallbackPackId = packMap.has('slate')
+      ? 'slate'
+      : (packMap.has('core') ? 'core' : listPacks()[0]);
       tokens = packMap.get(fallbackPackId).createTokens(resolvedMode);
     }
 

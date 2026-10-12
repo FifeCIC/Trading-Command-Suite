@@ -32,7 +32,14 @@ import { TopRowSlotProvider, TopRowSlotHost } from './core/top-row-slot';
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
-import './theme/packs/ai-original.css';
+// ⚠️ `ai-original.css` WAS imported here and is DELETED (2026-10-12, owner request). It was not a
+// theme: it restyled the topbar's padding and stickiness, card padding and radius, table cell
+// padding and button min-heights — ~80 STRUCTURAL properties, where `slate.css` declares none and
+// `scifi.css` only a decorative dot. A theme may change colour; it may not change structure, and the
+// owner measured the difference between packs and asked for it removed. The base `index.css` already
+// owns all of it: `.topbar` (L979), `.topbar-area-nav button` (L1062) with the wrap guard at L2505,
+// `box-sizing` (L424), and `min-height: 44px` in 11+ places. Deleting this import restores the app's
+// own structure under every pack. `slate.css` is the only colour-only pack imported.
 import './theme/packs/scifi.css';
 import './theme/packs/slate.css';
 import { featureFlags } from './utils/featureFlags';
@@ -100,12 +107,14 @@ function SymbolRedirect() {
   return <Navigate to={`/research/symbol/${encodeURIComponent(ticker || '')}`} replace />;
 }
 
+// ⚠️ `slate` is FIRST — it is the default pack, and the list order is what the picker presents as the
+// default. `ai-original` was removed 2026-10-12 (owner request) because it carried ~80 structural
+// overrides, so the app's geometry silently depended on which pack was active.
 const THEME_CARDS = [
-  { id: 'ai-original', name: 'AI Original', description: 'Dark navy, blue accent — doomchart inspired.', colors: ['#0a0e17', '#5b8def', '#e6ecf7'] },
+  { id: 'slate', name: 'Slate', description: 'Blue-gray with indigo accent — matches the dashboard.', colors: ['#0f172a', '#3b82f6', '#e2e8f0'] },
   { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
   { id: 'oceanic', name: 'Oceanic', description: 'Deep blue with teal.', colors: ['#0f1b2e', '#00d9ff', '#d6e8ff'] },
   { id: 'scifi', name: 'Sci-Fi', description: 'Dark navy, cyan neon.', colors: ['#0a1428', '#00d9ff', '#c1d0e0'] },
-  { id: 'slate', name: 'Slate', description: 'Blue-gray with indigo accent — matches the dashboard.', colors: ['#0f172a', '#3b82f6', '#e2e8f0'] },
   { id: 'terminal', name: 'Terminal', description: 'Black, neon green.', colors: ['#0a0a0a', '#00ff41', '#e0e0e0'] },
   { id: 'void', name: 'Void', description: 'Black, neon purple.', colors: ['#08080d', '#8a50ff', '#d4d0e8'] },
 ];

@@ -1782,6 +1782,24 @@ button.nav-active {
   padding: 0.3rem 1rem 0.1rem;
 }
 
+/* ⚠️ COLLAPSE THE ROW WHEN IT HOLDS NOTHING (2026-10-11). Owner report on /dashboard/dashboard:
+   *"a very thin bar reaching from left to right of the widgets area. It doesn't appear to have a
+   purpose."* MEASURED: 1885px × 6px, `Text: ""` — and 6px is exactly this rule's padding
+   (0.3rem + 0.1rem), so the bar IS the padding of an empty row.
+
+   WHY IT IS EMPTY ON THE DASHBOARD: `App.jsx` renders `<Breadcrumbs/>` only when `!isDashboard`, and
+   the ℹ inside `.main-top-right` only when the view has a `VIEW_EXPLANATIONS` entry. On a view with
+   neither, every child is empty and only the padding renders.
+
+   ⚠️ The row itself is NOT removed and must not be: it is the Top-Row Content Slot host
+   (`src/core/top-row-slot.jsx`), where pages inject content — SymbolsLadderPage puts its refresh
+   countdown here. So the rule keys on CONTENT: a child that is not empty keeps the row's spacing, and
+   a page that injects later restores it with no CSS change. `.main-top-right:empty` is a real match —
+   React renders an element with no children as genuinely empty, with no whitespace text node. */
+.main-top-row:not(:has(> *:not(:empty))) {
+  padding-block: 0;
+}
+
 .main-top-right {
   margin-left: auto;
   display: flex;
@@ -2761,4 +2779,23 @@ button.nav-active {
 .site-shell.dashboard-shell .left-rail,
 .site-shell.dashboard-shell .rail-collapse-toggle {
   display: none;
+}
+
+/* ⚠️ THE BREAKOUT IS APPLIED TO `main` ONLY — NOT TO THE SHELL (corrected 2026-10-12).
+   The first version of this set `padding-inline: 0` on `.site-shell.dashboard-shell`. That removed
+   the dashboard's gutters, but it ALSO removed the gutter from every other grid item in the same
+   shell — including `<header.topbar>` and the footer, which span all three columns. Measured:
+   the topbar moved from x=10 to x=0 and grew 1900px → 1905px, moving `.topbar-status-summary`
+   and `.topbar-calc-btn` with it. Owner report: *"<button.topbar-status-summary> Online and
+   <button.topbar-calc-btn> 🮈 are no longer positioned to the far right."*
+
+   The owner asked for the CONTENT to reach the edges, not the chrome. A negative inline margin on the
+   main column cancels exactly `.site-shell.layout-omni`'s `10px` gutter for that column alone, so the
+   topbar and footer keep their spacing while `main`, `.dash-page` and the widget grid run edge to edge.
+   ⚠️ The `10px` is duplicated from `.site-shell.layout-omni` on purpose — it is the value being
+   cancelled, and writing `calc()` around a variable nobody sets would hide that. If that padding
+   changes, this must change with it. It cannot overflow the document: the margin only consumes the
+   shell's own padding. */
+.site-shell.dashboard-shell .main-stage {
+  margin-inline: -10px;
 }

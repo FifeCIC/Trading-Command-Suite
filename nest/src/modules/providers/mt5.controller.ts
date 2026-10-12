@@ -63,9 +63,124 @@ export class Mt5Controller {
   }
 
   @Get('routes/:symbol')
-  @ApiOperation({ summary: 'Resolve the effective route for a single symbol' })
+  @ApiOperation({ summary: 'Resolve the effective route for a single symbol, with per-broker capability and health' })
   async resolveRoute(@Param('symbol') symbol: string) {
-    return { symbol: symbol.toUpperCase(), route: this.symbolRouter.resolve(symbol) };
+    const sym = symbol.toUpperCase();
+    const route = this.symbolRouter.resolve(sym);
+    // ⚠️ `brokers` + `botsOnSymbol` are ADDITIVE, added 2026-10-11 for the bot page's "Account
+    // routing" panel — the surface that answers "this bot's account is gone; which broker can I
+    // re-select?". `route` is unchanged for every existing consumer.
+    const healths = await this.mt5Connection.getAllBrokerHealths();
+    const brokers = healths.map((h) => ({
+      brokerId: h.brokerId,
+      server: h.server,
+      // The MT5 account NUMBER the bridge is logged into — null when unreachable. It is what
+      // "the account has been identified" actually means, so the panel renders it.
+      account: h.health?.account ?? null,
+      reachable: h.reachable,
+      connected: !!h.health?.connected,
+      connectionState: h.connectionState ?? null,
+      // ⚠️ `null` = capability UNKNOWN (broker_symbol never synced) — it must not read as
+      // "cannot trade" (#1002). The panel distinguishes the two.
+      // ⚠️ The CURRENT broker is asked with its ROUTE's brokerSymbol (broker-native name) —
+      // `broker_symbol` is keyed by the broker's name, so USTEC→NAS100 must ask as NAS100.
+      canTrade:
+        this.symbolRouter.canTradeOn(
+          h.brokerId,
+          sym,
+          h.brokerId === route.brokerId ? route.brokerSymbol : undefined,
+        ) ?? null,
+      current: h.brokerId === route.brokerId,
+    }));
+    let botsOnSymbol: number | null = null;
+    try {
+      botsOnSymbol = await (this.prisma as any).tradingStrategy.count({
+        where: { symbol: sym, active: true },
+      });
+    } catch {
+      botsOnSymbol = null; // "cannot count" is a state, not a zero
+    }
+    return { symbol: sym, route, brokers, botsOnSymbol, timestamp: new Date().toISOString() };
+  }
+
+  /**
+   * POST routes/:symbol/switch — re-select the broker an ORDER for this symbol travels to.
+   *
+   * WHY A SWITCH ENDPOINT RATHER THAN PUT+DELETE FROM THE CALLER (2026-10-11): `PUT
+   * routes/:symbol` upserts ONE (symbol, brokerId) row and NULLS its note, and a re-select is
+   * "disable what is there, enable what should be" — two writes that must not half-apply.
+   * The route rows carry HAND-VERIFIED notes (e.g. US500: "Pepperstone tradeMode=4; MetaQuotes
+   * tradeMode=0"), so a switch DISABLES the old row rather than deleting it: the note survives,
+   * and re-selecting the old broker is `switch` back.
+   *
+   * REFUSES — rather than warns — when the target's OWN symbol list says `tradeMode=0` (#1002):
+   * creating that route produces orders refused at dispatch, with the operator sent looking at
+   * the broker. `undefined` (never synced) is allowed and reported as unverified.
+   */
+  @Post('routes/:symbol/switch')
+  @ApiOperation({ summary: 'Re-select the broker for a symbol (disable existing rows, enable the target)' })
+  async switchRoute(@Param('symbol') symbol: string, @Body() body: { brokerId: number; reason?: string }) {
+    const sym = symbol.toUpperCase();
+    if (typeof body?.brokerId !== 'number' || !Number.isInteger(body.brokerId)) {
+      return { ok: false, error: 'brokerId (integer) is required' };
+    }
+    const target = body.brokerId;
+    const activeIds = this.mt5Connection.getBrokerIds();
+    if (!activeIds.includes(target)) {
+      return {
+        ok: false,
+        error: `broker ${target} is not an active MT5 bridge (active: ${activeIds.join(', ') || 'none'})`,
+      };
+    }
+    const before = this.symbolRouter.resolve(sym);
+    // ⚠️ Ask with the TARGET'S OWN broker-native name (#1112). `broker_symbol` is keyed by the
+    // broker's name — USTEC exists as `NAS100` on broker 3 — so a canonical-only ask returns a
+    // definite `false` and this guard would REFUSE THE RETURN LEG of a switch (3→2→3) on a route
+    // that trades fine. The row is read regardless of `enabled`: it is what the user is re-enabling.
+    const targetRow = await this.prisma.symbolRoute.findFirst({
+      where: { symbol: sym, brokerId: target },
+      select: { brokerSymbol: true },
+    });
+    const canTrade = this.symbolRouter.canTradeOn(target, sym, targetRow?.brokerSymbol ?? undefined);
+    if (canTrade === false) {
+      return {
+        ok: false,
+        error:
+          `broker ${target} cannot trade ${sym} — its own symbol list reports tradeMode=0 (#1002). ` +
+          `Re-select a broker whose list permits it.`,
+      };
+    }
+    // One transaction: disable every currently-enabled row for the symbol, then enable the target.
+    // `update` deliberately omits `note`/`brokerSymbol` — those are the row's hand-verified record.
+    await this.prisma.$transaction([
+      this.prisma.symbolRoute.updateMany({
+        where: { symbol: sym, enabled: true },
+        data: { enabled: false },
+      }),
+      this.prisma.symbolRoute.upsert({
+        where: { symbol_brokerId: { symbol: sym, brokerId: target } },
+        update: { enabled: true, priority: 0 },
+        create: {
+          symbol: sym,
+          brokerId: target,
+          brokerSymbol: null,
+          priority: 0,
+          enabled: true,
+          provider: 'mt5',
+          note: body.reason ?? null,
+        },
+      }),
+    ]);
+    this.invalidateRouteCache(sym);
+    return {
+      ok: true,
+      symbol: sym,
+      before: { brokerId: before.brokerId, explicit: before.explicit },
+      after: { brokerId: target },
+      capability:
+        canTrade === true ? 'verified' : 'unverified — broker_symbol has no entry for this symbol',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Put('routes/:symbol')

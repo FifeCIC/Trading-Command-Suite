@@ -166,7 +166,9 @@
         "hide": false,
         "keen": 3,
         "note": "Element:  <section.screener-transparency> Text:     256symbols in DB109with recent catalysts147quiet — filtered  Source:   /research/screener  add a stat for how many symbols have been scored out of the symbols registered and another stat for how many have been traded out of the total symbols registered. ",
-        "updatedAt": "2026-10-08T08:03:16.543Z",
+        "noteNew": "This is a good table for offering per row actions and additional information and actions on clicking. That is unique. The styling is good and I want a sample of this table in my final theme. It's good styling for highlighting row.",
+        "uiScore": 4,
+        "updatedAt": "2026-10-11T23:20:11.860Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -212,8 +214,9 @@
         "hide": false,
         "keen": 3,
         "note": "strong page - needs slight improvement to autosize widgets but it might be complex as some widgets should have a minimum size else they will look messy",
-        "noteNew": "",
-        "updatedAt": "2026-10-08T21:55:49.164Z",
+        "noteNew": "The entire dashboard and widget system is strong. I will want to copy this into my React Stack Core and use it in most projects. ",
+        "uiScore": 8,
+        "updatedAt": "2026-10-11T18:54:34.236Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -221,7 +224,9 @@
         "hide": false,
         "keen": 2,
         "note": "Element:  <div.ni-expanded-meta> Text:     Sentiment: NEUTRALImpact: MEDIUMCategory: earningsOpen sourc Source:   /research/news-intel  add ability to register the symbol. There is another view getting such an action and they should share the approach. A standard overlay was requested to allow selection of watchlist and eventually AI suggestions based on the context. In the case of news thats more important. ",
-        "updatedAt": "2026-10-08T13:33:08.537Z",
+        "noteNew": "These small-sized stats with icons are good I want them in the theme: Element:  <span.ni-summary-val.ni-sent-pos> Text:     ▲ 0 Positive Source:   /research/news-intel   Element:  <span.ni-summary-val.ni-sent-neg> Text:     ▼ 0 Negative Source:   /research/news-intel    Element:  <span.ni-summary-val.ni-sent-neu> Text:     ● 2821 Neutral Source:   /research/news-intel  and as a separate element this approach to a list is good: Element:  <div.ni-feed> Text:     Yahoo5.011/10/2026, 20:53:58mediumearningsDEJim Cramer Says  Source:   /research/news-intel  so lets include a sample of that in our theme as an approach to lists with around 10 pieces of information. ",
+        "uiScore": 7,
+        "updatedAt": "2026-10-11T23:32:08.844Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -422,8 +427,8 @@
         "keen": null,
         "note": "Move this to the Research area and improve styling on Element:  <div.db-event> Text:     📅AGSS earnings1h 15m Source:   /development/daily-briefing  and Element:  <div.db-brief-row> Text:     InvestedEURCAD58BUY▸ Source:   /development/daily-briefing   ",
         "noteNew": "",
-        "uiScore": null,
-        "updatedAt": "2026-10-08T08:03:33.160Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-11T23:35:22.344Z",
         "importance": null,
         "noteApplied": true,
         "noteNewApplied": null
@@ -432,7 +437,9 @@
         "hide": false,
         "keen": 1,
         "note": "When AI is fully integrated I would add a toggle for automatic AI response to note submission but we arent in the AI phase yet. ",
-        "updatedAt": "2026-10-08T08:03:17.393Z",
+        "noteNew": "The accordion is good layout. The title bar works really well for me: Element:  <div.rn-list> Text:     ⠿▾What stocks will benefit the most by global warming. Give  Source:   /research/research-notes and also Element:  <button.rn-mass-btn> Text:     ⤵ Mass import symbols Source:   /research/research-notes   it's just a button but it's nice and the icon is well placed. Keep in mind that my current active theme needs to be considered. ",
+        "uiScore": 8,
+        "updatedAt": "2026-10-11T23:23:25.457Z",
         "importance": "L",
         "noteApplied": false
       },
@@ -486,7 +493,9 @@
         "hide": false,
         "keen": 3,
         "note": "Nothing right now. ",
-        "updatedAt": "2026-10-01T08:14:10.297Z",
+        "noteNew": "We will attempt to name elements so that they are idenfiable within the final theme, and to aid in the creation of widgets. This page has a good \"Financial Breakdown Sidebar\"  Element:  <aside.symbol-detail-rail> Text:     AUDJPY☆Australian Dollar vs Japanese Yenforexmt5ActiveCompan Source:   /research/symbols-browser",
+        "uiScore": 8,
+        "updatedAt": "2026-10-11T23:09:00.378Z",
         "importance": "H"
       },
       "/signals/signals-overview": {
@@ -581,7 +590,8 @@
         "hide": false,
         "keen": 3,
         "note": "the table needs to match the most recent designs, links from symbols to the symbols own page, pages url includes \"t212\" but it's a view",
-        "updatedAt": "2026-10-08T08:03:16.834Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-11T18:54:39.094Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -589,7 +599,8 @@
         "hide": false,
         "keen": 3,
         "note": "The protocols column shows zero for symbols that have current positons which means some basic wiring still hasn't been done. If it turns out that those positions were created in yet another separate system from META.Stack's path then I need to know asap - sometimes this does happen due to the way agent AI processes instructions. ",
-        "updatedAt": "2026-10-08T08:03:16.462Z",
+        "uiScore": 8,
+        "updatedAt": "2026-10-11T20:17:31.088Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -665,7 +676,9 @@
         "hide": false,
         "keen": 3,
         "note": "Element:  <div.ec-table-wrap> Text:     SymbolCompanyDateTimeEPS EstPrior EPSRev EstMkt CapNKENike,  Source:   /research/earnings-calendar add ability to click on row and an overlay appears with option to register the symbol and to select an existing watchlist to add the symbol too. Additionally, when we are in the AI integration phase, add an option for AI anlysis of the stock, to establish the best protocol and bot and to advise on scheduling an entry, within app and a limit order. The AI phase is not actually defined so we might need to create an epic sprint issue that references other related issues.",
-        "updatedAt": "2026-10-08T13:33:08.504Z",
+        "noteNew": "The screen options are good: Element:  <div.ff-seg> Text:     AllTodayTomorrowThis WeekNext Week Source:   /research/earnings-calendar and they work especially good with icons: Element:  <div.ff-seg> Text:     Any☀️ BMO🌙 AMC Source:   /research/earnings-calendar so I want both samples in my theme library. I want to mention that the table on this view is not styled in-line with the rest of the app but lets correct it once the theme is finalised. Technically the table should be sharing existing styles but agentic AI has saw fit to come up with something different. ",
+        "uiScore": 4,
+        "updatedAt": "2026-10-11T23:28:22.307Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -673,7 +686,8 @@
         "hide": false,
         "keen": 1,
         "note": "This should not be released free or premium. We need to come up with a plan for a custom version OR our first add-on/extension. We don't have such a system so that would be a new epic. Such a system is also going to require the first hooks and filters.",
-        "updatedAt": "2026-10-01T08:27:42.256Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-11T23:28:52.358Z",
         "importance": "L"
       },
       "/settings/screen-assignment": {
@@ -723,7 +737,9 @@
         "hide": false,
         "keen": 3,
         "note": "Some watchlist's symbols do not appear. I suspect recent d don\"Built-in Watchlists\" should automatically display a watchlist for every separate stocks and shares account. This will extend the multi-accounts design and the UI automatically adapting to support that. It does require the database generation of the watchlist to match the account so that a protocol can use it. That might also involve the registration of symbols not yet in the database. Also, somehow there are two designes for the pills that display the symbols, some pills have the company name and some don't but it depeneds on the watchlist. ",
-        "updatedAt": "2026-10-01T07:46:55.026Z",
+        "noteNew": "This needs to be a part of all pages so lets add it to the theme libraries example pages - they might need to be built when the time comes. Element:  <button.pip-trigger> Text:     ℹ Source:   /watchlists/active-symbols",
+        "uiScore": 6,
+        "updatedAt": "2026-10-11T23:07:30.609Z",
         "importance": "H"
       },
       "/automation/automation-rules": {
@@ -803,7 +819,8 @@
         "hide": false,
         "keen": 1,
         "note": "Create an issue for discussion the possibility of forming protocols and bots specifically for pairs. Also do we have a directive to benefit from pairs or would this require a custom directive per pair - create an issue to discuss that and con Tidy up this list: Element:  <section.mc-section> Text:     Position Risk FlagsCRWV + CHPT1.00High positive correlation  Source:   /research/market-correlations Make this a bit larger: Element:  <div.mc-heatmap-wrap> Text:     8XPdNVDAXIACY3LNVlMSTRRTPACICPTGEFRBLXAIRpSOUNMETCR3NKd3NVDl Source:   /research/market-correlations  and make it so the boxes: Element:  <td.mc-cell> Text:     0.77 Source:   /research/market-correlations popout and resize larger when hovered over.",
-        "updatedAt": "2026-10-08T08:03:16.740Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-11T23:33:15.737Z",
         "importance": "L",
         "noteApplied": true
       },
@@ -811,7 +828,8 @@
         "hide": false,
         "keen": 2,
         "note": "This is essentially like a report on a stock. It will require the AI phase to be started.",
-        "updatedAt": "2026-10-08T08:03:17.373Z",
+        "uiScore": 1,
+        "updatedAt": "2026-10-11T23:32:41.272Z",
         "importance": "M",
         "noteApplied": false
       },
@@ -908,7 +926,8 @@
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T08:48:22.416Z",
+        "uiScore": 3,
+        "updatedAt": "2026-10-11T23:33:36.032Z",
         "importance": "M"
       }
     }

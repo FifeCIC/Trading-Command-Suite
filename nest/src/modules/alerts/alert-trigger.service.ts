@@ -243,11 +243,94 @@ export class AlertTriggerService implements OnModuleInit {
         // `collapseOrCreateAlert()` — "1 MT5 Bridge(s) Down" and "2 MT5 Bridge(s) Down" were two
         // DIFFERENT keys for ONE condition, so the row fractured every time the number moved.
         // The counts stay in the message, where a human still reads them.
-        return { triggered: true, title: 'MT5 Bridge(s) Down', message: `${servers} unreachable. Only ${brokers.length - down.length}/${brokers.length} active.`, severity: 'warning' };
+        //
+        // ⚠️ AND THE MESSAGE MUST NAME THE CONSEQUENCE (2026-10-11). "broker 3 unreachable. Only
+        // 1/2 active." was true and told the operator nothing about the 8 active bots it stranded.
+        const stranded = await this.strandedRouting(down.map((b) => b.brokerId));
+        const affected =
+          stranded && stranded.botCount > 0
+            ? ` Affected: ${stranded.botCount} active bot(s) routed via the unavailable broker(s) — ${stranded.symbols.join(', ')}.`
+            : '';
+        return { triggered: true, title: 'MT5 Bridge(s) Down', message: `${servers} unreachable. Only ${brokers.length - down.length}/${brokers.length} active.${affected}`, severity: 'warning' };
+      }
+      // ── "Account no longer available" with EVERY bridge healthy ─────────────────────────────
+      // A route can point at a broker id that is not in `MT5_ACTIVE_BROKERS` at all — the slot the
+      // bots were configured against was removed from the launcher, so NO bridge will ever answer
+      // it. All bridges report healthy and every routed bot still cannot trade. Added 2026-10-11;
+      // this is the purest form of "a bot assigned an account that is no longer available".
+      const strandedRoutes = await this.strandedRouting([]);
+      if (strandedRoutes && strandedRoutes.inactiveBrokerIds.length > 0 && strandedRoutes.botCount > 0) {
+        return {
+          triggered: true,
+          title: 'MT5 Route(s) Target Inactive Broker',
+          message:
+            `route(s) for ${strandedRoutes.symbols.join(', ')} point at broker ` +
+            `${strandedRoutes.inactiveBrokerIds.join(', ')}, which is not an active bridge. ` +
+            `${strandedRoutes.botCount} active bot(s) cannot route orders there — activate the ` +
+            `bridge (nest/.env MT5_ACTIVE_BROKERS) or re-select the broker.`,
+          severity: 'warning',
+        };
       }
       return { triggered: false, title: '', message: '' };
     } catch {
       return { triggered: true, title: 'MT5 Bridge Error', message: 'Failed to query MT5 bridge health.' };
+    }
+  }
+
+  /**
+   * strandedRouting() — which SYMBOLS, and how many ACTIVE BOTS, a set of unavailable brokers strands.
+   *
+   * WHY THIS EXISTS (2026-10-11). Broker 3's session died for ~24h (expired demo, `Terminal:
+   * Authorization failed`) and the alert said only "broker 3 unreachable. Only 1/2 active." — a true
+   * sentence that did not name a single consequence. Measured at the time: **8 active bots across 7
+   * routed symbols** were unable to trade, and the operator's question ("are any BOTS affected?")
+   * could not be answered from the alert. The message now carries the count and the symbols.
+   *
+   * TWO KINDS OF STRANDING, both computed here:
+   *   1. a bridge that IS active but not connected (`downBrokerIds`), and
+   *   2. a route that targets an id NOT in `MT5_ACTIVE_BROKERS` — the account was removed, so no
+   *      bridge will ever answer it. This one fires with EVERY bridge healthy, which is why the
+   *      caller checks it in its own branch.
+   *
+   * ⚠️ Bots WITHOUT an explicit route are NOT counted: they follow the primary broker, so a partial
+   * outage does not strand them. Counting them would inflate the figure — a plausible number that
+   * answers a different question, which is this repo's most repeated defect.
+   *
+   * `null` = the database was not readable — callers keep their original message rather than
+   * printing a fabricated zero.
+   */
+  private async strandedRouting(
+    downBrokerIds: number[],
+  ): Promise<{ symbols: string[]; botCount: number; inactiveBrokerIds: number[] } | null> {
+    const prisma = this.prisma as any;
+    if (!prisma?.isAvailable) return null;
+    try {
+      const conn = this.mt5Connection as any;
+      const activeIds: number[] =
+        typeof conn?.getBrokerIds === 'function' ? conn.getBrokerIds() : [];
+      const routes: Array<{ symbol: string; brokerId: number }> = await prisma.symbolRoute.findMany({
+        where: { enabled: true, provider: 'mt5' },
+        select: { symbol: true, brokerId: true },
+      });
+      // Empty `activeIds` means "no multi-broker registry" (single-bridge installs, unit tests) —
+      // every route's brokerId IS the default bridge there, so nothing can be inactive.
+      const inactiveBrokerIds = activeIds.length
+        ? [...new Set(routes.map((r) => Number(r.brokerId)).filter((id) => !activeIds.includes(id)))]
+        : [];
+      const strandedIds = [...new Set([...downBrokerIds, ...inactiveBrokerIds])];
+      if (strandedIds.length === 0) return { symbols: [], botCount: 0, inactiveBrokerIds };
+      const symbols = [
+        ...new Set(
+          routes.filter((r) => strandedIds.includes(Number(r.brokerId))).map((r) => String(r.symbol)),
+        ),
+      ].sort();
+      const botCount = symbols.length
+        ? await prisma.tradingStrategy.count({ where: { active: true, symbol: { in: symbols } } })
+        : 0;
+      return { symbols, botCount, inactiveBrokerIds };
+    } catch (err) {
+      this.logger.warn(`stranded-routing lookup failed: ${(err as Error).message}`);
+      return null;
     }
   }
 

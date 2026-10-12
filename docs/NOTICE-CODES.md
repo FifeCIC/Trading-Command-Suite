@@ -39,6 +39,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-RISK-001` | warning | RISK | Trade blocked by a safety gate |
 | `TCS-RISK-002` | warning | RISK | Directives disagree |
 | `TCS-RISK-003` | warning | RISK | Risk gate warning |
+| `TCS-RISK-004` | warning | RISK | No bot will take this signal |
 | `TCS-SCORE-001` | info | SCORE | Not enough data to judge edge |
 | `TCS-SIG-001` | error | SIG | Signals list unavailable |
 | `TCS-SIG-002` | error | SIG | Signal not dismissed |
@@ -76,7 +77,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-022` | warning | TRADE | Order outcome UNKNOWN — it may have been placed |
 | `TCS-TRADE-023` | error | TRADE | Position size could not be computed — no order sent |
 
-**54 codes** — 3 critical, 27 error, 13 warning, 5 info, 6 success.
+**55 codes** — 3 critical, 27 error, 14 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -515,6 +516,16 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `warning`
 - **Call:** `notice('TCS-RISK-003', { warning })`
 - **Related:** *none*
+
+#### `TCS-RISK-004` — No bot will take this signal
+
+- **Severity:** warning
+- **Message:** No bot will take this signal: {reason}
+- **Cause:** No ACTIVE bot subscribing to this protocol has a bar this reading meets — or none subscribes at all. A scored signal with no consumer is not a trade, whatever its strength.
+- **Action:** Create or adjust a bot for this protocol, or stop watching the protocol. The verdict is computed server-side from strategy_protocol subscriptions.
+- **Params:** `reason`
+- **Call:** `notice('TCS-RISK-004', { reason })`
+- **Related:** #911, #1111
 
 ### INTEG — Broker and provider integrations
 

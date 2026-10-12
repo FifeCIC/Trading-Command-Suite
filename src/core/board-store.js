@@ -59,23 +59,56 @@ function sizeFor(def, cols) {
   };
 }
 
-/** Left-to-right packing — used for seeding, migration and appending. */
+/**
+ * Left-to-right packing — used for seeding, migration and appending.
+ *
+ * ⚠️ EACH ROW IS STRETCHED TO FILL THE GRID (2026-10-11). Owner report on /dashboard/dashboard:
+ * *"this area that includes the tiles also doesn't allow widgets to be dragged into a large portion
+ * of the page area."* MEASURED on the real board: most rows used only 50–83% of the grid, with up to
+ * **924px** unused to the right, and some rows beginning at x=925 — a gap on the LEFT as well.
+ *
+ * The cause was this function. It packed first-fit at each widget's FIXED default width, so a row of
+ * 596 + 749 in a 12-column grid left three columns empty; the next widget's 901 did not fit in the
+ * remainder, so it wrapped and the gap stayed. ⚠️ Packing alone therefore could not close it —
+ * measured: re-packing an existing board changed nothing at all. The gap had to be filled here.
+ *
+ * ⚠️ WHY THE STRETCH IS APPLIED WHEN A ROW CLOSES (on wrap, and once more after the loop): a row's
+ * used width is only final once the next item has failed to fit. Growing the last widget then is the
+ * only point at which the leftover is known. A row that already fills `cols` gets nothing, and the
+ * stretch is clamped to `cols` so a single-widget row becomes full width rather than overflowing.
+ *
+ * ⚠️ `rowStart` guards a wrapped row: without it, `fillRow()` after a wrap would grow the FIRST widget
+ * of the NEW row using the OLD row's leftover.
+ */
 export function packLayout(items, cols, startY = 0) {
   const layout = [];
   let x = 0;
   let y = startY;
   let rowH = 0;
+  let rowStart = 0; // index in `layout` of the first item on the current row
+
+  /** Give the current row's last widget the columns the row left unused. */
+  const fillRow = () => {
+    if (layout.length - 1 < rowStart) return; // no item has been placed on this row yet
+    const last = layout[layout.length - 1];
+    const leftover = cols - x;
+    if (leftover > 0) last.w = Math.min(cols, last.w + leftover);
+  };
+
   for (const item of items) {
     const { w, h, minW, minH } = sizeFor(getWidget(item.widgetId), cols);
     if (x + w > cols) {
+      fillRow();
       x = 0;
       y += rowH;
       rowH = 0;
+      rowStart = layout.length;
     }
     layout.push({ i: item.uid, x, y, w, h, minW, minH });
     x += w;
     rowH = Math.max(rowH, h);
   }
+  fillRow();
   return layout;
 }
 

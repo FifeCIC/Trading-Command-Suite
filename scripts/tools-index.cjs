@@ -70,7 +70,6 @@ function referenceFiles() {
   add(path.join(NEST, 'package.json'));
   add(path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md'));
   add(path.join(REPO_ROOT, 'NEXT-AGENT.md'));
-  add(path.join(REPO_ROOT, '.agent-context.md'));
 
   // Instruction files + agents + skills: everything an agent actually loads.
   for (const sub of ['instructions', 'agents', 'skills', 'prompts']) {

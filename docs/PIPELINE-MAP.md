@@ -20,7 +20,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `symbol_route`
 
 - **writers (1):** `mt5.controller.ts`
-- **readers (3):** `bar-refresh.service.ts`, `mt5.controller.ts`, `mt5-symbol-router.service.ts`
+- **readers (4):** `alert-trigger.service.ts`, `bar-refresh.service.ts`, `mt5.controller.ts`, `mt5-symbol-router.service.ts`
 
 ## Bar store
 
@@ -49,7 +49,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `trading_strategy`
 
 - **writers (2):** `speed-scan.controller.ts`, `trading-strategy.service.ts`
-- **readers (22):** `app.controller.ts`, `alert-trigger.service.ts`, `architecture.service.ts`, `ab-test.service.ts`, `automation.controller.ts`, `backtest.service.ts`, `bar-refresh.service.ts`, `replay.service.ts`, `exit-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-health.service.ts`, `strategy-derivation.service.ts`, `signal-envelope.service.ts`, `signal-queue.service.ts`, `symbol-protocol-authority.service.ts`, `symbol-resolver.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `mt5-trading.service.ts`, `pyramid-policy.service.ts`, `trade-history.controller.ts`, `trading-strategy.service.ts`
+- **readers (23):** `app.controller.ts`, `alert-trigger.service.ts`, `architecture.service.ts`, `ab-test.service.ts`, `automation.controller.ts`, `backtest.service.ts`, `bar-refresh.service.ts`, `mt5.controller.ts`, `replay.service.ts`, `exit-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-health.service.ts`, `strategy-derivation.service.ts`, `signal-envelope.service.ts`, `signal-queue.service.ts`, `symbol-protocol-authority.service.ts`, `symbol-resolver.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `mt5-trading.service.ts`, `pyramid-policy.service.ts`, `trade-history.controller.ts`, `trading-strategy.service.ts`
 
 ## Gate / queue
 
@@ -81,12 +81,12 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**551** source files · **2920** declarations · **362** ratio sites · **1501** nodes · **134** unreferenced
+**551** source files · **2924** declarations · **363** ratio sites · **1505** nodes · **134** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
-| `exact` | the identical computation after normalisation | 43 |
-| `coarse` | the identical **shape**, different constants | 40 |
+| `exact` | the identical computation after normalisation | 44 |
+| `coarse` | the identical **shape**, different constants | 41 |
 | `idiom` | `(A−B)` **and** `(B−A)` in one expression | 1 |
 
 ## Divergent edges — the same maths, DIFFERENT rules
@@ -116,7 +116,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 24 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3005` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -409,7 +409,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 24 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3005` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -603,7 +603,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
-_… and 33 further group(s)._
+_… and 34 further group(s)._
 
 ## Q3b — the same shape, differing constants
 
@@ -653,7 +653,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 24 sites — `(VN/VN)*N`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:515` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3005` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -828,7 +828,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `total>0?Math.round((correct/total)*1000)/1000:0`
   - guarded by: `total>0`
 
-_… and 30 further group(s)._
+_… and 31 further group(s)._
 
 ## Q3c — the same idea, re-derived
 
@@ -876,9 +876,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/common/cache/cache.service.ts:69 del`
 - `nest/src/modules/alerts/alert-trigger.service.ts:150 stop`
 - `nest/src/modules/alerts/alert-trigger.service.ts:226 label`
-- `nest/src/modules/alerts/alert-trigger.service.ts:278 canTrade`
-- `nest/src/modules/alerts/alert-trigger.service.ts:286 definitelyBlocked`
-- `nest/src/modules/alerts/alert-trigger.service.ts:785 toMap`
+- `nest/src/modules/alerts/alert-trigger.service.ts:361 canTrade`
+- `nest/src/modules/alerts/alert-trigger.service.ts:369 definitelyBlocked`
+- `nest/src/modules/alerts/alert-trigger.service.ts:868 toMap`
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
@@ -925,7 +925,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:464 getCompanyMetrics`
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:508 getCapabilities`
 - `nest/src/modules/providers/adapters/trading212.adapter.ts:534 getCapabilities`
-- `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:371 getBrokerSymbol`
+- `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:383 getBrokerSymbol`
 - `nest/src/modules/providers/position-sync.service.ts:692 note`
 - `nest/src/modules/providers/provider-cache.service.ts:62 getStatus`
 - `nest/src/modules/replay/replay.service.ts:483 computeReturn`
@@ -969,11 +969,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/scoring.service.ts:831 debug`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:395 num`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:1602 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:1787 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:1795 first`
-- `nest/src/modules/signals/signal-envelope.service.ts:225 has`
-- `nest/src/modules/signals/signal-envelope.service.ts:539 newestOfTf`
+- `nest/src/modules/signals/signal-envelope.service.ts:1775 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:1960 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:1968 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:259 has`
+- `nest/src/modules/signals/signal-envelope.service.ts:573 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:166 note`

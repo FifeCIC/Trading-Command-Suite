@@ -376,6 +376,28 @@ export default function WidgetBoard({
     setKeysFor(null);
   }, [defaultWidgets, setItems, setLayouts]);
 
+  /**
+   * fillWidth() — re-pack the CURRENT widgets so they span the full grid. Owner request 2026-10-11:
+   * *"this area that includes the tiles also doesn't allow widgets to be dragged into a large portion
+   * of the page area."*
+   *
+   * ⚠️ THIS IS NOT `resetLayout`, AND THE TWO MUST NOT BE MERGED. `resetLayout` above re-seeds from
+   * `defaultWidgets`, so it DISCARDS a hand-arranged board. This packs the widgets the user actually
+   * has. Conflating them would make "fill the width" silently delete widgets, which is the sort of
+   * helpful-looking button that costs a user their arrangement.
+   *
+   * WHY IT IS NEEDED AT ALL: tiles are positioned in COLUMNS, and a saved layout can leave columns
+   * unused — measured on the dashboard, one row used 9 of 12 columns, so three columns rendered as an
+   * empty gap beside the tiles and no amount of dragging filled it permanently. `buildAllLayouts` —
+   * the same packing the board already uses for a fresh board — closes those gaps across every
+   * breakpoint. Nothing moves until this is pressed, so the arrangement stays the user's.
+   */
+  const fillWidth = useCallback(() => {
+    if (!items.length) return;
+    setLayouts(buildAllLayouts(items));
+    setKeysFor(null);
+  }, [items, setLayouts]);
+
   const clearBoard = useCallback(() => {
     setItems([]);
     setLayouts({});
@@ -445,7 +467,20 @@ export default function WidgetBoard({
         )}
         {editable && items.length > 0 && (
           <>
-            <button type="button" className="wb-btn wb-btn--ghost" onClick={resetLayout}>
+            <button
+              type="button"
+              className="wb-btn wb-btn--ghost"
+              onClick={fillWidth}
+              title="Re-pack the widgets you have so they span the full grid width. Moves tiles; removes nothing."
+            >
+              Fill width
+            </button>
+            <button
+              type="button"
+              className="wb-btn wb-btn--ghost"
+              onClick={resetLayout}
+              title="Restore the default widget set for this board — this REPLACES the widgets you have added."
+            >
               Reset
             </button>
             <button type="button" className="wb-btn wb-btn--ghost" onClick={clearBoard}>

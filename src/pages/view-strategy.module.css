@@ -459,3 +459,99 @@
   color: var(--ink-soft);
   line-height: 1.5;
 }
+
+/* ── Account routing (2026-10-11) ──────────────────────────────────────────────────────────────
+   The broker bridge that fills this bot's orders, and the re-select control. Warnings reuse the
+   amber token — an unavailable account is a fault to act on, not an error state of the page. */
+.routeRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+}
+.routePath {
+  color: var(--ink);
+}
+.routeWarn {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  line-height: 1.5;
+}
+.routeControls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+.routeLabel {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.routeSelect {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  max-width: 100%;
+}
+.routeSelect:focus-visible,
+.routeBtn:focus-visible,
+.routeBtnPrimary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.routeBtn,
+.routeBtnPrimary {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.routeBtn:hover,
+.routeBtnPrimary:hover {
+  border-color: var(--accent);
+}
+.routeBtnPrimary {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: var(--weight-bold);
+}
+.routeBtn:disabled,
+.routeBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.routeConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+.routeConfirm p {
+  margin: 0;
+  line-height: 1.5;
+}
+.routeOk {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-profit);
+}
+.routeErr {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-loss);
+}

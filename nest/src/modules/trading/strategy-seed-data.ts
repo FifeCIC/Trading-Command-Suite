@@ -428,6 +428,81 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     exhaustionDecelPct: 20,
   },
 
+  // ─── Owner-approved onboarding, 2026-10-12 — the unsubscribed ladder protocols ────────────
+  //
+  // WHY THESE EXIST. Measured on the live ladder 2026-10-11/12: 5 of 21 cards read NOTHING
+  // SUBSCRIBED — scored work with no consumer — including the TOP card (USTEC, STRONG_BUY 23%).
+  // The owner accepted the onboarding proposal 2026-10-12. BTC/SOL (btc-scalp-v1) are
+  // DELIBERATELY excluded: the Binance adapter is market-data only (no keys, no order path)
+  // and MT5 crypto is the #914 bare-ticker trap — they stay signal-only, and the signals
+  // overview's "no bot will take this signal" notice now states that truthfully on every one
+  // of their signals. (⚠️ Do not write the notice CODE as a literal in nest/src — the notices
+  // gate treats any TCS-… literal here as server-emittable and fails the build.)
+  //
+  // ⚠️ USTEC ALSO NEEDS ITS ROUTE: `seed-symbol-onboarding.ts` → USTEC → broker 3, brokerSymbol
+  // `NAS100` (MetaQuotes lists USTEC with tradeMode=0; Pepperstone trades NAS100, floor 0.1).
+  {
+    name: 'USTEC QQQ Speed',
+    symbol: 'USTEC',
+
+    magic: 234140,
+    protocolId: 'qqq-speed-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    // 0.1 = the Pepperstone NAS100 volume floor (verified 2026-10-12), not a preference —
+    // the same lesson as the FTSE bot's 0.01→0.1 change.
+    baseSize: 0.1,
+    slPct: 1.0,
+    tpPct: 1.0,
+    // Bar 10 with a measured all-time ceiling of 25.8% (#840) — same bar as its FTSE/DAX/CAC
+    // peers. Raise from measured outcomes, never by intuition.
+    minComposite: 10,
+    sessionWindow: ['us'],
+    style: 'Tick Scalp',
+  },
+  {
+    name: 'VIX Spike Reversion',
+    symbol: 'VIX',
+
+    magic: 234141,
+    // ⚠️ NOT the same protocol as the existing short bot: `vix-spike-v1` is LONG_ONLY
+    // mean-reversion (1m–5m, ceiling 20.8%); `vix-short-v1` is SHORT_ONLY. Two protocols, two
+    // bots — the ladder watches vix-spike-v1, which previously had no subscriber.
+    protocolId: 'vix-spike-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.1,
+    slPct: 2.0,
+    tpPct: 4.0,
+    minComposite: 10,
+    sessionWindow: 'all-hours',
+    style: 'Scalp',
+  },
+  {
+    name: 'Gold Macro Position',
+    symbol: 'XAUUSD',
+
+    magic: 234142,
+    protocolId: 'gold-macro-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    // The protocol is 1d–1w trend/position (avg hold: days to weeks).
+    timeframe: '1d',
+    baseSize: 0.01,
+    slPct: 2.5,
+    tpPct: 5.0,
+    // ⚠️ Bar 5, NOT 7+. The protocol's measured ALL-TIME ceiling is 6.4% (#840) — below the
+    // Position style gate (7) — so a higher bar would starve it forever. Raise from measured
+    // outcomes (#772 doctrine), never by intuition.
+    minComposite: 5,
+    sessionWindow: 'all-hours',
+    style: 'Trend Following / Position',
+    // ⚠️ `maxHoldHours` DELIBERATELY ABSENT — absent means NO LIMIT. A days-to-weeks thesis
+    // must not carry the 12h time-stop the intraday families use.
+  },
+
   // ── Short-side proof (#772) ─────────────────────────────
   //
   // ⚠️ This is the app's only SHORT bot and the proof that the short path works

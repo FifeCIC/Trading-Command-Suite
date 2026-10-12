@@ -564,6 +564,10 @@ async function main() {
               WHERE sr.symbol COLLATE utf8mb4_unicode_ci = t.symbol COLLATE utf8mb4_unicode_ci
                 AND sr.enabled = 1 AND sr.provider = 'mt5'
               ORDER BY sr.priority ASC LIMIT 1) AS routedBroker,
+            (SELECT sr.brokerSymbol FROM symbol_route sr
+              WHERE sr.symbol COLLATE utf8mb4_unicode_ci = t.symbol COLLATE utf8mb4_unicode_ci
+                AND sr.enabled = 1 AND sr.provider = 'mt5'
+              ORDER BY sr.priority ASC LIMIT 1) AS routedBrokerSymbol,
             (SELECT sr.provider FROM symbol_route sr
               WHERE sr.symbol COLLATE utf8mb4_unicode_ci = t.symbol COLLATE utf8mb4_unicode_ci
                 AND sr.enabled = 1 AND sr.provider <> 'mt5'
@@ -594,6 +598,12 @@ async function main() {
     const nonMt5 = b.nonMt5Provider != null ? String(b.nonMt5Provider) : null;
     const brokerId = b.routedBroker != null ? Number(b.routedBroker) : primary;
     const port = nonMt5 ? undefined : portByBroker[brokerId];
+    // ⚠️ THE LOOKUP NAME IS THE BROKER'S NAME, NOT OURS (#1112). `/symbols` and `/symbol/<X>/info`
+    // are keyed by what the BROKER calls the symbol: broker 3 lists `NAS100`, not `USTEC`. The
+    // canonical ticker was used here, so a mapped route read `tradeMode: undefined` →
+    // `BROKER-HAS-NO-SYMBOL` — "we could not ask" published as "the broker does not list it".
+    // Measured 2026-10-12 on USTEC (route: broker 3 as `NAS100`, tradeMode=4).
+    const nativeName = String(b.routedBrokerSymbol || ticker).toUpperCase();
     // ⚠️ `modesByPort` only gets a key when the bridge actually ANSWERED (`catch` above leaves it
     // absent). Measured 2026-09-26: :5001 was UP but returned **503** on `/symbols`, so all seven
     // broker-3 symbols read `tradeMode: undefined` and were reported `BROKER-HAS-NO-SYMBOL` — i.e.
@@ -604,8 +614,8 @@ async function main() {
     // the key, `listLoaded` read true, and all seven broker-3 symbols were still published as
     // BROKER-HAS-NO-SYMBOL. An empty list is not an answer, so the test requires symbols.
     const listLoaded = port != null && (modesByPort.get(port)?.size ?? 0) > 0;
-    const tradeMode = nonMt5 || !listLoaded ? undefined : modesByPort.get(port)?.get(ticker);
-    const c = nonMt5 || !listLoaded ? null : await constraints(port, ticker);
+    const tradeMode = nonMt5 || !listLoaded ? undefined : modesByPort.get(port)?.get(nativeName);
+    const c = nonMt5 || !listLoaded ? null : await constraints(port, nativeName);
     const bars = Number(b.bars);
     const size = Number(b.baseSize);
     const active = Number(b.active) === 1;
@@ -629,6 +639,9 @@ async function main() {
 
     rows.push({
       ticker,
+      // ⚠️ Carried so the audit SHOWS which name was asked of the broker (#1112): a mapped route
+      // read under the canonical ticker is exactly the defect this file was corrected for.
+      native: nativeName !== ticker ? nativeName : null,
       name: String(b.name),
       active,
       mode: String(b.mode),
@@ -670,8 +683,8 @@ async function main() {
   if (env.capProbeFailed) console.log(`\u26a0\ufe0f  cap-evaluability probe FAILED: ${env.capProbeFailed} — cap faults are NOT checked.`);
   if (env.scoreProbeFailed) console.log(`\u26a0\ufe0f  score-freshness probe FAILED: ${env.scoreProbeFailed} — freshness is NOT checked.`);
 
-  console.log('\n[symbol ] [bot                              ] [active] [mode      ] [size] [broker] [tradeMode] [floor] [lastScore                     ] [subs] verdict');
-  console.log('-'.repeat(150));
+  console.log('\n[symbol  ] [bot                              ] [active] [mode      ] [size] [broker] [tradeMode] [floor] [lastScore                     ] [subs] verdict');
+  console.log('-'.repeat(152));
   for (const r of rows) {
     // ⚠️ A NON-BLOCKING fault is still a fact worth printing, but printing it in the same style as a
     // blocker is how "39 OK" and `STALE-SCORE` end up on the same screen and read as a contradiction.
@@ -684,7 +697,7 @@ async function main() {
     // `13908` reads as healthy whether it was written a second or six hours ago.
     const scoreCol = r.scoreNewest ? `${formatAge(r.scoreAgeMin)} ago` : 'never';
     console.log(
-      `${r.ticker.padEnd(8)} ${r.name.slice(0, 32).padEnd(32)} ${String(r.active).padEnd(6)} ` +
+      `${(r.native ? `${r.ticker}\u2192${r.native}` : r.ticker).padEnd(10)} ${r.name.slice(0, 32).padEnd(32)} ${String(r.active).padEnd(6)} ` +
       `${r.mode.padEnd(10)} ${String(r.size).padEnd(5)} ${String(r.brokerId).padEnd(7)} ` +
       `${String(r.tradeMode ?? 'n/a').padEnd(10)} ${String(r.floor ?? 'n/a').padEnd(6)} ` +
       `${scoreCol.padEnd(14)} ` +

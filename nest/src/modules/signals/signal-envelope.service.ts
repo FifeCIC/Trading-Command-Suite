@@ -130,6 +130,40 @@ export interface SignalEnvelope {
   /** #723 — execution blockers assessed at GENERATION time (same library that
    *  re-checks at execution). Each carries a change-hint. */
   executionBlockers?: FeasibilityBlocker[];
+  /**
+   * #911 → single-service (2026-10-12) — the BOT VERDICT: will any ACTIVE bot take this signal?
+   * Computed ONCE by `buildBotGate()`; consumers render `sentence` verbatim.
+   */
+  botGate?: BotGateVerdict;
+}
+
+/**
+ * BotGateVerdict — "will any ACTIVE bot take this signal?", computed ONCE server-side.
+ *
+ * WHY THE SERVER OWNS THIS (2026-10-12, owner directive). The sentence used to be generated
+ * client-side (`src/core/tradeability.js`, #911) from `GET /api/scoring/gated/thresholds` — whose
+ * bot list comes from the DISPLAY-ONLY `trading_strategy.protocolId` column plus name-prefix
+ * matching: the exact basis #759's correction rejected when the gate reconciliation moved onto
+ * `strategy_protocol` subscriptions. Two views, one question, TWO bot lists that agreed only by
+ * accident. Now: one lookup (the reconciliation's), one sentence, rendered where signals live.
+ */
+export interface BotGateVerdict {
+  state: 'refused' | 'clear' | 'unsubscribed' | 'unknown';
+  /** The ONE human sentence — rendered verbatim, never re-derived by a consumer. */
+  sentence: string;
+  lowestBarPct: number | null;
+  readingPct: number | null;
+  shortfall: number | null;
+  /** ACTIVE bots subscribing to the protocol (via `strategy_protocol`). */
+  subscribedBots: number;
+  clearingBots: number;
+  /**
+   * True when the signal CARD should render `sentence` as its own notice. The client maps this to
+   * its "no bot will take this signal" RISK code — the literal is deliberately NOT written here,
+   * because the notices gate treats any TCS-… literal in nest/src as server-emittable and would
+   * demand an HTTP status for a code the server never throws (see notice-catalogue.ts).
+   */
+  notice: boolean;
 }
 
 export interface SignalLadder {
@@ -663,12 +697,18 @@ export class SignalEnvelopeService {
       ),
       protocolId,
     );
-    const { preTradeReady, preTradeBlockers, preTradeBlockerCodes } = this.evaluatePreTrade(
-      gated,
-      conflicts,
-      gate.threshold,
-      gate.label,
+    const evaluated = this.evaluatePreTrade(gated, conflicts, gate.threshold, gate.label);
+
+    // ── The BOT VERDICT (#911 → single service, 2026-10-12) ────────────────────────────────
+    // Built from the reconciliation's OWN lookup (subscriptions, not the display column) and
+    // folded into the blockers so one fact is one sentence (see buildBotGate/applyBotGate).
+    const botGateBase = this.buildBotGate(gate.participatingBots, gated.signalPct);
+    const botGateApplied = this.applyBotGate(
+      evaluated.preTradeBlockers,
+      evaluated.preTradeBlockerCodes,
+      botGateBase,
     );
+    const botGate: BotGateVerdict = { ...botGateBase, notice: botGateApplied.notice };
 
     // #684 — combined strength: best of Signal and Opportunity.
     // Signal % is the classification basis (pre-gate directional).
@@ -702,9 +742,10 @@ export class SignalEnvelopeService {
       },
       groups,
       conflicts,
-      preTradeReady,
-      preTradeBlockers,
-      preTradeBlockerCodes,
+      preTradeReady: evaluated.preTradeReady,
+      preTradeBlockers: botGateApplied.blockers,
+      preTradeBlockerCodes: evaluated.preTradeBlockerCodes,
+      botGate,
       scoredAt: new Date().toISOString(),
       // ── #684 Signals v1 metadata ──
       protocolId: protocolId ?? null,
@@ -1121,21 +1162,153 @@ export class SignalEnvelopeService {
       const bars = bots
         .map((b) => Number((b as { minComposite?: number | null }).minComposite ?? 0))
         .filter((n) => Number.isFinite(n) && n > 0);
-      if (bars.length === 0) return resolution;
+
+      // The participating-bot facts ride on WHICHEVER resolution is returned, so the envelope can
+      // build the bot verdict from this same lookup (#911 → single-service, 2026-10-12).
+      // ⚠️ Attached by MUTATION on the unchanged paths, because callers/specs pin object identity
+      // for "the gate was not second-guessed" (`expect(out).toBe(base)`).
+      const participating = { count: subscribedIds.length, bars: [...bars].sort((a, b) => a - b) };
+      if (bars.length === 0) {
+        resolution.participatingBots = participating;
+        return resolution;
+      }
 
       const lowestBotBar = Math.min(...bars);
-      if (lowestBotBar >= resolution.threshold) return resolution;
+      if (lowestBotBar >= resolution.threshold) {
+        resolution.participatingBots = participating;
+        return resolution;
+      }
 
       return {
         threshold: lowestBotBar,
         source: 'style',
         style: resolution.style,
         label: `${resolution.label}, reconciled down to the lowest participating bot bar (${lowestBotBar})`,
+        participatingBots: participating,
       };
     } catch {
       // Bot lookup is best-effort — never let it change the gate by accident.
       return resolution;
     }
+  }
+
+  /**
+   * buildBotGate() — THE bot verdict, and the ONE place its human sentence is generated.
+   *
+   * ── DECISION (2026-10-12, owner) ──
+   * WHAT:        the bot verdict's sentence is generated server-side ONCE (here) and rendered on
+   *              SIGNAL cards; the scoring ladder and every ScoreCard carry NO bot status.
+   * WHY:         bots come into play once a signal exists, and the sentence had TWO implementations:
+   *              the client (`tradeability.js`) resolved "subscribed" bots from the DISPLAY-ONLY
+   *              `trading_strategy.protocolId` column, while this service's reconciliation resolves
+   *              them through `strategy_protocol` subscriptions (#759) — one fact, two bot lists,
+   *              two views, agreeing only by accident. Owner: "should be a single service".
+   * INSTEAD OF:  #911's client-side block on every ScoreCard (Ladder + AbLadder + MetaStackCockpit).
+   * REVERSE BY:  restore `src/core/tradeability.js` + `<BotTradeability/>` on ScoreCard and drop
+   *              `buildBotGate`/`applyBotGate`/`envelope.botGate` (see docs/SETTLED-DECISIONS.md).
+   * REGISTER:    docs/SETTLED-DECISIONS.md row 82
+   * GUARD:       nest/src/modules/signals/signal-envelope-bot-verdict.spec.ts (canaried both ways)
+   *
+   * WHY THE SERVER OWNS THIS SENTENCE (2026-10-12, owner directive). It was generated client-side
+   * (`src/core/tradeability.js`, #911) from `GET /api/scoring/gated/thresholds`, whose bot list
+   * comes from the DISPLAY-ONLY `trading_strategy.protocolId` column plus name-prefix matching —
+   * the exact basis #759's correction rejected when it moved the gate reconciliation onto
+   * `strategy_protocol` subscriptions. Two views, one question, two bot lists: they agreed only by
+   * accident, and the owner asked for ONE service. Bots do not belong on the scoring ladder;
+   * the SIGNAL CARD shows this sentence.
+   *
+   * States (the retired client module's vocabulary, kept so old explanations still map):
+   *   refused | clear | unsubscribed | unknown — `unknown` is checked by construction, never a
+   *   confident answer to a question the data cannot answer.
+   */
+  private buildBotGate(
+    participating: { count: number; bars: number[] } | undefined,
+    signalPct: number | null | undefined,
+  ): BotGateVerdict {
+    const base: BotGateVerdict = {
+      state: 'unknown',
+      sentence: '',
+      lowestBarPct: null,
+      readingPct: null,
+      shortfall: null,
+      subscribedBots: participating?.count ?? 0,
+      clearingBots: 0,
+      notice: false,
+    };
+
+    // No lookup ran (override gate / no protocol) → cannot judge. Silence, never a guess.
+    if (!participating) return base;
+
+    if (participating.count === 0) {
+      return {
+        ...base,
+        state: 'unsubscribed',
+        sentence:
+          'No ACTIVE bot subscribes to this protocol, so nothing can act on this signal whatever its strength.',
+        notice: true,
+      };
+    }
+
+    const reading = typeof signalPct === 'number' ? Math.round(signalPct * 10) / 10 : null;
+    if (participating.bars.length === 0 || reading == null) {
+      return {
+        ...base,
+        readingPct: reading,
+        sentence: 'No subscribed bot declares a usable bar, so none can be compared.',
+      };
+    }
+
+    const lowest = participating.bars[0];
+    const clearing = participating.bars.filter((b) => reading >= b).length;
+    if (clearing > 0) {
+      return {
+        ...base,
+        state: 'clear',
+        readingPct: reading,
+        lowestBarPct: lowest,
+        clearingBots: clearing,
+        sentence: `${clearing} of ${participating.count} subscribed bot(s) have a bar this reading meets.`,
+      };
+    }
+
+    const shortfall = Math.round((lowest - reading) * 10) / 10;
+    return {
+      ...base,
+      state: 'refused',
+      readingPct: reading,
+      lowestBarPct: lowest,
+      shortfall,
+      sentence:
+        `REFUSED by every subscribed bot — the lowest bar is ${lowest}% and this reading is ` +
+        `${reading}%, a shortfall of ${shortfall} point${shortfall === 1 ? '' : 's'}.`,
+      notice: true,
+    };
+  }
+
+  /**
+   * applyBotGate() — fold the verdict into the pre-trade blockers.
+   *
+   * When the bots REFUSE and the gate blocked, the below-gate blocker's sentence IS the bot
+   * sentence: one fact, ONE sentence (that placeholder used to read `Signal below 9% (8.3%)
+   * [style …, reconciled down to the lowest participating bot bar (9)]`). The CODE stays
+   * `BELOW_GATE` — classification reads codes, never this text (#974).
+   *
+   * When the gate did NOT block, nothing is appended to `preTradeBlockers`: `preTradeReady` is a
+   * READINESS contract, and a display explanation must not flip it (a manual trade the gate
+   * permits stays permitted). The card renders the verdict from `botGate.notice` instead.
+   */
+  private applyBotGate(
+    blockers: string[],
+    codes: string[],
+    botGate: BotGateVerdict,
+  ): { blockers: string[]; notice: boolean } {
+    const i = codes.indexOf('BELOW_GATE');
+    if (botGate.state === 'refused' && i >= 0) {
+      const next = [...blockers];
+      next[i] = botGate.sentence;
+      return { blockers: next, notice: false };
+    }
+    return { blockers, notice: botGate.notice };
   }
 
   private emptyEnvelope(symbol: string): SignalEnvelope {

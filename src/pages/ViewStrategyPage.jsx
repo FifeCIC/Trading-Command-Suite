@@ -61,10 +61,10 @@
  *   GET /api/trading/strategies/:id/protocols  — subscriptions; `role` lives HERE, not on the bot
  */
 
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 // The app's ONE reveal-on-scroll mechanism (Theme Lab -> Scroll Animations). `.lad-reveal` is
 // `opacity: 0` in `ladder.css`, and this hook is the only thing that adds `lad-reveal--show`, so a
 // `.lad-reveal` element WITHOUT the hook stays invisible. Reusing the hook rather than writing a
@@ -100,6 +100,7 @@ import { formatCurrency, formatDateTime, formatNumber } from '../core/format-uti
 // reached a user (#824). `TCS-SYS-002` carries the status and the action; the wording is preserved
 // inside the notice as its cause.
 import { noticeFromError } from '../core/notices/from-error.js';
+import NoticeBlock from '../components/NoticeBlock';
 import styles from './view-strategy.module.css';
 import './strategy-decision-path.css';
 
@@ -441,6 +442,187 @@ function BotRecord({ query, row }) {
           {query.data?.populationNote && (
             <p className={styles.sectionNote}>{query.data.populationNote}</p>
           )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * RouteAccountPanel — which BROKER BRIDGE fills this bot's orders, and the way to re-select it.
+ *
+ * WHY IT EXISTS (owner, 2026-10-11): *"when we view a bot there is no way to re-select a broker"* —
+ * asked while the Pepperstone demo the bot's symbol was routed to had expired. Two facts were true
+ * at once, and neither was visible anywhere near the bot:
+ *
+ *   1. The bot carries `brokerId: 'mt5'` — a VENUE, not an account. The ACCOUNT is chosen by
+ *      `symbol_route` (per SYMBOL, shared by every bot trading it), which is why this panel says so
+ *      in its own words when more than one bot is affected.
+ *   2. Nothing surfaced that the account was gone, on the page about the bot that uses it.
+ *
+ * The panel writes through `POST /api/providers/mt5/routes/:symbol/switch` — ONE transaction that
+ * disables the current row and enables the target, so a half-applied route (which reads as "no
+ * route" and silently falls back to the primary broker) cannot happen. The server refuses targets
+ * whose own symbol list reports tradeMode=0 (#1002); the refusal is rendered as text rather than
+ * left for the operator to discover at order time.
+ */
+function RouteAccountPanel({ bot }) {
+  const routeQuery = useQuery({
+    queryKey: ['mt5-route', bot.symbol],
+    queryFn: () => apiGet(`/api/providers/mt5/routes/${encodeURIComponent(bot.symbol)}`),
+  });
+  const [target, setTarget] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [outcome, setOutcome] = useState(null); // { ok, text }
+  const [failure, setFailure] = useState(null); // notice
+
+  const data = routeQuery.data;
+  const route = data?.route;
+  const brokers = data?.brokers || [];
+  const current = brokers.find((b) => b.current);
+  const down = current && (!current.reachable || !current.connected);
+  const currentCantTrade = current?.canTrade === false;
+  const shared = typeof data?.botsOnSymbol === 'number' && data.botsOnSymbol > 1;
+
+  async function doSwitch() {
+    setBusy(true); setOutcome(null); setFailure(null);
+    try {
+      const res = await apiPost(
+        `/api/providers/mt5/routes/${encodeURIComponent(bot.symbol)}/switch`,
+        { brokerId: Number(target) },
+      );
+      if (res?.ok) {
+        setOutcome({
+          ok: true,
+          text:
+            `Re-routed ${bot.symbol} to broker ${res.after?.brokerId}.` +
+            (String(res.capability || '').startsWith('unverified')
+              ? ` Capability unverified — this broker's symbol list has no entry for ${bot.symbol}.`
+              : ''),
+        });
+        setTarget(''); setConfirming(false);
+        routeQuery.refetch();
+      } else {
+        setOutcome({ ok: false, text: res?.error || 'The switch was refused.' });
+      }
+    } catch (err) {
+      setFailure(noticeFromError(err, 'TCS-SYS-007', { operation: `re-route ${bot.symbol}` }));
+    } finally { setBusy(false); }
+  }
+
+  const selectable = brokers.filter((b) => !b.current);
+
+  // Server + account number, each only when really known — an unreachable bridge reports
+  // `server: '?'` and a null account, and neither must be rendered as a fact.
+  const currentBits = [];
+  if (current?.server && current.server !== '?') currentBits.push(current.server);
+  if (current?.account) currentBits.push(current.account);
+  const currentLabel = currentBits.length ? ` (${currentBits.join(' · ')})` : '';
+
+  return (
+    <section className={`${styles.group} lad-reveal`}>
+      <h2 className={styles.groupHead}>
+        Account routing — which bridge fills this bot&apos;s orders
+        <span className={styles.groupCount}><code>symbol_route</code></span>
+      </h2>
+
+      {routeQuery.isPending && <p className={styles.sectionNote}>Reading the route…</p>}
+      {routeQuery.isError && (
+        <p className={styles.sectionNote}>
+          ⚠️ <strong>Could not read the route.</strong> A failed read is not &quot;no route&quot; —
+          check the API is running and reload.
+        </p>
+      )}
+
+      {data && (
+        <>
+          <div className={styles.routeRow}>
+            <span className={styles.routePath}>
+              <strong>{bot.symbol}</strong> → broker {route.brokerId}{currentLabel}
+            </span>
+            {current && (
+              <span className={`${styles.chip} ${down ? styles.chipNone : styles.chipLive}`}>
+                {down ? 'UNREACHABLE' : 'CONNECTED'}
+              </span>
+            )}
+            {!route.explicit && (
+              <span className={`${styles.chip} ${styles.chipDisplay}`}>DEFAULT (no row)</span>
+            )}
+          </div>
+
+          {down && (
+            <p className={styles.routeWarn}>
+              ⚠️ Orders for <strong>{bot.symbol}</strong> refuse while this account is unavailable
+              {shared ? ` — ${data.botsOnSymbol} active bots trade it.` : '.'}{' '}
+              The alert <em>&quot;MT5 Bridge(s) Down&quot;</em> carries the same fact for every
+              affected symbol.
+            </p>
+          )}
+          {currentCantTrade && (
+            <p className={styles.routeWarn}>
+              ⚠️ The current broker&apos;s own symbol list reports <code>tradeMode=0</code> for{' '}
+              {bot.symbol} — orders will be refused at dispatch (#1002). Re-select a broker below.
+            </p>
+          )}
+
+          {shared && (
+            <p className={styles.sectionNote}>
+              <strong>Shared route.</strong> {data.botsOnSymbol} active bots trade {bot.symbol};
+              routing is per symbol, not per bot, so a re-select moves all of them.
+            </p>
+          )}
+
+          {selectable.length > 0 && (
+            <div className={styles.routeControls}>
+              <label className={styles.routeLabel} htmlFor="route-target">Re-select broker</label>
+              <select
+                id="route-target"
+                className={styles.routeSelect}
+                value={target}
+                onChange={(e) => { setTarget(e.target.value); setConfirming(false); setOutcome(null); }}
+              >
+                <option value="">Choose…</option>
+                {selectable.map((b) => (
+                  <option key={b.brokerId} value={b.brokerId} disabled={b.canTrade === false}>
+                    broker {b.brokerId} — {b.server && b.server !== '?' ? b.server : 'unknown server'}
+                    {' · '}{b.reachable && b.connected ? 'connected' : 'unreachable'}
+                    {b.canTrade === false ? ' · CANNOT trade this symbol' : b.canTrade === true ? ' · can trade' : ' · capability unknown'}
+                  </option>
+                ))}
+              </select>
+              {target !== '' && !confirming && (
+                <button type="button" className={styles.routeBtn} onClick={() => setConfirming(true)}>
+                  Re-route…
+                </button>
+              )}
+            </div>
+          )}
+
+          {confirming && (
+            <div className={styles.routeConfirm}>
+              <p>
+                Re-route <strong>{bot.symbol}</strong> to broker <strong>{target}</strong>?{' '}
+                {shared
+                  ? ` Orders for ${data.botsOnSymbol} active bots will move.`
+                  : ' Orders for this symbol will move.'}{' '}
+                The old row is disabled, not deleted — switch back at any time.
+              </p>
+              <div className={styles.routeControls}>
+                <button type="button" className={styles.routeBtnPrimary} disabled={busy} onClick={doSwitch}>
+                  {busy ? 'Re-routing…' : 'Confirm re-route'}
+                </button>
+                <button type="button" className={styles.routeBtn} disabled={busy} onClick={() => setConfirming(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {outcome && (
+            <p className={outcome.ok ? styles.routeOk : styles.routeErr} role="status">{outcome.text}</p>
+          )}
+          {failure && <NoticeBlock notice={failure} />}
         </>
       )}
     </section>
@@ -797,6 +979,12 @@ export default function ViewStrategyPage() {
           </p>
         )}
       </header>
+
+      {/* WHERE THE BOT'S ORDERS ACTUALLY GO — the account is chosen per SYMBOL (symbol_route),
+          not per bot, and nothing on this page said which bridge fills them or how to move them
+          (owner, 2026-10-11: "no way to re-select a broker"). Mt5-venue bots only; a bot on
+          another venue does not travel through `symbol_route` at all. */}
+      {bot.brokerId === 'mt5' && <RouteAccountPanel bot={bot} />}
 
       {/* The headline. Read before a single rule — this is the number that decides whether the
           bot's configuration can be trusted. AUDIT ONLY: settings mode keeps the per-row chip, so

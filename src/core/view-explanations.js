@@ -11,6 +11,16 @@
  */
 
 export const VIEW_EXPLANATIONS = {
+  // ── Dashboard ──
+  // ⚠️ ADDED 2026-10-11. The key is the NAV-TREE view id (`dashboard`), NOT the route
+  // (`/dashboard/dashboard`) — App.jsx looks this up as `VIEW_EXPLANATIONS[secondaryView]`, so a
+  // route-shaped key would render nothing and give no error. Its absence was measured: 46 entries,
+  // none for the dashboard, so the ℹ control in the shell's top row never appeared here.
+  'dashboard':
+    'Your modular home view — a board of widgets you can drag, resize and remove, with the arrangement ' +
+    'saved. The tick strip above shows the automation loop and its risk state. "Fill width" re-packs ' +
+    'the tiles across the full grid after you add or remove widgets; nothing moves until you press it.',
+
   // ── Speed Trading ──
   'speed-scanner':
     'Scores each symbol across all active directives in real-time. ' +

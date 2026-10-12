@@ -59,6 +59,12 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
   { ticker: 'UK100', name: 'FTSE 100 Index', type: 'index' },
   { ticker: 'GER40', name: 'DAX 40 Index', type: 'index' },
   { ticker: 'FRA40', name: 'CAC 40 Index', type: 'index' },
+  // USTEC — added 2026-10-12, owner-approved onboarding of the three unsubscribed ladder
+  // protocols. The `symbol` row and its `qqq-speed-v1` assignment ALREADY existed in the
+  // database (scoring worked), but with no entry here a reinstall would lose the row and the
+  // instrument would silently become unscorable — the exact class recorded for VIX, XAGUSD
+  // and the USD majors above.
+  { ticker: 'USTEC', name: 'NASDAQ 100 Index', type: 'index' },
   // Silver — added 2026-09-10. XAGUSD was already ASSIGNED to xau-speed-v1 but had
   // no `symbol` row, so it rendered a permanent "Not scored" ladder card and could
   // never be scored. Both MT5 bridges price it live. The `symbol` row is the
@@ -212,6 +218,17 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
     brokerId: 3,
     brokerSymbol: 'US500',
     note: 'US 500 Index — Pepperstone tradeMode=4 verified 2026-09-15; MetaQuotes :5000 reports tradeMode=0 (trading disabled)',
+  },
+  // USTEC — added 2026-10-12 (owner-approved). It had NO route, so feed AND orders fell back
+  // to the primary broker (MetaQuotes :5000), which lists USTEC as `tradeMode=0` (trading
+  // disabled) — the same fault as US500/US30 before it: a card reading actionable while the
+  // bridge could never accept the order. Pepperstone serves it as `NAS100` (Retail\Indices\Majors,
+  // tradeMode=4, volumeMin 0.1) — measured 2026-10-12 against :5001 /symbols, NOT assumed.
+  {
+    symbol: 'USTEC',
+    brokerId: 3,
+    brokerSymbol: 'NAS100',
+    note: 'NASDAQ 100 — NASDAQ vs MetaQuotes USTEC tradeMode=0 (disabled); Pepperstone NAS100 tradeMode=4, volumeMin 0.1 (verified 2026-10-12 on :5001)',
   },
   { symbol: 'XAGUSD', brokerId: 3, brokerSymbol: 'XAGUSD', note: 'Silver — live on both bridges; Pepperstone (3) is primary for metals' },
   // VIX — added 2026-09-11 (#772). Pepperstone-ONLY: :5001 lists

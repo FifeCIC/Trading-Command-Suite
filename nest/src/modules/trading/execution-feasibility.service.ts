@@ -133,7 +133,9 @@ export class ExecutionFeasibilityService {
           ticker,
           route,
           this.symbolRouter?.brokerIds?.() ?? [],
-          this.symbolRouter ? (b, s) => this.symbolRouter!.canTradeOn(b, s) : undefined,
+          // ⚠️ brokerSymbol is passed through — `broker_symbol` is keyed by the BROKER's name,
+          // so a mapped route (USTEC → NAS100) must ask with the mapped name (2026-10-12).
+          this.symbolRouter ? (b, s, bs) => this.symbolRouter!.canTradeOn(b, s, bs) : undefined,
         )
       : [];
     if (routeProblems.length > 0) {

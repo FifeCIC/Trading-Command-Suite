@@ -64,8 +64,12 @@ export function orderRouteProblems(
    * ⚠️ ONLY a known `false` refuses. A broker whose symbol list has never been synced must keep
    * working — treating UNKNOWN as "cannot trade" would refuse every order on a fresh install, which
    * is a worse failure than the one being fixed.
+   *
+   * ⚠️ `brokerSymbol` is the route's mapped broker-native name and is passed THROUGH to the lookup
+   * (added 2026-10-12): `broker_symbol.name` is keyed by the BROKER's name, so a mapped route
+   * (USTEC → NAS100) must ask with the mapped name or a tradeable route reports `false`.
    */
-  canTrade?: (brokerId: number, symbol: string) => boolean | undefined,
+  canTrade?: (brokerId: number, symbol: string, brokerSymbol?: string | null) => boolean | undefined,
 ): string[] {
   const ticker = (symbol || '').toUpperCase();
   const isCrypto = venueForSymbol(ticker).kind === 'crypto';
@@ -98,7 +102,7 @@ export function orderRouteProblems(
   // so asking would return `false` and mislabel a crypto route problem as a capability problem.
   // The crypto rules above already refuse those for the right reason.
   if (route.mt5 && canTrade) {
-    const allowed = canTrade(route.brokerId, ticker);
+    const allowed = canTrade(route.brokerId, ticker, route.brokerSymbol);
     if (allowed === false) {
       problems.push(
         `broker ${route.brokerId} cannot trade ${ticker} — its own symbol list reports ` +
@@ -294,10 +298,18 @@ export class Mt5SymbolRouter implements OnModuleInit {
    *
    * `undefined` = UNKNOWN (no capability data loaded). `false` = the broker's own list says no.
    * The distinction is the whole point: unknown must not be read as a refusal.
+   *
+   * ⚠️ `brokerSymbol` IS THE BROKER-NATIVE NAME AND IT MUST BE PASSED WHEN THE ROUTE MAPS ONE
+   * (added 2026-10-12). `tradeableOn` is keyed by `broker_symbol.name` — the BROKER's name, not
+   * the canonical ticker — so `canTradeOn(3, 'USTEC')` finds nothing (broker 3 lists `NAS100`)
+   * and returns a DEFINITE `false` for a route that is fully tradeable. Latent since #1002 because
+   * every route until then had brokerSymbol == ticker; **USTEC → broker 3 / `NAS100` is the first
+   * mapped route**, and it was refused on sight.
    */
-  canTradeOn(brokerId: number, symbol: string): boolean | undefined {
+  canTradeOn(brokerId: number, symbol: string, brokerSymbol?: string | null): boolean | undefined {
     if (!this.capabilityLoaded) return undefined;
-    const set = this.tradeableOn.get((symbol || '').toUpperCase());
+    const key = (brokerSymbol || symbol || '').toUpperCase();
+    const set = this.tradeableOn.get(key);
     // Loaded, and NO broker lists it — so it cannot be traded on any configured bridge.
     if (!set) return false;
     return set.has(brokerId);

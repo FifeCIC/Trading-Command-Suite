@@ -458,3 +458,11 @@ Permanent residents are only: `scoring/` (served by the API), `mt5-bridge/` (sup
 `parked-scratch-*/`. The logging-hygiene focus is **#703** (Sprint 4); the app-side pruning +
 retention settings already exist (`logging.retentionDays` et al, #1023) — the gap this fixes was
 the ROOT folder, which nothing pruned and nothing untracked.
+
+⚠️ **The repo ROOT holds no scratch at all (swept 2026-10-12).** `temp-*`, issue drafts, assessment
+scripts and issue-dump snapshots in the root are **tracked files in a repo that becomes public** —
+clutter *and* disclosure risk. The 2026-10-12 sweep removed the last stragglers (`temp-issue-*.md`
+drafts → already live as issues; `temp-report-applied.cjs` → its list posted to #1098;
+`all-issues.txt` / `2026-10-08` dumps → deleted; `.agent-context.md` → retired, superseded by
+`NEXT-AGENT.md` + `DOCUMENTATION-INDEX.md` §1). Keep it at zero: if it is not a deliverable, it
+lives in `logs/` and dies with its issue.

@@ -414,7 +414,11 @@
 /* ── Page container ─────────────────────────────────────── */
 /* .main-stage has no padding by design; each view brings its own
    (matches .sig-page / .sm-page conventions). */
-.dash-page { padding: 1.25rem 1.5rem; }
+/* ⚠️ NO HORIZONTAL PADDING (2026-10-12). The dashboard is a full-bleed widget surface: the shell
+   gives it a single full-width column, so any horizontal padding here is visible as a dead band down
+   each side of the screen. Owner: *"not touching the left and right sides of the screen. That would
+   be 100% width."* The tiles' own 12px grid margin still keeps their content off the glass. */
+.dash-page { padding: 1.25rem 0; }
 
 .dash-card-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .dash-stat { display: flex; flex-direction: column; gap: 0.1rem; min-width: 90px; }

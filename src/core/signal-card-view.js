@@ -86,6 +86,13 @@ export function buildNotices(envelope) {
   if ((envelope.preTradeBlockers || []).length) {
     add(notice('TCS-RISK-001', { reason: envelope.preTradeBlockers.slice(0, 2).join(' · ') }));
   }
+  // The BOT VERDICT (#911 → single service, 2026-10-12) — "no bot will take it", generated
+  // server-side ONCE (`signal-envelope.service.ts` → `botGate`) and rendered verbatim.
+  // `notice` is false when the below-gate blocker already carries the same sentence (one fact, one
+  // sentence) and false for `clear`/`unknown` — this is a display explanation, never a new block.
+  if (envelope.botGate?.notice && envelope.botGate.sentence) {
+    add(notice('TCS-RISK-004', { reason: envelope.botGate.sentence }));
+  }
   // Risk-gate warnings — the gate's own wording is the message.
   (envelope.riskGate?.warnings || []).map(stripWarningGlyph).slice(0, 2).forEach((w) =>
     add(notice('TCS-RISK-003', { warning: w })));

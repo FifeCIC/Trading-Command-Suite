@@ -41,6 +41,13 @@ export interface StyleGateResolution {
   style?: string | null;
   /** Short human-readable provenance for logs/blocker text. */
   label: string;
+  /**
+   * The ACTIVE bots subscribing to the protocol (via `strategy_protocol`), captured by the
+   * reconciliation so the envelope can state the BOT VERDICT from the same lookup (#911 →
+   * single-service, 2026-10-12). `undefined` = no lookup ran (override path, no protocol),
+   * which must stay distinguishable from `{ count: 0 }` = looked up, nobody subscribes.
+   */
+  participatingBots?: { count: number; bars: number[] };
 }
 
 /**

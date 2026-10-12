@@ -31,8 +31,6 @@ import { forwardRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import SignalBadge from './SignalBadge';
-// #911 — the per-card reconciliation of the classifier's bar against every subscribed bot's bar.
-import BotTradeability from './BotTradeability';
 // ⚠️ The component OWNS its stylesheet. Do not remove this as a "page concern".
 // All page CSS is bundled globally, but in DEV Vite injects CSS only when a module is
 // imported — so a page that mounts ScoreCard without having imported ladder.css itself
@@ -281,15 +279,14 @@ const ScoreCard = forwardRef(function ScoreCard({
         </div>
       </div>
       {/*
-        ⚠️ #911 — THE RECONCILIATION, ON THE SURFACE THAT MAKES THE CLAIM.
-        The card said BUY from the classifier's 6% bar while 24 of 26 active bots only act at
-        9-10%. Both numbers were right and nothing put them side by side, so an operator could read
-        "BUY" here and "no trade" everywhere else and be correct twice. This states, per subscribed
-        bot, the bar, whether this reading meets it, and by how much it misses — and it renders in
-        EVERY state including `clear`, because a block that only appears when something is wrong
-        teaches the reader that absence means fine.
+        ⚠️ THE BOT VERDICT WAS REMOVED FROM THIS CARD 2026-10-12 (#1111, owner directive).
+        It rendered "NO BOT WILL TAKE IT / REFUSED by every subscribed bot — …", generated
+        client-side from a bot list based on the DISPLAY-ONLY `trading_strategy.protocolId` column.
+        Two reasons it left: bots do not come into play on a scoring view, and the sentence now has
+        ONE server-side owner (`signal-envelope.service.ts` → `botGate`) rendered on the SIGNAL
+        card (TCS-RISK-004). REVERSE BY: restore `src/core/tradeability.js` + `<BotTradeability/>`
+        here — see docs/SETTLED-DECISIONS.md and #911.
       */}
-      <BotTradeability protocolId={e.protocolId} signalPct={e.vm.pct} />
       </div>
     </motion.div>
   );

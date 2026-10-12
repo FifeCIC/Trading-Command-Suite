@@ -640,6 +640,16 @@ export const NOTICES = {
     params: ['warning'],
     refs: [],
   },
+  'TCS-RISK-004': {
+    severity: 'warning',
+    area: 'RISK',
+    title: 'No bot will take this signal',
+    message: 'No bot will take this signal: {reason}',
+    cause: 'No ACTIVE bot subscribing to this protocol has a bar this reading meets — or none subscribes at all. A scored signal with no consumer is not a trade, whatever its strength.',
+    action: 'Create or adjust a bot for this protocol, or stop watching the protocol. The verdict is computed server-side from strategy_protocol subscriptions.',
+    params: ['reason'],
+    refs: ['#911', '#1111'],
+  },
 
   // ── System ─────────────────────────────────────────────────────────────
   'TCS-SYS-001': {

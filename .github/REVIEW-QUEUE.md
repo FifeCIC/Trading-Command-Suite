@@ -24,6 +24,8 @@
 
 | **R53** | **The A/B Ladder's card column alternates sides**, so "protocols sit opposite different protocols" — but the fix reverses your own 2026-09-22 flaw report recorded in the same file | `/scoring/ab-ladder` · `AbLadderPage.jsx` header (2026-09-22) | One row per symbol (left = side A ordered by A, right = B's counterpart) gives the layout you want today — and re-creates September's flaw: a B-strong / A-weak symbol sinks to the bottom. Accept that, or keep per-side ranking? |
 
+| **R54** | The bot page now has an **Account routing** panel: it shows which bridge/account fills the bot's orders, live health, and lets you **re-select the broker** (capability + health shown per option; server refuses tradeMode=0 targets) | `/trading/strategy/{id}` — review on the Silver bot · writes `POST /api/providers/mt5/routes/:symbol/switch` | Review the placement and wording. ⚠️ Re-select moves **every bot on that symbol** (XAGUSD = 2 bots) — is the symbol-level shape right, or do you want per-bot accounts? |
+
 ⚠️ **THREE ROW IDS COLLIDED, AND IT IS CORRECTED (2026-10-06).** The three rows raised on 2026-10-02/03 were numbered **R37, R38 and R39** — and all three were **already used** by the 2026-10-01 block further down. Two of them the owner has since answered: both moved to DONE as **R42** and **R43**, each naming the id it used to carry. The one still open was renumbered **R44**. Nothing was deleted. ⚠️ The cause is worth one line: ids were allocated by looking at the **OPEN** table, which is the shortest part of the file — the ids were in the long DONE block underneath.
 
 New rows appear when there is **something to look at or a genuine fork**, not before.

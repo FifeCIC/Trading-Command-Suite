@@ -1147,7 +1147,9 @@ export class Mt5Adapter implements IProviderAdapter {
       // #1002 — the broker's OWN symbol list is the authority on whether it can trade this
       // symbol. Without this the check could only ask "is the broker active?", which is true of a
       // broker whose list reports tradeMode=0 for the symbol — the US30 case.
-      this.symbolRouter ? (b, s) => this.symbolRouter!.canTradeOn(b, s) : undefined,
+      // ⚠️ The route's brokerSymbol (broker-native name) is passed through — `broker_symbol` is
+      // keyed by the BROKER's name, so a mapped route (USTEC → NAS100) must ask with it.
+      this.symbolRouter ? (b, s, bs) => this.symbolRouter!.canTradeOn(b, s, bs) : undefined,
     );
     if (routeProblems.length > 0) {
       const error =

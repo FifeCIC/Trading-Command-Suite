@@ -122,6 +122,40 @@ describe('Mt5SymbolRouter — capability loading and order resolution (#1002)', 
       .toEqual([]);
   });
 
+  /**
+   * ⚠️ THE MAPPED-ROUTE CASE (added 2026-10-12). `broker_symbol` is keyed by the BROKER's name —
+   * so a route that maps the ticker (`USTEC → NAS100`) MUST ask the capability with the mapped
+   * name. Latent since #1002 because every route until then had brokerSymbol == ticker; USTEC was
+   * the first route where they differ, and `canTradeOn(3, 'USTEC')` returned a DEFINITE `false`
+   * for a fully tradeable route — refusing every USTEC order at dispatch.
+   *
+   * CANARY: revert `orderRouteProblems` to `canTrade(route.brokerId, ticker)` (drop the third
+   * argument) and this case fails with the false "cannot trade" problem.
+   */
+  it('a MAPPED route (USTEC → NAS100) is tradeable — capability is asked with the broker-native name', async () => {
+    const { router } = makeRouter({
+      brokerSymbolRows: [{ brokerId: 3, name: 'NAS100' }],
+    });
+    await router.refresh();
+
+    // The broker lists NAS100; the canonical ticker exists on nobody.
+    expect(router.canTradeOn(3, 'USTEC', 'NAS100')).toBe(true);
+    // The OLD lookup's answer — kept deliberately, so the failure this fix removes stays visible.
+    expect(router.canTradeOn(3, 'USTEC')).toBe(false);
+
+    const mappedRoute = {
+      brokerId: 3,
+      url: 'http://127.0.0.1:5001',
+      brokerSymbol: 'NAS100',
+      explicit: true,
+      mt5: true,
+      provider: 'mt5',
+    };
+    expect(
+      orderRouteProblems('USTEC', mappedRoute as any, [2, 3], (b, s, bs) => router.canTradeOn(b, s, bs)),
+    ).toEqual([]);
+  });
+
   it('resolveForOrder() prefers an active broker that CAN trade the symbol', async () => {
     const { router } = makeRouter({ brokerSymbolRows: [{ brokerId: 3, name: 'US30' }] });
     await router.refresh();
