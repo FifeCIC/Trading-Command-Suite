@@ -49,8 +49,13 @@ export interface LogEntry {
  *
  * The directory is created on resolution AND re-created before each write, because a
  * long-running process can outlive an external cleanup.
+ *
+ * ⚠️ EXPORTED 2026-10-12 — `scoring-log.service.ts` imports this SAME resolver. It used to do
+ * `join(process.cwd(), 'logs', 'scoring')`, and `process.cwd()` differs by launcher — so scoring
+ * logs landed in the REPO root when started one way and in `nest/logs` when started another, and
+ * both directories accumulated near-duplicate history. One resolver, one root.
  */
-function resolveLogDir(): string {
+export function resolveLogDir(): string {
   const override = process.env.TCS_LOG_DIR;
   if (override && override.trim()) return path.resolve(override.trim());
 

@@ -387,7 +387,7 @@ file.** `/api/system/logs/recent` does not exist (404). Use `/file` for history.
 | `nest/logs/console-{api,build-api,mt5-<port>,vite}[-err].log` | `build-api.ps1`, `tcs-launch.ps1` | raw console capture — **the live one** |
 | `logs/api-out.log`, `logs/api-err.log` | `build-api.ps1` **before** #1023 | raw console capture — **stale** |
 | `%TEMP%\nest-api.log`, `%TEMP%\nest-api-err.log` | `tcs-launch.ps1` **before** #1023 | raw console capture — **stale**, and **outside the repo** |
-| `logs/scoring/*.jsonl` | `scoring-log.service.ts` | structured scoring, served by `/api/logs/scoring/*` |
+| `nest/logs/scoring/*.jsonl` | `scoring-log.service.ts` | structured scoring, served by `/api/logs/scoring/*` — **moved 2026-10-12** (shares `resolveLogDir()`; used to follow `process.cwd()` and split across `logs/` + `nest/logs`) |
 | `logs/*.log`, `nest/*.log` | agents, by hand | ad-hoc per-session captures |
 
 ⚠️ **WHICH ONE IS LIVE DEPENDED ON WHAT LAST STARTED THE API** — `build-api.ps1` redirected to

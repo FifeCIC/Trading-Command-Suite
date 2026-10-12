@@ -1,7 +1,8 @@
 /**
  * ScoringLogService — unified JSON-lines logging system.
  *
- * Writes structured JSON entries to rotating log files in /logs/scoring/.
+ * Writes structured JSON entries to rotating log files under the app log root — `nest/logs/scoring/`
+ * by default (shared resolver; see `resolveLogDir` in log.service.ts).
  * Categories: scoring_run | signal | trade | provider_health | error
  *
  * Also maintains an in-memory buffer for SSE streaming and recent queries.
@@ -10,6 +11,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { appendFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { resolveLogDir } from './log.service';
 
 export type LogCategory = 'scoring_run' | 'signal' | 'trade' | 'provider_health' | 'error';
 
@@ -21,7 +23,14 @@ export interface LogEntry {
   data?: Record<string, any>;
 }
 
-const LOG_DIR = join(process.cwd(), 'logs', 'scoring');
+/**
+ * ⚠️ THE APP LOG ROOT, shared with SystemLogService (2026-10-12). This was
+ * `join(process.cwd(), 'logs', 'scoring')` — cwd-dependent, so the directory followed whichever
+ * launcher started the API: repo `logs/scoring/` one way, `nest/logs/scoring/` another. Measured
+ * 2026-10-12: BOTH held near-duplicate July–August files, and nothing pruned either (the app
+ * prune walks the canonical log root only). One resolver now answers for every app-side writer.
+ */
+const LOG_DIR = join(resolveLogDir(), 'scoring');
 const MAX_BUFFER = 500;        // In-memory buffer for SSE + recent queries
 const MAX_LINES_PER_FILE = 50_000;
 
