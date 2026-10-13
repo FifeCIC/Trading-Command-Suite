@@ -34,6 +34,8 @@
 
 | **R58** | `maxPortfolioRisk` is measured against **one account's equity** (`account.equity`, `trading-strategy.service.ts:2011`), but the portfolio view **aggregates to £10,214** while the gate implies a base near **£713** — and the two are **not reconciled** | `assessGlobalRiskLimits` · `/api/portfolio/summary` (`source=all`, 2026-10-13) | Should the cap measure **per account** or **across the whole book**? Architectural fork; the answer changes both the number in R57 and what the gate refuses. |
 
+| **R59** | Should the **A/B runner be restricted to backtest/replay** so it cannot place live orders? It shares the primary book's risk budget, so a running test can crowd out the strategies it is meant to compare | measured 2026-10-13: **0 A/B arms hold a position** today (latent, not active); the runner places **real** orders | Restrict to backtest, keep live but on separate accounts, or leave as is? Your steer was "a manually run A/B service with backtesting can be enough for now". |
+
 ⚠️ **THREE ROW IDS COLLIDED, AND IT IS CORRECTED (2026-10-06).** The three rows raised on 2026-10-02/03 were numbered **R37, R38 and R39** — and all three were **already used** by the 2026-10-01 block further down. Two of them the owner has since answered: both moved to DONE as **R42** and **R43**, each naming the id it used to carry. The one still open was renumbered **R44**. Nothing was deleted. ⚠️ The cause is worth one line: ids were allocated by looking at the **OPEN** table, which is the shortest part of the file — the ids were in the long DONE block underneath.
 
 New rows appear when there is **something to look at or a genuine fork**, not before.

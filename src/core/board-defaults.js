@@ -27,6 +27,10 @@ export const BOARD_DEFAULTS = {
   dashboard: [
     'market-context',
     'alerts',
+    // Placed high on purpose (#943): the owner asked for the caps to be visible
+    // without hunting for them. Existing boards receive it appended once via the
+    // `seeded` list; this order applies to a first-run board.
+    'risk-caps',
     'hot-picks',
     'mt5-portfolio',
     'broker-pnl',

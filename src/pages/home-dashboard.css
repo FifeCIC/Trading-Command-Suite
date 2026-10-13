@@ -753,3 +753,76 @@
 .dash-hp-link:hover {
   text-decoration: underline;
 }
+
+/* ── Risk Caps widget (#943) ────────────────────────────────────────────────
+ * The quick control for the two numbers that gate every entry. Numbers use the
+ * monospace face the UI standards require for stat values, so a changed cap is
+ * legible at a glance and aligns with its neighbour. Colours come from tokens
+ * only — this file hardcodes none.
+ *
+ * ⚠️ The interactive parts are kept at a comfortable hit size (>= ~1.9rem). A
+ * cap that needs a precise click is one you stop adjusting, which defeats the
+ * point of putting it on the dashboard.
+ */
+.risk-cap { gap: 0.15rem; }
+.risk-cap-source {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+.risk-cap-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.risk-cap-input {
+  width: 5rem;
+  min-height: 1.9rem;
+  padding: 0.25rem 0.4rem;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  text-align: right;
+}
+.risk-cap-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.risk-cap-suffix {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.risk-cap-save {
+  min-height: 1.9rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+.risk-cap-save:not(:disabled):hover { border-color: var(--accent); }
+.risk-cap-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.risk-cap-help {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+.risk-cap-ok { color: var(--color-profit); }
+.risk-cap-bad { color: var(--danger); }

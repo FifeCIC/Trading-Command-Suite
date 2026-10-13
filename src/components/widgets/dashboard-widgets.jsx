@@ -13,11 +13,15 @@
  *     `dash-card` wrapper and no `<h3>`.
  *   - The `dash-*` classes live in `src/pages/home-dashboard.css`, which stays in
  *     the bundle because `DashboardPage` imports it.
- *   - Real data only; every source is an existing read-only endpoint.
+ *   - Real data only. Every source reads an existing endpoint, and all but one
+ *     are read-only: `risk-caps` is the sole writer, and it writes through the
+ *     settings registry endpoint that already validates the value against its
+ *     declaration. Add a second writer only with a reason this good.
  */
+import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { apiGet } from '../../core/api/client';
+import { apiGet, apiPut } from '../../core/api/client';
 import { registerWidget } from '../../core/widget-registry';
 import { signalColor } from '../../core/signal-utils';
 
@@ -397,6 +401,157 @@ function WorstCaseWidget() {
   );
 }
 
+/* ── Risk Caps — quick control on the two numbers that gate every entry ─────
+ *
+ * WHY IT EXISTS (#943). `risk.maxPortfolioRisk` refused 522 entry attempts
+ * across 13 symbols on 2026-10-12, and the number could only be read on
+ * `/risk-controls` — a page nobody had open. The owner asked for it on the
+ * dashboard, adjustable, so it stops being a value you have to go and look for.
+ *
+ * ⚠️ IT DELIBERATELY SHOWS NO "AT RISK" FIGURE. The neighbouring Worst-Case
+ * widget's "Total at Risk" is unrealised P&L on losing positions — NOT the
+ * quantity this cap compares. The gate uses
+ * Σ |entry − brokerSL| × volume × contractSize (`assessBookAtRisk()`, backend),
+ * which can exceed the cap while every position is in profit. Placing the two
+ * side by side would invite exactly the misreading that exists today, so this
+ * widget shows the cap alone until the gate's own number is exposed (#943).
+ *
+ * ⚠️ IT WRITES — the only writing widget in this file. It goes through
+ * `PUT /api/system/settings/registry/:key`, which validates the value against
+ * its DECLARATION and refuses with a reason. Bounds are read from that
+ * declaration (`setting.min`/`setting.max`) rather than restated here, so there
+ * is no second definition of the cap and no second write path.
+ */
+const RISK_CAPS = [
+  {
+    key: 'risk.maxPortfolioRisk',
+    label: 'Max portfolio risk',
+    // Stored as a FRACTION (0.15), shown as a PERCENT (15). The scale lives here
+    // and nowhere else in this component, so the two units cannot drift apart.
+    scale: 100,
+    suffix: '%',
+    step: 1,
+    help: 'of portfolio value, if every stop fills',
+  },
+  { key: 'risk.maxDailyLoss', label: 'Max daily loss', scale: 1, suffix: '', step: 10, help: 'account currency, per UTC day' },
+];
+
+function RiskCapsWidget() {
+  const capsQuery = useQuery({
+    queryKey: ['dash-risk-caps'],
+    queryFn: () => apiGet('/api/system/settings/registry').catch(() => null),
+    refetchInterval: 60_000,
+  });
+
+  const settings = capsQuery.data?.settings || [];
+  const present = RISK_CAPS
+    .map((meta) => ({ meta, setting: settings.find((s) => s.key === meta.key) }))
+    .filter((r) => r.setting);
+
+  // ⚠️ "Could not read" must not render as "not configured". Collapsed, the two
+  // are indistinguishable and one of them means this widget is lying.
+  if (!present.length) {
+    return (
+      <p className="dash-hint">
+        {capsQuery.isLoading
+          ? 'Loading risk caps…'
+          : 'Risk caps unavailable — the settings registry could not be read, so these values are UNKNOWN, not unset.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="dash-card-stats">
+      {present.map(({ meta, setting }) => (
+        <RiskCapRow key={meta.key} meta={meta} setting={setting} onSaved={capsQuery.refetch} />
+      ))}
+    </div>
+  );
+}
+
+/** One cap: its current value, where that value came from, and a control. */
+function RiskCapRow({ meta, setting, onSaved }) {
+  // ⚠️ A `null` draft means "showing the stored value" and is NOT a draft of 0 —
+  // collapsing them would make clearing the field look like setting the cap to zero.
+  const [draft, setDraft] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const toShown = (v) => (v == null ? null : Number(v) * meta.scale);
+  const stored = toShown(setting.value);
+  const shown = draft ?? stored;
+  const fromDb = setting.source === 'db';
+
+  const dirty = draft != null && stored != null && Math.abs(draft - stored) > 1e-9;
+  // Bounds come from the DECLARATION (what the endpoint enforces), never restated here.
+  const minShown = toShown(setting.min);
+  const maxShown = toShown(setting.max);
+  const withinBounds =
+    draft == null ||
+    ((minShown == null || draft >= minShown) && (maxShown == null || draft <= maxShown));
+
+  const save = useCallback(async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiPut(`/api/system/settings/registry/${meta.key}`, { value: draft / meta.scale });
+      setDraft(null);
+      setMsg('Saved');
+      onSaved?.();
+    } catch (err) {
+      // The endpoint refuses out-of-range WITH A REASON, and `apiPut` exposes it as
+      // `err.detail` (the server's own wording, without the status prefix). Prefer that:
+      // "invalid value … above the maximum of 1" is the useful sentence, and a bare
+      // "Request failed with 500" would throw it away.
+      setMsg(err?.detail || err?.message || 'Save failed');
+    } finally {
+      setBusy(false);
+    }
+  }, [draft, meta.key, meta.scale, onSaved]);
+
+  return (
+    <div className="dash-stat risk-cap">
+      <span className="dash-stat-label">
+        {meta.label}
+        {/* A literal space, because the provenance chip follows inline — without it a
+            screen reader announces "Max portfolio riskset" as one word. */}
+        {' '}
+        <span
+          className="risk-cap-source"
+          title={
+            fromDb
+              ? 'A row exists in global_setting — this is the enforced value.'
+              : 'No row exists, so the declared default applies. Setting it writes a row.'
+          }
+        >
+          {fromDb ? 'set' : 'default'}
+        </span>
+      </span>
+      <span className="risk-cap-row">
+        <input
+          className="risk-cap-input"
+          type="number"
+          inputMode="decimal"
+          step={meta.step}
+          min={minShown ?? undefined}
+          max={maxShown ?? undefined}
+          value={shown ?? ''}
+          disabled={busy}
+          onChange={(e) => setDraft(e.target.value === '' ? null : Number(e.target.value))}
+          aria-label={`${meta.label}${meta.suffix ? ` (${meta.suffix})` : ''}`}
+        />
+        {meta.suffix && <span className="risk-cap-suffix">{meta.suffix}</span>}
+        <button className="risk-cap-save" onClick={save} disabled={busy || !dirty || !withinBounds}>
+          {busy ? '…' : 'Set'}
+        </button>
+      </span>
+      <span className="risk-cap-help">
+        {msg ? <span className={msg === 'Saved' ? 'risk-cap-ok' : 'risk-cap-bad'}>{msg}</span> : meta.help}
+      </span>
+    </div>
+  );
+}
+
 /* ── Market Sessions ─────────────────────────────────────────── */
 const SESSIONS = [
   { label: 'London', open: 8, close: 16, tz: 'GMT/BST', offset: 1 },
@@ -647,4 +802,15 @@ registerWidget({
   frame: true,
   size: { w: 4, h: 6, minW: 3, minH: 4 },
   Component: HotPicksWidget,
+});
+
+registerWidget({
+  id: 'risk-caps',
+  title: 'Risk Caps',
+  icon: '🎚️',
+  category: 'Risk',
+  description: 'The two numbers that gate every entry, with a quick control.',
+  frame: true,
+  size: { w: 4, h: 4, minW: 3, minH: 3 },
+  Component: RiskCapsWidget,
 });
