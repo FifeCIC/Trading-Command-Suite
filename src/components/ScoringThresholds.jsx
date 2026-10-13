@@ -91,7 +91,7 @@ function useThresholdState() {
 }
 
 /**
- * ThresholdClassification — the SCALE and the bars, without the per-bot table.
+ * ThresholdClassification — the SCALE and the thresholds, without the per-bot table.
  * Rendered on Scoring, where the question is "what counts as a signal?".
  */
 export function ThresholdClassification() {
@@ -124,8 +124,8 @@ export function ThresholdClassification() {
         <code>{Object.entries(preTradeGate.byStyle).map(([k, v]) => `${k} ${v}`).join(' · ')}</code>
       </SettingRow>
       <SettingRow
-        label="Bot bars"
-        hint={`Each bot has its own bar (minComposite). ${summary.activeClearing} of ${summary.active} active bots have cleared theirs in the last ${windowDays} days.`}>
+        label="Bot thresholds"
+        hint={`Each bot has its own threshold (minComposite). ${summary.activeClearing} of ${summary.active} active bots have cleared theirs in the last ${windowDays} days.`}>
         <span className={summary.activeCannotFire > 0 ? 'threshold-bad' : 'threshold-ok'}>
           {summary.activeCannotFire > 0
             ? `${summary.activeCannotFire} active bot(s) CANNOT FIRE`
@@ -146,15 +146,15 @@ export function ThresholdClassification() {
 }
 
 /**
- * BotBarsTable — the same reading, per bot.
+ * BotThresholdsTable — the same reading, per bot.
  * Rendered on Trading, where the question is "can each of my bots actually fire?".
  *
- * ⚠️ The closing warning is not decoration. A bar that clears looks like a green light, and
+ * ⚠️ The closing warning is not decoration. A threshold that clears looks like a green light, and
  * it is not: it admits a trade so the trade can be MEASURED. Directional accuracy has been
- * at or below chance, so a cleared bar is permission to gather evidence, never evidence of
+ * at or below chance, so a cleared threshold is permission to gather evidence, never evidence of
  * edge.
  */
-export function BotBarsTable() {
+export function BotThresholdsTable() {
   const { data, node } = useThresholdState();
   if (node) return node;
 
@@ -171,10 +171,10 @@ export function BotBarsTable() {
     <>
       <div className="setting-row">
         <div className="setting-info" style={{ maxWidth: '100%', width: '100%' }}>
-          <strong>Bot bar vs achieved ceiling</strong>
+          <strong>Bot threshold vs achieved ceiling</strong>
           <p>
             <code>achieved</code> is the highest composite the bot&apos;s protocol has actually
-            produced in {windowDays} days. <strong>A bar above its achieved value can never
+            produced in {windowDays} days. <strong>A threshold above its achieved value can never
             fire.</strong>
           </p>
           <div className="threshold-table-wrap">
@@ -183,7 +183,7 @@ export function BotBarsTable() {
                 <tr>
                   <th scope="col">Bot</th>
                   <th scope="col">Symbol</th>
-                  <th scope="col">Bar</th>
+                  <th scope="col">Threshold</th>
                   <th scope="col">Achieved</th>
                   <th scope="col">Verdict</th>
                 </tr>
@@ -195,7 +195,7 @@ export function BotBarsTable() {
                     <tr key={`${b.name}-${b.symbol}`} className={v.cls}>
                       <td>{b.name}</td>
                       <td>{b.symbol}</td>
-                      <td>{b.barPct}%</td>
+                      <td>{b.thresholdPct}%</td>
                       <td>{b.achievedPct == null ? '—' : `${b.achievedPct}%`}</td>
                       <td className={v.cls}>{v.text}</td>
                     </tr>
@@ -205,7 +205,7 @@ export function BotBarsTable() {
             </table>
           </div>
           <p style={{ marginTop: '0.5rem' }}>
-            ⚠️ <strong>A bot clearing its bar is not evidence of profit.</strong> These bars
+            ⚠️ <strong>A bot clearing its threshold is not evidence of profit.</strong> These thresholds
             admit trades so they can be <em>measured</em>. Directional accuracy has been
             at or below chance — see the edge report before drawing conclusions.
           </p>

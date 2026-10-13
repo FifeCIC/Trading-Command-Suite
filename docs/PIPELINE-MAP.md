@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **551** backend source files (specs excluded). Two access paths, because one
+Scanned **552** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**551** source files · **2924** declarations · **363** ratio sites · **1505** nodes · **134** unreferenced
+**552** source files · **2925** declarations · **363** ratio sites · **1505** nodes · **134** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -336,13 +336,13 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 3 sites — `round1((100*V1)/V2)`
 
-- `nest/src/modules/scoring/protocol-gating.controller.ts:335` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:388` — `(anonymous)()`
   - `configuredCapacity>0?round1((100*neverCapacity)/configuredCapacity):0`
   - guarded by: `configuredCapacity>0`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:338` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:391` — `(anonymous)()`
   - `configuredCapacity>0?round1((100*p.peak)/configuredCapacity):0`
   - guarded by: `configuredCapacity>0`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:344` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:397` — `(anonymous)()`
   - `reachableCapacity>0?round1((100*p.peak)/reachableCapacity):null`
   - guarded by: `reachableCapacity>0`
 
@@ -954,8 +954,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/protocol-db.service.ts:456 getAllSlugs`
 - `nest/src/modules/scoring/protocol-db.service.ts:968 protocolNeedsEurUsd`
 - `nest/src/modules/scoring/protocol-db.service.ts:984 getName`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:479 isIncluded`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:484 effectiveMax`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:532 isIncluded`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:537 effectiveMax`
 - `nest/src/modules/scoring/protocol-gating.service.ts:1273 worker`
 - `nest/src/modules/scoring/protocol-health.service.ts:558 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:61 recordActivity`
@@ -969,11 +969,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/scoring.service.ts:831 debug`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:395 num`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:1775 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:1960 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:1968 first`
-- `nest/src/modules/signals/signal-envelope.service.ts:259 has`
-- `nest/src/modules/signals/signal-envelope.service.ts:573 newestOfTf`
+- `nest/src/modules/signals/signal-envelope.service.ts:1826 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:2011 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:2019 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:288 has`
+- `nest/src/modules/signals/signal-envelope.service.ts:602 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:166 note`

@@ -97,7 +97,11 @@ export const EXPERIENCE_MATRIX = {
     'capability-map':         { beginner: false, experienced: false, expert: true },
     'pipeline-graph-lab':     { beginner: false, experienced: false, expert: true },
     'motion-lab':             { beginner: false, experienced: false, expert: true },
-    'theme-lab':              { beginner: false, experienced: true,  expert: true },
+    'layout-guide':           { beginner: true,  experienced: true,  expert: true },
+    'colour':                 { beginner: true,  experienced: true,  expert: true },
+    'surfaces':               { beginner: true,  experienced: true,  expert: true },
+    'data-display':           { beginner: true,  experienced: true,  expert: true },
+    'interactive':            { beginner: true,  experienced: true,  expert: true },
     'component-lab':          { beginner: false, experienced: false, expert: true },
     // Training
     'glossary':               { beginner: true,  experienced: true,  expert: true },

@@ -152,7 +152,14 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
     enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
     settingKey: 'risk.maxPortfolioRisk',
-    defaultValue: 0.15,
+    // ⚠️ 0.15 → 0.20 on 2026-10-13 (owner decision, R47/R57). Measured: the cap refused **601**
+    // entry attempts in one day, 97% of all blocks, because ONE minimum-lot XAUUSD position risks
+    // 12.2% of a £718 account — the MT5 floor (0.01 lot) cannot be sized smaller, so a 15% cap can
+    // only ever hold that one trade. Effect of the raise, measured: portfolio-cap refusals **601 → 0**
+    // and a trade executed 45s after the change. Kept in step with
+    // `settings-registry.ts`'s declared default, because a database-only change is lost on reinstall.
+    // ⚠️ Written as `0.2`, NOT `0.20` — see the note in `settings-registry.ts`.
+    defaultValue: 0.2,
     summary:
       'Total portfolio fraction at risk if every open position’s stop filled — Σ |entry − SL| × ' +
       'volume × contractSize across the book. Blocks a new order while the book exceeds it.',

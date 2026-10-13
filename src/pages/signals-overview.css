@@ -502,6 +502,24 @@
 .sig-b-row-pct { font-size: 0.78rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .sig-b-row-pct--combined { font-size: 0.95rem; font-weight: 800; color: var(--accent); }
 /*
+ * Conviction — the SECOND reading, beside the Signal percentage (#915 Option C).
+ *
+ * ⚠️ MUTED ON PURPOSE, AND NEVER AS BRIGHT AS `.sig-b-row-pct` ABOVE IT.
+ * This number divides by the OBSERVED denominator, so it RISES on a quiet tick. Styled as a
+ * second headline it would be read as "how good this is" — the precise misreading ADR-011 exists
+ * to prevent. It qualifies the number beside it; it does not compete with it.
+ *
+ * `--ink-soft` (#94a3b8) on the card's `--panel` (#000) is 8.4:1 — AAA, and the same token
+ * `.sig-b-row-standing--below` and `.sig-b-notice--info` already use for secondary readings.
+ */
+.sig-b-row-conviction {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/*
  * Value cell — the percentage AND any chip beside it, as ONE grid child.
  *
  * ⚠️ `.sig-b-row { display: contents }` unpacks each row into the parent's 3-column grid

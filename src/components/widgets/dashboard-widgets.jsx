@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiGet, apiPut } from '../../core/api/client';
 import { registerWidget } from '../../core/widget-registry';
 import { signalColor } from '../../core/signal-utils';
+import { noticeLine } from '../../core/notices/registry.js';
 
 /** MT5 bridge diagnostics — connection, balance, equity. */
 const useMt5Diag = () =>
@@ -498,12 +499,16 @@ function RiskCapRow({ meta, setting, onSaved }) {
       setDraft(null);
       setMsg('Saved');
       onSaved?.();
-    } catch (err) {
-      // The endpoint refuses out-of-range WITH A REASON, and `apiPut` exposes it as
-      // `err.detail` (the server's own wording, without the status prefix). Prefer that:
-      // "invalid value … above the maximum of 1" is the useful sentence, and a bare
-      // "Request failed with 500" would throw it away.
-      setMsg(err?.detail || err?.message || 'Save failed');
+    } catch {
+      // ⚠️ A registered NOTICE CODE, not the raw error. `validate-notices.cjs` matches
+      // `/(\b(error|err|e)\??\.message\b)/` ANYWHERE in a UI file — including a `.message` passed as a
+      // parameter and never rendered — and its allowlist "may only go DOWN", so declaring this file
+      // was not an option. Nothing here may reference `.message`.
+      //
+      // The server's own sentence is therefore not shown; TCS-SYS-007's action text points at the API
+      // log, which holds the detail against the same code. The `Set` button is disabled outside the
+      // declared bounds, so this path is rare.
+      setMsg(noticeLine('TCS-SYS-007', { operation: 'set the risk cap' }));
     } finally {
       setBusy(false);
     }

@@ -212,13 +212,20 @@ export const SETTINGS: SettingDefinition[] = [
     // question as maxDrawdown (peak-to-current on realised+unrealised equity).
     key: 'risk.maxPortfolioRisk',
     type: 'number',
-    defaultValue: 0.15,
+    // 0.15 → 0.20 on 2026-10-13 (owner decision, R47/R57). See `risk-profile-rules.ts` for the
+    // measurement: 601 refusals/day under 0.15, driven by one minimum-lot gold position that cannot
+    // be sized smaller on a £718 account; 601 → 0 refusals after the raise. Changed here as well as
+    // in the database so a reinstall keeps the decision (a DB-only change does not survive).
+    // ⚠️ Written as `0.2`, NOT `0.20` — `validate-risk-profile.cjs` compares this literal against the
+    // setting's own default as STRINGS and fails the build on `0.20` vs `0.2`. Two spellings of one
+    // number is the drift that guard exists to catch, and it caught this.
+    defaultValue: 0.2,
     class: 'runtime',
     owner: 'trading',
     label: 'Max portfolio risk',
     description:
       'Ceiling on the TOTAL loss across all open positions if every broker stop filled, as a ' +
-      'fraction of portfolio value (0.15 = 15%). Refuses new orders while the book exceeds it. ' +
+      'fraction of portfolio value (0.20 = 20%). Refuses new orders while the book exceeds it. ' +
       '⚠️ Positions WITHOUT a broker stop are priced at full notional (materially larger), so a ' +
       'naked position can trip this on its own — that is deliberate. Wired 2026-09-19 (#900); ' +
       'before that this cap had no reader anywhere and was assumed to be protecting something.',

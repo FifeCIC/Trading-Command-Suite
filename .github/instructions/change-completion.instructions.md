@@ -120,6 +120,43 @@ This is the same defect as the one this file already documents — #638's ticked
 that was never run. A *causal claim* is also a claim, and it needs the same treatment: name the
 observation that supports it.
 
+---
+
+## 🛑 Do not call two numbers a DISAGREEMENT until you have stated the basis of each
+
+**Measured 2026-10-13 — three times in one session, by the agent that had already read the
+"re-check your numbers" rule.** In all three the numbers were right. The **comparison** was wrong.
+
+| Claim | What was actually compared |
+|---|---|
+| Portfolio "6.1× overstated" (**#811**) | the All-Platforms aggregate vs MT5-only equity |
+| "Two score stores disagree 3.4×" (**#1114**) | `MAX(score.value)` over 2 weeks vs `MAX(score_snapshot.composite)` all-time |
+| "Every protocol peaks today" | `MAX(DATE(x))` — the **last** day — under a column headed *"ceiling_occurred_on"* |
+
+**The existing rule ("re-check numbers you did not measure yourself") cannot catch any of those**,
+because the numbers *were* measured. So the guard has to bite at a different moment:
+
+> **Before writing "X and Y disagree", "X is 6× Y", or "X peaks on <date>", name the SOURCE and the
+> WINDOW of each side in the sentence itself.** If the two sides do not share a basis, it is not a
+> comparison — it is two unrelated measurements printed next to each other.
+
+Checks that would each have caught all three:
+
+1. **Same window, or say so.** An all-time `MAX` against a windowed `MAX` is not a disagreement.
+2. **Same population** — same table, same filter, same join cardinality. A per-protocol aggregate
+   against a per-symbol one is not a disagreement. (Found again *inside* #1115's fix: thirteen
+   `forex-session-v1` bots all reported one `achievedPct` because the join ignored the symbol.)
+3. **A derived column must not hide the data it came from.** `MAX(DATE(t))` is *"last seen"*, not
+   *"when the peak happened"* — it was labelled and read as the latter. Print the raw value beside
+   the derived one, or name the column after the transform rather than the intent.
+4. **A scale change is not a disagreement.** Where history spans a rescale, a `MAX` across it returns
+   an obsolete number. Look for one before comparing — see **#1116**.
+
+⚠️ **The `db-schema.cjs` warning ("read the TYPE, not just the name") fired three times in this
+session and prevented none of it.** A warning printed by a tool does not reach the moment the
+sentence is written. The guard has to be a precondition on the claim, not a note beside the command.
+
+
 **Guards that were added, and what each is actually worth:**
 
 | Guard | Runs | Value |

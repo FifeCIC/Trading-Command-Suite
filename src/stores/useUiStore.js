@@ -6,7 +6,7 @@ export const useUiStore = create(
     (set) => ({
       devOverlayOpen: false,
       themeMode: 'dark',
-      themePack: 'scifi',
+      themePack: 'slate',
       backgroundTone: 'aura',
       showNavIcons: true,
       bookmarks: [],

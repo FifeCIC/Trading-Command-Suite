@@ -8,7 +8,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import MetaStackLayerSwitch from '../components/MetaStackLayerSwitch';
-import { BotBarsTable } from '../components/ScoringThresholds';
+import { BotThresholdsTable } from '../components/ScoringThresholds';
 import { SettingRow, SettingsSection, MovedNote } from '../components/SettingsControls';
 import { usePreferences } from '../core/hooks/usePreferences';
 // ⚠️ `./settings.css` ONLY — deliberately.
@@ -389,9 +389,9 @@ export default function TradingSettingsPage() {
       <SettingsSection
         id="bots"
         title="Bots"
-        desc="Every active bot's bar against the highest score its protocol has actually produced. A bar above the achieved ceiling is a bot that can never fire."
+        desc="Every active bot's threshold against the highest score its protocol has actually produced. A threshold above the achieved ceiling is a bot that can never fire."
       >
-        <BotBarsTable />
+        <BotThresholdsTable />
         {/* §9.14 — Trading Bots, Create Bot and Strategy Monitor are PREMIUM views, and so is the
             /settings/automation destination, so the whole note is premium-only. The flag is read
             from the Vite define: the bundler folds this away in the free build, which is what stops

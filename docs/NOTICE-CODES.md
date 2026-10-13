@@ -521,7 +521,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 
 - **Severity:** warning
 - **Message:** No bot will take this signal: {reason}
-- **Cause:** No ACTIVE bot subscribing to this protocol has a bar this reading meets — or none subscribes at all. A scored signal with no consumer is not a trade, whatever its strength.
+- **Cause:** No ACTIVE bot subscribing to this protocol has a threshold this reading meets — or none subscribes at all. A scored signal with no consumer is not a trade, whatever its strength.
 - **Action:** Create or adjust a bot for this protocol, or stop watching the protocol. The verdict is computed server-side from strategy_protocol subscriptions.
 - **Params:** `reason`
 - **Call:** `notice('TCS-RISK-004', { reason })`

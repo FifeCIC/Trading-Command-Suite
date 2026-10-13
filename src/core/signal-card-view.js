@@ -62,6 +62,46 @@ export function topDirectives(envelope) {
 export function roundPct(v) { return v == null ? null : Math.round(v); }
 
 /**
+ * signalConviction() — the DISPLAY derivation for #915 Option C: the second reading of a signal,
+ * plus how much of the protocol stayed silent this tick.
+ *
+ * WHY IT LIVES HERE AND NOT IN THE COMPONENT: this file is the shared home for signal-card
+ * helpers precisely so the overview card and the META.Stack Cockpit cannot disagree about the
+ * same data (see the header). The arithmetic below is one division and one subtraction, but a
+ * copy of it in each renderer is exactly the drift this file exists to prevent.
+ *
+ * THE TWO QUESTIONS, both true, neither interchangeable:
+ *   • Signal (`envelope.signalPct`) divides by the protocol's FULL directional capacity — every
+ *     eligible directive, including the ones that read neutral. Answers "how much of the whole
+ *     protocol agrees?"
+ *   • Conviction (`envelope.convictionPct`) divides by the capacity that actually READ. Answers
+ *     "of the directives that spoke, how strongly did they agree?"
+ * A protocol with one strong directive among fourteen silent ones displays a low Signal and a
+ * high Conviction. Shown together they separate "the market offered nothing" from "the
+ * denominator is diluted by silence" — one percentage cannot tell those apart.
+ *
+ * ⚠️ DISPLAY ONLY. `envelope.signal` (server-owned) decides BUY/HOLD/SELL and no gate may read
+ * this. Conviction RISES on a quiet tick — that is inherent to the observed denominator and is
+ * precisely why ADR-011 bans it as a scoring denominator. See the `convictionPct` docblock in
+ * `nest/src/modules/signals/signal-envelope.service.ts`.
+ *
+ * @returns {{pct: number|null, observedMax: number|null, silentSharePct: number|null}}
+ *   `pct`/`silentSharePct` are `null` — never 0 — when either side is unknown, so "we cannot
+ *   judge" never renders as "none of it was silent". Same rule as `thresholdGeometry()`'s null
+ *   `standing`.
+ */
+export function signalConviction(envelope) {
+  const pct = roundPct(envelope?.convictionPct);
+  const observedMax = envelope?.observedSignalMax ?? null;
+  const full = Number(envelope?.maxPossible);
+  const silentSharePct =
+    observedMax != null && observedMax > 0 && Number.isFinite(full) && full > 0
+      ? Math.round(100 - (observedMax / full) * 100)
+      : null;
+  return { pct, observedMax, silentSharePct };
+}
+
+/**
  * Normalise every blocker/warning/conflict into ONE uniform notice list so the
  * card never mixes ad-hoc styles.
  *

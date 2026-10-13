@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 177,
+  "count": 178,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -125,6 +125,14 @@
       "reaches": [
         "npm"
       ]
+    },
+    {
+      "name": "audit-ui-review.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "READ the owner's Page Walkthrough verdicts (`uiScore` + \"Preferred",
+      "selfTest": false,
+      "reaches": null
     },
     {
       "name": "check-breakdown.cjs",

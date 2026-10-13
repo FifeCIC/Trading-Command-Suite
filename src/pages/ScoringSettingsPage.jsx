@@ -20,7 +20,7 @@
 
 import { SettingRow, SettingsSection, MovedNote } from '../components/SettingsControls';
 import MetaStackLayerSwitch from '../components/MetaStackLayerSwitch';
-import { ThresholdClassification, BotBarsTable } from '../components/ScoringThresholds';
+import { ThresholdClassification, BotThresholdsTable } from '../components/ScoringThresholds';
 import { usePreferences } from '../core/hooks/usePreferences';
 import './settings.css';
 
@@ -52,17 +52,17 @@ export default function ScoringSettingsPage() {
       <SettingsSection
         id="trade-thresholds"
         title="Trade Thresholds"
-        desc="Every bar that decides whether a signal becomes a trade, with the highest score the protocol has actually produced. A bar above its achieved value is a bot that can never fire."
+        desc="Every threshold that decides whether a signal becomes a trade, with the highest score the protocol has actually produced. A threshold above its achieved value is a bot that can never fire."
       >
         <ThresholdClassification />
       </SettingsSection>
 
       <SettingsSection
         id="scoring-bot-bars"
-        title="Bot bar vs achieved ceiling"
-        desc="The same reading, per bot. Each bot has its own bar, so 'can this bot ever fire?' is a per-bot question."
+        title="Bot threshold vs achieved ceiling"
+        desc="The same reading, per bot. Each bot has its own threshold, so 'can this bot ever fire?' is a per-bot question."
       >
-        <BotBarsTable />
+        <BotThresholdsTable />
       </SettingsSection>
 
       <SettingsSection

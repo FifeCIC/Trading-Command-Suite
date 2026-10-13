@@ -20,12 +20,17 @@ function fmtTime(iso) {
 function SideBadge({ side }) {
   const s = (side || '').toLowerCase();
   if (!s) return null;
-  return <span className={`pl-side pl-side-${s}`}>{s.toUpperCase()}</span>;
+  // ⚠️ `poslife-side-${s}` IS DYNAMIC, and that is exactly how this line was MISSED. The rename script
+  // replaced the literal `pl-side` (it is followed by a space) but could not see `pl-side-` followed by
+  // `${` — a template literal, not a class name. The page then carried `poslife-side pl-side-buy`,
+  // and the second class matched no rule. A literal rename cannot see a generated name; verify in the
+  // browser, not by grepping the files you edited.
+  return <span className={`poslife-side poslife-side-${s}`}>{s.toUpperCase()}</span>;
 }
 
 function OriginBadge({ origin }) {
   const o = origin || 'unknown';
-  return <span className={`pl-origin pl-origin-${o}`}>{o}</span>;
+  return <span className={`poslife-origin poslife-origin-${o}`}>{o}</span>;
 }
 
 export default function PositionLifecyclePage() {
@@ -46,32 +51,32 @@ export default function PositionLifecyclePage() {
   const closedTrades = trades.filter(t => t.status === 'closed');
 
   return (
-    <div className="pl-page">
-      <header className="pl-header">
+    <div className="poslife-page">
+      <header className="poslife-header">
         <h2>Position Lifecycle Monitor</h2>
-        <p className="pl-sub">Lab prototype — the traceability chain behind every position: open → broker ticket linked → closed with real exit.</p>
+        <p className="poslife-sub">Lab prototype — the traceability chain behind every position: open → broker ticket linked → closed with real exit.</p>
       </header>
 
-      <div className="pl-stats">
-        <div className="pl-stat"><span className="pl-stat-num">{openTrades.length}</span><span>Open trades</span></div>
-        <div className="pl-stat"><span className="pl-stat-num">{closedTrades.length}</span><span>Closed (recent)</span></div>
-        <div className="pl-stat"><span className="pl-stat-num">{positions.length}</span><span>Broker positions</span></div>
-        <div className="pl-stat"><span className="pl-stat-num pl-stat-time">{fmtTime(sync.lastSyncedAt)}</span><span>Last position sync</span></div>
+      <div className="poslife-stats">
+        <div className="poslife-stat"><span className="poslife-stat-num">{openTrades.length}</span><span>Open trades</span></div>
+        <div className="poslife-stat"><span className="poslife-stat-num">{closedTrades.length}</span><span>Closed (recent)</span></div>
+        <div className="poslife-stat"><span className="poslife-stat-num">{positions.length}</span><span>Broker positions</span></div>
+        <div className="poslife-stat"><span className="poslife-stat-num poslife-stat-time">{fmtTime(sync.lastSyncedAt)}</span><span>Last position sync</span></div>
       </div>
 
-      <section className="pl-section">
-        <h3>Open Trades <span className="pl-hint">(trade table — brokerTicket, origin, source)</span></h3>
+      <section className="poslife-section">
+        <h3>Open Trades <span className="poslife-hint">(trade table — brokerTicket, origin, source)</span></h3>
         {openTrades.length === 0 ? (
-          <p className="pl-empty">No open trades recorded.</p>
+          <p className="poslife-empty">No open trades recorded.</p>
         ) : (
-          <table className="pl-table">
+          <table className="poslife-table">
             <thead><tr><th>Symbol</th><th>Side</th><th>Ticket</th><th>Origin</th><th>Source</th><th>Qty</th><th>Entry</th><th>Opened</th></tr></thead>
             <tbody>
               {openTrades.map(t => (
                 <tr key={t.id}>
-                  <td className="pl-symbol">{t.symbol}</td>
+                  <td className="poslife-symbol">{t.symbol}</td>
                   <td><SideBadge side={t.side} /></td>
-                  <td className="pl-mono">{t.brokerTicket ? `#${t.brokerTicket}` : '—'}</td>
+                  <td className="poslife-mono">{t.brokerTicket ? `#${t.brokerTicket}` : '—'}</td>
                   <td><OriginBadge origin={t.origin} /></td>
                   <td className="pl-muted">{t.source || '—'}</td>
                   <td>{t.quantity ?? '—'}</td>
@@ -84,23 +89,23 @@ export default function PositionLifecyclePage() {
         )}
       </section>
 
-      <section className="pl-section">
-        <h3>Broker Positions <span className="pl-hint">(position table — live synced snapshot)</span></h3>
+      <section className="poslife-section">
+        <h3>Broker Positions <span className="poslife-hint">(position table — live synced snapshot)</span></h3>
         {positions.length === 0 ? (
-          <p className="pl-empty">No positions synced yet. The automation loop syncs broker positions each tick.</p>
+          <p className="poslife-empty">No positions synced yet. The automation loop syncs broker positions each tick.</p>
         ) : (
-          <table className="pl-table">
+          <table className="poslife-table">
             <thead><tr><th>Symbol</th><th>Side</th><th>Ticket</th><th>Provider</th><th>Qty</th><th>Avg</th><th>P&amp;L</th><th>Last quote</th></tr></thead>
             <tbody>
               {positions.map(p => (
                 <tr key={p.id}>
-                  <td className="pl-symbol">{p.symbol}</td>
+                  <td className="poslife-symbol">{p.symbol}</td>
                   <td><SideBadge side={p.side} /></td>
-                  <td className="pl-mono">{p.brokerTicket ? `#${p.brokerTicket}` : '—'}</td>
+                  <td className="poslife-mono">{p.brokerTicket ? `#${p.brokerTicket}` : '—'}</td>
                   <td className="pl-muted">{p.provider}</td>
                   <td>{p.quantity ?? '—'}</td>
                   <td>{p.avgPrice ?? '—'}</td>
-                  <td className={(p.pnl ?? 0) >= 0 ? 'pl-green' : 'pl-red'}>{(p.pnl ?? 0).toFixed(2)}</td>
+                  <td className={(p.pnl ?? 0) >= 0 ? 'poslife-green' : 'poslife-red'}>{(p.pnl ?? 0).toFixed(2)}</td>
                   <td className="pl-muted">{fmtTime(p.lastQuotedAt)}</td>
                 </tr>
               ))}
@@ -109,18 +114,18 @@ export default function PositionLifecyclePage() {
         )}
       </section>
 
-      <section className="pl-section">
-        <h3>Recent Stop Adjustments <span className="pl-hint">(stop_adjustment audit)</span></h3>
+      <section className="poslife-section">
+        <h3>Recent Stop Adjustments <span className="poslife-hint">(stop_adjustment audit)</span></h3>
         {adjustments.length === 0 ? (
-          <p className="pl-empty">No stop adjustments recorded yet.</p>
+          <p className="poslife-empty">No stop adjustments recorded yet.</p>
         ) : (
-          <ul className="pl-adjustments">
+          <ul className="poslife-adjustments">
             {adjustments.map(a => (
               <li key={a.id}>
-                <span className="pl-symbol">{a.symbol}</span>
-                <span className="pl-mono">#{a.tradeTicket}</span>
+                <span className="poslife-symbol">{a.symbol}</span>
+                <span className="poslife-mono">#{a.tradeTicket}</span>
                 <span className="pl-muted">SL {a.oldSl ?? '—'} → {a.newSl ?? '—'}</span>
-                <span className="pl-reason">{a.reason}</span>
+                <span className="poslife-reason">{a.reason}</span>
                 <span className="pl-muted">{fmtTime(a.adjustedAt)}</span>
               </li>
             ))}

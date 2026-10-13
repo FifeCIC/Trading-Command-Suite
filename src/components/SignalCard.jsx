@@ -60,6 +60,7 @@ import {
   buildNotices,
   directionLabel,
   roundPct,
+  signalConviction,
   topDirectives,
 } from '../core/signal-card-view';
 // ⚠️ The component OWNS its stylesheet. Do not remove this as a "page concern".
@@ -176,6 +177,7 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
 
   const notices = buildNotices(envelope);
   const signalPct = roundPct(envelope.signalPct);
+  const conviction = signalConviction(envelope);
   const oppPct = roundPct(envelope.opportunityPct);
   const protocolName = envelope.protocolName || envelope.protocolId;
   const strength = Math.min(100, envelope.combinedStrength || 0);
@@ -221,7 +223,7 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
             <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${strength}%` }} /></span>
             <strong className="sig-b-row-pct sig-b-row-pct--combined">{envelope.combinedStrength}</strong>
           </div>
-          <div className="sig-b-row" title={`Signal = directional conviction of this setup. ${scaleTitle}`}>
+          <div className="sig-b-row" title={`Signal = how much of the protocol's directional capacity agrees — it counts the directives that read NEUTRAL this tick. ${scaleTitle}`}>
             <span className="sig-b-row-label">Signal</span>
             <span className="sig-b-row-track">
               {/*
@@ -255,6 +257,40 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
               */}
             <span className="sig-b-row-value">
               <strong className="sig-b-row-pct">{signalPct ?? '—'}{signalPct != null ? '%' : ''}</strong>
+              {/*
+                * #915 Option C — the SECOND reading of the same signal, beside the first.
+                *
+                * The percentage above divides by the protocol's FULL directional capacity; this
+                * divides by the capacity that actually READ. Both are true, they answer different
+                * questions, and showing only the first made a diluted denominator look like a dead
+                * market (owner, 2026-10-13: "a whole bunch of directives score low, always, as if
+                * the market data never shows a good opportunity").
+                *
+                * ⚠️ DISPLAY ONLY. `envelope.signal` (server-owned) still decides BUY/HOLD/SELL and
+                * the pre-trade gate is untouched. Conviction RISES on a quiet tick — inherent to
+                * the observed denominator, and exactly why ADR-011 bans it for CLASSIFICATION. See
+                * the `convictionPct` docblock in nest/src/modules/signals/signal-envelope.service.ts
+                * and `signalConviction()` in src/core/signal-card-view.js.
+                */}
+              {conviction.pct != null && (
+                <span
+                  className="sig-b-row-conviction"
+                  title={
+                    `Conviction: the directives that read directionally this tick agreed on ` +
+                    `${conviction.pct}% of their own combined capacity (${conviction.observedMax} points).\n\n` +
+                    `Signal (${signalPct ?? '—'}%) measures against the protocol's FULL directional capacity ` +
+                    `(${envelope.maxPossible} points), which counts every eligible directive.` +
+                    (conviction.silentSharePct != null
+                      ? ` ${conviction.silentSharePct}% of that capacity produced no direction this tick.`
+                      : '') +
+                    `\n\nSo a low Signal with a higher Conviction means FEW directives spoke, but those that ` +
+                    `did agreed. It describes participation — it is not a claim of edge, and it does not ` +
+                    `decide BUY/HOLD/SELL.`
+                  }
+                >
+                  {conviction.pct}% of active
+                </span>
+              )}
               {signalGeometry.standing && (
                 <span
                   className={`sig-b-row-standing sig-b-row-standing--${signalGeometry.standing}`}

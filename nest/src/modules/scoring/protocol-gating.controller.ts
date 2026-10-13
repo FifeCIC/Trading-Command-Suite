@@ -103,7 +103,7 @@ export class ProtocolGatingController {
    *
    * Three people had written the diagnosis in code comments. **Nobody could SEE the
    * numbers**, so it was never fixed. This endpoint exists so that class of failure is
-   * visible: a bar above its achieved ceiling is a bot that cannot fire, and it should be
+   * visible: a threshold above its achieved ceiling is a bot that cannot fire, and it should be
    * obvious rather than inferable.
    *
    * `achievedPct` is the best compositePct the bot's protocol has actually produced in the
@@ -113,20 +113,64 @@ export class ProtocolGatingController {
   async thresholds() {
     const WINDOW_DAYS = 7;
 
-    // Per-bot bar vs its protocol's measured ceiling. Note the COLLATE: `score.strategyId`
-    // is defined with a different collation from `trading_strategy.protocolId`, and MySQL
-    // refuses the comparison without it.
+    // ── The SCALE EPOCH (#1115) ────────────────────────────────────────────────────────────────
+    //
+    // ⚠️ `score_snapshot` SPANS TWO INCOMPATIBLE SCALES, so a MAX across the boundary returns a
+    // figure from a scale the pipeline no longer uses. Measured 2026-10-13: `forex-session-v1`
+    // peaks at `signalPct` **100** before this date and **27.3** after; `xau-speed-v1` **77** vs
+    // **23.8**. An unfiltered MAX is therefore not "the best ever" — it is "the best on the old
+    // denominator", which is the ~6.3x error this endpoint's own docblock describes.
+    //
+    // The boundary is 2026-09-11 — the day AFTER #758's stable denominator landed (2026-09-10,
+    // see the `observedSignalMax` note in `protocol-gating.service.ts`). Before it, `signalPct`
+    // divided by the OBSERVED directional sum (~130) rather than the CONFIGURED capacity
+    // (~725-815).
+    //
+    // ⚠️ It is a DATE because the scale is NOT recorded as data: `score_snapshot` has no
+    // `denominatorMode` column, unlike `score.breakdown`. The durable fix is a recorded
+    // `scaleEpoch` (#1116); until then this constant is the ONE place the boundary is written down.
+    // (Not a trade threshold, so `validate-threshold-sources.cjs` does not own it.)
+    const SCALE_EPOCH = '2026-09-11';
+
+    // Per-bot THRESHOLD vs its protocol's measured ceiling.
+    //
+    // ⚠️ "threshold", NOT "bar". In a trading app "bar" means an OHLCV candle, which belongs to
+    // the SYMBOL. This number belongs to the BOT (`trading_strategy.minComposite`). The two shared
+    // one word, and the owner read `barPct` as candle data — the field is now `thresholdPct`.
+    //
+    // Note the COLLATE: `score_snapshot.protocolId` is defined with a different collation from
+    // `trading_strategy.protocolId`, and MySQL refuses the comparison without it.
+    //
+    // ⚠️ READS `score_snapshot`, NOT `score` (#1115). `score` is SPARSE — measured 2026-10-13 it
+    // held 0-25 rows/day for 2026-09-16..10-07 against 2,371-11,752/day in `score_snapshot`, and
+    // the protocols' true peaks fall in that gap (`xau-speed-4h` peaked at 17.25 on 2026-09-11
+    // with ZERO `score` rows that day). Reading it reported that bot's ceiling as 6.2 against a
+    // real 17.3 and marked it `cannot fire` — a live bot declared dead by a measurement that
+    // never saw its best tick.
+    //
+    // ⚠️ `symbol` IS CONSTRAINED to the bot's own symbol. The `score` join was protocol-wide, so
+    // a protocol scoring several symbols reported the max across all of them as THIS bot's
+    // achievement (all 13 `forex-session-v1` bots shared one `achievedPct`). Switching source
+    // without tightening that would have introduced a fresh false-positive of exactly the kind
+    // being fixed.
+    //
+    // ⚠️ `signalPct IS NOT NULL` is what excludes the `rarity.captureSnapshot()` rows — that
+    // writer stores `composite` and `tradingSignal` only (224,373 rows, 57% of the table), so it
+    // contributes no percentage and is skipped for free rather than by a second predicate.
     const bots = await this.prisma.$queryRawUnsafe<Array<{
       name: string; symbol: string; protocolId: string; mode: string; active: number;
       minComposite: number; achievedPct: number | null; samples: bigint;
     }>>(`
       SELECT ts.name, ts.symbol, ts.protocolId, ts.mode, ts.active, ts.minComposite,
-             MAX(s.breakdown->>'$.rawComposite' / NULLIF(s.breakdown->>'$.configuredSignalMax', 0) * 100) AS achievedPct,
-             COUNT(s.id) AS samples
+             MAX(ss.signalPct) AS achievedPct,
+             COUNT(ss.id) AS samples
       FROM trading_strategy ts
-      LEFT JOIN score s
-        ON s.strategyId COLLATE utf8mb4_unicode_ci = ts.protocolId COLLATE utf8mb4_unicode_ci
-       AND s.timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${WINDOW_DAYS} DAY)
+      LEFT JOIN score_snapshot ss
+        ON ss.protocolId COLLATE utf8mb4_unicode_ci = ts.protocolId COLLATE utf8mb4_unicode_ci
+       AND ss.symbol = ts.symbol
+       AND ss.signalPct IS NOT NULL
+       AND ss.snappedAt >= '${SCALE_EPOCH}'
+       AND ss.snappedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${WINDOW_DAYS} DAY)
       GROUP BY ts.id, ts.name, ts.symbol, ts.protocolId, ts.mode, ts.active, ts.minComposite
       ORDER BY ts.active DESC, ts.minComposite ASC, ts.name ASC
     `);
@@ -140,7 +184,7 @@ export class ProtocolGatingController {
         protocolId: b.protocolId,
         mode: b.mode,
         active: b.active === 1,
-        barPct: Number(b.minComposite),
+        thresholdPct: Number(b.minComposite),
         achievedPct: achieved == null ? null : Math.round(achieved * 10) / 10,
         samples,
         // Three outcomes, kept distinct on purpose. "no data" is NOT "cannot fire" —
@@ -152,30 +196,39 @@ export class ProtocolGatingController {
     // ── Per-PROTOCOL measured ceiling (#840) ────────────────────────────────────────────────────
     //
     // ⚠️ WHY THIS IS SEPARATE FROM `bots` ABOVE. The per-bot rows answer "did THIS bot clear its
-    // bar" — which needs the bot to exist. The create form has no bot yet, so it needs the ceiling
+    // threshold" — which needs the bot to exist. The create form has no bot yet, so it needs the ceiling
     // for ANY protocol, whether or not one has ever been configured. Same measurement, different
     // question, so it is a second query rather than a wider join.
     //
-    // ⚠️ ALL-TIME, NOT WINDOWED. `ProtocolHealthService` compares a bot's bar against the protocol's
-    // "highest composite EVER recorded", and that is the right basis here too: a bar above the
-    // all-time maximum is one the protocol has NEVER cleared, so restricting to 7 days would both
-    // understate the ceiling and make the warning flicker as history rolls off. This is the reuse
-    // the issue asked for — same definition, computed once for the create path.
+    // ⚠️ ALL-TIME, NOT WINDOWED. `ProtocolHealthService` compares a bot's threshold against the
+    // protocol's "highest composite EVER recorded", and that is the right basis here too: a
+    // threshold above the all-time maximum is one the protocol has NEVER cleared, so restricting
+    // to 7 days would both understate the ceiling and make the warning flicker as history rolls
+    // off. This is the reuse the issue asked for — same definition, computed once for the create
+    // path.
     //
-    // ⚠️ SAME SCALE AS `minComposite`. The percentage is `rawComposite / configuredSignalMax * 100`,
-    // identical to `achievedPct` above, so the form compares like with like. A raw composite here
-    // would be a units mismatch — the exact class of defect #839 was.
+    // ⚠️ "ALL-TIME" NOW MEANS ALL-TIME ON THE CURRENT SCALE, bounded by `SCALE_EPOCH` (#1115). The
+    // window is deliberately NOT `WINDOW_DAYS`: this one answers "could this protocol EVER clear a
+    // threshold of N", which a 7-day window cannot.
+    //
+    // ⚠️ SAME SCALE AS `minComposite`, AND THAT IS WHY THE SOURCE CHANGED. The percentage is now
+    // read directly as `signalPct` — the value the scorer itself wrote — instead of being
+    // recomputed here as `rawComposite / configuredSignalMax * 100`. Recomputing gave the same
+    // number on the same row (verified: 6.15 both ways, 2026-10-13), but it could only ever be
+    // evaluated over `score`, which is the sparse table. Reading the stored value from
+    // `score_snapshot` is what makes the history complete.
     let protocolCeilings: Record<string, { ceilingPct: number; samples: number }> = {};
     try {
       const ceilings = await this.prisma.$queryRawUnsafe<Array<{
         protocolId: string; ceilingPct: number | null; samples: bigint;
       }>>(`
-        SELECT s.strategyId AS protocolId,
-               MAX(s.breakdown->>'$.rawComposite' / NULLIF(s.breakdown->>'$.configuredSignalMax', 0) * 100) AS ceilingPct,
-               COUNT(s.id) AS samples
-        FROM score s
-        WHERE s.strategyId IS NOT NULL
-        GROUP BY s.strategyId
+        SELECT ss.protocolId AS protocolId,
+               MAX(ss.signalPct) AS ceilingPct,
+               COUNT(ss.id) AS samples
+        FROM score_snapshot ss
+        WHERE ss.signalPct IS NOT NULL
+          AND ss.snappedAt >= '${SCALE_EPOCH}'
+        GROUP BY ss.protocolId
       `);
       for (const c of ceilings) {
         if (c.ceilingPct == null) continue;
@@ -197,13 +250,13 @@ export class ProtocolGatingController {
       classification: SIGNAL_THRESHOLDS,
       preTradeGate: {
         default: SIGNALS_GATE_DEFAULT,
-        botBarFallback: BOT_BAR_DEFAULT,
+        botThresholdFallback: BOT_BAR_DEFAULT,
         byStyle: STYLE_THRESHOLDS,
-        note: 'Per-protocol override > trading style > default. The gate blocks a signal when signalPct is below the resolved bar.',
+        note: 'Per-protocol override > trading style > default. The gate blocks a signal when signalPct is below the resolved threshold.',
       },
       /**
        * Highest percentage each protocol has EVER achieved. Used by the create form to warn when a
-       * typed bar is above everything that protocol has reached (#840). `samples` lets the caller
+       * typed threshold is above everything that protocol has reached (#840). `samples` lets the caller
        * distinguish "measured and low" from "barely measured" — a ceiling from 3 readings is not
        * evidence, which is the same 10-sample floor `ProtocolHealthService` uses.
        */

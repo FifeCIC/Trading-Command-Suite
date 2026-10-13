@@ -110,14 +110,10 @@ function SymbolRedirect() {
 // ⚠️ `slate` is FIRST — it is the default pack, and the list order is what the picker presents as the
 // default. `ai-original` was removed 2026-10-12 (owner request) because it carried ~80 structural
 // overrides, so the app's geometry silently depended on which pack was active.
-const THEME_CARDS = [
-  { id: 'slate', name: 'Slate', description: 'Blue-gray with indigo accent — matches the dashboard.', colors: ['#0f172a', '#3b82f6', '#e2e8f0'] },
-  { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
-  { id: 'oceanic', name: 'Oceanic', description: 'Deep blue with teal.', colors: ['#0f1b2e', '#00d9ff', '#d6e8ff'] },
-  { id: 'scifi', name: 'Sci-Fi', description: 'Dark navy, cyan neon.', colors: ['#0a1428', '#00d9ff', '#c1d0e0'] },
-  { id: 'terminal', name: 'Terminal', description: 'Black, neon green.', colors: ['#0a0a0a', '#00ff41', '#e0e0e0'] },
-  { id: 'void', name: 'Void', description: 'Black, neon purple.', colors: ['#08080d', '#8a50ff', '#d4d0e8'] },
-];
+// ⚠️ THEME_CARDS MOVED to src/core/theme-cards.js (2026-10-13). The Appearance area's chooser needs
+// the same list, and importing it from here would have been a CYCLE — App.jsx imports the chooser.
+// Nothing in App.jsx uses it now that the shell rail's pack and preview controls were removed.
+// ⚠️ `themePack` / `setThemePack` DO stay: they feed `useThemeRuntime` above.
 
 
 
@@ -956,17 +952,12 @@ function AppShell({ directContent = null, directArea = null, directView = null }
 
         {primaryArea === 'settings' && (
           <>
-            <AccordionBlock title="Theme Mode" defaultOpen={false}>
-              <div className="inline-actions" style={{ padding: '0.5rem 0' }}>
-                <button type="button" className={themeMode === 'light' ? 'cta' : ''} onClick={() => setThemeMode('light')}>
-                  Light
-                </button>
-                <button type="button" className={themeMode === 'dark' ? 'cta' : ''} onClick={() => setThemeMode('dark')}>
-                  Dark
-                </button>
-              </div>
-            </AccordionBlock>
-
+            {/* ⚠️ THEME MODE / THEME PACK / PREVIEW REMOVED HERE (2026-10-13, owner request).
+                ⚠️ These were SHELL CHROME — they rendered whenever Screen Options was open, which is
+                why they appeared to live on /settings/trading-settings when they were not part of
+                that page at all. Theme pack selection moves to the new Appearance area.
+                ⚠️ "Background" is deliberately KEPT: the owner listed Theme Mode, Theme Pack and
+                Preview, and not this. Do not "finish the job" by removing it. */}
             <AccordionBlock title="Background" defaultOpen={false}>
               <div className="inline-actions" style={{ padding: '0.5rem 0' }}>
                 <button
@@ -1002,51 +993,9 @@ function AppShell({ directContent = null, directArea = null, directView = null }
               </div>
             </AccordionBlock>
 
-            <div className="rail-block">
-              <p className="muted">Theme Pack</p>
-              <div className="rail-links">
-                {availablePacks.map((packId) => (
-                  <button
-                    key={packId}
-                    type="button"
-                    className={themePack === packId ? 'nav-active' : ''}
-                    onClick={() => {
-                      setThemePack(packId);
-                      pushActivity('THEME', `Pack switched to ${packId}`);
-                    }}
-                  >
-                    {packId}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rail-block preview-cards-rail">
-              <p className="muted">Preview</p>
-              <div className="preview-cards">
-                {THEME_CARDS.filter((c) => availablePacks.includes(c.id)).map((card) => (
-                  <button
-                    key={card.id}
-                    type="button"
-                    className={`preview-card-rail ${themePack === card.id ? 'active' : ''}`}
-                    onClick={() => { setThemePack(card.id); pushActivity('THEME', `Preview clicked ${card.id}`); }}
-                  >
-                    <div className="preview-card-swatch" style={{ background: card.colors[0] }}>
-                      <span className="preview-card-accent" style={{ background: card.colors[1] }} />
-                      <span className="preview-card-line" style={{ background: card.colors[2], opacity: 0.3 }} />
-                      <span className="preview-card-line short" style={{ background: card.colors[2], opacity: 0.2 }} />
-                    </div>
-                    <span className="preview-card-name">{card.name}</span>
-                    <span className="preview-card-desc">{card.description}</span>
-                    <div className="preview-card-bars">
-                      {card.colors.map((c) => (
-                        <span key={c} className="preview-card-bar" style={{ background: c }} title={c} />
-                      ))}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* ⚠️ The Preview cards rail-block was removed here too (2026-10-13) — it was the third of
+                the three the owner listed. Its pack chooser now lives in the Appearance area, so
+                keeping it would have left two controls for one setting. */}
           </>
         )}
         <button
@@ -1147,6 +1096,19 @@ export default function App() {
           {FULL_EDITION_ONLY && (
             <>
               <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
+              {/* ⚠️ APPEARANCE AREA MOVES (2026-10-13, owner request). The three views below moved
+                  into the new Appearance area, and the Theme Packs page was retired into its chooser.
+                  These redirects exist so a link, a bookmark or a handoff written BEFORE the move
+                  still lands somewhere correct — removing a route without one produces a blank view
+                  that reads as a broken build rather than as a move. */}
+              <Route path="/settings/appearance" element={<Navigate to="/appearance/appearance" replace />} />
+              <Route path="/settings/screen-assignment" element={<Navigate to="/appearance/screen-assignment" replace />} />
+              <Route path="/development/responsive-layout-lab" element={<Navigate to="/appearance/responsive-layout-lab" replace />} />
+              <Route path="/settings/theme-packs" element={<Navigate to="/appearance/layout-guide" replace />} />
+              {/* Theme Lab retired 2026-10-13 (owner request). Its sections became the Appearance
+                  element groups; this redirect keeps `/development/theme-lab` resolving rather than
+                  showing a blank view to anyone following an older link or handoff. */}
+              <Route path="/development/theme-lab" element={<Navigate to="/appearance/layout-guide" replace />} />
               <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
               <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
               <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />

@@ -5,7 +5,7 @@
  * Regenerate with: node scripts/generate-free-map.cjs
  * Check freshness:  node scripts/generate-free-map.cjs --check
  *
- * 42 of 113 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
+ * 41 of 113 entries — premium entries carry labels, source file paths and API endpoints, so leaving them in published the map
  * Plan: Trading-Command-Suite-Documentation/commercial/FREE-EDITION-PLAN.md (§3, §11.1)
  */
 
@@ -329,14 +329,6 @@ export const VIEW_META = {
     css: "src/pages/settings-education.css",
     api: [],
   },
-  "/settings/theme-packs": {
-    tier: "free",
-    review: "approved",
-    label: "Theme Packs",
-    file: "src/pages/ThemePage.jsx",
-    css: "src/pages/theme-page.css",
-    api: [],
-  },
   "/settings/user-preferences": {
     tier: "free",
     review: "approved",
@@ -359,7 +351,7 @@ export const VIEW_META = {
       "POST /api/automation/layer",
     ],
   },
-  "/settings/appearance": {
+  "/appearance/appearance": {
     tier: "free",
     review: "approved",
     label: "Appearance",

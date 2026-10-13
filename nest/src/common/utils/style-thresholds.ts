@@ -47,7 +47,7 @@ export interface StyleGateResolution {
    * single-service, 2026-10-12). `undefined` = no lookup ran (override path, no protocol),
    * which must stay distinguishable from `{ count: 0 }` = looked up, nobody subscribes.
    */
-  participatingBots?: { count: number; bars: number[] };
+  participatingBots?: { count: number; thresholds: number[] };
 }
 
 /**

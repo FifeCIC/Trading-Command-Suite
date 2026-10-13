@@ -7,14 +7,14 @@ import './performance-lab.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
 function PnlBadge({ value }) {
-  const cls = value >= 0 ? 'pl-up' : 'pl-down';
+  const cls = value >= 0 ? 'perflab-up' : 'perflab-down';
   const sign = value >= 0 ? '+' : '';
-  return <span className={`pl-pnl ${cls}`}>{sign}{value.toFixed(2)}</span>;
+  return <span className={`perflab-pnl ${cls}`}>{sign}{value.toFixed(2)}</span>;
 }
 
 function MiniBar({ value, max, color = '#22c55e' }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  return <span className="pl-bar"><span className="pl-bar-fill" style={{ width: `${pct}%`, background: color }} /></span>;
+  return <span className="perflab-bar"><span className="perflab-bar-fill" style={{ width: `${pct}%`, background: color }} /></span>;
 }
 
 /**
@@ -70,11 +70,11 @@ export default function PerformanceLabPage() {
   const maxPnl = useMemo(() => Math.max(1, ...strategies.map(s => Math.abs(s.totalPnl))), [strategies]);
   const maxTrades = useMemo(() => Math.max(1, ...strategies.map(s => s.totalTrades)), [strategies]);
 
-  if (isLoading) return <div className="pl-page"><LoadingSkeleton variant="card" count={6} /></div>;
+  if (isLoading) return <div className="perflab-page"><LoadingSkeleton variant="card" count={6} /></div>;
 
   return (
-    <div className="pl-page">
-      <header className="pl-header">
+    <div className="perflab-page">
+      <header className="perflab-header">
         <div>
           <h1>Trading Performance
           <PageInfoPopover>
@@ -82,9 +82,9 @@ export default function PerformanceLabPage() {
           </PageInfoPopover>
         </h1>
         </div>
-        <div className="pl-days">
+        <div className="perflab-days">
           {[30, 90, 180, 365].map(d => (
-            <button key={d} className={`pl-day-btn ${days === d ? 'active' : ''}`} onClick={() => setDays(d)}>{d}d</button>
+            <button key={d} className={`perflab-day-btn ${days === d ? 'active' : ''}`} onClick={() => setDays(d)}>{d}d</button>
           ))}
         </div>
       </header>
@@ -93,56 +93,56 @@ export default function PerformanceLabPage() {
 
       {/* ── Overall Summary ── */}
       {data?.overall && (
-        <div className="pl-overall">
-          <div className="pl-stat-card">
-            <span className="pl-stat-val" style={{ color: data.overall.totalPnl >= 0 ? '#22c55e' : '#ef4444' }}>
+        <div className="perflab-overall">
+          <div className="perflab-stat-card">
+            <span className="perflab-stat-val" style={{ color: data.overall.totalPnl >= 0 ? '#22c55e' : '#ef4444' }}>
               {data.overall.totalPnl >= 0 ? '+' : ''}{data.overall.totalPnl.toFixed(2)}
             </span>
-            <span className="pl-stat-label">Total P&L ({days}d)</span>
+            <span className="perflab-stat-label">Total P&L ({days}d)</span>
           </div>
-          <div className="pl-stat-card">
-            <span className="pl-stat-val">{data.overall.winRate}%</span>
-            <span className="pl-stat-label">Win Rate</span>
-            <span className="pl-stat-sub">{data.overall.totalWins}W / {data.overall.totalLosses}L</span>
+          <div className="perflab-stat-card">
+            <span className="perflab-stat-val">{data.overall.winRate}%</span>
+            <span className="perflab-stat-label">Win Rate</span>
+            <span className="perflab-stat-sub">{data.overall.totalWins}W / {data.overall.totalLosses}L</span>
           </div>
-          <div className="pl-stat-card">
-            <span className="pl-stat-val">{fmtProfitFactor(data.overall.profitFactor, 2)}</span>
-            <span className="pl-stat-label">Profit Factor</span>
+          <div className="perflab-stat-card">
+            <span className="perflab-stat-val">{fmtProfitFactor(data.overall.profitFactor, 2)}</span>
+            <span className="perflab-stat-label">Profit Factor</span>
           </div>
-          <div className="pl-stat-card">
-            <span className="pl-stat-val">{data.overall.totalTrades}</span>
-            <span className="pl-stat-label">Closed Trades</span>
+          <div className="perflab-stat-card">
+            <span className="perflab-stat-val">{data.overall.totalTrades}</span>
+            <span className="perflab-stat-label">Closed Trades</span>
           </div>
-          <div className="pl-stat-card">
-            <span className="pl-stat-val">{data.overall.activeStrategies}</span>
-            <span className="pl-stat-label">Active Strategies</span>
+          <div className="perflab-stat-card">
+            <span className="perflab-stat-val">{data.overall.activeStrategies}</span>
+            <span className="perflab-stat-label">Active Strategies</span>
           </div>
         </div>
       )}
 
       {/* ── Live MT5 Positions ── */}
       {mt5Positions.length > 0 && (
-        <section className="pl-section">
+        <section className="perflab-section">
           <h2>Open Positions (MT5)</h2>
-          <div className="pl-strategy-grid">
+          <div className="perflab-strategy-grid">
             {mt5Positions.map((p, i) => (
-              <div key={p.ticket || i} className="pl-strategy-card">
-                <div className="pl-card-head">
-                  <span className="pl-strategy-name">{p.symbol} {p.type === 0 ? 'BUY' : 'SELL'} ×{p.volume}</span>
+              <div key={p.ticket || i} className="perflab-strategy-card">
+                <div className="perflab-card-head">
+                  <span className="perflab-strategy-name">{p.symbol} {p.type === 0 ? 'BUY' : 'SELL'} ×{p.volume}</span>
                   <PnlBadge value={p.profit || 0} />
                 </div>
-                <div className="pl-card-stats">
-                  <div className="pl-card-stat">
-                    <span className="pl-cs-val">{p.price_current?.toFixed(4) || '—'}</span>
-                    <span className="pl-cs-label">Current</span>
+                <div className="perflab-card-stats">
+                  <div className="perflab-card-stat">
+                    <span className="perflab-cs-val">{p.price_current?.toFixed(4) || '—'}</span>
+                    <span className="perflab-cs-label">Current</span>
                   </div>
-                  <div className="pl-card-stat">
-                    <span className="pl-cs-val">{p.price_open?.toFixed(4) || '—'}</span>
-                    <span className="pl-cs-label">Entry</span>
+                  <div className="perflab-card-stat">
+                    <span className="perflab-cs-val">{p.price_open?.toFixed(4) || '—'}</span>
+                    <span className="perflab-cs-label">Entry</span>
                   </div>
-                  <div className="pl-card-stat">
-                    <span className="pl-cs-val">{p.ticket}</span>
-                    <span className="pl-cs-label">Ticket</span>
+                  <div className="perflab-card-stat">
+                    <span className="perflab-cs-val">{p.ticket}</span>
+                    <span className="perflab-cs-label">Ticket</span>
                   </div>
                 </div>
               </div>
@@ -153,79 +153,79 @@ export default function PerformanceLabPage() {
 
       {/* ── Per-Strategy Cards ── */}
       {strategies.length > 0 ? (
-        <section className="pl-section">
+        <section className="perflab-section">
           <h2>Strategies</h2>
-          <div className="pl-strategy-grid">
+          <div className="perflab-strategy-grid">
             {strategies.map(s => (
-              <div key={s.strategyId} className="pl-strategy-card">
-                <div className="pl-card-head">
-                  <span className="pl-strategy-name">{s.strategyName}</span>
+              <div key={s.strategyId} className="perflab-strategy-card">
+                <div className="perflab-card-head">
+                  <span className="perflab-strategy-name">{s.strategyName}</span>
                   <PnlBadge value={s.totalPnl} />
                 </div>
-                <div className="pl-card-stats">
-                  <div className="pl-card-stat">
-                    <span className="pl-cs-val">{s.winRate}%</span>
-                    <span className="pl-cs-label">Win Rate</span>
+                <div className="perflab-card-stats">
+                  <div className="perflab-card-stat">
+                    <span className="perflab-cs-val">{s.winRate}%</span>
+                    <span className="perflab-cs-label">Win Rate</span>
                   </div>
-                  <div className="pl-card-stat">
-                    <span className="pl-cs-val">{s.totalTrades}</span>
-                    <span className="pl-cs-label">Trades</span>
+                  <div className="perflab-card-stat">
+                    <span className="perflab-cs-val">{s.totalTrades}</span>
+                    <span className="perflab-cs-label">Trades</span>
                   </div>
-                  <div className="pl-card-stat">
-                    <span className="pl-cs-val">{fmtProfitFactor(s.profitFactor, 1)}</span>
-                    <span className="pl-cs-label">PF</span>
+                  <div className="perflab-card-stat">
+                    <span className="perflab-cs-val">{fmtProfitFactor(s.profitFactor, 1)}</span>
+                    <span className="perflab-cs-label">PF</span>
                   </div>
                 </div>
-                <div className="pl-card-bars">
-                  <div className="pl-bar-row">
-                    <span className="pl-bar-label">P&L</span>
+                <div className="perflab-card-bars">
+                  <div className="perflab-bar-row">
+                    <span className="perflab-bar-label">P&L</span>
                     <MiniBar value={Math.abs(s.totalPnl)} max={maxPnl} color={s.totalPnl >= 0 ? '#22c55e' : '#ef4444'} />
                   </div>
-                  <div className="pl-bar-row">
-                    <span className="pl-bar-label">Volume</span>
+                  <div className="perflab-bar-row">
+                    <span className="perflab-bar-label">Volume</span>
                     <MiniBar value={s.totalTrades} max={maxTrades} color="#60a5fa" />
                   </div>
                 </div>
-                <div className="pl-card-footer">
+                <div className="perflab-card-footer">
                   <span>{s.symbols?.slice(0, 4).join(', ')}{s.symbols?.length > 4 ? ` +${s.symbols.length - 4}` : ''}</span>
-                  <span className="pl-holding">{s.avgHoldingHours > 0 ? `${s.avgHoldingHours}h avg` : ''}</span>
+                  <span className="perflab-holding">{s.avgHoldingHours > 0 ? `${s.avgHoldingHours}h avg` : ''}</span>
                 </div>
               </div>
             ))}
           </div>
         </section>
       ) : (
-        <section className="pl-section">
-          <p className="pl-empty">No strategy performance data yet. Trades recorded via MT5 close or strategy execution will appear here.</p>
+        <section className="perflab-section">
+          <p className="perflab-empty">No strategy performance data yet. Trades recorded via MT5 close or strategy execution will appear here.</p>
         </section>
       )}
 
       {/* ── Equity Curve ── */}
       {data?.equityCurve?.length > 1 && (
-        <section className="pl-section">
+        <section className="perflab-section">
           <h2>Equity Curve</h2>
-          <div className="pl-equity-chart">
-            <div className="pl-ec-bars">
+          <div className="perflab-equity-chart">
+            <div className="perflab-ec-bars">
               {data.equityCurve.map((pt, i) => {
                 const maxAbs = Math.max(1, ...data.equityCurve.map(p => Math.abs(p.cumPnl)));
                 const height = Math.max(2, (Math.abs(pt.cumPnl) / maxAbs) * 120);
                 return (
-                  <div key={i} className="pl-ec-bar-wrap" title={`${pt.date}: ${pt.cumPnl >= 0 ? '+' : ''}${pt.cumPnl.toFixed(2)}`}>
+                  <div key={i} className="perflab-ec-bar-wrap" title={`${pt.date}: ${pt.cumPnl >= 0 ? '+' : ''}${pt.cumPnl.toFixed(2)}`}>
                     <div
-                      className={`pl-ec-bar ${pt.cumPnl >= 0 ? 'up' : 'down'}`}
+                      className={`perflab-ec-bar ${pt.cumPnl >= 0 ? 'up' : 'down'}`}
                       style={{ height: `${height}px` }}
                     />
                     {i % Math.ceil(data.equityCurve.length / 10) === 0 && (
-                      <span className="pl-ec-label">{pt.date.slice(5)}</span>
+                      <span className="perflab-ec-label">{pt.date.slice(5)}</span>
                     )}
                   </div>
                 );
               })}
             </div>
-            <div className="pl-ec-summary">
+            <div className="perflab-ec-summary">
               <span>Start: {data.equityCurve[0]?.date}</span>
               <span>End: {data.equityCurve[data.equityCurve.length - 1]?.date}</span>
-              <span className={data.overall?.totalPnl >= 0 ? 'pl-up' : 'pl-down'}>
+              <span className={data.overall?.totalPnl >= 0 ? 'perflab-up' : 'perflab-down'}>
                 Net: {data.overall?.totalPnl >= 0 ? '+' : ''}{data.overall?.totalPnl?.toFixed(2)}
               </span>
             </div>
@@ -235,10 +235,10 @@ export default function PerformanceLabPage() {
 
       {/* ── Monthly Breakdown ── */}
       {data?.monthlyBreakdown?.length > 0 && (
-        <section className="pl-section">
+        <section className="perflab-section">
           <h2>Monthly Breakdown</h2>
-          <div className="pl-table-wrap">
-            <table className="pl-table">
+          <div className="perflab-table-wrap">
+            <table className="perflab-table">
               <thead>
                 <tr>
                   <th>Month</th>
@@ -254,8 +254,8 @@ export default function PerformanceLabPage() {
                   <tr key={m.month}>
                     <td>{m.month}</td>
                     <td>{m.trades}</td>
-                    <td className="pl-up">{m.wins}</td>
-                    <td className="pl-down">{m.losses}</td>
+                    <td className="perflab-up">{m.wins}</td>
+                    <td className="perflab-down">{m.losses}</td>
                     <td style={{ color: m.winRate >= 50 ? '#22c55e' : '#ef4444' }}>{m.winRate}%</td>
                     <td><PnlBadge value={m.pnl} /></td>
                   </tr>
@@ -268,7 +268,7 @@ export default function PerformanceLabPage() {
 
       {/* ── Empty State ── */}
       {!data?.overall && !strategies.length && (
-        <div className="pl-empty-state">
+        <div className="perflab-empty-state">
           <p>No performance data available. Trades are recorded when positions are closed via MT5 or strategy execution.</p>
         </div>
       )}

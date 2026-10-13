@@ -116,21 +116,28 @@ import {
  *   — #714 (2026-09-02): the bar is now checked by processSignalQueues against
  *     the signal record's compositePct — no strategy-side scoring exists.
  *
- * ⚠️ SCALE WARNING (2026-08-13) ⚠️
- * These thresholds (and Layer 3's minComposite in the DB) were calibrated for
- * the OLD 0-100 composite scale. The composite is now RAW (values in the
- * hundreds — see protocol-gating.service.ts SCALE WARNING). A minComposite of
- * 55 on the old scale now passes almost any raw composite (55+), which is why
- * the app over-produced BUY signals. Do NOT tune these to new absolute values
- * — the correct fix is percentage-based thresholds (composite / maxScore × 100)
- * so custom protocols of any maxScore share the same semantics.
+ * ✅ RESOLVED (2026-09-15) — this block read "⚠️ SCALE WARNING (2026-08-13) ⚠️" until 2026-10-13.
+ * It described thresholds calibrated for the OLD 0-100 composite while the composite had become
+ * RAW (hundreds), so a `minComposite` of 55 admitted almost everything — and it asked for "the
+ * correct fix": percentage-based thresholds.
+ *
+ * That fix LANDED. Gate 4 in `processSignalQueues` compares `head.compositePct` — the percentage
+ * of the protocol's CONFIGURED capacity — against `minComposite`, and the style table was rescaled
+ * ÷~6.3 to match (the derivation is in `style-thresholds.ts`).
+ *
+ * ⚠️ WHY THE BLOCK IS DELETED RATHER THAN SOFTENED: a stale comment is not neutral. It reads as a
+ * live measurement, and it nearly produced a false bug report on 2026-10-13 — an agent read "the
+ * correct fix is percentage-based thresholds" as outstanding work, then briefly believed
+ * `BOT_BAR_DEFAULT` was still 60. It is **10**. Never re-derive a bar from this block's history.
  *
  * The style→bar table and matcher live in common/utils/style-thresholds.ts.
  * This file used to carry its own copy with a DIFFERENT fallback (60) from the
  * signals gate's (65); two copies of one table always drift.
  */
 function getStyleThreshold(tradingStyle?: string): number {
-  // BOT_BAR_DEFAULT (60) preserves this path's historic fallback exactly.
+  // BOT_BAR_DEFAULT is **10**, rescaled ÷~6.3 with the rest of the table on 2026-09-15. The
+  // comment here used to say "(60)" — the pre-rescale value — which is exactly the kind of stale
+  // number a reader believes instead of checking.
   return resolveStyleThreshold(tradingStyle, BOT_BAR_DEFAULT).threshold;
 }
 

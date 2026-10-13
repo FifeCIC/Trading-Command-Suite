@@ -1,0 +1,435 @@
+/* appearance-area.css — the Appearance area and its theme-pack chooser.
+ *
+ * ⚠️ KNOWN STANDARDS VIOLATION — THIS FILE SHOULD BE `appearance-area.module.css`.
+ * `ui-standards` "Rule B" (decided 2026-09-17) requires any NEW page/component stylesheet to be a CSS
+ * Module, because every global stylesheet is concatenated into one sheet and a page prefix is therefore
+ * a GLOBAL namespace where the last-loaded rule wins on both pages. This file was created on
+ * 2026-10-13 as a plain global `.css` and so breaks that rule; `theme-lab.css`, which the same pages
+ * import, is the same shape. Converting both means changing 8 page imports plus the `tl-*` class names
+ * across the section library — which is why it is recorded here rather than bundled into the visual
+ * pass that fixed the padding. Do it as its own change.
+ *
+ * ⚠️ TOKENS ONLY. Every colour here comes from a CSS variable so a pack switch repaints this page
+ * like any other — no literal hex, per ui-standards. The pack CARDS are the one deliberate exception:
+ * they render each pack's own colours inline, because showing a colour scheme is the point of the card.
+ *
+ * ⚠️ NO STRUCTURAL DEPENDENCE. Nothing here sets a width, padding or size from a theme token, so
+ * switching packs cannot change this page's geometry. That separation is the reason this area exists;
+ * see the note in App.jsx about the deleted `ai-original` pack.
+ */
+
+.appearance-area {
+  /* ⚠️ HORIZONTAL PADDING AND `max-width` ARE NOT OPTIONAL ON A PAGE WRAPPER.
+     `.site-shell .main-stage` (index.css) sets `padding: 1rem 0` — ZERO horizontal — so the gutter
+     has to come from the page's own root element. This rule originally read `padding: 1.25rem 0 2rem`,
+     which left the heading flush against the stage edge: measured 2026-10-13, the first heading sat at
+     x=275 and `.main-stage` began at x=275 — a 0px gap, on every Appearance page at once.
+     The values below are the app's existing convention, not new ones: `directives-page` computes to
+     `20px 24px 32px 24px`, and ui-standards item 9 requires `var(--page-max-width)` on the container. */
+  max-width: var(--page-max-width, 1400px);
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+  color: var(--ink);
+}
+
+/* ⚠️ THE HEADER IS A PANEL, NOT FLOATING TEXT — that is the house idiom. `directives-toolbar`
+   (directives-manager.css) and `content-card` (index.css) both use `1px solid var(--line)` +
+   `border-radius` + `background: var(--panel)`. The Appearance pages had none of it, which is most
+   of why they read as flat beside the 8/10 pages: a bare heading on a bare background. Values are
+   copied from those existing rules rather than chosen here. */
+.appearance-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ⚠️ NO PAGE TITLE IN THIS BLOCK, DELIBERATELY (2026-10-13). The shell already renders the page name
+   in `.main-top-row` via `components/Breadcrumbs.jsx` (Dashboard › Area › View), and `index.css`
+   hides a page's own heading — "Hide page-level h1 — title is now in main-top-row".
+
+   ⚠️ Measured before it was removed: `/appearance/patterns` showed its name twice — the breadcrumb at
+   y=217, then this block repeating "Pattern Library" at y=282. The 8/10 page
+   `/protocols/directives-registry` shows only a tagline beneath its breadcrumb. What a page supplies
+   is its DESCRIPTION. Do not re-add a heading here. */
+
+/* ⚠️ THE POPOVER IS A SIBLING OF THIS PARAGRAPH, NOT A CHILD — it is laid out on the header row by
+   `.appearance-head`'s flex. Putting it back inside the `<p>` is invalid HTML: `PageInfoPopover`
+   renders a `<div>`, and React logs `validateDOMNesting: <div> cannot appear as a descendant of <p>`
+   on every page that does it. That was measured here on 2026-10-13 — the build passed and the pages
+   rendered, so only the browser console showed the fault. */
+.appearance-lede {
+  flex: 1 1 auto;
+  margin: 0;
+  max-width: 82ch;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.appearance-lede {
+  margin: 0;
+  max-width: 78ch;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* The description and its info button sit on one row — see `.appearance-head` above. */
+
+/* Sections carry the same panel surface as the header, so a page reads as composed blocks rather
+   than a heading followed by loose content. */
+.appearance-section {
+  margin-top: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.85rem 0.95rem;
+}
+
+.appearance-section h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.appearance-note {
+  margin: 0 0 0.85rem;
+  max-width: 80ch;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* ⚠️ `overflow-x: auto` on a WRAPPER, not the table: this is the pattern that keeps a wide table from
+   widening the page. `.main-stage` carries `min-width: 0` for the same reason (see index.css #853).
+   ⚠️ NO BORDER HERE. When this sits inside `.appearance-section` or `.ap-family` the panel already
+   draws one; a second border on the inner box reads as a rendering fault, not as separation. */
+.appearance-table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+.appearance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+/* ⚠️ The header row must stay distinguishable from the panel behind it. Inside a panel,
+   `background: var(--panel)` makes the header row invisible — so it is mixed, using the same idiom
+   index.css already uses for panel edges (`color-mix(in srgb, var(--panel) 93%, var(--bg) 7%)`). */
+.appearance-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 88%, var(--bg) 12%);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.appearance-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+.appearance-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.appearance-use {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.appearance-avoid {
+  color: var(--ink-soft);
+}
+
+/* ── Theme pack chooser ─────────────────────────────────────────────────────────────────────── */
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.9rem;
+}
+
+/* The owner's requested card shape: a full coloured outline with corner-only accents. */
+.theme-section-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.theme-section-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Corner-only accents — drawn with two pseudo-elements rather than an image. */
+.neon-lab-card::before,
+.neon-lab-card::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.neon-lab-card::before {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+}
+.neon-lab-card::after {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+}
+
+.tp-swatch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 3px;
+  height: 62px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.tp-swatch-bg {
+  grid-row: span 2;
+}
+.tp-swatch-accent {
+  border-radius: 2px;
+}
+.tp-swatch-line {
+  opacity: 0.5;
+  border-radius: 2px;
+}
+
+.tp-body {
+  flex: 1;
+}
+
+.tp-name {
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.tp-desc {
+  margin: 0 0 0.5rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.tp-bars {
+  display: flex;
+  gap: 4px;
+}
+
+.tp-bar {
+  width: 18px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+}
+
+/* ── Pattern Library (/appearance/patterns) ───────────────────────────────────────────────────
+   A register of the patterns the OWNER approved, read out of the Page Walkthrough. Tokens only,
+   like everything else in this file.
+
+   ⚠️ `.ap-row--flag` IS NOT DECORATION. It marks a pattern the owner has deliberately NOT chosen
+   (the status-pill text-vs-rectangle fork). On a page whose whole purpose is to record that choice,
+   a flagged row that looks identical to a settled one invites someone to treat it as settled. */
+.ap-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.ap-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.9rem 0 1.4rem;
+}
+
+.ap-family {
+  margin-top: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.9rem 1rem;
+}
+
+/* Accent-marked heading — a touch of the theme's OWN colour, so the page is not entirely monochrome.
+   `var(--accent)` is defined by every pack, so this repaints with the pack like everything else.
+   The mark is a left border rather than a coloured heading, because colour on body text is what
+   accessibility-policy warns about; colour on a rule is safe. */
+.ap-family h3 {
+  margin: 0 0 0.25rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--accent);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ap-family-lede {
+  margin: 0 0 0.8rem;
+  max-width: 80ch;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* ── Data Display example plate (/appearance/data-display) ─────────────────────────────────────
+   The container each table example sits on. A RECESSED surface — `var(--bg)` rather than
+   `var(--panel)` — because the app's table stylesheets give their rows `background: var(--panel)`, so
+   a panel-coloured plate would make the table blend into its own container.
+
+   ⚠️ NO BORDER HERE, ON PURPOSE. Three of the five examples bring their own bordered wrap
+   (.screener-table-wrap, .directives-table-wrap, .dv-card); a border on the plate would double it up
+   and read as a rendering fault rather than as a container.
+
+   ⚠️ `overflow-x: auto` lets the dense 11-column example scroll INSIDE the plate instead of widening
+   the page — the same reason `.main-stage` carries `min-width: 0` (#853). */
+.dd-stage {
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 0.5rem;
+  overflow-x: auto;
+}
+
+.ap-table code {
+  font-size: 0.72rem;
+  color: var(--ink);
+}
+
+.ap-elements {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.ap-sources span {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.ap-score {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* State chips. `--ok`/`--warn` are not guaranteed to exist, so each falls back to `--accent`
+   rather than introducing a literal colour. */
+.ap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.ap-chip--strong {
+  border-color: var(--ok, var(--accent));
+  color: var(--ink);
+}
+
+.ap-chip--requested {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.ap-chip--undecided {
+  border-color: var(--warn, var(--accent));
+  color: var(--ink);
+}
+
+.ap-row--flag {
+  background: var(--panel);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.ap-quotes {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.ap-quotes summary {
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.ap-quotes ul,
+.ap-reject {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  line-height: 1.5;
+}
+
+.ap-quotes li,
+.ap-reject li {
+  margin-bottom: 0.4rem;
+}
+
+/* ⚠️ 44px, matching the app's tap-target minimum (index.css sets this for buttons generally; stated
+   here because this control sits in a card and is easy to shrink by accident). */
+.tp-choose {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tp-choose:hover,
+.tp-choose:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tp-choose.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

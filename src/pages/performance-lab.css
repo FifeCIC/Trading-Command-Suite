@@ -1,57 +1,67 @@
-.pl-page { max-width: 1100px; margin: 0 auto; padding: 20px; color: var(--ink); }
-.pl-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-.pl-header h1 { margin: 0; font-size: 1.4rem; }
-.pl-subtitle { color: var(--color-muted); font-size: 0.8rem; margin: 4px 0 0; }
-.pl-days { display: flex; gap: 4px; }
-.pl-day-btn { padding: 5px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--color-neutral); border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
-.pl-day-btn.active { background: var(--color-accent-blue); color: #fff; border-color: var(--color-accent-blue); }
-.pl-day-btn:hover:not(.active) { background: #252840; }
+.perflab-page { max-width: 1100px; margin: 0 auto; padding: 20px; color: var(--ink); }
+.perflab-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.perflab-header h1 { margin: 0; font-size: 1.4rem; }
+.perflab-subtitle { color: var(--color-muted); font-size: 0.8rem; margin: 4px 0 0; }
+.perflab-days { display: flex; gap: 4px; }
+.perflab-day-btn { padding: 5px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--color-neutral); border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
+.perflab-day-btn.active { background: var(--color-accent-blue); color: #fff; border-color: var(--color-accent-blue); }
+.perflab-day-btn:hover:not(.active) { background: #252840; }
 
-.pl-overall { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.pl-stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; text-align: center; }
-.pl-stat-val { font-size: 1.5rem; font-weight: 700; display: block; }
-.pl-stat-label { color: var(--color-neutral); font-size: 0.72rem; display: block; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-.pl-stat-sub { color: var(--color-muted); font-size: 0.68rem; display: block; margin-top: 2px; }
+.perflab-overall { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.perflab-stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; text-align: center; }
+.perflab-stat-val { font-size: 1.5rem; font-weight: 700; display: block; }
+.perflab-stat-label { color: var(--color-neutral); font-size: 0.72rem; display: block; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.perflab-stat-sub { color: var(--color-muted); font-size: 0.68rem; display: block; margin-top: 2px; }
 
-.pl-section { margin-bottom: 24px; }
-.pl-section h2 { font-size: 1rem; color: var(--color-neutral); margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.perflab-section { margin-bottom: 24px; }
+.perflab-section h2 { font-size: 1rem; color: var(--color-neutral); margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-.pl-strategy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.pl-strategy-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
-.pl-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.pl-strategy-name { font-weight: 600; font-size: 0.9rem; }
-.pl-card-stats { display: flex; gap: 20px; margin-bottom: 10px; }
-.pl-card-stat { text-align: center; }
-.pl-cs-val { font-size: 1.1rem; font-weight: 700; display: block; }
-.pl-cs-label { color: var(--color-muted); font-size: 0.65rem; text-transform: uppercase; }
-.pl-card-bars { margin-bottom: 8px; }
-.pl-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.pl-bar-label { font-size: 0.65rem; color: var(--color-muted); width: 40px; text-align: right; }
-.pl-bar { flex: 1; height: 6px; background: #252840; border-radius: 3px; overflow: hidden; display: block; }
-.pl-bar-fill { height: 100%; border-radius: 3px; display: block; transition: width 0.3s; }
-.pl-card-footer { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-muted); }
-.pl-holding { color: var(--color-neutral); }
+.perflab-strategy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.perflab-strategy-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.perflab-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.perflab-strategy-name { font-weight: 600; font-size: 0.9rem; }
+.perflab-card-stats { display: flex; gap: 20px; margin-bottom: 10px; }
+.perflab-card-stat { text-align: center; }
+.perflab-cs-val { font-size: 1.1rem; font-weight: 700; display: block; }
+.perflab-cs-label { color: var(--color-muted); font-size: 0.65rem; text-transform: uppercase; }
+.perflab-card-bars { margin-bottom: 8px; }
+.perflab-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.perflab-bar-label { font-size: 0.65rem; color: var(--color-muted); width: 40px; text-align: right; }
+.perflab-bar { flex: 1; height: 6px; background: #252840; border-radius: 3px; overflow: hidden; display: block; }
+.perflab-bar-fill { height: 100%; border-radius: 3px; display: block; transition: width 0.3s; }
+.perflab-card-footer { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-muted); }
+.perflab-holding { color: var(--color-neutral); }
 
-.pl-pnl { font-weight: 600; font-size: 0.85rem; }
-.pl-pnl.pl-up { color: var(--color-profit); }
-.pl-pnl.pl-down { color: var(--color-loss); }
+.perflab-pnl { font-weight: 600; font-size: 0.85rem; }
+.perflab-pnl.perflab-up { color: var(--color-profit); }
+.perflab-pnl.perflab-down { color: var(--color-loss); }
 
-.pl-equity-chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-.pl-ec-bars { display: flex; align-items: flex-end; gap: 2px; height: 130px; padding-bottom: 18px; position: relative; }
-.pl-ec-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
-.pl-ec-bar { width: 100%; max-width: 8px; border-radius: 2px 2px 0 0; min-height: 2px; }
-.pl-ec-bar.up { background: var(--color-profit); }
-.pl-ec-bar.down { background: var(--color-loss); }
-.pl-ec-label { position: absolute; bottom: -16px; font-size: 0.55rem; color: var(--color-muted); white-space: nowrap; }
-.pl-ec-summary { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-neutral); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.perflab-equity-chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.perflab-ec-bars { display: flex; align-items: flex-end; gap: 2px; height: 130px; padding-bottom: 18px; position: relative; }
+.perflab-ec-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
+.perflab-ec-bar { width: 100%; max-width: 8px; border-radius: 2px 2px 0 0; min-height: 2px; }
+.perflab-ec-bar.up { background: var(--color-profit); }
+.perflab-ec-bar.down { background: var(--color-loss); }
+.perflab-ec-label { position: absolute; bottom: -16px; font-size: 0.55rem; color: var(--color-muted); white-space: nowrap; }
+.perflab-ec-summary { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-neutral); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
 
-.pl-table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
-.pl-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.pl-table th { text-align: left; padding: 10px 14px; color: var(--color-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--line); }
-.pl-table td { padding: 8px 14px; border-bottom: 1px solid var(--color-grid); }
-.pl-table tbody tr:hover { background: #252840; }
-.pl-up { color: var(--color-profit); }
-.pl-down { color: var(--color-loss); }
+.perflab-table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.perflab-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.perflab-table th { text-align: left; padding: 10px 14px; color: var(--color-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--line); }
+.perflab-table td { padding: 8px 14px; border-bottom: 1px solid var(--color-grid); }
+/* ⚠️ WAS `background: #252840` — a HARDCODED hex, which broke two rules at once.
+   1. `ui-standards`: "Never hardcode a hex value in a page/component CSS file."
+   2. It silently overrode `protocols-ladder.css`'s `.perflab-table tbody tr:hover { background: var(--line) }`,
+      because `.pl-` is a SHARED prefix across three stylesheets and this one loads later once its
+      route has been visited. Measured 2026-10-13 on /appearance/data-display: the hover computed to
+      `rgb(37, 40, 64)` — this hex — instead of `var(--line)` = `#334155`, so rows went DARKER on hover
+      rather than lighter. The owner spotted it unaided: *"as if the theme doesn't have the required
+      styles and falls back to a default."*
+   `var(--line)` is what the ladder already uses, so all three definitions of this rule now agree on a
+   light, theme-aware hover whatever the load order happens to be. */
+.perflab-table tbody tr:hover { background: var(--line); }
+.perflab-up { color: var(--color-profit); }
+.perflab-down { color: var(--color-loss); }
 
-.pl-empty { color: var(--color-muted); font-size: 0.8rem; }
-.pl-empty-state { text-align: center; padding: 40px; color: var(--color-muted); }
+.perflab-empty { color: var(--color-muted); font-size: 0.8rem; }
+.perflab-empty-state { text-align: center; padding: 40px; color: var(--color-muted); }

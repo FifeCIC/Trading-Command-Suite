@@ -13,6 +13,7 @@ import { SignalOutcomeService } from './signal-outcome.service';
 import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
+import { convictionPercent } from './conviction';
 import { selectBaseTimeframe, everyCadenceStale } from '../../common/utils/timeframe';
 // ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Do NOT reintroduce a prefix test here:
 // `'STRONG_SELL'.startsWith('SELL')` is FALSE, which routed the strongest bearish signal as a
@@ -123,6 +124,34 @@ export interface SignalEnvelope {
   directionMode: 'LONG_ONLY' | 'SHORT_ONLY';
   scoreId: string | null;          // persisted Score row id — required for /:id/action + /:id/trade
   signalPct: number | null;        // pre-gate directional % (classification basis)
+  /**
+   * ── #915 Option C — the SECOND reading of the same signal. DISPLAY ONLY. ──────────────────
+   *
+   * `signalPct` answers "how much of the protocol's FULL directional capacity agrees?" — its
+   * denominator (`maxPossible`) counts every direction-eligible directive, including the ones
+   * that read neutral this tick. Measured 2026-10-12: a median 46.5% of that capacity never
+   * records a direction, so a protocol with one genuinely strong directive still displays
+   * ~6-17%, and that reads as "the market never offers anything".
+   *
+   * `convictionPct` answers the OTHER question: "how strongly did the directives that DID read
+   * directionally agree?" Denominator = `observedSignalMax`. Showing both is what separates
+   * "the market offered nothing" from "the denominator is diluted by silence" — one percentage
+   * cannot tell those apart.
+   *
+   * ⚠️ ADR-011 IS INTACT AND MUST STAY SO. Classification (`signal` → BUY/HOLD/SELL), the
+   * pre-trade gate and everything persisted still use `signalPct`. Nothing may branch on
+   * `convictionPct`: it moves with the data by construction (a quiet tick RAISES it), which is
+   * exactly why ADR-011 bans the observed sum as a scoring denominator. Read it as "of the
+   * directives that spoke", never as "how good this is".
+   *
+   * `null` when nothing read directionally — NOT 0. See `convictionPercent()`.
+   */
+  convictionPct: number | null;
+  /** The denominator behind `convictionPct`, carried so the reading is auditable
+   *  (`convictionPct = signalRaw / observedSignalMax`) and the SILENT share is visible
+   *  (`observedSignalMax / maxPossible`). `null` when nothing read directionally — an absence,
+   *  never a zero. */
+  observedSignalMax: number | null;
   opportunityPct: number | null;   // additive screening %
   combinedStrength: number;        // 0.5×signalPct + 0.5×opportunityPct — the best-of rank
   marketStatus: { open: boolean; asOf: string | null; reason?: string } | null;
@@ -151,7 +180,7 @@ export interface BotGateVerdict {
   state: 'refused' | 'clear' | 'unsubscribed' | 'unknown';
   /** The ONE human sentence — rendered verbatim, never re-derived by a consumer. */
   sentence: string;
-  lowestBarPct: number | null;
+  lowestThresholdPct: number | null;
   readingPct: number | null;
   shortfall: number | null;
   /** ACTIVE bots subscribing to the protocol (via `strategy_protocol`). */
@@ -714,6 +743,24 @@ export class SignalEnvelopeService {
     // Signal % is the classification basis (pre-gate directional).
     const directionMode = gated.directionMode ?? 'LONG_ONLY';
     const signalPct = gated.signalPct;
+    // ── #915 Option C — the second reading (see the interface docblock for the ADR-011 boundary).
+    // Observed capacity of 0 means NOTHING read directionally this tick. That is an absence, not a
+    // zero, so it becomes `null` and stays distinguishable from "those that spoke agreed on
+    // nothing". `convictionPercent()` owns that rule.
+    //
+    // ⚠️ `gated.meta` IS OPTIONAL IN PRACTICE, WHATEVER THE TYPE SAYS. The #758 NO_DATA return in
+    // `protocol-gating.service.ts` is cast `as any` and omits `meta` entirely, so the unguarded
+    // `gated.meta.observedSignalMax` threw `Cannot read properties of undefined` on that path —
+    // caught by `signal-envelope-stale-symbol.spec.ts`, 3 cases, 2026-10-13. `GatedScore` declares
+    // `meta` required, so TypeScript cannot see the hole.
+    //
+    // ⚠️ That path ALSO carries `observedSignalMax` at TOP LEVEL — do NOT read it to "fix" this.
+    // NO_DATA is the scorer's own judgement that the tick produced no directional reading, so the
+    // honest conviction there is `null`, not a percentage derived from a tick already declared
+    // unreadable.
+    const observedSignalMax =
+      gated.meta && gated.meta.observedSignalMax > 0 ? gated.meta.observedSignalMax : null;
+    const convictionPct = convictionPercent(gated.signalRaw, observedSignalMax);
     const opportunityPct = gated.opportunityPct ?? null;
     const combinedStrength =
       signalPct != null && opportunityPct != null
@@ -753,6 +800,8 @@ export class SignalEnvelopeService {
       directionMode,
       scoreId: null, // assigned after persistence (persistScores returns ids)
       signalPct,
+      convictionPct,
+      observedSignalMax,
       opportunityPct,
       combinedStrength,
       marketStatus: gated.marketStatus ?? null,
@@ -1167,23 +1216,23 @@ export class SignalEnvelopeService {
       // build the bot verdict from this same lookup (#911 → single-service, 2026-10-12).
       // ⚠️ Attached by MUTATION on the unchanged paths, because callers/specs pin object identity
       // for "the gate was not second-guessed" (`expect(out).toBe(base)`).
-      const participating = { count: subscribedIds.length, bars: [...bars].sort((a, b) => a - b) };
+      const participating = { count: subscribedIds.length, thresholds: [...bars].sort((a, b) => a - b) };
       if (bars.length === 0) {
         resolution.participatingBots = participating;
         return resolution;
       }
 
-      const lowestBotBar = Math.min(...bars);
-      if (lowestBotBar >= resolution.threshold) {
+      const lowestBotThreshold = Math.min(...bars);
+      if (lowestBotThreshold >= resolution.threshold) {
         resolution.participatingBots = participating;
         return resolution;
       }
 
       return {
-        threshold: lowestBotBar,
+        threshold: lowestBotThreshold,
         source: 'style',
         style: resolution.style,
-        label: `${resolution.label}, reconciled down to the lowest participating bot bar (${lowestBotBar})`,
+        label: `${resolution.label}, reconciled down to the lowest participating bot threshold (${lowestBotThreshold})`,
         participatingBots: participating,
       };
     } catch {
@@ -1222,13 +1271,13 @@ export class SignalEnvelopeService {
    *   confident answer to a question the data cannot answer.
    */
   private buildBotGate(
-    participating: { count: number; bars: number[] } | undefined,
+    participating: { count: number; thresholds: number[] } | undefined,
     signalPct: number | null | undefined,
   ): BotGateVerdict {
     const base: BotGateVerdict = {
       state: 'unknown',
       sentence: '',
-      lowestBarPct: null,
+      lowestThresholdPct: null,
       readingPct: null,
       shortfall: null,
       subscribedBots: participating?.count ?? 0,
@@ -1250,24 +1299,24 @@ export class SignalEnvelopeService {
     }
 
     const reading = typeof signalPct === 'number' ? Math.round(signalPct * 10) / 10 : null;
-    if (participating.bars.length === 0 || reading == null) {
+    if (participating.thresholds.length === 0 || reading == null) {
       return {
         ...base,
         readingPct: reading,
-        sentence: 'No subscribed bot declares a usable bar, so none can be compared.',
+        sentence: 'No subscribed bot declares a usable threshold, so none can be compared.',
       };
     }
 
-    const lowest = participating.bars[0];
-    const clearing = participating.bars.filter((b) => reading >= b).length;
+    const lowest = participating.thresholds[0];
+    const clearing = participating.thresholds.filter((b) => reading >= b).length;
     if (clearing > 0) {
       return {
         ...base,
         state: 'clear',
         readingPct: reading,
-        lowestBarPct: lowest,
+        lowestThresholdPct: lowest,
         clearingBots: clearing,
-        sentence: `${clearing} of ${participating.count} subscribed bot(s) have a bar this reading meets.`,
+        sentence: `${clearing} of ${participating.count} subscribed bot(s) have a threshold this reading meets.`,
       };
     }
 
@@ -1276,10 +1325,10 @@ export class SignalEnvelopeService {
       ...base,
       state: 'refused',
       readingPct: reading,
-      lowestBarPct: lowest,
+      lowestThresholdPct: lowest,
       shortfall,
       sentence:
-        `REFUSED by every subscribed bot — the lowest bar is ${lowest}% and this reading is ` +
+        `REFUSED by every subscribed bot — the lowest threshold is ${lowest}% and this reading is ` +
         `${reading}%, a shortfall of ${shortfall} point${shortfall === 1 ? '' : 's'}.`,
       notice: true,
     };
@@ -1332,6 +1381,8 @@ export class SignalEnvelopeService {
       directionMode: 'LONG_ONLY',
       scoreId: null,
       signalPct: null,
+      convictionPct: null,
+      observedSignalMax: null,
       opportunityPct: null,
       combinedStrength: 0,
       marketStatus: null,

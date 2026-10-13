@@ -258,7 +258,7 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
    *
    * This check answers it from evidence. For each active bot it takes the
    * protocol's highest composite **within the range of `score` it actually read** and compares it
-   * to the bot's own threshold. If the ceiling is below the bar, the bot is configured to never
+   * to the bot's own threshold. If the ceiling is below it, the bot is configured to never
    * fire, and no amount of market movement will change that.
    *
    * ⚠️ #999 — IT USED TO SAY "EVER RECORDED" HERE, AND THAT WAS FALSE. `score` is a shorter,

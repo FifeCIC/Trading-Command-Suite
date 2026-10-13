@@ -464,6 +464,17 @@
         "importance": "H",
         "noteApplied": true
       },
+      "/appearance/appearance": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-13T16:58:17.696Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/development/theme-lab": {
         "hide": null,
         "keen": null,
@@ -1154,6 +1165,17 @@
         "importance": "H",
         "noteApplied": true
       },
+      "/appearance/screen-assignment": {
+        "hide": null,
+        "keen": null,
+        "note": "Move to Settings. ",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-13T16:58:17.727Z",
+        "importance": null,
+        "noteApplied": true,
+        "noteNewApplied": null
+      },
       "/development/theme-lab-motion": {
         "hide": null,
         "keen": null,
@@ -1384,6 +1406,17 @@
         "uiScore": 3,
         "updatedAt": "2026-10-11T23:33:36.032Z",
         "importance": "M"
+      },
+      "/appearance/responsive-layout-lab": {
+        "importance": null,
+        "hide": null,
+        "keen": null,
+        "uiScore": 8,
+        "note": "",
+        "noteNew": "Lets make use of the screen size options on our new theme lab: Element:  <div.rll-device-bar> Text:     4K+ (2560px)Desktop (1440px)Laptop (1024px)Tablet (768px)Mob Source:   /development/responsive-layout-lab",
+        "noteApplied": null,
+        "noteNewApplied": null,
+        "updatedAt": "2026-10-13T16:58:17.755Z"
       }
     }
   }

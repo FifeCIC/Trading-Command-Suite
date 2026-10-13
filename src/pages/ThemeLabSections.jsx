@@ -10,9 +10,9 @@ import PageInfoPopover from '../components/PageInfoPopover';
 //
 // ⚠️ TRANSITIONS LAB was deleted 2026-10-01 with its examples NOT migrated: asked whether to move
 // them first, the owner answered "all 21". Recover from git if that call is reversed.
-import MotionLabSection from './ThemeLabMotion';
-import ScrollLabSection from './ThemeLabScroll';
-import PopoverLabSection from './ThemeLabPopover';
+// ⚠️ REMOVED 2026-10-13: MotionLabSection / ScrollLabSection / PopoverLabSection were imported and
+// rendered here. They are rendered by AppearanceMotionPage instead — importing them here put the
+// motion examples on every group page. If this file needs them again, guard them by group.
 
 // ── Shade presets from the task spec ────────────────────────
 const SHADE_PRESETS = [
@@ -39,12 +39,12 @@ const CARD_SHADES = [
   { bg: '#1a2240', border: '#2a3560' },
 ];
 
-const TABLE_ROWS = [
-  { symbol: 'AAPL', price: 198.32, change: +2.4, signal: 'BUY' },
-  { symbol: 'TSLA', price: 227.91, change: -3.1, signal: 'SELL' },
-  { symbol: 'NVDA', price: 129.14, change: +5.8, signal: 'BUY' },
-  { symbol: 'MSFT', price: 462.75, change: +0.9, signal: 'HOLD' },
-];
+// ⚠️ `TABLE_ROWS` WAS HERE AND IS DELETED (2026-10-13, owner request). It held four INVENTED rows
+// (AAPL $198.32, TSLA $227.91, …) and fed the "Table at Different Shade Levels" section, which the
+// owner removed from /appearance/data-display. Deleted rather than left behind because a section
+// nothing renders is the "buried ability" the repo's own rules warn about — and because fabricated
+// market data is exactly what the owner ruled out for this area: *"Only use this apps own real data
+// to create examples."* Real tables replaced it, fetching live rows.
 
 const FORM_STANDARD_CLASSES = [
   '.ff-form              /* Form container — column, 1rem field gap */',
@@ -78,29 +78,35 @@ const GLOW_PRESETS = [
   { tone: 'info',    label: 'Informational',    dot: 'var(--notice-info-text)',     desc: 'Blue glow for neutral updates — new data, insights, routine status.' },
 ];
 
-export default function ThemeLabPage() {
+/**
+ * ThemeLabSections — the element-by-element examples, grouped, in ONE file.
+ * ==========================================================================
+ * ⚠️ RENDERED BY THE APPEARANCE PAGES, NOT ROUTED DIRECTLY. Each page passes the group it wants and
+ * only that group's sections render. A section whose heading has no `group === '…'` guard belongs to
+ * nobody and will never appear — so if you add a section here, give it exactly one group.
+ *
+ * ⚠️ THIS FILE IS THE SINGLE SOURCE OF THESE EXAMPLES. It was `ThemeLabPage.jsx`, one long page; the
+ * Appearance area needed them as element groups instead (owner request, 2026-10-13). They were NOT
+ * copied into four files — four copies drift and only one receives the next fix.
+ *
+ * ⚠️ The page wrapper (`tl-page`, the `tl-header`, the `<h1>`) is deliberately gone: each Appearance
+ * page supplies its own heading, so leaving it here would render a second title inside every page.
+ */
+export function ThemeLabSections({ group }) {
   const [activeBg, setActiveBg] = useState(null);
 
   return (
-    <div className="tl-page">
-      <header className="tl-header">
-        <h1>Theme Lab
-          <PageInfoPopover>
-            Sandbox for exploring UI technologies. Experimental features live here.
-          Changes are not applied globally — see .github/instructions/ui-standards.instructions.md for what's accepted vs experimental.
-          </PageInfoPopover>
-        </h1>
-      </header>
+    <div className="tl-sections">
 
-      {/* ── Lab Sections — RENDERED, not linked (2026-10-01) ──────────────────
-          Formerly a hub of buttons that navigated to three separate views. Those views are deleted;
-          their examples render here instead, so nothing was lost and there is no second route in. */}
-      <MotionLabSection />
-      <ScrollLabSection />
-      <PopoverLabSection />
+      {/* ⚠️ THE THREE LAB COMPONENTS WERE HERE AND ARE DELETED (2026-10-13). They render
+          unconditionally, so while they sat in this shared library they appeared at the top of EVERY
+          group page — nine motion headings above the colour swatches — and TWICE on Motion, once from
+          here and once from the page itself. They belong to Motion, which renders them; a shared
+          library must contain only group-guarded sections. */}
 
       {/* ── Best Practices ─────────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'colour' && (
+<section className="tl-section">
         <h2>Dark Mode Best Practices</h2>
         <div className="tl-principles">
           <div className="tl-principle">
@@ -121,9 +127,11 @@ export default function ThemeLabPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Panel Shading ───────────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'colour' && (
+<section className="tl-section">
         <h2>Panel Shading</h2>
         <p className="tl-hint">Click a shade to preview it as the content area background.</p>
         <div className="tl-shade-grid">
@@ -144,9 +152,11 @@ export default function ThemeLabPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* ── Text Contrast ───────────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'colour' && (
+<section className="tl-section">
         <h2>Text Contrast Levels</h2>
         <div className="tl-text-grid">
           {TEXT_SAMPLES.map((s) => (
@@ -162,9 +172,11 @@ export default function ThemeLabPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* ── Card Variants ───────────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'surfaces' && (
+<section className="tl-section">
         <h2>Card Background Variants</h2>
         <div className="tl-card-grid">
           {CARD_SHADES.map((c, i) => (
@@ -181,9 +193,11 @@ export default function ThemeLabPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* ── Neon Border Card Variants ────────────────────────── */}
-      <section className="tl-section">
+      {group === 'surfaces' && (
+<section className="tl-section">
         <h2>Neon Border Card Variants</h2>
         <p className="tl-hint">Glowing borders for highlighting cards — success, warning, danger, and info variants.</p>
         <div className="tl-card-grid">
@@ -210,9 +224,11 @@ export default function ThemeLabPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* ── Corner Glow Surfaces ─────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'surfaces' && (
+<section className="tl-section">
         <h2>Corner Glow Surfaces</h2>
         <p className="tl-hint">
           A soft radial glow washing from one corner of a panel — the highlight used by the Protocol Trail
@@ -231,9 +247,11 @@ export default function ThemeLabPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* ── Fade-on-Hover Stack ──────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'motion' && (
+<section className="tl-section">
         <h2>Fade-on-Hover Card Stack</h2>
         <p className="tl-hint">
           Cards that start muted and reveal their full colour on hover — tones down busy multi-card stacks.
@@ -241,9 +259,11 @@ export default function ThemeLabPage() {
         </p>
         <FadeCardGroup cards={FADE_CARDS} variant="hover" />
       </section>
+      )}
 
       {/* ── Fade-on-Scroll Stack ─────────────────────────────── */}
-      <section className="tl-section">
+      {group === 'motion' && (
+<section className="tl-section">
         <h2>Fade-on-Scroll Card Stack</h2>
         <p className="tl-hint">
           Same component with <code>variant="scroll"</code> — cards also reveal when the group
@@ -251,9 +271,11 @@ export default function ThemeLabPage() {
         </p>
         <FadeCardGroup cards={FADE_CARDS} variant="scroll" />
       </section>
+      )}
 
       {/* ── Fade-on-Scroll (one at a time) ────────────────────── */}
-      <section className="tl-section">
+      {group === 'motion' && (
+<section className="tl-section">
         <h2>Fade-on-Scroll — One Card at a Time</h2>
         <p className="tl-hint">
           <code>variant="scroll-each"</code> — each card lights up individually as it crosses the
@@ -261,7 +283,9 @@ export default function ThemeLabPage() {
         </p>
         <FadeCardGroup cards={FADE_CARDS} variant="scroll-each" />
       </section>
-      <section className="tl-section">
+      )}
+      {group === 'motion' && (
+<section className="tl-section">
         <h2>Pulsing Header Card</h2>
         <p className="tl-hint">A card with a pulsing header — useful for indicating active problems or live-updating status.</p>
         <div className="tl-card-grid">
@@ -283,43 +307,25 @@ export default function ThemeLabPage() {
           ))}
         </div>
       </section>
+      )}
 
-      {/* ── Table at Different Shades ───────────────────────── */}
-      <section className="tl-section">
-        <h2>Table at Different Shade Levels</h2>
-        <div className="tl-table-wrap">
-          <table className="ds-table">
-            <thead>
-              <tr>
-                <th>Symbol</th>
-                <th>Price</th>
-                <th>Change</th>
-                <th>Signal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TABLE_ROWS.map((r) => (
-                <tr key={r.symbol}>
-                  <td><strong>{r.symbol}</strong></td>
-                  <td>${r.price.toFixed(2)}</td>
-                  <td className={r.change >= 0 ? 'pf-green' : 'pf-red'}>
-                    {r.change >= 0 ? '+' : ''}{r.change}%
-                  </td>
-                  <td>
-                    <span className={`al-signal al-signal-${r.signal.toLowerCase()}`}>
-                      {r.signal}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {/* ⚠️ "Table at Different Shade Levels" WAS HERE AND IS DELETED (2026-10-13, owner request).
+          It rendered four invented rows, and the owner removed it from /appearance/data-display, which
+          now carries five tables built from the app's own stylesheets and live data instead. The
+          SECTION is deleted, not just its render, so the `data` group does not become a guard that
+          nothing satisfies — a section no page renders is a buried ability. It survives in git history
+          if the shade demo is ever wanted back; bring it back with real rows, not fixtures. */}
 
       {/* ── Active Preview ──────────────────────────────────── */}
-      {activeBg && (
-        <section className="tl-section">
+      {/* ⚠️ TWO CONDITIONS, IN THIS ORDER — the shade must exist before it can be previewed, and the
+          section must belong to the page asking for it. An earlier pass put the group test INSIDE the
+          `activeBg` test, which is an object literal in JSX and does not compile. */}
+      {/* ⚠️ GROUPED WITH `colour`, NEXT TO THE SHADE PICKER THAT DRIVES IT. The picker lives in Panel
+          Shading above — a preview of a shade belongs beside the control that chooses it. Put here on
+          `interactive` instead, the section would have rendered nothing at all until someone visited
+          another page: a group page that is empty on arrival is a buried ability, not a page. */}
+      {group === 'colour' && activeBg && (
+<section className="tl-section">
           <h2>Active Preview: {activeBg}</h2>
           <div className="tl-preview" style={{ background: SHADE_PRESETS.find((s) => s.label === activeBg)?.bg }}>
             <p style={{ color: SHADE_PRESETS.find((s) => s.label === activeBg)?.text }}>
@@ -333,172 +339,17 @@ export default function ThemeLabPage() {
         </section>
       )}
 
-      {/* ── Form System (canonical: src/core/forms.css, .ff-*) ── */}
-      <section className="tl-section">
-        <h2>Form System</h2>
-        <p className="tl-hint">
-          One canonical form standard. Import <code>src/core/forms.css</code> on any page with a form and use the{' '}
-          <code>.ff-*</code> classes — comfortable field density for forms, <code>.ff-bar</code> for dense filter
-          toolbars. There is no longer a separate <code>.app-form</code> set.
-        </p>
-
-        <div className="tl-form-demos">
-          {/* Single-column demo */}
-          <div className="tl-form-demo">
-            <h3>Single Column</h3>
-            <div className="ff-form">
-              <div className="ff-field">
-                <label className="ff-label" htmlFor="tl-strategy">Strategy Name</label>
-                <input id="tl-strategy" type="text" className="ff-input" placeholder="e.g., Tech Dip Accumulation" defaultValue="" />
-                <span className="ff-hint">Give your strategy a descriptive name.</span>
-              </div>
-              <div className="ff-field">
-                <label className="ff-label" htmlFor="tl-watchlist">Watchlist</label>
-                <select id="tl-watchlist" className="ff-select" defaultValue="">
-                  <option value="">— Select a watchlist —</option>
-                  <option>Momentum Stocks</option>
-                  <option>Primary</option>
-                </select>
-                <span className="ff-hint">Symbols will come from the selected watchlist.</span>
-              </div>
-              <div className="ff-field">
-                <label className="ff-label" htmlFor="tl-desc">Description</label>
-                <textarea id="tl-desc" className="ff-textarea" placeholder="What does this strategy aim to do?" rows={2} />
-              </div>
-            </div>
-          </div>
-
-          {/* Two-column demo */}
-          <div className="tl-form-demo">
-            <h3>Two Column (responsive)</h3>
-            <div className="ff-form">
-              <div className="ff-row-2">
-                <div className="ff-field">
-                  <label className="ff-label" htmlFor="tl-min">Min Score</label>
-                  <input id="tl-min" type="number" className="ff-input" placeholder="25" />
-                  <span className="ff-hint">Composite score threshold (0-100).</span>
-                </div>
-                <div className="ff-field">
-                  <label className="ff-label" htmlFor="tl-max">Max Positions</label>
-                  <input id="tl-max" type="number" className="ff-input" placeholder="5" />
-                  <span className="ff-hint">Maximum concurrent positions.</span>
-                </div>
-              </div>
-              <div className="ff-row-2">
-                <div className="ff-field">
-                  <label className="ff-label" htmlFor="tl-sl">Stop Loss %</label>
-                  <input id="tl-sl" type="number" className="ff-input" placeholder="2.0" step="0.1" />
-                </div>
-                <div className="ff-field">
-                  <label className="ff-label" htmlFor="tl-tp">Take Profit %</label>
-                  <input id="tl-tp" type="number" className="ff-input" placeholder="5.0" step="0.1" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Segmented + buttons demo */}
-          <div className="tl-form-demo">
-            <h3>Segmented &amp; Actions</h3>
-            <div className="ff-form">
-              <div className="ff-field">
-                <label className="ff-label">Session</label>
-                <div className="ff-seg" role="group" aria-label="Session">
-                  <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">Any</button>
-                  <button type="button" className="ff-seg-btn" aria-pressed="false">☀️ BMO</button>
-                  <button type="button" className="ff-seg-btn" aria-pressed="false">🌙 AMC</button>
-                </div>
-              </div>
-              <div className="ff-field">
-                <label className="ff-label">Filter Style</label>
-                <div className="ff-seg" role="group" aria-label="Filter style">
-                  <button type="button" className="ff-seg-btn" aria-pressed="false">Table</button>
-                  <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">Cards</button>
-                  <button type="button" className="ff-seg-btn" aria-pressed="false">Split</button>
-                </div>
-              </div>
-              <div className="ff-actions">
-                <button type="button" className="ff-btn ff-btn-secondary">Cancel</button>
-                <button type="button" className="ff-btn ff-btn-primary">Save Strategy</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Error/disabled + compact toolbar demo */}
-          <div className="tl-form-demo">
-            <h3>Error &amp; Disabled States</h3>
-            <div className="ff-form">
-              <div className="ff-field ff-field--error">
-                <label className="ff-label" htmlFor="tl-ticker">Ticker Symbol</label>
-                <input id="tl-ticker" type="text" className="ff-input" defaultValue="INVALID!" />
-                <span className="ff-field-error">Symbol not found. Check the ticker and try again.</span>
-              </div>
-              <div className="ff-field">
-                <label className="ff-label" htmlFor="tl-exch">Exchange</label>
-                <select id="tl-exch" className="ff-select" disabled>
-                  <option>NASDAQ</option>
-                </select>
-                <span className="ff-hint">Exchange selection is locked for this symbol.</span>
-              </div>
-              <div className="ff-field ff-field--success">
-                <label className="ff-label" htmlFor="tl-protocol">Protocol</label>
-                <select id="tl-protocol" className="ff-select" defaultValue="built-in">
-                  <option>built-in</option>
-                  <option>custom</option>
-                </select>
-                <span className="ff-hint" style={{ color: '#22c55e' }}>✓ Protocol is valid and ready to use.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Compact toolbar demo */}
-        <div className="tl-form-demo" style={{ marginTop: '1.25rem' }}>
-          <h3>Compact Toolbar (.ff-bar) — data-page filter row</h3>
-          <div className="ff-bar">
-            <div className="ff-field">
-              <span className="ff-label">Horizon</span>
-              <div className="ff-seg" role="group" aria-label="Horizon">
-                <button type="button" className="ff-seg-btn" aria-pressed="false">1mo</button>
-                <button type="button" className="ff-seg-btn" aria-pressed="false">2mo</button>
-                <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">3mo</button>
-              </div>
-            </div>
-            <div className="ff-field">
-              <label className="ff-label" htmlFor="tl-sector">Sector</label>
-              <select id="tl-sector" className="ff-select" defaultValue="all">
-                <option value="all">All Sectors</option>
-                <option>Technology</option>
-                <option>Healthcare</option>
-                <option>Financials</option>
-              </select>
-            </div>
-            <div className="ff-field">
-              <span className="ff-label">Session</span>
-              <div className="ff-seg" role="group" aria-label="Session">
-                <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">Any</button>
-                <button type="button" className="ff-seg-btn" aria-pressed="false">☀️ BMO</button>
-                <button type="button" className="ff-seg-btn" aria-pressed="false">🌙 AMC</button>
-              </div>
-            </div>
-            <label className="ff-checkbox-label" style={{ paddingBottom: '0.4rem' }}>
-              <input type="checkbox" />
-              <span>Estimates only</span>
-            </label>
-          </div>
-          <p className="tl-hint" style={{ margin: '0.75rem 0 0' }}>
-            Slim on desktop for tidy screenshots; tap targets return to 44px on touch devices.
-          </p>
-        </div>
-
-        {/* CSS snippet reference */}
-        <details className="tl-code-block" style={{ marginTop: '1.5rem' }}>
-          <summary>CSS Classes Reference</summary>
-          <pre className="tl-pre">{FORM_STANDARD_CLASSES}</pre>
-        </details>
-      </section>
+            {/* ⚠️ FORM SYSTEM MOVED OUT 2026-10-13 (owner request): it is now a page in the Appearance area
+          (src/pages/AppearanceFormsPage.jsx). It is NOT copied — this file no longer renders it, so
+          there is one implementation of the form standard and one place to fix it. */}
 
       {/* ── Container Queries Demo ─────────────────────────── */}
+      {/* ⚠️ THIS GUARD WAS MISSING AND THE SECTION RENDERED ON EVERY PAGE. The first pass located
+          sections by the literal string `<section className="tl-section">`; this one is
+          `<section className="tl-section" id="container-queries">`, so it never matched and was
+          never grouped. Match on the CLASS, not the whole opening tag, or a section with an id,
+          a style or a data attribute is silently left behind — and it appears everywhere. */}
+      {group === 'interactive' && (
       <section className="tl-section" id="container-queries">
         <h2>⊡ Container Queries</h2>
         <p className="tl-subtitle">
@@ -563,6 +414,7 @@ export default function ThemeLabPage() {
           </pre>
         </details>
       </section>
+      )}
     </div>
   );
 }

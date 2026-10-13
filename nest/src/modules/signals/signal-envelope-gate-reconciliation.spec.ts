@@ -61,7 +61,7 @@ describe('SignalEnvelopeService — gate reconciliation resolves SUBSCRIPTIONS (
     const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1');
 
     expect(out.threshold).toBe(7);
-    expect(out.label).toContain('lowest participating bot bar (7)');
+    expect(out.label).toContain('lowest participating bot threshold (7)');
     expect(strategyProtocol.findMany).toHaveBeenCalledWith({
       where: { protocolId: 'forex-session-v1' },
       select: { strategyId: true },

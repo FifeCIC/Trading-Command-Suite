@@ -154,4 +154,47 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
       expect(scoreWithGating).toHaveBeenCalled();
     });
   });
+
+  describe('#915 Option C — the conviction reading is read safely off `meta`', () => {
+    // ⚠️ These live HERE because this spec already drives the REAL service with a light mock; a
+    // second harness would be a copy of this one.
+    //
+    // ⚠️ WHY THE FIRST CASE IS NOT CEREMONY. The #758 NO_DATA return in
+    // `protocol-gating.service.ts` is cast `as any` and omits `meta` — so typing `meta` as required
+    // on `GatedScore` does NOT make it present at runtime. Reading
+    // `gated.meta.observedSignalMax` unconditionally threw on that path and took 3 cases of THIS
+    // spec down (measured 2026-10-13), which is how the hole was found.
+    const noMetaShape = {
+      composite: 0, maxPossible: 0, signal: 'NO_DATA', confidence: 0,
+      breakouts: {}, groups: [], subScores: {}, rarity: null, directionMode: 'LONG_ONLY',
+      signalRaw: 0, signalPct: 0, noData: true,
+    } as any;
+
+    it('does NOT throw, and reports no conviction, when the scorer returned no `meta` (NO_DATA)', async () => {
+      scoreWithGating.mockResolvedValue(noMetaShape);
+
+      const env = await service.buildEnvelope('SPY', 'test-v1');
+
+      // `null` — never 0. NO_DATA is the scorer's own judgement that the tick produced no
+      // directional reading, so there is no conviction figure to report.
+      expect(env.convictionPct).toBeNull();
+      expect(env.observedSignalMax).toBeNull();
+    });
+
+    it('carries the observed reading through when `meta` IS present', async () => {
+      // The live XAUUSD / gold-macro-v1 figures, 2026-10-13: raw 51 against a configured 795 and
+      // an observed 90 — the same tick that reads 6.42% as breadth.
+      scoreWithGating.mockResolvedValue({
+        composite: 51, maxPossible: 795, signal: 'BUY', confidence: 0,
+        breakouts: {}, groups: [], subScores: {}, rarity: null, directionMode: 'LONG_ONLY',
+        signalRaw: 51, signalPct: 6.415,
+        meta: { observedSignalMax: 90, configuredSignalMax: 795 },
+      } as any);
+
+      const env = await service.buildEnvelope('XAUUSD', 'test-v1');
+
+      expect(env.observedSignalMax).toBe(90);
+      expect(env.convictionPct).toBeCloseTo(56.67, 2);
+    });
+  });
 });
