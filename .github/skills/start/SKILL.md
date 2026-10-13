@@ -1,10 +1,8 @@
 ---
 name: start
-description: "Start a new agent session — check agent-state, pick an unclaimed issue, claim it, load context, and begin work."
-agent: agent
-tools: [read, search, write, execute]
+description: Start a new agent session — check agent-state, pick an unclaimed issue, claim it, load context, and begin work.
+disable-model-invocation: true
 ---
-
 # /start — Begin a work session
 
 ## 1. Check coordination state

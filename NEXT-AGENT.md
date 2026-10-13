@@ -1,13 +1,20 @@
-# Next Agent — start here
+# Next Agent — scoring-layer orientation
 
-**Last verified:** 2026-09-16 · **Version:** 0.15.0 · **Stack:** Vite 5173 · NestJS 3201 · MT5 5000/5001
+**Status:** ⚠️ **HISTORICAL. The work order below is from 2026-09-16 and has NOT been re-measured.**
+**Last verified:** 2026-09-16 · **Version then:** 0.15.0 · **Version at 2026-10-12:** 0.128.0
+**Stack:** Vite 5173 · NestJS 3201 · MT5 5000/5001
 
-> 🔁 **Re-verified 2026-09-16 by doc fact-check.** The issue list below was confirmed still accurate (all 10
-> issues OPEN). Counts elsewhere in this repo's docs had drifted — see `README.md` → Ops Notes for how to
-> measure them. If you update this file, re-measure; do not increment a number by hand.
+> 🛑 **Read this before acting on the queue below.** Measured **2026-10-12**: this file's "work in this
+> order" list runs **#758–#782**, while live issue numbers are **#1107–#1113** — the ordering is roughly
+> four months of work out of date. It is kept because its explanations are still the best short account
+> of the *scoring-layer traps*, not because the queue is current.
+>
+> **Where the current answers live:** live ordering → **`.github/PRIMARY-GOALS.md`**; what is waiting on
+> a human → **`.github/REVIEW-QUEUE.md`**; open work → the tracker. If you update this file, re-measure —
+> do not increment a number by hand.
 
-A long session on the scoring layer just finished. This file tells you **what to work on,
-in what order, and why** — so you do not re-derive it or re-break it.
+A long session on the scoring layer finished in September 2026. The sections below record **what was
+wrong, what was fixed, and which traps to avoid** — so you do not re-derive it or re-break it.
 
 ---
 
@@ -20,10 +27,13 @@ in what order, and why** — so you do not re-derive it or re-break it.
 
 ---
 
-## Work in this order
+## ⚠️ Work order — HISTORICAL (2026-09-16), NOT the current queue
 
-**#776 is the tracking issue** — it holds the full sequencing, the shared measurement step, and
-the acceptance criteria. The table below is the short form:
+**Do not follow this as a queue.** It is preserved because the *reasons* it gives for each step are
+still useful. For what to work on now see `.github/PRIMARY-GOALS.md` and the tracker.
+
+**#776 was the tracking issue at the time** — it holds the sequencing, the shared measurement step, and
+the acceptance criteria as they stood then. The table below is the short form:
 
 | # | Issue | Why this order |
 |---|---|---|

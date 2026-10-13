@@ -66,12 +66,23 @@
   },
   "uiReview": {
     "entries": {
+      "/dashboard": {
+        "hide": null,
+        "keen": null,
+        "note": "This is registered twice maybe /dashboard and /dashboard/dashboard",
+        "noteNew": "",
+        "uiScore": 1,
+        "updatedAt": "2026-10-12T23:35:07.126Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/lab/backtest": {
         "hide": false,
         "keen": 3,
         "note": "I think there is a github issue covering important changes for this view. Else we need to have a discussion again. ",
-        "uiScore": null,
-        "updatedAt": "2026-10-06T21:11:28.931Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T23:12:43.830Z",
         "importance": "H"
       },
       "/lab/timeline": {
@@ -86,7 +97,9 @@
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T21:28:17.123Z",
+        "noteNew": "This is a random colour container with buttons that aren't within the rest of the theme either and yet it somehow works as a sort of call-to-action so lets add some samples of it to the theme lab and see if we can come up with range of call-to-action boxes: Element:  <section.sfr-outcome.sfr-outcome--ready> Text:     Everything checks outThe app is connected and has the data i Source:   /status/setup",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:58:07.880Z",
         "importance": "L"
       },
       "/lab/allocator": {
@@ -97,6 +110,17 @@
         "importance": null,
         "noteApplied": true
       },
+      "/lab/snapshots": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T23:15:36.943Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/lab/ab-testing": {
         "hide": null,
         "keen": null,
@@ -104,6 +128,17 @@
         "updatedAt": "2026-10-09T22:47:24.693Z",
         "importance": null,
         "noteApplied": true
+      },
+      "/lab/charts-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 2,
+        "updatedAt": "2026-10-12T23:16:25.712Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/lab/gold-speed": {
         "hide": null,
@@ -135,6 +170,17 @@
         "note": "Move this page to the Development area",
         "updatedAt": "2026-10-08T08:03:16.267Z",
         "importance": "L",
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/dashboard/screen": {
+        "hide": null,
+        "keen": null,
+        "note": "This is a duplicate registry of the /dashboard ",
+        "noteNew": "",
+        "uiScore": 1,
+        "updatedAt": "2026-10-12T23:35:09.305Z",
+        "importance": null,
         "noteApplied": null,
         "noteNewApplied": null
       },
@@ -176,21 +222,35 @@
         "hide": false,
         "keen": 3,
         "note": "There is a mistake in the design. It appears that the left and right columns order independent of one another. That is wrong. The left is meant to order only and the right column shows it's counterpart. Right now there are protocols sitting opposite different protocols.",
-        "updatedAt": "2026-10-01T09:08:16.566Z",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T22:28:53.700Z",
         "importance": "H"
+      },
+      "/settings/settings": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T23:18:05.703Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/status/system-log": {
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T21:38:28.445Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:58:39.228Z",
         "importance": "L"
       },
       "/education/glossary": {
         "hide": false,
         "keen": 1,
         "note": "Styling is not correct on Element:  <button.glossary-entry-header> Text:     ▶pullbackPrice Actionaka pullbacks, pull back, retracement Source:   /education/glossary",
-        "updatedAt": "2026-10-08T08:03:16.524Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:56:11.050Z",
         "importance": "L",
         "noteApplied": true
       },
@@ -198,7 +258,8 @@
         "hide": false,
         "keen": 2,
         "note": "Change this to a free page. Add Education to Element:  <select.ob-select> Text:     Active TradingAccount GrowthInstrument TradingPortfolio Reco Source:   /planner/objectives",
-        "updatedAt": "2026-10-08T08:03:16.779Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T23:17:14.083Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -206,7 +267,8 @@
         "hide": false,
         "keen": 2,
         "note": "The page lacks vaThis menu is not populatedElement:  <select.stratcreate-input> Text:     — Select — Source:   /trading/bot-create ",
-        "updatedAt": "2026-10-09T22:53:09.370Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:50:42.380Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -220,6 +282,28 @@
         "importance": "H",
         "noteApplied": true
       },
+      "/development/roadmap": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:19:43.769Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/lab/snapshot-replay": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T23:16:11.806Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/research/news-intel": {
         "hide": false,
         "keen": 2,
@@ -230,11 +314,45 @@
         "importance": "M",
         "noteApplied": true
       },
+      "/settings/appearance": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:18:07.565Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/settings/automation": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:17:45.565Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/settings/monitoring": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:18:13.836Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/status/health-check": {
         "hide": false,
         "keen": 1,
         "note": "Add report download for sending to developer for troubleshooting. ",
-        "updatedAt": "2026-10-08T08:03:16.661Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:58:28.984Z",
         "importance": "L",
         "noteApplied": true
       },
@@ -242,14 +360,16 @@
         "hide": true,
         "keen": 2,
         "note": "I would like Element:  <button.topbar-calc-btn> Text:     🧮 Source:   /trading/calculators to display an overlay of the calculators that replaces this page - delete this page itself. That way the user isnt taking to a different page that they're on and they should be able to copy the results of the calculation. ",
-        "updatedAt": "2026-10-01T19:55:50.799Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:55:39.967Z",
         "importance": "L"
       },
       "/trading/mt5-trading": {
         "hide": false,
         "keen": 1,
         "note": "The style of this toggle does not fit in with the theme: Element:  <div.mt5u-mode-toggle> Text:     🟡 Demo🔴 Live Source:   /trading/mt5-trading  Move Element:  <div.mt5u-layout-bar> Text:     Width:Full Width4KDesktopLaptopTablet Source:   /trading/mt5-trading to the global screen options  sidebar Element:  <button.so-gear-btn> Text:     ⚙ Source:   /trading/mt5-trading and rename from \"MT5 Trading\" to \"Manual Trading\". It already has a disabled button for both Trading212 and Alpaca. ",
-        "updatedAt": "2026-10-08T08:17:34.331Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:52:18.851Z",
         "importance": "L",
         "noteApplied": true
       },
@@ -280,8 +400,8 @@
         "keen": null,
         "note": "Move this page to the Development area",
         "noteNew": "",
-        "uiScore": null,
-        "updatedAt": "2026-10-08T08:03:33.113Z",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:20:21.361Z",
         "importance": null,
         "noteApplied": true,
         "noteNewApplied": null
@@ -290,7 +410,8 @@
         "hide": false,
         "keen": 2,
         "note": "I would like to group and order diagrams that can be chained. So many different groups for selecting and flicking through the diagrams for that group, in order as they apply in code. At least as best as possible.",
-        "updatedAt": "2026-10-08T20:34:01.886Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:27:28.125Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -298,17 +419,30 @@
         "hide": false,
         "keen": 2,
         "note": "The selection process needs to offer selection of protocols that use the same watchlists so that they are symbol centric: Element:  <div.sa-protocol-toggles> Text:     BTC Investment Monitor V1BTC Tick Scalp V1Gold Speed Scalp V Source:   /protocols/sees-arena   also the entire table Element:  <th> Text:     Symbol Source:   /protocols/sees-arena  needs improvement and can include more protocol stats.  ",
-        "updatedAt": "2026-10-08T08:03:16.854Z",
+        "noteNew": "",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T22:15:24.110Z",
         "importance": "M",
         "noteApplied": true
+      },
+      "/settings/theme-packs": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:18:45.461Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/status/order-testing": {
         "hide": null,
         "keen": null,
         "note": "Move this page to the Status area with the intention of offering all users the ability to test individual aspects of the app. This will support keen testers in the area days too. Lets also take the opportunity to examine the existing QA page and how we might create a system that can feedback to myself.",
         "noteNew": "",
-        "uiScore": null,
-        "updatedAt": "2026-10-08T21:47:39.352Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:58:50.183Z",
         "importance": null,
         "noteApplied": true,
         "noteNewApplied": null
@@ -317,16 +451,51 @@
         "hide": false,
         "keen": 3,
         "note": "",
-        "updatedAt": "2026-10-01T18:03:27.397Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:53:40.803Z",
         "importance": "H"
       },
       "/trading/trading-bots": {
         "hide": false,
         "keen": 2,
         "note": "This column and its value feels wrong to me: Element:  <th._thNum_1avwi_397> Text:     Score Source:   /trading/trading-bots this is about more than the column of this table though. I dont trust our approach to generating that score. I assume it's the signal scorend we use a forumalue based on a reduced threshold. The whole thing needs re-examined. Lets create a UI for the scoring mechanism - wire all of it to a view that merges diagram with a dynamic page. We will do this with every approach to scoring so that the maths is broken down and it makes it easier for me to understand. I want this to be very high priority - done soon.",
-        "updatedAt": "2026-10-08T21:41:21.579Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T22:50:12.393Z",
         "importance": "H",
         "noteApplied": true
+      },
+      "/development/theme-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "I like the popover so that has to be included: Element:  <button> Text:     Toggle Popover Source:   /development/theme-lab   and same with Element:  <button> Text:     Tooltip Source:   /development/theme-lab  and tthe fade on roll card stacks should be used within our app and future apps: Element:  <section.tl-section> Text:     Fade-on-Scroll Card StackSame component with variant=\"scroll Source:   /development/theme-lab ",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:31:44.107Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/development/ui-review": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:25:15.970Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/status/capability-map": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T23:07:42.625Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/status/file-inventory": {
         "hide": false,
@@ -337,26 +506,51 @@
         "noteApplied": null,
         "noteNewApplied": null
       },
+      "/status/scheduled-jobs": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 3,
+        "updatedAt": "2026-10-12T23:08:06.006Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/trading/ab-strategies": {
         "hide": false,
         "keen": 3,
         "note": "some of the pairs are invalud: different protocols but that's less about this page and more about the database data. Agentic AI might have created those pairs. I would like: Element:  <article._pairRow_18ja8_687> Text:     AGold Day-Trade M15 (copy)609a435bactivexau-speed-m15-copy(p Source:   /trading/ab-strategies to display the different between A and B. I would also like the ability to order by that value and search. Placed here: Element:  <div._listHeadRow_18ja8_861> Text:     Strategy pairsListTable Source:   /trading/ab-strategies",
-        "updatedAt": "2026-10-08T08:17:34.357Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:51:40.467Z",
         "importance": "H",
         "noteApplied": true
+      },
+      "/trading/speed-scanner": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T22:50:01.373Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/trading/stop-guardian": {
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T18:30:03.393Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T22:54:03.681Z",
         "importance": "L"
       },
       "/trading/trade-journal": {
         "hide": false,
         "keen": 3,
         "note": "I would like these to be accordions: Element:  <div.tj-card.tj-open> Text:     EURCADBUY#152712930991strategyOPENVol: 0.01Entry: $1.6001/10 Source:   /trading/trade-journal  displaying some of the information on the row and a bit more than we have now when opened. Im thinking a little bit more history of the position i.e. how many SL adjustments, how many simulated SL adjustments, peak price and reason for closing. ",
-        "updatedAt": "2026-10-08T08:03:16.503Z",
+        "uiScore": 3,
+        "updatedAt": "2026-10-12T22:54:13.631Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -364,7 +558,8 @@
         "hide": false,
         "keen": 2,
         "note": "I want this to be clever but I'm not sure how. I've wondered if this is where we list limit orders too and potentially allow bots to create limit orders based on a new type of protocol score or maybe even the scoring and data we already have would suggest a good entry point: not sure if we have a good mechanism for finding the support level yet? I asked for a view that shows us the levels so I can visually test them, especially during backtesting. ",
-        "updatedAt": "2026-10-08T21:47:39.449Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:53:00.861Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -375,11 +570,23 @@
         "updatedAt": "2026-10-01T08:10:22.950Z",
         "importance": "L"
       },
+      "/development/qa-testing": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:20:09.492Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/lab/position-lifecycle": {
         "hide": false,
         "keen": 2,
         "note": "Styling needs to match one of our better views with table",
-        "updatedAt": "2026-10-08T08:03:16.759Z",
+        "uiScore": 3,
+        "updatedAt": "2026-10-12T23:16:41.227Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -387,22 +594,37 @@
         "hide": false,
         "keen": 2,
         "note": "Change this to a free page. It's a way to dynamically change the app and that will need as many users as we can to ensure it supports a positive experience. ",
-        "updatedAt": "2026-10-08T08:03:16.816Z",
+        "uiScore": 2,
+        "updatedAt": "2026-10-12T23:17:02.442Z",
         "importance": "M",
         "noteApplied": true
       },
       "/scoring/symbols-ladder": {
-        "hide": true,
+        "hide": false,
         "keen": 2,
         "note": "",
-        "updatedAt": "2026-10-01T09:09:03.734Z",
+        "noteNew": "This view has one of the strongest tables. The rectangular status icons work very well when all columns use the same style. Slashed stats with a partly coloured value works very well to make a the part that changes, really stand out. ",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T22:36:19.807Z",
         "importance": "M"
+      },
+      "/settings/risk-controls": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:17:54.891Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/trading/market-context": {
         "hide": false,
         "keen": 2,
         "note": "Isnt there more data and market status indicators online that can tell us what the market is like compared to normal? Just wondering if the view can be enhanced further and offer more value. ",
-        "updatedAt": "2026-10-08T18:26:57.072Z",
+        "uiScore": 2,
+        "updatedAt": "2026-10-12T22:54:30.973Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -413,6 +635,17 @@
         "updatedAt": "2026-10-09T22:47:24.865Z",
         "importance": "L",
         "noteApplied": true,
+        "noteNewApplied": null
+      },
+      "/development/feature-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "This is a nice simple fresh group of accordions: Element:  <div.fl-list> Text:     Trailing StopLIVE▸Animated trailing stop following price wit Source:   /development/feature-lab  it seems suitable for items that need a small amount of information on the top row but potentially a lot when opened. I think its highly suitable for views that the user will need to focus on an item at a time - the spacing helps to avoid overwhelming. I would say training e-learning, text intense, charts, graphs.",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:25:13.691Z",
+        "importance": null,
+        "noteApplied": null,
         "noteNewApplied": null
       },
       "/research/analyse-symbol": {
@@ -447,7 +680,8 @@
         "hide": false,
         "keen": 3,
         "note": "Add a symbol search and rename the page to Single Symbol",
-        "updatedAt": "2026-10-08T08:03:16.563Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T22:36:47.022Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -455,8 +689,9 @@
         "hide": false,
         "keen": null,
         "note": "Element:  <span.bc-broker-id> Text:     Broker 2 Source:   /research/broker-catalogue  extend that line with the name of the brokers account i.e. PepperstoneUK-Demo is one of the accounts in use. Also move the page to the Status area. ",
+        "noteNew": "This view is surpringly effective despite being simple. It has text then cards then text then controls then table and the way it is all layed out somehow works. The minimum flashy colouring but occasional use of it also seems to work. This is another good approach for highly statistical data. The cards: Element:  <article.bc-broker.bc-broker-ok> Text:     Broker 2MetaQuotes-DemookOffered12,373Tradeable11,448Onboard Source:   /status/broker-catalogue and Element:  <article.bc-broker.bc-broker-ok> Text:     Broker 3PepperstoneUK-DemookOffered1,651Tradeable1,568Onboar Source:   /status/broker-catalogue could be widgets too.  ",
         "uiScore": null,
-        "updatedAt": "2026-10-08T08:03:16.720Z",
+        "updatedAt": "2026-10-12T23:11:53.496Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -464,7 +699,8 @@
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T19:53:29.200Z",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T22:55:09.622Z",
         "importance": "L"
       },
       "/automation/speed-scanner": {
@@ -474,11 +710,35 @@
         "updatedAt": "2026-10-01T20:19:54.715Z",
         "importance": "M"
       },
+      "/development/identity-map": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:27:09.221Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/protocols/protocol-queue": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 1,
+        "updatedAt": "2026-10-12T22:24:42.083Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/protocols/protocol-trail": {
         "hide": false,
         "keen": 1,
         "note": "It does not display anything and I believe it's meant to display all activity by the protocol which will include a breakdown of each directives score within each scoring run. This could be a busy page so should be limited to a few entries by default but the ability to search and filter. ",
-        "updatedAt": "2026-10-08T08:03:16.585Z",
+        "noteNew": "This page has a good way of framing a section. Not entirely sure where I would use it but it's worth adding examples to the new theme lab. Maybe even try different shades of headers. These could be good for the settings page and any page that is intensive with many bits of information that need broken down: Element:  <div.pt-group> Text:     Sentiment0 / 0Momentum Acceleration• 0 / 80No measurable mom Source:   /protocols/protocol-trail",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:19:07.873Z",
         "importance": "L",
         "noteApplied": true
       },
@@ -502,7 +762,9 @@
         "hide": false,
         "keen": 3,
         "note": "Lets consider more filters and ordering that overrides the default ordering: Element:  <div.sig-toolbar> Text:     ↻ RefreshShow dismissed Source:   /signals/signals-overview  ability to priortise symbols with highest past profit",
-        "updatedAt": "2026-10-08T21:49:32.546Z",
+        "noteNew": "Signals offers advanced cards. They're packed with information and status and some options. It's important for quick decision making and would be a useful design for admin procedure that requires a mix of information and quick decisions: Element:  <article.sig-b-card> Text:     VIXSHORT12s agoVIX Spike Short V1·VIX Spike Short (demo proo Source:   /signals/signals-overview   lets have samples in the library based on different topics (using mock data)",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T22:39:29.852Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -510,7 +772,9 @@
         "hide": false,
         "keen": 3,
         "note": "Another view with the 60/100 score which I asked for an investigation of Element:  <div.mss-priority-score-row> Text:     60Score / 100BUY Source:   /status/meta-stack-status  -  there is potential for META.Stack to be detailed even more on this page but it already looks good, the styling is a good example for some of the lesser styled pages. ",
-        "updatedAt": "2026-10-08T17:35:58.031Z",
+        "noteNew": "This is brilliant as a status card for a single service or system: Element:  <section.mss-panel.mss-panel--priority> Text:     🎯 Priority Focus: XAUUSD🔄 Run Fresh Scoring58Composite sco Source:   /status/meta-stack-status   Create some samples using mock data in theme lab. To be totally clear the new theme lab or builder (not decided on the jargon) is going to be separate to the existing stucture - a fresh start basically. So when I say, lets use mock data and different topics. This will need to reside within the library. I need to be able to remove it from this app once we update the apps existing theme lab. This is a great table for a set number of items/rows and basic status: Element:  <section.mss-panel> Text:     📊 Scoring PipelineStrategy: DB-Read (pre-computed)|Entry th Source:   /status/meta-stack-status",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:06:50.634Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -518,7 +782,8 @@
         "hide": false,
         "keen": 2,
         "note": "Some strategies are labelled with Element:  <span.sl-badge> Text:     Fully Supported Source:   /trading/strategy-library but we need another one telling us if the supporting/linked strategy  active or not, in the initial row before opening the accordion: Element:  <article.sl-card> Text:     Cable Session Trading (GBPUSD)GBPUSD-specific session strate Source:   /trading/strategy-library ",
-        "updatedAt": "2026-10-08T08:03:16.681Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:54:50.381Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -526,7 +791,9 @@
         "hide": false,
         "keen": 3,
         "note": "This feature needs examined as the overlay appears top left and is not a notice its more like a text field, messy: Element:  <button.pip-trigger> Text:     ℹ Source:   /trading/strategy-monitor",
-        "updatedAt": "2026-10-09T22:58:11.974Z",
+        "noteNew": "Not a great view. The table will need to be updated when we have a solid set of base designs in the theme library. One thing I notice is this new style that's appearing: Element:  <span._cardType_1avwi_121> Text:     Trading Source:   /trading/strategy-monitor   the colour seems to match other elements used. It looks good for none status labels so lets add examples. The text really stands out. ",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:42:07.512Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -534,7 +801,8 @@
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T20:05:14.689Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:55:53.313Z",
         "importance": "M"
       },
       "/trading212/order-testing": {
@@ -565,8 +833,10 @@
       "/education/candle-patterns": {
         "hide": true,
         "keen": 3,
-        "note": "This is not good enough yet as it does not show the patterns on the chart. I also want examples made-up using the other chart technology bundled with the app. This page should be hidden until complete.",
-        "updatedAt": "2026-10-08T08:17:34.270Z",
+        "note": "This is not good enough yet as it does not show the patterns on the chart. I also want examples made-up using the other chart technology bundled with the app. This page should be hidden until complete. This shou",
+        "noteNew": "",
+        "uiScore": 2,
+        "updatedAt": "2026-10-12T23:36:06.384Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -574,15 +844,50 @@
         "hide": false,
         "keen": 2,
         "note": "Change this to a free page. I would like to offer some basic finance management between registered accounts. Premium will get some additional perks and AI support.",
-        "updatedAt": "2026-10-08T08:03:16.797Z",
+        "uiScore": 1,
+        "updatedAt": "2026-10-12T23:16:52.748Z",
         "importance": "M",
         "noteApplied": true
+      },
+      "/settings/scoring-settings": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:17:41.969Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/settings/trading-settings": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:17:40.505Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/settings/user-preferences": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:18:38.668Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/trading/positions-monitor": {
         "hide": false,
         "keen": 2,
         "note": "The design of containers need better design and there is probably more stats ",
-        "updatedAt": "2026-10-08T18:26:57.050Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:51:57.262Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -627,8 +932,8 @@
         "keen": null,
         "note": "Move to the Development area",
         "noteNew": "",
-        "uiScore": null,
-        "updatedAt": "2026-10-08T08:03:33.135Z",
+        "uiScore": 9,
+        "updatedAt": "2026-10-12T23:20:36.719Z",
         "importance": null,
         "noteApplied": true,
         "noteNewApplied": null
@@ -653,7 +958,9 @@
         "hide": false,
         "keen": 1,
         "note": "This page does not load anything and I think its meant to offer a breakdown of directives. Ability to search directives. It should then display examples or diagrams and maths to explain how the directive works - what market data it uses and the theory. Some directives are gates and some are rules for bots too, they can be included but their type should be very clear.",
-        "updatedAt": "2026-10-08T08:03:16.603Z",
+        "noteNew": "Something I'm struggling to make a decision on is the approach to status pills. I'm really liking Element:  <span.dv-signal.dv-signal--sell> Text:     STRONG_SELL Source:   /protocols/directive-viewer  and Element:  <span.dv-signal.dv-signal--hold> Text:     HOLD Source:   /protocols/directive-viewer  as the text stands out very well. Please display these along side the rectangle shaped ones that are on other tables so can make a decision on which OR add some suggestion on where they're best used and keep both designs. I will also add that I like the table as a simplistic solution so lets add a sample for that purpose. Logs and information that is best being able to see a lot on one screen are some uses. ",
+        "uiScore": 4,
+        "updatedAt": "2026-10-12T22:23:07.646Z",
         "importance": "M",
         "noteApplied": true
       },
@@ -661,14 +968,18 @@
         "hide": false,
         "keen": 2,
         "note": "",
-        "updatedAt": "2026-10-01T08:57:08.349Z",
+        "noteNew": "This page has strong forms and I like the following one so create something in our forms section of the new theme lab: Element:  <section.cp-section> Text:     Directive Groups+ Add GroupEach group bundles related direct Source:   /protocols/protocol-builder  Right now my only issue with it is everythings black and white. So add 2-3 examples of a similar \"add items\" form arrangement  and I will choose one. The following section is also unique and I want an example in the lab theme. It has accordion hidden tag clouds with nice interaction. Element:  <section.cp-section> Text:     Directive PaletteClick a directive to add it to the currentl Source:   /protocols/protocol-builder   this is a good approach to presenting a lot of options in a series of taxonomies. I don't like the pill approach for a lot things especially as indicators of selected/included options with deletable link:  Element:  <span.cp-chip> Text:     Moving Averages Alignment✕ Source:   /protocols/protocol-builder  what I do like is this row of buttons with counters included so lets have samples of those: Element:  <div.cp-quick-add-groups> Text:     ▶ Technical Analysis (1)Sentiment & Fundamentals (0)Risk Gat Source:   /protocols/protocol-builder  ",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T22:15:30.628Z",
         "importance": "M"
       },
       "/protocols/protocols-ladder": {
         "hide": false,
         "keen": 3,
         "note": "There is not one SELL position and I suspect that it is a lack of SELL protocols but please make sure. ",
-        "updatedAt": "2026-10-08T08:03:16.894Z",
+        "noteNew": "This views table is good for rows heavy on status and status. A common table. This one is a good start so lets add an example but there may be another table that offers parts to merge into this - as a common stats and status table.",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T22:08:50.603Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -695,17 +1006,30 @@
         "keen": null,
         "note": "Move to Settings. ",
         "noteNew": "",
-        "uiScore": null,
-        "updatedAt": "2026-10-08T08:03:33.181Z",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:18:28.067Z",
         "importance": null,
         "noteApplied": true,
+        "noteNewApplied": null
+      },
+      "/settings/settings-database": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:19:02.299Z",
+        "importance": null,
+        "noteApplied": null,
         "noteNewApplied": null
       },
       "/status/meta-stack-explorer": {
         "hide": false,
         "keen": 3,
         "note": "Agent should review this page for potential new steps that isn't integrated. Especially around bots. I also notice something unusual, yet again, another hint to another scoring mechnism: Element:  <div.mse-signal-main> Text:     XAUUSDBUY60/100 Source:   /status/meta-stack-explorer  this is showing a scoring out of 100, now that might be percentage and if so it is a high percentage score but it should say so. This needs investigated and I need to know if the app is still generating a score using an approach outside of the primary (and meant to be ONLY) META.Stack scoring path. ",
-        "updatedAt": "2026-10-08T18:26:57.012Z",
+        "noteNew": "This is a highly unique view and I want an example of it in the new library. Make it based on a different subject but keep the step approach and individal status within each step. Generally, use everything on the page with a different topics data.  I like this large high impact notivce: Element:  <div.mse-signal-banner.mse-signal-hold> Text:     XAUUSDHOLD8/910 · 0.88%Risk: ×0.968Rarity: Standard (20p)Str Source:   /status/meta-stack-explorer  create a list of samples like this with the purpose being to get the attention of the user or summarise. ",
+        "uiScore": 9,
+        "updatedAt": "2026-10-12T23:02:32.031Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -729,7 +1053,8 @@
         "hide": false,
         "keen": 3,
         "note": "Reduce the initial size of the containers and turn them into accordions: Element:  <li._card_1y1bd_225._cardActive_1y1bd_241> Text:     df217b0d4af07ca4btc-speed-v1(proto)longBTCBitcoin Investment Source:   /trading/strategies-derived  also add more information to them such as most recent trade or current position, and most recent signal+scores. ",
-        "updatedAt": "2026-10-08T08:03:16.483Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:51:18.261Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -755,7 +1080,8 @@
         "hide": null,
         "keen": null,
         "note": "MAke it so I can order by reason Element:  <th> Text:     Latest reason Source:   /development/blocked-signals",
-        "updatedAt": "2026-10-08T08:03:16.642Z",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:27:41.207Z",
         "importance": null,
         "noteApplied": true
       },
@@ -767,19 +1093,55 @@
         "importance": null,
         "noteApplied": true
       },
+      "/development/strategy-wizard": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T23:32:58.150Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/development/theory-registry": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:21:42.459Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/scoring/live-ordering-stack": {
         "hide": false,
         "keen": 3,
         "note": "There is still a serious flaw in our scoring system and this is where we come to examine the output. SIGNAL is far too low, and I'm wondering if we should trial the ability to switch between a single score and dual - how much work would that involve? Also would there be any benefit in designing and trialing a scoring system that is broken down into 3-5 stages, like gates made-up of groups of directives. Just explore these ideas for now. As for the page itself it does not need changes. ",
-        "updatedAt": "2026-10-08T21:47:39.094Z",
+        "noteNew": "The ladder is a unique design engineered for the purpose of stock scoring but our theme library and theme builder is to be copied into a generic boilerplate. This design offers an excellent approach to any records that have a comared stat that constantly changes. It makes for a good live screen for the purpose of monitoring and it's design is almost perfect. I would like to see an example in the library based on an entirely different topic. ",
+        "uiScore": 9,
+        "updatedAt": "2026-10-12T22:27:34.586Z",
         "importance": "H",
         "noteApplied": true
+      },
+      "/settings/settings-education": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:19:13.720Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/status/platform-comparisons": {
         "hide": false,
         "keen": 1,
         "note": "I would like all of this information added to the free projects github pages in the hopes it attracts some traffic. Does Github allow any statistics monitoring?",
-        "updatedAt": "2026-10-08T20:34:01.952Z",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T22:59:11.104Z",
         "importance": "L",
         "noteApplied": true
       },
@@ -787,7 +1149,8 @@
         "hide": false,
         "keen": 3,
         "note": "The hover over affect is too dark. ",
-        "updatedAt": "2026-10-08T08:03:16.622Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:52:46.671Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -807,11 +1170,24 @@
         "importance": null,
         "noteApplied": true
       },
+      "/education/settings-education": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T22:56:29.396Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/protocols/protocols-registry": {
         "hide": false,
         "keen": 3,
         "note": "This view currently has an Old/New comparison. Delete the old and accept the newer design.",
-        "updatedAt": "2026-10-08T08:17:34.306Z",
+        "noteNew": "The entire view is unique and a mockup of it should be added to the theme library. It is an alternative to accordions. Ideal when the initial information is small. This allows the user to quickly read the left column and focus on a smaller area initially. As button I like and should be part of the gallery of buttons: Element:  <button.prb-status-btn.prb-target-btn.target-off> Text:     Target: Off Source:   /protocols/protocols-registry  this one is a good approach to something that is disabled or off. ",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T21:36:22.554Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -850,11 +1226,23 @@
         "importance": null,
         "noteApplied": true
       },
+      "/protocols/directives-registry": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "Another unique layout and almost the opposite of the protocols-registry with the selectable rows being wider and the additional information being in a sidebar on the right. I would like a mockup of this in the theme gallery we create. This sidebar as  mix of controls and that is what makes this layout useful. Like quick settings for something that is selected. The table itself has a mix of style approaches and might need adjustment but in general it's good. The way we have an item title and it's slug underneath it works well. So this table design is good for items that do have slugs or ID. I like the ALL READY BETA ALPHA toggles too and how styles change. These are like traffic lights in a sense. They are ideal for 3-5 options in a taxonomy so I want an example of this in the theme library: Element:  <button> Text:     READY Source:   /protocols/directives-registry  also  I like the coloured dots for presenting colour keyed statistics so lets include that: Element:  <div.directives-toolbar-stats> Text:     79 shown109 active🟢 79🟡 15🔴 15 Source:   /protocols/directives-registry",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T21:43:36.871Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/scoring/scoring-activity-logs": {
         "hide": false,
         "keen": 1,
         "note": "",
-        "updatedAt": "2026-10-01T09:11:19.126Z",
+        "uiScore": 5,
+        "updatedAt": "2026-10-12T22:37:16.348Z",
         "importance": "L"
       },
       "/automation/automation-overview": {
@@ -864,6 +1252,50 @@
         "updatedAt": "2026-10-09T22:47:25.097Z",
         "importance": "L",
         "noteApplied": true
+      },
+      "/builder/architecture-framework": {
+        "hide": null,
+        "keen": null,
+        "note": "This is duplicate page or at least its registered twice ",
+        "noteNew": "",
+        "uiScore": 1,
+        "updatedAt": "2026-10-12T23:35:04.969Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/development/meta-stack-cockpit": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:32:39.474Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/development/performance-change": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 6,
+        "updatedAt": "2026-10-12T23:28:02.614Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
+      "/development/pipeline-graph-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:32:50.589Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
       },
       "/protocols/configure-directives": {
         "hide": false,
@@ -881,6 +1313,17 @@
         "importance": "H",
         "noteApplied": true
       },
+      "/development/design-observations": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "",
+        "uiScore": 7,
+        "updatedAt": "2026-10-12T23:21:59.038Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/education/candle-patterns-guide": {
         "hide": true,
         "keen": 3,
@@ -897,6 +1340,17 @@
         "importance": null,
         "noteApplied": true
       },
+      "/development/responsive-layout-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "Lets make use of the screen size options on our new theme lab: Element:  <div.rll-device-bar> Text:     4K+ (2560px)Desktop (1440px)Laptop (1024px)Tablet (768px)Mob Source:   /development/responsive-layout-lab",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:26:22.386Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/development/theme-lab-transitions": {
         "hide": null,
         "keen": null,
@@ -909,7 +1363,8 @@
         "hide": false,
         "keen": 3,
         "note": "This should be assessed very soon because nothing seems to show as having a SHORT Protocol. We need more shorting protocols and there is another comment regarding creating pairs. Lets change this page to allow selection of special paired protocols too so that Dual has two meanings. ",
-        "updatedAt": "2026-10-08T08:03:16.874Z",
+        "uiScore": 3,
+        "updatedAt": "2026-10-12T22:24:20.469Z",
         "importance": "H",
         "noteApplied": true
       },
@@ -917,8 +1372,8 @@
         "hide": false,
         "keen": null,
         "note": "Move to the Development area",
-        "uiScore": null,
-        "updatedAt": "2026-10-08T08:03:16.951Z",
+        "uiScore": 8,
+        "updatedAt": "2026-10-12T23:33:14.854Z",
         "importance": "L",
         "noteApplied": true
       },

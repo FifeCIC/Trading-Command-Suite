@@ -31,6 +31,24 @@ applyTo: "**"
 > `MIRROR:END` must equal the source byte-for-byte. Without them the check could not tell the
 > mirrored rules from this explanatory header.
 
+> ⚠️ **Measured 2026-10-12 — the declared source is GONE on this machine.** The path above does
+> not exist: `%APPDATA%\Code\User\prompts\` contains no files, so
+> `validate-output-style-sync.cjs` exits **2 (UNVERIFIED)** and **cannot pass here**. Two
+> machine-local summaries still point at that missing path — `output-style-guide.md` (1.2 KB) and
+> `output-style-tcs.md` (1.3 KB) under `…\globalStorage\github.copilot-chat\memory-tool\memories\`
+> — so **this file is now the only full copy of these rules.** Nothing decides whether that makes
+> this file canonical; recorded as **REVIEW-QUEUE R56**.
+>
+> ⚠️ **A second, machine-local style rule asks for something different.** `communication-style.md`
+> (same memories directory, updated 2026-10-01) reads: *"Prefer emojis and bullet lists over
+> symbol-dense tables"* and *"Avoid monochrome glyph furniture: `->`, `*`, `|`…"*. That is a
+> different default from this file's **"tables over prose"**, and **the repo holds no trace of it.**
+> Same row, **R56**.
+>
+> ⚠️ The paragraph below says this check is *"on demand, not in `prebuild`"*. **It is in `prebuild`** —
+> `nest/package.json` runs `validate-output-style-sync.cjs --report`. The `--report` flag is what
+> keeps it non-fatal.
+
 <!-- MIRROR:BEGIN -->
 
 ---
