@@ -442,11 +442,20 @@ export const THEORIES = [
     unit: '% of that protocol’s configured directional capacity',
     window:
       'One full trading day of continuous scoring, one symbol, compared against the same protocol’s `observedSignalMax` reading and against the multi-directive fleet baseline measured 2026-10-14.',
-    status: 'untested',
+    status: 'supported',
     falsification:
       'Score the one-directive protocol for a full day and read its ceiling. ⚠️ **BOTH outcomes are informative, which is why this test is worth running:** a ceiling ≥ 60% says the SILENT DIRECTIVES are the dilution and directive count is the lever; a ceiling that stays inside 6.2–31% says directive count is NOT the cause and the **capacity accounting itself** is wrong — which is a materially different, and worse, finding. A ceiling BELOW the fleet band would point at capacity being over-counted for a single directive.',
+    evidence: {
+      basis: 'measurement',
+      n: 1400,
+      result:
+        'ANSWERED — the ≥60% branch. **Denominators, read from the running app:** the one-directive probe reports `configuredSignalMax: 100` (1 direction-eligible directive); `xau-speed-v1` is **910** (10 non-gate directives) and `eurusd-macro-v1` is **830**. **Same directive, same ticks, only the denominator changed** — `rsi-oversold`, its 1,400 recorded BULLISH ticks (`directiveoutcome`, maxScore 140 in all 33 protocols that use it): average **66.1%** over 140 vs **10.2%** over 910; ticks at or above 60%: **736 of 1,400** vs **0 of 1,400**. Max 100% vs ~15%. **Confirmed live end-to-end, same tick:** on USDCHF `ema-structure` read bullish at 60/100 → `signalPct 60`, `STRONG_BUY`, `directionEligibleDirectives: 1`; the identical 60-point reading inside a 10-directive protocol is 60/910 = **6.6%**. ⚠️ **SECOND, UNEXPECTED FINDING — the binding constraint is not only dilution.** On a neutral tick the SAME one-directive protocol produces **no score at all**: EURUSD `ema-structure` read neutral at 35/100, `hasDirectionalEvidence` was false, and the protocol’s live state went `no-data` with **0 rows written** to both `score` and `score_snapshot`. So a one-directive protocol is effectively BINARY — NO_DATA, or 60%+ — and never a misleading 11%. The 11% readings come from multi-directive protocols, where some directive almost always reads directional and therefore unblocks a score that is then divided by the full configured capacity.',
+      measuredAt: '2026-10-14',
+      source:
+        'This repo — live `GET /api/scoring/gated/:symbol?protocol=…` (probe `configuredSignalMax` vs mature), `directiveoutcome` 1,400-row query, `protocol_directive_entry` capacity sums, and the probe’s own `protocol_score_status` rows. Built objects: protocol `probe-1dir-v1` + bot `Probe 1-Directive (EMA Structure)`.',
+    },
     decision:
-      '(pending — no result yet) ⚠️ The experiment needs a permissive bot so trades are not stopped by a gate that is itself under review (#1118). Build it as a COPIED protocol, never by editing an incumbent (`maths-change-requires-ab`) — a copy makes the sandbox cheap.',
+      'SUPPORTED — leave the probe in place and let it run. The lever is DIRECTIVE COUNT (denominator), not the directives themselves; a single directive reaches 60% on 100% of its bullish ticks. ⚠️ **What this does NOT license:** lowering `capacityMaxTotal` by hand-editing incumbents. The probe is a NEW protocol, never an edit of one with performance history (`maths-change-requires-ab`). ⚠️ **What it means for the next step:** because the probe is binary, a protocol sized for frequent trading wants a directive that reads DIRECTIONAL often — measured bullish ticks per candidate: `ema-structure` 4,563 (cleanest, always 60/100), `rsi-oversold` 1,400 (strongest, 43–100%), `session-open-effect` 441 (84.6% avg), and `multi-timeframe-trend` 1,068 with a ceiling of **12.5%** — a trap that would produce zero signals however permissive the bot.',
     area: 'scoring',
     issue: 915,
   },
