@@ -14,6 +14,7 @@ import { DirectiveConfigService } from './directive-config.service';
 import { ProtocolHealthIssue, ProtocolHealthService } from './protocol-health.service';
 import { isDirectiveIncluded } from '../directives/directive-inclusion';
 import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-target';
+import { resolveRetentionDays } from '../system/retention.config';
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
 
 /** One decimal place, or the UI reads 46.50000000000001. */
@@ -200,23 +201,26 @@ export class ProtocolGatingController {
     // for ANY protocol, whether or not one has ever been configured. Same measurement, different
     // question, so it is a second query rather than a wider join.
     //
-    // ⚠️ ALL-TIME, NOT WINDOWED. `ProtocolHealthService` compares a bot's threshold against the
-    // protocol's "highest composite EVER recorded", and that is the right basis here too: a
-    // threshold above the all-time maximum is one the protocol has NEVER cleared, so restricting
-    // to 7 days would both understate the ceiling and make the warning flicker as history rolls
-    // off. This is the reuse the issue asked for — same definition, computed once for the create
-    // path.
+    // ⚠️ BOUNDED BY THE SOURCE'S RETENTION, AND THAT IS NOT "ALL-TIME" (#1117).
     //
-    // ⚠️ "ALL-TIME" NOW MEANS ALL-TIME ON THE CURRENT SCALE, bounded by `SCALE_EPOCH` (#1115). The
-    // window is deliberately NOT `WINDOW_DAYS`: this one answers "could this protocol EVER clear a
-    // threshold of N", which a 7-day window cannot.
+    // This block read "⚠️ ALL-TIME, NOT WINDOWED" and justified it as "`ProtocolHealthService`
+    // compares a bot's threshold against the protocol's highest composite EVER recorded". That
+    // intent is right. **The source could never deliver it** — and nothing compared the two.
     //
-    // ⚠️ SAME SCALE AS `minComposite`, AND THAT IS WHY THE SOURCE CHANGED. The percentage is now
-    // read directly as `signalPct` — the value the scorer itself wrote — instead of being
-    // recomputed here as `rawComposite / configuredSignalMax * 100`. Recomputing gave the same
-    // number on the same row (verified: 6.15 both ways, 2026-10-13), but it could only ever be
-    // evaluated over `score`, which is the sparse table. Reading the stored value from
-    // `score_snapshot` is what makes the history complete.
+    // Measured 2026-10-14: `score_snapshot` is pruned at **90 days** (`retention.config.ts`,
+    // `DATA_RETENTION_SNAPSHOT_DAYS`) — it holds exactly 90 and cannot hold more. The previous
+    // source, `score`, is pruned at **30 days**, which is the specific reason the ceiling was
+    // understated by 2.8–3.3× (#1115): the reader was asked an all-time question of a 30-day table.
+    //
+    // So the honest statement is: **the best reading in the RETAINED window.** The window is
+    // reported as `ceilingWindowDays` so a consumer cannot mistake it for all-time — the defect
+    // here was a number whose basis was invisible, so the basis is now part of the payload.
+    //
+    // ⚠️ A true all-time ceiling needs a source that is not pruned (an incrementally-maintained
+    // max, or a longer window). Until then this is a LOWER BOUND on the ceiling, which is the safe
+    // direction: it can warn when a threshold may be unreachable, never invent headroom.
+    //
+    // ⚠️ AND IT IS BOUNDED BY `SCALE_EPOCH` (#1115) as well — the two bounds are independent.
     let protocolCeilings: Record<string, { ceilingPct: number; samples: number }> = {};
     try {
       const ceilings = await this.prisma.$queryRawUnsafe<Array<{
@@ -255,12 +259,28 @@ export class ProtocolGatingController {
         note: 'Per-protocol override > trading style > default. The gate blocks a signal when signalPct is below the resolved threshold.',
       },
       /**
-       * Highest percentage each protocol has EVER achieved. Used by the create form to warn when a
-       * typed threshold is above everything that protocol has reached (#840). `samples` lets the caller
-       * distinguish "measured and low" from "barely measured" — a ceiling from 3 readings is not
-       * evidence, which is the same 10-sample floor `ProtocolHealthService` uses.
+       * Best percentage each protocol achieved **in the retained window** — NOT all-time (#1117).
+       * Used by the create form to warn when a threshold is above everything that protocol has
+       * reached (#840). `samples` lets the caller distinguish "measured and low" from "barely
+       * measured" — a ceiling from 3 readings is not evidence, which is the same 10-sample floor
+       * `ProtocolHealthService` uses. ⚠️ `ceilingWindowDays` states the window, because the defect
+       * this replaced was a number whose basis was invisible.
        */
       protocolCeilings,
+      /**
+       * ⚠️ THE WINDOW `protocolCeilings` WAS MEASURED OVER (#1117). Stated because the defect this
+       * replaced was a ceiling whose basis was invisible: the query read `score` (pruned at **30
+       * days**) while its comment claimed *"ALL-TIME, NOT WINDOWED"*, understating ceilings by up to
+       * 3.3× (#1115). It now reads `score_snapshot` (**90 days**) and SAYS SO.
+       *
+       * ⚠️ This is the EFFECTIVE window (`resolveRetentionDays`, env-aware), not the default — a
+       * hardcoded 90 would be wrong the moment `DATA_RETENTION_SNAPSHOT_DAYS` is set.
+       *
+       * ⚠️ A consumer must not read `protocolCeilings` as all-time: it is a **lower bound**, bounded
+       * by this window AND by `SCALE_EPOCH` (2026-09-11, the rescale). Safe direction — it can warn
+       * that a threshold may be unreachable, never invent headroom.
+       */
+      ceilingWindowDays: resolveRetentionDays('score_snapshot'),
       bots: rows,
       summary: {
         total: rows.length,
@@ -281,7 +301,8 @@ export class ProtocolGatingController {
    *
    * ⚠️ WHY THIS EXISTS (#761 point 3)
    * --------------------------------
-   * `thresholds` reports `protocolCeilings`: the best percentage a protocol has EVER achieved,
+   * `thresholds` reports `protocolCeilings`: the best percentage a protocol achieved in the
+   * RETAINED window (reported as `ceilingWindowDays` — NOT all-time, #1117),
    * `rawComposite / configuredSignalMax`. #761 established those percentages are honest but that
    * the BANDS were calibrated on the old inflated scale — and its point 3 asks the follow-up
    * question directly: *"configured capacity includes directives that are structurally unlikely to

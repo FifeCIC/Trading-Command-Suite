@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { BacktestArchiveService } from './backtest-archive.service';
 import { Prisma } from '@prisma/client';
-import { RETENTION_TABLES } from './retention.config';
+import { RETENTION_TABLES, resolveRetentionDays } from './retention.config';
 /**
  * Data retention service — prunes old data to prevent unbounded growth.
  *
@@ -116,7 +116,7 @@ export class DataRetentionService {
     const config = RETENTION_TABLES[table];
     if (!config) return { table, deleted: 0, cutoff: new Date() };
 
-    const days = retentionDays ?? parseInt(process.env[config.envKey] || String(config.defaultDays), 10);
+    const days = retentionDays ?? resolveRetentionDays(table);
     const cutoff = new Date(Date.now() - days * 86400000);
     const batchSize = 5000;
     let totalDeleted = 0;

@@ -26,7 +26,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { EdgeStatisticsService, EdgeReport } from './edge-statistics.service';
-import { PnlStatisticsService, PnlReport } from './pnl-statistics.service';
+import { PnlStatisticsService, PnlReport, PnlPopulation } from './pnl-statistics.service';
 
 @ApiTags('scoring')
 @Controller('scoring/edge')
@@ -61,13 +61,22 @@ export class EdgeController {
   })
   @ApiQuery({ name: 'days', required: false, description: 'Lookback in days (default 90)' })
   @ApiQuery({ name: 'symbol', required: false })
+  @ApiQuery({
+    name: 'population',
+    required: false,
+    enum: ['all', 'live', 'ab-test'],
+    description:
+      'Which trades to measure. `all` (default) = unchanged behaviour. `live` excludes A/B test rows — use this for "is the STRATEGY working?". `ab-test` measures the instrument alone. See #1120.',
+  })
   getPnl(
     @Query('days') days?: string,
     @Query('symbol') symbol?: string,
+    @Query('population') population?: string,
   ): Promise<PnlReport> {
     return this.pnl.getPnlReport({
       days: days ? Number(days) : undefined,
       symbol,
+      population: parsePnlPopulation(population),
     });
   }
 
@@ -124,6 +133,24 @@ export class EdgeController {
 }
 
 export type VerdictLevel = 'insufficient-data' | 'no-edge-detected' | 'directional-edge-no-pnl' | 'edge-and-profit' | 'losing';
+
+/**
+ * Parse the `population` query parameter for the P&L report (#1120).
+ *
+ * ⚠️ **AN UNRECOGNISED VALUE FALLS BACK TO `all`, NEVER TO `live`.** The tempting default for a
+ * typo is "the useful one", but here the two answer different questions and `all` is the status
+ * quo: a typo that silently produced the live-only figures would hand back a *flattering* number
+ * with no indication the filter had been applied — the same "plausible output, no error" shape as
+ * the defect this parameter exists to make visible.
+ *
+ * Exported and pure so it can be canaried without an HTTP call.
+ */
+export function parsePnlPopulation(v?: string): PnlPopulation {
+  const s = (v ?? '').trim().toLowerCase();
+  if (s === 'live') return 'live';
+  if (s === 'ab-test' || s === 'abtest' || s === 'ab') return 'ab-test';
+  return 'all';
+}
 
 /**
  * The decision ladder.

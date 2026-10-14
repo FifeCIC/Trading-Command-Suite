@@ -1622,6 +1622,37 @@ export class ProtocolGatingService {
         // Fire-and-forget like the score write: a failure here must never break scoring.
         this.observeAdaptiveTargetPeak(protocolId, rawCompositeForAdaptiveTarget(breakdownData));
 
+        // ⚠️ A KNOWN, UNEXPLAINED 9-DAY HOLE IN THIS TABLE (#1117, 2026-10-14). Do NOT assume
+        // `score` is populated just because this line exists and this function runs.
+        //
+        // MEASURED: 2026-09-16 → 2026-09-24 hold **zero** `score` rows, with data on both sides
+        // (2026-09-15 has 15; 2026-09-25 onward resumes). The line BELOW this one — the
+        // `scoreSnapshot.create` above — demonstrably ran on those days: `score_snapshot` carries
+        // 2,371–11,752 rows/day in that window **with `signalPct` non-null**, and `signalPct` is
+        // written only by this function. So this block executed and the row below did not appear.
+        //
+        // SIX HYPOTHESES REFUTED, each by measurement:
+        //   • the write throws — the catch below logs "Failed to store canonical score", a string
+        //     unchanged since 2026-08-11; **0 matches** across 24 MB of gap-period logs.
+        //   • symbols unregistered (`if (!sym) return;`) — `XAUUSD` 2026-06-24, `BTC` 2026-09-10,
+        //     `EURJPY` 2026-09-15: every symbol scored in the gap was registered BEFORE it.
+        //   • protocol inactive (#803) — the REFUSED warning is logged; **0 matches**.
+        //   • the tick path did not run — refuted above, by `signalPct` presence.
+        //   • retention with a shorter window — would have to leave 2026-09-15 intact, which it does.
+        //   • a second writer of `score_snapshot` with `signalPct` — there are only two writers of
+        //     that table (`protocol-gating`, `rarity.captureSnapshot`) and rarity sets no `signalPct`.
+        //
+        // LEADING REMAINING CANDIDATE, unprovable retroactively: the running `dist` differed from
+        // this source for that period. `dist` is untracked and the console logs rotate, so there is
+        // no evidence left to test it with.
+        //
+        // ⚠️ WHY IT IS A NOTE AND NOT AN OPEN ISSUE: nothing on a money path reads `score`. The
+        // gate reads `score_snapshot` (`signalPct`), and the ceiling endpoint now reads it too
+        // (#1115). `score` is read by diagnostics and the backtest archive.
+        //
+        // ⚠️ IF YOU ARE ADDING A STATISTIC OVER `score`: state the window you measured over and
+        // make it visible in the payload — the defect this pattern keeps producing (#1115) is a
+        // number whose basis was invisible. See `ceilingWindowDays` for the shape to copy.
         await (this.prisma as any).score.create({
           data: {
             symbolId: sym.id,

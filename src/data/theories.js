@@ -401,6 +401,133 @@ export const THEORIES = [
       area: 'trading',
       issue: 995,
     },
+
+  // ── The owner's vision for what the scoring engine should be able to reach ─────────────────────
+  {
+    id: 'a-protocol-can-reach-80-percent-of-configured-capacity',
+    raisedAt: '2026-10-14',
+    statement:
+      'A protocol reaches at least 80% of its CONFIGURED directional capacity on at least one tick per week, so a percentage expresses the significance of a moment rather than a fraction diluted by silent directives.',
+    predictedDirection:
+      'Some protocol’s ceiling — `MAX(rawComposite / configuredSignalMax)`, measured over the retained window — sits at or above 80%.',
+    measure: 'breadth ceiling, `MAX(breakdown.rawComposite / breakdown.configuredSignalMax × 100)`',
+    unit: '% of the protocol’s configured directional capacity',
+    window:
+      'Retained `score` window (30 days), every protocol with >100 ticks, 2026-10-14. ⚠️ The window must be stated because `score` rotates — see `ceilingWindowDays` on `GET /api/scoring/gated/thresholds`.',
+    status: 'refuted',
+    evidence: {
+      basis: 'measurement',
+      n: 16,
+      result:
+        'REFUTED on the configured scale: the fleet ceiling is 6.2%–31.0% (`hourly-3dir-v1` 30.3, `momentum-stock-v1` 28.8, `spy-speed-v1` 28.8, `dow-speed-v1` 24.9, `forex-session-v1` 23.0, `xau-speed-4h` 6.2). **Nothing reaches 40%, let alone 80%.** ⚠️ But the SAME 16 protocols reach **93–100%** on the observed scale (`rawComposite / observedSignalMax`) — 10 of them at exactly 100%. The owner’s intent IS met; the DENOMINATOR is what hides it.',
+      measuredAt: '2026-10-14',
+      source:
+        '`score.breakdown` — `SELECT strategyId, MAX(rawComposite/configuredSignalMax*100), MAX(rawComposite/observedSignalMax*100) … HAVING ticks > 100`',
+    },
+    falsification:
+      'Read both ceilings per protocol. A breadth ceiling ≥ 80% for any protocol refutes this — the ratio of the two ceilings IS the dilution, so the gap between them names the cause directly. ⚠️ Both numbers must be reported together: reporting only the configured one is what produced the belief in the first place.',
+    decision:
+      'THE INTENT IS RIGHT AND THE SCALE IS THE QUESTION — do not weaken the target. Two consequences, neither of which is taken here: (1) **the 2026-09-15 ÷~6.3 rescale** (`ENTRY_THRESHOLD` 40 → 6, gate 65 → 13, style bars 45–80 → 7–13) exists to keep thresholds meaningful after ADR-011 moved the denominator to the configured capacity — it did NOT create the dilution, it followed it; (2) **choosing which scale drives the GATE is the open decision** (#915 option B). ⚠️ This refutes the *number*, not the design: a protocol CAN be judged on conviction, where 10 protocols already hit 100%. ⚠️ NOT a maths change made here — moving a gate admits trades and needs a copied config + monitored comparison. ⚠️ **A CEILING IS THE WRONG METRIC — measured the same day, the DISCRIMINATING statistic is the FREQUENCY of strong ticks** (`pct_of_ticks_at_80`): `spy-speed-v1` **31.2%**, `qqq-speed-v1` 23.9, `xau-speed-v1-copy` 19.1, `btc-speed-v1` 17.9, `vix-short-v1` 11.3, `btc-scalp-v1` 8.8, `momentum-stock-v1` 2.3, `xau-speed-v1` 2.0, `forex-session-v1` **0.6**, `gold-macro-v1` **0.0**, `xau-speed-4h` **0.0**. That answers the owner’s own worry — *"the system holds us back from identifying what might be a truly weak or over complex protocol"* — because a ceiling cannot rank protocols when most reach 100%, while the frequency separates them by a factor of 50. ⚠️ `forex-session-v1` is the instructive row: **86.6% of ticks at ≥60% but only 0.6% at ≥80%** — consistently moderate, never exceptional, which is a different finding from weak.',
+    area: 'scoring',
+    issue: 915,
+  },
+  {
+    id: 'one-directive-protocol-escapes-denominator-dilution',
+    raisedAt: '2026-10-14',
+    statement:
+      'A protocol built from ONE signal directive (plus one opportunity directive) reaches a high percentage of its configured capacity on some ticks, because a single directive cannot be diluted by other directives reading neutral.',
+    predictedDirection:
+      'Scoring that protocol continuously for a day produces a breadth ceiling at or above 60% — materially ABOVE the 6.2–31% band every multi-directive protocol sits in.',
+    measure: 'breadth ceiling of the one-directive protocol, beside its conviction reading',
+    unit: '% of that protocol’s configured directional capacity',
+    window:
+      'One full trading day of continuous scoring, one symbol, compared against the same protocol’s `observedSignalMax` reading and against the multi-directive fleet baseline measured 2026-10-14.',
+    status: 'untested',
+    falsification:
+      'Score the one-directive protocol for a full day and read its ceiling. ⚠️ **BOTH outcomes are informative, which is why this test is worth running:** a ceiling ≥ 60% says the SILENT DIRECTIVES are the dilution and directive count is the lever; a ceiling that stays inside 6.2–31% says directive count is NOT the cause and the **capacity accounting itself** is wrong — which is a materially different, and worse, finding. A ceiling BELOW the fleet band would point at capacity being over-counted for a single directive.',
+    decision:
+      '(pending — no result yet) ⚠️ The experiment needs a permissive bot so trades are not stopped by a gate that is itself under review (#1118). Build it as a COPIED protocol, never by editing an incumbent (`maths-change-requires-ab`) — a copy makes the sandbox cheap.',
+    area: 'scoring',
+    issue: 915,
+  },
+
+  // ── The owner's 2026-10-14 reading of the P&L ──────────────────────────────────────────────────
+  {
+    id: 'the-loss-is-concentrated-in-gold-ex-gold-is-break-even',
+    raisedAt: '2026-10-14',
+    statement:
+      'The app’s realised loss is concentrated in gold and silver, and excluding them the strategy is approximately break-even rather than losing.',
+    predictedDirection:
+      'P&L excluding `XAUUSD`/`XAGUSD` is a small number near zero, while the gold/silver bucket carries the large negative.',
+    measure: '`SUM(pnl)` per bucket, on `trade` where `status=closed AND pnlInvalid=0`',
+    unit: 'account currency (GBP), and average per trade',
+    window: 'All valid closed trades, 2026-08-12 → 2026-10-14 (333 trades).',
+    status: 'supported',
+    evidence: {
+      basis: 'measurement',
+      n: 333,
+      result:
+        'CONFIRMED, more strongly than stated. **GOLD/SILVER: 61 trades (18% of the count), £−1,079.19 — 93% of the total loss of £−1,157.87.** Everything else: 272 trades, **£−78.68**, i.e. **£−0.29 per trade** — break-even. ⚠️ The mechanism is sizing, not entry: one XAUUSD MINIMUM lot (0.01) risks £87.98, which was 82% of a 15% portfolio cap (measured 2026-10-13, MetaQuotes-Demo equity £718.65). The broker will not size below that, so gold cannot be risked proportionally on a small account.',
+      measuredAt: '2026-10-14',
+      source: '`trade` table — `GROUP BY CASE WHEN symbol IN (\'XAUUSD\',\'XAGUSD\')`',
+    },
+    falsification:
+      'Re-run the two-bucket split. If the ex-gold bucket is materially negative — say worse than −£5/trade — this is refuted and the loss is systemic rather than concentrated. ⚠️ Re-measure rather than carry the figure forward: it moves with every closed trade, and the sample is small.',
+    decision:
+      'CONFIRMED as the owner’s reading, and it changes what "is it working?" means: **the honest test is ex-gold.** Gold must be judged separately — it is a position-sizing question (one lot is too big for this account), not a scoring question. ⚠️ NOT acted on here: reducing gold size or disabling gold bots is a RISK change, and it is the owner’s call. ⚠️ Do not delete the gold result to make the book look better — the concentration IS the finding.',
+    area: 'trading',
+  },
+  {
+    id: 'profit-comes-from-long-holds-not-entry-precision',
+    raisedAt: '2026-10-14',
+    statement:
+      'Winners realise their gain many hours or a day after entry, so the outcome is driven by how long a position is held rather than by how precise the entry was.',
+    predictedDirection:
+      'P&L rises monotonically with hold duration, so the longest-held bucket is the most profitable and the shortest is the least.',
+    measure: '`SUM(pnl)` and win rate bucketed by `TIMESTAMPDIFF(MINUTE, openedAt, closedAt)`',
+    unit: 'account currency (GBP) per bucket, and win rate in %',
+    window: 'All valid closed trades, 2026-08-12 → 2026-10-14. Both all-trades and ex-gold.',
+    status: 'refuted',
+    evidence: {
+      basis: 'measurement',
+      n: 333,
+      result:
+        'REFUTED as stated, PARTLY right in the middle of the range. Buckets (all trades): <1h £−36.95 · **1–6h £−1,014.43** · **6–24h £+25.54** · >24h £−132.03. So **only the 6–24h band is profitable**, and "the next day" is NEGATIVE — the relationship is not monotonic: it rises to a peak at 6–24h and then falls. ⚠️ **Ex-gold, and this is the decisive part: win rates are 40.9% / 56.8% / 46.2% / 37.0% — all coin-flip, and the 56.8% bucket STILL LOSES (£−45.97).** A bucket that wins most of its trades and loses money is a payoff problem, not an entry or a holding problem: ex-gold avg win **£2.46** vs avg loss **£−2.74** (ratio **1.11**), needing a **52.6%** win rate to break even against an actual **47.1%** — a gap of 5.5 points. All-trades the ratio is **2.2** because gold’s losses are large.',
+      measuredAt: '2026-10-14',
+      source: '`trade` table — hold-duration buckets + `AVG(CASE WHEN pnl>0 …)` / `AVG(CASE WHEN pnl<0 …)`',
+    },
+    falsification:
+      'Re-bucket by hold duration and read win rate beside P&L. If any bucket shows a materially higher win rate AND a positive P&L, duration is doing real work. ⚠️ The two numbers must be read TOGETHER — this refutation is only visible because the 56.8% bucket is the one that loses.',
+    decision:
+      'DIRECTION OF THE FIX MOVES TO THE EXIT AND THE SIZE, NOT THE ENTRY. ⚠️ This is consistent with what the repo already recorded independently — `PRIMARY-GOALS.md` cites #916 (*"winners exit at a third of their target while losers reach the stop"*) and #917 (*"its winner closed at 14% of target"*), which is the same payoff-ratio defect seen from the trade side. ⚠️ NOT a scoring finding: entry precision is ~47% at every duration, so tuning directives cannot lift the win rate to 52.6% on its own — the payoff ratio is the cheaper lever, and it is 2.2× worse than it needs to be because of gold sizing.',
+    area: 'trading',
+  },
+  {
+    id: 'most-of-the-loss-is-the-a-b-test-not-the-live-strategy',
+    raisedAt: '2026-10-14',
+    statement:
+      'The book’s realised loss comes overwhelmingly from the A/B test accounts rather than from the live bots, so a whole-book P&L figure describes the measurement instrument and not the strategy.',
+    predictedDirection:
+      'Splitting closed trades by `strategy` shows the `AB-%` rows carrying a large negative while the non-AB live rows sit near zero per trade.',
+    measure: '`SUM(pnl)` and `AVG(pnl)` grouped into A/B test, non-A/B copies, and live bots',
+    unit: 'account currency (GBP), total and per trade, with win rate in %',
+    window: 'All valid closed trades, 2026-08-12 → 2026-10-14 (333 trades).',
+    status: 'supported',
+    evidence: {
+      basis: 'measurement',
+      n: 333,
+      result:
+        'CONFIRMED, and far more extreme than expected. **A/B TEST: 23 trades (7% of the count) at £−929.60 — 80% of the total loss of £−1,157.87**, win rate **17.4%**. Protocol copies (non-A/B): 9 trades, £−122.72. **LIVE BOTS: 301 trades, £−105.55 — £−0.35 per trade at a 47.5% win rate, i.e. break-even.** ⇒ **91% of the loss is test instrumentation.** ⚠️ The arms are also un-sized: worst single A/B trade **£−322.67** (~45% of a £718.65 demo account), and the `AB-A #929 measurable run` average loss **£−87.49** matches ONE `XAUUSD` minimum lot risk (£87.98) — so a stop-out is large by construction and **the arms are not measuring the protocol difference they exist to measure.**',
+      measuredAt: '2026-10-14',
+      source: '`trade` table — `GROUP BY CASE WHEN strategy LIKE \'AB-%\' …`',
+    },
+    falsification:
+      'Re-split by `strategy`. If the `AB-%` rows are a small share of the loss, this is refuted and the live strategy is genuinely losing. ⚠️ Check the grouping before trusting it: a row whose `strategy` is NULL or renamed silently moves between buckets.',
+    decision:
+      'REPORTING IS CONTAMINATED AND THE EXPERIMENT IS COMPROMISED — both are #1120. ⚠️ Consequences that were acted on: the owner’s own reading (*"if we take gold out of the equation I think we break even"*) is CORRECT but the cause is narrower than gold — it is the A/B accounts, and gold is where they were pointed. **Any "is the strategy working?" figure must state whether it includes `AB-%` rows**, or it measures the instrument. ⚠️ NOT fixed here: applying the risk gate to A/B arms changes what they do (owner call), and an exempt instrument is measuring a different game from the one the bots play.',
+    area: 'trading',
+    issue: 1120,
+  },
 ];
 
 export default THEORIES;

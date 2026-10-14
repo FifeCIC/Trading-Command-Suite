@@ -1,8 +1,24 @@
 #!/usr/bin/env node
 /**
- * audit-data-health.cjs — the guard for the class that cost 5 days of trading and 16,673
- * unusable measurement rows.
+ * audit-data-health.cjs — silent data failure: threshold REACHABILITY ("cannot fire"), stalled
+ * writers, NULL must-populate columns, protocol refs, duplicate daily bars. The class that cost
+ * 5 days of trading and 16,673 unusable measurement rows.
  * =====================================================================================
+ *
+ * ⚠️ WHY THE FIRST LINE NAMES CAPABILITIES (2026-10-14). It used to read *"the guard for the class
+ * that cost 5 days of trading and 16,673 unusable measurement rows"* — true, evocative, and
+ * **useless to a search**. `tools-index.cjs --find` indexes this line as the tool's PURPOSE, so a
+ * searcher asking for `reachability`, `cannot fire`, or `threshold` got **"No tool matches"** and
+ * concluded the capability did not exist. It does exist, and has since 2026-09-15.
+ *
+ * Measured cost: on 2026-10-14 an agent re-derived this script's central finding from scratch —
+ * that `score` ROTATES and a ceiling read from it understates, producing a false "cannot fire" —
+ * and shipped a fix to `GET /api/scoring/gated/thresholds` for the same defect this file had been
+ * reporting as a WARNING since 2026-10-08. The fix was correct and the API genuinely lacked the
+ * protection; **the search that would have found the existing work returned nothing.**
+ *
+ * ⚠️ THE RULE THIS ENCODES: a tool's first line is an INDEX KEY, not a title. Name the capability
+ * in the words someone would actually type. A guard nobody can find is a guard that does not run.
  *
  * WHY THIS EXISTS
  * ---------------

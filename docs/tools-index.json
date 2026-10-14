@@ -36,7 +36,7 @@
       "name": "audit-data-health.cjs",
       "where": "nest",
       "category": "audit",
-      "purpose": "the guard for the class that cost 5 days of trading and 16,673",
+      "purpose": "silent data failure: threshold REACHABILITY (\"cannot fire\"), stalled",
       "selfTest": true,
       "reaches": [
         "npm"

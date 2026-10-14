@@ -43,6 +43,16 @@ import { classifyPnlRow } from '../../common/trading/pnl-population';
 
 export type PnlReliability = 'noise' | 'weak' | 'moderate' | 'strong';
 
+/**
+ * Which trades the report measures (#1120).
+ *
+ * `all` is the status quo and the default. `live` answers "is the STRATEGY working?" — which is a
+ * different question from "did the book make money", because the A/B test accounts are part of the
+ * book. Measured 2026-10-14: `all` gives expectancy £−3.48/trade while `live` gives £−0.74 — the
+ * same data answering two questions, 4.7× apart.
+ */
+export type PnlPopulation = 'all' | 'live' | 'ab-test';
+
 export interface PnlBucket {
   /** What this bucket groups by — e.g. a strategy name, a side, or 'ALL'. */
   label: string;
@@ -65,7 +75,7 @@ export interface PnlBucket {
 
 export interface PnlReport {
   generatedAt: string;
-  window: { days: number; symbol: string | null };
+  window: { days: number; symbol: string | null; population: PnlPopulation };
   sample: {
     closedTrades: number;
     withPnl: number;
@@ -102,6 +112,25 @@ export interface PnlReport {
   populationNote: string;
   /** Whole book. */
   overall: PnlBucket | null;
+  /**
+   * ⚠️ **LIVE STRATEGY vs TEST INSTRUMENTATION — read this before reading `overall` (#1120).**
+   *
+   * Measured 2026-10-14: the A/B arms were **23 trades (7% of the count) and £−929.60 — 80% of
+   * the whole book's loss** — while the 301 live-bot trades were **−£0.35 per trade**, i.e.
+   * break-even. **`overall` therefore describes the measurement instrument as much as the
+   * strategy**, and the owner's own conclusion (*"we're losing money"*) was formed from a figure
+   * that is 91% instrumentation.
+   *
+   * ⚠️ WHY THE SPLIT IS REPORTED RATHER THAN `overall` CHANGED: excluding the A/B rows from
+   * `overall` would silently move every surface that reads it (Signals Overview's "past profit"
+   * among them). Making the share VISIBLE answers "is this contaminated?" without pre-empting
+   * that decision. ⚠️ A reader who sees a large `abTest` share must not read `overall` as the
+   * strategy's result.
+   *
+   * Population test: `trade.abTestId IS NOT NULL OR trade.strategy LIKE 'AB-%'`. Both are used —
+   * the id is the real attribution (#1079) and the prefix catches rows written before it.
+   */
+  byPopulation: { live: PnlBucket; abTest: PnlBucket };
   bySide: PnlBucket[];
   /** Attribution — which pipeline produced the trades. */
   bySource: PnlBucket[];
@@ -128,9 +157,10 @@ export class PnlStatisticsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getPnlReport(params: { days?: number; symbol?: string } = {}): Promise<PnlReport> {
+  async getPnlReport(params: { days?: number; symbol?: string; population?: PnlPopulation } = {}): Promise<PnlReport> {
     const days = params.days ?? 90;
-    const window = { days, symbol: params.symbol ?? null };
+    const population = params.population ?? 'all';
+    const window = { days, symbol: params.symbol ?? null, population };
 
     const empty = (reason: string): PnlReport => ({
       generatedAt: new Date().toISOString(),
@@ -138,6 +168,7 @@ export class PnlStatisticsService {
       sample: { closedTrades: 0, withPnl: 0, excludedInvalid: 0, excludedExitUnknown: 0, distinctDays: 0, firstTrade: null, lastTrade: null },
       populationNote: 'No trades evaluated.',
       overall: null,
+      byPopulation: { live: bucket('LIVE BOTS', []), abTest: bucket('A/B TEST', []) },
       bySide: [],
       bySource: [],
       byStrategy: [],
@@ -154,7 +185,7 @@ export class PnlStatisticsService {
     const where: any = { closedAt: { not: null, gte: since }, pnl: { not: null } };
     if (params.symbol) where.symbol = params.symbol;
 
-    let trades: Array<{ pnl: number | null; side: string; source: string | null; strategy: string | null; symbol: string; closedAt: Date | null; pnlInvalid: number | null; exitPrice: number | null }>;
+    let trades: Array<{ pnl: number | null; side: string; source: string | null; strategy: string | null; symbol: string; closedAt: Date | null; pnlInvalid: number | null; exitPrice: number | null; abTestId: string | null }>;
     try {
       trades = await this.prisma.trade.findMany({
         where,
@@ -162,7 +193,11 @@ export class PnlStatisticsService {
         // every row read as `exit-unknown` (an absent field is indistinguishable from a null one
         // in TypeScript with `strictNullChecks: false`), so the exclusion would be silent, total
         // and wrong — every trade excluded, no error.
-        select: { pnl: true, side: true, source: true, strategy: true, symbol: true, closedAt: true, pnlInvalid: true, exitPrice: true },
+        //
+        // ⚠️ `abTestId` is REQUIRED by `byPopulation` for the same reason: absent, every A/B row
+        // would read as live and the split would report 100% live with no error — #1120's own
+        // defect reintroduced in the fix for it.
+        select: { pnl: true, side: true, source: true, strategy: true, symbol: true, closedAt: true, pnlInvalid: true, exitPrice: true, abTestId: true },
       });
     } catch (err) {
       return empty(`Trade query failed: ${(err as Error).message}`);
@@ -186,12 +221,37 @@ export class PnlStatisticsService {
     const exitUnknownRows = trades.filter((t) => classifyPnlRow(t) === 'exit-unknown');
     const validTrades = trades.filter((t) => classifyPnlRow(t) === 'realised');
 
-    const rows = validTrades.filter((t): t is typeof t & { pnl: number } => t.pnl !== null && Number.isFinite(t.pnl));
+    const validRows = validTrades.filter((t): t is typeof t & { pnl: number } => t.pnl !== null && Number.isFinite(t.pnl));
+
+    // ── #1120 — the POPULATION filter, applied AFTER the #1044 classifier ────────────────────────
+    //
+    // ⚠️ ORDER MATTERS AND IT IS NOT ARBITRARY. `classifyPnlRow` decides whether a row is a RESULT
+    // at all; the population decides WHICH RESULT. Filtering first would let a quarantined row's
+    // `pnl = 0` placeholder into an expectancy calculation — the defect #1044 closed.
+    //
+    // ⚠️ THE COUNTS ARE FILTERED TOO. `sample` and the exclusion notes describe the population
+    // actually measured, not the raw query. A reader who asks for `live` and sees "5 excluded as
+    // pnlInvalid" must be able to trust that number against the live set — quoting the whole
+    // table's exclusions beside a filtered result is the same basis error this parameter exists to
+    // expose.
+    const inPopulation = (t: { abTestId?: string | null; strategy?: string | null }) =>
+      population === 'all' ? true : population === 'live' ? !isAbTestRow(t) : isAbTestRow(t);
+    const populationNote =
+      population === 'all'
+        ? null
+        : `⚠️ POPULATION FILTER: \`${population}\` — ${population === 'live' ? 'A/B test rows are EXCLUDED' : 'ONLY A/B test rows are included'}. ` +
+          `This is a different question from the whole book (#1120): measured 2026-10-14 the whole book was £−3.48/trade against £−0.74/trade for live bots alone.`;
+
+    const rows = validRows.filter(inPopulation);
+
     if (rows.length === 0) {
       return empty(
-        `No closed trades with usable PnL in the last ${days} day(s). ` +
-        `${invalidRows.length} row(s) were excluded as pnlInvalid, ` +
-        `${exitUnknownRows.length} as exit-unknown (no exit price, not flagged).`,
+        `No closed trades with usable PnL in the last ${days} day(s)` +
+        (population === 'all' ? '' : ` in the \`${population}\` population`) +
+        '. ' +
+        `${invalidRows.filter(inPopulation).length} row(s) were excluded as pnlInvalid, ` +
+        `${exitUnknownRows.filter(inPopulation).length} as exit-unknown (no exit price, not flagged).` +
+        (populationNote ? ` ${populationNote}` : ''),
       );
     }
 
@@ -204,10 +264,12 @@ export class PnlStatisticsService {
       generatedAt: new Date().toISOString(),
       window,
       sample: {
-        closedTrades: trades.length,
+        closedTrades: population === 'all' ? trades.length : validRows.length + invalidRows.filter(inPopulation).length + exitUnknownRows.filter(inPopulation).length,
         withPnl: rows.length,
-        excludedInvalid: invalidRows.length,
-        excludedExitUnknown: exitUnknownRows.length,
+        // ⚠️ Filtered to the population MEASURED — see the note above `rows`. Quoting the whole
+        // table's exclusions beside a filtered result is the basis error this parameter exposes.
+        excludedInvalid: invalidRows.filter(inPopulation).length,
+        excludedExitUnknown: exitUnknownRows.filter(inPopulation).length,
         distinctDays,
         firstTrade: sortedDates[0] ?? null,
         lastTrade: sortedDates[sortedDates.length - 1] ?? null,
@@ -227,13 +289,39 @@ export class PnlStatisticsService {
         return parts.join(' ');
       })(),
       overall: bucket('ALL', rows.map((r) => r.pnl)),
+      // #1120 — the live/test split. See the interface docblock: `overall` describes the
+      // instrument as much as the strategy, so the share is stated beside it.
+      byPopulation: {
+        live: bucket('LIVE BOTS', rows.filter((r) => !isAbTestRow(r)).map((r) => r.pnl)),
+        abTest: bucket('A/B TEST', rows.filter((r) => isAbTestRow(r)).map((r) => r.pnl)),
+      },
       bySide: groupBy(rows, (r) => r.side).map(([label, list]) => bucket(label, list)),
       bySource: groupBy(rows, (r) => r.source ?? '(unspecified)').map(([label, list]) => bucket(label, list)),
       byStrategy: groupBy(rows, (r) => r.strategy ?? '(untagged)').map(([label, list]) => bucket(label, list)),
       bySymbol: groupBy(rows, (r) => r.symbol ?? '(unknown)').map(([label, list]) => bucket(label, list)),
-      caveats: caveatsFor(rows.length, distinctDays),
+      caveats: [...(populationNote ? [populationNote] : []), ...caveatsFor(rows.length, distinctDays)],
     };
   }
+}
+
+/**
+ * isAbTestRow() — does this closed trade belong to a TEST INSTRUMENT rather than a live bot?
+ *
+ * WHY IT EXISTS (#1120): measured 2026-10-14, the A/B arms were **23 trades (7% of the count) and
+ * **£−929.60 — 80% of the whole book's loss**, while the 301 live-bot trades sat at £−0.35 each.
+ * A whole-book figure therefore describes the instrument as much as the strategy, and the split
+ * has to be stated rather than inferred.
+ *
+ * ⚠️ TWO TESTS, DELIBERATELY. `abTestId` is the real attribution (#1079 writes it per arm); the
+ * `AB-%` strategy prefix catches rows written before that, and it is the pattern the trade records
+ * actually carry today (`strategy = 'AB-A #929 measurable run …'`). Using only the id would
+ * under-report; using only the prefix would break the day someone renames a test.
+ *
+ * Pure and exported so `--self-test`-style canaries can drive it in both directions.
+ */
+export function isAbTestRow(row: { abTestId?: string | null; strategy?: string | null }): boolean {
+  if (row.abTestId != null && String(row.abTestId).length > 0) return true;
+  return /^AB-/.test(row.strategy ?? '');
 }
 
 /**

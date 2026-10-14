@@ -13,9 +13,18 @@
  * The seed file is the durable artefact; the database is not. So "the row exists" must write, not
  * skip — which is what these tests assert. Reverting to create-only fails them.
  *
- * The `active` tests are the other half and they encode a deliberate asymmetry: a seed that
- * DECLARES `active` is obeyed, and a seed that omits it must not resurrect a bot an operator
- * switched off. Getting that backwards would start trading a bot somebody had stopped.
+ * The `active` tests are the other half. ⚠️ They encode a ONE-DIRECTIONAL rule, and the direction
+ * is the whole point: a seed that DECLARES `active: false` is obeyed (a safety statement — worst
+ * case a bot you wanted on stays off, which is visible), but a seed that declares `active: true`
+ * is NOT written on UPDATE (worst case is a bot an operator switched OFF silently coming back on
+ * and placing orders — invisible, and it moves money). A seed that omits `active` must not
+ * resurrect a bot an operator switched off.
+ *
+ * ⚠️ Narrowed to one direction on 2026-10-14. It was previously symmetric, and that was measurably
+ * harmful: with all 38 bots disabled, `POST /seed?dryRun=true` reported **13 bots** a re-seed would
+ * silently re-enable — every forex session bot, i.e. the ones whose seed entry carries an explicit
+ * `active: true`. The current seed declares `active: true` on those 13; nothing else does.
+ * CREATE is untouched, so a fresh install still reproduces the intended starting state.
  */
 import { TradingStrategyService } from './trading-strategy.service';
 
@@ -148,7 +157,7 @@ describe('seedDefaults — CONVERGENCE (#833)', () => {
   });
 });
 
-describe('seedDefaults — `active` is converged only when DECLARED', () => {
+describe('seedDefaults — `active` converges ONE WAY ONLY: false yes, true no', () => {
   it('does NOT re-enable a bot the operator switched off (seed omits active)', async () => {
     const { svc, calls } = harness({
       existing: { ...MATCHING_ROW, active: false },
@@ -162,6 +171,23 @@ describe('seedDefaults — `active` is converged only when DECLARED', () => {
     expect(calls.update.every((u: any) => !('active' in u.data))).toBe(true);
   });
 
+  it('⚠️ does NOT re-enable a bot when the seed says active:true — the 2026-10-14 trap', async () => {
+    const { svc, calls } = harness({
+      // `baseSize` drifted so an UPDATE genuinely happens — otherwise the assertion below would
+      // pass because nothing was written at all, which is a different reason.
+      existing: { ...MATCHING_ROW, active: false, baseSize: 0.05 }, // operator switched it OFF
+      subscription: { id: 'sub-1', role: 'long' },
+    });
+
+    await svc.seedDefaults([{ ...SEEDED, active: true }]); // seed says it should be ON
+
+    expect(calls.update).toHaveLength(1);
+    // The operator's choice WINS. A re-seed must not restart a bot somebody stopped.
+    expect(calls.update[0].data).not.toHaveProperty('active');
+    // …and the REAL config must still have converged, or this guard passes for the wrong reason.
+    expect(calls.update[0].data.baseSize).toBe(0.02);
+  });
+
   it('DOES apply a declared active:false (the A/B control bot case)', async () => {
     const { svc, calls } = harness({
       existing: { ...MATCHING_ROW, active: true },
@@ -172,6 +198,18 @@ describe('seedDefaults — `active` is converged only when DECLARED', () => {
 
     expect(calls.update).toHaveLength(1);
     expect(calls.update[0].data.active).toBe(false);
+  });
+
+  it('CREATE still honours a declared active:true (a fresh install must be faithful)', async () => {
+    const { svc, calls } = harness({
+      existing: null, // no such row → the create branch
+      subscription: null,
+    });
+
+    await svc.seedDefaults([{ ...SEEDED, active: true }]);
+
+    expect(calls.create).toHaveLength(1);
+    expect(calls.create[0].data.active).toBe(true);
   });
 });
 

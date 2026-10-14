@@ -7,7 +7,73 @@
  * the moment `avgLoss` is treated as a positive magnitude. The sign cases below exist
  * specifically to make that error fail loudly.
  */
-import { bucket, reliabilityFor } from './pnl-statistics.service';
+import { bucket, reliabilityFor, isAbTestRow } from './pnl-statistics.service';
+
+/**
+ * #1120 — the live/test population split.
+ *
+ * ⚠️ WHY THIS IS TESTED AT ALL. The split's whole job is to stop a whole-book figure being read as
+ * the strategy's result. Measured 2026-10-14: A/B arms were 23 trades (7% of the count) and 80% of
+ * the loss, while live bots ran at −£0.35/trade. **If `isAbTestRow` under-reports, the split says
+ * "all live" and the contamination is invisible — with no error**, which is precisely the defect
+ * the split exists to reveal. So the both-directions cases below are load-bearing.
+ */
+describe('isAbTestRow — which population is this trade in?', () => {
+  it('detects by the REAL attribution (`abTestId`)', () => {
+    expect(isAbTestRow({ abTestId: 'b50727ee-1', strategy: 'Gold Macro Position' })).toBe(true);
+  });
+
+  it('detects by the strategy prefix, which is what the records actually carry today', () => {
+    expect(isAbTestRow({ abTestId: null, strategy: 'AB-A #929 measurable run - tradeThreshold 55' })).toBe(true);
+    expect(isAbTestRow({ abTestId: null, strategy: 'AB-B 929 XAU M15 - group vs maxscore weighting' })).toBe(true);
+  });
+
+  it('does NOT swallow a live bot whose name merely contains those letters', () => {
+    // The prefix is ANCHORED. 'Gold AB-Scalp' is a live bot; a substring test would misfile it and
+    // silently move its P&L into the instrument bucket.
+    expect(isAbTestRow({ abTestId: null, strategy: 'Gold AB-Scalp' })).toBe(false);
+    expect(isAbTestRow({ abTestId: null, strategy: 'ABX Momentum' })).toBe(false);
+    expect(isAbTestRow({ abTestId: null, strategy: 'Gold Macro Position' })).toBe(false);
+  });
+
+  it('treats a missing field as LIVE, never as A/B — the safe direction', () => {
+    // ⚠️ Defaulting the other way would hide live trades inside the instrument bucket and make the
+    // strategy look better than it is. Under-reporting the instrument is the conservative error.
+    expect(isAbTestRow({})).toBe(false);
+    expect(isAbTestRow({ abTestId: null, strategy: null })).toBe(false);
+    expect(isAbTestRow({ abTestId: '', strategy: '' })).toBe(false);
+    expect(isAbTestRow({ abTestId: undefined, strategy: undefined })).toBe(false);
+  });
+
+  it('the two populations partition the rows — nothing is counted twice or dropped', () => {
+    const rows = [
+      { abTestId: 't1', strategy: 'AB-A x' },
+      { abTestId: null, strategy: 'Gold Macro Position' },
+      { abTestId: null, strategy: 'AB-B y' },
+      { abTestId: null, strategy: 'forex-session-v1' },
+    ];
+    const ab = rows.filter(isAbTestRow);
+    const live = rows.filter((r) => !isAbTestRow(r));
+    expect(ab.length + live.length).toBe(rows.length);
+    expect(ab.every((r) => /^AB-/.test(r.strategy) || r.abTestId != null)).toBe(true);
+  });
+});
+
+describe('bucket — the population split reports the same arithmetic as the whole book', () => {
+  it('live + abTest buckets account for the whole book', () => {
+    const all = [100, -50, 20, -300, 5, -10];
+    const abRows = [20, -300];
+    const liveRows = all.filter((p) => !abRows.includes(p));
+    const live = bucket('LIVE BOTS', liveRows);
+    const ab = bucket('A/B TEST', abRows);
+    // The split must not lose or invent money — a mismatch here means a row was misfiled.
+    expect(live.totalPnl + ab.totalPnl).toBeCloseTo(bucket('ALL', all).totalPnl, 6);
+    expect(live.trades + ab.trades).toBe(6);
+    // …and each row landed on exactly one side, so neither bucket is empty by accident.
+    expect(ab.trades).toBe(2);
+    expect(live.trades).toBe(4);
+  });
+});
 
 describe('bucket — expectancy sign correctness', () => {
   it('computes positive expectancy for a genuinely profitable book', () => {

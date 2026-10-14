@@ -102,7 +102,7 @@ buried ability `development-philosophy` §7 warns about.
 | `analyse-query-patterns.cjs` | repo | analysis | yes | docs | WHERE THE PIPELINE ASKS THE DATABASE FOR SOMETHING IT ALREADY HAS. |
 | `analyse-unreachable-capacity.cjs` | nest | analysis | — | docs | Is the score denominator counting capacity the numerator can never reach? |
 | `audit-bot-activation.cjs` | nest | audit | yes | npm | WHY each trading bot can or cannot trade. |
-| `audit-data-health.cjs` | nest | audit | yes | npm | the guard for the class that cost 5 days of trading and 16,673 |
+| `audit-data-health.cjs` | nest | audit | yes | npm | silent data failure: threshold REACHABILITY ("cannot fire"), stalled |
 | `audit-denominator-history.cjs` | nest | audit | — | docs | what did the Signal denominator actually do over time? |
 | `audit-hint-dependency.cjs` | nest | audit | — | docs | Audit which resolution path every protocol actually takes (#764). |
 | `audit-outcome-recording.cjs` | nest | audit | — | ⚠️ **NOTHING** | the filtered-rate check for #825. |

@@ -179,6 +179,28 @@ export const RETENTION_DAYS: Record<string, number> = Object.fromEntries(
   Object.entries(RETENTION_TABLES).map(([t, c]) => [t, c.defaultDays]),
 );
 
+/**
+ * resolveRetentionDays() — the ONE place an env override is applied to a retention window.
+ *
+ * ⚠️ WHY THIS IS A FUNCTION AND NOT `RETENTION_DAYS[table]`. `RETENTION_DAYS` is the derived
+ * **default**; the EFFECTIVE window is `DATA_RETENTION_*` if set. A caller that reports
+ * `RETENTION_DAYS[table]` therefore states a window that may not be the one in force — which is
+ * exactly the defect #1117 describes: a number whose basis is invisible and can be wrong.
+ *
+ * ⚠️ THE PARSING IS PRESERVED BYTE-EQUIVALENT to the expression it replaces
+ * (`parseInt(process.env[envKey] || String(defaultDays), 10)`) — including the quirk that an env
+ * value of `'0'` resolves to **0 days**, which prunes everything older than now. Do not "fix" that
+ * here: it is existing behaviour, and changing it silently would alter what the next prune deletes.
+ *
+ * ADR-014 — one implementation per concept. `data-retention.service.ts` had this inline; a second
+ * copy in a controller would drift, and only one of them would get the next fix.
+ */
+export function resolveRetentionDays(table: string): number {
+  const config = RETENTION_TABLES[table];
+  if (!config) return 0;
+  return Number.parseInt(process.env[config.envKey] || String(config.defaultDays), 10);
+}
+
 /** Table → retention date column, derived. */
 export const TABLE_DATE_COLUMN: Record<string, string> = Object.fromEntries(
   Object.entries(RETENTION_TABLES).map(([t, c]) => [t, c.dateCol]),

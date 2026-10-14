@@ -10,9 +10,50 @@
  * That is the same failure shape as the scoring bugs this repo keeps re-finding: **a value
  * computed, then not used, with no error**. These tests exist so it cannot recur.
  */
-import { decideVerdict } from './edge.controller';
+import { decideVerdict, parsePnlPopulation } from './edge.controller';
 import type { EdgeReport } from './edge-statistics.service';
 import type { PnlReport, PnlBucket } from './pnl-statistics.service';
+
+/**
+ * parsePnlPopulation — the `?population=` filter (#1120).
+ *
+ * ⚠️ WHY THE TYPO CASE IS THE IMPORTANT ONE. `live` and `all` answer DIFFERENT questions and their
+ * answers differ by 4.7× (measured 2026-10-14: £−3.48/trade whole book vs £−0.74/trade live). A bad
+ * value that silently resolved to `live` would hand back a *flattering* number with no sign the
+ * filter had been applied — the "plausible output, no error" shape. Unknown input must land on
+ * `all`, the status quo.
+ */
+describe('parsePnlPopulation — unknown input falls back to the status quo', () => {
+  it('recognises the three real values', () => {
+    expect(parsePnlPopulation('all')).toBe('all');
+    expect(parsePnlPopulation('live')).toBe('live');
+    expect(parsePnlPopulation('ab-test')).toBe('ab-test');
+  });
+
+  it('is case- and whitespace-tolerant', () => {
+    expect(parsePnlPopulation('LIVE')).toBe('live');
+    expect(parsePnlPopulation('  Live  ')).toBe('live');
+    expect(parsePnlPopulation('AB-Test')).toBe('ab-test');
+  });
+
+  it('accepts the obvious shorthands for the instrument', () => {
+    expect(parsePnlPopulation('ab')).toBe('ab-test');
+    expect(parsePnlPopulation('abtest')).toBe('ab-test');
+  });
+
+  it('⚠️ a TYPO resolves to `all`, never to `live`', () => {
+    // The whole point: a misspelling must not hand back the flattering answer.
+    for (const bad of ['lve', 'livel', 'liv', 'AB-T', 'production', '1', 'true', 'undefined', 'null', '{}']) {
+      expect(parsePnlPopulation(bad)).toBe('all');
+    }
+  });
+
+  it('absent or empty is `all` — the unchanged default', () => {
+    expect(parsePnlPopulation(undefined)).toBe('all');
+    expect(parsePnlPopulation('')).toBe('all');
+    expect(parsePnlPopulation('   ')).toBe('all');
+  });
+});
 
 function bucket(over: Partial<PnlBucket> = {}): PnlBucket {
   return {

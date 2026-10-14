@@ -2601,8 +2601,36 @@ export class TradingStrategyService {
         if ((s as any).exhaustionDecelPct !== undefined) {
           desired.exhaustionDecelPct = (s as any).exhaustionDecelPct;
         }
-        if ((s as any).active !== undefined) {
-          desired.active = (s as any).active;
+        // ── `active` converges ONE WAY ONLY: `false` yes, `true` no ──────────────────────
+        // DECISION (2026-10-14, primary)
+        // WHAT:       On UPDATE a seeded `active: false` IS written; a seeded `active: true`
+        //             is NOT. CREATE still honours either value.
+        // WHY:        The two directions are not equally safe. Obeying `false` worst-cases to
+        //             "a bot you wanted on stays off" — visible, one click to fix (this is the
+        //             A/B control-bot case the seeder exists to protect). Obeying `true`
+        //             silently restarts a bot an operator stopped, and it places orders —
+        //             invisible, and it moves money.
+        // REVERSE BY: change the guard below to `!== undefined`, restoring full convergence.
+        //             Expect the 13 forex session bots to be re-enabled by the next seed run.
+        // REGISTER:   docs/SETTLED-DECISIONS.md row 85 (extends row 52 to bots)
+        // GUARD:      strategy-seed-convergence.spec.ts — "does NOT re-enable ... seed says true"
+        //
+        // Measured 2026-10-14: after disabling all 38 bots, `POST /seed?dryRun=true` reported
+        // **13 bots** it would re-enable — every forex session bot, i.e. the only seed entries
+        // carrying an explicit `active: true`. The owner had just cleared the board for a
+        // controlled experiment; a stray seed run would have put 13 bots back on with no error
+        // and no log — the repo's signature failure (plausible output, no error). After this
+        // change the same dry run reports **0** changes.
+        //
+        // ⚠️ The two pre-existing `active` tests both still pass and NEITHER covered the `true`
+        // direction — which is why the trap survived until someone measured it.
+        //
+        // INSTEAD OF: converging `active` in both directions like every other declared field.
+        //   The distinction is STATE vs CONFIGURATION — the database owns STATE, the seed owns
+        //   CONFIGURATION. Register row 52 settled this for `protocol.active`.
+        // Replaced:   `if ((s as any).active !== undefined) desired.active = (s as any).active;`
+        if ((s as any).active === false) {
+          desired.active = false;
         }
 
         const differing = Object.keys(desired).filter(
