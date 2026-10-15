@@ -7,6 +7,7 @@ import { noticeFromError } from '../core/notices/from-error.js';
 import BacktestChartPane from '../components/backtest/BacktestChartPane';
 import EquityCurveChart from '../components/backtest/EquityCurveChart';
 import BacktestPeriodsPanel from '../components/backtest/BacktestPeriodsPanel';
+import BacktestRunsPanel from '../components/backtest/BacktestRunsPanel';
 
 // ── Preset profiles (#50) ──
 const EXECUTION_PRESETS = {
@@ -314,6 +315,14 @@ export default function BacktestPage() {
           </button>
         </p>
       )}
+
+      {/* #823 Stage 2 — the stored runs were invisible. Measured 2026-10-15: 26 runs stored and
+          served by `GET /api/backtest/runs`, with ZERO frontend references to the list. Placed
+          beside the periods panel for the same reason it is mounted here rather than as a route:
+          the engine, the window capture and the history all belong to the page that runs them, and
+          #823 Stage 1 says explicitly not to design a second backtest view while the first sits
+          unused. */}
+      <BacktestRunsPanel />
 
       {stats && (
         <div className="bt-results">

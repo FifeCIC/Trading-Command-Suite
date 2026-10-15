@@ -284,6 +284,10 @@ export const NAV_TREE = {
     views: [
       // ── Backtesting & replay — "what would have happened?" ──
       { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
+      // #823 Stage 1 — `backtest-data` was mapped in `view-routes.jsx` but had NO nav entry, so it
+      // was reachable only by typing the URL. Stage 1's own criterion: "a page nobody can find is
+      // effectively absent". Surfaced rather than rebuilt.
+      { id: 'backtest-data', label: 'Backtest Data', icon: '⛁' },
       { id: 'snapshots', label: 'Snapshots', icon: '🔬' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       // ── Charts & data inspection ──

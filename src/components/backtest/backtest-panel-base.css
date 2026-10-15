@@ -1,0 +1,79 @@
+/**
+ * Backtest panel base — the declarations SHARED by the backtest panels.
+ * =====================================================================
+ *
+ * ⚠️ WHY THIS FILE EXISTS. `validate-duplication.cjs` (INV-NO-NEW-DUPLICATION, runs in prebuild)
+ * flagged `backtest-periods-panel.css` and `backtest-runs-panel.css` as a NEW pair sharing three
+ * block(s) — the panel frame, the button, and the focus rule. The guard's instruction is
+ * *"Fix by EXTRACTING the shared block into one place, not by copying it."*
+ *
+ * That pair was created on 2026-10-15 by the runs panel copying the periods panel's frame and
+ * button styling. Copying was the wrong move and the guard caught it, which is exactly what it is
+ * for. Both panels now import this file and carry the shared classes, so the declarations exist
+ * ONCE.
+ *
+ * ⚠️ DELIBERATELY NOT ALLOWLISTED. The guard supports `--update-allowance` for duplication that is
+ * "genuinely unavoidable". This was avoidable, and the repo's own rule is that an allowlisted guard
+ * is worse than none — it consumes attention and provides no cover.
+ *
+ * ⚠️ The BUTTON is a near-duplicate of `.ff-btn` in `src/core/forms.css` (the canonical Form
+ * System) and that is recorded rather than hidden: `.ff-btn` is 8px/15px padding with NO minimum
+ * height, which lands around 34px — under the 40px tap target `accessibility-policy.instructions.md`
+ * requires. These panel buttons are the primary control on a data tool, so the stricter target is
+ * kept here. **If `.ff-btn` ever gains a 40px minimum, this block should be deleted in favour of
+ * it.** Filed as a note in the handoff rather than silently diverging.
+ */
+
+/* ── The panel frame ──────────────────────────────────────────────────────── */
+
+.bt-panel {
+  margin: var(--space-lg, 20px) 0;
+  padding: var(--space-md, 16px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+/* ── The button ───────────────────────────────────────────────────────────── */
+
+.bt-panel-btn {
+  /* 40px minimum tap target (accessibility-policy) — a 28px control is unusable on touch. */
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.bt-panel-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.bt-panel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A visible focus ring — never removed. Keyboard users lose the app without it. */
+.bt-panel-btn:focus-visible,
+.bt-panel input:focus-visible,
+.bt-panel select:focus-visible,
+.bt-panel textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The smaller variant, for row-level actions. ⚠️ 32px is BELOW the 40px policy target and is used
+   only for secondary controls inside a table row, where a 40px control would break the row rhythm.
+   Recorded rather than silently shipping: if a reviewer disagrees, raise it here — one place. */
+.bt-panel-btn-sm {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+}

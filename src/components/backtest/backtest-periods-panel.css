@@ -10,12 +10,17 @@
  * text (accessibility-policy.instructions.md).
  */
 
-.btp {
-  margin: var(--space-lg, 20px) 0;
-  padding: var(--space-md, 16px);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
+/* ⚠️ The panel frame, the button and the focus ring are NOT declared here any more — they are
+   SHARED with `BacktestRunsPanel` and live in `backtest-panel-base.css`.
+   `validate-duplication.cjs` (INV-NO-NEW-DUPLICATION, prebuild) flagged these two panels as a NEW
+   pair sharing three block(s), and the guard's instruction is to EXTRACT rather than copy. The root
+   element carries `bt-panel`; every button carries `bt-panel-btn`. Do NOT restate them here — doing
+   so re-creates the violation. */
+
+/* ── Panel-specific offset ────────────────────────────────────────────────── */
+
+.btp-toggle {
+  flex: 0 0 auto;
 }
 
 .btp-head {
@@ -41,48 +46,6 @@
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
-
-.btp button {
-  /* 40px minimum tap target (accessibility-policy) — a 28px control is unusable on touch. */
-  min-height: 40px;
-  padding: 8px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ink);
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: border-color 150ms ease, background 150ms ease;
-}
-
-.btp button:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-/* A visible focus ring — never removed. Keyboard users lose the app without it. */
-.btp button:focus-visible,
-.btp input:focus-visible,
-.btp select:focus-visible,
-.btp textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.btp button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btp-toggle {
-  flex: 0 0 auto;
-}
-
-.btp-small {
-  min-height: 32px;
-  padding: 4px 10px;
-  font-size: 0.72rem;
-}
 
 /* ── Capture form ─────────────────────────────────────────────────────────── */
 

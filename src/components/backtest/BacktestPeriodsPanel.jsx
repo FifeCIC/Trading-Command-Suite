@@ -29,6 +29,7 @@ import { apiGet, apiPost } from '../../core/api/client';
 import NoticeBlock from '../NoticeBlock';
 import { notice } from '../../core/notices/registry';
 import { noticeFromError } from '../../core/notices/from-error.js';
+import './backtest-panel-base.css';
 import './backtest-periods-panel.css';
 
 const TIMEFRAMES = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'];
@@ -116,12 +117,12 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
   const importing = captureMutation.isPending || reimportMutation.isPending;
 
   return (
-    <section className="btp" aria-labelledby="btp-heading">
+    <section className="bt-panel btp" aria-labelledby="btp-heading">
       <header className="btp-head">
         <h3 id="btp-heading">Backtest periods — captured windows</h3>
         <button
           type="button"
-          className="btp-toggle"
+          className="bt-panel-btn btp-toggle"
           aria-expanded={open}
           aria-controls="btp-body"
           onClick={() => setOpen((v) => !v)}
@@ -184,6 +185,7 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
         <div className="btp-actions">
           <button
             type="button"
+            className="bt-panel-btn"
             onClick={() => captureMutation.mutate()}
             disabled={!name.trim() || !symbol.trim() || !from || !to || importing}
           >
@@ -302,7 +304,7 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
                 <td>
                   <button
                     type="button"
-                    className="btp-small"
+                    className="bt-panel-btn bt-panel-btn-sm"
                     onClick={() => reimportMutation.mutate(p.id)}
                     disabled={reimportMutation.isPending}
                   >
@@ -317,7 +319,7 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
 
       {selectedPeriod && onRunPeriod && (
         <div className="btp-run">
-          <button type="button" onClick={() => onRunPeriod(selectedPeriod)}>
+          <button type="button" className="bt-panel-btn" onClick={() => onRunPeriod(selectedPeriod)}>
             Run backtest on “{selectedPeriod.name}”
           </button>
           <span className="btp-hint">

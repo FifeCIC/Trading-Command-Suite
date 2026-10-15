@@ -1,0 +1,201 @@
+/**
+ * Backtest runs panel (#823 Stage 2).
+ *
+ * ⚠️ The panel frame, the button and the focus ring are NOT declared here — they live in
+ * `backtest-panel-base.css`, shared with `backtest-periods-panel.css`. `validate-duplication.cjs`
+ * (INV-NO-NEW-DUPLICATION, prebuild) caught this file restating its sibling's frame and button, and
+ * the correct fix was to EXTRACT them rather than bank the copy. See that file's header.
+ *
+ * ⚠️ Every colour is a CSS variable. `validate-css-tokens.cjs` runs in prebuild and fails on a NEW
+ * undefined token, and `ui-standards.instructions.md` forbids hex literals here. Every token below
+ * was checked against `node scripts/validate-css-tokens.cjs --tokens` before being written.
+ *
+ * ⚠️ The TABLE (`table`/`th`/`td`), `caption` and `.sr-only` come from `.bt-table`
+ * (`src/core/tables.css`), not from a local copy — same guard, same reason.
+ *
+ * ⚠️ The profit/loss tones are used on TEXT ONLY, never as a background behind body text.
+ * `--color-profit` / `--color-loss` are tuned for dark panels; behind dark body text they would fail
+ * contrast (`accessibility-policy.instructions.md`). The sign is always printed beside the colour,
+ * so colour is never the only carrier of the meaning.
+ */
+
+.btr-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm, 8px);
+  flex-wrap: wrap;
+}
+
+.btr-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.btr-count {
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  color: var(--ink-soft);
+}
+
+.btr-sub {
+  margin: var(--space-sm, 8px) 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  max-width: 70ch;
+}
+
+/* The confirm/cancel pair beside a row's Delete button. */
+.btr-confirm {
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* ── The list ─────────────────────────────────────────────────────────────── */
+
+.btr-table-wrap {
+  margin-top: var(--space-md, 12px);
+  overflow-x: auto;
+}
+
+/* The checkbox column is narrow and must not wrap. */
+.btr-table-wrap td:first-child,
+.btr-table-wrap th:first-child {
+  width: 4.5rem;
+}
+
+.btr-row-selected td {
+  background: var(--color-grid);
+}
+
+.btr-strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Numbers in a data tool are monospaced so digits line up (ui-standards). */
+.btr-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.btr-window {
+  white-space: nowrap;
+}
+
+/* Text-only tone. The sign is printed beside the colour as well. */
+.is-profit {
+  color: var(--color-profit);
+}
+
+.is-loss {
+  color: var(--color-loss);
+}
+
+.btr-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 12px);
+  flex-wrap: wrap;
+  margin-top: var(--space-md, 12px);
+  padding-top: var(--space-md, 12px);
+  border-top: 1px solid var(--line);
+}
+
+.btr-hint {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  max-width: 60ch;
+}
+
+/* ⚠️ "not recorded" is styled DIFFERENTLY from `0`. They are different facts — `totalSignals` is
+   null for a pre-2026-09-23 run and 0 for a run that genuinely produced no signals. Rendering them
+   identically is how "nobody recorded it" hides as "there was nothing there". */
+.btr-none {
+  color: var(--color-muted);
+  font-style: italic;
+  font-size: 0.72rem;
+}
+
+.btr-empty {
+  margin: var(--space-md, 12px) 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.btr-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm, 8px);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm, 8px);
+}
+
+/* ── The comparison ───────────────────────────────────────────────────────── */
+
+.btr-compare {
+  margin-top: var(--space-md, 12px);
+  padding-top: var(--space-md, 12px);
+  border-top: 1px solid var(--line);
+}
+
+.btr-compare h4 {
+  margin: 0 0 var(--space-sm, 8px);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ⚠️ A named winner and a REFUSAL are deliberately different treatments. `insufficient-data` and
+   `sample-unknown` are the endpoint declining to over-claim (#929), and giving a refusal the same
+   accent treatment as a result would invert its purpose. */
+.btr-verdict {
+  margin: 0 0 var(--space-sm, 8px);
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  font-size: 0.82rem;
+  border-left: 3px solid var(--line);
+  color: var(--ink);
+}
+
+.btr-verdict-ok {
+  border-left-color: var(--accent);
+}
+
+.btr-verdict-hold {
+  border-left-color: var(--color-warning);
+}
+
+.btr-verdict-sub {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.btr-warn {
+  margin: var(--space-sm, 8px) 0;
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  font-size: 0.78rem;
+  color: var(--color-warning);
+  border-left: 3px solid var(--color-warning);
+}
+
+.btr-caveat {
+  margin: var(--space-md, 12px) 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  max-width: 80ch;
+}
+
+/* A destructive action is toned separately from a normal one. */
+.btr-btn-danger {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+@media (max-width: 768px) {
+  .btr-window {
+    white-space: normal;
+  }
+}
