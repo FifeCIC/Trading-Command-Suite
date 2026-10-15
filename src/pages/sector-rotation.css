@@ -26,18 +26,7 @@
 .sr2-tf-active { background: rgba(14,165,166,0.15); border-color: var(--accent, var(--accent)); color: var(--accent, var(--accent)); }
 
 /* ── Table ────────────────────────────────────────────────── */
-.sr2-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }
-.sr2-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.sr2-table th {
-  text-align: left; font-weight: 500; color: var(--ink-soft, var(--ink-soft));
-  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
-  background: rgba(0,0,0,0.12); white-space: nowrap;
-}
-.sr2-table th.sr2-sorted { color: var(--accent, var(--accent)); }
-.sr2-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.sr2-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-.sr2-rank { color: var(--ink-soft, var(--ink-soft)); font-size: 0.72rem; width: 30px; }
+.sr2-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }.sr2-table th.sr2-sorted { color: var(--accent, var(--accent)); }.sr2-rank { color: var(--ink-soft, var(--ink-soft)); font-size: 0.72rem; width: 30px; }
 .sr2-name { font-weight: 600; }
 .sr2-etf { color: var(--accent, var(--accent)); font-weight: 600; font-size: 0.76rem; }
 .sr2-right { text-align: right; }

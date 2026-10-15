@@ -231,35 +231,7 @@
 .cm-table-wrap {
   overflow-x: auto;
   width: 100%;
-}
-
-.cm-table {
-  width: 100%;
-  min-width: 100%;
-  border-collapse: collapse;
-  font-size: 0.75rem;
-  table-layout: auto;
-}
-
-.cm-table th {
-  text-align: left;
-  padding: 0.4rem 0.5rem;
-  color: var(--ink-soft, var(--ink-soft));
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  border-bottom: 1px solid var(--line, #1e2a45);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.cm-table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-  vertical-align: middle;
-}
-
-/* ── API grid ── */
+}undefined { min-width: 100%; table-layout: auto; }/* ── API grid ── */
 .cm-api-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

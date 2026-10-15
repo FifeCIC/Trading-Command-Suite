@@ -157,37 +157,7 @@
 
 .mss-table-wrap {
   overflow-x: auto;
-}
-
-.mss-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-}
-
-.mss-table th {
-  text-align: left;
-  padding: 8px 12px;
-  font-weight: 600;
-  color: var(--text-dim);
-  border-bottom: 1px solid var(--border);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.mss-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-  vertical-align: middle;
-}
-
-.mss-table tbody tr:hover {
-  background: color-mix(in srgb, var(--accent) 4%, transparent);
-}
-
-.mss-row--priority {
+}.mss-row--priority {
   background: color-mix(in srgb, var(--accent) 6%, var(--panel));
 }
 

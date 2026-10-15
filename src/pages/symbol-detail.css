@@ -26,12 +26,7 @@
 .sd-bars { display: flex; align-items: flex-end; gap: 3px; height: 100px; }
 .sd-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
 .sd-bar { width: 100%; max-width: 24px; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; }
-.sd-bar-label { font-size: 0.55rem; color: var(--ink-soft); margin-top: 3px; }
-
-.sd-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-.sd-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 2px solid var(--line); font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); }
-.sd-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.82rem; }
-.sd-reason { color: var(--ink-soft); font-size: 0.78rem; max-width: 300px; }
+.sd-bar-label { font-size: 0.55rem; color: var(--ink-soft); margin-top: 3px; }.sd-reason { color: var(--ink-soft); font-size: 0.78rem; max-width: 300px; }
 
 /* ── Trade & Portfolio ── */
 .sd-card--trade { margin-top: 1rem; }

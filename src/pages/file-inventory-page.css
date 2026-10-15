@@ -115,26 +115,7 @@
 /* ── Table ── */
 .fi-table-wrap {
   overflow-x: auto;
-}
-
-.fi-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.fi-table th {
-  text-align: left;
-  padding: 0.45rem 0.5rem;
-  border-bottom: 2px solid var(--line);
-  color: var(--ink-soft);
-  font-weight: 600;
-  font-size: 0.73rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.fi-sortable {
+}.fi-sortable {
   cursor: pointer;
   user-select: none;
 }
@@ -145,19 +126,7 @@
 
 .fi-num {
   text-align: right;
-}
-
-.fi-table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink);
-}
-
-.fi-table tbody tr:hover {
-  background: color-mix(in srgb, var(--accent) 4%, transparent);
-}
-
-.fi-table tbody tr.fi-bloated {
+}.fi-table tbody tr.fi-bloated {
   background: color-mix(in srgb, var(--color-loss) 6%, transparent);
 }
 

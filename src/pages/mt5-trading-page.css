@@ -46,20 +46,32 @@
 .mt5u-account-selector label { font-size: 0.7rem; color: var(--ink-soft, var(--color-muted)); text-transform: uppercase; }
 .mt5u-account-selector select { padding: 0.3rem 0.5rem; border: 1px solid var(--line, var(--line)); border-radius: 5px; background: var(--panel, var(--bg)); color: var(--ink, var(--ink)); font-size: 0.78rem; }
 .mt5u-remove-btn { background: none; border: 1px solid transparent; border-radius: 4px; color: var(--ink-soft, var(--color-muted)); cursor: pointer; font-size: 0.65rem; padding: 0.4rem 0.5rem; line-height: 1; min-height: 44px; min-width: 44px; }
-.mt5u-remove-btn:hover { border-color: var(--color-loss); color: var(--color-loss); background: rgba(239,68,68,0.08); }
+.mt5u-remove-btn:hover { border-color: var(--color-loss); color: var(--color-loss); background: color-mix(in srgb, var(--color-loss) 8%, transparent); }
 
 .mt5u-mode-warning { margin-left: auto; }
 
 /* ── Badges ── */
 .mt5u-badge { font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; }
-.mt5u-badge-demo { background: #78350f44; color: #fbbf24; border: 1px solid #78350f; }
-.mt5u-badge-live { background: #7f1d1d44; color: #fca5a5; border: 1px solid #7f1d1d; animation: mt5u-pulse-live 2s ease-in-out infinite; }
-@keyframes mt5u-pulse-live { 0%, 100% { border-color: #7f1d1d; } 50% { border-color: var(--color-loss); } }
+/* ⚠️ THE SAME DEFECT AS THE TOGGLE ABOVE, LEFT UNFIXED ONE ELEMENT DOWN (fixed 2026-10-15).
+   The toggle was converted off `#78350f/#fbbf24` and `#7f1d1d/#fca5a5` with a comment calling them
+   "colours that exist in NO theme" — and the badge directly beneath kept them. So the badge still
+   ignored every theme pack and the High Contrast Text preference, while the switch beside it obeyed
+   them. Fixing an instance and leaving its neighbour is how the same workaround keeps being re-added.
+   Demo/live now use exactly the tokens the toggle uses, so the pair cannot drift apart again. */
+.mt5u-badge-demo { background: var(--notice-warning-bg); color: var(--notice-warning-text); border: 1px solid var(--notice-warning-border); }
+.mt5u-badge-live { background: color-mix(in srgb, var(--danger) 18%, var(--panel)); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent); animation: mt5u-pulse-live 2s ease-in-out infinite; }
+/* `#7f1d1d` → `var(--color-loss)`, which is what the 50% frame already used. A keyframe that pulses
+   between a theme token and a colour no theme defines is a pulsing inconsistency, not a pulse. */
+@keyframes mt5u-pulse-live { 0%, 100% { border-color: var(--color-loss); } 50% { border-color: var(--danger); } }
 
 /* ── Messages ── */
 .mt5u-msg { padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; }
-.mt5u-msg-success { background: #064e3b33; border: 1px solid #065f46; color: #6ee7b7; }
-.mt5u-msg-error { background: #7f1d1d33; border: 1px solid #991b1b; color: #fca5a5; }
+/* Third instance of the same defect in this file. `#064e3b33/#065f46/#6ee7b7` are the app's success
+   greens nowhere — they are a private palette. The notice system already defines the trio
+   (`--notice-success-bg/-border/-text`) and `.app-notice--success` uses exactly this shape, so this now
+   matches the notice treatment instead of imitating it. */
+.mt5u-msg-success { background: var(--notice-success-bg); border: 1px solid var(--notice-success-border); color: var(--notice-success-text); }
+.mt5u-msg-error { background: color-mix(in srgb, var(--danger) 20%, var(--panel)); border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent); color: var(--danger); }
 .mt5u-msg button { background: none; border: none; color: inherit; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; }
 
 /* ── Account Bar ── */

@@ -231,32 +231,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow-x: auto;
-}
-
-.bc-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.bc-table th {
-  text-align: left;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
-  white-space: nowrap;
-}
-
-.bc-table td {
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink-soft);
-}
-
-.bc-table tbody tr:hover td {
+}.bc-table tbody tr:hover td {
   background: var(--bg-elev);
 }
 

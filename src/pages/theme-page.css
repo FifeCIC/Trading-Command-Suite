@@ -263,43 +263,7 @@
   border: 1px solid #1b2430;
   border-radius: 12px;
   padding: 0.7rem;
-}
-
-.dark-panel-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.dark-panel-table th,
-.dark-panel-table td {
-  padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid #1c2735;
-  text-align: left;
-}
-
-.dark-panel-table th {
-  color: #91a8c6;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.dark-panel-table td {
-  color: #d3deee;
-  font-size: 0.9rem;
-}
-
-.state-ok {
-  color: #00ff72;
-  font-weight: 700;
-}
-
-.state-warn {
-  color: #ffc24d;
-  font-weight: 700;
-}
-
-@media (max-width: 920px) {
+}920px) {
   .guide-layout {
     grid-template-columns: 1fr;
   }

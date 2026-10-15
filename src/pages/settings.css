@@ -99,27 +99,7 @@
   margin-top: 0.5rem;
   border: 1px solid var(--line);
   border-radius: 6px;
-}
-.threshold-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-xs, 0.7rem);
-}
-.threshold-table th,
-.threshold-table td {
-  text-align: left;
-  padding: 0.35rem 0.55rem;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-.threshold-table th {
-  color: var(--ink-soft);
-  font-weight: 600;
-}
-.threshold-table tbody tr:last-child td { border-bottom: none; }
-.threshold-table td:first-child { white-space: normal; }
-
-/* The verdict text carries the meaning; colour only reinforces it. */
+}ng; colour only reinforces it. */
 .threshold-ok { color: var(--accent); font-weight: 600; }
 .threshold-bad { color: var(--danger); font-weight: 700; }
 .threshold-unknown { color: var(--ink-soft); font-style: italic; }

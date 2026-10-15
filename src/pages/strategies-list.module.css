@@ -155,33 +155,7 @@
   align-items: start;
 }
 
-.tablePane { overflow-x: auto; }
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-  color: var(--ink);
-}
-
-.table th {
-  padding: var(--space-sm);
-  text-align: left;
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.table td {
-  padding: var(--space-sm);
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-
-.table tbody tr { background: var(--panel); }
+.tablePane { overflow-x: auto; }.table tbody tr { background: var(--panel); }
 
 .row { cursor: pointer; }
 .row:hover { background: var(--line); }

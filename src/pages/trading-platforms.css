@@ -246,36 +246,7 @@
 
 .tp-comparison-wrap {
   overflow-x: auto;
-}
-
-.tp-comparison-table {
-  width: 100%;
-  min-width: 920px;
-  border-collapse: collapse;
-  font-size: 0.83rem;
-}
-
-.tp-comparison-table th,
-.tp-comparison-table td {
-  border-bottom: 1px solid var(--line);
-  padding: 0.45rem 0.5rem;
-  vertical-align: top;
-}
-
-.tp-comparison-table th {
-  background: color-mix(in srgb, var(--panel) 86%, var(--line));
-  text-align: left;
-  color: var(--ink-soft);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.tp-comparison-table input[type="checkbox"] {
-  opacity: 0.5;
-  accent-color: var(--accent);
-}
-.tp-comparison-table input[type="checkbox"]:checked {
+}undefined { min-width: 920px; }undefined { position: sticky; }input[type="checkbox"]:checked {
   opacity: 0.8;
 }
 
@@ -332,23 +303,7 @@
   color: var(--ink-soft);
   font-size: 0.74rem;
   line-height: 1.35;
-}
-
-.tp-config-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  table-layout: fixed;
-}
-
-.tp-config-table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--line);
-  vertical-align: top;
-  overflow-wrap: anywhere;
-}
-
-.tp-config-table td.label {
+}undefined { table-layout: fixed; }.tp-config-table td.label {
   color: var(--ink-soft);
   width: 120px;
   font-size: 0.78rem;
@@ -491,46 +446,11 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
-}
-
-.tp-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.tp-table thead {
+}.tp-table thead {
   background: color-mix(in srgb, var(--panel) 85%, var(--line));
-}
-
-.tp-table th {
-  padding: 0.55rem 0.7rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-  user-select: none;
-}
-
-.tp-table th:hover {
+}.tp-table th:hover {
   color: var(--ink);
-}
-
-.tp-table td {
-  padding: 0.45rem 0.7rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
-  color: var(--ink);
-}
-
-.tp-table tbody tr:hover {
-  background: color-mix(in srgb, var(--panel) 80%, var(--line));
-}
-
-.tp-mono {
+}.tp-mono {
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
   font-size: 0.78rem;
 }
@@ -588,12 +508,7 @@
   .tp-control input {
     max-width: 100%;
     width: 100%;
-  }
-  .tp-comparison-table {
-    min-width: 600px;
-    font-size: 0.76rem;
-  }
-  .tp-field-cell {
+  }undefined { min-width: 600px; }.tp-field-cell {
     min-width: 140px;
   }
 }
@@ -614,51 +529,11 @@
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line, var(--line));
   border-radius: 8px;
-}
-
-.pc-table {
-  width: 100%;
-  min-width: 900px;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.pc-table thead {
+}undefined { min-width: 900px; }.pc-table thead {
   position: sticky;
   top: 0;
   z-index: 2;
-}
-
-.pc-table th,
-.pc-table td {
-  padding: 0.45rem 0.55rem;
-  border-bottom: 1px solid var(--line, var(--line));
-  white-space: nowrap;
-  text-align: center;
-}
-
-.pc-table thead th {
-  background: var(--panel, var(--panel));
-  color: var(--ink-soft, var(--ink-soft));
-  font-weight: 600;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.pc-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.pc-table tbody tr:hover {
-  background: rgba(14, 165, 166, 0.06);
-}
-
-/* Sticky first column */
-.pc-sticky-col {
-  position: sticky;
-  left: 0;
-  z-index: 1;
+}ex: 1;
   background: var(--panel, var(--panel));
   text-align: left !important;
   font-weight: 600;
@@ -704,12 +579,7 @@
 
   .pc-sticky-col {
     min-width: 140px;
-  }
-
-  .pc-table {
-    font-size: 0.76rem;
-  }
-}
+  }}
 
 /* ── Add Symbol Search (side panel) ──────────────────────── */
 
@@ -884,30 +754,7 @@
 .pc-scroll-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-}
-.pc-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-  min-width: 600px;
-}
-.pc-table th {
-  text-align: left;
-  padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink-soft);
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-.pc-table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid rgba(51,65,85,0.3);
-  vertical-align: top;
-}
-.pc-sticky-col {
+}undefined { min-width: 600px; }.pc-sticky-col {
   position: sticky;
   left: 0;
   background: var(--panel);

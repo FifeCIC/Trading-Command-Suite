@@ -115,15 +115,7 @@
 .appearance-table-wrap {
   overflow-x: auto;
   border-radius: 6px;
-}
-
-.appearance-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-/* ⚠️ The header row must stay distinguishable from the panel behind it. Inside a panel,
+}/* ⚠️ The header row must stay distinguishable from the panel behind it. Inside a panel,
    `background: var(--panel)` makes the header row invisible — so it is mixed, using the same idiom
    index.css already uses for panel edges (`color-mix(in srgb, var(--panel) 93%, var(--bg) 7%)`). */
 .appearance-table th {
@@ -137,16 +129,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
-}
-
-.appearance-table td {
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid var(--line);
-  vertical-align: top;
-  line-height: 1.45;
-}
-
-.appearance-table tbody tr:last-child td {
+}.appearance-table tbody tr:last-child td {
   border-bottom: none;
 }
 

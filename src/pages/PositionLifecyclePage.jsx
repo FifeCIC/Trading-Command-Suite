@@ -69,6 +69,7 @@ export default function PositionLifecyclePage() {
         {openTrades.length === 0 ? (
           <p className="poslife-empty">No open trades recorded.</p>
         ) : (
+          <div className="poslife-table-wrap">
           <table className="poslife-table">
             <thead><tr><th>Symbol</th><th>Side</th><th>Ticket</th><th>Origin</th><th>Source</th><th>Qty</th><th>Entry</th><th>Opened</th></tr></thead>
             <tbody>
@@ -86,6 +87,7 @@ export default function PositionLifecyclePage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 
@@ -94,6 +96,7 @@ export default function PositionLifecyclePage() {
         {positions.length === 0 ? (
           <p className="poslife-empty">No positions synced yet. The automation loop syncs broker positions each tick.</p>
         ) : (
+          <div className="poslife-table-wrap">
           <table className="poslife-table">
             <thead><tr><th>Symbol</th><th>Side</th><th>Ticket</th><th>Provider</th><th>Qty</th><th>Avg</th><th>P&amp;L</th><th>Last quote</th></tr></thead>
             <tbody>
@@ -111,6 +114,7 @@ export default function PositionLifecyclePage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 

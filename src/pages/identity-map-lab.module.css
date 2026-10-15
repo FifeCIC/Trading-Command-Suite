@@ -101,26 +101,7 @@
 .dotNone { background: var(--border-strong); }
 
 /* ── Tables ── */
-.tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.table th {
-  text-align: left;
-  padding: 8px 10px;
-  background: var(--bg-elev);
-  color: var(--text-dim);
-  font-weight: 600;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-}
-.table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.table tbody tr:last-child td { border-bottom: none; }
-.table tbody tr:hover { background: var(--bg-elev); }
-.rowWarn { background: color-mix(in srgb, var(--risk-watch) 8%, transparent); }
+.tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }undefined { position: sticky; }.table tbody tr:last-child td { border-bottom: none; }.rowWarn { background: color-mix(in srgb, var(--risk-watch) 8%, transparent); }
 .rowAmb { background: color-mix(in srgb, var(--risk-high) 8%, transparent); }
 .num { font-family: var(--font-mono, ui-monospace, monospace); white-space: nowrap; }
 .no { color: var(--text-faint); }

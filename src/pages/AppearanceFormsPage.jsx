@@ -220,6 +220,164 @@ export default function AppearanceFormsPage() {
           <pre className="tl-pre">{FORM_STANDARD_CLASSES}</pre>
         </details>
       </section>
+
+      {/* ── Add-items form — TWO ARRANGEMENTS, CHOSEN BY THE OWNER ──────────────────────────────
+          Owner request, from /protocols/protocol-builder: *"add 2-3 examples of a similar 'add items'
+          form arrangement and I will choose one."* Three were offered on 2026-10-13; the owner chose
+          **A and B**, and C (the compact add-bar variant) was DELETED on 2026-10-14. Do not re-add C
+          without asking — it was rejected, not overlooked.
+
+          Both keep only `.ff-*` classes, and the fields are the ones the real builder uses (name,
+          weight, risk gate), so these are two arrangements of ONE task, not two different forms. */}
+      <section className="tl-section">
+        <h3>Add-Items Form — two arrangements</h3>
+        <p className="tl-hint">
+          One task — build a list of items, each with a name, a weight and a risk-gate flag — laid out
+          two ways. Source: <code>/protocols/protocol-builder</code> (“Directive Groups”), which the
+          owner rated 7/10 with the note that the only fault was that “everythings black and white”.
+        </p>
+
+        <div className="tl-form-demos">
+          {/* A — inline rows, add at the bottom. Densest. */}
+          <div className="tl-form-demo">
+            <h3>A · Inline rows, add at the bottom</h3>
+            <div className="ff-form">
+              <fieldset className="ff-fieldset">
+                <legend className="ff-legend">Directive groups</legend>
+                <div className="ff-row-3">
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-a1">Name</label>
+                    <input id="ai-a1" className="ff-input" type="text" defaultValue="Momentum" />
+                  </div>
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-a2">Weight</label>
+                    <input id="ai-a2" className="ff-input" type="number" defaultValue="5" />
+                  </div>
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-a3">Risk gate</label>
+                    <label className="ff-checkbox-label">
+                      <input id="ai-a3" type="checkbox" defaultChecked />
+                      <span>Applies a risk multiplier</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="ff-row-3">
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-a4">Name</label>
+                    <input id="ai-a4" className="ff-input" type="text" defaultValue="Trend" />
+                  </div>
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-a5">Weight</label>
+                    <input id="ai-a5" className="ff-input" type="number" defaultValue="3" />
+                  </div>
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-a6">Risk gate</label>
+                    <label className="ff-checkbox-label">
+                      <input id="ai-a6" type="checkbox" />
+                      <span>Applies a risk multiplier</span>
+                    </label>
+                  </div>
+                </div>
+              </fieldset>
+              <button type="button" className="ff-btn ff-btn-secondary">+ Add item</button>
+            </div>
+          </div>
+
+          {/* B — one card per item. Most comfortable; better for a few items with more detail.
+
+              ⚠️ THE OWNER'S REASON FOR KEEPING B (2026-10-14), recorded here so the choice is not
+              re-opened by accident: B is the arrangement to reach for "when the values might need
+              messages displayed underneath such as warnings or confirmation that the values are
+              correct". Because each item is its own `<fieldset>`, it has somewhere natural to put a
+              message that belongs to THAT item — the `.ff-hint` lines below are already doing exactly
+              this, one per card.
+
+              To extend it: `.ff-field--error` / `.ff-field--success` mark a field and pair with
+              `.ff-field-error`, `.ff-hint-warn` gives a caution, and plain `.ff-hint` confirms.
+              Those states are rendered in full in "Error & Disabled States" above.
+
+              That is the trade against A: A is a flat grid, and a grid row has nowhere to hang a
+              per-item message without breaking the columns. A is for many items, B is for items that
+              need a verdict attached. */}
+          <div className="tl-form-demo">
+            <h3>B · One card per item</h3>
+            <div className="ff-form">
+              <fieldset className="ff-fieldset">
+                <legend className="ff-legend">1 · Momentum</legend>
+                <div className="ff-row-2">
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-b1">Weight</label>
+                    <input id="ai-b1" className="ff-input" type="number" defaultValue="5" />
+                  </div>
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-b2">Min multiplier</label>
+                    <input id="ai-b2" className="ff-input" type="number" step="0.1" defaultValue="0.5" />
+                  </div>
+                </div>
+                <span className="ff-hint">Risk gate — caps the composite when conditions are poor.</span>
+              </fieldset>
+              <fieldset className="ff-fieldset">
+                <legend className="ff-legend">2 · Trend</legend>
+                <div className="ff-row-2">
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-b3">Weight</label>
+                    <input id="ai-b3" className="ff-input" type="number" defaultValue="3" />
+                  </div>
+                  <div className="ff-field">
+                    <label className="ff-label" htmlFor="ai-b4">Min multiplier</label>
+                    <input id="ai-b4" className="ff-input" type="number" step="0.1" defaultValue="1" />
+                  </div>
+                </div>
+                <span className="ff-hint">Not a gate — contributes to the composite only.</span>
+              </fieldset>
+              <button type="button" className="ff-btn ff-btn-secondary">+ Add item</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── Segmented filter, second variant ─────────────────────────────────────────────────────── */}
+      <section className="tl-section">
+        <h3>Segmented filter — the two proven variants</h3>
+        <p className="tl-hint">
+          Both come from <code>/research/earnings-calendar</code>, where the owner singled them out: *“The
+          screen options are good … they work especially good with icons.”* A segmented control is for a
+          FEW fixed options; past about five, use a <code>.ff-select</code> instead.
+        </p>
+        <div className="ff-form">
+          <div className="ff-field">
+            <span className="ff-label">Time window — five options, plain text</span>
+            <div className="ff-seg" role="group" aria-label="Time window">
+              <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">All</button>
+              <button type="button" className="ff-seg-btn" aria-pressed="false">Today</button>
+              <button type="button" className="ff-seg-btn" aria-pressed="false">Tomorrow</button>
+              <button type="button" className="ff-seg-btn" aria-pressed="false">This Week</button>
+              <button type="button" className="ff-seg-btn" aria-pressed="false">Next Week</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Inline trigger ───────────────────────────────────────────────────────────────────────── */}
+      <section className="tl-section">
+        <h3>Inline trigger — the ℹ affordance</h3>
+        <p className="tl-hint">
+          The owner asked for this in the library: *“This needs to be a part of all pages.”* It is
+          <code>PageInfoPopover</code> — a small circular ℹ button opening a native popover. It is what sits
+          on this page&apos;s own heading, and the shell renders it in the top row for any view with an
+          explanation entry, so it is already app-wide. It is NOT a symbol opener.
+        </p>
+        <div className="ff-field">
+          <span className="ff-label">Any label that needs explaining</span>
+          {/* ⚠️ SIBLING, not a child of that span. PageInfoPopover renders a <div>, and a <div> inside a
+              <span> or <p> is invalid HTML — React logs validateDOMNesting on every page that does it. */}
+          <PageInfoPopover>
+            A short explanation of whatever sits beside it. This is the whole component: a trigger button
+            and a popover panel, no configuration.
+          </PageInfoPopover>
+        </div>
+      </section>
     </div>
   );
 }

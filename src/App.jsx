@@ -1110,8 +1110,25 @@ export default function App() {
                   showing a blank view to anyone following an older link or handoff. */}
               <Route path="/development/theme-lab" element={<Navigate to="/appearance/layout-guide" replace />} />
               <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
+              {/* ⚠️ PHANTOM VIEW-META ENTRIES REMOVED 2026-10-15 — these five paths had a view-meta entry
+                  but no route, because routes are generated from the NAV TREE and the nav moved these
+                  views to /protocols ("Fully migrated from legacy /scoring/ area", nav-tree.js). The
+                  entries were a phantom: no route, but a row in the Page Walkthrough — which is how the
+                  owner came to score five non-existent pages 1/10.
+                  ⚠️ DIRECTION IS PER VIEW, and these five went protocols-ward while symbols-ladder and
+                  singles-monitor (above) went scoring-ward. The nav tree decides, not a neighbouring
+                  redirect — reading one case backwards is how an agent would re-open this. */}
+              <Route path="/scoring/directives-registry" element={<Navigate to="/protocols/directives-registry" replace />} />
+              <Route path="/scoring/protocols-ladder" element={<Navigate to="/protocols/protocols-ladder" replace />} />
+              <Route path="/scoring/protocol-builder" element={<Navigate to="/protocols/protocol-builder" replace />} />
+              <Route path="/scoring/sees-arena" element={<Navigate to="/protocols/sees-arena" replace />} />
+              <Route path="/lab/dual-protocol-inspector" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
               <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
-              <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
+              {/* ⚠️ TARGET CORRECTED 2026-10-15. This pointed at `/lab/dual-protocol-inspector`, which is
+                  not a route — the nav routes that view at `/protocols/dual-protocol-inspector`. A
+                  redirect to a dead path is worse than no redirect: it looks handled while landing the
+                  user on the catch-all. */}
+              <Route path="/lab/scoring-debug-lab" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
               <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
               {/* ⚠️ This redirected to /status/meta-stack-pipeline, which was MERGED into this lab
                   (2026-10-08). The old URL now lands on the graph itself rather than 404ing — a

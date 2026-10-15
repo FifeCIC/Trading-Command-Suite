@@ -220,21 +220,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--accent, var(--accent));
-}
-
-.decoder-fields-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-}
-
-.decoder-fields-table td {
-  padding: 0.3rem 0.5rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line, var(--line)) 50%, transparent);
-  vertical-align: top;
-}
-
-.decoder-field-label {
+}.decoder-field-label {
   width: 140px;
   color: var(--ink-soft, var(--ink-soft));
   font-weight: 600;

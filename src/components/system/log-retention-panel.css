@@ -111,23 +111,7 @@
 
 .lrp-btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--color-loss) 14%, transparent); }
 
-.lrp-table-wrap { overflow-x: auto; }
-
-.lrp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-
-.lrp-table th {
-  text-align: left;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-}
-
-.lrp-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); }
-
-.lrp-file { font-size: 0.78rem; color: var(--color-accent-blue); }
+.lrp-table-wrap { overflow-x: auto; }.lrp-file { font-size: 0.78rem; color: var(--color-accent-blue); }
 .lrp-size { font-variant-numeric: tabular-nums; color: var(--ink-soft); white-space: nowrap; }
 .lrp-verdict { color: var(--ink-soft); font-size: 0.75rem; }
 .lrp-empty { color: var(--ink-soft); font-style: italic; }

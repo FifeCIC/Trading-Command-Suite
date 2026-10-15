@@ -76,34 +76,7 @@
   border-radius: 10px;
   overflow-x: auto;
   background: var(--panel);
-}
-
-.directives-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.directives-table thead th {
-  text-align: left;
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  padding: 0.45rem 0.5rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.directives-table td {
-  border-bottom: 1px solid var(--line);
-  padding: 0.4rem 0.5rem;
-  vertical-align: top;
-  color: var(--ink);
-  font-size: 0.82rem;
-}
-
-.directive-row {
+}.directive-row {
   transition: background 0.15s;
   cursor: pointer;
 }
@@ -437,12 +410,7 @@
 @media (max-width: 840px) {
   .directives-header {
     grid-template-columns: 1fr;
-  }
-
-  .directives-table {
-    font-size: 0.9rem;
-  }
-}
+  }}
 
 /* ── Category & Complexity badges (mirror directives-status styling) ── */
 .directives-table td:nth-child(2) { /* Category */

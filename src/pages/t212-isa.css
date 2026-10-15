@@ -96,27 +96,7 @@
 }
 
 /* ── Table ── */
-.t212i-table-wrap { overflow-x: auto; }
-.t212i-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-.t212i-table th {
-  text-align: left;
-  padding: 0.4rem 0.6rem;
-  color: var(--ink-soft, var(--color-muted));
-  font-weight: 600;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: 1px solid var(--line, var(--line));
-}
-.t212i-table td {
-  padding: 0.35rem 0.6rem;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.t212i-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
+.t212i-table-wrap { overflow-x: auto; }.t212i-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
 .t212i-empty { color: var(--ink-soft, var(--color-muted)); font-size: 0.85rem; font-style: italic; }
 
 /* ── Placeholder (not connected state) ── */

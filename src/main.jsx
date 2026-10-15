@@ -6,6 +6,11 @@ import App from './App';
 import { getPreferences } from './core/hooks/usePreferences';
 import { applyNoticeLocale } from './core/notices/apply-locale';
 import './index.css';
+// ⚠️ THE CANONICAL TABLE ARRANGEMENT, LOADED AFTER index.css. It is one arrangement for 57 table
+// classes, replacing 57 hand-written ones (measured: 69 families, 69 distinct arrangements before this).
+// It loads last so its declarations win any tie — though the per-page arrangement rules were removed
+// outright, so there should be nothing left to tie with. See the file's own header for the measurement.
+import './core/tables.css';
 
 // Apply the stored notice locale before the first render, so a reload never flashes English
 // messages at a user who chose otherwise (#826 Phase 6). Every later change applies through

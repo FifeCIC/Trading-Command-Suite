@@ -476,39 +476,7 @@
 
 .architecture-table-wrap {
   overflow-x: auto;
-}
-
-.architecture-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 640px;
-}
-
-.architecture-table th,
-.architecture-table td {
-  border: 1px solid var(--arch-border-table);
-  padding: 10px 12px;
-  text-align: left;
-  vertical-align: top;
-  color: var(--arch-text-secondary);
-}
-
-.architecture-table th {
-  background: var(--arch-bg-table-head);
-  color: var(--arch-text-table-head);
-}
-
-.architecture-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.architecture-card h2 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  color: var(--arch-text-primary);
+}undefined { min-width: 640px; }undefined { display: grid; }r: var(--arch-text-primary);
 }
 
 .architecture-card ul,

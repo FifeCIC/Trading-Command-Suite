@@ -12,18 +12,7 @@
 .pf-cons-neg { background: rgba(239,68,68,0.15); color: var(--color-loss); }
 
 /* ── Table ────────────────────────────────────────────────── */
-.pf-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; margin-bottom: 1rem; }
-.pf-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.pf-table th {
-  text-align: left; font-weight: 500; color: var(--ink-soft, var(--ink-soft));
-  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
-  background: rgba(0,0,0,0.12); white-space: nowrap;
-}
-.pf-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.pf-table tbody tr { cursor: pointer; transition: background 0.15s; }
-.pf-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-.pf-row-expanded { background: rgba(14,165,166,0.06) !important; }
+.pf-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; margin-bottom: 1rem; }.pf-table tbody tr { cursor: pointer; transition: background 0.15s; }.pf-row-expanded { background: rgba(14,165,166,0.06) !important; }
 
 .pf-sortable { cursor: pointer; user-select: none; }
 .pf-sortable:hover { color: var(--accent, var(--accent)); }
@@ -67,9 +56,7 @@
   display: flex; gap: 1rem; font-size: 0.68rem; color: var(--ink-soft, var(--ink-soft));
 }
 
-@media (max-width: 700px) { .pf-table { font-size: 0.72rem; } .pf-table th, .pf-table td { padding: 0.3rem 0.4rem; } }
-
-/* ── States ──────────────────────────────────────────────── */
+@media (max-width: 700px) {─────────── */
 .pf-loading {
   text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
   font-size: 0.92rem;

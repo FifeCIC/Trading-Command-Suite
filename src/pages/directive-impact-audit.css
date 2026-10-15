@@ -92,31 +92,7 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-}
-.dia-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-.dia-table th {
-  text-align: left;
-  padding: 0.55rem 0.6rem;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.dia-table td {
-  padding: 0.45rem 0.6rem;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.dia-table tbody tr:hover {
-  background: var(--bg);
-}
-.dia-row-hw {
+}.dia-row-hw {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 .dia-rank {

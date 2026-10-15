@@ -185,14 +185,7 @@
   color: var(--ink-soft);
   text-align: center;
   padding: 1rem;
-}
-
-.mt5-log-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.mt5-log-row td {
+}.mt5-log-row td {
   padding: 0.2rem 0.4rem;
   vertical-align: top;
 }

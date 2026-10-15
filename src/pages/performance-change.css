@@ -84,33 +84,7 @@
 
 .pc-table-wrap {
   overflow-x: auto;
-}
-
-.pc-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-
-.pc-table th {
-  text-align: left;
-  padding: 6px 10px 6px 0;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.pc-table td {
-  padding: 6px 10px 6px 0;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-
-.pc-entity {
+}.pc-entity {
   font-family: inherit;
   color: var(--ink);
 }

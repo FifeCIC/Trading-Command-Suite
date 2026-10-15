@@ -100,22 +100,7 @@
 .dv-badge--nature  { background: var(--notice-info-bg); color: var(--notice-info-text); text-transform: none; letter-spacing: 0; }
 .dv-badge--feed    { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-soft); text-transform: none; letter-spacing: 0; font-weight: 600; }
 
-.dv-table-wrap { overflow-x: auto; }
-.dv-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.dv-table th {
-  text-align: left;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-  border-bottom: 2px solid var(--line);
-}
-.dv-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); }
-.dv-table tbody tr:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
-
-/* ── Directive picker — the page's entry point and search (added 2026-10-06) ──
+.dv-table-wrap { overflow-x: auto; }/* ── Directive picker — the page's entry point and search (added 2026-10-06) ──
    Before this the page had NO way in: it read `?id=` and offered nothing else, so opening it from
    the navigation showed an empty state that only pointed at a URL parameter. */
 .dv-picker { margin-bottom: 1rem; }

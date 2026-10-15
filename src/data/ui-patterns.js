@@ -213,6 +213,10 @@ export const UI_PATTERNS = [
   },
   {
     id: 'add-items-form',
+    // Sample BUILT 2026-10-13, TRIMMED 2026-10-14 — the owner chose A (inline rows) and B (one card per
+    // item) from three offered, and C was deleted. B is the one kept for items that need a warning or a
+    // confirmation underneath their values; that reason is recorded at the code site.
+    sampleAt: '/appearance/forms',
     family: 'control',
     name: 'Add-items form arrangement',
     what: 'A repeating "add item" block — currently monochrome. The owner wants 2–3 variants to choose from before settling.',
@@ -235,6 +239,9 @@ export const UI_PATTERNS = [
   },
   {
     id: 'segmented-filter',
+    // Sample BUILT 2026-10-13 — both proven variants on /appearance/forms: the five-option time window
+    // and the icon variant (☀️ BMO / 🌙 AMC).
+    sampleAt: '/appearance/forms',
     family: 'control',
     name: 'Segmented control with icons',
     what: 'A segmented filter where each segment may carry an icon; two proven variants (time window, session timing).',
@@ -246,10 +253,19 @@ export const UI_PATTERNS = [
   },
   {
     id: 'pip-trigger',
+    // ⚠️ CORRECTED 2026-10-13, AND THE ORIGINAL ENTRY WAS WRONG. Measured: the `.pip-trigger` class
+    // belongs to `src/components/PageInfoPopover.jsx` — it is the small CIRCULAR ℹ button that opens a
+    // native popover, and the shell renders it in the top row for any view with a VIEW_EXPLANATIONS
+    // entry. It is NOT a square button and it does NOT open a symbol or detail panel. The owner's
+    // walkthrough note attached it to /watchlists/active-symbols because that is the page where their
+    // element picker sampled it — the element is shell-level, not page-level.
+    // The `what` / `bestFor` lines below were written before that was measured; the `sampleAt` note is
+    // the correction. Do not re-read the old description as fact.
+    sampleAt: '/appearance/forms',
     family: 'control',
-    name: 'Inline trigger button',
-    what: 'A very small square icon button that opens a symbol or detail panel from anywhere. The owner wants it available on all pages.',
-    bestFor: 'A consistent "open this thing" affordance across every list',
+    name: 'Inline trigger — the ℹ popover',
+    what: 'The ℹ button (`PageInfoPopover`): a small CIRCULAR trigger that opens a native popover explaining whatever sits beside it. The shell renders it in the top row for any view with an explanation entry, so it is already app-wide rather than something to add per page.',
+    bestFor: 'Explaining a view or a control in place, without a help page',
     sources: [{ view: '/watchlists/user-watchlists', score: 6 }],
     elements: ['pip-trigger'],
     owner: '"This needs to be a part of all pages so lets add it to the theme libraries example pages"',
@@ -303,6 +319,10 @@ export const UI_PATTERNS = [
   },
   {
     id: 'impact-notice',
+    // Sample BUILT 2026-10-13 — /appearance/surfaces, using the source page's own `.mse-signal-banner`
+    // classes and live `/api/scoring/ranked` values. The `mse-signal-verified` modifier is deliberately
+    // NOT shown: its "✓ Pipeline Verified" badge is a claim about the pipeline, not a style.
+    sampleAt: '/appearance/surfaces',
     family: 'container',
     name: 'High-impact notice banner',
     what: 'A large, loud banner carrying one headline figure and its status — deliberately built to stop the eye.',

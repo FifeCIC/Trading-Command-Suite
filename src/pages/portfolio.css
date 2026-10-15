@@ -20,11 +20,7 @@
 .pf-bar-down { background: var(--color-loss); }
 .pf-bar-cash { background: var(--line); }
 .pf-alloc-pct { font-size: 0.82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.pf-warn { font-size: 0.72rem; color: #e6a700; }
-.pf-table { width: 100%; border-collapse: collapse; }
-.pf-table th { text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding: 0.55rem 0.6rem; }
-.pf-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent 40%); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
-.pf-error { color: var(--color-loss); }
+.pf-warn { font-size: 0.72rem; color: #e6a700; }.pf-error { color: var(--color-loss); }
 
 /* Type badges */
 .pf-type-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; }

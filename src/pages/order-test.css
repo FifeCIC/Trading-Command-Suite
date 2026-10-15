@@ -23,30 +23,7 @@
   background: rgba(14,165,166,0.15);
   border-color: var(--accent);
   color: var(--accent);
-}
-
-.ot-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.ot-table th {
-  text-align: left;
-  padding: 0.4rem 0.5rem;
-  border-bottom: 2px solid var(--line, var(--line));
-  color: var(--ink-soft, var(--ink-soft));
-  font-size: 0.72rem;
-  text-transform: uppercase;
-}
-
-.ot-table td {
-  padding: 0.45rem 0.5rem;
-  border-bottom: 1px solid var(--line, var(--line));
-  vertical-align: top;
-}
-
-.ot-row--ok { background: rgba(34,197,94,0.03); }
+}.ot-row--ok { background: rgba(34,197,94,0.03); }
 .ot-row--fail { background: rgba(239,68,68,0.03); }
 
 .ot-method {

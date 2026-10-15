@@ -205,37 +205,7 @@
 }
 
 /* ── Table ── */
-.t212p-table-wrap { overflow-x: auto; }
-.t212p-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-.t212p-table th {
-  text-align: left;
-  padding: 8px 12px;
-  color: var(--ink-soft);
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-.t212p-table td {
-  padding: 8px 12px;
-  /* ⚠️ Was `rgba(255,255,255,0.04)` — a hardcoded WHITE hairline. It is invisible on any light theme
-     and ignores every theme pack, so the rows had no separation at all wherever the surface was pale.
-     This is the second half of the owner's *"the table needs to match the most recent designs"*: the
-     header already matched, the body did not. Derived from `--line` the way
-     /status/meta-stack-status does it — the page the owner named as the exemplar (*"a good example for
-     some of the lesser styled pages"*) — so it darkens on light themes and lightens on dark ones.
-     `tabular-nums` because every column after Symbol is a number, and they should line up. */
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
-  vertical-align: middle;
-  font-variant-numeric: tabular-nums;
-}
-.t212p-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
+.t212p-table-wrap { overflow-x: auto; }.t212p-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
 
 /* ⚠️ The ticker is now a LINK (2026-10-06). Owner (Page Walkthrough, /trading/t212-portfolio):
    *"links from symbols to the symbols own page"*. Before this the ticker was inert text in BOTH

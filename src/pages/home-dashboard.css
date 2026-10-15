@@ -609,11 +609,7 @@
 }
 
 /* ── Positions Table ────────────────────────────────────── */
-.dash-table-wrap { overflow-x: auto; }
-.dash-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.dash-table th { text-align: left; padding: 0.35rem 0.5rem; color: var(--color-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line); }
-.dash-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(51,65,85,0.4); }
-.dash-buy { color: var(--color-profit); font-weight: 600; }
+.dash-table-wrap { overflow-x: auto; }.dash-buy { color: var(--color-profit); font-weight: 600; }
 .dash-sell { color: var(--color-loss); font-weight: 600; }
 .dash-profit { color: var(--color-profit); font-weight: 600; }
 .dash-loss { color: var(--color-loss); font-weight: 600; }

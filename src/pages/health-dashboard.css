@@ -69,11 +69,7 @@
 .hd-trend-count { font-size: 0.58rem; color: var(--ink-soft); width: 30px; text-align: right; }
 
 /* Tables */
-.hd-table-wrap { overflow-x: auto; }
-.hd-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
-.hd-table th { text-align: left; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--line); }
-.hd-table td { padding: 0.2rem 0.4rem; border-bottom: 1px solid rgba(128,128,128,0.05); }
-.hd-table-sm td { font-size: 0.65rem; }
+.hd-table-wrap { overflow-x: auto; }.hd-table-sm td { font-size: 0.65rem; }
 .hd-td-name { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hd-td-num { font-variant-numeric: tabular-nums; text-align: right; }
 .hd-td-hint { font-size: 0.6rem; color: var(--ink-soft); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

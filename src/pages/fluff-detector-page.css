@@ -11,11 +11,7 @@
 .fd-summary-card.fluffy { border-color: #7f1d1d; }
 .fd-summary-num { display: block; font-size: 1.4rem; font-weight: 700; color: var(--ink); }
 .fd-summary-label { font-size: 0.72rem; color: var(--color-muted); }
-.fd-table-wrap { overflow-x: auto; }
-.fd-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.fd-table th { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--panel); color: var(--ink-soft); font-size: 0.75rem; text-transform: uppercase; }
-.fd-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #1e2030; }
-.fd-row { cursor: pointer; transition: background 0.15s; }
+.fd-table-wrap { overflow-x: auto; }.fd-row { cursor: pointer; transition: background 0.15s; }
 .fd-row:hover { background: var(--panel)33; }
 .fd-source-name { font-weight: 600; color: var(--ink); }
 .fd-score-text { font-size: 0.78rem; color: var(--ink-soft); margin-left: 0.5rem; }

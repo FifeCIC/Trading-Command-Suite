@@ -51,17 +51,7 @@
 .dm-btn-danger:hover { background: rgba(239,68,68,0.15); }
 
 /* ── Table ── */
-.dm-table-wrap { overflow-x: auto; }
-.dm-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-.dm-table th {
-  text-align: left; padding: 0.4rem 0.5rem;
-  color: var(--ink-soft); font-size: 0.7rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--line);
-}
-.dm-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid rgba(51,65,85,0.3); }
-
-.dm-table-name { font-size: 0.78rem; color: #a5b4fc; margin-right: 0.5rem; }
+.dm-table-wrap { overflow-x: auto; }.dm-table-name { font-size: 0.78rem; color: #a5b4fc; margin-right: 0.5rem; }
 .dm-table-label { font-size: 0.72rem; color: var(--ink-soft); }
 
 .dm-row-count { font-weight: 600; font-variant-numeric: tabular-nums; }

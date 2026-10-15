@@ -221,30 +221,7 @@
 }
 
 /* Positions table */
-.db-positions-table-wrap { overflow-x: auto; }
-.db-positions-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.db-positions-table th {
-  text-align: left;
-  padding: 6px 8px;
-  color: var(--color-muted);
-  font-weight: 600;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: 1px solid var(--line);
-}
-
-.db-positions-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(45,48,64,0.4);
-}
-
-.db-buy { color: var(--color-profit); font-weight: 600; }
+.db-positions-table-wrap { overflow-x: auto; }.db-buy { color: var(--color-profit); font-weight: 600; }
 .db-sell { color: var(--color-loss); font-weight: 600; }
 .db-profit { color: var(--color-profit); font-weight: 600; }
 .db-loss { color: var(--color-loss); font-weight: 600; }

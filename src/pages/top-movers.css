@@ -31,17 +31,7 @@
 .tm-losers h2 { color: var(--color-loss); font-size: 1rem; margin: 0 0 0.75rem; }
 
 /* ── Table ── */
-.tm-table-wrap { overflow-x: auto; }
-.tm-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-.tm-table th {
-  text-align: left; padding: 0.35rem 0.5rem;
-  color: var(--ink-soft); font-size: 0.7rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--line);
-}
-.tm-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid rgba(51,65,85,0.3); }
-
-.tm-ticker-link {
+.tm-table-wrap { overflow-x: auto; }.tm-ticker-link {
   color: var(--accent); font-weight: 700; text-decoration: none;
   font-family: monospace; font-size: 0.85rem;
 }

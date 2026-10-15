@@ -88,18 +88,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.rp-table-wrap { overflow-x: auto; }
-.rp-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-.rp-table th {
-  text-align: left;
-  font-weight: 600;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  padding: 4px 6px;
-  white-space: nowrap;
-}
-.rp-table td { padding: 3px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.rp-mono { font-variant-numeric: tabular-nums; font-size: 0.72rem; }
+.rp-table-wrap { overflow-x: auto; }.rp-mono { font-variant-numeric: tabular-nums; font-size: 0.72rem; }
 .rp-up { color: #22c55e; }
 .rp-down { color: #ef4444; }
 .rp-row-open { opacity: 0.75; }

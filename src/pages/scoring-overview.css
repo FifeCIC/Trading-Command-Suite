@@ -303,29 +303,7 @@
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--line);
-}
-
-.so-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.so-table th {
-  text-align: left;
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  padding: 0.5rem 0.55rem;
-}
-
-.so-table td {
-  padding: 0.45rem 0.55rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent 40%);
-}
-
-.so-table strong {
+}.so-table strong {
   color: var(--ink);
 }
 
@@ -596,30 +574,14 @@
 /* ── Help Modal ── */
 .los-help-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .los-help-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; min-width: 280px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
-.los-help-modal h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
-.los-help-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.los-help-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.08); }
-.los-help-table kbd { background: var(--line); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 0.75rem; }
+.los-help-modal h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }.los-help-table kbd { background: var(--line); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 0.75rem; }
 .los-help-close { margin-top: 0.6rem; padding: 0.35rem 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; font-family: inherit; font-size: 0.78rem; }
 .los-help-close:hover { border-color: var(--accent); }
 .los-refreshing {
   text-align: center; font-size: 0.78rem; color: var(--ink-soft);
   margin: 0.5rem 0 0; animation: los-pulse .8s ease-in-out infinite;
 }
-.los-stack-table-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
-.los-stack-table { width: 100%; border-collapse: collapse; }
-.los-stack-table th {
-  text-align: left; font-size: 0.8rem; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--ink-soft);
-  border-bottom: 1px solid var(--line); padding: 0.5rem 0.55rem;
-  background: color-mix(in srgb, var(--panel) 96%, var(--bg) 4%);
-}
-.los-stack-table td {
-  padding: 0.5rem 0.55rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent 50%);
-  font-size: 0.82rem;
-}
-.los-row-top td { background: rgba(14,165,166,0.04); }
+.los-stack-table-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }.los-row-top td { background: rgba(14,165,166,0.04); }
 .los-rank { width: 30px; font-weight: 700; color: var(--ink-soft); text-align: center; }
 .los-ticker { font-weight: 700; font-family: monospace; font-size: 0.85rem !important; }
 .los-score { min-width: 140px; }

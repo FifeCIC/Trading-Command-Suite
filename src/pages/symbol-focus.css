@@ -218,29 +218,7 @@
 
 /* Horizontal scroll rather than a cramped table — 10 columns will not fit a narrow pane, and a
    squeezed table is unreadable rather than merely ugly. */
-.sf-cmp-scroll { overflow-x: auto; }
-
-.sf-cmp-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.75rem;
-}
-.sf-cmp-table th {
-  text-align: left;
-  font-size: 0.64rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  padding: 0.25rem 0.4rem;
-  white-space: nowrap;
-}
-.sf-cmp-table td {
-  padding: 0.25rem 0.4rem;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-.sf-cmp-table .sf-num { text-align: right; font-variant-numeric: tabular-nums; }
+.sf-cmp-scroll { overflow-x: auto; }.sf-cmp-table .sf-num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ⚠️ An unmeasured protocol is dimmed, NOT zeroed. It has no reading in the window; that is
    "unknown", and rendering it as a low number would put it beside a measured-bad one. */

@@ -19,12 +19,14 @@
 .poslife-section { margin-bottom: 1.25rem; }
 .poslife-section h3 { margin: 0 0 0.5rem; color: var(--ink); font-size: 0.95rem; }
 .poslife-hint { font-size: 0.7rem; color: var(--color-muted); font-weight: 400; }
-.poslife-empty { color: var(--color-muted); font-size: 0.85rem; padding: 0.75rem; border: 1px dashed var(--line); border-radius: 8px; }
-
-.poslife-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.poslife-table th { text-align: left; padding: 8px 12px; color: var(--ink-soft); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.poslife-table td { padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); vertical-align: middle; font-variant-numeric: tabular-nums; }
-.poslife-symbol { font-weight: 700; color: var(--ink); }
+.poslife-empty { color: var(--color-muted); font-size: 0.85rem; padding: 0.75rem; border: 1px dashed var(--line); border-radius: 8px; }/* ⚠️ THE WRAP IS WHY THIS PAGE WAS OVERFLOWING THE VIEWPORT. Measured 2026-10-13: the table rendered
+   704px wide inside a 689px `.poslife-page` at a 989px viewport, pushing `document.scrollWidth` to
+   1003px — a 14px horizontal scroll on a page whose only fault was a table with no scroll container.
+   EVERY other table in the app has one (`.pl-table-wrap`, `.mss-table-wrap`, `.dv-table-wrap`,
+   `.screener-table-wrap`, `.directives-table-wrap`); this page was the exception.
+   `overflow-x: auto` sits on the WRAPPER, never the `<table>` — a table cannot scroll itself, and
+   putting it here is what lets `.main-stage { min-width: 0 }` (#853) actually do its job. */
+.poslife-table-wrap { overflow-x: auto; }.poslife-symbol { font-weight: 700; color: var(--ink); }
 .poslife-mono { font-family: ui-monospace, monospace; color: var(--accent); }
 .pl-muted { color: var(--ink-soft); }
 .poslife-green { color: var(--color-profit); }

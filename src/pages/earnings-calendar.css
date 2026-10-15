@@ -86,15 +86,7 @@
 .ec-count { font-size: 0.7rem; font-weight: 500; background: rgba(255,255,255,0.06); padding: 0.15rem 0.5rem; border-radius: 999px; color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Table ────────────────────────────────────────────────── */
-.ec-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }
-.ec-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.ec-table th {
-  text-align: left; font-weight: 500; color: var(--ink-soft, var(--ink-soft));
-  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
-  background: rgba(0,0,0,0.12);
-}
-/* Sortable header button — inherits th typography; whole header is the hit target */
+.ec-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }/* Sortable header button — inherits th typography; whole header is the hit target */
 .ec-th-sort {
   background: none; border: none; padding: 0; margin: 0;
   color: inherit; font: inherit; font-size: inherit; font-weight: inherit;
@@ -102,11 +94,7 @@
   cursor: pointer; white-space: nowrap;
 }
 .ec-th-sort:hover { color: var(--accent, var(--accent)); }
-.ec-th-sort.ec-sort-active { color: var(--accent, var(--accent)); }
-.ec-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.ec-table tbody tr { cursor: pointer; transition: background 0.15s; }
-.ec-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-.ec-row-expanded { background: rgba(14,165,166,0.06) !important; }
+.ec-th-sort.ec-sort-active { color: var(--accent, var(--accent)); }.ec-table tbody tr { cursor: pointer; transition: background 0.15s; }.ec-row-expanded { background: rgba(14,165,166,0.06) !important; }
 .ec-sym { font-weight: 700; color: var(--accent, var(--accent)); }
 .ec-right { text-align: right; }
 .ec-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
@@ -132,9 +120,7 @@
 .ec-surp-pos { background: rgba(34,197,94,0.15); color: var(--color-profit); }
 .ec-surp-neg { background: rgba(239,68,68,0.15); color: var(--color-loss); }
 
-@media (max-width: 600px) { .ec-table { font-size: 0.72rem; } .ec-table th, .ec-table td { padding: 0.3rem 0.4rem; } }
-
-/* ── States ──────────────────────────────────────────────── */
+@media (max-width: 600px) {─────────── */
 .ec-loading {
   text-align: center; padding: 3rem 1rem; color: var(--ink-soft, var(--ink-soft));
   font-size: 0.92rem;

@@ -45,11 +45,7 @@
 .perflab-ec-label { position: absolute; bottom: -16px; font-size: 0.55rem; color: var(--color-muted); white-space: nowrap; }
 .perflab-ec-summary { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-neutral); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
 
-.perflab-table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
-.perflab-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.perflab-table th { text-align: left; padding: 10px 14px; color: var(--color-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--line); }
-.perflab-table td { padding: 8px 14px; border-bottom: 1px solid var(--color-grid); }
-/* ⚠️ WAS `background: #252840` — a HARDCODED hex, which broke two rules at once.
+.perflab-table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }/* ⚠️ WAS `background: #252840` — a HARDCODED hex, which broke two rules at once.
    1. `ui-standards`: "Never hardcode a hex value in a page/component CSS file."
    2. It silently overrode `protocols-ladder.css`'s `.perflab-table tbody tr:hover { background: var(--line) }`,
       because `.pl-` is a SHARED prefix across three stylesheets and this one loads later once its

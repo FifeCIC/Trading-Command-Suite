@@ -172,45 +172,11 @@
   overflow-x: auto;
   border: 1px solid var(--border, var(--ink));
   border-radius: 8px;
-}
-
-.import-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.import-table thead {
+}.import-table thead {
   background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
-
-.import-table th {
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.import-table td {
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-
-.import-table tbody tr:last-child td {
+}.import-table tbody tr:last-child td {
   border-bottom: none;
-}
-
-.import-table tbody tr:hover {
-  background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
-
-/* Row color hints */
+}/* Row color hints */
 .run-row--completed {
   border-color: #16a34a;
 }

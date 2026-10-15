@@ -196,22 +196,8 @@ const VIEW_META = {
     css: 'src/pages/strategy-create.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/watchlists', 'POST /api/trading/strategies'],
   },
-  '/lab/dual-protocol-inspector': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Dual-Protocol Inspector',
-    file: 'src/pages/ScoringDebugLab.jsx',
-    css: 'src/pages/scoring-debug-lab.css',
-    api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/gated/:symbol'],
-  },
-  '/scoring/protocols-ladder': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Protocols Ladder',
-    file: 'src/pages/ProtocolsLadderPage.jsx',
-    css: 'src/pages/protocols-ladder.css',
-    api: ['GET /api/scoring/runs'],
-  },
+
+
   '/scoring/symbols-ladder': {
     tier: 'premium',
     review: 'approved',
@@ -228,14 +214,7 @@ const VIEW_META = {
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
-  '/scoring/protocol-builder': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Protocol Builder',
-    file: 'src/pages/CreateProtocolsPage.jsx',
-    css: 'src/pages/create-protocols.css',
-    api: ['GET /api/directives', 'GET /api/watchlists', 'POST /api/scoring/protocols'],
-  },
+
   '/trading/trade-journal': {
     tier: 'free',
     review: 'approved',
@@ -252,14 +231,7 @@ const VIEW_META = {
     css: 'src/pages/calculators.css',
     api: [],
   },
-  '/scoring/directives-registry': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Directives Registry',
-    file: 'src/pages/DirectivesManagerPage.jsx',
-    css: 'src/pages/directives-manager.css',
-    api: ['GET /api/directives'],
-  },
+
   // Canonical URL — part of gradual /scoring/ → /protocols/ migration
   '/protocols/directives-registry': {
     tier: 'premium',
@@ -287,14 +259,7 @@ const VIEW_META = {
     css: 'src/pages/stop-guardian-stats.css',
     api: ['GET /api/trading/stop-guardian-stats'],
   },
-  '/scoring/sees-arena': {
-    tier: 'premium',
-    review: 'approved',
-    label: 'Protocol Comparison',
-    file: 'src/pages/SeesArenaPage.jsx',
-    css: 'src/pages/sees-arena.css',
-    api: ['POST /api/scoring/arena/consensus'],
-  },
+
   '/protocols/sees-arena': {
     tier: 'premium',
     review: 'approved',

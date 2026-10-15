@@ -21,15 +21,7 @@
 }
 
 /* Table */
-.pl-table-wrap { overflow-x: auto; }
-.pl-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; color: var(--ink); }
-.pl-table th {
-  text-align: left; padding: 0.45rem 0.6rem; font-size: 0.68rem; font-weight: 700;
-  color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em;
-  border-bottom: 2px solid var(--line); background: var(--panel);
-}
-
-/* Table-header popover — hover the header for an explanation (matches .pt-pop). */
+.pl-table-wrap { overflow-x: auto; }/* Table-header popover — hover the header for an explanation (matches .pt-pop). */
 .pl-th { position: relative; cursor: help; }
 .pl-th-pop {
   position: absolute;
@@ -61,10 +53,7 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-}
-.pl-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); color: var(--ink); }
-.pl-table tbody tr:hover { background: var(--line); }
-.pl-table tbody tr { background: var(--panel); }
+}.pl-table tbody tr { background: var(--panel); }
 .pl-rank { color: var(--ink-soft); font-size: 0.72rem; width: 2rem; }
 .pl-symbol { font-weight: 700; color: var(--ink); }
 

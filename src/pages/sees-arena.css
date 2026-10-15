@@ -65,13 +65,7 @@
 .sa-tooltip-wrap:hover .sa-tooltip-content { display: block; }
 
 /* ── Comparison Table ── */
-.sa-compare-wrap { overflow-x: auto; }
-.sa-compare-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-.sa-compare-table th { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--line); color: var(--ink-soft); font-weight: 600; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-.sa-compare-table th.sa-th-protocol { text-align: center; min-width: 90px; }
-.sa-compare-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.08); text-align: center; font-variant-numeric: tabular-nums; }
-
-/* ⚠️ The symbol is the row's IDENTITY and this table is wide (one column per protocol), so it PINS to
+.sa-compare-wrap { overflow-x: auto; }.sa-compare-table th.sa-th-protocol { text-align: center; min-width: 90px; }/* ⚠️ The symbol is the row's IDENTITY and this table is wide (one column per protocol), so it PINS to
    the left edge while the score columns scroll beneath it. Without that, a row of eight scores cannot
    be attributed to a symbol without counting back up the table. */
 .sa-compare-table td.sa-td-symbol {
@@ -174,15 +168,7 @@
 .sl-ladder-table-wrap {
   border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
   background: var(--panel);
-}
-.sl-ladder-table { width: 100%; border-collapse: collapse; }
-.sl-ladder-table thead th {
-  text-align: left; padding: 0.5rem 0.6rem;
-  border-bottom: 2px solid var(--line); color: var(--ink-soft);
-  font-weight: 600; font-size: 0.65rem; text-transform: uppercase;
-  letter-spacing: 0.04em; white-space: nowrap;
-}
-.sl-ladder-row td {
+}.sl-ladder-row td {
   padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.06);
   font-size: 0.78rem;
 }
