@@ -66,6 +66,40 @@ have not finished deciding.** `REGISTER` and `GUARD` name where to look next.
 
 Verified by `node scripts/validate-decisions.cjs`.
 
+### The companion marker — `PLANNED IN #NNNN` (a known GAP, not a decision)
+
+A `DECISION` records what was **settled**. It cannot record *what is known to be missing* — and that
+is where agents lose the thread: the code looks finished, the capability is absent, and nothing says
+so. This marker exists because the owner asked for it directly (2026-10-15):
+
+> *"add doc comments to applicable areas of the plugin to prompt agents and make them aware of what
+> has already been planned… I feel the app's complexity needs a thread from github issue to code."*
+
+```js
+// ── PLANNED IN #1123 ──
+// MISSING:    a bot created here gets no `strategy_protocol` subscription, so it never trades.
+// TODAY:      POST /api/trading/strategies/:id/protocols exists and nothing calls it.
+// WHEN BUILT: add a protocol picker to this form and write through that endpoint.
+```
+
+⚠️ **Rule 4 in `anti-circular-work.instructions.md` covers the PAST** — *"2026-09-11 — <what you
+changed and WHY>. … See #789."* This marker covers the **FUTURE**, and it is deliberately a separate
+marker rather than more prose, for one reason:
+
+> **`PLANNED IN #` is greppable as a CLASS.** An arbitrary `See #1123` cannot be listed; a marker
+> can. Every known gap in the codebase then answers to one search:
+
+```powershell
+rg -n "PLANNED IN #" nest/src src
+```
+
+`MISSING` and `TODAY` are required. `WHEN BUILT` is required — a gap with no stated fix is a
+complaint, not a plan. If the gap has **no issue yet**, file one first; the marker cites an issue, it
+does not replace one.
+
+⚠️ **Do not add this marker for speculation.** It marks a measured gap that is planned and owned —
+the same bar as filing an issue: a named observable, on a money path or blocking one.
+
 ---
 
 ## 3. Guard status must be honest

@@ -215,6 +215,16 @@ export default function CreateProtocolsPage() {
             directiveIds: g.directiveIds,
           })),
       };
+      // ── PLANNED IN #1124 ──
+      // MISSING:    this form composes a protocol but CANNOT give it any symbols. A protocol with
+      //             no symbol is never scored, and the resolver's Path 3 then GUESSES symbols from
+      //             the slug text (#761/#763) or silently resolves none.
+      // TODAY:      no endpoint anywhere writes `symbol_protocol_assignment` — the only writes are
+      //             inside `protocol-db.service.ts` L590 (side-effect of DUPLICATING a protocol)
+      //             and L709 (delete). So a COPIED protocol works and a COMPOSED one cannot.
+      // WHEN BUILT: add symbol selection here (or to the registry detail panel) writing through a
+      //             new assignment endpoint; and make "zero resolved symbols" a VISIBLE state.
+      // ⚠️ Two readers of `symbol_protocol_assignment` currently disagree — see #1124.
       const res = await apiPost('/api/scoring/protocols', payload);
       if (res.success) {
         setSavedMsg(`Protocol "${protocolName}" saved successfully!`);

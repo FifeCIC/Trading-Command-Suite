@@ -254,6 +254,15 @@ export default function StrategyCreatePage() {
   }, [protocolId]);
 
   // ── Submit ──
+  // ── PLANNED IN #1123 ──
+  // MISSING:    a bot created here gets NO `strategy_protocol` subscription, so it is never
+  //             queued and never trades. It renders active, produces nothing, and reports no error.
+  // TODAY:      `POST /api/trading/strategies/:id/protocols` → `addProtocolSubscription()`
+  //             (trading-strategy.controller.ts L192-195, #712) exists, and NO page in `src/`
+  //             calls it. This form posts the bot only.
+  // WHEN BUILT: add a protocol picker here and write through that endpoint; show subscription
+  //             state on the bot list so a bot that cannot trade is visible as a defect.
+  // ⚠️ Routing is by SUBSCRIPTION, not by the bot — see `database-seed-discipline.instructions.md`.
   const createMutation = useMutation({
     mutationFn: (body) => apiPost('/api/trading/strategies', body),
     onSuccess: () => {

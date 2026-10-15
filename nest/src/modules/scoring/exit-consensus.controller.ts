@@ -37,6 +37,24 @@ import { ExitConsensusService } from './exit-consensus.service';
  * REGISTER:  docs/SETTLED-DECISIONS.md row 54
  * GUARD:     NONE — nothing fails if a future change starts acting on `action`. 🔴 UNGUARDED, and
  *            said plainly rather than implied.
+ *
+ * ── PLANNED IN #1125 — this RE-OPENS the DECISION above, and says what changed ──
+ * ⚠️ Read the DECISION's reasoning as HISTORICAL. Its conclusion (stay advisory) may still hold;
+ *    its PREMISE has moved, so it must not be treated as settled on the old grounds.
+ * WHAT CHANGED: the DECISION's `REVERSE BY` routes through fixing #929 and running a LIVE A/B
+ *    comparison. On 2026-10-14 the owner removed that route: *"B copies cannot always trade due to
+ *    the accounts already have a position so the system is flawed"* — the live two-arm design is
+ *    being retired in favour of BACKTESTING ONLY, so both arms can act as if placing trades. The
+ *    measurement route is now `POST /api/backtest/run` (#816, #823), not a live pair.
+ *    Separately, the "identical P&L for both arms" blocker it cites was explained on 2026-10-06 —
+ *    that pair differed only in `weightStrategy`, which is INERT (register row 31 / #1054), so no
+ *    number of trades could have produced a difference. That is a different limit from throughput.
+ * MISSING:  an owner decision on whether the exit chain may CLOSE a position (options A1–A4 in
+ *    #1125). Nothing needs building to make it an actor — the capability exists here.
+ * TODAY:    advisory. Measured 2026-10-15: no score- or signal-driven close has ever been recorded,
+ *    and `broker:tp` has fired exactly ONCE in the whole trade history.
+ * WHEN BUILT: if the owner chooses an acting option, treat it as MATHS (`maths-change-requires-ab`)
+ *    and change this marker before the behaviour.
  */
 @Controller('scoring/exit-consensus')
 export class ExitConsensusController {
