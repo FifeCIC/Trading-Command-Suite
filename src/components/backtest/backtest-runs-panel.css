@@ -67,7 +67,11 @@
 }
 
 .btr-row-selected td {
-  background: var(--color-grid);
+  /* ⚠️ WAS `background: var(--color-grid)` (#1e2030) — the GRID-LINE token used as a row FILL. On
+     a black panel a selected run was nearly indistinguishable from an unselected one; the owner
+     reported "the table rows when selected" as too dark on 2026-10-16. An accent tint reads as
+     "selected" under any theme and introduces no literal. */
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .btr-strong {

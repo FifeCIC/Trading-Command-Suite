@@ -5630,6 +5630,17 @@ const QA_CHECKLIST = [
         priority: 'critical',
         versionNote: '2026-10-16 — two guards: REPLAY_OP_FAST_REFUSE (1,700, derived from the cheapest measured 11.5 ms/step) and a 20s wall-clock deadline. ⚠️ Two earlier versions of this guard were wrong — 1,500 ops @ 11 ms, then 800 ops @ 25 ms, and a 510-op request still ran past 28s. The deadline measures the work instead of modelling it.',
       },
+      {
+        id: 'qa-bt-008',
+        area: 'Backtesting',
+        system: 'Protocol Backtesting page',
+        name: 'Protocol backtesting shows a SCORE TIMELINE and cannot be given a symbol by hand (#823)',
+        procedure: 'Open /lab/protocol-backtest. Before choosing a protocol, check the Symbol select. Then choose a protocol (e.g. btc-speed-v1), check the symbol and timeframe it sets, click "Score this window", then click any row in the table.',
+        expected: 'Initially the Symbol select is DISABLED and the run button reads "Select a protocol". Choosing a protocol sets the symbol automatically from that protocol\'s own resolvedSymbols (btc-speed-v1 → BTC) and the timeframe to its recommendedTimeframe (15m) — there is NO free-text symbol input, and a symbol the protocol does not score cannot be offered. The run lists a score row per bar with: the ENGINE\'s signal badge, whether it became a signal, the raw/max pair (e.g. "54 / 1295"), the derived %, the opportunity %, active/total directives, forward returns and correctness. The header states ENTRY BAR 6% and STRONG AT 13%, so the bar each row was measured against is visible rather than assumed. Clicking a row shows that bar\'s per-directive breakdown. A window the engine cannot finish is refused with its reason rendered on the page (not silence), and a pre-run estimate warns before the click.',
+        category: 'UI',
+        priority: 'high',
+        versionNote: '2026-10-17 — #823. Calls the SAME POST /api/replay/run used by Snapshot Replay, i.e. the canonical scorer; no second scoring path. Default window is per-TIMEFRAME because 14 days is fine at 1h (~212 bars) and over budget at 15m (~1,163).',
+      },
     ];
 
 export default QA_CHECKLIST;

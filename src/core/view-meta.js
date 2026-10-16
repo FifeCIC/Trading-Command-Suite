@@ -564,6 +564,25 @@ const VIEW_META = {
     css: 'src/pages/backtest-data.css',
     api: [],
   },
+  '/lab/protocol-backtest': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Protocol Backtesting',
+    file: 'src/pages/ProtocolBacktestPage.jsx',
+    css: 'src/pages/protocol-backtest.css',
+    api: ['POST /api/replay/run', 'GET /api/scoring/gated/protocols'],
+  },
+  // ⚠️ ADDED 2026-10-17. `verify-view-meta-routes.cjs` found this leaf registered in `nav-tree.js`
+  // with no metadata, so the page rendered "No metadata registered" — reachable but undocumented.
+  // The nav entry was added for #823 Stage 1 without this half; the sweep is what caught it.
+  '/lab/backtest-data': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Backtest Data',
+    file: 'src/pages/BacktestDataPage.jsx',
+    css: 'src/pages/backtest-data.css',
+    api: ['GET /api/backtest/data-inventory', 'GET /api/speed/record/active'],
+  },
   '/education/candle-patterns': {
     tier: 'free',
     review: 'approved',

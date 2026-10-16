@@ -12,11 +12,16 @@ import type { MarketBar } from '../directives/interfaces/directive.interface';
 /**
  * ⚠️ THE REPLAY BUDGET — measured 2026-10-16. Two guards, because a prediction is not enough.
  *
- * WHY IT MUST EXIST: the API client gives up at **28s** (`TCS-SYS-003`). A legitimate-looking
- * request — 5m over 10 days — takes 22-28s with ONE protocol and fails outright with three, and the
- * page offers exactly that window. Nothing bounded this, so the endpoint's latency was set by the
+ * WHY IT MUST EXIST: the API client abandons a request at **28s**. A legitimate-looking request —
+ * 5m over 10 days — takes 22-28s with ONE protocol and fails outright with three, and the page
+ * offers exactly that window. Nothing bounded this, so the endpoint's latency was set by the
  * caller's date range. The caller then saw a timeout, and the server kept working on an answer
  * nobody would read.
+ *
+ * ⚠️ Do NOT name the client's timeout CODE here. It is a frontend code (`core/notices/from-error.js`)
+ * that this server never emits, and `validate-notices.cjs` reads any code mentioned in backend
+ * source as backend-emitted — so citing it here makes the guard demand a server-catalogue entry for
+ * a message the server cannot send. The code belongs in the client files that raise it.
  *
  * ⚠️ WHY A WALL-CLOCK DEADLINE, AND NOT JUST A CALCULATED CAP. The cost per step varies **5.2×**
  * BETWEEN PROTOCOLS at the same window. Measured on EURUSD 1h over 14 days (212 steps, ONE protocol):
@@ -93,6 +98,19 @@ export interface ReplayStep {
   composite: number;
   signal: string;
   normalizedScore: number;
+  /**
+   * The raw pre-risk directional score and the CONFIGURED denominator it was scaled against.
+   * `normalizedScore === signalRaw / signalMax`. Carried so the backtesting table can show
+   * "60 / 140" — the number AND what it was measured against — rather than only the derived
+   * percentage, which is the form that hid the denominator question (#823).
+   */
+  signalRaw: number;
+  signalMax: number;
+  /** The DUAL score's second reading: opportunity (every directive counts, gates included), as a
+   *  percentage. Lets the protocol table show both readings side by side, as the Ladder does. */
+  opportunityPct: number;
+  /** Direction-eligible directives that produced a reading this bar — the observed count. */
+  directionEligibleDirectives?: number;
   /** Selected protocol (signal thesis) + its name + executing bot (execution policy). */
   protocolId: string | null;
   protocolName: string | null;
@@ -100,8 +118,7 @@ export interface ReplayStep {
   activeDirectives: number;
   totalDirectives: number;
   /** Forward returns: what happened AFTER this signal */
-  forwardReturn1?: number;
-  forwardReturn3?: number;
+  forwardReturn1?: number;  forwardReturn3?: number;
   forwardReturn5?: number;
   forwardReturn10?: number;
   /** Was this signal directionally correct? */
@@ -133,6 +150,11 @@ export interface ReplayResult {
    * Absent for a hand-assembled config.
    */
   period?: { id: string; name: string; note: string | null };
+  /**
+   * The thresholds a score must clear to become a signal, echoed so the table can show the BAR
+   * each row is measured against instead of leaving the reader to assume one (#823).
+   */
+  thresholds: { entry: number; strong: number; scale: string };
   steps: ReplayStep[];
   summary: {
     avgComposite: number;
@@ -549,6 +571,10 @@ export class ReplayService {
         composite: selected.composite,
         signal,
         normalizedScore,
+        signalRaw: selected.signalRaw,
+        signalMax: selected.signalMax,
+        opportunityPct: selected.opportunityPct,
+        directionEligibleDirectives: selected.meta.directionEligibleDirectives,
         protocolId: selectedProtocolId ?? null,
         protocolName: nameBySlug.get(selectedProtocolId) ?? selectedProtocolId ?? null,
         botName: botByKey.get(`${selectedProtocolId}|${symbol.toUpperCase()}`) ?? null,
@@ -642,6 +668,11 @@ export class ReplayService {
       totalBars: bars.length,
       // #986 — which stored window this replayed, so the output says why the dates mattered.
       period: period ? { id: period.id, name: period.name, note: period.note } : undefined,
+      thresholds: {
+        entry: SIGNAL_THRESHOLDS.entry,
+        strong: SIGNAL_THRESHOLDS.strong,
+        scale: SIGNAL_THRESHOLDS.scale,
+      },
       steps,
       summary: {
         avgComposite,

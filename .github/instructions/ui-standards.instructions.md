@@ -20,29 +20,87 @@ applyTo: "src/**"
 
 All colors MUST use CSS variables. Never hardcode a hex value in a page/component CSS file.
 
+> ⚠️ **Values corrected 2026-10-16 against `src/index.css`.** Six held their PRE-WCAG-boost
+> values (`--ink-soft`, `--accent`, `--danger`, `--color-loss`, `--color-sell`, `--color-neutral`)
+> and the twelve notice tokens were missing entirely. An agent copying `#ef4444` from this table
+> would have written exactly the hardcoded-literal debt the gate below now blocks — so a stale
+> token table here is not cosmetic drift, it is a source of it. **Re-read `index.css` before
+> trusting a value in this table.**
+
 | Token | Value | Purpose |
 |-------|-------|---------|
 | `--bg` | `#000000` | Page background |
 | `--ink` | `#e5e7eb` | Primary text |
-| `--ink-soft` | `#94a3b8` | Secondary/muted text |
+| `--ink-soft` | `#a1a9b5` | Secondary/muted text |
 | `--panel` | `#000000` | Panel/shell background |
 | `--line` | `#1a1a1a` | Borders, dividers |
-| `--accent` | `#0ea5a6` | Primary accent (teal) |
-| `--danger` | `#ef4444` | Destructive actions |
+| `--accent` | `#14b8b9` | Primary accent (teal) |
+| `--danger` | `#f87171` | Destructive actions |
 | `--color-profit` | `#22c55e` | Profit, buy, bullish |
-| `--color-loss` | `#ef4444` | Loss, sell, bearish |
+| `--color-loss` | `#f87171` | Loss, sell, bearish |
 | `--color-buy` | `#22c55e` | Buy signal |
-| `--color-sell` | `#ef4444` | Sell signal |
+| `--color-sell` | `#f87171` | Sell signal |
 | `--color-accent-blue` | `#3b82f6` | Interactive elements |
 | `--color-warning` | `#f59e0b` | Warnings, cautions |
-| `--color-neutral` | `#94a3b8` | Neutral/muted text |
+| `--color-neutral` | `#a1a9b5` | Neutral/muted text |
 | `--color-muted` | `#64748b` | Disabled, tertiary |
 | `--color-text-dim` | `#6b7280` | Dimmed text |
 | `--color-panel` | `#1a1d2e` | Card/panel fill |
 | `--color-border` | `#2d3040` | Card/panel border |
 | `--color-grid` | `#1e2030` | Grid/dashboard fill |
 | `--color-input-bg` | `#111318` | Input backgrounds |
+| `--notice-success-text` | `#22c55e` | Notice banner — `-bg` / `-border` variants also exist |
+| `--notice-warning-text` | `#f59e0b` | Notice banner |
+| `--notice-critical-text` | `#ef4444` | Notice banner — ⚠️ still the PRE-boost red |
+| `--notice-info-text` | `#60a5fa` | Notice banner |
 | `--shadow-card` | `0 12px 28px rgba(0,0,0,0.65)` | Card elevation |
+
+> ⚠️ **Two gaps in the accessibility layer, recorded not fixed** (both need a colour decision,
+> not a sweep): `--notice-critical-text` did not get the WCAG boost that `--danger` and
+> `--color-loss` did, and the `:root[data-high-contrast='true']` block overrides the semantic
+> tokens but **not** the notice tokens — so notice banners do not respond to High Contrast Text.
+
+### Hardcoded Colours — enforced by a build gate
+
+**Rule:** a colour in a page/component stylesheet comes from a token. A literal with no `var()`
+cannot be looked up by `validate-css-tokens.cjs` — there is no name to resolve — so it renders,
+looks plausible, and ignores every theme pack. A hex tuned against `#000000` is simply wrong on
+a light background.
+
+**This is enforced, not advised.** `scripts/validate-css-literals.cjs` runs in `prebuild`:
+
+```powershell
+node scripts/validate-css-literals.cjs              # gate — exit 1 on NEW debt
+node scripts/validate-css-literals.cjs --by-file    # what is left, worst first
+node scripts/validate-css-literals.cjs --self-test  # prove the guard still fires
+```
+
+Pre-existing debt is frozen in `scripts/css-literal-baseline.json` as per-file, per-literal
+**counts** — counts rather than a list, so a *swap* (one literal removed, a different one added)
+is still caught. **A count may only ever go down.** Fix a literal by choosing the token; never
+by running `--update-baseline`.
+
+**Exempt — and only these four literals:** `#fff`, `#ffffff`, `#000`, `#000000`. They are correct
+on a *fixed-contrast* surface (text on an accent-filled button, a scrim), and a line scanner
+cannot see the sibling `background` to tell that case from `color: #fff` where `--ink` was meant.
+The alternative was firing on correct code, and a guard that fires on correct code gets
+allowlisted wholesale — so the narrower rule wins. **Accepted cost:** a `#fff` that should have
+been `--ink` is not caught.
+
+**Also exempt:** a token *definition* (`--name: #hex`) — that is where a literal belongs.
+
+| Writing this | Flagged? | Use instead |
+|---|---|---|
+| `color: #f87171` | ✅ | `var(--color-loss)` / `var(--color-sell)` / `var(--danger)` |
+| `color: #22c55e` | ✅ | `var(--color-profit)` / `var(--color-buy)` |
+| `background: #f59e0b22` | ✅ | `var(--notice-warning-bg)` or `color-mix()` |
+| `border: 1px solid #1a1a1a` | ✅ | `var(--line)` |
+| `color: #fff` on an accent fill | ❌ exempt | — |
+| `--brand: #f7931a` | ❌ exempt | — (a definition) |
+
+⚠️ **Outside the gate — use judgement:** `rgb()` / `rgba()` / `hsl()` and named colours
+(`red`, `white`) are equally theme-blind and are not counted. A declaration whose value is
+wrapped onto its own line is missed too. Writing one declaration per line avoids the second.
 
 ### Spacing Scale
 

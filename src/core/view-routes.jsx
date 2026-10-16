@@ -157,6 +157,7 @@ import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
 
 // ── Backtest / Strategies ──
 import BacktestPage from '../pages/BacktestPage.jsx';
+import ProtocolBacktestPage from '../pages/ProtocolBacktestPage.jsx';
 import ScenarioAnalysisPage from '../pages/ScenarioAnalysisPage.jsx';
 
 // ── Status / System ──
@@ -344,6 +345,8 @@ export const VIEW_COMPONENTS = {
 
   // Backtest / Strategies
   'backtest': BacktestPage,
+  // #823 — scores-only backtesting, sibling to the engine (which stores trades AND signals).
+  'protocol-backtest': ProtocolBacktestPage,
   'scenario-analysis': ScenarioAnalysisPage,
   // 'strategies' was removed with TradingStrategiesPage (2026-09-23) - see the note at the import site.
 

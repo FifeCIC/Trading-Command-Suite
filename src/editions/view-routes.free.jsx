@@ -6,7 +6,7 @@
  * The free build swaps the full registry for this one via a Vite alias, so premium
  * pages are PHYSICALLY ABSENT from the bundle (plan §3/§4).
  *
- * 39 view(s) · 37 component(s) · 104 premium entry(ies) excluded.
+ * 39 view(s) · 37 component(s) · 110 premium entry(ies) excluded.
  */
 
 // ── Free pages ──
@@ -25,6 +25,7 @@ import NewsIntelPage from '../pages/NewsIntelPage.jsx';
 import ObjectivesPage from '../pages/ObjectivesPage.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
+import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
 import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import ProtocolQueuePage from '../pages/ProtocolQueuePage.jsx';
@@ -40,7 +41,6 @@ import SymbolPage from '../pages/SymbolPage.jsx';
 import SymbolsBrowserPage from '../pages/SymbolsBrowserPage.jsx';
 import T212ISAPage from '../pages/T212ISAPage.jsx';
 import T212PortfolioPage from '../pages/T212PortfolioPage.jsx';
-import ThemePage from '../pages/ThemePage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
 import TradingSettingsPage from '../pages/TradingSettingsPage.jsx';
@@ -67,6 +67,7 @@ export const VIEW_COMPONENTS = {
   'objectives': ObjectivesPage,
   'performance-lab': PerformanceLabPage,
   'personal-finances': PersonalFinancesPage,
+  'platform-comparisons': PlatformComparisonsPage,
   'positions-monitor': PositionsMonitorPage,
   'preference-lab': PreferenceLab,
   'protocol-queue': ProtocolQueuePage,
@@ -82,7 +83,6 @@ export const VIEW_COMPONENTS = {
   'symbols-browser': SymbolsBrowserPage,
   't212-isa': T212ISAPage,
   't212-portfolio': T212PortfolioPage,
-  'theme-packs': ThemePage,
   'trade-journal': TradeJournalPage,
   'trading-plans': TradingPlansPage,
   'trading-settings': TradingSettingsPage,

@@ -1,0 +1,131 @@
+/* protocol-backtest.css — the Protocol Backtesting page (#823).
+ *
+ * ⚠️ THE TABLE IS NOT RESTYLED HERE. It uses the global `.bt-table` (src/core/tables.css), because
+ * 69 table families with 69 arrangements was the drift that file removed, and
+ * `validate-duplication.cjs` fails in prebuild on a locally restated copy. Everything below is
+ * scoped to `.pb-*` and uses only defined tokens — `--bg-elev` is invoked WITH a fallback because
+ * its definition is not in `index.css`.
+ */
+
+.pb-page { display: flex; flex-direction: column; gap: 1rem; }
+
+.pb-header h1 { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.35rem; }
+.pb-intro { margin: 0; max-width: 74ch; font-size: 0.82rem; color: var(--ink-soft); }
+
+.pb-panel {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.pb-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; }
+.pb-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.pb-fields select,
+.pb-fields input {
+  min-height: 40px;
+  min-width: 10rem;
+  padding: 0.4rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+.pb-fields select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Never removed — a keyboard user loses the app without it. */
+.pb-fields select:focus-visible,
+.pb-fields input:focus-visible,
+.pb-run:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pb-run {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 22%, var(--color-input-bg));
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pb-run:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--color-input-bg);
+  border-color: var(--color-border);
+}
+
+.pb-proto-note { margin: 0.75rem 0 0; font-size: 0.78rem; color: var(--ink-soft); }
+
+/* The pre-run cost estimate — a warning line, never a block. */
+.pb-estimate { margin: 0.5rem 0 0; font-size: 0.78rem; color: var(--ink-soft); }
+.pb-estimate--risky { color: var(--color-warning); font-weight: 600; }
+.pb-estimate-note { font-weight: 400; opacity: 0.75; }
+
+.pb-results { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.pb-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pb-strip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 6.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-elev, var(--panel));
+}
+.pb-strip-item span {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.pb-strip-item strong { font-size: 1rem; }
+.pb-strip-item--signal strong { color: var(--color-buy); }
+.pb-strip-item--muted strong { color: var(--ink-soft); }
+
+/* The counterfactual warning — a reading aid, not decoration. */
+.pb-counterfactual {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--color-warning);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.pb-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.pb-row { cursor: pointer; }
+.pb-row--signal td { font-weight: 600; }
+.pb-row--selected td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+.pb-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+}
+.pb-mono--strong { font-weight: 700; color: var(--ink); }
+.pb-up { color: var(--color-buy); }
+.pb-down { color: var(--color-sell); }
+.pb-yes { font-weight: 700; color: var(--color-buy); }
+.pb-no { color: var(--color-muted); }
+
+.pb-detail { padding: 0.75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.pb-detail h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+.pb-reason { font-size: 0.78rem; color: var(--ink-soft); }
+.pb-none { font-size: 0.82rem; color: var(--ink-soft); }
