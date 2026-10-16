@@ -2131,65 +2131,90 @@ export class BacktestService {
       orderBy: { ticker: 'asc' },
     });
 
-    const inventory = [];
+    // ── ⚠️ THIS WAS AN N+1 LOOP — measured 2026-10-16 ──────────────────────────────────────────
+    // For EVERY symbol it ran SIX sequential queries (bar count, first bar, last bar, distinct
+    // timeframes, backtest count, last backtest). `symbol` holds **261** rows and `marketbar`
+    // **1,238,868**, so that was **1,566 round-trips**, each with a COUNT(*) over the bar table.
+    // The endpoint crossed the API's own 30s gateway deadline and returned **HTTP 504**, which is
+    // what `/lab/backtest-data` rendered as "Failed to load. Is the backend running?".
+    //
+    // The page was never broken and the API was never down — the QUERY was unbounded. It had also
+    // been degrading with data volume, which is why it "worked an hour ago".
+    //
+    // Now three aggregate queries plus one bounded per-symbol lookup. `marketbar`'s index
+    // `(symbolId, timeframe, timestamp)` covers the first two; `symbol` (261) and `backtestrun`
+    // (26) are tiny.
+    //
+    // ⚠️ `provider` is deliberately NOT in this aggregate. Measured 2026-10-16 on 1,238,868 rows:
+    //
+    //     GROUP BY symbolId, MIN/MAX(timestamp)                    1,075ms   <- index-covered
+    //     ... the same + MIN(provider)                             9,781ms   <- +8.7s
+    //
+    // `provider` is not in the `(symbolId, timeframe, timestamp)` index, so including it forces a
+    // row lookup for EVERY bar. It is fetched below by a per-symbol index lookup instead — for the
+    // 48 symbols that have bars, not all 261.
+    const barAgg = await this.prisma.marketBar.groupBy({
+      by: ['symbolId'],
+      _count: { _all: true },
+      _min: { timestamp: true },
+      _max: { timestamp: true },
+    });
+    const barsBySymbol = new Map(barAgg.map((r) => [r.symbolId, r]));
 
-    for (const sym of symbols) {
-      // Bar stats
-      const barCount = await this.prisma.marketBar.count({ where: { symbolId: sym.id } });
+    // Timeframes per symbol — index-covered by (symbolId, timeframe), one row per pair.
+    const tfAgg = await this.prisma.marketBar.groupBy({
+      by: ['symbolId', 'timeframe'],
+      _count: { _all: true },
+    });
+    const tfBySymbol = new Map<string, string[]>();
+    for (const r of tfAgg) {
+      const list = tfBySymbol.get(r.symbolId) ?? [];
+      list.push(r.timeframe);
+      tfBySymbol.set(r.symbolId, list);
+    }
 
-      let dateFrom: string | null = null;
-      let dateTo: string | null = null;
-      let provider: string | null = null;
-      let timeframes: string[] = [];
+    const btAgg = await this.prisma.backtestRun.groupBy({
+      by: ['symbolId'],
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+    const btBySymbol = new Map(btAgg.map((r) => [r.symbolId, r]));
 
-      if (barCount > 0) {
-        const first = await this.prisma.marketBar.findFirst({
-          where: { symbolId: sym.id },
-          orderBy: { timestamp: 'asc' },
-          select: { timestamp: true, provider: true },
+    // ⚠️ `provider` is "a provider recorded for this symbol", NOT necessarily the earliest bar's.
+    // The old code fetched the earliest bar's provider — one query per symbol, which was part of
+    // the reason this endpoint took 30s. Every symbol with bars today (48) has exactly one
+    // provider, so the values are unchanged. `LIMIT 1` uses the symbolId index prefix.
+    const providerBySymbol = new Map<string, string>();
+    await Promise.all(
+      [...barsBySymbol.keys()].map(async (symbolId) => {
+        const row = await this.prisma.marketBar.findFirst({
+          where: { symbolId },
+          select: { provider: true },
         });
-        const last = await this.prisma.marketBar.findFirst({
-          where: { symbolId: sym.id },
-          orderBy: { timestamp: 'desc' },
-          select: { timestamp: true },
-        });
-        const tfRows = await this.prisma.marketBar.findMany({
-          where: { symbolId: sym.id },
-          distinct: ['timeframe'],
-          select: { timeframe: true },
-        });
+        if (row?.provider) providerBySymbol.set(symbolId, row.provider);
+      }),
+    );
 
-        dateFrom = first ? first.timestamp.toISOString().slice(0, 10) : null;
-        dateTo = last ? last.timestamp.toISOString().slice(0, 10) : null;
-        provider = first?.provider || null;
-        timeframes = tfRows.map((r) => r.timeframe);
-      }
+    const inventory = symbols.map((sym) => {
+      const agg = barsBySymbol.get(sym.id);
+      const bt = btBySymbol.get(sym.id);
+      const barCount = agg?._count?._all ?? 0;
+      const firstTs = agg?._min?.timestamp ?? null;
+      const lastTs = agg?._max?.timestamp ?? null;
 
-      // Backtest runs
-      const btRuns = await this.prisma.backtestRun.count({ where: { symbolId: sym.id } });
-      let lastBacktest: string | null = null;
-      if (btRuns > 0) {
-        const last = await this.prisma.backtestRun.findFirst({
-          where: { symbolId: sym.id },
-          orderBy: { createdAt: 'desc' },
-          select: { createdAt: true },
-        });
-        lastBacktest = last ? last.createdAt.toISOString().slice(0, 16) : null;
-      }
-
-      inventory.push({
+      return {
         ticker: sym.ticker,
         type: sym.type || 'stock',
         active: sym.active,
         barCount,
-        dateFrom,
-        dateTo,
-        provider,
-        timeframes,
-        backtestRuns: btRuns,
-        lastBacktest,
-      });
-    }
+        dateFrom: firstTs ? firstTs.toISOString().slice(0, 10) : null,
+        dateTo: lastTs ? lastTs.toISOString().slice(0, 10) : null,
+        provider: providerBySymbol.get(sym.id) ?? null,
+        timeframes: (tfBySymbol.get(sym.id) ?? []).sort(),
+        backtestRuns: bt?._count?._all ?? 0,
+        lastBacktest: bt?._max?.createdAt ? bt._max.createdAt.toISOString().slice(0, 16) : null,
+      };
+    });
 
     const symbolsWithBars = inventory.filter((s) => s.barCount > 0).length;
     const totalBars = inventory.reduce((sum, s) => sum + s.barCount, 0);
