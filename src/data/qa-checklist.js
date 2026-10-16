@@ -5619,6 +5619,17 @@ const QA_CHECKLIST = [
         priority: 'high',
         versionNote: '2026-10-16 — defaults now computed via daysAgo(10)/today instead of literals.',
       },
+      {
+        id: 'qa-bt-007',
+        area: 'Backtesting',
+        system: 'Replay engine — cost budget',
+        name: 'An over-budget replay is REFUSED with a reason, never left to hit the client timeout (2026-10-16)',
+        procedure: 'POST /api/replay/run twice. (a) Absolutely over budget: {symbol:"EURUSD",timeframe:"5m",from:"<10 days ago>",to:"<today>",protocolIds:["euro-stoxx-v1"]} — 2,153 operations. (b) Possibly over budget: the same with timeframe 1h and from 30 days ago. Then (c) a normal one: 1h over 14 days, which must still SUCCEED.',
+        expected: '(a) HTTP 400 in UNDER A SECOND, naming the operation count and "cost per bar varies ~5x by protocol (11.5–59.7 ms measured)". (b) HTTP 400 after ~20s naming how many of how many bars it reached. (c) HTTP 201 as normal, ~2.7s. ❌ Before this, (a)/(b) ran 22–28s and were abandoned by the API client with TCS-SYS-003 "Request timed out" — and the page showed nothing at all. The endpoint\'s latency was set by the caller\'s date range.',
+        category: 'API',
+        priority: 'critical',
+        versionNote: '2026-10-16 — two guards: REPLAY_OP_FAST_REFUSE (1,700, derived from the cheapest measured 11.5 ms/step) and a 20s wall-clock deadline. ⚠️ Two earlier versions of this guard were wrong — 1,500 ops @ 11 ms, then 800 ops @ 25 ms, and a 510-op request still ran past 28s. The deadline measures the work instead of modelling it.',
+      },
     ];
 
 export default QA_CHECKLIST;

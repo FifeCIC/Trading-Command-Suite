@@ -21,6 +21,8 @@
 .sr-run-btn:hover { background: color-mix(in srgb, var(--accent) 80%, black); }
 .sr-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sr-result-summary { color: var(--accent); font-weight: 600; margin-left: 0.5rem; }
+/* A big replay is SLOW — say so rather than let it look hung (#823, 2026-10-16). */
+.sr-many-steps { color: var(--color-warning); margin: 0.25rem 0 0.5rem; }
 .sr-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
 .sr-hint { font-size: 0.75rem; color: var(--ink-soft); }
 

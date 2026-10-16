@@ -14,23 +14,48 @@ const TIMEFRAMES = ['1m', '5m', '15m', '1h'];
 const DEFAULT_SYMBOLS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD'];
 
 /**
- * The default window is the LAST 10 DAYS, computed at mount — not a literal.
+ * The default window is DERIVED at mount — a `1h` walkthrough of the last 14 days.
  *
- * ⚠️ These were hardcoded `'2026-07-01'` → `'2026-07-08'`. Measured 2026-10-16 against the live
- * `marketbar` table: EURUSD 5m holds 14,759 bars but the EARLIEST is 2026-08-05, so the page's
- * default window predated all of its own data. Every first click returned
- * `400 — Replay found 0 bar(s) for EURUSD 5m (2026-07-01 → 2026-07-08)`.
+ * ⚠️ Two measured corrections here, both 2026-10-16.
  *
- * A hardcoded date range is a dead control in a store with a rolling horizon: the data ages
- * forward, the literal does not. Derived dates cannot go stale.
+ * 1. These were hardcoded `'2026-07-01'` → `'2026-07-08'`. Against the live `marketbar` table
+ *    EURUSD 5m holds 14,759 bars but the EARLIEST is 2026-08-05, so the default window predated
+ *    all of its own data and every first click returned `400 — found 0 bar(s)`. A hardcoded date
+ *    range is a dead control in a store with a rolling horizon: the data ages forward, the
+ *    literal does not.
+ *
+ * 2. The replacement (5m over 10 days) was the SLOWEST possible choice. A replay costs roughly
+ *    10ms and 2.2KB per bar, measured on `euro-stoxx-v1`:
+ *
+ *      | window     | time   | payload | steps |
+ *      |------------|--------|---------|-------|
+ *      | 1h · 14d   |  2.4s  | 0.46 MB |   212 |
+ *      | 1h ·  7d   |  1.0s  | 0.20 MB |    92 |
+ *      | 5m ·  2d   |  4.6s  | 0.91 MB |   419 |
+ *      | 5m · 10d   | 22.4s  | 4.69 MB | 2,153 |
+ *
+ *    A 22-second wait with no progress reads as a HANG, and 2,153 steps is not a walkthrough
+ *    anyone steps through by hand. 1h/14d is ~2s and is a real walkthrough. A denser timeframe
+ *    stays available — it is just no longer the default.
  */
 const isoDay = (d) => d.toISOString().slice(0, 10);
 const daysAgo = (n) => isoDay(new Date(Date.now() - n * 86400000));
+const DEFAULT_TIMEFRAME = '1h';
+const DEFAULT_WINDOW_DAYS = 14;
+
+/** Past this many steps, playback is genuinely slow — say so rather than appearing frozen.
+ *  600 (≈15s of playback at 20×) sits above the default 1h/14d run (~212) and below the server's
+ *  practical ceiling (800 ops ≈ its budget), so it is REACHABLE — a warning that can never fire is
+ *  decoration. */
+const MANY_STEPS = 600;
+
+/** Bounded sparkline budget — see `sparkTicks` in the component. */
+const MAX_SPARK_TICKS = 300;
 
 export default function SnapshotReplayPage() {
   const [symbol, setSymbol] = useState('EURUSD');
-  const [timeframe, setTf] = useState('5m');
-  const [fromDate, setFromDate] = useState(() => daysAgo(10));
+  const [timeframe, setTf] = useState(DEFAULT_TIMEFRAME);
+  const [fromDate, setFromDate] = useState(() => daysAgo(DEFAULT_WINDOW_DAYS));
   const [toDate, setToDate] = useState(() => isoDay(new Date()));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState('1×');
@@ -69,6 +94,27 @@ export default function SnapshotReplayPage() {
   const steps = replayResult?.steps || [];
   const totalCandles = steps.length;
 
+  /**
+   * ⚠️ ELAPSED FEEDBACK — because a replay is SLOW, and silence reads as broken.
+   * Measured 2026-10-16: 1h/14d takes 2.4s; 5m/10d took 22.4s. With the button simply saying
+   * "Running…", a 22-second wait is indistinguishable from a hang — which is exactly what it was
+   * reported as. The page already renders its errors (see the NoticeBlock below); this is the same
+   * rule applied to the waiting, not just the failing.
+   */
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!replayMutation.isPending) {
+      setElapsed(0);
+      return;
+    }
+    const t0 = Date.now();
+    const id = setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 400);
+    return () => clearInterval(id);
+  }, [replayMutation.isPending]);
+
+  /** Sparkline ticks are DOM NODES. See `sparkTicks` below — it must be declared AFTER
+   *  `allSignals`, which it samples. */
+
   // ── Current step data ──
   const currentStep = steps[currentIdx];
   const currentCandle = currentStep?.bar;
@@ -104,6 +150,22 @@ export default function SnapshotReplayPage() {
     }));
   }, [steps]);
 
+  /**
+   * ⚠️ BOUNDED SPARKLINE — ticks are DOM NODES.
+   *
+   * `allSignals.slice(0, currentIdx + 1)` grew one node per bar and was rebuilt on every playback
+   * tick: a 2,153-step replay re-created 2,153 nodes every 25ms at 20× speed, on top of the chart
+   * update. Sampling to a fixed budget keeps the SHAPE (the run of buy/sell/no-data) while the
+   * DOM stops scaling with the window. Measured 2026-10-16 — the default window is now 1h/14d
+   * (~212 steps), but a hand-chosen 5m/10d window is 2,153 and must not freeze the tab.
+   */
+  const sparkTicks = useMemo(() => {
+    const upTo = allSignals.slice(0, currentIdx + 1);
+    if (upTo.length <= MAX_SPARK_TICKS) return upTo;
+    const stride = Math.ceil(upTo.length / MAX_SPARK_TICKS);
+    return upTo.filter((_, i) => i % stride === 0 || i === upTo.length - 1);
+  }, [allSignals, currentIdx]);
+
   // ── Chart setup ──
   useEffect(() => {
     if (!chartRef.current || chartInst.current) return;
@@ -127,11 +189,20 @@ export default function SnapshotReplayPage() {
   }, [replayResult]);
 
   // ── Update chart candles ──
+  // ⚠️ `fitContent()` used to run on EVERY step — i.e. every animation frame at 20× speed (25ms) —
+  // and each call re-lays out the whole visible series. Measured 2026-10-16: a 5m/10d replay is
+  // 2,153 steps, so playback re-fitted a 2,000+ candle series ~40 times a second. That is a large
+  // part of why the tab froze. The fit now happens once per RUN (below); the progressive reveal
+  // still happens here, because `chartCandles` is the prefix up to `currentIdx`.
   useEffect(() => {
     if (!candleSeries.current || !chartCandles.length) return;
     candleSeries.current.setData(chartCandles);
-    if (chartInst.current) chartInst.current.timeScale().fitContent();
   }, [chartCandles]);
+
+  // One fit per run, not per tick.
+  useEffect(() => {
+    if (chartInst.current && replayResult) chartInst.current.timeScale().fitContent();
+  }, [replayResult]);
 
   // ── Animation ──
   const advance = useCallback(() => {
@@ -210,7 +281,7 @@ export default function SnapshotReplayPage() {
           disabled={replayMutation.isPending || selectedProtocols.length === 0}
         >
           {replayMutation.isPending
-            ? 'Running…'
+            ? `Running… ${elapsed}s`
             : selectedProtocols.length === 0
               ? 'Select a protocol'
               : 'Load Replay'}
@@ -238,6 +309,17 @@ export default function SnapshotReplayPage() {
           unproductive for months. Silence is not a UI state. */}
       {replayMutation.isError && (
         <NoticeBlock notice={noticeFromError(replayMutation.error)} />
+      )}
+
+      {/* ⚠️ A big replay is SLOW — say so before it is mistaken for a hang.
+          Playback ticks at 25ms per step at 20×, so a 2,153-step replay needs ~54s of watching
+          even after the 22s load. Instant mode is the escape hatch; naming it is the point. */}
+      {replayResult && totalCandles > MANY_STEPS && (
+        <p className="sr-hint sr-many-steps">
+          ⚠️ {totalCandles.toLocaleString()} steps — at 20× that is about{' '}
+          {Math.round((totalCandles * 25) / 1000)}s of playback after the load. Use{' '}
+          <strong>Instant</strong>, or narrow the window, if it feels stuck.
+        </p>
       )}
 
       {/* ── Protocol selection (canonical scoring set) ── */}
@@ -429,7 +511,7 @@ export default function SnapshotReplayPage() {
 
             {/* Signal history sparkline */}
             <div className="sr-signal-sparkline">
-              {allSignals.slice(0, currentIdx + 1).map((s, i) => (
+              {sparkTicks.map((s, i) => (
                 <div
                   key={i}
                   className={`sr-signal-tick ${s.signal}`}

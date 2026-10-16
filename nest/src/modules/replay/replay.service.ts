@@ -9,6 +9,51 @@ import { BacktestPeriodService } from '../backtest/backtest-period.service';
 import { dropConsecutiveDuplicates } from '../../common/utils/building-bar-duplicate';
 import type { MarketBar } from '../directives/interfaces/directive.interface';
 
+/**
+ * ⚠️ THE REPLAY BUDGET — measured 2026-10-16. Two guards, because a prediction is not enough.
+ *
+ * WHY IT MUST EXIST: the API client gives up at **28s** (`TCS-SYS-003`). A legitimate-looking
+ * request — 5m over 10 days — takes 22-28s with ONE protocol and fails outright with three, and the
+ * page offers exactly that window. Nothing bounded this, so the endpoint's latency was set by the
+ * caller's date range. The caller then saw a timeout, and the server kept working on an answer
+ * nobody would read.
+ *
+ * ⚠️ WHY A WALL-CLOCK DEADLINE, AND NOT JUST A CALCULATED CAP. The cost per step varies **5.2×**
+ * BETWEEN PROTOCOLS at the same window. Measured on EURUSD 1h over 14 days (212 steps, ONE protocol):
+ *
+ *   | protocol             | time   | ms/step |
+ *   |----------------------|--------|---------|
+ *   | euro-stoxx-v1        |  2.44s |    11.5 |
+ *   | doge-speed-v1        |  2.53s |    11.9 |
+ *   | vix-spike-v1         |  4.20s |    19.8 |
+ *   | gold-macro-v1        |  4.29s |    20.2 |
+ *   | momentum-stock-v1    |  6.75s |    31.9 |
+ *   | xau-speed-v1         |  8.48s |    40.0 |
+ *   | btc-speed-v1         |  9.44s |    44.5 |
+ *   | btc-scalp-v1         | 12.65s |    59.7 |
+ *
+ * So `steps × protocols` predicts NOTHING usable: 800 ops is 9s for the cheapest protocol and 48s
+ * for the dearest. `REPLAY_OP_FAST_REFUSE` therefore exists only to refuse the obviously impossible
+ * in milliseconds; the DEADLINE is the guarantee, because it measures the work instead of modelling
+ * it. Two earlier versions of this guard were wrong in exactly this way — the first used 1,500 ops
+ * at 11 ms; the second used 800 ops at 25 ms and a 510-op request still ran past 28s. A cost model
+ * that has been wrong twice is not made right by a third estimate.
+ */
+/**
+ * Fast-path refusal, DERIVED — not guessed.
+ *
+ * No protocol has measured below **11.5 ms per step**, so inside a 20s deadline the theoretical
+ * maximum is `20_000 / 11.5 ≈ 1,739` steps × protocols. A request above that figure cannot finish
+ * in budget for ANY protocol mix, so it is refused in milliseconds instead of after 20s of work.
+ * Requests BELOW it are handed to the deadline, which decides on the real cost — the dearest
+ * protocol measured (59.7 ms/step) manages only ~335 ops in the same 20s, so the deadline is what
+ * catches those.
+ */
+const REPLAY_OP_FAST_REFUSE = 1700;
+
+/** The real guard. 20s leaves ~8s of headroom under the client's 28s timeout. */
+const REPLAY_DEADLINE_MS = 20_000;
+
 export interface ReplayConfig {
   symbol: string;
   timeframe: string;
@@ -349,8 +394,23 @@ export class ReplayService {
       );
     }
 
+    // ── THE REPLAY BUDGET, guard 1 of 2 (see REPLAY_OP_FAST_REFUSE) ─────────────────────────────
+    // A heuristic, kept only so the obviously impossible is refused in milliseconds rather than
+    // after 20s of work. It cannot bound the cost on its own — see the docblock.
+    const stepCount = bars.length - windowSize + 1;
+    const scoreOps = stepCount * protocolIds.length;
+    if (scoreOps > REPLAY_OP_FAST_REFUSE) {
+      throw new BadRequestException(
+        `Replay would score ${stepCount} bar(s) × ${protocolIds.length} protocol(s) = ` +
+          `${scoreOps.toLocaleString()} scoring operations. Cost per bar varies ~5x by protocol ` +
+          '(11.5–59.7 ms measured), so this cannot finish inside the API client\'s 28s timeout. ' +
+          'Narrow the date range, choose a higher timeframe, or select fewer protocols.',
+      );
+    }
+
     const steps: ReplayStep[] = [];
-    let totalComposite = 0;
+    // ── guard 2 of 2: the wall-clock deadline ──
+    const replayStartedAt = Date.now();    let totalComposite = 0;
     let maxComposite = -Infinity;
     let minComposite = Infinity;
     let buyCount = 0;
@@ -405,6 +465,21 @@ export class ReplayService {
     }
 
     for (let i = windowSize - 1; i < bars.length; i++) {
+      // ── THE DEADLINE — the guard that actually holds ──────────────────────────────────────────
+      // Measured against the WORK, not a prediction of it, so it cannot under-estimate. Throwing
+      // is deliberate: returning the steps computed so far would hand back a summary describing a
+      // WINDOW THAT WAS NEVER REPLAYED — the "plausible numbers, no error" defect this repo keeps
+      // re-finding.
+      if (Date.now() - replayStartedAt > REPLAY_DEADLINE_MS) {
+        throw new BadRequestException(
+          `Replay exceeded its ${Math.round(REPLAY_DEADLINE_MS / 1000)}s budget after ` +
+            `${i - windowSize + 1} of ${stepCount} bar(s) (${symbol} ${timeframe}, ${from} → ${to}). ` +
+            'Cost per bar varies about 5x between protocols (11.5–59.7 ms measured), so a window ' +
+            'that is comfortable for one protocol can be far too slow for another. Narrow the date ' +
+            'range, choose a higher timeframe, or select fewer protocols.',
+        );
+      }
+
       const currentBar = bars[i];
       const windowBars = bars.slice(Math.max(0, i - windowSize + 1), i + 1);
       const gatedResults = await Promise.all(
