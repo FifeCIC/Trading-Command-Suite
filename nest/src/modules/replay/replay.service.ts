@@ -96,6 +96,11 @@ export interface ReplayResult {
     buySignals: number;
     sellSignals: number;
     holdSignals: number;
+    /** #758 — bars where the protocol had NO directional evidence. Deliberately NOT folded
+     *  into `holdSignals`: a phantom "HOLD" is what #758 removed from the scorer, and
+     *  re-creating it in the summary would report "the market did nothing" when the truth
+     *  is "we could not read the market". */
+    noDataSignals: number;
     totalDirectivesRun: number;
     directivesPerBar: number;
   };
@@ -311,7 +316,15 @@ export class ReplayService {
       );
     }
     if (!protocolIds?.length) {
-      throw new Error('Replay requires at least one protocolId for canonical META.Stack scoring.');
+      // ⚠️ Was `throw new Error(...)` — a CLIENT-side validation failure reported as a server
+      // fault (HTTP 500, `TCS-SYS-006`). Measured 2026-10-16: the replay UI's "Load Replay"
+      // button did not disable itself with no protocol selected, so the first click a user made
+      // was answered with an internal-error code that named nothing actionable. The two guards
+      // around this one already used BadRequestException; this was the odd one out.
+      throw new BadRequestException(
+        'Replay requires at least one protocolId for canonical META.Stack scoring — ' +
+          'a replay IS the scorer, so there is nothing to replay without a recipe.',
+      );
     }
 
     // Load bars
@@ -343,6 +356,7 @@ export class ReplayService {
     let buyCount = 0;
     let sellCount = 0;
     let holdCount = 0;
+    let noDataCount = 0;
     let totalDirectivesRun = 0;
 
     // #739 — resolve protocol (thesis) + bot (execution policy) display names
@@ -422,6 +436,7 @@ export class ReplayService {
 
       if (signal === 'BUY' || signal === 'STRONG_BUY') buyCount++;
       else if (signal === 'SELL' || signal === 'STRONG_SELL') sellCount++;
+      else if (signal === 'NO_DATA') noDataCount++;
       else holdCount++;
 
       totalComposite += normalizedScore;
@@ -560,6 +575,7 @@ export class ReplayService {
         buySignals: buyCount,
         sellSignals: sellCount,
         holdSignals: holdCount,
+        noDataSignals: noDataCount,
         totalDirectivesRun,
         directivesPerBar:
           steps.length > 0

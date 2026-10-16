@@ -64,7 +64,12 @@ export interface SignalEnvelope {
   /** Risk-adjusted raw signal. Never compare this value with a percentage threshold. */
   composite: number;
   maxPossible: number;           // max achievable score for this envelope
-  signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+  /** ⚠️ `NO_DATA` is a real outcome (#758), not a HOLD — no direction-eligible directive read
+   *  this tick, so there was nothing to classify. It is carried here rather than filtered because
+   *  the envelope is also the record of what the scorer said; a consumer deciding whether to ACT
+   *  must skip it, and must be able to SEE it to do so. Added 2026-10-16 — its absence is what
+   *  let `gated.signal` be assigned here untyped. */
+  signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | 'NO_DATA';
   confidence: number;            // 0-100 confidence score
   rarity: string | null;         // e.g. "Exceptional", "Strong"
   rarityColor: string | null;

@@ -77,6 +77,15 @@
 .sr-signal-badge.buy { background: color-mix(in srgb, var(--color-buy) 15%, transparent); color: var(--color-buy); }
 .sr-signal-badge.sell { background: color-mix(in srgb, var(--color-sell) 15%, transparent); color: var(--color-sell); }
 .sr-signal-badge.hold { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+/* ── STRONG_* and NO_DATA had NO rule — measured 2026-10-16 ────────────────────────────────
+   Only `.buy` / `.sell` / `.hold` were styled, and the class comes from
+   `signal.toLowerCase()`. So `STRONG_BUY` became `.strong_buy` and rendered with no colour at
+   all, and `NO_DATA` became `.no_data` and looked identical to `HOLD`. Those are three
+   different facts (#758): a directional call, a below-threshold reading, and "we could not
+   read the market". Collapsing the third into the second is the exact phantom #758 removed. */
+.sr-signal-badge.strong_buy { background: color-mix(in srgb, var(--color-buy) 32%, transparent); color: var(--color-buy); font-weight: 800; }
+.sr-signal-badge.strong_sell { background: color-mix(in srgb, var(--color-sell) 32%, transparent); color: var(--color-sell); font-weight: 800; }
+.sr-signal-badge.no_data { background: color-mix(in srgb, var(--color-muted) 15%, transparent); color: var(--color-muted); }
 
 /* Sparkline */
 .sr-signal-sparkline { display: flex; gap: 1px; flex-wrap: wrap; }
@@ -84,6 +93,12 @@
 .sr-signal-tick.buy { background: var(--color-buy); }
 .sr-signal-tick.sell { background: var(--color-sell); }
 .sr-signal-tick.hold { background: var(--accent); }
+/* A STRONG signal is a taller bar; a NO_DATA bar is an OUTLINE, so "nothing to read" can never
+   be mistaken for "read it, and it was neutral". */
+.sr-signal-tick.strong_buy { background: var(--color-buy); height: 18px; }
+.sr-signal-tick.strong_sell { background: var(--color-sell); height: 18px; }
+.sr-signal-tick.no_data { background: transparent; border: 1px solid var(--color-muted); }
+.sr-nodata-count { color: var(--color-muted); font-weight: 400; }
 
 /* Forward return badges */
 .sr-fwd-badge {

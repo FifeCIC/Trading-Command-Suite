@@ -179,7 +179,21 @@ export interface GatedScore {
   signalMax: number;
   /** Unrounded normalized signal percentage. Round only at presentation boundaries. */
   signalPct: number;
-  signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+  signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | 'NO_DATA';
+  /**
+   * ⚠️ `'NO_DATA'` is a REAL outcome, not a HOLD (#758).
+   *
+   * It means: no direction-eligible directive produced a reading this tick, so there is nothing
+   * to classify. It is data absence. A HOLD means "we read the market and there was no edge".
+   *
+   * It was missing from this union until 2026-10-16, and that omission is what forced
+   * `const signal = 'NO_DATA' as any` in the early return — the `as any` then silenced the
+   * object-literal check for the WHOLE return, which is how that path came to omit `meta`
+   * and 500 the replay engine. A type that cannot name a real state does not prevent the state;
+   * it only hides the code that produces it.
+   */
+  noData?: boolean;
+  noDataReason?: string;
   /** Group id → 0-100 directional percentage.
    *  CONTRACT: an ABSENT key means the group is not participating (empty config,
    *  no directional contribution, or a gate group) — it must read as NEUTRAL
@@ -1026,10 +1040,13 @@ export class ProtocolGatingService {
         symbol,
         protocolId,
         composite: 0,
-        maxPossible: 0,
+        // The CONFIGURED denominator, not 0. The contract on the canonical return below is
+        // `signalRaw / signalMax === signalPct` on EVERY path; `0 / 0` broke it and left a
+        // no-data tick unreadable to any consumer that recomputes the percentage.
+        maxPossible: signalDenominator,
         signal,
         signalRaw: 0,
-        signalMax: 0,
+        signalMax: signalDenominator,
         signalPct: 0,
         confidence: 0,
         subScores,
@@ -1050,6 +1067,55 @@ export class ProtocolGatingService {
         denominatorMode: 'configured-capacity',
         observedSignalMax: totalMax,
         configuredSignalMax: capacityMaxTotal,
+        // ── ⚠️ SHAPE PARITY WITH THE CANONICAL RETURN — do not remove ──────────────────────
+        // This early return used to omit `meta` entirely, and the `as any` on the closing
+        // brace meant TypeScript never noticed the two return paths disagreed.
+        //
+        // Measured 2026-10-16: `replay.service.ts` reads `selected.meta.directiveCount` when
+        // building a replay step. On any tick where the selected protocol produced no
+        // directional evidence — which is MOST ticks right now, since `probe-1dir-v1` has a
+        // single directive and all 47 stock protocols are `active: false` — the entire
+        // `POST /api/replay/run` call died with HTTP 500:
+        //   Cannot read properties of undefined (reading 'directiveCount')
+        // The backtesting UI therefore could not run a replay at all, and the error named
+        // nothing that pointed here.
+        //
+        // The fields below are the canonical return's contract. `riskMultiplier` is the one
+        // deliberate omission — risk gating is not evaluated on this path, so there is no
+        // multiplier to report, and fabricating one would be worse than its absence.
+        gatingActive: true,
+        inactiveGroupIds,
+        excludedBreakdown,
+        readinessGate: {
+          ready: readinessBlockers.length === 0,
+          blockers: readinessBlockers,
+          reason: readinessBlockers.length
+            ? `protocol contains non-ready directives: ${readinessBlockers.map(b => `${b.directiveId} (${b.readiness})`).join(', ')}`
+            : undefined,
+        },
+        directionMode,
+        meta: {
+          compositePct: 0,
+          maxScore: signalDenominator,
+          directiveCount: allResults.size,
+          gatedCount: allResults.size - alphaCount,
+          riskDirectiveCount: breakouts['risk']?.length ?? 0,
+          weightStrategy,
+          denominatorMode: 'configured-capacity',
+          configuredSignalMax: capacityMaxTotal,
+          observedSignalMax: totalMax,
+          directionEligibleDirectives: directionEligibleTotal,
+          readinessBreakdown: { ready: readyCount, beta: betaCount, alpha: alphaCount, alphaExcluded: alphaCount },
+          directionalEvidence: {
+            bullishRaw,
+            bullishMax,
+            bullishPct,
+            bearishRaw,
+            bearishMax,
+            bearishPct,
+            selected: selectedDirection,
+          },
+        },
       } as any;
     }
 

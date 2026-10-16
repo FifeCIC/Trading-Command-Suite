@@ -4,6 +4,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './snapshot-replay.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -191,16 +193,38 @@ export default function SnapshotReplayPage() {
         <button
           className="sr-run-btn"
           onClick={handleRun}
-          disabled={replayMutation.isPending}
+          disabled={replayMutation.isPending || selectedProtocols.length === 0}
         >
-          {replayMutation.isPending ? 'Running…' : 'Load Replay'}
+          {replayMutation.isPending
+            ? 'Running…'
+            : selectedProtocols.length === 0
+              ? 'Select a protocol'
+              : 'Load Replay'}
         </button>
         {replayResult && (
           <span className="sr-result-summary">
-            {replayResult.totalBars} bars · {steps.length} steps · avg {replayResult.summary.avgComposite}%
+            {replayResult.totalBars} bars · {steps.length} steps
+            {/* ⚠️ `holdSignals` deliberately EXCLUDES no-data bars (#758). Reporting them
+                together as "hold" is what made a replay of an unreadable market look like a
+                quiet one. */}
+            · {replayResult.summary.buySignals} buy · {replayResult.summary.sellSignals} sell
+            {replayResult.summary.noDataSignals > 0 && (
+              <> · <span className="sr-nodata-count">{replayResult.summary.noDataSignals} no-data</span></>
+            )}
+            · avg {replayResult.summary.avgComposite}%
           </span>
         )}
       </div>
+
+      {/* ── A FAILED REPLAY MUST SAY SO ────────────────────────────────────────────────────
+          Measured 2026-10-16: this page rendered no error at all. `POST /api/replay/run` was
+          returning HTTP 500 on every no-data tick — the common case — so clicking "Load Replay"
+          did *nothing visible*: no spinner result, no message, no chart, no empty state. The
+          feature looked unimplemented rather than broken, which is why backtesting felt
+          unproductive for months. Silence is not a UI state. */}
+      {replayMutation.isError && (
+        <NoticeBlock notice={noticeFromError(replayMutation.error)} />
+      )}
 
       {/* ── Protocol selection (canonical scoring set) ── */}
       <div className="sr-protocol-select">
