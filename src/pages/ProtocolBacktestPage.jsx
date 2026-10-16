@@ -48,26 +48,34 @@ import './protocol-backtest.css';
 const TIMEFRAMES = ['15m', '1h', '4h', '1d'];
 
 /**
- * Bars per day, observed in the store for 24/5 instruments, and the window to default to for each.
+ * The window to default to for each timeframe.
  *
- * ⚠️ WHY THE WINDOW IS PER-TIMEFRAME. A replay's cost is bars × directives, and the engine refuses
- * what it cannot finish in 20s. Measured 2026-10-17: the FIRST protocol alphabetically
- * (`btc-speed-v1`, 14 directives) over the old flat 14-day default at its recommended 15m hit that
- * deadline on the user's very first click — 1,163 bars. One number cannot serve both 1d and 15m.
- *
- * These figures only WARN; the server's deadline is the authority. They are derived from measured
- * step counts, not guessed: 1h/14d ≈ 212 steps, 15m/14d ≈ 1,163, 5m/10d ≈ 2,153.
+ * ⚠️ PER-TIMEFRAME BECAUSE THE BUDGET IS BARS × DIRECTIVES. Measured 2026-10-17: a flat 14 days is
+ * comfortable at 1h (~212 bars) and hopeless at 15m (1,163 bars), which made the FIRST click fail
+ * for the first protocol alphabetically. These are starting points the user can change, not limits.
  */
-const BARS_PER_DAY = { '15m': 83, '1h': 15, '4h': 4, '1d': 1 };
 const DEFAULT_DAYS = { '15m': 2, '1h': 10, '4h': 20, '1d': 60 };
 
 /**
- * Above this many scoring operations a run is at RISK of the engine's refusal, because cost per
- * operation varies ~5x between protocols (11.5-59.7 ms measured). 700 ops is ~7.7s for the cheapest
- * protocol and ~42s for the dearest, against a 20s deadline — so it is a warning line, not a block.
- * The server decides.
+ * The engine's REAL limits, from `replay.service.ts`.
+ *
+ *   REPLAY_OP_FAST_REFUSE = 1,700 operations — refused IMMEDIATELY, before any work is done.
+ *   REPLAY_DEADLINE_MS    = 20s              — checked inside the loop; refused however far it got.
+ *
+ * ⚠️ WHY THIS PAGE PREDICTS NOTHING FROM THEM. An earlier version multiplied a bars-per-day table by
+ * the directive count and announced a verdict. Measured 2026-10-17: it declared a run "over the
+ * 1,700-operation ceiling — refused immediately" for a window that then completed in 4s with 11
+ * rows. The table was wrong — BTC 15m yields ~83 bars/day across 14 days but only ~20/day across the
+ * last 2 — and no endpoint exposes a per-(symbol, timeframe) bar count, so no figure computed here
+ * can be trusted. A warning that cries wolf is worse than none: it teaches the reader to ignore it.
+ *
+ * So the page STATES the limits and the measured spread, and lets the engine answer — in ~0.09s when
+ * it refuses outright, or with the exact count it reached when it hits the deadline.
  */
-const RISKY_OPS = 700;
+const ENGINE_MAX_OPS = 1700;
+const ENGINE_DEADLINE_S = 20;
+const MS_PER_BAR_MIN = 11.5;
+const MS_PER_BAR_MAX = 59.7;
 
 const isoDay = (d) => d.toISOString().slice(0, 10);
 const daysAgo = (n) => isoDay(new Date(Date.now() - n * 86400000));
@@ -127,15 +135,13 @@ export default function ProtocolBacktestPage() {
     setToDate(isoDay(new Date()));
   }, [timeframe]);
 
-  // ── The pre-run estimate. The engine refuses what it cannot finish; this says so BEFORE the
-  //    user waits 20s to find out. It is an estimate and is labelled as one. ──
+  // ── The window in context. This computes NO prediction — see the note on ENGINE_MAX_OPS: an
+  //    estimate here was measured crying wolf, and a warning nobody can trust teaches the reader
+  //    to ignore warnings. The limits are stated; the engine decides. ──
   const windowDays = Math.max(
     1,
     Math.round((new Date(toDate).getTime() - new Date(fromDate).getTime()) / 86400000),
   );
-  const estSteps = Math.round(windowDays * (BARS_PER_DAY[timeframe] ?? 15));
-  const estOps = estSteps * (protocol?.directiveCount ?? 0);
-  const estRisky = estOps > RISKY_OPS;
 
   const replayMutation = useMutation({
     mutationFn: (config) => apiPost('/api/replay/run', config),
@@ -265,16 +271,20 @@ export default function ProtocolBacktestPage() {
           </p>
         )}
 
-        {/* Say the cost BEFORE the click. The engine's refusal is rendered below too — this is the
-            warning, that is the verdict. */}
+        {/* What the engine's limits ARE. Facts, not a prediction — see the note on ENGINE_MAX_OPS
+            for the measured case where a predicted verdict contradicted the run it described. */}
         {protocol && symbol && (
-          <p className={`pb-estimate ${estRisky ? 'pb-estimate--risky' : ''}`}>
-            ≈ {estSteps.toLocaleString()} bars × {protocol.directiveCount} directives ≈{' '}
-            <strong>{estOps.toLocaleString()}</strong> scoring operations
-            {estRisky
-              ? ' — likely over the engine’s budget. Narrow the range or choose a higher timeframe.'
-              : ' — within the engine’s budget.'}{' '}
-            <span className="pb-estimate-note">estimate only; the engine decides</span>
+          <p className="pb-estimate">
+            Window: {windowDays} day(s) at {timeframe} · protocol has {protocol.directiveCount}{' '}
+            directives.{' '}
+            <span className="pb-estimate-note">
+              The engine refuses a replay it cannot finish: over{' '}
+              {ENGINE_MAX_OPS.toLocaleString()} scoring operations (bars × protocols) it refuses
+              instantly, and it stops any run at {ENGINE_DEADLINE_S}s. Cost per bar varies 5.2×
+              between protocols ({MS_PER_BAR_MIN}–{MS_PER_BAR_MAX} ms measured), so nothing here
+              predicts which side you land on — if it is refused, the reason appears above with the
+              count it reached.
+            </span>
           </p>
         )}
 
