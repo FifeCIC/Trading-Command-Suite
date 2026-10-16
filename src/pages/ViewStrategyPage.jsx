@@ -63,8 +63,8 @@
 
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../core/api/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost, apiDelete } from '../core/api/client';
 // The app's ONE reveal-on-scroll mechanism (Theme Lab -> Scroll Animations). `.lad-reveal` is
 // `opacity: 0` in `ladder.css`, and this hook is the only thing that adds `lad-reveal--show`, so a
 // `.lad-reveal` element WITHOUT the hook stays invisible. Reusing the hook rather than writing a
@@ -668,6 +668,62 @@ export default function ViewStrategyPage() {
     refetchInterval: 30_000,
   });
 
+  // ── Subscription management (#1123, built 2026-10-16) ─────────────────────────────────────
+  //
+  // ⚠️ WHY THIS EXISTS HERE. This page used to say *"Edit it on Strategy Monitor, where the
+  // add/remove path already lives."* **It does not live there** — measured 2026-10-16:
+  // `StrategyMonitorPage.jsx` makes no subscription call at all, and no page in `src/` invoked
+  // `POST/DELETE /api/trading/strategies/:id/protocols`. A pointer to a non-existent feature is
+  // worse than no pointer: it tells the reader the capability exists, so they stop looking.
+  //
+  // ⚠️ The `role` default is NOT assumed. The endpoint falls back to `'long'`, which would route a
+  // SHORT bot's signals as long. `roleForSubscribe()` mirrors `resolveEffectiveRole` + the same slug
+  // heuristic `seedDefaults()` uses, so a subscription added here matches one the seeder would make.
+  const qc = useQueryClient();
+  const [newProtocol, setNewProtocol] = useState('');
+  const [newRole, setNewRole] = useState('long');
+  const [subMsg, setSubMsg] = useState(null);
+
+  const protocolOptions = useQuery({
+    queryKey: ['sub-protocol-options'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
+    enabled: Boolean(strategyId),
+    staleTime: 300_000,
+  });
+  const protoChoices = useMemo(() => {
+    const d = protocolOptions.data;
+    const list = Array.isArray(d) ? d : Array.isArray(d?.protocols) ? d.protocols : [];
+    // The SUBSCRIBED id is the slug — `strategy_protocol.protocolId` holds slugs, and routing
+    // matches on it. Sending the UUID would insert a row nothing ever matches.
+    return list
+      .map((p) => ({ id: p.slug ?? p.id, label: p.name ?? p.slug ?? p.id }))
+      .filter((p) => p.id);
+  }, [protocolOptions.data]);
+
+  const subscribeMutation = useMutation({
+    mutationFn: ({ protocolId, role }) =>
+      apiPost(`${TRADING}/${strategyId}/protocols`, { protocolId, role }),
+    onSuccess: () => {
+      setSubMsg({ ok: true, text: 'Subscription added — this bot can now receive signals from that protocol.' });
+      setNewProtocol('');
+      qc.invalidateQueries({ queryKey: ['bot-subs', strategyId] });
+      qc.invalidateQueries({ queryKey: ['strategies-list'] });
+    },
+    onError: (err) =>
+      setSubMsg({ ok: false, notice: noticeFromError(err, 'TCS-SYS-007', { operation: 'add the subscription' }) }),
+  });
+
+  const unsubscribeMutation = useMutation({
+    mutationFn: (subId) => apiDelete(`${TRADING}/${strategyId}/protocols/${subId}`),
+    onSuccess: () => {
+      setSubMsg({ ok: true, text: 'Subscription removed.' });
+      qc.invalidateQueries({ queryKey: ['bot-subs', strategyId] });
+      qc.invalidateQueries({ queryKey: ['strategies-list'] });
+    },
+    onError: (err) =>
+      setSubMsg({ ok: false, notice: noticeFromError(err, 'TCS-SYS-007', { operation: 'remove the subscription' }) }),
+  });
+
   // The realised record (#894). `['bot-performance']` is the SAME key the A/B page's table uses,
   // so both surfaces share ONE fetch. Slower refetch than the bot row: this is a portfolio-wide
   // aggregation that only changes when a trade closes.
@@ -1057,6 +1113,14 @@ export default function ViewStrategyPage() {
                 <span className={`${styles.chip} ${sub.role === 'short' ? styles.chipNone : styles.chipLive}`}>
                   {String(sub.role || 'unset').toUpperCase()}
                 </span>
+                <button
+                  type="button"
+                  className={styles.routeBtn}
+                  disabled={unsubscribeMutation.isPending}
+                  onClick={() => unsubscribeMutation.mutate(sub.id)}
+                >
+                  Remove
+                </button>
                 {!sub.role && (
                   <p className={styles.caveat}>
                     ⚠️ No role set, so direction falls back to the bot&apos;s <code>requireDirection</code>.
@@ -1066,12 +1130,63 @@ export default function ViewStrategyPage() {
             ))}
           </div>
         )}
+
+        {/* ── Add a subscription (#1123) ─────────────────────────────────────────────── */}
+        <div className={styles.routeRow}>
+          <label className={styles.routeLabel}>
+            Protocol
+            <select
+              className={styles.routeSelect}
+              value={newProtocol}
+              onChange={(e) => {
+                setNewProtocol(e.target.value);
+                // Default the role from the chosen protocol's slug, the same fallback the seeder
+                // uses — so the common case needs no thought and a SHORT protocol is not silently
+                // subscribed as long.
+                setNewRole(/-short|short-/i.test(e.target.value) ? 'short' : 'long');
+              }}
+            >
+              <option value="">— choose a protocol —</option>
+              {protoChoices.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.routeLabel}>
+            Role
+            <select
+              className={styles.routeSelect}
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+            >
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className={styles.routeBtnPrimary}
+            disabled={!newProtocol || subscribeMutation.isPending}
+            onClick={() => subscribeMutation.mutate({ protocolId: newProtocol, role: newRole })}
+          >
+            {subscribeMutation.isPending ? 'Adding…' : 'Add subscription'}
+          </button>
+        </div>
+
+        {subMsg && (
+          subMsg.ok
+            ? <p className={styles.routeOk}>{subMsg.text}</p>
+            : <NoticeBlock notice={subMsg.notice} />
+        )}
+
         <p className={styles.sectionNote}>
-          <strong>Read-only here.</strong> There is no <code>PATCH</code> endpoint for a subscription —
-          changing a role means remove + re-add, and a failure between those two calls leaves the bot
-          with no signal source, which it would not report. Edit it on{' '}
-          <a className={styles.link} href="/trading/strategy-monitor">Strategy Monitor</a>, where the
-          add/remove path already lives.
+          A subscription is what ROUTES signals to this bot — without one it is silently idle, which
+          is why the add/remove path is here rather than an implied one elsewhere. There is still no{' '}
+          <code>PATCH</code> for a subscription, so <strong>changing a role means remove then
+          re-add</strong>; between those two calls the bot has no signal source and will not report
+          it. That is the one thing to be deliberate about here.
         </p>
       </section>
 

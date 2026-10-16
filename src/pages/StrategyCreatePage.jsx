@@ -253,22 +253,76 @@ export default function StrategyCreatePage() {
     }
   }, [protocolId]);
 
+  /**
+   * The subscription role for a bot created here.
+   *
+   * ⚠️ THIS MIRRORS THE SERVER'S OWN RULE EXACTLY, and deliberately does not invent one.
+   * `seedDefaults()` derives it as
+   *   `resolveEffectiveRole(null, requireDirection) ?? (/-short|short-/i.test(protocolId) ? 'short' : 'long')`
+   * (`trading-strategy.service.ts` L2655). Using the same rule means a bot created here and one
+   * created by the seeder behave IDENTICALLY — which is the whole point. A second rule would let the
+   * two drift, and `resolveEffectiveRole`'s own header exists precisely because two direction fields
+   * already drifted once (measured 2026-09-17: 24 `role='long'`, 1 `role='short'`, and `role` read
+   * by nothing at all).
+   *
+   * ⚠️ The endpoint defaults to `'long'`, so a SHORT bot MUST NOT be subscribed with the default —
+   * that would route its signals as long. `database-seed-discipline.instructions.md` records
+   * `seedDefaults()` hardcoding `role: 'long'` as a live hazard.
+   */
+  function roleForSubscription(requireDirection, protocolId) {
+    const dir = String(requireDirection ?? '').trim().toLowerCase();
+    if (dir === 'short' || dir === 'sell') return 'short';
+    if (dir === 'long' || dir === 'buy') return 'long';
+    return /-short|short-/i.test(String(protocolId ?? '')) ? 'short' : 'long';
+  }
+
   // ── Submit ──
-  // ── PLANNED IN #1123 ──
-  // MISSING:    a bot created here gets NO `strategy_protocol` subscription, so it is never
-  //             queued and never trades. It renders active, produces nothing, and reports no error.
-  // TODAY:      `POST /api/trading/strategies/:id/protocols` → `addProtocolSubscription()`
-  //             (trading-strategy.controller.ts L192-195, #712) exists, and NO page in `src/`
-  //             calls it. This form posts the bot only.
-  // WHEN BUILT: add a protocol picker here and write through that endpoint; show subscription
-  //             state on the bot list so a bot that cannot trade is visible as a defect.
-  // ⚠️ Routing is by SUBSCRIPTION, not by the bot — see `database-seed-discipline.instructions.md`.
   const createMutation = useMutation({
-    mutationFn: (body) => apiPost('/api/trading/strategies', body),
-    onSuccess: () => {
-      setMsg('✅ Strategy created!');
+    /**
+     * Create the bot, THEN subscribe it to its protocol (#1123, built 2026-10-16).
+     *
+     * ⚠️ WHY THE SECOND CALL EXISTS. `POST /api/trading/strategies` writes the bot's legacy single
+     * `protocolId` and creates NO `strategy_protocol` row. Signal routing reads SUBSCRIPTIONS
+     * (`SignalQueueService.syncQueues` joins `strategy_protocol`), so a bot created here was never
+     * queued and never traded — it rendered **active**, produced **nothing**, and reported **no
+     * error**. The endpoint that fixes it (`POST /api/trading/strategies/:id/protocols`, #712) has
+     * existed since 2026-08 and had **zero** frontend callers until now.
+     */
+    mutationFn: async (body) => {
+      const created = await apiPost('/api/trading/strategies', body);
+      const botId = created?.id;
+      if (!botId || !body.protocolId) return { created, subscribed: false };
+
+      const role = roleForSubscription(body.requireDirection, body.protocolId);
+      try {
+        await apiPost(`/api/trading/strategies/${botId}/protocols`, {
+          protocolId: body.protocolId,
+          role,
+        });
+        return { created, subscribed: true, role };
+      } catch (err) {
+        // ⚠️ NOT SWALLOWED. A bot with no subscription never trades, so reporting a plain success
+        // here would be the exact silent failure this change exists to remove. The bot IS created;
+        // the subscription is NOT. Both facts are reported.
+        return { created, subscribed: false, role, subscribeError: err };
+      }
+    },
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['strategies-list'] });
       queryClient.invalidateQueries({ queryKey: ['monitor-strategies'] });
+      if (result?.subscribed) {
+        setMsg(`✅ Strategy created and subscribed (role: ${result.role}).`);
+      } else if (result?.subscribeError) {
+        setMsg(
+          '⚠️ Strategy created, but NOT subscribed — it will not trade until it is. ' +
+          noticeLine('TCS-SYS-007', {
+            operation: 'subscribe the strategy to its protocol',
+            detail: result.subscribeError,
+          }),
+        );
+      } else {
+        setMsg('✅ Strategy created. No protocol was selected, so it has no subscription and will not trade.');
+      }
     },
     onError: (err) => setMsg('❌ ' + noticeLine('TCS-SYS-007', { operation: 'create the strategy', detail: err })),
   });

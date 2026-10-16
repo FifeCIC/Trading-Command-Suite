@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Post, Patch, Param, Body, Logger, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Patch, Delete, Param, Body, Logger, Query } from '@nestjs/common';
 import { ProtocolGatingService, GatedScore, SIGNAL_THRESHOLDS } from './protocol-gating.service';
 import {
   STYLE_THRESHOLDS,
@@ -1089,20 +1089,148 @@ export class ProtocolGatingController {
   /**
    * GET /api/scoring/gated/protocols/:id/symbols
    * Returns the symbols a protocol scores (single-symbol or watchlist-derived).
+   *
+   * ⚠️ `resolution` WAS SYSTEMATICALLY WRONG until 2026-10-16 (#1124). It queried
+   * `symbol_protocol_assignment` by the id **as passed** — a SLUG — while every assignment is stored
+   * against the protocol's **UUID** (that is what `copyProtocol()` writes, and what the new assign
+   * endpoint writes). So the check never matched, and the label read **`derived`** — meaning "these
+   * symbols were GUESSED from the slug" — for a protocol with a perfectly good assignment.
+   *
+   * `resolveSymbols()` itself was correct, which is why `symbols` was right and only the LABEL lied.
+   * That is the "plausible output, no error" shape this repo keeps re-finding, and it matters
+   * directly here: a reader checking whether their assignment TOOK would see `derived` and conclude
+   * it had not. Measured before the fix: `probe-1dir-v1` had an EURUSD assignment row and reported
+   * `resolution: "derived"`.
+   *
+   * The candidates are now built the same way `resolveSymbols()` builds them, so the label and the
+   * list come from one lookup instead of two that disagreed.
    */
   @Get('protocols/:id/symbols')
   async getProtocolSymbols(@Param('id') id: string): Promise<{ protocolId: string; symbols: string[]; resolution: string }> {
     const symbols = await this.protocolDb.resolveSymbols(id);
-    // Determine which path resolved
+
     let resolution = 'derived';
     try {
-      const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({ where: { protocolId: id } });
-      if (assignments?.length > 0) resolution = 'db:assignment';
-      else {
-        const wl = await (this.prisma as any).watchlist.findFirst({ where: { protocolId: id } });
+      const proto = await (this.prisma as any).protocol.findFirst({
+        where: { OR: [{ slug: id }, { id }] },
+        select: { id: true, slug: true },
+      });
+      const candidates: string[] = [];
+      for (const v of [id, proto?.id, proto?.slug]) {
+        if (typeof v === 'string' && v.length > 0 && !candidates.includes(v)) candidates.push(v);
+      }
+
+      const assignments = candidates.length
+        ? await (this.prisma as any).symbolProtocolAssignment.findMany({
+            where: { protocolId: { in: candidates } },
+          })
+        : [];
+      if (assignments?.length > 0) {
+        resolution = 'db:assignment';
+      } else {
+        const wl = candidates.length
+          ? await (this.prisma as any).watchlist.findFirst({
+              where: { protocolId: { in: candidates } },
+            })
+          : null;
         if (wl) resolution = 'db:watchlist';
       }
     } catch { /* table may not exist */ }
+
     return { protocolId: id, symbols, resolution };
+  }
+
+  /**
+   * POST /api/scoring/gated/protocols/:id/symbols — assign a symbol to a protocol (#1124).
+   *
+   * Body `{ symbol }`. `:id` may be a SLUG or a UUID; the row is stored against the protocol's
+   * **UUID**, which is what `copyProtocol()` does, so both routes into this table agree.
+   *
+   * ⚠️ WHY THIS ENDPOINT WAS MISSING, AND WHY THAT MATTERED. Until this was added, **no controller
+   * wrote `symbol_protocol_assignment` at all.** The only writes in the codebase were side-effects
+   * inside `protocol-db.service.ts`:
+   *   • **L590** — copies assignments when a protocol is **DUPLICATED**
+   *   • **L709** — deletes them when a protocol is **DELETED**
+   * So a protocol COPIED from one that already had symbols worked, and a protocol **COMPOSED from
+   * scratch could never be given any**. With none, `resolveSymbols()` falls past Path 1 and Path 2
+   * to **Path 3 — a name-guessing fallback that infers symbols from the protocol's slug text**
+   * (#761/#763), or resolves nothing and scores nothing. Neither failure reports an error.
+   *
+   * ⚠️ The ticker is REFUSED unless it is a registered symbol. A typo would otherwise store an
+   * assignment that can never score — and once stored it is indistinguishable from a wired one,
+   * which is the exact class of defect (#1124) this endpoint exists to remove.
+   */
+  @Post('protocols/:id/symbols')
+  async assignProtocolSymbol(
+    @Param('id') id: string,
+    @Body() body: { symbol?: string },
+  ): Promise<{ assigned: true; symbol: string; protocolId: string; symbols: string[] }> {
+    const ticker = String(body?.symbol ?? '').trim().toUpperCase();
+    if (!ticker) throw new BadRequestException('A `symbol` is required.');
+
+    const proto = await (this.prisma as any).protocol.findFirst({
+      where: { OR: [{ slug: id }, { id }] },
+      select: { id: true, slug: true },
+    });
+    if (!proto) throw new BadRequestException(`No protocol matches "${id}".`);
+
+    const known = await (this.prisma as any).symbol.findFirst({
+      where: { ticker },
+      select: { ticker: true },
+    });
+    if (!known) {
+      throw new BadRequestException(
+        `"${ticker}" is not a registered symbol, so this assignment could never score. Register the symbol first.`,
+      );
+    }
+
+    // Idempotent by hand rather than `upsert`, so this does not depend on Prisma's generated
+    // compound-unique key name. The table also carries @@unique([symbol, protocolId]).
+    const existing = await (this.prisma as any).symbolProtocolAssignment.findFirst({
+      where: { symbol: ticker, protocolId: proto.id },
+      select: { id: true },
+    });
+    if (!existing) {
+      await (this.prisma as any).symbolProtocolAssignment.create({
+        data: { symbol: ticker, protocolId: proto.id, priority: 0 },
+      });
+    }
+
+    return {
+      assigned: true,
+      symbol: ticker,
+      protocolId: proto.slug,
+      symbols: await this.protocolDb.resolveSymbols(proto.slug),
+    };
+  }
+
+  /**
+   * DELETE /api/scoring/gated/protocols/:id/symbols/:symbol — unassign (#1124).
+   *
+   * ⚠️ Removes ONLY the explicit assignment row. A protocol may still resolve symbols through a
+   * linked WATCHLIST (Path 2), so `symbols` in the response is the resolved set **after** the
+   * removal — the honest answer to "what does this protocol score now?", not "one row fewer".
+   */
+  @Delete('protocols/:id/symbols/:symbol')
+  async unassignProtocolSymbol(
+    @Param('id') id: string,
+    @Param('symbol') symbol: string,
+  ): Promise<{ removed: number; protocolId: string; symbols: string[] }> {
+    const ticker = String(symbol ?? '').trim().toUpperCase();
+    const proto = await (this.prisma as any).protocol.findFirst({
+      where: { OR: [{ slug: id }, { id }] },
+      select: { id: true, slug: true },
+    });
+    if (!proto) throw new BadRequestException(`No protocol matches "${id}".`);
+
+    const result = await (this.prisma as any).symbolProtocolAssignment.deleteMany({
+      where: { protocolId: proto.id, symbol: ticker },
+    });
+
+    return {
+      removed: result?.count ?? 0,
+      protocolId: proto.slug,
+      symbols: await this.protocolDb.resolveSymbols(proto.slug),
+    };
   }
 }

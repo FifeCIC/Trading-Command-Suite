@@ -14,6 +14,7 @@ import '../core/forms.css';
 import './create-protocols.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 import NoticeBlock from '../components/NoticeBlock';
+import ProtocolSymbolsPanel from '../components/ProtocolSymbolsPanel';
 // `notice()` comes from the registry and `noticeFromError()` from the adapter — the adapter does not
 // re-export it. (Passing an object literal to noticeFromError would fabricate an Error shape.)
 import { notice } from '../core/notices/registry.js';
@@ -215,16 +216,16 @@ export default function CreateProtocolsPage() {
             directiveIds: g.directiveIds,
           })),
       };
-      // ── PLANNED IN #1124 ──
-      // MISSING:    this form composes a protocol but CANNOT give it any symbols. A protocol with
-      //             no symbol is never scored, and the resolver's Path 3 then GUESSES symbols from
-      //             the slug text (#761/#763) or silently resolves none.
-      // TODAY:      no endpoint anywhere writes `symbol_protocol_assignment` — the only writes are
-      //             inside `protocol-db.service.ts` L590 (side-effect of DUPLICATING a protocol)
-      //             and L709 (delete). So a COPIED protocol works and a COMPOSED one cannot.
-      // WHEN BUILT: add symbol selection here (or to the registry detail panel) writing through a
-      //             new assignment endpoint; and make "zero resolved symbols" a VISIBLE state.
-      // ⚠️ Two readers of `symbol_protocol_assignment` currently disagree — see #1124.
+      // ── #1124 RESOLVED 2026-10-16 ────────────────────────────────────────────────────────────
+      // This form composed a protocol but could not give it any SYMBOLS. Before the fix no
+      // controller wrote `symbol_protocol_assignment` at all — the only writes were side-effects
+      // inside `protocol-db.service.ts` (L590 copying assignments when a protocol is DUPLICATED,
+      // L709 deleting them). So a COPIED protocol worked and a COMPOSED one could never be wired.
+      // With no assignment, `resolveSymbols()` fell through to a NAME-GUESSING fallback (#761/#763)
+      // or resolved nothing — neither of which reported an error.
+      // NOW: `ProtocolSymbolsPanel` below manages assignments through
+      // `POST/DELETE /api/scoring/gated/protocols/:id/symbols`, and shows the resolution label so
+      // a GUESSED list (`derived`) is distinguishable from a wired one (`db:assignment`).
       const res = await apiPost('/api/scoring/protocols', payload);
       if (res.success) {
         setSavedMsg(`Protocol "${protocolName}" saved successfully!`);
@@ -568,6 +569,14 @@ export default function CreateProtocolsPage() {
           Reset
         </button>
       </div>
+
+      {/* ── #1124 — the symbols this protocol scores ─────────────────────────────────────────
+          Mounted HERE because composing a protocol and wiring it to symbols are two halves of one
+          job, and only the first half had a control. Without an assignment, `resolveSymbols()`
+          falls through to a NAME-GUESSING fallback (#761/#763) or resolves nothing — and neither
+          failure reports an error. Keyed on the slug so loading another protocol refetches rather
+          than showing the previous protocol's symbols. */}
+      <ProtocolSymbolsPanel protocolSlug={protocolSlug} />
     </div>
   );
 }
