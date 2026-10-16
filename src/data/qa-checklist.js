@@ -5608,6 +5608,17 @@ const QA_CHECKLIST = [
         priority: 'high',
         versionNote: '2026-10-16 — adds `summary.noDataSignals` to POST /api/replay/run.',
       },
+      {
+        id: 'qa-bt-006',
+        area: 'Backtesting',
+        system: 'Snapshot Replay page',
+        name: 'The replay page works on ARRIVAL — its default window is inside the data (2026-10-16)',
+        procedure: 'Open /lab/snapshot-replay and select any protocol, then click Load Replay WITHOUT changing the symbol, timeframe or dates. Then compare the from/to inputs against: SELECT MIN(timestamp) FROM marketbar b JOIN symbol s ON s.id=b.symbolId WHERE s.ticker="EURUSD" AND b.timeframe="5m".',
+        expected: 'The replay loads — bars and steps appear. The default window is the last 10 days, DERIVED at mount, so it is always inside the data. ❌ Before the fix the defaults were hardcoded "2026-07-01" → "2026-07-08" while EURUSD 5m bars begin 2026-08-05, so the first click returned 400 "found 0 bar(s)" for every user, every time. A hardcoded date range is a dead control in a store with a rolling horizon: the data moves forward, the literal does not. Measured 2026-10-16: EURUSD 5m 2026-10-06 → 10-16 gave 2,182 bars and 2,153 steps.',
+        category: 'UI',
+        priority: 'high',
+        versionNote: '2026-10-16 — defaults now computed via daysAgo(10)/today instead of literals.',
+      },
     ];
 
 export default QA_CHECKLIST;

@@ -13,11 +13,25 @@ const SPEEDS = { '1×': 500, '5×': 100, '20×': 25, 'Instant': 0 };
 const TIMEFRAMES = ['1m', '5m', '15m', '1h'];
 const DEFAULT_SYMBOLS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD'];
 
+/**
+ * The default window is the LAST 10 DAYS, computed at mount — not a literal.
+ *
+ * ⚠️ These were hardcoded `'2026-07-01'` → `'2026-07-08'`. Measured 2026-10-16 against the live
+ * `marketbar` table: EURUSD 5m holds 14,759 bars but the EARLIEST is 2026-08-05, so the page's
+ * default window predated all of its own data. Every first click returned
+ * `400 — Replay found 0 bar(s) for EURUSD 5m (2026-07-01 → 2026-07-08)`.
+ *
+ * A hardcoded date range is a dead control in a store with a rolling horizon: the data ages
+ * forward, the literal does not. Derived dates cannot go stale.
+ */
+const isoDay = (d) => d.toISOString().slice(0, 10);
+const daysAgo = (n) => isoDay(new Date(Date.now() - n * 86400000));
+
 export default function SnapshotReplayPage() {
   const [symbol, setSymbol] = useState('EURUSD');
   const [timeframe, setTf] = useState('5m');
-  const [fromDate, setFromDate] = useState('2026-07-01');
-  const [toDate, setToDate] = useState('2026-07-08');
+  const [fromDate, setFromDate] = useState(() => daysAgo(10));
+  const [toDate, setToDate] = useState(() => isoDay(new Date()));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState('1×');
   const [currentIdx, setCurrentIdx] = useState(0);
