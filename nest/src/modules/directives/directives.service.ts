@@ -324,6 +324,13 @@ export class DirectivesService {
         // if (gateResult.muted) { ... continue; }
         //
         // Weight multiplier is always 1.0 — no reduction.
+        //
+        // ⚠️ MEASURED 2026-10-17. Because this block is disabled, `isScoringDemo()` has NO effect
+        // on any score: this was its only scoring-side caller. Proven by replaying one VIX 1h
+        // window under BOTH SCORING_MODE values — byte-identical (144 steps, 44 signals, max
+        // 20.83%). Re-enabling it is a real behaviour change (regime mismatch would MUTE directives
+        // in "live"), so it needs an A/B copy, not an uncomment. See `config/scoring-mode.ts`
+        // and issue #610.
 
         // ── Run the directive (supports async for Finnhub-backed directives) ──
         let result = await directive.calculate(input);

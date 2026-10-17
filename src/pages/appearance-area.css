@@ -349,7 +349,7 @@
 }
 
 .ap-chip--strong {
-  border-color: var(--ok, var(--accent));
+  border-color: var(--color-profit);
   color: var(--ink);
 }
 
@@ -359,7 +359,7 @@
 }
 
 .ap-chip--undecided {
-  border-color: var(--warn, var(--accent));
+  border-color: var(--color-warning);
   color: var(--ink);
 }
 

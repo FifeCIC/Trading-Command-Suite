@@ -142,8 +142,8 @@
   opacity: 0.85;
 }
 
-.pm-profit { color: #4ade80; }
-.pm-loss { color: #f87171; }
+.pm-profit { color: var(--color-profit); }
+.pm-loss { color: var(--color-loss); }
 
 /* Entry → Current price line */
 .pm-price-line {
@@ -185,15 +185,15 @@
   font-weight: 500;
 }
 
-.pm-buy { color: #4ade80; }
-.pm-sell { color: #f87171; }
+.pm-buy { color: var(--color-buy); }
+.pm-sell { color: var(--color-sell); }
 
 .pm-warning {
   padding: 6px 10px;
   background: #451a03;
   border: 1px solid #78350f;
   border-radius: 6px;
-  color: #fbbf24;
+  color: var(--color-warning);
   font-size: 0.8rem;
   margin-bottom: 10px;
 }

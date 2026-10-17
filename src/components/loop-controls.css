@@ -31,8 +31,8 @@
   flex: 0 0 auto;
 }
 
-.lc-on { background: #22c55e; }
-.lc-off { background: #6b7280; }
+.lc-on { background: var(--color-profit); }
+.lc-off { background: var(--color-text-dim); }
 .lc-unknown { background: var(--text-dim); }
 
 .lc-chip {

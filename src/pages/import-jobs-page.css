@@ -289,7 +289,7 @@
 
 .import-error {
   color: var(--color-loss);
-  border-color: #fca5a5;
+  border-color: var(--color-loss);
 }
 
 .import-count {

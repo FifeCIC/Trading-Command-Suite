@@ -200,8 +200,8 @@
   color: var(--ink);
 }
 
-.mt5-log--ok .mt5-log-msg { color: #065f46; }
-.mt5-log--error .mt5-log-msg { color: #991b1b; }
+.mt5-log--ok .mt5-log-msg { color: var(--color-profit); }
+.mt5-log--error .mt5-log-msg { color: var(--danger); }
 .mt5-log--warn .mt5-log-msg { color: #92400e; }
 .mt5-log--info .mt5-log-msg { color: var(--ink-soft); }
 
@@ -231,5 +231,5 @@
   font-weight: 600;
 }
 
-.mt5-ok { color: #065f46; }
-.mt5-err { color: #991b1b; }
+.mt5-ok { color: var(--color-profit); }
+.mt5-err { color: var(--danger); }

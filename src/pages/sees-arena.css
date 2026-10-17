@@ -108,7 +108,7 @@
 .sa-score-high { background: rgba(34,197,94,0.15); color: var(--color-profit); }
 .sa-score-med { background: rgba(245,158,11,0.12); color: var(--color-warning); }
 .sa-score-low { background: rgba(239,68,68,0.1); color: var(--color-loss); }
-.sa-score-gated { background: rgba(107,114,128,0.08); color: #6b7280; }
+.sa-score-gated { background: rgba(107,114,128,0.08); color: var(--color-text-dim); }
 
 /* ── Signal Badges ── */
 .sa-sig-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.6rem; font-weight: 700; }
@@ -128,7 +128,7 @@
 .sa-con-strong_buy { background: rgba(34,197,94,0.2); color: var(--color-profit); }
 .sa-con-buy { background: rgba(34,197,94,0.1); color: #4ade80; }
 .sa-con-mixed { background: rgba(245,158,11,0.1); color: var(--color-warning); }
-.sa-con-sell { background: rgba(239,68,68,0.1); color: #fca5a5; }
+.sa-con-sell { background: rgba(239,68,68,0.1); color: var(--color-loss); }
 .sa-con-strong_sell { background: rgba(239,68,68,0.2); color: var(--color-loss); }
 
 /* ── Divergence ── */

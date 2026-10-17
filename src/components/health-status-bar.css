@@ -77,9 +77,9 @@
   margin-right: 8px;
 }
 
-.health-overall--online { color: #4ade80; }
+.health-overall--online { color: var(--color-profit); }
 .health-overall--degraded { color: #facc15; }
-.health-overall--offline { color: #f87171; }
+.health-overall--offline { color: var(--danger); }
 .health-overall--unknown { color: #9ca3af; }
 
 .health-detail-close {

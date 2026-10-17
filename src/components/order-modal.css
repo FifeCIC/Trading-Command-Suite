@@ -105,8 +105,8 @@
   color: var(--ink);
 }
 
-.om-green { color: #00a63e !important; }
-.om-red { color: #ff4757 !important; }
+.om-green { color: var(--color-profit) !important; }
+.om-red { color: var(--danger) !important; }
 
 /* ── ISA Notice ──────────────────────────────────────────── */
 .om-isa-notice {
@@ -247,7 +247,7 @@
 .om-btn-secondary:hover { background: rgba(255,255,255,0.05); }
 
 .om-btn-danger {
-  background: #ff4757;
+  background: var(--danger);
   color: #fff;
 }
 .om-btn-danger:hover:not(:disabled) { filter: brightness(1.1); }
@@ -358,8 +358,8 @@
   font-size: 1.1rem;
 }
 
-.om-result-ok h3 { color: #00a63e; }
-.om-result-fail h3 { color: #ff4757; }
+.om-result-ok h3 { color: var(--color-profit); }
+.om-result-fail h3 { color: var(--danger); }
 
 .om-result-details {
   text-align: left;

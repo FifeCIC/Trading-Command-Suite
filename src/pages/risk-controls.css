@@ -69,7 +69,7 @@
 
 /* Gates */
 .rc-badge-on { font-size: 0.6rem; background: rgba(34,197,94,0.12); color: var(--color-profit); padding: 1px 6px; border-radius: 4px; font-weight: 700; }
-.rc-badge-off { font-size: 0.6rem; background: rgba(107,114,128,0.12); color: #6b7280; padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+.rc-badge-off { font-size: 0.6rem; background: rgba(107,114,128,0.12); color: var(--color-text-dim); padding: 1px 6px; border-radius: 4px; font-weight: 700; }
 .rc-gates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 .rc-gate-card {
   border: 1px solid var(--line); border-top: 3px solid var(--color-profit);

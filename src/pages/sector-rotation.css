@@ -32,7 +32,7 @@
 .sr2-right { text-align: right; }
 .sr2-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
 .sr2-up-strong { color: var(--color-profit); font-weight: 700; }
-.sr2-up { color: #4ade80; }
+.sr2-up { color: var(--color-profit); }
 .sr2-down { color: var(--color-loss); }
 
 @media (max-width: 600px) { .sr2-quadrant { height: 250px; } }

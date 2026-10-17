@@ -4,7 +4,7 @@
 .tj-header p { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
 .tj-privacy { font-size: 0.72rem !important; color: var(--color-muted) !important; margin-top: 0.3rem !important; }
 .tj-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
-.tj-stat-card { padding: 0.5rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; text-align: center; }
+.tj-stat-card { padding: 0.5rem; border: 1px solid var(--color-grid); border-radius: 8px; background: #0d1117; text-align: center; }
 .tj-stat-num { display: block; font-size: 1.1rem; font-weight: 700; color: var(--ink); }
 .tj-stat-card span:last-child { font-size: 0.7rem; color: var(--color-muted); }
 .tj-green { color: var(--color-profit) !important; }
@@ -13,7 +13,7 @@
 .tj-ai-summary h3 { margin: 0 0 0.5rem; color: #93c5fd; font-size: 0.9rem; }
 .tj-ai-summary p { margin: 0.2rem 0; }
 .tj-entries { display: flex; flex-direction: column; gap: 0.75rem; }
-.tj-card { border: 1px solid #1e2030; border-radius: 10px; padding: 0.75rem; }
+.tj-card { border: 1px solid var(--color-grid); border-radius: 10px; padding: 0.75rem; }
 .tj-card.tj-win { border-color: var(--color-profit); }
 .tj-card.tj-loss { border-color: var(--color-loss); }
 .tj-card.tj-open { border-color: var(--color-accent-blue); }
@@ -21,7 +21,7 @@
 .tj-symbol { font-weight: 700; font-size: 1rem; color: var(--ink); }
 .tj-type { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; }
 .tj-buy { background: #064e3b44; color: #6ee7b7; }
-.tj-sell { background: #7f1d1d44; color: #fca5a5; }
+.tj-sell { background: #7f1d1d44; color: var(--color-loss); }
 .tj-ticket { font-size: 0.72rem; color: #93c5fd; font-family: ui-monospace, monospace; }
 .tj-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: #cbd5e1; }
 .tj-origin-external { background: #7c2d12; color: #fdba74; }
@@ -30,7 +30,7 @@
 /* Close-attribution chip (#916) — WHO closed the trade. Same palette family as the origin chip
    so the eye reads both as "provenance"; colour separates the actor class, text names it. */
 .tj-closewhy { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: #cbd5e1; }
-.tj-closewhy-sl { background: #7f1d1d; color: #fca5a5; }
+.tj-closewhy-sl { background: #7f1d1d; color: var(--color-loss); }
 .tj-closewhy-tp { background: #14532d; color: #86efac; }
 .tj-closewhy-system { background: #78350f; color: #fcd34d; }
 .tj-closewhy-app { background: #1e3a8a; color: #93c5fd; }
@@ -42,7 +42,7 @@
 .tj-note { font-size: 0.82rem; color: var(--ink); font-style: italic; margin: 0.3rem 0; }
 .tj-note-edit { display: flex; gap: 0.5rem; align-items: flex-start; }
 .tj-note-edit textarea { flex: 1; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 0.8rem; }
-.tj-note-edit button, .tj-btn-sm { padding: 0.45rem 0.75rem; min-height: 44px; border-radius: 4px; border: 1px solid var(--line); background: #1e2030; color: var(--ink-soft); font-size: 0.75rem; cursor: pointer; }
+.tj-note-edit button, .tj-btn-sm { padding: 0.45rem 0.75rem; min-height: 44px; border-radius: 4px; border: 1px solid var(--line); background: var(--color-grid); color: var(--ink-soft); font-size: 0.75rem; cursor: pointer; }
 .tj-btn-ai { padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid var(--color-accent-blue); background: #1e3a5f44; color: #93c5fd; font-size: 0.78rem; cursor: pointer; margin-top: 0.5rem; }
 .tj-btn-ai:disabled { opacity: 0.5; }
 .tj-analysis { margin-top: 0.5rem; padding: 0.5rem; background: var(--bg); border-radius: 6px; font-size: 0.78rem; line-height: 1.5; }

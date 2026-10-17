@@ -76,13 +76,13 @@
 }
 
 .ed--warning {
-  border-color: color-mix(in srgb, #d97706 40%, var(--line, #d9e2ec));
-  background: color-mix(in srgb, #d97706 6%, var(--panel, #fff));
-  color: #b45309;
+  border-color: color-mix(in srgb, var(--color-warning) 40%, var(--line, #d9e2ec));
+  background: color-mix(in srgb, var(--color-warning) 6%, var(--panel, #fff));
+  color: var(--color-warning);
 }
 
 .ed--critical {
-  border-color: #991b1b;
-  background: color-mix(in srgb, #991b1b 8%, var(--panel, #fff));
-  color: #991b1b;
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--panel, #fff));
+  color: var(--danger);
 }

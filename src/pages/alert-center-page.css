@@ -112,7 +112,7 @@
   border-radius: 3px;
 }
 
-.ac-sev-critical .ac-sev-label { background: rgba(220,38,38,0.15); color: #fca5a5; }
+.ac-sev-critical .ac-sev-label { background: rgba(220,38,38,0.15); color: var(--color-loss); }
 .ac-sev-high .ac-sev-label { background: rgba(234,88,12,0.15); color: #fdba74; }
 .ac-sev-warning .ac-sev-label { background: rgba(245,158,11,0.15); color: #fde68a; }
 .ac-sev-info .ac-sev-label { background: rgba(59,130,246,0.15); color: #93c5fd; }
@@ -228,7 +228,7 @@
   text-transform: uppercase;
 }
 
-.ac-sev-tag.ac-sev-critical { background: rgba(220,38,38,0.15); color: #fca5a5; }
+.ac-sev-tag.ac-sev-critical { background: rgba(220,38,38,0.15); color: var(--color-loss); }
 .ac-sev-tag.ac-sev-high { background: rgba(234,88,12,0.15); color: #fdba74; }
 .ac-sev-tag.ac-sev-warning { background: rgba(245,158,11,0.15); color: #fde68a; }
 .ac-sev-tag.ac-sev-info { background: rgba(59,130,246,0.15); color: #93c5fd; }

@@ -274,4 +274,4 @@
 .prb-health { border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0.6rem 0; background: rgba(245, 158, 11, 0.06); }
 .prb-health h3 { font-size: 0.75rem; margin: 0 0 0.35rem; color: var(--color-warning); }
 .prb-health-line { font-size: 0.7rem; margin: 2px 0; color: var(--ink-soft); }
-.prb-health-line.prb-health-error { color: #f87171; }
+.prb-health-line.prb-health-error { color: var(--danger); }

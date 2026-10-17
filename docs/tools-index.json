@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 178,
+  "count": 179,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1108,6 +1108,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "a behavioural field cannot reach the create form without its",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-css-literals.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the \"is this colour reachable by a theme?\" gate",
       "selfTest": true,
       "reaches": [
         "prebuild",

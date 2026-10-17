@@ -218,7 +218,7 @@
   padding: 0.4rem 0.6rem;
   border-radius: 6px;
 }
-.sig-opp-warnings { color: #d97706; background: rgba(217, 119, 6, 0.09); }
+.sig-opp-warnings { color: var(--color-warning); background: rgba(217, 119, 6, 0.09); }
 .sig-opp-blockers { color: var(--color-loss); background: rgba(220, 38, 38, 0.09); }
 
 .sig-opp-actions { display: flex; gap: 0.5rem; margin-top: auto; }
@@ -236,9 +236,9 @@
 .sig-opp-btn--buy { background: #16a34a; }
 .sig-opp-btn--buy:hover { background: #15803d; }
 .sig-opp-btn--sell { background: var(--color-loss); }
-.sig-opp-btn--sell:hover { background: #b91c1c; }
-.sig-opp-btn--confirm { background: #d97706; }
-.sig-opp-btn--confirm:hover { background: #b45309; }
+.sig-opp-btn--sell:hover { background: var(--color-sell); }
+.sig-opp-btn--confirm { background: var(--color-warning); }
+.sig-opp-btn--confirm:hover { background: var(--color-warning); }
 .sig-opp-btn--dismiss {
   flex: 0 0 auto;
   background: transparent;
@@ -402,7 +402,7 @@
 /* Execution blockers (#723) — generation-time feasibility with change-hints */
 .sig-opp-exec {
   display: flex; flex-direction: column; gap: 2px;
-  font-size: 0.66rem; color: #f87171;
+  font-size: 0.66rem; color: var(--color-loss);
   border-left: 2px solid rgba(248, 113, 113, 0.45);
   padding: 2px 0 2px 8px; margin: 2px 0 4px;
 }
@@ -567,7 +567,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.sig-b-notice--critical { color: #f87171; background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.28); }
+.sig-b-notice--critical { color: var(--danger); background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.28); }
 .sig-b-notice--warning { color: var(--color-warning); background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); }
 .sig-b-notice--info { color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 6%, transparent); border-color: var(--line); }
 /* Stable notice code (#826) — monospace so it is copyable and unmistakable, muted so it never

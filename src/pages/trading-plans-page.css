@@ -168,7 +168,7 @@
   border-radius: 9px;
 }
 .plan-signal-dir--long { background: rgba(22, 163, 74, 0.15); color: #4ade80; }
-.plan-signal-dir--short { background: rgba(220, 38, 38, 0.15); color: #f87171; }
+.plan-signal-dir--short { background: rgba(220, 38, 38, 0.15); color: var(--color-sell); }
 .plan-signal-proto {
   margin-left: auto;
   font-size: 11px;

@@ -306,7 +306,7 @@
   color: var(--accent);
 }
 
-.directive-btn-disable { color: #ef5350; border-color: #ef5350; }
+.directive-btn-disable { color: var(--danger); border-color: var(--danger); }
 .directive-btn-enable { color: var(--color-profit); border-color: var(--color-profit); }
 .directive-btn-delete { color: var(--ink-soft); }
 

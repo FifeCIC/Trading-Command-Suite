@@ -109,7 +109,7 @@
 }
 
 .as-signal--entry, .as-signal--bullish { background: rgba(34,197,94,0.12); color: var(--color-profit); }
-.as-signal--watch, .as-signal--neutral { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.as-signal--watch, .as-signal--neutral { background: rgba(251,191,36,0.12); color: var(--color-warning); }
 .as-signal--defensive, .as-signal--bearish { background: rgba(239,68,68,0.12); color: var(--color-loss); }
 
 .as-confidence {

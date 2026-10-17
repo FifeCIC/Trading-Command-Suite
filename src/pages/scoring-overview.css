@@ -25,7 +25,7 @@
 
 .so-freshness-btn {
   padding: 4px 10px; border: 1px solid var(--color-warning); border-radius: 6px;
-  background: rgba(245,158,11,0.08); color: #d97706;
+  background: rgba(245,158,11,0.08); color: var(--color-warning);
   font-size: 0.72rem; font-family: inherit; cursor: pointer; flex-shrink: 0;
   font-weight: 600;
 }
@@ -64,7 +64,7 @@
   font-weight: 600;
   text-transform: uppercase;
   background: #ffaa0020;
-  color: #9a6400;
+  color: var(--color-warning);
 }
 
 /* ---- Summary grid ---- */
@@ -104,8 +104,8 @@
   color: var(--ink-soft);
 }
 
-.so-mode-full { color: #00a63e; }
-.so-mode-fallback { color: #e6a700; }
+.so-mode-full { color: var(--color-profit); }
+.so-mode-fallback { color: var(--color-warning); }
 
 /* ---- Two-column ---- */
 .so-two-col {

@@ -41,8 +41,8 @@
 }
 .so-bookmarked:hover {
   opacity: 1;
-  color: #fbbf24;
-  border-color: #fbbf24;
+  color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 .so-gear-active {
   color: var(--accent, var(--accent));

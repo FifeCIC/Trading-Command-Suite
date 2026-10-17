@@ -11,7 +11,7 @@
 
 .sd-chip { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 .sd-chip--ok { background: #00ff4120; color: #00a63e; }
-.sd-chip--warn { background: #ffaa0020; color: #9a6400; }
+.sd-chip--warn { background: #ffaa0020; color: var(--color-warning); }
 .sd-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 
 .sd-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 0.8rem; margin-bottom: 1rem; }
@@ -50,13 +50,13 @@
 .sd-btn:hover:not(:disabled) { opacity: 0.85; }
 .sd-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .sd-btn-buy { background: #065f46; border-color: #059669; color: #6ee7b7; }
-.sd-btn-sell { background: #7f1d1d; border-color: var(--color-loss); color: #fca5a5; }
+.sd-btn-sell { background: #7f1d1d; border-color: var(--color-loss); color: var(--color-loss); }
 
 .sd-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .sd-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; }
 .sd-modal h3 { margin: 0 0 0.5rem; }
 .sd-modal p { font-size: 0.85rem; color: var(--ink-soft); }
-.sd-modal-warning { background: #7c2d1233; border: 1px solid #9a3412; border-radius: 6px; padding: 0.5rem; font-size: 0.78rem !important; color: #fbbf24 !important; margin: 0.75rem 0; }
+.sd-modal-warning { background: #7c2d1233; border: 1px solid var(--color-warning); border-radius: 6px; padding: 0.5rem; font-size: 0.78rem !important; color: var(--color-warning) !important; margin: 0.75rem 0; }
 .sd-modal-actions { margin-top: 1rem; display: flex; justify-content: flex-end; }
 
 .sd-isa-warning {
@@ -95,7 +95,7 @@
 .sd-news-source { font-size: 0.72rem; color: var(--ink-soft); font-weight: 600; }
 .sd-news-sentiment { font-size: 0.72rem; font-weight: 600; }
 .sd-news-headline { margin: 0.15rem 0; font-size: 0.85rem; color: var(--ink); }
-.sd-fluff-tag { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: #7f1d1d44; color: #fca5a5; }
+.sd-fluff-tag { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: #7f1d1d44; color: var(--color-loss); }
 
 /* ── Chart ── */
 .sd-chart-wrap { margin-bottom: 1rem; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.1); }

@@ -6,7 +6,7 @@
 .pf-stat { border: 1px solid var(--line); border-radius: 12px; padding: 1rem; background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%); }
 .pf-stat-label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
 .pf-stat-value { display: block; font-size: 1.6rem; font-weight: 700; margin-top: 0.15rem; }
-.pf-positive { color: #00a63e; }
+.pf-positive { color: var(--color-profit); }
 .pf-negative { color: var(--color-loss); }
 .pf-section { border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%); margin-bottom: 1rem; }
 .pf-section h2 { margin: 0 0 0.6rem; font-size: 1.05rem; }
@@ -20,7 +20,7 @@
 .pf-bar-down { background: var(--color-loss); }
 .pf-bar-cash { background: var(--line); }
 .pf-alloc-pct { font-size: 0.82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.pf-warn { font-size: 0.72rem; color: #e6a700; }.pf-error { color: var(--color-loss); }
+.pf-warn { font-size: 0.72rem; color: var(--color-warning); }.pf-error { color: var(--color-loss); }
 
 /* Type badges */
 .pf-type-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; }

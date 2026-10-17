@@ -36,7 +36,6 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { venueForSymbol } from '../calendar/market-patterns';
 import { DirectiveConfigService } from './directive-config.service';
-import { isScoringDemo } from '../../config/scoring-mode';
 import {
   RiskGatingEngine,
   RiskDirectiveResult,

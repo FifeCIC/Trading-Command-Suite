@@ -47,7 +47,7 @@
 .dm-btn:hover { background: var(--line); }
 .dm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .dm-btn-sm { padding: 0.25rem 0.6rem; font-size: 0.75rem; }
-.dm-btn-danger { background: rgba(239,68,68,0.08); color: #fca5a5; border-color: rgba(239,68,68,0.2); }
+.dm-btn-danger { background: rgba(239,68,68,0.08); color: var(--color-loss); border-color: rgba(239,68,68,0.2); }
 .dm-btn-danger:hover { background: rgba(239,68,68,0.15); }
 
 /* ── Table ── */
@@ -64,7 +64,7 @@
   display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px;
   font-size: 0.72rem; font-weight: 600; background: rgba(59,130,246,0.1); color: #93c5fd;
 }
-.dm-retention-stale { background: rgba(239,68,68,0.1); color: #fca5a5; }
+.dm-retention-stale { background: rgba(239,68,68,0.1); color: var(--color-loss); }
 
 .dm-row-stale td { background: rgba(239,68,68,0.03); }
 

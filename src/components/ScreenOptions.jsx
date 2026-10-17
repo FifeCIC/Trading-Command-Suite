@@ -686,6 +686,21 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
     document.documentElement.setAttribute('data-colorblind', colorBlindMode ? 'true' : 'false');
   }, [colorBlindMode]);
 
+  // Apply high contrast text preference to the document so CSS can respond
+  //
+  // IMPORTANT: this is the ONE preference that needs its own effect here, and the
+  // reason is a trap. App.jsx applies `data-high-contrast` in a mount-only effect
+  // plus an `onStorage` listener — but the `storage` event does NOT fire in the
+  // tab that made the change, so toggling this from the panel updated
+  // localStorage and nothing else. Measured 2026-10-16: same click left the
+  // attribute 'false'; a reload then produced 'true'. The user-visible symptom is
+  // "the toggle does nothing", which reads as a missing control rather than a
+  // missing repaint. The six siblings above each apply their own attribute for
+  // exactly this reason — this one was simply absent.
+  useEffect(function () {
+    document.documentElement.setAttribute('data-high-contrast', highContrastText ? 'true' : 'false');
+  }, [highContrastText]);
+
   return (
     <>
       {/* Sticky buttons */}

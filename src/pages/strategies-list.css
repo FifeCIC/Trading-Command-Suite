@@ -41,7 +41,7 @@
 }
 .sl-chip-wl { background: rgba(139,92,246,0.1); color: #8b5cf6; }
 .sl-chip-proto { background: rgba(6,182,212,0.1); color: #06b6d4; }
-.sl-chip-broker { background: rgba(245,158,11,0.1); color: #d97706; }
+.sl-chip-broker { background: rgba(245,158,11,0.1); color: var(--color-warning); }
 
 .sl-card-score { display: flex; justify-content: space-between; align-items: center; margin: 0.3rem 0; }
 .sl-score-label { font-size: 0.65rem; color: var(--ink-soft); }

@@ -91,7 +91,7 @@
   font-family: monospace;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.pg-mode-btn:hover { background: #252840; color: #e5e7eb; }
+.pg-mode-btn:hover { background: #252840; color: var(--ink); }
 .pg-mode-btn.active { background: var(--color-accent-blue); color: #fff; border-color: var(--color-accent-blue); }
 .pg-legend-sep { width: 1px; height: 18px; background: var(--line); }
 .pg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
@@ -140,7 +140,7 @@
   transition: stroke 0.2s, stroke-width 0.2s;
 }
 .pg-conn-group--hover .pg-edge {
-  stroke: #60a5fa;
+  stroke: var(--notice-info-text);
   stroke-width: 2.8;
   stroke-dasharray: 8 2;
   filter: url(#glow);
@@ -498,7 +498,7 @@
   padding: 4px 10px;
   border-radius: 6px;
   background: rgba(59,130,246,0.1);
-  color: #60a5fa;
+  color: var(--notice-info-text);
   border: 1px solid rgba(59,130,246,0.15);
 }
 

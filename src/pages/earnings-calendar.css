@@ -64,8 +64,8 @@
 .ec-btn:hover { border-color: var(--accent, var(--accent)); }
 .ec-btn-primary { background: var(--accent, var(--accent)); border-color: var(--accent, var(--accent)); color: #04151a; font-weight: 600; }
 .ec-btn-primary:hover { filter: brightness(1.1); }
-.ec-btn-danger { border-color: #b45309; color: #fdba74; }
-.ec-btn-danger:hover { border-color: var(--color-warning); color: #fcd34d; }
+.ec-btn-danger { border-color: var(--color-warning); color: var(--color-warning); }
+.ec-btn-danger:hover { border-color: var(--color-warning); color: var(--color-warning); }
 .ec-cap-notice {
   display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
   font-size: 0.78rem; color: var(--ink-soft, var(--ink-soft));

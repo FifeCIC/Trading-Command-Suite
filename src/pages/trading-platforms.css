@@ -342,8 +342,8 @@
   letter-spacing: 0.03em;
 }
 
-.tp-chip--ok { background: #00ff4120; color: #00a63e; }
-.tp-chip--warn { background: #ffaa0020; color: #9a6400; }
+.tp-chip--ok { background: #00ff4120; color: var(--color-profit); }
+.tp-chip--warn { background: #ffaa0020; color: var(--color-warning); }
 .tp-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 
 .tp-hint {

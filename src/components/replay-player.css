@@ -73,12 +73,12 @@
   background: transparent;
 }
 .rp-price { fill: none; stroke: var(--ink-soft); stroke-width: 0.4; vector-effect: non-scaling-stroke; }
-.rp-mark-entry { fill: #22c55e; }
-.rp-mark-exit { fill: #ef4444; }
+.rp-mark-entry { fill: var(--color-profit); }
+.rp-mark-exit { fill: var(--color-loss); }
 /* #R14 — the stop/target of the most recent revealed trade, drawn the way chart packages do. */
 .rp-level { stroke-width: 0.35; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
-.rp-level-sl { stroke: #ef4444; }
-.rp-level-tp { stroke: #22c55e; }
+.rp-level-sl { stroke: var(--color-loss); }
+.rp-level-tp { stroke: var(--color-profit); }
 .rp-axis {
   display: flex;
   justify-content: space-between;
@@ -89,8 +89,8 @@
 }
 
 .rp-table-wrap { overflow-x: auto; }.rp-mono { font-variant-numeric: tabular-nums; font-size: 0.72rem; }
-.rp-up { color: #22c55e; }
-.rp-down { color: #ef4444; }
+.rp-up { color: var(--color-profit); }
+.rp-down { color: var(--color-loss); }
 .rp-row-open { opacity: 0.75; }
 
 .rp-open-chip {

@@ -597,7 +597,7 @@
 
 .architecture-mode-badge.architecture-badge-warn {
   background: #ffaa0020;
-  color: #9a6400;
+  color: var(--color-warning);
 }
 
 .architecture-mode-badge.architecture-badge-neutral {

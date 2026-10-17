@@ -270,7 +270,7 @@
 }
 
 .db-brief-card {
-  background: #111318;
+  background: var(--color-input-bg);
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;

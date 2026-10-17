@@ -225,7 +225,7 @@
 /* Trail data */
 .dt-trail-data {
   margin-top: 12px;
-  background: #111318;
+  background: var(--color-input-bg);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 10px 12px;
