@@ -42,6 +42,10 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import SignalBadge from '../components/SignalBadge';
 import { buildScoreDisplay } from '../core/score-display';
+// ⚠️ The canonical Form System (`src/core/forms.css`, `.ff-*`). It is NOT global — each page that
+// has a form imports it. Using it is what keeps the fields readable under the active theme; see the
+// note on the fields block below for the measured failure of the hand-rolled version.
+import '../core/forms.css';
 import './protocol-backtest.css';
 
 /** Timeframes the store actually holds (measured: 1m, 5m, 15m, 1h, 4h, 1d). */
@@ -199,10 +203,21 @@ export default function ProtocolBacktestPage() {
       </header>
 
       <section className="pb-panel">
+        {/* ⚠️ LAYOUT ONLY — the control styling is the canonical Form System, not this page's.
+            Measured 2026-10-17 (owner report: "the fields are dark and text cannot be read"): this
+            block was hand-styled with `background: var(--color-input-bg)` — a fixed `#111318`, an
+            INPUT surface that ignores the theme — and never styled `.ff-select option`, so the
+            dropdown list was dark-on-dark. `.ff-input`/`.ff-select` use `var(--panel)` and style
+            their `option` children; that is the entire point of one shared form standard. */}
         <div className="pb-fields">
-          <label>
-            Protocol
-            <select value={protocolId} onChange={(e) => setProtocolId(e.target.value)}>
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="pb-protocol">Protocol</label>
+            <select
+              id="pb-protocol"
+              className="ff-select"
+              value={protocolId}
+              onChange={(e) => setProtocolId(e.target.value)}
+            >
               <option value="">Select a protocol…</option>
               {protocols.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -210,45 +225,72 @@ export default function ProtocolBacktestPage() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
           {/* ⚠️ NO FREE-TEXT SYMBOL. The choices are the protocol's OWN resolved symbols, so an
               instrument the protocol does not score cannot be offered. */}
-          <label>
-            Symbol
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="pb-symbol">Symbol</label>
             <select
+              id="pb-symbol"
+              className="ff-select"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
               disabled={!protocolId || symbols.length === 0}
             >
               {symbols.length === 0 && (
-                <option value="">{protocolId ? 'this protocol resolves no symbols' : 'choose a protocol first'}</option>
+                <option value="">
+                  {protocolId ? 'this protocol resolves no symbols' : 'choose a protocol first'}
+                </option>
               )}
               {symbols.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label>
-            Timeframe
-            <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="pb-timeframe">Timeframe</label>
+            <select
+              id="pb-timeframe"
+              className="ff-select"
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value)}
+            >
               {TIMEFRAMES.map((tf) => (
                 <option key={tf} value={tf}>{tf}</option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label>
-            From
-            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </label>
-          <label>
-            To
-            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </label>
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="pb-from">From</label>
+            <input
+              id="pb-from"
+              className="ff-input"
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+          </div>
 
-          <button type="button" className="pb-run" onClick={run} disabled={!canRun}>
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="pb-to">To</label>
+            <input
+              id="pb-to"
+              className="ff-input"
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </div>
+
+          <button
+            type="button"
+            className="ff-btn ff-btn-primary"
+            onClick={run}
+            disabled={!canRun}
+          >
             {replayMutation.isPending
               ? `Scoring… ${elapsed}s`
               : !protocolId
@@ -260,7 +302,7 @@ export default function ProtocolBacktestPage() {
         </div>
 
         {protocol && (
-          <p className="pb-proto-note">
+          <p className="ff-hint">
             <strong>{protocol.name || protocol.id}</strong> · {protocol.directiveCount} directives ·
             configured capacity <strong>{protocol.maxScore}</strong> · recommended timeframe{' '}
             {protocol.recommendedTimeframe || '—'}
@@ -274,17 +316,14 @@ export default function ProtocolBacktestPage() {
         {/* What the engine's limits ARE. Facts, not a prediction — see the note on ENGINE_MAX_OPS
             for the measured case where a predicted verdict contradicted the run it described. */}
         {protocol && symbol && (
-          <p className="pb-estimate">
+          <p className="ff-hint">
             Window: {windowDays} day(s) at {timeframe} · protocol has {protocol.directiveCount}{' '}
-            directives.{' '}
-            <span className="pb-estimate-note">
-              The engine refuses a replay it cannot finish: over{' '}
-              {ENGINE_MAX_OPS.toLocaleString()} scoring operations (bars × protocols) it refuses
-              instantly, and it stops any run at {ENGINE_DEADLINE_S}s. Cost per bar varies 5.2×
-              between protocols ({MS_PER_BAR_MIN}–{MS_PER_BAR_MAX} ms measured), so nothing here
-              predicts which side you land on — if it is refused, the reason appears above with the
-              count it reached.
-            </span>
+            directives. The engine refuses a replay it cannot finish: over{' '}
+            {ENGINE_MAX_OPS.toLocaleString()} scoring operations (bars × protocols) it refuses
+            instantly, and it stops any run at {ENGINE_DEADLINE_S}s. Cost per bar varies 5.2×
+            between protocols ({MS_PER_BAR_MIN}–{MS_PER_BAR_MAX} ms measured), so nothing here
+            predicts which side you land on — if it is refused, the reason appears above with the
+            count it reached.
           </p>
         )}
 

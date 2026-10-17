@@ -31,63 +31,18 @@
   background: var(--panel);
 }
 
+/* ⚠️ LAYOUT ONLY. The control styling is the canonical Form System (`.ff-input` / `.ff-select` /
+   `.ff-btn` in `src/core/forms.css`), imported by the page.
+   Measured 2026-10-17 — the owner reported "the fields are dark and text cannot be read". This file
+   was restating the fields with `background: var(--color-input-bg)` (a fixed `#111318`) and had NO
+   rule for `select option`, so the dropdown was dark-on-dark under the active theme while the
+   canonical `.ff-select` styles both. Do not re-add control styling here: it is how the app ended
+   up with many form arrangements in the first place. */
 .pb-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; }
-.pb-fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-.pb-fields select,
-.pb-fields input {
-  min-height: 40px;
-  min-width: 10rem;
-  padding: 0.4rem 0.6rem;
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: var(--ink);
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-}
-.pb-fields select:disabled { opacity: 0.5; cursor: not-allowed; }
+.pb-fields .ff-field { min-width: 10rem; }
 
-/* Never removed — a keyboard user loses the app without it. */
-.pb-fields select:focus-visible,
-.pb-fields input:focus-visible,
-.pb-run:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.pb-run {
-  min-height: 40px;
-  padding: 8px 16px;
-  font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--accent) 22%, var(--color-input-bg));
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  cursor: pointer;
-}
-.pb-run:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  background: var(--color-input-bg);
-  border-color: var(--color-border);
-}
-
-.pb-proto-note { margin: 0.75rem 0 0; font-size: 0.78rem; color: var(--ink-soft); }
-
-/* The engine's limits, stated as facts. ⚠️ NO tone variants: an earlier version graded this line
-   with a predicted verdict, and it was measured contradicting the run it described (see the note on
-   ENGINE_MAX_OPS in the page). A warning nobody can trust is worse than none. */
-.pb-estimate { margin: 0.5rem 0 0; font-size: 0.78rem; color: var(--ink-soft); }
-.pb-estimate-note { opacity: 0.8; }
+/* Both notes use the canonical `.ff-hint` — there is no page-local note style. */
+.pb-panel .ff-hint { margin: 0.75rem 0 0; }
 
 .pb-results { display: flex; flex-direction: column; gap: 0.75rem; }
 
