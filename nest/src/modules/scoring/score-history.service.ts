@@ -352,9 +352,11 @@ export class ScoreHistoryService {
     // Rolling 14-day window — the outer bound on how far back runs are considered.
     const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const baseWhere: any = { timestamp: { gte: fourteenDaysAgo } };
-    if (Object.keys(where).length > 0) {
-      baseWhere.AND = [where];
-    }
+
+    // The id sets the search resolved. Kept in scope because the "newest minute per group" query
+    // below must apply the SAME filter — see the note there.
+    let searchSymbolIds: string[] = [];
+    let searchStrategyIds: string[] = [];
 
     // Fetch raw scores — if search is active, also fetch symbol tickers to filter
     let scores;
@@ -372,16 +374,30 @@ export class ScoreHistoryService {
         select: { id: true },
       });
 
-      const symbolFilter = matchingIds.length > 0 ? { symbolId: { in: matchingIds } } : {};
-      const strategyNameFilter = matchingStrategies.length > 0 ? { strategyId: { in: matchingStrategies.map((s) => s.id) } } : {};
-
       if (matchingIds.length === 0 && matchingStrategies.length === 0) {
         return { runs: [], total: 0, page, pageSize, totalPages: 0, queryTimeMs: Date.now() - startTime };
       }
 
+      searchSymbolIds = matchingIds;
+      searchStrategyIds = matchingStrategies.map((s) => s.id);
+
       where.OR = [];
-      if (matchingIds.length > 0) where.OR.push(symbolFilter);
-      if (matchingStrategies.length > 0) where.OR.push(strategyNameFilter);
+      if (searchSymbolIds.length > 0) where.OR.push({ symbolId: { in: searchSymbolIds } });
+      if (searchStrategyIds.length > 0) where.OR.push({ strategyId: { in: searchStrategyIds } });
+    }
+
+    // ── ATTACH `where` ONLY AFTER THE SEARCH BLOCK HAS POPULATED IT ────────────────────────────
+    // ⚠️ This ran BEFORE the block above, guarded by `Object.keys(where).length > 0`. With no
+    // `strategyId` supplied, `where` was still `{}` at that moment, the guard was false, and
+    // `where` was therefore NEVER attached to `baseWhere` — so the `where.OR` written moments
+    // later was added to an object nothing referenced.
+    //
+    // MEASURED 2026-10-19: `GET /api/scoring/runs?search=EURUSD` returned VIX runs. The search
+    // filter was silently discarded and the response looked completely normal. That is worse than
+    // no filter: it returns a plausible page and the reader draws a conclusion from it. The
+    // stale-EURUSD investigation was misled by exactly this.
+    if (Object.keys(where).length > 0) {
+      baseWhere.AND = [where];
     }
 
     // ── Newest runs PER PROTOCOL, not newest rows globally (#757) ──
@@ -415,13 +431,44 @@ export class ScoreHistoryService {
     // MySQL DATETIME into a JS Date, and multiplying that Date by the auto-increment
     // id (below) coerces it to epoch ms — which produces an absurd id, not a "NaN"
     // crash. DATE_FORMAT keeps it opaque text and is also what the grouping key needs.
+    // ── THE WINDOW QUERY MUST CARRY THE SAME FILTER AS `baseWhere` ────────────────────────────
+    // ⚠️ These two queries answer different questions and BOTH must filter:
+    //   this one   → WHICH MINUTES form the page
+    //   baseWhere  → which ROWS survive inside those minutes
+    // Unfiltered, the page was built from the newest minutes of ALL groups, which are owned by
+    // whichever protocol scores most often. A protocol that last scored days ago — precisely the
+    // one a reader investigates — fell outside that window and the endpoint returned
+    // `{ runs: [], total: 0 }` while its rows sat in the database.
+    //
+    // MEASURED 2026-10-19: `search=EURUSD&strategyId=probe-1dir-v1` returned `total: 0` and that
+    // empty result was read as "the Oct 16 row no longer exists". It existed the whole time. A
+    // filter applied to one half of a two-step query is the same defect as no filter.
+    const latestWhere: string[] = ['timestamp >= ?'];
+    const latestParams: any[] = [since];
+    if (strategyFilter) {
+      latestWhere.push('strategyId = ?');
+      latestParams.push(strategyFilter);
+    }
+    if (searchSymbolIds.length > 0 || searchStrategyIds.length > 0) {
+      const alternatives: string[] = [];
+      if (searchSymbolIds.length > 0) {
+        alternatives.push(`symbolId IN (${searchSymbolIds.map(() => '?').join(',')})`);
+        latestParams.push(...searchSymbolIds);
+      }
+      if (searchStrategyIds.length > 0) {
+        alternatives.push(`strategyId IN (${searchStrategyIds.map(() => '?').join(',')})`);
+        latestParams.push(...searchStrategyIds);
+      }
+      latestWhere.push(`(${alternatives.join(' OR ')})`);
+    }
+
     const latestRows: Array<{ g: string | null; newest: string }> = await (this.prisma as any).$queryRawUnsafe(
       `SELECT ${groupField} AS g,
               DATE_FORMAT(MAX(timestamp), '%Y-%m-%dT%H:%i:%s.000Z') AS newest
          FROM Score
-        WHERE timestamp >= ?
+        WHERE ${latestWhere.join(' AND ')}
         GROUP BY g`,
-      since,
+      ...latestParams,
     );
 
     // Keep the newest `limit` groups (the page), then union their minutes. A group

@@ -34,7 +34,7 @@
 /* Items */
 .qa-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .qa-item { background: var(--panel, var(--panel)); border: 1px solid var(--line, var(--line)); border-radius: 10px; overflow: hidden; transition: border-color 0.15s; }
-.qa-item.qa-expanded { border-color: #6366f1; }
+.qa-item.qa-expanded { border-color: var(--color-accent-blue); }
 .qa-item-header { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0.85rem; cursor: pointer; gap: 1rem; }
 .qa-item-header:hover { background: rgba(255,255,255,0.015); }
 .qa-item-left { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
@@ -54,14 +54,14 @@
 .qa-procedure h4, .qa-expected h4, .qa-feedback-existing h4 { font-size: 0.82rem; text-transform: uppercase; color: var(--ink-soft, var(--ink-soft)); margin: 0 0 0.3rem; }
 .qa-pre { background: rgba(0,0,0,0.3); padding: 0.5rem 0.7rem; border-radius: 6px; font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-word; margin: 0; line-height: 1.5; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 .qa-expected p { font-size: 0.88rem; color: var(--ink-soft, #cbd5e1); margin: 0; line-height: 1.5; }
-.qa-version { font-size: 0.72rem; color: #6366f1; margin-bottom: 0.5rem; }
+.qa-version { font-size: 0.72rem; color: var(--color-accent-blue); margin-bottom: 0.5rem; }
 .qa-feedback-existing { margin-bottom: 0.5rem; }
 .qa-feedback-existing p { font-size: 0.82rem; color: var(--ink-soft, #cbd5e1); background: rgba(99,102,241,0.08); padding: 0.4rem 0.6rem; border-radius: 6px; margin: 0; }
 
 .qa-feedback-form { display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap; }
 .qa-feedback-input { flex: 1; min-width: 200px; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--line, var(--line)); background: rgba(0,0,0,0.2); color: var(--ink, var(--ink)); font-size: 0.82rem; font-family: inherit; resize: vertical; }
-.qa-feedback-input:focus { border-color: #6366f1; outline: none; }
-.qa-feedback-btn { padding: 0.4rem 0.8rem; border-radius: 6px; border: none; background: #6366f1; color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.qa-feedback-input:focus { border-color: var(--color-accent-blue); outline: none; }
+.qa-feedback-btn { padding: 0.4rem 0.8rem; border-radius: 6px; border: none; background: var(--color-accent-blue); color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .qa-feedback-btn:hover { background: #5558e6; }
 .qa-status-hint { font-size: 0.72rem; color: var(--ink-soft, var(--ink-soft)); width: 100%; }
 

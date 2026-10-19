@@ -80,3 +80,64 @@ test('the tooltip surfaces the SERVER’s reason, and names the alarming state p
   const stale = vm({ open: true, stale: true, reason: 'cadence indeterminate' });
   assert.match(stale.frozenTitle, /Market OPEN but data stale \(cadence indeterminate\)/);
 });
+
+// ── EXPIRED — the third axis: is this row still being REPLACED? ──────────────────────────────
+//
+// ⚠️ THE DEFECT THESE PIN (measured 2026-10-19 on /scoring/live-ordering-stack):
+// EURUSD / `probe-1dir-v1` held a `STRONG_BUY` 60/100 dated 16 Oct and rendered **Live** for two
+// days while ranked ABOVE every live score. The protocol was being run every 2 minutes on fresh
+// bars; its single directive returned 29/100 and classified itself `neutral`, and a neutral tick
+// writes no row. So the newest row stayed 2 days old, still carrying the
+// `marketStatus: { open: true, stale: false }` stamped into it at the time — which is all the
+// state model looked at. Age was not an input, so `frozen` was `false` and the ladder's
+// "a frozen scan must never outrank a live signal" rule never fired.
+
+const aged = (marketStatus, ageMinutes, maxAgeMinutes = 180) =>
+  buildScoreDisplay(
+    { signal: 'STRONG_BUY', rawComposite: 60, rawMax: 100, marketStatus },
+    { ageMinutes, maxAgeMinutes },
+  );
+
+test('a row that stopped being replaced is EXPIRED, never Live — the 2-day-old card', () => {
+  const out = aged({ open: true, stale: false }, 4_146);
+  assert.equal(out.state, SCORE_STATES.EXPIRED);
+  // frozen is the load-bearing part: the Ladder sorter demotes frozen cards, so this alone
+  // takes the dead row out of the top rank without any new ranking rule.
+  assert.equal(out.frozen, true);
+  assert.equal(out.needsAttention, true);
+  assert.equal(stateLabel(out), 'No new score');
+  assert.match(out.frozenTitle, /NO NEW SCORE for 4146 min/);
+});
+
+test('a CLOSED market stays PAUSED even when the row is old — weekend is not an incident', () => {
+  // The opposite direction of the rule above, and the one that would have produced noise: FX is
+  // shut from Friday close to Monday open, so EVERY FX card is hours old over the weekend. Age
+  // must not upgrade those to EXPIRED — same reasoning that keeps data age out of STALE.
+  assert.equal(aged({ open: false }, 10_000).state, SCORE_STATES.PAUSED);
+  assert.equal(aged({ open: false }, 10_000).needsAttention, false);
+});
+
+test('CANARY — identical age, only the market flag decides PAUSED vs EXPIRED', () => {
+  // Proves the pair above is separated by `open` alone. Both calls pass the SAME age.
+  assert.equal(aged({ open: false }, 4_146).state, SCORE_STATES.PAUSED);
+  assert.equal(aged({ open: true, stale: false }, 4_146).state, SCORE_STATES.EXPIRED);
+});
+
+test('a fresh row is untouched by the age rule — no false expiry', () => {
+  const out = aged({ open: true, stale: false }, 2);
+  assert.equal(out.state, SCORE_STATES.LIVE);
+  assert.equal(out.frozen, false);
+});
+
+test('CANARY — the SAME row flips Live ⇄ EXPIRED on the age input alone', () => {
+  // Proves the test above is driven by age and not by marketStatus. Both calls pass the SAME row.
+  const ms = { open: true, stale: false };
+  assert.equal(aged(ms, 179).state, SCORE_STATES.LIVE);
+  assert.equal(aged(ms, 181).state, SCORE_STATES.EXPIRED);
+});
+
+test('no age supplied means NO AGE RULE — legacy callers are unchanged', () => {
+  assert.equal(buildScoreDisplay(row({ open: true, stale: false })).state, SCORE_STATES.LIVE);
+  // A missing age must be `null`, not 0 — 0 would silently mean "brand new".
+  assert.equal(buildScoreDisplay(row({ open: true })).ageMinutes, null);
+});

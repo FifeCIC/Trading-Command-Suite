@@ -34,6 +34,64 @@ import { buildScoreDisplay } from './score-display';
 import { familyOf } from './score-card-view';
 
 /**
+ * DEFAULT SCORE-AGE LIMIT — a LIVENESS label, not a scoring rule.
+ * ==============================================================
+ * A card whose row has not been replaced for longer than this is marked `expired`, which sets
+ * `frozen: true`. That single flag is enough: the Ladder's sorter already ranks
+ * "actionable before score size", so an expired card stops outranking live ones with no new
+ * ranking logic.
+ *
+ * ⚠️ WHY A CONSTANT IS ACCEPTABLE HERE, WHEN `score-display.js` REFUSES ONE FOR THE
+ * ENTRY/STRONG THRESHOLDS. Those thresholds decide what a signal IS — a hand-copied number there
+ * makes the UI disagree with the scorer. This one decides only whether a row is still being
+ * replaced, and the row carries its own timestamp; the window is a display floor, and the chip
+ * prints the real age beside it so nobody has to trust the number.
+ *
+ * The AUTHORITATIVE stall value already exists server-side: `stalledForMinutes` on
+ * `/api/scoring/gated/protocols/status`. This payload does not carry it, so the age is computed
+ * from timestamps the server sent. If the protocols payload gains that field, replace this
+ * constant with it — do not add a third source.
+ *
+ * WHY 180 AS THE FALLBACK: every currently-active protocol is intraday (5m/15m/1h), and three
+ * missed hourly bars is the point at which a card is genuinely not current. A protocol whose
+ * cadence IS on the payload derives its own window above; one with an unusual horizon declares
+ * `maxScoreAgeMinutes`.
+ */
+const DEFAULT_MAX_SCORE_AGE_MINUTES = 180;
+
+/**
+ * Cache window per CADENCE. A protocol's freshness window is a property of the horizon it trades,
+ * not a global constant — a 5-minute scalp is dead after 30 minutes while a daily swing protocol is
+ * perfectly current after two days. Owner, 2026-10-19: *"it should be depending on the protocol
+ * because some are scoring based on different targeted trading periods."*
+ *
+ * Resolution order (first wins):
+ *   1. `protocol.maxScoreAgeMinutes` — explicit declaration on the registry row. Use this when the
+ *      horizon is unusual; it is the only value that is a decision rather than a derivation.
+ *   2. 3 × the protocol's recommended cadence — the same "three missed bars" rule the rest of the
+ *      pipeline uses.
+ *   3. `DEFAULT_MAX_SCORE_AGE_MINUTES` when the cadence is not on the payload. Not a guess at the
+ *      horizon: it is the fallback the card prints beside the real age, so the reader can see the
+ *      window that was applied.
+ */
+const CADENCE_MINUTES = {
+  '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '2h': 120, '4h': 240, '1d': 1440,
+};
+
+const maxAgeMinutesFor = (protocol) => {
+  if (Number.isFinite(protocol?.maxScoreAgeMinutes)) return protocol.maxScoreAgeMinutes;
+  const cadence = CADENCE_MINUTES[protocol?.recommendedTimeframe ?? protocol?.timeframe];
+  if (Number.isFinite(cadence)) return Math.max(60, cadence * 3);
+  return DEFAULT_MAX_SCORE_AGE_MINUTES;
+};
+
+/** Age of a score row in minutes, or `null` when the timestamp cannot be read — never 0. */
+const ageMinutesOf = (timestamp) => {
+  const at = Date.parse(timestamp);
+  return Number.isFinite(at) ? (Date.now() - at) / 60_000 : null;
+};
+
+/**
  * @param {Array} protocols  gated protocols, each with `id`, `name`, `resolvedSymbols[]`
  * @param {Array} runs       scoring runs, timestamp-descending, each with `protocolId` + `scores[]`
  * @returns {Array} card entries shaped for `ScoreCard` / `buildCardRef`
@@ -92,7 +150,10 @@ export function buildScoreEntries(protocols = [], runs = []) {
         protocolId: p.id,
         protocolName: p.name || p.id,
         raw,
-        vm: buildScoreDisplay(raw ?? {}),
+        vm: buildScoreDisplay(raw ?? {}, {
+          ageMinutes: ageMinutesOf(raw?.timestamp),
+          maxAgeMinutes: maxAgeMinutesFor(p),
+        }),
         hasScore: !!raw,
         time: raw?.timestamp ?? null,
         // The persisted Score row UUID for this symbol+protocol — copied by the

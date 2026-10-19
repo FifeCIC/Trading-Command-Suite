@@ -8,12 +8,17 @@
  *
  * Usage:
  *   <h1>My Page <PageInfoPopover>A description of this page.</PageInfoPopover></h1>
+ *
+ * `label` names the overlay for assistive tech and the native tooltip. It defaults to "Page info"
+ * because the component began on page headers; a caller that hides a PANEL's explanation behind
+ * the same trigger should say so ("Run facts and engine limits"), otherwise a screen reader
+ * announces "Page info" twice on a page that has both.
  */
 
 import { useId } from 'react';
 import './page-info-popover.css';
 
-export default function PageInfoPopover({ children }) {
+export default function PageInfoPopover({ children, label = 'Page info' }) {
   const id = useId();
 
   if (!children) return null;
@@ -24,8 +29,8 @@ export default function PageInfoPopover({ children }) {
         type="button"
         className="pip-trigger"
         popovertarget={id}
-        aria-label="Page info"
-        title="Page info"
+        aria-label={label}
+        title={label}
       >
         ℹ
       </button>

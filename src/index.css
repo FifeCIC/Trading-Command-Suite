@@ -988,10 +988,27 @@ option {
   color: var(--ink, #e2e8f0);
 }
 
+/* ⚠️ A NATIVE CHECKBOX DOES NOT SCALE ITS INDICATOR. The browser draws the tick at its
+ * intrinsic size (~13px) centred in the element, so `min-width/min-height: 44px` produced a
+ * large EMPTY box with the tick lost inside it. In light mode that was degraded but visible;
+ * with `color-scheme: dark` the empty box became dark-on-dark and the check state could not be
+ * seen at all — reported against /watchlists/active-symbols (262 checkboxes), 2026-10-17.
+ *
+ * WCAG 2.2 target size applies to the TARGET, not the glyph. Keep the control at its natural
+ * size and let the LABEL carry the hit area — labels wrapping a checkbox are already clickable,
+ * so the 44px box was never providing anything the label did not. */
 input[type="checkbox"] {
-  min-width: 44px;
-  min-height: 44px;
-  accent-color: var(--accent, #0ea5a6);
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* The stretched rule gave keyboard users no visible focus state; this does. */
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .cta {
@@ -2003,7 +2020,7 @@ button.nav-active {
 .sl-time { white-space: nowrap; font-size: 0.78rem; color: var(--ink-soft); font-family: monospace; }
 .sl-chip { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 3px; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; }
 .sl-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
-.sl-chip--warn { background: #ffaa0020; color: var(--color-warning); }
+.sl-chip--warn { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
 .sl-chip--error { background: #ff004020; color: var(--danger); }
 
 /* Backtest */
@@ -2145,12 +2162,12 @@ button.nav-active {
 .msc-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
 .msc-panel-header h3 { margin: 0; font-size: 0.9rem; }
 .msc-mode { padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.62rem; text-transform: uppercase; font-weight: 600; }
-.msc-mode--full { background: #00ff4120; color: var(--color-profit); }
-.msc-mode--fallback { background: #ffaa0020; color: var(--color-warning); }
+.msc-mode--full { background: color-mix(in srgb, var(--color-profit) 12.5%, transparent); color: var(--color-profit); }
+.msc-mode--fallback { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
 .msc-summary { font-size: 0.7rem; color: var(--ink-soft); margin: 0 0 0.5rem; }
 .msc-loading { font-size: 0.78rem; color: var(--ink-soft); }.msc-signal { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
-.msc-entry { background: #00ff4120; color: var(--color-profit); }
-.msc-watch { background: #ffaa0020; color: var(--color-warning); }
+.msc-entry { background: color-mix(in srgb, var(--color-profit) 12.5%, transparent); color: var(--color-profit); }
+.msc-watch { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
 .msc-defensive { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 .msc-nodata { background: #ff004020; color: var(--danger); }
 
@@ -2181,7 +2198,7 @@ button.nav-active {
 .sa-score { font-weight: 700; color: var(--accent); margin-left: auto; }
 .sa-empty { font-size: 0.78rem; color: var(--ink-soft); padding: 0.5rem; }
 .sa-tag { display: inline-block; padding: 0.15rem 0.4rem; border-radius: 3px; margin: 2px; font-size: 0.7rem; }
-.sa-tag--present { background: #00ff4120; color: var(--color-profit); }
+.sa-tag--present { background: color-mix(in srgb, var(--color-profit) 12.5%, transparent); color: var(--color-profit); }
 .sa-tag--absent { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 .sa-assessment { margin-top: 0.75rem; padding: 0.75rem; border-radius: 6px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
 .sa-readiness { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
@@ -2225,7 +2242,7 @@ button.nav-active {
 .pf-sig { font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 3px; }
 .pf-sig-buy { background: #1b3a1b; color: var(--color-buy); }
 .pf-sig-sell { background: #3a1b1b; color: var(--color-sell); }
-.pf-sig-hold { background: #1b2a3a; color: #79c0ff; }
+.pf-sig-hold { background: var(--color-panel); color: var(--notice-info-text); }
 .pf-sig-no_data { background: transparent; color: var(--ink-soft); }
 .pf-data-status { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; white-space: nowrap; }
 .pf-ds-live { background: color-mix(in srgb, var(--color-profit) 15%, transparent); color: var(--color-profit); border: 1px solid color-mix(in srgb, var(--color-profit) 30%, transparent); }
@@ -2298,12 +2315,12 @@ button.nav-active {
 
 /* Share Card */
 .share-card { border: 1px solid var(--line); border-radius: 8px; padding: 1rem; background: var(--panel); max-width: 320px; text-align: center; }
-.share-card-symbol { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+.share-card-symbol { font-size: 1.4rem; font-weight: 700; color: var(--notice-info-text); }
 .share-card-score { font-size: 2.5rem; font-weight: 700; color: var(--color-profit); margin: 0.25rem 0; }
 .share-card-signal { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
 .share-sig-buy { background: #1b3a1b; color: var(--color-buy); }
 .share-sig-sell { background: #3a1b1b; color: var(--color-sell); }
-.share-sig-hold { background: #1b2a3a; color: #79c0ff; }
+.share-sig-hold { background: var(--color-panel); color: var(--notice-info-text); }
 .share-card-meta { font-size: 0.75rem; color: var(--ink-soft); margin: 0.5rem 0; }
 .share-card-link { font-size: 0.75rem; }
 
@@ -2372,7 +2389,7 @@ button.nav-active {
 .hd-signal { padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.78rem; display: flex; align-items: center; gap: 0.5rem; }
 .hd-sig-buy { background: color-mix(in srgb, var(--color-profit) 10%, transparent); }
 .hd-sig-sell { background: color-mix(in srgb, var(--color-sell) 10%, transparent); }
-.hd-sig-hold { background: color-mix(in srgb, #79c0ff 10%, transparent); }
+.hd-sig-hold { background: color-mix(in srgb, var(--notice-info-text) 10%, transparent); }
 .hd-sig-time { font-size: 0.65rem; color: var(--ink-soft); margin-left: auto; }
 
 /* Accordion */
@@ -2405,7 +2422,7 @@ button.nav-active {
 .sa-sig-dot { width: 8px; height: 8px; border-radius: 50%; }
 .sa-sig-buy { background: #00a63e; }
 .sa-sig-sell { background: var(--color-sell); }
-.sa-sig-hold { background: #79c0ff; }
+.sa-sig-hold { background: var(--notice-info-text); }
 .sa-sig-no_data { background: var(--ink-soft); }
 .sa-score { font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums; }
 .sa-flash-up { animation: saFlashUp 0.5s; }

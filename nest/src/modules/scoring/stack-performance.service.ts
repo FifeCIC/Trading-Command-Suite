@@ -4,11 +4,19 @@
  * A MetaStack is the complete automation unit: Watchlist + Protocol + Scoring Strategy + Trading Strategy.
  * This service rates MetaStacks by actual trade outcomes — PnL per runtime hour, profit factor, drawdown, etc.
  *
- * Rating formula:
- *   effectivenessRate = totalPnl / Math.max(runtimeHours, 0.25)
- *   confidenceFactor  = clamp(tradeCount / 100, 0.1, 1.0)
- *   consistencyFactor = 1 - abs(winRate - 0.5) * 0.3
- *   rating = effectivenessRate × recencyDecay × confidenceFactor × consistencyFactor
+ * Rating formula — MIRRORS THE CODE. A header that drifts from the code is a claim the next reader
+ * trusts and cannot check, so keep this block in step with `computeMetaStackRating`:
+ *   runtimeHours            = max((lastTrade − activation).hours, 0.25)
+ *   effectivenessRate       = totalPnl / runtimeHours          ($/hour — CURRENCY, not a ratio)
+ *   normalizedEffectiveness = clamp(effectivenessRate / 50 × 100, 0, 100)   ⚠️ 50 is a USD anchor
+ *   confidenceFactor        = clamp(tradeCount / 100, 0.1, 1.0)
+ *   recencyDecay            = exp(−ageOfLastTrade / 30 days)
+ *   consistencyFactor       = 1 − (1 − winRate) × 0.3          monotonic in winRate
+ *   rating = round(normalizedEffectiveness × recencyDecay × confidenceFactor × consistencyFactor)
+ *
+ * ⚠️ `maxDrawdown` is CURRENCY (peak-to-trough of cumulative PnL), NOT a percentage, and is NOT an
+ * input to `rating`. A percentage is impossible here: starting capital is never read, so "peak" is
+ * a peak of realised PnL measured from zero.
  *
  * Bands:
  *   > 80   ★★★★★  Elite
@@ -40,7 +48,7 @@ export interface MetaStackRating {
   grossLoss: number;
   profitFactor: number;
   winRate: number;
-  maxDrawdown: number;
+  maxDrawdown: number; // ⚠️ CURRENCY (peak-to-trough of cumulative PnL) — NOT a percentage
   runtimeHours: number;
   effectivenessRate: number;
   rating: number;
@@ -128,6 +136,11 @@ export class StackPerformanceService {
     let losingTrades = 0;
     let peakEquity = 0;
     let currentEquity = 0;
+    // ⚠️ #review-2026-10-17 — UNIT: this is CURRENCY (peak-to-trough of cumulative PnL), not a
+    // percentage, and it is NOT an input to `rating`. A true percentage drawdown is impossible
+    // here: this method never reads starting capital, so "peak equity" is a peak of realised PnL
+    // measured from zero. Treat the value as a relative comparison between stacks of similar size,
+    // never as a risk percentage.
     let maxDrawdown = 0;
 
     const pnlHistory: number[] = [];
@@ -182,12 +195,31 @@ export class StackPerformanceService {
       ? Math.exp(-Math.max(0, now - lastTradeAt.getTime()) / thirtyDaysMs)
       : 0.5;
 
-    // Consistency: penalise extreme win rates (could be overfitting)
-    const consistencyFactor = 1 - Math.abs(winRate - 0.5) * 0.3;
+    // ── DECISION (2026-10-17, primary) ──
+    // WHAT:       consistencyFactor is MONOTONIC in winRate: 1 - (1 - winRate) * 0.3.
+    // WHY:        It was `1 - Math.abs(winRate - 0.5) * 0.3` — DISTANCE FROM A COIN FLIP — so a 20%
+    //             and an 80% win rate scored IDENTICALLY (both 0.91) and 50% was treated as the
+    //             ideal. A factor inside a performance rating that cannot tell a good hit-rate from
+    //             a bad one is not measuring consistency. The 0.30 penalty budget and the resulting
+    //             [0.70, 1.00] range are UNCHANGED, so the SCALE of `rating` is preserved — only
+    //             the ordering within it is corrected.
+    // INSTEAD OF: Leaving the symmetric form and re-tuning the 0.30 penalty.
+    // REVERSE BY: Restoring `1 - Math.abs(winRate - 0.5) * 0.3` (one line). The guard below fails
+    //             if the ordering is lost, so the reversal cannot be silent.
+    // REGISTER:   docs/SETTLED-DECISIONS.md row 86
+    // GUARD:      nest/src/modules/scoring/stack-performance.service.spec.ts
+    const CONSISTENCY_MAX_PENALTY = 0.3;
+    const consistencyFactor = 1 - (1 - winRate) * CONSISTENCY_MAX_PENALTY;
+
+    // ── Effectiveness anchor ──
+    // ⚠️ $50 of PnL per runtime hour maps to a normalised 100. This is a CURRENCY-DENOMINATED
+    // constant: it is wrong for an account not denominated in USD, and the clamp below saturates,
+    // so every stack earning more than it scores the same. Named here so it is findable and
+    // tunable — it was previously a bare `50` buried inside the expression.
+    const EFFECTIVENESS_ANCHOR_PER_HOUR = 50;
 
     // Raw rating: effectiveness × confidence × recency × consistency
-    // Normalise effectiveness to a 0-100 scale (assume $50/hr = 100)
-    const normalizedEffectiveness = Math.min(100, Math.max(0, (effectivenessRate / 50) * 100));
+    const normalizedEffectiveness = Math.min(100, Math.max(0, (effectivenessRate / EFFECTIVENESS_ANCHOR_PER_HOUR) * 100));
     const rating = Math.round(
       normalizedEffectiveness * recencyDecay * confidenceFactor * consistencyFactor
     );

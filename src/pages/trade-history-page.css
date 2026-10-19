@@ -7,7 +7,7 @@
 .th-filter-group label { font-size: 0.75rem; color: var(--ink-soft); }
 .th-btn-group { display: flex; gap: 0.25rem; }
 .th-btn { padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft); font-size: 0.78rem; cursor: pointer; }
-.th-btn.active { background: #1e3a5f; border-color: var(--color-accent-blue); color: #93c5fd; }
+.th-btn.active { background: var(--color-panel); border-color: var(--color-accent-blue); color: var(--notice-info-text); }
 .th-export-btn { padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft); font-size: 0.8rem; cursor: pointer; }
 .th-export-btn:disabled { opacity: 0.3; cursor: default; }
 .th-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 1.5rem; }

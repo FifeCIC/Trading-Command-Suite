@@ -772,6 +772,31 @@ export class SignalEnvelopeService {
         ? Math.round((signalPct + opportunityPct) / 2)
         : (signalPct ?? opportunityPct ?? 0);
 
+    // ⚠️ `riskGate.active` MEANS "a risk rule changed the outcome" — NOT "the gating framework ran".
+    //
+    // It was `gated.gatingActive`, and BOTH scoring paths hardcode that to `true`, so the field was
+    // a constant: every envelope reported an active risk gate even when no rule applied, the chain
+    // was empty and the multiplier was 1. SymbolPage is its only consumer and reads it as the
+    // question "is a gate doing anything?" — so it rendered a Risk Gate panel whose every guard
+    // downstream was an assumption about a field that could not be false.
+    //
+    // That constant is what made 2026-10-19's crash reachable: the NO_DATA path returned
+    // `active: true` with no `multiplier` key, so the panel rendered and `multiplier.toFixed(2)`
+    // threw, blanking the whole page.
+    //
+    // `gatingActive` is left alone — it is a different claim ("the gate framework was consulted")
+    // and `speed-scan.service.ts` branches on it.
+    const riskChain = (gated.riskGate?.multiplierChain ?? []).map(s => ({
+      rule: s.name,
+      multiplier: s.multiplier,
+      severity: s.severity,
+    }));
+    const riskHardGate = gated.riskGate?.hardGateTriggered ?? false;
+    const riskApplied =
+      riskChain.length > 0 ||
+      riskHardGate ||
+      (Number.isFinite(gated.riskMultiplier) && gated.riskMultiplier !== 1);
+
     const envelope: SignalEnvelope = {
       symbol,
       composite: gated.composite,
@@ -781,15 +806,11 @@ export class SignalEnvelopeService {
       rarity: gated.rarity?.label ?? null,
       rarityColor: gated.rarity?.color ?? null,
       riskGate: {
-        active: gated.gatingActive,
+        active: riskApplied,
         multiplier: gated.riskMultiplier,
-        triggered: gated.riskGate?.hardGateTriggered ?? false,
+        triggered: riskHardGate,
         reason: gated.riskGate?.hardGateReason ?? null,
-        chain: (gated.riskGate?.multiplierChain ?? []).map(s => ({
-          rule: s.name,
-          multiplier: s.multiplier,
-          severity: s.severity,
-        })),
+        chain: riskChain,
         warnings: gated.riskGate?.warnings ?? [],
       },
       groups,

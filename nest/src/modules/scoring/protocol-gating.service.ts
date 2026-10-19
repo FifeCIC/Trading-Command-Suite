@@ -42,6 +42,13 @@ import {
   RiskGateResult,
 } from './risk-gating-engine.service';
 import { normalizeScorePercent, selectDirectionalEvidence } from './score-units';
+import {
+  RARITY_BANDS,
+  RARITY_MIN_SAMPLES,
+  classifyRarityBand,
+  rarityPercentile,
+  type RarityBand,
+} from './rarity-bands';
 
 /**
  * Weighting Systems
@@ -148,7 +155,7 @@ export interface DirectiveBreakout {
   unmeasured?: boolean;
 }
 
-export type RarityBand = 'standard' | 'strong' | 'exceptional' | 'cyclical' | 'black-swan';
+export type { RarityBand };
 
 export interface RarityInfo {
   percentile: number;
@@ -287,29 +294,9 @@ export interface GatedScore {
 }
 
 // ─── Rarity Bands ────────────────────────────────────────
-
-const RARITY_BANDS: Record<RarityBand, Omit<RarityInfo, 'percentile' | 'sampleSize'>> = {
-  'standard': {
-    band: 'standard', label: 'Standard', color: '#22c55e', emoji: '🟢',
-    description: 'Common opportunity — trade with base size', sizeMultiplier: 1.0,
-  },
-  'strong': {
-    band: 'strong', label: 'Strong', color: '#3b82f6', emoji: '🔵',
-    description: 'Above-average convergence — scale up 1.5×', sizeMultiplier: 1.5,
-  },
-  'exceptional': {
-    band: 'exceptional', label: 'Exceptional', color: '#8b5cf6', emoji: '🟣',
-    description: 'Rare alignment — scale up 2×', sizeMultiplier: 2.0,
-  },
-  'cyclical': {
-    band: 'cyclical', label: 'Cyclical', color: '#f59e0b', emoji: '🟡',
-    description: 'Multi-year event — maximum conviction', sizeMultiplier: 2.5,
-  },
-  'black-swan': {
-    band: 'black-swan', label: 'Black Swan', color: '#ef4444', emoji: '🔴',
-    description: 'Unprecedented — verify data before trading', sizeMultiplier: 0,
-  },
-};
+// ⚠️ The table that used to live here was a SECOND copy of the one in rarity.service.ts, with a
+// different minimum sample size (10 here, 30 there) — so one score could receive two different
+// bands, and a future fix would land in only one of them. Both now import ./rarity-bands.
 
 // ─── Directive IDs that need EURUSD/DXY ────────────────────
 
@@ -1057,10 +1044,35 @@ export class ProtocolGatingService {
         opportunityMax,
         opportunityPct,
         breakouts,
+        // ⚠️ `riskMultiplier` IS REQUIRED HERE — the omission was reverted 2026-10-19.
+        //
+        // BEFORE: this path deliberately omitted the key ("risk gating is not evaluated here,
+        // so there is no multiplier to report"). The reasoning was sound in isolation and the
+        // effect was not:
+        //
+        //   `GatedScore.riskMultiplier` is declared `number` (line 212), so every consumer
+        //   compiled against a promise this path did not keep. `JSON.stringify` then DROPS an
+        //   undefined key, so `GET /api/signals/envelope/:symbol` returned a riskGate with no
+        //   `multiplier` at all — while still reporting `active: true`.
+        //
+        //   SymbolPage renders `riskGate.multiplier.toFixed(2)` for any envelope whose gate is
+        //   active. On a NO_DATA envelope (i.e. most ticks of most protocols right now) that
+        //   threw `Cannot read properties of undefined (reading 'toFixed')` and took the WHOLE
+        //   page down. The crash named SymbolPage and pointed at nothing in scoring.
+        //
+        // It was also internally inconsistent: the line below has always carried
+        // `multiplier: 1` inside `riskGate`. Fabricating the value there and omitting it here
+        // is the same claim told two ways.
+        //
+        // `1` is the identity multiplier and is what this path MEANS — no risk gate is applied,
+        // so the composite is unreduced. That is a statement about the computation, not an
+        // invented risk reading. Callers that must distinguish "no gate evaluated" from
+        // "gate evaluated at ×1" read `riskGate.active` (false on this path).
+        riskMultiplier: 1,
         riskGate: { hardGateTriggered: false, multiplier: 1, severity: 0, warnings: [], reasons: [], chain: [], active: false, triggered: false } as any,
         rarity: null,
         noData: true,
-        noDataReason: 'No directional evidence this tick — no direction-eligible directive produced a reading. This is data absence, not a neutral score (#758).',
+        noDataReason: this.describeNoData(bars, directionEligibleTotal, observedMaxTotal, directionMode),
         marketStatus: undefined,
         // Diagnostics for the denominator decision (#758).
         denominatorMode: 'configured-capacity',
@@ -1079,9 +1091,9 @@ export class ProtocolGatingService {
         // The backtesting UI therefore could not run a replay at all, and the error named
         // nothing that pointed here.
         //
-        // The fields below are the canonical return's contract. `riskMultiplier` is the one
-        // deliberate omission — risk gating is not evaluated on this path, so there is no
-        // multiplier to report, and fabricating one would be worse than its absence.
+        // The fields below are the canonical return's contract. `riskMultiplier` used to be
+        // omitted here and is now supplied (see the note beside it above) — this path has NO
+        // remaining shape difference from the canonical return.
         gatingActive: true,
         inactiveGroupIds,
         excludedBreakdown,
@@ -1406,6 +1418,48 @@ export class ProtocolGatingService {
   }
 
   /**
+   * describeNoData() — WHY a tick produced no reading, in one sentence the reader can act on.
+   * =========================================================================================
+   * A no-data tick has three distinct causes and only ONE of them is about data:
+   *
+   *   1. no bars at all                  → the data pipeline
+   *   2. no direction-eligible directive → the protocol's directionMode / readiness config
+   *   3. directives ran, all `neutral`   → the DIRECTIVES themselves
+   *
+   * ⚠️ The single sentence this replaces said "This is data absence" on EVERY no-data tick, and
+   * that claim was measured wrong. EURUSD/`probe-1dir-v1` was reported as data absence on every
+   * tick for two days while holding 51 fresh hourly bars (1h bar 40 minutes old, checked
+   * 2026-10-19 19:25Z) and while `ema-structure` returned a real measurement, 29/100, classified
+   * `neutral` — because that directive can only ever emit `'bullish'` or `'neutral'`; it has no
+   * bearish branch. The engine was right and the SENTENCE was wrong.
+   *
+   * A wrong cause is worse than no cause: it sends the next reader at the wrong subsystem. Three
+   * separate investigations went to the candles and the MT5 bridge because of this string, and the
+   * bridge was healthy the whole time. So the sentence names the counts it was decided from — a
+   * reader who sees "51 bars" knows not to check the feed.
+   */
+  private describeNoData(
+    bars: unknown[] | undefined,
+    directionEligibleTotal: number,
+    observedMaxTotal: number,
+    directionMode: string,
+  ): string {
+    const barCount = Array.isArray(bars) ? bars.length : 0;
+    if (barCount === 0) {
+      return 'No bars supplied for this symbol — nothing was measured, so there is no reading (#758). The data pipeline is the place to look.';
+    }
+    if (directionEligibleTotal === 0) {
+      return `Data present (${barCount} bars) but NO directive is eligible to express direction under ${directionMode} — every directive was excluded before scoring. Look at the protocol's directionMode and directive readiness (alpha directives are excluded), not the feed.`;
+    }
+    if (observedMaxTotal === 0) {
+      return `Data present (${barCount} bars). All ${directionEligibleTotal} direction-eligible directive(s) ran and every one classified itself \`neutral\` — a real neutral measurement, NOT missing data (#758). A directive that can only emit one direction reads 'neutral' throughout the opposite trend, so check the directives' \`signalClass\` rules before checking the feed.`;
+    }
+    // Reachable only when the configured-capacity denominator is itself 0 — say so rather than
+    // assert one of the causes above, because none of them was established.
+    return `Data present (${barCount} bars); directional evidence was present (observed max ${observedMaxTotal}) yet produced no usable reading under ${directionMode}. This combination is not one of the three known causes — investigate (#758).`;
+  }
+
+  /**
    * Assess whether a protocol is READY to score (readiness gate #627).
    * A protocol is only eligible when every INCLUDED directive has
    * `readiness === 'ready'` — beta directives are blockers, alpha directives
@@ -1457,23 +1511,22 @@ export class ProtocolGatingService {
         orderBy: { composite: 'asc' },
       });
 
-      if (history.length < 10) {
-        // Not enough data — return undefined (no rarity yet)
+      // ONE threshold for both rarity paths (#1126 consolidation). Below it there is no band, and
+      // order sizing stays at the bot's base size.
+      if (history.length < RARITY_MIN_SAMPLES) {
         return undefined;
       }
 
       const scores = history.map(h => h.composite);
-      let countBelow = 0;
-      for (const s of scores) {
-        if (s < composite) countBelow++;
-      }
-
-      const percentile = Math.round((countBelow / scores.length) * 100);
-      const band = this.classifyRarityBand(percentile);
-      const config = RARITY_BANDS[band];
+      // ⚠️ Was a strictly-below count, so a score at the window maximum scored (n-1)/n — 97 at
+      // n=30 — and `black-swan` (>=99) was unreachable below ~67 samples. The highest score ever
+      // recorded was therefore reported as `cyclical` and sized at 2.5×. See rarityPercentile().
+      const percentile = rarityPercentile(scores, composite);
+      const band = classifyRarityBand(percentile);
 
       return {
-        ...config,
+        band,
+        ...RARITY_BANDS[band],
         percentile,
         sampleSize: scores.length,
       };
@@ -1483,13 +1536,7 @@ export class ProtocolGatingService {
     }
   }
 
-  private classifyRarityBand(percentile: number): RarityBand {
-    if (percentile >= 99) return 'black-swan';
-    if (percentile >= 95) return 'cyclical';
-    if (percentile >= 85) return 'exceptional';
-    if (percentile >= 70) return 'strong';
-    return 'standard';
-  }
+  // classifyRarityBand() moved to ./rarity-bands — one mapping for both rarity paths.
 
   /**
    * Store a score snapshot for future rarity computations AND write

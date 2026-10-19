@@ -126,6 +126,60 @@ function topLevelReturnObjects(body: string): string[] {
 const returnsMissingMeta = (body: string): number =>
   topLevelReturnObjects(body).filter((r) => !/\bmeta\s*:/.test(r)).length;
 
+/**
+ * Keys EVERY exit of `scoreWithGating` must carry.
+ *
+ * ⚠️ **2026-10-19 — `riskMultiplier` is the key this list was missing, and the cost was a page.**
+ * The `NO_DATA` exit omitted it deliberately ("no multiplier to report"). `GatedScore` declares
+ * `riskMultiplier: number`, so every consumer compiled against a promise this path did not keep;
+ * `JSON.stringify` then drops an undefined key, so `GET /api/signals/envelope/:symbol` returned a
+ * `riskGate` with `active: true` and NO `multiplier`.
+ *
+ * `SymbolPage` renders `riskGate.multiplier.toFixed(2)` for any envelope whose gate is active, so
+ * `/symbol/EURUSD` — and any symbol whose protocol was producing no directional evidence, i.e.
+ * most of them — died with `Cannot read properties of undefined (reading 'toFixed')`. The stack
+ * trace named SymbolPage and pointed at nothing in scoring.
+ *
+ * Same shape as the `meta` bug above: one omitted key in one early return, invisible to TypeScript
+ * because the literal closes with `as any`. So the guard checks a LIST, not one field — closing the
+ * class rather than the instance.
+ */
+const CONTRACT_KEYS = [
+  'meta',
+  'riskMultiplier',
+  'marketStatus',
+  'gatingActive',
+  'directionMode',
+  'inactiveGroupIds',
+  'readinessGate',
+  'excludedBreakdown',
+];
+
+/**
+ * ⚠️ A key may be written SHORTHAND (`marketStatus,`) or explicitly (`marketStatus: …`), and the
+ * first version of this matcher only accepted the colon form — so five keys that were present on
+ * both returns were reported missing. A guard that reports a working contract as broken is worse
+ * than useless: the obvious repair is to "fix" correct code. The delimiter class `[,:}]` accepts
+ * both forms.
+ */
+const hasKey = (obj: string, key: string): boolean =>
+  new RegExp(`\\b${key}\\s*[,:}]`).test(obj);
+
+/**
+ * ⚠️ Mutate a RETURN OBJECT, never the whole method body.
+ *
+ * The first canary replaced the key across `body`, but `body` also contains the `const`
+ * declarations (`const excludedBreakdown: …`) and the `describeNoData(… , directionMode)` call
+ * that share these names. The replace landed on a declaration, both returns kept their key, and
+ * the canary reported 0 — a false "the guard is broken" on a guard that was correct. **A canary
+ * must prove its own edit landed**, so it edits the object it is about to assert on.
+ */
+const removeKey = (obj: string, key: string): string =>
+  obj.replace(new RegExp(`\\b${key}\\s*[,:}]`), `${key}RemovedByCanary:`);
+
+const returnsMissingKey = (body: string, key: string): number =>
+  topLevelReturnObjects(body).filter((r) => !hasKey(r, key)).length;
+
 describe('ProtocolGatingService.scoreWithGating — return-shape contract', () => {
   const raw = fs.readFileSync(SRC_PATH, 'utf8');
   const source = stripComments(raw);
@@ -145,6 +199,22 @@ describe('ProtocolGatingService.scoreWithGating — return-shape contract', () =
     const mutated = body.replace(/\bmeta\s*:/, 'metaRemovedByCanary:');
     expect(mutated).not.toBe(body);
     expect(returnsMissingMeta(mutated)).toBe(1);
+  });
+
+  // ⚠️ Each contract key is checked separately AND canaried separately. A list checked as a whole
+  // is one assertion, so a single key could be dropped from every exit and the test would still
+  // pass on the remaining ones being present in at least one return.
+  describe.each(CONTRACT_KEYS)('contract key `%s`', (key) => {
+    it('is present on EVERY exit', () => {
+      expect(returnsMissingKey(body, key)).toBe(0);
+    });
+
+    it('CANARY — removing this key from an exit IS detected', () => {
+      const exits = topLevelReturnObjects(body);
+      const mutated = exits.map((r, i) => (i === 0 ? removeKey(r, key) : r));
+      expect(mutated[0]).not.toBe(exits[0]);
+      expect(mutated.filter((r) => hasKey(r, key)).length).toBe(exits.length - 1);
+    });
   });
 
   it('CANARY INVALID — a body that cannot be located REFUSES rather than passing', () => {

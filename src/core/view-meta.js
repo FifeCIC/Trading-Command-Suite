@@ -875,6 +875,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceAreaPage.jsx',
     api: [],
+    review: 'pending',
   },
   // Pattern Library — 2026-10-13. A static reading of the Page Walkthrough verdicts, so it fetches
   // nothing and works with the API down.
@@ -884,6 +885,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearancePatternsPage.jsx',
     api: [],
+    review: 'pending',
   },
   // Motion and Forms — new 2026-10-13. Both are MOVES rather than new work: their sections were
   // composed into Theme Lab and are now pages of their own in the Appearance area (owner request).
@@ -894,6 +896,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceMotionPage.jsx',
     api: [],
+    review: 'pending',
   },
   '/appearance/forms': {
     label: 'Forms',
@@ -901,6 +904,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceFormsPage.jsx',
     api: [],
+    review: 'pending',
   },
   // Element groups — 2026-10-13. The four pages below carry the sections that used to make up
   // View: Theme Lab, split by what a reader is trying to decide (colour, container, table, control).
@@ -911,6 +915,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceColourPage.jsx',
     api: [],
+    review: 'pending',
   },
   '/appearance/surfaces': {
     label: 'Surfaces & Cards',
@@ -918,6 +923,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceSurfacesPage.jsx',
     api: [],
+    review: 'pending',
   },
   '/appearance/data-display': {
     label: 'Data Display',
@@ -925,6 +931,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceDataDisplayPage.jsx',
     api: [],
+    review: 'pending',
   },
   '/appearance/interactive': {
     label: 'Interactive',
@@ -932,6 +939,7 @@ const VIEW_META = {
     tier: 'premium',
     file: 'src/pages/AppearanceInteractivePage.jsx',
     api: [],
+    review: 'pending',
   },
   // ⚠️ '/settings/theme-packs' REMOVED 2026-10-13 (owner request). Its gallery duplicated the
   // shell rail's pack controls and the new Appearance area's chooser — three surfaces for one setting.

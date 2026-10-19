@@ -23,6 +23,16 @@ export interface MonteCarloInput {
   iterations?: number;            // Default 10,000
   ruinThreshold?: number;         // Default 50% drawdown from starting capital
   positionSizeVariants?: number[]; // Test multiple position sizes (for optimization)
+  /**
+   * How many trades this strategy takes in a YEAR. Used only to annualise the Sharpe ratio.
+   *
+   * ⚠️ Omit this and the simulator assumes the whole supplied sequence spans one year
+   * (`tradePnlSequence.length` trades/year). That assumption is what made the reported Sharpe
+   * meaningless whenever the sequence was not a full year — the value was scaled by
+   * `sqrt(tradeCount)` regardless of the real trading frequency. A caller that has trade DATES
+   * must compute the true figure and pass it here.
+   */
+  tradesPerYear?: number;
 }
 
 export interface MonteCarloResult {
@@ -72,6 +82,7 @@ export class MonteCarloService {
       iterations = 10_000,
       ruinThreshold = 0.5,       // 50% of starting capital
       positionSizeVariants,
+      tradesPerYear,
     } = input;
 
     if (tradePnlSequence.length < 5) {
@@ -84,6 +95,22 @@ export class MonteCarloService {
     const equityResults: number[] = [];
     const drawdownResults: number[] = [];
     let ruinCount = 0;
+
+    // ⚠️ #review-2026-10-17 — THESE WERE ACCUMULATED OUTSIDE THE ITERATION LOOP.
+    //
+    // `totalWinAmount` / `totalLossAmount` used to be declared beside `ruinCount` and incremented
+    // inside the per-trade sampling loop, so they summed every sample of every iteration. The
+    // "profit factor" derived from them was therefore `Σwins / Σlosses` over all iterations —
+    // which, because each iteration resamples the SAME trade sequence with replacement, converges
+    // to the profit factor of the input sequence itself. It was a deterministic restatement of the
+    // input wearing a simulation's clothes: no spread, no variation, no information added.
+    //
+    // It is now per-run (reset each iteration) and reported as the MEDIAN across runs, which is a
+    // genuine Monte Carlo statistic. Win/loss counts are tracked separately so the averages are
+    // per winning / per losing trade rather than per sample.
+    const perRunProfitFactors: number[] = [];
+    let allWinCount = 0;
+    let allLossCount = 0;
     let totalWinAmount = 0;
     let totalLossAmount = 0;
 
@@ -91,14 +118,23 @@ export class MonteCarloService {
       let equity = startingCapital;
       let peak = startingCapital;
       let maxDrawdown = 0;
+      let runWinAmount = 0;
+      let runLossAmount = 0;
 
       // Randomly sample from trade sequence with replacement
       for (let t = 0; t < tradePnlSequence.length; t++) {
         const randomIndex = Math.floor(Math.random() * tradePnlSequence.length);
         const tradePnl = tradePnlSequence[randomIndex] * positionSize;
 
-        if (tradePnl > 0) totalWinAmount += tradePnl;
-        else totalLossAmount += Math.abs(tradePnl);
+        if (tradePnl > 0) {
+          runWinAmount += tradePnl;
+          totalWinAmount += tradePnl;
+          allWinCount++;
+        } else if (tradePnl < 0) {
+          runLossAmount += Math.abs(tradePnl);
+          totalLossAmount += Math.abs(tradePnl);
+          allLossCount++;
+        }
 
         equity += tradePnl;
 
@@ -117,6 +153,10 @@ export class MonteCarloService {
 
       equityResults.push(equity);
       drawdownResults.push(maxDrawdown);
+      // A run with no losses is capped rather than infinite (999 mirrors the old sentinel).
+      perRunProfitFactors.push(
+        runLossAmount > 0 ? runWinAmount / runLossAmount : runWinAmount > 0 ? 999 : 0,
+      );
     }
 
     // ── Compute metrics ──
@@ -132,15 +172,29 @@ export class MonteCarloService {
     const medianDD = sortedDD[Math.floor(sortedDD.length * 0.5)];
     const p5DD = sortedDD[Math.floor(sortedDD.length * 0.05)];
 
-    // Sharpe approximation: (mean excess return) / std dev
+    // ── Sharpe ──
+    // ⚠️ #review-2026-10-17 — the annualisation factor was `sqrt(tradePnlSequence.length)`, which
+    // silently asserts "this sequence is exactly one year of trades". Nothing enforced that, so the
+    // ratio was scaled by the NUMBER OF TRADES RECORDED rather than by trading frequency: two
+    // strategies with identical per-trade behaviour reported different Sharpes purely because one
+    // had more history. `tradesPerYear` now carries the real figure.
+    // The sequence-length default is retained deliberately — dropping it would change the magnitude
+    // by sqrt(N) and silently invalidate `buildRecommendation`'s annualised thresholds (0 / 0.5 / 1).
     const excessReturn = (mean - startingCapital) / startingCapital;
-    const sharpeApprox = stdDev > 0 ? (excessReturn / (stdDev / startingCapital)) * Math.sqrt(tradePnlSequence.length) : 0;
+    const periodsPerYear = tradesPerYear && tradesPerYear > 0 ? tradesPerYear : tradePnlSequence.length;
+    const sharpeApprox = stdDev > 0
+      ? (excessReturn / (stdDev / startingCapital)) * Math.sqrt(periodsPerYear)
+      : 0;
 
-    // Profit factor
-    const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : totalWinAmount > 0 ? 999 : 0;
+    // ── Profit factor — MEDIAN OF THE PER-RUN FACTORS ──
+    // Was `Σwins / Σlosses` across every iteration, i.e. the input sequence's own ratio restated.
+    const sortedPF = [...perRunProfitFactors].sort((a, b) => a - b);
+    const profitFactor = sortedPF.length > 0 ? sortedPF[Math.floor(sortedPF.length * 0.5)] : 0;
 
-    const avgWin = totalWinAmount / (iterations * tradePnlSequence.length);
-    const avgLoss = totalLossAmount / (iterations * tradePnlSequence.length);
+    // Per WINNING / per LOSING trade. These used to divide by `iterations × sequence length`,
+    // which is per sample, not per trade of that outcome.
+    const avgWin = allWinCount > 0 ? totalWinAmount / allWinCount : 0;
+    const avgLoss = allLossCount > 0 ? totalLossAmount / allLossCount : 0;
 
     // ── Distribution percentiles ──
     const percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99].map(pct => ({
@@ -185,7 +239,7 @@ export class MonteCarloService {
       let bestRoR = ruinCount / iterations;
 
       for (const size of positionSizeVariants) {
-        const variantResult = this.runSingleSize(tradePnlSequence, startingCapital, size, iterations / 4, ruinCapital);
+        const variantResult = this.runSingleSize(tradePnlSequence, startingCapital, size, iterations / 4, ruinCapital, periodsPerYear);
         result.positionSizeAnalysis.push({
           size,
           medianEquity: variantResult.median,
@@ -212,6 +266,7 @@ export class MonteCarloService {
 
   private runSingleSize(
     trades: number[], capital: number, size: number, iter: number, ruinCap: number,
+    periodsPerYear: number,
   ): { median: number; ror: number; sharpe: number } {
     const results: number[] = [];
     let ruins = 0;
@@ -231,7 +286,8 @@ export class MonteCarloService {
     const variance = results.reduce((s, v) => s + (v - mean) ** 2, 0) / results.length;
     const stdDev = Math.sqrt(variance);
     const excess = (mean - capital) / capital;
-    const sharpe = stdDev > 0 ? (excess / (stdDev / capital)) * Math.sqrt(trades.length) : 0;
+    // Same annualisation assumption as the main simulation — see the note beside `sharpeApprox`.
+    const sharpe = stdDev > 0 ? (excess / (stdDev / capital)) * Math.sqrt(periodsPerYear) : 0;
 
     return { median, ror: ruins / iter, sharpe };
   }

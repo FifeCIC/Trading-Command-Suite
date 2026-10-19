@@ -2231,6 +2231,140 @@ export class BacktestService {
     };
   }
 
+  // ── Timeframe coverage — which timeframes this symbol can ACTUALLY be scored at ──
+
+  /**
+   * How many bars exist for ONE symbol in ONE window, per timeframe.
+   *
+   * ── Why this exists ──
+   * The protocol-backtest page had to offer a timeframe menu without knowing which choices would
+   * work, and its own source said so: *"no endpoint exposes a per-(symbol, timeframe) bar count"*.
+   * So the menu offered all four, and the user found out afterwards — VIX at `1h` over three days
+   * returned `found 10 bars, needs 30+`. A menu that offers an option and then refuses it is a
+   * promise the app did not keep.
+   *
+   * ⚠️ `/api/backtest/data-inventory` cannot answer this: it lists the timeframes a symbol has
+   * EVER held, which is a different question. VIX lists `1h` there and still cannot be scored at
+   * `1h` across a 3-day window. "Has data" ≠ "has enough data in YOUR window".
+   *
+   * Cheap by construction: ONE `GROUP BY timeframe` over a `(symbolId, timeframe, timestamp)`
+   * index, bounded by the window. Compare with `getDataInventory`, which is 261 symbols wide.
+   */
+  async getTimeframeCoverage(
+    symbol: string,
+    from?: string,
+    to?: string,
+    minBars = 30,
+  ): Promise<{
+    symbol: string;
+    symbolKnown: boolean;
+    from: string | null;
+    to: string | null;
+    requiredBars: number;
+    timeframes: Array<{
+      timeframe: string;
+      bars: number;
+      usable: boolean;
+      heldBars: number;
+      heldFrom: string | null;
+      heldTo: string | null;
+    }>;
+  }> {
+    const upper = (symbol || '').toUpperCase();
+    // ⚠️ NOT a second constant. The caller passes the SAME `windowSize` it will send to
+    // `/api/replay/run` (which itself defaults to 30), so "usable" here and the engine's
+    // "needs N+ to score one window" can never disagree — a mismatch would offer a choice and
+    // then refuse it, which is the defect this endpoint exists to remove.
+    const requiredBars = Number.isFinite(minBars) && minBars > 0 ? Math.floor(minBars) : 30;
+    const symbolId = await this.resolveSymbolId(upper);
+
+    if (!symbolId) {
+      return { symbol: upper, symbolKnown: false, from: from ?? null, to: to ?? null, requiredBars, timeframes: [] };
+    }
+
+    const timestampFilter = from || to
+      ? {
+          ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
+          // ⚠️ `to` is a DATE and the user means "through the end of that day". Comparing against
+          // midnight would silently drop the final day — the same half-open-window trap that makes
+          // a 10-day run look like 9.
+          ...(to ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
+        }
+      : undefined;
+
+    // ⚠️ The `where` is built INLINE, not from a pre-declared variable. Prisma's `groupBy` is
+    // generic over the argument; a hoisted variable defeats the inference, TypeScript falls
+    // through to the array-argument overload, and the error reads as "missing length/pop/push".
+    // Every working call site in this repo inlines it for the same reason.
+    const rows: Array<{ timeframe: string; bars: number }> = await (async () => {
+      const agg = await this.prisma.marketBar.groupBy({
+        by: ['timeframe'],
+        where: timestampFilter ? { symbolId, timestamp: timestampFilter } : { symbolId },
+        _count: { _all: true },
+      });
+      return agg.map((r) => ({ timeframe: String(r.timeframe), bars: r._count._all }));
+    })().catch((err: any) => {
+      // A failed read must not render as "no data" — the two are indistinguishable downstream.
+      this.logger.warn(`Timeframe coverage failed for ${upper}: ${err.message}`);
+      throw err;
+    });
+
+    /**
+     * What the store holds for this symbol OUTSIDE the window — the answer to "which dates can I
+     * even ask for?". Without it the menu could only report the window the user had already typed,
+     * which is circular: you have to guess a date range to learn which date ranges work.
+     *
+     * ⚠️ This is the FULL series per timeframe, not the window. Index-covered
+     * `(symbolId, timeframe, timestamp)`; one row per timeframe.
+     */
+    const held: Array<{ timeframe: string; heldBars: number; heldFrom: Date | null; heldTo: Date | null }> =
+      await (async () => {
+        const agg = await this.prisma.marketBar.groupBy({
+          by: ['timeframe'],
+          where: { symbolId },
+          _count: { _all: true },
+          _min: { timestamp: true },
+          _max: { timestamp: true },
+        });
+        return agg.map((r) => ({
+          timeframe: String(r.timeframe),
+          heldBars: r._count._all,
+          heldFrom: r._min.timestamp ?? null,
+          heldTo: r._max.timestamp ?? null,
+        }));
+      })().catch((err: any) => {
+        this.logger.warn(`Held-range read failed for ${upper}: ${err.message}`);
+        throw err;
+      });
+
+    const heldByTf = new Map(held.map((h) => [h.timeframe, h]));
+    // Union: a timeframe with bars OUTSIDE the window but none inside is exactly the case the UI
+    // must be able to show ("we hold 2,431 bars, but none between these dates").
+    const allTfs = [...new Set([...rows.map((r) => r.timeframe), ...held.map((h) => h.timeframe)])];
+
+    return {
+      symbol: upper,
+      symbolKnown: true,
+      from: from ?? null,
+      to: to ?? null,
+      requiredBars,
+      timeframes: allTfs
+        .map((tf) => {
+          const inWindow = rows.find((r) => r.timeframe === tf)?.bars ?? 0;
+          const h = heldByTf.get(tf);
+          return {
+            timeframe: tf,
+            bars: inWindow,
+            usable: inWindow >= requiredBars,
+            heldBars: h?.heldBars ?? 0,
+            heldFrom: h?.heldFrom ? h.heldFrom.toISOString().slice(0, 10) : null,
+            heldTo: h?.heldTo ? h.heldTo.toISOString().slice(0, 10) : null,
+          };
+        })
+        .sort((a, b) => a.timeframe.localeCompare(b.timeframe)),
+    };
+  }
+
   // ── Grid Search Optimization ────────────────────────
 
   async optimize(params: {

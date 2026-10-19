@@ -306,7 +306,7 @@
 }
 
 .nd-nav-card-secondary {
-  border-top-color: #6366f1;
+  border-top-color: var(--color-accent-blue);
 }
 
 .nd-nav-card:hover {
@@ -320,7 +320,7 @@
 }
 
 .nd-nav-card-secondary:hover {
-  border-color: #6366f1;
+  border-color: var(--color-accent-blue);
 }
 
 .nd-nav-card:active {

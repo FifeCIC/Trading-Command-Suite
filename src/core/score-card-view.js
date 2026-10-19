@@ -45,6 +45,7 @@ export const STATE_CLASS = {
  */
 export function stateLabel(vm) {
   if (vm.state === 'unscored') return 'Not scored';
+  if (vm.state === 'expired') return 'No new score';
   if (vm.state === 'stale') return 'Data stale';
   if (vm.frozen) return 'Market closed';
   return 'Live';
@@ -64,6 +65,9 @@ export function stateTitle(vm) {
 /** CSS modifier for a card's state chip — the label/colour pair in one place. */
 export function stateClass(vm) {
   if (vm.state === 'unscored') return STATE_CLASS.unscored;
+  // An expired score is an INCIDENT, not a quiet market: the protocol is running and has stopped
+  // producing readings. It gets the attention styling, never the benign closed styling.
+  if (vm.state === 'expired') return STATE_CLASS.stale;
   if (!vm.frozen) return STATE_CLASS[vm.state] || STATE_CLASS.live;
   return vm.state === 'stale' ? STATE_CLASS.stale : STATE_CLASS.closed;
 }

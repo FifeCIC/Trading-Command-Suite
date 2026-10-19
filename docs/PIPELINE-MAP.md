@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **552** backend source files (specs excluded). Two access paths, because one
+Scanned **553** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**552** source files · **2929** declarations · **363** ratio sites · **1507** nodes · **135** unreferenced
+**553** source files · **2936** declarations · **361** ratio sites · **1509** nodes · **132** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -95,9 +95,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 28 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:415` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:439` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:423` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:447` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:1653` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -160,7 +160,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(earlyEntropy-lateEntropy)/ENTROPY_MAX`
 - … and 14 more
 
-### 17 sites — `Math.round((V1/V2)*100)`
+### 16 sites — `Math.round((V1/V2)*100)`
 
 - `nest/src/common/cache/cache.service.ts:119` — `getStats()`
   - `total>0?Math.round((this.totalHits/total)*100):0`
@@ -186,7 +186,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/portfolio/trading212-import.service.ts:386` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
-- … and 9 more
+- … and 8 more
 
 ### 10 sites — `(V1-V2)/Math.max(0.01,V2)*100`
 
@@ -223,7 +223,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/paper-trading/paper-trading.service.ts:281` — `updateDrawdown()` → `drawdown`
   - `this.peakEquity>0?((this.peakEquity-equity)/this.peakEquity)*100:0`
   - guarded by: `this.peakEquity>0`
-- `nest/src/modules/risk/monte-carlo.service.ts:107` — `simulate()` → `drawdown`
+- `nest/src/modules/risk/monte-carlo.service.ts:143` — `simulate()` → `drawdown`
   - `peak>0?((peak-equity)/peak)*100:0`
   - guarded by: `peak>0`
 - `nest/src/modules/trading/trade-history.controller.ts:182` — `(anonymous)()` → `dd`
@@ -321,16 +321,16 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 4 sites — `Math.round(V1/V2*100)`
 
-- `nest/src/modules/replay/replay.service.ts:511` — `runReplay()`
+- `nest/src/modules/replay/replay.service.ts:656` — `runReplay()`
   - `buySteps.length>0?Math.round(buySteps.filter(s=>s.signalCorrect).length/buySteps.length*100):0`
   - guarded by: `buySteps.length>0`
-- `nest/src/modules/replay/replay.service.ts:512` — `runReplay()`
+- `nest/src/modules/replay/replay.service.ts:657` — `runReplay()`
   - `sellSteps.length>0?Math.round(sellSteps.filter(s=>s.signalCorrect).length/sellSteps.length*100):0`
   - guarded by: `sellSteps.length>0`
-- `nest/src/modules/replay/replay.service.ts:533` — `(anonymous)()`
+- `nest/src/modules/replay/replay.service.ts:678` — `(anonymous)()`
   - `low.length>0?Math.round(low.filter(s=>s.signalCorrect).length/low.length*100):0`
   - guarded by: `low.length>0`
-- `nest/src/modules/replay/replay.service.ts:537` — `(anonymous)()`
+- `nest/src/modules/replay/replay.service.ts:682` — `(anonymous)()`
   - `mid.length>0?Math.round(mid.filter(s=>s.signalCorrect).length/mid.length*100):0`
   - guarded by: `mid.length>0`
 
@@ -373,6 +373,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent[recent.length-1]-recent[0])/(Math.abs(recent[0])||1)`
   - conditions: `Math.abs(recent[0])||1`
 
+### 2 sites — `Math.min(100,Math.max(0,(V1/V2)*100))`
+
+- `nest/src/modules/scoring/scoring.service.ts:505` — `rankAll()` → `normalizedScorePct`
+  - `maxPossibleScore>0?Math.min(100,Math.max(0,(seasonAdjustedScore/maxPossibleScore)*100)):0`
+  - guarded by: `maxPossibleScore>0`
+- `nest/src/modules/scoring/stack-performance.service.ts:222` — `computeMetaStackRating()` → `normalizedEffectiveness`
+  - `Math.min(100,Math.max(0,(effectivenessRate/EFFECTIVENESS_ANCHOR_PER_HOUR)*100))`
+
 ### 2 sites — `Math.round((V1/V2)*1000)/10`
 
 - `nest/src/modules/ai/portfolio-lab.service.ts:154` — `analyze()`
@@ -388,9 +396,9 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 28 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:415` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:439` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:423` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:447` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:1653` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -453,7 +461,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(earlyEntropy-lateEntropy)/ENTROPY_MAX`
 - … and 14 more
 
-### 17 sites — `Math.round((V1/V2)*100)`
+### 16 sites — `Math.round((V1/V2)*100)`
 
 - `nest/src/common/cache/cache.service.ts:119` — `getStats()`
   - `total>0?Math.round((this.totalHits/total)*100):0`
@@ -479,7 +487,7 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/portfolio/trading212-import.service.ts:386` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
-- … and 9 more
+- … and 8 more
 
 ### 13 sites — `Math.max(0,Math.min(1,(V1-V2)/(V3-V2)))`
 
@@ -596,7 +604,7 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/paper-trading/paper-trading.service.ts:281` — `updateDrawdown()` → `drawdown`
   - `this.peakEquity>0?((this.peakEquity-equity)/this.peakEquity)*100:0`
   - guarded by: `this.peakEquity>0`
-- `nest/src/modules/risk/monte-carlo.service.ts:107` — `simulate()` → `drawdown`
+- `nest/src/modules/risk/monte-carlo.service.ts:143` — `simulate()` → `drawdown`
   - `peak>0?((peak-equity)/peak)*100:0`
   - guarded by: `peak>0`
 - `nest/src/modules/trading/trade-history.controller.ts:182` — `(anonymous)()` → `dd`
@@ -635,9 +643,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/automation/stop-guardian.service.ts:1866` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:415` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:439` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:423` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:447` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:1653` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -674,7 +682,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(currentAtr/lastClose)*100`
 - … and 16 more
 
-### 17 sites — `Math.round((VN/VN)*N)`
+### 16 sites — `Math.round((VN/VN)*N)`
 
 - `nest/src/common/cache/cache.service.ts:119` — `getStats()`
   - `total>0?Math.round((this.totalHits/total)*100):0`
@@ -700,7 +708,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/portfolio/trading212-import.service.ts:386` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
-- … and 9 more
+- … and 8 more
 
 ### 13 sites — `Math.max(N,Math.min(N,(VN-VN)/(VN-VN)))`
 
@@ -889,11 +897,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/stop-guardian.service.ts:1850 progress`
 - `nest/src/modules/automation/stop-guardian.service.ts:568 flat`
-- `nest/src/modules/backtest/backtest.controller.ts:310 mapResult`
+- `nest/src/modules/backtest/backtest.controller.ts:334 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:240 pick`
 - `nest/src/modules/directives/directives.service.ts:243 prepare`
-- `nest/src/modules/directives/directives.service.ts:462 evaluateGate`
-- `nest/src/modules/directives/directives.service.ts:878 refreshActiveStatuses`
+- `nest/src/modules/directives/directives.service.ts:469 evaluateGate`
+- `nest/src/modules/directives/directives.service.ts:885 refreshActiveStatuses`
 - `nest/src/modules/directives/implementations/market-regime.directive.ts:116 smooth`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:237 extract`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:61 stubResult`
@@ -928,8 +936,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:383 getBrokerSymbol`
 - `nest/src/modules/providers/position-sync.service.ts:692 note`
 - `nest/src/modules/providers/provider-cache.service.ts:62 getStatus`
-- `nest/src/modules/replay/replay.service.ts:483 computeReturn`
-- `nest/src/modules/replay/replay.service.ts:508 avg`
+- `nest/src/modules/replay/replay.service.ts:628 computeReturn`
+- `nest/src/modules/replay/replay.service.ts:653 avg`
 - `nest/src/modules/research/earnings-import-settings.service.ts:238 getRunState`
 - `nest/src/modules/research/investigation.service.ts:355 deleteStale`
 - `nest/src/modules/research/research-import.service.ts:195 isAllowed`
@@ -937,7 +945,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/research/research-import.service.ts:627 importInsiderTransactionsBulk`
 - `nest/src/modules/research/research-import.service.ts:767 importCompanyMetricsBulk`
 - `nest/src/modules/research/research-overview.service.ts:155 classify`
-- `nest/src/modules/risk/monte-carlo.service.ts:67 simulate`
+- `nest/src/modules/risk/monte-carlo.service.ts:77 simulate`
 - `nest/src/modules/scheduler/trading-scheduler.service.ts:251 start`
 - `nest/src/modules/scheduler/trading-scheduler.service.ts:256 stop`
 - `nest/src/modules/scheduler/trading-scheduler.service.ts:261 getStatus`
@@ -957,24 +965,21 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/protocol-db.service.ts:984 getName`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:553 isIncluded`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:558 effectiveMax`
-- `nest/src/modules/scoring/protocol-gating.service.ts:1273 worker`
+- `nest/src/modules/scoring/protocol-gating.service.ts:1350 worker`
 - `nest/src/modules/scoring/protocol-health.service.ts:558 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:61 recordActivity`
-- `nest/src/modules/scoring/rarity.service.ts:136 captureSnapshot`
-- `nest/src/modules/scoring/rarity.service.ts:159 getDistributionStats`
-- `nest/src/modules/scoring/rarity.service.ts:89 computeRarity`
 - `nest/src/modules/scoring/score-history.service.ts:116 richness`
 - `nest/src/modules/scoring/score-history.service.ts:130 isWorkbench`
-- `nest/src/modules/scoring/score-history.service.ts:402 truncateToMinute`
+- `nest/src/modules/scoring/score-history.service.ts:418 truncateToMinute`
 - `nest/src/modules/scoring/score-velocity.service.ts:112 flatten`
 - `nest/src/modules/scoring/scoring.service.ts:831 debug`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:395 num`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:1826 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:2011 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:2019 first`
-- `nest/src/modules/signals/signal-envelope.service.ts:288 has`
-- `nest/src/modules/signals/signal-envelope.service.ts:602 newestOfTf`
+- `nest/src/modules/signals/signal-envelope.service.ts:1852 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:2037 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:2045 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:293 has`
+- `nest/src/modules/signals/signal-envelope.service.ts:607 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:166 note`

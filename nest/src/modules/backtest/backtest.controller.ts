@@ -121,6 +121,30 @@ export class BacktestController {
     return this.backtestService.getDataInventory();
   }
 
+  /**
+   * GET /api/backtest/timeframe-coverage — which timeframes a symbol can ACTUALLY be scored at
+   * inside a window. Answers "is this choice usable?" BEFORE the run rather than after it fails.
+   * `minBars` should be the same `windowSize` the client will send to `/api/replay/run`.
+   */
+  @Get('timeframe-coverage')
+  @ApiOperation({ summary: 'Bar counts per timeframe for one symbol in a window — marks each usable/not (#1128)' })
+  async timeframeCoverage(
+    @Query('symbol') symbol: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('minBars') minBars?: string,
+  ) {
+    if (!symbol) {
+      throw new BadRequestException('symbol is required — coverage is meaningless without one');
+    }
+    return this.backtestService.getTimeframeCoverage(
+      symbol,
+      from,
+      to,
+      minBars ? parseInt(minBars, 10) : undefined,
+    );
+  }
+
   /** List all persisted backtest runs */
   @Get('runs')
   async listRuns(

@@ -56,7 +56,7 @@
 
 .db-mode-btn:hover:not(.active) {
   color: var(--ink);
-  background: #232840;
+  background: var(--color-panel);
 }
 
 /* Snapshot grid */

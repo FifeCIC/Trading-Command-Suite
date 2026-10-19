@@ -468,7 +468,7 @@
 .sig-b-row-track { position: relative; height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 10%, transparent); overflow: hidden; }
 .sig-b-row-fill { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--accent) 55%, var(--color-profit)); transition: width 0.4s ease; }
 .sig-b-row-fill--accent { background: var(--accent); }
-.sig-b-row-fill--conf { background: #38bdf8; }
+.sig-b-row-fill--conf { background: var(--color-accent-blue); }
 /*
  * ENTRY tick — marks where the entry threshold sits on the bar scale.
  *

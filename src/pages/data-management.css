@@ -13,7 +13,7 @@
   font-size: 0.85rem;
 }
 .dm-banner-ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
-.dm-banner-info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+.dm-banner-info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: var(--notice-info-text); }
 .dm-banner button { background: none; border: none; color: inherit; cursor: pointer; font-size: 1rem; }
 
 /* ── Summary Cards ── */

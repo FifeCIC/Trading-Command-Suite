@@ -124,7 +124,7 @@
 }
 
 .bt-tf-active {
-  background: #1e3a5f;
+  background: var(--color-panel);
   border-color: var(--color-accent-blue);
   color: var(--notice-info-text);
 }

@@ -115,7 +115,7 @@
 .ac-sev-critical .ac-sev-label { background: rgba(220,38,38,0.15); color: var(--color-loss); }
 .ac-sev-high .ac-sev-label { background: rgba(234,88,12,0.15); color: #fdba74; }
 .ac-sev-warning .ac-sev-label { background: rgba(245,158,11,0.15); color: #fde68a; }
-.ac-sev-info .ac-sev-label { background: rgba(59,130,246,0.15); color: #93c5fd; }
+.ac-sev-info .ac-sev-label { background: rgba(59,130,246,0.15); color: var(--notice-info-text); }
 
 .ac-title {
   font-weight: 600;
@@ -231,7 +231,7 @@
 .ac-sev-tag.ac-sev-critical { background: rgba(220,38,38,0.15); color: var(--color-loss); }
 .ac-sev-tag.ac-sev-high { background: rgba(234,88,12,0.15); color: #fdba74; }
 .ac-sev-tag.ac-sev-warning { background: rgba(245,158,11,0.15); color: #fde68a; }
-.ac-sev-tag.ac-sev-info { background: rgba(59,130,246,0.15); color: #93c5fd; }
+.ac-sev-tag.ac-sev-info { background: rgba(59,130,246,0.15); color: var(--notice-info-text); }
 
 /* ── Toggle Switch ────────────────────────────────────────── */
 
@@ -293,7 +293,7 @@
 .ac-history-title { flex: 1; color: var(--ink, var(--ink)); }
 .ac-history-status { font-size: 0.7rem; padding: 0.1rem 0.35rem; border-radius: 3px; text-transform: capitalize; }
 .ac-status-active { background: rgba(245,158,11,0.15); color: #fde68a; }
-.ac-status-acknowledged { background: rgba(59,130,246,0.15); color: #93c5fd; }
+.ac-status-acknowledged { background: rgba(59,130,246,0.15); color: var(--notice-info-text); }
 .ac-status-dismissed { background: rgba(100,116,139,0.15); color: #cbd5e1; }
 
 /* ── Mobile ───────────────────────────────────────────────── */

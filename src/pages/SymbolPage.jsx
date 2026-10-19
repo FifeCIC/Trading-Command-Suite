@@ -782,20 +782,30 @@ export default function SymbolPage() {
           <h2>Risk Gate</h2>
           {primaryEnv?.riskGate?.active ? (
             <>
+              {/* ⚠️ Every number below is SERVER DATA and must survive being absent.
+                  `multiplier.toFixed(2)` threw `Cannot read properties of undefined` and took the
+                  whole page down when a NO_DATA envelope reported an active gate without a
+                  multiplier — the fix belongs at the producer, but a missing number must never
+                  blank a page either. `Number.isFinite` renders "not evaluated" instead. */}
               <div className="sym-risk-mult">
-                Multiplier: <strong>×{primaryEnv.riskGate.multiplier.toFixed(2)}</strong>
+                Multiplier:{' '}
+                <strong>
+                  {Number.isFinite(primaryEnv.riskGate.multiplier)
+                    ? `×${primaryEnv.riskGate.multiplier.toFixed(2)}`
+                    : 'not evaluated'}
+                </strong>
                 {primaryEnv.riskGate.triggered && <span className="sym-risk-hard">⚠ Hard Gate: {primaryEnv.riskGate.reason}</span>}
               </div>
-              {primaryEnv.riskGate.chain.length > 0 && (
+              {(primaryEnv.riskGate.chain?.length ?? 0) > 0 && (
                 <div className="sym-risk-chain">
                   {primaryEnv.riskGate.chain.map((s, i) => (
-                    <span key={i} className="sym-risk-step" style={{ opacity: 1 - s.severity * 0.5 }}>
-                      {s.rule}: ×{s.multiplier.toFixed(2)}
+                    <span key={i} className="sym-risk-step" style={{ opacity: 1 - (s.severity ?? 0) * 0.5 }}>
+                      {s.rule}: {Number.isFinite(s.multiplier) ? `×${s.multiplier.toFixed(2)}` : '—'}
                     </span>
                   ))}
                 </div>
               )}
-              {primaryEnv.riskGate.warnings.length > 0 && (
+              {(primaryEnv.riskGate.warnings?.length ?? 0) > 0 && (
                 <div className="sym-risk-warnings">
                   {primaryEnv.riskGate.warnings.map((w, i) => <span key={i} className="sym-risk-warn">⚠ {stripWarningGlyph(w)}</span>)}
                 </div>

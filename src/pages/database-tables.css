@@ -83,8 +83,8 @@
   letter-spacing: 0.03em;
 }
 
-.db-chip--ok { background: #00ff4120; color: var(--color-profit); }
-.db-chip--warn { background: #ffaa0020; color: var(--color-warning); }
+.db-chip--ok { background: color-mix(in srgb, var(--color-profit) 12.5%, transparent); color: var(--color-profit); }
+.db-chip--warn { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
 .db-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 .db-chip--error { background: #ff004020; color: var(--danger); }
 .db-chip--info { background: var(--accent)20; color: var(--accent); }

@@ -38,8 +38,43 @@ export const SCORE_STATES = {
   LIVE: 'live',
   PAUSED: 'paused',     // market closed → frozen at last close (benign, expected)
   STALE: 'stale',       // market OPEN but the feed is behind → investigate
+  EXPIRED: 'expired',   // ⚠️ the SCORE itself stopped being replaced → see below
   UNSCORED: 'unscored', // no score produced at all
 };
+
+/**
+ * ⚠️ `EXPIRED` — the state that was missing, and it is NOT the same question as the other three.
+ * =============================================================================================
+ * PAUSED and STALE describe the MARKET at the moment the row was written. Neither can describe
+ * the row itself, because both are stamped into the row and then frozen with it.
+ *
+ * Measured 2026-10-19, `probe-1dir-v1` / EURUSD:
+ *
+ *   • the automation loop ran the protocol every 2 minutes — `lastTickAt` was 81 seconds old
+ *   • the single directive returned a real 29/100 measurement and classified itself `neutral`
+ *   • a `neutral` tick writes NO row (`noData → continue`), so the newest row stayed 16 Oct
+ *   • that row carried `marketStatus: { open: true, stale: false }` — written when the market was
+ *     open and the feed was fresh — so this file returned `LIVE`, `frozen: false`
+ *
+ * Result: a **2-day-old `STRONG_BUY` 60/100** rendered with a `Live` chip, ranked ABOVE every live
+ * score on the ladder, because the ladder's sorter demotes only `frozen` cards and this one was
+ * not frozen. `stalledForMinutes` (4,146) was already being computed by the API and read by
+ * nothing.
+ *
+ * So age is a THIRD axis: not "is the market open", not "is the feed behind", but **"is this row
+ * still being replaced?"**. An open market with an ancient score is precisely the dangerous case —
+ * it is the shape of a protocol that has gone silent while showing its last confident reading.
+ *
+ * Precedence: **PAUSED first, then EXPIRED.** A closed market is *expected* to write nothing, so
+ * age over a weekend is the normal case and must stay benign — otherwise every FX card alarms from
+ * Friday close to Monday open. EXPIRED therefore applies only while the market is open (or when the
+ * row carries no market status at all): an open market with an ancient score is precisely the shape
+ * of a protocol that has gone silent while still displaying its last confident reading.
+ *
+ * ⚠️ `maxAgeMinutes` is supplied by the CALLER, not held here as a constant, because the honest
+ * window depends on the protocol's cadence — a daily protocol is not stale after three hours.
+ * `score-card-entries.js` owns the default and documents it.
+ */
 
 /**
  * ⚠️ THERE ARE DELIBERATELY NO FALLBACK THRESHOLD CONSTANTS HERE.
@@ -229,8 +264,13 @@ export function standingClass(standing) {
  *   }
  * @returns {object} resolved view model — the ONLY thing pages should render.
  */
-export function buildScoreDisplay(raw = {}) {
+export function buildScoreDisplay(raw = {}, options = {}) {
   const ms = raw.marketStatus ?? null;
+  // Score age — the third axis (see SCORE_STATES.EXPIRED). Both numbers come from the caller:
+  // this file compares them, it does not own the window.
+  const ageMinutes = Number.isFinite(options.ageMinutes) ? options.ageMinutes : null;
+  const maxAgeMinutes = Number.isFinite(options.maxAgeMinutes) ? options.maxAgeMinutes : null;
+  const ageExpired = ageMinutes != null && maxAgeMinutes != null && ageMinutes > maxAgeMinutes;
 
   // Prefer the pre-gate raw composite (server-verified signal strength).
   // Fall back to the gated `value` for rows written before rawComposite existed.
@@ -252,20 +292,29 @@ export function buildScoreDisplay(raw = {}) {
   // freshness flag. That is what stops the chip flipping between two words for one situation.
   let state = SCORE_STATES.UNSCORED;
   if (score != null) {
-    if (!ms) {
+    if (ms && ms.open === false) {
+      // CALENDAR SAYS CLOSED → PAUSED, always, and it OUTRANKS age.
+      // A closed market is EXPECTED to write nothing, so an old row over a weekend is the normal
+      // case, not an incident — the same reasoning that stops data age upgrading this to STALE.
+      // Age-expiring while closed would alarm every FX card from Friday close to Monday open.
+      state = SCORE_STATES.PAUSED;
+    } else if (ageExpired) {
+      // ⚠️ OPEN (or age-known but market unstated) and the row has not been replaced → EXPIRED.
+      // This is the 2-day-old `Live` card: open market, ancient score, `frozen` false.
+      state = SCORE_STATES.EXPIRED;
+    } else if (!ms) {
       // No marketStatus (legacy rows) — classification still shown. Unchanged behaviour.
       state = SCORE_STATES.LIVE;
-    } else if (ms.open === false) {
-      // CALENDAR SAYS CLOSED → PAUSED, always. Data age while closed is expected, not an
-      // incident, so `ms.stale` must not demote this into the feed-alarm state.
-      state = SCORE_STATES.PAUSED;
     } else {
       // Open (or open unstated) → freshness is the SERVER's flag, never a local clock comparison.
       state = ms.stale === true ? SCORE_STATES.STALE : SCORE_STATES.LIVE;
     }
   }
 
-  const frozen = state === SCORE_STATES.PAUSED || state === SCORE_STATES.STALE;
+  const frozen =
+    state === SCORE_STATES.PAUSED ||
+    state === SCORE_STATES.STALE ||
+    state === SCORE_STATES.EXPIRED;
 
   // Signal is server-owned. The client NEVER re-derives BUY/HOLD/SELL from pct.
   const signal = raw.signal && raw.signal !== '—' ? raw.signal : null;
@@ -289,15 +338,18 @@ export function buildScoreDisplay(raw = {}) {
      * True when the state is worth the operator's attention (open + feed behind). Benign states
      * (closed market) are false — only one of the four is an incident, and the UI styles it apart.
      */
-    needsAttention: state === SCORE_STATES.STALE,
+    needsAttention: state === SCORE_STATES.STALE || state === SCORE_STATES.EXPIRED,
+    ageMinutes,
     // Human copy for frozen/closed rows — built once, reused everywhere. The SERVER's reason is
     // surfaced when present ("calendar closed" vs "cadence indeterminate") rather than re-derived.
     frozenTitle: frozen
       ? `${
-          state === SCORE_STATES.STALE
-            ? 'Market OPEN but data stale'
-            : 'Market closed'
-        }${ms?.reason ? ` (${ms.reason})` : ''} — ${signal ?? 'signal'} (${score ?? '—'}/${scoreMax ?? '—'}) frozen at last close, not a live tradable signal.`
+          state === SCORE_STATES.EXPIRED
+            ? `NO NEW SCORE for ${ageMinutes != null ? `${Math.round(ageMinutes)} min` : 'too long'} (limit ${maxAgeMinutes} min) — the protocol is still being run on live data but has not written a reading, so this is the last one it produced`
+            : state === SCORE_STATES.STALE
+              ? 'Market OPEN but data stale'
+              : 'Market closed'
+        }${ms?.reason ? ` (${ms.reason})` : ''} — ${signal ?? 'signal'} (${score ?? '—'}/${scoreMax ?? '—'}) is NOT a live tradable signal.`
       : undefined,
   };
 }

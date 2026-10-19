@@ -6,8 +6,8 @@
  * Tracks historical scores per protocol, classifies current scores into
  * rarity bands, and provides position sizing hints.
  *
- * Rarity Bands:
- *   ≥ 99th percentile → Black Swan  (never seen before — verify data)
+ * Rarity Bands (values live in ./rarity-bands — ONE definition, shared with protocol-gating):
+ *   ≥ 99th percentile → Black Swan  (never seen before — BASE size only, do not scale up)
  *   ≥ 95th percentile → Cyclical    (multi-year alignment)
  *   ≥ 85th percentile → Exceptional (rare convergence)
  *   ≥ 70th percentile → Strong      (above-average)
@@ -15,8 +15,16 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  RARITY_BANDS,
+  RARITY_MIN_SAMPLES,
+  classifyRarityBand,
+  rarityPercentile,
+  type RarityBand,
+  type RarityBandConfig,
+} from './rarity-bands';
 
-export type RarityBand = 'standard' | 'strong' | 'exceptional' | 'cyclical' | 'black-swan';
+export type { RarityBand, RarityBandConfig };
 
 export interface RarityResult {
   percentile: number;
@@ -29,51 +37,9 @@ export interface RarityResult {
   sampleSize: number;
 }
 
-export interface RarityBandConfig {
-  label: string;
-  color: string;
-  emoji: string;
-  description: string;
-  sizeMultiplier: number;
-}
+// RarityBandConfig is re-exported from ./rarity-bands (declared once, there).
 
-export const RARITY_BANDS: Record<RarityBand, RarityBandConfig> = {
-  'standard': {
-    label: 'Standard',
-    color: '#22c55e',
-    emoji: '🟢',
-    description: 'Common opportunity — trade with base size',
-    sizeMultiplier: 1.0,
-  },
-  'strong': {
-    label: 'Strong',
-    color: '#3b82f6',
-    emoji: '🔵',
-    description: 'Above-average convergence — scale up 1.5×',
-    sizeMultiplier: 1.5,
-  },
-  'exceptional': {
-    label: 'Exceptional',
-    color: '#8b5cf6',
-    emoji: '🟣',
-    description: 'Rare alignment of directives — scale up 2×',
-    sizeMultiplier: 2.0,
-  },
-  'cyclical': {
-    label: 'Cyclical',
-    color: '#f59e0b',
-    emoji: '🟡',
-    description: 'Multi-year event (halving, macro shift) — maximum conviction',
-    sizeMultiplier: 2.5,
-  },
-  'black-swan': {
-    label: 'Black Swan',
-    color: '#ef4444',
-    emoji: '🔴',
-    description: 'Never seen before — protocol in uncharted territory. Verify data.',
-    sizeMultiplier: 0,
-  },
-};
+// RARITY_BANDS moved to ./rarity-bands — one definition shared with protocol-gating.service.
 
 const LOOKBACK_DAYS = 365;
 
@@ -102,19 +68,16 @@ export class RarityService {
     const scores = history.map((h) => h.composite);
     const sampleSize = scores.length;
 
-    // Not enough data (< 30 snapshots) — return neutral/median
-    if (sampleSize < 30) {
+    // Not enough data — return neutral/median. ONE threshold for both rarity paths.
+    if (sampleSize < RARITY_MIN_SAMPLES) {
       return this.bandResult('standard', 50, sampleSize);
     }
 
-    // Binary-search find where current score falls
-    let countBelow = 0;
-    for (const s of scores) {
-      if (s < compositeScore) countBelow++;
-    }
-
-    const percentile = Math.round((countBelow / sampleSize) * 100);
-    const band = this.classifyBand(percentile);
+    // ⚠️ Was a linear scan counting strictly-below only, with a comment claiming it was a
+    // binary search. `rarityPercentile` keeps the exclusive rank but makes a score at/above the
+    // window maximum read as the 100th percentile — see the note on that function.
+    const percentile = rarityPercentile(scores, compositeScore);
+    const band = classifyRarityBand(percentile);
 
     return this.bandResult(band, percentile, sampleSize);
   }
@@ -122,12 +85,9 @@ export class RarityService {
   /**
    * Classify a percentile into a rarity band.
    */
+  /** Kept as a method for existing callers; the mapping lives in ./rarity-bands. */
   classifyBand(percentile: number): RarityBand {
-    if (percentile >= 99) return 'black-swan';
-    if (percentile >= 95) return 'cyclical';
-    if (percentile >= 85) return 'exceptional';
-    if (percentile >= 70) return 'strong';
-    return 'standard';
+    return classifyRarityBand(percentile);
   }
 
   /**
@@ -176,7 +136,7 @@ export class RarityService {
     });
 
     const scores = history.map((h) => h.composite);
-    if (scores.length < 30) return null;
+    if (scores.length < RARITY_MIN_SAMPLES) return null;
 
     const n = scores.length;
     return {

@@ -63,7 +63,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  background: #ffaa0020;
+  background: color-mix(in srgb, var(--color-warning) 12.5%, transparent);
   color: var(--color-warning);
 }
 

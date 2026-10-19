@@ -1,0 +1,175 @@
+/**
+ * ProtocolCarousel — layout for the snap panel (#1128).
+ *
+ * ⚠️ ONLY the card height is a magic number: CARD_STEP_PX in the component must equal --pc-card-h
+ * here. It is used solely for the keyboard step; the snap itself is the browser's.
+ *
+ * Colours come from the theme tokens (`--panel`, `--line`, `--ink`, `--text-dim`, `--accent`) so
+ * the panel follows the active theme. Measured 2026-10-17: the previous hand-styled controls used
+ * `--color-input-bg` (a fixed #111318) and ignored the theme entirely — that is the bug this
+ * avoids by using the same tokens the Form System uses.
+ */
+.pc-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pc-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pc-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft, #cbd5e1);
+  letter-spacing: 0.02em;
+}
+
+.pc-count {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--text-dim, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The viewport. A fixed height is what makes it a PANEL rather than a list. */
+.pc-track {
+  --pc-card-h: 132px;
+
+  height: calc(var(--pc-card-h) * 2.6);
+  /* Defensive: makes this element the offsetParent for its cards. The centre measurement uses
+     getBoundingClientRect and does not depend on it, but any future offset-based maths will. */
+  position: relative;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  /* THE SNAP. `mandatory` guarantees a card is always resting in the middle — never a
+     half-scrolled position, which is the "lock into place" behaviour. */
+  scroll-snap-type: y mandatory;
+  scrollbar-width: thin;
+
+  background: var(--panel, #0b0f17);
+  border: 1px solid var(--line, #1e293b);
+  border-radius: 10px;
+  /* Room above the first and below the last card so either end can reach the centre. */
+  padding: calc(var(--pc-card-h) * 0.8) 0;
+}
+
+.pc-track:focus-visible {
+  outline: 2px solid var(--accent, #38bdf8);
+  outline-offset: 2px;
+}
+
+.pc-card {
+  box-sizing: border-box;
+  height: var(--pc-card-h);
+  margin: 0 10px;
+  padding: 10px 12px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+
+  /* Neighbours sit back so the resting card reads as the selected one. */
+  opacity: 0.45;
+  transform: scale(0.965);
+  transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease;
+
+  scroll-snap-align: center;
+  /* A single flick must not skim past several protocols. */
+  scroll-snap-stop: always;
+}
+
+.pc-card--active,
+.pc-card:hover {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pc-card--active {
+  border-color: var(--accent, #38bdf8);
+  background: color-mix(in srgb, var(--accent, #38bdf8) 8%, transparent);
+}
+
+.pc-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pc-name {
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: var(--ink, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-badge {
+  flex: none;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--text-dim, #94a3b8);
+  border: 1px solid var(--line, #1e293b);
+}
+
+.pc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  color: var(--text-dim, #94a3b8);
+}
+
+.pc-dot {
+  opacity: 0.5;
+}
+
+.pc-style {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #cbd5e1);
+}
+
+.pc-desc {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-faint, #64748b);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pc-empty {
+  margin: 0;
+  padding: 12px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #94a3b8);
+}
+
+/* ⚠️ The accessibility policy requires motion to be droppable. The SNAP stays — it is the
+   control's behaviour, not decoration — but the scale/opacity animation does not. */
+@media (prefers-reduced-motion: reduce) {
+  .pc-card {
+    transition: none;
+    transform: none;
+  }
+}

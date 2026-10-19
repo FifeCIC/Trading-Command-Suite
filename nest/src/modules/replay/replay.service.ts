@@ -189,6 +189,19 @@ export interface ReplayResult {
   };
 }
 
+/**
+ * May the MT5 fallback REPLACE the stored series?
+ *
+ * ⚠️ #1128 — ONLY when it genuinely adds bars. The bridge is asked for its LATEST `limit` bars with
+ * no date parameters, so for a historical window it returns nothing inside the requested range.
+ * The old code returned that empty list regardless, throwing away the stored rows it had already
+ * read — so a window holding 12 bars reported "found 0 bars", blaming the store for a count it
+ * never had. A fallback that can REDUCE the data available is worse than no fallback.
+ */
+export function preferFallbackBars(fallbackCount: number, storedCount: number): boolean {
+  return fallbackCount > storedCount;
+}
+
 @Injectable()
 export class ReplayService {
   private readonly logger = new Logger(ReplayService.name);
@@ -291,7 +304,23 @@ export class ReplayService {
               `(${timeframe}) before the replay sees them (#1049).`,
             );
           }
-          return deduped.bars as any;
+          // ⚠️ #1128 — THE FALLBACK COULD MAKE THINGS WORSE, AND SILENTLY.
+          //
+          // `fetchMT5Bars` asks for the LATEST `limit` bars — it has no date parameters. So for a
+          // HISTORICAL window (say last March) the 200 most recent bars contain NONE of the
+          // requested dates, `inWindow` is empty, and this used to `return deduped.bars` — i.e.
+          // return ZERO and throw away the stored rows it had already read. A window with 12
+          // stored bars then reported "found 0 bars", blaming the store for a bar count it never
+          // had. Only accept the fallback when it genuinely adds bars.
+          if (preferFallbackBars(deduped.bars.length, rows.length)) {
+            return deduped.bars as any;
+          }
+          this.logger.warn(
+            `MT5 fallback produced ${deduped.bars.length} bar(s) inside the window for ${symbol} ` +
+              `${timeframe}, which is no better than the ${rows.length} already stored — keeping ` +
+              'the stored series. The bridge returns its LATEST bars, so a historical window ' +
+              'cannot be filled this way.',
+          );
         }
       } catch (err) {
         this.logger.warn(
