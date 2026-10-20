@@ -621,9 +621,26 @@ export const CURRENT_SLICE = [
       'THE ARCHITECTURE SURFACES ARE NOW GUARDED AGAINST DIVERGING (2026-09-30) — scripts/validate-architecture-docs.cjs enforces INV-ARCH-DOCS-1 and INV-ARCH-DOCS-2 between architecture-reference.js (the agent-readable map) and architecture-framework.data.js (the human page). This is the guard that was recorded as MISSING in batch #22, where the two surfaces diverged once and only a human found it. It is deliberately NOT in prebuild: prebuild is shared by every agent and a gate that has run once is not yet a gate.',
       'THE OWNER CAN NOW CURATE THE APP PAGE BY PAGE (2026-09-30) — /development/ui-review is one row per view (141 rows, built from VIEW_META and NAV_TREE) carrying importance, hide-now, keenness and a free-text note, saved on every interaction to the appsetting store and mirrored to nest/app-settings.json so an agent can read the answers as a file. Endpoints GET and PUT /api/system/settings/ui-review.',
 
+  /* ── batch #25 — 2026-10-01 (which bridge holds it, which rows count, and what a surface admits it cannot see) ── */
+      'THE MT5 BRIDGE CANNOT BE BLOCKED BY ITS OWN RECOVERY ATTEMPT (2026-10-01, #1000) — a build gate now requires `timeout=` on every `mt5.initialize()` (7 call sites; omitting it blocks the interpreter), and the unattended reconnect defaults OFF, re-armed only by an explicit POST. The two criteria it could not meet were extracted to #1046 rather than papered over.',
+      'A POSITION IS PRICED AS ONE POSITION, NOT ONE ORDER (2026-10-01, #1014) — closing deals match on the position id and the net is split by each row share of the opening volume, refusing when the denominator is unknown. 22/22 ticketed `pnlInvalid` rows were re-priced; 113 rows in a different, unticketed population are named as still open.',
+      'POSITION READS AND ACTIONS ADDRESS THE BRIDGE THAT HOLDS THE POSITION (2026-10-01, #1033) — every read fans out across active bridges, each row carries its `brokerId`, and the endpoint returns `queried` so "asked and empty" cannot render as "never asked". The drawdown gate keeps the primary read because it pairs with a primary account balance.',
+      'ONE CLASSIFIER DECIDES WHETHER A CLOSED TRADE IS A RESULT (2026-10-01, #1044) — three disagreeing predicates measured 264 rows against 243 for the same question, and a `pnl: 0` default had recorded 21 closes with no exit price as break-even. `exit-unknown` is now 0 and the four populations are reported live.',
+      'THE FOUR DIRECT-ROUTE PAGES CARRY THE CHROME AND THE THEME (2026-10-01, #1047) — they were mounted as bare elements outside `AppShell`, which cost them the sidebar and the theme pack because `useThemeRuntime()` runs inside the shell. The edition swap is untouched and the free build still constructs no such route.',
+      'INSTRUMENT SUITABILITY IS READABLE AND SAYS WHAT ENFORCING IT WOULD COST (2026-10-01, #1051) — the registry declared `instrumentTypes` for 109 directives and was imported by nothing. The new reader is a REPORT, not a gate: enforcing it would move 111 pairs — 75 of them `forex-session-v1` — and `unknown never excludes`.',
+      'A PARTIAL SNAPSHOT CAN NO LONGER CLOSE A LIVE POSITION (2026-10-01, #1057/#1058) — only the producer of the snapshot may set `authoritative`, the automation loop forwards the flag unchanged, and a closed row for a ticket the broker reports open is REOPENED instead of re-created into a unique-index rejection.',
+      'THE CREATE FORM STATES WHAT EACH BOT FIELD ACTUALLY DOES (2026-10-01, #870) — 35 rules are declared once as live / display-only / legacy-only / none and served at `/api/trading/strategies/bot-rules`. The create form and the truth view share one map, and an undeclared field renders `UNDECLARED` rather than nothing.',
+      'THE TWO ARCHITECTURE SURFACES CANNOT SILENTLY DIVERGE (2026-10-01, #902/#1053) — a build gate compares the contract-register marker as `YYYY-MM-DD (batch #N` and the route set in BOTH directions, over a 52-route baseline that is anti-rot: a route since mirrored must have its allowance entry deleted or the build fails.',
+      'A CARD SAYS WHETHER ANY BOT WILL TAKE IT (2026-10-01, #911) — per-card tradeability reconciles the signal percentage against every ACTIVE bot subscribed to the protocol, from the thresholds query the app already runs, and a card with no reading says `CANNOT JUDGE` rather than refusing.',
+      'HOLDING PAST A SESSION BOUNDARY IS A POLICY A BOT MAY CHOOSE, NOT A FIX (2026-10-01, #928) — `exitBeforeUtc` is evaluated by the position time-stop that already reads every bridge. A 228-trade counterfactual replay showed the positive deltas were an artefact of truncating losses on a losing sample, so all 40 bots stay NULL.',
+      'PROVIDER SURFACES REPORT THE REGISTRY RATHER THAN A HAND-WRITTEN LIST (2026-10-01, #940) — `/api/providers/rate-limits` carries each adapter `source` and a finite `remainingEstimate`, and the bogus-provider error lists the same 10-id registry instead of three stale provider names.',
+      'SCHEMA DRIFT IS DETECTED AT FIELD LEVEL, IN BOTH DIRECTIONS (2026-10-01, #948) — Prisma DMMF is compared against `information_schema.COLUMNS` case-insensitively (a case-sensitive compare reported 58 false positives): 119 models, 13 unmodelled (#769), zero drift.',
+      'A COMPANY PROFILE SAYS WHICH PROVIDER ANSWERED, OR WHY NONE DID (2026-10-01, #966) — `resolveProfile()` derives its candidates from the registry and returns `ok | not-applicable | no-profile | unavailable`, non-equities short-circuit before spending a rate-limited call, and a stale market cap reports its age. `sector` was removed because it duplicated `industry`.',
+      'TWENTY-ONE DEAD VIEWS WERE REMOVED BY A PROTECTION RULE, NOT BY A FILE LIST (2026-10-01, handoff page-deletions-group-a) — a view-meta `file:` names what a view RENDERS, not what it OWNS, so a shared or externally-owned asset survives the delete; the free bundle still exposes 0 of 80 premium paths.',
+
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-30 (batch #24: 25 handoffs — the app now says WHICH ACCOUNT, WHICH MECHANISM and WHICH AUTHORITY. One authority replaced six partial mechanisms answering 2 / 8 / 3 / 0 for the same symbol; a position is addressed by the account that HOLDS it and carries an immutable per-bot magic; a bridge on the wrong account REFUSES orders; an exit mechanism declares the columns it reads and the build fails when the two registries disagree. Three refusals recorded rather than papered over: the exit premise replayed and REFUTED three ways (no acting exit built), the #927 floor re-measured and HELD while the panel reporting breaches is the defect, and a failed import now reports the real bar count instead of a zero.)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-10-01 (batch #25: 22 handoffs — WHICH BRIDGE HOLDS IT, WHICH ROWS COUNT, and what a surface admits it cannot see. Position read AND action now resolve the bridge that holds the position, and the response says which bridges were asked. A position P&L is split across the rows that built it, and ONE classifier replaced three disagreeing predicates for "is this closed trade a result" (264 rows by one rule against 243 by structure on the same table, plus 21 phantom break-evens). Two surfaces stopped asserting more than they could see: the provider registry replaced a hand-written adapter list, and a company profile reports which provider answered instead of a swallowed null. Two changes shipped as POLICY rather than as a fix, because the measurement refused the premise: the MT5 unattended reconnect stays OFF, and the exit-side session boundary is opt-in with all 40 bots NULL. Six capabilities with no UI are recorded as FINDINGS, not blanks.)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
 
@@ -780,6 +797,55 @@ export const CURRENT_ROUTE_CONTRACTS = [
         status: 'active',
       },
   
+      /* — batch #25 — new/changed endpoints (2026-10-01, 22 handoffs) — */
+      {
+        route: 'GET /api/providers/mt5/positions',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'Mt5Controller / Mt5TradingService',
+        contract: 'NEW (#1033). Returns { positions, count, brokers, queried } merged from EVERY active bridge, each row tagged with its brokerId and account. `queried` exists so "asked and empty" cannot render as "never asked"; before this, one URL captured at start-up answered for the whole book and the second account was invisible.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/providers/repair-pnl',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'ProvidersController',
+        contract: 'NEW in this register (#1014). Recomputes closed-trade P&L through the position-level split and returns { examined, repaired, notRepairable }. Each row is booked its share of the position net instead of the whole net. First live run { examined: 135, repaired: 0, notRepairable: 135 }, then 22/22 ticketed rows re-priced and 0 ticketed pnlInvalid left.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/suitability/directive-instrument-audit',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'SuitabilityController',
+        contract: 'NEW (#1051). Reports what enforcing the declared instrumentTypes would cost: { enforced: false, enforcementNote, totals: { pairsConsidered, wouldExclude }, byProtocol }. Measured 111 excluded of 287 pairs, 75 of them forex-session-v1, so it is a REPORT and not a gate. Declared ABOVE @Get(:ticker) deliberately — a catch-all registered first shadows it with a silent 200.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/providers/rate-limits',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'AdapterFactory / ProvidersController',
+        contract: 'CHANGED (#940). Every entry now carries `source` (governor or tracker) and a FINITE remainingEstimate, and the response carries `registered` — the 10-id adapter registry list. Previously the numbers were assembled per provider, so a missing figure rendered as an unlimited budget.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/providers/test/:provider/:symbol',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'ProvidersController',
+        contract: 'CHANGED (#940). An unknown provider now fails with `availableProviders` equal to the registry list (10 ids), instead of a hardcoded three-name list naming providers the app does not have.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/scoring/exit-consensus',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'ExitConsensusController',
+        contract: 'CHANGED (#1033). `poolTotal` is the live MT5 book and each open position carries an assessment. It previously read a single bridge through a captured URL, so it reported poolTotal 0 while 11 positions were open — an empty result that looked like a quiet market.',
+        status: 'active',
+      },
       /* — batch #24 — new/changed endpoints (2026-09-27 to 09-30, 25 handoffs) — */
       {
         route: 'GET /api/symbols/:ticker/protocols',

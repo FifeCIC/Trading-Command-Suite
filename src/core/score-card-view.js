@@ -58,6 +58,8 @@ export function stateLabel(vm) {
 export function stateTitle(vm) {
   if (vm.frozenTitle) return vm.frozenTitle;
   if (vm.state === 'unscored') return 'No score has been produced for this row.';
+  // A zero that excludes measured evidence must say so — otherwise "0" reads as "nothing found".
+  if (vm.refusedNote) return `Live — ${vm.refusedNote}`;
   const ms = vm.marketStatus;
   return ms?.reason ? `Live — ${ms.reason}` : undefined;
 }

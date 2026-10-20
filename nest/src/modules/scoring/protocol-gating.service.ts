@@ -509,6 +509,18 @@ export class ProtocolGatingService {
      * `spy-day-v1`/`qqq-day-v1` (2026-09-10).
      */
     timeframe?: string,
+    /**
+     * ⚠️ `persistNoData` — record a no-directional-evidence tick as a `NO_READING` row.
+     *
+     * OFF by default, deliberately. `scoreWithGating` is called by the ladder, the portfolio
+     * scorer, the speed scan and the HTTP routes; a global default of ON would multiply `Score`
+     * writes by every symbol in every caller, including the 26-symbol intraday scans. Only the
+     * LIVE LADDER opts in, because only the ladder has to show a current reading on every tick.
+     *
+     * See the note at the NO_DATA exit for the full reasoning — the short version is that #758
+     * stopped a phantom row being COUNTED and accidentally stopped real ticks being RECORDED.
+     */
+    opts: { persistNoData?: boolean } = {},
   ): Promise<GatedScore> {
     // Scoring REQUIRES a protocol — the unscoped 'default' pipeline was removed
     // (2026-08-22). Without a protocol, scoring would run every directive as a
@@ -1022,6 +1034,72 @@ export class ProtocolGatingService {
     // scores can now skip this rather than storing it as a result.
     if (!hasDirectionalEvidence) {
       const signal = 'NO_DATA' as any;
+
+      // ── #758 AMENDED (2026-10-19, owner-directed) — a neutral tick is RECORDED, not discarded ─
+      //
+      // #758 was fixing a real bug: an all-neutral tick persisted as `0/0 -> composite 0, signal
+      // HOLD`, which counted toward `symbolsScored` and let a protocol report 'scoring' for hours
+      // while producing nothing usable. Stopping it being COUNTED was correct.
+      //
+      // It also stopped it being RECORDED, and that was the over-correction. Owner, verbatim:
+      // *"I never ever gave agentic AI instructions to discard scores — a history of scoring is
+      // important for analysis and the entire point of the ladder is to order symbols based on the
+      // best opportunity in any given moment."*
+      //
+      // MEASURED CONSEQUENCE: `probe-1dir-v1` wrote a row every 2 minutes while its single
+      // directive was bullish, and then nothing at all once the trend turned — so the ladder kept
+      // presenting a 2-day-old STRONG_BUY 60/100 as the top card, because it was the newest row
+      // that existed. The record contained only the ticks that agreed with the last stored score.
+      //
+      // So the tick is now persisted as `signal: 'NO_READING'` — a value that is neither HOLD (a
+      // decision not to trade) nor NO_DATA (nothing was measured). `rawComposite`/`rawMax` keep
+      // the real configured denominator, so the row is readable and comparable; the COUNTING rules
+      // in `buildBestLadder` are untouched, so #758's fix still holds.
+      //
+      // The rarity snapshot is skipped on purpose — see the note in storeSnapshot().
+      if (opts.persistNoData) {
+        const noDataMarket = computeMarketStatus(bars, new Date(), timeframe);
+        this.storeSnapshot(
+          protocolId,
+          symbol,
+          0,
+          'NO_READING',
+          null,
+          {
+            subScores,
+            subRawTotals,
+            subMaxTotals,
+            breakouts,
+            riskMultiplier: 1,
+            directionMode,
+            directionalEvidence: {
+              bullishRaw, bullishMax, bearishRaw, bearishMax,
+              selected: selectedDirection,
+            },
+            readinessGate: {
+              ready: readinessBlockers.length === 0,
+              blockers: readinessBlockers,
+              reason: readinessBlockers.length
+                ? `protocol contains non-ready directives: ${readinessBlockers.map(b => `${b.directiveId} (${b.readiness})`).join(', ')}`
+                : undefined,
+            },
+            marketStatus: {
+              open: noDataMarket.open,
+              asOf: noDataMarket.asOf,
+              reason: noDataMarket.reason,
+            },
+            opportunityScore: Math.round(opportunityScore),
+            opportunityMax,
+            opportunityPct: Math.round(opportunityPct),
+            compositePct: 0,
+            denominatorMode: 'configured-capacity',
+            observedSignalMax: totalMax,
+            configuredSignalMax: capacityMaxTotal,
+          },
+          { skipRaritySnapshot: true },
+        );
+      }
+
       return {
         symbol,
         protocolId,
@@ -1206,6 +1284,10 @@ export class ProtocolGatingService {
       breakouts,
       riskMultiplier: Number(riskResult.multiplier),
       directionMode,
+      directionalEvidence: {
+        bullishRaw, bullishMax, bearishRaw, bearishMax,
+        selected: selectedDirection,
+      },
       readinessGate,
       marketStatus,
       opportunityScore: Math.round(opportunityScore),
@@ -1686,7 +1768,32 @@ export class ProtocolGatingService {
       observedSignalMax?: number;
       /** Sum of maxScores for ALL directives eligible to express direction this tick. */
       configuredSignalMax?: number;
+      /**
+       * The DIRECTION SPLIT the engine actually saw, BEFORE `directionMode` filtered it.
+       *
+       * ⚠️ Computed in `scoreWithGating()` since #758 and then THROWN AWAY on write (2026-10-19).
+       * Without it a `0 / 910` row is indistinguishable from "nothing was measured", which is the
+       * wrong conclusion and the one the reader actually draws.
+       *
+       * MEASURED, XAUUSD / `xau-speed-m15`, 2026-10-19 22:41Z, `directionMode: LONG_ONLY`:
+       *   `gold-round-numbers`        15/25   bearish
+       *   `support-resistance-levels`  8/95   bearish
+       *   nine other directives measured, all `neutral`
+       *   → persisted as `signal: NO_READING, rawComposite: 0, rawMax: 910`
+       * The bearish capacity (120) is still INSIDE the 910 denominator while its 23 points are
+       * excluded from the numerator, so a market with a clear short case reads as a flat zero.
+       * That is not a wrong number, but it is an unreadable one — and the evidence needed to read
+       * it was being discarded at the write.
+       */
+      directionalEvidence?: {
+        bullishRaw: number;
+        bullishMax: number;
+        bearishRaw: number;
+        bearishMax: number;
+        selected: string;
+      };
     },
+    opts: { skipRaritySnapshot?: boolean } = {},
   ): void {
     (async () => {
       // Canonical-symbol guard — only persist symbols this protocol resolves.
@@ -1703,20 +1810,29 @@ export class ProtocolGatingService {
       }
 
       // Write to score_snapshot (rarity history)
-      this.prisma.scoreSnapshot.create({
-        data: {
-          protocolId,
-          symbol,
-          composite,
-          tradingSignal: signal,
-          rarityPct,
-          // #726 — normalised percentages so the ceiling distribution is queryable.
-          signalPct: breakdownData.compositePct,
-          opportunityPct: breakdownData.opportunityPct,
-        },
-      }).catch((err: any) => {
-        this.logger.warn(`Failed to store score snapshot: ${err.message}`);
-      });
+      //
+      // ⚠️ SKIPPED for a NO_READING row, and it must stay skipped. `score_snapshot` is the
+      // RARITY distribution — `computeRarity()` counts how many historical composites sit below
+      // the current one. A `composite: 0` row every two minutes would fill that distribution
+      // with zeros, LOWER every percentile, and silently reclassify every live score as rarer
+      // than it is. Rarity drives position sizing bands, so polluting it is a money-path change.
+      // The reading is still recorded — in `Score`, which is the history table.
+      if (!opts.skipRaritySnapshot) {
+        this.prisma.scoreSnapshot.create({
+          data: {
+            protocolId,
+            symbol,
+            composite,
+            tradingSignal: signal,
+            rarityPct,
+            // #726 — normalised percentages so the ceiling distribution is queryable.
+            signalPct: breakdownData.compositePct,
+            opportunityPct: breakdownData.opportunityPct,
+          },
+        }).catch((err: any) => {
+          this.logger.warn(`Failed to store score snapshot: ${err.message}`);
+        });
+      }
 
       // Write to canonical Score table — protocol scores identified by strategyId = protocolId
       try {
@@ -1778,6 +1894,9 @@ export class ProtocolGatingService {
               timestamp: new Date().toISOString(),
               directionMode: breakdownData.directionMode,
               riskMultiplier: breakdownData.riskMultiplier,
+              // The pre-filter direction split — see the `directionalEvidence` note on the
+              // breakdownData type. Null when a caller could not supply it, never a fabricated 0.
+              directionalEvidence: breakdownData.directionalEvidence ?? null,
               // Pre-gate raw composite — the actual signal strength before any
               // hard gate (e.g. closed-market liquidity) forces composite to 0.
               // The gate is a tradability check, not part of the score itself.

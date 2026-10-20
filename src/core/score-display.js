@@ -311,6 +311,33 @@ export function buildScoreDisplay(raw = {}, options = {}) {
     }
   }
 
+  // ── REFUSED EVIDENCE — say what was measured and not counted ────────────────
+  //
+  // ⚠️ MEASURED, XAUUSD / `xau-speed-m15`, 2026-10-19 22:41Z: eleven directives ran, two returned
+  // `bearish`, the engine recorded `0 / 910`, and the card read `SIGNAL 0`. The direction split it
+  // refused was 80/240 bearish (33%).
+  //
+  // That zero is arithmetically correct and semantically useless: `rawComposite` counts only the
+  // PERMITTED direction while `rawMax` keeps the capacity of BOTH. So a clear short case renders as
+  // a flat nothing, indistinguishable from "no data" — the exact confusion this repo keeps paying
+  // for. This does not change any score; it names the evidence the score excludes.
+  const de = raw.directionalEvidence ?? null;
+  const directionMode = raw.directionMode ?? null;
+  let refusedNote = null;
+  if (de && score === 0) {
+    const refused = [
+      { side: 'bearish', raw: Number(de.bearishRaw) || 0, max: Number(de.bearishMax) || 0 },
+      { side: 'bullish', raw: Number(de.bullishRaw) || 0, max: Number(de.bullishMax) || 0 },
+    ].filter((s) => s.raw > 0 && de.selected !== s.side)[0];
+    if (refused) {
+      const share = refused.max > 0 ? ` (${Math.round((refused.raw / refused.max) * 100)}%)` : '';
+      refusedNote =
+        `Measured ${refused.side} evidence ${refused.raw}/${refused.max}${share}, but ` +
+        `${directionMode ?? 'this protocol'} cannot act on it — the Signal score counts only the ` +
+        `permitted direction, so a real reading is showing as zero.`;
+    }
+  }
+
   const frozen =
     state === SCORE_STATES.PAUSED ||
     state === SCORE_STATES.STALE ||
@@ -340,6 +367,8 @@ export function buildScoreDisplay(raw = {}, options = {}) {
      */
     needsAttention: state === SCORE_STATES.STALE || state === SCORE_STATES.EXPIRED,
     ageMinutes,
+    /** Non-null when the engine measured evidence it was not allowed to count — see above. */
+    refusedNote,
     // Human copy for frozen/closed rows — built once, reused everywhere. The SERVER's reason is
     // surfaced when present ("calendar closed" vs "cadence indeterminate") rather than re-derived.
     frozenTitle: frozen

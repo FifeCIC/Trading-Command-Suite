@@ -641,6 +641,12 @@ export class SignalEnvelopeService {
       { dayBars, hourBars, min15Bars },
       'group-weighted',
       baseTimeframe,
+      // ⚠️ The LADDER is the only caller that opts in. It must show a current reading for every
+      // symbol on every tick, so a neutral tick is persisted as `NO_READING` rather than leaving
+      // the previous score as the newest row (which is how a 2-day-old STRONG_BUY stayed ranked
+      // first). Portfolio/speed-scan/HTTP callers keep the old no-write behaviour — see the
+      // `persistNoData` note on scoreWithGating().
+      { persistNoData: true },
     );
 
     // Feed learning from the canonical live path. The retired rankAll path is

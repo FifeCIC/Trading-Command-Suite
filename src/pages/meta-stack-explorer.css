@@ -6,6 +6,42 @@
 .mse-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
 .mse-subtitle { color: var(--ink-soft); font-size: 0.8rem; margin: 0; }
 .mse-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+/* ── Pause / Play toggle ───────────────────────────────────────────────────────────────────────
+   One control, two states. `Paused` is the default: the record is frozen and every step of it is
+   visible. `Playing` re-reads the latest score on an interval. The visual must distinguish them
+   without relying on colour alone — the label word changes, and the glyph changes with it. */
+.mse-live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+}
+.mse-live-toggle:hover { color: var(--ink); background: rgba(255,255,255,0.05); }
+.mse-live-toggle.is-playing {
+  border-color: var(--color-profit);
+  color: var(--color-profit);
+}
+.mse-live-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Protocol picker inside the pinned banner ───────────────────────────────────────────────── */
+.mse-banner-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.4rem;
+  max-width: 22rem;
+}
+.mse-banner-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* Strategy banner — sticky so it stays visible while scrolling the pipeline */
 .mse-strategy-banner {
@@ -189,10 +225,99 @@
 .mse-check-pass { background: rgba(34,197,94,0.06); }
 .mse-check-fail { background: rgba(239,68,68,0.06); }
 .mse-check-pending { background: transparent; }
+/* ⚠️ `warn` and `na` are NEW states, not decoration. `na` means "could not judge" — the value was
+   unavailable, so the row carries a reason instead of a verdict. It must never look like a pass, or
+   the exact defect this contract exists to prevent comes back through the styling. */
+.mse-check-warn { background: rgba(245,158,11,0.08); }
+.mse-check-na { background: transparent; }
 .mse-check-icon { font-weight: 700; font-size: 0.8rem; min-width: 18px; text-align: center; }
 .mse-check-pass .mse-check-icon { color: var(--color-profit); }
 .mse-check-fail .mse-check-icon { color: var(--color-loss); }
 .mse-check-pending .mse-check-icon { color: var(--ink-soft); }
+.mse-check-warn .mse-check-icon { color: var(--color-warning); }
+.mse-check-na .mse-check-icon { color: var(--ink-soft); opacity: 0.7; }
+.mse-check-warn .mse-check-label,
+.mse-check-na .mse-check-label { opacity: 0.85; }
+/* Technical-level block — separated from the Pipeline rows so the two sets are never read as one
+   list. It is the same snapshot, at a deeper level. */
+.mse-check-list--technical {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--line);
+}
+.mse-tech-heading {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 0 0.5rem 0.25rem;
+}
+
+/* ── Directive ledger (Technical level, stage 5) ─────────────────────────────────────────────
+   The reason column is the point of this table: it is the engine's own sentence, and without it a
+   score is a number with no provenance. `Counted` says whether the reading reached the score, so
+   "measured and refused" is visible next to "measured and counted". */
+.mse-dir-table-wrap { margin-top: 0.5rem; overflow-x: auto; }
+.mse-dir-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+.mse-dir-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 0.3rem 0.45rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.mse-dir-table td {
+  padding: 0.3rem 0.45rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: top;
+}
+.mse-dir-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mse-dir-share { color: var(--ink-soft); }
+.mse-dir-name { font-weight: 600; white-space: nowrap; }
+.mse-dir-group { color: var(--ink-soft); white-space: nowrap; }
+.mse-dir-reason { color: var(--ink-soft); line-height: 1.45; }
+.mse-dir-class {
+  font-size: 0.66rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+.mse-dir-class--bullish { color: var(--color-profit); border-color: currentColor; }
+.mse-dir-class--bearish { color: var(--color-loss); border-color: currentColor; }
+.mse-dir-class--neutral { color: var(--ink-soft); }
+.mse-dir-flag {
+  margin-left: 0.3rem;
+  font-size: 0.62rem;
+  color: var(--color-warning);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 0.25rem;
+}
+.mse-dir-link { color: var(--accent); text-decoration: underline; }
+.mse-dir-link:hover { text-decoration: none; }
+.mse-dir-readiness {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.mse-dir-counted { color: var(--color-profit); font-weight: 600; }
+.mse-dir-refused { color: var(--ink-soft); }
+/* The measured value, set apart from the prose that explains it. */
+.mse-check-value {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
 .mse-check-label { font-weight: 600; }
 .mse-check-detail { font-size: 0.73rem; color: var(--ink-soft); margin-left: auto; }
 /* Per-check link */

@@ -596,6 +596,14 @@ export class ScoreHistoryService {
             opportunityScore: (e as any).breakdown?.opportunityScore ?? null,
             opportunityMax: (e as any).breakdown?.opportunityMax ?? null,
             marketStatus: (e as any).breakdown?.marketStatus ?? null,
+            // The pre-filter direction split. `rawComposite: 0` is only readable next to this:
+            // XAUUSD/`xau-speed-m15` measured 80/240 bearish (33%) and persists as 0/910 purely
+            // because the protocol is LONG_ONLY. Without this field the card cannot distinguish
+            // "nothing was measured" from "everything was measured and the answer was refused".
+            directionalEvidence: (e as any).breakdown?.directionalEvidence ?? null,
+            // The protocol's intent (`LONG_ONLY` etc.) — the card names it in the refused-evidence
+            // note, because "0" is only explainable alongside what the protocol was allowed to say.
+            directionMode: (e as any).breakdown?.directionMode ?? null,
           })),
         };
       })

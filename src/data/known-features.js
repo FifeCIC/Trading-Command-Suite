@@ -556,4 +556,25 @@ export const KNOWN_FEATURES = {
     'Automatic MT5 Session Recovery (API-side observer)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
     'Page Walkthrough (UI Review curation)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Architecture-surface agreement guard': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #25 (2026-10-01) — 15 capabilities from 22 handoffs (7 were Notes: bugfix/test,
+  //    QA entry only, so they carry no capability). #902's guard was already recorded in batch #24
+  //    and is NOT repeated, so 14 rows are new here. Theme: WHICH BRIDGE HOLDS IT, WHICH ROWS
+  //    COUNT, and what a surface admits it cannot see. uiSurfaces: 0 is a FINDING, not a blank
+  //    (6 of the 15). ⚠️ 'P&L Population Integrity' (#1044) is the LIVE definition and supersedes
+  //    the older 'P&L Population Integrity (invalid-row exclusion)' row; both stay because the
+  //    page looks features up BY NAME.
+    'MT5 bridge recovery bounds (bounded connect + opt-in unattended reconnect)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Position-level P&L attribution (split across scale-in rows)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Broker-addressed position I/O (read and act)': { dataPersistence: 'ephemeral', uiSurfaces: 3, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'P&L Population Integrity': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Direct-route pages inside the app shell': { dataPersistence: 'config', uiSurfaces: 4, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Directive Instrument Suitability Audit': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Snapshot-authority integrity for closure detection': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Bot field enforcement annotations (create form)': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Per-card bot tradeability': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Exit-Side Session Boundary (per-bot, opt-in)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Provider adapter state surfaces': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Field-level schema drift audit': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Company profile resolution': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'View deletion tooling (`scripts/delete-views.cjs`)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
 };

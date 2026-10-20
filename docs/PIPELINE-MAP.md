@@ -965,7 +965,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/protocol-db.service.ts:984 getName`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:553 isIncluded`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:558 effectiveMax`
-- `nest/src/modules/scoring/protocol-gating.service.ts:1350 worker`
+- `nest/src/modules/scoring/protocol-gating.service.ts:1432 worker`
 - `nest/src/modules/scoring/protocol-health.service.ts:558 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:61 recordActivity`
 - `nest/src/modules/scoring/score-history.service.ts:116 richness`
@@ -975,9 +975,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/scoring.service.ts:831 debug`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:395 num`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:1852 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:2037 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:2045 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:1858 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:2043 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:2051 first`
 - `nest/src/modules/signals/signal-envelope.service.ts:293 has`
 - `nest/src/modules/signals/signal-envelope.service.ts:607 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`

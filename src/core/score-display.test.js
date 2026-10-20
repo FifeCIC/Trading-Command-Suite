@@ -15,7 +15,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildScoreDisplay, SCORE_STATES } from './score-display.js';
-import { stateLabel } from './score-card-view.js';
+import { stateLabel, stateTitle } from './score-card-view.js';
 
 /** A scored row with a given marketStatus. */
 const row = (marketStatus) => ({ signal: 'BUY', rawComposite: 10, rawMax: 100, marketStatus });
@@ -140,4 +140,47 @@ test('no age supplied means NO AGE RULE — legacy callers are unchanged', () =>
   assert.equal(buildScoreDisplay(row({ open: true, stale: false })).state, SCORE_STATES.LIVE);
   // A missing age must be `null`, not 0 — 0 would silently mean "brand new".
   assert.equal(buildScoreDisplay(row({ open: true })).ageMinutes, null);
+});
+
+// ── REFUSED EVIDENCE — a zero that excludes a real measurement must say so ───────────────────
+//
+// ⚠️ MEASURED, XAUUSD / `xau-speed-m15`, 2026-10-19 22:41Z, directionMode LONG_ONLY:
+//   eleven directives ran · `gold-round-numbers` 15/25 bearish · `support-resistance-levels` 8/95
+//   bearish · nine neutral · persisted as `signal NO_READING, rawComposite 0, rawMax 910`
+// A live re-score reported the refused split as `bearishRaw 80, bearishMax 240` (33%).
+// The card showed `SIGNAL 0` with nothing to distinguish it from "nothing was measured".
+
+const xau = (over = {}) => buildScoreDisplay({
+  signal: 'NO_READING',
+  rawComposite: 0,
+  rawMax: 910,
+  marketStatus: { open: true, stale: false },
+  directionMode: 'LONG_ONLY',
+  directionalEvidence: { bullishRaw: 0, bullishMax: 0, bearishRaw: 80, bearishMax: 240, selected: 'none' },
+  ...over,
+});
+
+test('a zero with refused bearish evidence names the evidence and the mode', () => {
+  const out = xau();
+  assert.match(out.refusedNote, /bearish evidence 80\/240 \(33%\)/);
+  assert.match(out.refusedNote, /LONG_ONLY/);
+  // It must be reachable from the tooltip, which is the only surface the card offers.
+  assert.match(stateTitle(out), /Live — Measured bearish/);
+});
+
+test('direction is respected — bearish evidence is NOT "refused" when it was selected', () => {
+  const out = xau({
+    signal: 'SELL',
+    rawComposite: 80,
+    directionalEvidence: { bullishRaw: 0, bullishMax: 0, bearishRaw: 80, bearishMax: 240, selected: 'bearish' },
+  });
+  assert.equal(out.refusedNote, null);
+});
+
+test('a non-zero score never claims refused evidence — the note is for zeros only', () => {
+  assert.equal(xau({ rawComposite: 300 }).refusedNote, null);
+});
+
+test('no directionalEvidence means no note — absent is not zero', () => {
+  assert.equal(xau({ directionalEvidence: null }).refusedNote, null);
 });

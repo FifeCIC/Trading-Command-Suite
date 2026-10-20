@@ -14,7 +14,9 @@ import {
 import { sma } from '../utils/indicators';
 
 const VOLUME_MA_PERIOD = 20;
-const MIN_BARS = VOLUME_MA_PERIOD + 1;
+// ⚠️ +2, not +1. The comparison now needs the last COMPLETE bar plus the 20 before it — the newest
+// bar is excluded because it is still accumulating (see the note in calculate()).
+const MIN_BARS = VOLUME_MA_PERIOD + 2;
 
 @Injectable()
 export class VolumeConfirmationDirective implements IDirective {
@@ -42,9 +44,20 @@ export class VolumeConfirmationDirective implements IDirective {
       };
     }
 
+    // ⚠️ BOTH SIDES MUST BE COMPLETE BARS — the newest bar is excluded from BOTH.
+    //
+    // The 20-bar average was built from complete bars while the numerator was the CURRENT,
+    // partially-accumulated one, so the ratio measured how far through the bar we were rather than
+    // how much volume there was. Measured 2026-10-20 00:12Z, newest 1h bar 12.8 minutes old
+    // (~21% complete): XAUUSD 0.02x, VIX 0.06x, BTC 0.01x. Three unrelated markets do not all
+    // trade at 1-6% of average volume (#1130). Effect: this directive sat at 0-1/100 for most of
+    // every bar while holding its FULL capacity in the protocol's denominator — the same
+    // permanent-dilution shape as the always-neutral directives in #1131.
+    //
+    // Now: the last FINISHED bar, against the 20 finished bars before it.
     const volumes = bars.map((b) => b.volume);
-    const avgVolume = sma(volumes.slice(0, -1), VOLUME_MA_PERIOD); // Average of prior bars
-    const currentVolume = volumes[volumes.length - 1];
+    const currentVolume = volumes[volumes.length - 2];
+    const avgVolume = sma(volumes.slice(0, -2), VOLUME_MA_PERIOD);
 
     if (avgVolume <= 0) {
       return {

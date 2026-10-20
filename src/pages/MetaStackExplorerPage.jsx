@@ -23,7 +23,7 @@
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './meta-stack-explorer.css';
@@ -283,6 +283,17 @@ const PIPELINE = [
   },
 ];
 
+/* ── PLANNED IN #1129 ──
+ * MISSING:  a readability pass. Every stage now renders its measured values and reasons at ALL
+ *           times (owner decision 2026-10-20 — the three-level switch was replaced by a single
+ *           Pause/Play control). The page is therefore dense by design, and nothing has been done
+ *           to make that density scannable.
+ * TODAY:    each stage is a flat list of rows; label, value and reason compete for the eye, and a
+ *           stage with 11 directives produces a long table with no summary line.
+ * WHEN BUILT: order rows by result (fail → warn → na → pass) so the thing needing attention is
+ *           first, and let a stage collapse to its worst row when the page is not being read.
+ */
+
 /* ── Main component ────────────────────────────────────── */
 export default function MetaStackExplorerPage() {
   const [confirmedStages, setConfirmedStages] = useState(() => {
@@ -294,6 +305,44 @@ export default function MetaStackExplorerPage() {
     catch { return null; }
   });
   const [scrollPct, setScrollPct] = useState(0);
+
+  // ── PAUSE / PLAY — the one control on this page ─────────────────────────────────────────────
+  //
+  // Owner direction, 2026-10-20: *"rather than three levels I just want a toggle to Pause or Play.
+  // Pause will allow me to view every step on the latest score. Play will automatically refresh the
+  // page … instead of two levels of information on the UI I want it all displayed at all times."*
+  //
+  // So there is no level switch any more: every check, every measured value and every engine
+  // reason is rendered at all times. The ONLY thing this control changes is whether the page
+  // re-reads — nothing about what is shown.
+  //
+  // ⚠️ PAUSED IS THE DEFAULT, and that is deliberate: a diagnostic page that moves under the
+  // reader is how a number gets read from one tick and compared against another. Paused is the
+  // same behaviour the page had before this control existed (fetch on mount, then hold), so
+  // defaulting to it cannot surprise anyone. Play is opt-in and obvious.
+  const [playing, setPlaying] = useState(() => {
+    try { return localStorage.getItem('mse-live') === 'on'; } catch { return false; }
+  });
+  const choosePlaying = (next) => {
+    setPlaying(next);
+    try { localStorage.setItem('mse-live', next ? 'on' : 'off'); } catch {}
+  };
+
+  // PLAY = re-read on an interval. PAUSE = the interval does not exist, so nothing can move.
+  //
+  // Every `mse-*` query on the page is invalidated together: a refresh that updated some panels
+  // and not others would let two stages describe different ticks while looking like one record.
+  const PLAY_INTERVAL_MS = 15_000;
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!playing) return undefined;
+    const id = setInterval(() => {
+      queryClient.invalidateQueries({
+        predicate: (q) => String(q?.queryKey?.[0] ?? '').startsWith('mse-'),
+      });
+    }, PLAY_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [playing, queryClient]);
 
   // ── Prerequisite data queries ──
   const symbolsQuery = useQuery({
@@ -369,15 +418,17 @@ export default function MetaStackExplorerPage() {
   });
   const protocols = protoQuery.data?.protocols ?? [];
 
-  // Non-gated protocol list (has createdAt for user-vs-built-in heuristic)
-  const protoAllQuery = useQuery({
-    queryKey: ['mse-protocols-all'],
-    queryFn: () => apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
-    staleTime: 120_000,
-  });
-  const allProtocolsData = protoAllQuery.data?.protocols ?? [];
-
-  // Scoring auto-triggers when a Trading Strategy is selected (provides symbol + protocol)
+  // ⚠️ DECLARATION ORDER IS LOAD-BEARING — this block MOVED here on 2026-10-20.
+  //
+  // It used to sit ~350 lines below, next to the Score Momentum query. The Technical-level memos
+  // below read `scored` (in their bodies AND in their dependency arrays, which are evaluated
+  // immediately), so every one of them hit the temporal dead zone:
+  //
+  //     ReferenceError: Cannot access 'scored' before initialization
+  //
+  // …and the whole page rendered blank. A build cannot catch this — it is a runtime ordering
+  // fault that `tsc` and Vite both accept. `scoreQuery` depends only on `activeSymbol` and
+  // `activeProtocolId`, so it belongs with the other fetches, above anything that reads it.
   const scoreQuery = useQuery({
     queryKey: ['mse-score-v2', activeSymbol, activeProtocolId],
     queryFn: async () => {
@@ -390,6 +441,454 @@ export default function MetaStackExplorerPage() {
   });
 
   const scored = scoreQuery.data;
+
+  // ⚠️ MOVED HERE with `scoreQuery` (2026-10-20). `allProtocolsData` is read by the Technical-level
+  // memos below, and it used to be declared ~350 lines later — `ReferenceError: Cannot access
+  // 'allProtocolsData' before initialization`. Same fault as `scored`; same fix: a fetch belongs
+  // above everything that reads it.
+  const protoAllQuery = useQuery({
+    queryKey: ['mse-protocols-all'],
+    queryFn: () => apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
+    staleTime: 120_000,
+  });
+  const allProtocolsData = protoAllQuery.data?.protocols ?? [];
+
+  // ⚠️ MEASURED CEILING — the number that explains every "0-33" composite, and it was already
+  // being computed and served by `/api/scoring/gated/thresholds` with nothing displaying it.
+  //
+  // `protocolCeilings[slug].ceilingPct` is the HIGHEST percentage that protocol reached in
+  // `ceilingWindowDays` (90). Measured 2026-10-20: one-directive probes reach 60-100%, three
+  // directives reach 42%, and the 7-13 directive protocols reach 17-29%. A tick cannot exceed the
+  // ceiling, so the practical scoring range is 0 -> ceiling, while `entry` (6%) and `strong` (13%)
+  // are fixed percentages of CONFIGURED capacity. On `xau-speed-m15` (ceiling 24.2%) "strong" is
+  // 54% of everything the protocol can ever achieve. See #1131.
+  //
+  // Declared HERE, above `technicalValues`, for the reason recorded at `scoreQuery`: a top-level
+  // const read by a later hook is a temporal-dead-zone crash, not a type error.
+  const thresholdsQuery = useQuery({
+    queryKey: ['mse-thresholds'],
+    queryFn: () => apiGet('/api/scoring/gated/thresholds').catch(() => null),
+    staleTime: 120_000,
+  });
+
+  // ── MEASURED VALUES — stage 1 (Symbol Registration) ─────────────────────────────────────────
+  //
+  // ⚠️ WHY THIS EXISTS. The pipeline row "Non-default symbol added" reports a FAIL on a healthy
+  // FX-only install: it is a tutorial prompt wearing a pass/fail badge. Worse, the question that
+  // actually matters had NO surface anywhere in the app — *"which registered symbols does no active
+  // protocol ever resolve?"* A symbol in that state is never scored, never queued and never traded,
+  // and nothing reports it. That is the defect class this block is for.
+  //
+  // Everything below is computed from payloads this page ALREADY fetches (`/api/symbols` and
+  // `/api/scoring/gated/protocols`), so it describes the SAME snapshot as the rows above it. No new
+  // request, and with Pause on, nothing can move under the reader.
+  const symbolTech = useMemo(() => {
+    const raw = symbolsQuery.data;
+    const rows = Array.isArray(raw?.symbols) ? raw.symbols : Array.isArray(raw) ? raw : [];
+    const byType = rows.reduce((acc, r) => {
+      const key = r.type || 'unknown';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const registered = new Set(rows.map((r) => String(r.ticker || '').toUpperCase()).filter(Boolean));
+    const resolved = new Set();
+    for (const p of protocols) {
+      for (const s of (p.resolvedSymbols || [])) resolved.add(String(s).toUpperCase());
+    }
+    const covered = [...resolved].filter((t) => registered.has(t));
+    const orphans = [...registered].filter((t) => !resolved.has(t));
+    return {
+      total: rows.length,
+      activeCount: rows.filter((r) => r.active !== false).length,
+      byType,
+      covered,
+      orphans,
+      selectedResolved: activeSymbol ? resolved.has(String(activeSymbol).toUpperCase()) : null,
+    };
+  }, [symbolsQuery.data, protocols, activeSymbol]);
+
+  // ── MEASURED VALUES — bar freshness ─────────────────────────────────────────────────────────
+  //
+  // ⚠️ This is the stage that answers "is it the data?" — the question that took four hours by
+  // hand on 2026-10-19. It reads ONE endpoint (`/api/market-data/freshness`) and reports what it
+  // says rather than re-deriving it: ⚠️ the endpoint currently reports the `1h` cadence only, so
+  // every other cadence is `na` here rather than silently presented as covered.
+  const freshnessQuery = useQuery({
+    queryKey: ['mse-freshness'],
+    queryFn: () => apiGet('/api/market-data/freshness').catch(() => ({ results: [] })),
+    staleTime: 60_000,
+  });
+
+  const marketTech = useMemo(() => {
+    const results = Array.isArray(freshnessQuery.data?.results) ? freshnessQuery.data.results : [];
+    const ages = results.map((r) => r.ageMinutes).filter((a) => Number.isFinite(a)).sort((a, b) => a - b);
+    const selected = activeSymbol
+      ? results.find((r) => String(r.ticker).toUpperCase() === String(activeSymbol).toUpperCase())
+      : null;
+    return {
+      count: results.length,
+      fresh: results.filter((r) => r.status === 'fresh').length,
+      stale: results.filter((r) => r.status === 'stale').length,
+      missing: results.filter((r) => r.status === 'missing').length,
+      medianAge: ages.length ? Math.round(ages[Math.floor(ages.length / 2)]) : null,
+      oldestAge: ages.length ? Math.round(ages[ages.length - 1]) : null,
+      selected,
+    };
+  }, [freshnessQuery.data, activeSymbol]);
+
+  // ── MEASURED VALUES — directive rows (the walk-through surface) ─────────────────────────────
+  //
+  // ⚠️ Every field below is produced by the engine and was ALREADY in the payload; the page showed
+  // only name + score + class. The two that explain a wrong-looking number are `reason` (the
+  // engine's own sentence) and `inSignal` (whether that reading counted). Measured 2026-10-19:
+  // `xau-speed-m15` returned `0 / 910` while eleven directives measured, two of them `bearish`,
+  // and nothing on this page could show that.
+  const directiveRows = useMemo(() => {
+    const breakouts = scored?.breakouts || {};
+    const rows = [];
+    for (const [groupId, list] of Object.entries(breakouts)) {
+      for (const d of (list || [])) {
+        rows.push({
+          groupId,
+          directiveId: d.directiveId,
+          name: d.name,
+          score: d.score,
+          maxScore: d.maxScore,
+          normalizedScore: d.normalizedScore,
+          signalClass: d.signalClass || 'neutral',
+          counted: d.inSignal === true,
+          unmeasured: d.unmeasured === true,
+          reason: d.reason || null,
+        });
+      }
+    }
+    // Counted first, then the biggest raw readings — the rows a reader needs are at the top.
+    return rows.sort((a, b) => (Number(b.counted) - Number(a.counted)) || ((b.score || 0) - (a.score || 0)));
+  }, [scored]);
+
+  // ⚠️ THE SHARE COLUMN'S DENOMINATOR IS *NOT* THE TICK'S DIVISOR, and conflating them would
+  // produce a confidently wrong percentage for every gate directive.
+  //
+  // `configuredSignalMax` (910 on `xau-speed-m15`) EXCLUDES gate directives — `liquidity-check`
+  // declares 100 but is not in the signal divisor. So dividing each directive's maxScore by 910
+  // would overstate gate directives and the shares would not sum to 100%.
+  //
+  // Summing every declared maxScore gives a denominator that is internally consistent: the shares
+  // sum to 100%, and the gap between this total and `configuredSignalMax` IS the gate capacity.
+  const declaredCapacity = directiveRows.reduce((sum, d) => sum + (d.maxScore || 0), 0);
+
+  const technicalValues = useMemo(() => ({
+    'prereq-symbols': [
+      { label: 'Registered', value: String(symbolTech.total), status: symbolTech.total > 0 ? 'pass' : 'fail', reason: 'rows in the Symbol table' },
+      { label: 'Active', value: String(symbolTech.activeCount), status: symbolTech.activeCount > 0 ? 'pass' : 'warn', reason: 'an inactive symbol is never scored' },
+      {
+        label: 'By type',
+        value: Object.entries(symbolTech.byType).map(([k, v]) => `${k} ${v}`).join(' · ') || '—',
+        status: 'na',
+        reason: 'informational — the type decides the market calendar and the venue gate',
+      },
+      {
+        label: 'Resolved by an active protocol',
+        value: String(symbolTech.covered.length),
+        status: symbolTech.covered.length > 0 ? 'pass' : 'fail',
+        reason: 'symbols at least one active protocol resolves to',
+      },
+      {
+        label: 'Registered but resolved by none',
+        value: String(symbolTech.orphans.length),
+        status: symbolTech.orphans.length > 0 ? 'warn' : 'pass',
+        reason: 'never scored, never queued, never traded — and no other surface in the app reports it',
+      },
+      ...(activeSymbol ? [{
+        label: `Selected symbol (${activeSymbol})`,
+        value: symbolTech.selectedResolved ? 'resolved' : 'not resolved',
+        status: symbolTech.selectedResolved ? 'pass' : 'fail',
+        reason: symbolTech.selectedResolved
+          ? 'an active protocol resolves this symbol'
+          : 'no active protocol resolves it, so nothing downstream can score it',
+      }] : [{ label: 'Selected symbol', value: '—', status: 'na', reason: 'no strategy selected above' }]),
+      {
+        label: 'symbol_route coverage',
+        value: 'unknown',
+        status: 'na',
+        reason: 'no endpoint exposes per-symbol routes. symbol_route has ONE writer (Mt5Controller) and no seeder, so "routed or not" cannot be read from here',
+      },
+    ],
+
+    // ── Stage 2: Watchlists ──────────────────────────────────────────────────────────────────
+    'prereq-watchlist': (() => {
+      const raw = watchlistsQuery.data;
+      const lists = Array.isArray(raw?.watchlists) ? raw.watchlists : Array.isArray(raw) ? raw : [];
+      const builtIn = lists.filter((w) => w.kind === 'built-in').length;
+      const user = lists.length - builtIn;
+      const empty = lists.filter((w) => !(w.symbolCount > 0)).length;
+      const linkedToProtocol = lists.filter((w) => !!w.protocolId);
+      return [
+        { label: 'Watchlists', value: String(lists.length), status: lists.length > 0 ? 'pass' : 'fail', reason: `${builtIn} built-in · ${user} user-created` },
+        {
+          label: 'Empty watchlists',
+          value: String(empty),
+          status: empty > 0 ? 'warn' : 'pass',
+          reason: 'a watchlist with 0 symbols resolves no protocol symbols — it looks configured and does nothing',
+        },
+        {
+          label: 'Linked to a protocol',
+          value: `${linkedToProtocol.length}`,
+          status: linkedToProtocol.length > 0 ? 'pass' : 'warn',
+          reason: linkedToProtocol.length
+            ? linkedToProtocol.map((w) => `${w.id}→${w.protocolId}`).join(', ')
+            : 'no watchlist names a protocol — protocol symbols must then come from an explicit assignment or derive rule',
+        },
+      ];
+    })(),
+
+    // ── Stage 3: Protocol pairing ────────────────────────────────────────────────────────────
+    'prereq-protocol': (() => {
+      const gated = protocols;
+      const activeProtoIds = new Set(gated.filter((p) => p.active !== false).map((p) => p.id));
+      const linked = new Set(tradingStrats.map((s) => s.protocolId).filter(Boolean));
+      const zeroSymbols = gated.filter((p) => p.active !== false && (p.resolvedSymbols || []).length === 0);
+      const registered = new Set(
+        (Array.isArray(symbolsQuery.data?.symbols) ? symbolsQuery.data.symbols : Array.isArray(symbolsQuery.data) ? symbolsQuery.data : [])
+          .map((r) => String(r.ticker || '').toUpperCase()),
+      );
+      const unregistered = gated
+        .filter((p) => p.active !== false)
+        .flatMap((p) => (p.resolvedSymbols || []).filter((t) => !registered.has(String(t).toUpperCase())).map((t) => `${p.id}:${t}`));
+      return [
+        { label: 'Protocols', value: String(gated.length), status: gated.length > 0 ? 'pass' : 'fail', reason: `${activeProtoIds.size} active · ${allProtocolsData.length || '—'} in the registry` },
+        { label: 'Linked to a trading strategy', value: String(linked.size), status: linked.size > 0 ? 'pass' : 'fail', reason: 'a protocol with no bot is scoreable but never tradeable' },
+        {
+          label: 'Active protocols resolving ZERO symbols',
+          value: String(zeroSymbols.length),
+          status: zeroSymbols.length > 0 ? 'warn' : 'pass',
+          reason: zeroSymbols.length
+            ? zeroSymbols.map((p) => `${p.id} (${p.name || '—'})`).join(', ')
+            : 'every active protocol resolves at least one symbol',
+        },
+        {
+          label: 'Resolved symbols not registered',
+          value: String(unregistered.length),
+          status: unregistered.length > 0 ? 'fail' : 'pass',
+          reason: unregistered.length ? unregistered.slice(0, 12).join(', ') : 'every resolved ticker exists in the Symbol table',
+        },
+      ];
+    })(),
+
+    // ── Stage 4: Market data ─────────────────────────────────────────────────────────────────
+    'market-data': [
+      { label: 'Symbols with a freshness row', value: String(marketTech.count), status: marketTech.count > 0 ? 'pass' : 'warn', reason: 'the freshness sweep only covers active symbols' },
+      {
+        label: 'Fresh / stale / missing',
+        value: `${marketTech.fresh} / ${marketTech.stale} / ${marketTech.missing}`,
+        status: marketTech.stale + marketTech.missing > 0 ? 'warn' : 'pass',
+        reason: 'stale = the feed is behind on an open market; missing = no bars at all',
+      },
+      {
+        label: 'Bar age (median / oldest)',
+        value: `${marketTech.medianAge ?? '—'} / ${marketTech.oldestAge ?? '—'} min`,
+        status: 'na',
+        reason: 'measured against the newest stored bar per symbol — informational',
+      },
+      ...(marketTech.selected ? [{
+        label: `Selected symbol (${activeSymbol})`,
+        value: marketTech.selected.status,
+        status: marketTech.selected.status === 'fresh' ? 'pass' : 'fail',
+        reason: `newest ${marketTech.selected.timeframe} bar ${marketTech.selected.latestTimestamp || 'none'} · age ${Math.round(marketTech.selected.ageMinutes ?? 0)} min`,
+      }] : [{ label: 'Selected symbol', value: '—', status: 'na', reason: 'no strategy selected above' }]),
+      {
+        label: 'Other cadences',
+        value: 'unknown',
+        status: 'na',
+        reason: 'this endpoint reports the 1h cadence only — 5m/15m/1d freshness is not exposed here and must not be read as healthy',
+      },
+    ],
+
+    // ── Stage 5: Conditions ──────────────────────────────────────────────────────────────────
+    'conditions': (() => {
+      if (!scored) return [{ label: 'Awaiting scoring', value: '—', status: 'na', reason: 'select a protocol above' }];
+      const inactive = scored.inactiveGroupIds || [];
+      return [
+        {
+          label: 'Gating active',
+          value: scored.gatingActive === false ? 'inactive' : 'active',
+          status: scored.gatingActive === false ? 'warn' : 'pass',
+          reason: 'whether the gate framework was consulted this tick — NOT whether a rule changed the outcome',
+        },
+        {
+          label: 'Directives producing direction',
+          value: `${directiveRows.filter((d) => d.counted).length} of ${directiveRows.length}`,
+          status: directiveRows.some((d) => d.counted) ? 'pass' : 'warn',
+          reason: 'zero means the tick is a no-data verdict whatever the individual scores say',
+        },
+        {
+          label: 'Inactive groups',
+          value: inactive.length ? inactive.join(', ') : 'none',
+          status: inactive.length ? 'na' : 'pass',
+          reason: 'a group with no reading this tick contributes nothing to the numerator but keeps its capacity in the denominator',
+        },
+      ];
+    })(),
+
+    // ── Stage 6: Group aggregation ───────────────────────────────────────────────────────────
+    'groups': (() => {
+      if (!scored) return [{ label: 'Awaiting scoring', value: '—', status: 'na', reason: 'select a protocol above' }];
+      const raw = scored.subRawTotals || {};
+      const max = scored.subMaxTotals || {};
+      const rows = Object.keys({ ...raw, ...max }).map((g) => {
+        const r = raw[g] || 0;
+        const m = max[g] || 0;
+        return {
+          label: g,
+          value: `${r}/${m}${m > 0 ? ` (${Math.round((r / m) * 100)}%)` : ''}`,
+          status: m > 0 ? 'pass' : 'na',
+          reason: m > 0 ? `group capacity ${m} counted in the signal denominator` : 'no capacity this tick — the group produced no eligible directive',
+        };
+      });
+      return rows.length ? rows : [{ label: 'Groups', value: '—', status: 'na', reason: 'the payload carried no group totals' }];
+    })(),
+
+    // ── Stage 7: Risk gating ─────────────────────────────────────────────────────────────────
+    'risk-gate': (() => {
+      if (!scored) return [{ label: 'Awaiting scoring', value: '—', status: 'na', reason: 'select a protocol above' }];
+      const gate = scored.riskGate || {};
+      const chain = gate.multiplierChain || [];
+      return [
+        {
+          label: 'Hard gate',
+          value: gate.hardGateTriggered ? 'TRIGGERED' : 'none',
+          status: gate.hardGateTriggered ? 'fail' : 'pass',
+          reason: gate.hardGateReason || 'no rule vetoed the trade',
+        },
+        {
+          label: 'Multiplier',
+          value: scored.riskMultiplier != null ? `×${Number(scored.riskMultiplier).toFixed(3)}` : 'not evaluated',
+          status: scored.riskMultiplier == null ? 'na' : scored.riskMultiplier < 1 ? 'warn' : 'pass',
+          reason: scored.riskMultiplier == null
+            ? 'risk gating was not evaluated on this path — absence, not a multiplier of 1'
+            : scored.riskMultiplier < 1 ? 'reduced by at least one rule' : 'no rule reduced the composite',
+        },
+        {
+          label: 'Rules applied',
+          value: String(chain.length),
+          status: chain.length ? 'pass' : 'na',
+          reason: chain.length
+            ? chain.map((r) => `${r.name}${r.multiplier != null ? ` ×${Number(r.multiplier).toFixed(3)}` : ''}`).join(' · ')
+            : 'no risk rule produced a multiplier this tick — the chain being empty is not evidence the gate ran',
+        },
+      ];
+    })(),
+
+    // ── Stage 8: Composite — the denominator, which is where a zero comes from ───────────────
+    'composite': (() => {
+      // Ceiling rows are protocol-level and stand on their own — they render even when this tick
+      // produced no score, because "can this protocol ever fire?" is a different question.
+      const t = thresholdsQuery.data;
+      const ceiling = t?.protocolCeilings?.[activeProtocolId] ?? null;
+      const entry = t?.classification?.entry ?? null;
+      const strong = t?.classification?.strong ?? null;
+      const style = selectedProtocol?.tradingStyle;
+      // ⚠️ THE LABEL IS NOT THE KEY. The registry carries `tradingStyle: "Day Trade"` while
+      // `preTradeGate.byStyle` keys are kebab-case (`day-trade`). Looking up the label directly
+      // returned `undefined` and fell through to the default — silently. It happens to give the
+      // same number for Day Trade (both 10), but `scalp` is 12 and `swing` is 9, so a protocol
+      // whose style resolved wrongly would be gated against a bar its style never asked for, with
+      // no error anywhere. Normalise before lookup and name the resolved key in the reason.
+      const styleKey = typeof style === 'string'
+        ? style.trim().toLowerCase().replace(/\s+/g, '-')
+        : null;
+      const gate = t?.preTradeGate?.byStyle?.[styleKey] ?? t?.preTradeGate?.default ?? null;
+      const gateSource = t?.preTradeGate?.byStyle?.[styleKey] != null
+        ? `style "${styleKey}"`
+        : styleKey ? `default (no entry for style "${styleKey}")` : 'default (no style resolved)';
+      const pctOf = (bar) => (ceiling && ceiling.ceilingPct > 0 && bar != null
+        ? Math.round((bar / ceiling.ceilingPct) * 100)
+        : null);
+
+      const ceilingRows = [
+        {
+          label: 'Measured ceiling (90 days)',
+          value: ceiling
+            ? `${ceiling.ceilingPct}% · ${ceiling.samples} sample${ceiling.samples === 1 ? '' : 's'}`
+            : 'not measured',
+          status: !ceiling ? 'na' : ceiling.samples < 30 ? 'na' : ceiling.ceilingPct > 0 ? 'pass' : 'fail',
+          reason: !ceiling
+            ? 'no measured ceiling for this protocol — the audit has not observed it score'
+            : ceiling.samples < 30
+              ? `only ${ceiling.samples} sample(s) — too few to treat as a ceiling, in either direction`
+              : `the highest percentage this protocol reached in ${t?.ceilingWindowDays ?? 90} days. No tick can exceed it, so the practical range is 0–${ceiling.ceilingPct}%, not 0–100`,
+        },
+        {
+          label: 'Entry / strong vs ceiling',
+          value: entry == null || strong == null
+            ? '—'
+            : `${entry}% / ${strong}%${ceiling ? ` = ${pctOf(entry) ?? '?'}% / ${pctOf(strong) ?? '?'}% of ceiling` : ''}`,
+          status: ceiling && strong != null && pctOf(strong) != null && pctOf(strong) > 50 ? 'warn' : 'na',
+          reason: 'classification compares against CONFIGURED capacity, not against what this protocol can actually reach — a high share here means "strong" is barely attainable',
+        },
+        {
+          label: 'Pre-trade gate',
+          value: gate == null
+            ? '—'
+            : `${gate}%${ceiling ? ` = ${pctOf(gate) ?? '?'}% of ceiling` : ''}`,
+          status: ceiling && gate != null && pctOf(gate) != null && pctOf(gate) > 50 ? 'warn' : 'na',
+          reason: `resolved from ${gateSource} — this gate blocks a signal before any bot sees it`,
+        },
+      ];
+
+      if (!scored) return [...ceilingRows, { label: 'Awaiting scoring', value: '—', status: 'na', reason: 'select a protocol above' }];
+      const de = scored.meta?.directionalEvidence;
+      const observed = scored.meta?.observedSignalMax ?? scored.observedSignalMax;
+      const configured = scored.meta?.configuredSignalMax ?? scored.configuredSignalMax;
+      const rows = [
+        {
+          label: 'Directional split',
+          value: de ? `${de.bullishRaw}/${de.bullishMax} bull · ${de.bearishRaw}/${de.bearishMax} bear` : '—',
+          status: 'na',
+          reason: de
+            ? `selected: ${de.selected} — a reading on the non-permitted side is measured and then excluded from the numerator`
+            : 'the payload carried no direction split for this tick',
+        },
+        {
+          label: 'Denominator (observed vs configured)',
+          value: `${observed ?? '—'} / ${configured ?? '—'}`,
+          status: observed === 0 && configured > 0 ? 'warn' : 'pass',
+          reason: observed === 0 && configured > 0
+            ? 'observed capacity is ZERO while configured capacity is not — nothing directional counted this tick, so the numerator is 0 by construction, not by measurement'
+            : 'observed capacity is the sum of maxScores for directives that produced directional evidence',
+        },
+        {
+          label: 'Counted / measured directives',
+          value: `${directiveRows.filter((d) => d.counted).length} / ${directiveRows.length}`,
+          status: directiveRows.some((d) => d.counted) ? 'pass' : 'warn',
+          reason: 'how many of the directives that ran contributed to the score',
+        },
+        {
+          label: 'Unmeasured directives',
+          value: String(directiveRows.filter((d) => d.unmeasured).length),
+          status: directiveRows.some((d) => d.unmeasured) ? 'warn' : 'pass',
+          reason: 'reported insufficient bars or input — an unmeasured directive is treated as no penalty, so its silence is not neutral in effect',
+        },
+        {
+          label: 'No-data verdict',
+          value: scored.noData ? 'NO_DATA' : 'scored',
+          status: scored.noData ? 'warn' : 'pass',
+          reason: scored.noDataReason || 'a directional reading was produced',
+        },
+        {
+          // ⚠️ A measured gap, stated as a gap. The directive guard finds 12 directives declaring
+          // capacity they cannot reach and 2 that are constant in production (#1131), but it is a
+          // CLI script with no endpoint, so this page CANNOT show it. Saying `na` with the command
+          // is honest; inventing a summary here would be the exact defect this level exists for.
+          label: 'Directive audit (guard MODE 7/9)',
+          value: 'not exposed',
+          status: 'na',
+          reason: 'on-demand only: node nest/scripts/directive-guard.cjs --db (0 errors / 92 warnings on 2026-10-20, incl. 12 directives whose declared maxScore exceeds what they can return). No endpoint serves it — see epic #1129',
+        },
+      ];
+      return rows;
+    })(),
+  }), [symbolTech, activeSymbol, marketTech, protocols, allProtocolsData, tradingStrats, symbolsQuery.data, watchlistsQuery.data, scored, directiveRows, thresholdsQuery.data, activeProtocolId, selectedProtocol]);
 
   // Score Momentum (#519)
   const velocityQuery = useQuery({
@@ -656,6 +1155,19 @@ export default function MetaStackExplorerPage() {
         </h1>
         </div>
         <div className="mse-header-actions">
+          {/* One toggle, two states, and the label says what it is doing — not "on/off". */}
+          <button
+            type="button"
+            className={`mse-live-toggle${playing ? ' is-playing' : ''}`}
+            aria-pressed={playing}
+            onClick={() => choosePlaying(!playing)}
+            title={playing
+              ? 'PLAY — the page re-reads the latest score on an interval. Click to pause and hold this record.'
+              : 'PAUSE — this record is frozen. Every step of it is shown; nothing re-reads until you press play.'}
+          >
+            <span aria-hidden="true">{playing ? '▶' : '❚❚'}</span>
+            {playing ? 'Playing' : 'Paused'}
+          </button>
           <span className="mse-progress">{confirmedCount}/{stageCount} confirmed</span>
           <button className="mse-action-btn" onClick={confirmAll}>Confirm All</button>
           <button className="mse-action-btn mse-action-reset" onClick={resetAll}>Reset</button>
@@ -681,6 +1193,32 @@ export default function MetaStackExplorerPage() {
               Min composite: {selectedStrategy.minComposite}
             </span>
           )}
+          {/* Protocol picker AT THE TOP. The page is driven by a trading strategy, and a strategy
+              is the (protocol × symbol × mode) triple — so choosing a protocol here means choosing
+              the strategy that owns it. Options therefore read `protocol · symbol — mode`, which is
+              the pair the pipeline actually scores; a protocol with no strategy cannot be scored at
+              all and is listed below with that reason rather than silently missing. */}
+          <select
+            className="mse-banner-select"
+            aria-label="Protocol and symbol to inspect"
+            value={selectedStrategyId || ''}
+            onChange={(e) => {
+              const v = e.target.value || null;
+              setSelectedStrategyId(v);
+              try {
+                if (v) localStorage.setItem('mse-selected-strategy', v);
+                else localStorage.removeItem('mse-selected-strategy');
+              } catch {}
+            }}
+          >
+            <option value="">— select a protocol —</option>
+            {tradingStrats.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.protocolId ? `${s.protocolId} · ${s.symbol}` : s.name} — {s.mode || 'auto'}
+                {s.active ? '' : ' (inactive)'}
+              </option>
+            ))}
+          </select>
           <button
             className="mse-strategy-banner-change"
             onClick={() => {
@@ -759,22 +1297,60 @@ export default function MetaStackExplorerPage() {
                     <span className="mse-live-label">Status</span>
                     {Array.isArray(liveValues[stage.id]) ? (
                       <div className="mse-check-list">
-                        {liveValues[stage.id].map((check, ci) => (
-                          <div key={ci} className={`mse-check-item ${check.pass === true ? 'mse-check-pass' : check.pass === false ? 'mse-check-fail' : 'mse-check-pending'}`}>
-                            <span className="mse-check-icon">{check.pass === true ? '✓' : check.pass === false ? '✗' : '○'}</span>
-                            <span className="mse-check-label">{check.label}</span>
-                            <span className="mse-check-detail">{check.detail}</span>
-                            {check.link && (
-                              <a href={check.link} className="mse-check-link" title={check.linkLabel || 'Open'}>Go →</a>
-                            )}
-                          </div>
-                        ))}
+                        {liveValues[stage.id].map((check, ci) => {
+                          // ⚠️ `pass` has no third state, so "could not judge" had to be written as
+                          // `pass: true` with the word "not applicable" in the text — which renders
+                          // as a tick. `status` is the contract (pass | fail | warn | na); `pass` is
+                          // still accepted so untouched stages keep working during the migration.
+                          const st = check.status
+                            ?? (check.pass === true ? 'pass' : check.pass === false ? 'fail' : 'warn');
+                          return (
+                            <div key={ci} className={`mse-check-item mse-check-${st}`}>
+                              <span className="mse-check-icon">
+                                {st === 'pass' ? '✓' : st === 'fail' ? '✗' : st === 'na' ? '–' : '⚠'}
+                              </span>
+                              <span className="mse-check-label">{check.label}</span>
+                              <span className="mse-check-detail">
+                                {check.value != null && <strong className="mse-check-value">{check.value}</strong>}
+                                {check.reason ?? check.detail}
+                              </span>
+                              {check.link && (
+                                <a href={check.link} className="mse-check-link" title={check.linkLabel || 'Open'}>Go →</a>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <span className={`mse-live-val ${confirmed ? '' : 'mse-live-dim'}`}>{liveValues[stage.id] || '—'}</span>
                     )}
-                    <InfoPopover id={`pop-${stage.id}`} title={`${stage.title}`}>
-                      <div className="mse-popover-grid">
+                    {/* ── MEASURED VALUES AND REASONS — always shown ─────────────────────────
+                        No level gates this any more: the owner asked for everything visible at
+                        all times, with Pause/Play as the only control. It reads the same fetched
+                        snapshot as the rows above, so it can only ever describe the record that
+                        is already on screen. */}
+                    {Array.isArray(technicalValues[stage.id]) && (
+                      <div className="mse-check-list mse-check-list--technical">
+                        <span className="mse-tech-heading">Measured values &amp; reasons</span>
+                        {technicalValues[stage.id].map((check, ti) => (
+                          <div key={`t${ti}`} className={`mse-check-item mse-check-${check.status}`}>
+                            <span className="mse-check-icon">
+                              {check.status === 'pass' ? '✓' : check.status === 'fail' ? '✗' : check.status === 'na' ? '–' : '⚠'}
+                            </span>
+                            <span className="mse-check-label">{check.label}</span>
+                            <span className="mse-check-detail">
+                              {check.value != null && <strong className="mse-check-value">{check.value}</strong>}
+                              {check.reason}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* ⚠️ The directive ledger that used to render HERE has moved into the stage's
+                        own "Show all N directive results" disclosure, so there is one list of the
+                        evidence rather than two that can drift. Technical adds interpretation
+                        elsewhere (denominator, direction split), never a second copy of the rows. */}
+                    <InfoPopover id={`pop-${stage.id}`} title={`${stage.title}`}>                      <div className="mse-popover-grid">
                         <div className="mse-popover-item"><span className="mse-popover-label">Function</span><code>{stage.fn}</code></div>
                         {stage.fnDesc && <div className="mse-popover-item"><span className="mse-popover-label">Description</span><span className="mse-popover-desc">{stage.fnDesc}</span></div>}
                         <div className="mse-popover-item"><span className="mse-popover-label">DB Table</span><code>{stage.dbTable}</code></div>
@@ -826,38 +1402,89 @@ export default function MetaStackExplorerPage() {
 
                   {stage.id === 'directives' && scored && scored.breakouts && (
                     <details className="mse-detail-toggle">
-                      <summary className="mse-detail-summary">Show all {scored.meta?.directiveCount || 0} directive results</summary>
-                      <div className="mse-directive-list">
-                        {Object.entries(scored.breakouts).map(([groupId, directives]) =>
-                          directives.map(d => {
-                            const rd = readinessMap[d.directiveId] || 'alpha';
-                            const rs = READINESS_STYLES[rd] || READINESS_STYLES.alpha;
-                            return (
-                            <div key={d.directiveId} className={`mse-dir-row mse-dir-${d.signalClass}`} title={d.reason}>
-                              <a
-                                href={`/scoring/directive-detail?id=${d.directiveId}`}
-                                className="mse-dir-name"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}
-                              >{d.name}</a>
-                              <span className="mse-dir-score">{d.score}/{d.maxScore}</span>
-                              <span className="mse-dir-pct">{d.normalizedScore}%</span>
-                              <span className="mse-dir-group-tag">{groupId}</span>
-                              <span
-                                style={{
-                                  color: rs.color, background: rs.bg,
-                                  border: `1px solid ${rs.color}40`,
-                                  padding: '1px 5px', borderRadius: '3px',
-                                  fontSize: '0.62rem', fontWeight: 700,
-                                  flexShrink: 0,
-                                }}
-                                title={rs.title}
-                              >{rs.label}</span>
-                            </div>
-                            );
-                          })
-                        )}
+                      <summary className="mse-detail-summary">
+                        Show all {directiveRows.length} directive results — score · class · counted · reason
+                      </summary>
+                      {/* ⚠️ ONE surface, not two. This disclosure used to render its own list
+                          (name/score/%) while a second list rendered beside it at the old Technical
+                          level.
+                          Two lists of the same rows is how they drift. The table is now the only
+                          rendering, and it is the same at every level — what Technical adds
+                          elsewhere is the *interpretation* (denominator, direction split), not a
+                          second copy of the evidence.
+
+                          The `Counted` column is the one that matters: `inSignal: false` on a
+                          100-point reading means it was measured and refused, which is invisible
+                          in a score of `0 / 910`. */}
+                      <div className="mse-dir-table-wrap">
+                        <table className="mse-dir-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Directive</th>
+                              <th scope="col">Group</th>
+                              <th scope="col" className="mse-dir-num">Score</th>
+                              <th scope="col" className="mse-dir-num" title="This directive's maxScore as a share of ALL declared directive capacity in the protocol. Its capacity occupies that share of the tick's divisor whether or not it fires. Gate directives are excluded from the signal divisor, so the shares here can exceed the signal denominator's own split.">share</th>
+                              <th scope="col">Class</th>
+                              <th scope="col">Readiness</th>
+                              <th scope="col">Counted</th>
+                              <th scope="col">Engine reason</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {directiveRows.map((d) => {
+                              const rd = readinessMap[d.directiveId] || 'alpha';
+                              const rs = READINESS_STYLES[rd] || READINESS_STYLES.alpha;
+                              return (
+                                <tr key={`${d.groupId}:${d.directiveId}`} className={`mse-dir-tr mse-dir-${d.signalClass}`}>
+                                  <td className="mse-dir-name">
+                                    <a
+                                      href={`/scoring/directive-detail?id=${d.directiveId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="mse-dir-link"
+                                      title={d.directiveId}
+                                    >
+                                      {d.name || d.directiveId}
+                                    </a>
+                                  </td>
+                                  <td className="mse-dir-group">{d.groupId}</td>
+                                  <td className="mse-dir-num">
+                                    {d.score}/{d.maxScore}
+                                    {d.normalizedScore != null ? ` · ${d.normalizedScore}%` : ''}
+                                  </td>
+                                  {/* ⚠️ THE DILUTION, PER DIRECTIVE. `maxScore` is in the divisor on
+                                      every tick; a directive that never fires still occupies its
+                                      share. Measured 2026-10-20: `rsi-oversold` holds 140 of 910
+                                      (15%) and only counts when a σ-bonus fires, and
+                                      `position-size-kelly` declares 100 while being able to return
+                                      at most 30 (directive-guard MODE 9, #1131). */}
+                                  <td className="mse-dir-num mse-dir-share">
+                                    {declaredCapacity > 0
+                                      ? `${Math.round((d.maxScore / declaredCapacity) * 100)}%`
+                                      : '—'}
+                                  </td>
+                                  <td>
+                                    <span className={`mse-dir-class mse-dir-class--${d.signalClass}`}>{d.signalClass}</span>
+                                    {d.unmeasured && (
+                                      <span className="mse-dir-flag" title="Reported insufficient input — this is NOT a neutral reading">unmeasured</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <span
+                                      className="mse-dir-readiness"
+                                      style={{ color: rs.color, background: rs.bg, border: `1px solid ${rs.color}40` }}
+                                      title={rs.title}
+                                    >
+                                      {rs.label}
+                                    </span>
+                                  </td>
+                                  <td className={d.counted ? 'mse-dir-counted' : 'mse-dir-refused'}>{d.counted ? 'yes' : 'no'}</td>
+                                  <td className="mse-dir-reason">{d.reason || '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </details>
                   )}

@@ -114,6 +114,10 @@ export function buildScoreEntries(protocols = [], runs = []) {
         opportunityScore: s.opportunityScore ?? null,
         opportunityMax: s.opportunityMax ?? null,
         marketStatus: s.marketStatus ?? null,
+        // The pre-filter direction split — needed so a `0` can be told apart from "nothing
+        // measured". See the REFUSED EVIDENCE note in score-display.js.
+        directionalEvidence: s.directionalEvidence ?? null,
+        directionMode: s.directionMode ?? null,
         timestamp: run.timestamp,
         // Which protocol emitted this row — the card footer always names it.
         protocolId: proto,
