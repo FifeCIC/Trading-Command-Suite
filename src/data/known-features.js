@@ -577,4 +577,119 @@ export const KNOWN_FEATURES = {
     'Field-level schema drift audit': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Company profile resolution': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
     'View deletion tooling (`scripts/delete-views.cjs`)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #26 (2026-10-02 to 2026-10-05) — 17 capabilities from 20 handoffs (2 were Notes:
+  //    test/docs, QA entry only, so they carry no capability), and #998/#1065 are ONE capability
+  //    in its final placement, recorded once at the end state. Theme: the Automation area dissolved
+  //    into the thing each view was about, and three silent writers were found by MEASURING rather
+  //    than reading. uiSurfaces: 0 is a FINDING, not a blank (4 of the 17).
+    'Contested Position Governance (strictest claimant)': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Durable Position Peak Record': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Bot ↔ protocol symbol-coverage guard': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Per-symbol protocol counts (batch)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Alerts in the Trade Journal': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Automation area retired — capabilities relocated by subject': { dataPersistence: 'stored', uiSurfaces: 5, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Global safety rules — single surface in Settings': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Queue surfaces split by subject (Protocols / Status / Journal)': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Page-walkthrough "hide now" verdicts applied to navigation': { dataPersistence: 'config', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Automation loop controls on the Dashboard': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Version Bump Tooling (bump + regenerate + verify)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Theme Lab — unified examples': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'UI-review sprint — bucket 2/3/4': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Bar store integrity — only bridge-served bars': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Trading 212 position side — established at import': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Derived maths & node map (source-derived)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Pipeline Graph — derived Inputs / Outputs per node': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+  // ── batch #27 (2026-10-06) — 7 capabilities from 17 handoffs (10 carried no capability: nine
+  //    Notes with a QA entry only, plus the walkthrough sprint's route moves, which declare
+  //    architecture + QA and no capability). Theme: the Stop Guardian's SILENCE became answerable —
+  //    declines written once per state change, directives named when they stop speaking, a shadow
+  //    SuperTrend measured off the decision path — while the MT5 bridge's refusals returned as
+  //    structured notice codes, a resumed-but-inert A/B pair was refused at create time, gate
+  //    participation resolved through ONE authority, and the walkthrough replaced "keen" with a
+  //    1–10 UI rating. uiSurfaces: 0 is a FINDING, not a blank (3 of the 7).
+    'A/B arm-difference guard (`assertArmsCanDiffer`)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Stop Guardian decision trace (why a position was, or was not, managed)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Bridge pre-flight refusal reporting (notice codes end-to-end)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Guardian Directive Silence Detection': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Guardian SuperTrend Shadow Comparison': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Gate reconciliation — subscription authority': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Page Walkthrough — UI quality rating (1–10)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #28 (2026-10-07 to 2026-10-08) — 10 capabilities from 23 handoffs (13 carried no
+  //    capability: twelve with a QA entry only, and one report — `applied-status-columns` — whose
+  //    status selects were replaced by the read-only indicator that follows it). Theme: WHAT MAY
+  //    BE TRUSTED TO PRICE OR NAME A TRADE — two arms need two accounts, a frozen quote cannot
+  //    size an order, and an unattributed close is the owner's. uiSurfaces: 0 is a FINDING, not a
+  //    blank (2 of the 10).
+    'A/B live pair — two-account precondition': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Netted-position P&L split — multi-order detection': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Risk-cap breach alerts': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Close attribution — every close names its actor, unattributed closes assume the owner': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Walkthrough agent-reported completion indicator': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Stale-quote sizing refusal': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Exit-data recovery (in-app gap prompt + button)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Bot session-state audit & advisory pre-open alert': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Declared bot session slot (all-hours vs unfilled)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Shared register-symbol / add-to-watchlist overlay': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #29 (2026-10-09) — 9 capabilities from 18 handoffs (9 carried no capability: eight
+  //    Notes with a QA entry only — #1056, #1075, #733, #817, #820, #837, #1100, #996 — plus
+  //    #995, a feature that declares QA only). Theme: WHICH LAYER OWNS THE ANSWER — a canonical
+  //    `computeSuperTrend()` and ATR-unit stop distances replace thresholds that could never bite,
+  //    the trade gates learn the ORDER's account, the maturation drain is capacity-managed and says
+  //    so in the canonical log, a dated bias must be MEASURED or silent, the MT5 bridge cannot be
+  //    wedged by one hung request, and the journal's fabricated statistics are DELETED rather than
+  //    fixed. uiSurfaces: 0 is a FINDING, not a blank (7 of the 9).
+    'Directive fabrication guard (INV-NO-FABRICATED-READING + maxScore reachability)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Bridge wedge containment + auto-recovery': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Calendar-claim honesty gate (measured-or-silent dated biases)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Canonical SuperTrend (exit path)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'A/B pair safety scoping (account-aware guards + AB time-stop attribution)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Full-suite build gate': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Per-symbol realised P&L ordering (Signals Overview)': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Outcome maturation drain (capacity-managed)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Broker-side close reconciliation across an empty routed broker': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+
+  // ── batch #30 (2026-10-10 to 2026-10-12) — 7 capabilities from 12 handoffs (5 were Notes: bugfix/test/docs,
+  //    QA entry only, so they carry no capability). Theme: one writer, one answer — the ranked payload stops
+  //    inventing a denominator, `active = 0` becomes a real kill switch, sizing has one implementation, and
+  //    capability is keyed by the broker's own symbol name. uiSurfaces: 0 is a FINDING, not a blank (3 of these).
+    'Honest score denominator on the ranked payload': { dataPersistence: 'ephemeral', uiSurfaces: 4, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Log hygiene & repeat suppression (bridge + root logs)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Protocol Kill Switch (single scoring write path)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Selectable Position Sizing (backtest-live parity)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Account routing visibility + broker re-select (per symbol)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Bot verdict on signals (single server-side service)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Bot onboarding for unsubscribed ladder symbols (USTEC/VIX/Gold) + broker-native capability lookup': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+
+  // ── batch #31 (2026-10-13 to 2026-10-15) — 12 capabilities from 15 handoffs (3 were Notes: bugfix/docs,
+  //    QA entry only, so they carry no capability). Theme: the number and the surface — measure the ceiling
+  //    where the gate reads it, count what actually read, and show the instrument beside the strategy.
+  //    uiSurfaces: 0 is a FINDING, not a blank (2 of these). ⚠️ The two one-directive probe handoffs are ONE
+  //    capability recorded at its final state (the pair); the first landing built `probe-1dir-v1` alone.
+    'Gate ceiling reporting (bot threshold vs measured ceiling)': { dataPersistence: 'none', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Signal Conviction — the second reading': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Risk cap control on the dashboard': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Appearance Element Groups': { dataPersistence: 'localStorage', uiSurfaces: 5, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Bot threshold vs protocol ceiling (renamed from "bar")': { dataPersistence: 'none', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Pattern Library (owner-approved UI patterns)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Data Display — table examples': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'META.Stack layer ownership (protocol / signal / bot)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'P&L population split (live strategy vs test instrumentation)': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Seed preserves operator bot enable/disable state': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'One-Directive Probe pair (denominator isolation)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Backtest run history and comparison': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+
+  // ── batch #32 (2026-10-16 to 2026-10-17) — 7 capabilities from 11 handoffs (4 were Notes:
+  //    bugfix/refactor, QA entry only, so they carry no capability). Theme: the surface reaches the
+  //    mechanism — two builder gaps wired, a silent replay made loud and bounded, the top rarity
+  //    band made reachable, and the colour literals that made themes unreachable got a gate.
+  //    uiSurfaces: 0 is a FINDING, not a blank (1 of these). ⚠️ The two Protocol Backtesting entries
+  //    are TWO capabilities declared by two handoffs on ONE page: the score timeline itself, and
+  //    selection/run-eligibility (carousel + timeframe coverage).
+    'Protocol wiring — bot subscriptions and symbol assignments': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Replay cost budget (bounded endpoint)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Hardcoded-Color Detection Gate': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Snapshot Replay (worked; was silently dead)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Rarity-based position sizing': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Protocol Backtesting (score timeline)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Protocol Backtesting — protocol selection and run eligibility': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };
