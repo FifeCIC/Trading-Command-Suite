@@ -692,4 +692,23 @@ export const KNOWN_FEATURES = {
     'Rarity-based position sizing': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
     'Protocol Backtesting (score timeline)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
     'Protocol Backtesting — protocol selection and run eligibility': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+
+  // ── batch #33 (2026-10-20) — 1 capability from 1 handoff. Theme: a neutral tick is RECORDED
+  //    instead of deleted, so the ladder shows the latest evaluation rather than the last
+  //    confident one, and a two-day-old card can no longer read `Live`. uiSurfaces: 0 is a
+  //    FINDING, not a blank (0 of these). `devCompletion: 'partial'` is honest: #1129 (Explorer
+  //    epic) and #1131 (measured ceilings vs fixed thresholds) are both OPEN, so the diagnosis
+  //    ceiling is measured rather than fixed.
+    'Scoring integrity — recorded decay, honest freshness, measured ceiling': { dataPersistence: 'stored', uiSurfaces: 4, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+
+  // ── batch #34 (2026-10-21) — 3 capabilities from 4 handoffs (1 was a Note, QA only, so it carries
+  //    no capability). Theme: the signal denominator is now measured from both ends — earnable
+  //    capacity and a counterfactual label basis are computed and persisted, but NOTHING labels on
+  //    either — plus the one canonical scoring reference and the Explorer render canary that now
+  //    actually fails. uiSurfaces: 0 is a FINDING, not a blank (0 of these). `devCompletion:
+  //    'partial'` on the two capacity entries is honest: #1131 is OPEN and flipping the basis is a
+  //    maths change, not a fix.
+    'Scoring Engine Architecture Reference & Diagnostic Diagrams': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Earnable vs configured signal capacity': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Dual-basis signal labelling (configured vs earn-able)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
 };

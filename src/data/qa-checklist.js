@@ -7189,6 +7189,65 @@ const QA_CHECKLIST = [
         priority: 'high',
         versionNote: '2026-10-17 - batch #32 (theme structure) — also fixed `appearance-area.css` using `var(--ok, …)` / `var(--warn, …)`: neither token exists, so the fallback silently won and those chips ignored every theme (this had kept validate-css-tokens red in prebuild).',
       },
+
+      // ── handoff batch #33 (2026-10-20) ─────────────────────────────
+      {
+        id: 'qa-score-071',
+        area: 'Scoring',
+        system: 'Protocol gating / ladder freshness',
+        name: 'A protocol with no directional evidence still writes a current row',
+        procedure: 'Pick an active protocol whose only direction-eligible directives read neutral. Read `lastReadingAt` from `/api/scoring/gated/protocols/status`, wait one tick (2 min), read it again; then read the newest run from `/api/scoring/runs?strategyId=<slug>&limit=1`.',
+        expected: '`lastReadingAt` advances, the newest row carries `signal: NO_READING` with `rawComposite/rawMax` on the configured denominator, and `symbolsScored` stays 0 — recorded without being counted. ❌ Before the fix a tick with no directional evidence wrote nothing at all, so `lastReadingAt` froze at the last confident reading and the ladder kept ranking a two-day-old `STRONG_BUY 60/100` as `Live`.',
+        category: 'Data',
+        priority: 'critical',
+        versionNote: '2026-10-20 - batch #33 (#1129 / #1131) — `persistNoData` on `scoreWithGating()` writes a `NO_READING` Score row and skips the rarity snapshot; the ladder opts in, portfolio / speed / HTTP do not, so only the surface that must show freshness pays the write.',
+      },
+
+      // ── handoff batch #34 (2026-10-21) ─────────────────────────────
+      {
+        id: 'qa-score-072',
+        area: 'Scoring',
+        system: 'Protocol gating / direction filter',
+        name: 'A one-sided tick reads NO_READING and the opposite side\'s evidence is visible',
+        procedure: 'curl "http://localhost:3201/api/scoring/gated/BTC?protocol=btc-speed-v1" on a tick where the protocol\'s own direction has no reading; then curl "http://localhost:3201/api/scoring/runs?limit=5" and read the BTC row.',
+        expected: 'The envelope reports `noData: true` with `darkSide`/`directionalEvidence` showing populated opposite-side capacity; the runs row carries `signal: NO_READING`, `rawComposite 0`, `rawMax` = the protocol\'s configured capacity, and a non-zero `opportunityScore`/`opportunityMax` — recorded, not counted, and never `0 / 0`. ❌ The zero was read as a dropped score; it is the direction filter: `btc-speed-v1` is `LONG_ONLY` and `selectDirectionalEvidence()` is a PRESENCE test on `bullishMax > 0`, so a fully bearish tick has no reading of the protocol\'s own side (measured 2026-10-20: 99 of 123 ticks NO_READING in 24 h).',
+        category: 'Data',
+        priority: 'high',
+        versionNote: '2026-10-20 - batch #34 (#776) — documentation and diagrams only; no threshold, denominator or directive value changed. `docs/scoring-architecture.md` is now the canonical reference and the Diagrams page carries the three-stage-correction set.',
+      },
+      {
+        id: 'qa-score-073',
+        area: 'Scoring',
+        system: 'Protocol gating / signal capacity',
+        name: 'Earnable capacity is served and matches the two independent measurements',
+        procedure: 'curl -s "http://localhost:3201/api/scoring/gated/XAUUSD?protocol=xau-speed-m15" then run `node logs/measure-neutral-capacity.cjs` and `node logs/measure-neutral-outcomes.cjs`; open `/status/meta-stack-explorer`, pick `xau-speed-m15 · XAUUSD`, find the **Earnable capacity** row.',
+        expected: 'API returns `configuredSignalMax: 910`, `earnableSignalMax: 630` (31% unearnable) — the same 280 points all three methods report. The row renders `630 of 910 · 31% unearnable` styled amber, and `signal`/`compositePct` are unchanged by the addition (it is reporting only).',
+        category: 'API',
+        priority: 'high',
+        versionNote: '2026-10-20 - batch #34 (#1131) — `earnableSignalMax` added to `meta` and the persisted breakdown; the neutral-only directive set is generated from source (42 of 161) and checked in `prebuild`, never declared.',
+      },
+      {
+        id: 'qa-score-074',
+        area: 'Scoring',
+        system: 'Protocol gating / threshold basis',
+        name: 'Both threshold bases are computed and the incumbent still decides',
+        procedure: 'curl -s "http://localhost:3201/api/scoring/gated/XAUUSD?protocol=xau-speed-m15" and read `meta.thresholdBasis`; then open `/status/meta-stack-explorer`, pick `xau-speed-m15 · XAUUSD`, and find the **Label under the calibrated basis** row.',
+        expected: '`thresholdBasis.active === "configured"`, `entry 6 / strong 13`, `earnableEntry 5.19 / earnableStrong 13.85` (910 configured, 630 earn-able), and `signalAtEarnable` present. `signal` and `compositePct` must equal what the pre-change build returned for the same reading. The page row renders `✓`/`⚠` with both labels and no page errors. ⚠️ On a `NO_READING` tick `signalAtEarnable` must also be `NO_READING`, not `HOLD` — the first build reported `HOLD` and rendered a false "bases disagree" where neither basis had a label.',
+        category: 'API',
+        priority: 'high',
+        versionNote: '2026-10-21 - batch #34 (#1131) — `signal-threshold-basis.ts` computes the counterfactual (`7.5 / 20` of earn-able capacity) while `THRESHOLD_BASIS = \'configured\'` keeps the classifier byte-identical; flipping the basis is a maths change, not a fix.',
+      },
+      {
+        id: 'qa-ui-091',
+        area: 'UI / Diagnostics',
+        system: 'META.Stack Explorer / render canary',
+        name: 'META.Stack Explorer renders and carries its required rows',
+        procedure: 'Run `npm run canary:mse:self-test`, then `npm run canary:mse` (frontend on :5173, API on :3201). To prove the guard can fail: rename a required row label in `src/pages/MetaStackExplorerPage.jsx` and re-run.',
+        expected: 'Self-test 6/6. Live run prints `RESULT: ✅ rendered, required rows present, no page errors` and exits 0; with a row renamed it prints `✖ 1 required row(s) missing: Earnable capacity (#1131)` and exits 1. A non-rendering URL exits 1; a missing browser exits 2 (cannot run), distinctly from 1 (the page is broken). Observed 2026-10-21 in both directions, restore verified byte-identical by SHA256.',
+        category: 'Guard',
+        priority: 'high',
+        versionNote: '2026-10-21 - batch #34 (#1129) — canary promoted from `logs/` to `scripts/` with `REQUIRED_ROWS` (MISSING now fails the run), polling instead of a fixed sleep, and exit 1 vs 2. ⚠️ The file is still untracked and no CI gate invokes `canary:mse`.',
+      },
     ];
 
 export default QA_CHECKLIST;
