@@ -90,32 +90,32 @@ export function nodeExistsInSource(source, node) {
  */
 export const DIAGRAM_CLAIMS = {
   /**
-   * `scoring-gating` prints a SECOND, different stale scale for the same decision
-   * signal-state-machine describes. Two diagrams, two answers (65/35 vs 80/40), and
-   * the live value is a third (6/13). Recorded as three claims rather than one so the
-   * panel can stroke each offending boundary node separately.
+   * `scoring-gating` used to print a SECOND, different stale scale for the same decision
+   * (65/35 against signal-state-machine's 80/40, with the live value a third — 6/13).
+   * Fixed 2026-10-20: both diagrams now print the live scale, and these claims hold them to it.
+   * Three claims rather than one so the panel can stroke each boundary node separately.
    */
   'scoring-gating': [
     {
       node: 'N',
-      says: 'BUY at >= 65',
-      expect: 65,
+      says: 'BUY / SELL at >= 6%',
+      expect: 6,
       probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
-      note: 'Live entry boundary is 6 (const ENTRY_THRESHOLD, protocol-gating.service.ts L345).',
+      note: 'ENTRY_THRESHOLD (protocol-gating.service.ts). Classification is a percentage of CONFIGURED capacity, not raw points.',
     },
     {
       node: 'O',
-      says: 'HOLD at >= 35',
-      expect: 35,
+      says: 'HOLD below 6%',
+      expect: 6,
       probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
-      note: 'The HOLD floor is the same ENTRY_THRESHOLD, currently 6.',
+      note: 'The HOLD floor IS ENTRY_THRESHOLD — HOLD means "evidence exists, below the entry bar".',
     },
     {
       node: 'P',
-      says: 'SELL below 35',
-      expect: 35,
+      says: 'the entry floor applies to both sides; SELL comes only from SHORT_ONLY',
+      expect: 6,
       probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
-      note: 'The SELL boundary is ENTRY_THRESHOLD, currently 6.',
+      note: 'A LONG_ONLY protocol below entry emits HOLD, never SELL.',
     },
   ],
 
@@ -178,24 +178,38 @@ export const DIAGRAM_CLAIMS = {
     },
     {
       node: 'STRONG',
-      says: 'STRONG_BUY / STRONG_SELL at >= 80%',
-      expect: 80,
+      says: 'STRONG_BUY / STRONG_SELL at >= 13%',
+      expect: 13,
       probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.strong' },
-      note: 'STRONG_PCT was rescaled to 13 on 2026-09-15 (comment above STRONG_PCT in protocol-gating.service.ts).',
+      note: 'STRONG_PCT, rescaled to 13 on 2026-09-15 and pinned by signal-threshold-scale.spec.ts.',
     },
     {
       node: 'TRADE',
-      says: 'BUY / SELL from 40% up',
-      expect: 40,
+      says: 'BUY / SELL from 6% up',
+      expect: 6,
       probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
       note: 'ENTRY_THRESHOLD is 6.',
     },
     {
       node: 'HOLD',
-      says: 'HOLD below 40%',
-      expect: 40,
+      says: 'HOLD below 6%',
+      expect: 6,
       probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
       note: 'The HOLD boundary follows ENTRY_THRESHOLD, which is 6.',
+    },
+  ],
+
+  /**
+   * Added 2026-10-20 with the stage-contract diagram. The classification boundary is the
+   * one number in the stage table that a reader is most likely to act on, so it is probed.
+   */
+  'scoring-engine-stages': [
+    {
+      node: 'S11',
+      says: 'classification: signalPct vs 6 / 13',
+      expect: 6,
+      probe: { api: '/api/scoring/gated/thresholds', pick: 'classification.entry' },
+      note: 'Entry boundary. The strong boundary is a separate claim candidate; one probe per node keeps the panel unambiguous.',
     },
   ],
 
@@ -210,7 +224,6 @@ export const DIAGRAM_CLAIMS = {
   ],
 
   // ── Not yet claimed (needs the node ids confirmed first, see the header) ──────
-  //   scoring-gating      — BUY >= 65 / HOLD >= 35 / SELL < 35  (same stale scale)
   //   protocol-calendar   — 32 total protocols / 32 total protocols
   //   metastack-product   — 37 protocols in PROTOCOL_REGISTRY
   //   data-flow-architecture — 32 protocols, and Macro/Social/Insider "schema only"

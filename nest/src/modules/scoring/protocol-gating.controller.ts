@@ -981,6 +981,17 @@ export class ProtocolGatingController {
           // so the diagnostic set is all zero and `denominatorMode` still names the rule.
           denominatorMode: 'configured-capacity' as const,
           configuredSignalMax: 0,
+          earnableSignalMax: 0,
+          thresholdBasis: {
+            active: 'configured',
+            earnableBar: { entry: 0, strong: 0 },
+            entry: 0,
+            strong: 0,
+            earnableEntry: 0,
+            earnableStrong: 0,
+            signalPctEarnable: 0,
+            signalAtEarnable: 'HOLD',
+          },
           observedSignalMax: 0,
           directionEligibleDirectives: 0,
         },

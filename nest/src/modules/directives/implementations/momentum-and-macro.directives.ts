@@ -1091,7 +1091,11 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly name = 'Momentum Acceleration';
   readonly description = 'Price momentum proxy for sentiment shifts (analyst revisions unavailable).';
   readonly priority = 50;
-  readonly maxScore = 80;
+  // ⚠️ maxScore corrected 80 → 70 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 70;
+  // the extra 10 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 70;
   readonly version = '3.0.0';
   readonly readiness = 'ready' as const;
 

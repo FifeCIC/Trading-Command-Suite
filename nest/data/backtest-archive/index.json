@@ -1,7 +1,7 @@
 {
-  "lastUpdated": "2026-10-17T09:46:12.556Z",
-  "totalFiles": 33,
-  "totalRows": 7319416,
+  "lastUpdated": "2026-10-20T08:53:02.729Z",
+  "totalFiles": 34,
+  "totalRows": 7319716,
   "entries": [
     {
       "id": "directiveoutcome-2026-06-11-to-2026-07-11",
@@ -332,6 +332,16 @@
       "fileSize": 537950,
       "filePath": "directiveoutcome-2026-09-14-to-2026-10-14.json.gz",
       "createdAt": "2026-10-17T09:46:12.555Z"
+    },
+    {
+      "id": "directiveoutcome-2026-09-17-to-2026-10-17",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-09-17",
+      "dateTo": "2026-10-17",
+      "rowCount": 300,
+      "fileSize": 13194,
+      "filePath": "directiveoutcome-2026-09-17-to-2026-10-17.json.gz",
+      "createdAt": "2026-10-20T08:53:02.693Z"
     }
   ]
 }

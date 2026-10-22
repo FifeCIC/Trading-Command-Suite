@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.135.0",
+  "version": "0.136.0",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -63,7 +63,15 @@
     "validate:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs",
     "test:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs --self-test",
     "canary:bridge-bounds": "node scripts/canary-bridge-recovery-bounds.cjs",
-    "canary:bridge-5002": "pwsh -File scripts/mt5-bridge/canary-5002-bounded-connect.ps1"
+    "canary:bridge-5002": "pwsh -File scripts/mt5-bridge/canary-5002-bounded-connect.ps1",
+    "canary:mse": "node scripts/canary-mse-render.cjs",
+    "canary:mse:self-test": "node scripts/canary-mse-render.cjs --self-test",
+    "audit:calibration": "node scripts/audit-threshold-basis-calibration.cjs",
+    "audit:calibration:self-test": "node scripts/audit-threshold-basis-calibration.cjs --self-test",
+    "audit:basis-outcomes": "node scripts/measure-label-basis-outcomes.cjs",
+    "audit:basis-outcomes:self-test": "node scripts/measure-label-basis-outcomes.cjs --self-test",
+    "audit:dev-window": "node scripts/audit-dev-window-coverage.cjs",
+    "audit:dev-window:self-test": "node scripts/audit-dev-window-coverage.cjs --self-test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

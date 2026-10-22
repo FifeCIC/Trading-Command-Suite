@@ -26,7 +26,11 @@ export class WickFilterDirective implements IDirective {
   readonly description = 'Detects fakeout wicks vs genuine breakouts. Uses ATR, volume, and multi-timeframe logic.';
   readonly category = 'pattern' as const;
   readonly priority = 55;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 80;
+  // the extra 20 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 80;
   readonly minScore = 1;
   readonly minBars = { '1d': 10 };
   readonly version = '1.1.0';

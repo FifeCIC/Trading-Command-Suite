@@ -84,6 +84,11 @@ function InfoPopover({ id, title, children }) {
 }
 
 /* ── Pipeline stage definitions ────────────────────────── */
+// Labels that assert a trade direction. Two non-directional states are NOT a disagreement — HOLD is
+// "measured, no edge", NO_DATA/NO_READING is "nothing measured" — so comparing them by string equality
+// would raise a false amber on every unread tick.
+const DIRECTIONAL_LABELS = new Set(['BUY', 'STRONG_BUY', 'SELL', 'STRONG_SELL']);
+
 const PIPELINE = [
   // ── Prerequisites (Stage 0) ──
   {
@@ -418,6 +423,18 @@ export default function MetaStackExplorerPage() {
   });
   const protocols = protoQuery.data?.protocols ?? [];
 
+  // ⚠️ DECLARED HERE, ABOVE EVERY CONSUMER — caught by a real browser, not by the linter.
+  //
+  // `technicalValues` (below) reads `selectedProtocol?.tradingStyle` for the pre-trade gate. This
+  // const used to sit ~300 lines BELOW it, which is a temporal-dead-zone crash at render:
+  //   ReferenceError: Cannot access 'selectedProtocol' before initialization
+  //
+  // ⚠️ `no-use-before-define` did NOT catch this one. The rule reports a reference to a later
+  // `const` only within the SAME scope; this reference is inside a nested memo callback, so ESLint
+  // stays silent while the page still blanks. The only check that found it was driving the real
+  // browser (logs/canary-mse-render.cjs). Do not treat the linter as coverage for this class.
+  const selectedProtocol = protocols.find(p => p.id === activeProtocolId);
+
   // ⚠️ DECLARATION ORDER IS LOAD-BEARING — this block MOVED here on 2026-10-20.
   //
   // It used to sit ~350 lines below, next to the Score Momentum query. The Technical-level memos
@@ -584,8 +601,10 @@ export default function MetaStackExplorerPage() {
       {
         label: 'By type',
         value: Object.entries(symbolTech.byType).map(([k, v]) => `${k} ${v}`).join(' · ') || '—',
-        status: 'na',
-        reason: 'informational — the type decides the market calendar and the venue gate',
+        // Ticked when the value is PRESENT — the owner asked for that explicitly (2026-10-20):
+        // a row that reports real data confirms the mechanism works and should not read as a gap.
+        status: symbolTech.total > 0 ? 'pass' : 'na',
+        reason: 'symbol types present — the type decides the market calendar and the venue gate',
       },
       {
         label: 'Resolved by an active protocol',
@@ -687,8 +706,8 @@ export default function MetaStackExplorerPage() {
       {
         label: 'Bar age (median / oldest)',
         value: `${marketTech.medianAge ?? '—'} / ${marketTech.oldestAge ?? '—'} min`,
-        status: 'na',
-        reason: 'measured against the newest stored bar per symbol — informational',
+        status: marketTech.medianAge != null ? 'pass' : 'na',
+        reason: 'measured against the newest stored bar per symbol — the value is the finding, not a verdict',
       },
       ...(marketTech.selected ? [{
         label: `Selected symbol (${activeSymbol})`,
@@ -724,7 +743,9 @@ export default function MetaStackExplorerPage() {
         {
           label: 'Inactive groups',
           value: inactive.length ? inactive.join(', ') : 'none',
-          status: inactive.length ? 'na' : 'pass',
+          // An inactive group keeps its capacity in the denominator while contributing nothing to
+          // the numerator, so its presence is worth seeing — `warn`, not a neutral informational.
+          status: inactive.length ? 'warn' : 'pass',
           reason: 'a group with no reading this tick contributes nothing to the numerator but keeps its capacity in the denominator',
         },
       ];
@@ -823,7 +844,10 @@ export default function MetaStackExplorerPage() {
           value: entry == null || strong == null
             ? '—'
             : `${entry}% / ${strong}%${ceiling ? ` = ${pctOf(entry) ?? '?'}% / ${pctOf(strong) ?? '?'}% of ceiling` : ''}`,
-          status: ceiling && strong != null && pctOf(strong) != null && pctOf(strong) > 50 ? 'warn' : 'na',
+          // Present data ticks; only a proportion above half the achievable range stands out.
+          status: entry == null || strong == null
+            ? 'na'
+            : ceiling && pctOf(strong) != null && pctOf(strong) > 50 ? 'warn' : 'pass',
           reason: 'classification compares against CONFIGURED capacity, not against what this protocol can actually reach — a high share here means "strong" is barely attainable',
         },
         {
@@ -831,7 +855,7 @@ export default function MetaStackExplorerPage() {
           value: gate == null
             ? '—'
             : `${gate}%${ceiling ? ` = ${pctOf(gate) ?? '?'}% of ceiling` : ''}`,
-          status: ceiling && gate != null && pctOf(gate) != null && pctOf(gate) > 50 ? 'warn' : 'na',
+          status: gate == null ? 'na' : ceiling && pctOf(gate) != null && pctOf(gate) > 50 ? 'warn' : 'pass',
           reason: `resolved from ${gateSource} — this gate blocks a signal before any bot sees it`,
         },
       ];
@@ -840,11 +864,13 @@ export default function MetaStackExplorerPage() {
       const de = scored.meta?.directionalEvidence;
       const observed = scored.meta?.observedSignalMax ?? scored.observedSignalMax;
       const configured = scored.meta?.configuredSignalMax ?? scored.configuredSignalMax;
+      const earnable = scored.meta?.earnableSignalMax ?? scored.earnableSignalMax ?? null;
+      const tb = scored.meta?.thresholdBasis ?? scored.thresholdBasis ?? null;
       const rows = [
         {
           label: 'Directional split',
           value: de ? `${de.bullishRaw}/${de.bullishMax} bull · ${de.bearishRaw}/${de.bearishMax} bear` : '—',
-          status: 'na',
+          status: de ? 'pass' : 'na',
           reason: de
             ? `selected: ${de.selected} — a reading on the non-permitted side is measured and then excluded from the numerator`
             : 'the payload carried no direction split for this tick',
@@ -856,6 +882,39 @@ export default function MetaStackExplorerPage() {
           reason: observed === 0 && configured > 0
             ? 'observed capacity is ZERO while configured capacity is not — nothing directional counted this tick, so the numerator is 0 by construction, not by measurement'
             : 'observed capacity is the sum of maxScores for directives that produced directional evidence',
+        },
+        {
+          // #1131 — the divisor includes capacity that NOTHING can earn, so the same 13% buys a
+          // STRONG label at very different levels of real conviction between protocols. Measured
+          // spread: 12% (`forex-session-v1`) to 58% (`vix-spike-v1`). Reporting only — the label is
+          // still decided against `configured`, because excluding this capacity without moving the
+          // thresholds pushed 24% of recorded ticks across one.
+          label: 'Earnable capacity',
+          value: earnable == null
+            ? '—'
+            : `${earnable} of ${configured ?? '—'}${configured > 0 ? ` · ${Math.round(((configured - earnable) / configured) * 100)}% unearnable` : ''}`,
+          status: earnable == null ? 'na' : configured > 0 && (configured - earnable) / configured >= 0.25 ? 'warn' : 'pass',
+          reason: earnable == null
+            ? 'the payload carried no `earnableSignalMax` — an older build, or this path does not compute it'
+            : 'maximum real score: directives that can never emit a direction are removed from the divisor. A high share means the entry/strong thresholds are easier to reach here than in a protocol whose capacity is all earnable (see #1131)',
+        },
+        {
+          // #1131 — the same reading under both threshold bases. `signal` is still decided by the
+          // incumbent 13% of CONFIGURED capacity; this asks what the bar would be at 20% of
+          // EARN-ABLE capacity (calibrated to preserve today's label frequency). Both are persisted
+          // per tick, so the comparison is on identical readings rather than two runs.
+          label: 'Label under the calibrated basis',
+          value: tb == null
+            ? '—'
+            : `${tb.signalAtEarnable} at ${tb.earnableStrong}% · today ${scored.signal ?? '—'} at ${tb.strong}%`,
+          status: tb == null ? 'na' : (tb.signalAtEarnable === scored.signal
+            || (!DIRECTIONAL_LABELS.has(tb.signalAtEarnable) && !DIRECTIONAL_LABELS.has(scored.signal)))
+            ? 'pass' : 'warn',
+          reason: tb == null
+            ? 'the payload carried no `thresholdBasis` — an older build'
+            : tb.signalAtEarnable === scored.signal
+              ? `both bases agree on this reading (bars convert to ${tb.earnableEntry}/${tb.earnableStrong}% here)`
+              : `the bases DISAGREE here: 13% of configured only equals 20% of earnable when ${Math.round((earnable / (configured || 1)) * 100)}% of this protocol's capacity is earnable. Nothing has changed — the classifier still uses the configured bar (see #1131)`,
         },
         {
           label: 'Counted / measured directives',
@@ -902,8 +961,6 @@ export default function MetaStackExplorerPage() {
     ? (scored.signal === 'BUY' || scored.signal === 'STRONG_BUY') ? 'buy'
       : (scored.signal === 'SELL' || scored.signal === 'STRONG_SELL') ? 'sell' : 'hold'
     : '';
-  const selectedProtocol = protocols.find(p => p.id === activeProtocolId);
-
   const liveValues = useMemo(() => {
     const symCount = symbolsQuery.data?.symbols?.length || 0;
     const allSymbols = symbolsQuery.data?.symbols || [];
@@ -1238,6 +1295,34 @@ export default function MetaStackExplorerPage() {
               ? `${tradingStrats.length} trading strateg${tradingStrats.length === 1 ? 'y' : 'ies'} available — pick one to populate the pipeline`
               : 'No trading strategies found — create one first'}
           </span>
+          {/* ⚠️ THE PICKER MUST EXIST IN THE EMPTY STATE — that is the state a fresh load lands in.
+              Found by the browser canary on 2026-10-20: `mse-banner-select option` count was **0**,
+              because the select only rendered in the populated branch and the empty branch offered
+              a scroll link to a picker further down the page. "Select the protocol at the top" is
+              the control that matters most when nothing is selected. */}
+          {tradingStrats.length > 0 && (
+            <select
+              className="mse-banner-select"
+              aria-label="Protocol and symbol to inspect"
+              value={selectedStrategyId || ''}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                setSelectedStrategyId(v);
+                try {
+                  if (v) localStorage.setItem('mse-selected-strategy', v);
+                  else localStorage.removeItem('mse-selected-strategy');
+                } catch {}
+              }}
+            >
+              <option value="">— select a protocol —</option>
+              {tradingStrats.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.protocolId ? `${s.protocolId} · ${s.symbol}` : s.name} — {s.mode || 'auto'}
+                  {s.active ? '' : ' (inactive)'}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             className="mse-strategy-banner-change"
             onClick={() => {
@@ -1307,7 +1392,7 @@ export default function MetaStackExplorerPage() {
                           return (
                             <div key={ci} className={`mse-check-item mse-check-${st}`}>
                               <span className="mse-check-icon">
-                                {st === 'pass' ? '✓' : st === 'fail' ? '✗' : st === 'na' ? '–' : '⚠'}
+                                {st === 'pass' ? '✓' : st === 'fail' ? '✗' : st === 'na' ? '?' : '⚠'}
                               </span>
                               <span className="mse-check-label">{check.label}</span>
                               <span className="mse-check-detail">
@@ -1331,11 +1416,10 @@ export default function MetaStackExplorerPage() {
                         is already on screen. */}
                     {Array.isArray(technicalValues[stage.id]) && (
                       <div className="mse-check-list mse-check-list--technical">
-                        <span className="mse-tech-heading">Measured values &amp; reasons</span>
                         {technicalValues[stage.id].map((check, ti) => (
                           <div key={`t${ti}`} className={`mse-check-item mse-check-${check.status}`}>
                             <span className="mse-check-icon">
-                              {check.status === 'pass' ? '✓' : check.status === 'fail' ? '✗' : check.status === 'na' ? '–' : '⚠'}
+                              {check.status === 'pass' ? '✓' : check.status === 'fail' ? '✗' : check.status === 'na' ? '?' : '⚠'}
                             </span>
                             <span className="mse-check-label">{check.label}</span>
                             <span className="mse-check-detail">

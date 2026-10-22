@@ -23,7 +23,11 @@ export class Mt5HaramiDirective implements IDirective {
   readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced harami reversal pattern with RSI(37) confirmation.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 80;
+  // the extra 20 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 80;
   readonly minScore = 1;
   readonly minBars = { '1d': 14 };
   readonly version = '1.1.0';

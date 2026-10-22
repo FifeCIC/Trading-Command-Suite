@@ -111,7 +111,11 @@ export class AwesomeOscillatorDirective implements IDirective {
   readonly description =
     '5-period SMA of midpoints minus 34-period SMA. Rising green above zero = bullish, falling red below zero = bearish. Symmetric. Derived from MT5 Awesome Oscillator.';
   readonly priority = 40;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 75 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 75;
+  // the extra 25 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 75;
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
@@ -232,7 +236,11 @@ export class ChaikinMoneyFlowDirective implements IDirective {
   readonly description =
     'Volume-weighted accumulation/distribution over 21 periods. CMF > 0.1 = accumulation, < -0.1 = distribution. Symmetric. Derived from MT5 Chaikin Money Flow.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 80;
+  // the extra 20 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 80;
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
@@ -296,7 +304,11 @@ export class DonchianBreakoutDirective implements IDirective {
   readonly description =
     '20-bar high/low channel. Break above the prior high = bullish breakout, break below the prior low = bearish. Symmetric. Derived from MT5 Donchian Channel.';
   readonly priority = 55;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 75 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 75;
+  // the extra 25 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 75;
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
@@ -355,7 +367,11 @@ export class KeltnerChannelDirective implements IDirective {
   readonly description =
     'EMA(20) ± 2×ATR(10). Price near upper band = bullish, band squeeze = impending expansion. Derived from MT5 Keltner Channel.';
   readonly priority = 45;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 70 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 70;
+  // the extra 30 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 70;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -434,7 +450,11 @@ export class SuperTrendDirective implements IDirective {
   readonly description =
     'ATR(10) × 3 ratcheting SuperTrend. Direction comes from the canonical trailing band (the trend flips only when price closes through the ratified line); an unestablished trend is neutral, never guessed. Symmetric bullish/bearish evidence at equal magnitude. Derived from MT5 SuperTrend.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 55 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 55;
+  // the extra 45 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 55;
   readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
 
@@ -563,7 +583,11 @@ export class ADXDICrossoverDirective implements IDirective {
   readonly description =
     '+DI crossing above -DI with ADX > 20 = trend change to bullish. Derived from MT5 ADX crossover strategies.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 80;
+  // the extra 20 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 80;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -619,7 +643,11 @@ export class BollingerPctBDirective implements IDirective {
   readonly description =
     '%B = (price - lower) / (upper - lower). %B > 0.8 = near upper band, %B < 0.2 = near lower band. Derived from MT5 Bollinger %B.';
   readonly priority = 42;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 70 (2026-10-20, #1131). MODE 9: the highest score this directive's
+  // return arithmetic can produce is 70 (breakout above the upper band); the other 30 points were
+  // permanent, unearnable capacity in every protocol denominator. The unreachable-branch bug in the
+  // same class (`pctB < 0` shadowed by `pctB < 0.2`) was fixed at the same time.
+  readonly maxScore = 70;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -647,12 +675,19 @@ export class BollingerPctBDirective implements IDirective {
       return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `%B ${pctB.toFixed(2)} — riding upper band` };
     }
 
-    if (pctB < 0.2) {
-      return { score: 45, confidence: 0.45, signalClass: 'bullish', reason: `%B ${pctB.toFixed(2)} — near lower band, potential bounce` };
-    }
-
+    // ⚠️ ORDER MATTERS — the breakdown test MUST come before the "near lower band" test.
+    //
+    // `pctB < 0.2` also matches every negative value, so with the old order this branch was
+    // UNREACHABLE and a genuine break below the lower band was reported as
+    // `score: 45, signalClass: 'bullish', "potential bounce"` — the opposite of what the indicator
+    // means. Measured 2026-10-20 by directive-guard MODE 9 (declared 100, highest reachable 70):
+    // the bearish 10 path could never run (#1131).
     if (pctB < 0) {
       return { score: 10, confidence: 0.55, signalClass: 'bearish', reason: `%B ${pctB.toFixed(2)} — breakdown below lower band` };
+    }
+
+    if (pctB < 0.2) {
+      return { score: 45, confidence: 0.45, signalClass: 'bullish', reason: `%B ${pctB.toFixed(2)} — near lower band, potential bounce` };
     }
 
     return { score: 35, confidence: 0.3, signalClass: 'neutral', reason: `%B ${pctB.toFixed(2)} — mid-range` };
@@ -686,7 +721,11 @@ export class ATRTrailingStopDirective implements IDirective {
   readonly description =
     'Dual ATR trailing stop: long stop = highest high(20) − 3×ATR, short stop = lowest low(20) + 3×ATR. The gap between price and each stop is graded in ATR units (≥2 ATR beyond = strong, ≥0.5 = moderate) — symmetric bullish/bearish evidence. Derived from MT5 ATR Trailing Stop.';
   readonly priority = 48;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 75 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 75;
+  // the extra 25 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 75;
   readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
 
@@ -761,7 +800,11 @@ export class MomentumROCDirective implements IDirective {
   readonly description =
     'ROC(12) crossing above zero = bullish momentum shift. ROC rising with high value = accelerating trend. Derived from MT5 Momentum/ROC.';
   readonly priority = 45;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 80;
+  // the extra 20 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 80;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -819,7 +862,11 @@ export class DeMarkerDirective implements IDirective {
   readonly description =
     'DeMax/DeMin ratio over 14 periods. > 0.7 = overbought, < 0.3 = oversold. Derived from MT5 DeMarker indicator.';
   readonly priority = 42;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 65 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 65;
+  // the extra 35 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 65;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -872,7 +919,11 @@ export class AccumulationDistDirective implements IDirective {
   readonly description =
     'A/D line divergence from price. Rising A/D + flat price = accumulation. Derived from MT5 A/D indicator.';
   readonly priority = 45;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 70 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 70;
+  // the extra 30 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 70;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -934,7 +985,11 @@ export class BullsBearsPowerDirective implements IDirective {
   readonly description =
     "Elder's Bulls Power (High - EMA13) and Bears Power (Low - EMA13). Bulls > 0 and rising = bullish. Derived from MT5 Bulls/Bears Power.";
   readonly priority = 45;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 75 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 75;
+  // the extra 25 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 75;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -985,7 +1040,11 @@ export class EaseOfMovementDirective implements IDirective {
   readonly description =
     'Price change per unit of volume. Positive and rising = easy upward movement. Derived from MT5 Ease of Movement.';
   readonly priority = 40;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 65 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 65;
+  // the extra 35 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 65;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
 
@@ -1041,7 +1100,11 @@ export class IchimokuCloudDirective implements IDirective {
   readonly description =
     'Price above cloud = bullish, below = bearish, inside = neutral. Senkou spans are displaced 26 bars forward. Derived from MT5 Ichimoku.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 80;
+  // the extra 20 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 80;
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;

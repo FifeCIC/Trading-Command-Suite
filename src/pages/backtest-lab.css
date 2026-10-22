@@ -1,4 +1,10 @@
-/* protocol-backtest.css — the Protocol Backtesting page (#823).
+/* backtest-lab.css — the Backtest Lab page and its score-detail component (#823, #1134).
+ *
+ * ⚠️ ONE STYLESHEET, TWO CONSUMERS. Was `protocol-backtest.css`, loaded by the retired
+ * Protocol Backtesting page. On 2026-10-22 that page was merged into `/lab/backtest` and its
+ * score table became `src/components/backtest/ProtocolScoreDetail.jsx`, which imports this file
+ * directly. Keeping one file means the merged page and the drill-down cannot drift apart — a
+ * second `.pb-*` sheet is the duplication `validate-duplication.cjs` exists to catch.
  *
  * ⚠️ THE TABLE IS NOT RESTYLED HERE. It uses the global `.bt-table` (src/core/tables.css), because
  * 69 table families with 69 arrangements was the drift that file removed, and
@@ -161,3 +167,71 @@
 .pb-detail h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
 .pb-reason { font-size: 0.78rem; color: var(--ink-soft); }
 .pb-none { font-size: 0.82rem; color: var(--ink-soft); }
+
+/* ── Backtest Lab additions (#1134) ──────────────────────────────────────────────────────────── */
+
+/* Subject toggle: Protocols | Strategies. A segmented control, not two buttons — the two options are
+ * one choice, and a radio group says that to assistive tech where two buttons would not. */
+.pb-subject {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-elev, var(--panel));
+}
+.pb-subject-btn {
+  padding: 0.3rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pb-subject-btn:hover { color: var(--ink); }
+.pb-subject-btn--on { background: var(--accent); color: var(--accent-ink, #06121f); }
+.pb-subject-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The panel that carries the track + run fields. Sits above the results so the subject is chosen
+ * before the thing it scopes. */
+.pb-run-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+/* A guard is not a hint: it states that the run is refused and why. Warning colour, not error —
+ * nothing is broken, something is switched on. */
+.pb-guard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--risk-high, var(--color-warning));
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--risk-high, var(--color-warning)) 10%, transparent);
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+.pb-guard strong { font-weight: 700; }
+.pb-guard-note { color: var(--ink-soft); }
+
+/* Score detail: the drill-down header pairs a heading with its run button. */
+.pb-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+.pb-detail-head h3 { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-size: 0.95rem; }
+.bt-score-detail { display: flex; flex-direction: column; gap: 0.75rem; }

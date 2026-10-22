@@ -11,8 +11,13 @@ import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
 
-const MIN_BARS = 14;
+// ⚠️ MIN_BARS MUST COVER THE RSI PERIOD. It was 14 with `RSI_PERIOD = 37`, and `rsi()` returns an
+// EMPTY array when `closes.length <= period` — so on the 14-37 bar window this directive declares,
+// `latestRsi` fell back to the neutral 50 (line 40), `confirmed` could never be true, and the
+// 90-point confirmed-star branch (#1131) was unreachable. The confident half of the directive could
+// not fire on the very window it asked for.
 const RSI_PERIOD = 37;
+const MIN_BARS = RSI_PERIOD + 1;
 const DOJI_BODY_RATIO = 0.15; // Body < 15% of range = doji-like
 
 @Injectable()
@@ -22,9 +27,12 @@ export class Mt5StarDojiDirective implements IDirective {
   readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced 3-candle reversal pattern (morning/evening star) with RSI(37) confirmation.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 90 (2026-10-20, #1131). MODE 9: the confirmed-star branch tops out
+  // at 90; the extra 10 points were permanent, unearnable capacity. The reason that branch could
+  // never fire at all on the declared window (RSI period vs MIN_BARS) is fixed at the constants.
+  readonly maxScore = 90;
   readonly minScore = 1;
-  readonly minBars = { '1d': 14 };
+  readonly minBars = { '1d': RSI_PERIOD + 1 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;

@@ -1301,7 +1301,7 @@ export class BacktestService {
     /** Null unless every side cleared the sample bar. `sample` travels with the name. */
     best: { id: string; metric: string; value: number; sample: number } | null;
     verdict: {
-      verdict: 'winner' | 'insufficient-data' | 'sample-unknown' | 'no-runs';
+      verdict: 'winner' | 'insufficient-data' | 'sample-unknown' | 'incomparable-window' | 'no-runs';
       n: Record<string, number | null>;
       requiredPerSide: number;
       /** The comparison method, named whenever a winner is named. Null otherwise. */
@@ -1348,6 +1348,14 @@ export class BacktestService {
         botId: r.botId ?? null,
         /** That bot's LIVE lot size at run time. NULL = NOT RECORDED — never read as equal. */
         botBaseSize: r.botBaseSize ?? null,
+        // ⚠️ THE WINDOW EACH RUN ACTUALLY COVERED. Stored since the table was created and never
+        // surfaced here, so two runs over DIFFERENT periods were compared as if like-for-like and a
+        // "winner" could be a regime rather than a configuration. Surfaced so `windowWarning` can
+        // refuse, and so a reader can see the data a verdict rests on.
+        startDate: r.startDate.toISOString().slice(0, 10),
+        endDate: r.endDate.toISOString().slice(0, 10),
+        /** The stored period this run used, when it used one. NULL = a `days` run. */
+        periodId: r.periodId ?? null,
         // The ONLY field that needs the fraction→percent conversion.
         signalWinRatePct: Math.round(r.winRate * 10000) / 100,
         totalPnl: Number(r.totalPnl.toFixed(4)),
@@ -1429,17 +1437,50 @@ export class BacktestService {
       return null;
     })();
 
-    if (refusals.length > 0) {
+    // ── SAME DATA (#1131 follow-up) ───────────────────────────────────────────────────────────
+    // Two runs over different date windows are not a comparison, they are two measurements printed
+    // next to each other. This is stricter than `sizeWarning` because the confound is total: a
+    // difference between them can be the market regime, and no sample size fixes that.
+    // Refuses rather than warns — a warning still prints a winner, and a winner across different
+    // data is exactly the over-claim the sample bar exists to prevent (#965).
+    // ⚠️ `startDate` is NOT the requested window — it is `bars[windowSize].timestamp`, the first
+    // SCORABLE bar, so a protocol with a longer warm-up starts later on the SAME stored period. Two
+    // variants of one protocol can therefore differ on `startDate` while using an identical window,
+    // and comparing dates alone would refuse a legitimate comparison. When every run names the same
+    // `periodId` they used the same window, and that is the stronger fact.
+    const periodIds = formatted.map((f) => f.periodId);
+    const sharedPeriod = periodIds.every((id) => id !== null) && new Set(periodIds).size === 1;
+    const windowWarning = ((): string | null => {
+      if (sharedPeriod) return null;
+      const windows = [...new Set(formatted.map((f) => `${f.startDate} → ${f.endDate}`))];
+      if (windows.length <= 1) return null;
+      return (
+        `⚠️ NOT COMPARABLE — the runs cover DIFFERENT date windows: ${windows.join(' vs ')}. ` +
+        'A difference between them cannot be credited to the protocol or bot: it may simply be the ' +
+        'data. Re-run each side against the SAME stored period (`POST /api/backtest/run` with a ' +
+        '`periodId`) before comparing.'
+      );
+    })();
+
+    if (refusals.length > 0 || windowWarning) {
       return {
         runs: formatted,
         best: null,
         verdict: {
-          verdict: refusals.includes('sample-unknown') ? 'sample-unknown' : 'insufficient-data',
+          // The window check comes FIRST: unlike a thin sample, it is not resolved by collecting
+          // more data on one run — the two runs would still describe different markets.
+          verdict: windowWarning
+            ? 'incomparable-window'
+            : refusals.includes('sample-unknown') ? 'sample-unknown' : 'insufficient-data',
           n,
           requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
           metric: null,
           sizeWarning,
           note:
+            // ⚠️ WINDOW FIRST. It outranks the sample bar: collecting more trades cannot fix two
+            // runs describing different markets, so leading with "need ≥30 per side" would point a
+            // reader at the wrong remedy.
+            (windowWarning ? `${windowWarning} ` : '') +
             `${tradeAssessment.note} ${signalAssessment.note}` +
             (disagreements.length
               ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
@@ -1464,8 +1505,7 @@ export class BacktestService {
         requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
         metric: 'sharpeRatio',
         sizeWarning,
-        note:
-          `Winner named by sharpeRatio (${bestRow.protocolId} @${bestRow.timeframe}), over ` +
+        note:          `Winner named by sharpeRatio (${bestRow.protocolId} @${bestRow.timeframe}), over ` +
           `${bestRow.totalSignals} entry signals and ${bestRow.tradesCounted} bracketed trades. ` +
           `Both clear the ≥${MIN_SAMPLES_FOR_VERDICT} bar. ` +
           '⚠️ The bar means "big enough to speak about", NOT "statistically significant" — ' +

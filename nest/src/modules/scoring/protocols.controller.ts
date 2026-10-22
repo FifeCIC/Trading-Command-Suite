@@ -373,7 +373,31 @@ export class ProtocolsController {
     @Body() body: { directiveId: string; config: Record<string, any> },
   ) {
     await this.configService.updateProtocolConfig(slug, body.directiveId, body.config as any);
-    return this.getProtocolDirectiveConfig(slug);
+    const result = await this.getProtocolDirectiveConfig(slug);
+
+    // ⚠️ SETTABLE BUT INERT (#1133). The store accepts five fields; the SCORER applies only
+    // `maxScore` per protocol (see `resolveEffectiveMaxScores()` — `overrides.get(id)?.maxScore`).
+    // The other four are persisted and served, and change no score. Measured 2026-10-22 by grepping
+    // every consumer: the GLOBAL versions are applied in `directives.service.ts`, the per-protocol
+    // ones nowhere.
+    //
+    // A caller who sets `directionBias` per protocol and sees the same scores has no way to tell
+    // "the change did nothing" from "the change was measured and had no effect". So the response says
+    // which fields it could not apply rather than leaving a silent no-op — the same rule that makes
+    // an empty list and a failed query render differently.
+    const APPLIED_PER_PROTOCOL = new Set(['maxScore']);
+    const notApplied = Object.keys(body.config ?? {}).filter((k) => !APPLIED_PER_PROTOCOL.has(k));
+    if (notApplied.length === 0) return result;
+
+    return {
+      ...result,
+      warning:
+        `⚠️ STORED BUT NOT APPLIED: ${notApplied.join(', ')}. Only \`maxScore\` is honoured as a `
+        + 'per-protocol override; the other fields are written and returned but no scoring path reads '
+        + 'them per protocol (the GLOBAL values still apply). Treat this change as recorded, not live. '
+        + 'Deciding whether to wire or remove these fields is step 1 of #1133.',
+      notApplied,
+    };
   }
 
   /**

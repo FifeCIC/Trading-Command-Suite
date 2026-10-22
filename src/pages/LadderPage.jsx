@@ -388,6 +388,23 @@ export default function LadderPage() {
               protocol's paired symbols is ranked by scoring strength, and the cards
               slide into place as scores change. Reuses the same scoring data as the
               Symbols Ladder.
+              <br /><br />
+              <strong>Two scores, two questions.</strong> <em>Opportunity</em> counts
+              everything (ranking: which symbol is worth a closer look). <em>Signal</em>
+              counts only the protocol's own direction (timing: is now the moment, and
+              which way). The Signal % divides by the protocol's <em>configured</em>
+              capacity, not by what happened to fire this tick.
+              <br /><br />
+              <strong>A Signal of 0 is usually a direction result, not a lost score.</strong>
+              A LONG_ONLY protocol counts only bullish readings. If every directional
+              directive read bearish this tick, there is no reading of the protocol's own
+              side, and the card shows <code>NO_READING</code> with 0 / capacity — while the
+              bearish evidence is still measured and recorded. A low Signal on a
+              multi-directive protocol is the second cause: one directive firing strongly is
+              a small share of the protocol's whole capacity.
+              <br /><br />
+              Canonical detail: docs/scoring-architecture.md · Diagrams → “Why the Signal
+              Reads Zero”.
             </PageInfoPopover>
           </h1>
           <p className="lad-subtitle">

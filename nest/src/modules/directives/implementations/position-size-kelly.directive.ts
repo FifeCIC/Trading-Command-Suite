@@ -24,7 +24,11 @@ export class PositionSizeKellyDirective implements IDirective {
   readonly category = 'structural' as const;
   readonly description =
     'Scores position size against Kelly Criterion optimal allocation. Half-Kelly is the recommended standard.';
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 30 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 30;
+  // the extra 70 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 30;
   readonly minScore = 1;
   readonly minBars = { '1d': 20 };
   readonly version = '1.1.0';

@@ -33,7 +33,11 @@ export class Mt5EngulfingDirective implements IDirective {
   readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced engulfing pattern with RSI(37) confirmation. Proven 2-candle reversal logic from MetaQuotes Free Robots.';
   readonly priority = 55;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 85 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 85;
+  // the extra 15 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 85;
   readonly minScore = 1;
   readonly minBars = { '1d': 14 };
   readonly version = '1.1.0';

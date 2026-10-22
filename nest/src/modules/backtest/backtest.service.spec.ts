@@ -449,3 +449,105 @@ describe('BacktestService.getSummary — two populations, each named (#980)', ()
   });
 });
 
+describe('BacktestService.compareRuns — SAME DATA (the window guard)', () => {
+  /**
+   * ⚠️ THE DEFECT THIS PREVENTS. `backtestrun.startDate`/`endDate` have been stored since the table
+   * was created, and the comparison never read them. So two runs over different periods were
+   * compared as if like-for-like and a "winner" could be a market regime rather than a
+   * configuration — the same over-claim the 30-sample bar exists to prevent, but unfixable by
+   * collecting more data, because the two sides describe different markets.
+   *
+   * Both sides below clear the 30-trade / 30-signal bar, so ONLY the window can be refusing.
+   */
+  it('refuses to name a winner across DIFFERENT date windows, and names both', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-aug', {
+          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.9,
+          startDate: new Date('2026-08-01T00:00:00Z'), endDate: new Date('2026-08-31T00:00:00Z'),
+        }),
+        run('r-sep', {
+          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5',
+          startDate: new Date('2026-09-01T00:00:00Z'), endDate: new Date('2026-09-30T00:00:00Z'),
+        }),
+      ],
+      trades: [['r-aug', 22, 18], ['r-sep', 10, 30]],
+    });
+    const out = await svc(prisma).compareRuns(['r-aug', 'r-sep']);
+
+    expect(out.verdict.verdict).toBe('incomparable-window');
+    expect(out.best).toBeNull();                       // NOT the higher-Sharpe run
+    expect(out.verdict.metric).toBeNull();
+    // Both windows are named, so the reader can see what was compared.
+    // The window warning LEADS the note — the sample bar is not the reason here, and leading with
+    // it would point a reader at "collect more data", which cannot fix a window mismatch.
+    expect(out.verdict.note).toMatch(/^⚠️ NOT COMPARABLE/);
+    expect(out.verdict.note).toMatch(/2026-08-01 → 2026-08-31/);
+    expect(out.verdict.note).toMatch(/2026-09-01 → 2026-09-30/);
+    // And the window is on each row, so a UI can show the data a number rests on.
+    expect(out.runs.map((r) => r.startDate)).toEqual(expect.arrayContaining(['2026-08-01']));
+  });
+
+  it('still names a winner when both runs cover the SAME window', async () => {
+    // The guard must not refuse everything: this is the control that proves it is window-sensitive
+    // and not simply always-false. Both runs share the helper's 2026-08-01 → 2026-08-31 default.
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { totalTrades: 40, totalSignals: 120, sharpeRatio: 1.9 }),
+        run('r-b', { totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5' }),
+      ],
+      trades: [['r-a', 22, 18], ['r-b', 10, 30]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.verdict).toBe('winner');
+    expect(out.best?.id).toBe('r-a');
+  });
+
+  it('does NOT refuse two runs that share a periodId, even when their effective dates differ', async () => {
+    // ⚠️ `startDate` is the first SCORABLE bar (`bars[windowSize].timestamp`), so a protocol with a
+    // longer warm-up starts later on an IDENTICAL stored period. Comparing dates alone would refuse a
+    // legitimate comparison; the shared `periodId` is the stronger fact.
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', {
+          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.9, periodId: 'period-1',
+          startDate: new Date('2026-09-14T00:00:00Z'), endDate: new Date('2026-10-20T00:00:00Z'),
+        }),
+        run('r-b', {
+          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5',
+          periodId: 'period-1',
+          // SAME period, longer warm-up → a later first scorable bar.
+          startDate: new Date('2026-09-18T00:00:00Z'), endDate: new Date('2026-10-20T00:00:00Z'),
+        }),
+      ],
+      trades: [['r-a', 22, 18], ['r-b', 10, 30]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.verdict).toBe('winner');   // NOT 'incomparable-window'
+    expect(out.best?.id).toBe('r-a');
+    expect(out.runs.every((r) => r.periodId === 'period-1')).toBe(true);
+  });
+
+  it('the window refusal OUTRANKS a thin sample — more data would not fix it', async () => {
+    // A mismatched-window pair that is ALSO thin must report the window, because collecting trades
+    // would leave the two runs describing different markets. Reporting 'insufficient-data' here
+    // would invite exactly the wrong remedy.
+    const prisma = mockPrisma({
+      runs: [
+        run('r-thin-aug', { startDate: new Date('2026-08-01T00:00:00Z'), endDate: new Date('2026-08-31T00:00:00Z') }),
+        run('r-thin-sep', {
+          protocolId: 'xau-speed-m5',
+          startDate: new Date('2026-09-01T00:00:00Z'), endDate: new Date('2026-09-30T00:00:00Z'),
+        }),
+      ],
+      trades: [['r-thin-aug', 0, 3], ['r-thin-sep', 1, 2]],
+    });
+    const out = await svc(prisma).compareRuns(['r-thin-aug', 'r-thin-sep']);
+
+    expect(out.verdict.verdict).toBe('incomparable-window');
+    expect(out.best).toBeNull();
+  });
+});
+

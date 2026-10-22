@@ -20,7 +20,11 @@ export class Mt5EngulfingCciDirective implements IDirective {
   readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced engulfing pattern with CCI(37) confirmation. Pattern detected=30, confirmed=85.';
   readonly priority = 70;
-  readonly maxScore = 100;
+  // ⚠️ maxScore corrected 100 → 85 (2026-10-20, #1131). MODE 9 measured
+  // the highest score this directive's own return arithmetic can produce as 85;
+  // the extra 15 points were permanent, unearnable capacity in every
+  // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
+  readonly maxScore = 85;
   readonly minScore = 1;
   readonly minBars = { '1d': 41 };
   readonly version = '1.1.0';

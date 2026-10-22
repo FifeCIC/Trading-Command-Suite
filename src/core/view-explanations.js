@@ -39,10 +39,12 @@ export const VIEW_EXPLANATIONS = {
     'Use this to see where protocols agree or disagree before making a trade decision.',
 
   'live-ordering-stack':
-    'The Ladder ranks symbols by their composite score across all enabled protocols. ' +
-    'Higher-ranked symbols have stronger, more consistent signals. ' +
-    'Use the filters to narrow by sector, exchange, or score range. ' +
-    'Click any symbol to drill into its directive breakdown.',
+    'One card per (protocol × symbol), ranked by the metric the “Score” control selects — ' +
+    'Signal (timing: directional conviction) or Opportunity (ranking: everything counts). ' +
+    'A card showing NO_READING at 0 means the protocol’s own direction had no reading that tick — ' +
+    'the ℹ beside the page title explains why that is a direction result and not a lost score. ' +
+    'Filters narrow by protocol, age, market, direction and search; click a card to drill into ' +
+    'its directive breakdown.',
 
   'directives-registry':
     'The Directive Registry is the master catalog of all scoring rules. ' +

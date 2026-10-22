@@ -229,29 +229,31 @@
    unavailable, so the row carries a reason instead of a verdict. It must never look like a pass, or
    the exact defect this contract exists to prevent comes back through the styling. */
 .mse-check-warn { background: rgba(245,158,11,0.08); }
-.mse-check-na { background: transparent; }
+/* ⚠️ `na` MUST STAND OUT. Owner direction, 2026-10-20: *"styled like the other rows so they're
+   ticked even just to confirm that the data value is present … else style it to show otherwise.
+   It's to make it so that when I scroll down any issues will stand out."*
+   So a row that reports a real value is a PASS (ticked). `na` is reserved for "this could not be
+   judged" and is now the LOUD state — amber rule on the left, `?` glyph — so scanning the page for
+   the amber marks finds every unmeasured thing in one pass. */
+.mse-check-na {
+  background: rgba(245,158,11,0.10);
+  border-left: 3px solid var(--color-warning);
+  border-radius: 0 4px 4px 0;
+}
 .mse-check-icon { font-weight: 700; font-size: 0.8rem; min-width: 18px; text-align: center; }
 .mse-check-pass .mse-check-icon { color: var(--color-profit); }
 .mse-check-fail .mse-check-icon { color: var(--color-loss); }
 .mse-check-pending .mse-check-icon { color: var(--ink-soft); }
 .mse-check-warn .mse-check-icon { color: var(--color-warning); }
-.mse-check-na .mse-check-icon { color: var(--ink-soft); opacity: 0.7; }
+.mse-check-na .mse-check-icon { color: var(--color-warning); font-weight: 700; }
 .mse-check-warn .mse-check-label,
-.mse-check-na .mse-check-label { opacity: 0.85; }
-/* Technical-level block — separated from the Pipeline rows so the two sets are never read as one
-   list. It is the same snapshot, at a deeper level. */
+.mse-check-na .mse-check-label { opacity: 0.95; }
+/* Technical block — separated from the pipeline rows by spacing only. The heading and the dashed
+   divider were removed at the owner's request (2026-10-20): they cost a line and labelled rows the
+   reader can already identify.
+   Same snapshot, deeper level — no visual claim that these are a different kind of fact. */
 .mse-check-list--technical {
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
-  border-top: 1px dashed var(--line);
-}
-.mse-tech-heading {
-  display: block;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  padding: 0 0.5rem 0.25rem;
+  margin-top: 0.5rem;
 }
 
 /* ── Directive ledger (Technical level, stage 5) ─────────────────────────────────────────────

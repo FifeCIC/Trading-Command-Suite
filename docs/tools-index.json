@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 179,
+  "count": 186,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -50,6 +50,16 @@
       "selfTest": false,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "audit-dev-window-coverage.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "what date window can a DEVELOPMENT test actually use?",
+      "selfTest": true,
+      "reaches": [
+        "npm"
       ]
     },
     {
@@ -117,6 +127,16 @@
       ]
     },
     {
+      "name": "audit-threshold-basis-calibration.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "is `EARN_ABLE_BAR` still doing the job it was measured for?",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "audit-trade-pnl-attribution.cjs",
       "where": "nest",
       "category": "audit",
@@ -131,6 +151,14 @@
       "where": "repo",
       "category": "audit",
       "purpose": "READ the owner's Page Walkthrough verdicts (`uiScore` + \"Preferred",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "check-backtest-determinism.cjs",
+      "where": "repo",
+      "category": "check",
+      "purpose": "PHASE 0 of #1133: is POST /api/backtest/run deterministic?",
       "selfTest": false,
       "reaches": null
     },
@@ -204,6 +232,16 @@
       "selfTest": false,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "seed-dev-test-window.cjs",
+      "where": "nest",
+      "category": "database",
+      "purpose": "write the canonical development window as `backtest_period` rows (#1132).",
+      "selfTest": false,
+      "reaches": [
+        "npm"
       ]
     },
     {
@@ -362,6 +400,16 @@
       "category": "tool",
       "purpose": "Canary for validate-bridge-recovery-bounds.cjs.",
       "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "canary-mse-render.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "does /status/meta-stack-explorer actually RENDER, and are its rows present?",
+      "selfTest": true,
       "reaches": [
         "npm"
       ]
@@ -614,6 +662,17 @@
       "reaches": null
     },
     {
+      "name": "gen-directive-capabilities.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "which directives can NEVER express a direction?",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
       "name": "gen-schema-init.cjs",
       "where": "nest",
       "category": "tool",
@@ -765,6 +824,16 @@
       "purpose": "decide whether #844's fix is LIVE or merely DECLARED.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "measure-label-basis-outcomes.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "which label basis actually called direction better? (#1131)",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "measure-profit-taking.cjs",
@@ -1665,7 +1734,9 @@
       "category": "verification",
       "purpose": "run the DiagramsPage claim assertions from the terminal.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "verify-seed-maxscores.cjs",

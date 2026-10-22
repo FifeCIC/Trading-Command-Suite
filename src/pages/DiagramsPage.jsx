@@ -17,23 +17,28 @@ const DIAGRAMS = [
   {
     id: 'signal-state-machine',
     label: 'Signal Vocabulary & Direction State Machine',
-    desc: 'One vocabulary, three layers. SERVER: directionMode declares what a protocol may emit — LONG_ONLY → BUY only, SHORT_ONLY → SELL only. Classification is percentage-based: >=80% STRONG, >=40% BUY/SELL, below 40% HOLD. HOLD means "no directional edge / no trade right now" — it is NOT position advice. DUAL protocols do not flip by themselves: BUY↔SELL switching comes from PAIRING a LONG and SHORT protocol on a ScoringStrategy (shortProtocolId) — the loop compares both composites and the winner above threshold decides; both below = HOLD. UI states (LIVE/PAUSED/STALE/UNSCORED) are orthogonal to the signal. Database relationships: Protocol.derivedFrom links variants, ScoringStrategy.shortProtocolId pairs long+short for direction validation.',
+    desc: 'One vocabulary, four layers. NO-READING: the direction filter is a PRESENCE test — selectDirectionalEvidence() returns "none" when no non-gate directive read the protocol\'s own side this tick. That is neither a zero nor a HOLD; it is the absence of a reading (API says NO_DATA, the persisted row says NO_READING). SERVER: directionMode declares the only side a protocol may count — LONG_ONLY counts bullish readings, SHORT_ONLY counts bearish. BOTH was DELETED 2026-09-15 (#818) and must not be re-added. Classification is a percentage of CONFIGURED capacity (ADR-011): >=13% STRONG, >=6% BUY/SELL, below 6% HOLD. HOLD means "no directional edge / no trade right now" — NOT position advice. Direction switching comes from PAIRING a LONG and SHORT protocol on a ScoringStrategy (shortProtocolId); the loop compares both and the winner above threshold decides, both below = HOLD. UI states (LIVE/PAUSED/STALE/EXPIRED/UNSCORED) are orthogonal to the signal. See docs/scoring-architecture.md §4 and §6.',
     code: `flowchart TB
+    subgraph Filter["0. Direction filter — presence test, not magnitude"]
+        EVD["bullishMax / bearishMax<br/>accumulated from readings this tick"]
+        EVD --> PRES{"own side read?<br/>LONG_ONLY: bullishMax > 0<br/>SHORT_ONLY: bearishMax > 0"}
+        PRES -->|"no"| NONE["selected: none"]
+    end
     subgraph Server["1. Server classification (protocol-gating)"]
-        PCT["compositePct — directional signal % of max"]
-        PCT -->|">= 80"| STRONG["STRONG_BUY / STRONG_SELL"]
-        PCT -->|"40 - 79"| TRADE["BUY / SELL"]
-        PCT -->|"< 40"| HOLD["HOLD = no trade right now"]
+        PCT["signalPct = signalRaw / configuredSignalMax"]
+        PCT -->|">= 13"| STRONG["STRONG_BUY / STRONG_SELL"]
+        PCT -->|"6 - 12"| TRADE["BUY / SELL"]
+        PCT -->|"< 6"| HOLD["HOLD = no trade right now"]
     end
     subgraph Mode["2. directionMode contract (Protocol.directionMode)"]
-        LO["LONG_ONLY — emits BUY only"]
-        SO["SHORT_ONLY — emits SELL only"]
-        BO["BOTH — needs a PAIR (dual)"]
+        LO["LONG_ONLY — counts bullish readings only"]
+        SO["SHORT_ONLY — counts bearish readings only"]
+        NOBO["BOTH — DELETED 2026-09-15 (#818)<br/>do not re-add"]
     end
     subgraph Dual["3. Dual-protocol pairing (ScoringStrategy.shortProtocolId)"]
-        LS["LONG protocol composite"]
-        SS["SHORT protocol composite"]
-        LS --> CMP{"long > short<br/>and >= threshold?"}
+        LS["LONG protocol signalPct"]
+        SS["SHORT protocol signalPct"]
+        LS --> CMP{"long > short<br/>and >= 6%?"}
         SS --> CMP
         CMP -->|"long wins"| BUY["BUY"]
         CMP -->|"short wins"| SELL["SELL"]
@@ -42,15 +47,21 @@ const DIAGRAMS = [
     subgraph UI["4. Display states (orthogonal — buildScoreDisplay)"]
         U1["LIVE — fresh, tradable"]
         U2["PAUSED — market closed, frozen at last close"]
-        U3["STALE — data older than 30 min"]
+        U3["STALE — open market, feed behind"]
         U4["UNSCORED — no score produced"]
     end
-    Mode --> Server
-    HOLD -. "vocabulary: HOLD = no directional edge,<br/>NOT position advice" .-> WAIT
+    PRES -->|"yes"| PCT
+    NONE --> NO_READ["NO_READING — no reading of<br/>the protocol's own direction<br/>composite 0 · signalPct 0"]
+    Mode --> Filter
+    Server --> Dual
+    HOLD -. "HOLD = evidence exists but below 6% —<br/>NOT position advice" .-> WAIT
+    style NO_READ fill:#16213e,stroke:#ef4444,color:#fff
+    style NONE fill:#16213e,stroke:#ef4444,color:#fff
     style HOLD fill:#16213e,stroke:#f59e0b,color:#fff
     style WAIT fill:#16213e,stroke:#f59e0b,color:#fff
     style STRONG fill:#16213e,stroke:#22c55e,color:#fff
-    style TRADE fill:#16213e,stroke:#22c55e,color:#fff`,
+    style TRADE fill:#16213e,stroke:#22c55e,color:#fff
+    style NOBO fill:#16213e,stroke:#64748b,stroke-dasharray:5 5,color:#94a3b8`,
   },
   {
     id: 'scoring-dual-score',
@@ -598,54 +609,135 @@ const DIAGRAMS = [
   {
     id: 'scoring-gating',
     label: 'Scoring with Protocol Gating',
-    desc: 'ProtocolGatingService.scoreWithGating(): Run all directives → group by protocol → compute group % (rawSum/maxSum×100) → weighted combine (Tech×0.40 + Sent×0.35) → RiskGatingEngine applies tiered rules (hard gates veto, soft modifiers compound, regime overrides). Floor at 0.5× cumulative. Output: composite 0-100, signal BUY/HOLD/SELL, rarity band.',
+    desc: 'ProtocolGatingService.scoreWithGating() — the ONE evaluator. Order: run ONLY the protocol\'s directives → group them (technical / sentiment / risk-gate) → accumulate per group (configured capacity, observed signal, opportunity, direction split) → direction filter (presence test on the protocol\'s own side) → RiskGatingEngine (hard gate ≥0.8 severity vetoes to 0, soft modifiers compound, cumulative floor 0.05) → composite = additive raw sum, NO 0–100 clamp → classification on signalPct against CONFIGURED capacity (entry 6%, strong 13%). If the protocol\'s own direction did not read this tick there is NO reading: composite 0, signalPct 0, persisted as NO_READING. Full reference: docs/scoring-architecture.md.',
     code: `flowchart TB
-    subgraph Directives["1. Run All Directives"]
-        A[DirectivesService.runAll]
-        B[Activation Gate filters]
-        C[Time window checks]
+    subgraph Directives["1. Run the protocol's directives"]
+        A["DirectivesService.runAll<br/>ONLY ids in this protocol"]
+        B["Readiness: ready counted ·<br/>beta blocks · alpha EXCLUDED"]
+        C["Each result: score · maxScore ·<br/>signalClass · unmeasured"]
     end
-    subgraph Groups["2. Group by Protocol"]
-        D[Technical group<br/>groupPct = rawSum/maxSum × 100]
-        E[Sentiment group<br/>groupPct = rawSum/maxSum × 100]
-        F[Risk group<br/>breakouts extracted]
+    subgraph Groups["2. Group accumulation"]
+        D["capacityMax += maxScore<br/>every non-gate directive (CONFIGURED)"]
+        E["signalRaw/Max = own side only<br/>(OBSERVED — diagnostic)"]
+        F["oppRaw/Max = everything counts"]
+        G["bullishRaw/Max · bearishRaw/Max<br/>BOTH sides recorded"]
     end
-    subgraph Combine["3. Weighted Combine"]
-        G[rawBeforeRisk =<br/>tech% × 0.40 + sent% × 0.35]
+    subgraph Direction["3. Direction filter"]
+        DF{"own side read this tick?<br/>LONG_ONLY: bullishMax > 0<br/>SHORT_ONLY: bearishMax > 0"}
     end
     subgraph RiskEngine["4. RiskGatingEngine.apply()"]
-        H{Hard Gate?<br/>budget-gate · position-concentration<br/>· liquidity-check}
-        I[Soft Modifiers<br/>correlation-drag · dilution-impact<br/>· volatility-regime]
-        J[Regime Override<br/>dxy-regime → directional bias]
-        K[Cascading multiply<br/>floor at 0.5×]
+        H{"Hard Gate?<br/>severity >= 0.8<br/>budget · concentration · liquidity"}
+        I["Soft modifiers<br/>correlation · dilution · volatility<br/>cumulative floor 0.05"]
+        J["Regime override<br/>dxy-regime"]
     end
     subgraph Output["5. Output"]
-        L[composite = clamp 0-100]
-        M{signal?}
-        N[🟢 BUY ≥ 65]
-        O[🟡 HOLD ≥ 35]
-        P[🔴 SELL < 35 SHORT_ONLY]
-        Q[Rarity Band<br/>from ScoreSnapshot history]
+        L["composite = additive raw sum × multiplier<br/>NO 0-100 clamp"]
+        M{"signalPct vs configured capacity"}
+        N["BUY / SELL >= 6%"]
+        O["HOLD below 6%<br/>evidence exists, no directional edge"]
+        P["SELL < 6% is NOT emitted —<br/>SHORT_ONLY only"]
+        VETO["composite = 0<br/>HARD GATE"]
+        NOR["NO_READING<br/>composite 0 · signalPct 0<br/>denominator still reported"]
     end
     A --> B --> C
-    C --> D & E & F
-    D --> G
-    E --> G
-    F --> H
-    G --> H
-    H -->|severity ≥ 0.8| VETO[score = 0<br/>HARD GATE]
-    H -->|pass| I
-    I --> K
-    J --> K
-    K --> L
+    C --> D & E & F & G
+    D & E & G --> DF
+    DF -->|"yes"| H
+    DF -->|"no"| NOR
+    H -->|"yes"| VETO
+    H -->|"no"| I
+    J --> I
+    I --> L
     L --> M
-    M --> N & O & P
-    L --> Q
+    M --> N & O
+    M -.->|"SHORT_ONLY emits this"| P
     style VETO fill:#ef4444,color:#fff
+    style NOR fill:#ef4444,color:#fff
     style RiskEngine fill:#1a1a2e,stroke:#ef4444,color:#e5e7eb
     style N fill:#22c55e,color:#000
     style O fill:#f59e0b,color:#000
     style P fill:#ef4444,color:#fff`,
+  },
+  {
+    id: 'scoring-engine-stages',
+    label: 'Scoring Engine — Stage-by-Stage Contract',
+    desc: 'The 15 stages scoreWithGating() passes through, with what each one reads and writes. Read this before changing ANY stage: only stages 6–11 change a number, and stage 14 is the only one with a side effect. The two writes go to DIFFERENT tables on purpose — `score` is the reading history (30d retention), `score_snapshot` is the rarity distribution (90d) and deliberately skips NO_READING rows so zeros cannot pollute percentile bands. Canonical: docs/scoring-architecture.md §2 and §7.',
+    code: `flowchart TB
+    S1["1. Protocol load<br/>groups · directionMode · weightStrategy"] --> S2["2. Directive set<br/>first occurrence wins · duplicates skipped"]
+    S2 --> S3["3. Effective maxScore<br/>protocol override > global > class > 100"]
+    S3 --> S4["4. Run directives<br/>asOf = last bar timestamp"]
+    S4 --> S5["5. Readiness<br/>ready · beta blocks · alpha excluded"]
+    S5 --> S6["6. Group accumulation<br/>capacity · signal · opportunity · direction"]
+    S6 --> S7["7. Direction filter<br/>presence test on own side"]
+    S7 -->|"none"| S8["8. No-evidence branch<br/>composite 0 · signalPct 0"]
+    S7 -->|"own side"| S9["9. Risk gate<br/>hard veto · soft modifiers · floor 0.05"]
+    S9 --> S10["10. Composite<br/>additive raw points · no clamp"]
+    S8 --> S11["11. Classification<br/>signalPct vs 6 / 13"]
+    S10 --> S11
+    S11 --> S12["12. Rarity<br/>percentile from score_snapshot"]
+    S12 --> S13["13. Market status<br/>venue calendar + freshness"]
+    S13 --> S14["14. Persist — the ONLY side effect<br/>score (always) · score_snapshot (unless skipped)"]
+    S14 --> S15["15. Return GatedScore<br/>the shape every consumer reads"]
+    style S14 fill:#16213e,stroke:#ef4444,color:#fff
+    style S8 fill:#16213e,stroke:#f59e0b,color:#fff`,
+  },
+  {
+    id: 'scoring-direction-filter',
+    label: 'Why the Signal Reads Zero — Direction Filter',
+    desc: 'The engine\'s most misread behaviour. A LONG_ONLY protocol counts ONLY bullish readings. When every directional directive reads bearish, bullishMax is 0, selected is "none", and the tick becomes NO_READING — composite 0 and signalPct 0 — even though the bearish case was measured and is stored in directionalEvidence. That is intended (bearish evidence must never increase BUY strength) and it is NOT a dropped score: the row is written to `score`. Measured BTC / btc-speed-v1, 2026-10-20: 09:36Z bullish 0/0, bearish 212/635 → 0/1295; 09:46Z bullish 37/60 → 37/1295 = 2.9% HOLD. Both are correct; the second is still tiny because of capacity dilution.',
+    code: `flowchart TB
+    TICK["tick: every non-gate directive read"] --> SPLIT{"which side did any directive read?"}
+    SPLIT -->|"bullish only"| BULL["bullishMax > 0"]
+    SPLIT -->|"bearish only"| BEAR["bearishMax > 0"]
+    SPLIT -->|"both"| BOTH["both sides populated"]
+    SPLIT -->|"neither — all neutral"| NEUTRAL["no directional evidence"]
+    BULL --> LOOK{"protocol.directionMode"}
+    BEAR --> LOOK
+    BOTH --> LOOK
+    LOOK -->|"LONG_ONLY"| LB{"bullishMax > 0 ?"}
+    LOOK -->|"SHORT_ONLY"| SB{"bearishMax > 0 ?"}
+    LB -->|"yes"| SCORE["signalRaw = bullishRaw<br/>signalPct = bullishRaw / configuredSignalMax"]
+    LB -->|"no"| NONE["selected: none"]
+    SB -->|"yes"| SCORE2["signalRaw = bearishRaw<br/>signalPct = bearishRaw / configuredSignalMax"]
+    SB -->|"no"| NONE
+    NEUTRAL --> NONE
+    NONE --> NR["NO_READING<br/>composite 0 · signalPct 0<br/>bearish evidence recorded, not counted"]
+    SCORE --> BAND{"signalPct"}
+    SCORE2 --> BAND
+    BAND -->|">= 13%"| STRONG["STRONG_BUY / STRONG_SELL"]
+    BAND -->|"6 - 12%"| TRADE["BUY / SELL"]
+    BAND -->|"< 6%"| HOLD["HOLD"]
+    style NR fill:#ef4444,color:#fff
+    style NONE fill:#ef4444,color:#fff
+    style STRONG fill:#22c55e,color:#000
+    style TRADE fill:#22c55e,color:#000
+    style HOLD fill:#f59e0b,color:#000`,
+  },
+  {
+    id: 'scoring-capacity-dilution',
+    label: 'Capacity Dilution — Why a Good Reading is a Small Percentage',
+    desc: 'signalPct divides ONE side\'s fired points by the WHOLE protocol\'s configured capacity. Adding a directive therefore subtracts from every future percentage even when it never fires. Measured 2026-10-20 over 7 days (GET /api/scoring/gated/thresholds): one-directive protocols reach 60–100%, three directives 42%, and multi-directive protocols 17–29% — btc-speed-v1 21.8% across 7,652 samples. Against entry 6% that is 28% of everything the protocol has ever achieved; against strong 13% it is 60%. Tracked as #1131 (thresholds vs measured ceiling) and #1122 (capacity that scores 0). Both are maths changes — copied config + monitored comparison, never an in-place edit.',
+    code: `flowchart LR
+    subgraph Num["Numerator — what fired"]
+        N1["bullishRaw = 37<br/>one directive, 37/60 = 62% of itself"]
+    end
+    subgraph Den["Denominator — configured capacity"]
+        D1["configuredSignalMax = 1295<br/>EVERY non-gate directive's maxScore"]
+        D2["includes directives that scored 0<br/>includes the capacity of the other side"]
+    end
+    Num --> PCT["signalPct = 37 / 1295 = 2.9%"]
+    Den --> PCT
+    PCT --> HOLD["HOLD — below entry 6%"]
+    subgraph Ceil["Measured ceilings, 7 days"]
+        C1["probe-1dir-rsi · 1 directive · 100%"]
+        C2["hourly-3dir-v1 · 3 · 42.4%"]
+        C3["xau-speed-m15 · 11 · 24.2%"]
+        C4["btc-speed-v1 · 21.8%"]
+    end
+    Ceil --> BAND["entry 6% = 28% of btc-speed-v1's ceiling<br/>strong 13% = 60% of it"]
+    style PCT fill:#0f3460,stroke:#0ea5a6,color:#fff
+    style HOLD fill:#f59e0b,color:#000
+    style BAND fill:#16213e,stroke:#ef4444,color:#fff`,
   },
   {
     id: 'provider-adapters',
@@ -1488,44 +1580,47 @@ const DIAGRAMS = [
   {
     id: 'protocol-direction',
     label: 'Protocol Direction Architecture',
-    desc: 'Protocols encode trading direction via directionMode (LONG_ONLY | SHORT_ONLY | BOTH). The automation loop compares LONG vs SHORT scores to determine trade direction. No direction query parameter -- direction is selected by choosing the right protocol.',
+    desc: 'directionMode declares the ONE side a protocol may count: LONG_ONLY | SHORT_ONLY. BOTH was deleted 2026-09-15 (#818) because deciding the side at runtime let a moving denominator choose it (#813) — do not re-add it. ⚠️ Directives are NOT filtered out of the protocol by directionBias: every directive in the protocol RUNS, and the filter is applied at accumulation (directionAllowed = LONG_ONLY && bullish, or SHORT_ONLY && bearish). Bearish readings in a LONG_ONLY protocol are recorded in directionalEvidence and excluded from both the numerator and observedSignalMax, which is why a one-sided tick can read NO_READING. Direction switching is produced by PAIRING a LONG protocol and a SHORT protocol on a ScoringStrategy (shortProtocolId): the loop scores both and the winner above the threshold decides. Setting `directionMode` per protocol is a SAFETY decision, not a convenience — LONG/SHORT pairing is the intended A/B mechanism.',
     code: `flowchart TB
-    subgraph Registry["PROTOCOL_REGISTRY"]
-        direction LR
-        R1["built-in-default<br/>directionMode: LONG_ONLY<br/>groups: DIRECTIVE_GROUPS"]
-        R2["built-in-short<br/>directionMode: SHORT_ONLY<br/>groups: SHORT_DIRECTIVE_GROUPS"]
-        R3["mt5-technical-core-v1<br/>directionMode: LONG_ONLY"]
-        R4["mt5-technical-short<br/>directionMode: SHORT_ONLY"]
+    subgraph Protocol["1. Protocol declares a side (config)"]
+        R1["directionMode: LONG_ONLY<br/>counts bullish readings only"]
+        R2["directionMode: SHORT_ONLY<br/>counts bearish readings only"]
+        R3["BOTH — DELETED 2026-09-15 (#818)<br/>must not be re-added"]
     end
 
-    subgraph Directives["Directive Filtering (protocol-gating.service.ts)"]
-        D1["6 directives with directionBias"]
-        D2["bullish (4): momentum-exhaustion, target-achieved, volume-surge, vwap"]
-        D3["bearish (2): cci, williams-r"]
-        D4["LONG_ONLY: exclude bearish directives"]
-        D5["SHORT_ONLY: exclude bullish directives"]
-        D1 --> D2
-        D1 --> D3
-        D2 --> D5
-        D3 --> D4
+    subgraph Directives["2. Every directive in the protocol RUNS"]
+        D1["all protocol directives execute"]
+        D2["each returns signalClass<br/>bullish · bearish · neutral"]
+        D3["directionBias is NOT used to<br/>remove a directive from the run"]
+        D1 --> D2 --> D3
     end
 
-    subgraph Scoring["ScoringStrategy (DB)"]
-        S1["protocolId: 'built-in-default'"]
-        S2["shortProtocolId: 'built-in-short'"]
-        S3["Dual-protocol scoring in automation loop"]
+    subgraph Filter["3. Filter at accumulation, not at run"]
+        F1["LONG_ONLY: only bullish adds<br/>to signalRaw / observedSignalMax"]
+        F2["SHORT_ONLY: only bearish adds"]
+        F3["the other side is RECORDED<br/>in directionalEvidence, not counted"]
+        F4["presence test decides the reading:<br/>no own-side reading = NO_READING"]
+        F1 --> F4
+        F2 --> F4
+        F3 --> F4
+    end
+
+    subgraph Scoring["4. ScoringStrategy pairing (DB)"]
+        S1["protocolId: the LONG protocol"]
+        S2["shortProtocolId: the SHORT protocol"]
+        S3["automation loop scores BOTH"]
         S1 --> S3
         S2 --> S3
     end
 
-    subgraph Decision["Trade Direction Decision"]
-        T1["Score with LONG protocol"]
-        T2["Score with SHORT protocol"]
-        T3{"longScore > shortScore<br/>AND above threshold?"}        
-        T4["🟢 BUY signal"]
-        T5{"shortScore > longScore<br/>AND above threshold?"}
-        T6["🔴 SELL signal"]
-        T7["⚪ HOLD -- both below threshold"]
+    subgraph Decision["5. Direction decision"]
+        T1["long signalPct"]
+        T2["short signalPct"]
+        T3{"long > short<br/>and >= entry 6%?"}
+        T4["BUY signal"]
+        T5{"short > long<br/>and >= entry 6%?"}
+        T6["SELL signal"]
+        T7["HOLD — both below threshold"]
         T1 --> T3
         T2 --> T5
         T3 -->|yes| T4
@@ -1534,21 +1629,23 @@ const DIAGRAMS = [
         T5 -->|no| T7
     end
 
-    Registry --> Directives --> Scoring --> Decision
+    Protocol --> Directives --> Filter --> Scoring --> Decision
 
-    style Registry fill:#1e3a5f,stroke:#3b82f6,color:#e5e7eb
+    style Protocol fill:#1e3a5f,stroke:#3b82f6,color:#e5e7eb
     style Directives fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
+    style Filter fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb
     style Scoring fill:#1a1a2e,stroke:#6366f1,color:#e5e7eb
-    style Decision fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb
+    style Decision fill:#1a1a2e,stroke:#22c55e,color:#e5e7eb
     style R1 fill:#22c55e,color:#000
     style R2 fill:#ef4444,color:#fff
-    style R3 fill:#22c55e,color:#000
-    style R4 fill:#ef4444,color:#fff
+    style R3 fill:#16213e,stroke:#64748b,stroke-dasharray:5 5,color:#94a3b8
     style D1 fill:#7c3aed,color:#fff
-    style D2 fill:#22c55e,color:#000
-    style D3 fill:#ef4444,color:#fff
-    style D4 fill:#475569,color:#e5e7eb
-    style D5 fill:#475569,color:#e5e7eb
+    style D2 fill:#7c3aed,color:#fff
+    style D3 fill:#7c3aed,color:#fff
+    style F1 fill:#475569,color:#e5e7eb
+    style F2 fill:#475569,color:#e5e7eb
+    style F3 fill:#475569,color:#e5e7eb
+    style F4 fill:#ef4444,color:#fff
     style S1 fill:#22c55e,color:#000
     style S2 fill:#ef4444,color:#fff
     style S3 fill:#6366f1,color:#fff
@@ -1765,7 +1862,7 @@ const DIAGRAM_STAGES = [
   ['Platform & Architecture', ['component-arch', 'data-arch', 'data-flow-architecture', 'deployment']],
   ['Data & Providers', ['provider-adapters', 'provider-failover', 'earnings-pipeline', 't212-portfolio-flow', 'protocol-calendar', 'seasonality-heatmap']],
   ['Symbols & Protocols', ['protocol-symbol-resolution', 'symbol-protocol-authority', 'protocol-direction', 'scoring-dual-score', 'activation-gate']],
-  ['Scoring (SEES)', ['sees-research', 'sees-trading', 'sees-automation', 'scoring-gating', 'scoring-paths', 'speed-scanner', 'adaptive-loop-timing']],
+  ['Scoring (SEES)', ['sees-research', 'sees-trading', 'sees-automation', 'scoring-engine-stages', 'scoring-gating', 'scoring-direction-filter', 'scoring-capacity-dilution', 'scoring-paths', 'speed-scanner', 'adaptive-loop-timing']],
   ['Signals & Alerts', ['signal-state-machine', 'alert-center', 'calibration']],
   ['Trading, Exit & A/B', ['mt5-execution', 'automation-orchestration', 'exit-signals', 'ab-duplication', 'ab-contract']],
   ['META.Stack', ['metastack-product', 'metastack-rating', 'metastack-signature', 'metastack-lifecycle']],

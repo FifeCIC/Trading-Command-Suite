@@ -42,6 +42,8 @@ import {
   RiskGateResult,
 } from './risk-gating-engine.service';
 import { normalizeScorePercent, selectDirectionalEvidence } from './score-units';
+import { THRESHOLD_BASIS, EARN_ABLE_BAR, classifyBothBases } from './signal-threshold-basis';
+import { NEUTRAL_ONLY_DIRECTIVES } from '../directives/directive-capabilities.generated';
 import {
   RARITY_BANDS,
   RARITY_MIN_SAMPLES,
@@ -263,6 +265,32 @@ export interface GatedScore {
      *  directional evidence this tick. DIAGNOSTIC ONLY — it shrinks when a directive reads
      *  neutral, so dividing by it inflates the percentage. Never use it as a denominator. */
     observedSignalMax: number;
+    /** EARN-ABLE capacity: `configuredSignalMax` minus the maxScore of directives that can never
+     *  emit a direction (`NEUTRAL_ONLY_DIRECTIVES`, generated from directive source). REPORTING
+     *  ONLY (#1131) — `signalPct` still divides by `configuredSignalMax`, so no label moves.
+     *
+     *  Why it is reported: a protocol whose divisor is largely unearnable reaches `STRONG` at a far
+     *  lower share of what it could actually achieve, so the SAME 13% means different things in
+     *  different protocols (measured: 31% unearnable for `xau-speed-m15`, 58% for `vix-spike-v1`).
+     *  Excluding it from the divisor is NOT a drop-in fix: replayed over 5,873 recorded ticks it
+     *  would move 1,397 (24%) across a threshold, and `vix-spike-v1` would label all 101 of its ticks
+     *  STRONG. The divisor and the thresholds must move together — issue #1131. */
+    earnableSignalMax: number;
+    /** #1131 — the threshold-basis comparison, persisted on every tick so `signal` and
+     *  `signalAtEarnable` are two labels for ONE reading rather than two runs. `active` names which
+     *  basis actually decided `signal`; it is `'configured'` (the incumbent) unless
+     *  `THRESHOLD_BASIS` is flipped, which is a maths change. */
+    thresholdBasis: {
+      active: 'configured' | 'earnable';
+      /** The DECLARED earn-able bar, before conversion — auditable without parsing source. */
+      earnableBar: { entry: number; strong: number };
+      entry: number;
+      strong: number;
+      earnableEntry: number;
+      earnableStrong: number;
+      signalPctEarnable: number;
+      signalAtEarnable: string;
+    };
     /** Count of directives eligible to express direction (matches `configuredSignalMax`). */
     directionEligibleDirectives: number;
   };
@@ -681,6 +709,12 @@ export class ProtocolGatingService {
     let capacityMaxTotal = 0;
     let observedMaxTotal = 0;
     let directionEligibleTotal = 0;
+    // #1131 — earned-vs-earnable split. `capacityMaxTotal` is what the protocol CONFIGURES;
+    // `earnableMaxTotal` removes the maxScore of directives that cannot emit a direction in any
+    // market (generated from source by `scripts/gen-directive-capabilities.cjs`). Reporting only:
+    // the classification denominator stays `capacityMaxTotal`, because moving it alone was measured
+    // to push 1,397 of 5,873 recorded ticks across a threshold (see `earnableSignalMax` docs).
+    let earnableMaxTotal = 0;
     let bullishRaw = 0;
     let bullishMax = 0;
     let bearishRaw = 0;
@@ -843,6 +877,7 @@ export class ProtocolGatingService {
         if (!isGateGroup) {
           capacityMax += maxScore;
           directionEligibleCount++;
+          if (!directiveId || !NEUTRAL_ONLY_DIRECTIVES.has(directiveId)) earnableMaxTotal += maxScore;
         }
 
         // Opportunity: everything counts.
@@ -1023,6 +1058,31 @@ export class ProtocolGatingService {
       signal = 'HOLD';
     }
 
+    // ── #1131 — the counterfactual label, on the EARN-ABLE basis ────────────────
+    // `signal` above is still decided by the incumbent configured-capacity basis, exactly as before.
+    // This computes what the SAME reading would be labelled if the bar were expressed against
+    // earnable capacity (13% of what the protocol can actually earn, not 13% of a divisor that
+    // contains points nothing can reach). Both are persisted so the comparison is on identical
+    // ticks — which is the "copied configuration" the maths rule requires, without duplicating a
+    // protocol. The ACTIVE basis is `THRESHOLD_BASIS`; it stays 'configured' until the persisted
+    // comparison has been read (see the DECISION in signal-threshold-basis.ts).
+    const basis = classifyBothBases(selectedEvidence.raw, selectedDirection, {
+      configured: capacityMaxTotal,
+      earnable: earnableMaxTotal,
+      entry: ENTRY_THRESHOLD,
+      strong: STRONG_PCT,
+    });
+    if (THRESHOLD_BASIS === 'earnable') {
+      signal = basis.earnable.label as typeof signal;
+    }
+
+    // ⚠️ A tick with no directional evidence has NO label on either basis — the persisted state for
+    // those ticks is `NO_READING` (this file, ~L1105) and the returned one is `NO_DATA`. Returning the
+    // module's 'HOLD' here would be a third vocabulary and, worse, would render as "the bases
+    // disagree" on a tick where neither has a reading at all. The two are NOT interchangeable: HOLD
+    // is a decision not to trade, NO_READING is nothing having been measured.
+    const signalAtEarnable = hasDirectionalEvidence ? basis.earnable.label : 'NO_READING';
+
     // Meta: composite is the plain sum — no gating reduction to report.
     // compositePct is the normalized signal strength used for classification.
     const riskScore = subScores['risk'] ?? 50; // 50 = neutral risk baseline
@@ -1095,6 +1155,32 @@ export class ProtocolGatingService {
             denominatorMode: 'configured-capacity',
             observedSignalMax: totalMax,
             configuredSignalMax: capacityMaxTotal,
+
+            earnableSignalMax: earnableMaxTotal,
+
+            thresholdBasis: {
+
+              active: THRESHOLD_BASIS,
+
+              // The DECLARED bar, un-converted. Exposed so a reader can audit the constant without
+
+              // parsing the .ts source (see scripts/audit-threshold-basis-calibration.cjs).
+
+              earnableBar: { entry: EARN_ABLE_BAR.entry, strong: EARN_ABLE_BAR.strong },
+
+              entry: basis.configured.entry,
+
+              strong: basis.configured.strong,
+
+              earnableEntry: Math.round(basis.earnable.entry * 100) / 100,
+
+              earnableStrong: Math.round(basis.earnable.strong * 100) / 100,
+
+              signalPctEarnable: Math.round(basis.pctEarnable * 10) / 10,
+
+              signalAtEarnable,
+
+            },
           },
           { skipRaritySnapshot: true },
         );
@@ -1156,6 +1242,32 @@ export class ProtocolGatingService {
         denominatorMode: 'configured-capacity',
         observedSignalMax: totalMax,
         configuredSignalMax: capacityMaxTotal,
+
+        earnableSignalMax: earnableMaxTotal,
+
+        thresholdBasis: {
+
+          active: THRESHOLD_BASIS,
+
+          // The DECLARED bar, un-converted. Exposed so a reader can audit the constant without
+
+          // parsing the .ts source (see scripts/audit-threshold-basis-calibration.cjs).
+
+          earnableBar: { entry: EARN_ABLE_BAR.entry, strong: EARN_ABLE_BAR.strong },
+
+          entry: basis.configured.entry,
+
+          strong: basis.configured.strong,
+
+          earnableEntry: Math.round(basis.earnable.entry * 100) / 100,
+
+          earnableStrong: Math.round(basis.earnable.strong * 100) / 100,
+
+          signalPctEarnable: Math.round(basis.pctEarnable * 10) / 10,
+
+          signalAtEarnable,
+
+        },
         // ── ⚠️ SHAPE PARITY WITH THE CANONICAL RETURN — do not remove ──────────────────────
         // This early return used to omit `meta` entirely, and the `as any` on the closing
         // brace meant TypeScript never noticed the two return paths disagreed.
@@ -1192,6 +1304,32 @@ export class ProtocolGatingService {
           weightStrategy,
           denominatorMode: 'configured-capacity',
           configuredSignalMax: capacityMaxTotal,
+
+          earnableSignalMax: earnableMaxTotal,
+
+          thresholdBasis: {
+
+            active: THRESHOLD_BASIS,
+
+            // The DECLARED bar, un-converted. Exposed so a reader can audit the constant without
+
+            // parsing the .ts source (see scripts/audit-threshold-basis-calibration.cjs).
+
+            earnableBar: { entry: EARN_ABLE_BAR.entry, strong: EARN_ABLE_BAR.strong },
+
+            entry: basis.configured.entry,
+
+            strong: basis.configured.strong,
+
+            earnableEntry: Math.round(basis.earnable.entry * 100) / 100,
+
+            earnableStrong: Math.round(basis.earnable.strong * 100) / 100,
+
+            signalPctEarnable: Math.round(basis.pctEarnable * 10) / 10,
+
+            signalAtEarnable,
+
+          },
           observedSignalMax: totalMax,
           directionEligibleDirectives: directionEligibleTotal,
           readinessBreakdown: { ready: readyCount, beta: betaCount, alpha: alphaCount, alphaExcluded: alphaCount },
@@ -1298,6 +1436,32 @@ export class ProtocolGatingService {
       denominatorMode: 'configured-capacity',
       observedSignalMax: totalMax,
       configuredSignalMax: capacityMaxTotal,
+
+      earnableSignalMax: earnableMaxTotal,
+
+      thresholdBasis: {
+
+        active: THRESHOLD_BASIS,
+
+        // The DECLARED bar, un-converted. Exposed so a reader can audit the constant without
+
+        // parsing the .ts source (see scripts/audit-threshold-basis-calibration.cjs).
+
+        earnableBar: { entry: EARN_ABLE_BAR.entry, strong: EARN_ABLE_BAR.strong },
+
+        entry: basis.configured.entry,
+
+        strong: basis.configured.strong,
+
+        earnableEntry: Math.round(basis.earnable.entry * 100) / 100,
+
+        earnableStrong: Math.round(basis.earnable.strong * 100) / 100,
+
+        signalPctEarnable: Math.round(basis.pctEarnable * 10) / 10,
+
+        signalAtEarnable,
+
+      },
     });
 
     return {
@@ -1346,6 +1510,32 @@ export class ProtocolGatingService {
         // market condition score differently just because a directive went quiet.
         denominatorMode: 'configured-capacity',
         configuredSignalMax: capacityMaxTotal,
+
+        earnableSignalMax: earnableMaxTotal,
+
+        thresholdBasis: {
+
+          active: THRESHOLD_BASIS,
+
+          // The DECLARED bar, un-converted. Exposed so a reader can audit the constant without
+
+          // parsing the .ts source (see scripts/audit-threshold-basis-calibration.cjs).
+
+          earnableBar: { entry: EARN_ABLE_BAR.entry, strong: EARN_ABLE_BAR.strong },
+
+          entry: basis.configured.entry,
+
+          strong: basis.configured.strong,
+
+          earnableEntry: Math.round(basis.earnable.entry * 100) / 100,
+
+          earnableStrong: Math.round(basis.earnable.strong * 100) / 100,
+
+          signalPctEarnable: Math.round(basis.pctEarnable * 10) / 10,
+
+          signalAtEarnable,
+
+        },
         observedSignalMax: totalMax,
         directionEligibleDirectives: directionEligibleTotal,
         // ── Readiness breakdown — see docs/readiness-tiers.md ──
@@ -1768,6 +1958,20 @@ export class ProtocolGatingService {
       observedSignalMax?: number;
       /** Sum of maxScores for ALL directives eligible to express direction this tick. */
       configuredSignalMax?: number;
+      /** `configuredSignalMax` minus capacity that can never be earned (#1131). Reporting only —
+       *  the divisor and the thresholds move together or not at all; see issue #1131. */
+      earnableSignalMax?: number;
+      /** #1131 — threshold-basis comparison for this tick (see `meta.thresholdBasis`). */
+      thresholdBasis?: {
+        active: string;
+        earnableBar?: { entry: number; strong: number };
+        entry: number;
+        strong: number;
+        earnableEntry: number;
+        earnableStrong: number;
+        signalPctEarnable: number;
+        signalAtEarnable: string;
+      };
       /**
        * The DIRECTION SPLIT the engine actually saw, BEFORE `directionMode` filtered it.
        *
@@ -1921,6 +2125,19 @@ export class ProtocolGatingService {
               denominatorMode: breakdownData.denominatorMode ?? 'observed-fallback',
               observedSignalMax: breakdownData.observedSignalMax ?? null,
               configuredSignalMax: breakdownData.configuredSignalMax ?? null,
+              // ── #1131 — the earn-able pair and the basis comparison ────────────────────────
+              // ⚠️ THESE ARE LISTED EXPLICITLY, AND THAT IS THE WHOLE POINT. This literal is
+              // constructed field by field; it does NOT spread `breakdownData`. So a field added to
+              // the `breakdownData` type is accepted by TypeScript, computed in `scoreWithGating()`,
+              // returned in `meta` to every caller — and SILENTLY DROPPED here on the way to the DB.
+              //
+              // Measured 2026-10-21: `earnableSignalMax` and `thresholdBasis` were absent from every
+              // persisted row for eight hours while `GET /api/scoring/gated/...` returned both
+              // correctly. Every live check passed. Only decoding a stored row showed it. This is the
+              // second time this exact trap has bitten (`directionalEvidence` was the first, see the
+              // note above) — if you add a diagnostic field, add it HERE or it does not exist.
+              earnableSignalMax: breakdownData.earnableSignalMax ?? null,
+              thresholdBasis: breakdownData.thresholdBasis ?? null,
               // Opportunity score (Phase C dual-score model) — additive
               // "everything counts" total for SCREENING / ranking. Kept
               // alongside the directional signal.

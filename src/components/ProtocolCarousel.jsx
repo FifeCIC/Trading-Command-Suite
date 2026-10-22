@@ -245,15 +245,27 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
                   run should approach. It is the sum of EVERY directive's maximum, and several are
                   mutually exclusive by design, so no run can ever reach it — a protocol that scores
                   12% of it is behaving normally. Labelled here so the number stops implying a score. */}
+              {/* ⚠️ EVERY META FIELD IS NULLABLE (2026-10-22). This track is shared: the Backtest
+                  Lab lists STRATEGIES in it as well as protocols (#1134), and a bot has no
+                  directive count and no ceiling of its own — those belong to its protocol. Rendering
+                  them unconditionally printed "undefined directives · ceiling undefined", which
+                  reads as a broken protocol rather than as a bot. A field that is absent now renders
+                  nothing, so one track serves both subjects without a second component. */}
               <div className="pc-meta">
-                <span>{item.directiveCount} directives</span>
-                <span className="pc-dot" aria-hidden="true">·</span>
-                <span title="Sum of every directive's maximum — a theoretical ceiling no run can reach, because several directives cannot fire on the same bar.">
-                  ceiling {item.maxScore}
-                </span>
+                {item.directiveCount != null && <span>{item.directiveCount} directives</span>}
+                {item.directiveCount != null && item.maxScore != null && (
+                  <span className="pc-dot" aria-hidden="true">·</span>
+                )}
+                {item.maxScore != null && (
+                  <span title="Sum of every directive's maximum — a theoretical ceiling no run can reach, because several directives cannot fire on the same bar.">
+                    ceiling {item.maxScore}
+                  </span>
+                )}
                 {item.recommendedTimeframe && (
                   <>
-                    <span className="pc-dot" aria-hidden="true">·</span>
+                    {(item.directiveCount != null || item.maxScore != null) && (
+                      <span className="pc-dot" aria-hidden="true">·</span>
+                    )}
                     <span>{item.recommendedTimeframe}</span>
                   </>
                 )}
