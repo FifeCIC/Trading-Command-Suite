@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import BacktestPeriodsPanel from '../components/backtest/BacktestPeriodsPanel';
 import './trading-platforms.css';
 import './backtest-data.css';
+import './backtest-lab.css';
 
 const STATUS_COLORS = {
   ok: 'tp-chip--ok',
@@ -238,6 +240,28 @@ export default function BacktestDataPage() {
           </tbody>
         </table>
       </div>
+
+      {/* ── CAPTURED WINDOWS ──────────────────────────────────────────────────────────────────────
+          ⚠️ MOVED HERE FROM `/lab/backtest` (2026-10-22, owner direction: "It feels like something that
+          should be listed on Backtest Data"). The argument is structural, not cosmetic: a captured
+          period is DATA — a named, noted, imported window of bars — and this page is the inventory of
+          data. Leaving it on the Lab put a storage-management control in the middle of a measurement
+          form, and the Lab was the wrong place to discover that a window has no bars.
+
+          `onRunPeriod` is deliberately NOT passed: running is the Lab's job, and a "Run this period"
+          button here would be the second entrance to the same action. The Lab's Window control lists
+          every period this panel creates. */}
+      <section className="btd-periods">
+        <header className="tp-page-header">
+          <h2>Captured windows</h2>
+          <p>
+            Named, dated windows of stored bars. These are what the Backtest Lab&rsquo;s <strong>Window</strong>
+            {' '}control offers — a period is a statement about <em>where</em> to look, which is why a run
+            measured against one is comparable with a run measured next week.
+          </p>
+        </header>
+        <BacktestPeriodsPanel />
+      </section>
     </div>
   );
 }

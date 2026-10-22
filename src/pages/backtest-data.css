@@ -14,3 +14,9 @@
 .btd-rec-btn-dim { cursor: pointer; padding: 2px 6px; font-size: 10px; opacity: 0.6; }
 .btd-empty { text-align: center; padding: 24px; color: var(--ink-soft); }
 .btd-star { color: var(--accent, var(--accent)); margin-right: 4px; }
+
+/* Captured windows, hosted on the Backtest Data page (#1136). Not restyled — the panel brings its own
+ * `.btp-*` stylesheet; this only gives it room and separates it from the symbol inventory. */
+.btd-periods { margin-top: 1.75rem; }
+.btd-periods .tp-page-header { margin-bottom: 0.6rem; }
+.btd-periods .tp-page-header p { max-width: 70ch; color: var(--ink-soft); font-size: 0.82rem; }

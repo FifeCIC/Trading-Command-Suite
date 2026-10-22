@@ -283,12 +283,13 @@ export const NAV_TREE = {
     label: 'Lab',
     views: [
       // ── Backtesting & replay — "what would have happened?" ──
-      { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
-// #823 — Protocol backtesting answers a DIFFERENT question from strategy backtesting (scores vs
-// trades), so it is a sibling view rather than a section of the engine page. Owner direction,
-// 2026-10-16: "we should have 'Protocol Backtesting' (generates scores) and 'Strategy
-// Backtesting' (generates trades): two different views."
-{ id: 'protocol-backtest', label: 'Protocol Backtesting', icon: '⌗' },
+      { id: 'backtest', label: 'Backtest Lab', icon: '⬡' },
+      // ⚠️ `protocol-backtest` RETIRED 2026-10-22 (#1134, owner direction). It was a sibling view
+      // from 2026-10-16 because scores and trades are different questions — that is still true, so
+      // the question is now the page's SUBJECT TOGGLE (Protocols | Strategies) rather than a second
+      // route. The reason is measured: `/api/replay/run` stored nothing, so a protocol backtest
+      // could never be compared, while `/api/backtest/run` — the engine behind this one route —
+      // stores every run and compares two of them. One route, one history, both questions.
       // #823 Stage 1 — `backtest-data` was mapped in `view-routes.jsx` but had NO nav entry, so it
       // was reachable only by typing the URL. Stage 1's own criterion: "a page nobody can find is
       // effectively absent". Surfaced rather than rebuilt.

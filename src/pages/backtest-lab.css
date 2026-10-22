@@ -111,14 +111,14 @@
   color: var(--ink-soft);
 }
 .pb-strip-item strong { font-size: 1rem; }
-.pb-strip-item--signal strong { color: var(--color-buy); }
+.pb-strip-item--signal strong { color: var(--risk-normal); }
 .pb-strip-item--muted strong { color: var(--ink-soft); }
 /* The window holds fewer bars than the engine needs — the same condition the timeframe menu marks
    with "— needs 30". `--risk-high` is the themed severity token; the fallback is a token, not a
    literal, because a hex here would ignore every theme pack (validate-css-literals.cjs).
    ⚠️ TONE ON THE VALUE, NOT THE CARD: a full coloured value inside a neutral chip keeps the strip
    readable when only one of six facts is a warning. */
-.pb-strip-item--warn strong { color: var(--risk-high, var(--color-warning)); }
+.pb-strip-item--warn strong { color: var(--risk-high); }
 /* Values that are TEXT (a date range, an operation budget) rather than a single number: the 1rem
    stat size is for quantities and makes these two overflow their chip. */
 .pb-strip-item--text strong { font-size: 0.82rem; }
@@ -158,10 +158,10 @@
   font-variant-numeric: tabular-nums;
 }
 .pb-mono--strong { font-weight: 700; color: var(--ink); }
-.pb-up { color: var(--color-buy); }
-.pb-down { color: var(--color-sell); }
-.pb-yes { font-weight: 700; color: var(--color-buy); }
-.pb-no { color: var(--color-muted); }
+.pb-up { color: var(--risk-normal); }
+.pb-down { color: var(--risk-critical); }
+.pb-yes { font-weight: 700; color: var(--risk-normal); }
+.pb-no { color: var(--text-faint); }
 
 .pb-detail { padding: 0.75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .pb-detail h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
@@ -191,7 +191,7 @@
   cursor: pointer;
 }
 .pb-subject-btn:hover { color: var(--ink); }
-.pb-subject-btn--on { background: var(--accent); color: var(--accent-ink, #06121f); }
+.pb-subject-btn--on { background: var(--accent); color: var(--bg); }
 .pb-subject-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* The panel that carries the track + run fields. Sits above the results so the subject is chosen
@@ -214,10 +214,10 @@
   gap: 0.6rem;
   margin-top: 0.75rem;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--risk-high, var(--color-warning));
+  border: 1px solid var(--risk-high);
   border-left-width: 3px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--risk-high, var(--color-warning)) 10%, transparent);
+  background: color-mix(in srgb, var(--risk-high) 10%, transparent);
   font-size: 0.8rem;
   color: var(--ink);
 }
@@ -235,3 +235,130 @@
 }
 .pb-detail-head h3 { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-size: 0.95rem; }
 .bt-score-detail { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* ── Settings inventory panel (#1136) ─────────────────────────────────────────────────────────── */
+
+.bt-inventory { display: flex; flex-direction: column; gap: 0.75rem; }
+.bt-inventory-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.bt-inventory-head h3 { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-size: 0.95rem; }
+.bt-inventory-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.inv-count {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.inv-count--on { border-color: var(--risk-normal); color: var(--risk-normal); }
+.inv-count--part { border-color: var(--risk-high); color: var(--risk-high); }
+.inv-count--off { color: var(--text-faint); }
+.bt-inventory-filters { align-items: center; }
+.bt-inventory-note { margin: 0; }
+.bt-inventory-group { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.35rem; }
+.bt-inventory-group h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.inv-group-n {
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--bg-elev, var(--panel));
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A setting that does nothing inside a run is dimmed — but NOT hidden, and its badge still carries the
+ * word. Colour alone would fail the accessibility policy and would not survive a high-contrast theme. */
+.inv-row--off .inv-label,
+.inv-row--off .inv-value { color: var(--text-faint); }
+.inv-label { display: block; font-weight: 600; }
+.inv-key {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.inv-value { max-width: 14rem; overflow-wrap: anywhere; }
+.inv-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.inv-badge--on { border-color: var(--risk-normal); color: var(--risk-normal); }
+.inv-badge--part { border-color: var(--risk-high); color: var(--risk-high); }
+.inv-badge--off { color: var(--text-faint); }
+
+/* Run-scoped override inputs (#1136). An input is a control, so it uses the canonical Form System
+ * field styling rather than a local one — only the wrapper and the reset affordance are new. */
+.bt-inventory-override-note { margin: 0; line-height: 1.5; }
+.inv-input-wrap { display: inline-flex; align-items: center; gap: 0.35rem; }
+.inv-input {
+  width: 6.5rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.inv-reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.inv-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* An overridden row is marked by a BORDER as well as the badge: colour alone fails the accessibility
+ * policy and disappears in a high-contrast theme. */
+.inv-row--dirty td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.inv-badge--edit { margin-left: 0.3rem; border-color: var(--accent); color: var(--accent); }
+
+/* ── Reference tab strip (#1136) ────────────────────────────────────────────────────────────────
+ * Three reference panels share one slot. The run form and its RESULT stay adjacent above; only the
+ * material you consult is tabbed, so the page is roughly a third of its former height.
+ * Buttons rather than links: nothing navigates, and the panels are already in the DOM. */
+.bt-ref-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev, var(--panel));
+}
+.bt-ref-tab {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bt-ref-tab:hover { color: var(--ink); background: var(--bg-elev-2, var(--panel)); }
+.bt-ref-tab--on {
+  color: var(--ink);
+  background: var(--panel);
+  border-color: var(--line);
+}
+.bt-ref-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

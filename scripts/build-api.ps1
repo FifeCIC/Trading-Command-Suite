@@ -323,15 +323,73 @@ $errLog = Join-Path $logDir 'console-build-api-err.log'
 # ⚠️ `node dist/src/main.js` — NOT `npm run start`. This is the form the team has been using
 # manually to recover from this script's own restart failures; it is the same artefact the
 # build just wrote, starts in seconds, and produces a log file that the DOWN report can tail.
-$apiProc = Start-Process -FilePath 'node' -ArgumentList 'dist/src/main.js' `
-    -WorkingDirectory $nestDir `
-    -RedirectStandardOutput $outLog `
-    -RedirectStandardError $errLog `
-    -WindowStyle Hidden -PassThru
+#
+# ── ⚠️ STARTED VIA WMI SO THE CALLER CAN RETURN (2026-10-22) ──────────────────────────────────
+# WHY THIS IS NOT `Start-Process`. Measured: `build:api` finished its work — log complete, API
+# healthy, `/api/version` answering, no jest/tsc process alive — and the CALLING SHELL still reported
+# "running" minutes later. It returned only when a LATER build stopped that API.
+#
+# The cause is process OWNERSHIP, not output redirection: a `Start-Process` child is a DESCENDANT of
+# the caller, and the caller waits for its process tree to drain. A server never drains, so the call
+# never returns. `$apiProc.Dispose()` was tried and does NOT fix it — it drops a .NET handle, not an
+# OS parent-child relationship.
+#
+# `Win32_Process.Create` parents the new process to **WmiPrvSE.exe**, not to this script. The tree
+# the caller waits on therefore ends when this script exits, and the API keeps running — which is what
+# "starting in the background" was always supposed to mean.
+#
+# ⚠️ Redirection moves into `cmd.exe`, because WMI cannot attach standard handles. The log paths are
+# unchanged, so `nest/logs/console-build-api*.log` remains the answer to "where is the log".
+#
+# Falls back to `Start-Process` if WMI is unavailable or refused — a slow call is far better than an
+# API that did not start.
+$apiProc = $null
+try {
+    $redirected = "cmd.exe /c node dist/src/main.js 1> `"$outLog`" 2> `"$errLog`""
+    $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create `
+        -Arguments @{ CommandLine = $redirected; CurrentDirectory = $nestDir } -ErrorAction Stop
+    if ($created.ReturnValue -eq 0 -and $created.ProcessId) {
+        Start-Sleep -Milliseconds 250
+        $apiProc = Get-Process -Id $created.ProcessId -ErrorAction Stop
+        Write-Ok "API starting DETACHED via WMI (pid $($created.ProcessId)) — this script's caller will not wait on it."
+    }
+} catch {
+    Write-Host "   ⚠ WMI launch unavailable ($($_.Exception.Message)) — falling back to Start-Process." -ForegroundColor Yellow
+}
+if (-not $apiProc) {
+    $apiProc = Start-Process -FilePath 'node' -ArgumentList 'dist/src/main.js' `
+        -WorkingDirectory $nestDir `
+        -RedirectStandardOutput $outLog `
+        -RedirectStandardError $errLog `
+        -WindowStyle Hidden -PassThru
+    Write-Ok "API starting (pid $($apiProc.Id)) — ⚠ as a CHILD of this shell, so the caller may wait until it stops."
+}
 Write-Ok "API starting in the background (node dist/src/main.js, PID $($apiProc.Id))."
 
 # The post-restart assertion (#933): a REAL request must answer, or the script fails LOUDLY.
-if (Assert-ApiUp -Port 3201 -TimeoutSeconds 60 -Proc $apiProc) {
+$healthy = Assert-ApiUp -Port 3201 -TimeoutSeconds 60 -Proc $apiProc
+
+# ⚠️ DROPS OUR REFERENCE ONLY. The API is a separate process and is NOT stopped by this.
+$apiProc.Dispose()
+
+# ⚠️ MEASURED 2026-10-22 — DISPOSING THE HANDLE DID **NOT** FIX THE HANG, and this note exists so
+# nobody "fixes" it again on the same theory.
+#
+# The symptom: `npm --prefix nest run build:api` finishes its work and then the CALLER WAITS — for
+# minutes — with no output. Measured with a stopwatch: the build log was complete at 22:20:46
+# ("Build succeeded", "API healthy"), `/api/version` answered 0.138.0, no jest/tsc/build process was
+# alive, and the calling shell still reported "running" past 22:28. It reported completion only once a
+# LATER build stopped that API process.
+#
+# That last sentence is the mechanism: the restarted API remains a DESCENDANT of the shell that
+# launched this script, and the caller waits for its process tree to drain. A running API never
+# drains. `$apiProc.Dispose()` releases the .NET handle (correct hygiene, kept) but does not detach
+# the OS process, so it changes nothing about the wait.
+#
+# What actually avoids it: run this script ASYNCHRONOUSLY and treat "API healthy" in the log as
+# completion, rather than blocking on the call.
+
+if ($healthy) {
     Write-Ok 'API healthy on http://localhost:3201 — /api/version answered.'
     Release-BuildLock
 } else {

@@ -3,7 +3,9 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
 import { BacktestPeriodService } from './backtest-period.service';
 import type { CreatePeriodInput } from './backtest-period.service';
+import { buildSettingsInventory } from './settings-inventory';
 import { PrismaService } from '../../database/prisma.service';
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import type { BacktestRunRequest } from './backtest.service';
 
 /**
@@ -31,6 +33,7 @@ export class BacktestController {
     private readonly backtestService: BacktestService,
     private readonly periods: BacktestPeriodService,
     private readonly prisma: PrismaService,
+    private readonly settingsResolver: SettingsResolverService,
   ) {}
 
   @Get('datasets')
@@ -117,8 +120,69 @@ export class BacktestController {
 
   @Get('data-inventory')
   @ApiOperation({ summary: 'Comprehensive market bar inventory — all symbols with bar counts, date ranges, providers, and backtest run stats' })
-  async dataInventory() {
-    return this.backtestService.getDataInventory();
+  async dataInventory(@Query('fresh') fresh?: string) {
+    // `?fresh=1` bypasses the 60-second memo (see `getDataInventory`) — for a caller that has just
+    // imported bars and wants the new rows now.
+    return this.backtestService.getDataInventory({ fresh: fresh === '1' || fresh === 'true' });
+  }
+
+  /**
+   * GET /api/backtest/settings-inventory — EVERY knob an operator could change, and whether a RUN
+   * honours it (#1136).
+   *
+   * ⚠️ WHY THIS IS AN ENDPOINT AND NOT A HARDCODED LIST IN THE PAGE. `applied` is a claim about the
+   * engine, and a claim in a JSX file cannot be checked. Here it comes from
+   * `settings-inventory.ts`, whose declared maps are driven by `settings-inventory.spec.ts` against
+   * the real `mergeBotConfig()` and against `backtest.service.ts` itself — so if the engine stops
+   * reading `slPct`, or starts reading `minComposite`, the build goes red instead of the page going
+   * quietly wrong.
+   *
+   * Read-only by design: this lists and judges, it edits nothing. Editing from the Lab is #1133.
+   */
+  @Get('settings-inventory')
+  @ApiOperation({ summary: 'Every configurable knob, with whether a backtest run honours it (#1136)' })
+  async settingsInventory(
+    @Query('protocolId') protocolId?: string,
+    @Query('botId') botId?: string,
+  ) {
+    const [settings, bot, protocolRow] = await Promise.all([
+      this.settingsResolver.getAll().catch(() => []),
+      botId
+        ? this.prisma.tradingStrategy.findUnique({ where: { id: botId } }).catch(() => null)
+        : Promise.resolve(null),
+      // ⚠️ `protocol` BY SLUG, not `scoring_strategy`. Verified 2026-10-22 with `db-schema.cjs`:
+      // `scoring_strategy` has NO `slug` column (it keys on `protocolId`), so a `findFirst({ where:
+      // { slug } })` against it would have thrown on every request. `protocol.slug` is unique, and
+      // it is what the Lab holds as `protocolId`.
+      protocolId
+        ? this.prisma.protocol.findUnique({ where: { slug: protocolId } }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    // Truthiness for `active`: it is a `tinyint(1)` and arrives as 0/1. Everything else is passed
+    // through as stored — no derived fields are invented here.
+    const protocol = protocolRow
+      ? {
+        ...(protocolRow as Record<string, unknown>),
+        active: Boolean((protocolRow as Record<string, unknown>).active),
+      }
+      : null;
+
+    // `getAll()` returns declared settings with { key, label, value, source, ... } — the registry is
+    // the canonical list, so its rows are passed through rather than re-declared here.
+    const inventory = buildSettingsInventory({
+      settings: (settings as Array<Record<string, unknown>>) ?? [],
+      bot: (bot as Record<string, unknown> | null) ?? null,
+      protocol: protocol as Record<string, unknown> | null,
+    });
+
+    return {
+      note:
+        'applied: "honoured" = a backtest run reads it. "reported-only" = echoed into the result so a '
+        + 'run can say which configuration it measured, but it decides nothing. "ignored" = it exists '
+        + 'and does nothing inside a run, whatever the surface implies.',
+      ...inventory,
+    };
   }
 
   /**

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 186,
+  "count": 187,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -213,6 +213,14 @@
       "reaches": [
         "npm"
       ]
+    },
+    {
+      "name": "db-retention.cjs",
+      "where": "repo",
+      "category": "database",
+      "purpose": "trim OPERATIONAL HISTORY, never measurement history.",
+      "selfTest": true,
+      "reaches": null
     },
     {
       "name": "db-schema.cjs",

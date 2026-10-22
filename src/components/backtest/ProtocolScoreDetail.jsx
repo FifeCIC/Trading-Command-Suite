@@ -85,7 +85,6 @@ const n1 = (v) => (typeof v === 'number' ? v.toFixed(2) : '—');
 
 export default function ProtocolScoreDetail({
   protocolId,
-  protocolName,
   symbol,
   timeframe,
   periodId,
@@ -208,6 +207,14 @@ export default function ProtocolScoreDetail({
             Scores are measured against the protocol&rsquo;s <strong>configured</strong> directional
             capacity, which is the ceiling shown on its card — a score of 12% of it is normal, not
             weak.
+            <br />
+            <br />
+            <strong>⚠️ It has its own budget, and the frozen window can exceed it.</strong> The replay
+            engine stops at <strong>20 seconds</strong> and reports how far it got. Measured
+            2026-10-22: US500 1h over <code>dev-window-v1</code> is <strong>699 bars</strong> at
+            ~11.5–59.7 ms per bar, so it is refused after ~530 bars for a typical protocol. Narrow the
+            date range, choose a higher timeframe, or narrow the period — the refusal names the count,
+            and never returns zeroes.
           </PageInfoPopover>
         </h3>
         <button

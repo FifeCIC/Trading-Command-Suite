@@ -3,10 +3,22 @@ import { env } from '../config/env';
 const baseUrl = env.VITE_API_BASE_URL.replace(/\/$/, '');
 const DEFAULT_TIMEOUT_MS = 28_000; // just below the 30s server timeout
 
-/** Fetch with timeout — prevents "Loading..." from sticking forever */
-async function fetchWithTimeout(url, options = {}) {
+/**
+ * Fetch with timeout — prevents "Loading..." from sticking forever.
+ *
+ * ⚠️ `timeoutMs` EXISTS BECAUSE ONE ENDPOINT GENUINELY RUNS FOR MINUTES. Measured 2026-10-22: a
+ * protocol backtest over the frozen development window (`dev-window-v1`, BTC 15m, ~3,000 bars × 14
+ * directives) finished server-side in about 3.7 MINUTES and was correctly stored — while the browser
+ * had abandoned the request at 28 s. The page then showed NOTHING: no result, no error. The run
+ * existed and was retrievable; the only thing missing was the response.
+ *
+ * So the default stays strict for the 99% of calls that should answer in a second, and a caller with
+ * a known-slow endpoint says so explicitly. Raising the default instead would make every genuinely
+ * hung request take five minutes to report.
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
     if (!res.ok) {
@@ -37,11 +49,11 @@ async function fetchWithTimeout(url, options = {}) {
     return res.json();
   } catch (err) {
     if (err.name === 'AbortError') {
-      const timeout = new Error(`Request timed out after ${DEFAULT_TIMEOUT_MS / 1000}s`);
+      const timeout = new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
       // Marked so noticeFromError() can map it to its own code — an abandoned request has no
       // HTTP status, and reporting one would be a fabrication.
       timeout.timedOut = true;
-      timeout.timeoutSeconds = DEFAULT_TIMEOUT_MS / 1000;
+      timeout.timeoutSeconds = Math.round(timeoutMs / 1000);
       throw timeout;
     }
     throw err;
@@ -66,12 +78,16 @@ export async function apiGet(path) {
   return fetchWithTimeout(apiUrl(path));
 }
 
-export async function apiPost(path, body) {
-  return fetchWithTimeout(apiUrl(path), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+export async function apiPost(path, body, options = {}) {
+  return fetchWithTimeout(
+    apiUrl(path),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    options.timeoutMs,
+  );
 }
 
 export async function apiPatch(path, body) {

@@ -126,6 +126,11 @@ export interface BacktestRunRequest {
   protocolId?: string;
   slPct?: number;
   tpPct?: number;
+  /**
+   * The entry bar, as a PERCENTAGE of configured capacity — the same unit `signalPct` reports and the
+   * same unit `trading_strategy.minComposite` holds (#1136). Absent/0 = no bar.
+   */
+  minComposite?: number;
   /** Weight overrides — keyed by directive ID, overrides default weights */
   weights?: Record<string, number>;
   /** Execution realism */
@@ -211,9 +216,39 @@ export interface BotForBacktest {
   timeframe?: string | null;
   slPct?: number | null;
   tpPct?: number | null;
+  /**
+   * The bot's OWN entry bar, on the SAME percentage scale the scorer returns (#1136).
+   *
+   * ⚠️ This was missing from the interface and from `mergeBotConfig`, which is why the inventory
+   * called it `ignored` — the field the operator sets to stop a bot taking weak trades was simply not
+   * carried into a run. Live: `automation-loop.service.ts` skips when `gatePct < minComposite`; a run
+   * that omits the same gate takes trades the bot never would.
+   */
+  minComposite?: number | null;
   baseSize?: number | null;
   mode: string;
   active: boolean;
+}
+
+/**
+ * passesBotEntryBar() — the bot's own entry gate, as ONE pure function (#1136).
+ *
+ * Extracted from `run()`'s loop for the same reason `mergeBotConfig` was: a comparison buried in a
+ * hot loop cannot be tested, and this one decides which trades exist.
+ *
+ * ⚠️ THE BOUNDARY MATTERS AND IS EXCLUSIVE. Live: `automation-loop.service.ts` skips when
+ * `gatePct < minComposite`, so a score EXACTLY equal to the bar PASSES. Writing `<=` here would
+ * silently drop every trade sitting on the bar — a small, invisible, one-character divergence from
+ * the live path, which is the kind of defect this repo keeps paying for.
+ *
+ * ⚠️ UNITS ARE IDENTICAL ON BOTH SIDES. `compositePct` is `fullScore()`'s `composite`, which IS
+ * `gated.signalPct`; `minComposite` is stored as that same percentage. No conversion is applied, and
+ * none should be added.
+ */
+export function passesBotEntryBar(compositePct: number, minComposite?: number | null): boolean {
+  const bar = Number(minComposite ?? 0);
+  if (!Number.isFinite(bar) || bar <= 0) return true;
+  return compositePct >= bar;
 }
 
 /**
@@ -249,13 +284,32 @@ export function mergeBotConfig(
     return fromBot ?? undefined;
   };
 
+  // ⚠️ `symbol` KEEPS ITS `||` FALLBACK (an empty-string request must still fall back to the bot's),
+  // so it does not go through `pick()`. It still has to be RECORDED, though: `drivenBy.overridden` is
+  // documented as "what this run ACTUALLY measured", and a run that was pointed at a different market
+  // while reporting no overrides is exactly the silently-different-measurement this block exists to
+  // prevent. Found by `settings-inventory.spec.ts` (#1136), which asserted every honoured bot field
+  // lands in `overridden`.
+  const symbol = request.symbol || bot.symbol;
+  if (request.symbol && request.symbol !== bot.symbol) overridden.push('symbol');
+
   const merged: BacktestRunRequest = {
     ...request,
-    symbol: request.symbol || bot.symbol,
+    symbol,
     timeframe: pick(request.timeframe, bot.timeframe, 'timeframe'),
     protocolId: pick(request.protocolId, bot.protocolId, 'protocolId'),
     slPct: pick(request.slPct, bot.slPct, 'slPct'),
     tpPct: pick(request.tpPct, bot.tpPct, 'tpPct'),
+    // ⚠️ CARRIED NOW, AND IT CHANGES RESULTS (#1136). The bot's own entry bar previously never
+    // reached a run, so a bot set to skip anything under 10% was backtested as though it took every
+    // 6%+ signal. Measured on the live path: `automation-loop.service.ts` skips when
+    // `gatePct < minComposite`, and `fullScore()` returns `composite: gated.signalPct` — the same
+    // percentage, so the comparison is the same comparison, not an approximation of it.
+    //
+    // ⚠️ CONSEQUENCE, stated because it is not reversible by re-running: bot-driven runs stored
+    // before this change measured a LOWER bar than the bot uses. They are not comparable with new
+    // runs, and `caveats` says so on every bot-driven result.
+    minComposite: pick(request.minComposite, bot.minComposite, 'minComposite'),
   };
 
   const baseSize = bot.baseSize ?? null;
@@ -270,6 +324,13 @@ export function mergeBotConfig(
       `different risk per trade, so this run's P&L, drawdown and Sharpe do NOT transfer to the live ` +
       'bot — they describe its ENTRY LOGIC at another size. Read it as a study of the signal until ' +
       '#843 lands one shared sizing function.',
+    // ⚠️ #1136 — the entry bar IS applied now, and that makes old runs non-comparable. Saying so on
+    // the result is the only way a reader comparing a new run with a stored one can know.
+    (merged.minComposite ?? 0) > 0
+      ? `ℹ️ The bot's entry bar (minComposite ${merged.minComposite}%) IS applied (#1136). Runs of this `
+        + 'bot stored before 2026-10-22 did NOT apply it, so their trade counts are higher and the two '
+        + 'are not comparable.'
+      : 'ℹ️ The bot has no entry bar (minComposite 0), so this run applies none — matching the live path.',
     ...(merged.protocolId
       ? []
       : [
@@ -329,8 +390,8 @@ export interface BacktestResult {
     note: string | null;
     from: string;
     to: string;
-    /** Bars actually loaded for the window — the sample the run rests on. */
-    bars: number;
+    /** Bars actually loaded for the window — the sample the run rests on. NULL = not recorded. */
+    bars: number | null;
   };
   /** Number of news dates found for this symbol/period */
   newsDatesCount?: number;
@@ -362,8 +423,18 @@ export interface BacktestResult {
      * 100% beside **0 winners of 3 trades**. Use `tradeWinRate` when the question is about trades.
      */
     winRate: number;
-    averageReturn10d: number;
-    maxReturn10d: number;
+    /**
+     * ⚠️ NULL MEANS **NOT RECORDED**, and it was previously `0` (#1134).
+     *
+     * `backtestrun` stores no per-signal forward returns, so a result read back from a stored run
+     * cannot know these. `formatRunResult()` returned a literal `0` for both, which rendered as
+     * "0% — the strategy returned nothing" instead of "we do not have that number". Measured
+     * 2026-10-22 on run `a129a36a`: `averageReturn10d: 0` beside `totalPnl: 97699.97`.
+     * A fabricated zero is the most expensive kind of wrong number because it looks like a result.
+     */
+    averageReturn10d: number | null;
+    /** NULL = NOT RECORDED. See `averageReturn10d`. */
+    maxReturn10d: number | null;
     maxDrawdown10d: number;
     profitFactor: number;
     sharpeApproximation: number;
@@ -481,6 +552,7 @@ export class BacktestService {
       protocolId,
       slPct = 1.0,
       tpPct = 1.0,
+      minComposite = 0,
       slippage: rawSlippage,
       spread: rawSpread,
       assetClass,
@@ -637,8 +709,21 @@ export class BacktestService {
       // Canonical historical evaluation: ticker, protocol, and window are all
       // explicit. Never call rankAll here; it reads current DB state.
       const result = await this.fullScore(symbol, window, protocolId);
+      // ⚠️ `composite` IS `gated.signalPct` — a PERCENTAGE of configured capacity, not a raw score
+      // (see `fullScore()`). That is why the bar below is a direct comparison and not a conversion:
+      // the live loop does exactly this, against the same number, in the same unit.
       const composite = result.composite;
       const signal = result.signal;
+
+      // ── THE BOT'S OWN ENTRY BAR (#1136) ──────────────────────────────────────────────────────
+      // Live: `automation-loop.service.ts` — `if (minC > 0 && gatePct < minC) continue;`.
+      // Here it must gate BEFORE the signal is recorded, or the run would report signals the bot
+      // cannot act on AND would still simulate a trade for them.
+      //
+      // ⚠️ `signal` already cleared the PROTOCOL threshold (ENTRY_THRESHOLD, ~6%). A bar of 10 is a
+      // strictly tighter second gate, so this can only ever REMOVE entries — it can never add one.
+      const belowBotBar = !passesBotEntryBar(composite, minComposite);
+      if (belowBotBar) continue;
 
       const score = composite;
 
@@ -978,7 +1063,33 @@ export class BacktestService {
       include: { trades: true, symbol: true },
     });
     if (!run) return null;
-    return this.formatRunResult(run);
+    const result = this.formatRunResult(run);
+
+    // ── #1134 — RESTORE `measuredPeriod` ON THE READ PATH ──
+    // `run()` echoes `measuredPeriod` on the result it RETURNS, but that field has no column, so the
+    // stored run loses it. The Backtest Lab always reads via `GET /results/:runId`, which means the
+    // "Captured period" line could never appear — measured 2026-10-22 on run `a129a36a`, whose
+    // `periodId` was set and whose `measuredPeriod` came back absent.
+    //
+    // Reconstructed from the period row rather than guessed from the dates: `startDate` is
+    // `bars[windowSize].timestamp`, the first SCORABLE bar, so it is a day later than the period's
+    // own `from` (2026-09-10 vs 2026-09-09 on that run). Deriving the window from the dates would be
+    // off by exactly the warm-up, which is the kind of near-miss that reads as correct.
+    if (run.periodId) {
+      const period = await this.prisma.backtestPeriod.findUnique({ where: { id: run.periodId } });
+      if (period) {
+        result.measuredPeriod = {
+          id: period.id,
+          name: period.name,
+          note: period.note ?? null,
+          from: period.fromDate.toISOString().split('T')[0],
+          to: period.toDate.toISOString().split('T')[0],
+          bars: period.barCount ?? null,
+        };
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -1805,6 +1916,14 @@ export class BacktestService {
       totalDays: run.totalDays,
       timeframe: run.timeframe,
       entrySignals: [],
+      // ⚠️ STATED, because the emptiness above would otherwise read as "no signals" (#1134).
+      // Measured 2026-10-22 on run `a129a36a`: `stats.totalSignals` was **1,285** while this array
+      // was empty — two different facts wearing one name. A run persists its TRADES; the per-signal
+      // rows are computed during the run and never stored, so a result read back cannot list them.
+      caveats: [
+        'Per-signal rows are not stored with a run, so this view lists the trades it recorded but '
+        + 'cannot list the entry signals. The signal COUNT above is stored; the rows are not.',
+      ],
       trades: run.trades?.map((t: any) => ({
         entryDate: t.entryDate.toISOString(),
         entryPrice: Number(t.entryPrice),
@@ -1836,8 +1955,11 @@ export class BacktestService {
         // ⚠️ `run.totalSignals`, NOT `run.totalTrades` (#980). NULL = never recorded.
         totalSignals: run.totalSignals ?? null,
         winRate: run.winRate,
-        averageReturn10d: 0,
-        maxReturn10d: 0,
+        // ⚠️ NULL, NOT 0 (#1134). `backtestrun` stores no per-signal forward returns, so these
+        // numbers do not exist for a stored run. A literal 0 rendered as "0% — flat", which is a
+        // claim this row cannot support. See the docblock on the interface fields.
+        averageReturn10d: null,
+        maxReturn10d: null,
         maxDrawdown10d: run.maxDrawdown,
         profitFactor: run.profitFactor,
         sharpeApproximation: run.sharpeRatio,
@@ -1866,15 +1988,30 @@ export class BacktestService {
     to?: string,
     protocolId?: string,
   ): Promise<{
-    bars: Array<{ time: string; open: number; high: number; low: number; close: number; volume: number }>;
-    signals: Array<{ time: string; type: string; score: number; label: string; price: number; pnl?: number }>;
+    bars: Array<{ time: string | number; open: number; high: number; low: number; close: number; volume: number }>;
+    signals: Array<{ time: string | number; type: string; score: number; label: string; price: number; pnl?: number }>;
     indicators: {
-      rsi: Array<{ time: string; value: number }>;
-      macd: Array<{ time: string; macd: number; signal: number; histogram: number }>;
-      ema9: Array<{ time: string; value: number }>;
-      ema21: Array<{ time: string; value: number }>;
+      rsi: Array<{ time: string | number; value: number }>;
+      macd: Array<{ time: string | number; macd: number; signal: number; histogram: number }>;
+      ema9: Array<{ time: string | number; value: number }>;
+      ema21: Array<{ time: string | number; value: number }>;
     };
   }> {
+    /**
+     * ⚠️ A DAILY SERIES GETS `yyyy-mm-dd`; AN INTRADAY ONE GETS UNIX SECONDS (#1134).
+     *
+     * This used to emit `yyyy-mm-dd` for EVERY timeframe. `lightweight-charts` requires strictly
+     * ascending, unique times, so an intraday series collapsed onto one point per day — every bar
+     * after the first of each day shared a timestamp. Measured 2026-10-22: `GET /api/backtest/
+     * chart-data?symbol=US500&timeframe=1h` returned **729 bars for 41 distinct dates**. The chart
+     * does not tolerate that: it throws, and the throw takes the whole view down with it.
+     *
+     * The consumer already handles both forms — `BacktestChart`'s crosshair does
+     * `typeof param.time === 'string' ? param.time : new Date(param.time * 1000)…`.
+     */
+    const chartTime = (d: Date): string | number =>
+      (timeframe === '1d' ? d.toISOString().split('T')[0] : Math.floor(d.getTime() / 1000));
+
     const where: Record<string, unknown> = {
       symbol: { ticker: symbol.toUpperCase() },
       timeframe,
@@ -1906,7 +2043,7 @@ export class BacktestService {
 
     // Format bars for lightweight-charts
     const bars = rows.map((r, i) => ({
-      time: r.timestamp.toISOString().split('T')[0],
+      time: chartTime(r.timestamp),
       open: Number(r.open),
       high: Number(r.high),
       low: Number(r.low),
@@ -1915,7 +2052,7 @@ export class BacktestService {
     }));
 
     // Generate signals from directive scoring on the full window
-    const signals: Array<{ time: string; type: string; score: number; label: string; price: number; pnl?: number }> = [];
+    const signals: Array<{ time: string | number; type: string; score: number; label: string; price: number; pnl?: number }> = [];
     const windowSize = 100;
 
     for (let day = windowSize; day < rows.length; day++) {
@@ -1941,7 +2078,7 @@ export class BacktestService {
         const pnl = future10 ? Number(((Number(future10) - currentClose) / currentClose * 100).toFixed(2)) : undefined;
 
         signals.push({
-          time: window[window.length - 1].timestamp.toISOString().split('T')[0],
+          time: chartTime(window[window.length - 1].timestamp),
           type: 'entry',
           score: Number(score.toFixed(1)),
           label: `Entry: score ${score.toFixed(0)}`,
@@ -1955,10 +2092,10 @@ export class BacktestService {
       bars,
       signals,
       indicators: {
-        rsi: rsiValues.map((v, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', value: v })),
-        macd: macdData.map((m, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', ...m })),
-        ema9: ema9.map((v, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', value: v })),
-        ema21: ema21.map((v, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', value: v })),
+        rsi: rsiValues.map((v, i) => ({ time: rows[i] ? chartTime(rows[i].timestamp) : '', value: v })),
+        macd: macdData.map((m, i) => ({ time: rows[i] ? chartTime(rows[i].timestamp) : '', ...m })),
+        ema9: ema9.map((v, i) => ({ time: rows[i] ? chartTime(rows[i].timestamp) : '', value: v })),
+        ema21: ema21.map((v, i) => ({ time: rows[i] ? chartTime(rows[i].timestamp) : '', value: v })),
       },
     };
   }
@@ -2151,7 +2288,53 @@ export class BacktestService {
 
   // ── Data Inventory ──────────────────────────────────
 
-  async getDataInventory(): Promise<{
+  /**
+   * ⚠️ A SHORT IN-PROCESS MEMO, because this endpoint's cost is FIXED and paid per page load.
+   *
+   * Measured 2026-10-22 on 1,286,957 bars:
+   *
+   *     GROUP BY symbolId, MIN/MAX(timestamp)   1,221 ms   Extra: Using index
+   *     GROUP BY symbolId, timeframe, COUNT(*)  1,230 ms   Extra: Using index
+   *
+   * Both are **already covering-index scans** — this is not a missing index and no index helps. It is
+   * the intrinsic cost of aggregating 1.29M rows, and `/lab/backtest-data` pays it on every visit,
+   * every retry, and every remount.
+   *
+   * The numbers change only when bars are IMPORTED, so a 60-second memo is safe and is a large win for
+   * the way the page is actually used (load, filter chips, re-sort, navigate back).
+   *
+   * ⚠️ Deliberately NOT `CacheService`: that is a `@Global()` provider, and threading it into this
+   * constructor would mean editing every `new BacktestService(...)` in the specs for one memo. The
+   * TTL is short enough that a stale read is a non-event, and `?fresh=1` bypasses it.
+   */
+  private inventoryMemo: { at: number; value: Awaited<ReturnType<BacktestService['getDataInventory']>> } | null = null;
+  private static readonly INVENTORY_TTL_MS = 60_000;
+
+  async getDataInventory(opts: { fresh?: boolean } = {}): Promise<{
+    summary: { totalSymbols: number; symbolsWithBars: number; totalBars: number; totalBacktestRuns: number };
+    symbols: Array<{
+      ticker: string;
+      type: string;
+      active: boolean;
+      barCount: number;
+      dateFrom: string | null;
+      dateTo: string | null;
+      provider: string | null;
+      timeframes: string[];
+      backtestRuns: number;
+      lastBacktest: string | null;
+    }>;
+  }> {
+    if (!opts.fresh && this.inventoryMemo
+      && Date.now() - this.inventoryMemo.at < BacktestService.INVENTORY_TTL_MS) {
+      return this.inventoryMemo.value;
+    }
+    const built = await this.buildDataInventory();
+    this.inventoryMemo = { at: Date.now(), value: built };
+    return built;
+  }
+
+  private async buildDataInventory(): Promise<{
     summary: { totalSymbols: number; symbolsWithBars: number; totalBars: number; totalBacktestRuns: number };
     symbols: Array<{
       ticker: string;

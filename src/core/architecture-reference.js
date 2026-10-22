@@ -957,7 +957,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
         method: 'GET',
         permission: 'Authenticated operator access',
         owner: 'BacktestController / BacktestService',
-        contract: 'NEW (#823 / #1128). Bar counts per timeframe for ONE symbol in ONE window, each marked `usable` against `minBars`, plus `heldBars` / `heldFrom` / `heldTo` for the FULL stored series — one `GROUP BY timeframe` bounded by the window over `(symbolId, timeframe, timestamp)`. Distinct from `GET /api/backtest/data-inventory`, which reports timeframes a symbol has EVER held: VIX lists `1h` there yet cannot be scored at `1h` over three days. Consumed by `ProtocolCarousel` on `/lab/protocol-backtest`, where `minBars` and the replay `windowSize` are ONE constant.',
+        contract: 'NEW (#823 / #1128). Bar counts per timeframe for ONE symbol in ONE window, each marked `usable` against `minBars`, plus `heldBars` / `heldFrom` / `heldTo` for the FULL stored series — one `GROUP BY timeframe` bounded by the window over `(symbolId, timeframe, timestamp)`. Distinct from `GET /api/backtest/data-inventory`, which reports timeframes a symbol has EVER held: VIX lists `1h` there yet cannot be scored at `1h` over three days. ⚠️ ITS ONLY CONSUMER WAS RETIRED (2026-10-22, #1134): the page it served, `/lab/protocol-backtest`, was merged into `/lab/backtest`, and nothing in `src/` calls this endpoint any more (measured by grep). It is either removed or reused by the score-detail window control (#1135) — do not cite it as a live surface.',
         status: 'active',
       },
       /* — batch #31 — new/changed endpoints (2026-10-13 to 2026-10-15, 15 handoffs) — */

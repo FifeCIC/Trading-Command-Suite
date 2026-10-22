@@ -559,19 +559,25 @@ const VIEW_META = {
   '/lab/backtest': {
     tier: 'premium',
     review: 'approved',
-    label: 'Backtest Engine',
+    label: 'Backtest Lab',
     file: 'src/pages/BacktestPage.jsx',
-    css: 'src/pages/backtest-data.css',
-    api: [],
+    css: 'src/pages/backtest-lab.css',
+    api: [
+      'POST /api/backtest/run',
+      'GET /api/backtest/results/:runId',
+      'GET /api/backtest/equity/:runId',
+      'POST /api/backtest/runs/compare',
+      'GET /api/backtest/settings-inventory',
+      'POST /api/replay/run',
+      'GET /api/scoring/gated/protocols',
+      'GET /api/trading/strategies',
+      'GET /api/backtest/periods',
+    ],
   },
-  '/lab/protocol-backtest': {
-    tier: 'premium',
-    review: 'pending',
-    label: 'Protocol Backtesting',
-    file: 'src/pages/ProtocolBacktestPage.jsx',
-    css: 'src/pages/protocol-backtest.css',
-    api: ['POST /api/replay/run', 'GET /api/scoring/gated/protocols'],
-  },
+  // ⚠️ `'protocol-backtest'` RETIRED 2026-10-22 (#1134). The page was merged into `/lab/backtest` —
+  // the protocol surface is now the "Protocols" subject toggle there, and its score table is the
+  // `ProtocolScoreDetail` drill-down. `verify-view-meta-routes.cjs` fails if an entry outlives its
+  // route, which is exactly what caught this one needing removal rather than a label tweak.
   // ⚠️ ADDED 2026-10-17. `verify-view-meta-routes.cjs` found this leaf registered in `nav-tree.js`
   // with no metadata, so the page rendered "No metadata registered" — reachable but undocumented.
   // The nav entry was added for #823 Stage 1 without this half; the sweep is what caught it.
@@ -581,7 +587,17 @@ const VIEW_META = {
     label: 'Backtest Data',
     file: 'src/pages/BacktestDataPage.jsx',
     css: 'src/pages/backtest-data.css',
-    api: ['GET /api/backtest/data-inventory', 'GET /api/speed/record/active'],
+    api: [
+      'GET /api/backtest/data-inventory',
+      'GET /api/speed/record/active',
+      // ⚠️ MOVED HERE 2026-10-22 (#1136): the captured-windows panel was on /lab/backtest. A period is
+      // DATA — a named, imported window of bars — so it is managed on the page that inventories data,
+      // and the Lab only consumes it.
+      'GET /api/backtest/periods',
+      'POST /api/backtest/periods',
+      'POST /api/backtest/periods/:id/import',
+      'DELETE /api/backtest/periods/:id',
+    ],
   },
   '/education/candle-patterns': {
     tier: 'free',

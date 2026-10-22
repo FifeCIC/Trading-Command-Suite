@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReplayPlayer from '../components/ReplayPlayer';
 import { apiGet, apiPost } from '../core/api/client';
@@ -6,7 +6,6 @@ import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import BacktestChartPane from '../components/backtest/BacktestChartPane';
 import EquityCurveChart from '../components/backtest/EquityCurveChart';
-import BacktestPeriodsPanel from '../components/backtest/BacktestPeriodsPanel';
 import BacktestRunsPanel from '../components/backtest/BacktestRunsPanel';
 import ProtocolScoreDetail from '../components/backtest/ProtocolScoreDetail';
 import ProtocolCarousel from '../components/ProtocolCarousel';
@@ -46,6 +45,18 @@ import './backtest-lab.css';
  * the #1132 window warning does not even fire. Moving this window silently invalidates every
  * earlier comparison — see `nest/src/modules/backtest/dev-test-window.ts`.
  */
+
+/**
+ * The settings inventory is REFERENCE material, not a step in the workflow, so it is code-split out
+ * of the boot bundle. That is not a micro-optimisation: the main chunk sits against the PWA precache
+ * cap (`vite.config.js` → `maximumFileSizeToCacheInBytes`, 4 MB), and the build FAILS when it is
+ * exceeded. Measured 2026-10-22 on adding this panel: 4,195.82 kB against a 4,194,304-byte cap —
+ * 1.5 kB over. Splitting the panel is the fix that keeps the cap meaningful instead of raising it
+ * again.
+ */
+const BacktestSettingsInventory = lazy(
+  () => import('../components/backtest/BacktestSettingsInventory'),
+);
 
 // ── Preset profiles (#50) ──
 const EXECUTION_PRESETS = {
@@ -92,14 +103,28 @@ const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
  */
 const FROZEN_WINDOW_NAME = 'dev-window-v1';
 
-/** A protocol advertises `recommendedTimeframe`; use it only if we can offer it. */
+/**
+ * A protocol advertises `recommendedTimeframe`; use it only if we can offer it.
+ *
+ * ⚠️ WHOLE-TOKEN MATCH FIRST, and that is not fussiness. "15m–1d" CONTAINS "5m" as a substring, so a
+ * plain `.includes` scan resolves BTC Investment Monitor's recommendation to 5m the moment 5m is in
+ * `TIMEFRAMES`. Measured 2026-10-22 on the merged page: it did exactly that, differing from the
+ * retired protocol page (whose list omitted 5m, so the same scan found 15m). A window defaulted to
+ * the wrong timeframe is a run that measures something other than what the card says it measures.
+ */
 function pickTimeframe(recommended) {
   if (!recommended) return '1h';
   const norm = String(recommended).toLowerCase().replace(/\s/g, '');
+  const tokens = norm.split(/[^a-z0-9]+/);
+  const exact = TIMEFRAMES.find((tf) => tokens.includes(tf));
+  if (exact) return exact;
   return TIMEFRAMES.find((tf) => norm.includes(tf)) ?? '1h';
 }
 
 const fmtDay = (iso) => (iso ? String(iso).slice(0, 10) : '—');
+
+/** A percentage, or an explicit dash when the number was never recorded. Never a fabricated 0. */
+const pctOrDash = (v) => (v == null ? '—' : `${v}%`);
 
 export default function BacktestPage() {
   const queryClient = useQueryClient();
@@ -124,6 +149,24 @@ export default function BacktestPage() {
   const [showChart, setShowChart] = useState(false);
   const [newsExclusion, setNewsExclusion] = useState('none');
   const [showExecution, setShowExecution] = useState(false);
+
+  /**
+   * ── RUN-SCOPED OVERRIDES (#1136) ───────────────────────────────────────────────────────────────
+   * Held as STRINGS, because "blank" and "0" are different answers: blank means "use the subject's
+   * own value", zero means "disable the bracket". Collapsing them into a number would silently turn
+   * an untouched field into `slPct: 0` — and `doBrackets = slPct > 0 && tpPct > 0` would then stop
+   * bracketing the trades without the operator asking.
+   *
+   * ⚠️ THESE DO NOT WRITE ANYTHING. `BacktestRunRequest.slPct` / `tpPct` / `timeframe` are read from
+   * the REQUEST before the bot's own values (`mergeBotConfig`), and `mergeBotConfig` records the
+   * difference in `drivenBy.overridden`. That makes "this bot, but with a tighter stop" one call that
+   * changes one thing and is measurable — which is the point of the whole page.
+   */
+  const [overrides, setOverrides] = useState({ minComposite: '', slPct: '', tpPct: '', timeframe: '' });
+  const setOverride = (key, value) => setOverrides((prev) => ({ ...prev, [key]: value }));
+
+  /** Which reference panel is showing. The three are consulted, not stepped through — see the tabs. */
+  const [refTab, setRefTab] = useState('runs');
 
   // Execution realism state (#50)
   const [slippage, setSlippage] = useState(0.01);
@@ -165,7 +208,10 @@ export default function BacktestPage() {
     queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
     staleTime: 60_000,
   });
-  const protocols = protocolsQuery.data?.protocols ?? [];
+  const protocols = useMemo(
+    () => protocolsQuery.data?.protocols ?? [],
+    [protocolsQuery.data],
+  );
 
   const periodsQuery = useQuery({
     queryKey: ['bt-periods'],
@@ -334,11 +380,36 @@ export default function BacktestPage() {
         ? { periodId }
         : { symbol: marketSymbol, timeframe: marketTimeframe, days: bars };
 
+      // ⚠️ ONLY NON-BLANK OVERRIDES ARE SENT. An absent key means "use the subject's own value" —
+      // sending `slPct: ''` or `0` would be a decision the operator never made.
+      const runOverrides = {};
+      if (overrides.minComposite.trim() !== '') runOverrides.minComposite = Number(overrides.minComposite);
+      if (overrides.slPct.trim() !== '') runOverrides.slPct = Number(overrides.slPct);
+      if (overrides.tpPct.trim() !== '') runOverrides.tpPct = Number(overrides.tpPct);
+      // A period owns the timeframe, so overriding it there would be a value the server ignores while
+      // the form appeared to set it.
+      if (!usePeriod && overrides.timeframe.trim() !== '') {
+        runOverrides.timeframe = String(overrides.timeframe).trim();
+      }
+
       return apiPost('/api/backtest/run', {
         ...(subject === 'protocol' ? { protocolId } : { botId }),
         ...scope,
+        ...runOverrides,
         ...execution,
+      }, {
+        // ⚠️ MEASURED, NOT GUESSED. A BTC 15m run over the frozen development window (~3,000 bars ×
+        // 14 directives) completed server-side in about 3.7 minutes on 2026-10-22 and was correctly
+        // stored — while the client abandoned it at the 28 s default and the page showed nothing at
+        // all. This endpoint is simply slow; the default is for endpoints that are not.
+        timeoutMs: 300_000,
       });
+    },
+    onError: () => {
+      // A timed-out run is NOT a failed run: the engine may have finished and stored it after the
+      // browser stopped waiting (observed 2026-10-22 — the row existed, the response did not). Refresh
+      // the list so a completed run surfaces by itself rather than being stranded in the database.
+      queryClient.invalidateQueries({ queryKey: ['bt-runs'] });
     },
     onSuccess: (data) => {
       setRunId(data.id);
@@ -408,52 +479,389 @@ export default function BacktestPage() {
   const onFrozenWindow = usePeriod && selectedPeriod?.name === FROZEN_WINDOW_NAME;
 
   return (
-    <div className="bt-page">
-      <p className="bt-sub">Run the Conviction Dip Accumulation strategy against historical data and measure entry signal outcomes.</p>
+    <div className="pb-page">
+      <header className="pb-header">
+        <h1>
+          Backtest Lab
+          <PageInfoPopover label="What the Backtest Lab does">
+            <strong>One subject, one window, one stored run — so two runs can be compared.</strong>
+            <br />
+            Pick a <strong>protocol</strong> (scores only) or a <strong>strategy</strong> (scores plus
+            execution), choose a window, and run. Every run is stored, listed under “Completed runs”,
+            and any two can be compared on the same window.
+            <br />
+            <br />
+            A protocol decides <em>whether an opportunity exists</em>; a bot decides <em>what to do
+            about it</em>. Testing a protocol isolates the reading; testing a bot includes sizing,
+            stops and costs.
+            <br />
+            <br />
+            <strong>Score detail</strong> (protocol runs only) re-scores the same window bar by bar
+            and explains the numbers. It is a diagnostic — nothing about it is stored, so it is not a
+            measurement to compare.
+          </PageInfoPopover>
+        </h1>
+      </header>
 
-      <div className="bt-form">
-        <label>
-          Bot
-          <select value={botId} onChange={(e) => setBotId(e.target.value)}>
-            <option value="">— none (ad-hoc symbol run) —</option>
-            {bots.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}{b.symbol ? ` · ${b.symbol}` : ''}{b.protocolId ? ` · ${b.protocolId}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Symbol
-          <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())} placeholder="NVDA" />
-        </label>
-        <label>
-          Days
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
-            <option value={7}>7</option>
-            <option value={14}>14</option>
-            <option value={30}>30</option>
-            <option value={60}>60</option>
-            <option value={90}>90</option>
-            <option value={180}>180</option>
-            <option value={365}>365 (1 year)</option>
-            <option value={730}>730 (2 years)</option>
-            <option value={1825}>1825 (5 years)</option>
-          </select>
-        </label>
-        <label>
-          News
-          <select value={newsExclusion} onChange={(e) => setNewsExclusion(e.target.value)} title="Filter out news-driven signals to isolate protocol performance">
-            <option value="none">📰 Include (realistic)</option>
-            <option value="exclude">🚫 Exclude (protocol purity)</option>
-            <option value="only">📡 News-only (sensitivity)</option>
-            <option value="reduce">📉 Reduce weight</option>
-          </select>
-        </label>
-        <button type="button" className="bt-run" disabled={runMutation.isPending} onClick={() => runMutation.mutate()}>
-          {runMutation.isPending ? 'Running...' : 'Run Backtest'}
-        </button>
-      </div>
+      <section className="pb-panel">
+        <div className="pb-run-head">
+          <div className="pb-subject" role="radiogroup" aria-label="What to backtest">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={subject === 'protocol'}
+              className={`pb-subject-btn${subject === 'protocol' ? ' pb-subject-btn--on' : ''}`}
+              onClick={() => setSubject('protocol')}
+            >
+              Protocols
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={subject === 'strategy'}
+              className={`pb-subject-btn${subject === 'strategy' ? ' pb-subject-btn--on' : ''}`}
+              onClick={() => setSubject('strategy')}
+            >
+              Strategies
+            </button>
+          </div>
+          <span className="pb-count" aria-live="polite">
+            {subject === 'protocol'
+              ? `${filteredProtocols.length} of ${protocols.length} protocols`
+              : `${bots.length} strategies`}
+          </span>
+        </div>
+
+        {/* Search + filters narrow the PROTOCOL track only — a bot list is short enough to read. */}
+        {subject === 'protocol' && (
+          <div className="pb-toolbar">
+            <input
+              className="ff-input pb-search"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search protocols, symbols…"
+              aria-label="Search protocols by name, id, description or symbol"
+            />
+            <select
+              className="ff-select"
+              value={directionFilter}
+              onChange={(e) => setDirectionFilter(e.target.value)}
+              aria-label="Filter by direction mode"
+            >
+              <option value="">Any direction</option>
+              {directionOptions.map((d) => (
+                <option key={d} value={d}>{String(d).replace('_ONLY', ' only')}</option>
+              ))}
+            </select>
+            <select
+              className="ff-select"
+              value={styleFilter}
+              onChange={(e) => setStyleFilter(e.target.value)}
+              aria-label="Filter by trading style"
+            >
+              <option value="">Any style</option>
+              {styleOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <label className="pb-check">
+              <input
+                type="checkbox"
+                checked={runnableOnly}
+                onChange={(e) => setRunnableOnly(e.target.checked)}
+              />
+              Has symbols
+            </label>
+            {(query || directionFilter || styleFilter || runnableOnly) && (
+              <button
+                type="button"
+                className="ff-btn pb-clear"
+                onClick={() => {
+                  setQuery('');
+                  setDirectionFilter('');
+                  setStyleFilter('');
+                  setRunnableOnly(false);
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
+        {subject === 'protocol' ? (
+          <ProtocolCarousel
+            items={filteredProtocols}
+            value={protocolId}
+            onChange={setProtocolId}
+            label="Protocol"
+            emptyMessage="No protocols match these filters."
+          />
+        ) : (
+          <ProtocolCarousel
+            items={botItems}
+            value={botId}
+            onChange={setBotId}
+            label="Strategy"
+            emptyMessage="No trading strategies are configured."
+          />
+        )}
+
+        <div className="pb-fields">
+          {/* Symbol + timeframe. Read-only for a bot: they are facts about the bot, not choices. */}
+          {subject === 'strategy' ? (
+            <>
+              <div className="ff-field">
+                <span className="ff-label">Symbol</span>
+                <p className="pb-strip-item pb-strip-item--text">
+                  <strong>{selectedBot?.symbol || 'none'}</strong>
+                </p>
+              </div>
+              <div className="ff-field">
+                <span className="ff-label">Timeframe</span>
+                <p className="pb-strip-item pb-strip-item--text">
+                  <strong>{selectedBot?.timeframe || 'none'}</strong>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="ff-field">
+                <label className="ff-label" htmlFor="bt-symbol">Symbol</label>
+                <select
+                  id="bt-symbol"
+                  className="ff-select"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                >
+                  {(selectedProtocol?.resolvedSymbols ?? []).length === 0 && (
+                    <option value="">No symbols resolve</option>
+                  )}
+                  {(selectedProtocol?.resolvedSymbols ?? []).map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="ff-field">
+                <label className="ff-label" htmlFor="bt-timeframe">Timeframe</label>
+                <select
+                  id="bt-timeframe"
+                  className="ff-select"
+                  value={timeframe}
+                  onChange={(e) => setTimeframe(e.target.value)}
+                >
+                  {TIMEFRAMES.map((tf) => (
+                    <option key={tf} value={tf}>{tf}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Window. A stored period is a DATED window; `bars` is a row count. Both are offered, and
+              each says which it is — conflating them is how "30 days" came to mean 30 hours. */}
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="bt-window">Window</label>
+            <select
+              id="bt-window"
+              className="ff-select"
+              value={windowMode}
+              onChange={(e) => setWindowMode(e.target.value)}
+            >
+              <option value="period">Stored period</option>
+              <option value="bars">Last N bars</option>
+            </select>
+          </div>
+
+          {windowMode === 'period' ? (
+            <div className="ff-field">
+              <label className="ff-label" htmlFor="bt-period">Period</label>
+              {matchingPeriods.length === 0 ? (
+                <>
+                  <select id="bt-period" className="ff-select" value="" disabled>
+                    <option value="">No stored period for this market</option>
+                  </select>
+                  <span className="pb-field-note">
+                    Capture one on <strong>Backtest Data</strong>, or switch the Window to “Last N bars”.
+                  </span>
+                </>
+              ) : (
+                <select
+                  id="bt-period"
+                  className="ff-select"
+                  value={periodId}
+                  onChange={(e) => setPeriodId(e.target.value)}
+                >
+                  {matchingPeriods.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · {fmtDay(p.from)} → {fmtDay(p.to)}
+                      {p.name === FROZEN_WINDOW_NAME ? ' · frozen' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          ) : (
+            <div className="ff-field">
+              <label className="ff-label" htmlFor="bt-bars">Bars</label>
+              <input
+                id="bt-bars"
+                className="ff-input"
+                type="number"
+                min={30}
+                step={50}
+                value={bars}
+                onChange={(e) => setBars(Math.max(30, Number(e.target.value) || 30))}
+              />
+              <span className="pb-field-note">
+                Walked back from the newest bar — not calendar days.
+              </span>
+            </div>
+          )}
+
+          <div className="ff-field">
+            <label className="ff-label" htmlFor="bt-news">News</label>
+            <select
+              id="bt-news"
+              className="ff-select"
+              value={newsExclusion}
+              onChange={(e) => setNewsExclusion(e.target.value)}
+              title="Filter out news-driven signals to isolate protocol performance"
+            >
+              <option value="none">📰 Include (realistic)</option>
+              <option value="exclude">🚫 Exclude (protocol purity)</option>
+              <option value="only">📡 News-only (sensitivity)</option>
+              <option value="reduce">📉 Reduce weight</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            className="ff-btn ff-btn-primary"
+            disabled={!canRun || runMutation.isPending}
+            onClick={() => runMutation.mutate()}
+          >
+            {runMutation.isPending
+              ? 'Running…'
+              : blockedByActiveBot
+                ? 'Pause the strategy first'
+                : !subjectLabel
+                  ? `Select a ${subject === 'protocol' ? 'protocol' : 'strategy'}`
+                  : 'Run backtest'}
+          </button>
+        </div>
+
+        {/* ── PAUSED-SUBJECT GUARD ──────────────────────────────────────────────────────────────
+            States the pause state, refuses the run, and offers the one action that unblocks it.
+            ⚠️ It says plainly that pausing does NOT close a position — see `blockedByActiveBot`. */}
+        {blockedByActiveBot && (
+          <div className="pb-guard" role="status">
+            <strong>⏸ {selectedBot.name} is active.</strong>
+            <span className="pb-guard-note">
+              Pause it to make this comparison reproducible — an active bot keeps changing state
+              underneath the run. Pausing stops new entries; it does <em>not</em> close a position
+              that is already open.
+            </span>
+            <button
+              type="button"
+              className="ff-btn pb-clear"
+              disabled={pauseMutation.isPending}
+              onClick={() => pauseMutation.mutate(selectedBot.id)}
+            >
+              {pauseMutation.isPending ? 'Pausing…' : 'Pause this strategy'}
+            </button>
+          </div>
+        )}
+
+        {/* A protocol is not itself active, so a protocol run is never blocked. But a change to the
+            thing a live bot trades contaminates the comparison just the same — say so. */}
+        {activeBotsOnProtocol.length > 0 && (
+          <div className="pb-guard" role="status">
+            <strong>
+              ⚠ {activeBotsOnProtocol.length} active bot{activeBotsOnProtocol.length === 1 ? '' : 's'} trade this protocol
+            </strong>
+            <span className="pb-guard-note">
+              The run is allowed — a protocol backtest places no order — but while those bots trade,
+              the protocol&rsquo;s inputs keep moving. {activeBotsOnProtocol.map((b) => b.name).join(', ')}.
+            </span>
+          </div>
+        )}
+
+        {pauseMutation.isError && <NoticeBlock notice={noticeFromError(pauseMutation.error)} compact />}
+
+        {/* ── THE RUN, AS FACTS ─────────────────────────────────────────────────────────────────
+            Every number here is one that is NOT already on another control: the market, the window
+            in full, and the subject's ceiling. The facts the menus already state are behind the ℹ
+            overlay — repeating a fact is not reassurance, it reads as volume (owner report,
+            2026-10-18). */}
+        {subjectLabel && (
+          <div className="pb-facts">
+            <div className="pb-strip">
+              <div className="pb-strip-item pb-strip-item--text">
+                <span>Subject</span>
+                <strong>{subjectLabel}</strong>
+              </div>
+              <div className="pb-strip-item">
+                <span>Market</span>
+                <strong>{marketSymbol || '—'} {marketTimeframe || ''}</strong>
+              </div>
+              <div className={`pb-strip-item pb-strip-item--text${onFrozenWindow ? '' : ' pb-strip-item--warn'}`}>
+                <span>Window</span>
+                <strong>{windowLabel}</strong>
+              </div>
+              {subject === 'protocol' && selectedProtocol?.directiveCount != null && (
+                <div className="pb-strip-item">
+                  <span>Directives</span>
+                  <strong>{selectedProtocol.directiveCount}</strong>
+                </div>
+              )}
+              {subject === 'protocol' && selectedProtocol?.maxScore != null && (
+                <div className="pb-strip-item">
+                  <span>Configured capacity</span>
+                  <strong>{selectedProtocol.maxScore}</strong>
+                </div>
+              )}
+              {/* An override must be visible AT THE MOMENT OF THE RUN, not only in the panel far below.
+                  A stop you set and forgot is a comparison against the wrong baseline. */}
+              {(overrides.minComposite.trim() !== '' || overrides.slPct.trim() !== ''
+                || overrides.tpPct.trim() !== ''
+                || (!usePeriod && overrides.timeframe.trim() !== '')) && (
+                <div className="pb-strip-item pb-strip-item--text pb-strip-item--warn">
+                  <span>Run overrides</span>
+                  <strong>
+                    {[
+                      overrides.minComposite.trim() !== '' ? `BAR ${overrides.minComposite}%` : null,
+                      overrides.slPct.trim() !== '' ? `SL ${overrides.slPct}%` : null,
+                      overrides.tpPct.trim() !== '' ? `TP ${overrides.tpPct}%` : null,
+                      !usePeriod && overrides.timeframe.trim() !== '' ? `TF ${overrides.timeframe}` : null,
+                    ].filter(Boolean).join(' · ')}
+                  </strong>
+                </div>
+              )}
+            </div>
+
+            <PageInfoPopover label="Why the window matters">
+              <strong>A stored period is a DATE RANGE. “Last N bars” is a ROW COUNT.</strong>
+              <br />
+              They are not interchangeable: the engine walks backwards from the newest bar, so 30
+              bars on a 1h series covers about 30 hours, not 30 days. A run whose window is a row
+              count cannot be compared with one whose window is a date range — the comparison guard
+              refuses to name a winner across them.
+              <br />
+              <br />
+              <strong>Why {FROZEN_WINDOW_NAME} is the default.</strong> It is frozen so that work done
+              today is measured on the same data as work done last week. Moving it silently
+              invalidates every earlier comparison, which is why it is versioned rather than edited.
+              <br />
+              <br />
+              <strong>What a comparison can and cannot claim.</strong> Two runs on the same period,
+              same code, differing in one configuration field, is an experiment. Two runs on different
+              windows is two unrelated measurements printed next to each other.
+            </PageInfoPopover>
+          </div>
+        )}
+      </section>
 
       {/* ── Execution Realism Panel (#50) ── */}
       <div className="bt-execution-section">
@@ -538,35 +946,101 @@ export default function BacktestPage() {
         )}
       </div>
 
-      {runMutation.isError && <NoticeBlock notice={noticeFromError(runMutation.error)} compact />}
-
-      {/* #986 — capture a window, name it, and run against it. Placed ABOVE the results so the
-          control that scopes a run sits with the run, and mounted here rather than as a new route
-          because a fourth surface for the same job is the churn #965 item 5 forbids. */}
-      <BacktestPeriodsPanel
-        onRunPeriod={(p) => {
-          setPeriodId(p.id);
-          setPeriodName(p.name);
-          runMutation.mutate();
-        }}
-      />
-
-      {periodId && (
-        <p className="bt-active-period">
-          Next run targets the captured period <strong>{periodName}</strong>.
-          <button type="button" className="bt-clear-period" onClick={() => { setPeriodId(''); setPeriodName(''); }}>
-            Clear
-          </button>
-        </p>
+      {runMutation.isError && (
+        runMutation.error?.timedOut ? (
+          <div className="pb-guard" role="status">
+            <strong>⏱ The browser stopped waiting after {runMutation.error.timeoutSeconds}s.</strong>
+            <span className="pb-guard-note">
+              A long window can still be running on the server after the page gives up, and when it
+              finishes the run IS stored. Check <strong>Completed runs</strong> below before running it
+              again — a second attempt would duplicate a run that already succeeded. Narrow the window
+              if this keeps happening.
+            </span>
+          </div>
+        ) : (
+          <NoticeBlock notice={noticeFromError(runMutation.error)} compact />
+        )
       )}
 
-      {/* #823 Stage 2 — the stored runs were invisible. Measured 2026-10-15: 26 runs stored and
-          served by `GET /api/backtest/runs`, with ZERO frontend references to the list. Placed
-          beside the periods panel for the same reason it is mounted here rather than as a route:
-          the engine, the window capture and the history all belong to the page that runs them, and
-          #823 Stage 1 says explicitly not to design a second backtest view while the first sits
-          unused. */}
-      <BacktestRunsPanel />
+      {/* ⚠️ THE CAPTURED-WINDOWS PANEL IS NOT HERE ANY MORE (2026-10-22, owner direction). It moved to
+          `/lab/backtest-data`, which is the inventory of DATA — a captured period is a named, noted,
+          imported window of bars, and putting storage management beside a measurement form was the
+          wrong control on the wrong page. This page only CONSUMES periods: the Window control above
+          lists every one the data page creates. */}
+
+      {/* ── REFERENCE MATERIAL, IN ONE TAB STRIP ──────────────────────────────────────────────────
+          ⚠️ WHY TABS AND NOT THREE STACKED PANELS (owner report, 2026-10-22: *"the new page is
+          actually a mess"*). This page had grown to NINE vertically stacked blocks — run form,
+          execution panel, runs list, stats grid, equity chart, price chart, trades table, settings
+          inventory of four/five sub-tables, and the score-detail table. Everything was present and
+          nothing was findable.
+
+          These three are REFERENCE, not steps in the run: you consult one when you need it. Showing
+          one at a time keeps the run form and its result adjacent, which is the only adjacency that
+          matters during measurement.
+
+          The result blocks above are deliberately NOT tabbed — a result you have to click to see is
+          the opposite of the point. */}
+      <nav className="bt-ref-tabs" aria-label="Reference panels">
+        {[
+          { id: 'runs', label: 'Completed runs', hint: 'Stored runs, and the comparison of two of them.' },
+          { id: 'settings', label: 'Settings inventory', hint: 'Every knob, and whether a run honours it.' },
+          { id: 'scores', label: 'Score detail', hint: 'Bar-by-bar scores for the same window.' },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`bt-ref-tab${refTab === t.id ? ' bt-ref-tab--on' : ''}`}
+            aria-current={refTab === t.id ? 'true' : undefined}
+            title={t.hint}
+            onClick={() => setRefTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {refTab === 'runs' && (
+        /* #823 Stage 2 — the stored runs were invisible. Measured 2026-10-15: 26 runs stored and
+           served by `GET /api/backtest/runs`, with ZERO frontend references to the list. This panel
+           is load-bearing: it is the only place two runs can be set against each other, and it
+           carries the #1132 guard that refuses to name a winner across two windows. */
+        <BacktestRunsPanel />
+      )}
+
+      {refTab === 'settings' && (
+        <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
+          <BacktestSettingsInventory
+            subject={subject}
+            protocolId={protocolId}
+            botId={subject === 'strategy' ? botId : ''}
+            overrides={overrides}
+            onOverride={setOverride}
+            allowTimeframe={!usePeriod}
+          />
+        </Suspense>
+      )}
+
+      {refTab === 'scores' && (
+        /* Available for PROTOCOL runs on a DATED window. It needs dates: `/api/replay/run` takes
+           `from`/`to`, and a bar count has none — so a "last N bars" run correctly has no drill-down
+           rather than one measured over a guessed range. */
+        <ProtocolScoreDetail
+          protocolId={protocolId}
+          symbol={marketSymbol}
+          timeframe={marketTimeframe}
+          periodId={usePeriod ? periodId : ''}
+          blockedReason={
+            subject !== 'protocol'
+              ? 'Score detail scores one PROTOCOL over a window. Switch the subject to Protocols.'
+              : !protocolId
+                ? 'Select a protocol to score a window.'
+                : !usePeriod
+                  ? 'Score detail needs a dated window. Choose a stored period as the Window.'
+                  : null
+          }
+        />
+      )}
 
       {stats && (
         <div className="bt-results">
@@ -577,8 +1051,8 @@ export default function BacktestPage() {
                 `0dd94ddd` stored 100% here beside 0 winners of 3 trades. The two populations are
                 now labelled as what they are. */}
             <div className="bt-stat"><div className="bt-stat-value">{(stats.winRate * 100).toFixed(0)}%</div><div>Entry Signals Profitable</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{stats.averageReturn10d}%</div><div>Avg Return (10d)</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{stats.maxReturn10d}%</div><div>Max Return (10d)</div></div>
+            <div className="bt-stat"><div className="bt-stat-value">{pctOrDash(stats.averageReturn10d)}</div><div>Avg Return (10d)</div></div>
+            <div className="bt-stat"><div className="bt-stat-value">{pctOrDash(stats.maxReturn10d)}</div><div>Max Return (10d)</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.maxDrawdown10d}%</div><div>Max Drawdown (10d)</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.profitFactor}</div><div>Profit Factor</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.sharpeApproximation}</div><div>Sharpe (approx)</div></div>
@@ -606,26 +1080,41 @@ export default function BacktestPage() {
             <p className="bt-measured-period">
               Captured period: <strong>{result.measuredPeriod.name}</strong>
               {result.measuredPeriod.note ? ` — ${result.measuredPeriod.note}` : ''}
-              <span className="bt-measured-bars"> · {result.measuredPeriod.bars} bars loaded</span>
+              {result.measuredPeriod.from && (
+                <span className="bt-measured-bars">
+                  {' '}· {result.measuredPeriod.from} → {result.measuredPeriod.to}
+                  {result.measuredPeriod.bars != null
+                    ? ` · ${result.measuredPeriod.bars} bars imported`
+                    : ' · bar count not recorded'}
+                </span>
+              )}
             </p>
           )}
 
           {/* Execution realism info */}
-          {execution && (
+          {/* ⚠️ What this run CANNOT claim, stated with the numbers rather than left to the reader —
+              a bot-driven run carries the #843 sizing-divergence warning here. */}
+          {result?.caveats?.length > 0 && (
+            <ul className="bt-caveats">
+              {result.caveats.map((c) => <li key={c}>{c}</li>)}
+            </ul>
+          )}
+
+          {executionUsed && (
             <p className="bt-execution-info">
-              ⚙ Slippage: {(execution.slippage * 100).toFixed(2)}% · Spread: {(execution.spread * 100).toFixed(2)}%
-              · Commission: ${execution.commission.toFixed(2)}/share · {execution.positionModel === 'fixedPercent'
-                ? `${execution.riskPct}% risk on $${execution.accountSize.toLocaleString()}`
-                : execution.positionModel === 'fixedDollar'
-                ? `$${execution.fixedAmount} fixed`
-                : execution.positionModel?.startsWith('kelly')
-                ? <>Kelly ({execution.positionModel === 'kellyHalf' ? 'half' : 'full'})
-                  · f={(execution.kellyFraction * 100).toFixed(1)}%
-                  · Edge: {execution.kellyEdge > 0 ? '+' : ''}{execution.kellyEdge}%
-                  · Cap: {execution.kellyCapPct}%
-                  {execution.kellyFraction * 100 > 25 && <span style={{ color: 'var(--danger)', fontWeight: 700 }}> ⚠ Aggressive!</span>}
+              ⚙ Slippage: {(executionUsed.slippage * 100).toFixed(2)}% · Spread: {(executionUsed.spread * 100).toFixed(2)}%
+              · Commission: ${executionUsed.commission.toFixed(2)}/share · {executionUsed.positionModel === 'fixedPercent'
+                ? `${executionUsed.riskPct}% risk on $${executionUsed.accountSize.toLocaleString()}`
+                : executionUsed.positionModel === 'fixedDollar'
+                ? `$${executionUsed.fixedAmount} fixed`
+                : executionUsed.positionModel?.startsWith('kelly')
+                ? <>Kelly ({executionUsed.positionModel === 'kellyHalf' ? 'half' : 'full'})
+                  · f={(executionUsed.kellyFraction * 100).toFixed(1)}%
+                  · Edge: {executionUsed.kellyEdge > 0 ? '+' : ''}{executionUsed.kellyEdge}%
+                  · Cap: {executionUsed.kellyCapPct}%
+                  {executionUsed.kellyFraction * 100 > 25 && <span style={{ color: 'var(--danger)', fontWeight: 700 }}> ⚠ Aggressive!</span>}
                 </>
-                : `$${execution.fixedAmount} fixed`}
+                : `$${executionUsed.fixedAmount} fixed`}
             </p>
           )}
 
@@ -641,7 +1130,7 @@ export default function BacktestPage() {
           {equityData && !equityData.error && equityData.equity?.length > 0 && (
             <div className="bt-chart-section">
               <h3>Equity Curve &amp; Drawdown</h3>
-              <EquityCurveChart equityData={equityData} symbol={symbol} height={300} />
+              <EquityCurveChart equityData={equityData} symbol={result?.symbol ?? marketSymbol} height={300} />
             </div>
           )}
 
@@ -649,33 +1138,50 @@ export default function BacktestPage() {
           {showChart && (
             <div className="bt-chart-section">
               <h3>Price Chart &amp; Signals</h3>
-              <BacktestChartPane initialSymbol={symbol} />
+              <BacktestChartPane initialSymbol={result?.symbol ?? marketSymbol} />
             </div>
           )}
 
-          {result?.entrySignals?.length > 0 && (
-            <table className="bt-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Score</th>
-                  <th>5d Return</th>
-                  <th>10d Return</th>
-                  <th>20d Return</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.entrySignals.slice(-50).reverse().map((s, i) => (
-                  <tr key={i} className={s.wasProfitable ? 'bt-row-win' : 'bt-row-loss'}>
-                    <td>{s.date}</td>
-                    <td>{s.score}</td>
-                    <td className={s.return5d > 0 ? 'bt-green' : 'bt-red'}>{s.return5d != null ? `${s.return5d}%` : '—'}</td>
-                    <td className={s.return10d > 0 ? 'bt-green' : 'bt-red'}>{s.return10d != null ? `${s.return10d}%` : '—'}</td>
-                    <td className={s.return20d > 0 ? 'bt-green' : 'bt-red'}>{s.return20d != null ? `${s.return20d}%` : '—'}</td>
+          {/* ── WHAT IT TRADED ────────────────────────────────────────────────────────────────────
+              ⚠️ THIS REPLACED AN ENTRY-SIGNAL TABLE THAT COULD NEVER RENDER (#1134). A stored run
+              persists its TRADES, not its per-signal rows — `formatRunResult()` returns
+              `entrySignals: []` — so a table keyed on those rows was structurally dead, while 1,285
+              stored trades went unshown. The `caveats` block above states the gap; this shows the
+              population that actually exists. Newest first, last 50. */}
+          {result?.trades?.length > 0 && (
+            <div className="bt-chart-section">
+              <h3>Trades <span className="bt-measured-bars">· last {Math.min(50, result.trades.length)} of {result.trades.length.toLocaleString()}, newest first</span></h3>
+              <table className="bt-table">
+                <caption className="sr-only">
+                  The trades this run recorded, newest first, with entry and exit price, realised
+                  P&amp;L and why the position closed.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" title="When the position was opened.">Entry</th>
+                    <th scope="col" title="Long or short.">Dir</th>
+                    <th scope="col" title="Fill price at entry.">In</th>
+                    <th scope="col" title="Fill price at exit.">Out</th>
+                    <th scope="col" title="Realised profit or loss on the trade, as a percentage of the position.">PnL %</th>
+                    <th scope="col" title="What ended the trade: the stop, the target, or end of the window.">Why</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {result.trades.slice(-50).reverse().map((t, i) => (
+                    <tr key={`${t.entryDate}-${i}`} className={t.pnlPct > 0 ? 'bt-row-win' : 'bt-row-loss'}>
+                      <td className="pb-mono">{String(t.entryDate).slice(0, 16).replace('T', ' ')}</td>
+                      <td>{t.direction === 'short' ? '▼ short' : '▲ long'}</td>
+                      <td className="pb-mono">{t.entryPrice}</td>
+                      <td className="pb-mono">{t.exitPrice}</td>
+                      <td className={`pb-mono ${t.pnlPct > 0 ? 'bt-green' : 'bt-red'}`}>
+                        {t.pnlPct != null ? `${Number(t.pnlPct).toFixed(2)}%` : '—'}
+                      </td>
+                      <td>{t.exitReason ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
