@@ -711,4 +711,33 @@ export const KNOWN_FEATURES = {
     'Scoring Engine Architecture Reference & Diagnostic Diagrams': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
     'Earnable vs configured signal capacity': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
     'Dual-basis signal labelling (configured vs earn-able)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+
+  // ── batch #35 (2026-10-21 to 2026-10-22) — 6 capabilities from 10 handoffs (4 were Notes:
+  //    bugfix/test, QA only, so they carry no capability). Theme: the backtest becomes an honest
+  //    instrument — it refuses to compare across different date windows, runs on a FROZEN seeded
+  //    window, stores every protocol run on ONE page, and lists which knobs a run actually reads
+  //    (and now applies the bot's own entry bar). uiSurfaces: 0 is a FINDING, not a blank (0 of
+  //    these): `Frozen development testing window` declared 0 in its handoff and it is recorded at
+  //    1 because the merged Lab now DEFAULTS to it — the handoff was superseded mid-batch.
+  //    `devCompletion: 'partial'` is honest: #1132, #1133 and #1136 are OPEN (only #1134 is CLOSED).
+    'Same-data comparison guard (backtests)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Frozen development testing window': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Backtest Lab (one page, two subjects, stored comparable runs)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Bot entry-bar fidelity in backtests': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Run-scoped setting overrides + operational retention': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Settings inventory — every configurable knob, marked with whether a backtest run reads it': { dataPersistence: 'derived', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+
+  // ── batch #36 (2026-10-25 to 2026-10-26) — 4 capabilities from 7 handoffs (3 were Notes:
+  //    bugfix/feature, QA only, so they carry no capability). Theme: the Backtest Lab becomes a
+  //    gated instrument that measures what it says it measures — costs are DERIVED from the symbol
+  //    and then PERSISTED, a protocol run scores without fills, and a step tick means "the reader
+  //    reached this", not "the values happen to be valid". uiSurfaces: 0 is a FINDING, not a blank
+  //    (0 of these). `devCompletion: 'partial'` on all four is measured against the tracker, not
+  //    caution: #1138, #1141 and #1143 are OPEN (only #1137 is CLOSED), and the two #1141 entries
+  //    are partial for stated reasons — the stock/index 3% default is undecided and `fixedAmount`
+  //    has no column.
+    'Backtest Lab — asset-class cost modelling': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Backtest run cost provenance': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Backtest Lab — protocol/strategy separation and manual A/B': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Backtest Lab stepped workflow': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
 };
