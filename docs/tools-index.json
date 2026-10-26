@@ -67,7 +67,7 @@
       "where": "nest",
       "category": "audit",
       "purpose": "Audit which resolution path every protocol actually takes (#764).",
-      "selfTest": false,
+      "selfTest": true,
       "reaches": [
         "docs"
       ]

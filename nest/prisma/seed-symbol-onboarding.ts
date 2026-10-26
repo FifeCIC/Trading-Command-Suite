@@ -304,6 +304,25 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string }> = [
   { symbol: 'USDCHF', protocolSlug: 'forex-session-v1' },
   { symbol: 'USDJPY', protocolSlug: 'forex-session-v1' },
   { symbol: 'NZDUSD', protocolSlug: 'forex-session-v1' },
+  // ── The seven protocols whose assignments existed ONLY in the database (#1137) ──
+  // Measured 2026-10-25: 12 protocols had `symbol_protocol_assignment` rows and only 5 were
+  // declared here, so a reinstall would have silently un-wired seven protocols that are wired
+  // today. The rows were copied DB → seed (the only sanctioned direction for a value that has
+  // no seed path) and round-tripped: delete one, re-seed, it returns.
+  // ⚠️ `dow-speed-v1` and `btc-scalp-v1` matter most — `dow-index.json` already declares the
+  // FK to `dow-speed-v1`, so the watchlist link and the assignment must not disagree about
+  // which protocol scores US30.
+  { symbol: 'US30', protocolSlug: 'dow-speed-v1' },
+  { symbol: 'BTC', protocolSlug: 'btc-scalp-v1' },
+  { symbol: 'ETH', protocolSlug: 'btc-scalp-v1' },
+  { symbol: 'SOL', protocolSlug: 'btc-scalp-v1' },
+  { symbol: 'WTI', protocolSlug: 'oil-speed-v1' },
+  { symbol: 'QQQ', protocolSlug: 'qqq-speed-v1' },
+  { symbol: 'USTEC', protocolSlug: 'qqq-speed-v1' },
+  { symbol: 'SPY', protocolSlug: 'spy-speed-v1' },
+  { symbol: 'US500', protocolSlug: 'spy-speed-v1' },
+  { symbol: 'XAGUSD', protocolSlug: 'probe-1dir-rsi' },
+  { symbol: 'EURUSD', protocolSlug: 'probe-1dir-v1' },
   // VIX short assignment is deliberately NOT added yet. Per #772, nothing is
   // assigned until the first demo short has actually executed (Step 2), so the
   // short path is not spread across more protocols before it is proven once.

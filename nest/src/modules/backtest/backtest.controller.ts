@@ -7,6 +7,7 @@ import { buildSettingsInventory } from './settings-inventory';
 import { PrismaService } from '../../database/prisma.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import type { BacktestRunRequest } from './backtest.service';
+import { LongRunning } from '../../common/decorators/long-running.decorator';
 
 /**
  * Backtest Controller — Historical Strategy Validation
@@ -43,6 +44,11 @@ export class BacktestController {
     return this.backtestService.getDatasets();
   }
 
+  // ⚠️ A backtest scores ONE BAR AT A TIME and legitimately takes minutes (#1139). The global 30 s
+  // request deadline returned 504 mid-run, so a real window could never produce a result — measured
+  // 2026-10-26. 600 s matches the page's own client timeout, and covers the measured 298 s frozen-window run with headroom; if a run exceeds it, the client already
+  // tells the reader the run may still be stored (see the page's timed-out guard).
+  @LongRunning(600_000)
   @Post('run')
   @ApiOperation({ summary: 'Run backtest for a symbol over N days' })
   @ApiOkResponse({ description: 'Backtest result with entry signals and stats' })
@@ -562,3 +568,4 @@ export class BacktestController {
     }
   }
 }
+

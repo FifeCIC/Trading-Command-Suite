@@ -272,6 +272,15 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
               </div>
 
               {item.tradingStyle && <div className="pc-style">{item.tradingStyle}</div>}
+              {/* ⚠️ A PROTOCOL THAT CANNOT RUN SAYS SO HERE (2026-10-25). This replaced the "Has
+                  symbols" filter checkbox: filtering for a broken state hides it, whereas a badge on
+                  the card tells the operator which card is broken. Measured the day it shipped: 14 of
+                  47 protocols resolve zero symbols, one of them ACTIVE. */}
+              {item.unrunnable && (
+                <div className="pc-warn" title="This protocol resolves NO symbols, so it cannot be scored or backtested. Give it a watchlist or a designated symbol.">
+                  ⚠ no symbols — cannot run
+                </div>
+              )}
               {item.description && <p className="pc-desc">{item.description}</p>}
             </div>
           );

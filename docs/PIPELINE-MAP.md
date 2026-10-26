@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **557** backend source files (specs excluded). Two access paths, because one
+Scanned **558** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**557** source files · **2947** declarations · **363** ratio sites · **1517** nodes · **134** unreferenced
+**558** source files · **2950** declarations · **363** ratio sites · **1517** nodes · **134** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -95,9 +95,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 28 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:503` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:509` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:511` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:517` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:1804` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -396,9 +396,9 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 28 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:503` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:509` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:511` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:517` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:1804` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -643,9 +643,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/automation/stop-guardian.service.ts:1866` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:503` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:509` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:511` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:517` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:1804` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -897,7 +897,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/stop-guardian.service.ts:1850 progress`
 - `nest/src/modules/automation/stop-guardian.service.ts:568 flat`
-- `nest/src/modules/backtest/backtest.controller.ts:398 mapResult`
+- `nest/src/modules/backtest/backtest.controller.ts:404 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:2012 chartTime`
 - `nest/src/modules/backtest/backtest.service.ts:275 pick`
 - `nest/src/modules/directives/directives.service.ts:243 prepare`

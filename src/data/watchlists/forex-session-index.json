@@ -1,0 +1,12 @@
+{
+  "protocolId": "forex-session-v1",
+  "symbols": [
+    "AUDUSD",
+    "EURUSD",
+    "GBPUSD",
+    "NZDUSD",
+    "USDCAD",
+    "USDCHF",
+    "USDJPY"
+  ]
+}

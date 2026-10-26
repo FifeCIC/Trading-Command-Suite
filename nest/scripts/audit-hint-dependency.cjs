@@ -62,12 +62,86 @@ function deriveWatchlistName(slug) {
 
 const norm = (a) => [...new Set(a.map((s) => String(s).toUpperCase()))].sort();
 
+/**
+ * Pure classifier, extracted so `--self-test` can prove it in both directions without a
+ * database. Keeping the logic inline would make the only way to canary it a live run against
+ * whatever the database happens to contain — which is not a canary, it is an observation.
+ */
+function classifyVerdict(relational, viaHints, hintOnly) {
+  if (relational.length === 0 && viaHints.length > 0) return 'HINT_ONLY';
+  if (relational.length === 0 && viaHints.length === 0) return 'UNRESOLVED';
+  if (hintOnly.length > 0) return 'HINT_ADDS';
+  return 'RELATIONSHIP_ONLY';
+}
+
+/**
+ * A protocol that is ACTIVE but resolves no symbol by ANY path, and has not DECLARED itself
+ * unwired, is a blocker. Extracted for the same reason as the classifier.
+ *
+ * The declared opt-out is not a loophole invented here: `contract-probe.cjs`
+ * (INV-NO-SYMBOL-GUESSING) already honours this exact wording, and two guards that disagree
+ * about the same exception are worse than one.
+ */
+function isDeclaredUnwired(note) {
+  return /sandbox|intentionally not wired|not wired to live symbols/i.test(String(note || ''));
+}
+
+function isActiveUnresolvedBlocker(row) {
+  return row.active && row.verdict === 'UNRESOLVED' && !isDeclaredUnwired(row.note);
+}
+
+// ── --self-test ───────────────────────────────────────────────────────────
+// Proves the classifier and the blocker rule can FAIL, not merely that they run. An audit whose
+// logic has never been observed to produce the wrong verdict is a decoration.
+if (process.argv.includes('--self-test')) {
+  const cases = [
+    // [label, relational, viaHints, hintOnly, expected]
+    ['no relationship, no hint → UNRESOLVED', [], [], [], 'UNRESOLVED'],
+    ['no relationship, hint only → HINT_ONLY', [], ['BTC'], ['BTC'], 'HINT_ONLY'],
+    ['relationship also in hints → RELATIONSHIP_ONLY', ['EURUSD'], ['EURUSD'], [], 'RELATIONSHIP_ONLY'],
+    ['relationship plus an extra hinted symbol → HINT_ADDS', ['EURUSD'], ['EURUSD', 'GBPUSD'], ['GBPUSD'], 'HINT_ADDS'],
+    ['relationship and hint are disjoint → HINT_ADDS', ['EURUSD'], ['GBPUSD'], ['GBPUSD'], 'HINT_ADDS'],
+  ];
+  let failed = 0;
+  for (const [label, rel, hints, hintOnly, expected] of cases) {
+    const actual = classifyVerdict(rel, hints, hintOnly);
+    const ok = actual === expected;
+    if (!ok) failed++;
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  classify: ${label} → ${actual}${ok ? '' : ` (expected ${expected})`}`);
+  }
+
+  const blockerCases = [
+    ['ACTIVE + UNRESOLVED + no note → BLOCKS', { active: true, verdict: 'UNRESOLVED', note: null }, true],
+    ['ACTIVE + UNRESOLVED + parked note → BLOCKS', { active: true, verdict: 'UNRESOLVED', note: 'Parked 2026-08-20 — pending' }, true],
+    ['ACTIVE + UNRESOLVED + declared sandbox → allowed', { active: true, verdict: 'UNRESOLVED', note: 'Sandbox protocol — intentionally not wired to live symbols.' }, false],
+    ['INACTIVE + UNRESOLVED → allowed', { active: false, verdict: 'UNRESOLVED', note: null }, false],
+    ['ACTIVE + HINT_ONLY → allowed by THIS rule', { active: true, verdict: 'HINT_ONLY', note: null }, false],
+  ];
+  for (const [label, row, expected] of blockerCases) {
+    const actual = isActiveUnresolvedBlocker(row);
+    const ok = actual === expected;
+    if (!ok) failed++;
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  blocker: ${label} → ${actual}${ok ? '' : ` (expected ${expected})`}`);
+  }
+
+  // Canary the canary: if the classifier were hardcoded to one answer, at least one case above
+  // must disagree with it. Stated as an assertion so a future "simplification" that stubs the
+  // classifier fails here rather than silently passing every case.
+  const distinct = new Set(cases.map(([, r, h, ho]) => classifyVerdict(r, h, ho)));
+  const canaryOk = distinct.size === 4;
+  if (!canaryOk) failed++;
+  console.log(`  ${canaryOk ? 'PASS' : 'FAIL'}  canary: classifier produces all 4 verdicts (got ${distinct.size})`);
+
+  console.log(failed === 0 ? '\n✅ self-test passed' : `\n🛑 self-test FAILED (${failed})`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 (async () => {
   const prisma = new PrismaClient();
   try {
     // ── Load every protocol ───────────────────────────────────────────────
     const protocols = await prisma.$queryRawUnsafe(
-      `SELECT id, slug, name, active FROM protocol ORDER BY active DESC, slug ASC`,
+      `SELECT id, slug, name, active, note FROM protocol ORDER BY active DESC, slug ASC`,
     );
 
     // ── Path 0: explicit symbol assignments (FK) ─────────────────────────
@@ -134,15 +208,12 @@ const norm = (a) => [...new Set(a.map((s) => String(s).toUpperCase()))].sort();
       const viaHints = norm(hints);
 
       const hintOnly = viaHints.filter((s) => !relational.includes(s));
-      let verdict;
-      if (relational.length === 0 && viaHints.length > 0) verdict = 'HINT_ONLY';
-      else if (relational.length === 0 && viaHints.length === 0) verdict = 'UNRESOLVED';
-      else if (hintOnly.length > 0) verdict = 'HINT_ADDS';
-      else verdict = 'RELATIONSHIP_ONLY';
+      const verdict = classifyVerdict(relational, viaHints, hintOnly);
 
       rows.push({
         slug: p.slug,
         active: Number(p.active) === 1,
+        note: p.note ?? null,
         relational,
         viaHints,
         hintOnly,
@@ -181,15 +252,44 @@ const norm = (a) => [...new Set(a.map((s) => String(s).toUpperCase()))].sort();
     show('ACTIVE — UNRESOLVED (no path produces any symbol)', active.filter((r) => r.verdict === 'UNRESOLVED'));
 
     const blockers = active.filter((r) => r.verdict === 'HINT_ONLY' || r.verdict === 'HINT_ADDS');
+    // ── ACTIVE UNRESOLVED is a blocker too (2026-10-25) ──
+    // BEFORE: only HINT_ONLY / HINT_ADDS counted. An ACTIVE protocol with NO relationship and
+    //         NO hint (verdict UNRESOLVED) satisfied neither, so it was listed under a heading
+    //         and then never mentioned again — and the summary printed
+    //         "✅ No ACTIVE protocol depends on the hint tables" directly beneath it.
+    // WHY THAT WAS WRONG: the sentence is TRUE and REASSURING while the protocol resolves to
+    //         zero symbols and cannot score at all. Measured 2026-10-25: 1 ACTIVE protocol
+    //         (`eurusd-macro-v1`) was in exactly that state and this script exited 0. A green
+    //         line over a protocol that cannot run is the "plausible output, no error" shape.
+    // A sandbox opt-out is honoured (the same regex contract-probe.cjs uses), because a guard
+    // that fires on a DECLARED exception gets allowlisted, and an allowlisted guard is worse
+    // than none.  → isDeclaredUnwired(), defined at module level so --self-test covers it.
+    const activeUnresolved = active.filter((r) => r.verdict === 'UNRESOLVED');
+    const activeUnresolvedUndeclared = activeUnresolved.filter((r) => !isDeclaredUnwired(r.note));
+    const blockersAll = blockers.length + activeUnresolvedUndeclared.length;
+
     console.log('\n── SUMMARY ──');
-    if (blockers.length === 0) {
+    if (blockersAll === 0) {
       console.log('  ✅ No ACTIVE protocol depends on the hint tables.');
       console.log('     SINGLE_SYMBOL_HINTS and WATCHLIST_HINTS can be removed without changing');
       console.log('     any active protocol\'s symbol set.');
     } else {
-      console.log(`  ⚠️  ${blockers.length} ACTIVE protocol(s) depend on the hint tables:`);
-      for (const r of blockers) console.log(`       ${r.verdict.padEnd(16)} ${r.slug}`);
-      console.log('     Wire each onto a watchlist FK (or an assignment) before removing the hints.');
+      if (blockers.length) {
+        console.log(`  ⚠️  ${blockers.length} ACTIVE protocol(s) depend on the hint tables:`);
+        for (const r of blockers) console.log(`       ${r.verdict.padEnd(16)} ${r.slug}`);
+        console.log('     Wire each onto a watchlist FK (or an assignment) before removing the hints.');
+      }
+      if (activeUnresolvedUndeclared.length) {
+        console.log(`  🛑 ${activeUnresolvedUndeclared.length} ACTIVE protocol(s) resolve NO symbols by ANY path:`);
+        for (const r of activeUnresolvedUndeclared) console.log(`       ${r.verdict.padEnd(16)} ${r.slug}`);
+        console.log('     These cannot score at all. Either wire them, deactivate them, or declare');
+        console.log('     the opt-out in the protocol\'s note (it must say "sandbox" or');
+        console.log('     "intentionally not wired"). contract-probe.cjs INV-NO-SYMBOL-GUESSING fails on them.');
+      }
+    }
+    if (activeUnresolved.length > activeUnresolvedUndeclared.length) {
+      const declared = activeUnresolved.filter((r) => isDeclaredUnwired(r.note)).map((r) => r.slug);
+      console.log(`\n  ℹ️  ${declared.length} ACTIVE protocol(s) are unwired by DECLARED intent: ${declared.join(', ')}`);
     }
 
     const inactiveHintOnly = rows.filter((r) => !r.active && r.verdict === 'HINT_ONLY');
@@ -198,7 +298,29 @@ const norm = (a) => [...new Set(a.map((s) => String(s).toUpperCase()))].sort();
       console.log('     resolve to nothing if activated while the hints are gone:');
       for (const r of inactiveHintOnly) console.log(`       ${r.slug.padEnd(24)} hintOnly=[${r.hintOnly.join(', ')}]`);
     }
+    // ⚠️ INACTIVE + UNRESOLVED is reported, NOT gated. Measured 2026-10-25: 15 of them. They cost
+    // nothing while inactive, but each one becomes an instant no-symbols protocol if someone
+    // activates it — which is exactly how `eurusd-macro-v1` was found. Wiring them is a data
+    // decision (which symbols should this protocol trade?), not a repair, so it is surfaced here
+    // for a human and not turned into a build failure.
+    const inactiveUnresolved = rows.filter((r) => !r.active && r.verdict === 'UNRESOLVED' && !isDeclaredUnwired(r.note));
+    const inactiveDeclared = rows.filter((r) => !r.active && r.verdict === 'UNRESOLVED' && isDeclaredUnwired(r.note));
+    if (inactiveUnresolved.length) {
+      console.log(`\n  ℹ️  ${inactiveUnresolved.length} INACTIVE protocol(s) resolve NO symbols — harmless while`);
+      console.log('     inactive, but they become unwired the moment they are activated:');
+      console.log(`       ${inactiveUnresolved.map((r) => r.slug).join(', ')}`);
+    }
+    if (inactiveDeclared.length) {
+      console.log(`\n  ℹ️  ${inactiveDeclared.length} INACTIVE protocol(s) are unwired by DECLARED intent: ${inactiveDeclared.map((r) => r.slug).join(', ')}`);
+    }
     console.log('');
+
+    // Exit 1 when an ACTIVE protocol cannot resolve a symbol by any path. Callers that gate on
+    // this script (none today — it is on-demand) then cannot ignore it.
+    if (activeUnresolvedUndeclared.length > 0 || blockers.length > 0) {
+      console.log(`\n[audit] BLOCKED — ${blockersAll} ACTIVE protocol(s) need attention (see above).`);
+      process.exitCode = 1;
+    }
   } finally {
     await prisma.$disconnect();
   }

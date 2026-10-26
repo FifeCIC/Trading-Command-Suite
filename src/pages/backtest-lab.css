@@ -55,15 +55,6 @@
 }
 .pb-toolbar .ff-select { width: auto; min-width: 9rem; }
 .pb-search { flex: 1 1 16rem; min-width: 12rem; }
-.pb-check {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--ink-soft, #cbd5e1);
-  white-space: nowrap;
-  cursor: pointer;
-}
 .pb-count {
   font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
@@ -362,3 +353,251 @@
   border-color: var(--line);
 }
 .bt-ref-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The search sits in the run-head beside the subject toggle (owner direction, 2026-10-25) and must
+ * therefore be able to SHRINK. `.pb-search` is `flex: 1 1 16rem`, which is right in a toolbar but
+ * overflows a row that already holds two buttons and a count — so the head wraps the count to the next
+ * line rather than squashing the input below its usable width. */
+.pb-run-head .pb-search { flex: 1 1 12rem; min-width: 10rem; }
+.pb-run-head { align-items: center; }
+.pb-run-head .pb-count { flex: 0 0 auto; }
+
+/* Direction select in the subject header (#1136 follow-up, owner direction 2026-10-25). Fixed width so
+ * the search keeps the flexible space; it sits AFTER the count deliberately — the count belongs to the
+ * search, the direction is a separate facet. */
+.pb-run-head .pb-direction { flex: 0 0 auto; width: auto; min-width: 9rem; }
+
+/* ── STEPS (#1138, owner direction 2026-10-26) ──────────────────────────────────────────────────
+ * The Lab is one ordered sequence, and a step you have not reached is not interactive. Two things
+ * make that legible without explanation:
+ *
+ *   1. the NUMBER is always visible, so the order is the rail's job and not the reader's memory;
+ *   2. a locked step says WHICH condition is unmet ("Locked — Pick a protocol in step 1"), because
+ *      "complete the previous step" is true and useless.
+ *
+ * ⚠️ Locked steps are `aria-disabled`, never `disabled`. accessibility-policy requires every
+ * interactive element to be reachable by Tab; a natively disabled button leaves the tab order, so a
+ * keyboard user would meet a gap where a step should be and never hear the reason.
+ *
+ * ⚠️ Only ONE step body is mounted at a time, so the page cannot be scrolled past a step the reader
+ * has not done. That is the mechanism — the styling only reports it.
+ */
+.pb-steps {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.pb-steps-rail {
+  position: sticky;
+  top: var(--space-lg);
+}
+.pb-steps-rail ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pb-step-index {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  width: 100%;
+  /* accessibility-policy: tap targets at least 44x44. */
+  min-height: 2.75rem;
+  padding: var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pb-step-index:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.pb-step-index:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The number. A circle, not a square, so it reads as an ordinal rather than a control. */
+.pb-step-num {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.pb-step-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pb-step-label { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+.pb-step-state { font-size: 0.68rem; color: var(--text-dim, var(--ink-soft)); }
+
+/* Done — the tick carries the meaning, the colour only reinforces it. */
+.pb-step-item--done .pb-step-num {
+  border-color: var(--risk-normal);
+  color: var(--risk-normal);
+}
+.pb-step-item--done .pb-step-state { color: var(--risk-normal); }
+
+/* Current — accent ring, and `aria-current` is what a screen reader hears. */
+.pb-step-item .pb-step-index[aria-current='step'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.pb-step-index[aria-current='step'] .pb-step-num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Locked — dimmer, but the reason is TEXT, so the state never depends on realising a colour. */
+.pb-step-item--locked .pb-step-index { cursor: not-allowed; }
+.pb-step-item--locked .pb-step-label { color: var(--ink-soft); }
+.pb-step-item--locked .pb-step-state { color: var(--text-dim, var(--ink-soft)); }
+.pb-step-item--locked .pb-step-num { border-style: dashed; color: var(--ink-soft); }
+
+/* ── The panel the current step renders into ── */
+.pb-step-panel { min-width: 0; }
+.pb-step-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--line);
+}
+.pb-step-panel-head h2 { margin: 0; font-size: 1rem; color: var(--ink); }
+.pb-step-panel-num {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--bg);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.pb-step-panel-of {
+  margin-left: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  color: var(--text-dim, var(--ink-soft));
+}
+
+/* The run action, under the facts strip it commits to. */
+.pb-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+/* ≤900px — the rail becomes a numbered strip above the panel. A 12rem column on a narrow screen
+ * would leave the panel too narrow for a score table, which is the place the width matters most. */
+@media (max-width: 900px) {
+  .pb-steps { grid-template-columns: minmax(0, 1fr); }
+  .pb-steps-rail { position: static; }
+  .pb-steps-rail ol {
+    flex-direction: row;
+    gap: var(--space-xs);
+    overflow-x: auto;
+    padding-bottom: var(--space-xs);
+    -webkit-overflow-scrolling: touch;
+  }
+  .pb-step-item { flex: 0 0 auto; }
+  .pb-step-index { min-width: 9rem; }
+  .pb-step-panel-of { margin-left: 0; }
+}
+
+/* The continue affordance for a step that has no action of its own. */
+.pb-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--line);
+}
+
+/* ── Step 3 — information sources (#1139) ────────────────────────────────────────────────────── */
+
+.pb-symbol-pool {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.pb-info-head {
+  margin: var(--space-lg) 0 var(--space-sm);
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.pb-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The left border is the only colour difference between the two states, and the BADGE carries the
+ * same information in words — a reader who cannot separate the two hues loses nothing. */
+.pb-info-row {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+}
+.pb-info-row--ok { border-left-color: var(--risk-normal); }
+.pb-info-row--warn { border-left-color: var(--risk-high); }
+
+.pb-info-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.pb-info-row-main strong { color: var(--ink); font-size: 0.85rem; }
+
+.pb-info-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pb-info-row--ok .pb-info-badge { color: var(--risk-normal); }
+.pb-info-row--warn .pb-info-badge { color: var(--risk-high); }
+
+.pb-info-note {
+  margin: var(--space-xs) 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.pb-info-foot {
+  margin: var(--space-md) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-dim, var(--ink-soft));
+}
+
+.pb-info-window { margin-bottom: var(--space-md); }

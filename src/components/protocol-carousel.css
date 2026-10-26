@@ -173,3 +173,19 @@
     transform: none;
   }
 }
+
+/* ⚠️ A card-level warning, not a subtle tint: a protocol with no symbols cannot run at all. The word
+ * is in the badge, so the meaning does not depend on colour (accessibility-policy). */
+.pc-warn {
+  /* The card is a flex container, so `align-self` is what makes the badge hug its text. Without it the
+   * badge stretches the full card width and reads as a banner, not a label on one card. */
+  align-self: flex-start;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--risk-high);
+  border-radius: 6px;
+  color: var(--risk-high);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
