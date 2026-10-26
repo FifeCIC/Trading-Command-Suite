@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 187,
+  "count": 188,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1300,6 +1300,17 @@
       "category": "validator",
       "purpose": "INV-GUARDIAN-DIRECTIVE-RESOLVABLE (build-time)",
       "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-hidden-launches.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a WMI-launched console app must be launched HIDDEN (#1138).",
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"

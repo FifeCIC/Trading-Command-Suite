@@ -184,6 +184,8 @@ CREATE TABLE `BacktestRun` (
     `botId` VARCHAR(36) NULL,
     `botBaseSize` DOUBLE NULL,
     `periodId` VARCHAR(36) NULL,
+    `newsExclusion` VARCHAR(16) NOT NULL DEFAULT 'none',
+    `scoresJson` LONGTEXT NULL,
     `winRate` DOUBLE NOT NULL,
     `totalPnl` DOUBLE NOT NULL,
     `profitFactor` DOUBLE NOT NULL,

@@ -341,17 +341,34 @@ $errLog = Join-Path $logDir 'console-build-api-err.log'
 # ⚠️ Redirection moves into `cmd.exe`, because WMI cannot attach standard handles. The log paths are
 # unchanged, so `nest/logs/console-build-api*.log` remains the answer to "where is the log".
 #
+# ── ⚠️ AND THE WINDOW IS CREATED HIDDEN (2026-10-26) ───────────────────────────────────────────
+# `Win32_Process.Create` with no `ProcessStartupInformation` gives a console-subsystem child
+# (`cmd.exe`) a BRAND-NEW VISIBLE CONSOLE — an empty black window titled `C:\WINDOWS\system32\cmd.exe`
+# that displays nothing and belongs to nobody. The owner reported exactly that (*"2-3 times you've
+# caused a new one to open but it never displays anything"*), and this line was the only launcher in
+# the toolchain that omitted the flag: `tcs-launch.ps1` already passes `-WindowStyle Hidden` for the
+# same reason. `ShowWindow = 0` (SW_HIDE) creates the same console, hidden.
+#
+# ⚠️ Do not "fix" this by dropping `cmd.exe` — WMI cannot attach standard handles, so redirection has
+# to happen inside a shell. The flag is the fix; the shell is required.
+#
 # Falls back to `Start-Process` if WMI is unavailable or refused — a slow call is far better than an
 # API that did not start.
 $apiProc = $null
 try {
     $redirected = "cmd.exe /c node dist/src/main.js 1> `"$outLog`" 2> `"$errLog`""
+    # `New-CimInstance -ClientOnly` builds the WMI method's startup blob without registering anything.
+    $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = 0 }
     $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create `
-        -Arguments @{ CommandLine = $redirected; CurrentDirectory = $nestDir } -ErrorAction Stop
+        -Arguments @{
+            CommandLine              = $redirected
+            CurrentDirectory         = $nestDir
+            ProcessStartupInformation = $startup
+        } -ErrorAction Stop
     if ($created.ReturnValue -eq 0 -and $created.ProcessId) {
         Start-Sleep -Milliseconds 250
         $apiProc = Get-Process -Id $created.ProcessId -ErrorAction Stop
-        Write-Ok "API starting DETACHED via WMI (pid $($created.ProcessId)) — this script's caller will not wait on it."
+        Write-Ok "API starting DETACHED via WMI (pid $($created.ProcessId), window hidden) — this script's caller will not wait on it."
     }
 } catch {
     Write-Host "   ⚠ WMI launch unavailable ($($_.Exception.Message)) — falling back to Start-Process." -ForegroundColor Yellow

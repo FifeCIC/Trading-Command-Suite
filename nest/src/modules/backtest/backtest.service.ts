@@ -355,6 +355,88 @@ export function mergeBotConfig(
   };
 }
 
+/**
+ * How each side of a comparison COSTED and SIZED its fills (#1141).
+ *
+ * The three states this must keep apart, because they mean different things to a reader:
+ *
+ *   · **all recorded and identical** → silent. Nothing to say.
+ *   · **all recorded and different** → name both. A 3% round trip against a 0.03% one is a cost
+ *     difference wearing a protocol difference's clothes.
+ *   · **not recorded on one or both** → say so and stop there. Costs WERE applied to those runs,
+ *     they simply were not stored (measured 2026-10-26: NULL on 60 of 60 rows), so the pair cannot
+ *     be shown to have been costed alike. Unknown is not equal — the same rule as null-vs-zero.
+ *
+ * ⚠️ IT DOES NOT REFUSE THE COMPARISON. Two different cost models is a legitimate experiment
+ * ("does slippage kill this edge?"), exactly like two news modes. `windowWarning` refuses because
+ * two windows cannot be credited to the protocol at all; this one can be read correctly as long as
+ * the difference is named.
+ *
+ * Pure, so the three-state policy is testable without a database — the same reason `mergeBotConfig`
+ * is separate from its loading.
+ */
+export interface CostFacts {
+  id: string;
+  protocolId: string;
+  timeframe: string;
+  costs: {
+    recorded: boolean;
+    slippage: number | null;
+    spread: number | null;
+    commission: number | null;
+    positionModel: string | null;
+    accountSize: number | null;
+    riskPct: number | null;
+  };
+}
+
+export function describeCostDivergence(runs: CostFacts[]): string | null {
+  if (runs.length < 2) return null;
+
+  // ⚠️ THE RUN ID IS IN THE LABEL, not just protocol@timeframe. Two variants of ONE protocol are
+  // the primary use of this page, and they share both of those — the sizes warning already reads
+  // "xau-speed-m15 @15m, xau-speed-m15 @15m" for exactly that reason, which names nothing.
+  const labelled = (r: CostFacts) => `${r.protocolId} @${r.timeframe} [${String(r.id).slice(0, 8)}]`;
+  const unrecorded = runs.filter((r) => !r.costs.recorded);
+
+  if (unrecorded.length > 0) {
+    const which = unrecorded.map(labelled).join(', ');
+    return (
+      `⚠️ EXECUTION COSTS ARE UNKNOWN for ${unrecorded.length} of ${runs.length} run(s) (${which}) — ` +
+      'the columns exist but nothing wrote them before 2026-10-26 (#1141), so the costs that were ' +
+      'applied were never stored. A difference in P&L cannot be separated from a difference in ' +
+      'costs. Unknown is not the same as equal.'
+    );
+  }
+
+  // A run-to-run fingerprint of everything that changes what a fill COSTS and how big it is.
+  const costs = [...new Set(runs.map((r) =>
+    `${r.costs.spread}/${r.costs.slippage}/${r.costs.commission}`))];
+  const sizing = [...new Set(runs.map((r) =>
+    `${r.costs.positionModel}/${r.costs.accountSize}/${r.costs.riskPct}`))];
+
+  const parts: string[] = [];
+  if (costs.length > 1) {
+    parts.push(
+      'the runs used DIFFERENT execution costs (spread/slippage/commission: ' +
+      `${runs.map((r) => `${labelled(r)} ${r.costs.spread}/${r.costs.slippage}/${r.costs.commission}`).join(' vs ')})`,
+    );
+  }
+  if (sizing.length > 1) {
+    parts.push(
+      'and DIFFERENT position sizing (model/account/risk: ' +
+      `${runs.map((r) => `${labelled(r)} ${r.costs.positionModel}/${r.costs.accountSize}/${r.costs.riskPct}`).join(' vs ')})`,
+    );
+  }
+  if (parts.length === 0) return null;
+
+  return (
+    `⚠️ NOT A CLEAN COST PAIR — ${parts.join(' ')}. ` +
+    'The percentage figures survive a cost change better than the money figures do, so read the ' +
+    'signals and per-trade % before crediting any difference to the protocol or bot.'
+  );
+}
+
 export interface BacktestResult {
   id: string;
   symbol: string;
@@ -363,6 +445,12 @@ export interface BacktestResult {
   totalDays: number;
   timeframe: string;
   entrySignals: EntrySignal[];
+  /**
+   * EVERY bar this run scored, with the signal and whether the bot's own entry bar let it through
+   * (#1143). `entrySignals` is the ACTIONABLE population; this is the READING — what the protocol
+   * actually said, bar by bar, which is the thing two protocol runs are compared on.
+   */
+  scoreSeries?: Array<{ date: string; score: number; signal: string; passedBar: boolean }>;
   trades?: TradeRecord[];
   /**
    * Present ONLY on a bot-driven run (#965 item 3): the configuration that was resolved from the
@@ -694,6 +782,17 @@ export class BacktestService {
 
     const entrySignals: EntrySignal[] = [];
     const trades: TradeRecord[] = [];
+    /**
+     * EVERY bar the SEES engine scored, not only the ones that became entries (owner direction,
+     * 2026-10-26: *"it needs to be captured for comparison"*).
+     *
+     * ⚠️ THIS WAS THROWN AWAY. A run calls `fullScore()` once per bar — the canonical
+     * `ProtocolGatingService.scoreWithGating` path, guarded by `validate-single-scoring-path.cjs` —
+     * and then kept only the BUY bars that cleared the protocol threshold, so a stored run could not
+     * answer "what did this protocol score on this bar?". `entrySignals` is the ACTIONABLE
+     * population; this is the READING, which is what a protocol comparison is actually about.
+     */
+    const scoreSeries: Array<{ date: string; score: number; signal: string; passedBar: boolean }> = [];
     const windowSize = 100;
 
     for (let day = windowSize; day < bars.length; day++) {
@@ -723,6 +822,14 @@ export class BacktestService {
       // ⚠️ `signal` already cleared the PROTOCOL threshold (ENTRY_THRESHOLD, ~6%). A bar of 10 is a
       // strictly tighter second gate, so this can only ever REMOVE entries — it can never add one.
       const belowBotBar = !passesBotEntryBar(composite, minComposite);
+      // Recorded BEFORE the `continue`, so a bar the bot's own bar rejected still shows what the
+      // engine scored and that the bar — not the protocol — is why it was not traded.
+      scoreSeries.push({
+        date: barDate,
+        score: Number(composite.toFixed(1)),
+        signal,
+        passedBar: !belowBotBar,
+      });
       if (belowBotBar) continue;
 
       const score = composite;
@@ -934,6 +1041,7 @@ export class BacktestService {
       totalDays,
       timeframe,
       entrySignals: entrySignals.slice(-200),
+      scoreSeries: scoreSeries.slice(-2000),
       trades: doBrackets ? trades : undefined,
       execution: {
         slippage: Number(slippage.toFixed(6)),
@@ -1013,6 +1121,30 @@ export class BacktestService {
             // comparison are indistinguishable in this table, so a difference produced by the
             // DATES could be credited to the PROTOCOL.
             periodId: period?.id ?? null,
+            // #1139 follow-up — WHICH BAR POPULATION this measured. The news mode filters bars by
+            // date, so a comparison across two modes is not a like-for-like pair; `compareRuns()`
+            // can only say that if the mode was stored.
+            newsExclusion,
+            // ⚠️ #1141 — THE COSTS AND THE SIZING WERE NEVER STORED. Measured 2026-10-26: these six
+            // columns were NULL on **60 of 60** rows while `formatRunResult()` read them back, so
+            // every run served the formatter's DEFAULTS (0.01 / 0.01 / 0) and two runs costed
+            // differently compared as though they matched. Writing them is additive — no computed
+            // figure changes — which is why it was safe to fix without an A/B copy.
+            //
+            // ⚠️ `fixedAmount` still has NO column, so a `fixedDollar` run stores its model but not
+            // its amount. Stated here rather than left as a silent gap.
+            slippage,
+            spread,
+            commission,
+            positionModel,
+            accountSize,
+            riskPct,
+            // ⚠️ #1143 — THE SCORING OUTPUT WAS DISCARDED. The engine scores every bar through the
+            // canonical SEES path and kept only the BUY bars that cleared the threshold, so a stored
+            // run could not answer "what did this protocol score here?". Stored as a bounded JSON
+            // blob (last 2,000 bars) rather than a second table: a comparison needs the reading, not
+            // a join, and a table would add ~600 rows per run to every query.
+            scoresJson: JSON.stringify(scoreSeries.slice(-2000)),
             winRate: Number(winRate.toFixed(4)),
             totalPnl: Number(totalPnl.toFixed(4)),
             profitFactor: Number((grossProfit / grossLoss).toFixed(4)),
@@ -1408,6 +1540,8 @@ export class BacktestService {
       maxDrawdownPct: number;
       /** Percent per trade. NOT currency. */
       avgTradePnlPct: number;
+      /** The news-window mode this run measured with — `none` when the column predates it. */
+      newsExclusion: 'none' | 'exclude' | 'only';
     }>;
     /** Null unless every side cleared the sample bar. `sample` travels with the name. */
     best: { id: string; metric: string; value: number; sample: number } | null;
@@ -1422,6 +1556,14 @@ export class BacktestService {
        * cannot be credited to the protocol. Null means the sizes agree (or no bot was involved).
        */
       sizeWarning: string | null;
+      /**
+       * ⚠️ ONE STRING FOR EVERY "these two sides differ in something other than the thing you think
+       * you are testing". `BacktestRunsPanel` has rendered `comparabilityWarning` since it was
+       * written and the API NEVER SENT IT — a rendered surface with no data behind it, which reads
+       * as "no comparability issues" for every comparison ever made. Now populated from
+       * `windowWarning` / `sizeWarning` / `newsWarning`.
+       */
+      comparabilityWarning: string | null;
       note: string;
     };
   }> {
@@ -1467,6 +1609,28 @@ export class BacktestService {
         endDate: r.endDate.toISOString().slice(0, 10),
         /** The stored period this run used, when it used one. NULL = a `days` run. */
         periodId: r.periodId ?? null,
+        /**
+         * The news-window mode this run measured with. Surfaced so `newsWarning` can tell a reader
+         * that two sides filtered different bar populations, and so the mode is visible rather than
+         * inferred from the run's age.
+         */
+        // `newsExclusion` is now a modelled column (2026-10-26), so the typed client reads it
+        // directly. `?? 'none'` still handles a row written between the ALTER and the deploy.
+        newsExclusion: ((r.newsExclusion ?? 'none') as 'none' | 'exclude' | 'only'),
+        /**
+         * HOW THIS RUN COSTED AND SIZED ITS FILLS (#1141). `recorded: false` means the row predates
+         * the write path, so its costs are UNKNOWN — and unknown is not "the same as the other one".
+         * Surfaced so `describeCostDivergence()` can name it instead of a reader inferring it.
+         */
+        costs: {
+          recorded: r.slippage != null && r.spread != null && r.commission != null,
+          slippage: r.slippage ?? null,
+          spread: r.spread ?? null,
+          commission: r.commission ?? null,
+          positionModel: r.positionModel ?? null,
+          accountSize: r.accountSize ?? null,
+          riskPct: r.riskPct ?? null,
+        },
         // The ONLY field that needs the fraction→percent conversion.
         signalWinRatePct: Math.round(r.winRate * 10000) / 100,
         totalPnl: Number(r.totalPnl.toFixed(4)),
@@ -1491,6 +1655,7 @@ export class BacktestService {
           requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
           metric: null,
           sizeWarning: null,
+          comparabilityWarning: null,
           note:
             'No runs matched the supplied ids, so there is nothing to compare. This is NOT ' +
             '"the runs are equal" — no data was read.',
@@ -1529,7 +1694,10 @@ export class BacktestService {
     const sizeWarning = ((): string | null => {
       const unknown = formatted
         .filter((f) => f.botBaseSize === null)
-        .map((f) => `${f.protocolId} @${f.timeframe}`);
+        // ⚠️ THE RUN ID BELONGS IN THE LABEL. Two variants of ONE protocol are this page's primary
+        // comparison, and `protocolId @timeframe` is identical for both — measured 2026-10-26, a real
+        // comparison printed "spy-speed-v1 @1h, spy-speed-v1 @1h", which names neither side.
+        .map((f) => `${f.protocolId} @${f.timeframe} [${String(f.id).slice(0, 8)}]`);
       if (unknown.length > 0) {
         return (
           ` ⚠️ NOT LIKE-FOR-LIKE — the bots' LOT SIZE is UNKNOWN for ${unknown.join(', ')} ` +
@@ -1573,6 +1741,28 @@ export class BacktestService {
       );
     })();
 
+    // ── SAME NEWS FILTER (#1139 follow-up) ────────────────────────────────────────────────────
+    // The Lab's news mode became `exclude` by default on 2026-10-26 (owner direction). Every run
+    // stored before that was measured with `none`, so an old-vs-new comparison differs in the BAR
+    // POPULATION as well as in whatever the operator meant to change.
+    //
+    // ⚠️ WARNS, and deliberately does NOT refuse — unlike the window check. Two different windows
+    // cannot be credited to the protocol, so that pair is worthless; two different news filters are
+    // a legitimate experiment ("does skipping news days help?"), and refusing it would block the
+    // question the control exists to ask. What must not happen is the difference going unmentioned.
+    const newsModes = [...new Set(formatted.map((f) => f.newsExclusion))];
+    const newsWarning = newsModes.length > 1
+      ? `⚠️ The runs used DIFFERENT news-window modes (${newsModes.join(' vs ')}), so they measured ` +
+        'different bar populations. Part of any difference may be the filter rather than the ' +
+        'protocol or bot.'
+      : null;
+
+    // ── SAME COSTS AND SAME SIZING (#1141) ────────────────────────────────────────────────────
+    // The third confounder, and until now the only one with NO warning at all: the costs a run
+    // applied were never stored, so two runs costed 3% and 0.03% round trip compared as equals.
+    // The three-state policy (identical / different / unknown) lives in `describeCostDivergence()`.
+    const costWarning = describeCostDivergence(formatted as any);
+
     if (refusals.length > 0 || windowWarning) {
       return {
         runs: formatted,
@@ -1587,6 +1777,7 @@ export class BacktestService {
           requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
           metric: null,
           sizeWarning,
+          comparabilityWarning: [windowWarning, sizeWarning, newsWarning, costWarning].filter(Boolean).join(' ') || null,
           note:
             // ⚠️ WINDOW FIRST. It outranks the sample bar: collecting more trades cannot fix two
             // runs describing different markets, so leading with "need ≥30 per side" would point a
@@ -1596,7 +1787,9 @@ export class BacktestService {
             (disagreements.length
               ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
               : '') +
-            (sizeWarning ?? ''),
+            (sizeWarning ?? '') +
+            (newsWarning ? ` ${newsWarning}` : '') +
+            (costWarning ? ` ${costWarning}` : ''),
         },
       };
     }
@@ -1616,6 +1809,7 @@ export class BacktestService {
         requiredPerSide: MIN_SAMPLES_FOR_VERDICT,
         metric: 'sharpeRatio',
         sizeWarning,
+        comparabilityWarning: [sizeWarning, newsWarning, costWarning].filter(Boolean).join(' ') || null,
         note:          `Winner named by sharpeRatio (${bestRow.protocolId} @${bestRow.timeframe}), over ` +
           `${bestRow.totalSignals} entry signals and ${bestRow.tradesCounted} bracketed trades. ` +
           `Both clear the ≥${MIN_SAMPLES_FOR_VERDICT} bar. ` +
@@ -1624,7 +1818,9 @@ export class BacktestService {
           (disagreements.length
             ? ` ⚠️ Stored trade counts disagree with the trade rows: ${disagreements.join('; ')}.`
             : '') +
-          (sizeWarning ?? ''),
+          (sizeWarning ?? '') +
+          (newsWarning ? ` ${newsWarning}` : '') +
+          (costWarning ? ` ${costWarning}` : ''),
       },
     };
   }
@@ -1911,11 +2107,24 @@ export class BacktestService {
     return {
       id: run.id,
       symbol: run.symbol?.ticker || '',
-      protocolId: run.protocolId,
-      period: `${run.startDate.toISOString().split('T')[0]} to ${run.endDate.toISOString().split('T')[0]}`,
+      protocolId: run.protocolId,      period: `${run.startDate.toISOString().split('T')[0]} to ${run.endDate.toISOString().split('T')[0]}`,
       totalDays: run.totalDays,
       timeframe: run.timeframe,
       entrySignals: [],
+      // ⚠️ #1143 — THE SCORES ARE NOW STORED, so the caveat below is only true for OLDER runs.
+      // A run made from 2026-10-26 onward carries every bar it scored, which is what a protocol
+      // comparison is actually about. `null` (not `[]`) when the column is empty, so "not recorded"
+      // and "scored nothing" stay distinguishable.
+      scoreSeries: (() => {
+        const raw = run.scoresJson;
+        if (!raw) return undefined;
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
       // ⚠️ STATED, because the emptiness above would otherwise read as "no signals" (#1134).
       // Measured 2026-10-22 on run `a129a36a`: `stats.totalSignals` was **1,285** while this array
       // was empty — two different facts wearing one name. A run persists its TRADES; the per-signal

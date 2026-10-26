@@ -294,6 +294,112 @@ describe('BacktestService.compareRuns — units and populations (#965 item 2)', 
 
     expect(out.verdict.sizeWarning).toMatch(/LOT SIZE is UNKNOWN/);
     expect(out.verdict.sizeWarning).toMatch(/Unknown is not the same as equal/);
+    // ⚠️ NAMED BY RUN, not by protocol@timeframe: two variants of one protocol share both of those,
+    // and the message used to read "xau-speed-m15 @15m, xau-speed-m15 @15m" — naming neither side.
+    expect(out.verdict.sizeWarning).toMatch(/\[r-a\]/);
+  });
+});
+
+/**
+ * #1141 — SAME COSTS, and the third population: "not recorded".
+ *
+ * Measured 2026-10-26: `slippage`/`spread`/`commission`/`positionModel`/`accountSize`/`riskPct` were
+ * NULL on **60 of 60** stored runs, and `compareRuns()` had no cost check at all — so a 3% round
+ * trip and a 0.03% round trip compared as if they matched. The policy under test is three-state,
+ * and the third state is the one that gets lost: a run whose costs were never STORED is unknown,
+ * not equal, exactly like a null bot size.
+ */
+describe('BacktestService.compareRuns — SAME COSTS (#1141)', () => {
+  const recorded = {
+    slippage: 0.0001,
+    spread: 0.0001,
+    commission: 0,
+    positionModel: 'fixedPercent',
+    accountSize: 10000,
+    riskPct: 2,
+  };
+
+  it('names the UNKNOWN rather than assuming legacy rows were costed alike', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { totalTrades: 40, totalSignals: 200 }),
+        run('r-b', { totalTrades: 40, totalSignals: 200 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.comparabilityWarning).toMatch(/EXECUTION COSTS ARE UNKNOWN/);
+    expect(out.verdict.comparabilityWarning).toMatch(/2 of 2 run\(s\)/);
+    // It must NOT claim a difference it cannot see.
+    expect(out.verdict.comparabilityWarning).not.toMatch(/DIFFERENT execution costs/);
+    expect(out.verdict.note).toMatch(/EXECUTION COSTS ARE UNKNOWN/);
+  });
+
+  it('names WHICH side is unrecorded when only one is', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { protocolId: 'xau-speed-m5', totalTrades: 40, totalSignals: 200, ...recorded }),
+        run('r-b', { protocolId: 'xau-speed-m15', totalTrades: 40, totalSignals: 200 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    // Named by RUN ID as well as protocol, because two variants of one protocol share both.
+    expect(out.verdict.comparabilityWarning).toMatch(/EXECUTION COSTS ARE UNKNOWN for 1 of 2 run\(s\) \(xau-speed-m15 @15m \[r-b\]\)/);
+  });
+
+  it('says NOT A CLEAN COST PAIR and names both costings when they differ', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', {
+          protocolId: 'spy-speed-v1',
+          totalTrades: 40,
+          totalSignals: 200,
+          ...recorded,
+          slippage: 0.01,
+          spread: 0.01,
+        }),
+        run('r-b', { protocolId: 'spy-speed-v1', totalTrades: 40, totalSignals: 200, ...recorded }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.comparabilityWarning).toMatch(/NOT A CLEAN COST PAIR/);
+    expect(out.verdict.comparabilityWarning).toMatch(/0\.01\/0\.01\/0/);
+    expect(out.verdict.comparabilityWarning).toMatch(/0\.0001\/0\.0001\/0/);
+    expect(out.verdict.note).toMatch(/NOT A CLEAN COST PAIR/);
+  });
+
+  it('flags a SIZING difference even when the costs match', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { totalTrades: 40, totalSignals: 200, ...recorded, riskPct: 2 }),
+        run('r-b', { totalTrades: 40, totalSignals: 200, ...recorded, riskPct: 10 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    expect(out.verdict.comparabilityWarning).toMatch(/DIFFERENT position sizing/);
+  });
+
+  it('stays silent when both sides were costed and sized identically', async () => {
+    const prisma = mockPrisma({
+      runs: [
+        run('r-a', { totalTrades: 40, totalSignals: 200, ...recorded, botId: 'bot-a', botBaseSize: 0.01 }),
+        run('r-b', { totalTrades: 40, totalSignals: 200, ...recorded, botId: 'bot-b', botBaseSize: 0.01 }),
+      ],
+      trades: [['r-a', 20, 20], ['r-b', 20, 20]],
+    });
+    const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
+
+    // Both bot sizes equal, so the sizes warning is silent too — the ONLY string left would be a
+    // cost one, and there is nothing to say.
+    expect(out.verdict.comparabilityWarning).toBeNull();
+    expect(out.verdict.note).not.toMatch(/COST/);
   });
 });
 

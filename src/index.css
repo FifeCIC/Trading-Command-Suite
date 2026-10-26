@@ -2053,10 +2053,11 @@ button.nav-active {
 .bt-chart-section h3 { font-size: 1rem; color: var(--ink); margin: 0 0 0.6rem; }
 .bt-chart-heading { font-size: 1rem; color: var(--ink); margin: 0 0 0.6rem; }
 
-/* Execution Realism Panel (#50) */
+/* Costs & sizing panel (#50) */
 .bt-execution-section { margin-bottom: 1rem; }
 .bt-execution-toggle {
   width: 100%;
+  min-height: 44px;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2089,27 +2090,72 @@ button.nav-active {
   padding: 0.75rem;
   background: color-mix(in srgb, var(--panel) 97%, var(--bg) 3%);
 }
-.bt-presets { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
-.bt-preset-btn {
-  padding: 0.35rem 0.75rem;
+/* ── Costs & sizing: detected asset class (2026-10-26) ─────────────────────────────────────────
+   Replaces the three preset buttons. The class is looked up from the symbol, so this strip states
+   what was detected and what it costs — it is a reading, not a choice. */
+.bt-class-strip {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 0.4rem 0.9rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.bt-class-detect {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+.bt-class-symbol { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bt-class-arrow { color: var(--ink-soft); }
+.bt-class-type { color: var(--ink); }
+.bt-class-type em { font-style: normal; color: var(--ink-soft); font-size: 0.72rem; }
+.bt-class-pending { color: var(--ink-soft); font-style: italic; }
+.bt-class-profile { color: var(--accent); font-weight: 600; }
+.bt-class-edited {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink-soft) 16%, transparent);
+  color: var(--ink);
+}
+.bt-class-reset {
+  min-height: 44px;
+  padding: 0.35rem 0.7rem;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
-  color: var(--ink-soft);
-  font-size: 0.75rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.bt-preset-btn:hover { border-color: var(--accent); color: var(--ink); }
-.bt-preset-btn.active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
   color: var(--ink);
-  font-weight: 700;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
 }
+.bt-class-reset:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.bt-class-reset:disabled { color: var(--ink-soft); cursor: default; opacity: 0.7; }
+.bt-class-gloss,
+.bt-class-breakeven {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.bt-class-breakeven strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.bt-class-breakeven.is-high strong { color: var(--danger); }
 .bt-execution-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 0.6rem;
 }
 .bt-execution-grid label {
@@ -2118,6 +2164,79 @@ button.nav-active {
   gap: 3px;
   font-size: 0.72rem;
   color: var(--ink-soft);
+}
+.bt-field-gloss {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.bt-field-gloss strong { color: var(--ink); font-weight: 600; }
+.bt-field-warn {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--ink);
+  padding-left: 0.4rem;
+  border-left: 2px solid var(--accent);
+}
+.bt-field-warn.is-high { border-left-color: var(--danger); }
+.bt-bot-size-note {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink-soft);
+  border-radius: 5px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.bt-bot-size-note strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+/* What this run changes from the bot — the manual A/B "B" side (#1143). */
+.pb-changes {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 5px;
+  font-size: 0.74rem;
+  color: var(--ink);
+}
+.pb-changes ul { list-style: none; margin: 0.35rem 0 0; padding: 0; display: grid; gap: 0.2rem; }
+.pb-changes li { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.pb-changes li span:first-child { color: var(--ink-soft); }
+/* The bot's own value beside a field that inherits it. */
+.bt-inherit {
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-left: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.pb-changes code {
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--ink-soft) 14%, transparent);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+}
+/* Scores-only / informational guard — a panel that explains rather than refuses. */
+.pb-guard--info { border-left-color: var(--accent); }
+.pb-guard--info p { margin: 0.35rem 0 0; font-size: 0.78rem; line-height: 1.5; }
+/* A/B reference panels. */
+.bt-ab-panel { display: grid; gap: 0.6rem; }
+.bt-log-tail {
+  max-height: 22rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .bt-execution-grid input,
 .bt-execution-grid select {

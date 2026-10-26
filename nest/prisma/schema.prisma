@@ -249,6 +249,23 @@ model BacktestRun {
   // DATES could be credited to the PROTOCOL. NULL = not period-scoped (every run before this
   // column, and any plain day-range run) — deliberately distinct from the id of a period.
   periodId     String?  @db.VarChar(36)
+  // ⚠️ ADDED 2026-10-26 (#1139 follow-up) — WHICH BAR POPULATION this run measured. The Lab's news
+  // mode filters bars by date (`exclude` drops news-day bars, `only` keeps them), so two runs whose
+  // mode differs are not two measurements of the same thing. `run()` returned the mode in its
+  // RESPONSE and never persisted it, so a comparison had no way to know — and the value the
+  // response carried was lost the moment the page was closed.
+  // DEFAULT 'none' matches every run made before this column, which used the old 'include' default.
+  newsExclusion String  @default("none") @db.VarChar(16)
+  // ⚠️ ADDED 2026-10-26 (#1143) — THE SCORING OUTPUT THIS RUN PRODUCED. `run()` calls the canonical
+  // SEES path (`fullScore()` → `ProtocolGatingService.scoreWithGating`, guarded by
+  // `validate-single-scoring-path.cjs`) once per bar and then DISCARDED it, keeping only the BUY bars
+  // that cleared the threshold — so a stored run could not answer "what did this protocol score on
+  // this bar?", which is the question two protocol runs are compared on.
+  //
+  // JSON array of `{date, score, signal, passedBar}`, last 2,000 bars, bounded on purpose: a second
+  // table would add ~600 rows per run to every query for a reading nobody joins on.
+  // NULL = NOT RECORDED (every run before this column), deliberately distinct from '[]'.
+  scoresJson   String?  @db.LongText
   winRate      Float
   totalPnl     Float
   profitFactor Float

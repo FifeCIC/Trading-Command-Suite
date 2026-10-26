@@ -156,7 +156,8 @@ import RecentlyAnalysedSymbolsPage from '../pages/RecentlyAnalysedSymbolsPage.js
 import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
 
 // ── Backtest / Strategies ──
-import BacktestPage from '../pages/BacktestPage.jsx';
+import BacktestProtocolsPage from '../pages/BacktestProtocolsPage.jsx';
+import BacktestStrategiesPage from '../pages/BacktestStrategiesPage.jsx';
 import ScenarioAnalysisPage from '../pages/ScenarioAnalysisPage.jsx';
 
 // ── Status / System ──
@@ -343,7 +344,10 @@ export const VIEW_COMPONENTS = {
   'platform-comparisons': PlatformComparisonsPage,
 
   // Backtest / Strategies
-  'backtest': BacktestPage,
+  // ⚠️ SPLIT 2026-10-26 (owner direction): one page per subject, so each is linkable and described
+  // on its own. BacktestPage remains the shared implementation; these are its two routes.
+  'backtest': BacktestProtocolsPage,
+  'backtest-strategies': BacktestStrategiesPage,
   // #1134 — `/lab/protocol-backtest` and `ProtocolBacktestPage.jsx` were MERGED into `/lab/backtest`
   // on 2026-10-22. The protocol surface is now the "Protocols" subject toggle on that page, and its
   // per-bar score table is a drill-down (`ProtocolScoreDetail`). One route, one stored run history.

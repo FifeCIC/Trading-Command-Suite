@@ -559,8 +559,8 @@ const VIEW_META = {
   '/lab/backtest': {
     tier: 'premium',
     review: 'approved',
-    label: 'Backtest Lab',
-    file: 'src/pages/BacktestPage.jsx',
+    label: 'Backtesting Protocols',
+    file: 'src/pages/BacktestProtocolsPage.jsx',
     css: 'src/pages/backtest-lab.css',
     api: [
       'POST /api/backtest/run',
@@ -570,8 +570,35 @@ const VIEW_META = {
       'GET /api/backtest/settings-inventory',
       'POST /api/replay/run',
       'GET /api/scoring/gated/protocols',
-      'GET /api/trading/strategies',
       'GET /api/backtest/periods',
+    ],
+  },
+  /**
+   * ⚠️ ADDED 2026-10-26 — the STRATEGIES half of the Lab split (owner direction: *"Lets separate
+   * them. Split … into two pages."*). It shares `BacktestPage.jsx` with the protocols route, so
+   * `file` names the shared implementation and `entry` names the wrapper that fixes the subject.
+   *
+   * ⚠️ `verify-view-meta-routes.cjs` FAILED on the first run after the nav entry was added:
+   * `MISSING METADATA /lab/backtest-strategies`. That is the gate doing its job — a page reachable
+   * by URL but undocumented renders "No metadata registered".
+   */
+  '/lab/backtest-strategies': {
+    tier: 'premium',
+    review: 'needs-review',
+    label: 'Backtest Strategies',
+    file: 'src/pages/BacktestPage.jsx',
+    entry: 'src/pages/BacktestStrategiesPage.jsx',
+    css: 'src/pages/backtest-lab.css',
+    api: [
+      'POST /api/backtest/run',
+      'GET /api/backtest/results/:runId',
+      'GET /api/backtest/equity/:runId',
+      'POST /api/backtest/runs/compare',
+      'GET /api/backtest/settings-inventory',
+      'GET /api/backtest/periods',
+      'GET /api/trading/strategies',
+      'GET /api/trading/bot-performance',
+      'GET /api/system/logs/file',
     ],
   },
   // ⚠️ `'protocol-backtest'` RETIRED 2026-10-22 (#1134). The page was merged into `/lab/backtest` —

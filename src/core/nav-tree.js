@@ -283,7 +283,10 @@ export const NAV_TREE = {
     label: 'Lab',
     views: [
       // ── Backtesting & replay — "what would have happened?" ──
-      { id: 'backtest', label: 'Backtest Lab', icon: '⬡' },
+      { id: 'backtest', label: 'Backtesting Protocols', icon: '⬡' },
+      // ⚠️ ADDED 2026-10-26 (owner direction) — the strategies subject was a toggle on the page
+      // above; it is now its own route so the two questions can be described and linked separately.
+      { id: 'backtest-strategies', label: 'Backtest Strategies', icon: '⬢' },
       // ⚠️ `protocol-backtest` RETIRED 2026-10-22 (#1134, owner direction). It was a sibling view
       // from 2026-10-16 because scores and trades are different questions — that is still true, so
       // the question is now the page's SUBJECT TOGGLE (Protocols | Strategies) rather than a second

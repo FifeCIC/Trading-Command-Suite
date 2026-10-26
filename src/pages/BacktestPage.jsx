@@ -1,16 +1,30 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReplayPlayer from '../components/ReplayPlayer';
 import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
-import BacktestChartPane from '../components/backtest/BacktestChartPane';
-import EquityCurveChart from '../components/backtest/EquityCurveChart';
 import ProtocolCarousel from '../components/ProtocolCarousel';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { getAssetType } from '../core/asset-types.js';
 import '../core/forms.css';
 import './backtest-lab.css';
+
+/**
+ * ⚠️ THE TWO CHART COMPONENTS ARE CODE-SPLIT (2026-10-26). Not a micro-optimisation: the main chunk
+ * had reached 4,189.97 kB against the PWA precache cap and the build FAILS when it is exceeded
+ * (`vite.config.js` → `maximumFileSizeToCacheInBytes`). Measured the same day: adding the scoring
+ * panel pushed the main chunk to **4,227.01 kB** and the build stopped with
+ * `assets/index-*.js is 4.23 MB, and won't be precached`.
+ *
+ * ⚠️ AND THE DOCUMENTED FIX IS TO SPLIT, NOT TO RAISE THE CAP AGAIN. These two are the right things
+ * to split rather than, say, the page: they are needed only on the RESULT step, and a chart library
+ * is the heaviest dependency the Lab touches. Nothing on steps 1–5 needs either.
+ */
+const BacktestChartPane = lazy(() => import('../components/backtest/BacktestChartPane'));
+const EquityCurveChart = lazy(() => import('../components/backtest/EquityCurveChart'));
 
 /**
  * BacktestPage — the BACKTEST LAB (#1134).
@@ -58,6 +72,14 @@ const BacktestSettingsInventory = lazy(
 );
 const BacktestRunsPanel = lazy(() => import('../components/backtest/BacktestRunsPanel'));
 const ProtocolScoreDetail = lazy(() => import('../components/backtest/ProtocolScoreDetail'));
+/**
+ * The manual A/B pair (#1143): A = the bot's realised record, B = the most recent stored run.
+ * Lazy for the same reason as the three above — the main chunk sits against the PWA precache cap.
+ */
+const CurrentPerformancePanel = lazy(() =>
+  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.CurrentPerformancePanel })));
+const LatestBacktestPanel = lazy(() =>
+  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.LatestBacktestPanel })));
 
 /**
  * The Lab's steps (#1138, owner direction 2026-10-26).
@@ -71,10 +93,10 @@ const ProtocolScoreDetail = lazy(() => import('../components/backtest/ProtocolSc
  * `validate-*`-free nature of that pair is stated in the code rather than left to be discovered.
  */
 const STEPS = [
-  { n: 1, id: 'subject', label: 'Choose the subject' },
+  { n: 1, id: 'subject', label: 'Choose the subject', labelForProtocol: 'Choose the protocol', labelForStrategy: 'Choose the strategy' },
   { n: 2, id: 'window', label: 'Instrument & window' },
   { n: 3, id: 'info', label: 'Information sources' },
-  { n: 4, id: 'execution', label: 'Execution realism' },
+  { n: 4, id: 'execution', label: 'Costs & sizing', labelForProtocol: 'Scores only' },
   { n: 5, id: 'run', label: 'Run' },
   { n: 6, id: 'result', label: 'Result' },
 ];
@@ -133,41 +155,88 @@ const EXTERNAL_SOURCES = {
   },
 };
 
-// ── Preset profiles (#50) ──
-const EXECUTION_PRESETS = {
-  forex: {
+// ── Cost profiles per asset class (#50, revised 2026-10-26) ────────────────────────────────────
+/**
+ * The costs the engine applies when it is not told any, mirrored from `backtest.service.ts`
+ * (`isForex` / `isCrypto` branches — `slippage` / `spread` / `commission` defaults).
+ *
+ * ── DECISION (2026-10-26) ──
+ * WHAT:      the three "💱 Forex / 📈 US Stocks / ₿ Crypto" buttons are GONE. The class is detected
+ *            from the symbol instead, and each class's costs are applied until the reader edits one.
+ * WHY:       the buttons were a SECOND source of truth for a decision the page can already answer —
+ *            it knows the symbol. They also overwrote `accountSize` and `riskPct`, so a click that
+ *            asked for a cost profile silently resized every position.
+ * INSTEAD OF: keeping the buttons and marking the detected one (rejected: still two answers, and the
+ *            detected one would only be decoration next to three pressable ones).
+ * REVERSE BY: restoring a preset row that calls `applyClassCosts()` per key.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 92
+ * GUARD:     none — 🔴 UNGUARDED.
+ *
+ * ⚠️ AND THE PAGE ALWAYS SENT `slippage`/`spread`/`commission`, so the engine's `??` class defaults
+ * were UNREACHABLE from this form: every fresh page ran EVERY class at the old stocks default
+ * (1% spread + 1% slippage = a 3% round trip). Detecting the class is also what fixes that.
+ */
+const COST_PROFILES = {
+  fx: {
     label: '💱 Forex',
     slippage: 0.0001,
     spread: 0.0001,
     commission: 0,
-    positionModel: 'fixedPercent',
-    accountSize: 10000,
-    riskPct: 2,
-    assetClass: 'forex',
-  },
-  stocks: {
-    label: '📈 US Stocks',
-    slippage: 0.01,
-    spread: 0.01,
-    commission: 0,
-    positionModel: 'fixedPercent',
-    accountSize: 10000,
-    riskPct: 2,
-    assetClass: 'stock',
+    note: 'A price fraction, like FX itself — 0.0001 is roughly a pip. Spread stands in for the broker markup.',
   },
   crypto: {
     label: '₿ Crypto',
     slippage: 0.002,
     spread: 0.001,
     commission: 0.1,
-    positionModel: 'fixedPercent',
-    accountSize: 10000,
-    riskPct: 2,
-    assetClass: 'crypto',
+    note: 'Wider than FX and volatile; commission is charged per UNIT, which is negligible on BTC and punishing on a $1 coin.',
+  },
+  stock: {
+    label: '📈 Stock / ETF',
+    slippage: 0.01,
+    spread: 0.01,
+    commission: 0,
+    note: '⚠ These are the engine’s fallback for anything not FX or crypto — 1% each way is far wider than a liquid equity, so check the break-even figure below.',
   },
 };
 
+/**
+ * `/api/symbols` carries a real `type` per ticker (forex · crypto · commodity · index · etf · stock),
+ * measured 2026-10-26 across 261 rows. That is DATA, so it is preferred over a guess.
+ *
+ * ⚠️ When a symbol is not in that table, `getAssetType()` is the fallback — and it is ITSELF a
+ * hardcoded map whose own docstring says it should become a DB lookup. Its `'stock'` return means
+ * "not recognised", not "verified equity", which is why the strip says so rather than claiming it.
+ */
+const COST_PROFILE_FOR_TYPE = {
+  forex: 'fx',
+  commodity: 'fx',
+  crypto: 'crypto',
+  index: 'stock',
+  etf: 'stock',
+  stock: 'stock',
+};
+
+
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
+
+/**
+ * The Lab's default news-window mode (#1138, owner direction 2026-10-26: *"Make this the default
+ * for this menu"*). `exclude` keeps the protocol's own reading pure by dropping bars dated on a news
+ * release, so a run measures the protocol rather than the news.
+ *
+ * ⚠️ This changed what a default run measures, and every run stored before it used `none` — which is
+ * why `compareRuns()` now emits a `newsWarning` when the two sides differ. Changing a default is
+ * cheap; changing it silently would make yesterday's results look comparable with today's.
+ */
+const DEFAULT_NEWS_MODE = 'exclude';
+
+/**
+ * The engine's own floor: `BacktestService.run()` refuses a window with fewer than 100 bars. Used
+ * here as the `minBars` sent to `/api/backtest/timeframe-coverage` and as the Bars input's minimum,
+ * so the form and the engine cannot disagree about what is runnable.
+ */
+const MIN_RUN_BARS = 100;
 
 /**
  * The canonical development window's NAME — not its dates.
@@ -201,11 +270,17 @@ const fmtDay = (iso) => (iso ? String(iso).slice(0, 10) : '—');
 /** A percentage, or an explicit dash when the number was never recorded. Never a fabricated 0. */
 const pctOrDash = (v) => (v == null ? '—' : `${v}%`);
 
-export default function BacktestPage() {
+export default function BacktestPage({ subject: fixedSubject }) {
   const queryClient = useQueryClient();
 
   // ── Subject ──────────────────────────────────────────────────────────────────────────────────
-  const [subject, setSubject] = useState('protocol');
+  /**
+   * The subject is FIXED BY THE ROUTE (2026-10-26). Two pages, one subject each:
+   * `/lab/backtest` = Backtesting Protocols, `/lab/backtest-strategies` = Backtest Strategies.
+   * Defaulted to 'protocol' so the page is still valid if rendered without a prop.
+   */
+  const subject = fixedSubject === 'strategy' ? 'strategy' : 'protocol';
+  const otherSubjectRoute = subject === 'protocol' ? '/lab/backtest-strategies' : '/lab/backtest';
   const [protocolId, setProtocolId] = useState('');
   const [botId, setBotId] = useState('');
   const [timeframe, setTimeframe] = useState('1h');
@@ -221,8 +296,8 @@ export default function BacktestPage() {
 
   const [runId, setRunId] = useState('');
   const [showChart, setShowChart] = useState(false);
-  const [newsExclusion, setNewsExclusion] = useState('none');
-  const [showExecution, setShowExecution] = useState(false);
+  const [newsExclusion, setNewsExclusion] = useState(DEFAULT_NEWS_MODE);
+  const [showExecution, setShowExecution] = useState(true);
 
   /**
    * ── RUN-SCOPED OVERRIDES (#1136) ───────────────────────────────────────────────────────────────
@@ -240,7 +315,7 @@ export default function BacktestPage() {
   const setOverride = (key, value) => setOverrides((prev) => ({ ...prev, [key]: value }));
 
   /** Which reference panel is showing. The three are consulted, not stepped through — see the tabs. */
-  const [refTab, setRefTab] = useState('runs');
+  const [refTab, setRefTab] = useState('current');
 
   /**
    * The step the reader is on. Auto-advances ONCE per step (see the effect below); `activeStep`
@@ -251,7 +326,7 @@ export default function BacktestPage() {
   /** Steps already auto-advanced past — so going back to re-read step 1 does not bounce forward. */
   const autoAdvanced = useRef(new Set());
 
-  // Execution realism state (#50)
+  // Costs & sizing state (#50)
   const [slippage, setSlippage] = useState(0.01);
   const [spread, setSpread] = useState(0.01);
   const [commission, setCommission] = useState(0);
@@ -261,19 +336,13 @@ export default function BacktestPage() {
   const [kellyCapPct, setKellyCapPct] = useState(25);
   const [atrPeriod, setAtrPeriod] = useState(14);
   const [atrMultiplier, setAtrMultiplier] = useState(1.5);
-  const [activePreset, setActivePreset] = useState('stocks');
-
-  const applyPreset = (key) => {
-    const p = EXECUTION_PRESETS[key];
-    if (!p) return;
-    setSlippage(p.slippage);
-    setSpread(p.spread);
-    setCommission(p.commission);
-    setPositionModel(p.positionModel);
-    setAccountSize(p.accountSize);
-    setRiskPct(p.riskPct);
-    setActivePreset(key);
-  };
+  /** `Fixed $` sizing needs an amount; the form never sent one and the engine fell back to $100. */
+  const [fixedAmount, setFixedAmount] = useState(100);
+  /**
+   * `false` while the costs still follow the detected asset class. The moment the reader edits one the
+   * class stops moving it — otherwise changing the symbol would silently rewrite a value they typed.
+   */
+  const [costsEdited, setCostsEdited] = useState(false);
 
   const botsQuery = useQuery({
     queryKey: ['bt-bots'],
@@ -492,6 +561,48 @@ export default function BacktestPage() {
   );
   const marketTimeframe = subject === 'strategy' ? (selectedBot?.timeframe ?? '') : timeframe;
 
+  /**
+   * ⚠️ A PROTOCOL PRODUCES **SCORES**, NOT TRADES (owner direction, 2026-10-26: *"Lets make protocol
+   * score only. Backtesting protocols will only generate scores. That means when we select a
+   * protocol-only, the bot or financial fields are not required."*).
+   *
+   * ONE derived flag, used by three surfaces so they cannot disagree: the run payload sends
+   * `slPct: 0 / tpPct: 0` (which makes the engine's `doBrackets` false, so no fills are simulated at
+   * all), step 4 replaces its money form with the reason it has nothing to ask, and the result step
+   * labels money figures as not applicable rather than printing a P&L nobody asked for.
+   */
+  const scoresOnly = subject === 'protocol';
+
+  /**
+   * THE CHANGES BEING TESTED — every field where this run departs from the bot's own settings.
+   *
+   * Owner direction, 2026-10-26: *"capture the changes that the user makes on this page and then
+   * highlight those changes where applicable in the results so that the user has clarity on the
+   * changes."* The engine already reports this (`drivenBy.overridden`), but only AFTER the run. This
+   * is the same list BEFORE it, so the reader can see what they are about to test.
+   *
+   * ⚠️ AN OVERRIDE THAT MATCHES THE BOT IS NOT A CHANGE. Typing `11` into the entry bar of a bot
+   * whose bar is 11 is not an experiment, and counting it as one would make every run look modified.
+   */
+  const botChanges = useMemo(() => {
+    if (subject !== 'strategy' || !selectedBot) return [];
+    const rows = [];
+    const add = (label, raw, botValue, unit) => {
+      if (String(raw).trim() === '') return;
+      const value = Number(raw);
+      if (Number.isFinite(botValue) && value === Number(botValue)) return;
+      rows.push({ label, from: botValue ?? 'unset', to: raw + (unit ?? '') });
+    };
+    add('Entry bar (minComposite)', overrides.minComposite, selectedBot.minComposite, '%');
+    add('Stop (SL)', overrides.slPct, selectedBot.slPct, '%');
+    add('Target (TP)', overrides.tpPct, selectedBot.tpPct, '%');
+    if (overrides.timeframe.trim() !== '' && selectedBot.timeframe
+      && overrides.timeframe.trim() !== selectedBot.timeframe) {
+      rows.push({ label: 'Timeframe', from: selectedBot.timeframe, to: overrides.timeframe.trim() });
+    }
+    return rows;
+  }, [subject, selectedBot, overrides]);
+
   // The protocol's own recommended timeframe is a starting point, not a constraint; a protocol may
   // legitimately be measured on a different cadence.
   useEffect(() => {
@@ -524,6 +635,118 @@ export default function BacktestPage() {
     ? (selectedBot?.symbol ?? '')
     : (usePeriod && selectedPeriod ? selectedPeriod.symbol : (symbolPool[0] ?? ''));
 
+  // ── ASSET CLASS → COST PROFILE (#50, 2026-10-26) ───────────────────────────────────────────
+  // The class decides which costs model the fill, so it is looked up rather than asked for. The
+  // lookup is `/api/symbols` (a real `type` column), NOT a list in this file.
+  //
+  // ⚠️ THREE OUTCOMES, KEPT APART ON PURPOSE: `null` = "cannot judge yet" (query in flight or
+  // failed), `''` = "asked and absent from the table", and a value = answered. Collapsing them would
+  // make a failed lookup render as 'stock' and apply the wrong costs while looking confident.
+  const symbolsQuery = useQuery({
+    queryKey: ['bt-symbols'],
+    queryFn: () => apiGet('/api/symbols').catch(() => null),
+    staleTime: 10 * 60_000,
+  });
+  const symbolClass = useMemo(() => {
+    const raw = symbolsQuery.data;
+    if (!raw) return null;
+    const list = Array.isArray(raw) ? raw : (raw.symbols ?? []);
+    const wanted = String(marketSymbol || '').toUpperCase();
+    if (!wanted) return null;
+    const hit = list.find((s) => String(s.ticker ?? '').toUpperCase() === wanted);
+    if (hit?.type) return { type: hit.type, source: 'symbols' };
+    return { type: getAssetType(wanted).toLowerCase(), source: 'assumed' };
+  }, [symbolsQuery.data, marketSymbol]);
+
+  const costProfileKey = COST_PROFILE_FOR_TYPE[symbolClass?.type] ?? 'stock';
+  const costProfile = COST_PROFILES[costProfileKey];
+  /** What the price has to travel before the trade is flat: the whole spread plus slippage each way. */
+  const breakEvenPct = (spread + slippage * 2) * 100;
+
+  /**
+   * HOW MUCH THE ACCOUNT IS COMMITTED PER TRADE, from the maths the engine actually runs.
+   *
+   * `fixedPercent` sizes from the STOP DISTANCE, not from the account: `risk$ ÷ (price × slPct%)`
+   * units, so the committed notional is `risk$ × price ÷ (price × slPct%)` = **`accountSize ×
+   * riskPct ÷ slPct`** — the price cancels. Two consequences a reader cannot see otherwise:
+   *   · 2% risk on a 1% stop commits **2× the account**, not 2%.
+   *   · a tight stop commits MULTIPLES of the account (0.2% stop ⇒ 10×), so "2%" is not a cap.
+   *
+   * ⚠️ AND BELOW ONE UNIT THE ENGINE ROUNDS UP (`if (positionSize < 1) positionSize = 1`), so an
+   * expensive symbol can commit far more than this line says. Measured on a stored BTC run: £/$
+   * notional ≈ 7.8× a $10,000 account, all of it from that floor — issue #1142.
+   */
+  const effectiveSlPct = Number(overrides.slPct) > 0
+    ? Number(overrides.slPct)
+    : (subject === 'strategy' && Number(selectedBot?.slPct) > 0 ? Number(selectedBot.slPct) : 1);
+  const committedMultiple = positionModel === 'fixedPercent' && effectiveSlPct > 0
+    ? riskPct / effectiveSlPct
+    : null;
+
+  const applyClassCosts = () => {
+    setSlippage(costProfile.slippage);
+    setSpread(costProfile.spread);
+    setCommission(costProfile.commission);
+    setCostsEdited(false);
+  };
+
+  // While the reader has not touched the costs, the detected class owns them. This is what makes a
+  // forex run cost 3 pips instead of the 3% the old stocks-shaped default applied to every class.
+  useEffect(() => {
+    if (costsEdited || !symbolClass) return;
+    setSlippage(costProfile.slippage);
+    setSpread(costProfile.spread);
+    setCommission(costProfile.commission);
+  }, [costProfile, costsEdited, symbolClass]);
+
+  // ── TIMEFRAME COVERAGE (#1128, restored 2026-10-26) ─────────────────────────────────────────
+  // The old Protocol Backtesting page told the reader which timeframes the store actually holds;
+  // the merge into this page dropped that, so the menu went back to offering all five and letting
+  // the run refuse afterwards. `GET /api/backtest/timeframe-coverage` exists for exactly this and
+  // had NO frontend caller — it was an orphaned ability, which is the same defect as a missing one.
+  //
+  // ⚠️ THE WINDOW MATTERS, so the window is sent. A symbol can hold 4,000 bars of 1h and still have
+  // 40 of them inside a two-week period; asking without dates answers a different question.
+  //
+  // ⚠️ `minBars` IS THE ENGINE'S OWN FLOOR (100), not a second opinion. `BacktestService.run()`
+  // throws below 100 bars, so a menu built on any other threshold would offer a choice the run then
+  // rejects — the promise-keeping defect this endpoint was created to remove.
+  const coverageWindow = usePeriod && selectedPeriod
+    ? { from: fmtDay(selectedPeriod.from), to: fmtDay(selectedPeriod.to) }
+    : { from: '', to: '' };
+  const coverageQuery = useQuery({
+    queryKey: ['bt-tf-coverage', marketSymbol, marketTimeframe, coverageWindow.from, coverageWindow.to],
+    queryFn: () => {
+      const qs = new URLSearchParams({ symbol: marketSymbol, minBars: String(MIN_RUN_BARS) });
+      if (coverageWindow.from) qs.set('from', coverageWindow.from);
+      if (coverageWindow.to) qs.set('to', coverageWindow.to);
+      return apiGet(`/api/backtest/timeframe-coverage?${qs.toString()}`).catch(() => null);
+    },
+    enabled: Boolean(marketSymbol),
+    staleTime: 120_000,
+  });
+  /** `timeframe -> { bars, usable }`, or null while unknown. NULL IS NOT "NO DATA" — see the render. */
+  const timeframeCoverage = useMemo(() => {
+    const rows = coverageQuery.data?.timeframes;
+    if (!Array.isArray(rows)) return null;
+    const map = {};
+    for (const r of rows) map[r.timeframe] = { bars: Number(r.bars ?? 0), usable: Boolean(r.usable) };
+    return map;
+  }, [coverageQuery.data]);
+
+  /**
+   * Never leave an unusable timeframe selected. The protocol effect picks the protocol's
+   * RECOMMENDED cadence, which is a wish, not a fact about the store — `forex-session-v1` recommends
+   * 5m and the frozen window has no 5m bars for its pairs. Without this the select would show a
+   * disabled option as the current value, which reads as "selected and fine".
+   */
+  useEffect(() => {
+    if (subject !== 'protocol' || !timeframeCoverage) return;
+    if (timeframeCoverage[timeframe]?.usable) return;
+    const firstUsable = TIMEFRAMES.find((t) => timeframeCoverage[t]?.usable);
+    if (firstUsable && firstUsable !== timeframe) setTimeframe(firstUsable);
+  }, [subject, timeframeCoverage, timeframe]);
+
   /**
    * Default to the FROZEN window whenever the subject or market changes.
    *
@@ -542,20 +765,32 @@ export default function BacktestPage() {
 
   const runMutation = useMutation({
     mutationFn: () => {
-      // Execution realism travels with every run — it describes HOW the fill was modelled, which is
-      // independent of WHERE in time the run looked.
-      const execution = {
-        newsExclusion,
-        slippage,
-        spread,
-        commission,
-        positionModel,
-        accountSize,
-        riskPct,
-        kellyCapPct,
-        atrPeriod,
-        atrMultiplier,
-      };
+      // ⚠️ A PROTOCOL PRODUCES SCORES, NOT TRADES (owner direction, 2026-10-26: *"Lets make protocol
+      // score only. Backtesting protocols will only generate scores."*).
+      //
+      // `slPct`/`tpPct` of 0 make `doBrackets` FALSE in `backtest.service.ts` (`slPct > 0 && tpPct >
+      // 0`), so the engine records entry signals and forward returns and simulates NO trades — which
+      // is exactly what "scores only" means. Sending the money fields would have simulated fills at
+      // a size and cost that no bot owns, then printed them beside the scores.
+      //
+      // ⚠️ AND IT IS NOT COSMETIC: a protocol run made before this sent the form's costs and produced
+      // bracketed trades. `compareRuns()` will now see 0 trades on one side, which its sample bar
+      // reports honestly rather than silently averaging two different things.
+      const execution = scoresOnly
+        ? { newsExclusion, slPct: 0, tpPct: 0 }
+        : {
+          newsExclusion,
+          slippage,
+          spread,
+          commission,
+          positionModel,
+          accountSize,
+          riskPct,
+          fixedAmount,
+          kellyCapPct,
+          atrPeriod,
+          atrMultiplier,
+        };
 
       // ⚠️ A PERIOD RUN SENDS NO `symbol`, NO `timeframe` AND NO `days`. The period is AUTHORITATIVE
       // for the market and the window; sending them would be dead weight at best and misleading at
@@ -569,8 +804,11 @@ export default function BacktestPage() {
       // sending `slPct: ''` or `0` would be a decision the operator never made.
       const runOverrides = {};
       if (overrides.minComposite.trim() !== '') runOverrides.minComposite = Number(overrides.minComposite);
-      if (overrides.slPct.trim() !== '') runOverrides.slPct = Number(overrides.slPct);
-      if (overrides.tpPct.trim() !== '') runOverrides.tpPct = Number(overrides.tpPct);
+      // ⚠️ STOPS AND TARGETS ARE A STRATEGY'S BUSINESS. A protocol has no bracket to place, so an
+      // SL override on a protocol run would be a control that changes nothing (the very defect the
+      // news menu's removed `reduce` option was).
+      if (!scoresOnly && overrides.slPct.trim() !== '') runOverrides.slPct = Number(overrides.slPct);
+      if (!scoresOnly && overrides.tpPct.trim() !== '') runOverrides.tpPct = Number(overrides.tpPct);
       // A period owns the timeframe, so overriding it there would be a value the server ignores while
       // the form appeared to set it.
       if (!usePeriod && overrides.timeframe.trim() !== '') {
@@ -672,7 +910,7 @@ export default function BacktestPage() {
   const symbolReady = subject === 'protocol'
     ? (selectedProtocol?.resolvedSymbols ?? []).length > 0
     : Boolean(selectedBot?.symbol);
-  const windowReady = usePeriod ? Boolean(selectedPeriod) : bars >= 100;
+  const windowReady = usePeriod ? Boolean(selectedPeriod) : bars >= MIN_RUN_BARS;
   const instrumentReady = symbolReady && Boolean(marketTimeframe) && windowReady;
 
   // Which outside information sources this subject actually reads. Derived from the protocol's own
@@ -730,6 +968,19 @@ export default function BacktestPage() {
   // ENTRY, because an invalid step would let a run be assembled that the engine must refuse.
   const [reached, setReached] = useState(() => new Set());
   const stepDone = (n) => reached.has(n);
+
+  // ⚠️ A TICK BELONGS TO THE SUBJECT THAT EARNED IT. Changing what is being measured invalidates
+  // every configuration step below step 1, so the ticks clear with it — otherwise the rail reads
+  // "✓ Instrument & window Done" beside "Finish step 2 first" for a protocol whose window does not
+  // resolve. Measured 2026-10-26 by switching BTC → USDJPY Risk-Pair V1 on step 4: the ✓ survived a
+  // subject that could not satisfy it.
+  const subjectKey = subject === 'strategy'
+    ? `strategy:${selectedBot?.id ?? ''}`
+    : `protocol:${selectedProtocol?.id ?? ''}`;
+  useEffect(() => {
+    setReached(new Set());
+    autoAdvanced.current.clear();
+  }, [subjectKey]);
 
   // Lock reasons name the ACTUAL unmet condition. "Complete the previous step" would be true
   // and useless; "this protocol resolves no symbols" is the thing the reader has to fix.
@@ -794,7 +1045,7 @@ export default function BacktestPage() {
     <div className="pb-page">
       <header className="pb-header">
         <h1>
-          Backtest Lab
+          {subject === 'protocol' ? 'Backtesting Protocols' : 'Backtest Strategies'}
           <PageInfoPopover label="What the Backtest Lab does">
             <strong>One subject, one window, one stored run — so two runs can be compared.</strong>
             <br />
@@ -836,7 +1087,11 @@ export default function BacktestPage() {
                   >
                     <span className="pb-step-num" aria-hidden="true">{done ? '✓' : s.n}</span>
                     <span className="pb-step-text">
-                      <span className="pb-step-label">{s.label}</span>
+                      <span className="pb-step-label">
+                        {subject === 'protocol'
+                          ? (s.labelForProtocol ?? s.label)
+                          : (s.labelForStrategy ?? s.label)}
+                      </span>
                       <span className="pb-step-state">
                         {state === 'locked'
                           ? `Locked — ${lockReason[s.n]}`
@@ -857,7 +1112,11 @@ export default function BacktestPage() {
         <section className="pb-panel pb-step-panel" aria-labelledby="pb-step-heading">
           <header className="pb-step-panel-head">
             <span className="pb-step-panel-num" aria-hidden="true">{activeStep}</span>
-            <h2 id="pb-step-heading">{activeMeta.label}</h2>
+            <h2 id="pb-step-heading">
+              {subject === 'protocol'
+                ? (activeMeta.labelForProtocol ?? activeMeta.label)
+                : (activeMeta.labelForStrategy ?? activeMeta.label)}
+            </h2>
             <span className="pb-step-panel-of">
               Step {activeStep} of {STEPS.length}
             </span>
@@ -866,25 +1125,23 @@ export default function BacktestPage() {
           {activeStep === 1 && (
             <>
         <div className="pb-run-head">
-          <div className="pb-subject" role="radiogroup" aria-label="What to backtest">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={subject === 'protocol'}
-              className={`pb-subject-btn${subject === 'protocol' ? ' pb-subject-btn--on' : ''}`}
-              onClick={() => setSubject('protocol')}
-            >
-              Protocols (Scoring Only)
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={subject === 'strategy'}
-              className={`pb-subject-btn${subject === 'strategy' ? ' pb-subject-btn--on' : ''}`}
-              onClick={() => setSubject('strategy')}
-            >
-              Complete Strategies
-            </button>
+          {/*
+            ⚠️ THE SUBJECT IS NO LONGER A TOGGLE (owner direction, 2026-10-26: *"I think I'm
+            complicating things by merging protocol scoring backtesting with full strategy
+            backtesting… Lets separate them. Split … into two pages."*).
+
+            Each page now owns ONE subject, so the control that could switch it is a LINK to the other
+            page. Keeping a toggle here would let a reader assemble a protocol run on the Strategies
+            page (or the reverse) while the URL said otherwise — the page and the run would disagree
+            about what was being measured.
+          */}
+          <div className="pb-subject">
+            <span className="pb-subject-btn pb-subject-btn--on" aria-current="page">
+              {subject === 'protocol' ? 'Protocols (Scoring Only)' : 'Complete Strategies'}
+            </span>
+            <Link className="pb-subject-btn" to={otherSubjectRoute}>
+              {subject === 'protocol' ? 'Backtest Strategies →' : '← Backtest Protocols'}
+            </Link>
           </div>
 
           {/* ⚠️ THE SEARCH LIVES HERE, NOT IN THE FILTER BAR, AND IT SEARCHES BOTH SUBJECTS
@@ -1073,11 +1330,40 @@ export default function BacktestPage() {
                   className="ff-select"
                   value={timeframe}
                   onChange={(e) => setTimeframe(e.target.value)}
+                  aria-describedby="bt-timeframe-note"
                 >
-                  {TIMEFRAMES.map((tf) => (
-                    <option key={tf} value={tf}>{tf}</option>
-                  ))}
+                  {TIMEFRAMES.map((tf) => {
+                    const cov = timeframeCoverage?.[tf];
+                    // ⚠️ UNKNOWN IS NOT UNUSABLE. While the coverage query is in flight, or if it
+                    // failed, every option stays enabled and says so — disabling on `undefined`
+                    // would turn "I could not check" into "there is no data", which are different
+                    // answers and only one of them is true.
+                    const unknown = !cov;
+                    const disabled = !unknown && !cov.usable;
+                    return (
+                      <option key={tf} value={tf} disabled={disabled}>
+                        {tf}
+                        {cov ? ` · ${cov.bars.toLocaleString()} bars` : unknown ? '' : ''}
+                        {disabled ? ' · not enough' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
+                <span className="pb-field-note" id="bt-timeframe-note">
+                  {coverageQuery.isError || (coverageQuery.data === null && !coverageQuery.isLoading)
+                    ? `⚠ Could not read bar coverage for ${marketSymbol || 'this market'} — every timeframe is offered unchecked.`
+                    : !timeframeCoverage
+                      ? `Checking which timeframes hold ${MIN_RUN_BARS}+ bars for ${marketSymbol || 'this market'}…`
+                      : (() => {
+                        const usable = TIMEFRAMES.filter((t) => timeframeCoverage[t]?.usable);
+                        const scope = usePeriod && selectedPeriod
+                          ? 'in this period'
+                          : 'in the stored history';
+                        return usable.length === 0
+                          ? `No timeframe holds ${MIN_RUN_BARS}+ bars ${scope} — import data on Backtest Data first.`
+                          : `${usable.length} of ${TIMEFRAMES.length} timeframes hold ${MIN_RUN_BARS}+ bars ${scope} for ${marketSymbol}. ${usePeriod ? 'Counts are measured inside this period, not the whole history.' : 'Counts are the whole stored history.'}`;
+                      })()}
+                </span>
               </div>
             </>
           )}
@@ -1141,10 +1427,10 @@ export default function BacktestPage() {
                 id="bt-bars"
                 className="ff-input"
                 type="number"
-                min={100}
+                min={MIN_RUN_BARS}
                 step={50}
                 value={bars}
-                onChange={(e) => setBars(Math.max(100, Number(e.target.value) || 100))}
+                onChange={(e) => setBars(Math.max(MIN_RUN_BARS, Number(e.target.value) || MIN_RUN_BARS))}
               />
               <span className="pb-field-note">
                 Walked back from the newest bar — not calendar days.
@@ -1183,12 +1469,17 @@ export default function BacktestPage() {
                 value={newsExclusion}
                 onChange={(e) => setNewsExclusion(e.target.value)}
               >
+                {/* ⚠️ THE DEFAULT IS FIRST, and it is the default on purpose (owner direction,
+                    2026-10-26). Ordering it second — where it sat while `none` was the default —
+                    makes the selected value look like a correction rather than the normal case. */}
+                <option value="exclude">🚫 Skip news-day bars (protocol purity) — default</option>
                 <option value="none">📰 Include every bar (realistic)</option>
-                <option value="exclude">🚫 Skip news-day bars (protocol purity)</option>
                 <option value="only">📡 News-day bars only (sensitivity)</option>
               </select>
               <span className="pb-field-note">
                 A FILTER ON BARS, not a news score: bars dated on a news release are skipped or kept.
+                Skipping is the default because it measures the protocol rather than the release —
+                a run that includes them answers a different question.
                 {/* ⚠️ `reduce` WAS REMOVED HERE (2026-10-26). `backtest.service.ts` implements
                     `exclude` and `only` and nothing else — `reduce` was accepted by the type, sent
                     by the form and acted on by no code, so it read as a fourth behaviour that did
@@ -1328,86 +1619,285 @@ export default function BacktestPage() {
           </>
         )}
 
-      {/* ── STEP 3 — Execution Realism Panel (#50) ── */}
-      {activeStep === 4 && (
+      {/* ── STEP 4 — Costs & sizing for strategies; SCORES ONLY for protocols ── */}
+      {activeStep === 4 && scoresOnly && (
+        <div className="pb-guard pb-guard--info" role="note">
+          <strong>🔢 A protocol produces SCORES. There is nothing to set in this step.</strong>
+          <p>
+            A protocol answers <em>“does an opportunity exist?”</em> — it is a reading of the bars, not
+            an order. It has no position size, no stop, no spread and no account, so asking for them
+            would be asking you to price a trade nobody places.
+          </p>
+          <p>
+            This run therefore records <strong>scores, signals and forward returns</strong> and
+            simulates <strong>no fills</strong>. Switch the subject to <strong>Complete Strategies</strong>{' '}
+            (step 1) to measure a bot, where costs, sizing and trade size all belong to that bot.
+          </p>
+          <p className="pb-field-note">
+            ⚠️ Runs stored before 2026-10-26 <em>did</em> simulate trades from a protocol, using
+            whatever the form held at the time. Those runs have a trade count where a new one has 0 —
+            the comparison panel reports that rather than averaging the two.
+          </p>
+
+          {/* ⚠️ THE SETTINGS BELONG IN THE STEPS, NOT IN THE OUTCOMES AREA (owner direction,
+              2026-10-26: *"Settings inventory to be part of the steps and not in the area of
+              outcomes. Obviously the Protocols only page will have different fields."*).
+              It was a reference TAB beside Completed runs — a place a reader goes AFTER a run to
+              find out what a run honours, when the same list is what decides the run. The component
+              filters itself by `subject`, so a protocol shows the protocol knobs only. */}
+          <h3 className="pb-info-head">What this protocol lets you set</h3>
+          <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
+            <BacktestSettingsInventory
+              subject={subject}
+              protocolId={protocolId}
+              botId=""
+              overrides={overrides}
+              onOverride={setOverride}
+              allowTimeframe={!usePeriod}
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {activeStep === 4 && !scoresOnly && (
       <div className="bt-execution-section">
         <button
           type="button"
           className={`bt-execution-toggle ${showExecution ? 'open' : ''}`}
           onClick={() => setShowExecution(!showExecution)}
+          aria-expanded={showExecution}
         >
-          ⚙ Execution Realism {showExecution ? '▾' : '▸'}
-          {activePreset && <span className="bt-preset-badge">{EXECUTION_PRESETS[activePreset].label}</span>}
+          ⚙ Costs &amp; sizing {showExecution ? '▾' : '▸'}
+          <span className="bt-preset-badge">{costsEdited ? 'custom costs' : costProfile.label}</span>
         </button>
 
         {showExecution && (
           <div className="bt-execution-panel">
-            {/* Preset buttons */}
-            <div className="bt-presets">
-              {Object.entries(EXECUTION_PRESETS).map(([key, p]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`bt-preset-btn ${activePreset === key ? 'active' : ''}`}
-                  onClick={() => applyPreset(key)}
-                >
-                  {p.label}
-                </button>
-              ))}
+            {/* What the class was detected FROM, and what that costs before the protocol does anything. */}
+            <div className="bt-class-strip">
+              <div className="bt-class-detect">
+                <span className="bt-class-symbol">{marketSymbol || 'no symbol yet'}</span>
+                <span className="bt-class-arrow" aria-hidden="true">→</span>
+                {symbolClass === null ? (
+                  <span className="bt-class-pending">detecting class…</span>
+                ) : (
+                  <>
+                    <span className="bt-class-type">
+                      {symbolClass.type}
+                      {symbolClass.source === 'assumed' && (
+                        <em title="Not found in /api/symbols, so this is getAssetType()’s fallback — its ‘stock’ answer means ‘not recognised’, not ‘verified equity’.">
+                          {' '}· assumed
+                        </em>
+                      )}
+                    </span>
+                    <span className="bt-class-arrow" aria-hidden="true">→</span>
+                    <span className="bt-class-profile">{costProfile.label} costs</span>
+                  </>
+                )}
+                {costsEdited && <span className="bt-class-edited">edited</span>}
+              </div>
+              <button
+                type="button"
+                className="bt-class-reset"
+                onClick={applyClassCosts}
+                disabled={!symbolClass || (!costsEdited && slippage === costProfile.slippage
+                  && spread === costProfile.spread && commission === costProfile.commission)}
+              >
+                Use {costProfile.label} defaults
+              </button>
+              <p className="bt-class-gloss">{costProfile.note}</p>
+              <p className={`bt-class-breakeven ${breakEvenPct > 0.5 ? 'is-high' : ''}`}>
+                Break-even move <strong>{breakEvenPct.toFixed(2)}%</strong> of price — the trade must
+                travel that far before it is flat ({spread * 100}% spread + {slippage * 100}% slippage
+                each way).
+              </p>
             </div>
 
             <div className="bt-execution-grid">
+              {/* ⚠️ THE BOT'S OWN SETTINGS, INHERITED UNLESS EDITED (owner direction, 2026-10-26:
+                  *"it should come from the strategies parts of data"*). Empty = use the bot's value,
+                  which the engine applies server-side; typing a number is the CHANGE this run tests.
+                  Before this, these three lived only in the Settings inventory tab, so the place a
+                  change is made and the place it is described were different panels. */}
+              {subject === 'strategy' && selectedBot && (
+                <>
+                  <label title="The bot's own entry bar — signals below this % never become a trade">
+                    Entry bar % <span className="bt-inherit">bot: {selectedBot.minComposite ?? 0}%</span>
+                    <input
+                      type="number" step="1" min="0" max="100"
+                      value={overrides.minComposite}
+                      placeholder={String(selectedBot.minComposite ?? 0)}
+                      onChange={(e) => setOverride('minComposite', e.target.value)}
+                    />
+                    <span className="bt-field-gloss">Blank = the bot&rsquo;s own bar. Above it, a higher bar takes fewer, stronger trades.</span>
+                  </label>
+                  <label title="The bot's stop distance as % of price">
+                    Stop % <span className="bt-inherit">bot: {selectedBot.slPct ?? '—'}</span>
+                    <input
+                      type="number" step="0.1" min="0"
+                      value={overrides.slPct}
+                      placeholder={String(selectedBot.slPct ?? '')}
+                      onChange={(e) => setOverride('slPct', e.target.value)}
+                    />
+                    <span className="bt-field-gloss">Blank = the bot&rsquo;s own stop. This also sets the position size (% of Equity sizing).</span>
+                  </label>
+                  <label title="The bot's target distance as % of price">
+                    Target % <span className="bt-inherit">bot: {selectedBot.tpPct ?? '—'}</span>
+                    <input
+                      type="number" step="0.1" min="0"
+                      value={overrides.tpPct}
+                      placeholder={String(selectedBot.tpPct ?? '')}
+                      onChange={(e) => setOverride('tpPct', e.target.value)}
+                    />
+                    <span className="bt-field-gloss">Blank = the bot&rsquo;s own target. Target ÷ stop is the payoff the result reports.</span>
+                  </label>
+                </>
+              )}
               <label title="Slippage as decimal (0.01 = 1%)">
                 Slippage
-                <input type="number" step="0.0001" min="0" value={slippage} onChange={e => { setSlippage(parseFloat(e.target.value) || 0); setActivePreset(''); }} />
+                <input type="number" step="0.0001" min="0" value={slippage} onChange={e => {
+                  setSlippage(parseFloat(e.target.value) || 0); setCostsEdited(true); }} />
+                <span className="bt-field-gloss">Paid on entry and again on exit. 0.01 = 1% of price each way.</span>
               </label>
               <label title="Spread as decimal (0.01 = 1%)">
                 Spread
-                <input type="number" step="0.0001" min="0" value={spread} onChange={e => { setSpread(parseFloat(e.target.value) || 0); setActivePreset(''); }} />
+                <input type="number" step="0.0001" min="0" value={spread} onChange={e => {
+                  setSpread(parseFloat(e.target.value) || 0); setCostsEdited(true); }} />
+                <span className="bt-field-gloss">Split half on entry and half on exit — the full spread once per round trip.</span>
               </label>
               <label title="Per-share/contract commission ($)">
                 Commission $
-                <input type="number" step="0.01" min="0" value={commission} onChange={e => { setCommission(parseFloat(e.target.value) || 0); setActivePreset(''); }} />
+                <input type="number" step="0.01" min="0" value={commission} onChange={e => {
+                  setCommission(parseFloat(e.target.value) || 0); setCostsEdited(true); }} />
+                <span className="bt-field-gloss">Charged once per trade, multiplied by the units traded.</span>
               </label>
               <label title="Position sizing model">
                 Sizing Model
-                <select value={positionModel} onChange={e => { setPositionModel(e.target.value); setActivePreset(''); }}>
+                <select value={positionModel} onChange={e => { setPositionModel(e.target.value); }}>
                   <option value="fixedPercent">% of Equity</option>
                   <option value="fixedDollar">Fixed $</option>
                   <option value="atrEqualRisk">ATR Equal Risk</option>
                   <option value="kellyFull">Kelly (full)</option>
                   <option value="kellyHalf">Kelly (half)</option>
                 </select>
+                <span className="bt-field-gloss">
+                  Turns the simulated balance into a <strong>unit count</strong>. It changes money P&amp;L
+                  and money drawdown — never the win rate or the per-trade %.
+                </span>
               </label>
+              {positionModel === 'fixedDollar' && (
+                <label title="Fixed currency amount committed per trade">
+                  Fixed $
+                  <input type="number" step="50" min="1" value={fixedAmount} onChange={e => {
+                    setFixedAmount(parseFloat(e.target.value) || 100); }} />
+                  <span className="bt-field-gloss">Same cash amount on every trade, whatever the price.</span>
+                </label>
+              )}
               {(positionModel === 'kellyFull' || positionModel === 'kellyHalf') && (
                 <label title="Maximum % of account allowed per trade. Kelly can be aggressive — cap it.">
                   Kelly Cap %
-                  <input type="number" step="5" min="5" max="50" value={kellyCapPct} onChange={e => { setKellyCapPct(parseFloat(e.target.value) || 25); setActivePreset(''); }} />
+                  <input type="number" step="5" min="5" max="50" value={kellyCapPct} onChange={e => {
+                    setKellyCapPct(parseFloat(e.target.value) || 25); }} />
+                  <span className="bt-field-gloss">A ceiling on Kelly, because half-Kelly on a lucky streak still overbets.</span>
                 </label>
               )}
               {positionModel === 'atrEqualRisk' && (
                 <label title="Stop distance = ATR × multiplier. Higher = wider stop, smaller position.">
                   ATR Multiplier
-                  <input type="number" step="0.5" min="0.5" max="5" value={atrMultiplier} onChange={e => { setAtrMultiplier(parseFloat(e.target.value) || 1.5); setActivePreset(''); }} />
+                  <input type="number" step="0.5" min="0.5" max="5" value={atrMultiplier} onChange={e => {
+                    setAtrMultiplier(parseFloat(e.target.value) || 1.5); }} />
+                  <span className="bt-field-gloss">Stop distance = ATR × this. Wider stop, smaller position.</span>
                 </label>
               )}
               {positionModel === 'atrEqualRisk' && (
                 <label title="ATR lookback period. 14 = standard, 10 = more responsive, 20 = smoother.">
                   ATR Period
-                  <input type="number" step="1" min="5" max="50" value={atrPeriod} onChange={e => { setAtrPeriod(parseInt(e.target.value, 10) || 14); setActivePreset(''); }} />
+                  <input type="number" step="1" min="5" max="50" value={atrPeriod} onChange={e => {
+                    setAtrPeriod(parseInt(e.target.value, 10) || 14); }} />
+                  <span className="bt-field-gloss">Bars in the ATR average. 14 is the standard.</span>
                 </label>
               )}
               {!(positionModel === 'kellyFull' || positionModel === 'kellyHalf') && (
-                <label title="Risk per trade as % of account. Position size = (account * risk%) / stopDistance">
+                <label title="Risk per trade as % of account">
                   Risk %
-                  <input type="number" step="0.5" min="0.5" max="20" value={riskPct} onChange={e => { setRiskPct(parseFloat(e.target.value) || 2); setActivePreset(''); }} />
+                  <input type="number" step="0.5" min="0.5" max="20" value={riskPct} onChange={e => {
+                    setRiskPct(parseFloat(e.target.value) || 2); }} />
+                  <span className="bt-field-gloss">
+                    Used by % of Equity and ATR sizing. A Complete Strategy&apos;s real size is the
+                    <strong> bot&apos;s</strong> setting — this form&apos;s value is what gets simulated,
+                    and the two are only recorded, not reconciled.
+                  </span>
+                  {committedMultiple != null && (
+                    <span className={`bt-field-warn ${committedMultiple > 3 ? 'is-high' : ''}`}>
+                      {riskPct}% risk ÷ {effectiveSlPct}% stop ⇒ ≈{committedMultiple.toFixed(1)}× the
+                      account committed per trade. The stop decides the size, not the account.
+                    </span>
+                  )}
                 </label>
               )}
               <label title="Starting account balance for position sizing">
                 Account Size
-                <input type="number" step="1000" min="1000" value={accountSize} onChange={e => { setAccountSize(parseInt(e.target.value) || 10000); setActivePreset(''); }} />
+                <input type="number" step="1000" min="1000" value={accountSize} onChange={e => {
+                  setAccountSize(parseInt(e.target.value) || 10000); }} />
+                <span className="bt-field-gloss">Simulated starting balance. Nothing here reads a real account.</span>
               </label>
             </div>
+
+            {/* ⚠️ WHAT THE BOT ITSELF TRADES. The engine sizes in UNITS and the bot in LOTS (#843), so a
+                Complete Strategy's money figures are a simulation of the same edges — not its P&L.
+                Shown rather than asserted, because a reader who cannot see the bot's own size has no
+                way to judge whether the two agree. The FORK (bot wins vs form wins) is an owner
+                decision, recorded in .github/REVIEW-QUEUE.md. */}
+            {subject === 'strategy' && selectedBot && selectedBot.baseSize != null && (
+              <p className="bt-bot-size-note">
+                This bot&apos;s own entry size is <strong>{selectedBot.baseSize}</strong> — lots on
+                MT5, shares elsewhere. The form below models <strong>units</strong>, so treat the
+                money figures as a simulation of the edges, not as the bot&apos;s actual P&amp;L.
+              </p>
+            )}
+
+            {/* WHAT THIS RUN CHANGES. Shown BEFORE the run so the experiment is deliberate, and
+                again after it (the engine echoes the same list as `drivenBy.overridden`). */}
+            {botChanges.length > 0 ? (
+              <div className="pb-changes" role="note">
+                <strong>Changes being tested ({botChanges.length})</strong>
+                <ul>
+                  {botChanges.map((c) => (
+                    <li key={c.label}>
+                      <span>{c.label}</span>
+                      <code>{String(c.from)}</code>
+                      <span aria-hidden="true">→</span>
+                      <code>{c.to}</code>
+                    </li>
+                  ))}
+                </ul>
+                <p className="pb-field-note">
+                  Everything else is the bot&rsquo;s own value. This run is the <strong>B</strong> side;
+                  a run with nothing changed is the <strong>A</strong> baseline.
+                </p>
+              </div>
+            ) : (
+              <p className="pb-field-note">
+                <strong>No changes — this is the baseline.</strong> It measures the bot exactly as
+                configured, which is what tab <em>Current performance (A)</em> reports from its real
+                trades.
+              </p>
+            )}
+
+            {/* ⚠️ THE FULL SETTINGS LIST, IN THE STEP (owner direction, 2026-10-26). This page shows
+                every field the protocol page shows PLUS the execution ones, because a Complete
+                Strategy is a protocol plus execution. */}
+            <h3 className="pb-info-head">Every setting this run honours</h3>
+            <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
+              <BacktestSettingsInventory
+                subject={subject}
+                protocolId={protocolId}
+                botId={botId}
+                overrides={overrides}
+                onOverride={setOverride}
+                allowTimeframe={!usePeriod}
+              />
+            </Suspense>
           </div>
         )}
       </div>
@@ -1481,7 +1971,7 @@ export default function BacktestPage() {
             </p>
           )}
 
-          {/* Execution realism info */}
+          {/* Costs & sizing actually applied to this run */}
           {/* ⚠️ What this run CANNOT claim, stated with the numbers rather than left to the reader —
               a bot-driven run carries the #843 sizing-divergence warning here. */}
           {result?.caveats?.length > 0 && (
@@ -1492,8 +1982,10 @@ export default function BacktestPage() {
 
           {executionUsed && (
             <p className="bt-execution-info">
-              ⚙ Slippage: {(executionUsed.slippage * 100).toFixed(2)}% · Spread: {(executionUsed.spread * 100).toFixed(2)}%
-              · Commission: ${executionUsed.commission.toFixed(2)}/share · {executionUsed.positionModel === 'fixedPercent'
+              ⚙ Break-even <strong>{((executionUsed.spread + executionUsed.slippage * 2) * 100).toFixed(2)}%</strong>
+              {' '}· slippage {(executionUsed.slippage * 100).toFixed(2)}% each way
+              {' '}· spread {(executionUsed.spread * 100).toFixed(2)}%
+              {' '}· commission ${executionUsed.commission.toFixed(2)}/unit · {executionUsed.positionModel === 'fixedPercent'
                 ? `${executionUsed.riskPct}% risk on $${executionUsed.accountSize.toLocaleString()}`
                 : executionUsed.positionModel === 'fixedDollar'
                 ? `$${executionUsed.fixedAmount} fixed`
@@ -1520,7 +2012,9 @@ export default function BacktestPage() {
           {equityData && !equityData.error && equityData.equity?.length > 0 && (
             <div className="bt-chart-section">
               <h3>Equity Curve &amp; Drawdown</h3>
-              <EquityCurveChart equityData={equityData} symbol={result?.symbol ?? marketSymbol} height={300} />
+              <Suspense fallback={<p className="pb-none">Loading the equity curve…</p>}>
+                <EquityCurveChart equityData={equityData} symbol={result?.symbol ?? marketSymbol} height={300} />
+              </Suspense>
             </div>
           )}
 
@@ -1528,7 +2022,9 @@ export default function BacktestPage() {
           {showChart && (
             <div className="bt-chart-section">
               <h3>Price Chart &amp; Signals</h3>
-              <BacktestChartPane initialSymbol={result?.symbol ?? marketSymbol} />
+              <Suspense fallback={<p className="pb-none">Loading the chart…</p>}>
+                <BacktestChartPane initialSymbol={result?.symbol ?? marketSymbol} />
+              </Suspense>
             </div>
           )}
 
@@ -1605,8 +2101,9 @@ export default function BacktestPage() {
           the wrong page. This page only CONSUMES periods — the step-2 Window control lists them. */}
       <nav className="bt-ref-tabs" aria-label="Reference panels">
         {[
+          { id: 'current', label: 'Current performance (A)', hint: 'What this bot has actually done — realised trades, not a simulation.' },
+          { id: 'latest', label: 'Backtesting results (B)', hint: 'The most recent stored run, what it changed, and the log lines that mention it.' },
           { id: 'runs', label: 'Completed runs', hint: 'Stored runs, and the comparison of two of them.' },
-          { id: 'settings', label: 'Settings inventory', hint: 'Every knob, and whether a run honours it.' },
           { id: 'scores', label: 'Score detail', hint: 'Bar-by-bar scores for the same window.' },
         ].map((t) => (
           <button
@@ -1622,6 +2119,22 @@ export default function BacktestPage() {
         ))}
       </nav>
 
+      {refTab === 'current' && (
+        <Suspense fallback={<p className="pb-none">Loading the bot&rsquo;s realised trades…</p>}>
+          <CurrentPerformancePanel
+            botId={subject === 'strategy' ? botId : ''}
+            botName={selectedBot?.name ?? ''}
+            baseSize={selectedBot?.baseSize ?? null}
+          />
+        </Suspense>
+      )}
+
+      {refTab === 'latest' && (
+        <Suspense fallback={<p className="pb-none">Loading the most recent run…</p>}>
+          <LatestBacktestPanel fallbackRunId={runId} />
+        </Suspense>
+      )}
+
       {refTab === 'runs' && (
         /* #823 Stage 2 — the stored runs were invisible. Measured 2026-10-15: 26 runs stored and
            served by `GET /api/backtest/runs`, with ZERO frontend references to the list. This panel
@@ -1632,18 +2145,6 @@ export default function BacktestPage() {
         </Suspense>
       )}
 
-      {refTab === 'settings' && (
-        <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
-          <BacktestSettingsInventory
-            subject={subject}
-            protocolId={protocolId}
-            botId={subject === 'strategy' ? botId : ''}
-            overrides={overrides}
-            onOverride={setOverride}
-            allowTimeframe={!usePeriod}
-          />
-        </Suspense>
-      )}
 
       {refTab === 'scores' && (
         /* Available for PROTOCOL runs on a DATED window. It needs dates: `/api/replay/run` takes
@@ -1675,4 +2176,6 @@ export default function BacktestPage() {
     </div>
   );
 }
+
+
 
