@@ -7449,6 +7449,43 @@ const QA_CHECKLIST = [
         priority: 'high',
         versionNote: '2026-10-26 - batch #36 (#1143) — the Lab enforces protocol = scores, strategy = trades: `scoresOnly` is ONE derived flag for payload, step 4 and the rail label. ⚠️ The simulated size is still the form\'s `riskPct`, not the bot\'s `baseSize` (#1143 OPEN), and protocol runs stored before today still hold simulated trades — the comparison panel reports the count difference rather than averaging it.',
       },
+
+      // ── handoff batch #37 (2026-10-26) ───────────────────────────────
+      {
+        id: 'qa-bt-021',
+        area: 'Backtesting',
+        system: 'Backtest run — scoring output',
+        name: 'A protocol run stores its scores and simulates no trades',
+        procedure: 'Run a protocol over a dated window on `/lab/backtest`, then read the stored row (`backtestrun.scoresJson`) and `GET /api/backtest/results/:runId`; open the **Current performance (A)** tab.',
+        expected: 'The stored run has `totalTrades: 0` and `totalSignals > 0` with `scoresJson` non-NULL; the response carries a `scoreSeries` whose length matches the scored bar count (bounded to the last 2,000 bars) and each entry is `{ date, score, signal, passedBar }` — a bar the bot\'s own entry bar rejected is still present with `passedBar: false`. A run stored before 2026-10-26 returns NO `scoreSeries` (undefined, not an empty array). Tab A lists the scores as `n scored bar(s)`, last 25 shown.',
+        category: 'API',
+        priority: 'high',
+        versionNote: '2026-10-26 - batch #37 (#1143) — `run()` scored every bar and kept only the BUY bars that cleared the threshold; it now pushes every scored bar (BEFORE the `continue`, so a bot-bar rejection is recorded) into `scoreSeries`, returns the last 2,000 and persists them to the new `backtestrun.scoresJson` LONGTEXT, parsed back in `formatRunResult()`. ⚠️ The trades half of this claim is qa-bt-020 (batch #36); this entry covers the scores.',
+      },
+      {
+        id: 'qa-bt-022',
+        area: 'Backtesting',
+        system: 'Subject routing / settings inventory',
+        name: 'Each subject has its own page, and the settings inventory lives in the steps',
+        procedure: 'Open `/lab/backtest` and `/lab/backtest-strategies`. On each, walk to step 4 and read the title, the step name, the fields and the settings list; confirm `.bt-ref-tabs` carries no "Settings inventory" tab.',
+        expected: 'Protocols = title **Backtesting Protocols**, step 4 **Scores only**, no money inputs, heading **What this protocol lets you set**, tabs `Current performance (A) · Backtesting results (B) · Completed runs · Score detail`. Strategies = title **Backtest Strategies**, step 4 **Costs & sizing**, money inputs present, heading **Every setting this run honours**, the same four tabs. Neither page offers a subject toggle — each shows a link to the other route instead.',
+        category: 'UI',
+        priority: 'high',
+        versionNote: '2026-10-26 - batch #37 — `/lab/backtest` split into `BacktestProtocolsPage` and `BacktestStrategiesPage`, both rendering `BacktestPage` from a `subject` PROP (the URL is the authority; a toggle would let a protocol run be assembled on the Strategies page), and the settings inventory moved out of the reference tabs into step 4 on both. `verify-view-meta-routes.cjs` measures 105 nav leaves, 0 without metadata.',
+      },
+
+      // ── handoff batch #38 (2026-10-27) ───────────────────────────────
+      {
+        id: 'qa-scr-027',
+        area: 'Scoring / Protocol config',
+        system: 'Backtesting Protocols · step 4 directive editing',
+        name: 'A per-protocol maxScore changes the score, and does not change the global',
+        procedure: 'On `/lab/backtest` step 4 (protocols branch), note `totalWeight` and the first scored bar\'s score for a protocol (e.g. `spy-speed-v1`). Type a different value into one directive\'s **This protocol** field (e.g. `speed-momentum` 120 → 240) and blur, then run the protocol and read the first scored bar\'s score. Finally read the global setting `directive:speed-momentum:maxScore`.',
+        expected: 'The row\'s source badge flips to **protocol**, `totalWeight` changes by the difference, and the scored value changes — measured 2026-10-27 on `spy-speed-v1`: `speed-momentum` 120 → 240 moved the first scored bar from **3.5 to 2.9** while `directive:speed-momentum:maxScore` stayed **120**, proving the override is per-protocol. ⚠️ A blank field writes nothing: `PATCH {maxScore: null}` leaves the stored row and the badge stays **protocol**, and the panel offers no control that returns the directive to **inherited** (the `DELETE :slug/directive-config/:directiveId` endpoint exists but the panel does not call it).',
+        category: 'UI',
+        priority: 'high',
+        versionNote: '2026-10-27 - batch #38 (#1133) — step 4 on the Protocols page is now the protocol\'s directive list with one editable `maxScore` per directive, written to the `protocol:<slug>:<directiveId>:maxScore` settings family via `PATCH /api/scoring/protocols/:slug/directive-config` — the store `resolveEffectiveMaxScores()` reads — and NOT `protocol_directive_entry.maxScore`, which no scoring path reads. Scope is the protocol, not the run. The stored-but-inert warning half is qa-scr-026 (batch #35); this entry covers the editing surface.',
+      },
     ];
 
 export default QA_CHECKLIST;

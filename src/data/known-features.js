@@ -740,4 +740,26 @@ export const KNOWN_FEATURES = {
     'Backtest run cost provenance': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
     'Backtest Lab — protocol/strategy separation and manual A/B': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'both', devCompletion: 'partial' },
     'Backtest Lab stepped workflow': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+
+  // ── batch #37 (2026-10-26) — 1 capability from 2 handoffs (the earlier handoff's capability,
+  //    'Backtest Lab — protocol/strategy separation and manual A/B', was already seeded by batch
+  //    #36 — same subject, same uiSurfaces — so it is SKIPPED here; its two unrecorded facts, the
+  //    score capture and `scoresJson`, land as qa-bt-021 and a slice rather than as a second row
+  //    for one subject). Theme: the Lab's two subjects become two ROUTES, not a toggle, and a
+  //    stored run keeps every bar it scored. uiSurfaces: 0 is a FINDING, not a blank (0 of these).
+  //    `devCompletion: 'partial'`, not the handoff's "complete for the split": #1143 is measured
+  //    OPEN and the handoff itself names the trade size as the remainder.
+    'Backtest Lab — two pages, one subject each': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'partial' },
+
+  // ── batch #38 (2026-10-27) — 1 capability from 1 handoff. Theme: step 4 of the Protocols page
+  //    edits the store the SCORER reads — the `protocol:<slug>` settings family — and shows the
+  //    engine's precedence (protocol override → global → class) instead of the settings inventory.
+  //    This is a SECOND surface over the #609 store, not a duplicate of 'Per-protocol directive
+  //    weight overrides' (the store) or 'Scoring honors per-protocol directive overrides' (the
+  //    engine), so those two stay as they are. `devCompletion: 'partial'` — the handoff says
+  //    partial and #1133 is measured OPEN: only `maxScore` is applied per protocol (the directive
+  //    maths are code constants), the other four fields are stored and inert, and no control
+  //    returns a directive to "inherited".
+  //    uiSurfaces: 0 is a FINDING, not a blank (0 of these).
+    'Per-protocol directive editing from the Backtest Lab': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
 };
