@@ -10,6 +10,15 @@ import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 // #843 — the ONE sizing implementation, shared with the live automation loop.
 import { computeSizing } from '../trading/position-sizing';
 import { BacktestPeriodService } from './backtest-period.service';
+import {
+  scoringTotals,
+  measureWindow,
+  multiWindowVerdict,
+  ScoreBar,
+  RunTotals,
+  RepeatWindowResult,
+  RepeatVerdict,
+} from './score-maths';
 // #1021 — ONE derivation of the trade win rate. This existed in FOUR places in TWO unit
 // conventions (three `groupBy` pairs producing a PERCENT, one in-memory producing a FRACTION), and
 // one of them returned `0` where the others returned `null` for a run with no trades.
@@ -450,7 +459,27 @@ export interface BacktestResult {
    * (#1143). `entrySignals` is the ACTIONABLE population; this is the READING — what the protocol
    * actually said, bar by bar, which is the thing two protocol runs are compared on.
    */
-  scoreSeries?: Array<{ date: string; score: number; signal: string; passedBar: boolean }>;
+  scoreSeries?: Array<{
+    /** The BAR INSTANT (ISO). Intraday bars share a `date`, so a comparison must key on this. */
+    time?: string;
+    date: string;
+    /** Gated directional score, % of configured capacity — the BUY/SELL/HOLD basis. */
+    score: number;
+    signalPct?: number;
+    /** Additive "everything counts" score the Screening area ranks by (Phase C dual score). */
+    opportunityPct?: number;
+    opportunityScore?: number;
+    opportunityMax?: number;
+    riskMultiplier?: number;
+    signal: string;
+    passedBar: boolean;
+  }>;
+  /**
+   * Per-score totals for THIS run — sum / highest / lowest / mean, plus the capacity signature and
+   * whether every bar carries an instant. Served so an agent does not have to read 399 KB of per-bar
+   * scores for twenty numbers (2026-10-27).
+   */
+  totals?: RunTotals;
   trades?: TradeRecord[];
   /**
    * Present ONLY on a bot-driven run (#965 item 3): the configuration that was resolved from the
@@ -792,7 +821,7 @@ export class BacktestService {
      * answer "what did this protocol score on this bar?". `entrySignals` is the ACTIONABLE
      * population; this is the READING, which is what a protocol comparison is actually about.
      */
-    const scoreSeries: Array<{ date: string; score: number; signal: string; passedBar: boolean }> = [];
+    const scoreSeries: NonNullable<BacktestResult['scoreSeries']> = [];
     const windowSize = 100;
 
     for (let day = windowSize; day < bars.length; day++) {
@@ -824,9 +853,25 @@ export class BacktestService {
       const belowBotBar = !passesBotEntryBar(composite, minComposite);
       // Recorded BEFORE the `continue`, so a bar the bot's own bar rejected still shows what the
       // engine scored and that the bar — not the protocol — is why it was not traded.
+      //
+      // ⚠️ BOTH SCORES ARE KEPT (2026-10-27). `signalPct` is the gated directional score that
+      // decides BUY/SELL/HOLD; `opportunityPct` is the additive score the Screening area ranks by.
+      // The first version stored only `signalPct` under the name `score`, which made a two-score
+      // system look like a one-score system — the owner read the single column and asked where the
+      // other one was, which is exactly what a missing column should make a reader do.
       scoreSeries.push({
+        // ⚠️ THE INSTANT, NOT THE DAY. `barDate` is `YYYY-MM-DD`, so every intraday bar of one day
+        // shares it — a 1h run has 24 identical "dates". Keying a comparison on that collapses them
+        // into one row each (measured 2026-10-27: a run compared with ITSELF reported 954 of 1,722
+        // bars "changed"). `time` is the same instant-instant convention #819 fixed for trades.
+        time: currentBar.timestamp.toISOString(),
         date: barDate,
         score: Number(composite.toFixed(1)),
+        signalPct: Number(result.signalPct.toFixed(1)),
+        opportunityPct: Number(result.opportunityPct.toFixed(1)),
+        opportunityScore: Number(result.opportunityScore.toFixed(1)),
+        opportunityMax: Number(result.opportunityMax.toFixed(1)),
+        riskMultiplier: Number(result.riskMultiplier.toFixed(3)),
         signal,
         passedBar: !belowBotBar,
       });
@@ -1221,6 +1266,18 @@ export class BacktestService {
       }
     }
 
+    /**
+     * ── `totals` ON EVERY READ (owner direction, 2026-10-27: gaps 1 and 2 for agentic use) ──
+     * An agent comparing runs needs ~20 numbers; the payload it had to read for them was 399 KB of
+     * per-bar scores. The totals are computed HERE from the same series the payload carries, and with
+     * the same rules the repeat check uses (`score-maths.ts`) — one implementation, not one per client.
+     */
+    if (Array.isArray((result as { scoreSeries?: unknown[] }).scoreSeries)) {
+      (result as { totals?: unknown }).totals = scoringTotals(
+        (result as { scoreSeries: ScoreBar[] }).scoreSeries,
+      );
+    }
+
     return result;
   }
 
@@ -1442,6 +1499,33 @@ export class BacktestService {
       maxDrawdownPct: number;
       /** Percent per trade. NOT currency. */
       avgTradePnlPct: number;
+      /**
+       * Whether this run stored its per-bar score series (2026-10-27).
+       *
+       * ⚠️ A run stored before the score series existed cannot be differenced, replayed or compared
+       * per bar — and nothing in the payload used to say so, so the A/B repeat check picked the oldest
+       * run of a window and then sat on "loading" forever because that run had no scores. Reported
+       * here so a caller can EXCLUDE it instead of discovering the gap halfway through.
+       */
+      hasScores: boolean;
+      /**
+       * Whether the stored series carries each bar's INSTANT (`time`), not only its `date` (2026-10-27).
+       *
+       * ⚠️ `hasScores` IS NOT ENOUGH TO KNOW A RUN CAN BE DIFFERENCED. The score series gained a
+       * `time` field part-way through; runs stored before that have scores but no instant, and a
+       * date-keyed join collapses every intraday bar of one day onto a row and reports the survivors
+       * as "changed" (measured 2026-10-27: two IDENTICAL 1h runs showed 21 of 40 bars changed by date,
+       * 0 by instant). The repeat check therefore refuses such a run — which is correct, but it used
+       * to be DISCOVERED after picking it: the window came back "cannot be compared" while two
+       * measurable runs sat unused beside it. Reported here so selection can avoid it.
+       *
+       * ⚠️ IT IS A STRING CHECK ON THE STORED JSON, not a parse: the list already loads `scoresJson`
+       * for `hasScores`, and parsing 50 × ~400 KB series to answer a boolean would make this endpoint
+       * expensive for no gain. The only way it can be wrong is a run whose JSON contains the token
+       * `"time"` in some other field — and that error is in the safe direction: the run is offered,
+       * then refused by `measureWindow` with its own reason, never silently mis-joined.
+       */
+      hasInstants: boolean;
       createdAt: string;
     }>;
     total: number;
@@ -1482,6 +1566,11 @@ export class BacktestService {
         sharpeRatio: Math.round(r.sharpeRatio * 100) / 100,
         maxDrawdownPct: Number(r.maxDrawdown.toFixed(4)),
         avgTradePnlPct: Number(r.avgTradePnl.toFixed(4)),
+        // Read from the column, never inferred from createdAt: the rollout date is a guess about data,
+        // and a run re-imported later would break it.
+        hasScores: r.scoresJson != null && r.scoresJson !== '',
+        // See the field's docblock: a string token check on the already-loaded column, never a parse.
+        hasInstants: typeof r.scoresJson === 'string' && r.scoresJson.includes('"time"'),
         createdAt: r.createdAt.toISOString(),
       })),
       total,
@@ -2325,7 +2414,28 @@ export class BacktestService {
     symbol: string,
     bars: MarketBar[],
     protocolId: string,
-  ): Promise<{ composite: number; signal: string; breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }> }> {
+  ): Promise<{
+    composite: number;
+    signal: string;
+    /**
+     * ⚠️ THE DUAL SCORE, BOTH HALVES (owner report, 2026-10-27: *"We have a dual score system and
+     * yet this table only has one column named SCORE"*). `scoreWithGating()` returns two different
+     * numbers and this adapter used to keep only the first:
+     *
+     *   · `signalPct`  — DIRECTIONAL, gated: what BUY/SELL/HOLD is classified from.
+     *   · `opportunityPct` — ADDITIVE ("everything counts", gates + conditions): the number the
+     *     Screening area ranks symbols by. Phase C dual-score model.
+     *
+     * They answer different questions and neither substitutes for the other, so a result that
+     * reports one and not the other invites the reader to read a screen rank as a signal.
+     */
+    signalPct: number;
+    opportunityPct: number;
+    opportunityScore: number;
+    opportunityMax: number;
+    riskMultiplier: number;
+    breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }>;
+  }> {
     const symId = await this.resolveSymbolId(symbol);
     const bundle = symId
       ? await this.loadTfBundle(symId, protocolId)
@@ -2334,6 +2444,11 @@ export class BacktestService {
     return {
       composite: gated.signalPct,
       signal: gated.signal,
+      signalPct: gated.signalPct,
+      opportunityPct: gated.opportunityPct,
+      opportunityScore: gated.opportunityScore,
+      opportunityMax: gated.opportunityMax,
+      riskMultiplier: gated.riskMultiplier,
       breakdown: Object.values(gated.breakouts)
         .flat()
         .map(d => ({

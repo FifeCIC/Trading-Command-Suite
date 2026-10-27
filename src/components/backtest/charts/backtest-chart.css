@@ -48,7 +48,9 @@
   padding: 4px 10px;
   border: 1px solid #374151;
   border-radius: 6px;
-  background: var(--color-input-bg);
+  /* ⚠️ Derived from the THEMED pair — --color-input-bg is a fixed dark literal that no theme
+     recolours, so it rendered a dark control in light mode (measured 2026-10-27). */
+  background: color-mix(in srgb, var(--ink) 10%, var(--panel));
   color: var(--ink);
   font-size: 12px;
   cursor: pointer;
@@ -95,7 +97,7 @@
   padding: 4px 8px;
   border: 1px solid #374151;
   border-radius: 6px;
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 10%, var(--panel));
   color: var(--ink);
   font-size: 12px;
 }
@@ -110,7 +112,7 @@
   padding: 4px 10px;
   border: 1px solid #374151;
   border-radius: 6px;
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 10%, var(--panel));
   color: var(--color-text-dim);
   font-size: 11px;
   font-weight: 600;
@@ -133,7 +135,7 @@
   padding: 4px 12px;
   border: 1px solid #374151;
   border-radius: 6px;
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 10%, var(--panel));
   color: #9ca3af;
   font-size: 11px;
   cursor: pointer;

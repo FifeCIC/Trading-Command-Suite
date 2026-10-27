@@ -2044,7 +2044,7 @@ button.nav-active {
 /* The active-scope banner. Visible so the reader can tell a period-scoped run from a day-range one
    BEFORE the run rather than inferring it from the result afterwards. */
 .bt-active-period { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--ink); margin: 0.75rem 0; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; }
-.bt-clear-period { min-height: 32px; padding: 4px 10px; font-size: 0.72rem; font-weight: 600; color: var(--ink); background: var(--color-input-bg); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; }
+.bt-clear-period { min-height: 32px; padding: 4px 10px; font-size: 0.72rem; font-weight: 600; color: var(--ink); background: color-mix(in srgb, var(--ink) 12%, var(--panel)); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; }
 .bt-clear-period:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }.bt-row-win { background: color-mix(in srgb, #00ff41 4%, transparent); }
 .bt-row-loss { background: color-mix(in srgb, var(--danger) 4%, transparent); }
 .bt-green { color: var(--color-profit); }
@@ -2222,7 +2222,67 @@ button.nav-active {
 /* Scores-only / informational guard — a panel that explains rather than refuses. */
 .pb-guard--info { border-left-color: var(--accent); }
 .pb-guard--info p { margin: 0.35rem 0 0; font-size: 0.78rem; line-height: 1.5; }
-/* A/B reference panels. */
+/* ── Directive settings (step 4, Protocols page · 2026-10-27) ─────────────────────────────────── */
+.dp-panel { display: grid; gap: 0.7rem; }
+.dp-scope {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  border-radius: 5px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.dp-count { color: var(--ink-soft); font-weight: 400; }
+.dp-group { display: grid; gap: 0.35rem; }
+.dp-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+.dp-group-weight { font-size: 0.7rem; color: var(--ink-soft); font-weight: 400; }
+.dp-table { width: 100%; }
+.dp-desc { font-size: 0.68rem; color: var(--ink-soft); line-height: 1.4; margin-top: 2px; max-width: 46ch; }
+.dp-input {
+  width: 5.5rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.dp-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dp-hint { display: block; font-size: 0.64rem; color: var(--ink-soft); }
+.dp-badge {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+.dp-badge--override { border-color: var(--accent); color: var(--accent); }
+.dp-badge--risk { border-color: var(--danger); color: var(--danger); }
+.dp-ok,
+.dp-warn,
+.dp-error {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.dp-ok { border: 1px solid var(--line); border-left: 3px solid var(--accent); color: var(--ink); }
+.dp-warn { border: 1px solid var(--line); border-left: 3px solid var(--ink-soft); color: var(--ink); }
+.dp-error { border: 1px solid var(--danger); color: var(--ink); }
 .bt-ab-panel { display: grid; gap: 0.6rem; }
 .bt-log-tail {
   max-height: 22rem;

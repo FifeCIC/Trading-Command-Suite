@@ -45,6 +45,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '../../core/api/client';
 import NoticeBlock from '../NoticeBlock';
 import { noticeFromError } from '../../core/notices/from-error.js';
+import { useSort, SortableTh } from '../../core/use-sort.jsx';
 import './backtest-panel-base.css';
 import './backtest-runs-panel.css';
 
@@ -80,7 +81,7 @@ function Pnl({ value }) {
   return <span className={tone}>{n > 0 ? '+' : ''}{n.toFixed(2)}</span>;
 }
 
-export default function BacktestRunsPanel() {
+export default function BacktestRunsPanel({ showTrades = true }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -125,6 +126,8 @@ export default function BacktestRunsPanel() {
 
   const comparison = compareMutation.data;
   const canCompare = selected.length >= 2 && !compareMutation.isPending;
+  /** Newest first by default — the run just made is the one a reader is looking for. */
+  const sort = useSort(runs, 'createdAt', 'desc');
 
   return (
     <section className="bt-panel btr" aria-labelledby="btr-heading">
@@ -167,7 +170,7 @@ export default function BacktestRunsPanel() {
 
       {runs.length > 0 && (
         <>
-          <div className="btr-table-wrap">
+          <div className="btr-table-wrap bt-table-wrap">
             <table className="bt-table">
               <caption className="sr-only">
                 Stored backtest runs. Select rows to compare. Signal win rate is a rate on entry
@@ -176,20 +179,26 @@ export default function BacktestRunsPanel() {
               <thead>
                 <tr>
                   <th scope="col">Compare</th>
-                  <th scope="col">Symbol</th>
-                  <th scope="col">Protocol</th>
-                  <th scope="col">TF</th>
+                  <SortableTh col="symbol" label="Symbol" api={sort} />
+                  <SortableTh col="protocolId" label="Protocol" api={sort} />
+                  <SortableTh col="timeframe" label="TF" api={sort} />
                   <th scope="col">Period</th>
-                  <th scope="col">Trades</th>
-                  <th scope="col">Signals</th>
-                  <th scope="col">Signal win %</th>
-                  <th scope="col">P&amp;L</th>
-                  <th scope="col">Created</th>
+                  {/*
+                    ⚠️ TRADE COLUMNS ARE HIDDEN ON THE PROTOCOLS PAGE (owner direction, 2026-10-27:
+                    *"This view should not have anything relating to trades"*). A protocol run is
+                    scores-only, so `Trades` and `P&L` can only read 0 / +0.00 — columns that look like
+                    a result and carry none. On the Strategies page the same columns are the point.
+                  */}
+                  {showTrades && <SortableTh col="totalTrades" label="Trades" api={sort} className="bt-num" />}
+                  <SortableTh col="totalSignals" label="Signals" api={sort} className="bt-num" />
+                  <SortableTh col="signalWinRatePct" label="Signal win %" api={sort} className="bt-num" />
+                  {showTrades && <SortableTh col="totalPnl" label="P&amp;L" api={sort} className="bt-num" />}
+                  <SortableTh col="createdAt" label="Created" api={sort} />
                   <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                {runs.map((r) => (
+                {sort.sorted.map((r) => (
                   <tr key={r.id} className={selected.includes(r.id) ? 'btr-row-selected' : ''}>
                     <td>
                       <input
@@ -203,11 +212,11 @@ export default function BacktestRunsPanel() {
                     <td>{r.protocolId}</td>
                     <td className="btr-mono">{r.timeframe}</td>
                     <td className="btr-mono btr-window">{r.period}</td>
-                    <td className="btr-mono">{r.totalTrades}</td>
+                    {showTrades && <td className="btr-mono">{r.totalTrades}</td>}
                     <td className="btr-mono"><Num value={r.totalSignals} digits={0} /></td>
                     {/* ⚠️ Named "signal" win rate in the header — it is not a trade win rate. */}
                     <td className="btr-mono"><Num value={r.signalWinRatePct} digits={1} suffix="%" /></td>
-                    <td className="btr-mono"><Pnl value={r.totalPnl} /></td>
+                    {showTrades && <td className="btr-mono"><Pnl value={r.totalPnl} /></td>}
                     <td className="btr-mono btr-window">{shortStamp(r.createdAt)}</td>
                     <td>
                       {confirmDelete === r.id ? (
@@ -277,7 +286,7 @@ export default function BacktestRunsPanel() {
         </div>
       )}
 
-      {comparison && <Comparison result={comparison} />}
+      {comparison && <Comparison result={comparison} showTrades={showTrades} />}
     </section>
   );
 }
@@ -289,7 +298,7 @@ export default function BacktestRunsPanel() {
  * `sample-unknown` are refusals, and a checkmark beside a refusal would invert the endpoint's
  * whole purpose (#929: "noise wearing a result's clothes").
  */
-function Comparison({ result }) {
+function Comparison({ result, showTrades = true }) {
   const runs = Array.isArray(result?.runs) ? result.runs : [];
   const verdict = result?.verdict ?? null;
   const best = result?.best ?? null;
@@ -352,7 +361,7 @@ function Comparison({ result }) {
         </p>
       )}
 
-      <div className="btr-table-wrap">
+      <div className="btr-table-wrap bt-table-wrap">
         <table className="bt-table">
           <caption className="sr-only">Side-by-side metrics for the selected runs.</caption>
           <thead>
@@ -361,16 +370,20 @@ function Comparison({ result }) {
               <th scope="col">Symbol</th>
               <th scope="col">Protocol</th>
               <th scope="col">TF</th>
-              <th scope="col">Trades</th>
-              <th scope="col">Counted</th>
-              <th scope="col">Trade win %</th>
+{showTrades && (
+                <>
+                  <th scope="col">Trades</th>
+                  <th scope="col">Counted</th>
+                  <th scope="col">Trade win %</th>
+                </>
+              )}
               <th scope="col">Signals</th>
               <th scope="col">Signal win %</th>
-              <th scope="col">P&amp;L</th>
+              {showTrades && <th scope="col">P&amp;L</th>}
               <th scope="col">Profit factor</th>
               <th scope="col">Sharpe</th>
               <th scope="col">Max DD %</th>
-              <th scope="col">Avg/trade %</th>
+              {showTrades && <th scope="col">Avg/trade %</th>}
             </tr>
           </thead>
           <tbody>
@@ -380,18 +393,22 @@ function Comparison({ result }) {
                 <td className="btr-strong">{r.symbol}</td>
                 <td>{r.protocolId}</td>
                 <td className="btr-mono">{r.timeframe}</td>
-                <td className="btr-mono">{r.totalTrades}</td>
-                {/* ⚠️ A disagreement between the two is REPORTED by the endpoint; showing both
-                    counts side by side is how a reader sees it rather than being told it is fine. */}
-                <td className="btr-mono">{r.tradesCounted}</td>
-                <td className="btr-mono"><Num value={r.tradeWinRatePct} digits={1} suffix="%" /></td>
+{showTrades && (
+                  <>
+                    <td className="btr-mono">{r.totalTrades}</td>
+                    {/* ⚠️ A disagreement between the two is REPORTED by the endpoint; showing both
+                        counts side by side is how a reader sees it rather than being told it is fine. */}
+                    <td className="btr-mono">{r.tradesCounted}</td>
+                    <td className="btr-mono"><Num value={r.tradeWinRatePct} digits={1} suffix="%" /></td>
+                  </>
+                )}
                 <td className="btr-mono"><Num value={r.totalSignals} digits={0} /></td>
                 <td className="btr-mono"><Num value={r.signalWinRatePct} digits={1} suffix="%" /></td>
-                <td className="btr-mono"><Pnl value={r.totalPnl} /></td>
+                {showTrades && <td className="btr-mono"><Pnl value={r.totalPnl} /></td>}
                 <td className="btr-mono"><Num value={r.profitFactor} digits={2} /></td>
                 <td className="btr-mono"><Num value={r.sharpeRatio} digits={2} /></td>
                 <td className="btr-mono"><Num value={r.maxDrawdownPct} digits={1} suffix="%" /></td>
-                <td className="btr-mono"><Num value={r.avgTradePnlPct} digits={2} suffix="%" /></td>
+                {showTrades && <td className="btr-mono"><Num value={r.avgTradePnlPct} digits={2} suffix="%" /></td>}
               </tr>
             ))}
           </tbody>

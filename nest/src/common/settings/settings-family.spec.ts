@@ -92,6 +92,32 @@ describe('key families', () => {
     expect(matchFamily('directive:adx:maxScore:extra')).toBeNull();
   });
 
+  it('matches the accepted-baseline key for a protocol slug, and only its two fields', () => {
+    const m = matchFamily('backtest.baseline.vix-spike-v1.runId');
+    expect(m).not.toBeNull();
+    expect(m.family.id).toBe('backtestBaseline');
+    expect(m.subject).toBe('vix-spike-v1');
+    expect(m.field).toBe('runId');
+    expect(matchFamily('backtest.baseline.vix-spike-v1.acceptedAt')?.field).toBe(
+      'acceptedAt',
+    );
+    // ⚠️ The scope is a slug, not a run: a key carrying anything else, or an undeclared field, is NOT
+    // a baseline and must fall through to the undeclared signal rather than being read as one.
+    expect(matchFamily('backtest.baseline.vix-spike-v1.runId.extra')).toBeNull();
+    expect(matchFamily('backtest.baseline.Vix_Spike.runId')).toBeNull();
+    expect(matchFamily('backtest.baseline.vix-spike-v1.isBaseline')).toBeNull();
+  });
+
+  it('a baseline runId is any non-empty string — the store does not know what a run is', () => {
+    const field = SETTING_FAMILIES.find(
+      (f) => f.id === 'backtestBaseline',
+    )?.fields.runId;
+    expect(field).toBeDefined();
+    expect(
+      validateFamilyValue(field!, 'f05433fd-4bc2-4863-a23a-7932ad0e2e30'),
+    ).toEqual({ ok: true, value: 'f05433fd-4bc2-4863-a23a-7932ad0e2e30' });
+  });
+
   // ── THE SAFETY PROPERTY ─────────────────────────────────────────────────────
 
   it('a family member is NEVER seeded, even when the store is empty', async () => {
@@ -194,7 +220,20 @@ describe('key families', () => {
     //     an instance field and the change reverted on the next restart.
     //   • The alternative design — persisting the list as one JSON setting — was REJECTED because its
     //     declared default would be a SECOND COPY of the event list, the drift defect #849 closed.
+    //
+    // ⚠️ FIFTH FAMILY ADDED 2026-10-27 — `backtestBaseline`, and the confirmation this tripwire asks
+    // for:
+    //   • It is a genuinely OPEN-ENDED shape: one member pair per protocol scope, and protocols are
+    //     added routinely. It is not one key wearing a pattern.
+    //   • It has NO declared defaults, so `ensureDefaults()` cannot materialise one — adding it cannot
+    //     change a single value on any install, and cannot invent a baseline nobody accepted.
+    //   • It exists so the ACCEPTED reference has an owner. Before it, the accepted A-baseline was
+    //     `localStorage`: it died with a cache clear and no other machine could see it. The
+    //     alternative design — an `isBaseline` column on `backtestrun` — was REJECTED because a
+    //     baseline must not disappear when the run it names is deleted; a dangling pointer that the
+    //     UI reports is recoverable, a missing marker is indistinguishable from "never accepted".
     expect(SETTING_FAMILIES.map((f) => f.id).sort()).toEqual([
+      'backtestBaseline',
       'brokerTrading',
       'directive',
       'notificationEvent',

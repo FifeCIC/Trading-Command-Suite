@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import ReplayPlayer from '../components/ReplayPlayer';
+import ReplayPlayer from '../components/backtest/replay/ReplayPlayer';
 import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -9,6 +9,7 @@ import ProtocolCarousel from '../components/ProtocolCarousel';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getAssetType } from '../core/asset-types.js';
+import { useBacktestBaseline } from '../core/use-backtest-baseline.js';
 import '../core/forms.css';
 import './backtest-lab.css';
 
@@ -23,8 +24,8 @@ import './backtest-lab.css';
  * to split rather than, say, the page: they are needed only on the RESULT step, and a chart library
  * is the heaviest dependency the Lab touches. Nothing on steps 1–5 needs either.
  */
-const BacktestChartPane = lazy(() => import('../components/backtest/BacktestChartPane'));
-const EquityCurveChart = lazy(() => import('../components/backtest/EquityCurveChart'));
+const BacktestChartPane = lazy(() => import('../components/backtest/charts/BacktestChartPane'));
+const EquityCurveChart = lazy(() => import('../components/backtest/charts/EquityCurveChart'));
 
 /**
  * BacktestPage — the BACKTEST LAB (#1134).
@@ -71,15 +72,16 @@ const BacktestSettingsInventory = lazy(
   () => import('../components/backtest/BacktestSettingsInventory'),
 );
 const BacktestRunsPanel = lazy(() => import('../components/backtest/BacktestRunsPanel'));
-const ProtocolScoreDetail = lazy(() => import('../components/backtest/ProtocolScoreDetail'));
+/** Step 4 of the PROTOCOLS page: the per-protocol directive editor (2026-10-27). */
+const DirectiveSettingsPanel = lazy(() => import('../components/backtest/DirectiveSettingsPanel'));
 /**
  * The manual A/B pair (#1143): A = the bot's realised record, B = the most recent stored run.
  * Lazy for the same reason as the three above — the main chunk sits against the PWA precache cap.
  */
-const CurrentPerformancePanel = lazy(() =>
-  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.CurrentPerformancePanel })));
-const LatestBacktestPanel = lazy(() =>
-  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.LatestBacktestPanel })));
+const RunPanel = lazy(() =>
+  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunPanel })));
+const RunDiffPanel = lazy(() =>
+  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunDiffPanel })));
 
 /**
  * The Lab's steps (#1138, owner direction 2026-10-26).
@@ -316,6 +318,74 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   /** Which reference panel is showing. The three are consulted, not stepped through — see the tabs. */
   const [refTab, setRefTab] = useState('current');
+
+  // ── THE A/B BASELINE (2026-10-27) ────────────────────────────────────────────────────────────
+  // A is the run the READER ACCEPTED, not "the first run" and not live performance. It is stored in
+  // the DATABASE under the `backtestBaseline` settings family, scoped to the protocol, so it survives
+  // a cache clear and is visible from any machine. See `use-backtest-baseline.js`.
+  const baselineScope = protocolId || 'all';
+  const baseline = useBacktestBaseline(baselineScope);
+  const baselineRunId = baseline.runId;
+
+  const acceptBaseline = (runIdToAccept) => {
+    baseline.accept(runIdToAccept);
+    setRefTab('current');
+  };
+
+  const clearBaseline = () => {
+    baseline.clear();
+    setRefTab('current');
+  };
+
+  /**
+   * ⚠️ B MUST BE A RUN OF THE SAME PROTOCOL AS A. Measured 2026-10-27: `runs[0]` was the newest run
+   * in the whole table, so a VIX baseline was paired with whichever run happened to be newest — a
+   * different protocol, a different symbol, a different window. The panel then differenced them and
+   * reported the (near-empty) overlap as if it were a result. Filtering by the selected protocol is
+   * the minimum that makes "A vs B" a comparison at all; `RunDiffPanel` refuses a mismatched pair as
+   * a second guard, because a filter is a claim about the request, not about the two payloads.
+   */
+  const scopeProtocolId = protocolId || null;
+  const latestRunsQuery = useQuery({
+    queryKey: ['bt-runs', 'latest', scopeProtocolId],
+    queryFn: () =>
+      // `limit: 20` because the B PINNER lists from this response — `limit=1` would offer a
+      // one-item menu. `latestRunId` still reads `runs[0]`, so "latest" means the same thing.
+      apiGet(
+        `/api/backtest/runs?limit=20${scopeProtocolId ? `&protocolId=${encodeURIComponent(scopeProtocolId)}` : ''}`,
+      ).catch(() => null),
+    staleTime: 15_000,
+  });
+  /** A B run the reader PINNED. 
+ull = follow the latest, which is the default. */
+  const [pickedBId, setPickedBId] = useState(null);
+  useEffect(() => {
+    setPickedBId(null);
+  }, [protocolId]);
+
+  const latestRunId = (() => {
+    const raw = latestRunsQuery.data;
+    if (!raw) return runId || null;
+    const runs = Array.isArray(raw) ? raw : (raw.runs ?? []);
+    return runs[0]?.id ?? runId ?? null;
+  })();
+  /** The B the panels use: the pinned run when there is one, otherwise the latest. */
+  const bRunId = pickedBId ?? latestRunId;
+
+  /** One labelled line of the bot's LIVE record, so A/B comparisons do not erase the only live evidence. */
+  const liveRefQuery = useQuery({
+    queryKey: ['bt-bot-performance'],
+    queryFn: () => apiGet('/api/trading/bot-performance').catch(() => null),
+    enabled: subject === 'strategy' && Boolean(botId),
+    staleTime: 60_000,
+  });
+  const liveReference = (() => {
+    if (subject !== 'strategy' || !botId) return null;
+    const bot = (liveRefQuery.data?.bots ?? []).find((b) => b.botId === botId);
+    if (!bot) return null;
+    const r = bot.realised ?? {};
+    return `${r.samples ?? 0} closed trade(s) · win ${r.winRate == null ? '—' : `${(Number(r.winRate) * 100).toFixed(1)}%`} · expectancy ${r.expectancy ?? '—'} · total ${r.totalPnl ?? '—'} (reliability: ${r.reliability ?? '—'})`;
+  })();
 
   /**
    * The step the reader is on. Auto-advances ONCE per step (see the effect below); `activeStep`
@@ -1639,22 +1709,18 @@ export default function BacktestPage({ subject: fixedSubject }) {
             the comparison panel reports that rather than averaging the two.
           </p>
 
-          {/* ⚠️ THE SETTINGS BELONG IN THE STEPS, NOT IN THE OUTCOMES AREA (owner direction,
-              2026-10-26: *"Settings inventory to be part of the steps and not in the area of
-              outcomes. Obviously the Protocols only page will have different fields."*).
-              It was a reference TAB beside Completed runs — a place a reader goes AFTER a run to
-              find out what a run honours, when the same list is what decides the run. The component
-              filters itself by `subject`, so a protocol shows the protocol knobs only. */}
-          <h3 className="pb-info-head">What this protocol lets you set</h3>
-          <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
-            <BacktestSettingsInventory
-              subject={subject}
-              protocolId={protocolId}
-              botId=""
-              overrides={overrides}
-              onOverride={setOverride}
-              allowTimeframe={!usePeriod}
-            />
+          {/* ⚠️ STEP 4 IS THE DIRECTIVE LIST (owner direction, 2026-10-27): *"a list of directives in
+              the protocol and the settings for those directives offered in fields for editing …
+              stored as a custom per-protocol value, not a global."*
+              `DirectiveSettingsPanel` writes the store the SCORER reads (`protocol:<slug>` settings
+              family, via `PATCH :slug/directive-config`), not `protocol_directive_entry.maxScore`,
+              which no scoring path reads. */}
+          <h3 className="pb-info-head">
+            Directives in {selectedProtocol?.name ?? 'this protocol'}
+            {selectedProtocol?.directiveCount != null && <span className="dp-count"> · {selectedProtocol.directiveCount} directives</span>}
+          </h3>
+          <Suspense fallback={<p className="pb-none">Loading the directive settings…</p>}>
+            <DirectiveSettingsPanel protocolSlug={protocolId} />
           </Suspense>
         </div>
       )}
@@ -1936,8 +2002,12 @@ export default function BacktestPage({ subject: fixedSubject }) {
             <div className="bt-stat"><div className="bt-stat-value">{stats.maxDrawdown10d}%</div><div>Max Drawdown (10d)</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.profitFactor}</div><div>Profit Factor</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.sharpeApproximation}</div><div>Sharpe (approx)</div></div>
-            {/* Bracket trade stats */}
-            {stats.totalTrades != null && (
+            {/* Bracket trade stats — STRATEGIES ONLY (owner direction, 2026-10-27: *"step … includes
+                financial and trade related stats that need to be removed as they should only be shown
+                on the Backtest Strategies view"*). A protocol run is `scoresOnly`, so every one of
+                these cells would read 0 / $0.00 and invite the reader to treat "no trades" as a
+                result. On the Strategies page they are the whole point. */}
+            {subject === 'strategy' && stats.totalTrades != null && (
               <>
                 <div className="bt-stat"><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
                 <div className="bt-stat"><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
@@ -1980,7 +2050,10 @@ export default function BacktestPage({ subject: fixedSubject }) {
             </ul>
           )}
 
-          {executionUsed && (
+          {/* Costs & sizing actually applied to this run — STRATEGIES ONLY. A `scoresOnly` run sends
+              `slPct: 0 / tpPct: 0`, so no fill is simulated and a break-even line describes a trade
+              that never happened. Shown on the Strategies view, where costs are real. */}
+          {subject === 'strategy' && executionUsed && (
             <p className="bt-execution-info">
               ⚙ Break-even <strong>{((executionUsed.spread + executionUsed.slippage * 2) * 100).toFixed(2)}%</strong>
               {' '}· slippage {(executionUsed.slippage * 100).toFixed(2)}% each way
@@ -2008,8 +2081,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
             </p>
           )}
 
-          {/* Equity curve + drawdown */}
-          {equityData && !equityData.error && equityData.equity?.length > 0 && (
+          {/* Equity curve + drawdown
+              ⚠️ NEEDS ≥2 POINTS. A protocol run now places NO trades (scores only), so `/equity`
+              returns exactly one point at zero — and the chart's breakeven line was built from
+              `[first, last]`, i.e. `[t, t]`, which lightweight-charts rejects by assertion and the
+              whole view died with "Something went wrong rendering this view" (2026-10-27). A flat
+              line through one point is not a curve, so it is not drawn. */}
+          {equityData && !equityData.error && equityData.equity?.length > 1 && (
             <div className="bt-chart-section">
               <h3>Equity Curve &amp; Drawdown</h3>
               <Suspense fallback={<p className="pb-none">Loading the equity curve…</p>}>
@@ -2017,9 +2095,29 @@ export default function BacktestPage({ subject: fixedSubject }) {
               </Suspense>
             </div>
           )}
+          {equityData && !equityData.error && equityData.equity?.length === 1 && (
+            <p className="pb-field-note">
+              <strong>No equity curve.</strong> This run recorded no trades, so there is no curve to
+              draw — a protocol produces <em>scores</em>, and score-only runs place nothing. Switch to{' '}
+              <em>Backtest Strategies</em> to measure execution.
+            </p>
+          )}
 
-          {/* Chart visualization */}
-          {showChart && (
+          {/*
+            ⚠️ THE PRICE CHART AND THE TRADES TABLE USED TO RENDER HERE ON BOTH VIEWS, and both were
+            removed from the Protocols view on 2026-10-27 at the owner's direction. The chart opened on
+            NVDA while the run under test was a BTC protocol and carries no scoring overlay; the trades
+            table can only ever be empty for a scores-only run. Neither is wrong — they answer the
+            Strategies question, and showing them here implied they described the run.
+          */}
+
+          {/* Chart visualization — STRATEGIES ONLY.
+              ⚠️ Owner report 2026-10-27: this pane opened on /lab/backtest showing **NVDA** while the
+              run under test was a BTC protocol, and it carries no scoring overlay — so it was a chart
+              of something unrelated, dressed as if it described the run. It is not wrong (it is a
+              general chart with a symbol menu), it just answers a question this view does not ask.
+              Kept on the Strategies view, which is where a price chart next to trades belongs. */}
+          {subject === 'strategy' && showChart && (
             <div className="bt-chart-section">
               <h3>Price Chart &amp; Signals</h3>
               <Suspense fallback={<p className="pb-none">Loading the chart…</p>}>
@@ -2034,7 +2132,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
               `entrySignals: []` — so a table keyed on those rows was structurally dead, while 1,285
               stored trades went unshown. The `caveats` block above states the gap; this shows the
               population that actually exists. Newest first, last 50. */}
-          {result?.trades?.length > 0 && (
+          {subject === 'strategy' && result?.trades?.length > 0 && (
             <div className="bt-chart-section">
               <h3>Trades <span className="bt-measured-bars">· last {Math.min(50, result.trades.length)} of {result.trades.length.toLocaleString()}, newest first</span></h3>
               <table className="bt-table">
@@ -2101,10 +2199,10 @@ export default function BacktestPage({ subject: fixedSubject }) {
           the wrong page. This page only CONSUMES periods — the step-2 Window control lists them. */}
       <nav className="bt-ref-tabs" aria-label="Reference panels">
         {[
-          { id: 'current', label: 'Current performance (A)', hint: 'What this bot has actually done — realised trades, not a simulation.' },
-          { id: 'latest', label: 'Backtesting results (B)', hint: 'The most recent stored run, what it changed, and the log lines that mention it.' },
+          { id: 'current', label: 'Run A · accepted baseline', hint: 'The run you accepted as the reference. B is measured against it.' },
+          { id: 'latest', label: 'Run B · latest', hint: 'The most recent stored run, in the same shape as A. Accept it to promote it to A.' },
           { id: 'runs', label: 'Completed runs', hint: 'Stored runs, and the comparison of two of them.' },
-          { id: 'scores', label: 'Score detail', hint: 'Bar-by-bar scores for the same window.' },
+          { id: 'scores', label: 'A vs B differences', hint: 'What changed between the accepted baseline and the latest run — summarised, not every row.' },
         ].map((t) => (
           <button
             key={t.id}
@@ -2119,19 +2217,72 @@ export default function BacktestPage({ subject: fixedSubject }) {
         ))}
       </nav>
 
+      {/*
+        ── WHICH RUN IS B (added 2026-10-27) ────────────────────────────────────────────────────
+        ⚠️ WHY THIS CONTROL EXISTS. B was pinned to `runs[0]` — the newest run of the protocol — so the
+        A/B pair silently changed whenever anything else was run. That made the new repeat-on-a-second-
+        window check self-defeating: to measure the change on window 2 you must RUN on window 2, which
+        moves "latest" to that run and destroys the window-1 pair you were comparing. Choosing B
+        explicitly is what makes a pair deliberate instead of incidental.
+      */}
+      {(() => {
+        const runs = latestRunsQuery.data?.runs ?? latestRunsQuery.data ?? [];
+        if (!runs.length) return null;
+        return (
+          <p className="bt-panel-note">
+            <label>
+              Comparing A against{' '}
+              <select
+                className="ff-select"
+                value={pickedBId ?? ''}
+                onChange={(e) => setPickedBId(e.target.value || null)}
+              >
+                <option value="">the latest run ({String(latestRunId ?? '').slice(0, 8)})</option>
+                {runs.slice(0, 20).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.id.slice(0, 8)} · {r.symbol} {r.timeframe} · {r.period}
+                  </option>
+                ))}
+              </select>
+            </label>{' '}
+            — pin B to a specific run when you want a pair that does not move under you.
+          </p>
+        );
+      })()}
+
       {refTab === 'current' && (
-        <Suspense fallback={<p className="pb-none">Loading the bot&rsquo;s realised trades…</p>}>
-          <CurrentPerformancePanel
-            botId={subject === 'strategy' ? botId : ''}
-            botName={selectedBot?.name ?? ''}
-            baseSize={selectedBot?.baseSize ?? null}
+        <Suspense fallback={<p className="pb-none">Loading the accepted baseline…</p>}>
+          <RunPanel
+            role="A"
+            runId={baselineRunId}
+            accepted
+            onClear={baselineRunId ? clearBaseline : null}
+            liveReference={liveReference}
+            showTrades={subject === 'strategy'}
+            emptyHint={
+              baseline.source === 'loading'
+                ? 'Checking the stored baseline…'
+                : baseline.source === 'unreadable'
+                  ? '⚠️ The accepted baseline could not be READ, so this is unknown rather than empty. Retry, or accept a run from Backtesting results (B) to replace it.'
+                  : baseline.source === 'invalid'
+                    ? '⚠️ The stored baseline row could not be parsed. Accept a run from Backtesting results (B) to replace it.'
+                    : subject === 'strategy'
+                      ? 'No baseline accepted yet. Open Backtesting results (B) and accept a run — it becomes A, and every later run is measured against it.'
+                      : 'No baseline accepted yet. Run a backtest, then accept it from Backtesting results (B) — it becomes A.'
+            }
           />
         </Suspense>
       )}
 
       {refTab === 'latest' && (
         <Suspense fallback={<p className="pb-none">Loading the most recent run…</p>}>
-          <LatestBacktestPanel fallbackRunId={runId} />
+          <RunPanel
+            role="B"
+            runId={bRunId}
+            onAccept={bRunId ? () => acceptBaseline(bRunId) : null}
+            showTrades={subject === 'strategy'}
+            emptyHint="No backtest has been stored yet, so there is nothing in B to compare against A."
+          />
         </Suspense>
       )}
 
@@ -2141,38 +2292,31 @@ export default function BacktestPage({ subject: fixedSubject }) {
            is load-bearing: it is the only place two runs can be set against each other, and it
            carries the #1132 guard that refuses to name a winner across two windows. */
         <Suspense fallback={<p className="pb-none">Loading completed runs…</p>}>
-          <BacktestRunsPanel />
+          <BacktestRunsPanel showTrades={subject === 'strategy'} />
         </Suspense>
       )}
 
 
       {refTab === 'scores' && (
-        /* Available for PROTOCOL runs on a DATED window. It needs dates: `/api/replay/run` takes
-           `from`/`to`, and a bar count has none — so a "last N bars" run correctly has no drill-down
-           rather than one measured over a guessed range. */
-        <Suspense fallback={<p className="pb-none">Loading score detail…</p>}>
-          <ProtocolScoreDetail
-            protocolId={protocolId}
-            symbol={marketSymbol}
-            timeframe={marketTimeframe}
-            periodId={usePeriod ? periodId : ''}
-            blockedReason={
-              subject !== 'protocol'
-                ? 'Score detail scores one PROTOCOL over a window. Switch the subject to Protocols.'
-                : !protocolId
-                  ? 'Select a protocol to score a window.'
-                  : !usePeriod
-                    ? 'Score detail needs a dated window. Choose a stored period as the Window.'
-                    : null
-            }
-          />
+        /* ⚠️ THIS TAB USED TO BE "Score detail" (#1143 follow-up, 2026-10-27): *"Score detail doesn't
+           seem to display much but it should probably make differences between the A and B clear so
+           that the user doesn't need to examine every row of data."*
+           It is now the SUMMARY of A → B: how many bars moved, in which direction, and the ten
+           biggest movers — with the unmatched-bar counts stated, because comparing the overlap as if
+           it were the whole window is how a window mismatch becomes a false "no change". */
+        <Suspense fallback={<p className="pb-none">Comparing the two runs…</p>}>
+          <RunDiffPanel aId={baselineRunId} bId={bRunId} showTrades={subject === 'strategy'} />
         </Suspense>
       )}
 
 
-      {/* #819 — the replay of THIS run. Mounted here rather than as a new route: sprint #965
-          item 5 names the surfaces (#819, #606) and a fourth surface is the churn it forbids. */}
-      <ReplayPlayer runId={runId} />
+
+      {/* #819 — the replay of THIS run. STRATEGIES ONLY (owner direction, 2026-10-27: *"We can remove
+          this panel for Backtesting Protocols … but we will be improving it on Backtest Strategies so
+          that it shows where trades are executed and exited."*). A scores-only run has no trades to
+          replay, so on the Protocols view this panel could only ever say so — and it is a different
+          renderer (hand-drawn SVG, see `backtest/replay/`), so its improvements are tracked there. */}
+      {subject === 'strategy' && <ReplayPlayer runId={runId} />}
     </div>
   );
 }

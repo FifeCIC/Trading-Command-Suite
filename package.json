@@ -1,10 +1,12 @@
 {
   "name": "tradingcs",
-  "version": "0.141.0",
+  "version": "0.142.0",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
+    "audit:theme-contrast": "node scripts/audit-theme-contrast.cjs",
+    "test:backtest-totals": "node --test src/core/backtest-totals.test.js",
     "dev": "vite",
     "build": "vite build",
     "build:guard": "npm run build && npm run check:bundle",

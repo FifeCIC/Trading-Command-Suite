@@ -79,6 +79,23 @@ export function useThemeRuntime({ mode, packId = 'core', adapterIds } = {}) {
       root.style.setProperty('--line', '#1a1a1a', 'important');
     }
 
+    /**
+     * ⚠️ NATIVE FORM CHROME MUST FOLLOW THE RESOLVED PALETTE, NOT THE MODE NAME.
+     * `index.css` sets `color-scheme: dark` on `:root` and only relaxes it for
+     * `[data-bg-tone='light']` — which is the BACKGROUND-TONE setting, not the theme mode. So in
+     * light mode the page painted light while every native control kept dark chrome: the run-selection
+     * checkbox on `/lab/backtest` rendered as a dark box on a white panel (owner report 2026-10-27:
+     * *"They're all very dark and text is near impossible to read"*).
+     *
+     * Derived from `bundle.tokens.mode` — the RESOLVED palette — not from `mode`, because a pack may
+     * override the mode (measured: mode='light' + pack='void' resolves to a DARK palette, and light
+     * chrome there would be the same defect inverted).
+     */
+    root.style.setProperty(
+      'color-scheme',
+      bundle.tokens?.mode === 'light' ? 'light' : 'dark',
+    );
+
     root.setAttribute('data-theme-pack', bundle.packId || 'unknown');
     root.setAttribute('data-theme-mode', mode || 'light');
   }, [bundle, mode]);

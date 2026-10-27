@@ -411,6 +411,47 @@ export class SettingsResolverService implements OnModuleInit {
   }
 
   /**
+   * clear() — delete ONE stored member by its exact key.
+   *
+   * WHY IT IS NEEDED BESIDE clearFamily(): `clearFamily` derives a prefix and therefore needs to know
+   * the family's separator. It assumes `:` before the field, which is correct for `protocol:<s>:<d>:f`
+   * and WRONG for every dot-style family (`notifications.event.<event>.<field>`,
+   * `backtest.baseline.<scope>.<field>`) — so `clearFamily('backtestBaseline', scope)` deletes nothing
+   * and returns `deleted: 0`, which reads as "there was nothing to clear" rather than as a bug. A
+   * single-key delete needs no separator knowledge at all.
+   *
+   * ⚠️ Refuses a key that is neither declared nor a family member. Deleting an arbitrary
+   * `global_setting` row by name is exactly the unowned access path #849 closed for reads and writes,
+   * and a delete is the most destructive of the three.
+   */
+  async clear(
+    key: string,
+  ): Promise<{ key: string; deleted: number; previousSource: string }> {
+    const declared = SETTINGS_BY_KEY.get(key);
+    if (!declared && !matchFamily(key)) {
+      throw new Error(
+        `setting "${key}" is not declared in settings-registry.ts and matches no family — refusing to delete it.`,
+      );
+    }
+    if (declared?.class === 'secret') {
+      throw new Error(
+        `setting "${key}" is class 'secret' and lives in .env — there is no stored row to delete.`,
+      );
+    }
+    // Read before deleting, so the caller can be told what it replaced rather than just "gone".
+    const previousSource = declared
+      ? (await this.resolve(key)).source
+      : (await this.resolveFamily(key)).source;
+    const result = await this.prisma.globalSetting.deleteMany({ where: { key } });
+    const deleted =
+      typeof result === 'number'
+        ? result
+        : ((result as { count?: number })?.count ?? 0);
+    this.logger.log(`cleared setting "${key}" (was ${previousSource})`);
+    return { key, deleted, previousSource };
+  }
+
+  /**
    * clearFamily() — delete every stored member of a family, optionally narrowed to one subject.
    *
    * WHY IT LIVES HERE: a delete is a write, and the ownership rule applies to writes as much as reads. A

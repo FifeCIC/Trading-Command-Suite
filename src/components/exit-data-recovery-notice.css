@@ -56,7 +56,7 @@
   padding: 8px 14px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 10%, var(--panel));
   color: var(--ink);
   font-size: 0.82rem;
   font-weight: 600;

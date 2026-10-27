@@ -59,9 +59,10 @@
 
 param(
     [switch]$SkipRestart,
+    [switch]$Quick,
     [switch]$SelfTest,
     [switch]$LockSelfTest
-)
+    )
 
 $ErrorActionPreference = 'Continue'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -288,7 +289,22 @@ if (-not $apiPids -or $apiPids.Count -eq 0) {
 Write-Step 'Building the API'
 Push-Location $nestDir
 try {
-    & npm run build
+    if ($Quick) {
+        # ── -Quick (2026-10-27) ──
+        # WHAT:  `tsc` only — the same compiler step `npm run build` runs, WITHOUT `prebuild`.
+        # WHY:   `prebuild` is 55 chained steps including `npx jest` (1,947 tests), ~47 validators and
+        #        `prisma generate`. Measured ~90s of the ~2 min, paid PER ITERATION for a one-line change.
+        # INSTEAD OF: running the full gate on every save, which is what made a small edit cost minutes.
+        # REVERSE BY: dropping the switch and always running `npm run build`.
+        # ⚠️ THIS IS NOT A SUBSTITUTE FOR THE GATE. Run `build:api` (no switch) before a commit/close —
+        # `-Quick` skips the validators, so it cannot tell you an invariant broke.
+        # ⚠️ AND IT DOES NOT RUN `prisma generate` (that lives in `prebuild`). After a schema.prisma change
+        # the Prisma client is stale and `tsc` will fail on the new column — use the full build for that.
+        Write-Host '   -Quick: tsc only (prebuild validators and jest SKIPPED — run build:api before closing)' -ForegroundColor Yellow
+        & npx tsc -p tsconfig.build.json
+    } else {
+        & npm run build
+    }
     $buildExit = $LASTEXITCODE
 } finally {
     Pop-Location
@@ -358,7 +374,14 @@ $apiProc = $null
 try {
     $redirected = "cmd.exe /c node dist/src/main.js 1> `"$outLog`" 2> `"$errLog`""
     # `New-CimInstance -ClientOnly` builds the WMI method's startup blob without registering anything.
-    $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = 0 }
+    # ⚠️ `[uint16]` IS REQUIRED (measured 2026-10-27). `Win32_ProcessStartup.ShowWindow` is a CIM
+    # **uint16**; a plain `0` is an Int32 and `Invoke-CimMethod` rejects the blob with the bare message
+    # **"Type mismatch"** — which this block's `catch` turned into the `Start-Process` fallback, whose
+    # launch is a CHILD of the caller and therefore makes every `build:api` caller WAIT until that API
+    # is stopped. That is the whole "Waiting for terminal output" symptom: measured builds finished at
+    # ~2 min and the shell reported "running" for 9+ minutes. Reproduced in isolation: `0` → Type
+    # mismatch, `[uint16]0` → ReturnValue 0 with a PID.
+    $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
     $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create `
         -Arguments @{
             CommandLine              = $redirected

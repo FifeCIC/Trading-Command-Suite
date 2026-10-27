@@ -136,7 +136,7 @@
 .om-field select {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background: var(--color-input-bg);
+  background: color-mix(in srgb, var(--ink) 10%, var(--panel));
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--ink);

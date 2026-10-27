@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { createChart, LineSeries, AreaSeries, ColorType } from 'lightweight-charts';
-import EmptyState from '../EmptyState';
+import EmptyState from '../../EmptyState';
 
 /**
  * `lightweight-charts` accepts a `yyyy-mm-dd` string or a UNIX timestamp in SECONDS. It does NOT

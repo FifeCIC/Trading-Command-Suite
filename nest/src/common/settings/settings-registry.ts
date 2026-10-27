@@ -841,6 +841,59 @@ export const SETTING_FAMILIES: SettingFamily[] = [
       },
     },
   },
+  {
+    /**
+     * ── ADDED 2026-10-27 ─────────────────────────────────────────────────────────────────────────
+     * WHICH STORED RUN IS THE ACCEPTED "A" (owner direction: *"'A' will also be the data from the
+     * backtest that the user indicates as an improvement … so that we can mark the accepted change
+     * and then compare the following backtest to that new set of data."*)
+     *
+     * It was `localStorage` first, and that was a real limitation rather than a choice: a baseline
+     * dies with a cache clear, and no other machine or agent can see which run was accepted. It is a
+     * DECISION ABOUT EVIDENCE, so it belongs in the database with the runs it points at.
+     *
+     * ⚠️ THE SUBJECT IS A SCOPE, NOT A RUN: a protocol slug (`vix-spike-v1`), because two protocols
+     * score different directives against different symbols and their runs are not comparable. There is
+     * exactly ONE baseline per scope — accepting a run REPLACES the previous one, which is the point
+     * of "this is the new reference".
+     *
+     * ⚠️ `clearFamily('backtestBaseline', scope)` WOULD DELETE NOTHING — `clearFamily` derives its
+     * prefix with a `:` before the field (`<prefix><subject>:`), which is right for the `protocol`
+     * family and wrong for every dot-style one. Use `clear(<full key>)` (added alongside this family)
+     * when removing a baseline. Recorded here because the failure is a silent `deleted: 0`.
+     */
+    id: 'backtestBaseline',
+    label: 'Accepted backtest baseline',
+    owner: 'backtest',
+    description:
+      'Which stored run is the ACCEPTED A-baseline for one scope (a protocol slug). Read by the ' +
+      'Backtest Lab A/B panels so "compare against what I accepted" survives a browser cache clear ' +
+      'and is visible to every machine. ⚠️ Accepting a run REPLACES the scope\'s baseline — there is ' +
+      'one reference per scope, not a list. A baseline whose run has been DELETED is a dangling ' +
+      'pointer: the UI must say so and offer to clear it rather than silently comparing against ' +
+      'nothing.',
+    pattern: /^backtest\.baseline\.([a-z0-9-]+)\.(runId|acceptedAt)$/,
+    prefix: 'backtest.baseline.',
+    subjectGroup: 1,
+    fieldGroup: 2,
+    fields: {
+      runId: {
+        type: 'string',
+        description:
+          'The `backtestrun.id` the reader accepted as A. Not validated against the run table here — ' +
+          'the settings store does not know about runs, so a dangling id is a state the READER must ' +
+          'handle, and it must be reported rather than treated as "no baseline".',
+        userChangeable: true,
+      },
+      acceptedAt: {
+        type: 'string',
+        description:
+          'ISO instant the baseline was accepted. Kept so a reader can tell an old reference from a ' +
+          'fresh one without guessing from the run\'s own createdAt.',
+        userChangeable: false,
+      },
+    },
+  },
 ];
 
 /**

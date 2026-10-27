@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 188,
+  "count": 189,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -124,6 +124,16 @@
       "selfTest": true,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "audit-theme-contrast.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "\"would this colour pair be readable in EVERY mode?\"",
+      "selfTest": true,
+      "reaches": [
+        "npm"
       ]
     },
     {

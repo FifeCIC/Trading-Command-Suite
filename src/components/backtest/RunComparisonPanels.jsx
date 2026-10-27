@@ -1,295 +1,297 @@
 /**
- * RunComparisonPanels — the A/B pair for the manual backtest experiment (#1143 follow-up).
- * =========================================================================================
+ * RunComparisonPanels — tabs A, B and the A-vs-B difference (owner direction, 2026-10-27).
+ * ==========================================================================================
  *
- * OWNER DIRECTION, 2026-10-26: *"we need another tab displaying 'Current Performance (A)' and the
- * other new tab for the most recent backtest 'Backtesting Results (B)'"* — and *"we need a step that
- * backtests using the current strategies settings at least once so that there is an outcome to
- * compare to. This is how we establish our new manual A/B testing."*
+ * *"A and B should display the same type of information but they're currently very different, one is
+ * the first backtest run and B is every other after."* … *"'A' will also be the data from the
+ * backtest that the user indicates as an improvement"* … *"Score detail … should probably make
+ * differences between the A and B clear so that the user doesn't need to examine every row of data."*
  *
- * WHAT A AND B ARE, precisely:
+ * ── THE SHAPE ────────────────────────────────────────────────────────────────────────────────
+ * A and B are the SAME component rendering the SAME layout from ONE stored run each:
  *
- *   A — the bot's LIVE, realised record. Not a simulation. `GET /api/trading/bot-performance`
- *       counts closed trades attributed to that bot and reports its DECLARED settings beside them.
- *   B — the most recent stored backtest, with what it changed relative to the bot's own settings.
+ *     heading · run facts · scoring table · caveats
  *
- * ⚠️ THEY ARE NOT THE SAME KIND OF MEASUREMENT AND MUST NEVER BE AVERAGED OR DIFFED INTO ONE
- * NUMBER. A is a handful of real trades over an unknown window; B is a simulation over a window you
- * chose. The panel states each population rather than implying they are commensurate — which is the
- * same rule the verdict machine applies when it refuses to name a winner on a thin sample.
+ * A is the run the reader ACCEPTED (see `backtest-baseline.js`); B is the latest stored run. The
+ * only difference is which id each is given, and A's heading says it is accepted.
  *
- * ⚠️ AND THE SIZE DIFFERENCE IS NAMED, NOT ASSUMED AWAY. The live path sizes in LOTS from
- * `trading_strategy.baseSize`; the backtester sizes in UNITS from an equity model (#843). Until the
- * two share one sizing function, a money comparison between A and B is a comparison of two
- * different positions — so `botBaseSize` and the run's `positionModel` are both shown.
+ * ⚠️ THE LIVE BOT FIGURES ARE NO LONGER PANEL A. They answered a different question (real trades vs
+ * a simulation) and made the two tabs incomparable — which is exactly what was reported. They
+ * survive as one clearly-labelled reference line, because deleting them would remove the only live
+ * evidence on the page.
  */
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../../core/api/client.js';
+import { apiGet, apiPost } from '../../core/api/client.js';
+import { useSort, SortableTh } from '../../core/use-sort.jsx';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { pickRepeatPair } from '../../core/backtest-totals.js';
 
-const pct = (v) => (v == null ? '—' : `${(Number(v) * 100).toFixed(1)}%`);
-const num = (v, dp = 2) => (v == null ? '—' : Number(v).toFixed(dp));
 const money = (v) => (v == null ? '—' : `${v >= 0 ? '+' : '−'}${Math.abs(Number(v)).toFixed(2)}`);
+const pct1 = (v) => (v == null ? '—' : `${Number(v).toFixed(1)}%`);
 
-/** The stored scoring output of one run. A component so tab A can show it with or without a bot. */
-function ScoringOutput({ latestId, scoreSeries, protocolId }) {
-  return (
-    <>
-      <h4 className="pb-info-head">Scoring output — most recent run</h4>
-      {latestId == null ? (
-        <p className="pb-none">No run stored yet, so there are no scores to show.</p>
-      ) : !scoreSeries ? (
-        <p className="pb-none">
-          ⚠️ Run <code>{String(latestId).slice(0, 8)}</code> was made before scores were stored
-          (2026-10-26), so its scoring output is <strong>not recorded</strong> — not &ldquo;no
-          scores&rdquo;. Run it again to capture them.
-        </p>
-      ) : (
-        <>
-          <p className="pb-field-note">
-            <strong>{scoreSeries.length}</strong> scored bar(s) from run{' '}
-            <code>{String(latestId).slice(0, 8)}</code>.
-            {protocolId ? <> Protocol <strong>{protocolId}</strong>.</> : null} These are read back
-            from the stored run — nothing is re-scored here, because a panel that re-scores would be
-            a second scoring path by definition.
-          </p>
-          <table className="bt-table">
-            <caption className="sr-only">Every bar the most recent run scored</caption>
-            <thead>
-              <tr>
-                <th scope="col">Bar</th>
-                <th scope="col">Score</th>
-                <th scope="col">Signal</th>
-                <th scope="col">Passed the bot&rsquo;s bar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scoreSeries.slice(-25).map((s, i) => (
-                <tr key={`${s.date}-${i}`}>
-                  <td className="pb-mono">{s.date}</td>
-                  <td className="pb-mono">{s.score}</td>
-                  <td>{s.signal}</td>
-                  <td>{s.passedBar ? 'yes' : 'no — below the bar'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-    </>
-  );
+/**
+ * The BAR, as a reader must see it. `date` alone is `YYYY-MM-DD`, so a 1h run shows 24 identical
+ * rows for one day. When the run recorded the instant, show it — the rows are then distinguishable
+ * and sortable in true order.
+ */
+const barLabel = (row) => (row.time ? `${row.date} ${row.time.slice(11, 16)}` : row.date);
+const barKey = (row) => row.time ?? row.date;
+
+/** One decimal, or an em dash — never a fabricated 0 for a bar that stored no such score. */
+const num1 = (v) => (v == null || Number.isNaN(Number(v)) ? '—' : Number(v).toFixed(1));
+
+/** `2026-10-27T20:16:05Z` → `27 Oct 20:16`, so two runs of one window are told apart at a glance. */
+const shortStamp = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso ?? '').slice(0, 16);
+  return `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+/**
+ * scoringTotals now lives in `src/core/backtest-totals.js` (with `scoreDirectionCounts`) because it is
+ * pure arithmetic and needs a unit test — a JSX file cannot be imported by `node --test`, so the
+ * numbers that ARE the answer would otherwise ship untested. Imported at the top of this file.
+ */
+
+function useRun(runId) {
+  return useQuery({
+    queryKey: ['bt-run-detail', runId],
+    // ⚠️ NOT `.catch(() => null)`. Swallowing the failure made "the run was deleted" and "the API
+    // could not answer" both render as `null`, i.e. as the same state — and one of those states is a
+    // dangling accepted baseline a reader has to be told about. `error.status === 404` is the one that
+    // means GONE; anything else means UNKNOWN.
+    queryFn: () => apiGet(`/api/backtest/results/${runId}`),
+    enabled: Boolean(runId),
+    staleTime: 30_000,
+    retry: false,
+  });
 }
 
-/** A — what the bot has ACTUALLY done, straight from the trades attributed to it. */
-export function CurrentPerformancePanel({ botId, botName, baseSize }) {
-  const q = useQuery({
-    queryKey: ['bt-bot-performance'],
-    queryFn: () => apiGet('/api/trading/bot-performance').catch(() => null),
-    staleTime: 60_000,
-  });
-  // The SCORING OUTPUT of the most recent run (owner direction, 2026-10-26). The same query keys the
-  // B panel uses, so React Query serves both from one fetch rather than asking the API twice.
-  const runsList = useQuery({
-    queryKey: ['bt-runs'],
-    queryFn: () => apiGet('/api/backtest/runs?limit=1').catch(() => null),
-    staleTime: 15_000,
-  });
-  const latestId = (() => {
-    const raw = runsList.data;
-    if (!raw) return null;
-    const runs = Array.isArray(raw) ? raw : (raw.runs ?? []);
-    return runs[0]?.id ?? null;
-  })();
-  const latestRun = useQuery({
-    queryKey: ['bt-run-detail', latestId],
-    queryFn: () => apiGet(`/api/backtest/results/${latestId}`).catch(() => null),
-    enabled: Boolean(latestId),
-    staleTime: 30_000,
-  });
-  const scoreSeries = latestRun.data?.scoreSeries ?? null;
-
-  if (!botId) {
-    return (
-      <div className="bt-ab-panel">
-        <p className="pb-none">
-          Live performance is measured per BOT. Choose a Complete Strategy in step 1 — a protocol
-          has no live trades to report, which is exactly why it is the other subject.
-        </p>
-        <ScoringOutput
-          latestId={latestId}
-          scoreSeries={scoreSeries}
-          protocolId={latestRun.data?.protocolId ?? null}
-        />
-      </div>
-    );
-  }
-  if (q.isLoading) return <p className="pb-none">Loading the bot&rsquo;s realised trades…</p>;
-  const data = q.data;
-  if (!data) {
-    return (
-      <p className="pb-none">
-        ⚠️ The performance endpoint did not answer, so this is <strong>unknown</strong> — not
-        &ldquo;no trades&rdquo;. Retry before concluding anything from the absence.
-      </p>
-    );
-  }
-
-  const bot = (data.bots ?? []).find((b) => b.botId === botId);
-  if (!bot) {
-    return (
-      <div className="bt-ab-panel">
-        <p className="pb-none">
-          No realised record for <strong>{botName || botId}</strong> — it has either never traded or
-          its trades are not attributed to it. A backtest (B) is then the only evidence available.
-        </p>
-        <ScoringOutput
-          latestId={latestId}
-          scoreSeries={scoreSeries}
-          protocolId={latestRun.data?.protocolId ?? null}
-        />
-      </div>
-    );
-  }
-
-  const d = bot.declared ?? {};
-  const r = bot.realised ?? {};
+/** The scoring table. Shared, so A and B cannot drift apart in columns or wording. */
+function ScoreTable({ scoreSeries }) {
+  // `barAt` is derived so the BAR column sorts by the true instant, not the shared day.
+  const rows = (scoreSeries ?? []).map((s) => ({ ...s, barAt: barKey(s) }));
+  const sort = useSort(rows, 'barAt', 'desc');
   return (
-    <div className="bt-ab-panel">
-      <h3 className="pb-info-head">A · Current performance — {bot.botName}</h3>
-      <p className="pb-field-note">
-        LIVE, realised trades attributed to this bot — not a simulation. Population:{' '}
-        <strong>{r.samples ?? 0} closed trade(s)</strong>
-        {/* ⚠️ `bot.window` IS AN OBJECT ({firstClose, lastClose, days, samplesPerDay}), not a
-            string — rendering it directly throws "Objects are not valid as a React child" and took
-            the whole page down when this panel first mounted (2026-10-26). */}
-        {bot.window?.days ? <> over {bot.window.days} day(s)</> : null}
-        {r.reliability ? <> · reliability <strong>{r.reliability}</strong></> : null}.
-      </p>
-
+    <div className="bt-table-wrap">
       <table className="bt-table">
-        <caption className="sr-only">Declared settings and realised outcomes for this bot</caption>
+        <caption className="sr-only">Every bar this run scored — both scores</caption>
         <thead>
           <tr>
-            <th scope="col">Declared</th>
-            <th scope="col">Value</th>
-            <th scope="col">Realised</th>
-            <th scope="col">Value</th>
+            <SortableTh col="barAt" label="Bar" api={sort} />
+            <SortableTh col="signalPct" label="Signal %" title="Gated DIRECTIONAL score — what BUY / SELL / HOLD is classified from." api={sort} className="bt-num" />
+            <SortableTh col="opportunityPct" label="Opportunity %" title="ADDITIVE score — what the Screening area ranks by." api={sort} className="bt-num" />
+            <SortableTh col="opportunityScore" label="Opp points" api={sort} className="bt-num" />
+            <SortableTh col="riskMultiplier" label="Risk ×" api={sort} className="bt-num" />
+            <SortableTh col="signal" label="Signal" api={sort} />
+            <SortableTh col="passedBar" label="Passed" api={sort} />
           </tr>
         </thead>
         <tbody>
-          <tr><td>Protocol</td><td>{d.protocolId ?? '—'}</td><td>Win rate</td><td>{pct(r.winRate)}</td></tr>
-          <tr><td>Symbol / timeframe</td><td>{d.symbol ?? '—'} · {d.timeframe ?? '—'}</td><td>Expectancy</td><td>{money(r.expectancy)}</td></tr>
-          <tr><td>Stop / target</td><td>{d.slPct ?? '—'}% / {d.tpPct ?? '—'}%</td><td>Payoff</td><td>{num(r.payoff)}</td></tr>
-          <tr><td>Mode / active</td><td>{d.mode ?? '—'} · {d.active ? 'active' : 'paused'}</td><td>Total P&amp;L</td><td>{money(r.totalPnl)}</td></tr>
-          <tr><td>Max positions</td><td>{d.maxPositions ?? '—'}</td><td>Profit factor</td><td>{num(r.profitFactor)}</td></tr>
-          <tr><td>Entry size</td><td>{baseSize ?? d.allocationAmount ?? '—'} <span className="pb-field-gloss">lots</span></td><td>Best / worst</td><td>{money(r.bestTrade)} / {money(r.worstTrade)}</td></tr>
+          {/*
+            ⚠️ CAPPED AT 100 ROWS. A full window is ~1,700 scored bars; rendering them all put 12,000
+            cells in the DOM for one panel and made the tab feel broken (measured 2026-10-27: 1,728
+            rows from a single run). Sorting still governs WHICH hundred you see, and the count below
+            the table says how many are hidden rather than pretending the list is complete.
+          */}
+          {sort.sorted.slice(0, 100).map((s, i) => (
+            <tr key={`${s.barAt}-${i}`}>
+              <td className="pb-mono">{barLabel(s)}</td>
+              <td className="pb-mono bt-num">{s.signalPct ?? s.score}</td>
+              <td className="pb-mono bt-num">{s.opportunityPct ?? '—'}</td>
+              <td className="pb-mono bt-num">{s.opportunityScore ?? '—'}</td>
+              <td className="pb-mono bt-num">{s.riskMultiplier ?? '—'}</td>
+              <td>{s.signal}</td>
+              <td>{s.passedBar ? 'yes' : 'no — below the bar'}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
-
-      {data.populationNote && <p className="pb-field-note">{data.populationNote}</p>}
-
-      {/* ── THE SCORING OUTPUT (owner direction, 2026-10-26) ────────────────────────────────────
-          *"Current performance (A) should show the scoring data generated by clicking Run and it
-          needs to be captured for comparison."*
-          Every bar the engine scored, read back from the run's STORED `scoresJson` — not re-computed
-          here, because a panel that re-scores would be a second scoring path by definition. */}
-      <ScoringOutput
-        latestId={latestId}
-        scoreSeries={scoreSeries}
-        protocolId={latestRun.data?.protocolId ?? null}
-      />
-
-      <p className="pb-field-note">
-        ⚠️ A is <strong>real trades</strong>; B is a <strong>simulation</strong>. They are two
-        different measurements and this panel deliberately does not subtract one from the other —
-        compare the direction and the shape, not the digits.
-      </p>
     </div>
   );
 }
 
-/** B — the most recent stored backtest, with what it changed from the bot's own settings. */
-export function LatestBacktestPanel({ fallbackRunId }) {
-  const list = useQuery({
-    queryKey: ['bt-runs'],
-    queryFn: () => apiGet('/api/backtest/runs?limit=1').catch(() => null),
-    staleTime: 15_000,
-  });
+/**
+ * The three scores, totalled — quick reference for "is this run bigger or smaller than the other".
+ * Deliberately ONE small table: sum, highest bar, lowest bar per score.
+ */
+function ScoringTotals({ totals }) {
+  // ⚠️ From the API, not recomputed here: `run.totals` is produced by `score-maths.ts`, the same code
+  // `POST /api/backtest/repeat-check` uses, so the panel and an agent read identical numbers.
+  const t = totals;
+  const rows = [
+    ['Signal % (directional)', t.signalPct],
+    ['Opportunity % (additive)', t.opportunityPct],
+    ['Opp points', t.opportunityScore],
+  ];
+  return (
+    <>
+      <h4 className="bt-panel-head">Score totals — {t.bars} bar(s)</h4>
+      <div className="bt-table-wrap">
+        <table className="bt-table bt-facts-table">
+          <caption className="sr-only">
+            Sum, highest and lowest bar for each of the three per-bar scores
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Score</th>
+              <th scope="col" className="bt-num">Σ total</th>
+              <th scope="col" className="bt-num">Highest bar</th>
+              <th scope="col" className="bt-num">Lowest bar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([label, s]) => (
+              <tr key={label}>
+                <td>{label}</td>
+                <td className="pb-mono bt-num">{num1(s.sum)}</td>
+                <td className="pb-mono bt-num">{num1(s.max)}</td>
+                <td className="pb-mono bt-num">{num1(s.min)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/*
+        ⚠️ The unit, said once, where the reader meets the number. `signalPct` is a share of THIS
+        protocol's configured capacity, so Σ is capacity-points earned across the window — not a
+        percentage and not comparable across two protocols with different ceilings.
+      */}
+      <p className="bt-panel-note">
+        Σ is the sum across bars: <strong>capacity-points earned in the window</strong>, not an
+        average and not out of 100. Two protocols with different configured ceilings are not
+        comparable on this row; two runs of the <em>same</em> protocol are.
+        {t.signalPct.missing > 0 && ` ${t.signalPct.missing} bar(s) stored no signal value and are excluded from that row.`}
+      </p>
+    </>
+  );
+}
 
-  const latest = (() => {
-    const raw = list.data;
-    if (!raw) return fallbackRunId || null;
-    const runs = Array.isArray(raw) ? raw : (raw.runs ?? []);
-    return runs[0]?.id ?? fallbackRunId ?? null;
-  })();
+/**
+ * ONE run, rendered. `role` is 'A' or 'B' — the only difference is the heading and accept controls.
+ *
+ * ⚠️ `showTrades` IS WHAT KEEPS THE PROTOCOLS VIEW ABOUT SCORES (owner direction, 2026-10-27:
+ * *"This view should not have anything relating to trades"*). A protocol run is `scoresOnly` — it
+ * sends `slPct: 0 / tpPct: 0`, so the engine simulates NO fills and the trade cells can only ever
+ * read `0` / `—`. Rendering them invited the reader to conclude the protocol "made no trades" as if
+ * that were a result. They are simply not this subject's question; on the Strategies page they are.
+ */
+export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, liveReference, showTrades = true }) {
+  const q = useRun(runId);
+  const run = q.data;
 
-  const detail = useQuery({
-    queryKey: ['bt-run-detail', latest],
-    queryFn: () => apiGet(`/api/backtest/results/${latest}`).catch(() => null),
-    enabled: Boolean(latest),
-    staleTime: 30_000,
-  });
-
-  const logs = useQuery({
-    queryKey: ['bt-log-tail'],
-    queryFn: () => apiGet('/api/system/logs/file?lines=600').catch(() => null),
-    enabled: Boolean(latest),
-    staleTime: 30_000,
-  });
-
-  if (!latest) {
-    return <p className="pb-none">No backtest has been stored yet, so there is nothing in B to compare against A.</p>;
+  if (!runId) {
+    return (
+      <div className="bt-panel bt-ab-panel">
+        <h3 className="bt-panel-head">{role} · {role === 'A' ? 'Accepted baseline' : 'Latest run'}</h3>
+        <p className="pb-none">{emptyHint}</p>
+      </div>
+    );
   }
-  if (detail.isLoading) return <p className="pb-none">Loading the most recent run…</p>;
-  const run = detail.data;
+  if (q.isLoading) {
+    return <div className="bt-panel bt-ab-panel"><p className="pb-none">Loading run {String(runId).slice(0, 8)}…</p></div>;
+  }
   if (!run) {
-    return <p className="pb-none">⚠️ The stored run could not be read — that is unknown, not empty.</p>;
+    /**
+     * ⚠️ A BASELINE CAN OUTLIVE THE RUN IT NAMES. The accepted id lives in the settings store, which
+     * knows nothing about runs, so deleting a run leaves a dangling pointer. That is a state to
+     * REPORT and make revocable — rendering it as "no baseline" would silently discard a decision the
+     * reader made, and rendering "could not be read" alone would leave them stuck with no way out.
+     */
+    return (
+      <div className="bt-panel bt-ab-panel">
+        <h3 className="bt-panel-head">
+          {role} · {role === 'A' ? 'Accepted baseline' : 'Latest run'} — <code>{String(runId).slice(0, 8)}</code>
+        </h3>
+        <p className="pb-none">
+          {q.error && q.error.status !== 404
+            ? `⚠️ Run ${String(runId).slice(0, 8)} could not be READ — that is unknown, not empty.`
+            : `⚠️ This ${role === 'A' ? 'accepted baseline run' : 'run'} no longer exists — it was deleted, so there is nothing to compare.`}
+        </p>
+        {role === 'A' && onClear && (
+          <p className="pb-field-note">
+            <button type="button" className="bt-panel-btn" onClick={onClear}>
+              Clear the accepted baseline
+            </button>{' '}
+            Accept a different run from <strong>Run B · latest</strong> to set a new reference.
+          </p>
+        )}
+      </div>
+    );
   }
 
   const stats = run.stats ?? {};
   const ex = run.execution ?? {};
-  const overridden = run.drivenBy?.overridden ?? null;
-  const needle = [run.symbol, run.protocolId].filter(Boolean);
-  const logLines = (logs.data?.content ?? '')
-    .split('\n')
-    .filter((l) => needle.some((n) => l.includes(n)))
-    .slice(-40);
+  const changed = run.drivenBy?.overridden ?? null;
+  const series = run.scoreSeries ?? null;
 
   return (
-    <div className="bt-ab-panel">
-      <h3 className="pb-info-head">B · Backtesting results — most recent stored run</h3>
-      <p className="pb-field-note">
-        Simulation over a window you chose. Run <code>{String(run.id).slice(0, 8)}</code>
-        {run.period ? <> · {run.period}</> : null}
-        {run.measuredPeriod ? <> · {run.measuredPeriod.name}</> : null}.
-      </p>
+    <div className="bt-panel bt-ab-panel">
+      <h3 className="bt-panel-head">
+        {role} · {role === 'A' ? 'Accepted baseline' : 'Latest run'} — <code>{String(run.id).slice(0, 8)}</code>
+        {accepted && <span className="dp-badge dp-badge--override"> accepted</span>}
+      </h3>
 
-      <table className="bt-table">
-        <caption className="sr-only">The most recent run, as stored</caption>
-        <thead>
-          <tr>
-            <th scope="col">Figure</th>
-            <th scope="col">Value</th>
-            <th scope="col">Figure</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Symbol · timeframe</td><td>{run.symbol ?? '—'} · {run.timeframe ?? '—'}</td><td>Trades</td><td>{stats.totalTrades ?? 0}</td></tr>
-          <tr><td>Protocol</td><td>{run.protocolId ?? '—'}</td><td>Trade win rate</td><td>{stats.tradeWinRate == null ? '—' : `${(Number(stats.tradeWinRate) * 100).toFixed(1)}%`}</td></tr>
-          <tr><td>Position model</td><td>{ex.positionModel ?? '—'}</td><td>Avg trade P&amp;L</td><td>{stats.avgTradePnl == null ? '—' : `${stats.avgTradePnl}%`}</td></tr>
-          <tr><td>Spread / slippage</td><td>{ex.spread ?? '—'} / {ex.slippage ?? '—'}</td><td>Total P&amp;L</td><td>{money(stats.totalPnl)}</td></tr>
-          <tr><td>Account / risk</td><td>{ex.accountSize ?? '—'} · {ex.riskPct ?? '—'}%</td><td>Max drawdown</td><td>{stats.maxDrawdown10d ?? '—'}</td></tr>
-        </tbody>
-      </table>
+      <div className="bt-table-wrap">
+        <table className="bt-table bt-facts-table">
+          <caption className="sr-only">The facts this run recorded</caption>
+          <tbody>
+            <tr><td>Symbol · timeframe</td><td>{run.symbol ?? '—'} · {run.timeframe ?? '—'}</td><td>Scored bars</td><td>{series?.length ?? '—'}</td></tr>
+            <tr><td>Protocol</td><td>{run.protocolId ?? '—'}</td><td>Window</td><td>{run.measuredPeriod?.name ?? run.period ?? '—'}</td></tr>
+            {showTrades && (
+              <>
+                <tr><td>Position model</td><td>{ex.positionModel ?? '—'}</td><td>Spread / slippage</td><td>{ex.spread ?? '—'} / {ex.slippage ?? '—'}</td></tr>
+                <tr><td>Trades</td><td>{stats.totalTrades ?? 0}</td><td>Trade win rate</td><td>{stats.tradeWinRate == null ? '—' : pct1(Number(stats.tradeWinRate) * 100)}</td></tr>
+                <tr><td>Avg trade P&amp;L</td><td>{stats.avgTradePnl == null ? '—' : `${stats.avgTradePnl}%`}</td><td>Total P&amp;L</td><td>{money(stats.totalPnl)}</td></tr>
+              </>
+            )}
+            <tr>
+              <td>What it changed</td>
+              <td colSpan={3}>
+                {changed === null
+                  ? 'not bot-driven — no bot settings to differ from'
+                  : changed.length === 0 ? 'nothing (the bot as configured)' : changed.join(', ')}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      <p className="pb-field-note">
-        <strong>What this run changed from the bot:</strong>{' '}
-        {overridden === null
-          ? 'this run was not driven by a bot, so there is no bot settings set to differ from.'
-          : overridden.length === 0
-            ? 'nothing — it measured the bot exactly as configured.'
-            : overridden.join(', ')}
-      </p>
+      {run.totals && <ScoringTotals totals={run.totals} />}
+
+      {onAccept && (
+        <p className="pb-field-note">
+          <button type="button" className="bt-panel-btn" onClick={onAccept}>
+            Accept this run as the {role === 'B' ? 'A' : 'B'} baseline
+          </button>
+          {' '}The accepted run becomes <strong>A</strong>; the next run of this protocol is measured
+          against it. Stored in the database, so it follows you to another browser.
+        </p>
+      )}
+
+      {role === 'A' && accepted && onClear && (
+        <p className="pb-field-note">
+          <button type="button" className="bt-panel-btn" onClick={onClear}>
+            Clear the accepted baseline
+          </button>{' '}
+          Removes the reference — it does not delete the run itself.
+        </p>
+      )}
+
+      {series ? (
+        <>
+          <h4 className="bt-panel-head">
+            Scores — {series.length} bar(s)
+            {series.length > 100 && <span className="dp-hint"> · showing 100; sort to choose which</span>}
+          </h4>
+          <ScoreTable scoreSeries={series} />
+        </>
+      ) : (
+        <p className="pb-none">
+          ⚠️ This run stored no scores (made before 2026-10-26), so its scoring output is not recorded
+          — not &ldquo;no scores&rdquo;. Re-run it to capture them.
+        </p>
+      )}
 
       {Array.isArray(run.caveats) && run.caveats.length > 0 && (
         <ul className="pb-info-list">
@@ -299,14 +301,575 @@ export function LatestBacktestPanel({ fallbackRunId }) {
         </ul>
       )}
 
-      <h4 className="pb-info-head">Log lines mentioning this run</h4>
-      {logLines.length === 0 ? (
+      {liveReference && (
+        <p className="pb-field-note">
+          <strong>Live reference (this bot, not part of the comparison):</strong> {liveReference}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+/**
+ * RepeatCheck — does the SAME A→B change point the same way on MORE windows?
+ *
+ * Owner direction, 2026-10-27: *"a third would harden it … add 'repeats on N of M windows'"* — then
+ * *"Yes do that"*, and then the reason it matters: *"I see huge potential for agentic AI to use it …
+ * Agentic AI will be able to make adjustments. Re-test, and keep doing that over and over again for a
+ * set period or target a significant level of improvement."*
+ *
+ * ⚠️ THIS COMPONENT NO LONGER DOES THE ARITHMETIC. It sends run ids to
+ * `POST /api/backtest/repeat-check` and renders the answer. The maths lives once, in
+ * `nest/src/modules/backtest/score-maths.ts`, so an agent calling the endpoint and a reader looking at
+ * this panel cannot get different answers — the drift a second implementation would guarantee.
+ *
+ * ⚠️ IT WILL NOT GUESS A PAIR INTO EXISTENCE. The reader picks the period and both runs; a window that
+ * cannot be measured comes back from the endpoint with a reason and is counted as NOT USABLE, never
+ * dropped, and never rendered as a pass.
+ */
+function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
+  /** Every extra window the reader has added. One row by default: two windows is the minimum. */
+  const [rows, setRows] = useState([{ key: 1, period: '', aId: null, bId: null }]);
+  const nextKey = useRef(2);
+
+  const runsQuery = useQuery({
+    queryKey: ['bt-runs', 'repeat', protocolId],
+    queryFn: () => apiGet(`/api/backtest/runs?limit=50&protocolId=${encodeURIComponent(protocolId)}`),
+    enabled: Boolean(protocolId),
+    staleTime: 30_000,
+  });
+  const runs = runsQuery.data?.runs ?? runsQuery.data ?? [];
+
+  const periods = useMemo(() => {
+    const seen = new Map();
+    for (const r of runs) {
+      if (!r.period) continue;
+      seen.set(r.period, (seen.get(r.period) ?? 0) + 1);
+    }
+    return [...seen.entries()]
+      .filter(([p, n]) => n >= 2 && p !== window1.period)
+      .map(([p, n]) => ({ period: p, runs: n }));
+  }, [runs, window1.period]);
+
+  const setRow = (key, patch) => setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const choosePeriod = (key, period) => {
+    const picked = pickRepeatPair(runs, period, excludeIds);
+    setRow(key, { period, aId: picked.pair?.aId ?? null, bId: picked.pair?.bId ?? null });
+  };
+
+  /**
+   * The full list sent to the endpoint: the tab's own pair first, then every configured row.
+   *
+   * ⚠️ THE ENDPOINT TAKES `{ windows: [...] }`, NOT A BARE ARRAY. It was verified with curl in that
+   * shape and the client was sending the array itself, so every request returned 400 and both the
+   * diff table and the verdict rendered their "cannot judge" placeholders — which look exactly like
+   * missing data. A payload shape the server rejects is not a result; it is a silent no-op.
+   *
+   * ⚠️ AND IT SENDS WINDOW 1 ALONE. The diff table above reads window 1's totals from this answer, so
+   * waiting for a SECOND window to exist before posting left that table showing `—` as though nothing
+   * had been measured. One window is a valid request whose verdict is `cannot-judge` ("a repeat needs
+   * at least two windows") — which is the truth, not a refusal.
+   */
+  const payload = useMemo(() => {
+    const windows = [{ aId: window1.aId, bId: window1.bId, label: window1.period ?? 'this window' }];
+    for (const r of rows) {
+      if (r.aId && r.bId) windows.push({ aId: r.aId, bId: r.bId, label: r.period });
+    }
+    return { windows };
+  }, [window1.aId, window1.bId, window1.period, rows]);
+  const sent = window1.aId && window1.bId ? JSON.stringify(payload) : null;
+
+  const check = useQuery({
+    queryKey: ['bt-repeat-check', sent],
+    queryFn: () => apiPost('/api/backtest/repeat-check', payload),
+    enabled: Boolean(sent),
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  // The diff table above reads window 1's direction counts from the same answer, so the panel and the
+  // table cannot disagree about the same bars. A failure is passed up too, so the table can say the
+  // rows are placeholders instead of leaving them to read as zeros.
+  useEffect(() => {
+    if (check.data) onMeasured?.(check.data, null);
+    else if (check.isError) onMeasured?.(null, check.error);
+  }, [check.data, check.isError, check.error, onMeasured]);
+
+  const verdict = check.data?.verdict;
+  const badge = {
+    repeated: '🟢 REPEATED',
+    'did-not-repeat': '🔴 DID NOT REPEAT',
+    'no-change': '⚪ NO CHANGE',
+    'cannot-judge': '⚪ CANNOT JUDGE',
+  }[verdict ?? 'cannot-judge'];
+
+  return (
+    <>
+      <h4 className="bt-panel-head">Does it hold on other windows?</h4>
+      <p className="bt-panel-note">
+        One window cannot separate an improvement from luck. Add windows and the API measures the same A→B
+        change on each: the verdict counts how many windows agree, and the A side must have been scored at
+        the same capacity on every window (the B side likewise) or the comparison is refused rather than
+        averaged.
+      </p>
+
+      {periods.length === 0 ? (
         <p className="pb-none">
-          No log line in the current file mentions {needle.join(' or ')}. The log holds today&rsquo;s
-          entries only — an older run&rsquo;s lines are in their own dated file.
+          This protocol has no other stored window with two runs in it. Run the pair again over a
+          different period first — until then there is nothing to repeat on, which is not the same as
+          &ldquo;it held&rdquo;.
         </p>
       ) : (
-        <pre className="bt-log-tail">{logLines.join('\n')}</pre>
+        <>
+          {rows.map((row) => {
+            /**
+             * ⚠️ THE A/B LISTS OFFER ONLY RUNS THAT CAN BE LINED UP BAR BY BAR. A run stored before the
+             * score series recorded `time` has scores but cannot be joined per bar, so offering it let
+             * the reader pick a pair the endpoint would then refuse — with the reason shown, but after
+             * the fact. Both counts are kept so the warning can say WHY a window has nothing to offer,
+             * rather than looking like the period is empty.
+             */
+            const onPeriodAll = row.period
+              ? runs.filter((r) => r.period === row.period && !excludeIds.includes(r.id))
+              : [];
+            const onPeriod = onPeriodAll.filter((r) => r.hasScores !== false && r.hasInstants !== false);
+            return (
+              <p className="bt-panel-note" key={row.key}>
+                <label>
+                  Window{' '}
+                  <select className="ff-select" value={row.period} onChange={(e) => choosePeriod(row.key, e.target.value)}>
+                    <option value="">choose a stored period…</option>
+                    {periods.map((p) => (
+                      <option key={p.period} value={p.period}>
+                        {p.period} ({p.runs} run(s))
+                      </option>
+                    ))}
+                  </select>
+                </label>{' '}
+                {row.period && onPeriod.length < 2 && (
+                  <span>
+                    ⚠️ that window has {onPeriodAll.length} run(s) but only {onPeriod.length} can be
+                    lined up bar by bar — a run needs stored scores <em>and</em> a per-bar instant.
+                  </span>
+                )}
+                {row.period && onPeriod.length >= 2 && (
+                  <>
+                    <label>
+                      A{' '}
+                      <select className="ff-select" value={row.aId ?? ''} onChange={(e) => setRow(row.key, { aId: e.target.value })}>
+                        {onPeriod.map((r) => (
+                          <option key={r.id} value={r.id}>{r.id.slice(0, 8)} · {shortStamp(r.createdAt)}</option>
+                        ))}
+                      </select>
+                    </label>{' '}
+                    <label>
+                      B{' '}
+                      <select className="ff-select" value={row.bId ?? ''} onChange={(e) => setRow(row.key, { bId: e.target.value })}>
+                        {onPeriod.map((r) => (
+                          <option key={r.id} value={r.id}>{r.id.slice(0, 8)} · {shortStamp(r.createdAt)}</option>
+                        ))}
+                      </select>
+                    </label>{' '}
+                  </>
+                )}
+                {rows.length > 1 && (
+                  <button
+                    type="button"
+                    className="bt-panel-btn bt-panel-btn-sm"
+                    onClick={() => setRows((prev) => prev.filter((r) => r.key !== row.key))}
+                  >
+                    Remove
+                  </button>
+                )}
+              </p>
+            );
+          })}
+          <p className="bt-panel-note">
+            <button
+              type="button"
+              className="bt-panel-btn bt-panel-btn-sm"
+              onClick={() => {
+                const key = nextKey.current;
+                nextKey.current += 1;
+                setRows((prev) => [...prev, { key, period: '', aId: null, bId: null }]);
+              }}
+            >
+              ＋ Add another window
+            </button>{' '}
+            — three or more windows make the verdict harder to satisfy, which is the point.
+          </p>
+        </>
+      )}
+
+      {check.isError && (
+        <p className="pb-none">
+          ⚠️ The repeat check could not be read ({check.error?.status ?? 'no status'}) — that is unknown,
+          not &ldquo;it did not repeat&rdquo;.
+        </p>
+      )}
+
+      {check.data?.windows?.length > 0 && (
+        <>
+          <div className="bt-table-wrap">
+            <table className="bt-table bt-facts-table">
+              <caption className="sr-only">The same change measured on each window</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Window</th>
+                  <th scope="col">Run A → B</th>
+                  <th scope="col" className="bt-num">Bars</th>
+                  <th scope="col" className="bt-num">Δ Σ signal %</th>
+                  <th scope="col" className="bt-num">Capacity A / B</th>
+                </tr>
+              </thead>
+              <tbody>
+                {check.data.windows.map((w) => (
+                  <tr key={`${w.aId}-${w.bId}`}>
+                    <td>{w.label}</td>
+                    <td className="pb-mono">
+                      {w.blocked
+                        ? <span title={w.reason}>— {w.reason ?? w.blocked}</span>
+                        : `${String(w.aId).slice(0, 8)} → ${String(w.bId).slice(0, 8)}`}
+                    </td>
+                    <td className="pb-mono bt-num">{w.blocked ? '—' : w.bars}</td>
+                    <td className="pb-mono bt-num">
+                      {w.blocked ? '—' : `${w.deltaSignalSum > 0 ? '+' : ''}${num1(w.deltaSignalSum)}`}
+                    </td>
+                    <td className="pb-mono bt-num">
+                      {w.blocked ? '—' : `${num1(w.capacityA)} / ${num1(w.capacityB)}`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="bt-panel-note">
+            {check.isLoading ? (
+              'checking the chosen windows…'
+            ) : (
+              <>
+                <strong>{badge}</strong>
+                {check.data.counted
+                  ? ` — ${check.data.counted.usable} of ${check.data.counted.total} window(s) usable`
+                  : ''}
+                {check.data.counted?.blocked ? `, ${check.data.counted.blocked} cannot be compared` : ''}
+                {check.data.counted?.partial
+                  ? `, ${check.data.counted.partial} measured on partly different bars`
+                  : ''}
+                {check.data.reason ? ` · ${check.data.reason}` : ''}
+              </>
+            )}
+          </p>
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * A vs B — the DIFFERENCE, summarised (owner direction: *"so that the user doesn't need to examine
+ * every row of data"*).
+ *
+ * ⚠️ IT JOINS ON THE BAR INSTANT, and reports the unmatched counts. Two runs over different windows
+ * share only the bars both scored; silently comparing the overlap as if it were the whole picture
+ * would be the "plausible number, no error" defect this page keeps fixing.
+ *
+ * ⚠️ IT REFUSES THREE PAIRS RATHER THAN APPROXIMATING THEM: a different protocol, a run with no
+ * stored scores, and a run stored before the series recorded the bar instant. Each of those would
+ * otherwise render a number that reads as a difference.
+ */
+export function RunDiffPanel({ aId, bId, showTrades = true }) {
+  const a = useRun(aId);
+  const b = useRun(bId);
+  /** Window 1's totals + direction counts, as measured by the API (see window1Delta below). */
+  const [window1Delta, setWindow1Delta] = useState(null);
+  /**
+   * Why `window1Delta` is missing, when the API refused or failed. Kept SEPARATE from the delta so a
+   * failed read renders differently from "not measured yet" — printed side by side they are the same
+   * row of dashes, and dashes read as zero.
+   */
+  const [window1Err, setWindow1Err] = useState(null);
+
+  if (!aId || !bId) {
+    return (
+      <p className="pb-none">
+        A difference needs two runs. Accept a run as the <strong>A</strong> baseline, then a later run
+        becomes <strong>B</strong> — the summary appears here.
+      </p>
+    );
+  }
+  if (a.isLoading || b.isLoading) return <p className="pb-none">Comparing the two runs…</p>;
+  if (a.error || b.error) {
+    return (
+      <p className="pb-none">
+        ⚠️ One of these runs could not be read
+        {a.error?.status === 404 || b.error?.status === 404 ? ' — it was deleted' : ''}. A failed read
+        is not &ldquo;no change&rdquo;; nothing is being compared.
+      </p>
+    );
+  }
+
+  const sa = a.data?.scoreSeries;
+  const sb = b.data?.scoreSeries;
+  /**
+   * ⚠️ A DIFFERENT PROTOCOL IS NOT A DIFFERENCE. Two protocols score different directives against
+   * different symbols, so subtracting one from the other produces numbers that look like a result
+   * and mean nothing. This is a guard on the PAYLOADS, not on the request that fetched them — the
+   * page filters B by protocol, but a filter cannot prove what came back.
+   */
+  const protoA = a.data?.protocolId;
+  const protoB = b.data?.protocolId;
+  if (protoA && protoB && protoA !== protoB) {
+    return (
+      <p className="pb-none">
+        ⚠️ <strong>These two runs are different protocols</strong> — <code>{protoA}</code> vs{' '}
+        <code>{protoB}</code>. A protocol scores its own directives against its own symbol, so
+        subtracting one from the other would produce numbers with no meaning. Accept a baseline from
+        this protocol, then compare against it.
+      </p>
+    );
+  }
+  if (!sa || !sb) {
+    return (
+      <p className="pb-none">
+        ⚠️ One of these runs has <strong>no stored scores</strong>, so no difference can be computed.
+        That is missing data, not &ldquo;no change&rdquo; — re-run the older side to capture its scores.
+      </p>
+    );
+  }
+
+  // ⚠️ KEY ON `time` (the bar instant), NOT `date`. An intraday run has many bars per date, so a
+  // date-keyed join made a run compared with ITSELF report 954 of 1,722 bars as changed.
+  const keyOf = (s) => s.time ?? s.date;
+  /**
+   * Runs stored BEFORE the score series recorded the instant cannot be differenced per bar.
+   * A fallback to `date` would not fail — it would collapse every intraday bar of a day onto one
+   * row and report the survivors as "changed" (measured 2026-10-27: two IDENTICAL 1h runs showed
+   * 21 signal changes by date and 0 by instant). Refusing is the only honest answer, so the panel
+   * says why instead of printing a fabricated difference.
+   */
+  const instantMissing = sa.some((s) => !s.time) || sb.some((s) => !s.time);
+  const mapB = new Map(sb.map((s) => [keyOf(s), s]));
+  const shared = [];
+  for (const s of sa) {
+    const o = mapB.get(keyOf(s));
+    if (o) shared.push({ bar: keyOf(s), a: s, b: o });
+  }
+  /**
+   * ⚠️ `onlyA`/`onlyB` ARE NOT COMPUTED HERE ANY MORE. The endpoint returns them (`onlyA`, `onlyB`,
+   * `barsA`, `barsB`) from the same series join, so the panel prints its numbers instead of a second
+   * implementation's. The local `shared` join below exists ONLY to render the movers table from bars
+   * the client already holds — it is presentation, not arithmetic.
+   */
+
+  const dSignalPct = shared.map((r) => Number(r.b.signalPct ?? r.b.score) - Number(r.a.signalPct ?? r.a.score));
+  const dOppPct = shared.map((r) => Number(r.b.opportunityPct ?? 0) - Number(r.a.opportunityPct ?? 0));
+  const mean = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
+  const signalChanged = shared.filter((r) => r.a.signal !== r.b.signal).length;
+  const passedChanged = shared.filter((r) => Boolean(r.a.passedBar) !== Boolean(r.b.passedBar)).length;
+
+  /**
+   * ⚠️ THE TOTALS AND THE UP/DOWN COUNTS COME FROM THE API (2026-10-27). `window1Delta` is the same
+   * payload `POST /api/backtest/repeat-check` returns for this window — computed by `score-maths.ts`,
+   * which the repeat check below also calls. Recomputing them here would be the second implementation
+   * that drifts (and this page has already paid for one date-vs-instant divergence).
+   *
+   * The per-bar `shared` join below is NOT part of that: it exists to RENDER the movers table from bars
+   * the client already holds.
+   */
+  const movers = [...shared]
+    .map((r) => ({ ...r, d: Number(r.b.signalPct ?? r.b.score) - Number(r.a.signalPct ?? r.a.score) }))
+    .sort((x, y) => Math.abs(y.d) - Math.abs(x.d))
+    .slice(0, 10);
+
+  return (
+    <div className="bt-panel bt-ab-panel">
+      <h3 className="bt-panel-head">
+        A → B difference — <code>{String(aId).slice(0, 8)}</code> vs <code>{String(bId).slice(0, 8)}</code>
+      </h3>
+
+      {instantMissing ? (
+        <p className="pb-none">
+          ⚠️ <strong>Cannot difference these two runs per bar.</strong> At least one of them was
+          stored before the score series recorded the <em>instant</em> of each bar, so every intraday
+          bar of one day shares a single date and a per-bar join would report invented changes.
+          Re-run the older side to capture its instants — a missing comparison is not &ldquo;no
+          change&rdquo;.
+        </p>
+      ) : shared.length === 0 ? (
+        <p className="pb-none">
+          The two runs scored <strong>no bar in common</strong> ({sa.length} vs {sb.length} bars), so
+          there is nothing to difference. They describe different windows — a data mismatch, not a
+          null result.
+        </p>
+      ) : (
+        <>
+          <div className="bt-table-wrap">
+            <table className="bt-table bt-facts-table">
+              <caption className="sr-only">Summary of the difference between run A and run B</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Score</th>
+                  <th scope="col" className="bt-num">A total</th>
+                  <th scope="col" className="bt-num">B total</th>
+                  <th scope="col" className="bt-num">Δ total</th>
+                  <th scope="col" className="bt-num">Improved</th>
+                  <th scope="col" className="bt-num">Worsened</th>
+                  <th scope="col" className="bt-num">Unchanged</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Signal %', window1Delta?.scores?.signal],
+                  ['Opportunity %', window1Delta?.scores?.opportunity],
+                  ['Opp points', window1Delta?.scores?.points],
+                ].map(([label, s]) => {
+                  const av = s?.sumA;
+                  const bv = s?.sumB;
+                  const delta = s?.delta;
+                  return (
+                    <tr key={label}>
+                      <td>{label}</td>
+                      <td className="pb-mono bt-num">{num1(av)}</td>
+                      <td className="pb-mono bt-num">{num1(bv)}</td>
+                      <td className={`pb-mono bt-num ${delta > 0 ? 'bt-delta-up' : delta < 0 ? 'bt-delta-down' : ''}`}>
+                        {delta > 0 ? '+' : ''}{num1(delta)}
+                      </td>
+                      <td className="pb-mono bt-num">{s ? s.direction.up : '…'}</td>
+                      <td className="pb-mono bt-num">{s ? s.direction.down : '…'}</td>
+                      <td className="pb-mono bt-num">{s ? s.direction.same : '…'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {window1Err ? (
+            <p className="pb-none">
+              ⚠️ The API could not measure this pair ({window1Err?.status ?? 'no status'}
+              {window1Err?.message ? ` — ${window1Err.message}` : ''}). The rows above are placeholders,
+              not zeros, and nothing has been said about this change.
+            </p>
+          ) : (
+            !window1Delta && (
+              <p className="pb-field-note">
+                Measuring the two runs on the bars they share… the totals fill in as soon as the API
+                answers, and are left blank rather than guessed.
+              </p>
+            )
+          )}
+
+          <div className="bt-table-wrap">
+            <table className="bt-table bt-facts-table">
+              <caption className="sr-only">Summary of the difference between run A and run B</caption>
+              <tbody>
+                <tr>
+                  <td>Bars compared</td>
+                  <td>{window1Delta?.bars ?? '…'}</td>
+                  <td>Only in A / only in B</td>
+                  <td>
+                    {window1Delta
+                      ? `${window1Delta.onlyA ?? 0} / ${window1Delta.onlyB ?? 0} of ${window1Delta.barsA ?? '?'} / ${window1Delta.barsB ?? '?'}`
+                      : '…'}
+                  </td>
+                </tr>
+                <tr><td>Signal changed</td><td>{signalChanged} bar(s)</td><td>Entry-bar verdict changed</td><td>{passedChanged} bar(s)</td></tr>
+                <tr><td>Mean Δ signal %</td><td>{mean(dSignalPct).toFixed(2)}</td><td>Mean Δ opportunity %</td><td>{mean(dOppPct).toFixed(2)}</td></tr>
+                {showTrades && (
+                  <tr>
+                    <td>Trades A → B</td>
+                    <td>{a.data?.stats?.totalTrades ?? 0} → {b.data?.stats?.totalTrades ?? 0}</td>
+                    <td>Total P&amp;L A → B</td>
+                    <td>{money(a.data?.stats?.totalPnl)} → {money(b.data?.stats?.totalPnl)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/*
+            ⚠️ THE HONEST LIMIT OF THIS PANEL, stated where the verdict is read. The owner asked whether
+            a change is a good long-term change or "just lucky for the dataset being tested" — this
+            panel CANNOT answer that, and a bigger number in one window is not evidence of edge. What
+            it does answer: how much moved, in which direction, on how many bars. Persistence across a
+            SECOND window is the missing measurement, and nothing here substitutes for it.
+          */}
+          <p className="bt-panel-note">
+            <strong>One window cannot separate an improvement from luck.</strong> These counts say how
+            much moved and which way; they do not say it will hold. The evidence that a change is real
+            is that it repeats on a window you did not tune it on — re-run the same A/B pair over a
+            different period, and treat a win on a single window as unproven. Counts treat a
+            <em>higher</em> score as better for all three, so read them as &ldquo;moved up&rdquo; /
+            &ldquo;moved down&rdquo; rather than as a verdict on the protocol.
+          </p>
+
+          {movers.every((m) => m.d === 0) ? (
+            <p className="pb-none">
+              No bar's signal score moved between these two runs — the ten-biggest-movers list would be
+              ten rows of zero, so it is not shown. If a setting changed and nothing moved, the setting
+              does not reach the score path (the entry-bar verdict is a separate row above).
+            </p>
+          ) : (
+            <>
+              <h4 className="bt-panel-head">Biggest movers (top 10 by |Δ signal %|)</h4>
+          <div className="bt-table-wrap">
+            <table className="bt-table">
+              <caption className="sr-only">The ten bars whose signal score moved most</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Bar</th>
+                  <th scope="col" className="bt-num">A signal %</th>
+                  <th scope="col" className="bt-num">B signal %</th>
+                  <th scope="col" className="bt-num">Δ</th>
+                  <th scope="col">A signal</th>
+                  <th scope="col">B signal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {movers.map((m) => (
+                  <tr key={m.bar}>
+                    <td className="pb-mono">{barLabel(m.a ?? m.b)}</td>
+                    <td className="pb-mono bt-num">{m.a.signalPct ?? m.a.score}</td>
+                    <td className="pb-mono bt-num">{m.b.signalPct ?? m.b.score}</td>
+                    <td className="pb-mono bt-num">{m.d > 0 ? '+' : ''}{m.d.toFixed(1)}</td>
+                    <td>{m.a.signal}</td>
+                    <td>{m.b.signal}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="pb-field-note">
+            ⚠️ Bars only in one run are <strong>not</strong> compared — a different window cannot be
+            differenced. If the counts above are large, re-run both sides on the same stored period.
+          </p>
+            </>
+          )}
+
+          {/*
+            ⚠️ THE REPEAT CHECK SITS OUTSIDE THE "did anything move?" BRANCH (measured 2026-10-27). It
+            used to be rendered inside the else-branch, so on a pair where no bar's signal score moved
+            the whole section disappeared — including the API measurement that fills the totals table
+            ABOVE it, which then showed `—` forever. "Nothing moved" is the case where the verdict
+            matters most (a setting that never reaches the score path looks exactly like this), so the
+            section must not be the thing that gets hidden.
+          */}
+          <RepeatCheck
+            protocolId={protoA}
+            excludeIds={[aId, bId]}
+            window1={{
+              period: a.data?.measuredPeriod?.name ?? a.data?.period ?? null,
+              aId,
+              bId,
+            }}
+            onMeasured={(d, err) => {
+              setWindow1Delta(d?.windows?.[0] ?? null);
+              setWindow1Err(err ?? null);
+            }}
+          />
+        </>
       )}
     </div>
   );

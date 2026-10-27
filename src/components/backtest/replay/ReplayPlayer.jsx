@@ -18,13 +18,27 @@
  *   2. count an OPEN trade as a result (src/core/replay-clock.js owns that rule and is tested);
  *   3. show "not recorded" as a blank or a zero — SL/TP are not persisted per trade, and the
  *      caveats say so in words.
+ *
+ * ── TECHNOLOGY BOUNDARY (owner direction, 2026-10-27) ────────────────────────────────────────
+ * *"We can remove this panel for Backtesting Protocols … but we will be improving it on Backtest
+ * Strategies so that it shows where trades are executed and exited. It is different chart technology
+ * so will require additional work."*
+ *
+ * ⚠️ THIS IS HAND-DRAWN SVG. The components in `../charts/` are all `lightweight-charts` canvases with
+ * an axis per pane; this draws one fixed-viewBox `<svg>` and animates a playhead across it. That is why
+ * it lives in `replay/` and not beside them — two technologies, two lifecycles, two folders, so a
+ * reader knows which one a change is touching without opening the file.
+ *
+ * ⚠️ The entry/exit markers the owner wants next are a REPLAY-LAYER job: draw them on the existing
+ * timeline. Do NOT "improve" this by importing `createChart` — that replaces the thing that makes it a
+ * replay with the thing it deliberately is not.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
-import NoticeBlock from './NoticeBlock';
-import { noticeFromError } from '../core/notices/from-error.js';
+import { apiGet } from '../../../core/api/client';
+import NoticeBlock from '../../NoticeBlock';
+import { noticeFromError } from '../../../core/notices/from-error.js';
 import {
   REPLAY_SPEEDS,
   buildReplayEvents,
@@ -32,7 +46,7 @@ import {
   visibleRows,
   filterTrades,
   stepMsFor,
-} from '../core/replay-clock';
+} from '../../../core/replay-clock';
 import './replay-player.css';
 
 const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);

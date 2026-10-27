@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, CandlestickSeries, LineSeries, HistogramSeries, createSeriesMarkers, ColorType } from 'lightweight-charts';
-import EmptyState from '../EmptyState';
+import EmptyState from '../../EmptyState';
 import './backtest-chart.css';
 
 /**

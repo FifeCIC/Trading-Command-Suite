@@ -16,7 +16,34 @@ applyTo: "**"
 >    outside the app package, which becomes public. `.github/handoffs/` was removed 2026-09-11 and
 >    `scripts/validate-agent-docs.cjs` still **fails the build** if it reappears.
 
-Write a handoff file to **`G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\`** BEFORE calling `task_complete` **only** when the change is one of:
+## ⏱️ CADENCE — write ONE, at a milestone (owner instruction, 2026-10-27)
+
+> Owner, 2026-10-27: *"Yes lets reduce handoff frequency significant milestones, end off day prompts by
+> myself or when clearly finished on an area and switching to something else."*
+
+**A handoff is a milestone artefact, not a per-change receipt.** Write one when:
+
+| Write | Do not write |
+|---|---|
+| A **significant milestone**: an area is finished and the next work switches away from it | After every endpoint, guard, fix or comment thread |
+| The **owner asks** (end-of-day, "wrap up", "hand off") | Because `task_complete` is about to be called |
+| A **new capability** the Capability Map / Architecture Framework should carry, at the point it is complete | Per phase of one capability that is still moving |
+
+**Measured, and why this replaces the old trigger:** the previous rule said *"write one before
+`task_complete` when the change is an issue close, a behaviour change, or a new feature"*. In practice
+that produced **7–8 handoffs in one day for one area** — each individually compliant, collectively
+noise the Librarian must read and de-duplicate. The cost is not the bytes; it is that the milestone
+signal is lost in the per-change ones.
+
+**One handoff per landing is still the rule when you do write one** — it covers everything landed in
+that area since the last handoff, and a Note/Full shape is chosen by the *largest* change inside it.
+
+⚠️ **Nothing is deleted to enforce this.** Handoffs already written stay written (a handoff must not be
+removed before it is summarised), and the Librarian still processes what exists.
+
+---
+
+Write a handoff file to **`G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\`** at a **milestone** (see CADENCE above) — the change should be one of:
 
 1. **Closing a GitHub issue** — work that resolves an issue gets a handoff so the Librarian records it in the QA page, Capability Map, and Architecture Framework.
 2. **Pipeline / behaviour / capability change** — a change that alters a pipeline's data flow or behaviour: new or changed API endpoints, Prisma schema changes, scoring/gating/trading/automation logic, provider adapters, or data contracts.

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../../core/api/client';
+import { apiGet } from '../../../core/api/client';
 import BacktestChart from './BacktestChart';
 
 const SYMBOLS = ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'EURUSD', 'BTCUSD', 'ETHUSD'];

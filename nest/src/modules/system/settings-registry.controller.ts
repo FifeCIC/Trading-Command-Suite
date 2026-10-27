@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Logger,
   Post,
@@ -15,6 +16,7 @@ import {
   RUNTIME_SETTINGS,
   SECRET_SETTINGS,
   SETTING_FAMILIES,
+  matchFamily,
 } from '../../common/settings/settings-registry';
 
 /**
@@ -175,5 +177,28 @@ export class SettingsRegistryController {
       `setting "${key}" set to ${updated.value} (was ${updated.source})`,
     );
     return updated;
+  }
+
+  /**
+   * DELETE /api/system/settings/registry/:key — remove ONE stored row.
+   *
+   * Exists for "un-accept": a baseline, once accepted, must be revocable. `set()` cannot express
+   * removal (writing `''` would store an empty string and leave `source: 'stored'` lying about it),
+   * and `clearFamily` cannot target a dot-style family's key — it derives a `:` separator.
+   *
+   * ⚠️ Returns the row count. A `deleted: 0` is NOT an error here — it means the value was already the
+   * declared default (or the baseline was already cleared) — but the caller is told what it replaced
+   * via `previousSource`, so "cleared" and "there was nothing there" stay distinguishable.
+   */
+  @Delete(':key')
+  async clear(@Param('key') key: string) {
+    // An unowned key is a BAD REQUEST, not a server fault — the resolver's guard would otherwise
+    // surface as a 500 and read like an outage. The service keeps its own guard for direct callers.
+    if (!SETTINGS.some((s) => s.key === key) && !matchFamily(key)) {
+      throw new BadRequestException(
+        `setting "${key}" is not declared in settings-registry.ts and matches no family — refusing to delete it.`,
+      );
+    }
+    return this.resolver.clear(key);
   }
 }

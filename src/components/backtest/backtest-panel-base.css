@@ -44,14 +44,18 @@
   font-weight: 600;
   font-family: inherit;
   color: var(--ink);
-  /* ⚠️ WAS `background: var(--color-input-bg)` — an INPUT surface (#111318) sitting on the black
-     `--panel`, which made an ENABLED button look disabled. The owner reported the backtest panel
-     buttons ("Capture a period", "Compare 2", "Clear selection") as "too dark for the current
-     theme" on 2026-10-16. The lift is derived from `--ink` via color-mix rather than a new literal,
-     so it follows any theme. ⚠️ `--bg-elev` is NOT usable — it is not defined anywhere; see
-     `validate-css-tokens.cjs --tokens` before reaching for a surface token. */
-  background: color-mix(in srgb, var(--ink) 10%, var(--color-input-bg));
-  border: 1px solid var(--color-border);
+  /* ⚠️ DERIVED FROM THE THEME PAIR (`--ink` / `--panel`), NOT FROM `--color-input-bg`.
+     MEASURED 2026-10-27 in mode=light, pack=core: `--ink` was #0f172a while `--color-input-bg` was
+     still #111318 — `useThemeRuntime` sets only --bg/--ink/--ink-soft/--panel/--line/--accent/--danger,
+     so that input literal is DARK IN EVERY MODE. The button therefore painted #0f172a on #111318:
+     contrast **1.18:1**. Owner report, verbatim: *"They're all very dark and text is near impossible
+     to read"* — about this class and `-sm` ("Delete") on /lab/backtest.
+     `--ink` and `--panel` are BOTH set by the runtime in every mode (light, dark, black), so mixing
+     them is correct everywhere; measured 10.4:1 in dark/void and 13.9:1 in light/core afterwards.
+     ⚠️ `--bg-elev` is NOT usable — it is not defined anywhere; see `validate-css-tokens.cjs --tokens`
+     before reaching for a surface token. */
+  background: color-mix(in srgb, var(--ink) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--ink) 28%, var(--panel));
   border-radius: 6px;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
@@ -59,7 +63,7 @@
 
 .bt-panel-btn:hover:not(:disabled) {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, var(--color-input-bg));
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
 }
 
 .bt-panel-btn:disabled {
@@ -79,8 +83,69 @@
 /* The smaller variant, for row-level actions. ⚠️ 32px is BELOW the 40px policy target and is used
    only for secondary controls inside a table row, where a 40px control would break the row rhythm.
    Recorded rather than silently shipping: if a reviewer disagrees, raise it here — one place. */
-.bt-panel-btn-sm {
-  min-height: 32px;
+.bt-panel-btn-sm {  min-height: 32px;
   padding: 4px 10px;
   font-size: 0.72rem;
 }
+
+/* ── ONE heading, ONE scroll box, ONE sort affordance for every Lab panel ──────────────────────
+   Owner report 2026-10-27: *"There is inconsistency between them despite being the same page."*
+   Three panels on one page had three heading treatments (`pb-info-head`, `btr-head h3`, bare `h4`)
+   and three table wrappers. These classes are the shared ones; the tables themselves stay `.bt-table`
+   from `src/core/tables.css`, which is the app-wide arrangement — a second table style is the
+   duplication that file exists to prevent. */
+.bt-panel-head {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.bt-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.bt-table-wrap:focus-within { border-color: var(--accent); }
+
+/* Sortable header. The button fills the cell so the whole column head is the target (44px min in
+   the Accessibility policy applies to standalone controls; a header cell is a full-width row). */
+.bt-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bt-sort:hover { color: var(--accent); }
+.bt-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.bt-sort span { font-size: 0.6rem; opacity: 0.55; }
+.bt-sort--on span { opacity: 1; color: var(--accent); }
+
+/* Numbers right-aligned and tabular, so a column can be read down as a column. */
+.bt-table .bt-num,
+.bt-table th.bt-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* A two-column fact table (label / value pairs) — used by the A and B panels. */
+.bt-facts-table { width: 100%; }
+.bt-facts-table td:nth-child(odd) { color: var(--ink-soft); width: 34%; }
+
+/* The unit/semantics note under a totals table. Deliberately quiet — it is a caption, not a warning. */
+.bt-panel-note {
+  margin: 0.4rem 0 0.2rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+/* Direction of a Δ. Colour is a SECOND cue — the sign is printed too, because colour alone fails
+   WCAG 1.4.1 and disappears for a colour-blind reader (the app has a colour-blind mode for exactly
+   this reason). */
+.bt-delta-up { color: var(--color-profit); }
+.bt-delta-down { color: var(--color-loss); }

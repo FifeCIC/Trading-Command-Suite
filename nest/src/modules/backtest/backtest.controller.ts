@@ -1,4 +1,11 @@
-import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException, NotFoundException, Patch } from '@nestjs/common';
+import {
+  ScoreBar,
+  RepeatWindowResult,
+  RepeatVerdict,
+  measureWindow,
+  multiWindowVerdict,
+} from './score-maths';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
 import { BacktestPeriodService } from './backtest-period.service';
@@ -73,8 +80,117 @@ export class BacktestController {
   @Get('results/:runId')
   async getResult(@Param('runId') runId: string) {
     const result = await this.backtestService.getResult(runId);
-    if (!result) return { error: 'Run not found' };
+    /**
+     * ⚠️ A MISSING RUN IS 404, NOT `200 { error }`. Measured 2026-10-27: the old shape returned HTTP
+     * 200 with `{error: 'Run not found'}`, so every reader that branches on the HTTP result saw
+     * SUCCESS and rendered a run whose every field was `undefined` — and the deleted-baseline path
+     * then showed "Accepted baseline — undefine" instead of "this run no longer exists".
+     * A 200 carrying an error is the "plausible output, no error" defect at the transport layer.
+     *
+     * ── DECISION (2026-10-27, primary) ──
+     * WHAT:      a missing run answers 404 on results/equity/replay — asserted by backtest.controller.spec.ts.
+     * WHY:      the service was honest and only the controller lied, so a service test could not see it.
+     * INSTEAD OF: keeping `200 { error }` and branching on the body — that convention is what made a
+     *            deleted run render as a fabricated table of dashes.
+     * REVERSE BY: returning the `{ error }` sentinel again and updating the three frontend readers
+     *            (`RunComparisonPanels.useRun`, `BacktestPage.resultQuery`, `ReplayPlayer`).
+     * REGISTER:  docs/SETTLED-DECISIONS.md row 94
+     * GUARD:     nest/src/modules/backtest/backtest.controller.spec.ts
+     */
+    if (!result) throw new NotFoundException(`no stored backtest run "${runId}"`);
     return result;
+  }
+
+  /**
+   * POST /api/backtest/repeat-check — "does this change repeat on other windows?"
+   *
+   * WHY THIS ENDPOINT EXISTS (owner direction, 2026-10-27): *"I see huge potential for agentic AI to use
+   * it … Agentic AI will be able to make adjustments. Re-test, and keep doing that over and over again
+   * for a set period or target a significant level of improvement."*
+   *
+   * A tuning loop is adjust → re-test → DECIDE, and the decision maths used to live only in the browser.
+   * An agent would have had to re-derive totals, deltas and "did it repeat" from 399 KB payloads — a
+   * second implementation that would drift from the UI's. The maths is now `score-maths.ts`, this route
+   * serves it, and the A/B tab CALLS IT rather than computing.
+   *
+   * Body: `{ windows: [{ aId, bId, label? }] }` — one entry per window. **One window is accepted** so a
+   * caller can obtain the measurement for a single A→B pair (that is what the A/B tab's diff table
+   * reads); the verdict for a single window is `cannot-judge` with the reason "a repeat needs at least
+   * two windows", which is honest rather than a request rejection. Two or more windows is what actually
+   * answers "did it repeat".
+   * Returns per-window measurements (bars, Δ Σ signal %, capacity per side, up/down/same) plus one
+   * verdict with the counts. A window that cannot be measured comes back with `blocked` + `reason`,
+   * never silently dropped: "cannot judge" is a result and "we looked at fewer windows than you think"
+   * must be visible.
+   *
+   * ⚠️ REJECTING ONE WINDOW WAS A DEFECT (measured 2026-10-27, on the running app). The client's A/B tab
+   * always includes its own pair as window 1, and it did not post at all until a second window existed —
+   * so the diff table rendered `A total —`, `Δ —`, `…` as though nothing had been measured. The request
+   * shape was also wrong (a bare array), so every call that DID fire returned 400. Both failures were
+   * silent placeholders on screen. A caller should be able to ask for one window's measurement.
+   */
+  @Post('repeat-check')
+  @ApiOperation({ summary: 'Measure an A→B change on one or more windows, and say whether it repeats' })
+  async repeatCheck(
+    @Body() body: { windows?: Array<{ aId?: string; bId?: string; label?: string }> },
+  ) {
+    const asked = Array.isArray(body?.windows) ? body.windows : [];
+    if (!asked.length) {
+      throw new BadRequestException(
+        'body must be { windows: [{ aId, bId }] } — a bare array is not a body, and at least one window is required',
+      );
+    }
+    if (asked.length > 10) {
+      throw new BadRequestException('at most 10 windows per check');
+    }
+
+    const measured: RepeatWindowResult[] = [];
+    for (const [i, w] of asked.entries()) {
+      if (!w?.aId || !w?.bId) {
+        measured.push({
+          label: w?.label ?? `window ${i + 1}`,
+          aId: w?.aId ?? '',
+          bId: w?.bId ?? '',
+          blocked: 'no-scores',
+          reason: 'both run ids are required',
+        });
+        continue;
+      }
+      const [a, b] = await Promise.all([
+        this.backtestService.getResult(w.aId),
+        this.backtestService.getResult(w.bId),
+      ]);
+      const aSeries = (a as { scoreSeries?: ScoreBar[] } | null)?.scoreSeries ?? null;
+      const bSeries = (b as { scoreSeries?: ScoreBar[] } | null)?.scoreSeries ?? null;
+      const missingRun = !a || !b;
+      measured.push(
+        missingRun
+          ? {
+              label: w.label ?? `window ${i + 1}`,
+              aId: w.aId,
+              bId: w.bId,
+              blocked: 'no-scores',
+              reason: `${!a ? w.aId : w.bId} is not a stored run`,
+            }
+          : measureWindow({
+              aId: w.aId,
+              bId: w.bId,
+              label: w.label ?? (a?.measuredPeriod?.name ?? a?.period ?? `window ${i + 1}`),
+              aSeries,
+              bSeries,
+            }),
+      );
+    }
+
+    const verdict: RepeatVerdict = multiWindowVerdict(measured);
+    return {
+      verdict: verdict.verdict,
+      reason: verdict.reason,
+      counted: verdict.counted,
+      windows: measured,
+      /** What `deltaSignalSum` is the difference OF, so a caller cannot read it as anything else. */
+      signal: 'sum of signalPct across the bars both runs share, per window',
+    };
   }
 
   @Get('summary/:symbol')
@@ -329,7 +445,13 @@ export class BacktestController {
   @Get('equity/:runId')
   @ApiOperation({ summary: 'Get equity curve and drawdown data for a backtest run' })
   async getEquityCurve(@Param('runId') runId: string) {
-    return this.backtestService.getEquityCurve(runId);
+    const curve = await this.backtestService.getEquityCurve(runId);
+    // `getEquityCurve` signals absence in the payload (`{ error }`); the HTTP status must agree with
+    // it, or a caller that checks only the response status renders an empty curve as a real one.
+    if (curve && typeof curve === 'object' && 'error' in curve) {
+      throw new NotFoundException(`no stored backtest run "${runId}"`);
+    }
+    return curve;
   }
 
   /**
@@ -341,7 +463,8 @@ export class BacktestController {
   @ApiOperation({ summary: 'Get a backtest run as a replayable trade list + bar timeline (#819)' })
   async getReplay(@Param('runId') runId: string) {
     const replay = await this.backtestService.getReplay(runId);
-    if (!replay) return { error: 'Run not found' };
+    // Same rule as results/:runId — a deleted run must not answer 200 (see the note there).
+    if (!replay) throw new NotFoundException(`no stored backtest run "${runId}"`);
     return replay;
   }
 
