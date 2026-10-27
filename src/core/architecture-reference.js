@@ -768,8 +768,12 @@ export const CURRENT_SLICE = [
                                                SCORER reads; the handoff's "no delete endpoint" claim is corrected against
                                                the tree rather than copied) ── */
                                                 'THE PROTOCOLS PAGE NOW EDITS THE STORE THE SCORER READS (2026-10-27, #1133) — step 4 of `/lab/backtest` (protocols branch) is the protocol\'s directive list with one editable `maxScore` per directive, read from `GET /api/scoring/protocols/:slug/directive-config` (`classMaxScore` / `globalMaxScore` / `effectiveMaxScore` / `source`, plus `totalWeight`) and written by `PATCH` to the `protocol:<slug>:<directiveId>:maxScore` settings family — the store `ProtocolGatingService.resolveEffectiveMaxScores()` reads as `overrideMax ?? globalMax ?? classMax ?? 100`. It deliberately does NOT bind to `protocol_directive_entry.maxScore`, which `PATCH :slug/directives/:directiveId` writes and no scoring path reads (`GET :slug/directives` returns `impl?.maxScore ?? de.maxScore`, preferring the CLASS value over the stored entry), so a field bound to it would look like it worked and change nothing. The banner states the scope is the PROTOCOL — every future backtest AND every live bot — the opposite of the run-scoped SL/TP fields on the Strategies page. ⚠️ STILL OPEN #1133: only `maxScore` is applied per protocol, the other four fields are stored and inert, and a directive\'s thresholds are constants inside its `*.directive.ts`, so the table has one editable column and says why. ⚠️ THE HANDOFF\'S THIRD FINDING IS CONTRADICTED BY THE TREE: `DELETE /api/scoring/protocols/:slug/directive-config/:directiveId` → `deleteProtocolConfig()` → `settings.clearFamily(\'protocol\', \'<slug>:<directiveId>\')` EXISTS and is already exercised by qa-scr-026, so "a delete endpoint that does not exist" is wrong — the missing piece is that the panel does not call it, and `PATCH {maxScore: null}` does not clear the row (measured 2026-10-27: `source` stays `override`).',
+                    /* ── batch #39 — 2026-10-27 to 2026-10-27 (both scores kept per bar: the dual score
+                       becomes readable, and the opportunity path is measured earning capacity where the
+                       signal has no reading) ── */
+                        'BOTH SCORES ARE KEPT PER BAR, NOT ONLY THE ONE THAT CLASSIFIES (2026-10-27, no issue) — `fullScore()` already returned `gated.signalPct`, `opportunityPct`, `opportunityScore`, `opportunityMax` and `riskMultiplier`, but `scoreSeries` stored only `signalPct` under the name `score`, so a two-score system read as a one-score system in tab A (the owner read the single "SCORE" column and asked where the other score was). The per-bar record now carries all five beside `score` — kept as the signal alias so rows stored before today still render — and `RunComparisonPanels.jsx` prints seven columns (Bar · Signal % · Opportunity % · Opp points · Risk × · Signal · Passed) with the two questions named under the table; an older run reads "—", never `0`, in the opportunity columns. ⚠️ MEASURED, NOT EXPLAINED: run `ca0cc8c0` (`spy-speed-v1`, US500 1h, 170 bars) stores `2026-09-12 | signalPct 0 | opportunityPct 25.9 (206 of 795) | NO_DATA` beside `signalPct 1.3 | opportunityPct 32.0 (251 of 795) | HOLD`, so the ADDITIVE path earns a quarter of configured capacity on a bar where the DIRECTIONAL score has no reading — the same SHAPE batch #34 recorded for the ladder (#776), and the cause here is undiagnosed with no tracking issue. No NEW endpoint: both existing routes (`POST /api/backtest/run`, `GET /api/backtest/results/:runId`) carry the widened `scoreSeries` entry and are registered as CHANGED.',
                                           ]
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-10-27 (batch #38: 1 handoff — STEP 4 OF THE PROTOCOLS PAGE EDITS THE STORE THE SCORER READS. The directive list offers one editable `maxScore` per directive, written as a per-protocol override in the `protocol:<slug>` settings family that `resolveEffectiveMaxScores()` reads, and shows the precedence the engine applies (protocol → global → class) plus the scope (the protocol, not the run). No endpoint changed: the panel consumes the existing `GET` and `PATCH /api/scoring/protocols/:slug/directive-config`, so there is nothing new in the route register. ⚠️ STILL OPEN: #1133 (only `maxScore` is applied per protocol; the other four fields are stored and inert) and no control returns a directive to inherited — `PATCH {maxScore: null}` leaves the row, and the DELETE endpoint that would clear it exists but the panel does not call it.)';
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-10-27 (batch #40: 1 handoff — ONE POINT IS NOT A CURVE. A protocol run now places no trades, so `GET /api/backtest/equity/:runId` returns exactly ONE point — the endpoint working as designed — and `EquityCurveChart` built its breakeven line from `[points[0], points[last]]`, i.e. `[t, t]`. `lightweight-charts` asserts strictly ascending UNIQUE time, so the assertion threw and the error boundary replaced the whole Result step with "Something went wrong rendering this view" on EVERY protocol run: a scores-only change landing the same day silently made the Lab unrenderable. `ascUnique()` now guards all three `setData` calls (last value per timestamp wins) and the zero line is drawn only with two DISTINCT times; `BacktestPage` mounts the Equity section only at ≥2 points and explains the absence at exactly one. No endpoint changed and none was added — the defect was a consumer assumption about a shape the contract never promised more of.)';
 
 export const CURRENT_ROUTE_CONTRACTS = [
 
@@ -926,6 +930,23 @@ export const CURRENT_ROUTE_CONTRACTS = [
         status: 'active',
       },
   
+      /* — batch #39 — new/changed endpoints (2026-10-27, 1 handoff) — */
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (no issue). The `scoreSeries` entry widened from `{ date, score, signal, passedBar }` to also carry `signalPct`, `opportunityPct`, `opportunityScore`, `opportunityMax` and `riskMultiplier`, all read from `ProtocolGatingService.scoreWithGating()` through `fullScore()` and rounded on write; `score` is kept as the signal alias so older consumers keep working. Before this the run stored one score under a name that read like the only score, so a dual-score system looked single in tab A.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/results/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (no issue). Each parsed `scoreSeries` entry now returns the five dual-score fields beside `score`; a run stored before 2026-10-27 has no opportunity fields at all and the panel prints "—" rather than `0`, so "not recorded" stays distinguishable from "scored nothing". Measured 2026-10-27 on run `ca0cc8c0` (`spy-speed-v1`, US500 1h, 170 entries): the last bars carry `opportunityPct` 25.9–32.0 against `signalPct` 0–1.3.',
+        status: 'active',
+      },
       /* — batch #37 — new/changed endpoints (2026-10-26, 2 handoffs) — */
       {
         route: 'POST /api/backtest/run',

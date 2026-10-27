@@ -7457,7 +7457,7 @@ const QA_CHECKLIST = [
         system: 'Backtest run — scoring output',
         name: 'A protocol run stores its scores and simulates no trades',
         procedure: 'Run a protocol over a dated window on `/lab/backtest`, then read the stored row (`backtestrun.scoresJson`) and `GET /api/backtest/results/:runId`; open the **Current performance (A)** tab.',
-        expected: 'The stored run has `totalTrades: 0` and `totalSignals > 0` with `scoresJson` non-NULL; the response carries a `scoreSeries` whose length matches the scored bar count (bounded to the last 2,000 bars) and each entry is `{ date, score, signal, passedBar }` — a bar the bot\'s own entry bar rejected is still present with `passedBar: false`. A run stored before 2026-10-26 returns NO `scoreSeries` (undefined, not an empty array). Tab A lists the scores as `n scored bar(s)`, last 25 shown.',
+        expected: 'The stored run has `totalTrades: 0` and `totalSignals > 0` with `scoresJson` non-NULL; the response carries a `scoreSeries` whose length matches the scored bar count (bounded to the last 2,000 bars) and each entry is `{ date, score, signal, passedBar }` — a bar the bot\'s own entry bar rejected is still present with `passedBar: false`. A run stored before 2026-10-26 returns NO `scoreSeries` (undefined, not an empty array). Tab A lists the scores as `n scored bar(s)`, last 25 shown. ⚠️ Shape widened 2026-10-27: every entry ALSO carries `signalPct`, `opportunityPct`, `opportunityScore`, `opportunityMax` and `riskMultiplier` beside `score` — the four-name shape above describes a run stored on 2026-10-26, not today\'s (qa-bt-023, batch #39).',
         category: 'API',
         priority: 'high',
         versionNote: '2026-10-26 - batch #37 (#1143) — `run()` scored every bar and kept only the BUY bars that cleared the threshold; it now pushes every scored bar (BEFORE the `continue`, so a bot-bar rejection is recorded) into `scoreSeries`, returns the last 2,000 and persists them to the new `backtestrun.scoresJson` LONGTEXT, parsed back in `formatRunResult()`. ⚠️ The trades half of this claim is qa-bt-020 (batch #36); this entry covers the scores.',
@@ -7485,6 +7485,32 @@ const QA_CHECKLIST = [
         category: 'UI',
         priority: 'high',
         versionNote: '2026-10-27 - batch #38 (#1133) — step 4 on the Protocols page is now the protocol\'s directive list with one editable `maxScore` per directive, written to the `protocol:<slug>:<directiveId>:maxScore` settings family via `PATCH /api/scoring/protocols/:slug/directive-config` — the store `resolveEffectiveMaxScores()` reads — and NOT `protocol_directive_entry.maxScore`, which no scoring path reads. Scope is the protocol, not the run. The stored-but-inert warning half is qa-scr-026 (batch #35); this entry covers the editing surface.',
+      },
+
+      // ── handoff batch #39 (2026-10-27) ───────────────────────────────
+      {
+        id: 'qa-bt-023',
+        area: 'Scoring',
+        system: 'Backtest run — tab A scoring output (dual score)',
+        name: 'A stored run shows both scores per bar, and opportunity can be earned with no signal',
+        procedure: 'Run a protocol over a dated window on `/lab/backtest`, then open tab **A** (Current performance) and read the **Scoring output — most recent run** table; or read `GET /api/backtest/results/:runId` and inspect `scoreSeries`. Compare the **Signal %** and **Opportunity %** cells of the same row.',
+        expected: 'The table has seven columns — Bar, Signal %, Opportunity %, Opp points, Risk ×, Signal, Passed — and both score columns carry a value on every row of a run stored on or after 2026-10-27 (`Signal %` falls back to `score` for an older row; a pre-2026-10-27 run reads "—" in the opportunity columns, never `0`). `Opp points ÷ opportunityMax × 100` equals **Opportunity %** to the nearest whole point (measured `ca0cc8c0`: 206 of 795 = 25.9, 251 of 795 = 32.0). ⚠️ At least one bar can show non-zero **Opportunity %** beside `Signal 0 / NO_DATA` — measured 2026-10-27 on run `ca0cc8c0-a73c` (`spy-speed-v1`, US500 1h, 170 bars): row `2026-09-12 | 0 | 25.9 | 206 | 1 | NO_DATA` sits beside `2026-09-12 | 1.3 | 32.0 | 251 | 0.97 | HOLD`. That divergence is EXPECTED TO BE VISIBLE, not explained — the storage half of this claim is qa-bt-021 (batch #37); this entry covers the dual columns.',
+        category: 'UI',
+        priority: 'high',
+        versionNote: '2026-10-27 - batch #39 (no issue) — `fullScore()` and `scoreSeries` now keep BOTH scores per bar (`signalPct` directional and gated; `opportunityPct` / `opportunityScore` / `opportunityMax` additive, from `scoreWithGating()`; plus `riskMultiplier`), with `score` kept as the signal alias so older rows still render, and `RunComparisonPanels.jsx` prints them in seven columns. ⚠️ The landing makes a measured divergence visible — a quarter of configured opportunity capacity earned where the signal reads `NO_DATA` — and does not diagnose it.',
+      },
+
+      // ── handoff batch #40 (2026-10-27) ───────────────────────────────
+      {
+        id: 'qa-bt-024',
+        area: 'Backtesting',
+        system: 'Backtest Result step — equity curve chart',
+        name: 'A run that places no trades renders the Result step without crashing the view',
+        procedure: 'Open `/lab/backtest` (Protocols), choose a protocol on a dated window (e.g. `spy-speed-v1`, US500 1h) and press Run; walk to the Result step. Read `GET /api/backtest/equity/<runId>` and count its `equity` points. BEFORE THE FIX the Result step was replaced by the error boundary — "Something went wrong rendering this view" — and the console carried `Assertion failed: data must be asc ordered by time, index=1, time=<t>, prev time=<t>`: a no-trade run returns exactly ONE point (`{"time":"2026-09-10T01:00:00Z","equity":0,"drawdownPct":0}`) and the breakeven line was built as `[points[0], points[last]]` = `[t, t]`, which `lightweight-charts` rejects. AFTER THE FIX: look for the "No equity curve." note where the chart used to be, then run something that DOES trade (a strategy run, or open a stored run with ≥2 points) and confirm the equity curve, the drawdown area and the dashed zero line still draw.',
+        expected: 'No "Something went wrong rendering this view" and a `pageerror`-clean result step; a one-point `/equity` payload renders **No equity curve.** ("…a protocol produces scores, and score-only runs place nothing") and NO chart container — a flat line through a single observation is deliberately not drawn; the price chart below still renders; a ≥2-point payload still renders curve + drawdown + breakeven line. Verified 2026-10-27 on a fresh VIX run: result step reached, note shown, `crashed: false`, 622 entry signals / 56% profitable.',
+        category: 'UI',
+        priority: 'critical',
+        versionNote: '2026-10-27 - batch #40 (no issue) — a page-down regression introduced the SAME DAY by the protocol "scores only" change: every protocol run now stores no trades, so `GET /api/backtest/equity/:runId` returns exactly one point and the breakeven line became `[t, t]`. `EquityCurveChart.jsx` gained `ascUnique()` on all three `setData` calls (last value per timestamp wins) and draws the zero line only when there are two DISTINCT times; `BacktestPage.jsx` mounts the Equity section only at ≥2 points and explains the absence at exactly one. ⚠️ `toChartPoints()` already sorted and de-duplicated the equity points — the ZERO LINE bypassed it, so the guard closes the class rather than that one instance.',
       },
     ];
 

@@ -762,4 +762,15 @@ export const KNOWN_FEATURES = {
   //    returns a directive to "inherited".
   //    uiSurfaces: 0 is a FINDING, not a blank (0 of these).
     'Per-protocol directive editing from the Backtest Lab': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+
+  // ── batch #39 (2026-10-27) — 0 capabilities from 1 handoff: its declared capability, 'Backtest
+  //    score capture — both scores per bar', is the SAME `scoreSeries` → `backtestrun.scoresJson`
+  //    mechanism recorded as qa-bt-021 by batch #37 — same code path, same persistence column, same
+  //    single surface — so it is an EXTENSION of that entry, not a second row. Theme: a stored run now
+  //    keeps BOTH scores per bar — `signalPct` (directional and gated; what BUY/SELL/HOLD is
+  //    classified from) beside `opportunityPct` / `opportunityScore` / `opportunityMax` (additive;
+  //    what the Screening area ranks by) plus `riskMultiplier` — and tab A prints them in seven
+  //    columns. Its new facts land as qa-bt-023 and a slice. Nothing to seed: the key set is
+  //    unchanged, so the `capability` table is not touched (uiSurfaces: 0 is a FINDING, not a blank
+  //    — not applicable here, because no row is added).
 };
