@@ -303,10 +303,10 @@ export default function MarketContextPage() {
               </div>
               {/* Multi-factor indicators */}
               <div className="mc-session-indicators">
-                {/* ⚠️ §9.14 / D5=A — 'Average composite score' is a score. The free edition shows no
-                    score-derived numbers, so the indicator is omitted. Its SIBLINGS stay: how many
-                    positions a session carries is not a score, and the session table is the point of
-                    this page. Removing the one indicator, not the panel. */}
+                {/* 'Average composite score' was omitted while the free edition existed (removed
+                    2026-10-28) because that edition carried no scores. There is one edition now, so
+                    it renders. Its siblings were never gated: how many positions a session carries
+                    is not a score, and the session table is the point of this page. */}
                 {true && (
                   <div className="mc-indicator" title="Average composite score for symbols in this session's region">
                     <span className="mc-ind-label">Scoring</span>

@@ -149,3 +149,122 @@
    this reason). */
 .bt-delta-up { color: var(--color-profit); }
 .bt-delta-down { color: var(--color-loss); }
+
+/* The all-trades summary above the trade table. Deliberately not a bordered box: it is one line a
+   reader must be able to scan past, and 1,027 rows sit directly beneath it.
+   ⚠️ Profit/loss COLOUR reuses `.bt-green` / `.bt-red` and row tint reuses `.bt-row-win` /
+   `.bt-row-loss` (index.css) — the classes the trades table on the Run step already uses. A second
+   pair of names for the same thing is how two tables start disagreeing about what green means. */
+.bt-trade-summary { margin: 0 0 0.5rem; }
+.bt-trade-summary .pb-info-note { margin: 0; }
+
+/* A collapsed per-bar score table, and the trade table's non-wrapping cells. */
+/* A date/time or short token that must stay on ONE line. Without this a narrow panel breaks
+   `2026-10-20 22:25` across three lines and every row becomes three rows tall (measured 2026-10-29). */
+.bt-nowrap { white-space: nowrap; }
+
+/* ── The trade summary as STAT TILES ──────────────────────────────────────────────────────────────
+   ⚠️ `.mss-stat-*` ARE REUSED, NOT RE-DEFINED (owner direction: *"use existing styling as always"*).
+   They live in `src/pages/meta-stack-status.css`, which the Appearance area already presents as the
+   app's stat library (`/appearance/data-display`, example 2). This file only TIGHTENS the grid for a
+   narrow panel — three columns rather than `auto-fit 160px`, which would stack seven tiles vertically
+   inside an A/B panel and eat the whole screen. */
+.bt-trade-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 8px;
+  margin: 0 0 0.6rem;
+}
+.bt-trade-tiles .mss-stat-card { padding: 10px 8px; }
+.bt-trade-tiles .mss-stat-value { font-size: 1.1rem; letter-spacing: -0.01em; }
+.bt-trade-tiles .mss-stat-label { font-size: 0.7rem; }
+.bt-trade-tiles .mss-stat-sub { font-size: 0.66rem; }
+/* The Σ P&L is a six-figure number routinely (#1142 sizing), so it gets two grid tracks — at one
+   track its own value was clipped mid-digit, which is a number rendered wrong rather than merely
+   tight. */
+.bt-trade-tiles .bt-tile--wide { grid-column: span 2; }
+.bt-trade-tiles .bt-tile--wide .mss-stat-value { font-size: 1.25rem; }
+
+/* ── The Cycle Column (#1150) ─────────────────────────────────────────────────────────────────────
+   One slot that recycles through related facts every 3s. `min-width` stops the column from resizing
+   as the label and values change length, which would make every row twitch on each tick. */
+.bt-cycle-th { min-width: 4.6rem; vertical-align: bottom; }
+.bt-cycle-head { display: inline-flex; align-items: center; gap: 0.25rem; }
+.bt-cycle-label { white-space: nowrap; }
+.bt-cycle-pause {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  border-radius: 4px;
+  font-size: 0.6rem;
+  line-height: 1;
+  padding: 2px 3px;
+  cursor: pointer;
+}
+.bt-cycle-pause:hover { color: var(--accent); border-color: var(--accent); }
+.bt-cycle-pause:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bt-cycle-dots { display: flex; gap: 3px; margin-top: 2px; }
+.bt-cycle-dots > span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--line);
+}
+.bt-cycle-dots > span.is-on { background: var(--accent); }
+.bt-cycle-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* A cycling cell is transient content — the reduced-motion preference must also stop the tick. */
+@media (prefers-reduced-motion: reduce) {
+  .bt-cycle-dots > span { transition: none; }
+}
+
+/* The Accept/accept-baseline bar. Above the facts table, because it was previously the last thing
+   found in a panel full of numbers. */
+.bt-accept-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.55rem;
+  margin: 0 0 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+}
+.bt-panel-btn--primary {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.bt-accept-note { font-size: 0.7rem; color: var(--ink-soft); line-height: 1.4; }
+.bt-fact-value { font-weight: 600; }
+
+.bt-scores-details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0;
+}
+.bt-scores-details > summary::-webkit-details-marker { display: none; }
+.bt-scores-details > summary::before {
+  content: '▸';
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+.bt-scores-details[open] > summary::before { content: '▾'; }
+.bt-scores-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+
+/* The stop screen's "x / population" hint — quiet, so the count reads before its denominator. */
+.bt-sweep-of { color: var(--ink-soft); font-size: 0.66rem; }
+.bt-num-sweep td, .bt-num-sweep th { white-space: nowrap; }
+
+/* A run whose trades crossed bar-series holes. Amber, not red: the prices are real, the DURATIONS are
+   not. It must be visible without competing with a genuine error. */
+.bt-gap-warning {
+  border-left: 3px solid var(--notice-warning-text, var(--ink-soft));
+  padding-left: 0.5rem;
+  color: var(--ink-soft);
+}

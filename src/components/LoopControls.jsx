@@ -5,16 +5,16 @@
  * dashboard … and place them centre."* They came from `<header className="ad-header">` on
  * /automation/automation-dashboard, which is being deleted with the rest of the Automation area.
  *
- * ⚠️ THE PREMIUM GATING IS PRESERVED EXACTLY — do not "tidy" it. §9.14 makes Start / Stop / Run Now
- * PREMIUM-ONLY by decision (O2: the endpoints stay in the BACKEND by design — this is a UI boundary,
- * not a security boundary). Omitting the buttons is NOT enough on its own: the path literals would
- * still ship in the free bundle, where anyone can read them and post to them from a console. So the
- * ternary is written **at the call site** — `import.meta.env.VITE_EDITION` is substituted at build
- * time, so only one branch survives. A helper taking the path as an argument would evaluate it either
- * way and the literal would ship.
+ * ⚠️ THESE BUTTONS WERE PREMIUM-GATED UNTIL 2026-10-28. Start / Stop / Run Now are ordinary
+ * controls now: the free edition is gone (SETTLED-DECISIONS row 96), so every endpoint is real and
+ * the `apiPost('')` no-op branch that used to sit at the call site has been removed.
  *
- * ⚠️ `toggle` and `config` are deliberately NOT gated: the broker switches and the Confirm setting
- * stay in the free edition, so those endpoints are genuinely used there.
+ * ⚠️ THE LESSON UNDER IT STILL APPLIES if a per-build split ever returns: omitting a button is NOT
+ * enough to keep a path out of a build. The literal has to be folded at BUILD time — a helper taking
+ * the path as an argument evaluates both branches, so both strings ship.
+ *
+ * ⚠️ `toggle` and `config` were never gated — the broker switches and the Confirm setting were
+ * available to every build, so those endpoints were always genuinely used. Unchanged.
  *
  * WHY IT IS ITS OWN COMPONENT rather than living inside DashboardPage: the dashboard is a widget
  * board (`WidgetBoard`), which is also used by other boards. Putting automation controls inside that

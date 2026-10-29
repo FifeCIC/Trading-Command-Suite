@@ -6,6 +6,14 @@ import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import ProtocolCarousel from '../components/ProtocolCarousel';
+/**
+ * The trade table — shared by the Run step and both A/B panels (owner direction, 2026-10-29: *"more
+ * trade based and show us profit loss"*). Imported STATICALLY, not lazily like its A/B siblings: it
+ * is one small pure table, and the Run step renders it outside any Suspense boundary, so a lazy
+ * import there would throw on first paint.
+ */
+import TradeTable from '../components/backtest/TradeTable.jsx';
+import StopSweepPanel from '../components/backtest/StopSweepPanel.jsx';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getAssetType } from '../core/asset-types.js';
@@ -756,8 +764,42 @@ ull = follow the latest, which is the default. */
 
   const costProfileKey = COST_PROFILE_FOR_TYPE[symbolClass?.type] ?? 'stock';
   const costProfile = COST_PROFILES[costProfileKey];
+
+  /**
+   * The broker's MEASURED spread for the symbol this run would use (#1148).
+   *
+   * ⚠️ Shown beside the percent because the percent alone misleads — a 0.17-point VIX spread is 0.93%,
+   * a 0.40-point US500 spread is 0.005%, and both are ordinary index CFDs. Fetching it also makes the
+   * page honest about WHICH cost a run will use: the engine prefers this number over the class default.
+   */
+  const brokerSpreadQuery = useQuery({
+    queryKey: ['broker-spread', marketSymbol],
+    queryFn: () => apiGet(`/api/broker-symbols/spread?symbol=${encodeURIComponent(marketSymbol)}`),
+    enabled: Boolean(marketSymbol) && !scoresOnly,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const brokerSpread = brokerSpreadQuery.data ?? null;
+
+  /**
+   * ⚠️ THE COST THAT WILL ACTUALLY BE USED (#1148). The form's `spread` is only what the ENGINE receives
+   * when the operator has edited it (`costsEdited`); otherwise the engine prefers the broker's measured
+   * quote. Showing the fallback as "break-even" while the run silently uses 0.93% instead of 0.02% is the
+   * same displayed-number-≠-used-number defect this page keeps producing — measured 2026-10-29: the step
+   * read "Break-even move 0.10%" beside a broker quote of 0.93%.
+   */
+  const effectiveSpread = useMemo(() => {
+    if (costsEdited) return spread;
+    if (brokerSpread?.spreadPct != null) return brokerSpread.spreadPct / 100;
+    return spread;
+  }, [costsEdited, spread, brokerSpread]);
+  const costSource = costsEdited
+    ? 'custom'
+    : brokerSpread?.spreadPct != null
+      ? 'broker'
+      : 'default';
   /** What the price has to travel before the trade is flat: the whole spread plus slippage each way. */
-  const breakEvenPct = (spread + slippage * 2) * 100;
+  const breakEvenPct = (effectiveSpread + slippage * 2) * 100;
 
   /**
    * HOW MUCH THE ACCOUNT IS COMMITTED PER TRADE, from the maths the engine actually runs.
@@ -1813,12 +1855,46 @@ ull = follow the latest, which is the default. */
               >
                 Use {costProfile.label} defaults
               </button>
-              <p className="bt-class-gloss">{costProfile.note}</p>
+              {/* The class note is a claim about which numbers this run uses. When the broker's own
+                  measured spread takes over, the note is describing a value nothing will read — so it is
+                  labelled rather than left to sit beside a break-even it no longer explains. */}
+              <p className="bt-class-gloss">
+                {costSource === 'broker' ? 'Class default (not used — broker quote wins): ' : ''}
+                {costProfile.note}
+              </p>
               <p className={`bt-class-breakeven ${breakEvenPct > 0.5 ? 'is-high' : ''}`}>
                 Break-even move <strong>{breakEvenPct.toFixed(2)}%</strong> of price — the trade must
-                travel that far before it is flat ({spread * 100}% spread + {slippage * 100}% slippage
+                travel that far before it is flat ({(effectiveSpread * 100).toFixed(3)}% {costSource === 'broker' ? 'broker ' : ''}spread + {slippage * 100}% slippage
                 each way).
               </p>
+              {/*
+                ⚠️ THE PERCENT ALONE MISLEADS (#1148). Measured 2026-10-29: VIX quotes a 0.17-point
+                spread on an 18-point index — 0.93% — while US500 quotes 0.40 points on 7,722 — 0.005%.
+                Reading only the percentage, an operator (and an agent) concluded "VIX is expensive and
+                the broker is bad", when it is 17 ticks of an ordinary index CFD and the percentage is
+                large only because the price is small. Show the broker's own numbers, in ticks, and the
+                one ratio that actually decides whether a target is viable.
+              */}
+              {brokerSpread?.source === 'broker' && (
+                <p className="bt-class-gloss">
+                  <strong>Broker quote:</strong> {brokerSpread.spreadAbs?.toFixed(brokerSpread.tickSize && brokerSpread.tickSize < 0.01 ? 3 : 2)}{' '}
+                  points{brokerSpread.ticks != null ? ` (${brokerSpread.ticks} ticks)` : ''} ={' '}
+                  {brokerSpread.spreadPct?.toFixed(3)}% of price
+                  {brokerSpread.eatsShareOfOnePctMove != null && (
+                    <> — that eats <strong>{(brokerSpread.eatsShareOfOnePctMove * 100).toFixed(0)}%</strong> of a 1% move</>
+                  )}
+                  {`. Measured ${brokerSpread.quotedAt ? new Date(brokerSpread.quotedAt).toLocaleString() : ''}.`}
+                  {(brokerSpread.eatsShareOfOnePctMove ?? 0) > 0.4 && (
+                    <> ⚠️ At this price a 1% target is mostly cost — the bracket needs to be several times wider to be viable.</>
+                  )}
+                </p>
+              )}
+              {brokerSpread && brokerSpread.source === null && (
+                <p className="bt-class-gloss">
+                  No broker quote yet for {marketSymbol || 'this symbol'} — this run uses the class default.
+                  Capture it with <code>POST /api/broker-symbols/spread-sync</code>.
+                </p>
+              )}
             </div>
 
             <div className="bt-execution-grid">
@@ -2173,42 +2249,37 @@ ull = follow the latest, which is the default. */
               persists its TRADES, not its per-signal rows — `formatRunResult()` returns
               `entrySignals: []` — so a table keyed on those rows was structurally dead, while 1,285
               stored trades went unshown. The `caveats` block above states the gap; this shows the
-              population that actually exists. Newest first, last 50. */}
+              population that actually exists.
+
+              ⚠️ THE MARKUP IS NOW THE SHARED `<TradeTable>` (owner direction, 2026-10-29: the same
+              question — *"more trade based, show us profit loss"* — was being answered by TWO
+              hand-written tables in different columns, one here and one in the A/B panels. This page
+              keeps only the heading and the count; the columns, the sort, the P&L colour and the
+              all-trades summary live in `components/backtest/TradeTable.jsx`, so the Run step and the
+              A/B panels cannot drift apart. `limit={25}` here because this is a post-run glance;
+              the A/B panels show 100. */}
           {subject === 'strategy' && result?.trades?.length > 0 && (
             <div className="bt-chart-section">
-              <h3>Trades <span className="bt-measured-bars">· last {Math.min(50, result.trades.length)} of {result.trades.length.toLocaleString()}, newest first</span></h3>
-              <table className="bt-table">
-                <caption className="sr-only">
-                  The trades this run recorded, newest first, with entry and exit price, realised
-                  P&amp;L and why the position closed.
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col" title="When the position was opened.">Entry</th>
-                    <th scope="col" title="Long or short.">Dir</th>
-                    <th scope="col" title="Fill price at entry.">In</th>
-                    <th scope="col" title="Fill price at exit.">Out</th>
-                    <th scope="col" title="Realised profit or loss on the trade, as a percentage of the position.">PnL %</th>
-                    <th scope="col" title="What ended the trade: the stop, the target, or end of the window.">Why</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.trades.slice(-50).reverse().map((t, i) => (
-                    <tr key={`${t.entryDate}-${i}`} className={t.pnlPct > 0 ? 'bt-row-win' : 'bt-row-loss'}>
-                      <td className="pb-mono">{String(t.entryDate).slice(0, 16).replace('T', ' ')}</td>
-                      <td>{t.direction === 'short' ? '▼ short' : '▲ long'}</td>
-                      <td className="pb-mono">{t.entryPrice}</td>
-                      <td className="pb-mono">{t.exitPrice}</td>
-                      <td className={`pb-mono ${t.pnlPct > 0 ? 'bt-green' : 'bt-red'}`}>
-                        {t.pnlPct != null ? `${Number(t.pnlPct).toFixed(2)}%` : '—'}
-                      </td>
-                      <td>{t.exitReason ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <h3>Trades <span className="bt-measured-bars">· {Math.min(25, result.trades.length)} of {result.trades.length.toLocaleString()} shown, newest first</span></h3>
+              <TradeTable trades={result.trades} totals={result.tradeTotals} timeframe={result.timeframe} limit={25} />
             </div>
           )}
+
+          {/* ── STOP SCREEN (2026-10-29) ─────────────────────────────────────────────────────────
+              *"if 70% of positions that dropped into the red by X amount then triggered the SL, that
+              would tell us that we're losing money because the SL is too distant."* The panel is a
+              first-order screen over the excursions this run recorded; it is not a re-simulation and
+              says so in place. Kept OFF the Protocols view: a scores-only run records no trades, so
+              every row would be a zero. */}
+          {subject === 'strategy' && result?.trades?.length > 0 && result?.id && (
+            <div className="bt-chart-section">
+              <h3>Stop screen <span className="bt-measured-bars">· how tight could the stop be?</span></h3>
+              <Suspense fallback={<p className="pb-none">Screening candidate stops…</p>}>
+                <StopSweepPanel runId={result.id} />
+              </Suspense>
+            </div>
+          )}
+
       </div>
         </>
       )}

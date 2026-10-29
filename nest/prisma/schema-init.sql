@@ -285,6 +285,10 @@ CREATE TABLE `BacktestTrade` (
     `takeProfit` DOUBLE NULL,
     `positionSize` DOUBLE NULL,
     `commission` DOUBLE NULL,
+    `maxAdversePct` DOUBLE NULL,
+    `maxFavourablePct` DOUBLE NULL,
+    `barsHeld` INTEGER NULL,
+    `spansGap` BOOLEAN NULL,
 
     INDEX `BacktestTrade_runId_idx`(`runId`),
     INDEX `BacktestTrade_symbolId_idx`(`symbolId`),
@@ -2298,6 +2302,7 @@ CREATE TABLE `broker_symbol` (
     `volumeMax` DOUBLE NULL,
     `registered` BOOLEAN NOT NULL DEFAULT false,
     `spreadPct` DOUBLE NULL,
+    `spreadAbs` DOUBLE NULL,
     `spreadQuotedAt` DATETIME(3) NULL,
     `firstSeenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `lastSeenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),

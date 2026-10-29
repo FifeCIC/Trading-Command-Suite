@@ -1,11 +1,21 @@
 # Trading Command Suite
 
 ![Status](https://img.shields.io/badge/status-alpha-orange)
-![License](https://img.shields.io/badge/license-GPL--3.0-blue)
+![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 **Algorithmic trading & portfolio management platform.** Multi-broker, multi-session scoring engine with protocol-gated directive pipelines, automation loop, and decision-trail audit chain.
 
 Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanBayne)
+
+**Licensed under [AGPL-3.0](LICENSE).** Copyright (C) 2026 Ryan Bayne / FifeCIC.
+
+This is an open-source project and you get the full benefit of it — use it, run it, read it, fork it,
+and contribute to it. ⚠️ The AGPL's network clause means that if you run a **modified** version as a
+service, you must publish your changes. That is deliberate: improvements come back to everyone
+instead of being resold as a closed product.
+
+Contributions and ideas are welcome. ⚠️ The project is engineered and maintained by one person, so
+reviews and replies may take time — that is the honest trade for a codebase this size.
 
 ---
 

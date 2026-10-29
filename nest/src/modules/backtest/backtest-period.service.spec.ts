@@ -24,6 +24,20 @@
  * directions when written (see the issue comment for the observed failures).
  */
 import { BacktestPeriodService, summariseImport } from './backtest-period.service';
+
+/**
+ * The health standard the service now reads. Stubbed at the DECLARED DEFAULTS
+ * (`backtest.periodMinCoveragePct` 90, `backtest.periodMaxHoleMinutes` 120) so a spec exercises the
+ * same rule the app runs, rather than a number invented in the test.
+ */
+const settingsStub = (over = {}) => ({
+  get: async (key) => ({
+    'backtest.periodMinCoveragePct': 90,
+    'backtest.periodMaxHoleMinutes': 120,
+    ...over,
+  }[key]),
+});
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 // ── Pure arithmetic: the idempotency claim, testable with no database ────────────────────────
@@ -193,7 +207,7 @@ function barsFor(count: number, start = '2026-03-11T00:00:00Z') {
 describe('BacktestPeriodService.create — a window that says why it mattered (#986)', () => {
   it('stores name, note, symbol, timeframe and both ends', async () => {
     const prisma = mockPrisma({ period: PERIOD, symbol: SYMBOL });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
 
     const out: any = await svc.create({
       name: '  Greenland Mining surge  ',
@@ -216,7 +230,7 @@ describe('BacktestPeriodService.create — a window that says why it mattered (#
 
   it('refuses a blank name — the name is how the window is found again', async () => {
     const prisma = mockPrisma({ period: PERIOD, symbol: SYMBOL });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
     await expect(
       svc.create({ name: '   ', symbol: 'GML', timeframe: '5m', from: '2026-03-11', to: '2026-03-13' }),
     ).rejects.toThrow(BadRequestException);
@@ -224,7 +238,7 @@ describe('BacktestPeriodService.create — a window that says why it mattered (#
 
   it('refuses an inverted window rather than storing a negative span', async () => {
     const prisma = mockPrisma({ period: PERIOD, symbol: SYMBOL });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
     await expect(
       svc.create({
         name: 'backwards', symbol: 'GML', timeframe: '5m',
@@ -235,7 +249,7 @@ describe('BacktestPeriodService.create — a window that says why it mattered (#
 
   it('refuses an unparseable date instead of letting Date guess', async () => {
     const prisma = mockPrisma({ period: PERIOD, symbol: SYMBOL });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
     await expect(
       svc.create({ name: 'x', symbol: 'GML', timeframe: '5m', from: 'last tuesday', to: '2026-03-13' }),
     ).rejects.toThrow(/not a valid date/);
@@ -243,7 +257,7 @@ describe('BacktestPeriodService.create — a window that says why it mattered (#
 
   it('REGISTERS an unknown ticker and reports that it did', async () => {
     const prisma = mockPrisma({ period: PERIOD, symbol: null });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
 
     const out: any = await svc.create({
       name: 'GML surge', symbol: 'GML', timeframe: '5m',
@@ -260,7 +274,7 @@ describe('BacktestPeriodService.create — a window that says why it mattered (#
 
   it('can be told NOT to register, and then refuses — no silent symbol creation', async () => {
     const prisma = mockPrisma({ period: PERIOD, symbol: null });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
     await expect(
       svc.create({
         name: 'x', symbol: 'NOPE', timeframe: '5m',
@@ -280,7 +294,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
     const adapters = mockAdapters({
       yahoo: { id: 'yahoo', getCandlesRange: async () => barsFor(576) },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -298,7 +312,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
     const adapters = mockAdapters({
       yahoo: { id: 'yahoo', getCandlesRange: async () => barsFor(576) },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const first = await svc.importBars('per-1');
     const second = await svc.importBars('per-1');
@@ -318,7 +332,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
     const adapters = mockAdapters({
       yahoo: { id: 'yahoo', getCandlesRange: async () => [] },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -334,7 +348,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
       // `null` = could not answer. That is NOT `[]` = answered, found nothing.
       yahoo: { id: 'yahoo', getCandlesRange: async () => null },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -357,7 +371,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
     const adapters = mockAdapters({
       yahoo: { id: 'yahoo', getCandlesRange: async () => null },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -376,7 +390,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
     // A limit-based adapter — implementing getCandles only, which walks BACK from the newest bar.
     const limitOnly = { id: 'mt5', getCandles: jest.fn(async () => barsFor(10)) } as any;
     const adapters = mockAdapters({ yahoo: null, mt5: limitOnly });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -393,7 +407,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
       // Only the second half of the requested 2-day window came back — the silent case.
       yahoo: { id: 'yahoo', getCandlesRange: async () => barsFor(288, '2026-03-12T00:00:00Z') },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -409,7 +423,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
       yahoo: { id: 'yahoo', getCandlesRange: async () => null },
       mt5: { id: 'mt5', getCandlesRange: async () => barsFor(100) },
     });
-    const svc = new BacktestPeriodService(prisma, adapters);
+    const svc = new BacktestPeriodService(prisma, adapters, settingsStub());
 
     const out = await svc.importBars('per-1');
 
@@ -420,7 +434,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
 
   it('refuses a period id that does not resolve instead of importing nothing quietly', async () => {
     const prisma = mockPrisma({ period: null, symbol: SYMBOL });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
     await expect(svc.importBars('missing')).rejects.toThrow(NotFoundException);
   });
 });
@@ -430,7 +444,7 @@ describe('BacktestPeriodService.importBars — three outcomes, never one (#986)'
 describe('BacktestPeriodService.remove — a measured window is not a draft (#986)', () => {
   it('REFUSES to delete a period that runs reference, and names the count', async () => {
     const prisma = mockPrisma({ period: { ...PERIOD }, symbol: SYMBOL, runsUsingPeriod: 4 });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
 
     await expect(svc.remove('per-1')).rejects.toThrow(/4 backtest run/);
     expect(prisma.backtestPeriod.delete).not.toHaveBeenCalled();
@@ -438,7 +452,7 @@ describe('BacktestPeriodService.remove — a measured window is not a draft (#98
 
   it('unlinks the runs when told to, rather than deleting the measurements', async () => {
     const prisma = mockPrisma({ period: { ...PERIOD }, symbol: SYMBOL, runsUsingPeriod: 4 });
-    const svc = new BacktestPeriodService(prisma, mockAdapters({}));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
 
     const out = await svc.remove('per-1', { cascade: true });
 

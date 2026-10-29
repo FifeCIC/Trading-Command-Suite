@@ -45,8 +45,9 @@ export default function RecentlyAnalysedSymbolsPage() {
         <div>
           <h1>Recently Analysed Symbols
           <PageInfoPopover>
-            {/* §9.14.1 — 'SEES' is the scoring engine's name and the free edition does not carry the
-                method's vocabulary. Conditional, so the full edition keeps its own term. */}
+            {/* 'SEES' is the scoring engine's own name. The free edition (removed 2026-10-28)
+                avoided it to keep the method's vocabulary out of that build; one edition now, so the
+                real term is used. */}
             Symbols most recently scored by the{' '}
             {'SEES pipeline'}
             {' '}— ordered by analysis time

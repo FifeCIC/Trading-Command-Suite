@@ -1,5 +1,6 @@
 import { BadRequestException, Controller, Get, Post, Query } from '@nestjs/common';
 import { BrokerSymbolDiscoveryService } from './broker-symbol-discovery.service';
+import { spreadGeometry } from './spread-geometry';
 import { PrismaService } from '../../database/prisma.service';
 
 /**
@@ -147,6 +148,69 @@ export class BrokerSymbolsController {
         spreadPct: r.spreadPct,
         quotedAt: r.spreadQuotedAt?.toISOString?.() ?? null,
       })),
+    };
+  }
+
+  /**
+   * `GET /api/broker-symbols/spread?symbol=VIX` — the broker's measured cost for ONE symbol, in the
+   * units a human can reason about (#1148).
+   *
+   * ⚠️ IT RETURNS POINTS **AND** PERCENT ON PURPOSE. Measured 2026-10-29: VIX quotes 0.17 points on an
+   * 18-point index — **0.93%** — while US500 quotes 0.40 points on 7,722 — **0.005%**. Given only the
+   * percent, both a reader and an agent concluded "VIX is expensive / the broker is bad"; the spread is
+   * 17 ticks of an ordinary index CFD and the percentage is large only because the price is small.
+   * `spreadToTargetRatio` is the number that actually decides anything: how much of a 1% move the spread
+   * eats.
+   *
+   * `source` says where the value came from — `'broker'` when a quote was captured, `null` when nothing
+   * has been measured for this symbol (never a fabricated zero).
+   */
+  @Get('spread')
+  async spread(@Query('symbol') symbol?: string) {
+    if (!symbol) throw new BadRequestException('symbol is required');
+    const ticker = String(symbol).toUpperCase();
+    const routes = await (this.prisma as any).symbolRoute.findMany({
+      where: { symbol: ticker, enabled: true, provider: 'mt5' },
+      select: { brokerId: true, brokerSymbol: true },
+      orderBy: { brokerId: 'asc' },
+    });
+    for (const r of routes as Array<Record<string, unknown>>) {
+      const venue = Number(r.brokerId);
+      const nativeName = typeof r.brokerSymbol === 'string' && r.brokerSymbol ? r.brokerSymbol : ticker;
+      const row = await (this.prisma as any).brokerSymbol.findFirst({
+        where: { brokerId: venue, name: nativeName, spreadPct: { not: null } },
+        select: { name: true, digits: true, spreadPct: true, spreadAbs: true, spreadQuotedAt: true },
+      });
+      if (!row) continue;
+      const { tickSize, ticks, eatsShareOfOnePctMove } = spreadGeometry({
+        spreadPct: row.spreadPct,
+        spreadAbs: row.spreadAbs,
+        digits: row.digits,
+      });
+      return {
+        symbol: ticker,
+        brokerId: venue,
+        brokerSymbol: row.name,
+        source: 'broker',
+        spreadPct: row.spreadPct,
+        spreadAbs: row.spreadAbs,
+        tickSize,
+        ticks,
+        /** FRACTION of a 1% move eaten by the spread — 0.93 means a 1% target is almost entirely cost. */
+        eatsShareOfOnePctMove,
+        quotedAt: row.spreadQuotedAt?.toISOString?.() ?? null,
+      };
+    }
+    return {
+      symbol: ticker,
+      source: null,
+      spreadPct: null,
+      spreadAbs: null,
+      tickSize: null,
+      ticks: null,
+      eatsShareOfOnePctMove: null,
+      quotedAt: null,
+      note: 'No spread has been measured for this symbol — the backtest uses the asset-class default. POST /api/broker-symbols/spread-sync to capture it.',
     };
   }
 

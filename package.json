@@ -1,8 +1,8 @@
 {
   "name": "tradingcs",
-  "version": "0.143.0",
+  "version": "0.144.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
     "audit:theme-contrast": "node scripts/audit-theme-contrast.cjs",

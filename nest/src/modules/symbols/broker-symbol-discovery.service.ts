@@ -272,7 +272,10 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
       const spreadPct = ((ask - bid) / mid) * 100;
       await (this.prisma as any).brokerSymbol.updateMany({
         where: { brokerId, name },
-        data: { spreadPct, spreadQuotedAt: new Date() },
+        // ⚠️ BOTH forms are stored. The percent alone is what made a 17-tick VIX spread read as
+        // "expensive": 0.17 points on an 18-point index is 0.93%, while 0.40 points on US500 is 0.005%.
+        // A reader given only the percent cannot tell a wide venue from a low-priced instrument.
+        data: { spreadPct, spreadAbs: ask - bid, spreadQuotedAt: new Date() },
       });
       written += 1;
     }

@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
+import { sessionAwareGapProfile, periodHealth, PeriodHealth, PeriodStandard, timeframeMinutes } from './score-maths';
 
 /**
  * BacktestPeriodService — a WINDOW a human remembers by its story, not its dates. (#986)
@@ -111,6 +113,12 @@ export interface PeriodCoverage {
   /** True when `barCount > 0` and the window's own ends are not covered. */
   truncatedStart: boolean;
   truncatedEnd: boolean;
+  /**
+   * The VERDICT (2026-10-29). A bar COUNT cannot say whether a window is measurable — the VIX dev
+   * window held 7,662 bars while covering 63.9% of its span with a 111-hour hole in the middle.
+   * `status: 'unusable'` is a REFUSAL, and `BacktestService.run()` enforces it.
+   */
+  health: PeriodHealth;
 }
 
 /**
@@ -144,6 +152,7 @@ export class BacktestPeriodService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adapters: AdapterFactory,
+    private readonly settings: SettingsResolverService,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────────────────────
@@ -529,11 +538,17 @@ export class BacktestPeriodService {
   }
 
   /**
-   * What is ACTUALLY in `MarketBar` for this window right now.
+   * What is ACTUALLY in `MarketBar` for this window right now, AND whether that makes it usable.
    *
    * ⚠️ Read from the bars, not from the stored `barCount`. The stored figure is a claim made by a
    * previous import; this is what the table holds. When they disagree, that disagreement is the
    * finding — and it is surfaced rather than overwritten.
+   *
+   * ⚠️ `health` (2026-10-29) IS THE POINT OF THE CALL, not a decoration. Owner direction: *"we should
+   * consider some standard requirements to deem a period healthy/complete enough to use at all …
+   * until then we should be strict."* A bar count alone cannot say whether the window is measurable —
+   * the VIX dev window held a plausible 7,662 bars while covering 63.9% of its span with a 111-hour
+   * hole in the middle. `health.status === 'unusable'` is a REFUSAL, and `run()` enforces it.
    */
   async coverage(periodId: string): Promise<PeriodCoverage> {
     const period = await this.prisma.backtestPeriod.findUnique({ where: { id: periodId } });
@@ -546,12 +561,25 @@ export class BacktestPeriodService {
       timestamp: { gte: period.fromDate, lte: period.toDate },
     };
 
-    const [barCount, first, last, providerRows] = await Promise.all([
+    const [barCount, timestamps, first, last, providerRows] = await Promise.all([
+      // ⚠️ KEPT AS A COUNT, SEPARATE FROM THE TIMESTAMP READ, because `barCount` has a stated meaning —
+      // "bars present in MarketBar for this window" — and a spec already depends on that meaning. The
+      // timestamp list below is for the GAP PROFILE only; deriving `barCount` from its length would
+      // make the two answers one, and the moment a caller's mock or a capped read returns fewer rows the
+      // count would silently shrink.
       this.prisma.marketBar.count({ where }),
+      // Whole-row timestamps rather than a count: the gap profile needs the ORDER, and a count cannot
+      // say where the holes are. 5m over a few months is ~10-20k rows, which is a cheap read.
+      this.prisma.marketBar.findMany({ where, orderBy: { timestamp: 'asc' }, select: { timestamp: true } }),
       this.prisma.marketBar.findFirst({ where, orderBy: { timestamp: 'asc' }, select: { timestamp: true } }),
       this.prisma.marketBar.findFirst({ where, orderBy: { timestamp: 'desc' }, select: { timestamp: true } }),
       this.prisma.marketBar.findMany({ where, distinct: ['provider'], select: { provider: true } }),
     ]);
+
+    const profile = sessionAwareGapProfile(
+      timestamps.map((t) => t.timestamp),
+      timeframeMinutes(period.timeframe),
+    );
 
     return {
       periodId,
@@ -578,7 +606,20 @@ export class BacktestPeriodService {
       truncatedEnd:
         barCount > 0 &&
         period.toDate.getTime() - (last?.timestamp.getTime() ?? 0) > 3_600_000,
+      health: periodHealth(profile, await this.periodStandard()),
     };
+  }
+
+  /**
+   * The health standard IN FORCE, read from settings so the rule that produced a verdict is never a
+   * constant buried in a service. See `backtest.periodMinCoveragePct` / `.periodMaxHoleMinutes`.
+   */
+  async periodStandard(): Promise<PeriodStandard> {
+    const [minCoveragePct, maxHoleMinutes] = await Promise.all([
+      this.settings.get<number>('backtest.periodMinCoveragePct'),
+      this.settings.get<number>('backtest.periodMaxHoleMinutes'),
+    ]);
+    return { minCoveragePct: Number(minCoveragePct), maxHoleMinutes: Number(maxHoleMinutes) };
   }
 
   // ── Update / delete ───────────────────────────────────────────────────────────────────────

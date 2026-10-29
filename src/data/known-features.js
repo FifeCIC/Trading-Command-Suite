@@ -528,7 +528,7 @@ export const KNOWN_FEATURES = {
     'Bot Trade-Lifecycle Diagram': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Bot Realised Record (with n)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
     'Per-bot capital allowance': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
-    'Free edition': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+
     'Backtest comparison with a sample bar': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
     'Bot-driven backtest + like-for-like pairs': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
     'Decision-Row Consumer Marker': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'both', devCompletion: 'complete' },

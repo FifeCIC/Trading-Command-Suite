@@ -469,6 +469,26 @@ model BacktestTrade {
     // Execution realism (#50)
     positionSize Float?  // number of shares/contracts
     commission   Float?  // commission deducted ($)
+    // ── EXCURSION (2026-10-29) ──────────────────────────────────────────────────────────────────
+    // How far the position went AGAINST and IN FAVOUR of the entry before it resolved, as absolute
+    // percentages of the entry price (always >= 0). This is the data a "is the stop too distant"
+    // question needs and could not be answered without: `pnlPct` only says where a trade ENDED.
+    //
+    // ⚠️ NULLABLE, AND NULL MEANS "NOT RECORDED" — never 0. The 34,313 trades stored before this
+    // column existed were never measured, and rendering them as a zero excursion would claim every
+    // one touched its entry exactly, which is the opposite of the truth.
+    maxAdversePct   Float? // worst excursion against the position
+    maxFavourablePct Float? // best excursion in the position's favour
+    // Bars walked from entry to exit — the denominator a "how long did it take" question needs.
+    barsHeld     Int?
+    // ── DATA GAP (2026-10-29) ───────────────────────────────────────────────────────────────────
+    // TRUE when the trade's life crossed a hole in the bar series longer than one hour — the PC was
+    // off, the bridge was down, or the feed stopped. ⚠️ THE BRACKET WAS NOT MONITORED ACROSS THAT
+    // HOLE, so the recorded exit price is the first price that came back, not the level that would
+    // have fired. Measured 2026-10-29: 464 of 1,027 VIX trades (45.2%) crossed a gap > 1h, and the
+    // longest hole in that window was 111.3 hours. Those trades are contamination, and a run must be
+    // able to say how many it has.
+    spansGap     Boolean?
 
   run    BacktestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
@@ -2967,6 +2987,11 @@ model StrategyRegistry {
   // ⚠️ NULL = NEVER MEASURED, and 0 = measured zero (the demo feed genuinely reports bid == ask on FX).
   // Collapsing the two would make an unmeasured symbol look like a perfect fill.
   spreadPct      Float?
+  /// ⚠️ The SAME spread in PRICE units (ask − bid). Percent alone is misleading: VIX quotes 0.17 points on
+  /// an 18-point index = 0.93%, while US500 quotes 0.40 points on 7,722 = 0.005%. Two readers given only
+  /// the percent will call VIX "expensive" and the broker "bad", when the spread is 17 ticks of a normal
+  /// index CFD. Store both so the arithmetic can be shown rather than inferred.
+  spreadAbs      Float?
   spreadQuotedAt DateTime?
     firstSeenAt DateTime @default(now()) @db.DateTime(3)
     /// ⚠️ The staleness field. A symbol absent from the latest SUCCESSFUL sync carries a

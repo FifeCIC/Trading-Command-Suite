@@ -54,17 +54,17 @@ import { useHiddenViews } from './core/hooks/useHiddenViews.js';
 // EditionNotice removed 2026-10-28 with the free edition (FREE-EDITION-PLAN.md is superseded).
 
 /**
- * Compile-time "the FULL edition" flag (§9.14 strip pass).
+ * `FULL_EDITION_ONLY` — vestigial, kept only so the call site at the bottom reads unchanged.
  *
- * ⚠️ WHY THE VITE DEFINE AND NOT `editionAllowsKey()`.
- * Both answer "may this be offered?", but only ONE of them removes the premium route path from the
- * shipped JavaScript. `editionAllowsKey()` is a runtime question, so the path literal stays in the
- * bundle and the free-build guard reports it as a leak — correctly, because the free artefact is
- * readable. `import.meta.env.VITE_EDITION` is substituted at build time, so `"free" !== "free"`
- * folds to `false` and the whole guarded block is dropped by the minifier.
+ * ⚠️ THERE IS ONE EDITION NOW. The free edition was removed 2026-10-28 (SETTLED-DECISIONS row 96),
+ * so this is always `true` and the block it guards always renders. Simplify it when that block is
+ * next touched.
  *
- * Measured 2026-09-25: 20 premium route paths were reaching the free bundle, 9 of them the legacy
- * redirects below. See `FREE-EDITION-PLAN.md` §9.14.
+ * ⚠️ THE REASONING THAT WAS HERE IS WORTH KEEPING IF A PER-BUILD SPLIT EVER RETURNS. This flag used
+ * to be `import.meta.env.VITE_EDITION !== 'free'`, and the reason it was a BUILD-TIME define rather
+ * than a runtime helper is that only the define removes the literal from the shipped JavaScript: a
+ * runtime "may this be offered?" check leaves the route path readable in the bundle. Measured
+ * 2026-09-25, 20 route paths were reaching a free artefact before that was fixed.
  */
 // There is ONE edition now — the free edition was removed 2026-10-28. Kept as a named constant
 // so the call site at the bottom reads unchanged; simplify it whenever that block is next touched.

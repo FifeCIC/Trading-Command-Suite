@@ -3,16 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useUiStore } from '../stores/useUiStore';
 
 /**
- * ⚠️ §9.14 — 'Speed Trading' is a PREMIUM screen, so in the free build its shortcuts must not be
- * listed AND the name must not reach the shipped JS.
+ * ⚠️ `FREE_EDITION` is VESTIGIAL — always false. The free edition was removed 2026-10-28
+ * (SETTLED-DECISIONS row 96); the constant is kept only so the call sites below read unchanged.
  *
- * The flag is read straight from the Vite define rather than via `editionAllowsKey()`: both answer
- * "may this appear?", but only a build-time constant lets the bundler FOLD the premium branch away.
- * A runtime check would leave 'Speed Trading' in the free bundle, which is the leak the guard tests
- * for and fails the release on.
+ * THE REASONING WORTH KEEPING if a per-build split ever returns: such a flag must be a BUILD-TIME
+ * constant, not a runtime check, so that the excluded name is folded out of the artefact instead of
+ * being shipped inside it.
  */
-// The free edition was removed 2026-10-28 (SETTLED-DECISIONS row 96). Kept as a named constant,
-// always false, so the call sites below read unchanged.
 const FREE_EDITION = false;
 
 /** Context for the market-order keys — the screen they work on, less the premium one in free. */

@@ -291,10 +291,10 @@ function BrokerConfigSection() {
                 value={!!bs.enabled}
                 onChange={(next) => toggle.mutate({ target: brokerId, enabled: next })}
               />
-              {/* ⚠️ §9.14 — switching a broker's Trading flag ON is "start the trading bot" FOR THAT
-                  BROKER, so the CONTROL is premium-only, gated by ABSENCE rather than disabled. Its
-                  endpoint is deliberately not gated: Threshold and Confirm below use the same one in
-                  the free edition. */}
+              {/* Switching a broker's Trading flag ON is "start the trading bot" FOR THAT BROKER.
+                  It was premium-only while the free edition existed (removed 2026-10-28). Its
+                  endpoint was always shared with Threshold and Confirm below, so the gate was a UI
+                  boundary only — and there is no boundary now. */}
               {bs.enabled && (
                 <>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem' }}>

@@ -8,6 +8,7 @@ import {
 } from './score-maths';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
+import { stopSweep } from './score-maths';
 import { BacktestPeriodService } from './backtest-period.service';
 import type { CreatePeriodInput } from './backtest-period.service';
 import { buildSettingsInventory } from './settings-inventory';
@@ -129,6 +130,52 @@ export class BacktestController {
    * shape was also wrong (a bare array), so every call that DID fire returned 400. Both failures were
    * silent placeholders on screen. A caller should be able to ask for one window's measurement.
    */
+  /**
+   * ── STOP SWEEP (2026-10-29) ─────────────────────────────────────────────────────────────────────
+   * *"is the stop too distant?"* answered from the excursions a run recorded. Returns one row per
+   * candidate stop distance; see `score-maths.stopSweep` for what each column means and — importantly —
+   * for the two ways this is NOT a re-simulation.
+   *
+   * ⚠️ IT IS AN ENDPOINT AND NOT A PANEL CALCULATION. A sweep is arithmetic a reader must be able to
+   * reach without a browser (the tuning loop this repo is built around), and `src/core/backtest-totals.js`
+   * forbids a second implementation in the client. The panel POSTs here.
+   */
+  @Post('stop-sweep')
+  @ApiOperation({ summary: 'Screen candidate stop distances against a stored run’s recorded excursions' })
+  async stopSweep(@Body() body: { runId?: string; candidates?: unknown }) {
+    if (!body?.runId) throw new BadRequestException('runId is required');
+    const asked = Array.isArray(body.candidates) ? body.candidates.map(Number) : [];
+    const candidates = asked.length
+      ? asked
+      : [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5];
+    if (candidates.length > 20) throw new BadRequestException('at most 20 candidate stops per sweep');
+    if (candidates.some((c) => !Number.isFinite(c) || c <= 0)) {
+      throw new BadRequestException('every candidate stop must be a positive percentage of price');
+    }
+
+    const run = await this.backtestService.getResult(body.runId);
+    if (!run) throw new NotFoundException(`Run ${body.runId} does not exist`);
+
+    const trades = run.trades ?? [];
+    const withExcursion = trades.filter((t) => t.maxAdversePct != null);
+    return {
+      runId: body.runId,
+      /** Trades the screen could use. */
+      measured: withExcursion.length,
+      /** Trades with no excursion — a run made before 2026-10-29. NOT a zero, an absence. */
+      unmeasured: trades.length - withExcursion.length,
+      rows: stopSweep(trades, candidates),
+      /**
+       * Said in the payload so a reader cannot mistake the net column for a measurement: the screen
+       * assumes a tighter stop changes ONLY the trades whose excursion reached it.
+       */
+      basis:
+        'first-order screen — for each candidate it asks which trades’ recorded adverse excursion would have '
+        + 'fired it, and what those trades would then have realised at −candidate. It cannot see the path a '
+        + 'surviving trade took. Use a re-run with `stopPlan` for the exact answer.',
+    };
+  }
+
   @Post('repeat-check')
   @ApiOperation({ summary: 'Measure an A→B change on one or more windows, and say whether it repeats' })
   async repeatCheck(

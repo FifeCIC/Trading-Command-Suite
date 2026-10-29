@@ -618,10 +618,11 @@ export default function SymbolPage() {
         transition={{ delay: 0.02 }}
         aria-label={`Key figures for ${symbol}`}
       >
-      {/* ⚠️ §9.14 / D5=A — this tile is a raw COMPOSITE, i.e. a score. The free edition does not show
-          score-derived numbers, and this page is on the plan's ``score history stripped'' list. The
-          whole tile goes rather than being blanked: a tile reading “—” still reserves space and
-          still tells a reader a number belongs there. Flag folds at build time (Vite define). */}
+      {/* This tile is a raw COMPOSITE, i.e. a score. It was hidden while the free edition existed
+          (removed 2026-10-28) because that edition carried no scores; it renders now.
+          ⚠️ KEEP THE REASONING IF A SPLIT EVER RETURNS: the whole tile was removed rather than
+          blanked, because a tile reading “—” still reserves space and still tells a reader a number
+          belongs there. */}
       {true && (
         <StatTile
           label="Best reading"

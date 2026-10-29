@@ -152,8 +152,9 @@ export default function ProtocolQueuePage() {
                 <div className="eq-job-results">
                   {job.result.results.slice(0, 5).map((r, j) => (
                     <span key={j} className={`eq-result-chip eq-result-${r.signal?.toLowerCase()}`}>
-                      {/* ⚠️ §9.14 / D5=A — the composite is a score, so the free edition drops the
-                          NUMBER and keeps the chip's other two facts (symbol and direction). */}
+                      {/* The composite is a score. The free edition (removed 2026-10-28) dropped the
+                          NUMBER and kept the chip's other two facts — symbol and direction. One
+                          edition now, so the number shows. */}
                       {r.symbol}
                       {true && <>: {r.composite?.toFixed(0)}</>}{' '}
                       {r.signal}

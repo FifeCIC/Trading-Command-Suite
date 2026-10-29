@@ -1,6 +1,42 @@
 # Trading Command Suite — Setup Guide
 
-Get the full stack running locally in under 10 minutes.
+> ## ⚠️ Read this first — what you are actually installing
+>
+> **This is a SOURCE install, not an application package.** There is no installer, no `setup.exe` and
+> no one-click download. You clone the repository and run the stack yourself. Packaging is planned,
+> not built — tracked in issue **#1147**.
+>
+> ### Platform requirements, stated plainly
+>
+> | Requirement | Why it is needed | What you get without it |
+> |---|---|---|
+> | **Windows** | the MT5 bridge is a Python process that drives the MetaTrader 5 terminal | Linux/macOS can run the web app and the API, but **not** the bridge |
+> | **MetaTrader 5**, installed with a broker account (demo is fine) | it is where prices and orders come from | the UI, database and analysis work; **no market data and no trading** |
+> | **MySQL 8+** | every table the app uses | nothing persists |
+> | **Node.js 18+** | Vite front end and NestJS API | nothing runs |
+>
+> ⚠️ **There is no sample or demo data.** The app reads live provider data through the bridge. A fresh
+> install with no broker connected shows an empty application — deliberately. This project does not
+> ship fabricated numbers to make a screenshot look full.
+>
+> ### ⛔ NEVER run `prisma db push` in this repository
+>
+> `schema.prisma` is **not** the complete schema. Several tables are managed outside Prisma — the
+> trade execution queue among them — so `db push` treats them as unknown and **drops them, with your
+> data still in them.** It does not error; it warns and waits for a `y`.
+>
+> Create tables with the SQL under `nest/prisma/`, then run `npx prisma generate` (types only).
+> Not sure? Run `npm --prefix nest run db:check` first — it is read-only and names any table that
+> exists in the database but not in the schema.
+>
+> ### Time and what to prepare
+>
+> - **~10 minutes** for the web app and the API.
+> - **Considerably longer** for MetaTrader 5: install the terminal, open a broker account (demo is
+>   fine), and log in once by hand so the terminal is configured. Note the **account number** and
+>   **server name** — the bridge needs both.
+
+Get the web app and API running locally in about 10 minutes. Getting live market data and trading working needs MetaTrader 5 as well — budget considerably longer for that.
 
 ---
 
@@ -21,7 +57,7 @@ Get the full stack running locally in under 10 minutes.
 ## 1. Clone & Install
 
 ```bash
-git clone <repo-url> trading-command-suite
+git clone https://github.com/FifeCIC/trading-command-suite.git
 cd trading-command-suite
 ```
 

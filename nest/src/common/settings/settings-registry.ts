@@ -85,6 +85,62 @@ export interface SettingDefinition {
  * `docs-facts.cjs` sorts — a check that compares rendered output cannot tolerate ordering wobble).
  */
 export const SETTINGS: SettingDefinition[] = [
+  // ── Backtest period health (2026-10-29) ────────────────────────────────────
+  // ⚠️ THESE ARE THE ARGUMENTS THAT DECIDE WHETHER A WINDOW IS USABLE AT ALL, so they are settings
+  // rather than constants in the engine — the owner's standing requirement is that no decision lives
+  // only in code. Owner direction: *"we should consider some standard requirements to deem a period
+  // healthy/complete enough to use at all … until then we should be strict."*
+  //
+  // WHY THEY EXIST: measured on the `dev-window-v1` VIX 5m window on 2026-10-29, the bar series covered
+  // only **63.9%** of the wall-clock span, had 25 holes longer than an hour (longest **111.3 hours**),
+  // and **45.2% of trades crossed one**. Across a hole the engine sees no bar, so the stop and target
+  // are not monitored and the exit lands on the first price that comes back.
+  {
+    key: 'backtest.periodMinCoveragePct',
+    type: 'number',
+    defaultValue: 90,
+    class: 'runtime',
+    owner: 'backtest',
+    label: 'Period — minimum bar coverage %',
+    description:
+      'A backtest period whose bars cover less than this share of its own declared span is UNUSABLE. '
+      + 'Coverage is bars present against the bars the span would hold at the timeframe. Raise it to be '
+      + 'stricter; lowering it lets a gappy window be measured.',
+    userChangeable: true,
+    min: 0,
+    max: 100,
+  },
+  {
+    key: 'backtest.periodMaxHoleMinutes',
+    type: 'number',
+    defaultValue: 120,
+    class: 'runtime',
+    owner: 'backtest',
+    label: 'Period — longest tolerated hole (minutes)',
+    description:
+      'A single hole in the bar series longer than this makes the period UNUSABLE, whatever its overall '
+      + 'coverage. A hole is not a gap in the calendar — it is time during which a position would not have '
+      + 'been monitored at all. 120 minutes tolerates a lunch break on a 5m timeframe and refuses an overnight '
+      + 'outage.',
+    userChangeable: true,
+    min: 0,
+    max: 20160,
+  },
+  {
+    key: 'backtest.runMaxGapTradeSharePct',
+    type: 'number',
+    defaultValue: 10,
+    class: 'runtime',
+    owner: 'backtest',
+    label: 'Run — max share of trades spanning a hole %',
+    description:
+      'A completed run in which more than this share of trades crossed a bar-series hole is marked '
+      + 'CONTAMINATED: its prices are real but its hold times and exit reasons are not. The run is still '
+      + 'stored and still readable — it is labelled, never silently discarded.',
+    userChangeable: true,
+    min: 0,
+    max: 100,
+  },
   // ── Trading risk caps ──────────────────────────────────────────────────────
   // Migrated out of `process.env` on 2026-09-17 (#849). The declared defaults are deliberately the
   // values the .env held on that date (MT5_MAX_POSITION_SIZE=1.0, MT5_MAX_OPEN_POSITIONS=5,

@@ -64,10 +64,11 @@ function HealthChecksSection() {
     portStatus: 'Port Status Check',
   };
 
-  // ⚠️ §9.14 — 'Health & Diagnostics' is a PREMIUM view, and this section is its settings page.
-  // The guard is the Vite define, not a runtime check: `"free" !== "free"` folds to `false`, so the
-  // minifier drops the whole element and neither the title nor the href reaches the free bundle.
-  // `editionAllowsKey()` would answer the same question at runtime and still ship both strings.
+  // 'Health & Diagnostics' was a premium-only view, so this settings section was gated while the
+  // free edition existed (removed 2026-10-28). It renders unconditionally now.
+  // THE REASONING WORTH KEEPING if a per-build split ever returns: the gate had to be a build-time
+  // constant so the minifier dropped the element and neither the title nor the href reached the
+  // artefact — a runtime check would still ship both strings.
   return (
     true && (
     <SettingsSection

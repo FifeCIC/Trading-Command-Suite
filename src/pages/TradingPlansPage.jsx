@@ -169,11 +169,12 @@ export default function TradingPlansPage() {
                   <strong>{selected.content.symbol}</strong>
                   <span className="plan-signal-proto">{selected.content.protocolName || selected.content.protocolId}</span>
                 </div>
-                {/* ⚠️ §9.14 / D5=A — the free edition shows no score-derived numbers. The row goes as a
-                    UNIT rather than field by field: all four values arrive in the same scoring
-                    payload, so stripping the two obvious percentages and keeping `combinedStrength`
-                    and `confidence` would leave the row looking intact while still carrying scores.
-                    Which fields LOOK like scores is not a safe test — the payload is the test. */}
+                {/* Hidden while the free edition existed (removed 2026-10-28); it renders now.
+                    ⚠️ KEEP THE REASONING: the row is a UNIT, not a set of fields. All four values
+                    arrive in the same scoring payload, so stripping the two obvious percentages and
+                    keeping `combinedStrength` and `confidence` would leave the row looking intact
+                    while still carrying scores. Which fields LOOK like scores is not a safe test —
+                    the payload is the test. */}
                 {true && (
                   <div className="plan-signal-metrics">
                     <span><em>Combined</em> <strong>{selected.content.combinedStrength ?? '—'}</strong></span>

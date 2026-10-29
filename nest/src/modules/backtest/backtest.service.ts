@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 // #965 item 1 — the sample bar is shared with the live snapshot trial's verdict rather than
 // re-declared here. See the module header for the measurement that produced it.
@@ -13,10 +13,15 @@ import { BacktestPeriodService } from './backtest-period.service';
 import { applyExecutionCosts } from './execution-costs';
 import {
   scoringTotals,
+  tradeTotals,
+  timeframeMinutes,
   measureWindow,
   multiWindowVerdict,
   ScoreBar,
   RunTotals,
+  TradeLike,
+  TradeTotals,
+  PeriodHealth,
   RepeatWindowResult,
   RepeatVerdict,
 } from './score-maths';
@@ -99,6 +104,23 @@ function isMidnight(d: Date): boolean {
   return d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
 }
 
+/**
+ * StopPlan — a simulated stop that only ever TIGHTENS. See `BacktestRunRequest.stopPlan`.
+ *
+ * ⚠️ EVERY FIELD IS OPTIONAL AND `null` MEANS "DO NOT APPLY THIS RULE", not 0. A `trailPct: 0` would
+ * put the stop AT the best price, which is a different (and unusable) instruction.
+ */
+export interface StopPlan {
+  /** Favourable excursion (%) at which the stop moves to breakeven. */
+  lockAtPct?: number | null;
+  /** Keep the stop this many % behind the best price reached. */
+  trailPct?: number | null;
+  /** Favourable move (%) per tightening step. */
+  stepPct?: number | null;
+  /** How many % of price to tighten per step. */
+  tightenPct?: number | null;
+}
+
 export interface BacktestRunRequest {
   /**
    * Optional ONLY when `botId` is supplied — a bot-driven run takes the symbol from the bot, so
@@ -115,6 +137,27 @@ export interface BacktestRunRequest {
    * run must be able to say what it actually measured.
    */
   botId?: string;
+  /**
+   * ── A TIGHTENING STOP, SIMULATED (2026-10-29) ───────────────────────────────────────────────────
+   * Owner direction: *"a gradually tighter simulated-stop-loss. Acting like a trailing stop loss …
+   * and also an actual change of broker side stop loss that gets tighter depending on trade style and
+   * strategy i.e. closing day trades before market close."*
+   *
+   * ⚠️ NO TRAILING STOP EXISTS ON THE LIVE PATH. #913 and #936 both shipped an ANNOUNCED trail with no
+   * mechanism behind it, and `nest/scripts/validate-trailing-claims.cjs` exists because of them. So the
+   * mechanism is built HERE first, where its effect can be measured against a copied configuration
+   * (maths-change-requires-ab) before any order is ever affected.
+   *
+   * The three knobs compose and every one of them only ever TIGHTENS:
+   *   `lockAtPct`   — once the trade is this far in front, move the stop to breakeven.
+   *   `trailPct`    — keep the stop this far behind the best price reached.
+   *   `stepPct` + `tightenPct` — every `stepPct` of favourable move, pull the stop in `tightenPct`.
+   *
+   * ⚠️ THE STOP TESTED ON BAR N WAS SET FROM BARS UP TO N-1. OHLC cannot order an intra-bar high
+   * against an intra-bar low, so tightening from THIS bar's high and then testing THIS bar's low would
+   * be look-ahead. See the block in the trade loop.
+   */
+  stopPlan?: StopPlan;
   /**
    * #986 — run against a STORED PERIOD (a named, noted window) instead of a bar count.
    *
@@ -179,7 +222,7 @@ export interface TradeRecord {
   direction: 'LONG' | 'SHORT';
   pnl: number;
   pnlPct: number;
-  exitReason: 'TP' | 'SL' | 'EOD';  // Take-profit, Stop-loss, End-of-data
+  exitReason: 'TP' | 'SL' | 'TRAIL' | 'EOD';  // Take-profit, Stop-loss, tightened stop, End-of-data
   /**
    * #R14 — the stop and target the trade was measured against, or `undefined` for a run made
    * before they were recorded. Optional on purpose: an old run has no levels and must be able to
@@ -193,6 +236,16 @@ export interface TradeRecord {
   // Execution realism (#50)
   positionSize?: number;  // number of shares/contracts
   commission?: number;    // commission deducted ($)
+  /**
+   * Excursion — how far the position went against and in favour of the entry before it resolved, as
+   * absolute percentages of the entry price. Recorded from 2026-10-29; `undefined` on older trades
+   * means NOT MEASURED, which is not the same as 0.
+   */
+  maxAdversePct?: number;
+  maxFavourablePct?: number;
+  barsHeld?: number;
+  /** TRUE when the hold crossed a hole in the bar series > 1h — the bracket was unmonitored across it. */
+  spansGap?: boolean;
 }
 
 export interface EntrySignal {
@@ -492,6 +545,21 @@ export interface BacktestResult {
   totals?: RunTotals;
   trades?: TradeRecord[];
   /**
+   * The money, over EVERY trade — win rate, Σ P&L, average and best/worst per trade (owner direction,
+   * 2026-10-29: *"more trade based and show us profit loss at least"*).
+   *
+   * ⚠️ SERVED, NOT DERIVED IN THE PANEL. `src/core/backtest-totals.js` already forbids client-side
+   * arithmetic for exactly this reason: a panel that adds up its own win rate will eventually disagree
+   * with the endpoint an agent reads. Present on BOTH the live `POST /run` response and the stored
+   * `GET /results/:id`, so the two surfaces cannot show different summaries of the same run.
+   */
+  tradeTotals?: TradeTotals;
+  /**
+   * The health verdict for the window this run measured, or null for a day-range run. Report-only —
+   * see the note in `run()` for why the refusal waits for a session calendar.
+   */
+  periodHealth?: PeriodHealth | null;
+  /**
    * Present ONLY on a bot-driven run (#965 item 3): the configuration that was resolved from the
    * bot, and which of its fields the caller overrode.
    */
@@ -652,6 +720,25 @@ export class BacktestService {
    * difference is invisible: both produce a plausible result set. Same refusal as
    * `resolveBotDrivenRequest` makes for an unresolvable `botId`.
    */
+  /**
+   * ── THE WINDOW HEALTH CHECK (2026-10-29) ───────────────────────────────────────────────────────
+   * ATTACHES the verdict; it does NOT refuse. See `assertPeriodMeasurable` below for why that changed.
+   *
+   * ⚠️ THE THRESHOLDS ARE SETTINGS, and the verdict echoes the standard it used, so the number on screen
+   * can be re-derived without reading the source.
+   */
+  private async periodVerdict(periodId: string) {
+    if (!this.periods) return null;
+    try {
+      const coverage = await this.periods.coverage(periodId);
+      return coverage.health;
+    } catch {
+      // A period that cannot be COVERED is a different failure with its own error path; do not turn it
+      // into a silent "healthy".
+      return null;
+    }
+  }
+
   private async resolvePeriod(periodId?: string) {
     if (!periodId) return null;
     if (!this.periods) {
@@ -726,6 +813,16 @@ export class BacktestService {
     // ── #986 — a stored PERIOD names the market and the window ───────────────────────────────
     // Resolved BEFORE the destructure so the period can own `symbol`/`timeframe` below, and so an
     // unresolvable id throws before any work is done.
+    //
+    // ⚠️ HEALTH IS REPORTED, NOT ENFORCED — and that is a MEASURED decision, not a softening (2026-10-29).
+    // The first cut refused an `unusable` window before loading a bar. Then the gate was pointed at the
+    // canonical window and refused IT: `dev-window-v1` US500 5m reports 71.0% coverage with a
+    // **2,950-minute (49-hour) longest hole** — which is a WEEKEND, not an outage. The expected-bar
+    // calculation assumes a continuous grid at the timeframe, so every instrument with a closed session
+    // reads as unusable. A refusal built on that would have blocked the entire A/B loop for a false
+    // reason, so the standard is reported and the refusal waits for a SESSION CALENDAR.
+    // Tracked in #1149; see `periodHealth` for the three verdicts and the settings that produce them.
+    const periodHealthVerdict = request.periodId ? await this.periodVerdict(request.periodId) : null;
     const period = await this.resolvePeriod(request.periodId);
 
     /**
@@ -747,6 +844,7 @@ export class BacktestService {
       minComposite = 0,
       slippage: rawSlippage,
       spread: rawSpread,
+      stopPlan = null,
       assetClass,
       newsExclusion = 'none',
       // ── Position sizing + commission (#50) ──
@@ -860,6 +958,13 @@ export class BacktestService {
       // "exactly N" from "more than N".
       ...(period ? { take: PERIOD_BAR_CAP + 1 } : { take: days + 120 }),
     });
+
+    /**
+     * The bar length in minutes — needed by the gap guard in the trade loop. `0` when the timeframe
+     * cannot be read, in which case a gap is detected on the absolute (> 60 min) rule alone rather
+     * than on a guess at the bar length.
+     */
+    const barMinutes = timeframeMinutes(timeframe);
 
     if (period && rows.length > PERIOD_BAR_CAP) {
       throw new Error(
@@ -1025,14 +1130,79 @@ export class BacktestService {
           // plausible-output-no-error defect class this repo keeps paying for.
           let exitDate = currentBar.timestamp.toISOString();
 
+          /**
+           * ── EXCURSION + AN OPTIONAL TIGHTENING STOP (2026-10-29) ─────────────────────────────
+           * Owner direction: *"I want to establish an average time to SL trigger … and an average to
+           * TP … Where I'm going with this is to consider the speed of movement"*, and then: *"the
+           * speed of movement … how many on average, actually recover once they go one way or the
+           * other … The goal is to consider a method to identify tighter simulated-stop-loss."*
+           *
+           * `pnlPct` only says where a trade ENDED. These two numbers say how far it went each way on
+           * the way there, which is the difference between "the stop is too distant" and "the entry is
+           * mistimed" — and they are the input the stop sweep needs.
+           *
+           * ⚠️ THE TRAIL USES THE PREVIOUS BAR'S STOP LEVEL, NEVER THIS BAR'S HIGH. An intra-bar high
+           * and an intra-bar low cannot be ordered from OHLC alone, so tightening the stop from THIS
+           * bar's high and then testing THIS bar's low would be look-ahead: it books an exit at a level
+           * that price had not necessarily reached yet. The stop tested on bar N is the one set from
+           * bars up to N-1; the trail then updates from bar N for the next test. That is the
+           * conservative reading and it is why a bracketed run can be re-derived by hand.
+           *
+           * ⚠️ NOTHING HERE IS ARMED ON A LIVE ORDER. #913 and #936 both shipped an announced trail
+           * with no mechanism, and `nest/scripts/validate-trailing-claims.cjs` exists because of them.
+           * This block SIMULATES; the live-side stop still comes from the broker order's own levels.
+           */
+          const plan = stopPlan ?? null;
+          const isLong = true; // this loop only opens longs (signal === BUY | STRONG_BUY above)
+          const side = isLong ? 1 : -1;
+          let worstPct = 0; // worst excursion against the position, as % of entry
+          let bestPct = 0; // best excursion in its favour, as % of entry
+          let barsWalked = 0;
+          /** TRUE when the hold crossed a hole > 1h — the bracket was unmonitored across it. */
+          let spansGap = false;
+          /** The stop actually in force for THIS trade — starts at the configured SL and only tightens. */
+          let liveStop = slPrice;
+          /** Best price seen so far, for the trail. Seeded at entry so the first bar can tighten it. */
+          let bestPrice = currentClose;
+
           // Walk forward through remaining bars to check SL/TP
           for (let future = day + 1; future < bars.length; future++) {
             const fb = bars[future];
+            barsWalked = future - day;
 
-            // Check intra-bar: did SL or TP get hit?
-            if (fb.low <= slPrice) {
-              exitPrice = slPrice;
-              exitReason = 'SL';
+            /**
+             * ⚠️ A HOLE IN THE BAR SERIES MEANS THE BRACKET WAS NOT MONITORED (2026-10-29).
+             * The owner: *"Sometimes the PC is shutdown while positions are open so some of our data
+             * could be skewed by the app being asleep."* Measured on the VIX 5m dev window: **464 of
+             * 1,027 trades (45.2%) crossed a hole longer than an hour**, the longest 111.3 hours.
+             *
+             * The trade still exits at a real price — so P&L is a real measurement of what the engine
+             * did — but the DURATION is inflated (a 41.6-day window held only 63.9% of its bars) and
+             * the exit REASON is a guess: the level that would have fired during the hole was never
+             * seen. Flagged per trade rather than excluded, so a run can report how much of its
+             * population is contaminated instead of quietly averaging over it.
+             */
+            if (future > day + 1) {
+              const stepMin = (fb.timestamp.getTime() - bars[future - 1].timestamp.getTime()) / 60_000;
+              if (stepMin > barMinutes * 12 && stepMin > 60) spansGap = true;
+            }
+
+            // ── Excursion, measured on the RAW bar extremes, before any stop test ──
+            const adversePct = isLong
+              ? ((currentClose - fb.low) / currentClose) * 100
+              : ((fb.high - currentClose) / currentClose) * 100;
+            const favourablePct = isLong
+              ? ((fb.high - currentClose) / currentClose) * 100
+              : ((currentClose - fb.low) / currentClose) * 100;
+            if (adversePct > worstPct) worstPct = adversePct;
+            if (favourablePct > bestPct) bestPct = favourablePct;
+
+            // ── Does the stop IN FORCE (set from earlier bars) get hit? ──
+            if ((isLong && fb.low <= liveStop) || (!isLong && fb.high >= liveStop)) {
+              exitPrice = liveStop;
+              // A tightened stop is not the configured SL — say which one fired, so a reader is never
+              // told the original bracket stopped them out when the trail had already moved it.
+              exitReason = liveStop === slPrice ? 'SL' : 'TRAIL';
               exitDate = fb.timestamp.toISOString();
               break;
             }
@@ -1042,9 +1212,71 @@ export class BacktestService {
               exitDate = fb.timestamp.toISOString();
               break;
             }
+
+            // ── Tighten for the NEXT bar ──
+            bestPrice = isLong ? Math.max(bestPrice, fb.high) : Math.min(bestPrice, fb.low);
+            if (plan) {
+              const gainPct = (side * (bestPrice - currentClose) / currentClose) * 100;
+              let candidate = liveStop;
+              // 1. Lock at breakeven once the trade is far enough in front.
+              if (plan.lockAtPct != null && gainPct >= plan.lockAtPct) {
+                candidate = Math.max(candidate, currentClose);
+              }
+              // 2. Trail a fixed distance behind the best price.
+              if (plan.trailPct != null && gainPct > 0) {
+                const trailStop = isLong ? bestPrice * (1 - plan.trailPct / 100) : bestPrice * (1 + plan.trailPct / 100);
+                candidate = isLong ? Math.max(candidate, trailStop) : Math.min(candidate, trailStop);
+              }
+              // 3. Step-tighten: every `stepPct` of favourable move, pull the stop in by `tightenPct`.
+              if (plan.stepPct != null && plan.tightenPct != null && gainPct > 0) {
+                const steps = Math.floor(gainPct / plan.stepPct);
+                if (steps > 0) {
+                  const stepped = isLong
+                    ? slPrice + currentClose * (steps * plan.tightenPct) / 100
+                    : slPrice - currentClose * (steps * plan.tightenPct) / 100;
+                  candidate = isLong ? Math.max(candidate, stepped) : Math.min(candidate, stepped);
+                }
+              }
+              // NEVER loosen: a stop that moves backwards is not a stop.
+              liveStop = isLong ? Math.max(liveStop, candidate) : Math.min(liveStop, candidate);
+            }
+          }
+
+          // ── EOD MUST EXIT AT A PRICE, NOT AT ITS OWN ENTRY ────────────────────────────────────
+          // ── DECISION (2026-10-29, primary) ──
+          // WHAT:      a trade with no SL/TP hit closes at the LAST BAR's close, stamped at that bar.
+          // WHY:       Without it `exitPrice`/`exitDate` kept their initial values — the ENTRY close and
+          //            the ENTRY instant — so every end-of-data position was booked as a zero-move round
+          //            trip: P&L = pure cost, hold time = 0 minutes.
+          // INSTEAD OF: leaving `EOD` at the entry price; the alternative would be to DROP open trades,
+          //            which would silently shrink the population instead of marking it.
+          // REVERSE BY: deleting the block below. Runs made before it keep their stored (wrong) values —
+          //            nothing backfills them, because a re-run is the honest way to a corrected
+          //            population.
+          // REGISTER:  docs/SETTLED-DECISIONS.md row 98
+          // GUARD:     none in a unit test — the detectable signature is `backtesttrade` rows with
+          //            `exitReason = 'EOD' AND entryDate = exitDate`, which this block makes impossible.
+          //
+          // 🛑 FIXED 2026-10-29. MEASURED across the 90 stored runs before this fix: **2,124 of 34,313
+          // trades (6.2%)** were `EOD`, and **2,124 of 2,124 had `entryDate == exitDate`**. Their P&L sat
+          // at ~−1.0% each — the cost, nothing else. That is a plausible number with no error, on 6% of
+          // the population, and it silently corrupted both the win rate and the hold-time statistic.
+          //
+          // The convention is MARK-TO-MARKET: a position open at the end of the data closes at the last
+          // bar's close, stamped at that bar. `EOD` already names it as end-of-data, so nothing is
+          // disguised — the exit simply has an actual price and an actual time.
+          //
+          // VERIFIED by re-running the same VIX window: before → 43 of 43 EOD trades shared a stamp, avg
+          // hold 0 min, every `pnlPct` ≈ −1.0%; after → **0 of 43** share a stamp, avg hold
+          // **1,007.6 min**, `pnlPct` spread **−2.08% to −0.39%**.
+          if (exitReason === 'EOD' && bars.length > 0) {
+            const lastBar = bars[bars.length - 1];
+            exitPrice = lastBar.close;
+            exitDate = lastBar.timestamp.toISOString();
           }
 
           // ── Symmetric execution costs (fixed #50) ──
+
           // Entry: buy at ask = mid + spread/2 + slippage
           // Exit: sell at bid = mid - spread/2 - slippage
           //
@@ -1159,6 +1391,11 @@ export class BacktestService {
             protocolId: protocolId ?? 'unscoped',
             positionSize,
             commission: Number(totalCommission.toFixed(4)),
+            // Excursion, as absolute percentages of the entry price (2026-10-29).
+            maxAdversePct: Number(worstPct.toFixed(4)),
+            maxFavourablePct: Number(bestPct.toFixed(4)),
+            barsHeld: barsWalked,
+            spansGap,
           });
         }
       }
@@ -1218,6 +1455,11 @@ export class BacktestService {
           }
         : undefined,
       period: `${bars[windowSize].timestamp.toISOString().split('T')[0]} to ${bars[bars.length - 1].timestamp.toISOString().split('T')[0]}`,
+      /**
+       * The window's health verdict, carried with the result so a reader is told the series was gappy
+       * BEFORE they trust a hold time. `null` for a day-range run, which has no declared window to judge.
+       */
+      periodHealth: periodHealthVerdict,
       totalDays,
       timeframe,
       entrySignals: entrySignals.slice(-200),
@@ -1367,6 +1609,11 @@ export class BacktestService {
                 // #R14 — null when the engine set no level (an unbracketed run), never 0.
                 stopLoss: t.stopLoss ?? null,
                 takeProfit: t.takeProfit ?? null,
+                // Excursion (2026-10-29) — null on a trade from before these columns existed.
+                maxAdversePct: t.maxAdversePct ?? null,
+                maxFavourablePct: t.maxFavourablePct ?? null,
+                barsHeld: t.barsHeld ?? null,
+                spansGap: t.spansGap ?? null,
               direction: t.direction,
               pnl: t.pnl,
               pnlPct: t.pnlPct,
@@ -1385,7 +1632,20 @@ export class BacktestService {
     }
 
     this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%${newsExclusion !== 'none' ? ` (news: ${newsExclusion}, ${newsDates?.size ?? 0} news dates)` : ''}`);
-    return { ...result, id: persistedRunId || result.id, newsExclusion, newsDatesCount: newsDates?.size ?? 0 };
+    // ⚠️ `tradeTotals` IS ATTACHED ON BOTH PATHS (owner direction, 2026-10-29). It is attached here —
+    // the live POST /run response — AND in `getResult()`, because the two surfaces show the same
+    // table. Attaching it in only one made the freshly-run view print "this response carried no
+    // tradeTotals" while the stored view beside it showed the summary, which reads as a broken panel
+    // rather than as a missing field. Both call `score-maths.tradeTotals`, so the arithmetic is one
+    // implementation; only the attach point is repeated, and the note exists so it is not removed
+    // from one of them.
+    return {
+      ...result,
+      tradeTotals: tradeTotals((result as { trades?: TradeLike[] }).trades),
+      id: persistedRunId || result.id,
+      newsExclusion,
+      newsDatesCount: newsDates?.size ?? 0,
+    };
   }
 
   /**
@@ -1472,6 +1732,18 @@ export class BacktestService {
         (result as { scoreSeries: ScoreBar[] }).scoreSeries,
       );
     }
+
+    /**
+     * ── `tradeTotals` ON EVERY READ (owner direction, 2026-10-29) ──
+     * *"This table needs to be more trade based and show us profit loss at least."* The money figures
+     * a reader wants from a run — win rate, Σ P&L, average per trade, best and worst — are computed
+     * HERE for the same reason `totals` is: the panel and an agent must not hold two implementations
+     * that can drift. Always present (not only when `scoreSeries` exists), because a run predating the
+     * score series still has trades and its money is still the answer.
+     */
+    (result as { tradeTotals?: unknown }).tradeTotals = tradeTotals(
+      (result as { trades?: TradeLike[] }).trades,
+    );
 
     return result;
   }
@@ -1588,6 +1860,12 @@ export class BacktestService {
         exitReason: t.exitReason,
         stopLoss: t.stopLoss === null ? null : Number(t.stopLoss),
         takeProfit: t.takeProfit === null ? null : Number(t.takeProfit),
+        // Excursion (2026-10-29) — `null` means NOT RECORDED (the run predates the columns), and the
+        // panel must render it as "not measured" rather than 0.
+        maxAdversePct: t.maxAdversePct === null ? null : Number(t.maxAdversePct),
+        maxFavourablePct: t.maxFavourablePct === null ? null : Number(t.maxFavourablePct),
+        barsHeld: t.barsHeld === null ? null : Number(t.barsHeld),
+        spansGap: t.spansGap === null ? null : Boolean(t.spansGap),
         positionSize: t.positionSize === null ? null : Number(t.positionSize),
         pnl: Number(t.pnl),
         pnlPct: Number(t.pnlPct),
@@ -2591,6 +2869,12 @@ export class BacktestService {
         protocolId: run.protocolId,
         positionSize: t.positionSize ? Number(t.positionSize) : undefined,
         commission: t.commission ? Number(t.commission) : undefined,
+        // Excursion (2026-10-29). `?? null` rather than a falsy check: a genuinely measured 0.0 is a
+        // value, and only NULL means the run predates these columns.
+        maxAdversePct: t.maxAdversePct ?? null,
+        maxFavourablePct: t.maxFavourablePct ?? null,
+        barsHeld: t.barsHeld ?? null,
+        spansGap: t.spansGap ?? null,
       })) || [],
       execution: {
         slippage: Number(run.slippage ?? 0.01),

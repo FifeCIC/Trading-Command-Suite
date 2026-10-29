@@ -137,8 +137,9 @@ const SEVERITY_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#64748b' };
 
 /** Category → fallback route when an alert has no ticker and no link of its own. */
 const ALERT_FALLBACKS = {
-  // §9.14 — the Ladder is PREMIUM, so the free build is sent where a daily alert goes rather than to
-  // a path that does not ship. The define folds at build time.
+  // The Ladder used to be premium-only, so the free build (removed 2026-10-28) was sent where a
+  // daily alert goes rather than to a path that build did not ship. One edition now, so every
+  // route named here is real.
   signal: '/scoring/live-ordering-stack',
   drawdown: '/trading/portfolio-overview',
   system: '/status/setup',

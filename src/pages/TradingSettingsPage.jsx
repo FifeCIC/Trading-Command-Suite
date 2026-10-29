@@ -366,12 +366,10 @@ export default function TradingSettingsPage() {
         <p>Bots, thresholds, trade defaults and risk limits.</p>
       </motion.header>
 
-      {/* ⚠️ §9.14 / §9.14.1 — the Trading layer kill switch is a META.Stack control, and the section
-          title, its description AND the component all name the system. The plan strips the layer
-          switches from this free page, so the section is premium-only. Removing it also drops
-          `<MetaStackLayerSwitch>` from the free bundle entirely — nothing else there imports it.
-          The guard is the Vite define, so the whole element is folded away rather than hidden. */}
-      {import.meta.env.VITE_EDITION !== 'free' && (
+      {/* The Trading layer kill switch is a META.Stack control. It was premium-only while the free
+          edition existed (removed 2026-10-28); there is one edition now, so it always renders and
+          `<MetaStackLayerSwitch>` is always in the bundle. */}
+      {true && (
         <SettingsSection
           id="trading-layer"
           title="Trading layer"
@@ -392,11 +390,9 @@ export default function TradingSettingsPage() {
         desc="Every active bot's threshold against the highest score its protocol has actually produced. A threshold above the achieved ceiling is a bot that can never fire."
       >
         <BotThresholdsTable />
-        {/* §9.14 — Trading Bots, Create Bot and Strategy Monitor are PREMIUM views, and so is the
-            /settings/automation destination, so the whole note is premium-only. The flag is read
-            from the Vite define: the bundler folds this away in the free build, which is what stops
-            the names AND the paths reaching the shipped JS. `editionAllowsKey()` would answer the
-            same question at runtime and still ship the strings. */}
+        {/* These destinations were premium-only while the free edition existed (removed
+            2026-10-28). There is one edition now, so the note always renders and every link is a
+            real route. */}
         {true && (
           <MovedNote>
             Add and edit bots on <a href="/trading/trading-bots">Trading Bots</a> or{' '}

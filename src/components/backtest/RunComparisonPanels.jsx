@@ -25,9 +25,16 @@ import { apiGet, apiPost } from '../../core/api/client.js';
 import { useSort, SortableTh } from '../../core/use-sort.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { pickRepeatPair } from '../../core/backtest-totals.js';
+/**
+ * ⚠️ meta-stack-status.css IS IMPORTED FOR ITS .mss-stat-* TILES, not for its page (owner direction
+ * 2026-10-29: *"there are other pages with stats that display it better … use existing styling as
+ * always"*). The Appearance area presents these as the app's stat library, so importing them here is
+ * reuse rather than a second stat look.
+ */
+import '../../pages/meta-stack-status.css';
+import TradeTable, { holdLabel } from './TradeTable.jsx';
 
 const money = (v) => (v == null ? '—' : `${v >= 0 ? '+' : '−'}${Math.abs(Number(v)).toFixed(2)}`);
-const pct1 = (v) => (v == null ? '—' : `${Number(v).toFixed(1)}%`);
 
 /**
  * The BAR, as a reader must see it. `date` alone is `YYYY-MM-DD`, so a 1h run shows 24 identical
@@ -232,22 +239,68 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
         {accepted && <span className="dp-badge dp-badge--override"> accepted</span>}
       </h3>
 
+      {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (owner direction, 2026-10-29: *"needs to be
+          moved to the top … so it is more prominent"*). It sat between the facts table and the trades —
+          i.e. below a screen of numbers — so the one ACTION on the panel was the last thing found. It is
+          an `.bt-accept-bar` rather than a bare note so it reads as a control, not a footnote. */}
+      {(onAccept || (role === 'A' && accepted && onClear)) && (
+        <div className="bt-accept-bar">
+          {onAccept && (
+            <button type="button" className="bt-panel-btn bt-panel-btn--primary" onClick={onAccept}>
+              Accept this run as the A baseline
+            </button>
+          )}
+          {role === 'A' && accepted && onClear && (
+            <button type="button" className="bt-panel-btn" onClick={onClear}>
+              Clear the accepted baseline
+            </button>
+          )}
+          <span className="bt-accept-note">
+            {onAccept
+              ? <>The accepted run becomes <strong>A</strong>; the next run of this protocol is measured against it. Stored in the database, so it follows you to another browser.</>
+              : <>Removes the reference — it does not delete the run itself.</>}
+          </span>
+        </div>
+      )}
+
+      {/* ⚠️ ONE FACT PER ROW, WITH A HEADER (owner direction, 2026-10-29: *"needs styling based on a
+          similar table in the Appearance area"*). It was a headerless 4-column label/value mash — the
+          only table on the page with no `<thead>`, which is what made it look unlike every other table.
+          `src/core/tables.css` already gives `.bt-table` the SAME arrangement as `.pl-table` and
+          `.mss-table` (57 families, one arrangement), so the difference was STRUCTURE, not styling:
+          the Appearance examples all have a header and one entity per row. This is now that shape. */}
       <div className="bt-table-wrap">
-        <table className="bt-table bt-facts-table">
+        <table className="bt-table">
           <caption className="sr-only">The facts this run recorded</caption>
+          <thead>
+            <tr>
+              <th scope="col">Fact</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><td>Symbol · timeframe</td><td>{run.symbol ?? '—'} · {run.timeframe ?? '—'}</td><td>Scored bars</td><td>{series?.length ?? '—'}</td></tr>
-            <tr><td>Protocol</td><td>{run.protocolId ?? '—'}</td><td>Window</td><td>{run.measuredPeriod?.name ?? run.period ?? '—'}</td></tr>
+            <tr><td>Symbol · timeframe</td><td className="bt-fact-value">{run.symbol ?? '—'} · {run.timeframe ?? '—'}</td></tr>
+            <tr><td>Protocol</td><td className="bt-fact-value">{run.protocolId ?? '—'}</td></tr>
+            <tr><td>Window</td><td className="bt-fact-value">{run.measuredPeriod?.name ?? run.period ?? '—'}</td></tr>
+            <tr><td>Scored bars</td><td className="bt-fact-value">{series?.length ?? '—'}</td></tr>
             {showTrades && (
               <>
-                <tr><td>Position model</td><td>{ex.positionModel ?? '—'}</td><td>Spread / slippage</td><td>{ex.spread ?? '—'} / {ex.slippage ?? '—'}</td></tr>
-                <tr><td>Trades</td><td>{stats.totalTrades ?? 0}</td><td>Trade win rate</td><td>{stats.tradeWinRate == null ? '—' : pct1(Number(stats.tradeWinRate) * 100)}</td></tr>
-                <tr><td>Avg trade P&amp;L</td><td>{stats.avgTradePnl == null ? '—' : `${stats.avgTradePnl}%`}</td><td>Total P&amp;L</td><td>{money(stats.totalPnl)}</td></tr>
+                <tr><td>Position model</td><td className="bt-fact-value">{ex.positionModel ?? '—'}</td></tr>
+                <tr>
+                  <td>Spread / slippage</td>
+                  <td className="bt-fact-value">
+                    {ex.spread == null ? '—' : `${(Number(ex.spread) * 100).toFixed(3)}%`}
+                    {' / '}
+                    {ex.slippage == null ? '—' : `${(Number(ex.slippage) * 100).toFixed(2)}%`}
+                  </td>
+                </tr>
+                <tr><td>Trades</td><td className="bt-fact-value">{stats.totalTrades ?? 0}</td></tr>
+                <tr><td>Average hold</td><td className="bt-fact-value">{holdLabel(run.tradeTotals?.avgHoldMinutes)}</td></tr>
               </>
             )}
             <tr>
               <td>What it changed</td>
-              <td colSpan={3}>
+              <td className="bt-fact-value">
                 {changed === null
                   ? 'not bot-driven — no bot settings to differ from'
                   : changed.length === 0 ? 'nothing (the bot as configured)' : changed.join(', ')}
@@ -257,40 +310,48 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
         </table>
       </div>
 
-      {run.totals && <ScoringTotals totals={run.totals} />}
-
-      {onAccept && (
-        <p className="pb-field-note">
-          <button type="button" className="bt-panel-btn" onClick={onAccept}>
-            Accept this run as the {role === 'B' ? 'A' : 'B'} baseline
-          </button>
-          {' '}The accepted run becomes <strong>A</strong>; the next run of this protocol is measured
-          against it. Stored in the database, so it follows you to another browser.
-        </p>
-      )}
-
-      {role === 'A' && accepted && onClear && (
-        <p className="pb-field-note">
-          <button type="button" className="bt-panel-btn" onClick={onClear}>
-            Clear the accepted baseline
-          </button>{' '}
-          Removes the reference — it does not delete the run itself.
-        </p>
-      )}
-
-      {series ? (
+      {/* Trades FIRST — a run exists to answer "did this make money", and the per-trade P&L the
+          engine already stored was never rendered before 2026-10-29. */}
+      {showTrades && (
         <>
           <h4 className="bt-panel-head">
-            Scores — {series.length} bar(s)
-            {series.length > 100 && <span className="dp-hint"> · showing 100; sort to choose which</span>}
+            Trades — {run.trades?.length ?? 0} closed
+            {run.trades?.length > 100 && (
+              <span className="dp-hint"> · showing 100; the summary above them covers all</span>
+            )}
           </h4>
-          <ScoreTable scoreSeries={series} />
+          <TradeTable trades={run.trades} totals={run.tradeTotals} timeframe={run.timeframe} />
         </>
-      ) : (
-        <p className="pb-none">
-          ⚠️ This run stored no scores (made before 2026-10-26), so its scoring output is not recorded
-          — not &ldquo;no scores&rdquo;. Re-run it to capture them.
-        </p>
+      )}
+
+      {/* ⚠️ EVERYTHING SCORE-SHAPED IS COLLAPSED INTO ONE DETAILS BLOCK (owner direction, 2026-10-29).
+          The results a run exists to give are the trades; a score-totals table and 2,000 scored bars
+          sat ABOVE them and buried the answer under diagnostic numbers. Neither is deleted — the bar
+          list is the only place a signal that never became a trade is visible, so it must remain — but
+          both now sit one click behind a summary that says what they are for. */}
+      {(run.totals || series) && (
+        <details className="bt-scores-details">
+          <summary className="bt-panel-head">
+            Scoring detail — {series ? `${series.length} bar(s)` : 'no scores stored'}
+            <span className="dp-hint"> · diagnostic: why a bar did or did not trade</span>
+          </summary>
+          {run.totals && <ScoringTotals totals={run.totals} />}
+          {series ? (
+            <>
+              {series.length > 100 && (
+                <p className="pb-field-note">
+                  Showing 100 of {series.length} bars; sort a column to choose which.
+                </p>
+              )}
+              <ScoreTable scoreSeries={series} />
+            </>
+          ) : (
+            <p className="pb-none">
+              ⚠️ This run stored no scores (made before 2026-10-26), so its scoring output is not
+              recorded — not &ldquo;no scores&rdquo;. Re-run it to capture them.
+            </p>
+          )}
+        </details>
       )}
 
       {Array.isArray(run.caveats) && run.caveats.length > 0 && (
