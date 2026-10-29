@@ -67,7 +67,7 @@ export const BOARD_LABELS = {
   // as a leaked view name. Spread, so the entry is dropped whole rather than the string being left
   // in a dead branch; `import.meta.env.VITE_EDITION` is substituted at build time so the bundler
   // removes it from the free artefact entirely.
-  ...(import.meta.env.VITE_EDITION === 'free' ? {} : { lab: 'Widget Library (Lab)' }),
+  ...{ lab: 'Widget Library (Lab)' },
 };
 
 /** Board ids the app ships with (before anything is stored). */

@@ -1,5 +1,6 @@
 import { BadRequestException, Controller, Get, Post, Query } from '@nestjs/common';
 import { BrokerSymbolDiscoveryService } from './broker-symbol-discovery.service';
+import { PrismaService } from '../../database/prisma.service';
 
 /**
  * BrokerSymbolsController — the SURFACE for the broker catalogue (#958).
@@ -21,7 +22,10 @@ import { BrokerSymbolDiscoveryService } from './broker-symbol-discovery.service'
  */
 @Controller('broker-symbols')
 export class BrokerSymbolsController {
-  constructor(private readonly discovery: BrokerSymbolDiscoveryService) {}
+  constructor(
+    private readonly discovery: BrokerSymbolDiscoveryService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /** The gap, per broker: offered / tradeable / onboarded / never-looked-at. */
   @Get('summary')
@@ -98,6 +102,52 @@ export class BrokerSymbolsController {
       results.push(await this.discovery.syncBroker(id));
     }
     return { results };
+  }
+
+  /**
+   * Capture the LIVE spread for the routed symbols (#1147) without re-reading the whole catalogue.
+   *
+   * ⚠️ This is the "sync on connect" the owner asked for, in the only form that can work: a spread is a
+   * QUOTE, not a symbol property, so it cannot ride along with the daily catalogue sync any more cheaply
+   * than this. Safe to call often — it touches only symbols `symbol_route` already points at.
+   */
+  @Post('spread-sync')
+  async spreadSync(@Query('brokerId') brokerId?: string) {
+    const one = this.intOrUndefined(brokerId);
+    if (brokerId !== undefined && one === undefined) {
+      throw new BadRequestException('brokerId must be a number when supplied');
+    }
+    const targets = one !== undefined ? [one] : this.discovery.brokerIds();
+    const results = [];
+    for (const id of targets) {
+      const captured = await this.discovery.captureSpreads(id);
+      results.push({ brokerId: id, captured });
+    }
+    return { results };
+  }
+
+  /** What each routed symbol's spread was last measured at — NULL is "never measured", 0 is "measured zero". */
+  @Get('spreads')
+  async spreads(@Query('brokerId') brokerId?: string) {
+    const one = this.intOrUndefined(brokerId);
+    const rows = await (this.prisma as any).brokerSymbol.findMany({
+      where: {
+        ...(one !== undefined ? { brokerId: one } : {}),
+        spreadPct: { not: null },
+      },
+      select: { brokerId: true, name: true, assetClass: true, spreadPct: true, spreadQuotedAt: true },
+      orderBy: [{ brokerId: 'asc' }, { name: 'asc' }],
+      take: 200,
+    });
+    return {
+      spreads: rows.map((r: any) => ({
+        brokerId: r.brokerId,
+        name: r.name,
+        assetClass: r.assetClass,
+        spreadPct: r.spreadPct,
+        quotedAt: r.spreadQuotedAt?.toISOString?.() ?? null,
+      })),
+    };
   }
 
   private intOrUndefined(value?: string): number | undefined {

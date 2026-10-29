@@ -622,7 +622,7 @@ export default function SymbolPage() {
           score-derived numbers, and this page is on the plan's ``score history stripped'' list. The
           whole tile goes rather than being blanked: a tile reading “—” still reserves space and
           still tells a reader a number belongs there. Flag folds at build time (Vite define). */}
-      {import.meta.env.VITE_EDITION !== 'free' && (
+      {true && (
         <StatTile
           label="Best reading"
           value={bestScore ? `${bestScore.env.composite}` : '—'}

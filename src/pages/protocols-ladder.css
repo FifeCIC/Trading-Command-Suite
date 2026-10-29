@@ -145,3 +145,7 @@
 .pl-disabled-row { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.3rem 0; font-size: 0.78rem; }
 .pl-disabled-row .pl-proto-link { font-weight: 700; color: var(--ink); }
 .pl-disabled-note { color: var(--ink-soft); }
+
+/* ⚠️ #782 — a FAILED fetch is not an empty table. This notice replaces the table body so the page
+   cannot read as 'this registry scores nothing' when the truth is 'the request failed'. */
+.pl-notice { font-size: 0.82rem; color: var(--ink-soft); }

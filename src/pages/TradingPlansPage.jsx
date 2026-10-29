@@ -174,7 +174,7 @@ export default function TradingPlansPage() {
                     payload, so stripping the two obvious percentages and keeping `combinedStrength`
                     and `confidence` would leave the row looking intact while still carrying scores.
                     Which fields LOOK like scores is not a safe test — the payload is the test. */}
-                {import.meta.env.VITE_EDITION !== 'free' && (
+                {true && (
                   <div className="plan-signal-metrics">
                     <span><em>Combined</em> <strong>{selected.content.combinedStrength ?? '—'}</strong></span>
                     <span><em>Signal</em> <strong>{selected.content.signalPct != null ? `${selected.content.signalPct}%` : '—'}</strong></span>

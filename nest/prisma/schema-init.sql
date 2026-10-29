@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (111 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (113 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 119 CREATE TABLE statements.
+-- SCALE: 121 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -184,6 +184,9 @@ CREATE TABLE `BacktestRun` (
     `botId` VARCHAR(36) NULL,
     `botBaseSize` DOUBLE NULL,
     `periodId` VARCHAR(36) NULL,
+    `experimentId` VARCHAR(36) NULL,
+    `iteration` INTEGER NULL,
+    `configVersion` INTEGER NULL,
     `newsExclusion` VARCHAR(16) NOT NULL DEFAULT 'none',
     `scoresJson` LONGTEXT NULL,
     `winRate` DOUBLE NOT NULL,
@@ -191,6 +194,8 @@ CREATE TABLE `BacktestRun` (
     `profitFactor` DOUBLE NOT NULL,
     `sharpeRatio` DOUBLE NOT NULL,
     `maxDrawdown` DOUBLE NOT NULL,
+    `averageReturn10d` DOUBLE NULL,
+    `maxReturn10d` DOUBLE NULL,
     `avgTradePnl` DOUBLE NOT NULL,
     `slippage` DOUBLE NULL,
     `spread` DOUBLE NULL,
@@ -198,11 +203,47 @@ CREATE TABLE `BacktestRun` (
     `positionModel` VARCHAR(30) NULL,
     `accountSize` DOUBLE NULL,
     `riskPct` DOUBLE NULL,
+    `fixedAmount` DOUBLE NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `BacktestRun_symbolId_protocolId_idx`(`symbolId`, `protocolId`),
     INDEX `BacktestRun_createdAt_idx`(`createdAt`),
     INDEX `BacktestRun_periodId_idx`(`periodId`),
+    INDEX `BacktestRun_experimentId_iteration_idx`(`experimentId`, `iteration`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `backtest_experiment` (
+    `id` VARCHAR(36) NOT NULL,
+    `protocolId` VARCHAR(100) NOT NULL,
+    `label` VARCHAR(200) NOT NULL,
+    `goal` TEXT NULL,
+    `windowLabel` VARCHAR(120) NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'running',
+    `createdBy` VARCHAR(60) NOT NULL DEFAULT 'owner',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `backtest_experiment_protocolId_createdAt_idx`(`protocolId`, `createdAt`),
+    INDEX `backtest_experiment_status_idx`(`status`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `protocol_directive_change` (
+    `id` VARCHAR(36) NOT NULL,
+    `protocolSlug` VARCHAR(100) NOT NULL,
+    `directiveId` VARCHAR(100) NOT NULL,
+    `field` VARCHAR(40) NOT NULL,
+    `oldValue` VARCHAR(200) NULL,
+    `newValue` VARCHAR(200) NULL,
+    `source` VARCHAR(60) NOT NULL DEFAULT 'api',
+    `configVersion` INTEGER NOT NULL,
+    `changedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+
+    INDEX `protocol_directive_change_protocolSlug_configVersion_idx`(`protocolSlug`, `configVersion`),
+    INDEX `protocol_directive_change_directiveId_changedAt_idx`(`directiveId`, `changedAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -2256,6 +2297,8 @@ CREATE TABLE `broker_symbol` (
     `volumeMin` DOUBLE NULL,
     `volumeMax` DOUBLE NULL,
     `registered` BOOLEAN NOT NULL DEFAULT false,
+    `spreadPct` DOUBLE NULL,
+    `spreadQuotedAt` DATETIME(3) NULL,
     `firstSeenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `lastSeenAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
@@ -2311,6 +2354,9 @@ ALTER TABLE `TickRecordingSession` ADD CONSTRAINT `TickRecordingSession_symbolId
 
 -- AddForeignKey
 ALTER TABLE `BacktestRun` ADD CONSTRAINT `BacktestRun_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BacktestRun` ADD CONSTRAINT `BacktestRun_experimentId_fkey` FOREIGN KEY (`experimentId`) REFERENCES `backtest_experiment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `backtest_period` ADD CONSTRAINT `backtest_period_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

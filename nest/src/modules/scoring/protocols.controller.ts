@@ -7,7 +7,7 @@
  * GET /api/scoring/protocols/:id — single protocol detail with version history
  */
 
-import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
@@ -300,6 +300,46 @@ export class ProtocolsController {
     );
     this.logger.log(`Adaptive Target for ${slug} set to ${body.enabled ? 'enabled' : 'disabled'}`);
     return this.getAdaptiveTarget(slug);
+  }
+
+  /**
+   * GET /api/scoring/protocols/:slug/directive-changes
+   *
+   * #1144 — THE HISTORY OF THIS PROTOCOL'S OVERRIDES. Write-only storage is the "buried ability" this
+   * repo keeps paying for: a log nobody can read is indistinguishable from no log, and the reason the
+   * log exists is to answer *"which configuration produced this run?"* after the second change.
+   *
+   * `BacktestRun.configVersion` points at one of these numbers, so `version` here is the join key.
+   * ⚠️ An empty array means "no override has ever been recorded for this protocol" — that is version 0,
+   * a real state, and it is NOT the same as the endpoint failing (which is a 500).
+   */
+  @Get(':slug/directive-changes')
+  async getProtocolDirectiveChanges(
+    @Param('slug') slug: string,
+    @Query('limit') limit?: string,
+  ) {
+    const take = Math.min(Math.max(parseInt(limit ?? '50', 10) || 50, 1), 200);
+    if (!this.prisma.isAvailable) return { slug, changes: [], version: null };
+    const changes = await this.prisma.protocolDirectiveChange.findMany({
+      where: { protocolSlug: slug },
+      orderBy: [{ configVersion: 'desc' }],
+      take,
+    });
+    const latest = changes[0]?.configVersion ?? 0;
+    return {
+      slug,
+      version: latest,
+      changes: changes.map((c) => ({
+        version: c.configVersion,
+        directiveId: c.directiveId,
+        field: c.field,
+        // ⚠️ null = the value was ABSENT (a first override, or a reset) — never read as "was 0".
+        oldValue: c.oldValue,
+        newValue: c.newValue,
+        source: c.source,
+        changedAt: c.changedAt.toISOString(),
+      })),
+    };
   }
 
   /**

@@ -131,7 +131,7 @@ export default function HomeDashboard() {
           {/* §9.14 — Stop Guardian is a PREMIUM view, so its status row is omitted in the free
               build rather than shown with no page behind it. The guard is the Vite define: folded
               at build time, so the name never reaches the free bundle. */}
-          {import.meta.env.VITE_EDITION !== 'free' && (
+          {true && (
             <div className="nd-status-item">
               <span className="nd-status-label">Stop Guardian</span>
               <span className={`nd-status-value ${sgEnabled ? 'ok' : ''}`}>

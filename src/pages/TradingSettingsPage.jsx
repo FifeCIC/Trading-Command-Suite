@@ -397,7 +397,7 @@ export default function TradingSettingsPage() {
             from the Vite define: the bundler folds this away in the free build, which is what stops
             the names AND the paths reaching the shipped JS. `editionAllowsKey()` would answer the
             same question at runtime and still ship the strings. */}
-        {import.meta.env.VITE_EDITION !== 'free' && (
+        {true && (
           <MovedNote>
             Add and edit bots on <a href="/trading/trading-bots">Trading Bots</a> or{' '}
             <a href="/trading/bot-create">Create Bot</a>. Live evaluations are on{' '}

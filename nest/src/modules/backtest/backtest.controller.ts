@@ -359,6 +359,56 @@ export class BacktestController {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════════════════
+  // Backtest EXPERIMENTS (#1144) — the record of a tuning loop, so a series of runs is auditable.
+  //
+  // ⚠️ WHY THIS IS A ROUTE AND NOT A FRONTEND CONCEPT. The owner's goal is *"agentic AI will be able
+  // to make adjustments. Re-test, and keep doing that over and over"* — and an agent cannot group runs
+  // it produced unless the grouping is server-side. `POST /run` with `experimentId` assigns the
+  // iteration; these routes create, list and close the attempt.
+  //
+  // ⚠️ NO DELETE. An abandoned attempt keeps its runs; deleting it would destroy the evidence that the
+  // avenue was tried, which is what the next agent needs before repeating it.
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+
+  @Post('experiments')
+  @ApiOperation({ summary: 'Open a tuning experiment (a loop) for a protocol (#1144)' })
+  async createExperiment(
+    @Body() body: { protocolId?: string; label?: string; goal?: string; windowLabel?: string; createdBy?: string },
+  ) {
+    try {
+      return await this.backtestService.createExperiment(body ?? {});
+    } catch (err) {
+      throw new BadRequestException((err as Error).message);
+    }
+  }
+
+  @Get('experiments')
+  @ApiOperation({ summary: 'List tuning experiments, newest first (#1144)' })
+  async listExperiments(@Query('protocolId') protocolId?: string) {
+    return { experiments: await this.backtestService.listExperiments(protocolId) };
+  }
+
+  /** One experiment and every run in it, ordered by iteration — the audit trail of a single attempt. */
+  @Get('experiments/:id')
+  async getExperiment(@Param('id') id: string) {
+    const experiment = await this.backtestService.getExperiment(id);
+    // ⚠️ 404, never `200 { error }` — the same rule as `results/:runId` (register row 94).
+    if (!experiment) throw new NotFoundException(`no backtest experiment "${id}"`);
+    return experiment;
+  }
+
+  /** Close a loop: running | stopped | accepted | abandoned. `goal` and the window are NOT editable. */
+  @Patch('experiments/:id')
+  async setExperimentStatus(@Param('id') id: string, @Body() body: { status?: string }) {
+    if (!body?.status) throw new BadRequestException('body must be { status } — one of running, stopped, accepted, abandoned');
+    try {
+      return await this.backtestService.setExperimentStatus(id, body.status);
+    } catch (err) {
+      throw new BadRequestException((err as Error).message);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════
   // Backtest PERIODS (#986) — a named, noted window you capture once and reuse.
   //
   // ⚠️ ROUTE ORDER MATTERS: 'periods/import' and 'periods/:id/import' are declared BEFORE the

@@ -155,7 +155,7 @@ export default function ProtocolQueuePage() {
                       {/* ⚠️ §9.14 / D5=A — the composite is a score, so the free edition drops the
                           NUMBER and keeps the chip's other two facts (symbol and direction). */}
                       {r.symbol}
-                      {import.meta.env.VITE_EDITION !== 'free' && <>: {r.composite?.toFixed(0)}</>}{' '}
+                      {true && <>: {r.composite?.toFixed(0)}</>}{' '}
                       {r.signal}
                     </span>
                   ))}

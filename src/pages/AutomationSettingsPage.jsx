@@ -295,7 +295,7 @@ function BrokerConfigSection() {
                   BROKER, so the CONTROL is premium-only, gated by ABSENCE rather than disabled. Its
                   endpoint is deliberately not gated: Threshold and Confirm below use the same one in
                   the free edition. */}
-              {bs.enabled && import.meta.env.VITE_EDITION !== 'free' && (
+              {bs.enabled && (
                 <>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem' }}>
                     Trading

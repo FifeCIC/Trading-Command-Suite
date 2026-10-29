@@ -48,7 +48,7 @@ export default function RecentlyAnalysedSymbolsPage() {
             {/* §9.14.1 — 'SEES' is the scoring engine's name and the free edition does not carry the
                 method's vocabulary. Conditional, so the full edition keeps its own term. */}
             Symbols most recently scored by the{' '}
-            {import.meta.env.VITE_EDITION === 'free' ? 'scoring pipeline' : 'SEES pipeline'}
+            {'SEES pipeline'}
             {' '}— ordered by analysis time
           </PageInfoPopover>
         </h1>

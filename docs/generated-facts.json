@@ -20,7 +20,7 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 119,
+      "value": 121,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
       "how": "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '"
@@ -48,14 +48,14 @@
     },
     "validators": {
       "label": "Backend build-time validators",
-      "value": 37,
+      "value": 39,
       "unit": "",
       "source": "nest/scripts/validate-*.cjs (run in prebuild)",
       "how": "Get-ChildItem nest/scripts/validate-*.cjs"
     },
     "version": {
       "label": "Application version",
-      "value": "0.142.0",
+      "value": "0.143.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

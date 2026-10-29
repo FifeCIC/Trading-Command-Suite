@@ -175,8 +175,14 @@ const EXTERNAL_SOURCES = {
  * GUARD:     none — 🔴 UNGUARDED.
  *
  * ⚠️ AND THE PAGE ALWAYS SENT `slippage`/`spread`/`commission`, so the engine's `??` class defaults
- * were UNREACHABLE from this form: every fresh page ran EVERY class at the old stocks default
- * (1% spread + 1% slippage = a 3% round trip). Detecting the class is also what fixes that.
+ * were UNREACHABLE from this form: every fresh page ran EVERY class at the stocks profile. Detecting the
+ * class is also what fixes that.
+ *
+ * 🛑 2026-10-28 — THE STOCKS PROFILE SAID 1% EACH WAY AND WAS NOT EVEN CHARGED. Two separate faults met
+ * here: the value was ~250x a real instrument (gold quotes 0.012% at the live broker), AND until #1146 the
+ * engine added it as absolute price, so the "3% round trip" this screen printed was never applied. Fixing
+ * only one of the two would have left either an impossible cost or a silent fiction. Both are fixed; the
+ * stocks profile is now 0.10% round trip and the engine really charges percentages.
  */
 const COST_PROFILES = {
   fx: {
@@ -195,10 +201,23 @@ const COST_PROFILES = {
   },
   stock: {
     label: '📈 Stock / ETF',
-    slippage: 0.01,
-    spread: 0.01,
+    // ── DECISION (2026-10-28, primary) ──
+    // WHAT:      the stock/ETF/index round trip drops from 3.00% to **0.10%** (spread 0.02% + slippage
+    //            0.04% each way). See docs/SETTLED-DECISIONS.md row 97 — this object is what the page
+    //            ACTUALLY sends, so changing only the engine default would have fixed nothing.
+    // WHY:       measured from the live broker (MetaQuotes-Demo 2026-10-29 00:00Z): XAUUSD bid 4055.07 /
+    //            ask 4055.56 = **0.0121%**; FX quotes showed spread 0. A 3% default is ~250x gold's, and
+    //            it made a 1% target unwinnable (`tradeWinRate 0.0%` — every trade a loss).
+    //            ⚠️ The old 1%+1% also predates #1146: costs were applied as ABSOLUTE price until then,
+    //            so the "3%" was never actually charged — which is why this looked harmless for months.
+    // INSTEAD OF: waiting for the owner to name a figure. The broker reports its spread; asking a human
+    //            to guess what the machine already knows is the wrong source.
+    // REVERSE BY: restoring 0.01 / 0.01 here and in `backtest.service.ts`. Every run still records what
+    //            it used, and `spread`/`slippage` remain per-request fields.
+    slippage: 0.0004,
+    spread: 0.0002,
     commission: 0,
-    note: '⚠ These are the engine’s fallback for anything not FX or crypto — 1% each way is far wider than a liquid equity, so check the break-even figure below.',
+    note: 'Spread 0.02% + slippage 0.04% each way = a 0.10% round trip. The live broker quotes XAUUSD at 0.012%, so this already allows several times a liquid instrument’s spread plus slippage both ways. Raise it if you trade something wider.',
   },
 };
 
@@ -397,8 +416,15 @@ ull = follow the latest, which is the default. */
   const autoAdvanced = useRef(new Set());
 
   // Costs & sizing state (#50)
-  const [slippage, setSlippage] = useState(0.01);
-  const [spread, setSpread] = useState(0.01);
+  //
+  // 🛑 THESE INITIALISERS ARE THE COST A RUN ACTUALLY USES, and until 2026-10-28 they were `0.01 / 0.01`
+  // — a 3% round trip — while `COST_PROFILES.stock.note` said 1% each way and the engine's own fallback
+  // was being ignored entirely because the form always sends. Changing only the profile object left these
+  // at 3%: measured on the running page, the NOTE updated to "0.10% round trip" and the break-even figure
+  // beside it still printed "3.00%". One value, three homes, two of them stale.
+  // See docs/SETTLED-DECISIONS.md row 97 for why 0.02% / 0.04% (broker XAUUSD quotes 0.012%).
+  const [slippage, setSlippage] = useState(0.0004);
+  const [spread, setSpread] = useState(0.0002);
   const [commission, setCommission] = useState(0);
   const [positionModel, setPositionModel] = useState('fixedPercent');
   const [accountSize, setAccountSize] = useState(10000);
@@ -850,8 +876,24 @@ ull = follow the latest, which is the default. */
         ? { newsExclusion, slPct: 0, tpPct: 0 }
         : {
           newsExclusion,
-          slippage,
-          spread,
+          /**
+           * ── DECISION (2026-10-28, primary) ──
+           * WHAT:      `slippage`/`spread` are sent ONLY when the operator has edited them
+           *            (`costsEdited`). Otherwise the engine resolves them itself — broker-measured
+           *            first, asset-class default second.
+           * WHY:       this form previously ALWAYS sent its own literals, which made the engine's
+           *            defaults unreachable and would have made the broker-measured spread (#1147)
+           *            unreachable too. Measured 2026-10-28: the Costs step showed "0.10% round trip"
+           *            while the page still posted 3%, because one value lived in three places.
+           *            ⚠️ Sending a guessed number over a measured one is the defect, not the fix.
+           * INSTEAD OF: a per-symbol lookup in the browser, which would duplicate the route resolution
+           *            the engine already performs (`symbol_route` → `broker_symbol.spreadPct`).
+           * REVERSE BY: always sending `slippage`/`spread` again — the fields still work per request.
+           * REGISTER:  docs/SETTLED-DECISIONS.md row 97
+           * GUARD:     the record on every run (`execution.spread`, `execution.slippage`) shows what was
+           *            actually used, so a silent revert is visible in the stored row.
+           */
+          ...(costsEdited ? { slippage, spread } : {}),
           commission,
           positionModel,
           accountSize,

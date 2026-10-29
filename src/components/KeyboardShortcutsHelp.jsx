@@ -11,7 +11,9 @@ import { useUiStore } from '../stores/useUiStore';
  * A runtime check would leave 'Speed Trading' in the free bundle, which is the leak the guard tests
  * for and fails the release on.
  */
-const FREE_EDITION = import.meta.env.VITE_EDITION === 'free';
+// The free edition was removed 2026-10-28 (SETTLED-DECISIONS row 96). Kept as a named constant,
+// always false, so the call sites below read unchanged.
+const FREE_EDITION = false;
 
 /** Context for the market-order keys — the screen they work on, less the premium one in free. */
 const TRADING_CONTEXT = FREE_EDITION ? 'Manual Trading' : 'Speed Trading, Manual Trading';

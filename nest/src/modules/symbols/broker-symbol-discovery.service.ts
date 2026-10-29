@@ -124,6 +124,8 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
     fetched: number;
     tradeable: number;
     registered: number;
+    /** #1147 — how many routed symbols had a live spread captured. 0 is a valid count (nothing routed). */
+    spreads: number;
     reason: string | null;
   }> {
     const startedAt = new Date();
@@ -134,14 +136,14 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
       const reason = `Bridge call threw: ${(error as Error).message}`;
       await this.recordState(brokerId, 'error', reason, startedAt, false);
       this.logger.error(`Broker ${brokerId} symbol sync errored — ${reason}`);
-      return { brokerId, state: 'error', fetched: 0, tradeable: 0, registered: 0, reason };
+      return { brokerId, state: 'error', fetched: 0, tradeable: 0, registered: 0, spreads: 0, reason };
     }
 
     if (!rows || rows.length === 0) {
       const reason = 'Bridge returned no symbol list (unreachable or empty) — catalogue left untouched';
       await this.recordState(brokerId, 'unreachable', reason, startedAt, false);
       this.logger.warn(`Broker ${brokerId} symbol sync: ${reason}`);
-      return { brokerId, state: 'unreachable', fetched: 0, tradeable: 0, registered: 0, reason };
+      return { brokerId, state: 'unreachable', fetched: 0, tradeable: 0, registered: 0, spreads: 0, reason };
     }
 
     // Which of these the app has already onboarded. Read ONCE per sync rather than per row.
@@ -200,14 +202,84 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
     this.logger.log(
       `Broker ${brokerId} symbol catalogue synced: ${rows.length} offered, ${tradeable} tradeable, ${registered} already onboarded`,
     );
+
+    /**
+     * ⚠️ SPREAD IS A QUOTE, NOT A SYMBOL PROPERTY — captured as its own step (#1147).
+     *
+     * The catalogue above comes from the broker's instrument list, which carries `digits`,
+     * `contractSize`, `volumeMin/Max` and `tickSize` — but **no spread**, because a spread only exists
+     * between a live bid and a live ask. Until 2026-10-28 nothing in the app read bids or asks into
+     * storage at all, so the backtest priced every trade from a hardcoded per-asset-class guess
+     * (`1% spread + 1% slippage each way` — ~250x a real instrument). The owner asked whether the
+     * broker's own data reaches the app; this is the piece that did not.
+     *
+     * ⚠️ IT CANNOT FAIL THE CATALOGUE SYNC. Discovery's job is the list; a spread capture that cannot
+     * reach the quote feed leaves `spreadPct` NULL (which the backtest reads as "not measured" and
+     * falls back to the class default), and says so — it never writes a zero, because 0% spread would
+     * read as a perfect fill.
+     */
+    let spreads = 0;
+    try {
+      spreads = await this.captureSpreads(brokerId);
+    } catch (err) {
+      this.logger.warn(
+        `Broker ${brokerId} spread capture failed: ${(err as Error).message}. spreadPct stays NULL ` +
+          '(NOT zero) — anything reading it falls back to the class default.',
+      );
+    }
+
     return {
       brokerId,
       state: 'ok',
       fetched: rows.length,
       tradeable,
       registered,
+      spreads,
       reason: null,
     };
+  }
+
+  /**
+   * Capture the LIVE spread for the symbols actually routed to this broker.
+   *
+   * ⚠️ ONLY ROUTED SYMBOLS, not the 12,229-instrument catalogue: a bulk quote request for the whole
+   * list would hammer the bridge for data nothing reads. The set that matters is what can be traded —
+   * `symbol_route` for this broker, plus anything a bot is running.
+   *
+   * ⚠️ `(ask - bid) / mid`, as a **PERCENT**, which is the unit `BacktestService` wants. A quote with
+   * `bid == ask` (the demo feed reports 0 on FX) is recorded as measured 0 — that is a real reading and
+   * is NOT the same as `NULL` = never measured.
+   */
+  async captureSpreads(brokerId: number): Promise<number> {
+    const routes = await (this.prisma as any).symbolRoute.findMany({
+      where: { brokerId, enabled: true },
+      select: { symbol: true, brokerSymbol: true },
+    });
+    const names = [...new Set(
+      (routes as Array<{ symbol: string; brokerSymbol: string | null }>)
+        .map((r) => r.brokerSymbol || r.symbol)
+        .filter(Boolean),
+    )];
+    if (names.length === 0) return 0;
+
+    const quotes = await this.mt5.getQuotesBulk(names);
+    let written = 0;
+    for (const [name, q] of Object.entries(quotes ?? {})) {
+      const bid = Number((q as { bid?: number })?.bid);
+      const ask = Number((q as { ask?: number })?.ask);
+      if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) continue;
+      const mid = (bid + ask) / 2;
+      const spreadPct = ((ask - bid) / mid) * 100;
+      await (this.prisma as any).brokerSymbol.updateMany({
+        where: { brokerId, name },
+        data: { spreadPct, spreadQuotedAt: new Date() },
+      });
+      written += 1;
+    }
+    if (written > 0) {
+      this.logger.log(`Broker ${brokerId}: spread captured for ${written} routed symbol(s)`);
+    }
+    return written;
   }
 
   /** Broker's own grouping (`Nasdaq\GRML`) → first segment. Null when path is absent. */

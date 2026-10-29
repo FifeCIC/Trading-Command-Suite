@@ -307,7 +307,7 @@ export default function MarketContextPage() {
                     score-derived numbers, so the indicator is omitted. Its SIBLINGS stay: how many
                     positions a session carries is not a score, and the session table is the point of
                     this page. Removing the one indicator, not the panel. */}
-                {import.meta.env.VITE_EDITION !== 'free' && (
+                {true && (
                   <div className="mc-indicator" title="Average composite score for symbols in this session's region">
                     <span className="mc-ind-label">Scoring</span>
                     <span className={`mc-ind-value ${s.avgScore != null ? (s.avgScore >= 50 ? 'mc-ind-good' : 'mc-ind-warn') : 'mc-ind-none'}`}>

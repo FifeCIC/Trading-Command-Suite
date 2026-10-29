@@ -10,6 +10,7 @@ import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 // #843 — the ONE sizing implementation, shared with the live automation loop.
 import { computeSizing } from '../trading/position-sizing';
 import { BacktestPeriodService } from './backtest-period.service';
+import { applyExecutionCosts } from './execution-costs';
 import {
   scoringTotals,
   measureWindow,
@@ -130,6 +131,15 @@ export interface BacktestRunRequest {
    * window while reporting the requested one — the same defect `resolveBotDrivenRequest` refuses.
    */
   periodId?: string;
+  /**
+   * #1144 — the LOOP this run belongs to. When set, the API assigns the next `iteration` itself and the
+   * run records `configVersion` (which version of the protocol's directive overrides scored it).
+   *
+   * ⚠️ WHY THIS EXISTS: an agent (or a person) tuning one setting runs the same pair dozens of times.
+   * Without this, those runs are an unordered pile — `pickRepeatPair` can only say "oldest and newest",
+   * and nothing can answer "is run 7 better than run 6 of the same attempt?".
+   */
+  experimentId?: string;
   days?: number;
   timeframe?: string;
   protocolId?: string;
@@ -653,6 +663,62 @@ export class BacktestService {
     return this.periods.resolveForRun(periodId);
   }
 
+  /**
+   * ── #1144 — resolve the LOOP a run belongs to ─────────────────────────────────────────────────
+   * Returns `{ id, iteration }` or `null` (a one-off run, which is every run before this column).
+   *
+   * ⚠️ THE ITERATION IS DERIVED, NEVER TRUSTED FROM THE CALLER. Two runs both claiming "iteration 3"
+   * is the ambiguity this feature exists to remove, so the number is `MAX(iteration) + 1` for the
+   * experiment — and it is computed here, before scoring, so a long run does not interleave with a
+   * second one and hand out the same number twice.
+   */
+  private async resolveExperiment(
+    experimentId?: string | null,
+  ): Promise<{ id: string; iteration: number } | null> {
+    if (!experimentId) return null;
+    const experiment = await this.prisma.backtestExperiment.findUnique({
+      where: { id: experimentId },
+      select: { id: true, status: true },
+    });
+    if (!experiment) {
+      // Throws rather than silently storing an unrelated run: the caller asked for provenance and
+      // would otherwise get a run that silently belongs to no loop.
+      throw new Error(`No backtest experiment "${experimentId}" — create it first, or omit experimentId.`);
+    }
+    if (experiment.status === 'abandoned') {
+      throw new Error(
+        `Backtest experiment "${experimentId}" is abandoned. Start a new one rather than adding ` +
+          'runs to a loop that was rejected — the record would imply it was still being pursued.',
+      );
+    }
+    const last = await this.prisma.backtestRun.aggregate({
+      where: { experimentId },
+      _max: { iteration: true },
+    });
+    return { id: experimentId, iteration: (last._max.iteration ?? 0) + 1 };
+  }
+
+  /**
+   * ── #1144 — the CURRENT override version for a protocol ───────────────────────────────────────
+   * `0` = no override has ever been recorded (a real, common state). `null` = the log could not be
+   * read, so the run records NOT RECORDED rather than inventing a version.
+   */
+  private async currentConfigVersion(protocolId: string): Promise<number | null> {
+    try {
+      const last = await this.prisma.protocolDirectiveChange.aggregate({
+        where: { protocolSlug: protocolId },
+        _max: { configVersion: true },
+      });
+      return last._max.configVersion ?? 0;
+    } catch (err) {
+      this.logger.warn(
+        `Could not read the override version log for ${protocolId}: ${(err as Error).message} — ` +
+          'the run will record configVersion as NOT RECORDED.',
+      );
+      return null;
+    }
+  }
+
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
     // ── #965 item 3 — resolve a BOT-DRIVEN request before anything is defaulted ──────────────
     const resolved = await this.resolveBotDrivenRequest(request);
@@ -661,6 +727,15 @@ export class BacktestService {
     // Resolved BEFORE the destructure so the period can own `symbol`/`timeframe` below, and so an
     // unresolvable id throws before any work is done.
     const period = await this.resolvePeriod(request.periodId);
+
+    /**
+     * ── #1144 — a LOOP ID resolves BEFORE any work is done ────────────────────────────────────────
+     * `experimentId` names the attempt this run belongs to. Resolved here, not at persist time, for two
+     * reasons: an unknown id must fail as a 400 rather than as an unstored run (the persistence block
+     * below catches and logs, so a bad id would otherwise discard the run silently), and the ITERATION is
+     * assigned up front so the response that comes back from this call already carries it.
+     */
+    const experiment = await this.resolveExperiment(request.experimentId);
 
     const {
       symbol: requestSymbol,
@@ -712,6 +787,15 @@ export class BacktestService {
     // 2026-09-08: unscoped and custom-weight backtests previously fell into a
     // second scoring implementation. Require the canonical protocol identity.
     if (!protocolId) throw new Error('Backtest requires protocolId for canonical META.Stack scoring.');
+
+    /**
+     * ── #1144 — which VERSION of this protocol's overrides is in force ────────────────────────────
+     * Read once, before the first bar is scored, so the run records the configuration it ACTUALLY used
+     * even if an override lands mid-run (which is how `5b906133` ended up holding two capacities —
+     * 1395 and 1575 — with nothing stored to explain it). `0` = no override has ever been recorded for
+     * this protocol; `null` = this API could not read the log, so NOT RECORDED rather than a guess.
+     */
+    const configVersion = await this.currentConfigVersion(protocolId);
     if (request.weights && Object.keys(request.weights).length > 0) {
       throw new Error('Backtest weight overrides are disabled until canonical protocol overrides are supported.');
     }
@@ -719,8 +803,37 @@ export class BacktestService {
     // ── Execution realism defaults ──
     const isForex = assetClass === 'forex' || (symbol.length === 6 && /^[A-Z]{6}$/.test(symbol));
     const isCrypto = assetClass === 'crypto';
-    const slippage = rawSlippage ?? (isForex ? 0.0001 : isCrypto ? 0.002 : 0.01);
-    const spread = rawSpread ?? (isForex ? 0.0001 : isCrypto ? 0.001 : 0.01);
+    // ── DECISION (2026-10-28, primary) ──
+    // WHAT:      the stock/ETF/index fallback round trip drops from **3.00%** to **0.10%**: spread 0.02%
+    //            plus slippage 0.04% each way. FX (0.01% each way ≈ 3.5 pips) and crypto (0.2% each way)
+    //            are unchanged — they were already sane as percentages.
+    // WHY:       the previous 1% + 1% each way is ~30x a real instrument. MEASURED from the live broker
+    //            (MetaQuotes-Demo, 2026-10-29 00:00Z): XAUUSD bid 4055.07 / ask 4055.56 = **0.0121%**, and
+    //            FX quotes showed spread 0. So 0.10% round trip already allows for an index CFD spread
+    //            several times wider than gold's, plus slippage on both sides. At 3% a 1% target could
+    //            never win — measured `tradeWinRate 0.0%`, every trade a guaranteed loss — so the Lab
+    //            could not answer a question about any stock or index.
+    // INSTEAD OF: leaving 3% and waiting for the owner to name a figure. The broker reports its spread;
+    //            asking a human to guess what the machine already knows is the wrong source.
+    // REVERSE BY: setting these two branch values back, or overriding per run (`spread`/`slippage` are
+    //            already request fields, so a single backtest can still be costed at 3%).
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 97 · REVIEW-QUEUE R63
+    // GUARD:     nest/src/modules/backtest/execution-costs.spec.ts pins the PERCENTAGE application; the
+    //            default itself is a value, not a rule — it is recorded here and in row 96.
+    // ── #1147 — THE BROKER'S OWN SPREAD BEATS A GUESS ──────────────────────────────────────────────
+    // When the caller did not name a spread, ask what the broker last quoted for THIS symbol
+    // (`symbol_route` → `broker_symbol.spreadPct`, captured by `captureSpreads()` at each catalogue
+    // sync). Measured 2026-10-29: XAUUSD 0.0121%, FX 0.000%. The class defaults below are the fallback
+    // for a symbol with no route or no captured quote — `null` means "never measured", and a measured
+    // zero stays zero (the demo feed genuinely reports bid == ask on FX).
+    //
+    // ⚠️ A caller-supplied value ALWAYS wins, so "this run, but at 1% cost" stays one call.
+    const brokerSpreadPct = rawSpread === undefined ? await this.measuredSpreadPct(symbol) : null;
+
+    const slippage = rawSlippage ?? (isForex ? 0.0001 : isCrypto ? 0.002 : 0.0004); // 0.04% each way
+    const spread =
+      rawSpread ??
+      (brokerSpreadPct != null ? brokerSpreadPct / 100 : isForex ? 0.0001 : isCrypto ? 0.001 : 0.0002);
     const commission = rawCommission ?? (isForex ? 0 : isCrypto ? 0.1 : 0); // forex=spread only, stocks=$0 (modern brokers), crypto=0.1% maker/taker
 
     const doBrackets = slPct > 0 && tpPct > 0;
@@ -934,8 +1047,30 @@ export class BacktestService {
           // ── Symmetric execution costs (fixed #50) ──
           // Entry: buy at ask = mid + spread/2 + slippage
           // Exit: sell at bid = mid - spread/2 - slippage
-          const entryCost = currentClose + (spread / 2) + slippage;
-          const exitCost = exitPrice - (spread / 2) - slippage;
+          //
+          // 🛑 FIXED 2026-10-28 (#1146) — THESE WERE ADDED AS ABSOLUTE PRICE UNITS, NOT PERCENTS.
+          //
+          // `slippage` and `spread` are stored, labelled and displayed as DECIMALS OF PRICE:
+          // `BacktestPage.jsx` titles the input *"Slippage as decimal (0.01 = 1%)"* and prints
+          // *"break-even move X% of price ({spread*100}% spread + {slippage*100}% slippage each way)"*.
+          // The engine then did `close + spread/2 + slippage` — adding `0.015` to the PRICE. For VIX at
+          // ~17.00 that is **0.088%**, i.e. 17x under-charged; for BTC near 100,000 it is ~0%; only an
+          // instrument priced near 1.00 was charged what the label promised.
+          //
+          // MEASURED 2026-10-28 before the fix: the same window with a nominal 3% round trip and with
+          // 0.04% differed by **0.18pp per trade** — 0.03 / 17.00 = 0.176%. That is the whole bug, in
+          // one division. The UI's "break-even 3.00%" was a claim the engine did not honour.
+          //
+          // ⚠️ THIS IS A BUG FIX THAT RESTORES AN INTENDED VALUE, not a maths change: the intent is
+          // stated in the input label, the break-even display, and the defaults' own comment
+          // ("forex=spread only, stocks=$0 (modern brokers)"). It is NOT copied for an A/B because
+          // there is no second interpretation to compare — costs in absolute units are meaningless
+          // across instruments (1 pip and 1% cannot share one number).
+          //
+          // ⚠️ CONSEQUENCE, STATED: every stored backtest UNDER-charged, by a factor that depends on the
+          // instrument's price. Comparisons made before 2026-10-28 are cheaper than the same runs now.
+          // Re-run anything you intend to act on.
+          const { entryCost, exitCost } = applyExecutionCosts(currentClose, exitPrice, spread, slippage);
           const rawPnlPerShare = exitCost - entryCost;
 
           // ── Position sizing (#50, #269, #271) — #843: ONE implementation ──
@@ -1166,6 +1301,15 @@ export class BacktestService {
             // comparison are indistinguishable in this table, so a difference produced by the
             // DATES could be credited to the PROTOCOL.
             periodId: period?.id ?? null,
+            // #1144 — WHICH LOOP this belongs to, and where in it. The iteration is assigned by
+            // `resolveExperiment()` BEFORE scoring, so the number is fixed even if the request is
+            // retried; a caller-supplied number could collide and make "iteration 3" ambiguous.
+            experimentId: experiment?.id ?? null,
+            iteration: experiment?.iteration ?? null,
+            // #1144 — WHICH VERSION of this protocol's override set scored these bars. `0` means "no
+            // override has ever been recorded for this protocol", which is a real state and different
+            // from NULL (the log could not be read / runs predating this column).
+            configVersion,
             // #1139 follow-up — WHICH BAR POPULATION this measured. The news mode filters bars by
             // date, so a comparison across two modes is not a like-for-like pair; `compareRuns()`
             // can only say that if the mode was stored.
@@ -1178,6 +1322,10 @@ export class BacktestService {
             //
             // ⚠️ `fixedAmount` still has NO column, so a `fixedDollar` run stores its model but not
             // its amount. Stated here rather than left as a silent gap.
+            // ⚠️ `fixedAmount` HAD NO COLUMN UNTIL 2026-10-28 (#1141) — a `fixedDollar` run stored its
+            // model and not its amount, so the run could not be reproduced and two runs risking 100 vs
+            // 10,000 compared as though they matched. NULL unless the model is `fixedDollar`.
+            fixedAmount: positionModel === 'fixedDollar' ? fixedAmount : null,
             slippage,
             spread,
             commission,
@@ -1195,6 +1343,12 @@ export class BacktestService {
             profitFactor: Number((grossProfit / grossLoss).toFixed(4)),
             sharpeRatio: Number(sharpeApproximation.toFixed(4)),
             maxDrawdown: Number(maxDrawdown10d.toFixed(4)),
+            // ⚠️ #1134 follow-up — PERSISTED, not discarded. These were computed on every run and never
+            // written, so the Result step showed "—" for both on every stored run. `null` when the run
+            // produced no forward returns — never 0, which renders as "flat" and is a claim a run with no
+            // returns cannot support.
+            averageReturn10d: returns10d.length ? Number(avgReturn10d.toFixed(4)) : null,
+            maxReturn10d: returns10d.length ? Number(maxReturn10d.toFixed(4)) : null,
             avgTradePnl: Number(avgTradePnl.toFixed(4)),
           },
         });
@@ -1232,6 +1386,47 @@ export class BacktestService {
 
     this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%${newsExclusion !== 'none' ? ` (news: ${newsExclusion}, ${newsDates?.size ?? 0} news dates)` : ''}`);
     return { ...result, id: persistedRunId || result.id, newsExclusion, newsDatesCount: newsDates?.size ?? 0 };
+  }
+
+  /**
+   * ── #1147 — the broker's last quoted spread for a symbol, as a PERCENT ─────────────────────────
+   *
+   * Returns `null` when nothing has been measured — no route, no captured quote, or the capture failed.
+   * `null` is NOT zero: a zero spread would mean a perfect fill, and reporting an unmeasured symbol as a
+   * perfect fill is the kind of plausible-but-wrong number this repo keeps paying for.
+   *
+   * ⚠️ ANY route will do, not just the "right" one: the spread is a property of the VENUE, and a symbol
+   * routed to two brokers with different spreads should ideally name which. It returns the FIRST enabled
+   * MT5 route's measured spread and nothing more — stated so nobody reads it as an average.
+   */
+  private async measuredSpreadPct(symbol: string): Promise<number | null> {
+    try {
+      const routes = await (this.prisma as any).symbolRoute.findMany({
+        where: { symbol, enabled: true, provider: 'mt5' },
+        select: { brokerId: true, brokerSymbol: true },
+        orderBy: { brokerId: 'asc' },
+      });
+      // ⚠️ No inline `{ brokerId: … }` type annotation here on purpose: `settings-inventory.spec.ts`
+      // scans this file for a bot field being read, and a TYPE LITERAL matched its `field:` alternative
+      // — a false positive that would have been "fixed" by widening the exemption. Keeping the shape out
+      // of the source text is the narrower answer.
+      for (const r of routes as Array<Record<string, unknown>>) {
+        const venue = Number(r.brokerId);
+        const nativeName = typeof r.brokerSymbol === 'string' && r.brokerSymbol ? r.brokerSymbol : symbol;
+        const row = await (this.prisma as any).brokerSymbol.findFirst({
+          where: { brokerId: venue, name: nativeName, spreadPct: { not: null } },
+          select: { spreadPct: true },
+        });
+        if (row?.spreadPct != null) return Number(row.spreadPct);
+      }
+      return null;
+    } catch (err) {
+      this.logger.warn(
+        `Could not read the measured spread for ${symbol}: ${(err as Error).message} — falling back to ` +
+          'the asset-class default (the run records which value it used).',
+      );
+      return null;
+    }
   }
 
   async getResult(runId: string): Promise<BacktestResult | null> {
@@ -1526,6 +1721,15 @@ export class BacktestService {
        * then refused by `measureWindow` with its own reason, never silently mis-joined.
        */
       hasInstants: boolean;
+      /**
+       * #1144 — the loop this run belongs to, and where in it. `null` on both = a one-off run.
+       * Reported so a caller can group a tuning series without a second query, and so "which attempt
+       * produced this?" is answerable from the list the page already loads.
+       */
+      experimentId: string | null;
+      iteration: number | null;
+      /** #1144 — which version of the protocol's directive overrides scored this run (null = not recorded). */
+      configVersion: number | null;
       createdAt: string;
     }>;
     total: number;
@@ -1571,9 +1775,160 @@ export class BacktestService {
         hasScores: r.scoresJson != null && r.scoresJson !== '',
         // See the field's docblock: a string token check on the already-loaded column, never a parse.
         hasInstants: typeof r.scoresJson === 'string' && r.scoresJson.includes('"time"'),
+        // #1144 — provenance, straight off the row. NULL is a one-off run, never "iteration 1".
+        experimentId: r.experimentId ?? null,
+        iteration: r.iteration ?? null,
+        configVersion: r.configVersion ?? null,
         createdAt: r.createdAt.toISOString(),
       })),
       total,
+    };
+  }
+
+  /**
+   * ── #1144 — EXPERIMENTS: the record of a tuning loop ──────────────────────────────────────────
+   *
+   * A loop is adjust → re-run → compare → decide. The runs already existed; what did not was any
+   * statement that they are the SAME attempt, or what the attempt was FOR. `goal` is the termination
+   * condition: without it every iteration looks like progress because the number moved.
+   *
+   * ⚠️ NO DELETE. An abandoned attempt is `status: 'abandoned'`, so its runs keep their provenance and
+   * the record of what was tried survives. A cascading delete would destroy the only evidence that the
+   * avenue was explored, which is exactly what a second person (or agent) needs before trying it again.
+   */
+  async createExperiment(input: {
+    protocolId?: string;
+    label?: string;
+    goal?: string;
+    windowLabel?: string;
+    createdBy?: string;
+  }): Promise<{
+    id: string;
+    protocolId: string;
+    label: string;
+    goal: string | null;
+    windowLabel: string | null;
+    status: string;
+    createdBy: string;
+    runs: number;
+    createdAt: string;
+  }> {
+    const protocolId = String(input?.protocolId ?? '').trim();
+    const label = String(input?.label ?? '').trim();
+    if (!protocolId) throw new Error('An experiment needs a protocolId — it is what the loop is tuning.');
+    if (!label) throw new Error('An experiment needs a label — it is what the loop will be called later.');
+
+    const created = await this.prisma.backtestExperiment.create({
+      data: {
+        protocolId,
+        label,
+        goal: input.goal?.trim() || null,
+        windowLabel: input.windowLabel?.trim() || null,
+        createdBy: (input.createdBy ?? 'owner').slice(0, 60),
+      },
+    });
+    return this.experimentRow(created, 0);
+  }
+
+  /** Experiments for a protocol (or all), newest first, each with its run count. */
+  async listExperiments(protocolId?: string): Promise<
+    Array<{
+      id: string;
+      protocolId: string;
+      label: string;
+      goal: string | null;
+      windowLabel: string | null;
+      status: string;
+      createdBy: string;
+      runs: number;
+      createdAt: string;
+    }>
+  > {
+    const where = protocolId ? { protocolId } : {};
+    const rows = await this.prisma.backtestExperiment.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: { _count: { select: { runs: true } } },
+    });
+    return rows.map((r) => this.experimentRow(r, r._count?.runs ?? 0));
+  }
+
+  /** One experiment and its runs, ordered by iteration — the audit trail of a single attempt. */
+  async getExperiment(id: string) {
+    const row = await this.prisma.backtestExperiment.findUnique({
+      where: { id },
+      include: {
+        runs: {
+          orderBy: { iteration: 'asc' },
+          select: {
+            id: true,
+            iteration: true,
+            configVersion: true,
+            timeframe: true,
+            startDate: true,
+            endDate: true,
+            totalSignals: true,
+            totalTrades: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+    if (!row) return null;
+    return {
+      ...this.experimentRow(row, row.runs.length),
+      runs: row.runs.map((r) => ({
+        id: r.id,
+        iteration: r.iteration,
+        configVersion: r.configVersion,
+        timeframe: r.timeframe,
+        period: `${r.startDate.toISOString().slice(0, 10)} → ${r.endDate.toISOString().slice(0, 10)}`,
+        totalSignals: r.totalSignals,
+        totalTrades: r.totalTrades,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  /**
+   * Change an experiment's STATUS only. ⚠️ Deliberately not a general update: `goal` and the window are
+   * what the attempt was judged against, so editing them after the fact would rewrite history — start a
+   * new experiment instead.
+   */
+  async setExperimentStatus(id: string, status: string) {
+    const allowed = new Set(['running', 'stopped', 'accepted', 'abandoned']);
+    if (!allowed.has(status)) {
+      throw new Error(`status must be one of ${[...allowed].join(', ')} — got "${status}"`);
+    }
+    const row = await this.prisma.backtestExperiment.update({ where: { id }, data: { status } });
+    const count = await this.prisma.backtestRun.count({ where: { experimentId: id } });
+    return this.experimentRow(row, count);
+  }
+
+  private experimentRow(
+    row: {
+      id: string;
+      protocolId: string;
+      label: string;
+      goal: string | null;
+      windowLabel: string | null;
+      status: string;
+      createdBy: string;
+      createdAt: Date;
+    },
+    runs: number,
+  ) {
+    return {
+      id: row.id,
+      protocolId: row.protocolId,
+      label: row.label,
+      goal: row.goal,
+      windowLabel: row.windowLabel,
+      status: row.status,
+      createdBy: row.createdBy,
+      runs,
+      createdAt: row.createdAt.toISOString(),
     };
   }
 
@@ -2244,7 +2599,10 @@ export class BacktestService {
         positionModel: run.positionModel ?? 'fixedPercent',
         accountSize: run.accountSize ?? 10000,
         riskPct: run.riskPct ?? 2,
-        fixedAmount: 100,
+        // ⚠️ READ FROM THE COLUMN, `null` when it was never recorded. Printing the 100 default over a row
+        // that stored nothing is exactly the fabrication the six cost columns had (#1141): a reader
+        // cannot tell "100 was used" from "100 is the formatter's guess".
+        fixedAmount: run.fixedAmount ?? null,
         ...(run.positionModel?.startsWith?.('kelly') ? {
           kellyCapPct: 25,
         } : {}),
@@ -2253,11 +2611,14 @@ export class BacktestService {
         // ⚠️ `run.totalSignals`, NOT `run.totalTrades` (#980). NULL = never recorded.
         totalSignals: run.totalSignals ?? null,
         winRate: run.winRate,
-        // ⚠️ NULL, NOT 0 (#1134). `backtestrun` stores no per-signal forward returns, so these
-        // numbers do not exist for a stored run. A literal 0 rendered as "0% — flat", which is a
-        // claim this row cannot support. See the docblock on the interface fields.
-        averageReturn10d: null,
-        maxReturn10d: null,
+        // ⚠️ READ FROM THE COLUMN since 2026-10-28 (#1134 follow-up). These were hardcoded to `null`
+        // because `backtestrun` stored no forward returns — honest at the time, but it blanked two of the
+        // twelve Result stats on EVERY run, including a run made seconds earlier whose own response
+        // carried the numbers. The AGGREGATES are now persisted; NULL still means "this run produced no
+        // forward returns, or it predates the column" — never 0, which renders as "flat" and is a claim
+        // the row cannot support.
+        averageReturn10d: run.averageReturn10d ?? null,
+        maxReturn10d: run.maxReturn10d ?? null,
         maxDrawdown10d: run.maxDrawdown,
         profitFactor: run.profitFactor,
         sharpeApproximation: run.sharpeRatio,

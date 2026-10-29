@@ -249,6 +249,26 @@ model BacktestRun {
   // DATES could be credited to the PROTOCOL. NULL = not period-scoped (every run before this
   // column, and any plain day-range run) — deliberately distinct from the id of a period.
   periodId     String?  @db.VarChar(36)
+  // ⚠️ ADDED 2026-10-27 (#1144) — WHICH TUNING LOOP this run belongs to, and where in it.
+  //
+  // WHY: every other column here says WHAT was measured. None said WHY the run exists, so a series of
+  // runs an agent (or a person) produced while adjusting one setting was indistinguishable from an
+  // unrelated pile — `pickRepeatPair` could only guess a window's A and B as "oldest and newest", and
+  // nothing could answer "was run 7 better than run 6 of the same attempt?".
+  //
+  // ⚠️ NULL = NOT PART OF A LOOP, deliberately distinct from an experiment with no runs. Attempts that
+  // predate this column, and every hand-made one-off run, are NULL — never read as "iteration 1".
+  // `iteration` is 1-based and assigned by the API, not by the caller: a caller-supplied number can
+  // collide, and two runs claiming iteration 3 is exactly the ambiguity this column exists to remove.
+  experimentId String?  @db.VarChar(36)
+  iteration    Int?
+  // ⚠️ ADDED 2026-10-27 (#1144) — WHICH VERSION of this protocol's per-directive overrides produced this
+  // run. The overrides themselves are mutable settings keys (`protocol:<slug>:<dir>:maxScore`), so
+  // without a version a run cannot be tied to the configuration that scored it. Measured instance:
+  // run `5b906133` contains BOTH 1395 and 1575 capacity, because an override landed while it was
+  // scoring — and nothing stored could explain that after the fact.
+  // NULL = not recorded (runs before this column) — distinct from version 0 (no overrides ever set).
+  configVersion Int?
   // ⚠️ ADDED 2026-10-26 (#1139 follow-up) — WHICH BAR POPULATION this run measured. The Lab's news
   // mode filters bars by date (`exclude` drops news-day bars, `only` keeps them), so two runs whose
   // mode differs are not two measurements of the same thing. `run()` returned the mode in its
@@ -271,6 +291,21 @@ model BacktestRun {
   profitFactor Float
   sharpeRatio  Float
   maxDrawdown  Float
+  // ⚠️ ADDED 2026-10-28 (#1134 follow-up) — the two FORWARD-RETURN aggregates `run()` has always
+  // computed and never stored.
+  //
+  // The read path hardcoded these to `null` with the reasoning "`backtestrun` stores no per-signal
+  // forward returns, so these numbers do not exist for a stored run" — honest, but it meant two of the
+  // twelve stats on the Result step were permanently blank for EVERY run, including the one just made.
+  // Measured 2026-10-28: a fresh VIX run returned `averageReturn10d: null, maxReturn10d: null` while the
+  // live response carried real numbers.
+  //
+  // ⚠️ Only the AGGREGATES are stored, not the per-signal returns: the two numbers are what the page
+  // shows, and storing 1,000 per-signal rows would repeat the `scoresJson` size decision for a reading
+  // nobody joins on. NULL = the run scored no forward returns (or predates this column) — never 0, which
+  // would render as "flat" and is a claim the row cannot support.
+  averageReturn10d Float?
+  maxReturn10d Float?
   avgTradePnl  Float
   // Execution realism (#50)
   slippage     Float?   // slippage % used
@@ -279,14 +314,89 @@ model BacktestRun {
   positionModel String? @db.VarChar(30)  // fixedPercent | fixedDollar | atrEqualRisk | kellyFull | kellyHalf
   accountSize  Float?   // starting account balance
   riskPct      Float?   // risk % per trade
+  // ⚠️ ADDED 2026-10-28 (#1141) — the AMOUNT a `fixedDollar` run actually risked per trade. The six
+  // columns above have been written since 2026-10-26, but this one had no column at all, so a
+  // `fixedDollar` run stored its MODEL and not its AMOUNT — a run that cannot be reproduced, and a
+  // comparison that cannot tell 100 from 10,000. Nullable: every run made before this column, and every
+  // run whose `positionModel` is not `fixedDollar`, legitimately has no amount.
+  fixedAmount  Float?
   createdAt    DateTime @default(now())
 
   symbol Symbol         @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  experiment BacktestExperiment? @relation(fields: [experimentId], references: [id], onDelete: SetNull)
   trades BacktestTrade[]
 
   @@index([symbolId, protocolId])
   @@index([createdAt])
   @@index([periodId])
+  @@index([experimentId, iteration])
+}
+
+// ── Backtest experiments (#1144) — provenance for a tuning loop ──────────────
+// A LOOP is: adjust one setting → re-run → compare → decide → adjust again. The runs already exist;
+// what did not exist was a record that they are the SAME attempt, and what the attempt was FOR.
+//
+// ⚠️ `goal` IS NOT DECORATION. Without a stated target ("raise Σ signal % by 10% without increasing
+// the worsened-bar count") a loop cannot end — every iteration looks like progress because the number
+// moved. It is also the only place the owner's intent survives after the chat is closed.
+model BacktestExperiment {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  // Slug or UUID, exactly as `BacktestRun.protocolId` stores it — the same column name means the same
+  // thing here on purpose, so the two can be compared without a translation step.
+  protocolId  String   @db.VarChar(100)
+  label       String   @db.VarChar(200)
+  goal        String?  @db.Text
+  // The window the loop is pinned to, as `periodId` or "from → to". ⚠️ Free text because a loop may be
+  // pointed at a stored period OR a day range; a run-level `periodId` remains the authoritative record.
+  windowLabel String?  @db.VarChar(120)
+  // running | stopped | accepted | abandoned. 'accepted' means one of its runs was taken as the
+  // baseline; 'abandoned' means the attempts were rejected — both are outcomes, not deletions.
+  status      String   @default("running") @db.VarChar(20)
+  // Who drove the loop: 'owner' | 'agent:<name>'. An agent's unattended loop must be distinguishable
+  // from a person's, because only one of them was watching.
+  createdBy   String   @default("owner") @db.VarChar(60)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  runs BacktestRun[]
+
+  @@index([protocolId, createdAt])
+  @@index([status])
+  // ⚠️ Prisma's default table name for `BacktestExperiment` is `backtestexperiment` (no underscore),
+  // while this schema's tables use snake_case where they are newer (`backtest_period`). The DDL and the
+  // model MUST agree or every query fails at runtime with "The table … does not exist" — and no unit
+  // test can see it. `db:check` catches the drift; this line is the fix it asks for.
+  @@map("backtest_experiment")
+}
+
+// ── Per-protocol override history (#1144) — append-only ─────────────────────
+// The overrides themselves are mutable settings keys (`protocol:<slug>:<dir>:maxScore`). Overwriting
+// one in place left NO history, so "which configuration produced this run?" became unanswerable after
+// the second change. Measured: run `5b906133` holds two capacities (1395 and 1575) because an override
+// landed while it was scoring — the run is evidence of the gap and could not be explained from storage.
+//
+// ⚠️ APPEND-ONLY, and never updated. A row says what changed, from what, to what, at which version.
+// `configVersion` is per-protocol and monotonic: `BacktestRun.configVersion` points at one of these
+// rows, so a run can be traced to the exact override state that scored it (version 0 = no overrides).
+model ProtocolDirectiveChange {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  protocolSlug  String   @db.VarChar(100)
+  directiveId   String   @db.VarChar(100)
+  // 'maxScore' | 'minScore' | 'priority' | 'category' | 'directionBias' | '(reset)'
+  field         String   @db.VarChar(40)
+  // ⚠️ NULL means ABSENT, not zero — a first override has no previous value, and printing 0 would read
+  // as "it was 0 before".
+  oldValue      String?  @db.VarChar(200)
+  newValue      String?  @db.VarChar(200)
+  // 'owner' | 'api' | 'agent:<name>' — best effort; an unauthenticated local write cannot be proven.
+  source        String   @default("api") @db.VarChar(60)
+  configVersion Int
+  changedAt     DateTime @default(now())
+
+  @@index([protocolSlug, configVersion])
+  @@index([directiveId, changedAt])
+  // See the note on `BacktestExperiment.@@map` — the DDL name and the model name must agree.
+  @@map("protocol_directive_change")
 }
 
 // ── Backtest Periods (#986) ───────────────────────────────
@@ -1477,6 +1587,20 @@ model TradingStrategy {
   // these directly. Multi-protocol consumption moves to StrategyProtocol
   // subscriptions; these stay as the legacy single long/short link until the
   // loop consumes subscriptions.
+  // ── DECISION (2026-10-28, primary) ──
+  // WHAT:      a protocol reference is a SLUG. `watchlist.protocolId` is the one declared exception
+  //            (it holds protocol uuids, and its readers expect that).
+  // WHY:       measured 2026-10-28 (#800) — this column is varchar(36), exactly a uuid's width, so both
+  //            forms fitted and nothing rejected either. `WHERE protocolId = 'cac-speed-v1'` returned 0
+  //            bots while the bot existed under its uuid: wrong answer, no error. Slug is what 40/40
+  //            bots, 40/40 subscriptions and 88/88 runs already use, it is what `protocol.slug` is
+  //            unique on, and it is the only form a human can read in this column.
+  // INSTEAD OF: widening/narrowing the type and hoping, or resolving both forms at every call site —
+  //            two forms accepted everywhere is exactly the ambiguity being removed.
+  // REVERSE BY: declaring a different canonical form and migrating all four tables in one change, then
+  //            flipping CANONICAL_TABLES and the exception list in the guard.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 95
+  // GUARD:     nest/scripts/validate-protocol-refs.cjs (npm run validate:protocol-refs)
   protocolId    String?  @db.VarChar(36)
   shortProtocolId String? @db.VarChar(36)
   scoringStrategyId String? @db.VarChar(36) // soft link for versioning/performance only (#295)
@@ -2832,6 +2956,18 @@ model StrategyRegistry {
     volumeMin   Float?
     volumeMax   Float?
     registered  Boolean  @default(false)
+  // ⚠️ ADDED 2026-10-28 (#1147) — THE BROKER'S OWN SPREAD, which nothing in this app had ever stored.
+  //
+  // The catalogue carries digits/contractSize/volumeMin/tickSize — all SYMBOL properties. A spread is
+  // not a symbol property: it only exists between a live bid and a live ask. So the backtest priced
+  // every trade from a hardcoded per-class guess (1% + 1% each way ≈ 250x a real instrument) because
+  // the real number was never captured. `captureSpreads()` now reads the routed symbols' quotes at each
+  // catalogue sync.
+  //
+  // ⚠️ NULL = NEVER MEASURED, and 0 = measured zero (the demo feed genuinely reports bid == ask on FX).
+  // Collapsing the two would make an unmeasured symbol look like a perfect fill.
+  spreadPct      Float?
+  spreadQuotedAt DateTime?
     firstSeenAt DateTime @default(now()) @db.DateTime(3)
     /// ⚠️ The staleness field. A symbol absent from the latest SUCCESSFUL sync carries a
     /// `lastSeenAt` older than `lastSuccessAt` — the only honest way to say "no longer offered".

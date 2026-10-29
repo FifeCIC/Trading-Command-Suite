@@ -513,6 +513,20 @@ export class TradingStrategyService {
     });
   }
 
+  // ── DECISION (2026-10-28, primary) ──
+  // WHAT:      a protocol reference is a SLUG — `protocolId` and `shortProtocolId` here, and on every
+  //            canonical table. `watchlist.protocolId` is the one declared exception (protocol uuids).
+  // WHY:       measured 2026-10-28 (#800) — `trading_strategy.protocolId` is varchar(36), exactly a
+  //            uuid's width, so both forms fitted and nothing rejected either. `WHERE protocolId =
+  //            'cac-speed-v1'` returned 0 bots while the bot existed under its uuid: wrong answer, no
+  //            error. Slug is what 40/40 bots and 88/88 runs already use, it is what `protocol.slug`
+  //            is unique on, and it is the only form a human can read in this column.
+  // INSTEAD OF: resolving both forms at every call site — two accepted forms everywhere IS the
+  //            ambiguity being removed.
+  // REVERSE BY: choosing another canonical form, migrating all four canonical tables in one change,
+  //            then flipping `CANONICAL_TABLES` in the guard.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 95
+  // GUARD:     nest/scripts/validate-protocol-refs.cjs (npm run validate:protocol-refs)
   async create(data: {
     name: string;
     protocolId: string;

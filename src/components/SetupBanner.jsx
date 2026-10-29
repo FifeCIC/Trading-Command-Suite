@@ -35,7 +35,7 @@ const STEPS = [
   // there. Spread rather than `.filter()`: the array literal sits in a dead branch that the
   // bundler folds away, which is what keeps the paths out of the shipped JS — filtering at
   // runtime would still ship them. Flag reads the Vite define for the same reason.
-  ...(import.meta.env.VITE_EDITION === 'free'
+  ...(false
     ? []
     : [
         {

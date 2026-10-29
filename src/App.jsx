@@ -49,9 +49,9 @@ import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 // Edition (free spinoff): compile-time flag + nav filtering + view-meta key lookup — the free
 // build must never OFFER or RENDER a premium view (FREE-EDITION-PLAN.md §3). In the full build
 // everything here is an identity/compile-time constant.
-import { APP_EDITION, filterNavStructureByEdition, filterNavTreeByEdition, filterHiddenViews } from './core/edition-nav.js';
+import { filterHiddenViews } from './core/hidden-views.js';
 import { useHiddenViews } from './core/hooks/useHiddenViews.js';
-import EditionNotice from './components/EditionNotice.jsx';
+// EditionNotice removed 2026-10-28 with the free edition (FREE-EDITION-PLAN.md is superseded).
 
 /**
  * Compile-time "the FULL edition" flag (§9.14 strip pass).
@@ -66,18 +66,20 @@ import EditionNotice from './components/EditionNotice.jsx';
  * Measured 2026-09-25: 20 premium route paths were reaching the free bundle, 9 of them the legacy
  * redirects below. See `FREE-EDITION-PLAN.md` §9.14.
  */
-const FULL_EDITION_ONLY = import.meta.env.VITE_EDITION !== 'free';
+// There is ONE edition now — the free edition was removed 2026-10-28. Kept as a named constant
+// so the call site at the bottom reads unchanged; simplify it whenever that block is next touched.
+const FULL_EDITION_ONLY = true;
 
 // Edition-filtered once at module scope: the free build hides premium views from the sidebar.
 // (Full build = identity; see src/core/edition-nav.js.)
 // ⚠️ Renamed `..._BY_EDITION` 2026-10-02: AppShell now shadows these with the SAME names after also
 // applying the owner's "hide now" verdicts, so every existing consumer inside AppShell picks up both
 // filters without touching a call site.
-const NAV_STRUCTURE_BY_EDITION = filterNavStructureByEdition(getNavStructure());
+const NAV_STRUCTURE_BY_EDITION = getNavStructure();
 // The TOP navigation bar enumerates NAV_TREE directly, so it needs the same filter — measured
 // live 2026-09-23: without this, the free build still offered Protocols/Scoring/Signals/Planner/
 // Development in the top bar while the sidebar was correctly filtered.
-const EDITION_NAV_TREE_BY_EDITION = filterNavTreeByEdition(NAV_TREE);
+const EDITION_NAV_TREE_BY_EDITION = NAV_TREE;
 
 /**
  * Views the SHELL renders inline, with access to App's own state.
@@ -651,7 +653,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     // (see the note at the top of renderMainContent), so "no page here" IS the not-in-this-edition
     // answer — say so plainly rather than naming a nav entry, which would be false for a URL the
     // free edition never had.
-    if (APP_EDITION === 'free') return <EditionNotice />;
+    // The premium-view notice is gone with the free edition (2026-10-28): every route is allowed.
 
     // Say that, and NAME the view so it is reportable.
     return (

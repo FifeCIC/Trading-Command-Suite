@@ -210,16 +210,28 @@ export default function SymbolsLadderPage() {
   }, [nextTickAt]);
 
   // Active protocols — now includes resolvedSymbols from the server
-  const { data: protocolsData, isLoading: pLoading } = useQuery({
+  //
+  // ⚠️ NO `.catch(() => ({ protocols: [] }))` (#782). The catch threw away the status and message
+  // `apiGet` attaches, made react-query record a SUCCESS, and turned an outage into an empty list — so
+  // the page rendered an empty table as though the registry held nothing. The error branch below is what
+  // makes that distinguishable.
+  const {
+    data: protocolsData,
+    isLoading: pLoading,
+    isError: pError,
+    error: pErr,
+    refetch: refetchProtocols,
+  } = useQuery({
     queryKey: ['sl-protocols'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
     staleTime: 60_000,
   });
 
   // Watchlists for the symbol-scope filter (#634)
+  // ⚠️ Same rule: an empty array here means "the user has none", which is a claim about their data.
   const { data: watchlists } = useQuery({
     queryKey: ['sl-watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => []),
+    queryFn: () => apiGet('/api/watchlists'),
     staleTime: 120_000,
   });
 
@@ -490,7 +502,19 @@ export default function SymbolsLadderPage() {
         </TopRowSlotContent>
       )}
 
-      {pLoading ? <LoadingSkeleton variant="card" count={8} /> : (
+      {/*
+        ⚠️ A FAILED FETCH IS NOT AN EMPTY TABLE (#782). Without this branch the table below simply has
+        no rows, which reads as "this registry scores nothing" rather than "the request failed".
+      */}
+      {pError ? (
+        <p className="pl-notice">
+          ⚠️ Could not load protocols — the request failed
+          {pErr?.status ? ` (${pErr.status})` : ''}, so this is <strong>not</strong> an empty registry.{' '}
+          <button type="button" onClick={() => refetchProtocols()}>
+            Retry
+          </button>
+        </p>
+      ) : pLoading ? <LoadingSkeleton variant="card" count={8} /> : (
         <div className="pl-table-wrap">
           <table className="pl-table">
             <thead>

@@ -152,8 +152,24 @@ describe('settings inventory — the bot fields a backtest IGNORES cannot influe
     (field) => {
       // `bot.<field>` or `.<field>` — the forms a real read takes. A comment mentioning the name is
       // stripped above, so only code counts.
+      //
+      // ⚠️ NARROWED 2026-10-28 (#1147) — the bare `field:` alternative produced a FALSE POSITIVE on
+      // `brokerId`. `measuredSpreadPct()` reads a symbol's ROUTE to find the broker's quoted spread:
+      //
+      //     this.prisma.symbolRoute.findMany({ … select: { brokerId: true, brokerSymbol: true } })
+      //     this.prisma.brokerSymbol.findFirst({ where: { brokerId: r.brokerId, … } })
+      //
+      // Neither reads `bot.brokerId` — they are Prisma QUERY SHAPES, and a query shape cannot make a bot
+      // field influence a run. The pattern is narrowed by removing `where`/`select`/`orderBy`/`data`/
+      // `include` argument objects before testing, so the check keeps its teeth on the form it was
+      // written for (a value assigned into the merged request) without firing on a database predicate.
+      // ⚠️ Tightened, NOT exempted: this test still fails if a bot/strategy/config READ appears.
+      const codeWithoutQueryShapes = serviceCode.replace(
+        /\b(where|select|orderBy|data|include)\s*:\s*\{[^}]*(\{[^}]*\}[^}]*)*\}/g,
+        '',
+      );
       const reference = new RegExp(`\\b(bot|strategy|config)\\s*\\.\\s*${field}\\b|\\b${field}\\s*:`);
-      expect(serviceCode).not.toMatch(reference);
+      expect(codeWithoutQueryShapes).not.toMatch(reference);
     },
   );
 

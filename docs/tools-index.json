@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 189,
+  "count": 186,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -274,36 +274,6 @@
       ]
     },
     {
-      "name": "generate-free-manifest.cjs",
-      "where": "repo",
-      "category": "generator",
-      "purpose": "derives the free-edition manifest from the tier state.",
-      "selfTest": false,
-      "reaches": [
-        "docs"
-      ]
-    },
-    {
-      "name": "generate-free-map.cjs",
-      "where": "repo",
-      "category": "generator",
-      "purpose": "the free edition must not ship the MAP of the app.",
-      "selfTest": false,
-      "reaches": [
-        "docs"
-      ]
-    },
-    {
-      "name": "generate-free-registry.cjs",
-      "where": "repo",
-      "category": "generator",
-      "purpose": "derives the FREE edition's view registry.",
-      "selfTest": false,
-      "reaches": [
-        "docs"
-      ]
-    },
-    {
       "name": "generate-pipeline-map.cjs",
       "where": "repo",
       "category": "generator",
@@ -323,14 +293,6 @@
       "reaches": [
         "npm"
       ]
-    },
-    {
-      "name": "publish-free-release.cjs",
-      "where": "repo",
-      "category": "generator",
-      "purpose": "publish the FREE edition build to the PUBLIC repo.",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "agent-claim.cjs",
@@ -1267,14 +1229,6 @@
       ]
     },
     {
-      "name": "validate-edition-tiers.cjs",
-      "where": "repo",
-      "category": "validator",
-      "purpose": "the free/premium tier guard (FREE-EDITION-PLAN.md §3).",
-      "selfTest": true,
-      "reaches": null
-    },
-    {
       "name": "validate-envelope-callers.cjs",
       "where": "repo",
       "category": "validator",
@@ -1295,14 +1249,6 @@
         "prebuild",
         "npm"
       ]
-    },
-    {
-      "name": "validate-free-bundle.cjs",
-      "where": "repo",
-      "category": "validator",
-      "purpose": "post-build assertion for the editions (FREE-EDITION-PLAN.md §3).",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "validate-guardian-directive-ids.cjs",
@@ -1424,6 +1370,16 @@
       ]
     },
     {
+      "name": "validate-protocol-refs.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every table that NAMES a protocol must name it the SAME WAY.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "validate-protocol-slugs.cjs",
       "where": "nest",
       "category": "validator",
@@ -1442,6 +1398,27 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-query-empty-fallback.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a failed query must not resolve to an EMPTY LIST.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-raw-managed-ddl.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "the checked-in DDL must still describe the LIVE table.",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },

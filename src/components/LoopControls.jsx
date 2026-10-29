@@ -47,9 +47,9 @@ export default function LoopControls() {
     queryFn: () => apiGet('/api/automation/activity?limit=1').catch(() => null),
     refetchInterval: 10_000,
   });
-  const start = useMutation({ mutationFn: () => apiPost(import.meta.env.VITE_EDITION === 'free' ? '' : '/api/automation/start'), onSuccess: invalidate });
-  const stop = useMutation({ mutationFn: () => apiPost(import.meta.env.VITE_EDITION === 'free' ? '' : '/api/automation/stop'), onSuccess: invalidate });
-  const runNow = useMutation({ mutationFn: () => apiPost(import.meta.env.VITE_EDITION === 'free' ? '' : '/api/automation/run-now'), onSuccess: invalidate });
+  const start = useMutation({ mutationFn: () => apiPost('/api/automation/start'), onSuccess: invalidate });
+  const stop = useMutation({ mutationFn: () => apiPost('/api/automation/stop'), onSuccess: invalidate });
+  const runNow = useMutation({ mutationFn: () => apiPost('/api/automation/run-now'), onSuccess: invalidate });
 
   const s = statusQuery.data;
   const activity = activityQuery.data || null;
@@ -93,7 +93,7 @@ export default function LoopControls() {
         </>
       )}
 
-      {import.meta.env.VITE_EDITION !== 'free' && (
+      {true && (
         <span className="lc-actions">
           {loopRunning ? (
             <button className="lc-btn lc-btn-stop" onClick={() => stop.mutate()} disabled={busy}>

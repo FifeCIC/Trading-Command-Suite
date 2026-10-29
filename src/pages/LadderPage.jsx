@@ -128,7 +128,7 @@ function readInitialSelection() {
 
 export default function LadderPage() {
   const cardsColRef = useRef(null); // scroll-reveal scope (issue #672)
-  const { protocols, runs, isLoading } = useProtocolData();
+  const { protocols, runs, isLoading, loaded, isError, error, retry } = useProtocolData();
   const { statusMap } = useProtocolStatuses();
   // Filter / sort selections persist across navigation. Protocol selections are
   // stored PER direction, so toggling BOTH/LONG/SHORT restores each view's own
@@ -224,9 +224,11 @@ export default function LadderPage() {
   //
   // ⚠️ THE ORDER OF THESE GUARDS *IS* THE FIX — do not reorder or "simplify" them.
   //
-  //   1. `isLoading` — the protocol list has not arrived, so EVERY stored id looks
-  //      inapplicable. Pruning here persists an empty selection: this guard was missing
-  //      and it is why a 4-protocol selection collapsed to 1 on every refresh.
+  //   1. `!loaded` — the protocol list has not ARRIVED. Pruning against a list we do not have is
+  //      treating "no answer" as "none exist", which persists an empty selection: this guard was
+  //      missing and it is why a 4-protocol selection collapsed to 1 on every refresh (#782).
+  //      ⚠️ `loaded` is NOT `!isLoading`: a FAILED query is also not loading. `isLoading` alone let a
+  //      swallowed 502 through, and the failure then arrived as an empty array (defect 1 of #782).
   //   2. `applicableProtocols.length === 0` — after loading this can still be legitimately
   //      empty (e.g. no protocol applies to SHORT). There is then nothing to prune AGAINST
   //      and nothing to seed FROM, so return rather than writing `[]`.
@@ -239,7 +241,7 @@ export default function LadderPage() {
   // Other directions' buckets are never touched, so BOTH → LONG → BOTH restores each
   // view's own selection.
   useEffect(() => {
-    if (isLoading) return;
+    if (!loaded) return;
     if (applicableProtocols.length === 0) return;
 
     const applicableIds = applicableProtocols.map((p) => p.id);
@@ -260,7 +262,7 @@ export default function LadderPage() {
     if (kept.length !== cur.length) {
       setSelectedByDir((prev) => ({ ...prev, [direction]: kept }));
     }
-  }, [direction, applicableProtocols, selectedByDir, setSelectedByDir, isLoading]);
+  }, [direction, applicableProtocols, selectedByDir, setSelectedByDir, loaded]);
 
   const selectedProtocols = applicableProtocols.filter((p) => selectedIds.includes(p.id));
 
@@ -445,7 +447,23 @@ export default function LadderPage() {
           <h2 className="lad-proto-title">
             {direction === 'all' ? 'Active Protocols' : 'Applicable Protocols'}
           </h2>
-          {applicableProtocols.length === 0 ? (
+          {isError && applicableProtocols.length === 0 ? (
+            /*
+              ⚠️ A FAILED REQUEST MUST NOT BE REPORTED AS AN EMPTY REGISTRY (#782 defect 1).
+              "No active protocols." is a confident claim about the registry; when the fetch failed the
+              honest statement is about the REQUEST. The old code could only ever say the first, because
+              `useProtocolData` converted the failure into `{ protocols: [] }` and react-query recorded a
+              success — so `isError` was never true here.
+            */
+            <p className="lad-proto-empty">
+              ⚠️ Could not load protocols — the request failed
+              {error?.status ? ` (${error.status})` : ''}, so this is <strong>not</strong> an empty
+              registry.{' '}
+              <button type="button" className="lad-dir-btn lad-dir-btn--active" onClick={retry}>
+                Retry
+              </button>
+            </p>
+          ) : applicableProtocols.length === 0 ? (
             <p className="lad-proto-empty">No {direction === 'all' ? 'active' : 'applicable'} protocols.</p>
           ) : (
             <ul className="lad-proto-list">

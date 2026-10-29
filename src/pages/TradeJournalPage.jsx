@@ -139,7 +139,7 @@ const SEVERITY_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#64748b' };
 const ALERT_FALLBACKS = {
   // §9.14 — the Ladder is PREMIUM, so the free build is sent where a daily alert goes rather than to
   // a path that does not ship. The define folds at build time.
-  signal: import.meta.env.VITE_EDITION === 'free' ? '/dashboard' : '/scoring/live-ordering-stack',
+  signal: '/scoring/live-ordering-stack',
   drawdown: '/trading/portfolio-overview',
   system: '/status/setup',
   daily: '/dashboard',

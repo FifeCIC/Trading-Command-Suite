@@ -288,7 +288,7 @@ function DiversificationWidget() {
       ))}
       {/* §9.14 — the Strategy Allocator is a PREMIUM view (/lab/allocator). Omitted in the free
           build so neither the link text nor the path reaches the shipped bundle. */}
-      {import.meta.env.VITE_EDITION !== 'free' && (
+      {true && (
         <a href="/planner/allocator" className="dash-div-link">View Strategy Allocator →</a>
       )}
     </>

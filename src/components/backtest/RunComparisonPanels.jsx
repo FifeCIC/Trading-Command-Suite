@@ -355,7 +355,20 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
   const setRow = (key, patch) => setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const choosePeriod = (key, period) => {
     const picked = pickRepeatPair(runs, period, excludeIds);
-    setRow(key, { period, aId: picked.pair?.aId ?? null, bId: picked.pair?.bId ?? null });
+    /**
+     * ⚠️ `basis` TRAVELS WITH THE PAIR (#1144). 'experiment' means the API recorded these two as
+     * iterations of the same loop, so the change between them is the change under test. 'created-order'
+     * means nothing recorded it and the pair is an INFERENCE from timestamps — the panel says so,
+     * because a guessed pair must not read like a recorded one.
+     */
+    setRow(key, {
+      period,
+      aId: picked.pair?.aId ?? null,
+      bId: picked.pair?.bId ?? null,
+      basis: picked.pair?.basis ?? null,
+      fromIteration: picked.pair?.fromIteration ?? null,
+      toIteration: picked.pair?.toIteration ?? null,
+    });
   };
 
   /**
@@ -481,6 +494,14 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
                   >
                     Remove
                   </button>
+                )}
+                {row.aId && row.bId && (
+                  <span className="pb-field-note">
+                    {' '}
+                    {row.basis === 'experiment'
+                      ? `🟢 recorded loop — iteration ${row.fromIteration} → ${row.toIteration}`
+                      : '⚠️ inferred pair — no experiment recorded these two as consecutive attempts, so the change between them may not be the change you meant'}
+                  </span>
                 )}
               </p>
             );

@@ -193,6 +193,15 @@ export default function BacktestRunsPanel({ showTrades = true }) {
                   <SortableTh col="totalSignals" label="Signals" api={sort} className="bt-num" />
                   <SortableTh col="signalWinRatePct" label="Signal win %" api={sort} className="bt-num" />
                   {showTrades && <SortableTh col="totalPnl" label="P&amp;L" api={sort} className="bt-num" />}
+                  {/*
+                    ⚠️ PROVENANCE, NOT DECORATION (#1144). `iteration` is blank for a one-off run, and
+                    on a run that belongs to a loop it is the ONLY way to know that this row and the one
+                    above it are two attempts at the same thing rather than two unrelated measurements.
+                    `Cfg` is the version of the protocol's directive overrides that scored it — without
+                    it, two runs differing only in configuration look identical here.
+                  */}
+                  <th scope="col">Iter</th>
+                  <th scope="col" title="Version of this protocol's directive overrides that scored the run">Cfg</th>
                   <SortableTh col="createdAt" label="Created" api={sort} />
                   <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
@@ -217,6 +226,17 @@ export default function BacktestRunsPanel({ showTrades = true }) {
                     {/* ⚠️ Named "signal" win rate in the header — it is not a trade win rate. */}
                     <td className="btr-mono"><Num value={r.signalWinRatePct} digits={1} suffix="%" /></td>
                     {showTrades && <td className="btr-mono"><Pnl value={r.totalPnl} /></td>}
+                    {/*
+                      ⚠️ `—` and `1` must not look alike: `—` is "not part of a loop", `1` is "the first
+                      attempt". Same for `Cfg` — `—` means NOT RECORDED (a run stored before the column),
+                      while `v0` means "no override has ever been recorded for this protocol".
+                    */}
+                    <td className="btr-mono" title={r.experimentId ? `experiment ${String(r.experimentId).slice(0, 8)}` : 'not part of a loop'}>
+                      {r.iteration ?? '—'}
+                    </td>
+                    <td className="btr-mono" title={r.configVersion == null ? 'not recorded' : `override version ${r.configVersion}`}>
+                      {r.configVersion == null ? '—' : `v${r.configVersion}`}
+                    </td>
                     <td className="btr-mono btr-window">{shortStamp(r.createdAt)}</td>
                     <td>
                       {confirmDelete === r.id ? (

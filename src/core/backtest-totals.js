@@ -22,9 +22,16 @@
 /**
  * pickRepeatPair — the SECOND window's A and B, chosen deterministically.
  *
- * The oldest run of the period is treated as that window's "A" and the newest as its "B": within one
- * window that is exactly the order in which a change was tried. The caller prints both ids so a reader
- * (or an agent reading the panel) can see which runs a verdict was built from.
+ * ⚠️ IT PREFERS THE RECORDED LOOP (#1144). Runs now carry `experimentId` + `iteration`, so the honest
+ * pair is "the first and last iteration of the SAME experiment on this window" — that is what the change
+ * under test actually was. Before this, the choice was `createdAt` order, i.e. a GUESS that two runs
+ * were consecutive attempts because they happened to sit next to each other.
+ *
+ * Fallback order (each step runs only when the previous cannot produce a pair):
+ *
+ *   1. an experiment on this window with two or more usable runs → lowest and highest `iteration`;
+ *   2. otherwise oldest and newest by `createdAt`, and the result SAYS it was inferred (`basis`), because
+ *      a guessed pair must not read like a recorded one.
  *
  * ⚠️ RUNS WITH NO STORED SCORES ARE SKIPPED WHEN THE FLAG IS KNOWN (`hasScores === false`). Measured
  * 2026-10-27: the oldest run of `dev-window-v1` predates the score series, so pairing it produced
@@ -34,8 +41,7 @@
  * different gap. A run stored before the series recorded `time` HAS scores, so `hasScores` cannot
  * exclude it, and pairing it made the window report "a run stored no per-bar instant, so the two
  * cannot be lined up" while measurable runs sat unused on the same period (measured on
- * `dev-window-v1`, where the oldest run with scores was exactly that kind). Skipping it here means the
- * window is measured rather than explained.
+ * `dev-window-v1`, where the oldest run with scores was exactly that kind).
  */
 export function pickRepeatPair(runs, period, excludeIds = []) {
   const onPeriod = (runs ?? []).filter(
@@ -48,8 +54,57 @@ export function pickRepeatPair(runs, period, excludeIds = []) {
   if (onPeriod.length < 2) {
     return { pair: null, reason: 'that window has fewer than two stored runs that can be lined up bar by bar' };
   }
+
+  // 1. A recorded loop on this window — the only pair that is a fact rather than an inference.
+  const byExperiment = new Map();
+  for (const r of onPeriod) {
+    if (!r.experimentId || r.iteration == null) continue;
+    const list = byExperiment.get(r.experimentId) ?? [];
+    list.push(r);
+    byExperiment.set(r.experimentId, list);
+  }
+  /**
+   * WHICH loop, when a window has more than one? ⚠️ THE MOST RECENTLY ACTIVE ONE, not the longest.
+   *
+   * A window can be revisited weeks later (a new attempt at the same dates), so "the loop with the most
+   * runs" would keep pointing at last week's abandoned attempt while today's sits beside it. Recency is
+   * what a reader means by "the attempt being examined"; the count breaks ties, and the chosen
+   * `experimentId` is returned so the panel can say WHICH loop it picked rather than implying there was
+   * only one.
+   */
+  const newest = (list) =>
+    list.reduce((m, r) => Math.max(m, new Date(r.createdAt ?? 0).getTime()), 0);
+  const loops = [...byExperiment.entries()]
+    .filter(([, list]) => list.length >= 2)
+    .sort((a, b) => newest(b[1]) - newest(a[1]) || b[1].length - a[1].length);
+  if (loops.length > 0) {
+    const [experimentId, list] = loops[0];
+    const byIteration = [...list].sort((x, y) => x.iteration - y.iteration);
+    return {
+      pair: {
+        aId: byIteration[0].id,
+        bId: byIteration[byIteration.length - 1].id,
+        n: byIteration.length,
+        basis: 'experiment',
+        experimentId,
+        fromIteration: byIteration[0].iteration,
+        toIteration: byIteration[byIteration.length - 1].iteration,
+      },
+      reason: null,
+    };
+  }
+
+  // 2. No loop recorded — say so in the result, so the pair is not read as a recorded attempt.
   const byTime = [...onPeriod].sort(
     (x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime(),
   );
-  return { pair: { aId: byTime[0].id, bId: byTime[byTime.length - 1].id, n: byTime.length }, reason: null };
+  return {
+    pair: {
+      aId: byTime[0].id,
+      bId: byTime[byTime.length - 1].id,
+      n: byTime.length,
+      basis: 'created-order',
+    },
+    reason: null,
+  };
 }

@@ -17,7 +17,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../api/client';
-import { hiddenViewIdsFrom } from '../edition-nav.js';
+import { hiddenViewIdsFrom } from '../hidden-views.js';
 
 export function useHiddenViews() {
   const { data } = useQuery({

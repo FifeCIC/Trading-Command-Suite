@@ -442,11 +442,18 @@ export class SettingsResolverService implements OnModuleInit {
     const previousSource = declared
       ? (await this.resolve(key)).source
       : (await this.resolveFamily(key)).source;
+    // #1144 — record the value a single-key RESET is about to destroy (delete = newValue null).
+    const previousValue = key.startsWith('protocol:')
+      ? (await this.prisma.globalSetting.findUnique({ where: { key }, select: { value: true } }))?.value ?? null
+      : null;
     const result = await this.prisma.globalSetting.deleteMany({ where: { key } });
     const deleted =
       typeof result === 'number'
         ? result
         : ((result as { count?: number })?.count ?? 0);
+    if (key.startsWith('protocol:')) {
+      await this.recordProtocolOverrideChange(key, previousValue, null);
+    }
     this.logger.log(`cleared setting "${key}" (was ${previousSource})`);
     return { key, deleted, previousSource };
   }
@@ -488,6 +495,12 @@ export class SettingsResolverService implements OnModuleInit {
         ? `${family.prefix}${subject}`
         : `${family.prefix}${subject}:`
       : family.prefix;
+
+    // #1144 — a bulk reset of `protocol:<slug>:<directiveId>:*` is a change too: read the rows first so
+    // the history says WHAT was cleared, not just how many.
+    if (family.id === 'protocol') {
+      await this.recordProtocolFamilyReset(prefix);
+    }
 
     const result = await this.prisma.globalSetting.deleteMany({
       where: { key: { startsWith: prefix } },
@@ -607,6 +620,83 @@ export class SettingsResolverService implements OnModuleInit {
    * Secrets are refused outright: they belong in `.env`, and a settings endpoint that can write to them
    * would be a route to persisting a credential in the database.
    */
+  /**
+   * ── #1144 — append one row to the per-protocol override history ────────────────────────────────
+   *
+   * WHY THIS IS HERE AND NOT IN THE PATCH ROUTE: `protocol:<slug>:<directiveId>:<field>` can be written
+   * by the scoring PATCH route AND by `PUT /api/system/settings/registry/:key`. Two call sites would be
+   * two places to forget; the resolver is the single choke point every write already passes through.
+   *
+   * ⚠️ IT CANNOT BREAK THE WRITE. The audit is wrapped: a failed log leaves the override changed and
+   * says so in the log stream. The alternative — rolling back a deliberate override because a bookkeeping
+   * insert failed — trades a real action for a record of it.
+   *
+   * ⚠️ `source` is 'api', not an identity. There is no authenticated principal on this local API, so
+   * claiming 'owner' or an agent name would be a fabricated attribution (#1018's lesson: attribute from
+   * something recorded, never from a comment or a guess).
+   */
+  private async recordProtocolOverrideChange(
+    key: string,
+    oldValue: string | null,
+    newValue: string | null,
+  ): Promise<void> {
+    try {
+      // `protocol:<slug>:<directiveId>:<field>` — anything else is not an override and is not logged.
+      const parts = String(key).split(':');
+      if (parts.length !== 4 || parts[0] !== 'protocol') return;
+      const [, protocolSlug, directiveId, field] = parts;
+      if (!protocolSlug || !directiveId || !field) return;
+
+      // Monotonic PER PROTOCOL: `BacktestRun.configVersion` points at one of these numbers, so a run can
+      // be traced to the exact override state that scored it.
+      const last = await this.prisma.protocolDirectiveChange.aggregate({
+        where: { protocolSlug },
+        _max: { configVersion: true },
+      });
+      const configVersion = (last._max.configVersion ?? 0) + 1;
+
+      await this.prisma.protocolDirectiveChange.create({
+        data: {
+          protocolSlug,
+          directiveId,
+          field,
+          // ⚠️ null = ABSENT, not zero. A first override has no previous value; printing 0 would read
+          // as "it was 0 before".
+          oldValue: oldValue === null ? null : String(oldValue).slice(0, 200),
+          newValue: newValue === null ? null : String(newValue).slice(0, 200),
+          source: 'api',
+          configVersion,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Could not record the override change for "${key}": ${(err as Error).message}. The override ` +
+          'WAS written; only its history row is missing.',
+      );
+    }
+  }
+
+  /**
+   * Record the deltas a bulk reset is about to destroy. Read the matching rows BEFORE the delete,
+   * because `deleteMany` returns a count and not the values — and a reset recorded as "deleted 3 rows"
+   * cannot say what the configuration was.
+   */
+  private async recordProtocolFamilyReset(prefix: string): Promise<void> {
+    try {
+      const rows = await this.prisma.globalSetting.findMany({
+        where: { key: { startsWith: prefix } },
+        select: { key: true, value: true },
+      });
+      for (const row of rows) {
+        await this.recordProtocolOverrideChange(row.key, row.value, null);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Could not record the reset of protocol overrides under "${prefix}": ${(err as Error).message}`,
+      );
+    }
+  }
+
   async set(
     key: string,
     raw: unknown,
@@ -631,11 +721,25 @@ export class SettingsResolverService implements OnModuleInit {
         );
       }
       const familyValue = String(parsedFamily.value);
+      /**
+       * ── #1144 — RECORD THE CHANGE BEFORE OVERWRITING IT ──────────────────────────────────────────
+       * The override is a mutable settings key written with `upsert`, so the previous value was
+       * destroyed on every write and "which configuration produced this run?" became unanswerable after
+       * the second change. Reading the old row first is one extra query on a rare admin path, and it is
+       * the only way the log can state `oldValue`.
+       */
+      const previous = await this.prisma.globalSetting.findUnique({
+        where: { key },
+        select: { value: true },
+      });
       await this.prisma.globalSetting.upsert({
         where: { key },
         update: { value: familyValue },
         create: { key, value: familyValue },
       });
+      if (family.family.id === 'protocol') {
+        await this.recordProtocolOverrideChange(key, previous?.value ?? null, familyValue);
+      }
       return this.resolveFamily(key);
     }
     if (def.class === 'secret') {

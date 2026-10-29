@@ -69,7 +69,7 @@ function HealthChecksSection() {
   // minifier drops the whole element and neither the title nor the href reaches the free bundle.
   // `editionAllowsKey()` would answer the same question at runtime and still ship both strings.
   return (
-    import.meta.env.VITE_EDITION !== 'free' && (
+    true && (
     <SettingsSection
       id="health-checks"
       title="🩺 Health & Diagnostics"
@@ -113,7 +113,7 @@ export default function SettingsPage() {
         <h1>General</h1>
         <p>
           Application plumbing. Everything a user can change that belongs to a{' '}
-          {import.meta.env.VITE_EDITION === 'free' ? 'pipeline' : 'META.Stack'} layer now lives on
+          {'META.Stack'} layer now lives on
           that layer's page — see the index at the bottom.
         </p>
       </header>
@@ -158,7 +158,7 @@ export default function SettingsPage() {
         {/* §9.14 — Automation, Scoring, Database and the QA Checklist are all PREMIUM views. In the
             free build the entries are OMITTED rather than pointed at pages that are not there; the
             Vite define folds at build time, which is what keeps the paths out of the free bundle. */}
-        {import.meta.env.VITE_EDITION !== 'free' && (
+        {true && (
           <>
             <MovedNote><strong>The loop, the queue, layer kill switches</strong> → <a href="/settings/automation">Automation</a></MovedNote>
             <MovedNote><strong>Trade thresholds, scoring defaults</strong> → <a href="/settings/scoring-settings">Scoring</a></MovedNote>

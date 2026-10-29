@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **559** backend source files (specs excluded). Two access paths, because one
+Scanned **560** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -20,7 +20,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `symbol_route`
 
 - **writers (1):** `mt5.controller.ts`
-- **readers (4):** `alert-trigger.service.ts`, `bar-refresh.service.ts`, `mt5.controller.ts`, `mt5-symbol-router.service.ts`
+- **readers (6):** `alert-trigger.service.ts`, `backtest.service.ts`, `bar-refresh.service.ts`, `mt5.controller.ts`, `mt5-symbol-router.service.ts`, `broker-symbol-discovery.service.ts`
 
 ## Bar store
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**559** source files · **2965** declarations · **363** ratio sites · **1520** nodes · **135** unreferenced
+**560** source files · **2986** declarations · **365** ratio sites · **1537** nodes · **136** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -95,13 +95,13 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 28 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:632` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:682` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:640` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:690` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
-- `nest/src/modules/backtest/backtest.service.ts:2089` — `runDirectiveCoverage()` → `ret5d`
+- `nest/src/modules/backtest/backtest.service.ts:2444` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
-- `nest/src/modules/backtest/backtest.service.ts:2097` — `runDirectiveCoverage()` → `ret10d`
+- `nest/src/modules/backtest/backtest.service.ts:2452` — `runDirectiveCoverage()` → `ret10d`
   - `((bar10d.close-currentBar.close)/currentBar.close)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
@@ -165,10 +165,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/common/cache/cache.service.ts:119` — `getStats()`
   - `total>0?Math.round((this.totalHits/total)*100):0`
   - guarded by: `total>0`
-- `nest/src/modules/backtest/backtest.service.ts:2117` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2472` — `runDirectiveCoverage()`
   - `total5d>0?Math.round((wins5d/total5d)*100):0`
   - guarded by: `total5d>0`
-- `nest/src/modules/backtest/backtest.service.ts:2119` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2474` — `runDirectiveCoverage()`
   - `total10d>0?Math.round((wins10d/total10d)*100):0`
   - guarded by: `total10d>0`
 - `nest/src/modules/performance/performance.service.ts:167` — `(anonymous)()`
@@ -306,10 +306,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 4 sites — `Math.round((V1/V2)*100)/100`
 
-- `nest/src/modules/backtest/backtest.service.ts:2118` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2473` — `runDirectiveCoverage()`
   - `total5d>0?Math.round((sumReturn5d/total5d)*100)/100:0`
   - guarded by: `total5d>0`
-- `nest/src/modules/backtest/backtest.service.ts:2120` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2475` — `runDirectiveCoverage()`
   - `total10d>0?Math.round((sumReturn10d/total10d)*100)/100:0`
   - guarded by: `total10d>0`
 - `nest/src/modules/performance/performance.service.ts:244` — `computeStrategyStats()`
@@ -396,13 +396,13 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 28 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:632` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:682` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:640` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:690` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
-- `nest/src/modules/backtest/backtest.service.ts:2089` — `runDirectiveCoverage()` → `ret5d`
+- `nest/src/modules/backtest/backtest.service.ts:2444` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
-- `nest/src/modules/backtest/backtest.service.ts:2097` — `runDirectiveCoverage()` → `ret10d`
+- `nest/src/modules/backtest/backtest.service.ts:2452` — `runDirectiveCoverage()` → `ret10d`
   - `((bar10d.close-currentBar.close)/currentBar.close)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
@@ -466,10 +466,10 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/common/cache/cache.service.ts:119` — `getStats()`
   - `total>0?Math.round((this.totalHits/total)*100):0`
   - guarded by: `total>0`
-- `nest/src/modules/backtest/backtest.service.ts:2117` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2472` — `runDirectiveCoverage()`
   - `total5d>0?Math.round((wins5d/total5d)*100):0`
   - guarded by: `total5d>0`
-- `nest/src/modules/backtest/backtest.service.ts:2119` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2474` — `runDirectiveCoverage()`
   - `total10d>0?Math.round((wins10d/total10d)*100):0`
   - guarded by: `total10d>0`
 - `nest/src/modules/performance/performance.service.ts:167` — `(anonymous)()`
@@ -508,6 +508,26 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/directives/implementations/mfi.directive.ts:17` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - … and 5 more
+
+### 11 sites — `(V1+V2)/2`
+
+- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
+  - `(gap.top+gap.bottom)/2`
+- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
+  - `(b.high+b.low)/2`
+- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
+  - `(bar.open+bar.close)/2`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:126` — `calculate()` → `avgDist`
+  - `(dist20+dist50)/2`
+- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:55` — `calculate()` → `prevMidpoint`
+  - `(closes[last-1]+opens[last-1])/2`
+- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:73` — `calculate()` → `prevMidpoint`
+  - `(prev.high+prev.low)/2`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:346` — `calculate()` → `midBand`
+  - `(upperBand+lowerBand)/2`
+- `nest/src/modules/directives/implementations/price-time-gap.directive.ts:208` — `calculateVIC()` → `avgVolume`
+  - `(prevBar.volume+currBar.volume)/2`
+- … and 3 more
 
 ### 10 sites — `(V1-V2)/Math.max(0.01,V2)*100`
 
@@ -549,26 +569,6 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(b2.close-b1.close)/b1.close`
 - `nest/src/modules/directives/implementations/three-soldiers-pattern.directive.ts:95` — `calculate()` → `progression2`
   - `(b3.close-b2.close)/b2.close`
-- … and 2 more
-
-### 10 sites — `(V1+V2)/2`
-
-- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
-  - `(gap.top+gap.bottom)/2`
-- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
-  - `(b.high+b.low)/2`
-- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
-  - `(bar.open+bar.close)/2`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:126` — `calculate()` → `avgDist`
-  - `(dist20+dist50)/2`
-- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:55` — `calculate()` → `prevMidpoint`
-  - `(closes[last-1]+opens[last-1])/2`
-- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:73` — `calculate()` → `prevMidpoint`
-  - `(prev.high+prev.low)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:346` — `calculate()` → `midBand`
-  - `(upperBand+lowerBand)/2`
-- `nest/src/modules/directives/implementations/price-time-gap.directive.ts:208` — `calculateVIC()` → `avgVolume`
-  - `(prevBar.volume+currBar.volume)/2`
 - … and 2 more
 
 ### 10 sites — `(V1+V2+V3)/3`
@@ -639,17 +639,17 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(currentEma20-currentEma50)/currentEma50`
 - … and 31 more
 
-### 37 sites — `((VN-VN)/VN)*N`
+### 38 sites — `((VN-VN)/VN)*N`
 
 - `nest/src/modules/automation/stop-guardian.service.ts:1866` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:632` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:682` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:640` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:690` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
-- `nest/src/modules/backtest/backtest.service.ts:2089` — `runDirectiveCoverage()` → `ret5d`
+- `nest/src/modules/backtest/backtest.service.ts:2444` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
-- `nest/src/modules/backtest/backtest.service.ts:2097` — `runDirectiveCoverage()` → `ret10d`
+- `nest/src/modules/backtest/backtest.service.ts:2452` — `runDirectiveCoverage()` → `ret10d`
   - `((bar10d.close-currentBar.close)/currentBar.close)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
@@ -657,7 +657,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `((longExit-lastClose)/lastClose)*100`
 - `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:116` — `calculate()` → `dist`
   - `((currentPrice-nearestSupport)/currentPrice)*100`
-- … and 29 more
+- … and 30 more
 
 ### 26 sites — `(VN/VN)*N`
 
@@ -687,10 +687,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/common/cache/cache.service.ts:119` — `getStats()`
   - `total>0?Math.round((this.totalHits/total)*100):0`
   - guarded by: `total>0`
-- `nest/src/modules/backtest/backtest.service.ts:2117` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2472` — `runDirectiveCoverage()`
   - `total5d>0?Math.round((wins5d/total5d)*100):0`
   - guarded by: `total5d>0`
-- `nest/src/modules/backtest/backtest.service.ts:2119` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2474` — `runDirectiveCoverage()`
   - `total10d>0?Math.round((wins10d/total10d)*100):0`
   - guarded by: `total10d>0`
 - `nest/src/modules/performance/performance.service.ts:167` — `(anonymous)()`
@@ -729,6 +729,26 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/directives/implementations/mfi.directive.ts:17` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - … and 5 more
+
+### 11 sites — `(VN+VN)/N`
+
+- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
+  - `(gap.top+gap.bottom)/2`
+- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
+  - `(b.high+b.low)/2`
+- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
+  - `(bar.open+bar.close)/2`
+- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:126` — `calculate()` → `avgDist`
+  - `(dist20+dist50)/2`
+- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:55` — `calculate()` → `prevMidpoint`
+  - `(closes[last-1]+opens[last-1])/2`
+- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:73` — `calculate()` → `prevMidpoint`
+  - `(prev.high+prev.low)/2`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:346` — `calculate()` → `midBand`
+  - `(upperBand+lowerBand)/2`
+- `nest/src/modules/directives/implementations/price-time-gap.directive.ts:208` — `calculateVIC()` → `avgVolume`
+  - `(prevBar.volume+currBar.volume)/2`
+- … and 3 more
 
 ### 11 sites — `Math.abs(VN-VN)/VN`
 
@@ -772,26 +792,6 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(closes[closes.length-1]-closes[closes.length-6])/Math.max(0.01,closes[closes.length-6])*100`
 - … and 2 more
 
-### 10 sites — `(VN+VN)/N`
-
-- `nest/src/modules/directives/implementations/fair-value-gap.directive.ts:78` — `calculate()` → `gapMid`
-  - `(gap.top+gap.bottom)/2`
-- `nest/src/modules/directives/implementations/liquidity-check.directive.ts:94` — `(anonymous)()` → `mid`
-  - `(b.high+b.low)/2`
-- `nest/src/modules/directives/implementations/market-memory-zones.directive.ts:123` — `findMemoryZones()`
-  - `(bar.open+bar.close)/2`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:126` — `calculate()` → `avgDist`
-  - `(dist20+dist50)/2`
-- `nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts:55` — `calculate()` → `prevMidpoint`
-  - `(closes[last-1]+opens[last-1])/2`
-- `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:73` — `calculate()` → `prevMidpoint`
-  - `(prev.high+prev.low)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:346` — `calculate()` → `midBand`
-  - `(upperBand+lowerBand)/2`
-- `nest/src/modules/directives/implementations/price-time-gap.directive.ts:208` — `calculateVIC()` → `avgVolume`
-  - `(prevBar.volume+currBar.volume)/2`
-- … and 2 more
-
 ### 10 sites — `(VN+VN+VN)/N`
 
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:305` — `computeVwap()` → `tp`
@@ -817,10 +817,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/ai/portfolio-lab.service.ts:154` — `analyze()`
   - `totalCost>0?Math.round((totalPnl/totalCost)*1000)/10:0`
   - guarded by: `totalCost>0`
-- `nest/src/modules/backtest/backtest.service.ts:2118` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2473` — `runDirectiveCoverage()`
   - `total5d>0?Math.round((sumReturn5d/total5d)*100)/100:0`
   - guarded by: `total5d>0`
-- `nest/src/modules/backtest/backtest.service.ts:2120` — `runDirectiveCoverage()`
+- `nest/src/modules/backtest/backtest.service.ts:2475` — `runDirectiveCoverage()`
   - `total10d>0?Math.round((sumReturn10d/total10d)*100)/100:0`
   - guarded by: `total10d>0`
 - `nest/src/modules/performance/performance.service.ts:244` — `computeStrategyStats()`
@@ -897,10 +897,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/stop-guardian.service.ts:1850 progress`
 - `nest/src/modules/automation/stop-guardian.service.ts:568 flat`
-- `nest/src/modules/backtest/backtest.controller.ts:527 mapResult`
-- `nest/src/modules/backtest/backtest.service.ts:2310 chartTime`
-- `nest/src/modules/backtest/backtest.service.ts:284 pick`
-- `nest/src/modules/backtest/backtest.service.ts:408 labelled`
+- `nest/src/modules/backtest/backtest.controller.ts:577 mapResult`
+- `nest/src/modules/backtest/backtest.service.ts:2671 chartTime`
+- `nest/src/modules/backtest/backtest.service.ts:294 pick`
+- `nest/src/modules/backtest/backtest.service.ts:418 labelled`
+- `nest/src/modules/backtest/execution-costs.ts:52 round8`
 - `nest/src/modules/directives/directives.service.ts:243 prepare`
 - `nest/src/modules/directives/directives.service.ts:469 evaluateGate`
 - `nest/src/modules/directives/directives.service.ts:885 refreshActiveStatuses`
@@ -1009,8 +1010,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:767 median`
 - `nest/src/modules/trading/trade-history.controller.ts:773 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:167 reject`
-- `nest/src/modules/trading/trading-strategy.service.ts:1105 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:2387 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:1119 shape`
+- `nest/src/modules/trading/trading-strategy.service.ts:2401 evaluateAllActive`
 - `nest/src/modules/trading/trading-strategy.service.ts:268 num`
 - `nest/src/modules/watchlists/watchlists.controller.ts:381 has`
 

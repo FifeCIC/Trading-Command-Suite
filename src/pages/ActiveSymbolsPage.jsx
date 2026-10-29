@@ -489,7 +489,7 @@ export default function ActiveSymbolsPage() {
                         )}
                         {/* §9.14 — the Decision Trail is a PREMIUM view. Omitted in the free build
                             so the path does not ship and no dead link is offered. */}
-                        {import.meta.env.VITE_EDITION !== 'free' && (
+                        {true && (
                         <span style={{ fontSize: '0.7rem' }}>
                           {/* 🔗 Trail → `/automation/decision-trail` REMOVED 2026-10-01: that view
                               was deleted at the owner's direction in the Page Walkthrough. A link to
