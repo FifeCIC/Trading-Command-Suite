@@ -3167,6 +3167,43 @@ ull = follow the latest, which is the default. */
               <>
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalTrades)}`}><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.tradeWinRate)}`}><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
+                {/*
+                  ── THE TWO NUMBERS THAT ANSWER "WHY DOES THIS LOSE?" (2026-10-31) ────────────────
+                  Measured across the stored runs, the achieved win rate alone cannot tell a reader
+                  whether a configuration is near a fix or structurally impossible:
+                    `1bbf1860` stop 2.49 / target 1.49 at 1.01% cost → needs 88.0%, won 42.3%
+                    `568c5552` stop 2.47 / target 3.50 at 0.97% cost → needs 57.7%, won 22.9%
+                  A 42% win rate looks "poor but closeable" on its own; beside an 88% requirement it
+                  is a bracket that cannot pay for itself at any realistic win rate. So the required
+                  rate and the GAP to it are tiles, and the gap is what a reader acts on.
+                  ⚠️ `breakEvenUnavailable` is rendered, never swallowed: a null requirement is a
+                  refusal ("this target does not even cover the cost"), not a zero.
+                */}
+                {stats.breakEvenWinRatePct != null && (
+                  <div className={`bt-stat ${verdictClass(comparison?.verdicts?.breakEvenWinRatePct)}`} title={`This run's median bracket: stop ${stats.bracketStopPct}%, target ${stats.bracketTargetPct}%, round-trip cost ${stats.roundTripCostPct}%. Needs ${stats.breakEvenWinRatePct}% of trades to win to break even.`}>
+                    <div className="bt-stat-value">{stats.breakEvenWinRatePct}%</div>
+                    <div>Win Rate Needed</div>
+                    <div className="bt-stat-sub">{stats.bracketStopPct}% stop · {stats.bracketTargetPct}% target · {stats.roundTripCostPct}% cost</div>
+                  </div>
+                )}
+                {stats.breakEvenGapPp != null && (
+                  <div className={`bt-stat ${stats.clearsBreakEven ? 'is-better' : 'is-worse'}`} title="Achieved trade win rate minus the rate this bracket needs, in percentage points. Negative means the configuration loses by arithmetic, before any judgement about the entries.">
+                    <div className="bt-stat-value">{stats.breakEvenGapPp > 0 ? '+' : '−'}{Math.abs(stats.breakEvenGapPp)}pp</div>
+                    <div>Gap to Break-even</div>
+                    <div className="bt-stat-sub">{stats.clearsBreakEven ? 'clears it' : 'short of it'}</div>
+                  </div>
+                )}
+                {stats.breakEvenWinRatePct == null && stats.breakEvenUnavailable && (
+                  <div className="bt-stat is-worse" title="No break-even win rate can be computed from this run's own bracket and costs.">
+                    <div className="bt-stat-value">—</div>
+                    <div>Win Rate Needed</div>
+                    <div className="bt-stat-sub">
+                      {stats.breakEvenUnavailable === 'target-below-cost'
+                        ? 'target does not cover the cost'
+                        : 'no stop/target recorded'}
+                    </div>
+                  </div>
+                )}
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.avgTradePnl)}`}><div className="bt-stat-value">{pctOrDash(stats.avgTradePnl)}</div><div>Avg Trade PnL</div></div>
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalPnl)}`}><div className="bt-stat-value">{moneyOrDash(stats.totalPnl)}</div><div>Total PnL</div></div>
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.grossPnl)}`}><div className="bt-stat-value">{moneyOrDash(stats.grossPnl)}</div><div>Gross PnL</div></div>

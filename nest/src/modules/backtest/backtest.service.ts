@@ -13,6 +13,7 @@ import { BacktestPeriodService } from './backtest-period.service';
 import { applyExecutionCosts } from './execution-costs';
 import { computeEquityPath, type EquityPoint, type EquitySummary } from './equity-drawdown';
 import { describeRunDifferences, type RunDifferenceSet } from './run-differences';
+import { breakEvenWinRate, medianBracket } from './break-even';
 import {
   scoringTotals,
   tradeTotals,
@@ -236,6 +237,49 @@ export interface BacktestRunRequest {
   atrMultiplier?: number;     // stop distance = ATR * multiplier (default 1.5)
   /** Kelly criterion (#269) */
   kellyCapPct?: number;       // max position size cap for Kelly (default 25%)
+}
+
+/**
+ * breakEvenFor() — the shape both the fresh-run and stored-run paths return.
+ *
+ * ⚠️ IT LIVED IN TWO PLACES FOR A MINUTE, which is the defect this repo pays for most often. The
+ * fresh path knows `slPct`/`tpPct` from the request and the stored path has to read them off the
+ * trades; the CONVERSION of spread/slippage from decimals to percent is the part that must not be
+ * written twice — `spread: 0.0093` becoming `0.93` in one caller and `93` in the other is exactly
+ * the split-unit failure #980 removed.
+ */
+function breakEvenFor(
+  trades: Array<{
+    entryPrice?: number | string | null;
+    stopLoss?: number | string | null;
+    takeProfit?: number | string | null;
+  }>,
+  tradeWinRateFraction: number | null,
+  spread: unknown,
+  slippage: unknown,
+) {
+  const bracket = medianBracket(trades);
+  const costPct =
+    ((Number(spread) || 0) + 2 * (Number(slippage) || 0)) * 100;
+  const achieved =
+    tradeWinRateFraction == null ? null : Math.round(tradeWinRateFraction * 1000) / 10;
+  const be = breakEvenWinRate(
+    { stopPct: bracket.stopPct, targetPct: bracket.targetPct, costPct },
+    achieved,
+  );
+  return {
+    /** The median stop and target the run's trades actually used, as % of entry. */
+    bracketStopPct: bracket.stopPct,
+    bracketTargetPct: bracket.targetPct,
+    bracketSample: bracket.sample,
+    roundTripCostPct: Math.round(costPct * 100) / 100,
+    /** The win rate this bracket needs. NULL when it cannot be judged — see `breakEvenUnavailable`. */
+    breakEvenWinRatePct: be.requiredWinRatePct,
+    breakEvenUnavailable: be.unavailable,
+    /** achieved − required, in percentage points. The number to act on. */
+    breakEvenGapPp: be.gapPp,
+    clearsBreakEven: be.profitable,
+  };
 }
 
 export interface TradeRecord {
@@ -1629,6 +1673,9 @@ export class BacktestService {
           totalCommission: Number(totalCommissionPaid.toFixed(4)),
           netPnl: Number(totalPnl.toFixed(4)),
           avgPositionSize: Number(avgPositionSize.toFixed(1)),
+          // 2026-10-31 — what this bracket NEEDED versus what it got. Same computation as the stored
+          // path (`breakEvenFor`), fed from the trades this run just produced.
+          ...breakEvenFor(trades, tradeWinRate, spread, slippage),
         } : {}),
       },
     };
@@ -3057,6 +3104,18 @@ export class BacktestService {
         tradeWinRate: tradeStats.fraction,
         avgTradePnl: run.avgTradePnl,
         totalPnl: run.totalPnl,
+        /*
+         * ── THE BREAK-EVEN WIN RATE (2026-10-31) ────────────────────────────────────────────────
+         * What this run's OWN bracket needed, and the gap to what it achieved. Measured across the
+         * stored runs this is the number that explains the losses arithmetically rather than by
+         * narrative: `1bbf1860` (stop 2.49 / target 1.49 at 1.01% cost) needed **88.0%** and won
+         * 42.3%; `568c5552` (2.47 / 3.50 at 0.97%) needed **57.7%** and won 22.9%.
+         *
+         * ⚠️ COMPUTED FROM THE TRADES, not from the request: `slPct`/`tpPct` are not stored on the
+         * run, but every trade carries the levels the engine actually used (since #R14), so the
+         * bracket is recoverable for every historical run without a backfill.
+         */
+        ...breakEvenFor(runTrades, tradeStats.fraction, run.spread, run.slippage),
         // ⚠️ NOT `run.maxDrawdown` (#1149 follow-up, measured 2026-10-30).
         //
         // `backtestrun.maxDrawdown` is WRITTEN from `min(returns10d)` — the worst ten-day FORWARD

@@ -58,6 +58,16 @@ export const RUN_METRICS = {
   sharpeApproximation: { label: 'Sharpe (approx)', better: HIGHER_IS_BETTER },
   totalTrades: { label: 'Bracket trades', better: HIGHER_IS_BETTER },
   tradeWinRate: { label: 'Trade win rate', better: HIGHER_IS_BETTER },
+  /**
+   * ⚠️ LOWER IS BETTER, and it is the one metric here whose direction is genuinely counter-intuitive.
+   * `breakEvenWinRatePct` is not a performance — it is the bar a bracket must clear, so a run that
+   * needs 58% is in a better position than one that needs 88%. Marking it `higher` (which "more win
+   * rate sounds better" invites) would paint the structurally-impossible bracket green.
+   *
+   * `breakEvenGapPp` is the performance: achieved − required, so higher IS better.
+   */
+  breakEvenWinRatePct: { label: 'Win rate needed', better: LOWER_IS_BETTER },
+  breakEvenGapPp: { label: 'Gap to break-even (pp)', better: HIGHER_IS_BETTER },
   avgTradePnl: { label: 'Avg trade P&L', better: HIGHER_IS_BETTER },
   totalPnl: { label: 'Total P&L', better: HIGHER_IS_BETTER },
   grossPnl: { label: 'Gross P&L', better: HIGHER_IS_BETTER },
