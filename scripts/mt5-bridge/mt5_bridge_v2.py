@@ -364,6 +364,46 @@ def detect_server_utc_offset(force=False):
     _SERVER_OFFSET_MEASURED_AT = now
     return SERVER_UTC_OFFSET_SECONDS
 
+# ── Account kind: demo / contest / real ─────────────────────────────────────────
+# ⚠️ THIS IS A DIFFERENT FACT FROM `tradeMode`, AND THE NAME IS DELIBERATE.
+# `tradeMode` already means two different things in this project: MT5's own SYMBOL permission
+# (`s.trade_mode`, published by /symbols — 0 disabled … 4 full) and Nest's BOT mode
+# (`trading_strategy.mode` / `ab_test.tradeMode` — 'auto' | 'manual'). A third meaning under the
+# same name is the failure `scripts/db-schema.cjs` exists to warn about, so this is `accountKind`.
+#
+# ⚠️ UNKNOWN IS NOT DEMO, AND MUST NOT BE TREATED AS ONE.
+# `account_info()` returns None whenever the terminal is down, so `unknown` is the common reading
+# on a workstation with MT5 switched off. Classifying that as 'demo' would silently label a
+# real-money account as safe — the one direction of error that costs money. Every unrecognised
+# value, including None, returns 'unknown', and callers are expected to refuse rather than permit.
+#
+# PLANNED IN #1153
+# MISSING:    `accountKind` is published here and typed in Nest, but NOTHING GATES ON IT YET — no
+#             refusal path, no acknowledgement record, no UI badge.
+# TODAY:      the field is additive and read-only; nothing branches on it.
+# WHEN BUILT: the order-authorisation path refuses automated trading when kind is 'real' and the
+#             account has no current risk acknowledgement (#1153).
+_ACCOUNT_TRADE_MODE_KIND = {0: 'demo', 1: 'contest', 2: 'real'}
+
+def classify_account_kind(trade_mode):
+    """MT5 `account_info().trade_mode` -> 'demo' | 'contest' | 'real' | 'unknown'.
+
+    MT5's own constants are ACCOUNT_TRADE_MODE_DEMO=0, _CONTEST=1, _REAL=2. They are written as
+    integers rather than imported because this module must import cleanly on a machine where the
+    MetaTrader5 package is absent (the whole file is import-guarded for exactly that reason).
+
+    ⚠️ `bool` is rejected EXPLICITLY. It is an int subclass, so a bare `int(True) == 1` would
+    classify a malformed payload as 'contest' — a valid kind, from an invalid reading. A
+    non-integral float is NOT rejected: `int(2.5) == 2` gives 'real', which errs towards the
+    cautious answer rather than the convenient one.
+    """
+    if isinstance(trade_mode, bool):
+        return 'unknown'
+    try:
+        return _ACCOUNT_TRADE_MODE_KIND[int(trade_mode)]
+    except (TypeError, ValueError, KeyError):
+        return 'unknown'
+
 def utc_iso(epoch_seconds):
     """MT5 SERVER-clock epoch seconds -> true-UTC ISO-8601 string with 'Z'.
 
@@ -1625,6 +1665,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'activeAccount': active_num,
                     'account': str(acc.login) if acc else None,
                     'server': acc.server if acc else None,
+                    # ⚠️ #1153 — demo / contest / real, read from the `account_info()` call this
+                    # handler ALREADY makes. No extra native call: /health shares the bridge's
+                    # only thread, and a second blocking read here is how #1000 happened.
+                    # `unknown` when the terminal is down — never 'demo'. See the classifier.
+                    'accountKind': classify_account_kind(acc.trade_mode) if acc else 'unknown',
                     'balance': float(acc.balance) if acc else None,
                     'equity': float(acc.equity) if acc else None,
                     'connectionErrors': connection_errors,
@@ -1761,7 +1806,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 return json_response(self, {'login': info.login, 'server': info.server, 'balance': float(info.balance),
                     'equity': float(info.equity), 'margin': float(info.margin), 'marginFree': float(info.margin_free),
                     'marginLevel': float(info.margin_level) if info.margin_level else None, 'currency': info.currency,
-                    'leverage': info.leverage, 'name': info.name})
+                    'leverage': info.leverage, 'name': info.name,
+                    # #1153 — same fact as /health, same rule: `unknown` is never 'demo'.
+                    'accountKind': classify_account_kind(info.trade_mode)})
 
             # /positions
             if path == '/positions':
@@ -2627,6 +2674,35 @@ class BridgeHandler(BaseHTTPRequestHandler):
 # ─── Main ─────────────────────────────────────────────────
 
 if __name__ == '__main__':
+    # ── Self-test: the account-kind classifier, then exit ──
+    # `python mt5_bridge_v2.py --self-test-account-kind`
+    # ⚠️ Runs BEFORE the bridge starts anything, so it can be executed on a machine with no
+    # terminal, no account and no port available. The point of the flag is that the classifier's
+    # safety property — `unknown` is never `demo` — is checkable without a live broker.
+    if '--self-test-account-kind' in _sys.argv:
+        _cases = [
+            (0, 'demo'), (1, 'contest'), (2, 'real'),
+            (None, 'unknown'),           # terminal down: account_info() returned None
+            (3, 'unknown'),              # a value MT5 does not define
+            ('2', 'real'),               # numeric string, as some payloads carry
+            ('', 'unknown'),
+            (True, 'unknown'),           # bool is an int subclass; True is NOT a trade mode
+        ]
+        _fail = 0
+        for _in, _want in _cases:
+            _got = classify_account_kind(_in)
+            _ok = _got == _want
+            _fail += 0 if _ok else 1
+            print(f"  {'PASS' if _ok else 'FAIL'}  classify_account_kind({_in!r}) -> {_got!r} (want {_want!r})")
+        # The property that matters most, asserted as a property rather than a case.
+        _never_demo = all(
+            classify_account_kind(v) != 'demo' for v in (None, -1, 99, 'x', 2.5, [], {})
+        )
+        print(f"  {'PASS' if _never_demo else 'FAIL'}  no unrepresentable value ever classifies as 'demo'")
+        _fail += 0 if _never_demo else 1
+        print(f"\n[account-kind] {'PASSED' if _fail == 0 else 'FAILED'} — {_fail} failure(s)")
+        _sys.exit(1 if _fail else 0)
+
     # Identity (port + account slot + log file) was resolved at import time —
     # supports `--port` / `--broker-id` CLI flags and BRIDGE_PORT / BRIDGE_ACCOUNT env.
     port = BRIDGE_PORT

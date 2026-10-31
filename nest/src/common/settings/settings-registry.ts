@@ -141,6 +141,67 @@ export const SETTINGS: SettingDefinition[] = [
     min: 0,
     max: 100,
   },
+  // ── Auto-accept gates (2026-10-30) ─────────────────────────────────────────
+  // Owner: *"if there is an improvement in the profit we auto apply Run B and that gets stored as Run
+  // A"* — and, in the same message, the worry that decides the design: *"a small improvement is luck
+  // and we might need some caution."*
+  //
+  // So the mode may promote a run AUTOMATICALLY, but only across a threshold that is a declared,
+  // visible number rather than a rule buried in a component. Both of these are gates, not targets:
+  // a run that fails either one is left as B and the panel says which gate refused it.
+  //
+  // ── DECISION (2026-10-30, primary) ──
+  // WHAT:      Auto-Accept moves the ACCEPTED-BASELINE REFERENCE only, and only across these two
+  //            declared numeric gates. It never writes to `trading_strategy`.
+  // WHY:       the owner asked for promotion without a click AND named the risk that makes an
+  //            unguarded promotion unsafe. A gate that is a setting can be read, printed and changed;
+  //            a gate that is a constant in a component can only be discovered. The comparison is
+  //            relative and sign-aware because an absolute threshold on a NEGATIVE P&L reads
+  //            backwards — −90 is better than −100, not worse.
+  // INSTEAD OF: auto-applying the tested configuration to the live bot, which is the obvious reading
+  //            of "auto apply Run B" and is exactly the unguarded money-path edit
+  //            `maths-change-requires-ab.instructions.md` forbids. Live-apply stays a separate,
+  //            explicit action — and #1151 (backup/export) is its prerequisite.
+  // REVERSE BY: deleting these two declarations and the mode block in `BacktestPage.jsx`; the mode
+  //            falls back to 'normal' and every promotion becomes manual again.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 99
+  // GUARD:     src/core/backtest-compare.test.js (the comparison arithmetic, both directions)
+  //
+  // ⚠️ Neither of these promotes anything in the LIVE strategy. Auto-accept moves the REFERENCE (see
+  // `use-backtest-baseline.js`); writing configuration into `trading_strategy` from a backtest is a
+  // separate, explicit action and is not built.
+  {
+    key: 'backtest.autoAcceptMinPnlImprovePct',
+    type: 'number',
+    defaultValue: 10,
+    class: 'runtime',
+    owner: 'backtest',
+    label: 'Auto-accept — minimum P&L improvement %',
+    description:
+      'In Auto-Accept mode a completed run becomes the new A baseline only if its total P&L beats the '
+      + 'current baseline by at least this much, RELATIVELY (a baseline of -100 improving to -90 is a 10% '
+      + 'improvement of magnitude, not a profit). Raise it to demand more evidence per promotion; set it '
+      + 'to 0 to promote on any improvement at all, which is the setting that makes luck most likely to '
+      + 'be recorded as progress.',
+    userChangeable: true,
+    min: 0,
+    max: 1000,
+  },
+  {
+    key: 'backtest.autoAcceptMinTrades',
+    type: 'number',
+    defaultValue: 30,
+    class: 'runtime',
+    owner: 'backtest',
+    label: 'Auto-accept — minimum closed trades',
+    description:
+      'A run with fewer closed trades than this is never auto-accepted, whatever its P&L. Below roughly '
+      + '30 trades a single winner can move the total by more than the improvement threshold, so the '
+      + 'promotion would be recording noise. The run is still stored and still comparable by hand.',
+    userChangeable: true,
+    min: 0,
+    max: 100000,
+  },
   // ── Trading risk caps ──────────────────────────────────────────────────────
   // Migrated out of `process.env` on 2026-09-17 (#849). The declared defaults are deliberately the
   // values the .env held on that date (MT5_MAX_POSITION_SIZE=1.0, MT5_MAX_OPEN_POSITIONS=5,

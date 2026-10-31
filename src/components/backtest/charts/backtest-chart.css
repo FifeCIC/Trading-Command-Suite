@@ -261,6 +261,16 @@
   color: var(--ink);
 }
 
+/* The denominator line under a total that is only a share of something else. Deliberately quieter
+   than the value — it is the audit trail, not the headline. */
+.bt-equity-sub {
+  font-size: 0.62rem;
+  line-height: 1.3;
+  color: var(--color-text-dim);
+  font-family: monospace;
+  max-width: 22ch;
+}
+
 .bt-equity-chart {
   width: 100%;
 }

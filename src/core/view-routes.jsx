@@ -82,6 +82,7 @@ import AppearanceSurfacesPage from '../pages/AppearanceSurfacesPage.jsx';
 import AppearanceDataDisplayPage from '../pages/AppearanceDataDisplayPage.jsx';
 import AppearanceInteractivePage from '../pages/AppearanceInteractivePage.jsx';
 import AppearancePatternsPage from '../pages/AppearancePatternsPage.jsx';
+import AppearanceInfoPage from '../pages/AppearanceInfoPage.jsx';
 import AppearanceFormsPage from '../pages/AppearanceFormsPage.jsx';
 import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
 // MetaStackPipelinePage import REMOVED 2026-10-08 — the view was merged into Pipeline Graph Lab,
@@ -132,6 +133,7 @@ import T212ISAPage from '../pages/T212ISAPage.jsx';
 import DataAreaLandingPage from '../pages/DataAreaLandingPage.jsx';
 import DatabaseTablesPage from '../pages/DatabaseTablesPage.jsx';
 import BacktestDataPage from '../pages/BacktestDataPage.jsx';
+import BacktestRunsPage from '../pages/BacktestRunsPage.jsx';
 import DataStatusPage from '../pages/DataStatusPage.jsx';
 import DataElementsPage from '../pages/DataElementsPage.jsx';
 import DecoderPage from '../pages/DecoderPage.jsx';
@@ -322,6 +324,7 @@ export const VIEW_COMPONENTS = {
   'data-landing': DataAreaLandingPage,
   'database-tables': DatabaseTablesPage,
   'backtest-data': BacktestDataPage,
+  'backtest-runs': BacktestRunsPage,
   'data-status': DataStatusPage,
   'data-elements': DataElementsPage,
   'decoder': DecoderPage,
@@ -421,6 +424,7 @@ export const VIEW_COMPONENTS = {
   // moved pages (Appearance, Screen Assignment, Responsive Layout Lab, Motion, Forms) land beside it.
   'layout-guide': AppearanceAreaPage,
   'patterns': AppearancePatternsPage,
+  'info': AppearanceInfoPage,
   'motion': AppearanceMotionPage,
   'forms': AppearanceFormsPage,
   'colour': AppearanceColourPage,

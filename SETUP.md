@@ -2,22 +2,45 @@
 
 > ## ⚠️ Read this first — what you are actually installing
 >
+> 🛑 **This software is not configured to profit by default.** No strategy it ships with has been
+> shown to be profitable, and it is not financial advice. **Start on a demo account.** The full
+> financial disclaimer is [`DISCLAIMER.md`](DISCLAIMER.md) — it applies from the moment you run the
+> app, and connecting a funded account is taken as accepting it.
+>
 > **This is a SOURCE install, not an application package.** There is no installer, no `setup.exe` and
 > no one-click download. You clone the repository and run the stack yourself. Packaging is planned,
 > not built — tracked in issue **#1147**.
 >
-> ### Platform requirements, stated plainly
+> ### Two ways to install — decide before you start
 >
-> | Requirement | Why it is needed | What you get without it |
+> | | **Track A — Web + API** | **Track B — Full stack** |
 > |---|---|---|
-> | **Windows** | the MT5 bridge is a Python process that drives the MetaTrader 5 terminal | Linux/macOS can run the web app and the API, but **not** the bridge |
-> | **MetaTrader 5**, installed with a broker account (demo is fine) | it is where prices and orders come from | the UI, database and analysis work; **no market data and no trading** |
-> | **MySQL 8+** | every table the app uses | nothing persists |
-> | **Node.js 18+** | Vite front end and NestJS API | nothing runs |
+> | Adds | MySQL, Node.js | + Windows, MetaTrader 5 terminal, a broker account |
+> | Time | ~10 minutes | considerably longer |
+> | You get | every page, the database, scoring, Lab, backtesting, charts | all of the above **plus** live prices, positions and order placement |
+> | You do **not** get | bridging to a broker, portfolio positions, order placement | — |
 >
-> ⚠️ **There is no sample or demo data.** The app reads live provider data through the bridge. A fresh
-> install with no broker connected shows an empty application — deliberately. This project does not
-> ship fabricated numbers to make a screenshot look full.
+> **MetaTrader 5 is not required to run the app.** It is required to *trade* through it, and to see
+> the positions and account state that only a broker can supply. Measured 2026-10-31 with the MT5
+> terminal deliberately down: `/api/health` returned `status: ok`, `database: connected` (3 ms), and
+> `providers: total 10, healthy 2, degraded 8, failed 0`. So a Track A install is a working
+> application, not a broken one.
+>
+> **Platform note:** the MT5 bridge is a Python process that drives the MetaTrader 5 terminal, so it
+> is Windows only. Linux and macOS can run Track A in full and cannot run the bridge.
+>
+> ### What you must have either way
+>
+> | Requirement | Why | Without it |
+> |---|---|---|
+> | **MySQL 8+** | every table the app uses | nothing persists |
+> | **Node.js 18+** | runs the Vite front end and the NestJS API | nothing runs |
+> | **Git** | this is a source install | you cannot get the code |
+>
+> ⚠️ **There is no sample or demo data.** The app reads live provider data — from direct HTTP
+> providers, or through the MT5 bridge once that is configured. A fresh install with nothing
+> connected shows an empty application — deliberately. This project does not ship fabricated numbers
+> to make a screenshot look full.
 >
 > ### ⛔ NEVER run `prisma db push` in this repository
 >
@@ -31,12 +54,13 @@
 >
 > ### Time and what to prepare
 >
-> - **~10 minutes** for the web app and the API.
-> - **Considerably longer** for MetaTrader 5: install the terminal, open a broker account (demo is
->   fine), and log in once by hand so the terminal is configured. Note the **account number** and
->   **server name** — the bridge needs both.
+> - **~10 minutes** for Track A (web app, API, database).
+> - **Considerably longer** for Track B: install the MetaTrader 5 terminal, open a brokerage account
+>   (demo is fine), and log in once by hand so the terminal is configured. Note the **account
+>   number** and **server name** — the bridge needs both, and so does the variables block in §3.
 
-Get the web app and API running locally in about 10 minutes. Getting live market data and trading working needs MetaTrader 5 as well — budget considerably longer for that.
+Get the web app and the API running locally in about 10 minutes. Live prices, positions and order
+placement need MetaTrader 5 as well — that is Track B, and it needs considerably longer.
 
 ---
 
@@ -73,7 +97,7 @@ npm install
 cd ..
 ```
 
-> If `npm --prefix c:/wamp64/www/trading-command-suite/nest install` fails, run `cd nest && npm install` directly.
+> If `npm --prefix nest install` fails, run `cd nest && npm install` directly.
 
 ---
 
@@ -89,18 +113,25 @@ CREATE DATABASE IF NOT EXISTS tradingcs
   COLLATE utf8mb4_unicode_ci;
 
 CREATE USER IF NOT EXISTS 'tradingcs'@'localhost'
-  IDENTIFIED BY 'tradingcs_dev_2026';
+  IDENTIFIED BY 'YOUR_PASSWORD';   -- choose your own strong password, do not copy this
 
 GRANT ALL PRIVILEGES ON tradingcs.* TO 'tradingcs'@'localhost';
 FLUSH PRIVILEGES;
 ```
+
+Substitute your own database name, user and password if you prefer. Wherever this guide writes
+`tradingcs` for the user or the database, use the names you just created.
 
 ### Configure connection
 
 The connection string lives in `nest/.env`:
 
 ```env
-DATABASE_URL="mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+# ⚠️ Replace YOUR_PASSWORD with the password you set above — and substitute your own database
+#    and user names if you chose different ones.
+#    Do not copy example credentials from any guide, and note this repository is PUBLIC, so no
+#    real value belongs in a committed file. `nest/.env` is git-ignored; this is the only copy.
+DATABASE_URL="mysql://tradingcs:YOUR_PASSWORD@localhost:3306/tradingcs"
 ```
 
 ### Create the schema
@@ -120,8 +151,8 @@ For a **fresh database**, create the schema from `schema.prisma` without letting
 choose the diff — generate the SQL, **read it**, then apply it:
 
 ```powershell
-$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
-cd C:\wamp64\www\trading-command-suite\nest
+$env:DATABASE_URL = "mysql://tradingcs:YOUR_PASSWORD@localhost:3306/tradingcs"
+cd nest
 
 # 1. Generate the DDL from the schema to an empty target and REVIEW it
 npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
@@ -146,8 +177,8 @@ generate` will fail with `EPERM`.
 ### Seed initial data
 
 ```powershell
-$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
-npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma db seed
+$env:DATABASE_URL = "mysql://tradingcs:YOUR_PASSWORD@localhost:3306/tradingcs"
+npm --prefix nest run prisma db seed
 ```
 
 This seeds initial reference data. Seed contents are maintained in the `nest` codebase and have grown
@@ -175,33 +206,43 @@ protocols via `POST /api/scoring/gated/protocols/seed`, trading bots via
 holds it, and fails with `EPERM`. Forgetting this also leaves `dist/` empty after `rimraf`.
 
 ```powershell
-$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
-npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma:generate
+$env:DATABASE_URL = "mysql://tradingcs:YOUR_PASSWORD@localhost:3306/tradingcs"
+npm --prefix nest run prisma:generate
 ```
 
 ---
 
 ## 3. Environment Variables
 
-All backend env vars are in `nest/.env`:
+All backend env vars are in `nest/.env`. Start from the template: `cp nest/.env.example nest/.env`.
 
-| Variable | Required | Description |
+**Check the name before you set it.** The adapter reads the key the template declares — a variable
+with a near-miss name is silently ignored, and the provider simply reports as degraded.
+
+| Variable | Track | Notes |
 |---|---|---|
-| `DATABASE_URL` | ✅ | MySQL connection string |
-| `QUEUE_MODE` | Optional | Set to `redis` to enable BullMQ queue (default: off) |
-| `REDIS_URL` | Optional | Redis connection for queue mode |
-| `ALPACA_KEY` | Optional | Alpaca paper API key for real market data |
-| `ALPACA_SECRET` | Optional | Alpaca paper API secret |
+| `DATABASE_URL` | both ✅ | MySQL connection string |
+| `PORT` | both | defaults to `3201` |
+| `MT5_BRIDGE_URL` | B | where the bridge listens (default `http://localhost:5000`) |
+| `MT5_PYTHON_PATH` | B | Python interpreter the bridge is launched with |
+| `MT5_ACTIVE_BROKERS` | B | comma-separated **account numbers** to bridge, e.g. `2,3` — one port per entry, `:5000`, `:5001`, … |
+| `MT5_ACCOUNT_<n>` / `MT5_PASSWORD_<n>` / `MT5_SERVER_<n>` / `MT5_PATH_<n>` | B | one set per bridged account |
+| `FINNHUB_API_KEY`, `POLYGON_API_KEY`, `TWELVE_DATA_API_KEY`, `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `ALPACA_API_KEY` + `ALPACA_API_SECRET`, `TRADING212_DEMO_API_KEY` | optional | additional data providers — **14** adapters exist (`docs/GENERATED-FACTS.md`), none required |
+| `QUEUE_MODE` / `REDIS_*` | optional | `redis` enables BullMQ; leave off for local dev |
+| `TELEGRAM_BOT_TOKEN`, `DISCORD_WEBHOOK_URL`, `NOTIFICATION_EMAIL_*` | optional | notifications only |
+
+⚠️ **Every key is optional except `DATABASE_URL`.** With none set, the keyless providers still
+answer — measured 2026-10-31: `providers: total 10, healthy 2, failed 0` on a fresh install.
 
 **Fallback mode** (shown as `"mode":"fallback"` in `/api/health`) means Redis/queue is unavailable —
-this is NORMAL for local dev. The MySQL database stays connected and the API works; scores come from
-real market data when providers are configured. Do not restart NestJS to "fix" fallback mode.
+this is NORMAL for local dev. The MySQL database stays connected and the API works.
+Do not restart NestJS to "fix" fallback mode.
 
 ---
 
 ## 4. Run
 
-### Quickstart — full stack (recommended)
+### Quickstart — full stack (Track B, needs MetaTrader 5)
 
 The whole stack (MT5 Bridge → NestJS → Vite) starts/stops as one unit:
 
@@ -211,6 +252,19 @@ pwsh -File scripts\tcs-stop.ps1      # stop all three services
 ```
 
 Frontend lands on **http://localhost:5173**, API on **http://localhost:3201**.
+
+### Track A — no MetaTrader 5 (two terminals, no bridge)
+
+Do **not** use `tcs-launch.ps1` here; it also starts the bridge, which will fail without the
+terminal. Start the two web services instead:
+
+```powershell
+# terminal 1 — API
+npm --prefix nest run start:dev
+
+# terminal 2 — front end
+npm run dev
+```
 
 ### Backend (NestJS) only
 
@@ -290,10 +344,11 @@ npm --prefix nest run lint   # Backend
 
 ### `PrismaClientInitializationError: Can't reach database server`
 
-MySQL isn't running. Start WAMP (or `mysqld`), then verify:
+MySQL isn't running. Start WAMP (or `mysqld`), then verify — `-p` alone prompts for the password
+so it never lands in your shell history:
 
 ```bash
-mysql -u tradingcs -ptradingcs_dev_2026 -e "SELECT 1" tradingcs
+mysql -u tradingcs -p -e "SELECT 1" tradingcs
 ```
 
 ### `npm --prefix nest install` fails
@@ -334,16 +389,16 @@ Seed ordering issues are almost always a missing parent row, not a broken schema
 seed module's dependency order first (`nest/prisma/seed*.ts`), and confirm the tables it
 depends on exist with `npm --prefix nest run db:check`.
 
-If a genuine full reset is needed on a **throwaway** database, take a dump first:
+If a genuine full reset is needed, take a dump first. `mysqldump` must be on your `PATH` — with
+WAMP on Windows it lives in `...\bin\mysql\<version>\bin`, so add that folder to `PATH` rather
+than typing a version-pinned absolute path that will be wrong after the next MySQL upgrade.
 
-```powershell
-$env:MYSQL_PWD='tradingcs_dev_2026'
-& "C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u tradingcs tradingcs `
-  -e "SHOW TABLES" | Out-File tables-before-reset.txt
+```bash
 mysqldump -u tradingcs -p tradingcs > backup-before-reset.sql
 ```
 
-Never on the dev database, which holds the timestamp-repair rollback path.
+Safe on a first install against a throwaway database. Once real positions or trade history exist,
+the dump is mandatory, not optional.
 
 ---
 
@@ -383,10 +438,12 @@ trading-command-suite/
 
 ## 8. Next Steps
 
-1. Set up Alpaca paper trading credentials in `nest/.env` for real market data
-2. Run `setup-local-infra.ps1` for automated infrastructure checks (Windows)
-3. Find work in **GitHub Issues** (`gh issue list`) — the old `.agenticmemory/SPRINT.md` board is archived
-4. Read `docs/scoring-architecture.md` and the live registry (`GET /api/directives`) before touching directive code
+1. Open **`/status/setup`** in the app — the first-run wizard reports what is configured and what is not
+2. Track B only: configure the MT5 variables (§3), then check `GET :5000/health` on the bridge
+3. Add one data-provider key (§3) if the dashboard shows every provider as degraded
+4. Run `pwsh -File scripts\setup-local-infra.ps1` for automated infrastructure checks (Windows)
+5. Find work in **GitHub Issues** (`gh issue list`)
+6. Read `docs/scoring-architecture.md` and the live registry (`GET /api/directives`) before touching directive code
 
 ---
 

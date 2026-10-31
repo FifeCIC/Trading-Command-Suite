@@ -48,12 +48,14 @@ THIRD-PARTY-NOTICES.txt
 # Free-edition release artefacts (scripts/publish-free-release.cjs) — the zip and its checksum are
 # attached to the release rather than committed.
 #
-# ⚠️ `dist-free/` is ALREADY TRACKED in this repo, so an ignore entry here does NOT untrack it — a
-# rebuild still shows as a working-tree modification. Measured 2026-09-25: this block originally
-# listed `dist-free/` (added in a8bf596) on the assumption it was ignored, and a rebuild then
-# produced 5 tracked-file changes. **An ignore rule is a declaration about files git has never seen;
-# it says nothing about files git already has.** Untracking it is a separate decision, not a
-# side-effect of an ignore entry.
+# ⚠️ `dist-free/` WAS TRACKED (18 files, 6.2 MB, including a source map) and those files were
+# REMOVED on 2026-10-30, when the free edition was already gone and this directory was the last
+# surviving copy of its build output. Measured 2026-09-25, and worth keeping: **an ignore rule is a
+# declaration about files git has never seen — it says nothing about files git already has.** That
+# block originally listed `dist-free/` (added in a8bf596) on the assumption a rebuild would then
+# stop appearing, and a rebuild still produced 5 tracked-file changes. Untracking is a separate
+# action from ignoring; this entry now covers a directory git no longer has.
+dist-free/
 trading-command-suite-free-*.zip
 trading-command-suite-free-*.zip.sha256
 

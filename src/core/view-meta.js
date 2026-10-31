@@ -345,8 +345,8 @@ const VIEW_META = {
     tier: 'premium',
     review: 'approved',
     label: 'QA Testing',
-    // ⚠️ Case matters to the bundle guard (scripts/validate-free-bundle.cjs) and to any
-    // Linux/CI tooling: the file on disk is `QATestingPage.jsx`, not `QaTestingPage.jsx`.
+    // ⚠️ Case matters to any Linux/CI tooling: the file on disk is `QATestingPage.jsx`, not
+    // `QaTestingPage.jsx`. A path that resolves on Windows can fail on a case-sensitive filesystem.
     file: 'src/pages/QATestingPage.jsx',
     css: 'src/pages/qa-testing.css',
     api: [],
@@ -421,8 +421,8 @@ const VIEW_META = {
   '/development/ui-review': {
     tier: 'premium',
     // 'pending' until the owner has actually looked at it — the rule this repo applies to every new
-    // page (#988). Deliberately PREMIUM: it is a Development-area engineering tool, and the free
-    // edition must not ship a table of every page in the paid app.
+    // page (#988). `tier` is metadata only since the free edition was cancelled (2026-10-28); it no
+    // longer hides or ships anything, and nothing branches on it.
     review: 'pending',
     label: 'Page Walkthrough',
     file: 'src/pages/UiReviewPage.jsx',
@@ -601,6 +601,22 @@ const VIEW_META = {
       'GET /api/system/logs/file',
     ],
   },
+  // ⚠️ ADDED 2026-10-31. "Completed runs" moved off `/lab/backtest-strategies` onto its own page
+  // (owner direction — the strategies page had eleven steps and four tabs). It reads and compares
+  // stored runs and nothing else, so its API list is deliberately short: `runs`, `runs/compare` and
+  // the per-run delete. It does NOT run a backtest and must not be given the run endpoints.
+  '/lab/backtest-runs': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Completed Runs',
+    file: 'src/pages/BacktestRunsPage.jsx',
+    css: 'src/pages/BacktestRunsPage.css',
+    api: [
+      'GET /api/backtest/runs',
+      'POST /api/backtest/runs/compare',
+      'DELETE /api/backtest/runs/:runId',
+    ],
+  },
   // ⚠️ `'protocol-backtest'` RETIRED 2026-10-22 (#1134). The page was merged into `/lab/backtest` —
   // the protocol surface is now the "Protocols" subject toggle there, and its score table is the
   // `ProtocolScoreDetail` drill-down. `verify-view-meta-routes.cjs` fails if an entry outlives its
@@ -661,12 +677,10 @@ const VIEW_META = {
     api: [],
   },
   '/status/platform-comparisons': {
-    // ⚠️ PREMIUM → FREE (2026-10-08, owner direction on the Page Walkthrough): *"I would like all of
-    // this information added to the free projects github pages in the hopes it attracts some traffic."*
-    // `tier` here is the SINGLE SOURCE OF TRUTH for the free edition — both generators read it
-    // (scripts/generate-free-manifest.cjs, generate-free-map.cjs), and the free manifest is an
-    // allow-list, so this one field is the whole change. Regenerate after editing it or the free
-    // build keeps the old list.
+    // `tier` is metadata, not a build switch. It used to drive two code generators that emitted a
+    // filtered "free edition" bundle (scripts/generate-free-manifest.cjs / generate-free-map.cjs);
+    // both were deleted with the free edition on 2026-10-28 (SETTLED-DECISIONS row 96). It is kept
+    // because it is the field a future member tier would read — nothing branches on it today.
     tier: 'free',
     review: 'approved',
     label: 'API Comparisons',
@@ -933,6 +947,16 @@ const VIEW_META = {
   // Motion and Forms — new 2026-10-13. Both are MOVES rather than new work: their sections were
   // composed into Theme Lab and are now pages of their own in the Appearance area (owner request).
   // No API — they render live app components and form controls, and fetch nothing.
+  // Information — 2026-10-30. The ONE reference for how a sentence is displayed (see InfoNote.jsx).
+  // Renders the app's own component, so it cannot drift from the pages that use it. Fetches nothing.
+  '/appearance/info': {
+    label: 'Information',
+    area: 'appearance',
+    tier: 'premium',
+    file: 'src/pages/AppearanceInfoPage.jsx',
+    api: [],
+    review: 'pending',
+  },
   '/appearance/motion': {
     label: 'Motion',
     area: 'appearance',

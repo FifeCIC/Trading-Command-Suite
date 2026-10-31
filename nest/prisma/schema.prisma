@@ -276,6 +276,16 @@ model BacktestRun {
   // response carried was lost the moment the page was closed.
   // DEFAULT 'none' matches every run made before this column, which used the old 'include' default.
   newsExclusion String  @default("none") @db.VarChar(16)
+  // ⚠️ ADDED 2026-10-31 (#1155) — WHICH SIDES this run was ALLOWED to open: 'long' | 'short' | 'both'.
+  //
+  // WHY IT MUST BE STORED. The engine could previously only ever open a LONG (`const isLong = true`),
+  // so the absence of the column was invisible — every run was a long run. The moment a short run
+  // exists, a comparison between a long run and a short run is comparing two different QUESTIONS, and
+  // without this column the settings diff cannot see it: `directionMode` would be the only difference
+  // between +76,000 and −155,000 and the page would report "everything the same".
+  //
+  // DEFAULT 'long' matches every run made before this column, which was long-only by construction.
+  directionMode String  @default("long") @db.VarChar(8)
   // ⚠️ ADDED 2026-10-26 (#1143) — THE SCORING OUTPUT THIS RUN PRODUCED. `run()` calls the canonical
   // SEES path (`fullScore()` → `ProtocolGatingService.scoreWithGating`, guarded by
   // `validate-single-scoring-path.cjs`) once per bar and then DISCARDED it, keeping only the BUY bars

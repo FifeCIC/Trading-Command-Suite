@@ -19,6 +19,21 @@ reviews and replies may take time — that is the honest trade for a codebase th
 
 ---
 
+> ## 🛑 Read before you connect an account: [`DISCLAIMER.md`](DISCLAIMER.md)
+>
+> **This software is not configured to profit by default, and it is not financial advice.**
+> The shipped configuration is an engineering baseline for research and development — no strategy in
+> it has been shown to be profitable, and the trading performance of this project is not a feature of
+> this release.
+>
+> **Use a demo account.** Test on demo until you can explain every order the system places. Only then
+> consider a funded account, and never one you cannot afford to empty.
+>
+> The AGPL covers the *licence*; it does not tell you the *risk*. [`DISCLAIMER.md`](DISCLAIMER.md) does,
+> and it binds by the same terms.
+
+---
+
 ## What It Does
 
 - **META.Stack Scoring** (**M**odular **E**xpert **T**rading **A**rchitecture) — protocols built from inspirable directives across technical, sentiment, and risk groups. Protocol-gated scoring (~14 directives per protocol) is ~7× cheaper than flat scoring.

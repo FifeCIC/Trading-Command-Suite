@@ -426,8 +426,6 @@ function main(argv) {
   const srcAll = {};
   for (const abs of walk(path.join(ROOT, 'src'))) {
     const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
-    // GENERATED mirrors — regenerated immediately after, so they must not count as importers.
-    if (rel.startsWith('src/editions/')) continue;
     //⚠️ The three edited files use their POST-removal text. Reading them from disk made every page
     // look imported, because view-meta still named it and view-routes still imported it.
     srcAll[rel] = rel in pending ? pending[rel] : fs.readFileSync(abs, 'utf8');
@@ -480,8 +478,7 @@ function main(argv) {
     else console.log('  ⚠️  ' + p.asset + ' was declared in view-meta but does not exist');
   }
 
-  console.log('\nNEXT: node scripts/generate-free-map.cjs && node scripts/generate-free-manifest.cjs && node scripts/generate-free-registry.cjs');
-  console.log('      node scripts/verify-view-meta-routes.cjs && npm run build');
+  console.log('\nNEXT: node scripts/verify-view-meta-routes.cjs && npm run build');
   return errors.length ? 1 : 0;
 }
 

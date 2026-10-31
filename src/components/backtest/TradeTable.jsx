@@ -21,6 +21,7 @@
  */
 import { useMemo, useState, useEffect } from 'react';
 import { useSort, SortableTh } from '../../core/use-sort.jsx';
+import InfoNote from '../InfoNote';
 
 /**
  * Currency with a SIGN and thousands separators. The sign is explicit so a loss cannot be mistaken for a
@@ -36,13 +37,17 @@ const pct1 = (v) => (v == null ? '—' : `${Number(v).toFixed(1)}%`);
 const stamp = (iso) => (iso ? String(iso).slice(0, 16).replace('T', ' ') : '—');
 
 /**
- * useCycleColumn — a column that changes what it shows every 3 seconds (#1150).
+ * useCycleColumn — a column that changes what it shows every 6 seconds (#1150).
  *
  * Owner direction, 2026-10-29: *"there's too many columns already so we're going to do something very
  * new and designate a column to be automatic changing every 3 seconds … This will allow me to see more
  * data when browsing."* The approach is named a **Cycle Column** — one grid slot that recycles itself
  * through a short series of related facts instead of widening the table. ("Carousel column" describes
  * the same thing; "cycle" was chosen because nothing slides and the order is fixed.)
+ *
+ * ⚠️ 6 SECONDS, NOT 3 (owner direction, 2026-10-31). At 3s the header and three cells changed faster
+ * than a reader could finish one row — the column read as flicker rather than as information, and it
+ * also made the whole table re-lay-out twice as often.
  *
  * ⚠️ IT IS PAUSABLE, AND THAT IS NOT OPTIONAL. WCAG 2.2.2 (Pause, Stop, Hide) requires auto-updating
  * content to be stoppable, and a table whose header relabels itself under the reader is exactly that.
@@ -53,7 +58,7 @@ const stamp = (iso) => (iso ? String(iso).slice(0, 16).replace('T', ' ') : '—'
  * it is, at the moment it is shown — so the HEADER cycles with the cells, and the position is shown as
  * dots. A screenshot with no header would otherwise be a column of unexplained numbers.
  */
-const CYCLE_MS = 3000;
+const CYCLE_MS = 6000;
 
 function useCycleColumn(items) {
   const [index, setIndex] = useState(0);
@@ -194,7 +199,7 @@ const CYCLE_FACTS = [
   },
 ];
 
-export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
+export default function TradeTable({ trades, totals, timeframe, limit = 100, compare = null }) {
   // Memoised so `trades ?? []` does not allocate a fresh array on every render.
   const rows = useMemo(() => trades ?? [], [trades]);
   const order = useSort(rows, 'exitDate', 'desc');
@@ -204,6 +209,33 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
   );
   const barMin = useMemo(() => timeframeMinutes(timeframe), [timeframe]);
   const cycle = useCycleColumn(CYCLE_FACTS);
+
+  /**
+   * ── COMPARISON BORDERS (owner direction, 2026-10-30) ─────────────────────────────────────────
+   * *"This set should be the same … it might be that the box borders are coloured based on
+   * comparison but the text for loss or profit is standard red and green."*
+   *
+   * So each tile carries TWO independent signals and neither overrides the other:
+   *   · the VALUE keeps `mss-stat--bullish/bearish` → where this run stands
+   *   · the BORDER carries `is-better/is-worse`     → whether the change helped
+   * A −5% P&L on a run that improved from −12% is a loss AND an improvement; one colour cannot say
+   * both, and painting the number green would claim it made money.
+   *
+   * `compare` is `{ verdicts, reason, baselineLabel }` from the caller (`backtest-compare.js` computes
+   * the verdicts). When it is absent every tile renders exactly as before — the A/B panels pass no
+   * comparison because they already have a dedicated difference table.
+   */
+  const verdictOf = (key) => compare?.verdicts?.[key] ?? 'unknown';
+  const tileClass = (key) => {
+    const v = verdictOf(key);
+    return v === 'better' || v === 'worse' ? ` is-${v}` : '';
+  };
+  const tileTitle = (key, extra) => {
+    const v = verdictOf(key);
+    if (!compare) return extra;
+    const word = v === 'better' ? 'Better' : v === 'worse' ? 'Worse' : v === 'same' ? 'Unchanged' : 'Not compared';
+    return [extra, `${word} vs ${compare.baselineLabel ?? 'the previous run'}`].filter(Boolean).join(' · ');
+  };
 
   if (!rows.length) {
     return (
@@ -225,24 +257,24 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
          * tiles the Appearance area presents as the app's stat library — NOT a new look.
          */
         <dl className="mss-stat-grid bt-trade-tiles">
-          <div className="mss-stat-card">
+          <div className={`mss-stat-card${tileClass('count')}`} title={tileTitle('count')}>
             <dd className="mss-stat-value">{totals.count}</dd>
             <dt className="mss-stat-label">Closed trades</dt>
             {totals.breakEven > 0 && <dd className="mss-stat-sub">{totals.breakEven} break-even</dd>}
           </div>
-          <div className="mss-stat-card">
+          <div className={`mss-stat-card${tileClass('winRatePct')}`} title={tileTitle('winRatePct')}>
             <dd className={`mss-stat-value ${pctTone(totals.winRatePct, 50)}`}>{pct1(totals.winRatePct)}</dd>
             <dt className="mss-stat-label">Win rate</dt>
             <dd className="mss-stat-sub">
               {totals.wins} of {totals.measured} measured
             </dd>
           </div>
-          <div className="mss-stat-card bt-tile--wide">
+          <div className={`mss-stat-card bt-tile--wide${tileClass('sumPnl')}`} title={tileTitle('sumPnl')}>
             <dd className={`mss-stat-value ${numTone(totals.sumPnl)}`}>{money(totals.sumPnl)}</dd>
             <dt className="mss-stat-label">Σ P&amp;L</dt>
-            <dd className="mss-stat-sub">currency — read the % tile</dd>
+            <dd className="mss-stat-sub">currency · read the % tile</dd>
           </div>
-          <div className="mss-stat-card">
+          <div className={`mss-stat-card${tileClass('avgPnlPct')}`} title={tileTitle('avgPnlPct')}>
             <dd className={`mss-stat-value ${numTone(totals.avgPnlPct)}`}>
               {totals.avgPnlPct == null ? '—' : `${totals.avgPnlPct.toFixed(2)}%`}
             </dd>
@@ -258,14 +290,14 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
             trades crossed a hole in the series). Showing only the wall-clock number overstates how long
             the strategy actually held, so both are here and the gap count explains any difference.
           */}
-          <div className="mss-stat-card">
+          <div className={`mss-stat-card${tileClass('avgBarsHeld')}`} title={tileTitle('avgBarsHeld', 'Shorter is better — a bracket that resolves quickly is not being carried.')}>
             <dd className="mss-stat-value">{holdLabel(totals.avgBarsHeld * barMinutesOf(timeframe))}</dd>
             <dt className="mss-stat-label">Avg hold (bars)</dt>
             <dd className="mss-stat-sub">
               {totals.avgBarsHeld == null ? 'not recorded' : `${Math.round(totals.avgBarsHeld)} bars · gap-immune`}
             </dd>
           </div>
-          <div className="mss-stat-card">
+          <div className={`mss-stat-card${tileClass('avgHoldMinutes')}`} title={tileTitle('avgHoldMinutes', 'Shorter is better. Inflated by any hole in the bar series.')}>
             <dd className="mss-stat-value">{holdLabel(totals.avgHoldMinutes)}</dd>
             <dt className="mss-stat-label">Avg hold (clock)</dt>
             <dd className="mss-stat-sub">entry → exit, wall clock</dd>
@@ -290,14 +322,26 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
           )}
         </dl>
       ) : (
-        <p className="pb-field-note">
-          ⚠️ This response carried no <code>tradeTotals</code>, so the win count and Σ P&amp;L are not
-          shown — they are computed by the API, not here, and a figure derived in the browser could
-          disagree with what an agent reads from the same run.
-        </p>
+        <InfoNote tone="warning" label="No summary on this response">
+          It carried no <code>tradeTotals</code>, so the win count and Σ P&amp;L are not shown — they are
+          computed by the API, not here, and a figure derived in the browser could disagree with what an
+          agent reads from the same run. The rows below are unaffected.
+        </InfoNote>
       )}
       <div className="bt-table-wrap">
-        <table className="bt-table">
+        {/*
+          ⚠️ `--bt-cycle-ch` IS THE WIDTH OF THE LONGEST CYCLE HEADER, IN `ch`, AND IT IS THE ONE THING
+          THAT STOPS THIS TABLE RE-LAYING OUT (owner direction, 2026-10-31: *"Give this column a fixed
+          width … it will stop it moving the entire table. Base the width on the longest string for the
+          header."*).
+
+          The column recycled through "Held" (4) / "% / h" (5) / "Bars held" (9), so its width changed
+          with every tick — at the end of the row that only twitched the table's own edge, but the
+          reader still saw the grid jump. Declaring the width from the longest LABEL means it is
+          derived rather than a magic number, and it follows automatically if a longer fact is added.
+          The `.bt-cycle-label` / `.bt-cycle-cell` rules reserve exactly this much.
+        */}
+        <table className="bt-table" style={{ '--bt-cycle-ch': Math.max(...CYCLE_FACTS.map((f) => f.label.length)) }}>
           <caption className="sr-only">
             Every closed trade this run took, with its profit or loss
           </caption>
@@ -323,10 +367,29 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
                 api={order}
                 className="bt-num"
               />
+
+              <SortableTh col="exitDate" label="Exit" api={order} />
+              <SortableTh col="entryPrice" label="In" api={order} className="bt-num" />
+              <SortableTh col="exitPrice" label="Out" api={order} className="bt-num" />
+              <SortableTh col="positionSize" label="Size" api={order} className="bt-num" />
+              <SortableTh col="signal" label="Signal at entry" api={order} />
+              <SortableTh
+                col="exitReason"
+                label="Why"
+                title="What ended the trade: the stop, the target, or end of the window."
+                api={order}
+              />
               {/* ── THE CYCLE COLUMN (#1150) ───────────────────────────────────────────────────────
                   One slot, several facts, 3s apart. Its header carries the CURRENT fact's name plus a
                   pause control and a position dot — without that the numbers are unreadable, and WCAG
-                  2.2.2 requires the reader to be able to stop it. */}
+                  2.2.2 requires the reader to be able to stop it.
+
+                  ⚠️ IT IS THE LAST COLUMN ON PURPOSE (owner direction, 2026-10-30: *"Move this column
+                  to be the last column so that when it changes it doesn't have a knock on affect on all
+                  the columns to the right of it."*). The slot recycles through "Held / % per h / Bars
+                  held", which are different widths — sitting mid-row, every 3-second change re-laid out
+                  the eight columns to its right and the whole table twitched while being read. At the
+                  end there is nothing to its right to disturb. */}
               <th scope="col" className="bt-cycle-th" {...cycle.holdProps}>
                 <span className="bt-cycle-head">
                   <span className="bt-cycle-label" title={cycle.item.title}>
@@ -353,17 +416,6 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
                   </span>
                 )}
               </th>
-              <SortableTh col="exitDate" label="Exit" api={order} />
-              <SortableTh col="entryPrice" label="In" api={order} className="bt-num" />
-              <SortableTh col="exitPrice" label="Out" api={order} className="bt-num" />
-              <SortableTh col="positionSize" label="Size" api={order} className="bt-num" />
-              <SortableTh col="signal" label="Signal at entry" api={order} />
-              <SortableTh
-                col="exitReason"
-                label="Why"
-                title="What ended the trade: the stop, the target, or end of the window."
-                api={order}
-              />
             </tr>
           </thead>
           <tbody>
@@ -376,32 +428,49 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100 }) {
                 <td className="bt-nowrap">{t.direction === 'short' ? '▼ short' : '▲ long'}</td>
                 <td className={`pb-mono bt-num ${Number(t.pnlPct) < 0 ? 'bt-red' : 'bt-green'}`}>{pct1(t.pnlPct)}</td>
                 <td className={`pb-mono bt-num ${Number(t.pnl) < 0 ? 'bt-red' : 'bt-green'}`}>{money(t.pnl)}</td>
-                <td className="pb-mono bt-num bt-cycle-cell">{cycle.item.value(t, barMin)}</td>
                 <td className="pb-mono bt-nowrap">{stamp(t.exitDate)}</td>
                 <td className="pb-mono bt-num">{t.entryPrice?.toFixed?.(4) ?? '—'}</td>
                 <td className="pb-mono bt-num">{t.exitPrice?.toFixed?.(4) ?? '—'}</td>
                 <td className="pb-mono bt-num">{t.positionSize ?? '—'}</td>
                 <td>{t.signal ?? '—'}</td>
                 <td>{t.exitReason ?? '—'}</td>
+                <td className="pb-mono bt-num bt-cycle-cell">{cycle.item.value(t, barMin)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {/*
+        ⚠️ BOTH OF THESE ARE `<InfoNote>` (owner report, 2026-10-30 — the second list of "inconsistently
+        styled sentences": *"as if agentic AI is trying to create as many different styles as possible for
+        a paragraph"*). They were two `p.pb-field-note`, one of them with a bespoke `.bt-gap-warning` on
+        top. A note about the DATA's integrity and a note about how many ROWS are shown are the same kind
+        of statement — a caveat on what you are reading — so they take the same shape.
+
+        ⚠️ ORDER: the data-integrity warning first, then the row cap. The first one changes how much you
+        can trust the numbers; the second only says you are seeing a hundred of them.
+      */}
       {totals.tradesSpanningGap > 0 && (
-        <p className="pb-field-note bt-gap-warning">
-          ⚠️ <strong>{totals.tradesSpanningGap}</strong> of {totals.count} trade(s) crossed a hole in the
-          bar series longer than an hour — the machine was off or the feed stopped. Across such a hole the
-          stop and target were <strong>not monitored</strong>, so those trades&rsquo; hold times and exit
-          reasons are contaminated even though their prices are real. The bars column is the gap-immune
-          figure; the clock column is not.
-        </p>
+        <InfoNote
+          tone="warning"
+          label="Data gaps in this run"
+          meta={`${totals.tradesSpanningGap} of ${totals.count} trade(s) crossed a hole longer than an hour`}
+        >
+          The machine was off, or the feed stopped. Across such a hole the stop and target were{' '}
+          <strong>not monitored</strong>, so those trades&rsquo; hold times and exit reasons are
+          contaminated even though their prices are real. The <em>bars</em> column is the gap-immune
+          figure; the clock is not.
+        </InfoNote>
       )}
       {order.sorted.length > limit && (
-        <p className="pb-field-note">
-          Showing {limit} of {order.sorted.length} trades — the summary above covers all of them. Sort
-          a column to choose which {limit} you see.
-        </p>
+        <InfoNote
+          tone="neutral"
+          label="Rows shown"
+          meta={`${order.sorted.length.toLocaleString()} trades stored · ${limit} listed`}
+        >
+          The summary above covers <strong>all</strong> of them; this list is the first {limit}. Sort a
+          column to choose which {limit} you see.
+        </InfoNote>
       )}
     </>
   );

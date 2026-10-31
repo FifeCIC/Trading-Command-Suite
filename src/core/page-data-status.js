@@ -146,6 +146,7 @@ export const PAGE_DATA_STATUS = {
   'colour': { status: 'live', source: 'Theme tokens (active pack)' },
   'surfaces': { status: 'live', source: 'Card/surface tokens (active pack)' },
   'data-display': { status: 'live', source: 'Theme tokens (active pack)' },
+  'info': { status: 'static', source: 'InfoNote component + info-note.css' },
   'interactive': { status: 'live', source: 'Resizable container-query demo (CSS @container)' },
   'component-lab': { status: 'live', source: 'Self-contained showcase' },
 

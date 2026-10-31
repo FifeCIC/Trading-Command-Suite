@@ -30,29 +30,20 @@ const STEPS = [
     desc: 'Define which symbols to monitor',
     href: '/watchlists/user-watchlists',
   },
-  // ⚠️ §9.14 — both of these lead to PREMIUM views (Scoring › Protocol Builder, Trading › Create
-  // Bot). The free build must not offer the step or name its path, so the entries are DROPPED
-  // there. Spread rather than `.filter()`: the array literal sits in a dead branch that the
-  // bundler folds away, which is what keeps the paths out of the shipped JS — filtering at
-  // runtime would still ship them. Flag reads the Vite define for the same reason.
-  ...(false
-    ? []
-    : [
-        {
-          id: 'hasProtocols',
-          icon: '🧩',
-          label: 'Build a protocol',
-          desc: 'Choose directives and scoring rules',
-          href: '/scoring/protocol-builder',
-        },
-        {
-          id: 'hasStrategies',
-          icon: '⚙',
-          label: 'Create Trading Bot',
-          desc: 'Bind a protocol to a symbol with thresholds and sizing',
-          href: '/trading/bot-create',
-        },
-      ]),
+  {
+    id: 'hasProtocols',
+    icon: '🧩',
+    label: 'Build a protocol',
+    desc: 'Choose directives and scoring rules',
+    href: '/scoring/protocol-builder',
+  },
+  {
+    id: 'hasStrategies',
+    icon: '⚙',
+    label: 'Create Trading Bot',
+    desc: 'Bind a protocol to a symbol with thresholds and sizing',
+    href: '/trading/bot-create',
+  },
 ];
 
 export default function SetupBanner() {

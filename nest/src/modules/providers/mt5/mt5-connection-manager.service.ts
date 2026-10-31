@@ -48,6 +48,22 @@ export interface Mt5BridgeHealth {
   serverUtcOffsetSeconds?: number;
   serverUtcOffsetHours?: number;
   /**
+   * Whether the bridged account is `'demo'`, `'contest'`, `'real'`, or `'unknown'` (#1153).
+   *
+   * ⚠️ `unknown` IS NOT `demo`. The bridge cannot read `account_info()` while the terminal is down,
+   * so `unknown` is the common reading on a workstation with MT5 switched off. Treating it as
+   * `demo` would silently label a real-money account safe — the one direction of error that costs
+   * money. Anything gating on this must REFUSE on `unknown`, not permit.
+   *
+   * ⚠️ Not called `tradeMode`. That name already means two other things here: MT5's SYMBOL
+   * permission (`broker_symbol.tradeMode`, 0..4) and the BOT mode (`trading_strategy.mode`,
+   * 'auto' | 'manual'). A third meaning is the collision `scripts/db-schema.cjs` warns about.
+   *
+   * PLANNED IN #1153 — published and typed, but NOTHING GATES ON IT YET. No acknowledgement
+   * record, no refusal path, no UI badge. Additive and read-only until that epic progresses.
+   */
+  accountKind?: 'demo' | 'contest' | 'real' | 'unknown';
+  /**
    * Effective risk limits the RUNNING bridge enforces (#901).
    *
    * ⚠️ These are read from `nest/.env` at the bridge's IMPORT, so editing the file does NOT

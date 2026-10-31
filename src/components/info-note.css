@@ -1,0 +1,106 @@
+/**
+ * info-note.css — the ONE stylesheet behind every annotating sentence in the app.
+ *
+ * ⚠️ Every value here comes from the type and spacing scales in `ui-standards.instructions.md`:
+ *   label   0.65–0.72rem / 600   → 0.68rem
+ *   body    0.78–0.82rem / 400   → 0.82rem
+ *   caption 0.55–0.62rem         → 0.62rem
+ *   radius  cards 10px           → 10px
+ *   spacing xs 4 · sm 8 · md 12-16
+ * A page that needs a variant changes the PROP, not this file. `validate-css-literals.cjs` runs on it
+ * like any other stylesheet, so a hex literal here would fail the build.
+ *
+ * ⚠️ THE TONE IS BORDER + LABEL ONLY. Body text stays `--ink` in every tone — see the WCAG note in
+ * `InfoNote.jsx`. This is the difference between a note and a warning banner, and it is why five of
+ * these can stack without the page shouting.
+ */
+.info-note {
+  display: block;
+  padding: 0.55rem 0.8rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev, var(--panel));
+  margin: 0 0 0.6rem;
+}
+.info-note:last-child { margin-bottom: 0; }
+
+.info-note-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+.info-note-icon { font-size: 0.78rem; line-height: 1; }
+
+.info-note-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.info-note-body {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+/* A list inside a note is a list of limitations, not an article. Tight, one idea per row. */
+.info-note-body ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+}
+.info-note-body li + li { margin-top: 0.2rem; }
+.info-note-body strong { font-weight: 600; }
+/* The body never inherits a tone — but a value the reader must notice may carry one explicitly. */
+.info-note-body .is-better { color: var(--color-profit); }
+.info-note-body .is-worse { color: var(--color-loss); }
+
+.info-note-meta {
+  margin: 0.3rem 0 0;
+  font-size: 0.62rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tones: border, surface and LABEL. Never the body. ───────────────────────────────────────── */
+.info-note--info {
+  border-color: var(--notice-info-border);
+  background: var(--notice-info-bg);
+}
+.info-note--info .info-note-label { color: var(--notice-info-text); }
+
+.info-note--success {
+  border-color: var(--notice-success-border);
+  background: var(--notice-success-bg);
+}
+.info-note--success .info-note-label { color: var(--notice-success-text); }
+
+.info-note--warning {
+  border-color: var(--notice-warning-border);
+  background: var(--notice-warning-bg);
+}
+.info-note--warning .info-note-label { color: var(--notice-warning-text); }
+
+.info-note--critical {
+  border-color: var(--notice-critical-border);
+  background: var(--notice-critical-bg);
+}
+.info-note--critical .info-note-label { color: var(--notice-critical-text); }
+
+/* An inline encoding key — the coloured chip a legend points at. The chip carries the MEANING and the
+   border carries the COLOUR, so neither is a letter the reader has to decode ("G"/"R" was the first
+   attempt and it read as an abbreviation nobody defined). */
+.info-note .info-note-key {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.info-note .info-note-key.is-better { border-color: var(--color-profit); }
+.info-note .info-note-key.is-worse { border-color: var(--color-loss); }

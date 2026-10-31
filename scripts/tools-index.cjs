@@ -445,7 +445,7 @@ function selfTest() {
     ['classifies validators', () => categoryOf('validate-thing.cjs') === 'validator'],
     ['classifies audits', () => categoryOf('audit-thing.cjs') === 'audit'],
     ['classifies analysis', () => categoryOf('analyse-unreachable-capacity.cjs') === 'analysis'],
-    ['classifies generators', () => categoryOf('generate-free-map.cjs') === 'generator'],
+    ['classifies generators', () => categoryOf('generate-free-map.cjs') === 'generator'],  // fixture name; the file need not exist
     ['falls back to tool', () => categoryOf('commit-only.cjs') === 'tool'],
     ['extracts a purpose from a real header', () => {
       const p = purposeOf('/**\n * Foo bar — does a thing that is long enough to read as a sentence.\n */\ncode');

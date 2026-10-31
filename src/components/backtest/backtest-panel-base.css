@@ -166,15 +166,42 @@
 /* ── The trade summary as STAT TILES ──────────────────────────────────────────────────────────────
    ⚠️ `.mss-stat-*` ARE REUSED, NOT RE-DEFINED (owner direction: *"use existing styling as always"*).
    They live in `src/pages/meta-stack-status.css`, which the Appearance area already presents as the
-   app's stat library (`/appearance/data-display`, example 2). This file only TIGHTENS the grid for a
-   narrow panel — three columns rather than `auto-fit 160px`, which would stack seven tiles vertically
-   inside an A/B panel and eat the whole screen. */
+   app's stat library (`/appearance/data-display`, example 2). This file only changes the LAYOUT for a
+   narrow panel.
+
+   ⚠️ THE TILES DID NOT LOOK CENTRED, AND THE CAUSE WAS NOT `text-align` (owner report 2026-10-31:
+   *"lack of centering right now"*). The card is centred, but the markup is `<dl>` with `<dt>` and
+   `<dd>`, and the UA stylesheet gives every `<dd>` `margin-inline-start: 40px`. Measured:
+   `ddMargin: "0px 0px 0px 40px"` on every tile — so the value and its label sat 40px right of centre
+   inside a centred box. Fixed once in the LIBRARY (`meta-stack-status.css`) rather than here, because
+   every other page using `dl.mss-stat-grid` had the same offset.
+
+   ⚠️ FLEX-WRAP, NOT `auto-fit` GRID (measured 2026-10-31). `repeat(auto-fit, minmax(116px, 1fr))`
+   inside a NARROW panel produced `grid-template-columns: 116px 18px` at a 480px viewport — a phantom
+   18px second track, one tile squeezed into it, and the panel scrolling sideways. `auto-fit` counts
+   tracks from the container but the leftover plus a `span 2` tile can still overflow, and the result
+   reads as a ragged grid rather than a compacted one. Flex-wrap has no phantom tracks: each tile has
+   a basis and grows to fill its row, and the row count follows the panel width monotonic ally. */
 .bt-trade-tiles {
-  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 0.6rem;
 }
-.bt-trade-tiles .mss-stat-card { padding: 10px 8px; }
+.bt-trade-tiles .mss-stat-card {
+  /* `1 1 116px` = grow, shrink, and prefer this width. `min-width: 0` stops a long value from
+     forcing its tile wider than its share, which is what broke the even compaction.
+     ⚠️ `max-width` matters as much as the basis: a tile ALONE on its last row otherwise grows to the
+     full panel width and reads as a different component from its neighbours. Measured at a 526px
+     panel: without the cap the final tile was 526px beside 126px ones. */
+  flex: 1 1 116px;
+  min-width: 0;
+  max-width: 200px;
+  padding: 10px 8px;
+}
+/* The Σ P&L is a six-figure number routinely (#1142 sizing), so it gets roughly two tiles' width.
+   `flex-basis` rather than a span: at a narrow width the basis is simply the whole row. */
+.bt-trade-tiles .bt-tile--wide { flex: 2 1 232px; max-width: 420px; }
 .bt-trade-tiles .mss-stat-value { font-size: 1.1rem; letter-spacing: -0.01em; }
 .bt-trade-tiles .mss-stat-label { font-size: 0.7rem; }
 .bt-trade-tiles .mss-stat-sub { font-size: 0.66rem; }
@@ -184,12 +211,65 @@
 .bt-trade-tiles .bt-tile--wide { grid-column: span 2; }
 .bt-trade-tiles .bt-tile--wide .mss-stat-value { font-size: 1.25rem; }
 
+/* ── Sub-text, brought in line with the stat library (owner direction, 2026-10-30) ────────────────
+   *"the smaller text within these boxes could be a little better and maybe more inline with existing
+   theming."* The sub-line is now the palette's own faint token at the same optical size as the label
+   above it, tabular so `350 of 1526 measured` does not shuffle between tiles, and it wraps rather than
+   truncating. It stays ONE line of meaning — it is a qualifier on the value, not a second reading. */
+.bt-trade-tiles .mss-stat-sub {
+  font-size: 0.7rem;
+  color: var(--text-faint, var(--ink-soft));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  margin-top: 0.2rem;
+  text-wrap: balance;
+}
+.bt-trade-tiles .mss-stat-label { color: var(--ink-soft); letter-spacing: 0.01em; }
+
+/* ── COMPARISON BORDER (owner direction, 2026-10-30) ──────────────────────────────────────────────
+   The BORDER answers "did the change help?"; the VALUE keeps its profit/loss colour and answers
+   "where does this run stand?". Two questions, two encodings — a −5% P&L that improved from −12% must
+   not be painted green.
+
+   ⚠️ `box-shadow: inset` rather than `border-width`, so a coloured tile does not shift by a pixel and
+   the grid does not reflow when a comparison appears. An uncoloured tile is the honest rendering of
+   "nothing to compare against" and of "nothing moved". */
+.bt-trade-tiles .mss-stat-card.is-better,
+.bt-stats-grid .bt-stat.is-better {
+  box-shadow: inset 0 0 0 2px var(--color-profit);
+  border-color: var(--color-profit);
+}
+.bt-trade-tiles .mss-stat-card.is-worse,
+.bt-stats-grid .bt-stat.is-worse {
+  box-shadow: inset 0 0 0 2px var(--color-loss);
+  border-color: var(--color-loss);
+}
+
 /* ── The Cycle Column (#1150) ─────────────────────────────────────────────────────────────────────
-   One slot that recycles through related facts every 3s. `min-width` stops the column from resizing
-   as the label and values change length, which would make every row twitch on each tick. */
-.bt-cycle-th { min-width: 4.6rem; vertical-align: bottom; }
+   One slot that recycles through related facts every 6s.
+
+   ⚠️ BOTH THE HEADER AND THE CELLS ARE PINNED TO `--bt-cycle-ch`, the width of the LONGEST cycle
+   label, set on the table by `TradeTable`. Without it the column is as wide as its current label and
+   its longest current value, so every tick changed the column's width and re-laid out the table
+   (owner report 2026-10-31: *"it will stop it moving the entire table"*). Reserving the label's slot
+   is what makes the header the ONLY thing that changes — the geometry does not.
+
+   `1ch` resolves against each element's own font, and that is deliberate: the header and the value
+   have different fonts, and each needs its own nine characters of room. */
+.bt-cycle-th {
+  width: calc(var(--bt-cycle-ch, 9) * 1ch + 2.6rem);
+  min-width: calc(var(--bt-cycle-ch, 9) * 1ch + 2.6rem);
+  max-width: calc(var(--bt-cycle-ch, 9) * 1ch + 2.6rem);
+  vertical-align: bottom;
+}
 .bt-cycle-head { display: inline-flex; align-items: center; gap: 0.25rem; }
-.bt-cycle-label { white-space: nowrap; }
+.bt-cycle-label {
+  /* The reserved slot. `min-width` in `ch` of the header font = exactly as many characters as the
+     longest label needs, so a short label does not shrink the column. */
+  min-width: calc(var(--bt-cycle-ch, 9) * 1ch);
+  white-space: nowrap;
+  text-align: left;
+}
 .bt-cycle-pause {
   border: 1px solid var(--line);
   background: var(--panel);
@@ -210,7 +290,14 @@
   background: var(--line);
 }
 .bt-cycle-dots > span.is-on { background: var(--accent); }
-.bt-cycle-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bt-cycle-cell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  /* Same pinned geometry as the header, in the CELL's own font (`ch` of the mono face). */
+  width: calc(var(--bt-cycle-ch, 9) * 1ch + 2.6rem);
+  min-width: calc(var(--bt-cycle-ch, 9) * 1ch);
+  text-align: left;
+}
 
 /* A cycling cell is transient content — the reduced-motion preference must also stop the tick. */
 @media (prefers-reduced-motion: reduce) {

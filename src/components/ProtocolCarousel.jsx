@@ -28,8 +28,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './protocol-carousel.css';
 
-/** Cards are this tall (must match --pc-card-h in the CSS). Used for keyboard scrolling. */
-const CARD_STEP_PX = 132;
+/**
+ * Cards are this tall, WITH their margin (must match `--pc-card-h` in the CSS).
+ *
+ * ⚠️ IT MUST TRACK THE CSS. Measured 2026-10-30: the card height was 132px here and 132px in the
+ * stylesheet, and both moved to 76px together. A mismatch is not a crash — it makes Arrow Up/Down land
+ * between two cards, which the snap then resolves to *a* card, so the arrow appears to work while
+ * skipping one.
+ */
+const CARD_STEP_PX = 84;
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -198,9 +205,11 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
     <div className="pc-wrap">
       <div className="pc-head">
         <span className="pc-label">{label}</span>
-        <span className="pc-count" aria-hidden="true">
-          {activeIndex + 1} / {items.length}
-        </span>
+        {/* ⚠️ THE POSITION COUNTER IS GONE (owner direction, 2026-10-30: *"Remove 40 of 40
+            strategies"*). It restated the length of a list the reader is already scrolling, and the
+            selected card is the position — a number beside a visible one is volume, not information.
+            The count is still announced where it MATTERS: the empty state names how many exist, and
+            the search filter names how many match. */}
       </div>
 
       <div
@@ -228,6 +237,10 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
                 else cardRefs.current.delete(item.id);
               }}
               className={`pc-card${selected ? ' pc-card--active' : ''}`}
+              // The description is hidden at compact height (2026-10-30) — it is a full paragraph and
+              // would be clipped. Kept reachable as a tooltip so nothing is lost, and screen readers
+              // still get it from the option's accessible name.
+              title={item.description || undefined}
               onClick={() => {
                 scrollToIndex(index);
                 setActiveIndex(index);
@@ -251,7 +264,12 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
                   them unconditionally printed "undefined directives · ceiling undefined", which
                   reads as a broken protocol rather than as a bot. A field that is absent now renders
                   nothing, so one track serves both subjects without a second component. */}
-              <div className="pc-meta">
+              {/* ⚠️ ONE ROW FOR THE SECONDARY FACTS (2026-10-30). The card was cut to ~half its height
+                  on the owner's direction, and three stacked lines (meta, style, warning) do not fit —
+                  they would have been clipped by `overflow: hidden` rather than shrinking. Side by side
+                  they read in one line and nothing is lost. */}
+              <div className="pc-sub">
+                <div className="pc-meta">
                 {item.directiveCount != null && <span>{item.directiveCount} directives</span>}
                 {item.directiveCount != null && item.maxScore != null && (
                   <span className="pc-dot" aria-hidden="true">·</span>
@@ -272,6 +290,7 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
               </div>
 
               {item.tradingStyle && <div className="pc-style">{item.tradingStyle}</div>}
+              </div>
               {/* ⚠️ A PROTOCOL THAT CANNOT RUN SAYS SO HERE (2026-10-25). This replaced the "Has
                   symbols" filter checkbox: filtering for a broken state hides it, whereas a badge on
                   the card tells the operator which card is broken. Measured the day it shipped: 14 of

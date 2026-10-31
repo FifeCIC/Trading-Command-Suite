@@ -32,7 +32,15 @@ function toChartPoints(equity) {
   for (const d of equity ?? []) {
     const time = toChartTime(d.time);
     if (time == null) continue;
-    mapped.push({ time, equity: Number(d.equity) || 0, drawdownPct: Number(d.drawdownPct) || 0 });
+    mapped.push({
+      time,
+      equity: Number(d.equity) || 0,
+      // Currency, always present — this is what the shading plots.
+      drawdownAmount: Number(d.drawdownAmount) || 0,
+      // NULL when the run recorded no capital to divide by. Kept as null rather than 0 so the
+      // summary can say "cannot judge" instead of printing a drawdown of zero.
+      drawdownPct: d.drawdownPct == null ? null : Number(d.drawdownPct),
+    });
   }
   mapped.sort((a, b) => a.time - b.time);
   const deduped = [];
@@ -47,8 +55,23 @@ function toChartPoints(equity) {
  * EquityCurveChart — renders a cumulative P&L equity curve with drawdown shading.
  * #103: Cumulative P&L + Drawdown Visualization
  *
+ * ⚠️ WHAT THE "Max Drawdown" TILE USED TO SAY, AND WHY IT WAS WRONG (2026-10-30).
+ *
+ * It printed `−{(s.maxDrawdownPct ?? 0).toFixed(2)}%` from a percentage whose DENOMINATOR was the
+ * peak *cumulative P&L*. On run `7f00cfb8` (1,027 trades, £10,000 account) the peak P&L was
+ * £1,809.62 — one early winning trade — so a £161,068 fall was reported as **8,867.70%**, while a
+ * run that never went positive reported **0** because a `peak > 0` guard short-circuited. Two
+ * wrong numbers, one arithmetic.
+ *
+ * The tile now leads with the CURRENCY fall, which is always computable and needs no denominator,
+ * and prints the percentage only when the run recorded a capital figure — naming it. A reader can
+ * check both numbers against the curve below them, which is the point of the panel.
+ *
+ * The shading plots the currency amount: it is on its own price scale (a fixed band at the bottom),
+ * so it self-scales, and it needs no denominator either.
+ *
  * Props:
- *   equityData - { equity: [{ time, equity, drawdownPct }], summary: {...} }
+ *   equityData - { equity: [{ time, equity, drawdownAmount, drawdownPct }], summary: {...} }
  *   symbol     - display label
  *   height     - chart height (default 300)
  */
@@ -111,7 +134,7 @@ export default function EquityCurveChart({ equityData, symbol, height = 300 }) {
 
     const ddData = points.map((d) => ({
       time: d.time,
-      value: -Math.abs(d.drawdownPct), // negative so area fills down
+      value: -Math.abs(d.drawdownAmount), // negative so area fills down
     }));
     ddSeries.setData(ddData);
 
@@ -180,6 +203,7 @@ export default function EquityCurveChart({ equityData, symbol, height = 300 }) {
   }
 
   const s = equityData.summary || {};
+  const money = (v) => `${v < 0 ? '−' : ''}$${Math.abs(Number(v) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="bt-equity-wrapper" aria-label={`Equity curve${symbol ? ` for ${symbol}` : ''}`}>
@@ -187,16 +211,27 @@ export default function EquityCurveChart({ equityData, symbol, height = 300 }) {
         <div className="bt-equity-stat">
           <span className="bt-equity-label">Final P&amp;L</span>
           <span className={`bt-equity-value ${(s.finalEquity ?? 0) >= 0 ? 'bt-green' : 'bt-red'}`}>
-            ${(s.finalEquity ?? 0).toFixed(2)}
+            {money(s.finalEquity ?? 0)}
           </span>
         </div>
         <div className="bt-equity-stat">
-          <span className="bt-equity-label">Peak Equity</span>
-          <span className="bt-equity-value bt-green">${(s.peakEquity ?? 0).toFixed(2)}</span>
+          <span className="bt-equity-label">Peak P&amp;L</span>
+          <span className="bt-equity-value bt-green">{money(s.peakEquity ?? 0)}</span>
         </div>
+        {/*
+          Max Drawdown leads with CURRENCY, which needs no denominator and is therefore always
+          true. The percentage is printed only against a capital figure that was actually recorded,
+          and it NAMES that figure, so "1,610.68% of $10,000" can be checked and "—" cannot be
+          mistaken for "no drawdown".
+        */}
         <div className="bt-equity-stat">
           <span className="bt-equity-label">Max Drawdown</span>
-          <span className="bt-equity-value bt-red">−{(s.maxDrawdownPct ?? 0).toFixed(2)}%</span>
+          <span className="bt-equity-value bt-red">{money(-(s.maxDrawdownAmount ?? 0))}</span>
+          <span className="bt-equity-sub">
+            {s.maxDrawdownPct == null
+              ? 'capital not recorded — % not computable'
+              : `${Number(s.maxDrawdownPct).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% of ${money(s.accountSize ?? 0)}`}
+          </span>
         </div>
         <div className="bt-equity-stat">
           <span className="bt-equity-label">Total Trades</span>

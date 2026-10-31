@@ -30,18 +30,16 @@
   letter-spacing: 0.02em;
 }
 
-.pc-count {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  color: var(--text-dim, #94a3b8);
-  font-variant-numeric: tabular-nums;
-}
 
-/* The viewport. A fixed height is what makes it a PANEL rather than a list. */
+/* The viewport. A fixed height is what makes it a PANEL rather than a list.
+   ⚠️ OWNER DIRECTION 2026-10-30: *"These boxes could be half the height they are … and [the track]
+   could also be a bit smaller in height too."* The card drops 132 → 84px and the viewport from
+   2.6 cards to 1.6 — the resting card stays clearly centred with a sliver of each neighbour as the
+   only affordance, which is enough to say "this scrolls" without spending 190px on it. */
 .pc-track {
-  --pc-card-h: 132px;
+  --pc-card-h: 84px;
 
-  height: calc(var(--pc-card-h) * 2.6);
+  height: calc(var(--pc-card-h) * 1.6);
   /* Defensive: makes this element the offsetParent for its cards. The centre measurement uses
      getBoundingClientRect and does not depend on it, but any future offset-based maths will. */
   position: relative;
@@ -128,6 +126,21 @@
   border: 1px solid var(--line, #1e293b);
 }
 
+/**
+ * The card's second line: meta and style side by side (2026-10-30).
+ *
+ * ⚠️ THIS IS WHAT MAKES THE CARD FIT AT ~HALF HEIGHT. Stacked, `meta`, `style` and `warn` needed ~150px;
+ * the owner asked for roughly half, so the two quiet lines share one row and the description moves to a
+ * tooltip. Nothing is dropped — only re-flowed.
+ */
+.pc-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 0 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .pc-meta {
   display: flex;
   align-items: center;
@@ -145,17 +158,19 @@
 .pc-style {
   font-size: 0.72rem;
   color: var(--ink-soft, #cbd5e1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
 }
 
+/**
+ * ⚠️ HIDDEN AT THE COMPACT HEIGHT, NOT DELETED. It is a full paragraph and would be clipped by
+ * `overflow: hidden` — which would look like a rendering bug rather than a decision. The same text is on
+ * the card's `title` (hover) and in the option's accessible name, so nothing becomes unreachable.
+ */
 .pc-desc {
-  margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  color: var(--text-faint, #64748b);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: none;
 }
 
 .pc-empty {

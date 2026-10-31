@@ -46,6 +46,7 @@ import { apiGet, apiPost, apiDelete } from '../../core/api/client';
 import NoticeBlock from '../NoticeBlock';
 import { noticeFromError } from '../../core/notices/from-error.js';
 import { useSort, SortableTh } from '../../core/use-sort.jsx';
+import RunSettingsDiff from './RunSettingsDiff';
 import './backtest-panel-base.css';
 import './backtest-runs-panel.css';
 
@@ -288,7 +289,9 @@ export default function BacktestRunsPanel({ showTrades = true }) {
               </button>
             )}
             <span className="btr-hint">
-              Select 2–4 runs. Only runs that measure the same way are a fair comparison.
+              {selected.length >= 2
+                ? `${selected.length} selected. The comparison names the settings that differ, then puts the results side by side.`
+                : 'Select 2–4 runs. Only runs that measure the same way are a fair comparison.'}
             </span>
           </div>
         </>
@@ -381,6 +384,13 @@ function Comparison({ result, showTrades = true }) {
         </p>
       )}
 
+      {/* ── WHAT DIFFERS, BEFORE WHAT HAPPENED ────────────────────────────────────────────────
+          "What did I change?" is the question a backtest session is made of, and it must be answered
+          before the results are read — otherwise a P&L difference with no visible cause gets credited
+          to whatever the reader last remembers changing. The metrics table below answers the other
+          question ("which run won") and already existed. */}
+      <RunSettingsDiff differences={result?.differences} runs={runs} />
+
       <div className="btr-table-wrap bt-table-wrap">
         <table className="bt-table">
           <caption className="sr-only">Side-by-side metrics for the selected runs.</caption>
@@ -402,7 +412,12 @@ function Comparison({ result, showTrades = true }) {
               {showTrades && <th scope="col">P&amp;L</th>}
               <th scope="col">Profit factor</th>
               <th scope="col">Sharpe</th>
-              <th scope="col">Max DD %</th>
+              {/* ⚠️ "Max DD %" WAS THE TEN-DAY FORWARD RETURN, not a drawdown (#1149 follow-up,
+                  2026-10-30). It reads `run.maxDrawdown`, which is written from `min(returns10d)` —
+                  the worst forward return of the scored bars. It is the SAME shape of mistake the
+                  Result step's tile had, and it is what made "max drawdown" mean three things in
+                  this page family. "Drawdown" now means the equity path only. */}
+              <th scope="col" title="The worst ten-day forward return of the scored bars, per score. Not the equity-path drawdown.">Worst 10d %</th>
               {showTrades && <th scope="col">Avg/trade %</th>}
             </tr>
           </thead>

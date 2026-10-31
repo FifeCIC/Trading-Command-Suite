@@ -2,18 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useUiStore } from '../stores/useUiStore';
 
-/**
- * ⚠️ `FREE_EDITION` is VESTIGIAL — always false. The free edition was removed 2026-10-28
- * (SETTLED-DECISIONS row 96); the constant is kept only so the call sites below read unchanged.
- *
- * THE REASONING WORTH KEEPING if a per-build split ever returns: such a flag must be a BUILD-TIME
- * constant, not a runtime check, so that the excluded name is folded out of the artefact instead of
- * being shipped inside it.
- */
-const FREE_EDITION = false;
-
-/** Context for the market-order keys — the screen they work on, less the premium one in free. */
-const TRADING_CONTEXT = FREE_EDITION ? 'Manual Trading' : 'Speed Trading, Manual Trading';
+/** Context for the market-order keys — names every screen they work on. */
+const TRADING_CONTEXT = 'Speed Trading, Manual Trading';
 
 const SHORTCUTS = [
   {
@@ -22,14 +12,20 @@ const SHORTCUTS = [
       { combo: 'B', label: 'Buy at market', context: TRADING_CONTEXT },
       { combo: 'S', label: 'Sell at market', context: TRADING_CONTEXT },
       { combo: 'C', label: 'Close position', context: TRADING_CONTEXT },
-      // Shift+B / Shift+S are Speed Trading only — the SHORTCUT goes with the screen, not just the
-      // label (a free user cannot press a key that reaches no page).
-      ...(FREE_EDITION
-        ? []
-        : [
-            { combo: 'Shift + B', label: 'Buy 2× size', context: 'Speed Trading' },
-            { combo: 'Shift + S', label: 'Sell 2× size', context: 'Speed Trading' },
-          ]),
+      // ⚠️ THESE TWO WERE BEHIND UNDEFINED `FREE_EDITION` AND TOOK THE WHOLE APP DOWN (2026-10-30).
+      //
+      // The condition was `...(FREE_EDITION ? [] : [ …two entries… ])`, guarding a build flag that
+      // the free edition's cancellation had already deleted (SETTLED-DECISIONS row 96, 2026-10-28).
+      // An undeclared identifier is legal at PARSE time, so `vite build` and `tsc` both passed — the
+      // module threw `ReferenceError: FREE_EDITION is not defined` only when it was evaluated, and
+      // the app-level boundary replaced EVERY page with "App Failed to Load". A green build, a dead
+      // app: the exact signature this repo pays for most often.
+      //
+      // Unconditional because there is ONE edition now and it has both keys (`App.jsx` says the same
+      // of the nav filter: "the premium-view notice is gone with the free edition … every route is
+      // allowed"). Do not reintroduce a build-flag conditional here without defining the flag.
+      { combo: 'Shift + B', label: 'Buy 2× size', context: 'Speed Trading' },
+      { combo: 'Shift + S', label: 'Sell 2× size', context: 'Speed Trading' },
     ],
   },
   {

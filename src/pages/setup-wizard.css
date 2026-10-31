@@ -1,4 +1,4 @@
-/* SetupWizardPage — the first-run experience (/status/setup). Ships in the FREE edition.
+/* SetupWizardPage — the first-run experience (/status/setup). Ships in every build.
  * ============================================================================
  * ⚠️ THEMED TOKENS ONLY. Every colour below is a runtime token written onto :root by
  *    `src/theme/adapters/vanilla.js` (--bg, --panel, --bg-elev, --border, --border-strong,

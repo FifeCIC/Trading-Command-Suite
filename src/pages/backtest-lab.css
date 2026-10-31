@@ -81,8 +81,13 @@
 /* The RUN FACTS strip above the results — the same chip language as `.pb-strip` below, because
    two fact displays on one page should not be two designs. The ℹ trigger sits at the right of the
    strip: it opens the prose that used to occupy this space (see the note in the page's JSX). */
-.pb-facts { display: flex; align-items: flex-start; gap: 0.2rem; margin-top: 0.9rem; }
+.pb-facts { display: flex; align-items: flex-start; gap: 0.2rem; margin-top: 0.9rem; flex-wrap: wrap; }
 .pb-facts .pb-strip { flex: 1 1 auto; }
+/* ⚠️ THE SESSION LOG TAKES ITS OWN ROW (measured 2026-10-30). `.pb-facts` is a flex row, so adding
+   the log as a second child squeezed the strip into a narrow column and stacked six chips vertically
+   beside a wide table. `flex-basis: 100%` forces the wrap: the strip states what the run uses, the log
+   is the history underneath it, and neither should narrow the other. */
+.pb-facts .pb-session-log { flex: 1 1 100%; }
 
 .pb-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .pb-strip-item {
@@ -197,23 +202,6 @@
 }
 
 /* A guard is not a hint: it states that the run is refused and why. Warning colour, not error —
- * nothing is broken, something is switched on. */
-.pb-guard {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--risk-high);
-  border-left-width: 3px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--risk-high) 10%, transparent);
-  font-size: 0.8rem;
-  color: var(--ink);
-}
-.pb-guard strong { font-weight: 700; }
-.pb-guard-note { color: var(--ink-soft); }
 
 /* Score detail: the drill-down header pairs a heading with its run button. */
 .pb-detail-head {
@@ -487,12 +475,6 @@
   font-size: 0.72rem;
   font-weight: 700;
 }
-.pb-step-panel-of {
-  margin-left: auto;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.7rem;
-  color: var(--text-dim, var(--ink-soft));
-}
 
 /* The run action, under the facts strip it commits to. */
 .pb-run-actions {
@@ -516,7 +498,6 @@
   }
   .pb-step-item { flex: 0 0 auto; }
   .pb-step-index { min-width: 9rem; }
-  .pb-step-panel-of { margin-left: 0; }
 }
 
 /* The continue affordance for a step that has no action of its own. */
@@ -601,3 +582,168 @@
 }
 
 .pb-info-window { margin-bottom: var(--space-md); }
+
+/* The news-coverage preview in step 3. A hairline rule so it reads as "the answer about this field"
+   rather than as another paragraph of instructions. */
+.pb-news-preview {
+  margin-top: 0.4rem;
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--line);
+}
+.pb-news-preview .pb-field-note { margin: 0.15rem 0; }
+/* ⚠️ Amber, not red: an inert control is not an error — the run is valid, it just is not filtered. */
+.pb-news-inert { color: var(--notice-warning-text, var(--ink)); }
+
+/* ── Session change log (step 5) ────────────────────────────────────────────────────────────────
+   A record table, deliberately quieter than the run strip above it: the strip is what the run uses,
+   this is provenance. Muted "was", emphasised "now", so the eye lands on the current value. */
+.pb-session-log { margin-top: 0.9rem; }
+.pb-session-log-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.pb-session-log-head h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+}
+.pb-session-clear { padding: 0.15rem 0.6rem; font-size: 0.78rem; }
+.pb-session-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+.pb-session-table th,
+.pb-session-table td {
+  text-align: left;
+  padding: 0.28rem 0.6rem 0.28rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: baseline;
+}
+.pb-session-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  border-bottom-color: var(--line);
+}
+.pb-session-table tbody th { font-weight: 500; color: var(--ink-soft); }
+.pb-was { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--line); }
+.pb-now { font-weight: 600; }
+.pb-at { color: var(--ink-soft); white-space: nowrap; }
+
+/* ── "you changed this step" marker on the rail ─────────────────────────────────────────────────
+   Accent, not a warning colour: editing a setting is the normal way to run an experiment, not a
+   fault. Small and non-bold so the badge never out-shouts the step's own state above it. */
+.pb-step-changed {
+  color: var(--accent, var(--ink));
+  font-weight: 500;
+}
+
+/* ── Modes (Run step) ────────────────────────────────────────────────────────────────────────────
+   Two radios styled as cards, because a bare radio pair gives the reader no idea what the choice
+   costs. The gates in force are printed under them — a gate whose value is not shown cannot be
+   checked. */
+.bt-modes {
+  margin: 0.9rem 0 0.2rem;
+  padding: 0.7rem 0.85rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev, var(--panel));
+}
+.bt-modes legend {
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.bt-mode-options { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.bt-mode {
+  flex: 1 1 16rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "radio name" "radio hint";
+  column-gap: 0.55rem;
+  align-items: start;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.bt-mode--on { border-color: var(--accent); background: var(--bg); }
+.bt-mode input { grid-area: radio; margin-top: 0.15rem; accent-color: var(--accent); }
+.bt-mode-name { grid-area: name; font-weight: 600; font-size: 0.88rem; }
+.bt-mode-hint { grid-area: hint; font-size: 0.78rem; color: var(--ink-soft); line-height: 1.32; }
+
+/* ── THE PAIR BAR (2026-10-30) ───────────────────────────────────────────────────────────────────
+   One row: which run is A, which is B, and the control that changes B. It replaced a `<label>`
+   sentence and a caption that said the same thing, plus a select whose options repeated their own id.
+   Monospace ids so two eight-character hashes are comparable at a glance — that is the whole job. */
+.bt-pair-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.7rem;
+  margin: 0 0 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev, var(--panel));
+}
+.bt-pair-side { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.bt-pair-role {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.bt-pair-id { font-size: 0.8rem; color: var(--ink); }
+.bt-pair-empty { font-size: 0.8rem; color: var(--ink-soft); font-style: italic; }
+.bt-pair-arrow { color: var(--ink-soft); font-size: 0.8rem; }
+.bt-pair-select { max-width: 22rem; font-size: 0.78rem; }
+.bt-pair-unpin {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.bt-pair-unpin:hover { border-color: var(--accent); color: var(--ink); }
+
+/* ── Better / worse on a COMPARISON row ─────────────────────────────────────────────────────────
+   The same two classes the result tiles use for their border, applied to a table cell. Only used
+   where "better" is true and measurable — a higher total P&L, a lower cost. ⚠️ NOT used on the score
+   Δ cells: the panel states that a higher score is not a verdict, so colouring it green would
+   contradict the sentence next to it. */
+.bt-delta--better { color: var(--color-profit); font-weight: 600; }
+.bt-delta--worse { color: var(--color-loss); font-weight: 600; }
+
+/* Actions inside an `InfoNote` — the pause button in a guard note. Kept next to the pattern so a
+   note with a control does not grow its own margin rules. */
+.info-note .bt-note-actions { margin-top: 0.5rem; }
+
+/* The word beside a compared value ("better" / "worse"). Same chip language as `.info-note-key`, one
+   size down, so a table cell can carry a verdict without a second row or a legend to re-read. */
+.bt-delta-tag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}

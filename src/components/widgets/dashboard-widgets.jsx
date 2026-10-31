@@ -286,11 +286,7 @@ function DiversificationWidget() {
       {warnings.slice(0, 2).map((w, i) => (
         <p key={i} className="dash-div-warn-msg">⚠️ {w}</p>
       ))}
-      {/* §9.14 — the Strategy Allocator is a PREMIUM view (/lab/allocator). Omitted in the free
-          build so neither the link text nor the path reaches the shipped bundle. */}
-      {true && (
-        <a href="/planner/allocator" className="dash-div-link">View Strategy Allocator →</a>
-      )}
+      <a href="/planner/allocator" className="dash-div-link">View Strategy Allocator →</a>
     </>
   );
 }
@@ -697,9 +693,9 @@ function HotPicksWidget() {
         ))}
       </div>
       {/* `/development/hot-stock-picks` DELETED 2026-10-01 (owner, Page Walkthrough). The button
-          that opened it went with the page — there is no "all picks" view to link to. §9.14 gated
-          this on edition; a deleted page needs no gate. `isFetching` left the destructure above
-          because this button was its only reader. */}
+          that opened it went with the page — there is no "all picks" view to link to, so a link
+          to it would be a dead button. `isFetching` left the destructure above because this
+          button was its only reader. */}
     </>
   );
 }

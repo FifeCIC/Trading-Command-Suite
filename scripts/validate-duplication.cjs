@@ -135,12 +135,12 @@ function collectFiles() {
         continue;
       }
       // ⚠️ DECLARED-GENERATED files are DERIVED, exactly like a `dist*` build: they have ONE source
-      // (the file they are filtered from) and their own freshness check
-      // (`generate-free-map.cjs --check`) that fails if they drift from it. Scanning them compares
-      // an artefact against the source it was generated FROM — the same false positive as the
-      // `dist-free` case above, and it landed the same way: measured 2026-09-24,
-      // `src/editions/screen-options.free.jsx` shared 554 windows with
-      // `src/components/ScreenOptions.jsx` (commit 6105cd0), which failed EVERY agent's prebuild.
+      // (the file they are filtered from) and their own freshness check that fails if they drift
+      // from it. Scanning them compares an artefact against the source it was generated FROM — the
+      // same false positive as the `dist-free` case above. Measured 2026-09-24: a generated copy of
+      // `src/components/ScreenOptions.jsx` shared 554 windows with it (commit 6105cd0), which failed
+      // EVERY agent's prebuild. That particular generator is gone with the free edition (2026-10-28),
+      // and the exemption stays because the shape can return.
       //
       // ⚠️ THE BANNER IS THE EXEMPTION'S OWN PROOF, which is why this is narrow rather than a
       // directory exemption. A hand-written copy is by definition editable, so it will not carry

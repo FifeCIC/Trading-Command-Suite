@@ -66,6 +66,22 @@
   margin-bottom: 24px;
 }
 
+/*
+ * ⚠️ THE UA `<dd>` INDENT IS 40px AND IT DEFEATED `text-align: center` (measured 2026-10-31).
+ *
+ * `<dl><dt>value</dt><dd>label</dd></dl>` is the correct markup for a stat tile, but the UA stylesheet
+ * gives `dd` `margin-inline-start: 40px`. The card centres its text and the dd's own box was therefore
+ * centred 40px off: on `/lab/backtest-strategies` the tile read `ddMargin: "0px 0px 0px 40px"`, so the
+ * value and label sat right of centre inside a centred card (owner report: *"lack of centering"*).
+ *
+ * Fixed here, in the library, because every page consuming `dl.mss-stat-grid` had it — not just the
+ * backtest tiles that were reported.
+ */
+.mss-stat-grid dt,
+.mss-stat-grid dd {
+  margin: 0;
+}
+
 .mss-stat-card {
   background: var(--panel);
   border: 1px solid var(--border);

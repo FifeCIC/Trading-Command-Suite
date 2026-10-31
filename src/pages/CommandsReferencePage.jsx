@@ -19,8 +19,8 @@ const COMMANDS = [
   // ── Services ──
   { cat: 'services', cmd: 'pwsh -File scripts/tcs-launch.ps1', desc: 'Start all TCS services (MT5 Bridge → NestJS → Vite)' },
   { cat: 'services', cmd: 'pwsh -File scripts/tcs-stop.ps1', desc: 'Stop all TCS services' },
-  { cat: 'services', cmd: 'npm --prefix C:\\wamp64\\www\\trading-command-suite\\nest run start', desc: 'Start NestJS only (port 3201)' },
-  { cat: 'services', cmd: 'npm --prefix C:\\wamp64\\www\\trading-command-suite run dev', desc: 'Start Vite dev server (port 5173)' },
+  { cat: 'services', cmd: 'npm --prefix nest run start', desc: 'Start NestJS only (port 3201)' },
+  { cat: 'services', cmd: 'npm run dev', desc: 'Start Vite dev server (port 5173)' },
   { cat: 'services', cmd: 'Get-NetTCPConnection -LocalPort 3201 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }', desc: 'Kill NestJS by port' },
 
   // ── Health & Diagnostics ──
@@ -31,13 +31,15 @@ const COMMANDS = [
   { cat: 'health', cmd: 'curl -s http://localhost:3201/api/system/health-check', desc: 'Run all system checks (DB/tables/watchlists/protocols/bridge/automation)' },
 
   // ── Build & Deploy ──
-  { cat: 'build', cmd: 'npm --prefix C:\\wamp64\\www\\trading-command-suite\\nest run build', desc: 'Build NestJS (tsc)' },
-  { cat: 'build', cmd: 'npm --prefix C:\\wamp64\\www\\trading-command-suite run build', desc: 'Build Vite frontend for production' },
-  { cat: 'build', cmd: 'npm --prefix C:\\wamp64\\www\\trading-command-suite run preview', desc: 'Preview production build locally' },
+  { cat: 'build', cmd: 'npm --prefix nest run build', desc: 'Build NestJS (tsc)' },
+  { cat: 'build', cmd: 'npm run build', desc: 'Build Vite frontend for production' },
+  { cat: 'build', cmd: 'npm run preview', desc: 'Preview production build locally' },
 
   // ── Database ──
-  { cat: 'db', cmd: '$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"; npx prisma db push', desc: 'Push Prisma schema to MySQL (run from nest/)' },
-  { cat: 'db', cmd: '$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"; npx prisma studio', desc: 'Open Prisma Studio GUI' },
+  // ⚠️ `prisma db push` is deliberately NOT listed here. It treats `schema.prisma` as the whole truth
+  // and DROPS every unmodelled table — 13 in this repo, including the trade execution queue (#769).
+  { cat: 'db', cmd: 'npm --prefix nest run db:check', desc: 'Verify schema safety — ALWAYS run before any schema change' },
+  { cat: 'db', cmd: '$env:DATABASE_URL = "mysql://USER:PASSWORD@localhost:3306/DB"; npx prisma studio', desc: 'Open Prisma Studio GUI (Prisma does not read .env)' },
   { cat: 'db', cmd: 'curl -s http://localhost:3201/api/database/table-stats', desc: 'DB table row counts and sizes' },
   { cat: 'db', cmd: 'curl -s -X POST "http://localhost:3201/api/system/data-retention/prune-all"', desc: 'Prune all tables to retention targets' },
   { cat: 'db', cmd: 'curl -s "http://localhost:3201/api/system/data-retention/stats"', desc: 'Data retention stats (counts, ages, sizes)' },

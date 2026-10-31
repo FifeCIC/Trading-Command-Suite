@@ -14,9 +14,9 @@ import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import HomeDashboard from './pages/HomeDashboard';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
-// Direct-route pages live behind ONE import surface so the free build can swap them out
-// (src/editions/direct-pages.free.jsx — FREE-EDITION-PLAN.md §3/§4). A `null` export means the
-// page is premium: the route below is skipped and the page code is absent from the bundle.
+// Direct-route pages live behind ONE import surface (core/direct-pages.jsx) so the route table
+// names four page files, not four separate imports. A `null` export means "skip this route" —
+// nothing exports null today, since the free edition that used it was cancelled 2026-10-28.
 import {
   PlatformComparisonsPage,
   DataManagementPage,
@@ -46,40 +46,25 @@ import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
-// Edition (free spinoff): compile-time flag + nav filtering + view-meta key lookup — the free
-// build must never OFFER or RENDER a premium view (FREE-EDITION-PLAN.md §3). In the full build
-// everything here is an identity/compile-time constant.
 import { filterHiddenViews } from './core/hidden-views.js';
 import { useHiddenViews } from './core/hooks/useHiddenViews.js';
-// EditionNotice removed 2026-10-28 with the free edition (FREE-EDITION-PLAN.md is superseded).
 
 /**
- * `FULL_EDITION_ONLY` — vestigial, kept only so the call site at the bottom reads unchanged.
+ * Nav filtering happens twice, and the split is deliberate.
  *
- * ⚠️ THERE IS ONE EDITION NOW. The free edition was removed 2026-10-28 (SETTLED-DECISIONS row 96),
- * so this is always `true` and the block it guards always renders. Simplify it when that block is
- * next touched.
+ * At module scope the tree is the BASE structure — no view removed. Inside `AppShell` the owner's
+ * "hide now" verdicts from the Page Walkthrough are applied on top. Both call the same
+ * `filterHiddenViews()` helper, so "is this view hidden?" has exactly one implementation.
  *
- * ⚠️ THE REASONING THAT WAS HERE IS WORTH KEEPING IF A PER-BUILD SPLIT EVER RETURNS. This flag used
- * to be `import.meta.env.VITE_EDITION !== 'free'`, and the reason it was a BUILD-TIME define rather
- * than a runtime helper is that only the define removes the literal from the shipped JavaScript: a
- * runtime "may this be offered?" check leaves the route path readable in the bundle. Measured
- * 2026-09-25, 20 route paths were reaching a free artefact before that was fixed.
+ * ⚠️ There was a second filter here until 2026-10-28: a build-time `VITE_EDITION` define that split
+ * a paid and a free bundle. The free edition was cancelled (SETTLED-DECISIONS row 96), so this is
+ * a single-edition app and the base tree is simply the whole tree.
  */
-// There is ONE edition now — the free edition was removed 2026-10-28. Kept as a named constant
-// so the call site at the bottom reads unchanged; simplify it whenever that block is next touched.
-const FULL_EDITION_ONLY = true;
-
-// Edition-filtered once at module scope: the free build hides premium views from the sidebar.
-// (Full build = identity; see src/core/edition-nav.js.)
-// ⚠️ Renamed `..._BY_EDITION` 2026-10-02: AppShell now shadows these with the SAME names after also
-// applying the owner's "hide now" verdicts, so every existing consumer inside AppShell picks up both
-// filters without touching a call site.
-const NAV_STRUCTURE_BY_EDITION = getNavStructure();
-// The TOP navigation bar enumerates NAV_TREE directly, so it needs the same filter — measured
-// live 2026-09-23: without this, the free build still offered Protocols/Scoring/Signals/Planner/
-// Development in the top bar while the sidebar was correctly filtered.
-const EDITION_NAV_TREE_BY_EDITION = NAV_TREE;
+const BASE_NAV_STRUCTURE = getNavStructure();
+// The TOP navigation bar enumerates NAV_TREE directly, so it needs the same base reference — the
+// sidebar and the top bar must never disagree about which areas exist. Measured live 2026-09-23:
+// filtering one and not the other left the top bar offering areas the sidebar had hidden.
+const BASE_NAV_TREE = NAV_TREE;
 
 /**
  * Views the SHELL renders inline, with access to App's own state.
@@ -165,21 +150,20 @@ function ContentCard({ title, children }) {
  * (`src/core/direct-pages.jsx`) used to be mounted as BARE ELEMENTS outside this component, so they
  * got no sidebar, no breadcrumb and — because `useThemeRuntime()` runs in here — no theme pack.
  * They now render as the shell's content with the area/view stated, so the chrome and the theme
- * apply. The BUNDLE reason they were split out is untouched: the component is still referenced only
- * when the edition module exports it, so the free build still ships no premium page code.
+ * apply.
  */
 function AppShell({ directContent = null, directArea = null, directView = null }) {
-  // ⚠️ MEMOISED, and it must stay that way. These shadow the module-scope edition-filtered
-  // constants, so without a stable reference the NAV_STRUCTURE effect below (the one that
-  // redirects an area with no first view) would re-run on every render once it is listed as a
-  // dependency — which it now must be, because the value is no longer module-constant.
+  // ⚠️ MEMOISED, and it must stay that way. These filter the module-scope base constants down to
+  // what the owner has not hidden, so without a stable reference the NAV_STRUCTURE effect below
+  // (the one that redirects an area with no first view) would re-run on every render once it is
+  // listed as a dependency — which it now must be, because the value is not module-constant.
   const hiddenViews = useHiddenViews();
   const NAV_STRUCTURE = useMemo(
-    () => filterHiddenViews(NAV_STRUCTURE_BY_EDITION, hiddenViews),
+    () => filterHiddenViews(BASE_NAV_STRUCTURE, hiddenViews),
     [hiddenViews],
   );
   const EDITION_NAV_TREE = useMemo(
-    () => filterHiddenViews(EDITION_NAV_TREE_BY_EDITION, hiddenViews),
+    () => filterHiddenViews(BASE_NAV_TREE, hiddenViews),
     [hiddenViews],
   );
   const { area, view, symbolId, ticker, strategyId } = useParams();
@@ -533,19 +517,16 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   }
 
   function renderMainContent() {
-    // ── Edition guard — the decision now lives in the LAST RESORT branch at the bottom ──
-    // ⚠️ The free build deliberately carries NO list of premium routes (2026-09-23). The first
-    // version of this guard asked `getViewMetaKey()` whether the path was a known premium view —
-    // which meant the free bundle had to ship every premium path to answer the question. Measured:
-    // all 95 premium paths appeared as string literals in dist-free/assets/index-*.js. The map is
-    // the thing the free edition must not contain, so the guard moved to where "no page" is
-    // decided. Deliberate consequence: in the free build a typo'd URL and a premium URL read the
-    // same, because telling them apart is exactly what the removed list was for.
+    // ── Unresolvable routes are decided in the LAST RESORT branch at the bottom ──
+    // ⚠️ This function deliberately carries NO list of known view paths. An earlier version asked
+    // `getViewMetaKey()` whether the path was a known view — which meant the whole path map had to
+    // be reachable from the code answering the question. Measured 2026-09-23: all 95 view paths
+    // appeared as string literals in the shipped bundle. The decision moved to where "no page" is
+    // already known. Deliberate consequence: a typo'd URL and an unbuilt URL read the same.
 
     // ── DIRECT-ROUTE PAGES (#1047) — render inside the chrome, not beside it ──
-    // The element is passed in from the route so the edition swap keeps working: in the free build
-    // `direct-pages.free.jsx` exports `null`, the route is not declared at all, and this branch is
-    // never reached. Nothing premium is referenced from here.
+    // The element is passed in from the route, so a `null` export ("skip this route") is honoured
+    // by the route table rather than by this branch. Nothing here references a specific page.
     if (directContent) return directContent;
 
     // ── Component map lookup (handles ~90 simple views) ──
@@ -1089,73 +1070,63 @@ export default function App() {
           {TopMoversPage && <Route path="/lab/top-movers" element={<AppShell directArea="lab" directView="top-movers" directContent={<TopMoversPage />} />} />}
           {SystemHealthPage && <Route path="/settings/health-check" element={<AppShell directArea="settings" directView="health-check" directContent={<SystemHealthPage />} />} />}
           {PlatformComparisonsPage && <Route path="/lab/platform-comparisons" element={<AppShell directArea="lab" directView="platform-comparisons" directContent={<PlatformComparisonsPage />} />} />}
-          {/* ⚠️ §9.14 — every redirect in this block lands on a PREMIUM view, so the free build
-              omits the route entirely. Two things are avoided by omitting rather than retargeting:
-              the premium path would otherwise ship as a string literal in the free bundle, and a
-              free user following an old bookmark would be sent to a page that is not there. The
-              free build falls through to the edition guard instead, which is the designed reply.
-              The flag folds at build time — see FULL_EDITION_ONLY at the top of this file. */}
-          {FULL_EDITION_ONLY && (
-            <>
-              <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
-              {/* ⚠️ APPEARANCE AREA MOVES (2026-10-13, owner request). The three views below moved
-                  into the new Appearance area, and the Theme Packs page was retired into its chooser.
-                  These redirects exist so a link, a bookmark or a handoff written BEFORE the move
-                  still lands somewhere correct — removing a route without one produces a blank view
-                  that reads as a broken build rather than as a move. */}
-              <Route path="/settings/appearance" element={<Navigate to="/appearance/appearance" replace />} />
-              <Route path="/settings/screen-assignment" element={<Navigate to="/appearance/screen-assignment" replace />} />
-              <Route path="/development/responsive-layout-lab" element={<Navigate to="/appearance/responsive-layout-lab" replace />} />
-              <Route path="/settings/theme-packs" element={<Navigate to="/appearance/layout-guide" replace />} />
-              {/* Theme Lab retired 2026-10-13 (owner request). Its sections became the Appearance
-                  element groups; this redirect keeps `/development/theme-lab` resolving rather than
-                  showing a blank view to anyone following an older link or handoff. */}
-              <Route path="/development/theme-lab" element={<Navigate to="/appearance/layout-guide" replace />} />
-              <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
-              {/* ⚠️ PHANTOM VIEW-META ENTRIES REMOVED 2026-10-15 — these five paths had a view-meta entry
-                  but no route, because routes are generated from the NAV TREE and the nav moved these
-                  views to /protocols ("Fully migrated from legacy /scoring/ area", nav-tree.js). The
-                  entries were a phantom: no route, but a row in the Page Walkthrough — which is how the
-                  owner came to score five non-existent pages 1/10.
-                  ⚠️ DIRECTION IS PER VIEW, and these five went protocols-ward while symbols-ladder and
-                  singles-monitor (above) went scoring-ward. The nav tree decides, not a neighbouring
-                  redirect — reading one case backwards is how an agent would re-open this. */}
-              <Route path="/scoring/directives-registry" element={<Navigate to="/protocols/directives-registry" replace />} />
-              <Route path="/scoring/protocols-ladder" element={<Navigate to="/protocols/protocols-ladder" replace />} />
-              <Route path="/scoring/protocol-builder" element={<Navigate to="/protocols/protocol-builder" replace />} />
-              <Route path="/scoring/sees-arena" element={<Navigate to="/protocols/sees-arena" replace />} />
-              <Route path="/lab/dual-protocol-inspector" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
-              <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
-              {/* ⚠️ TARGET CORRECTED 2026-10-15. This pointed at `/lab/dual-protocol-inspector`, which is
-                  not a route — the nav routes that view at `/protocols/dual-protocol-inspector`. A
-                  redirect to a dead path is worse than no redirect: it looks handled while landing the
-                  user on the catch-all. */}
-              <Route path="/lab/scoring-debug-lab" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
-              <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
-              {/* ⚠️ This redirected to /status/meta-stack-pipeline, which was MERGED into this lab
-                  (2026-10-08). The old URL now lands on the graph itself rather than 404ing — a
-                  bookmark or a link in an older issue keeps working. */}
-              <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/development/pipeline-graph-lab" replace />} />
-              {/* `/planner/allocator` → `/lab/allocator` REMOVED 2026-10-01. The allocator view was
-                  deleted at the owner's direction in the Page Walkthrough ("delete unless you think
-                  there is value" — read: it survives as the Portfolio Assistant). A redirect to a
-                  route that no longer exists is a 404 with extra steps. */}
-              <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />
-              <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
-              {/* `/trading/trading-strategies` RETIRED 2026-09-23 (owner, option A): its table +
-                  sticky sidebar layout moved to /trading/trading-bots, so this is a REDIRECT rather
-                  than a deletion. A retired route with no redirect is a 404 for every bookmark,
-                  every doc link and every QA procedure that names it - and paths are cheap, dead
-                  links are not. Premium-only, because its destination is premium. */}
-              <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
-              {/* These two redirect only to FREE destinations, so the reason to gate them is not the
-                  destination — it is the SOURCE path: `/lab/metastack-*` names the system, and per
-                  §14.2.1 the NAME is part of the asset. An old bookmark falls through to the
-                  edition guard instead, which is the designed reply. */}
-              <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
-              <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
-            </>
-          )}
+          {/* ── Legacy redirects ────────────────────────────────────────────────────────────
+              Every path below was renamed or moved. The redirect exists so an old bookmark, a doc
+              link or a handoff written BEFORE the move still lands somewhere correct — removing a
+              route without one produces a blank view that reads as a broken build rather than as a
+              move. Paths are cheap; dead links are not.
+              ⚠️ DIRECTION IS PER VIEW and the NAV TREE decides it, not a neighbouring redirect.
+              Reading one case backwards is how an agent would re-open this. */}
+          <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
+          {/* ⚠️ APPEARANCE AREA MOVES (2026-10-13, owner request). The three views below moved into
+              the new Appearance area, and the Theme Packs page was retired into its chooser. */}
+          <Route path="/settings/appearance" element={<Navigate to="/appearance/appearance" replace />} />
+          <Route path="/settings/screen-assignment" element={<Navigate to="/appearance/screen-assignment" replace />} />
+          <Route path="/development/responsive-layout-lab" element={<Navigate to="/appearance/responsive-layout-lab" replace />} />
+          <Route path="/settings/theme-packs" element={<Navigate to="/appearance/layout-guide" replace />} />
+          {/* Theme Lab retired 2026-10-13 (owner request). Its sections became the Appearance element
+              groups; this redirect keeps `/development/theme-lab` resolving rather than showing a
+              blank view to anyone following an older link or handoff. */}
+          <Route path="/development/theme-lab" element={<Navigate to="/appearance/layout-guide" replace />} />
+          <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
+          {/* ⚠️ PHANTOM VIEW-META ENTRIES REMOVED 2026-10-15 — these five paths had a view-meta entry
+              but no route, because routes are generated from the NAV TREE and the nav moved these
+              views to /protocols ("Fully migrated from legacy /scoring/ area", nav-tree.js). The
+              entries were a phantom: no route, but a row in the Page Walkthrough — which is how the
+              owner came to score five non-existent pages 1/10.
+              ⚠️ These five went protocols-ward while symbols-ladder and singles-monitor (above) went
+              scoring-ward. That is not an inconsistency to tidy up. */}
+          <Route path="/scoring/directives-registry" element={<Navigate to="/protocols/directives-registry" replace />} />
+          <Route path="/scoring/protocols-ladder" element={<Navigate to="/protocols/protocols-ladder" replace />} />
+          <Route path="/scoring/protocol-builder" element={<Navigate to="/protocols/protocol-builder" replace />} />
+          <Route path="/scoring/sees-arena" element={<Navigate to="/protocols/sees-arena" replace />} />
+          <Route path="/lab/dual-protocol-inspector" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
+          <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
+          {/* ⚠️ TARGET CORRECTED 2026-10-15. This pointed at `/lab/dual-protocol-inspector`, which is
+              not a route — the nav routes that view at `/protocols/dual-protocol-inspector`. A
+              redirect to a dead path is worse than no redirect: it looks handled while landing the
+              user on the catch-all. */}
+          <Route path="/lab/scoring-debug-lab" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
+          <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
+          {/* ⚠️ This redirected to /status/meta-stack-pipeline, which was MERGED into this lab
+              (2026-10-08). The old URL now lands on the graph itself rather than 404ing — a bookmark
+              or a link in an older issue keeps working. */}
+          <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/development/pipeline-graph-lab" replace />} />
+          {/* `/planner/allocator` → `/lab/allocator` REMOVED 2026-10-01. The allocator view was deleted
+              at the owner's direction in the Page Walkthrough ("delete unless you think there is
+              value" — read: it survives as the Portfolio Assistant). A redirect to a route that no
+              longer exists is a 404 with extra steps. */}
+          <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />
+          <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
+          {/* `/trading/trading-strategies` RETIRED 2026-09-23 (owner, option A): its table + sticky
+              sidebar layout moved to /trading/trading-bots, so this is a REDIRECT rather than a
+              deletion. A retired route with no redirect is a 404 for every bookmark, every doc link
+              and every QA procedure that names it. */}
+          <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
+          {/* The `/lab/metastack-*` pair — old names for views that now live under `/lab`. Kept so a
+              bookmark written against the old paths still resolves. */}
+          <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
+          <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
           <Route path="/status/platform-api-management" element={<Navigate to="/status" replace />} />
           <Route path="/status/audit-log" element={<Navigate to="/status" replace />} />
           <Route path="/status/ai-logs" element={<Navigate to="/status" replace />} />

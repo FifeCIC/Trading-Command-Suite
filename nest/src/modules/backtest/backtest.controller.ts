@@ -176,6 +176,84 @@ export class BacktestController {
     };
   }
 
+  /**
+   * ── NEWS PREVIEW (2026-10-30) ──────────────────────────────────────────────────────────────────
+   * Owner direction: *"when we make selections in [the news control] the panel should tell us what
+   * records there actually are for the symbol and the selected period, what news actually applies and
+   * will be part of the backtest?"*
+   *
+   * ⚠️ THE CONTROL IS OTHERWISE UNFALSIFIABLE. `exclude` is the default, and when `newsArticle` holds
+   * no rows for the symbol the exclusion filter finds nothing and the run is **identical** to `none` —
+   * so a reader choosing "skip news days" gets no warning that the choice did nothing. This endpoint
+   * answers the question before the run instead of after it.
+   *
+   * ⚠️ `datesWouldExclude` IS MEASURED FROM THE BARS' OWN DATE RANGE, not from the requested window,
+   * because that is what the engine uses. A preview computed from different bounds would promise a
+   * filter the run does not apply.
+   */
+  @Get('news-preview')
+  @ApiOperation({ summary: 'What news records exist for this symbol and window, and what a run would apply' })
+  async newsPreview(
+      @Query('symbol') symbol?: string,
+      @Query('timeframe') timeframe?: string,
+      @Query('from') from?: string,
+      @Query('to') to?: string,
+    ) {
+      if (!symbol) throw new BadRequestException('symbol is required');
+      const ticker = String(symbol).toUpperCase();
+
+      /**
+       * ⚠️ THE PREVIEW MUST USE THE RUN'S OWN BOUNDS. Asked with no window it answers for the whole
+       * stored history, which is not what the run will measure — measured 2026-10-30: VIX 5m holds 5
+       * articles across Jan–Oct, but only 1 of them falls inside `dev-window-v1` (Sep 9 – Oct 20). A
+       * preview that said "5" for a window that will apply one would be worse than no preview.
+       */
+      const fromD = from ? new Date(from) : null;
+      const toD = to ? new Date(to) : null;
+      const explicit = fromD && toD && !Number.isNaN(fromD.getTime()) && !Number.isNaN(toD.getTime());
+      const range = explicit ? { from: fromD, to: toD } : await this.backtestService.windowInstants({ timeframe });
+
+    if (!range) {
+      return {
+        symbol: ticker,
+        available: false,
+        reason: 'no bars are stored for this symbol, so there is no window to preview news against',
+      };
+    }
+
+    const rows = await this.backtestService.newsForSymbol(ticker, range.from, range.to);
+    const byImpact: Record<string, number> = {};
+    const dates = new Set<string>();
+    for (const r of rows) {
+      byImpact[r.impact] = (byImpact[r.impact] ?? 0) + 1;
+      dates.add(r.date);
+    }
+
+    return {
+      symbol: ticker,
+      available: true,
+      window: { from: range.from.toISOString(), to: range.to.toISOString() },
+      /** Whether the window came from the caller (the selected period) or the whole stored history. */
+      windowBasis: explicit ? 'selected-window' : 'whole-stored-history',
+      /** Articles in the window. 0 is a real answer and changes the meaning of the control. */
+      articles: rows.length,
+      distinctDates: dates.size,
+      byImpact,
+      /** The first few dates, so a reader can see they are real rather than a count. */
+      sampleDates: [...dates].sort().slice(0, 8),
+      /**
+       * ⚠️ THE HEADLINE THE PANEL MUST SHOW. With zero articles, `exclude` and `none` produce the same
+       * run — the control is inert, and saying so is more useful than letting the reader believe they
+       * filtered something.
+       */
+      excludesAnything: rows.length > 0,
+      note: rows.length > 0
+        ? `${rows.length} article(s) on ${dates.size} date(s) fall inside this window; "skip news-day bars" will drop those dates.`
+        : 'No news records exist for this symbol in this window, so the news choice has NO EFFECT on the run — '
+          + 'exclude, include and news-only all measure the same bars. Import news on the relevant data page first.',
+    };
+  }
+
   @Post('repeat-check')
   @ApiOperation({ summary: 'Measure an A→B change on one or more windows, and say whether it repeats' })
   async repeatCheck(

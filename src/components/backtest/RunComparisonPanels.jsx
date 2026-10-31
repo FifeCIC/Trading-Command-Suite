@@ -25,6 +25,7 @@ import { apiGet, apiPost } from '../../core/api/client.js';
 import { useSort, SortableTh } from '../../core/use-sort.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { pickRepeatPair } from '../../core/backtest-totals.js';
+import InfoNote from '../InfoNote';
 /**
  * ⚠️ meta-stack-status.css IS IMPORTED FOR ITS .mss-stat-* TILES, not for its page (owner direction
  * 2026-10-29: *"there are other pages with stats that display it better … use existing styling as
@@ -75,7 +76,13 @@ function useRun(runId) {
 }
 
 /** The scoring table. Shared, so A and B cannot drift apart in columns or wording. */
-function ScoreTable({ scoreSeries }) {
+/**
+ * ⚠️ EXPORTED 2026-10-30 so the RUN step can show a protocol run its own score series. A protocol run
+ * places no trades, so its Result step previously showed seven statistic tiles and nothing else —
+ * the per-bar reading, which is the entire output of a protocol, was reachable only by first
+ * accepting a baseline and opening the A/B panel. One definition now serves both.
+ */
+export function ScoreTable({ scoreSeries }) {
   // `barAt` is derived so the BAR column sorts by the true instant, not the shared day.
   const rows = (scoreSeries ?? []).map((s) => ({ ...s, barAt: barKey(s) }));
   const sort = useSort(rows, 'barAt', 'desc');
@@ -164,12 +171,12 @@ function ScoringTotals({ totals }) {
         protocol's configured capacity, so Σ is capacity-points earned across the window — not a
         percentage and not comparable across two protocols with different ceilings.
       */}
-      <p className="bt-panel-note">
-        Σ is the sum across bars: <strong>capacity-points earned in the window</strong>, not an
-        average and not out of 100. Two protocols with different configured ceilings are not
-        comparable on this row; two runs of the <em>same</em> protocol are.
+      <InfoNote tone="neutral" label="How to read Σ">
+        Σ is the sum across bars: <strong>capacity-points earned in the window</strong>, not an average
+        and not out of 100. Two protocols with different configured ceilings are not comparable on this
+        row; two runs of the <em>same</em> protocol are.
         {t.signalPct.missing > 0 && ` ${t.signalPct.missing} bar(s) stored no signal value and are excluded from that row.`}
-      </p>
+      </InfoNote>
     </>
   );
 }
@@ -234,9 +241,19 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
 
   return (
     <div className="bt-panel bt-ab-panel">
-      <h3 className="bt-panel-head">
-        {role} · {role === 'A' ? 'Accepted baseline' : 'Latest run'} — <code>{String(run.id).slice(0, 8)}</code>
-        {accepted && <span className="dp-badge dp-badge--override"> accepted</span>}
+      {/*
+        ⚠️ THE VISIBLE HEADING IS GONE (owner direction, 2026-10-31: *"Remove … as it is duplicate
+        info"*). It read "A · 2fd56ab8 · accepted" directly beneath the `.bt-pair-bar` above, which
+        already states the role, the run id and the ACCEPTED badge — the last of three statements of the
+        same fact in 120 pixels (the removed one is the tab, the previous pass removed the role words).
+
+        Kept as `sr-only` rather than deleted outright: the heading is what names this panel for a screen
+        reader, and there is no visual context to read it from. It costs no pixels and removes the
+        duplication the owner can see.
+      */}
+      <h3 className="bt-panel-head sr-only">
+        {role} · <code>{String(run.id).slice(0, 8)}</code>
+        {accepted ? ' accepted' : ''}
       </h3>
 
       {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (owner direction, 2026-10-29: *"needs to be
@@ -257,8 +274,8 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
           )}
           <span className="bt-accept-note">
             {onAccept
-              ? <>The accepted run becomes <strong>A</strong>; the next run of this protocol is measured against it. Stored in the database, so it follows you to another browser.</>
-              : <>Removes the reference — it does not delete the run itself.</>}
+              ? <>The accepted run becomes <strong>A</strong>; the next run of this protocol is measured against it. Stored in the database, so it follows you to another browser. <strong>It does not change the strategy’s own settings</strong> — the bot keeps trading exactly what it trades now, and no copy of the strategy is made.</>
+              : <>Removes the reference — it does not delete the run itself, and it does not touch the strategy.</>}
           </span>
         </div>
       )}
@@ -310,16 +327,19 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
         </table>
       </div>
 
-      {/* Trades FIRST — a run exists to answer "did this make money", and the per-trade P&L the
-          engine already stored was never rendered before 2026-10-29. */}
+      {/* ── WHAT IT TRADED ────────────────────────────────────────────────────────────────────────
+          ⚠️ THE HEADING NOW SITS ABOVE THE TILES (owner report, 2026-10-30: *"sits between a table and a
+          row of cards as if agentic AI couldn't decide which to put them in"*). It was placed directly
+          above the TABLE, which put it below the stat tiles — so one section appeared to be two, with a
+          heading in the seam. It heads the whole block now: tiles first (how much), table second (which
+          ones).
+
+          ⚠️ AND IT NO LONGER REPEATS THE COUNT. It read "Trades — 1027 closed" directly above a tile
+          reading "1027 Closed trades". The tiles answer "how many" with four more numbers beside it; a
+          heading that answers it again is the volume this page keeps being asked to shed. */}
       {showTrades && (
         <>
-          <h4 className="bt-panel-head">
-            Trades — {run.trades?.length ?? 0} closed
-            {run.trades?.length > 100 && (
-              <span className="dp-hint"> · showing 100; the summary above them covers all</span>
-            )}
-          </h4>
+          <h4 className="bt-panel-head">Trades</h4>
           <TradeTable trades={run.trades} totals={run.tradeTotals} timeframe={run.timeframe} />
         </>
       )}
@@ -332,40 +352,54 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
       {(run.totals || series) && (
         <details className="bt-scores-details">
           <summary className="bt-panel-head">
-            Scoring detail — {series ? `${series.length} bar(s)` : 'no scores stored'}
-            <span className="dp-hint"> · diagnostic: why a bar did or did not trade</span>
+            Scoring detail{series ? ` · ${series.length.toLocaleString()} bar(s)` : ''}
           </summary>
+          {/* ⚠️ "diagnostic: why a bar did or did not trade" WAS INLINE IN THE SUMMARY (owner report,
+              2026-10-30). A `<summary>` is a control label; a clause explaining what the disclosure is
+              FOR is a sentence about the content, so it lives inside as an `InfoNote` — visible as soon
+              as the block opens, out of the way while it is closed. */}
+          <InfoNote tone="neutral" label="What this shows">
+            Every bar the run scored, and why it did or did not trade: the signal, the gated score, and
+            whether the bot&rsquo;s own entry bar let it through. Diagnostic, not a result.
+          </InfoNote>
           {run.totals && <ScoringTotals totals={run.totals} />}
           {series ? (
             <>
               {series.length > 100 && (
-                <p className="pb-field-note">
-                  Showing 100 of {series.length} bars; sort a column to choose which.
-                </p>
+                <InfoNote
+                  tone="neutral"
+                  label="Rows shown"
+                  meta={`${series.length.toLocaleString()} bars stored · 100 listed`}
+                >
+                  Sort a column to choose which 100 you see. The totals above cover all of them.
+                </InfoNote>
               )}
               <ScoreTable scoreSeries={series} />
             </>
           ) : (
-            <p className="pb-none">
-              ⚠️ This run stored no scores (made before 2026-10-26), so its scoring output is not
-              recorded — not &ldquo;no scores&rdquo;. Re-run it to capture them.
-            </p>
+            <InfoNote tone="warning" label="No scores stored">
+              This run stored no scores (it was made before 2026-10-26), so its scoring output is
+              <strong> not recorded</strong> — which is not the same as &ldquo;no scores&rdquo;. Re-run it
+              to capture them.
+            </InfoNote>
           )}
         </details>
       )}
 
+      {/* ⚠️ THE SAME `InfoNote` AS THE RESULT STEP'S "What this cannot claim" — same role, same tone,
+          same label. This is what makes the two surfaces readable as one system. */}
       {Array.isArray(run.caveats) && run.caveats.length > 0 && (
-        <ul className="pb-info-list">
-          {run.caveats.map((c, i) => (
-            <li key={i} className="pb-info-row pb-info-row--warn"><p className="pb-info-note">{c}</p></li>
-          ))}
-        </ul>
+        <InfoNote tone="warning" label="What this cannot claim">
+          <ul>
+            {run.caveats.map((c) => <li key={c}>{c}</li>)}
+          </ul>
+        </InfoNote>
       )}
 
       {liveReference && (
-        <p className="pb-field-note">
-          <strong>Live reference (this bot, not part of the comparison):</strong> {liveReference}
-        </p>
+        <InfoNote tone="neutral" label="Live reference">
+          The bot&rsquo;s own record, <strong>not part of the comparison</strong>: {liveReference}
+        </InfoNote>
       )}
     </div>
   );
@@ -478,15 +512,29 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
     'cannot-judge': '⚪ CANNOT JUDGE',
   }[verdict ?? 'cannot-judge'];
 
+  /**
+   * ⚠️ THE VERDICT IS AN OUTCOME, SO IT IS AN `InfoNote` WITH A TONE (owner direction, 2026-10-30).
+   * It was a `p.bt-panel-note` carrying its own emoji — the same statement in a fifth style, on the one
+   * line of the panel that a reader actually needs to be stopped by. The tone map is the app's own
+   * badminton: repeated = success, did not repeat = critical, anything the API could not judge = warning
+   * (⚠️ NOT neutral: "cannot judge" is a gap, and a neutral box reads as "nothing to report").
+   */
+  const verdictNote = {
+    repeated: { label: 'Does it hold? — repeated', tone: 'success' },
+    'did-not-repeat': { label: 'Does it hold? — did not repeat', tone: 'critical' },
+    'no-change': { label: 'Does it hold? — no change', tone: 'neutral' },
+    'cannot-judge': { label: 'Does it hold? — cannot judge', tone: 'warning' },
+  }[verdict ?? 'cannot-judge'];
+
   return (
     <>
       <h4 className="bt-panel-head">Does it hold on other windows?</h4>
-      <p className="bt-panel-note">
-        One window cannot separate an improvement from luck. Add windows and the API measures the same A→B
-        change on each: the verdict counts how many windows agree, and the A side must have been scored at
-        the same capacity on every window (the B side likewise) or the comparison is refused rather than
-        averaged.
-      </p>
+      <InfoNote tone="neutral" label="How this works">
+        One window cannot separate an improvement from luck. Add windows and the API measures the same
+        A→B change on each: the verdict counts how many windows agree, and the A side must have been
+        scored at the same capacity on every window (the B side likewise) or the comparison is{' '}
+        <strong>refused rather than averaged</strong>.
+      </InfoNote>
 
       {periods.length === 0 ? (
         <p className="pb-none">
@@ -626,9 +674,13 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
               </tbody>
             </table>
           </div>
-          <p className="bt-panel-note">
+          <InfoNote
+            tone={check.isLoading ? 'neutral' : verdictNote.tone}
+            label={check.isLoading ? 'Checking' : verdictNote.label}
+            role="status"
+          >
             {check.isLoading ? (
-              'checking the chosen windows…'
+              'Comparing the chosen windows…'
             ) : (
               <>
                 <strong>{badge}</strong>
@@ -642,7 +694,7 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
                 {check.data.reason ? ` · ${check.data.reason}` : ''}
               </>
             )}
-          </p>
+          </InfoNote>
         </>
       )}
     </>
@@ -675,20 +727,20 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
 
   if (!aId || !bId) {
     return (
-      <p className="pb-none">
+      <InfoNote tone="neutral" label="Nothing to compare yet">
         A difference needs two runs. Accept a run as the <strong>A</strong> baseline, then a later run
         becomes <strong>B</strong> — the summary appears here.
-      </p>
+      </InfoNote>
     );
   }
-  if (a.isLoading || b.isLoading) return <p className="pb-none">Comparing the two runs…</p>;
+  if (a.isLoading || b.isLoading) return <InfoNote tone="neutral" label="Measuring">Comparing the two runs…</InfoNote>;
   if (a.error || b.error) {
     return (
-      <p className="pb-none">
-        ⚠️ One of these runs could not be read
+      <InfoNote tone="critical" label="A run could not be read">
+        One of these runs could not be read
         {a.error?.status === 404 || b.error?.status === 404 ? ' — it was deleted' : ''}. A failed read
         is not &ldquo;no change&rdquo;; nothing is being compared.
-      </p>
+      </InfoNote>
     );
   }
 
@@ -704,20 +756,20 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
   const protoB = b.data?.protocolId;
   if (protoA && protoB && protoA !== protoB) {
     return (
-      <p className="pb-none">
-        ⚠️ <strong>These two runs are different protocols</strong> — <code>{protoA}</code> vs{' '}
-        <code>{protoB}</code>. A protocol scores its own directives against its own symbol, so
-        subtracting one from the other would produce numbers with no meaning. Accept a baseline from
-        this protocol, then compare against it.
-      </p>
+      <InfoNote tone="warning" label="Not comparable — different protocols">
+        <strong>{protoA}</strong> vs <strong>{protoB}</strong>.
+        {' '}A protocol scores its own directives against its own symbol, so subtracting one from the
+        other would produce numbers with no meaning. Accept a baseline from this protocol, then compare
+        against it.
+      </InfoNote>
     );
   }
   if (!sa || !sb) {
     return (
-      <p className="pb-none">
-        ⚠️ One of these runs has <strong>no stored scores</strong>, so no difference can be computed.
-        That is missing data, not &ldquo;no change&rdquo; — re-run the older side to capture its scores.
-      </p>
+      <InfoNote tone="warning" label="Not comparable — no scores stored">
+        One of these runs has <strong>no stored scores</strong>, so no difference can be computed. That
+        is missing data, not &ldquo;no change&rdquo; — re-run the older side to capture its scores.
+      </InfoNote>
     );
   }
 
@@ -765,6 +817,28 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
     .sort((x, y) => Math.abs(y.d) - Math.abs(x.d))
     .slice(0, 10);
 
+  /**
+   * The only place on this panel where a DIFFERENCE is an IMPROVEMENT.
+   *
+   * ⚠️ Uses the same two classes the result tiles use for their border (`is-better` / `is-worse`), so
+   * "B beat A" reads identically here and on the Result step. Deliberately NOT applied to the score
+   * Δ cells: this panel's own note states that a higher score is not a verdict, and colouring it green
+   * would contradict the sentence printed directly beneath it.
+   *
+   * ⚠️ `null` on either side is "cannot say", never a zero difference — a run with no P&L recorded has
+   * not lost nothing, it has recorded nothing.
+   */
+  const pnlVerdict = (() => {
+    const pa = a.data?.stats?.totalPnl;
+    const pb = b.data?.stats?.totalPnl;
+    if (pa == null || pb == null) return { cls: '', label: null };
+    const d = Number(pb) - Number(pa);
+    if (Math.abs(d) < 1e-9) return { cls: '', label: 'no change' };
+    return d > 0
+      ? { cls: 'bt-delta--better', label: 'better' }
+      : { cls: 'bt-delta--worse', label: 'worse' };
+  })();
+
   return (
     <div className="bt-panel bt-ab-panel">
       <h3 className="bt-panel-head">
@@ -772,19 +846,21 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
       </h3>
 
       {instantMissing ? (
-        <p className="pb-none">
-          ⚠️ <strong>Cannot difference these two runs per bar.</strong> At least one of them was
-          stored before the score series recorded the <em>instant</em> of each bar, so every intraday
-          bar of one day shares a single date and a per-bar join would report invented changes.
-          Re-run the older side to capture its instants — a missing comparison is not &ldquo;no
-          change&rdquo;.
-        </p>
+        <InfoNote tone="warning" label="Not comparable — no bar instants">
+          At least one of these runs was stored before the score series recorded the <em>instant</em> of
+          each bar, so every intraday bar of one day shares a single date and a per-bar join would report{' '}
+          <strong>invented changes</strong>. Re-run the older side to capture its instants — a missing
+          comparison is not &ldquo;no change&rdquo;.
+        </InfoNote>
       ) : shared.length === 0 ? (
-        <p className="pb-none">
-          The two runs scored <strong>no bar in common</strong> ({sa.length} vs {sb.length} bars), so
-          there is nothing to difference. They describe different windows — a data mismatch, not a
-          null result.
-        </p>
+        <InfoNote
+          tone="warning"
+          label="Not comparable — no shared bars"
+          meta={`${sa.length.toLocaleString()} bars in A · ${sb.length.toLocaleString()} bars in B`}
+        >
+          The two runs scored <strong>no bar in common</strong>, so there is nothing to difference. They
+          describe different windows — a data mismatch, not a null result.
+        </InfoNote>
       ) : (
         <>
           <div className="bt-table-wrap">
@@ -829,17 +905,17 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
           </div>
 
           {window1Err ? (
-            <p className="pb-none">
-              ⚠️ The API could not measure this pair ({window1Err?.status ?? 'no status'}
-              {window1Err?.message ? ` — ${window1Err.message}` : ''}). The rows above are placeholders,
-              not zeros, and nothing has been said about this change.
-            </p>
+            <InfoNote tone="critical" label="The comparison could not be measured">
+              The API answered {window1Err?.status ?? 'with no status'}
+              {window1Err?.message ? ` — ${window1Err.message}` : ''}. The rows above are placeholders,
+              not zeros, and <strong>nothing has been said about this change</strong>.
+            </InfoNote>
           ) : (
             !window1Delta && (
-              <p className="pb-field-note">
-                Measuring the two runs on the bars they share… the totals fill in as soon as the API
+              <InfoNote tone="neutral" label="Measuring">
+                Comparing the two runs on the bars they share… the totals fill in as soon as the API
                 answers, and are left blank rather than guessed.
-              </p>
+              </InfoNote>
             )
           )}
 
@@ -864,7 +940,16 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
                     <td>Trades A → B</td>
                     <td>{a.data?.stats?.totalTrades ?? 0} → {b.data?.stats?.totalTrades ?? 0}</td>
                     <td>Total P&amp;L A → B</td>
-                    <td>{money(a.data?.stats?.totalPnl)} → {money(b.data?.stats?.totalPnl)}</td>
+                    {/* ⚠️ THE ONE CELL HERE WHERE "BETTER" IS TRUE AND MEASURABLE (owner direction,
+                        2026-10-30: *"Using the same styling principles for highlighting positive or
+                        negative change in the comparison process"*). More money is better; more trades
+                        is not — so the treatment is applied here and nowhere near the score Δ cells,
+                        where a higher score is explicitly NOT a verdict and a green number would argue
+                        with the sentence right below it. */}
+                    <td className={`pb-mono ${pnlVerdict.cls}`}>
+                      {money(a.data?.stats?.totalPnl)} → {money(b.data?.stats?.totalPnl)}
+                      {pnlVerdict.label && <> <span className="bt-delta-tag">{pnlVerdict.label}</span></>}
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -878,21 +963,21 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
             it does answer: how much moved, in which direction, on how many bars. Persistence across a
             SECOND window is the missing measurement, and nothing here substitutes for it.
           */}
-          <p className="bt-panel-note">
+          <InfoNote tone="warning" label="What this comparison cannot claim">
             <strong>One window cannot separate an improvement from luck.</strong> These counts say how
             much moved and which way; they do not say it will hold. The evidence that a change is real
             is that it repeats on a window you did not tune it on — re-run the same A/B pair over a
-            different period, and treat a win on a single window as unproven. Counts treat a
-            <em>higher</em> score as better for all three, so read them as &ldquo;moved up&rdquo; /
+            different period, and treat a win on a single window as unproven. Counts treat a{' '}
+            <em>higher</em> score as better for all three, so read them as &ldquo;moved up&rdquo; /{' '}
             &ldquo;moved down&rdquo; rather than as a verdict on the protocol.
-          </p>
+          </InfoNote>
 
           {movers.every((m) => m.d === 0) ? (
-            <p className="pb-none">
-              No bar's signal score moved between these two runs — the ten-biggest-movers list would be
-              ten rows of zero, so it is not shown. If a setting changed and nothing moved, the setting
-              does not reach the score path (the entry-bar verdict is a separate row above).
-            </p>
+            <InfoNote tone="neutral" label="No bar moved">
+              No bar&rsquo;s signal score changed between these two runs, so the ten-biggest-movers list
+              would be ten rows of zero and is not shown. If a setting changed and nothing moved, that
+              setting does not reach the score path — the entry-bar verdict is a separate row above.
+            </InfoNote>
           ) : (
             <>
               <h4 className="bt-panel-head">Biggest movers (top 10 by |Δ signal %|)</h4>

@@ -203,3 +203,39 @@
     white-space: normal;
   }
 }
+
+/* ── WHAT DIFFERS (owner direction, 2026-10-31) ─────────────────────────────────────────────────
+   Only the CHANGED settings are listed, so the table is short by construction — usually two or three
+   rows. Everything identical is one sentence underneath, because a reader needs to know the comparison
+   was controlled, not to read sixteen rows of "same".
+
+   ⚠️ `not recorded` is set in the warning tone rather than left as a quiet dash. It is the one cell
+   value that changes what the table MEANS: a run that never stored a cost is not a run that had no
+   cost, and a muted rendering reads as "nothing to see". */
+.btr-diff {
+  margin: var(--space-md, 12px) 0 var(--space-lg, 20px);
+}
+.btr-diff-head {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.bt-diff-table th[scope='row'] {
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.btr-diff-missing {
+  color: var(--color-warning);
+  font-style: italic;
+}
+.btr-diff-same {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+  max-width: 100ch;
+}
+

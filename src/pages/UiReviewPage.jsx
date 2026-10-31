@@ -3,9 +3,8 @@ import { apiGet, apiPut } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 // ⚠️ DEFAULT import — `src/core/view-meta.js` exports VIEW_META as its default and exposes only
-// helper functions by name. The GENERATED free copy (`src/editions/view-meta.free.js`) is the one
-// that exports a NAMED `VIEW_META`, and assuming the two matched failed the build with
-// [MISSING_EXPORT]. The default import is the shape both files have in common.
+// helper functions by name. A former generated variant exported a NAMED `VIEW_META`, and assuming
+// the two matched failed the build with [MISSING_EXPORT].
 import VIEW_META from '../core/view-meta.js';
 import { NAV_TREE } from '../core/nav-tree.js';
 import './ui-review.css';
@@ -25,8 +24,8 @@ import './ui-review.css';
  * (a registry keyed by hand that silently drifts from the thing it describes).
  *
  * ⚠️ NAV ORDER IS PRESERVED, and the views that are NOT sidebar entries are listed separately. The
- * largest page in the free edition is a detail route (`/research/symbol`) that appears nowhere in
- * the nav — a walkthrough built from the sidebar alone would never have shown it.
+ * largest page is a detail route (`/research/symbol`) that appears nowhere in the nav — a
+ * walkthrough built from the sidebar alone would never have shown it.
  *
  * ⚠️ SAVES ON EVERY INTERACTION. The note field is debounced (a request per keystroke would be
  * absurd), everything else writes immediately, and each row reports what actually happened —

@@ -1,12 +1,13 @@
 {
   "name": "tradingcs",
-  "version": "0.144.0",
+  "version": "0.145.0",
   "private": true,
   "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
     "audit:theme-contrast": "node scripts/audit-theme-contrast.cjs",
     "test:backtest-totals": "node --test src/core/backtest-totals.test.js",
+    "test:backtest-compare": "node --test src/core/backtest-compare.test.js",
     "dev": "vite",
     "build": "vite build",
     "build:guard": "npm run build && npm run check:bundle",

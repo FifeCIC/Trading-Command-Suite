@@ -5,16 +5,14 @@
  * --------------------
  * App.jsx serves four pages at literal paths (`/lab/top-movers`, `/settings/data-management`,
  * `/settings/health-check`, `/lab/platform-comparisons`) outside the `/:area/:view` registry.
- * A direct static import ships that page into EVERY build — including the free edition, which
- * must PHYSICALLY exclude premium page code (the shipped JS is readable; FREE-EDITION-PLAN.md
- * §3/§4 — "hidden is not absent").
+ * Keeping them behind one module means the route table names a single import surface rather than
+ * four separate page files, and a `null` export is a supported way to skip a route without
+ * deleting the page.
  *
- * The free build swaps this module for `src/editions/direct-pages.free.jsx` (Vite alias, mode
- * `free`). A `null` export there means the page is premium: App.jsx skips the route and the
- * page code never enters the bundle.
- *
- * Adding a page here? Decide its edition and mirror the decision in the free variant —
- * `scripts/validate-free-bundle.cjs` checks tiered registry pages, not this list.
+ * ⚠️ THIS USED TO BE AN EDITION SEAM. A Vite alias swapped this module for
+ * `src/editions/direct-pages.free.jsx` in "free" mode, where `null` meant "premium, do not ship".
+ * The free edition was cancelled 2026-10-28 (SETTLED-DECISIONS row 96) and the alias is gone — all
+ * four pages are always exported. The `null` guard in App.jsx remains as a harmless no-op.
  */
 export { default as DataManagementPage } from '../pages/DataManagementPage';
 export { default as TopMoversPage } from '../pages/TopMoversPage';

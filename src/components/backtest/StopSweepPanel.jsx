@@ -1,3 +1,4 @@
+import InfoNote from '../InfoNote';
 /**
  * StopSweepPanel — "is the stop too distant?", screened against a run's recorded excursions.
  *
@@ -67,18 +68,22 @@ export default function StopSweepPanel({ runId }) {
 
   return (
     <>
-      <p className="bt-panel-note">
+      {/* ⚠️ `InfoNote`, not a `bt-panel-note` paragraph (owner report, 2026-10-30: the sentences that
+          annotate data were arriving in a different style on every panel). */}
+      <InfoNote
+        tone={data.unmeasured > 0 ? 'warning' : 'neutral'}
+        label="What this screen measured"
+        meta={`best net on this screen: a ${fmt(best.stopPct)}% stop, ${signed(best.deltaPnlPct)}% across the run`}
+      >
         <strong>{data.measured}</strong> of {data.measured + data.unmeasured} trade(s) carry a recorded
-        adverse excursion.{' '}
+        adverse excursion.
         {data.unmeasured > 0 && (
           <>
-            ⚠️ {data.unmeasured} do not — a run made before 2026-10-29 — and they are excluded rather than
-            treated as zero. Re-run to include them.{' '}
+            {' '}{data.unmeasured} do not — a run made before 2026-10-29 — and they are{' '}
+            <strong>excluded rather than treated as zero</strong>. Re-run to include them.
           </>
         )}
-        Best net on this screen: a <strong>{fmt(best.stopPct)}%</strong> stop, {signed(best.deltaPnlPct)}
-        % across the run.
-      </p>
+      </InfoNote>
       <div className="bt-table-wrap">
         <table className="bt-table bt-num-sweep">
           <caption className="sr-only">
@@ -115,13 +120,13 @@ export default function StopSweepPanel({ runId }) {
           </tbody>
         </table>
       </div>
-      <p className="pb-field-note">
-        ⚠️ <strong>First-order screen, not a measurement.</strong> Each row asks which trades&rsquo; recorded
+      <InfoNote tone="warning" label="What this cannot claim">
+        <strong>First-order screen, not a measurement.</strong> Each row asks which trades&rsquo; recorded
         adverse excursion would have fired that stop, and what those trades would then have realised at
         −stop%. It cannot see the path a trade it did <em>not</em> stop took, so &ldquo;Est. net&rdquo; is an
-        estimate. For the exact answer, re-run the window with <code>stopPlan</code> — the engine simulates a
-        stop that only ever tightens (breakeven lock, trail, or step-tighten).
-      </p>
+        estimate. For the exact answer, re-run the window with <code>stopPlan</code> — the engine simulates
+        a stop that only ever tightens (breakeven lock, trail, or step-tighten).
+      </InfoNote>
     </>
   );
 }

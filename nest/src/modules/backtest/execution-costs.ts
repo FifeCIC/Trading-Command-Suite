@@ -30,17 +30,30 @@
  * @param exitPrice  the level the trade exited at (SL/TP/EOD), in the same units as `close`
  * @param spread     decimal of price — 0.01 = 1% total spread, half of it each side
  * @param slippage   decimal of price — 0.01 = 1%, charged on BOTH entry and exit
+ * @param side       +1 for a long (buy at ask, sell at bid), −1 for a short (sell at bid, buy at ask).
+ *                   Defaults to +1 so every existing caller and every existing stored number is
+ *                   unchanged — see the note below on why the sign is a parameter and not a second
+ *                   function.
  */
 export function applyExecutionCosts(
   close: number,
   exitPrice: number,
   spread: number,
   slippage: number,
+  side: 1 | -1 = 1,
 ): { entryCost: number; exitCost: number } {
-  // Entry: buy at ask = mid + half the spread + slippage. Exit: sell at bid = price − the same again.
-  // Rounded to 8dp so a float artefact cannot leak into a stored price.
-  const entryCost = round8(close * (1 + spread / 2 + slippage));
-  const exitCost = round8(exitPrice * (1 - spread / 2 - slippage));
+  // ⚠️ A SHORT PAYS EXACTLY THE SAME COST IN THE OPPOSITE DIRECTION (2026-10-31, #1155).
+  //
+  // This used to be `close * (1 + cost)` / `exitPrice * (1 − cost)` — the long-only shape. A short
+  // SELLS at the bid and BUYS BACK at the ask, so both sides of the round trip sit on the other side
+  // of the mid. Getting the sign wrong here would not throw: it would CREDIT half the spread plus
+  // slippage to every short, so a short run would look better than free and the "is shorting VIX more
+  // profitable?" question would answer itself in the wrong direction. Reusing this one tested function
+  // with a `side` parameter is deliberate — a second `applyShortCosts()` would be a copy that only
+  // one of them would get the next fix.
+  const cost = spread / 2 + slippage;
+  const entryCost = round8(close * (1 + side * cost));
+  const exitCost = round8(exitPrice * (1 - side * cost));
   return { entryCost, exitCost };
 }
 

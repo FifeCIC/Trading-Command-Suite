@@ -188,6 +188,7 @@ CREATE TABLE `BacktestRun` (
     `iteration` INTEGER NULL,
     `configVersion` INTEGER NULL,
     `newsExclusion` VARCHAR(16) NOT NULL DEFAULT 'none',
+    `directionMode` VARCHAR(8) NOT NULL DEFAULT 'long',
     `scoresJson` LONGTEXT NULL,
     `winRate` DOUBLE NOT NULL,
     `totalPnl` DOUBLE NOT NULL,

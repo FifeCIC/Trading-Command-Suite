@@ -2035,11 +2035,11 @@ button.nav-active {
 .bt-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
 .bt-stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; text-align: center; font-size: 0.75rem; color: var(--ink-soft); }
 .bt-stat-value { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
-.bt-period { font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
+/* .bt-period, .bt-execution-info and the .bt-* legend/notice one-offs are RETIRED 2026-10-30: every annotating sentence on the backtest result is a <InfoNote> now (owner report: *"too much mixed styling when displaying sentences"*). One structure, one type scale, tone on the border only. */
 /* #986 — a run that measured a CAPTURED period says so by name, not only by date range. The date
    range alone does not say why the window mattered, and a captured-window result must never read
    as an ordinary day-range run. */
-.bt-measured-period { font-size: 0.8rem; color: var(--ink); margin-bottom: 0.5rem; padding: 6px 10px; border-left: 2px solid var(--accent); }
+/* `.bt-measured-period` RETIRED 2026-10-30 — the captured period is a popover in the step panel header now (owner direction: *"Hide this as a popout"*). The class is deleted rather than left behind: a rule nothing renders is a style that looks available and is not. */
 .bt-measured-bars { color: var(--ink-soft); font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.72rem; }
 /* The active-scope banner. Visible so the reader can tell a period-scoped run from a day-range one
    BEFORE the run rather than inferring it from the result afterwards. */
@@ -2054,25 +2054,6 @@ button.nav-active {
 .bt-chart-heading { font-size: 1rem; color: var(--ink); margin: 0 0 0.6rem; }
 
 /* Costs & sizing panel (#50) */
-.bt-execution-section { margin-bottom: 1rem; }
-.bt-execution-toggle {
-  width: 100%;
-  min-height: 44px;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--ink);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.bt-execution-toggle:hover { border-color: var(--accent); }
-.bt-execution-toggle.open { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
 .bt-preset-badge {
   font-size: 0.7rem;
   font-weight: 500;
@@ -2220,8 +2201,6 @@ button.nav-active {
   padding: 0 0.3rem;
 }
 /* Scores-only / informational guard — a panel that explains rather than refuses. */
-.pb-guard--info { border-left-color: var(--accent); }
-.pb-guard--info p { margin: 0.35rem 0 0; font-size: 0.78rem; line-height: 1.5; }
 /* ── Directive settings (step 4, Protocols page · 2026-10-27) ─────────────────────────────────── */
 .dp-panel { display: grid; gap: 0.7rem; }
 .dp-scope {
@@ -2306,14 +2285,6 @@ button.nav-active {
   background: var(--panel);
   color: var(--ink);
   font-size: 0.8rem;
-}
-.bt-execution-info {
-  font-size: 0.75rem;
-  color: var(--ink-soft);
-  margin: 0 0 0.5rem;
-  padding: 0.4rem 0.6rem;
-  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
-  border-radius: 5px;
 }
 
 /* Multi-Strategy Comparison */

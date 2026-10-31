@@ -68,6 +68,10 @@ export const EXPERIENCE_MATRIX = {
     'import-jobs':           { beginner: false, experienced: false, expert: true },
     'data-elements':         { beginner: false, experienced: false, expert: true },
     'backtest-data':         { beginner: false, experienced: false, expert: true },
+  // Stored-run review is the same audience as the data inventory: it is for finding out what changed
+  // between measurements, which only matters once you are iterating on one. Visible to every level so
+  // an entry point to the results is never hidden behind an experience setting.
+  'backtest-runs':         { beginner: true, experienced: true, expert: true },
     'decoder':               { beginner: false, experienced: false, expert: true },
     'database-tables':       { beginner: false, experienced: false, expert: true },
     'api-activity':          { beginner: false, experienced: false, expert: true },
@@ -101,6 +105,7 @@ export const EXPERIENCE_MATRIX = {
     'colour':                 { beginner: true,  experienced: true,  expert: true },
     'surfaces':               { beginner: true,  experienced: true,  expert: true },
     'data-display':           { beginner: true,  experienced: true,  expert: true },
+  'info':                   { beginner: true,  experienced: true,  expert: true },
     'interactive':            { beginner: true,  experienced: true,  expert: true },
     'component-lab':          { beginner: false, experienced: false, expert: true },
     // Training

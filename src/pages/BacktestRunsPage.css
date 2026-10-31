@@ -1,0 +1,9 @@
+/* Completed runs — its own page since 2026-10-31 (see BacktestRunsPage.jsx for why).
+   No header block: the shell renders the view label and the panel carries the instruction, so the
+   only layout this page owns is the stack. */
+
+.btrp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

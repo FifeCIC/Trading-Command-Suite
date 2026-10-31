@@ -156,17 +156,10 @@ export default function SettingsPage() {
         desc="This page used to hold all of these. Nothing was removed — it was filed where it belongs."
       >
         <MovedNote><strong>Theme, Display, Market Tape</strong> → <a href="/settings/appearance">Appearance</a></MovedNote>
-        {/* §9.14 — Automation, Scoring, Database and the QA Checklist are all PREMIUM views. In the
-            free build the entries are OMITTED rather than pointed at pages that are not there; the
-            Vite define folds at build time, which is what keeps the paths out of the free bundle. */}
-        {true && (
-          <>
-            <MovedNote><strong>The loop, the queue, layer kill switches</strong> → <a href="/settings/automation">Automation</a></MovedNote>
-            <MovedNote><strong>Trade thresholds, scoring defaults</strong> → <a href="/settings/scoring-settings">Scoring</a></MovedNote>
-            <MovedNote><strong>Database</strong> → <a href="/settings/settings-database">Database</a></MovedNote>
-            <MovedNote><strong>Reset QA checks</strong> → <a href="/development/qa-testing">QA Checklist</a></MovedNote>
-          </>
-        )}
+        <MovedNote><strong>The loop, the queue, layer kill switches</strong> → <a href="/settings/automation">Automation</a></MovedNote>
+        <MovedNote><strong>Trade thresholds, scoring defaults</strong> → <a href="/settings/scoring-settings">Scoring</a></MovedNote>
+        <MovedNote><strong>Database</strong> → <a href="/settings/settings-database">Database</a></MovedNote>
+        <MovedNote><strong>Reset QA checks</strong> → <a href="/development/qa-testing">QA Checklist</a></MovedNote>
         <MovedNote><strong>Bots, trade defaults, risk limits</strong> → <a href="/settings/trading-settings">Trading</a></MovedNote>
         <MovedNote><strong>Full preference list</strong> → <a href="/settings/user-preferences">User Preferences</a></MovedNote>
       </SettingsSection>

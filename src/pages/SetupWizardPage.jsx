@@ -1,8 +1,8 @@
 /**
  * SetupWizardPage — the first-run experience, at /status/setup.
  * ============================================================
- * Ships in the FREE edition (`FREE_MANIFEST.freeViews` contains '/status/setup'), so for many
- * users this is the first screen the app shows them.
+ * Ships to every user, and `/status/setup` is reachable from the Status area, so for many this is
+ * the first screen the app shows them.
  *
  * ⚠️ WHAT THIS REPLACED, AND WHY (measured 2026-09-25). The previous version was a seven-chip
  * wizard that revealed one screen of developer diagnostics per click, and its copy told the user

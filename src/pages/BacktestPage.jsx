@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReplayPlayer from '../components/backtest/replay/ReplayPlayer';
+import InfoNote from '../components/InfoNote';
 import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -18,6 +18,9 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getAssetType } from '../core/asset-types.js';
 import { useBacktestBaseline } from '../core/use-backtest-baseline.js';
+import {
+  RUN_METRICS, TRADE_METRICS, compareMetrics, noComparisonReason, verdictClass,
+} from '../core/backtest-compare.js';
 import '../core/forms.css';
 import './backtest-lab.css';
 
@@ -32,7 +35,6 @@ import './backtest-lab.css';
  * to split rather than, say, the page: they are needed only on the RESULT step, and a chart library
  * is the heaviest dependency the Lab touches. Nothing on steps 1–5 needs either.
  */
-const BacktestChartPane = lazy(() => import('../components/backtest/charts/BacktestChartPane'));
 const EquityCurveChart = lazy(() => import('../components/backtest/charts/EquityCurveChart'));
 
 /**
@@ -79,7 +81,6 @@ const EquityCurveChart = lazy(() => import('../components/backtest/charts/Equity
 const BacktestSettingsInventory = lazy(
   () => import('../components/backtest/BacktestSettingsInventory'),
 );
-const BacktestRunsPanel = lazy(() => import('../components/backtest/BacktestRunsPanel'));
 /** Step 4 of the PROTOCOLS page: the per-protocol directive editor (2026-10-27). */
 const DirectiveSettingsPanel = lazy(() => import('../components/backtest/DirectiveSettingsPanel'));
 /**
@@ -90,6 +91,9 @@ const RunPanel = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunPanel })));
 const RunDiffPanel = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunDiffPanel })));
+/** The per-bar score table, shared with the A/B panels so a protocol run's own reading has one shape. */
+const ScoreSeriesTable = lazy(() =>
+  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.ScoreTable })));
 
 /**
  * The Lab's steps (#1138, owner direction 2026-10-26).
@@ -107,8 +111,110 @@ const STEPS = [
   { n: 2, id: 'window', label: 'Instrument & window' },
   { n: 3, id: 'info', label: 'Information sources' },
   { n: 4, id: 'execution', label: 'Costs & sizing', labelForProtocol: 'Scores only' },
-  { n: 5, id: 'run', label: 'Run' },
-  { n: 6, id: 'result', label: 'Result' },
+  // ── The four settings audits (owner direction, 2026-10-30: *"Strategy + Protocol + Directive
+  // Overrides + Global Settings should all be separate steps"*). They were four stacked tables and 39
+  // rows under one heading at the bottom of the Costs step, which is the stacking the owner objected
+  // to. One group per step, and each step's lede says what that group decides.
+  { n: 5, id: 'set-strategy', label: 'What the strategy sets' },
+  { n: 6, id: 'set-protocol', label: 'What the protocol sets' },
+  { n: 7, id: 'set-overrides', label: 'Directive overrides' },
+  { n: 8, id: 'set-global', label: 'Global settings' },
+  { n: 9, id: 'outputs', label: 'Outputs' },
+  { n: 10, id: 'run', label: 'Run' },
+  { n: 11, id: 'result', label: 'Result' },
+];
+
+/**
+ * ⚠️ STEP NUMBERS ARE NAMED, NOT LITERAL. Inserting a step renumbers everything after it, and this
+ * page once compared `activeStep === 5` / `=== 6` in twenty places — one missed literal renders the
+ * Run panel on the Result step with no error. These derive from `STEPS`, so an insertion changes the
+ * array and nothing else.
+ */
+const STEP_OUTPUTS = STEPS.find((s) => s.id === 'outputs').n;
+const STEP_RUN = STEPS.find((s) => s.id === 'run').n;
+const STEP_RESULT = STEPS.find((s) => s.id === 'result').n;
+
+/**
+ * The settings-audit steps, mapped to the inventory group each one renders.
+ *
+ * ⚠️ ORDER IS THE READER'S, NOT THE API'S. The API returns `run` first (the editable overrides), then
+ * strategy, protocol, directive-override, settings. `run` is deliberately NOT a step here: those four
+ * fields are the Costs form's own inputs, and echoing them as a second editable table is the
+ * duplication this split removed.
+ */
+const SETTINGS_STEPS = [
+  {
+    step: STEPS.find((s) => s.id === 'set-strategy').n,
+    group: 'strategy',
+    title: 'What the strategy sets',
+    lede: 'The bot’s own knobs — symbol, timeframe, size, mode — and whether a run reads each one.',
+  },
+  {
+    step: STEPS.find((s) => s.id === 'set-protocol').n,
+    group: 'protocol',
+    title: 'What the protocol sets',
+    lede: 'The values the SCORER reads for every bar of the run. These decide the signal, so they decide the trades.',
+  },
+  {
+    step: STEPS.find((s) => s.id === 'set-overrides').n,
+    group: 'directive-override',
+    title: 'Directive overrides',
+    lede: 'The per-protocol weights a scorer applies. ⚠️ Only one of these five fields is actually applied per protocol — the rest are inert.',
+  },
+  {
+    step: STEPS.find((s) => s.id === 'set-global').n,
+    group: 'settings',
+    title: 'Global settings',
+    lede: 'Every value the settings registry declares. ⚠️ None of them is read by a backtest run — they belong to the live loop, the scheduler and the log system.',
+  },
+];
+/**
+ * The result panels the reader can switch on, in the order they render.
+ *
+ * ⚠️ WHY THIS IS A STEP AND NOT A SET OF CHECKBOXES ON THE RESULT (owner direction, 2026-10-30:
+ * *"maybe add a new step for the user to select what outputs they want"*). Two reasons that are about
+ * the reader rather than tidiness:
+ *   1. Choosing outputs BEFORE running means the result is what was asked for, not a wall of panels
+ *      that then has to be turned down.
+ *   2. The Replay panel animates and the stop screen makes an API call per run, so a run in a session
+ *      of twenty should not pay for panels nobody looked at.
+ *
+ * `protocols: true` / `strategies: true` records which subject a panel belongs to. A protocol run
+ * simulates no fills, so the trade, stop-screen, equity and replay panels would all be empty there —
+ * they are not offered at all rather than offered and then explained away.
+ */
+const OUTPUT_OPTIONS = [
+  {
+    id: 'scores',
+    label: 'Score series',
+    strategies: true,
+    protocols: true,
+    hint: 'Every bar this run scored — the signal, the score and whether the bot’s own entry bar passed it. This is the READING, and it is what two protocol runs are compared on.',
+  },
+  {
+    id: 'equity',
+    label: 'Equity curve & drawdown',
+    strategies: true,
+    hint: 'Cumulative P&L trade by trade, with the drawdown at each point. One point per closed trade, not per bar.',
+  },
+  {
+    id: 'trades',
+    label: 'Trade list',
+    strategies: true,
+    hint: 'One row per closed trade with its P&L in % and in currency, the exit reason, the cycle column and the stat tiles.',
+  },
+  {
+    id: 'stopScreen',
+    label: 'Stop screen',
+    strategies: true,
+    hint: 'Re-reads this run’s excursions to ask how tight the stop could have been. Makes one API call per run.',
+  },
+  {
+    id: 'replay',
+    label: 'Replay',
+    strategies: true,
+    hint: 'Plays the run’s bars forward with its trades marked. Animation, so it is off until asked for.',
+  },
 ];
 
 /**
@@ -261,6 +367,31 @@ const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
 const DEFAULT_NEWS_MODE = 'exclude';
 
 /**
+ * Display labels for the two enum-like selects, used by the session change log.
+ *
+ * ⚠️ These are TRANSLATIONS, not behaviour — the values sent to the API stay the raw codes. A log that
+ * printed `atrEqualRisk` would be readable to the engine and to nobody else.
+ */
+const NEWS_MODE_LABELS = {
+  exclude: 'Skip news days',
+  none: 'Include every bar',
+  only: 'News days only',
+};
+/** #1155 — the session-log label for the direction control. Short, because it sits in a table cell. */
+const DIRECTION_LABELS = {
+  long: 'Long only',
+  short: 'Short only',
+  both: 'Both sides',
+};
+const SIZING_MODEL_LABELS = {
+  fixedPercent: '% of Equity',
+  fixedDollar: 'Fixed $',
+  atrEqualRisk: 'ATR Equal Risk',
+  kellyFull: 'Kelly (full)',
+  kellyHalf: 'Kelly (half)',
+};
+
+/**
  * The engine's own floor: `BacktestService.run()` refuses a window with fewer than 100 bars. Used
  * here as the `minBars` sent to `/api/backtest/timeframe-coverage` and as the Bars input's minimum,
  * so the form and the engine cannot disagree about what is runnable.
@@ -297,7 +428,29 @@ function pickTimeframe(recommended) {
 const fmtDay = (iso) => (iso ? String(iso).slice(0, 10) : '—');
 
 /** A percentage, or an explicit dash when the number was never recorded. Never a fabricated 0. */
-const pctOrDash = (v) => (v == null ? '—' : `${v}%`);
+const pctOrDash = (v) => (v == null ? '—' : `${v < 0 ? '−' : ''}${Math.abs(v)}%`);
+
+/**
+ * `moneyOrDash()` — currency, or an em dash.
+ *
+ * ⚠️ The sign goes BEFORE the symbol (`−$296.19`), not after it (`$-296.19`). Four tiles on this step
+ * printed the latter: a P&L is negative far more often than not here, so the broken form was the
+ * COMMON case, not the edge case.
+ */
+const moneyOrDash = (v) =>
+  v == null
+    ? '—'
+    : `${v < 0 ? '−' : ''}$${Math.abs(Number(v)).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * Capitalise the first letter of a sentence fragment built elsewhere.
+ *
+ * ⚠️ The auto-accept details are written as mid-sentence clauses ("P&L moved +3.2% against A — under
+ * the 10% gate") because they are reused inside different verdict sentences. Splicing one after a full
+ * stop read as "This run stays B. P&L moved…" — two sentences where the second was written to be a
+ * continuation. Capitalising at the join keeps the fragments reusable AND the result readable.
+ */
+const capFirst = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : '');
 
 export default function BacktestPage({ subject: fixedSubject }) {
   const queryClient = useQueryClient();
@@ -309,7 +462,6 @@ export default function BacktestPage({ subject: fixedSubject }) {
    * Defaulted to 'protocol' so the page is still valid if rendered without a prop.
    */
   const subject = fixedSubject === 'strategy' ? 'strategy' : 'protocol';
-  const otherSubjectRoute = subject === 'protocol' ? '/lab/backtest-strategies' : '/lab/backtest';
   const [protocolId, setProtocolId] = useState('');
   const [botId, setBotId] = useState('');
   const [timeframe, setTimeframe] = useState('1h');
@@ -324,9 +476,57 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const [bars, setBars] = useState(500);
 
   const [runId, setRunId] = useState('');
-  const [showChart, setShowChart] = useState(false);
+  /**
+   * ── OUTPUTS (2026-10-30) ──────────────────────────────────────────────────────────────────────
+   * Which result panels this page renders. Owner direction: *"Make this output an option … maybe add a
+   * new step for the user to select what outputs they want."*
+   *
+   * Persisted in `localStorage` rather than per-render, because a mode of working that resets on
+   * reload is a control the reader has to re-set every time — and unlike the search box, this is a
+   * standing preference, not a transient filter.
+   *
+   * ⚠️ `replay` DEFAULTS OFF. It animates and fetches its own payload, so a run in a session of twenty
+   * should not pay for a panel nobody opened.
+   */
+  const OUTPUT_STORAGE_KEY = `bt.outputs.${subject}`;
+  const defaultOutputs = () => {
+    const base = {};
+    for (const o of OUTPUT_OPTIONS) {
+      const on = subject === 'protocol' ? o.protocols === true : o.strategies === true;
+      base[o.id] = Boolean(on) && o.id !== 'replay';
+    }
+    return base;
+  };
+  const [outputs, setOutputs] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(OUTPUT_STORAGE_KEY);
+      if (!raw) return defaultOutputs();
+      const saved = JSON.parse(raw);
+      const base = defaultOutputs();
+      for (const k of Object.keys(base)) if (typeof saved[k] === 'boolean') base[k] = saved[k];
+      return base;
+    } catch {
+      return defaultOutputs();
+    }
+  });
+  const setOutput = (id, on) => {
+    setOutputs((prev) => {
+      const next = { ...prev, [id]: on };
+      try {
+        window.localStorage.setItem(OUTPUT_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* a private-mode quota failure must not break the page — the choice still applies this visit */
+      }
+      return next;
+    });
+  };
   const [newsExclusion, setNewsExclusion] = useState(DEFAULT_NEWS_MODE);
-  const [showExecution, setShowExecution] = useState(true);
+  /**
+   * #1155 — which sides the run may open. `'long'` is the default and reproduces every run made before
+   * 2026-10-31, when the trade loop was `if (signal === 'BUY' || signal === 'STRONG_BUY')` with
+   * `const isLong = true` beneath it.
+   */
+  const [directionMode, setDirectionMode] = useState('long');
 
   /**
    * ── RUN-SCOPED OVERRIDES (#1136) ───────────────────────────────────────────────────────────────
@@ -490,7 +690,35 @@ ull = follow the latest, which is the default. */
   // right fix for a protocol with no symbols is to say so on its card, not to offer a checkbox that
   // hides it. ⚠️ Measured the same day: **14 of 47 protocols resolve zero symbols**, one of them
   // (`eurusd-macro-v1`) ACTIVE — so the state is real and is now shown on the card instead.
-  const [query, setQuery] = useState('');
+  /**
+   * ⚠️ THE SEARCH REMEMBERS ITSELF, PER SUBJECT (owner direction, 2026-10-30: *"Auto fill with the
+   * previous search"*). A backtesting session is many runs in a row on the same handful of strategies,
+   * so retyping the filter after every navigation is pure friction.
+   *
+   * Per subject, because a protocol query and a strategy query are different vocabularies — restoring
+   * the wrong one would show an empty carousel that reads as "nothing is configured".
+   *
+   * `sessionStorage`, not `localStorage`: this is the state of the CURRENT sitting. A filter restored a
+   * week later is a reader wondering why their list is short.
+   */
+  const queryKey = `bt.search.${subject}`;
+  const [query, setQueryRaw] = useState(() => {
+    try {
+      return window.sessionStorage.getItem(queryKey) ?? '';
+    } catch {
+      // A blocked storage API must not break the page — the field simply starts empty.
+      return '';
+    }
+  });
+  const setQuery = (next) => {
+    setQueryRaw(next);
+    try {
+      if (next) window.sessionStorage.setItem(queryKey, next);
+      else window.sessionStorage.removeItem(queryKey);
+    } catch {
+      /* storage unavailable — the value still works for this render */
+    }
+  };
   const [directionFilter, setDirectionFilter] = useState('');
 
   const directionOptions = useMemo(
@@ -852,6 +1080,35 @@ ull = follow the latest, which is the default. */
   const coverageWindow = usePeriod && selectedPeriod
     ? { from: fmtDay(selectedPeriod.from), to: fmtDay(selectedPeriod.to) }
     : { from: '', to: '' };
+  /**
+   * ── NEWS PREVIEW (2026-10-30) ────────────────────────────────────────────────────────────────
+   * Owner direction: *"the panel should tell us what records there actually are for the symbol and the
+   * selected period, what news actually applies and will be part of the backtest?"*
+   *
+   * ⚠️ WITHOUT THIS THE CONTROL IS UNFALSIFIABLE. "Skip news-day bars" is the default; when no news
+   * rows exist for the symbol it filters nothing and the run is identical to "include every bar". The
+   * reader would never know. Measured 2026-10-30 for VIX 5m: **5 articles across the whole history but
+   * only 2 inside `dev-window-v1`** — so the honest number depends on the window, and the preview sends
+   * the window rather than letting the API guess.
+   */
+  const newsPreviewQuery = useQuery({
+    queryKey: ['bt-news-preview', marketSymbol, coverageWindow.from, coverageWindow.to],
+    queryFn: () => {
+      const qs = new URLSearchParams({ symbol: marketSymbol, timeframe: marketTimeframe || '5m' });
+      if (coverageWindow.from) qs.set('from', coverageWindow.from);
+      if (coverageWindow.to) qs.set('to', coverageWindow.to);
+      return apiGet(`/api/backtest/news-preview?${qs.toString()}`);
+    },
+    enabled: Boolean(marketSymbol),
+    staleTime: 120_000,
+    retry: false,
+  });
+  const newsPreview = newsPreviewQuery.data ?? null;
+
+  /** `true` when the current news mode cannot change this run — the case the panel must state. */
+  const newsIsInert =
+    newsPreview?.available === true && newsPreview.excludesAnything === false && newsExclusion !== 'none';
+
   const coverageQuery = useQuery({
     queryKey: ['bt-tf-coverage', marketSymbol, marketTimeframe, coverageWindow.from, coverageWindow.to],
     queryFn: () => {
@@ -902,6 +1159,19 @@ ull = follow the latest, which is the default. */
   }, [matchingPeriods, frozenPeriod, periodId]);
 
   const runMutation = useMutation({
+    /**
+     * ⚠️ PRESSING RUN ALWAYS EARNS THE ADVANCE (found 2026-10-30 by walking the page by hand).
+     *
+     * The auto-advance effect skips a step already in `autoAdvanced` — which is right for a step the
+     * reader deliberately revisited, and wrong for the Run step the moment they press Run. Opening the
+     * Run step from the RAIL marks it (that is the "I chose to be here" branch), so a run started from
+     * there finished, stored, and left the page sitting on Run with step 11 reading "Ready" and no
+     * error anywhere. Reaching the same step via **Continue** did not mark it, so the same button
+     * behaved differently depending on how the reader arrived.
+     */
+    onMutate: () => {
+      autoAdvanced.current.delete(STEP_RUN);
+    },
     mutationFn: () => {
       // ⚠️ A PROTOCOL PRODUCES SCORES, NOT TRADES (owner direction, 2026-10-26: *"Lets make protocol
       // score only. Backtesting protocols will only generate scores."*).
@@ -915,9 +1185,13 @@ ull = follow the latest, which is the default. */
       // bracketed trades. `compareRuns()` will now see 0 trades on one side, which its sample bar
       // reports honestly rather than silently averaging two different things.
       const execution = scoresOnly
-        ? { newsExclusion, slPct: 0, tpPct: 0 }
+        // A protocol run opens no positions at all, so the sides it may open is meaningless — but it is
+        // still sent, because a scores-only run computes `wasProfitable` per signal and a SHORT
+        // protocol's forward returns must be judged in the direction it would have traded (#1155).
+        ? { newsExclusion, directionMode, slPct: 0, tpPct: 0 }
         : {
           newsExclusion,
+          directionMode,
           /**
            * ── DECISION (2026-10-28, primary) ──
            * WHAT:      `slippage`/`spread` are sent ONLY when the operator has edited them
@@ -990,7 +1264,6 @@ ull = follow the latest, which is the default. */
     },
     onSuccess: (data) => {
       setRunId(data.id);
-      setShowChart(true);
       // A new run must appear in the completed-runs panel immediately: that panel IS the comparison
       // surface, and a run that exists but is not listed cannot be compared.
       queryClient.invalidateQueries({ queryKey: ['bt-runs'] });
@@ -1020,6 +1293,245 @@ ull = follow the latest, which is the default. */
   const equityData = equityQuery.data;
   const stats = result?.stats;
   const executionUsed = result?.execution;
+
+  // ── MODES (2026-10-30) ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Owner direction: *"Create modes. The first Modes will be Normal and Auto-Accept (if there is an
+   * improvement in the profit we auto apply Run B and that gets stored as Run A)."*
+   *
+   * Plus the caution, in the same message: *"I'm just a bit concerned that a small improvement is luck
+   * and we might need some caution."* That caution is why this mode has TWO GATES and both are declared
+   * settings (`backtest.autoAcceptMinPnlImprovePct`, `backtest.autoAcceptMinTrades`) rather than
+   * constants inside this component.
+   *
+   * 🛑 WHAT AUTO-ACCEPT DOES **NOT** DO: it never writes to `trading_strategy`. It moves the REFERENCE
+   * (the `backtest.baseline.<scope>.runId` setting) and nothing else. Applying a tested configuration
+   * to the live bot is a separate, explicit action and is NOT BUILT — see the note in the Modes panel.
+   */
+  const MODE_STORAGE_KEY = 'bt.mode';
+  const [mode, setModeState] = useState(() => {
+    try {
+      return window.localStorage.getItem(MODE_STORAGE_KEY) === 'auto' ? 'auto' : 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
+  const setMode = (next) => {
+    setModeState(next);
+    try {
+      window.localStorage.setItem(MODE_STORAGE_KEY, next);
+    } catch {
+      /* the mode still applies this visit */
+    }
+  };
+
+  /**
+   * The two gates, read from the settings registry so the threshold a promotion had to clear is a
+   * number the owner can change — and one this panel can PRINT, because a gate whose value is not
+   * shown cannot be checked.
+   *
+   * ⚠️ A failed read falls back to the DECLARED defaults and says so (`settingsSource`). Silently
+   * substituting 10 / 30 would make an unreadable registry look like a configured one.
+   */
+  const settingsQuery = useQuery({
+    queryKey: ['settings-registry'],
+    queryFn: () => apiGet('/api/system/settings/registry').catch(() => null),
+    staleTime: 300_000,
+    // Read whenever the mode panel could be shown; ctiveStep is declared later in this component, so\n    // this cannot reference it without a use-before-define.\n    enabled: true,
+  });
+  const autoAcceptGates = useMemo(() => {
+    const rows = settingsQuery.data?.settings;
+    const find = (k) => (Array.isArray(rows) ? rows.find((s) => s.key === k)?.value : undefined);
+    const minImprove = Number(find('backtest.autoAcceptMinPnlImprovePct'));
+    const minTrades = Number(find('backtest.autoAcceptMinTrades'));
+    return {
+      minImprovePct: Number.isFinite(minImprove) ? minImprove : 10,
+      minTrades: Number.isFinite(minTrades) ? minTrades : 30,
+      source: Number.isFinite(minImprove) && Number.isFinite(minTrades)
+        ? 'settings'
+        : settingsQuery.isError
+          ? 'defaults (the settings registry could not be read)'
+          : 'defaults (not yet read)',
+    };
+  }, [settingsQuery.data, settingsQuery.isError]);
+
+  /**
+   * ── WHAT WE COMPARE AGAINST (2026-10-30) ──────────────────────────────────────────────────────
+   * Owner direction: *"style these boxes with a colour to indicate improvement or not: based on the
+   * previous test if one was done for that strategy."*
+   *
+   * ⚠️ THE ACCEPTED BASELINE WINS WHEN THERE IS ONE. In Auto-Accept mode A becomes the accumulated best,
+   * so "improvement" has to mean "against A" — comparing against the immediately previous run would
+   * flip the border back to red on the run after a promotion, which is backwards. With no baseline,
+   * the most recent earlier run of the same protocol is used, which is the literal reading of the ask.
+   */
+  const runsList = useMemo(() => {
+    const raw = latestRunsQuery.data;
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : (raw.runs ?? []);
+  }, [latestRunsQuery.data]);
+
+  const previousRunId = useMemo(() => {
+    if (!runId) return null;
+    const prior = runsList.filter((r) => r.id !== runId);
+    return prior[0]?.id ?? null;
+  }, [runsList, runId]);
+
+  const isComparingToBaseline = Boolean(baselineRunId && baselineRunId !== runId);
+  const comparisonRunId = isComparingToBaseline ? baselineRunId : previousRunId;
+
+  const comparisonQuery = useQuery({
+    queryKey: ['backtest-result', comparisonRunId],
+    queryFn: () => apiGet(`/api/backtest/results/${comparisonRunId}`),
+    enabled: Boolean(comparisonRunId && runId && comparisonRunId !== runId),
+    refetchInterval: false,
+    retry: false,
+  });
+
+  /**
+   * The verdicts, or `null` when there is nothing to compare with.
+   *
+   * ⚠️ A DIFFERENT PROTOCOL IS NOT A COMPARISON — the same guard `RunDiffPanel` applies, for the same
+   * reason: two protocols score different directives against different symbols, so one being "better"
+   * than the other is not a statement about a change anyone made.
+   */
+  const comparison = useMemo(() => {
+    const prev = comparisonQuery.data;
+    if (!comparisonRunId || !prev || !stats) return null;
+    const protoA = prev.protocolId;
+    const protoB = result?.protocolId;
+    if (protoA && protoB && protoA !== protoB) {
+      return {
+        verdicts: {},
+        tradeVerdicts: {},
+        reason: `the comparison run is a different protocol (${protoA} vs ${protoB}), so its numbers are not a change to this one`,
+      };
+    }
+    /**
+     * ⚠️ A DIFFERENT WINDOW IS NOT A CHANGE EITHER. Two runs on different windows are two unrelated
+     * measurements printed next to each other — the rule this page already states in the window
+     * popover, applied here to the borders. Measured while building this: the newest stored run
+     * measured `dev-window-v1` while a quick verification run measured "last 300 bars", and without
+     * this guard the quick run's boxes would have been painted green for scoring fewer bars.
+     */
+    const windowA = prev.measuredPeriod?.name ?? null;
+    const windowB = result?.measuredPeriod?.name ?? null;
+    if (windowA !== windowB) {
+      return {
+        verdicts: {},
+        tradeVerdicts: {},
+        reason: `the comparison run measured ${windowA ? `the period “${windowA}”` : 'a day-range window'} and this one measured ${windowB ? `“${windowB}”` : 'a day range'} — different windows are two measurements, not a change`,
+      };
+    }
+    const barsA = prev.scoreSeries?.length ?? null;
+    const barsB = result?.scoreSeries?.length ?? null;
+    const label = `run ${String(comparisonRunId).slice(0, 8)}${isComparingToBaseline ? ' — the accepted A' : ' — the previous run'}`
+      // The bar counts travel in the label because a window can keep its name while its data grows.
+      + (barsA != null && barsB != null ? ` (${barsA.toLocaleString()} vs ${barsB.toLocaleString()} bars scored)` : '');
+    return {
+      verdicts: compareMetrics(RUN_METRICS, prev.stats, stats),
+      tradeVerdicts: compareMetrics(TRADE_METRICS, prev.tradeTotals, result?.tradeTotals),
+      label,
+      prevPnl: prev.stats?.totalPnl ?? null,
+      prevTrades: prev.tradeTotals?.count ?? null,
+    };
+  }, [comparisonRunId, comparisonQuery.data, stats, result, isComparingToBaseline]);
+
+  /**
+   * `true` only when there is a REAL comparison — both runs comparable and a label naming which one.
+   * The memo below returns a `reason` object with no label for an incomparable pair, so testing the
+   * object itself is not enough (measured 2026-10-30: "…better / worse than . The figure itself…").
+   */
+  const hasComparison = Boolean(comparison?.label);
+
+  const comparisonReason = comparison?.reason
+    ?? noComparisonReason({
+      previousRunId: comparisonRunId,
+      previousRunMissing: comparisonQuery.isError && comparisonQuery.error?.status === 404,
+      incomparable: null,
+    });
+
+  // ── AUTO-ACCEPT (2026-10-30) ───────────────────────────────────────────────────────────────────
+  /**
+   * Promotes the run to A when it clears BOTH gates. Nothing here writes to the strategy.
+   *
+   * ⚠️ RUN ONCE PER RUN. The effect re-runs on every render that touches its dependencies, so without
+   * a guard it would call `baseline.accept()` repeatedly — each call a settings write, and each write
+   * a mutation. `autoHandled` keys on the run id, which is the thing being decided about.
+   */
+  const autoHandled = useRef(new Set());
+  const [autoOutcome, setAutoOutcome] = useState(null);
+
+  useEffect(() => {
+    if (mode !== 'auto' || !stats || !runId) return;
+    if (autoHandled.current.has(runId)) return;
+    // The comparison payload is the thing being judged; without it there is nothing to decide yet.
+    if (comparisonRunId && comparisonRunId !== runId && !comparison && !comparisonQuery.isError) return;
+
+    const trades = result?.tradeTotals?.count ?? 0;
+    const pnl = stats.totalPnl ?? null;
+    const gateTrades = autoAcceptGates.minTrades;
+    const gateImprove = autoAcceptGates.minImprovePct;
+
+    const decide = (verdict, detail) => {
+      autoHandled.current.add(runId);
+      setAutoOutcome({ runId, verdict, detail });
+    };
+
+    // A first run has nothing to beat. It becomes A so the NEXT run has a reference — and says so,
+    // because "auto-accepted" with no comparison would otherwise read as a measured improvement.
+    if (!comparisonRunId) {
+      if (trades < gateTrades) {
+        decide('skipped', `no baseline to beat, and ${trades} trade(s) is under the ${gateTrades}-trade gate — left as B`);
+        return;
+      }
+      acceptBaseline(runId);
+      decide('accepted-first', `first run for this protocol — became A with no comparison (${trades} trades)`);
+      return;
+    }
+
+    if (comparisonQuery.isError) {
+      decide('skipped', `could not read the comparison run, so nothing was judged${comparisonQuery.error?.status === 404 ? ' — it was deleted' : ''}`);
+      return;
+    }
+    if (comparison?.reason) {
+      // ⚠️ SHORT HERE, LONG IN THE COMPARISON NOTE (2026-10-30). The reason is a full sentence and it
+      // was being printed twice within 40 pixels — once as the comparison's caption and again inside
+      // this decision. One fact, one home: the note about comparing carries why comparing is not
+      // possible; this note records only that the decision therefore could not be made.
+      decide('skipped', 'no comparable run to judge — the comparison note above says why');
+      return;
+    }
+
+    if (trades < gateTrades) {
+      decide('skipped', `${trades} closed trade(s) is under the ${gateTrades}-trade gate — a total on that sample is noise`);
+      return;
+    }
+    if (pnl == null || comparison?.prevPnl == null) {
+      decide('skipped', 'one of the two runs has no total P&L recorded, so the improvement cannot be measured');
+      return;
+    }
+
+    const prev = Number(comparison.prevPnl);
+    const next = Number(pnl);
+    // ⚠️ RELATIVE, AND SIGN-AWARE. A baseline of −100 improving to −90 is a 10% improvement in
+    // magnitude, not a loss of 10%. Dividing by a NEGATIVE baseline without taking its magnitude
+    // inverts the verdict — the 22.9%-win-rate run would have been "accepted" for getting worse.
+    let improvementPct;
+    if (prev === 0) improvementPct = next > 0 ? Infinity : 0;
+    else improvementPct = ((next - prev) / Math.abs(prev)) * 100;
+
+    if (!(improvementPct >= gateImprove)) {
+      decide('skipped', `P&L moved ${improvementPct >= 0 ? '+' : ''}${improvementPct.toFixed(1)}% against A — under the ${gateImprove}% improvement gate`);
+      return;
+    }
+
+    acceptBaseline(runId);
+    decide('accepted', `P&L improved ${improvementPct === Infinity ? 'from zero to positive' : `+${improvementPct.toFixed(1)}%`} against A over ${trades} trades — became the new A`);
+    // `acceptBaseline` and `comparison` are stable enough for a once-per-run decision; the run id is
+    // the guard that actually matters, and it is in `autoHandled`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, stats, runId, comparisonRunId, comparison, comparisonQuery.isError, autoAcceptGates, result]);
 
   /**
    * ── PAUSED-SUBJECT DISCIPLINE ────────────────────────────────────────────────────────────────
@@ -1082,35 +1594,42 @@ ull = follow the latest, which is the default. */
 
   const canRunBool = Boolean(canRun);
   const hasResult = Boolean(stats);
-  // `stepValid` = the VALUES for this step are usable. It governs whether the next step may be
-  // entered, because an invalid step would let the reader assemble a run the engine must refuse.
-  const stepValid = useMemo(
-    () => ({
-      1: canRunBool,
-      2: instrumentReady,
-      // Information sources needs no decision — every control in it has a defensible default — so it
-      // is valid as soon as it is reachable. It is a step because its READING matters, not because
-      // it needs an answer.
-      3: canRunBool && instrumentReady,
-      4: canRunBool && instrumentReady,
-      5: canRunBool && instrumentReady,
-      6: hasResult,
-    }),
-    [canRunBool, instrumentReady, hasResult],
-  );
-  const stepUnlocked = useMemo(
-    () => ({
-      1: true,
-      2: stepValid[1],
-      3: stepValid[1] && stepValid[2],
-      4: stepValid[1] && stepValid[2],
-      5: stepValid[1] && stepValid[2],
-      // ⚠️ Step 6 is unlocked by the RESULT, not by step 5 being enterable — `stepValid[5]` would be
-      // true before anything had been run, which made "Result" read Ready with no result in hand.
-      6: stepValid[6],
-    }),
-    [stepValid],
-  );
+  /**
+   * `stepValid` = the VALUES for this step are usable. It governs whether the next step may be
+   * entered, because an invalid step would let the reader assemble a run the engine must refuse.
+   *
+   * ⚠️ DERIVED FROM `STEPS`, NOT LISTED (2026-10-30). It was a literal map of seven keys, so inserting
+   * four steps meant four more keys and any omission silently made a step unenterable. Now every step
+   * gets a verdict by rule:
+   *   · step 1 is the subject, so it is valid exactly when a runnable subject is chosen;
+   *   · the Result step is valid exactly when a result exists;
+   *   · everything between needs a subject and a resolvable window. **Information sources, Outputs and
+   *     the four settings audits need no decision at all** — they arrive with defensible defaults, so
+   *     they are steps because their READING matters, not because they need an answer.
+   */
+  const stepValid = useMemo(() => {
+    const out = {};
+    for (const s of STEPS) {
+      if (s.n === 1) out[s.n] = canRunBool;
+      else if (s.n === STEP_RESULT) out[s.n] = hasResult;
+      else out[s.n] = canRunBool && instrumentReady;
+    }
+    return out;
+  }, [canRunBool, instrumentReady, hasResult]);
+
+  const stepUnlocked = useMemo(() => {
+    const out = {};
+    for (const s of STEPS) {
+      // ⚠️ The RESULT step is unlocked by the RESULT, not by the Run step being enterable — the Run
+      // step is valid before anything has been run, which made "Result" read Ready with no result.
+      out[s.n] = s.n === 1
+        ? true
+        : s.n === STEP_RESULT
+          ? stepValid[STEP_RESULT]
+          : stepValid[1] && stepValid[2];
+    }
+    return out;
+  }, [stepValid]);
 
   // ⚠️ THE TICK IS A **SESSION** FACT, NOT A VALUE FACT (owner report, 2026-10-26: *"Refreshing the
   // page doesn't reset the steps"*). `stepValid` answers "are these values usable"; it was being
@@ -1138,23 +1657,236 @@ ull = follow the latest, which is the default. */
 
   // Lock reasons name the ACTUAL unmet condition. "Complete the previous step" would be true
   // and useless; "this protocol resolves no symbols" is the thing the reader has to fix.
-  const lockReason = {
-    2: !canRun
-      ? `Pick a ${subject === 'protocol' ? 'protocol' : 'strategy'} in step 1`
-      : subject === 'protocol' && (selectedProtocol?.resolvedSymbols ?? []).length === 0
-        ? 'This protocol resolves no symbols — wire a watchlist or a symbol assignment'
-        : 'Complete step 1',
-    3: 'Finish step 2 first',
-    4: 'Finish step 2 first',
-    5: 'Finish step 2 first',
-    6: 'Available once a run has completed',
+  /**
+   * Lock reasons name the ACTUAL unmet condition. "Complete the previous step" would be true and
+   * useless; "this protocol resolves no symbols" is the thing the reader has to fix.
+   *
+   * ⚠️ ONE RULE FOR EVERY STEP AFTER THE SECOND (2026-10-30). It was a literal map keyed 2–7, so the
+   * four new settings steps had no entry and a locked step rendered "Locked — undefined". Every step
+   * from 3 onward is gated by the same condition, so the reason is computed rather than listed.
+   */
+  const lockReasonFor = (n) => {
+    if (n === 2) {
+      return subject === 'strategy' && blockedByActiveBot
+        // ⚠️ NAMED SEPARATELY. `blockedByActiveBot` also makes `canRun` false, so this case fell into
+        // "Pick a strategy in step 1" — a reason naming a condition the reader has already satisfied,
+        // on a card that is visibly selected.
+        ? `${selectedBot?.name ?? 'This strategy'} is ACTIVE — pause it before backtesting`
+        : !canRun
+          ? `Pick a ${subject === 'protocol' ? 'protocol' : 'strategy'} in step 1`
+          : subject === 'protocol' && (selectedProtocol?.resolvedSymbols ?? []).length === 0
+            ? 'This protocol resolves no symbols — wire a watchlist or a symbol assignment'
+            : 'Complete step 1';
+    }
+    if (n === STEP_RESULT) return 'Available once a run has completed';
+    return 'Finish step 2 first';
   };
 
-  const maxUnlocked = [6, 5, 4, 3, 2, 1].find((n) => stepUnlocked[n]) ?? 1;
+  /**
+   * ⚠️ THIS ARRAY IS THE LAST STEP NUMBER AND IT IS NOT DERIVED — it was `[6, 5, 4, 3, 2, 1]` after the
+   * Outputs step was inserted, so `stepUnlocked[7]` was never consulted and the Result step could not
+   * open however complete the run was. Measured 2026-10-30: a finished 1,027-trade run left the page on
+   * the Run step with a full result payload already in hand and no error anywhere.
+   *
+   * Derived now, so a future step cannot be half-added again.
+   */
+  const maxUnlocked = [...STEPS].reverse().map((s) => s.n).find((n) => stepUnlocked[n]) ?? 1;
   // Clamping is what makes a step RE-LOCK when its inputs stop being valid — e.g. switching to a
   // protocol with no resolvable symbols while standing on step 5 must not leave step 5 on screen.
   const activeStep = Math.min(step, maxUnlocked);
   const activeMeta = STEPS.find((s) => s.n === activeStep) ?? STEPS[0];
+
+  // ── THE SESSION'S CHANGES ────────────────────────────────────────────────────────────────────
+  /**
+   * Owner direction, 2026-10-30: *"explore a method of presenting the previous value before the most
+   * recent change so the user can track the changes made during the backtesting session … we should
+   * frame it as a session because users will probably test many times in a row"*, and for step 5:
+   * *"remind us of our selections and maybe even list the changes made and show the two values, old
+   * and new."*
+   *
+   * ⚠️ DERIVED BY DIFFING A SNAPSHOT, NOT BY WRAPPING THE SETTERS. A wrapped setter only records the
+   * call sites somebody remembered to wrap, so the next control added records nothing — a gap that is
+   * invisible by construction. One diff over this declared list cannot miss a change to a listed
+   * field, and adding a row here is the only way to track a new one.
+   *
+   * ⚠️ A FIELD MUST BE IN USE TO BE TRACKED. `Fixed $` while the model is `% of Equity` is not a
+   * change to what the run does; logging it would report movement in a value the engine ignores.
+   * The same test applies to the ATR and Kelly fields.
+   *
+   * ⚠️ `null` MEANS "NOT YET KNOWN", AND IT IS NOT A CHANGE. The protocol and bot lists load
+   * asynchronously, so on first paint the subject has no name. A row whose value is null is left out
+   * of the baseline entirely, so the default subject arriving is not logged as something the reader
+   * did — and when it later changes from a real name to another real name, that is.
+   */
+  const sessionTracked = [
+    {
+      label: 'Subject',
+      step: 1,
+      value: subject === 'protocol'
+        ? (selectedProtocol?.name ?? null)
+        : (selectedBot?.name ?? null),
+    },
+    {
+      label: 'Direction',
+      step: 1,
+      value: directionFilter ? String(directionFilter).replace('_ONLY', ' only') : 'Any direction',
+    },
+    // ⚠️ DERIVED FOR BOTH SUBJECTS (measured 2026-10-30 on the protocols route). A strategy's timeframe
+    // is the bot's own cadence, and a protocol's is chosen FOR the reader from
+    // (recommendedTimeframe) — so on first load the form, not the reader, made this decision. Logging it
+    // reported two changes nobody had made. A change the reader DOES make still logs; only the settle
+    // window absorbs the form's own work.
+    { label: 'Timeframe', step: 2, derived: true, value: marketTimeframe || null },
+    {
+      label: 'Window',
+      step: 2,
+      // The stored period is filtered to the timeframe, which is itself auto-chosen — so the default
+      // period is the form's pick too. Same rule as the timeframe above.
+      derived: true,
+      value: usePeriod
+        ? (selectedPeriod?.name ?? `period (none stored for ${marketTimeframe || '—'})`)
+        : `last ${bars} bars`,
+    },
+    { label: 'News filter', step: 3, value: NEWS_MODE_LABELS[newsExclusion] ?? newsExclusion },
+    { label: 'Sides', step: 3, value: DIRECTION_LABELS[directionMode] ?? directionMode },
+    // The trade shape and the money only exist for a strategy. A protocol run simulates no fills,
+    // so every row below would be a value nothing reads.
+    ...(subject === 'strategy' ? [
+      { label: 'Stop (SL)', step: 4, derived: true, value: `${Number(effectiveSlPct).toFixed(2)}%` },
+      {
+        label: 'Target (TP)',
+        step: 4,
+        derived: true,
+        value: Number(overrides.tpPct) > 0
+          ? `${Number(overrides.tpPct).toFixed(2)}%`
+          : (Number(selectedBot?.tpPct) > 0 ? `${Number(selectedBot.tpPct).toFixed(2)}%` : null),
+      },
+      {
+        label: 'Entry bar',
+        step: 4,
+        derived: true,
+        value: overrides.minComposite.trim() !== ''
+          ? `${overrides.minComposite}%`
+          : (selectedBot?.minComposite != null ? `${selectedBot.minComposite}%` : null),
+      },
+      { label: 'Spread', step: 4, derived: true, value: `${(spread * 100).toFixed(3)}%` },
+      { label: 'Slippage', step: 4, derived: true, value: `${(slippage * 100).toFixed(3)}%` },
+      { label: 'Commission', step: 4, derived: true, value: `$${Number(commission).toFixed(2)}` },
+      { label: 'Sizing model', step: 4, derived: true, value: SIZING_MODEL_LABELS[positionModel] ?? positionModel },
+      ...(positionModel === 'fixedPercent' ? [
+        { label: 'Account size', step: 4, derived: true, value: `$${accountSize.toLocaleString()}` },
+        { label: 'Risk %', step: 4, derived: true, value: `${riskPct}%` },
+      ] : []),
+      ...(positionModel === 'fixedDollar' ? [
+        { label: 'Fixed $', step: 4, derived: true, value: `$${fixedAmount}` },
+      ] : []),
+      ...(positionModel === 'kellyFull' || positionModel === 'kellyHalf' ? [
+        { label: 'Kelly cap', step: 4, derived: true, value: `${kellyCapPct}%` },
+      ] : []),
+      ...(positionModel === 'atrEqualRisk' ? [
+        { label: 'ATR multiplier', step: 4, derived: true, value: `${atrMultiplier}×` },
+        { label: 'ATR period', step: 4, derived: true, value: String(atrPeriod) },
+      ] : []),
+    ] : []),
+  ].filter((r) => r.value != null);
+
+  /**
+   * ⚠️ HOW MANY DEBOUNCE TICKS A SUBJECT SWITCH KEEPS ITS DERIVED VALUES QUIET.
+   *
+   * The bug: half the tracked rows are not values the reader types — they are values the FORM derives
+   * from the chosen bot (stop, target, entry bar, spread, slippage, commission, sizing). Changing the
+   * subject re-derives them, but in LATER renders than the subject itself, because the bot list is a
+   * separate query and the cost class follows the symbol. So one subject switch was logged once, and
+   * then — one or two ticks later — six derived values were logged as though the reader had edited
+   * each one.
+   *
+   * Owner report, 2026-10-30: *"This table is suggesting everything changed … I certainly never
+   * changed so many different values."*
+   *
+   * THE FIX: a derived row is never reported while the switch is SETTLING. Settling is counted in
+   * ticks, not seconds — a wall-clock window is a guess about how long a query takes and would report
+   * the same phantom rows on a slow machine.
+   */
+  const SUBJECT_SETTLE_TICKS = 6;
+  const SESSION_LOG_LIMIT = 25;
+  const [sessionLog, setSessionLog] = useState([]);
+  const sessionBaseline = useRef(null);
+  const sessionTimer = useRef(null);
+  /**
+   * Ticks since the form was last (re)established — a subject change, or the first load.
+   *
+   * ⚠️ IT STARTS AT 0, NOT AT `null` (measured 2026-10-30, immediately after this shipped). `null` meant
+   * "settled", so a FRESH PAGE LOAD had no settle window at all: `spread`/`slippage` initialise to their
+   * defaults, the detected asset class rewrites them a moment later, and the log reported three
+   * "changes" before the reader had touched anything. **A first load is a settle** — the subject, the
+   * bot list and the cost class all arrive asynchronously, in different ticks.
+   */
+  const settleTicks = useRef(0);
+  const sessionSignature = sessionTracked.map((r) => `${r.label}=${r.value}`).join('|');
+
+  useEffect(() => {
+    // ⚠️ DEBOUNCED, because several of these are typed values. Entering `2.5` into a stop would
+    // otherwise log three changes (`2`, `2.`, `2.5`) and the panel would read as a keystroke trace
+    // rather than a record of decisions.
+    clearTimeout(sessionTimer.current);
+    sessionTimer.current = setTimeout(() => {
+      const before = sessionBaseline.current;
+      const nowRows = new Map(sessionTracked.map((r) => [r.label, r.value]));
+
+      if (before === null) {
+        sessionBaseline.current = nowRows;
+        return;
+      }
+
+      const subjectChanged = before.has('Subject')
+        && nowRows.has('Subject')
+        && before.get('Subject') !== nowRows.get('Subject');
+      if (subjectChanged) settleTicks.current = 0;
+      else settleTicks.current += 1;
+
+      const settling = settleTicks.current <= SUBJECT_SETTLE_TICKS;
+
+      const changed = [];
+      for (const row of sessionTracked) {
+        if (!before.has(row.label)) continue;              // appeared with the subject; not a decision
+        if (before.get(row.label) === row.value) continue;
+        // Fallout from a subject switch that has not settled yet — re-baseline, do not report.
+        if (row.derived && settling) continue;
+        changed.push({
+          label: row.label,
+          step: row.step,
+          from: before.get(row.label),
+          to: row.value,
+          at: Date.now(),
+        });
+      }
+
+      sessionBaseline.current = nowRows;
+
+      // ⚠️ A SUBJECT SWITCH IS ONE CHANGE, NOT SEVEN. Its row is `derived: false`, so it survives the
+      // settle filter while everything the form re-derived from it is absorbed.
+      if (changed.length) setSessionLog((rows) => [...changed.reverse(), ...rows].slice(0, SESSION_LOG_LIMIT));
+    }, 600);
+    return () => clearTimeout(sessionTimer.current);
+    // `sessionSignature` IS the dependency: it is the value of every tracked field serialised, so it
+    // changes exactly when one of them does. Listing the 20 fields instead would re-run this effect
+    // for unrelated renders and reset the debounce mid-type.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionSignature]);
+
+  /**
+   * How many session changes touch each step, for the rail badge.
+   *
+   * ⚠️ THIS IS THE ANSWER TO "did I change something?" FROM ANYWHERE ON THE PAGE, and it is why the
+   * previous value does NOT need to be printed under every field. The owner's complaint is density;
+   * a per-field "← was 2.00%" adds a line of text to every control the reader touches, while a badge
+   * on the rail adds at most a few characters and points at the one table that holds them all.
+   */
+  const sessionChangeCounts = useMemo(() => {
+    const counts = {};
+    for (const r of sessionLog) counts[r.step] = (counts[r.step] ?? 0) + 1;
+    return counts;
+  }, [sessionLog]);
 
   // ── AUTO-ADVANCE IS DELIBERATELY NARROW ──────────────────────────────────────────────────────
   // ONLY Run → Result advances by itself, because that transition is the direct outcome of the
@@ -1164,11 +1896,11 @@ ull = follow the latest, which is the default. */
   // satisfied steps 1-2 before the data had even painted. They advance on **Continue**.
   // `autoAdvanced` is what stops a manual visit to a satisfied step bouncing forward again.
   useEffect(() => {
-    if (activeStep !== 5 || !hasResult) return;
-    if (autoAdvanced.current.has(5)) return;
-    autoAdvanced.current.add(5);
-    setReached((prev) => new Set(prev).add(5));
-    setStep(6);
+    if (activeStep !== STEP_RUN || !hasResult) return;
+    if (autoAdvanced.current.has(STEP_RUN)) return;
+    autoAdvanced.current.add(STEP_RUN);
+    setReached((prev) => new Set(prev).add(STEP_RUN));
+    setStep(STEP_RESULT);
   }, [activeStep, hasResult]);
 
   const goToStep = (n) => {
@@ -1204,8 +1936,8 @@ ull = follow the latest, which is the default. */
             <strong>One subject, one window, one stored run — so two runs can be compared.</strong>
             <br />
             Pick a <strong>protocol</strong> (scores only) or a <strong>strategy</strong> (scores plus
-            execution), choose a window, and run. Every run is stored, listed under “Completed runs”,
-            and any two can be compared on the same window.
+            execution), choose a window, and run. Every run is stored, and any two can be compared on
+            the <strong>Completed Runs</strong> page in this area.
             <br />
             <br />
             A protocol decides <em>whether an opportunity exists</em>; a bot decides <em>what to do
@@ -1248,12 +1980,20 @@ ull = follow the latest, which is the default. */
                       </span>
                       <span className="pb-step-state">
                         {state === 'locked'
-                          ? `Locked — ${lockReason[s.n]}`
+                          ? `Locked — ${lockReasonFor(s.n)}`
                           : done
                             ? 'Done'
                             : activeStep === s.n
                               ? 'In progress'
                               : 'Ready'}
+                        {/* A change marker, not a second state: the step can be Ready AND changed.
+                            Rendered after the state so the reading order stays "what is this step
+                            doing", then "you altered it this session". */}
+                        {sessionChangeCounts[s.n] > 0 && (
+                          <span className="pb-step-changed">
+                            {' '}· {sessionChangeCounts[s.n]} change{sessionChangeCounts[s.n] === 1 ? '' : 's'}
+                          </span>
+                        )}
                       </span>
                     </span>
                   </button>
@@ -1271,32 +2011,41 @@ ull = follow the latest, which is the default. */
                 ? (activeMeta.labelForProtocol ?? activeMeta.label)
                 : (activeMeta.labelForStrategy ?? activeMeta.label)}
             </h2>
-            <span className="pb-step-panel-of">
-              Step {activeStep} of {STEPS.length}
-            </span>
+            {/* ⚠️ THE "STEP 6 OF 6" COUNTER IS GONE (owner direction, 2026-10-30: *"Remove these step
+                labels they're just extra we don't need cluttering the screen"*). The rail beside this
+                panel already shows every step, its number and its state — the counter restated one row
+                of it. The captured-period detail MOVED HERE as the header's ℹ, which is the space the
+                counter was using. */}
+            {result?.measuredPeriod && (
+              <PageInfoPopover label="Captured period">
+                <strong>{result.measuredPeriod.name}</strong>
+                {result.measuredPeriod.note ? <> — {result.measuredPeriod.note}</> : null}
+                <br />
+                {result.measuredPeriod.from} → {result.measuredPeriod.to}
+                {result.measuredPeriod.bars != null
+                  ? ` · ${result.measuredPeriod.bars.toLocaleString()} bars imported`
+                  : ' · bar count not recorded'}
+                <br />
+                <br />
+                A captured period is a <strong>named, frozen window</strong>, versioned rather than
+                edited so that work done today is measured on the same bars as work done last week.
+                Moving it silently invalidates every earlier comparison.
+                {result.measuredPeriod.bars == null && (
+                  <>
+                    <br />
+                    <br />
+                    ⚠️ <strong>The bar count was not recorded</strong> on this run. That is missing
+                    data, not a window of zero bars — re-run it to capture the count.
+                  </>
+                )}
+              </PageInfoPopover>
+            )}
           </header>
 
           {activeStep === 1 && (
             <>
         <div className="pb-run-head">
-          {/*
-            ⚠️ THE SUBJECT IS NO LONGER A TOGGLE (owner direction, 2026-10-26: *"I think I'm
-            complicating things by merging protocol scoring backtesting with full strategy
-            backtesting… Lets separate them. Split … into two pages."*).
-
-            Each page now owns ONE subject, so the control that could switch it is a LINK to the other
-            page. Keeping a toggle here would let a reader assemble a protocol run on the Strategies
-            page (or the reverse) while the URL said otherwise — the page and the run would disagree
-            about what was being measured.
-          */}
-          <div className="pb-subject">
-            <span className="pb-subject-btn pb-subject-btn--on" aria-current="page">
-              {subject === 'protocol' ? 'Protocols (Scoring Only)' : 'Complete Strategies'}
-            </span>
-            <Link className="pb-subject-btn" to={otherSubjectRoute}>
-              {subject === 'protocol' ? 'Backtest Strategies →' : '← Backtest Protocols'}
-            </Link>
-          </div>
+          
 
           {/* ⚠️ THE SEARCH LIVES HERE, NOT IN THE FILTER BAR, AND IT SEARCHES BOTH SUBJECTS
               (owner direction, 2026-10-25). It used to render only under Protocols, so switching
@@ -1323,11 +2072,10 @@ ull = follow the latest, which is the default. */
             }
           />
 
-          <span className="pb-count" aria-live="polite">
-            {subject === 'protocol'
-              ? `${filteredProtocols.length} of ${protocols.length} protocols`
-              : `${filteredBots.length} of ${bots.length} strategies`}
-          </span>
+          {/* ⚠️ THE "40 of 40 strategies" COUNT WAS REMOVED (owner direction, 2026-10-30). The carousel's
+              own header already prints "n / total", so this repeated the same fact in a second place —
+              and the number is not a result, it is a length. Kept out of the DOM entirely rather than
+              hidden, because a `sr-only` copy would re-add the duplication for screen readers. */}
 
           {/* ⚠️ THE DIRECTION FILTER IS HERE, NOT IN A SEPARATE BAR, AND IT APPLIES TO BOTH SUBJECTS
               (owner direction, 2026-10-25). For a strategy the value is DERIVED from its protocol
@@ -1398,36 +2146,35 @@ ull = follow the latest, which is the default. */
             States the pause state, refuses the run, and offers the one action that unblocks it.
             ⚠️ It says plainly that pausing does NOT close a position — see `blockedByActiveBot`. */}
         {blockedByActiveBot && (
-          <div className="pb-guard" role="status">
-            <strong>⏸ {selectedBot.name} is active.</strong>
-            <span className="pb-guard-note">
-              Pause it to make this comparison reproducible — an active bot keeps changing state
-              underneath the run. Pausing stops new entries; it does <em>not</em> close a position
-              that is already open.
-            </span>
-            <button
-              type="button"
-              className="ff-btn pb-clear"
-              disabled={pauseMutation.isPending}
-              onClick={() => pauseMutation.mutate(selectedBot.id)}
-            >
-              {pauseMutation.isPending ? 'Pausing…' : 'Pause this strategy'}
-            </button>
-          </div>
+          <InfoNote tone="warning" label="This strategy is active" role="status">
+            <strong>⏸ {selectedBot.name}</strong> — pause it to make this comparison reproducible. An
+            active bot keeps changing state underneath the run. Pausing stops new entries; it does{' '}
+            <em>not</em> close a position that is already open.
+            <div className="bt-note-actions">
+              <button
+                type="button"
+                className="ff-btn pb-clear"
+                disabled={pauseMutation.isPending}
+                onClick={() => pauseMutation.mutate(selectedBot.id)}
+              >
+                {pauseMutation.isPending ? 'Pausing…' : 'Pause this strategy'}
+              </button>
+            </div>
+          </InfoNote>
         )}
 
         {/* A protocol is not itself active, so a protocol run is never blocked. But a change to the
             thing a live bot trades contaminates the comparison just the same — say so. */}
         {activeBotsOnProtocol.length > 0 && (
-          <div className="pb-guard" role="status">
-            <strong>
-              ⚠ {activeBotsOnProtocol.length} active bot{activeBotsOnProtocol.length === 1 ? '' : 's'} trade this protocol
-            </strong>
-            <span className="pb-guard-note">
-              The run is allowed — a protocol backtest places no order — but while those bots trade,
-              the protocol&rsquo;s inputs keep moving. {activeBotsOnProtocol.map((b) => b.name).join(', ')}.
-            </span>
-          </div>
+          <InfoNote
+            tone="warning"
+            label={`${activeBotsOnProtocol.length} active bot${activeBotsOnProtocol.length === 1 ? '' : 's'} trade this protocol`}
+            role="status"
+          >
+            The run is allowed — a protocol backtest places no order — but while those bots trade, the
+            protocol&rsquo;s inputs keep moving.{' '}
+            {activeBotsOnProtocol.map((b) => b.name).join(', ')}.
+          </InfoNote>
         )}
 
         {pauseMutation.isError && <NoticeBlock notice={noticeFromError(pauseMutation.error)} compact />}
@@ -1456,6 +2203,24 @@ ull = follow the latest, which is the default. */
                 <p className="pb-strip-item pb-strip-item--text">
                   <strong>{selectedBot?.timeframe || 'none'}</strong>
                 </p>
+                {/* ⚠️ THIS LOOKED LIKE A BROKEN MENU (owner report, 2026-10-30: *"This seems fixed to
+                    5m … is that because nothing else is ready? It needs to be clear."*). It is not a
+                    menu at all — it is `trading_strategy.timeframe`, the cadence the bot itself
+                    trades, and a run on any other cadence would measure bars the bot never sees. The
+                    BAR COUNT is stated too, because that is the other half of the question: the
+                    cadence is fixed AND the period holds enough (or does not). */}
+                <span className="pb-field-note">
+                  Not a menu — this is the strategy&rsquo;s own cadence ({selectedBot?.timeframe || 'none'}),
+                  read from the bot. A run on any other timeframe would score bars the bot never
+                  trades, so it is changed on the strategy, not here.
+                  {(() => {
+                    const cov = timeframeCoverage?.[marketTimeframe];
+                    if (!cov) return '';
+                    return cov.usable
+                      ? ` This period holds ${cov.bars.toLocaleString()} of them (minimum ${MIN_RUN_BARS}).`
+                      : ` ⚠ This period holds only ${cov.bars.toLocaleString()} of them, under the ${MIN_RUN_BARS}-bar minimum — the run will refuse until more data is imported.`;
+                  })()}
+                </span>
               </div>
             </>
           ) : (
@@ -1497,8 +2262,12 @@ ull = follow the latest, which is the default. */
                     return (
                       <option key={tf} value={tf} disabled={disabled}>
                         {tf}
-                        {cov ? ` · ${cov.bars.toLocaleString()} bars` : unknown ? '' : ''}
-                        {disabled ? ' · not enough' : ''}
+                        {cov ? ` · ${cov.bars.toLocaleString()} bars` : ''}
+                        {/* ⚠️ "NOT ENOUGH" WAS AMBIGUOUS (owner direction, 2026-10-30: *"This seems
+                            fixed to 5m … is that because nothing else is ready? It needs to be clear."*)
+                            The reason is a BAR COUNT against a stated minimum, so the option says
+                            exactly that instead of a judgement the reader has to guess at. */}
+                        {disabled ? ` · under the ${MIN_RUN_BARS}-bar minimum` : ''}
                       </option>
                     );
                   })}
@@ -1510,12 +2279,28 @@ ull = follow the latest, which is the default. */
                       ? `Checking which timeframes hold ${MIN_RUN_BARS}+ bars for ${marketSymbol || 'this market'}…`
                       : (() => {
                         const usable = TIMEFRAMES.filter((t) => timeframeCoverage[t]?.usable);
+                        const blocked = TIMEFRAMES.filter((t) => timeframeCoverage[t] && !timeframeCoverage[t].usable);
                         const scope = usePeriod && selectedPeriod
                           ? 'in this period'
                           : 'in the stored history';
-                        return usable.length === 0
-                          ? `No timeframe holds ${MIN_RUN_BARS}+ bars ${scope} — import data on Backtest Data first.`
-                          : `${usable.length} of ${TIMEFRAMES.length} timeframes hold ${MIN_RUN_BARS}+ bars ${scope} for ${marketSymbol}. ${usePeriod ? 'Counts are measured inside this period, not the whole history.' : 'Counts are the whole stored history.'}`;
+                        // ⚠️ LEAD WITH THE ANSWER, NOT WITH A COUNT (owner direction, 2026-10-30).
+                        // "1 of 5 timeframes hold 60+ bars" makes the reader work out WHY the control
+                        // looks locked; when only one qualifies, the note says so and names what the
+                        // others hold. Measured 2026-10-29: for `dev-window-v1` VIX 5m only the 5m
+                        // series clears the minimum, so the select genuinely cannot move.
+                        if (usable.length === 0) {
+                          return `No timeframe holds ${MIN_RUN_BARS}+ bars ${scope} — import data on Backtest Data first.`;
+                        }
+                        if (usable.length === 1) {
+                          const only = usable[0];
+                          const why = blocked
+                            .map((t) => `${t} holds ${timeframeCoverage[t].bars.toLocaleString()}`)
+                            .join(', ');
+                          return `Locked to ${only} — it is the only timeframe with ${MIN_RUN_BARS}+ bars ${scope} for ${marketSymbol}`
+                            + (why ? ` (${why}).` : '.')
+                            + ' This is a DATA limit, not a setting: the other series do not extend far enough to measure.';
+                        }
+                        return `${usable.length} of ${TIMEFRAMES.length} timeframes hold ${MIN_RUN_BARS}+ bars ${scope} for ${marketSymbol}. ${usePeriod ? 'Counts are measured inside this period, not the whole history.' : 'Counts are the whole stored history.'}`;
                       })()}
                 </span>
               </div>
@@ -1615,6 +2400,37 @@ ull = follow the latest, which is the default. */
             they are not offered as a toggle: a switch the engine cannot honour is a lie. */}
         {activeStep === 3 && (
           <>
+            {/*
+              ── WHICH SIDES THIS RUN MAY OPEN (#1155, 2026-10-31) ─────────────────────────────────
+              Owner direction: *"I read that it's easier to profit on VIX by shorting it but we can only
+              tell that when we can test the same period both SHORT and LONG."*
+
+              It sits in "Information sources" alongside the news filter because that is the step that
+              decides WHAT POPULATION gets measured — and direction decides whether a signal becomes a
+              position at all. ⚠️ 'Long only' is first and is the default: every run stored so far was
+              long-only by construction, so a reader opening this page must not see a control implying
+              the population changed when it did not.
+            */}
+            <div className="ff-field">
+              <label className="ff-label" htmlFor="bt-direction">Sides this run may open</label>
+              <select
+                id="bt-direction"
+                className="ff-select"
+                value={directionMode}
+                onChange={(e) => setDirectionMode(e.target.value)}
+              >
+                <option value="long">↗ Long only — every run before 2026-10-31 did this</option>
+                <option value="short">↘ Short only — the mirror on the same bars</option>
+                <option value="both">↕ Both — take every signal either way</option>
+              </select>
+              <span className="pb-field-note">
+                A SIGNAL decides the side: BUY / STRONG_BUY opens a long, SELL / STRONG_SELL opens a
+                short, with the stop above and the target below. Choose <em>Short only</em> to run the
+                same window as a mirror of the long run and compare the two — that is the only way to
+                answer "is this protocol better in the other direction?".
+              </span>
+            </div>
+
             <div className="ff-field pb-info-window">
               <label className="ff-label" htmlFor="bt-news">News days in the window</label>
               <select
@@ -1641,6 +2457,55 @@ ull = follow the latest, which is the default. */
                 {' '}“Reduce weight” is deliberately absent — the engine has no weighting step, so it
                 would have been a control that changed nothing.
               </span>
+
+              {/* ── WHAT NEWS ACTUALLY APPLIES (2026-10-30) ─────────────────────────────────────
+                  The answer, before the run: how many records exist for THIS symbol inside THIS
+                  window, and therefore whether the choice above does anything at all. */}
+              <div className="pb-news-preview">
+                {newsPreviewQuery.isLoading && (
+                  <p className="pb-field-note">Checking what news records exist for {marketSymbol}…</p>
+                )}
+                {newsPreviewQuery.isError && (
+                  <p className="pb-field-note">
+                    ⚠ Could not read news coverage ({newsPreviewQuery.error?.status ?? 'no status'}) — that is
+                    <strong> unknown</strong>, not zero. The run will still apply whichever mode is selected.
+                  </p>
+                )}
+                {newsPreview?.available === false && (
+                  <p className="pb-field-note">⚠ {newsPreview.reason}</p>
+                )}
+                {newsPreview?.available && (
+                  <>
+                    <p className="pb-field-note">
+                      <strong>{newsPreview.articles}</strong> news record(s) on{' '}
+                      <strong>{newsPreview.distinctDates}</strong> date(s){' '}
+                      {newsPreview.windowBasis === 'selected-window'
+                        ? 'inside the selected window'
+                        : 'across the WHOLE stored history — this run\u2019s window is a bar count, so the true count is at most this'}
+                      {newsPreview.articles > 0 && newsPreview.sampleDates?.length > 0 && (
+                        <> — {newsPreview.sampleDates.slice(0, 5).join(', ')}{newsPreview.distinctDates > 5 ? '…' : ''}</>
+                      )}
+                      {Object.keys(newsPreview.byImpact ?? {}).length > 0 && (
+                        <> · impact: {Object.entries(newsPreview.byImpact).map(([k, v]) => `${k} ${v}`).join(', ')}</>
+                      )}
+                      .
+                    </p>
+                    {newsIsInert && (
+                      <p className="pb-field-note pb-news-inert">
+                        🛑 <strong>This choice has no effect on this run.</strong> No news records exist for{' '}
+                        {marketSymbol} in this window, so &ldquo;skip news-day bars&rdquo; and &ldquo;include
+                        every bar&rdquo; measure exactly the same bars. The run is valid — it simply is not
+                        news-filtered, and nothing will say so afterwards unless this line does.
+                      </p>
+                    )}
+                    {newsPreview.excludesAnything && newsExclusion !== 'none' && (
+                      <p className="pb-field-note">
+                        Those {newsPreview.distinctDates} date(s) will be dropped from the run.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             <h3 className="pb-info-head">Information the selected {subject === 'protocol' ? 'protocol' : 'strategy'} reads</h3>
@@ -1674,8 +2539,55 @@ ull = follow the latest, which is the default. */
 
         {/* ── STEP 4 opens at the execution section below ──────────────────────────────────── */}
 
-        {/* ── STEP 5 — the run ─────────────────────────────────────────────────────────────── */}
-        {activeStep === 5 && (
+        {/* ── STEP 5 — OUTPUTS (owner direction, 2026-10-30: *"maybe add a new step for the user to
+            select what outputs they want"*) ────────────────────────────────────────────────────
+            ⚠️ THIS STEP NEVER BLOCKS A RUN. It arrives with a defensible default set, so it is valid
+            as soon as it is reachable — it exists because the choice is worth making deliberately, not
+            because a run needs an answer. That is what keeps it from becoming friction in a session of
+            twenty runs. */}
+        {activeStep === STEP_OUTPUTS && (
+          <div className="pb-fields">
+            <p className="pb-field-note">
+              What the Result step should show. Nothing here changes what the engine measures — it
+              changes what you are handed afterwards, and it is remembered for this subject.
+            </p>
+
+            <ul className="bt-output-list">
+              {OUTPUT_OPTIONS
+                .filter((o) => (subject === 'protocol' ? o.protocols : o.strategies))
+                .map((o) => (
+                  <li key={o.id} className="bt-output-row">
+                    <label className="bt-output-toggle">
+                      <input
+                        type="checkbox"
+                        checked={outputs[o.id] !== false}
+                        onChange={(e) => setOutput(o.id, e.target.checked)}
+                      />
+                      <span className="bt-output-label">{o.label}</span>
+                    </label>
+                    <span className="bt-output-hint">{o.hint}</span>
+                  </li>
+                ))}
+            </ul>
+
+            {/* A panel that does not exist yet is declared, not silently absent — the owner asked for
+                this one twice, and an option that vanishes reads as an option that was refused. */}
+            <InfoNote tone="info" label="A price chart of this run is not available yet">
+              What is planned is one chart of the <em>run’s own</em> bars, coloured by the algorithm’s
+              verdict, with support and resistance drawn as zones from the level directives. The chart
+              that used to sit here was a general chart with its own symbol menu — it opened on
+              whatever symbol was picked last, drew no scoring overlay, and so was never a picture of
+              the run.
+              <br />
+              <br />
+              Blocked by <strong>#1150</strong>: only 1 of 6 level directives returns its levels as
+              data; the rest write them into a sentence, which cannot be drawn.
+            </InfoNote>
+          </div>
+        )}
+
+        {/* ── STEP 6 — the run ─────────────────────────────────────────────────────────────── */}
+        {activeStep === STEP_RUN && (
           <>
 
         {/* ── THE RUN, AS FACTS ─────────────────────────────────────────────────────────────────
@@ -1729,6 +2641,53 @@ ull = follow the latest, which is the default. */
               )}
             </div>
 
+            {/* ── WHAT CHANGED IN THIS VISIT ─────────────────────────────────────────────────────
+                Owner direction, 2026-10-30. It sits BELOW the strip on purpose: the strip is what the
+                run will use, this is the history of how it got there. Two tables, two questions —
+                folding them into one would make "SL 2.00%" appear twice with no way to tell which one
+                the engine reads. */}
+            {sessionLog.length > 0 && (
+              <div className="pb-session-log">
+                <div className="pb-session-log-head">
+                  <h3>Changes this session</h3>
+                  <button
+                    type="button"
+                    className="ff-btn ff-btn-secondary pb-session-clear"
+                    onClick={() => setSessionLog([])}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <table className="pb-session-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Change</th>
+                      <th scope="col">Was</th>
+                      <th scope="col">Now</th>
+                      <th scope="col">At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessionLog.map((r) => (
+                      <tr key={`${r.label}-${r.at}`}>
+                        <th scope="row">{r.label}</th>
+                        <td className="pb-was">{r.from}</td>
+                        <td className="pb-now">{r.to}</td>
+                        <td className="pb-at">{new Date(r.at).toLocaleTimeString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="pb-field-note">
+                  Newest first, this visit only. The strip above is what the run will <em>use</em>; this
+                  is how it got there. A subject switch re-derives the timeframe, window, stop, target,
+                  costs and sizing from the chosen subject, so it is recorded as{' '}
+                  <strong>one</strong> change rather than a list — those values are the form&rsquo;s
+                  work, not yours. Nothing here is sent to the engine: it is a record, not a setting.
+                </p>
+              </div>
+            )}
+
             <PageInfoPopover label="Why the window matters">
               <strong>A stored period is a DATE RANGE. “Last N bars” is a ROW COUNT.</strong>
               <br />
@@ -1749,6 +2708,64 @@ ull = follow the latest, which is the default. */
             </PageInfoPopover>
           </div>
         )}
+
+            {/* ── MODES (owner direction, 2026-10-30) ─────────────────────────────────────────────
+                *"Create modes. The first Modes will be Normal and Auto-Accept."* Placed here, on the
+                Run step, because it decides what happens AFTER the run this button starts — and
+                because the gates it will apply have to be readable before it applies them, not
+                explained afterwards. */}
+            <fieldset className="bt-modes">
+              <legend>Mode</legend>
+              <div className="bt-mode-options">
+                <label className={`bt-mode${mode === 'normal' ? ' bt-mode--on' : ''}`}>
+                  <input
+                    type="radio"
+                    name="bt-mode"
+                    value="normal"
+                    checked={mode === 'normal'}
+                    onChange={() => setMode('normal')}
+                  />
+                  <span className="bt-mode-name">Normal</span>
+                  <span className="bt-mode-hint">
+                    A run is stored and shown. Nothing is promoted — you accept a baseline yourself.
+                  </span>
+                </label>
+                <label className={`bt-mode${mode === 'auto' ? ' bt-mode--on' : ''}`}>
+                  <input
+                    type="radio"
+                    name="bt-mode"
+                    value="auto"
+                    checked={mode === 'auto'}
+                    onChange={() => setMode('auto')}
+                  />
+                  <span className="bt-mode-name">Auto-Accept</span>
+                  <span className="bt-mode-hint">
+                    A run that beats A by the gates below becomes the new <strong>A</strong> with no
+                    click. A run that fails a gate is left as B and says which gate refused it.
+                  </span>
+                </label>
+              </div>
+              {mode === 'auto' && (
+                /* ⚠️ A CONTAINER, NOT A TRAILING PARAGRAPH (owner direction, 2026-10-30: *"Put this
+                   text … into a container to frame it better"*). It is the same `InfoNote` the result
+                   page uses, so the sentence that states a policy and the sentence that reports its
+                   outcome are the same shape — and the gates, which are the whole substance of the
+                   mode, are no longer loose text under the radios. */
+                <InfoNote
+                  tone="info"
+                  label="Gates in force"
+                  meta={`source: ${autoAcceptGates.source}`}
+                >
+                  <strong>+{autoAcceptGates.minImprovePct}%</strong> total P&amp;L against A and at least{' '}
+                  <strong>{autoAcceptGates.minTrades}</strong> closed trades.
+                  <br />
+                  🛑 <strong>This never changes the strategy’s own settings.</strong> It moves the
+                  reference A points at, and nothing else — the bot keeps trading exactly what it
+                  trades now. Writing a tested configuration into the live strategy is a separate,
+                  explicit action and is not built.
+                </InfoNote>
+              )}
+            </fieldset>
 
             {/* The action sits AFTER the facts deliberately: the strip states exactly what is about
                 to be measured, then the button starts it. Split into two steps, the run button used
@@ -1774,24 +2791,22 @@ ull = follow the latest, which is the default. */
         )}
 
       {/* ── STEP 4 — Costs & sizing for strategies; SCORES ONLY for protocols ── */}
-      {activeStep === 4 && scoresOnly && (
-        <div className="pb-guard pb-guard--info" role="note">
-          <strong>🔢 A protocol produces SCORES. There is nothing to set in this step.</strong>
-          <p>
-            A protocol answers <em>“does an opportunity exist?”</em> — it is a reading of the bars, not
-            an order. It has no position size, no stop, no spread and no account, so asking for them
-            would be asking you to price a trade nobody places.
-          </p>
-          <p>
-            This run therefore records <strong>scores, signals and forward returns</strong> and
-            simulates <strong>no fills</strong>. Switch the subject to <strong>Complete Strategies</strong>{' '}
-            (step 1) to measure a bot, where costs, sizing and trade size all belong to that bot.
-          </p>
-          <p className="pb-field-note">
-            ⚠️ Runs stored before 2026-10-26 <em>did</em> simulate trades from a protocol, using
-            whatever the form held at the time. Those runs have a trade count where a new one has 0 —
-            the comparison panel reports that rather than averaging the two.
-          </p>
+      {activeStep === 4 && scoresOnly && (<>
+        <InfoNote tone="info" label="A protocol produces scores — nothing to set here">
+          A protocol answers <em>“does an opportunity exist?”</em> — it is a reading of the bars, not an
+          order. It has no position size, no stop, no spread and no account, so asking for them would be
+          asking you to price a trade nobody places.
+          <br />
+          <br />
+          This run therefore records <strong>scores, signals and forward returns</strong> and simulates{' '}
+          <strong>no fills</strong>. Switch the subject to <strong>Complete Strategies</strong> (step 1)
+          to measure a bot, where costs, sizing and trade size all belong to that bot.
+          <br />
+          <br />
+          ⚠️ Runs stored before 2026-10-26 <em>did</em> simulate trades from a protocol, using whatever
+          the form held at the time. Those runs have a trade count where a new one has 0 — the
+          comparison panel reports that rather than averaging the two.
+        </InfoNote>
 
           {/* ⚠️ STEP 4 IS THE DIRECTIVE LIST (owner direction, 2026-10-27): *"a list of directives in
               the protocol and the settings for those directives offered in fields for editing …
@@ -1806,23 +2821,15 @@ ull = follow the latest, which is the default. */
           <Suspense fallback={<p className="pb-none">Loading the directive settings…</p>}>
             <DirectiveSettingsPanel protocolSlug={protocolId} />
           </Suspense>
-        </div>
+        </>
       )}
 
       {activeStep === 4 && !scoresOnly && (
-      <div className="bt-execution-section">
-        <button
-          type="button"
-          className={`bt-execution-toggle ${showExecution ? 'open' : ''}`}
-          onClick={() => setShowExecution(!showExecution)}
-          aria-expanded={showExecution}
-        >
-          ⚙ Costs &amp; sizing {showExecution ? '▾' : '▸'}
-          <span className="bt-preset-badge">{costsEdited ? 'custom costs' : costProfile.label}</span>
-        </button>
-
-        {showExecution && (
-          <div className="bt-execution-panel">
+      /* ⚠️ NO ACCORDION (owner direction, 2026-10-30: *"There is no need for this accordion to hold the
+         content"*). The disclosure existed when this block sat under the whole page's other controls and
+         needed a lid on it; it is now the entire content of its own step, so a toggle that collapses the
+         only thing on screen buys nothing and costs a click. `showExecution` is gone with it. */
+      <div className="bt-execution-panel">
             {/* What the class was detected FROM, and what that costs before the protocol does anything. */}
             <div className="bt-class-strip">
               <div className="bt-class-detect">
@@ -2068,58 +3075,89 @@ ull = follow the latest, which is the default. */
               </p>
             )}
 
-            {/* ⚠️ THE FULL SETTINGS LIST, IN THE STEP (owner direction, 2026-10-26). This page shows
-                every field the protocol page shows PLUS the execution ones, because a Complete
-                Strategy is a protocol plus execution. */}
-            <h3 className="pb-info-head">Every setting this run honours</h3>
-            <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
-              <BacktestSettingsInventory
-                subject={subject}
-                protocolId={protocolId}
-                botId={botId}
-                overrides={overrides}
-                onOverride={setOverride}
-                allowTimeframe={!usePeriod}
-              />
-            </Suspense>
+            {/* ⚠️ THE SETTINGS INVENTORY NO LONGER RENDERS HERE (2026-10-30). Its four audit groups are
+                four steps of their own — see `SETTINGS_STEPS`. What stayed is the one thing this step
+                owns: the four overrides the form above edits, and the list of what they change. */}
           </div>
-        )}
-      </div>
       )}
 
+      {/* ── STEPS 5–8 — THE SETTINGS AUDITS (2026-10-30) ─────────────────────────────────────────
+          One group of the inventory per step. Each renders the SAME component with a different
+          `group`, so the table shape, the honoured/reported/ignored verdicts and their API-driven
+          provenance cannot drift between them. */}
+      {SETTINGS_STEPS.map((s) => activeStep === s.step && (
+        <div key={s.group} className="pb-fields">
+          <InfoNote tone="neutral" label="What this step is">
+            {s.lede}
+          </InfoNote>
+          <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
+            <BacktestSettingsInventory
+              subject={subject}
+              /*
+                ⚠️ ON THE STRATEGIES ROUTE THE PROTOCOL COMES FROM THE BOT (found 2026-10-30, as soon as
+                this became its own step). `protocolId` is the page's PROTOCOL-page state and is empty
+                here, so the "What the protocol sets" step rendered 0 rows and told the reader to select
+                a protocol that was already selected. A bot names its protocol; that is the one this run
+                scores with.
+              */
+              protocolId={protocolId || selectedBot?.protocolId || ''}
+              botId={botId}
+              group={s.group}
+              showFilters
+            />
+          </Suspense>
+        </div>
+      ))}
+
       {/* ── a failed run is reported in the step that started it ── */}
-      {activeStep === 5 && runMutation.isError && (
+      {activeStep === STEP_RUN && runMutation.isError && (
         runMutation.error?.timedOut ? (
-          <div className="pb-guard" role="status">
-            <strong>⏱ The browser stopped waiting after {runMutation.error.timeoutSeconds}s.</strong>
-            <span className="pb-guard-note">
-              A long window can still be running on the server after the page gives up, and when it
-              finishes the run IS stored. Check <strong>Completed runs</strong> below before running it
-              again — a second attempt would duplicate a run that already succeeded. Narrow the window
-              if this keeps happening.
-            </span>
-          </div>
+          <InfoNote
+            tone="warning"
+            label={`The browser stopped waiting after ${runMutation.error.timeoutSeconds}s`}
+            role="status"
+          >
+            A long window can still be running on the server after the page gives up, and when it
+            finishes the run <strong>IS stored</strong>. Check <strong>Completed Runs</strong> in this
+            area before running it again — a second attempt would duplicate a run that already
+            succeeded. Narrow the window if this keeps happening.
+          </InfoNote>
         ) : (
           <NoticeBlock notice={noticeFromError(runMutation.error)} compact />
         )
       )}
 
 
-      {activeStep === 6 && stats && (
+      {activeStep === STEP_RESULT && stats && (
         <>
       <div className="bt-results">
+          {/*
+            ⚠️ BORDER = COMPARISON, VALUE COLOUR = PROFIT/LOSS (owner direction, 2026-10-30: *"the box
+            borders are coloured based on comparison but the text for loss or profit is standard red and
+            green"*). The two encodings answer different questions and neither overrides the other.
+
+            ⚠️ AN UNCOLOURED BOX IS A THIRD STATE, NOT A MISSING ONE. `verdictClass` returns '' for both
+            "nothing moved" and "nothing to compare against", and `comparisonReason` below prints which
+            of those it is — an unlabelled grid of plain boxes would read as "nothing changed" in both
+            cases, which is the defect this page keeps paying for.
+          */}
           <div className="bt-stats-grid">
-            <div className="bt-stat"><div className="bt-stat-value">{stats.totalSignals}</div><div>Entry Signals</div></div>
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalSignals)}`} title={comparison?.label ? `vs ${comparison.label}` : undefined}><div className="bt-stat-value">{stats.totalSignals}</div><div>Entry Signals</div></div>
             {/* ⚠️ #980 — `stats.winRate` is a SIGNAL rate (profitable entry signals ÷ entry
                 signals). Labelling it "Win Rate" invited reading it as a trade rate, and run
-                `0dd94ddd` stored 100% here beside 0 winners of 3 trades. The two populations are
+                `0ddddd` stored 100% here beside 0 winners of 3 trades. The two populations are
                 now labelled as what they are. */}
-            <div className="bt-stat"><div className="bt-stat-value">{(stats.winRate * 100).toFixed(0)}%</div><div>Entry Signals Profitable</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{pctOrDash(stats.averageReturn10d)}</div><div>Avg Return (10d)</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{pctOrDash(stats.maxReturn10d)}</div><div>Max Return (10d)</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{stats.maxDrawdown10d}%</div><div>Max Drawdown (10d)</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{stats.profitFactor}</div><div>Profit Factor</div></div>
-            <div className="bt-stat"><div className="bt-stat-value">{stats.sharpeApproximation}</div><div>Sharpe (approx)</div></div>
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.winRate)}`}><div className="bt-stat-value">{(stats.winRate * 100).toFixed(0)}%</div><div>Entry Signals Profitable</div></div>
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.averageReturn10d)}`}><div className="bt-stat-value">{pctOrDash(stats.averageReturn10d)}</div><div>Avg Return (10d)</div></div>
+            {/* ⚠️ RENAMED 2026-10-30 (#1149 follow-up). These two are the BEST and WORST ten-day
+                FORWARD RETURN of the scored bars — a signal-quality pair. Calling the negative one
+                "Max Drawdown (10d)" put a second, unrelated "Max Drawdown" on the same page as the
+                equity curve's (which read 8,867.70% for run `7f00cfb8` while this tile said −2.87%,
+                from the same column). "Drawdown" now means one thing on this page: the equity path. */}
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.maxReturn10d)}`}><div className="bt-stat-value">{pctOrDash(stats.maxReturn10d)}</div><div>Best Return (10d)</div></div>
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.maxDrawdown10d)}`}><div className="bt-stat-value">{pctOrDash(stats.maxDrawdown10d)}</div><div>Worst Return (10d)</div></div>
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.profitFactor)}`}><div className="bt-stat-value">{stats.profitFactor}</div><div>Profit Factor</div></div>
+            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.sharpeApproximation)}`}><div className="bt-stat-value">{stats.sharpeApproximation}</div><div>Sharpe (approx)</div></div>
             {/* Bracket trade stats — STRATEGIES ONLY (owner direction, 2026-10-27: *"step … includes
                 financial and trade related stats that need to be removed as they should only be shown
                 on the Backtest Strategies view"*). A protocol run is `scoresOnly`, so every one of
@@ -2127,76 +3165,132 @@ ull = follow the latest, which is the default. */
                 result. On the Strategies page they are the whole point. */}
             {subject === 'strategy' && stats.totalTrades != null && (
               <>
-                <div className="bt-stat"><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">{stats.avgTradePnl}%</div><div>Avg Trade PnL</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">${stats.totalPnl?.toFixed(2)}</div><div>Total PnL</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">{stats.grossPnl != null ? `$${stats.grossPnl.toFixed(2)}` : '—'}</div><div>Gross PnL</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">{stats.totalCommission != null ? `$${stats.totalCommission.toFixed(2)}` : '—'}</div><div>Total Commission</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">{stats.avgPositionSize != null ? Math.round(stats.avgPositionSize) : '—'}</div><div>Avg Pos Size</div></div>
-                <div className="bt-stat"><div className="bt-stat-value">{stats.maxTradeDrawdown != null ? `$${stats.maxTradeDrawdown.toFixed(2)}` : '—'}</div><div>Max Trade DD</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalTrades)}`}><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.tradeWinRate)}`}><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.avgTradePnl)}`}><div className="bt-stat-value">{pctOrDash(stats.avgTradePnl)}</div><div>Avg Trade PnL</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalPnl)}`}><div className="bt-stat-value">{moneyOrDash(stats.totalPnl)}</div><div>Total PnL</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.grossPnl)}`}><div className="bt-stat-value">{moneyOrDash(stats.grossPnl)}</div><div>Gross PnL</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalCommission)}`}><div className="bt-stat-value">{moneyOrDash(stats.totalCommission)}</div><div>Total Commission</div></div>
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.avgPositionSize)}`}><div className="bt-stat-value">{stats.avgPositionSize != null ? Math.round(stats.avgPositionSize) : '—'}</div><div>Avg Pos Size</div></div>
+                {/* ⚠️ THE WORST SINGLE TRADE, in currency (#1149 follow-up, 2026-10-30). This cell
+                    used to read `run.maxDrawdown` — the same column as "Max Drawdown (10d)" — so run
+                    `7f00cfb8` showed −2.87 in both, while its actual worst trade lost **$296.19**.
+                    One column serving two labels, and only one of the two was true. */}
+                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.maxTradeDrawdown)}`}><div className="bt-stat-value">{moneyOrDash(stats.maxTradeDrawdown)}</div><div>Worst Trade</div></div>
               </>
             )}
           </div>
 
-          {result?.period && <p className="bt-period">Period: {result.period}</p>}
+          {/*
+            ── EVERY SENTENCE ON THIS PAGE, IN ONE STRUCTURE (2026-10-30) ────────────────────────
+            ⚠️ Owner report: *"We've got too much mixed styling when displaying sentences … This is a
+            perfect example of agentic AI working on a UI without any reference to an established theme
+            like we are trying to do in the appearance area."*
 
-          {/* ⚠️ #986 — WHICH STORED PERIOD this measured, by name and note. `result.period` above
-              is a date range; on its own it does not say why the window mattered, and a result
-              from a captured window must never read as an ordinary day-range run. */}
-          {result?.measuredPeriod && (
-            <p className="bt-measured-period">
-              Captured period: <strong>{result.measuredPeriod.name}</strong>
-              {result.measuredPeriod.note ? ` — ${result.measuredPeriod.note}` : ''}
-              {result.measuredPeriod.from && (
-                <span className="bt-measured-bars">
-                  {' '}· {result.measuredPeriod.from} → {result.measuredPeriod.to}
-                  {result.measuredPeriod.bars != null
-                    ? ` · ${result.measuredPeriod.bars} bars imported`
-                    : ' · bar count not recorded'}
-                </span>
-              )}
-            </p>
-          )}
+            Measured before this change: five shapes for five sentences — a bare `<p>` legend, an
+            `app-notice--warning`, a `.bt-period` paragraph, an unstyled `<ul>` of caveats and a
+            `.bt-execution-info` line (plus a sixth, `.bt-news-info`). Each was locally reasonable; the
+            SET was incoherent, which is what a missing pattern looks like from outside. They are now
+            all `<InfoNote>`, so the anatomy — uppercase role label, one body, one optional caption — is
+            identical and the tone lives on the border and the label only.
 
-          {/* Costs & sizing actually applied to this run */}
-          {/* ⚠️ What this run CANNOT claim, stated with the numbers rather than left to the reader —
-              a bot-driven run carries the #843 sizing-divergence warning here. */}
-          {result?.caveats?.length > 0 && (
-            <ul className="bt-caveats">
-              {result.caveats.map((c) => <li key={c}>{c}</li>)}
-            </ul>
+            ⚠️ ORDER IS DELIBERATE: what was measured, then what is being compared, then what the
+            system decided, then the configuration used, then what the result cannot claim. Facts,
+            then decisions, then limits. Read top-down it answers "what am I looking at?" before
+            "should I trust it?".
+          */}
+          <InfoNote
+            tone="neutral"
+            label="Window measured"
+            meta={[
+              result?.measuredPeriod?.bars != null ? `${result.measuredPeriod.bars.toLocaleString()} bars imported` : 'bar count not recorded',
+              result?.scoreSeries?.length ? `${result.scoreSeries.length.toLocaleString()} scored` : null,
+            ].filter(Boolean).join(' · ')}
+          >
+            {result?.measuredPeriod
+              ? <><strong>{result.measuredPeriod.name}</strong> · {result.measuredPeriod.from} → {result.measuredPeriod.to}</>
+              : <>Day range · {result?.period ?? 'not stated by the engine'}</>}
+          </InfoNote>
+
+          <InfoNote
+            tone="neutral"
+            label="Comparison"
+            meta={hasComparison ? undefined : comparisonReason}
+          >
+            {/*
+              ⚠️ KEYED ON `label`, NOT ON `comparison` (measured 2026-10-30). The memo returns a
+              `reason` object with NO label when the two runs are not comparable — so `comparison` is
+              truthy and `comparison.label` is undefined, and the sentence rendered as "…better / worse
+              than . The figure itself…". A comparison that cannot be made must take the
+              cannot-be-made branch.
+            */}
+            {hasComparison
+              ? <>Tile border{' '}
+                <span className="info-note-key is-better">better</span>{' '}
+                <span className="info-note-key is-worse">worse</span> than {comparison.label}. The
+                figure itself keeps its profit-and-loss colour.</>
+              : <>These tiles are not compared with anything, so no border is coloured and nothing
+                here has been shown to be an improvement.</>}
+          </InfoNote>
+
+          {/* ⚠️ A PROMOTION NOBODY ANNOUNCED IS INDISTINGUISHABLE FROM A RUN THAT WAS NEVER
+              PROMOTED. Every outcome is printed with the number that decided it, so a reader can
+              disagree with the decision rather than having to trust it. */}
+          {autoOutcome?.runId === runId && (
+            <InfoNote
+              tone={autoOutcome.verdict === 'accepted' || autoOutcome.verdict === 'accepted-first' ? 'success' : 'warning'}
+              label={autoOutcome.verdict === 'accepted' || autoOutcome.verdict === 'accepted-first' ? 'Auto-Accept · promoted' : 'Auto-Accept · not promoted'}
+              role="status"
+            >
+              {autoOutcome.verdict === 'accepted'
+                ? <>This run is the new <strong>A</strong> — {autoOutcome.detail}.</>
+                : autoOutcome.verdict === 'accepted-first'
+                  ? <>This run became <strong>A</strong> because there was nothing to beat — {autoOutcome.detail}.</>
+                  : <>Left as <strong>B</strong>: {capFirst(autoOutcome.detail)}.</>}
+            </InfoNote>
           )}
 
           {/* Costs & sizing actually applied to this run — STRATEGIES ONLY. A `scoresOnly` run sends
               `slPct: 0 / tpPct: 0`, so no fill is simulated and a break-even line describes a trade
               that never happened. Shown on the Strategies view, where costs are real. */}
           {subject === 'strategy' && executionUsed && (
-            <p className="bt-execution-info">
-              ⚙ Break-even <strong>{((executionUsed.spread + executionUsed.slippage * 2) * 100).toFixed(2)}%</strong>
-              {' '}· slippage {(executionUsed.slippage * 100).toFixed(2)}% each way
-              {' '}· spread {(executionUsed.spread * 100).toFixed(2)}%
-              {' '}· commission ${executionUsed.commission.toFixed(2)}/unit · {executionUsed.positionModel === 'fixedPercent'
+            <InfoNote
+              tone="neutral"
+              label="Costs applied"
+              meta={`${executionUsed.positionModel === 'fixedPercent'
                 ? `${executionUsed.riskPct}% risk on $${executionUsed.accountSize.toLocaleString()}`
                 : executionUsed.positionModel === 'fixedDollar'
-                ? `$${executionUsed.fixedAmount} fixed`
-                : executionUsed.positionModel?.startsWith('kelly')
-                ? <>Kelly ({executionUsed.positionModel === 'kellyHalf' ? 'half' : 'full'})
-                  · f={(executionUsed.kellyFraction * 100).toFixed(1)}%
-                  · Edge: {executionUsed.kellyEdge > 0 ? '+' : ''}{executionUsed.kellyEdge}%
-                  · Cap: {executionUsed.kellyCapPct}%
-                  {executionUsed.kellyFraction * 100 > 25 && <span style={{ color: 'var(--danger)', fontWeight: 700 }}> ⚠ Aggressive!</span>}
-                </>
-                : `$${executionUsed.fixedAmount} fixed`}
-            </p>
+                  ? `$${executionUsed.fixedAmount} fixed per trade`
+                  : executionUsed.positionModel?.startsWith('kelly')
+                    ? `Kelly (${executionUsed.positionModel === 'kellyHalf' ? 'half' : 'full'}) · f=${(executionUsed.kellyFraction * 100).toFixed(1)}% · cap ${executionUsed.kellyCapPct}%`
+                    : executionUsed.positionModel}`}
+            >
+              Break-even <strong>{((executionUsed.spread + executionUsed.slippage * 2) * 100).toFixed(2)}%</strong>
+              {' '}· slippage {(executionUsed.slippage * 100).toFixed(2)}% each way · spread{' '}
+              {(executionUsed.spread * 100).toFixed(2)}% · commission ${executionUsed.commission.toFixed(2)}/unit
+              {executionUsed.positionModel?.startsWith('kelly') && executionUsed.kellyFraction * 100 > 25 && (
+                <span className="is-worse"> · ⚠ Kelly is aggressive here</span>
+              )}
+            </InfoNote>
           )}
 
-          {/* News exclusion info */}
+          {/* A filter that was on has to say so, because a run without news days and a run on a quiet
+              week look identical afterwards. */}
           {result?.newsExclusion && result.newsExclusion !== 'none' && (
-            <p className="bt-news-info">
-              📡 News mode: <strong>{result.newsExclusion}</strong>
-              {result.newsDatesCount != null && <span> — {result.newsDatesCount} news dates found</span>}
-            </p>
+            <InfoNote tone="neutral" label="News filter applied">
+              <strong>{result.newsExclusion === 'only' ? 'news-day bars only' : 'news-day bars skipped'}</strong>
+              {result.newsDatesCount != null && <> · {result.newsDatesCount} news date(s) matched</>}
+            </InfoNote>
+          )}
+
+          {/* ⚠️ WHAT THIS RUN CANNOT CLAIM — last, and toned, because it is the one statement a reader
+              must not skim past. A bot-driven run carries the #843 sizing-divergence warning here. */}
+          {result?.caveats?.length > 0 && (
+            <InfoNote tone="warning" label="What this cannot claim">
+              <ul>
+                {result.caveats.map((c) => <li key={c}>{c}</li>)}
+              </ul>
+            </InfoNote>
           )}
 
           {/* Equity curve + drawdown
@@ -2205,7 +3299,7 @@ ull = follow the latest, which is the default. */
               `[first, last]`, i.e. `[t, t]`, which lightweight-charts rejects by assertion and the
               whole view died with "Something went wrong rendering this view" (2026-10-27). A flat
               line through one point is not a curve, so it is not drawn. */}
-          {equityData && !equityData.error && equityData.equity?.length > 1 && (
+          {outputs.equity !== false && equityData && !equityData.error && equityData.equity?.length > 1 && (
             <div className="bt-chart-section">
               <h3>Equity Curve &amp; Drawdown</h3>
               <Suspense fallback={<p className="pb-none">Loading the equity curve…</p>}>
@@ -2213,7 +3307,7 @@ ull = follow the latest, which is the default. */
               </Suspense>
             </div>
           )}
-          {equityData && !equityData.error && equityData.equity?.length === 1 && (
+          {outputs.equity !== false && equityData && !equityData.error && equityData.equity?.length === 1 && (
             <p className="pb-field-note">
               <strong>No equity curve.</strong> This run recorded no trades, so there is no curve to
               draw — a protocol produces <em>scores</em>, and score-only runs place nothing. Switch to{' '}
@@ -2223,26 +3317,21 @@ ull = follow the latest, which is the default. */
 
           {/*
             ⚠️ THE PRICE CHART AND THE TRADES TABLE USED TO RENDER HERE ON BOTH VIEWS, and both were
-            removed from the Protocols view on 2026-10-27 at the owner's direction. The chart opened on
-            NVDA while the run under test was a BTC protocol and carries no scoring overlay; the trades
-            table can only ever be empty for a scores-only run. Neither is wrong — they answer the
-            Strategies question, and showing them here implied they described the run.
+            removed from the Protocols view on 2026-10-27 at the owner's direction.
+
+            ⚠️ THE PRICE CHART IS NOW GONE FROM BOTH VIEWS (owner direction, 2026-10-30: *"Remove this
+            chart as it is useless right now"*). It was never the run's chart — `BacktestChartPane`
+            carries its own symbol menu, so it opened on whatever symbol was last picked rather than on
+            the run under test, and it drew no scoring overlay. The chart that belongs here is the one
+            the owner has asked for repeatedly: the run's own bars, coloured by the algorithm's verdict,
+            with support/resistance levels drawn from the directives. That needs level directives to
+            RETURN geometry, which 5 of 6 currently discard into `reason` prose (#1150). Until then a
+            chart would be a picture of something else, so there is no chart.
           */}
 
-          {/* Chart visualization — STRATEGIES ONLY.
-              ⚠️ Owner report 2026-10-27: this pane opened on /lab/backtest showing **NVDA** while the
-              run under test was a BTC protocol, and it carries no scoring overlay — so it was a chart
-              of something unrelated, dressed as if it described the run. It is not wrong (it is a
-              general chart with a symbol menu), it just answers a question this view does not ask.
-              Kept on the Strategies view, which is where a price chart next to trades belongs. */}
-          {subject === 'strategy' && showChart && (
-            <div className="bt-chart-section">
-              <h3>Price Chart &amp; Signals</h3>
-              <Suspense fallback={<p className="pb-none">Loading the chart…</p>}>
-                <BacktestChartPane initialSymbol={result?.symbol ?? marketSymbol} />
-              </Suspense>
-            </div>
-          )}
+          {/* Chart visualization — REMOVED 2026-10-30. See the note above: it is a general chart with
+              its own symbol menu, so it was never a picture of the run. The Outputs step lists the
+              honest replacement and says what it is waiting on. */}
 
           {/* ── WHAT IT TRADED ────────────────────────────────────────────────────────────────────
               ⚠️ THIS REPLACED AN ENTRY-SIGNAL TABLE THAT COULD NEVER RENDER (#1134). A stored run
@@ -2258,10 +3347,16 @@ ull = follow the latest, which is the default. */
               all-trades summary live in `components/backtest/TradeTable.jsx`, so the Run step and the
               A/B panels cannot drift apart. `limit={25}` here because this is a post-run glance;
               the A/B panels show 100. */}
-          {subject === 'strategy' && result?.trades?.length > 0 && (
+          {subject === 'strategy' && outputs.trades !== false && result?.trades?.length > 0 && (
             <div className="bt-chart-section">
               <h3>Trades <span className="bt-measured-bars">· {Math.min(25, result.trades.length)} of {result.trades.length.toLocaleString()} shown, newest first</span></h3>
-              <TradeTable trades={result.trades} totals={result.tradeTotals} timeframe={result.timeframe} limit={25} />
+              <TradeTable
+                trades={result.trades}
+                totals={result.tradeTotals}
+                timeframe={result.timeframe}
+                limit={25}
+                compare={comparison ? { verdicts: comparison.tradeVerdicts, label: comparison.label } : null}
+              />
             </div>
           )}
 
@@ -2271,12 +3366,44 @@ ull = follow the latest, which is the default. */
               first-order screen over the excursions this run recorded; it is not a re-simulation and
               says so in place. Kept OFF the Protocols view: a scores-only run records no trades, so
               every row would be a zero. */}
-          {subject === 'strategy' && result?.trades?.length > 0 && result?.id && (
+          {subject === 'strategy' && outputs.stopScreen !== false && result?.trades?.length > 0 && result?.id && (
             <div className="bt-chart-section">
               <h3>Stop screen <span className="bt-measured-bars">· how tight could the stop be?</span></h3>
               <Suspense fallback={<p className="pb-none">Screening candidate stops…</p>}>
                 <StopSweepPanel runId={result.id} />
               </Suspense>
+            </div>
+          )}
+
+          {/* ── SCORE SERIES (2026-10-30) ────────────────────────────────────────────────────────
+              ⚠️ THIS IS THE PROTOCOL VIEW'S WHOLE RESULT. A protocol places no trades, so before this
+              its Result step showed seven statistic tiles and nothing else — the per-bar reading, which
+              is the entire output of a protocol, was only reachable by accepting a baseline and opening
+              the A/B panel. Rendered for BOTH subjects when asked for: on a strategy it is the reading
+              behind the trades, which is how a reader tells an entry problem from an exit problem. */}
+          {outputs.scores !== false && Array.isArray(result?.scoreSeries) && result.scoreSeries.length > 0 && (
+            <div className="bt-chart-section">
+              <h3>
+                Score series
+                <span className="bt-measured-bars">
+                  {' '}· {result.scoreSeries.length.toLocaleString()} bar(s) scored · the reading, not the trades
+                </span>
+              </h3>
+              <Suspense fallback={<p className="pb-none">Loading the score series…</p>}>
+                <ScoreSeriesTable scoreSeries={result.scoreSeries} />
+              </Suspense>
+            </div>
+          )}
+
+          {/* ── REPLAY (2026-10-30) ──────────────────────────────────────────────────────────────
+              ⚠️ MOVED OFF THE PAGE CHROME AND BEHIND THE OUTPUTS CHOICE. It used to render on EVERY
+              step, below the panel, for any strategy route with a run id — so it appeared while the
+              reader was still choosing a window, and it fetched its own payload whether or not anyone
+              watched it. Owner direction: *"Make this output an option."* */}
+          {subject === 'strategy' && outputs.replay === true && result?.id && (
+            <div className="bt-chart-section">
+              <h3>Replay <span className="bt-measured-bars">· the run’s bars played forward with its trades marked</span></h3>
+              <ReplayPlayer runId={result.id} />
             </div>
           )}
 
@@ -2287,7 +3414,7 @@ ull = follow the latest, which is the default. */
             Steps 1-3 have no action of their own — they are configuration, so "done" quietly happens
             and the reader is left with nothing to press. This is that button. It is NOT shown on
             step 5, where the Run button IS the action, or on step 6, which is terminal. */}
-        {activeStep < 5 && stepValid[activeStep] && stepUnlocked[activeStep + 1] && (
+        {activeStep < STEP_RUN && stepValid[activeStep] && stepUnlocked[activeStep + 1] && (
           <div className="pb-step-actions">
             <button type="button" className="ff-btn ff-btn-primary" onClick={() => goToStep(activeStep + 1)}>
               Continue to step {activeStep + 1} · {STEPS[activeStep].label}
@@ -2299,8 +3426,12 @@ ull = follow the latest, which is the default. */
       {/* ── REFERENCE — deliberately NOT a numbered step ──────────────────────────────────────────
           (owner direction on steps, 2026-10-26.) The rail numbers a SEQUENCE; reference material is
           consulted, not sequenced. The settings inventory tells you what you CAN override *before*
-          you run, and Completed runs is where two results are compared — numbering either would put
-          it in a position that is wrong for the other. They stay outside the steps, always available.
+          you run — numbering that would put it in a position that is wrong for every step. It stays
+          outside the steps, always available.
+
+          ⚠️ "COMPLETED RUNS" IS NO LONGER ONE OF THEM (owner direction, 2026-10-31: *"move that to a
+          new page for the area"*). Stored-run review left for `/lab/backtest-runs`; this page keeps
+          only the panels that describe THIS run and the A/B pair.
 
           ⚠️ WHY TABS AND NOT THREE STACKED PANELS (owner report, 2026-10-22: *"the new page is
           actually a mess"*). This page had grown to NINE vertically stacked blocks. Everything was
@@ -2314,7 +3445,8 @@ ull = follow the latest, which is the default. */
         {[
           { id: 'current', label: 'Run A · accepted baseline', hint: 'The run you accepted as the reference. B is measured against it.' },
           { id: 'latest', label: 'Run B · latest', hint: 'The most recent stored run, in the same shape as A. Accept it to promote it to A.' },
-          { id: 'runs', label: 'Completed runs', hint: 'Stored runs, and the comparison of two of them.' },
+          // `runs` was here — moved to /lab/backtest-runs (2026-10-31). Stored-run review is its own
+          // job, not a fifth tab on a measurement form.
           { id: 'scores', label: 'A vs B differences', hint: 'What changed between the accepted baseline and the latest run — summarised, not every row.' },
         ].map((t) => (
           <button
@@ -2331,35 +3463,70 @@ ull = follow the latest, which is the default. */
       </nav>
 
       {/*
-        ── WHICH RUN IS B (added 2026-10-27) ────────────────────────────────────────────────────
-        ⚠️ WHY THIS CONTROL EXISTS. B was pinned to `runs[0]` — the newest run of the protocol — so the
-        A/B pair silently changed whenever anything else was run. That made the new repeat-on-a-second-
-        window check self-defeating: to measure the change on window 2 you must RUN on window 2, which
-        moves "latest" to that run and destroys the window-1 pair you were comparing. Choosing B
-        explicitly is what makes a pair deliberate instead of incidental.
+        ── THE PAIR, ON ONE ROW (owner report, 2026-10-30) ──────────────────────────────────────────
+        *"We have some doubling of information: 'Run A · accepted baseline' and 'A · Accepted baseline —
+        2fd56ab8 accepted' and in between … 'Comparing A against the latest run (7f00cfb8)' … which
+        doesn't tell a human much. I think a more interesting design can exist on one row and include
+        [accepted] [2fd56ab8] and [the select]."*
+
+        So: ONE row — which run is A, which run is B, and the control that changes B. What it replaced:
+
+          · a `<label>` sentence "Comparing A against …" AND a `p.bt-panel-note` repeating it — the
+            same words twice, once as a label and once as a caption;
+          · a select whose own option text ran to "the latest run (7f00cfb8) — 7f00cfb8 · VIX 5m ·
+            2026-09-09 → 2026-10-20", i.e. the id twice plus material the facts table already lists.
+
+        ⚠️ THE IDS, NOT THE WORDS. "Accepted baseline" and "Latest run" are on the tabs and are what the
+        role letter already means; what a reader actually needs to fix a pair is the two ids side by side
+        and one control. The "pin it" explanation moved into the select's own `title`/`aria-label`,
+        because it explains the CONTROL rather than the data.
       */}
       {(() => {
         const runs = latestRunsQuery.data?.runs ?? latestRunsQuery.data ?? [];
         if (!runs.length) return null;
         return (
-          <p className="bt-panel-note">
-            <label>
-              Comparing A against{' '}
+          <div className="bt-pair-bar">
+            <div className="bt-pair-side">
+              <span className="bt-pair-role">A</span>
+              {baselineRunId
+                ? <code className="bt-pair-id">{String(baselineRunId).slice(0, 8)}</code>
+                : <span className="bt-pair-empty">none accepted</span>}
+              {baselineRunId && <span className="dp-badge dp-badge--override">accepted</span>}
+            </div>
+
+            <span className="bt-pair-arrow" aria-hidden="true">→</span>
+
+            <div className="bt-pair-side">
+              <span className="bt-pair-role">B</span>
               <select
-                className="ff-select"
+                className="ff-select bt-pair-select"
                 value={pickedBId ?? ''}
+                aria-label="Which stored run is B in this comparison"
+                title="Leave on Latest to follow the newest run, or pin one run to compare against a pair that does not move under you."
                 onChange={(e) => setPickedBId(e.target.value || null)}
               >
-                <option value="">the latest run ({String(latestRunId ?? '').slice(0, 8)})</option>
+                <option value="">Latest · {String(latestRunId ?? '').slice(0, 8)}</option>
                 {runs.slice(0, 20).map((r) => (
+                  /* ⚠️ ID + WINDOW ONLY. The symbol and timeframe are in both runs' facts tables, and
+                     repeating them in every option is what made this control twice as wide as it needed
+                     to be. */
                   <option key={r.id} value={r.id}>
-                    {r.id.slice(0, 8)} · {r.symbol} {r.timeframe} · {r.period}
+                    {r.id.slice(0, 8)} · {r.period}
                   </option>
                 ))}
               </select>
-            </label>{' '}
-            — pin B to a specific run when you want a pair that does not move under you.
-          </p>
+              {pickedBId && (
+                <button
+                  type="button"
+                  className="bt-pair-unpin"
+                  onClick={() => setPickedBId(null)}
+                  title="Go back to following the latest run"
+                >
+                  unpin
+                </button>
+              )}
+            </div>
+          </div>
         );
       })()}
 
@@ -2399,16 +3566,18 @@ ull = follow the latest, which is the default. */
         </Suspense>
       )}
 
-      {refTab === 'runs' && (
-        /* #823 Stage 2 — the stored runs were invisible. Measured 2026-10-15: 26 runs stored and
-           served by `GET /api/backtest/runs`, with ZERO frontend references to the list. This panel
-           is load-bearing: it is the only place two runs can be set against each other, and it
-           carries the #1132 guard that refuses to name a winner across two windows. */
-        <Suspense fallback={<p className="pb-none">Loading completed runs…</p>}>
-          <BacktestRunsPanel showTrades={subject === 'strategy'} />
-        </Suspense>
-      )}
+      {/*
+        ⚠️ THE `runs` TAB WAS MOVED OFF THIS PAGE (owner direction, 2026-10-31) to `/lab/backtest-runs`.
 
+        Owner, 2026-10-31: *"I'm realising this one page is very complex especially with the [Completed
+        runs] added so move that to a new page for the area."* The panel itself is unchanged and
+        `BacktestRunsPanel` is imported there rather than copied, so the #1132 guard that refuses to
+        name a winner across two windows, the baseline pinning, and the delete guard all kept one
+        implementation. What moved is only WHERE it is mounted.
+
+        The tab list below no longer offers `runs`, and `refTab` can no longer hold that value, so the
+        branch that rendered it is deleted rather than left unreachable.
+      */}
 
       {refTab === 'scores' && (
         /* ⚠️ THIS TAB USED TO BE "Score detail" (#1143 follow-up, 2026-10-27): *"Score detail doesn't
@@ -2429,7 +3598,7 @@ ull = follow the latest, which is the default. */
           that it shows where trades are executed and exited."*). A scores-only run has no trades to
           replay, so on the Protocols view this panel could only ever say so — and it is a different
           renderer (hand-drawn SVG, see `backtest/replay/`), so its improvements are tracked there. */}
-      {subject === 'strategy' && <ReplayPlayer runId={runId} />}
+      {null /* Replay moved into the Result step and behind the Outputs choice — see the Outputs step. */}
     </div>
   );
 }

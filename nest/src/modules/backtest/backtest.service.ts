@@ -11,6 +11,8 @@ import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { computeSizing } from '../trading/position-sizing';
 import { BacktestPeriodService } from './backtest-period.service';
 import { applyExecutionCosts } from './execution-costs';
+import { computeEquityPath, type EquityPoint, type EquitySummary } from './equity-drawdown';
+import { describeRunDifferences, type RunDifferenceSet } from './run-differences';
 import {
   scoringTotals,
   tradeTotals,
@@ -201,6 +203,28 @@ export interface BacktestRunRequest {
   assetClass?: 'forex' | 'stock' | 'crypto';
   /** News exclusion mode (#105) */
   newsExclusion?: 'none' | 'exclude' | 'only' | 'reduce';
+  /**
+   * ── WHICH SIDES THIS RUN MAY OPEN (#1155, 2026-10-31) ──────────────────────────────────────────
+   * Owner direction: *"I read that it's easier to profit on VIX by shorting it but we can only tell
+   * that when we can test the same period both SHORT and LONG."*
+   *
+   * Before this, the trade loop was `if (signal === 'BUY' || signal === 'STRONG_BUY')` with
+   * `const isLong = true` right after it — every branch below was already written for both sides, so
+   * the capability existed everywhere except at the ONE line that decides whether to enter. The
+   * consequence was that a protocol whose whole thesis is the downside could not be measured at all:
+   * `vix-spike-short-v1` scored 2 SELL signals over 23 bars and produced **0 trades**.
+   *
+   *   'long'  — the historical behaviour, and the DEFAULT. Nothing stored changes meaning.
+   *   'short' — SELL / STRONG_SELL only. A like-for-like mirror of the long run on the same window.
+   *   'both'  — either side.
+   *
+   * ⚠️ THIS IS A DECLARED SETTING, NOT AN EDIT TO THE MATHS. The default reproduces the old run
+   * exactly, so an existing comparison stays valid, and the two modes can be compared on the frozen
+   * window as the A/B rule requires. It is also stored on the run (`directionMode`) — a run that does
+   * not say which sides it could open is not reproducible, and the settings diff could not tell a long
+   * run from a short one.
+   */
+  directionMode?: 'long' | 'short' | 'both';
   /** Position sizing + commission (#50, #269, #271) */
   positionModel?: 'fixedPercent' | 'fixedDollar' | 'atrEqualRisk' | 'kellyFull' | 'kellyHalf';
   accountSize?: number;      // starting account balance in USD
@@ -630,7 +654,13 @@ export interface BacktestResult {
     averageReturn10d: number | null;
     /** NULL = NOT RECORDED. See `averageReturn10d`. */
     maxReturn10d: number | null;
-    maxDrawdown10d: number;
+    /**
+     * The worst ten-day forward return per score. NULL when the run produced no forward returns —
+     * NOT 0, which renders as "flat" and is a claim the row cannot support. It is also NOT the
+     * equity-path drawdown (`getEquityCurve`) and NOT a trade drawdown; three quantities, three
+     * names, because `backtestrun.maxDrawdown` once answered all three.
+     */
+    maxDrawdown10d: number | null;
     profitFactor: number;
     sharpeApproximation: number;
     // bracket trade stats
@@ -643,12 +673,18 @@ export interface BacktestResult {
     tradeWinRate?: number | null;
     avgTradePnl?: number;
     totalPnl?: number;
-    maxTradeDrawdown?: number;
+    maxTradeDrawdown?: number | null;
     // position sizing stats (#50)
     avgPositionSize?: number;
     totalCommission?: number;
     netPnl?: number;
     grossPnl?: number;
+    /**
+     * The capital a percentage could be a share OF. Returns step 6 prints two percents of capital
+     * (drawdown, and the run's loss against the account); both must name their denominator, and a
+     * run stored without one must say "not recorded" rather than quietly assuming £10,000.
+     */
+    accountSize?: number | null;
   };
 }
 
@@ -737,6 +773,43 @@ export class BacktestService {
       // into a silent "healthy".
       return null;
     }
+  }
+
+  /**
+   * The instant range of the bars a run would use — exposed for the news preview, which must be
+   * measured against THE SAME bounds the engine uses or it promises a filter the run does not apply.
+   */
+  async windowInstants(opts: { timeframe?: string }): Promise<{ from: Date; to: Date } | null> {
+    const tf = opts.timeframe || '5m';
+    const first = await this.prisma.marketBar.findFirst({
+      where: { timeframe: tf },
+      orderBy: { timestamp: 'asc' },
+      select: { timestamp: true },
+    });
+    const last = await this.prisma.marketBar.findFirst({
+      where: { timeframe: tf },
+      orderBy: { timestamp: 'desc' },
+      select: { timestamp: true },
+    });
+    if (!first || !last) return null;
+    return { from: first.timestamp, to: last.timestamp };
+  }
+
+  /** News rows for a symbol between two instants, trimmed to what the engine actually reads. */
+  async newsForSymbol(
+    ticker: string,
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ date: string; impact: string }>> {
+    const rows = await this.prisma.newsArticle.findMany({
+      where: { symbol: ticker, publishedAt: { gte: from, lte: to } },
+      select: { publishedAt: true, impact: true },
+      orderBy: { publishedAt: 'asc' },
+    });
+    return rows.map((n) => ({
+      date: n.publishedAt.toISOString().split('T')[0],
+      impact: n.impact ?? 'unknown',
+    }));
   }
 
   private async resolvePeriod(periodId?: string) {
@@ -847,6 +920,8 @@ export class BacktestService {
       stopPlan = null,
       assetClass,
       newsExclusion = 'none',
+      // #1155 — 'long' is the default, so an existing caller's run is byte-for-byte the same.
+      directionMode = 'long',
       // ── Position sizing + commission (#50) ──
       positionModel = 'fixedPercent',
       accountSize = 10000,
@@ -1099,8 +1174,27 @@ export class BacktestService {
 
       const currentClose = currentBar.close;
 
-      // Entry signal
-      if (signal === 'BUY' || signal === 'STRONG_BUY') {
+      /**
+       * ── WHICH SIDE, DECIDED BY THE SIGNAL CLASS (#1155, 2026-10-31) ─────────────────────────────
+       *
+       * ⚠️ NOT `signal.includes('SELL')` AND NOT `startsWith`. The repo has this exact trap recorded:
+       * `'STRONG_SELL'.startsWith('SELL') === false`, so a prefix test routed the strongest sell signal
+       * to the LONG branch. The four classes are enumerated explicitly, which is also what
+       * `validate-signal-classification.cjs` checks for elsewhere.
+       *
+       * `directionMode` gates WHICH of them may open. 'long' is the default and reproduces the old
+       * behaviour exactly; 'short' and 'both' are a declared experiment, not a silent alteration.
+       */
+      const isLongSignal = signal === 'BUY' || signal === 'STRONG_BUY';
+      const isShortSignal = signal === 'SELL' || signal === 'STRONG_SELL';
+      const mayGoLong = directionMode === 'long' || directionMode === 'both';
+      const mayGoShort = directionMode === 'short' || directionMode === 'both';
+      const enterLong = isLongSignal && mayGoLong;
+      const enterShort = isShortSignal && mayGoShort;
+
+      if (enterLong || enterShort) {
+        const isLong = enterLong;
+        const side: 1 | -1 = isLong ? 1 : -1;
         const future5 = bars[day + 5]?.close;
         const future10 = bars[day + 10]?.close;
         const future20 = bars[day + Math.min(20, bars.length - day - 1)]?.close;
@@ -1109,16 +1203,26 @@ export class BacktestService {
           date: currentBar.timestamp.toISOString().split('T')[0],
           score: Number(score.toFixed(1)),
           signal,
+          // ⚠️ THE FORWARD RETURNS ARE PRICE MOVEMENTS and stay direction-agnostic — a −3% move is
+          // −3% whichever side you took. `wasProfitable` below is the direction-aware one, and it is
+          // the field the signal win rate is computed from. Keeping the raw returns signed by PRICE
+          // means a reader can see the market, not just the trade.
           return5d: future5 ? Number(((future5 - currentClose) / currentClose * 100).toFixed(2)) : null,
           return10d: future10 ? Number(((future10 - currentClose) / currentClose * 100).toFixed(2)) : null,
           return20d: future20 ? Number(((future20 - currentClose) / currentClose * 100).toFixed(2)) : null,
-          wasProfitable: (future10 || 0) > currentClose,
+          // Direction-aware: a short is profitable when price FALLS. `(future10 || 0)` is kept for the
+          // missing-bar case, which reads as 0 and therefore as "no move" for either side.
+          wasProfitable: side * ((future10 || 0) - currentClose) > 0,
         });
 
         // Bracket order simulation with execution realism (#50)
         if (doBrackets) {
-          const slPrice = currentClose * (1 - slPct / 100);
-          const tpPrice = currentClose * (1 + tpPct / 100);
+          // ⚠️ THE BRACKET IS MIRRORED, NOT REUSED. A short's stop sits ABOVE the entry and its target
+          // BELOW; `side` carries the sign so every level below is one expression. Getting this backwards
+          // would not throw — it would place a short's stop on the profitable side and book a guaranteed
+          // loss, which is the plausible-number-no-error class this repo keeps paying for.
+          const slPrice = currentClose * (1 - (side * slPct) / 100);
+          const tpPrice = currentClose * (1 + (side * tpPct) / 100);
 
           let exitPrice = currentClose;
           let exitReason: TradeRecord['exitReason'] = 'EOD';
@@ -1153,8 +1257,8 @@ export class BacktestService {
            * This block SIMULATES; the live-side stop still comes from the broker order's own levels.
            */
           const plan = stopPlan ?? null;
-          const isLong = true; // this loop only opens longs (signal === BUY | STRONG_BUY above)
-          const side = isLong ? 1 : -1;
+          // #1155 — `isLong` and `side` now come from the SIGNAL CLASS (declared above), not a constant.
+          // Every branch below this line was already written for both sides; only the entry gate was not.
           let worstPct = 0; // worst excursion against the position, as % of entry
           let bestPct = 0; // best excursion in its favour, as % of entry
           let barsWalked = 0;
@@ -1206,7 +1310,8 @@ export class BacktestService {
               exitDate = fb.timestamp.toISOString();
               break;
             }
-            if (fb.high >= tpPrice) {
+            // ── Does the TARGET get hit? Mirrored: a short's target is BELOW the entry (#1155) ──
+            if (isLong ? fb.high >= tpPrice : fb.low <= tpPrice) {
               exitPrice = tpPrice;
               exitReason = 'TP';
               exitDate = fb.timestamp.toISOString();
@@ -1302,8 +1407,11 @@ export class BacktestService {
           // ⚠️ CONSEQUENCE, STATED: every stored backtest UNDER-charged, by a factor that depends on the
           // instrument's price. Comparisons made before 2026-10-28 are cheaper than the same runs now.
           // Re-run anything you intend to act on.
-          const { entryCost, exitCost } = applyExecutionCosts(currentClose, exitPrice, spread, slippage);
-          const rawPnlPerShare = exitCost - entryCost;
+          const { entryCost, exitCost } = applyExecutionCosts(currentClose, exitPrice, spread, slippage, side);
+          // ⚠️ `side` MULTIPLIES THE RESULT (#1155). For a short, profit is what the price FELL by, so
+          // `exitCost − entryCost` is negated. Without it every short would be booked with exactly the
+          // long run's P&L sign and a "shorting VIX is better" conclusion would be an artefact.
+          const rawPnlPerShare = side * (exitCost - entryCost);
 
           // ── Position sizing (#50, #269, #271) — #843: ONE implementation ──
           // The model maths now lives in `trading/position-sizing.ts`, which the LIVE loop also
@@ -1352,7 +1460,11 @@ export class BacktestService {
             // fixedPercent: risk accountSize * riskPct% on the stop distance (entry as fallback).
             // ⚠️ The fallback denominator is `currentClose`, NOT `entryCost` — preserved exactly
             // from the pre-#843 extraction; `entryCost` carries half-spread + slippage.
-            const stopDistance = currentClose - slPrice;
+            // ⚠️ `Math.abs` AND THE SIDE-AWARE STOP (#1155): for a short the stop is ABOVE the entry, so
+            // `currentClose − slPrice` is NEGATIVE and would take the fallback branch on every short —
+            // sizing every short as though its stop distance were the whole price. Measured before the
+            // fix: a short run sized its positions off the fallback, not off its own stop.
+            const stopDistance = isLong ? currentClose - slPrice : slPrice - currentClose;
             const sized = computeSizing({
               model: 'fixedPercent',
               equity: accountSize,
@@ -1377,7 +1489,7 @@ export class BacktestService {
             entryPrice: Number(entryCost.toFixed(5)),
             exitDate,
             exitPrice: Number(exitCost.toFixed(5)),
-            direction: 'LONG',
+            direction: isLong ? 'LONG' : 'SHORT',
             pnl: Number(netPnl.toFixed(4)),
             pnlPct: Number(pnlPct.toFixed(2)),
             exitReason,
@@ -1492,9 +1604,13 @@ export class BacktestService {
       stats: {
         totalSignals: entrySignals.length,
         winRate: Number(winRate.toFixed(2)),
-        averageReturn10d: Number(avgReturn10d.toFixed(2)),
-        maxReturn10d: Number(maxReturn10d.toFixed(2)),
-        maxDrawdown10d: Number(maxDrawdown10d.toFixed(2)),
+        averageReturn10d: returns10d.length ? Number(avgReturn10d.toFixed(2)) : null,
+        // A fresh run must agree with a stored one: no forward returns means NULL, not 0. The
+        // stored-row reader gates on `maxReturn10d` for exactly this reason (`getResults`), and the
+        // two paths disagreed until 2026-10-30 — one field, two answers, depending on where the run
+        // came from. That is the split-unit defect #980 removed, in its absence form.
+        maxReturn10d: returns10d.length ? Number(maxReturn10d.toFixed(2)) : null,
+        maxDrawdown10d: returns10d.length ? Number(maxDrawdown10d.toFixed(2)) : null,
         profitFactor: Number((grossProfit / grossLoss).toFixed(2)),
         sharpeApproximation: Number(sharpeApproximation.toFixed(2)),
         ...(doBrackets ? {
@@ -1508,7 +1624,7 @@ export class BacktestService {
       tradeWinRate: tradeWinRate === null ? null : Number(tradeWinRate.toFixed(2)),
           avgTradePnl: Number(avgTradePnl.toFixed(2)),
           totalPnl: Number(totalPnl.toFixed(4)),
-          maxTradeDrawdown: Number(maxTradeDrawdown.toFixed(4)),
+          maxTradeDrawdown: tradePnls.length ? Number(maxTradeDrawdown.toFixed(4)) : null,
           grossPnl: Number(grossPnlTotal.toFixed(4)),
           totalCommission: Number(totalCommissionPaid.toFixed(4)),
           netPnl: Number(totalPnl.toFixed(4)),
@@ -1556,6 +1672,10 @@ export class BacktestService {
             // date, so a comparison across two modes is not a like-for-like pair; `compareRuns()`
             // can only say that if the mode was stored.
             newsExclusion,
+            // #1155 — WHICH SIDES this run could open. Without it a long run and a short run are
+            // indistinguishable in this table, and `describeRunDifferences()` would report "no setting
+            // differs" between a +76,000 and a −155,000 result that differ only in DIRECTION.
+            directionMode,
             // ⚠️ #1141 — THE COSTS AND THE SIZING WERE NEVER STORED. Measured 2026-10-26: these six
             // columns were NULL on **60 of 60** rows while `formatRunResult()` read them back, so
             // every run served the formatter's DEFAULTS (0.01 / 0.01 / 0) and two runs costed
@@ -2264,6 +2384,12 @@ export class BacktestService {
       avgTradePnlPct: number;
       /** The news-window mode this run measured with — `none` when the column predates it. */
       newsExclusion: 'none' | 'exclude' | 'only';
+      /**
+       * #1155 — which sides the run could open. `long` for every run made before the column existed,
+       * which was long-only by construction. Surfaced so a long-vs-short pair is visibly a different
+       * QUESTION rather than a difference in settings.
+       */
+      directionMode: 'long' | 'short' | 'both';
     }>;
     /** Null unless every side cleared the sample bar. `sample` travels with the name. */
     best: { id: string; metric: string; value: number; sample: number } | null;
@@ -2288,6 +2414,16 @@ export class BacktestService {
       comparabilityWarning: string | null;
       note: string;
     };
+    /**
+     * WHICH SETTINGS ACTUALLY DIFFER between the selected runs (owner direction, 2026-10-31).
+     *
+     * A side-by-side metrics table answers "which run won"; it cannot answer "what did I change",
+     * which is the question a backtest session is made of. Four runs were listed with identical
+     * protocol, symbol, timeframe, trade count, win rate and profit factor and P&Ls from +76,617 to
+     * +141,219 — the only inputs that differed were spread and slippage, and nothing on the page said
+     * so. `describeRunDifferences()` computes this from the STORED columns.
+     */
+    differences: RunDifferenceSet;
   }> {
     const runs = await this.prisma.backtestRun.findMany({
       where: { id: { in: runIds } },
@@ -2339,6 +2475,9 @@ export class BacktestService {
         // `newsExclusion` is now a modelled column (2026-10-26), so the typed client reads it
         // directly. `?? 'none'` still handles a row written between the ALTER and the deploy.
         newsExclusion: ((r.newsExclusion ?? 'none') as 'none' | 'exclude' | 'only'),
+        // #1155 — `?? 'long'` handles a row written between the ALTER and the deploy, and matches what
+        // every pre-column row actually did (the loop could only open a long).
+        directionMode: ((r.directionMode ?? 'long') as 'long' | 'short' | 'both'),
         /**
          * HOW THIS RUN COSTED AND SIZED ITS FILLS (#1141). `recorded: false` means the row predates
          * the write path, so its costs are UNKNOWN — and unknown is not "the same as the other one".
@@ -2364,12 +2503,26 @@ export class BacktestService {
         // A UI is free to display 2dp; the API must not discard the value first.
         maxDrawdownPct: Number(r.maxDrawdown.toFixed(4)),
         avgTradePnlPct: Number(r.avgTradePnl.toFixed(4)),
+        /*
+         * ── THE THREE SETTINGS THE DIFF NEEDS AND THE MAPPER WAS NOT SENDING (2026-10-31) ────────
+         * `describeRunDifferences()` compares STORED columns, so a field the mapper omits reads as
+         * "not recorded" on every side and lands in the diff as a shared gap — noise that also hides
+         * a real difference. These three are the remaining INPUTS that change what a run measures:
+         * the fixed stake when the model is `fixedAmount`, which directive-override version scored
+         * it, and which iteration of an experiment it was.
+         */
+        fixedAmount: r.fixedAmount ?? null,
+        configVersion: r.configVersion ?? null,
+        iteration: r.iteration ?? null,
       };
     });
 
     if (formatted.length === 0) {
       return {
         runs: [],
+        // No runs is the absence of a comparison, not an empty one. An empty set is the honest
+        // shape; "everything matches" would be a claim about nothing.
+        differences: describeRunDifferences([]),
         best: null,
         verdict: {
           verdict: 'no-runs',
@@ -2472,6 +2625,35 @@ export class BacktestService {
     // cannot be credited to the protocol, so that pair is worthless; two different news filters are
     // a legitimate experiment ("does skipping news days help?"), and refusing it would block the
     // question the control exists to ask. What must not happen is the difference going unmentioned.
+    // ── WHAT ELSE DIFFERS (owner direction, 2026-10-31) ───────────────────────────────────────
+    // Computed from the STORED columns, once, so every branch below returns the same diff. It is
+    // ordered to match `formatted` (createdAt desc) so a column position means the same run in both
+    // the metrics table and the settings table.
+    const differences = describeRunDifferences(
+      formatted.map((f) => ({
+        id: f.id,
+        symbol: f.symbol,
+        protocolId: f.protocolId,
+        timeframe: f.timeframe,
+        startDate: f.startDate,
+        endDate: f.endDate,
+        periodId: f.periodId ?? null,
+        newsExclusion: f.newsExclusion,
+        directionMode: f.directionMode,
+        positionModel: f.costs.positionModel,
+        accountSize: f.costs.accountSize,
+        riskPct: f.costs.riskPct,
+        fixedAmount: f.fixedAmount ?? null,
+        slippage: f.costs.slippage,
+        spread: f.costs.spread,
+        commission: f.costs.commission,
+        botId: f.botId ?? null,
+        botBaseSize: f.botBaseSize ?? null,
+        configVersion: f.configVersion ?? null,
+        iteration: f.iteration ?? null,
+      })),
+    );
+
     const newsModes = [...new Set(formatted.map((f) => f.newsExclusion))];
     const newsWarning = newsModes.length > 1
       ? `⚠️ The runs used DIFFERENT news-window modes (${newsModes.join(' vs ')}), so they measured ` +
@@ -2488,6 +2670,7 @@ export class BacktestService {
     if (refusals.length > 0 || windowWarning) {
       return {
         runs: formatted,
+        differences,
         best: null,
         verdict: {
           // The window check comes FIRST: unlike a thin sample, it is not resolved by collecting
@@ -2519,6 +2702,7 @@ export class BacktestService {
     const bestRow = formatted.reduce((a, b) => (a.sharpeRatio > b.sharpeRatio ? a : b));
     return {
       runs: formatted,
+      differences,
       best: {
         id: bestRow.id,
         metric: 'sharpeRatio',
@@ -2559,91 +2743,42 @@ export class BacktestService {
   }
 
   /**
-   * Computes the equity curve and drawdown from stored trades.
-   * Equity = cumulative PnL from all trades in chronological order.
-   * Drawdown = (peak - current) / peak * 100 at each point.
+   * getEquityCurve() — the run's realised P&L path and its worst peak-to-trough fall.
+   *
+   * The arithmetic lives in `computeEquityPath()` (`equity-drawdown.ts`), extracted 2026-10-30 so
+   * `equity-drawdown.spec.ts` can canary it in BOTH directions without a database. Read that file's
+   * header for the three measured defects this replaced — in short: the denominator was the peak
+   * cumulative P&L (8,867.70% on a run whose real fall was 1,610.68% of capital), a `peak > 0` guard
+   * made a monotonic loser report exactly 0, and the path was ordered by entry date while being
+   * stamped with exit date (117 of 1,027 points out of order).
+   *
+   * This method now only loads the rows and delegates. `trades: { orderBy: { exitDate: 'asc' } }` is
+   * kept as the SQL-side ordering so the query itself is honest about what the curve is a function
+   * of; `computeEquityPath` sorts again because it cannot assume its caller did.
    */
   async getEquityCurve(runId: string): Promise<{
     runId: string;
     symbol: string;
-    startingCapital?: number;
-    equity: Array<{ time: string; equity: number; drawdownPct: number }>;
-    summary: {
-      totalTrades: number;
-      totalPnl: number;
-      finalEquity: number;
-      maxDrawdownPct: number;
-      maxDrawdownStart: string | null;
-      maxDrawdownEnd: string | null;
-      peakEquity: number;
-      peakDate: string | null;
-    };
+    equity: EquityPoint[];
+    summary: EquitySummary;
   } | { error: string }> {
     const run = await this.prisma.backtestRun.findUnique({
       where: { id: runId },
       include: {
-        trades: { orderBy: { entryDate: 'asc' } },
+        trades: { orderBy: { exitDate: 'asc' } },
         symbol: { select: { ticker: true } },
       },
     });
 
     if (!run) return { error: 'Run not found' };
 
-    const trades = run.trades || [];
-    const startingCapital = 0; // equity curve starts at zero cumulative PnL
-    const equity: Array<{ time: string; equity: number; drawdownPct: number }> = [];
+    const { equity, summary } = computeEquityPath(run.trades || [], {
+      runStart: run.startDate,
+      accountSize: run.accountSize,
+      totalPnl: run.totalPnl,
+    });
 
-    let cumulative = 0;
-    let peak = 0;
-    let maxDrawdownPct = 0;
-    let maxDrawdownStart: string | null = null;
-    let maxDrawdownEnd: string | null = null;
-    let currentDrawdownStart: string | null = null;
-    let peakDate: string | null = null;
-
-    // Add starting point
-    equity.push({ time: run.startDate.toISOString(), equity: 0, drawdownPct: 0 });
-
-    for (const trade of trades) {
-      cumulative += Number(trade.pnl);
-
-      if (cumulative > peak) {
-        peak = cumulative;
-        peakDate = trade.exitDate.toISOString();
-        currentDrawdownStart = null; // reset drawdown tracking
-      } else if (currentDrawdownStart === null) {
-        currentDrawdownStart = trade.exitDate.toISOString();
-      }
-
-      const drawdown = peak > 0 ? ((peak - cumulative) / Math.abs(peak)) * 100 : 0;
-      if (drawdown > maxDrawdownPct) {
-        maxDrawdownPct = drawdown;
-        maxDrawdownStart = currentDrawdownStart;
-        maxDrawdownEnd = trade.exitDate.toISOString();
-      }
-
-      equity.push({
-        time: trade.exitDate.toISOString(),
-        equity: Math.round(cumulative * 100) / 100,
-        drawdownPct: Math.round(drawdown * 100) / 100,
-      });
-    }
-
-    return {
-      runId,
-      symbol: run.symbol?.ticker || '',
-      equity,
-      summary: {
-        totalTrades: trades.length,
-        totalPnl: run.totalPnl,
-        finalEquity: equity.length > 0 ? equity[equity.length - 1].equity : 0,
-        maxDrawdownPct: Math.round(maxDrawdownPct * 100) / 100,
-        maxDrawdownStart,
-        maxDrawdownEnd,
-        peakEquity: peak,
-        peakDate,
-      },
-    };
+    return { runId, symbol: run.symbol?.ticker || '', equity, summary };
   }
 
   /**
@@ -2903,7 +3038,10 @@ export class BacktestService {
         // the row cannot support.
         averageReturn10d: run.averageReturn10d ?? null,
         maxReturn10d: run.maxReturn10d ?? null,
-        maxDrawdown10d: run.maxDrawdown,
+        // The COLUMN cannot be NULL (`backtestrun.maxDrawdown` is `double NOT NULL`), so it reads 0
+        // for a run that produced no forward returns — and 0 renders as "flat", a claim the row
+        // cannot support. Its nullable sibling is the honest gate: no max return means no returns.
+        maxDrawdown10d: run.maxReturn10d == null ? null : run.maxDrawdown,
         profitFactor: run.profitFactor,
         sharpeApproximation: run.sharpeRatio,
         totalTrades: run.totalTrades,
@@ -2919,7 +3057,21 @@ export class BacktestService {
         tradeWinRate: tradeStats.fraction,
         avgTradePnl: run.avgTradePnl,
         totalPnl: run.totalPnl,
-        maxTradeDrawdown: run.maxDrawdown,
+        // ⚠️ NOT `run.maxDrawdown` (#1149 follow-up, measured 2026-10-30).
+        //
+        // `backtestrun.maxDrawdown` is WRITTEN from `min(returns10d)` — the worst ten-day FORWARD
+        // RETURN per score (see the write at the `run()` mapper). It is not a trade drawdown. Serving
+        // it here as well as at `maxDrawdown10d` put the SAME NUMBER under two different labels on
+        // the Result step: run `7f00cfb8` reported "Max Drawdown (10d) −2.87" and "Max Trade DD
+        // −2.87", while its actual worst single trade was **−296.19**. One column, two names, and
+        // only one of them was true.
+        //
+        // A run that recorded no trades gets `null` — never 0, because 0 says "no trade lost money".
+        maxTradeDrawdown: runTrades.length
+          ? Number(Math.min(...runTrades.map((t) => Number(t.pnl))).toFixed(4))
+          : null,
+        // The denominator for any % of capital, so the UI can NAME it rather than assert one.
+        accountSize: run.accountSize ?? null,
       },
     };
   }
