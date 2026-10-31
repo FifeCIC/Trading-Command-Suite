@@ -57,8 +57,16 @@ const SITE_INDEX = path.join(ROOT, 'site', 'index.html');
 /** The wiki page name. GitHub derives the URL from this; changing it breaks every existing link. */
 const WIKI_PAGE = 'Financial-Disclaimer.md';
 const WIKI_HOME = 'Home.md';
-/** Pages serves this folder. `site/` is intentional: it is NOT `docs/`, which holds internal reference. */
-const PAGES_PATH = '/site';
+/**
+ * Pages deploys via `.github/workflows/pages.yml` (build_type: workflow), NOT from a branch folder.
+ *
+ * ⚠️ MEASURED 2026-10-31: the branch model accepts only `/` or `/docs`, and `POST /pages` with
+ * `source[path]=/site` is refused HTTP 422 — so `site/` could not be served any other way. `/docs`
+ * was rejected as the destination because it holds internal reference documents; serving it would
+ * put engineering notes at the public front door.
+ */
+const PAGES_SOURCE_DIR = 'site';
+const PAGES_WORKFLOW = '.github/workflows/pages.yml';
 
 // ── The decision, isolated so it can be tested without a network ────────────────────────────────
 
@@ -113,6 +121,14 @@ function decidePreflight(s) {
         'commit and push site/ first',
     );
   }
+  if (!s.hostsPagesWorkflowTracked) {
+    // The deployment type has no folder setting, so the workflow IS the configuration. Without it
+    // on master, enabling Pages produces a site that never builds and never explains why.
+    pages.push(
+      `${PAGES_WORKFLOW} is not committed — the Actions deployment type has no folder setting, so ` +
+        'without the workflow Pages would never build',
+    );
+  }
   if (!s.secretScanning) {
     warnings.push(
       'secret scanning is not enabled — free on public repos; it should be on before history is exposed',
@@ -134,6 +150,7 @@ const GOOD = {
   disclaimerExists: true,
   siteIndexExists: true,
   siteIndexTracked: true,
+  hostsPagesWorkflowTracked: true,
   visibility: 'public',
   hasWiki: true,
   disclaimerTracked: true,
@@ -151,6 +168,7 @@ function selfTest() {
     // ⚠️ THE REGRESSION CASE. Measured 2026-10-31: `site/` existed on disk and was untracked, and the
     // first version of this preflight passed it. Enabling Pages there publishes a 404 with no error.
     ['site index UNCOMMITTED refuses PAGES ONLY', { ...GOOD, siteIndexTracked: false }, true, false],
+    ['missing deploy workflow refuses PAGES ONLY', { ...GOOD, hostsPagesWorkflowTracked: false }, true, false],
     ['an uncommitted disclaimer WARNS but passes', { ...GOOD, disclaimerTracked: false }, true, true],
     ['secret scanning off WARNS but passes', { ...GOOD, secretScanning: false }, true, true],
   ];
@@ -215,10 +233,18 @@ function readState(repo) {
   } catch {
     siteTracked = false;
   }
+  let workflowTracked = false;
+  try {
+    execFileSync('git', ['ls-files', '--error-unmatch', PAGES_WORKFLOW], { cwd: ROOT, stdio: 'pipe' });
+    workflowTracked = true;
+  } catch {
+    workflowTracked = false;
+  }
   return {
     disclaimerExists: fs.existsSync(DISCLAIMER),
     siteIndexExists: fs.existsSync(SITE_INDEX),
     siteIndexTracked: siteTracked,
+    hostsPagesWorkflowTracked: workflowTracked,
     visibility: r.visibility,
     hasWiki: r.has_wiki === true,
     disclaimerTracked: tracked,
@@ -281,16 +307,16 @@ function publishWiki(repo, disclaimerBody, apply) {
 }
 
 function publishPages(repo, state, apply) {
-  console.log(`\n[pages] source: branch master, path ${PAGES_PATH}`);
+  console.log(`\n[pages] deployment type: workflow (${PAGES_WORKFLOW} uploads ${PAGES_SOURCE_DIR}/)`);
   if (state.hasPages) {
     console.log('  already enabled — not touching its configuration');
     return 'already-enabled';
   }
   if (!apply) {
-    console.log('  would enable Pages from master:/site');
+    console.log('  would enable Pages with build_type=workflow');
     return 'dry-run';
   }
-  gh(['api', '-X', 'POST', `repos/${repo}/pages`, '-f', 'source[branch]=master', '-f', `source[path]=${PAGES_PATH}`]);
+  gh(['api', '-X', 'POST', `repos/${repo}/pages`, '-f', 'build_type=workflow']);
   console.log('  enabled');
   return 'enabled';
 }

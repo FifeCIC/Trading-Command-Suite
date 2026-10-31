@@ -1,0 +1,54 @@
+# Deploys the landing page in `site/` to GitHub Pages.
+#
+# ⚠️ WHY THIS WORKFLOW EXISTS RATHER THAN SetTINGS → PAGES → master:/docs
+# ----------------------------------------------------------------
+# Measured 2026-10-31: the branch deployment model accepts only `/` or `/docs` as the source path —
+# `POST /repos/{owner}/{repo}/pages` with `source[path]=/site` is refused with HTTP 422
+# ("`/site` is not a possible value. Must be one of the following: /, /docs").
+#
+# `/docs` was rejected as a destination on purpose: it holds the app's internal reference documents
+# (`scoring-architecture`, `SCREENER-CONTRACT`, `risk-controls`, …). Serving that folder as the
+# public site would put engineering notes at the front door and force the landing page to masquerade
+# as `docs/index.html`.
+#
+# The Actions deployment type (`build_type: workflow`) has no folder restriction, so `site/` stays a
+# folder of its own and nothing in `docs/` is published by this workflow.
+#
+# Publishing is driven by `scripts/publish-public-docs.cjs`; this file is the deploy step it enables.
+name: Pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. `cancel-in-progress: false` because a half-cancelled Pages deployment can
+# leave the site reporting the previous artefact while a newer push is already merged.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          # The whole folder — `site/.nojekyll` rides along, which is what stops Jekyll from
+          # rewriting the output on a branch build.
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
