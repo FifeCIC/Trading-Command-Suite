@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Command Suite — early alpha screenshots</title>
+<meta name="description" content="Screenshots from the early alpha of Trading Command Suite — a modular trading analysis and automation platform. Images are from an early build and the app has moved on a long way since.">
+
+<!--
+  ===========================================================================================
+  PUBLISHING NOTES (updated 2026-09-29)
+
+  LINKS — all live, no placeholders remain:
+    Discord  https://discord.gg/8gRFkhbbfg        (also the tester channel — see below)
+    Reddit   https://www.reddit.com/r/TradingCommandSuite/
+
+  OTHER-SITE LINKS REMOVED 2026-09-29 at the owner's instruction: that site has no registration or
+  community yet, so every link to it pointed somewhere that could not receive anyone. GitHub Pages
+  is the home for now.
+
+  THE TESTER PATH IS THE DISCORD, NOT A FORM. A separate site cannot host a form yet, and a GitHub
+  Issue Form is the wrong tool here — it creates a PUBLIC issue, so an applicant's contact details
+  would be world-readable. A hosted form can be added later without changing this page's structure.
+
+  Authority for publishing these images: the owner authorised them on 2026-09-28, overriding the
+  "no META.Stack technicals exposed" boundary set by FREE-EDITION-PLAN.md §3.5 and decision O6.
+  See website/SCREENSHOT-PUBLICATION-AUTHORISATION.md for what that superseded and why.
+
+  NUMBERS ARE DELIBERATE FLOORS, AND THE FLOOR MOVES BOTH WAYS. Measured 2026-09-29 the live counts
+  were 105 directives and 52 protocols, published as "more than 100" and "more than 50".
+  RE-MEASURED 2026-10-31: 109 directives, **49 protocols** — so the protocol floor of 50 was no longer
+  true and became "more than 40". A floor is only honest while the real count stays above it, and
+  directives do get retired.
+  ===========================================================================================
+-->
+
+<style>
+  /* Palette taken from the product's own light theme (website/light-theme-reference.md) so the
+     brochure matches the app rather than inventing a second identity. */
+  :root {
+    --bg: #f4f7fb;
+    --ink: #0f172a;
+    --ink-soft: #334155;
+    --panel: #ffffff;
+    --line: #d9e2ec;
+    --accent: #0b7d7e;          /* darkened from the app's #0ea5a6 to clear 4.5:1 on white */
+    --accent-soft: #0ea5a6;
+    --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.08);
+    --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(14, 165, 166, 0.08) 0%, var(--bg) 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px 72px; }
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+  }
+
+  header.hero { padding: 40px 0 8px; }
+  .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  .brand img { width: 52px; height: 52px; }
+  .brand span { font-weight: 700; letter-spacing: 0.02em; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.6rem); line-height: 1.15; margin: 0 0 12px; }
+  h2 { font-size: 1.3rem; margin: 44px 0 10px; }
+  h3 { font-size: 1.05rem; margin: 26px 0 8px; }
+  .lede { font-size: 1.08rem; color: var(--ink-soft); max-width: 62ch; }
+
+  .banner {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-left-width: 6px;
+    border-radius: 10px; padding: 14px 16px; margin: 22px 0 0;
+    color: #7c2d12;
+  }
+  .banner strong { display: block; }
+  .banner p { margin: 2px 0 0; font-size: 0.95rem; }
+
+  nav.cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 8px; }
+  .cta {
+    display: inline-block; padding: 11px 18px; border-radius: 999px;
+    background: var(--accent); color: #fff; text-decoration: none;
+    font-weight: 600; font-size: 0.95rem; border: 1px solid var(--accent);
+    min-height: 44px;
+  }
+  .cta:hover { background: #096a6b; }
+  .cta.secondary { background: transparent; color: var(--accent); }
+  .cta.secondary:hover { background: rgba(14, 165, 166, 0.1); }
+
+  section.card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow-card);
+    padding: 22px 24px; margin-top: 22px;
+  }
+
+  dl.terms { margin: 0; }
+  dl.terms dt { font-weight: 700; margin-top: 14px; }
+  dl.terms dt:first-of-type { margin-top: 0; }
+  dl.terms dd { margin: 2px 0 0; color: var(--ink-soft); }
+  .note { font-size: 0.94rem; color: var(--ink-soft); }
+  .note.mistake {
+    background: rgba(59, 130, 246, 0.07);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 10px; padding: 12px 14px; margin-top: 16px;
+  }
+
+  .gallery { display: grid; gap: 26px; grid-template-columns: 1fr; margin-top: 20px; }
+  @media (min-width: 720px) { .gallery { grid-template-columns: 1fr 1fr; } }
+  figure { margin: 0; }
+  figure img {
+    width: 100%; height: auto; display: block;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  }
+  figcaption { margin-top: 8px; font-size: 0.9rem; color: var(--ink-soft); }
+  figcaption b { color: var(--ink); }
+
+  table.status { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.94rem; }
+  table.status th, table.status td {
+    text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top;
+  }
+  table.status th { width: 38%; font-weight: 600; }
+
+  footer.end { margin-top: 40px; font-size: 0.88rem; color: var(--ink-soft); }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Trading Command Suite logo" width="52" height="52">
+      <span>Trading Command Suite</span>
+    </div>
+
+    <h1>A trading platform that shows you its reasoning</h1>
+    <p class="lede">
+      Trading Command Suite analyses markets with a library of small, named rules, scores the results
+      into ranked opportunities, and can act on them automatically. Below is what it looks like.
+    </p>
+
+    <div class="banner" role="note">
+      <div>
+        <strong>⚠️ These screenshots are from an EARLY ALPHA build.</strong>
+        <p>
+          They are published on purpose, warts and all, so you can see how much ground a tool like
+          this covers. The app has moved on a great deal since these were captured — layout, speed
+          and daily workflow have all been reworked — and it is still under active development,
+          tested by a small invited group. Treat every image as <em>where we were</em>, not where
+          we are.
+        </p>
+      </div>
+    </div>
+
+    <nav class="cta-row" aria-label="Follow the project">
+      <a class="cta" href="https://discord.gg/8gRFkhbbfg">Join the Discord</a>
+      <a class="cta" href="https://www.reddit.com/r/TradingCommandSuite/">Discuss on Reddit</a>
+      <a class="cta secondary" href="#testers">Become a tester</a>
+      <a class="cta secondary" href="../">Back to the project page</a>
+    </nav>
+    <p class="note">
+      We are inviting testers while the platform is in alpha. Applications are open to anyone —
+      see <a href="#testers">who we are looking for</a>.
+    </p>
+  </header>
+
+  <main>
+
+    <section class="card" id="purpose" aria-labelledby="h-purpose">
+      <h2 id="h-purpose">What you are looking at</h2>
+      <p>
+        The analysis layer is a library of <b>more than 100 named directives</b> — small, single-purpose
+        rules such as “this instrument is oversold” — grouped into <b>more than 40 protocols</b>, each of
+        which asks one specific question of the market. The screenshots below show what that looks like
+        in practice.
+      </p>
+      <p class="note">
+        <b>Written for:</b> traders who are curious what a purpose-built analysis platform looks like.
+        No prior knowledge of this app is assumed — the handful of words its screens use are defined
+        just below. If you already build systems, skip to the
+        <a href="#gallery">gallery</a>: the interesting part is how the pieces compose.
+      </p>
+    </section>
+
+    <section class="card" id="terms" aria-labelledby="h-terms">
+      <h2 id="h-terms">The words on the screens</h2>
+      <dl class="terms">
+        <dt>Directive</dt>
+        <dd>A single named rule — “this instrument looks oversold”, “momentum is fading”. Each one
+          looks at the market and reports what it found. Directives are the small pieces.</dd>
+
+        <dt>Protocol</dt>
+        <dd>A chosen set of directives that answers a specific question, such as
+          “is there a long opportunity in gold this afternoon?”. Protocols are the opinion.</dd>
+
+        <dt>Scoring</dt>
+        <dd>Running a protocol over a symbol and turning the directives that fired into one
+          comparable number, so that many symbols and many protocols can be ranked against each
+          other instead of being read one at a time.</dd>
+
+        <dt>Signal</dt>
+        <dd>The ranked result — what the platform thinks is worth your attention right now, and in
+          which direction.</dd>
+
+        <dt>Watchlist</dt>
+        <dd>The list of symbols you asked it to keep an eye on.</dd>
+
+        <dt>MetaStack</dt>
+        <dd>A complete assembled unit: which symbols to watch, which protocol judges them, how the
+          score is used, and which trading strategy acts on it. It is the thing that can be rated,
+          versioned and compared.</dd>
+      </dl>
+
+      <div class="note mistake">
+        <b>Common mistake:</b> reading a score as a forecast. It is a <em>ranking</em> — it tells you
+        what stood out from the rest of the list, not what the market will do.
+        <b>Quick check:</b> if a screen shows a number, ask “compared to what?”. Every one of them is
+        comparative.
+      </div>
+    </section>
+
+    <h2 id="gallery-heading">The screens</h2>
+    <p class="note">
+      17 captures from the alpha build, in no particular order. Every image is a real screen; none
+      is a mockup.
+    </p>
+
+    <div class="gallery" role="list">
+
+      <figure role="listitem">
+        <img src="assets/scoring-ladder.png" alt="Scoring Ladder screen: a list of active protocols on the left and ranked symbol cards showing signal and opportunity scores on the right." loading="lazy" width="1200">
+        <figcaption><b>Scoring Ladder.</b> The centre of the app — protocols on the left, the ranked
+          opportunities they produced on the right. This is where many symbols are compared at once.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/signals.png" alt="Signals screen showing ranked trading opportunities as cards." loading="lazy" width="1200">
+        <figcaption><b>Signals.</b> The same analysis presented as opportunities rather than
+          instrument rankings — the view you would actually trade from.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/signal-card.png" alt="A single signal shown in detail." loading="lazy" width="1200">
+        <figcaption><b>Signal Card.</b> One opportunity opened up. The point of the platform is that
+          this view can explain <em>why</em>, rule by rule, rather than just asserting a direction.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/protocols-ladder.png" alt="Protocols Ladder screen ranking protocols." loading="lazy" width="1200">
+        <figcaption><b>Protocols Ladder.</b> Many protocols judged against each other on the same
+          instrument — useful for seeing which approach currently fits the market.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/symbols-ladder.png" alt="Symbols Ladder screen ranking symbols." loading="lazy" width="1200">
+        <figcaption><b>Symbols Ladder.</b> The reverse angle: one protocol, every symbol, ranked.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/directives-registry.png" alt="Directives Registry listing the available rules." loading="lazy" width="1200">
+        <figcaption><b>Directives Registry.</b> The rule library. Every analysis in the app is built
+          from these named pieces.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/protocols-registry.png" alt="Protocols Registry listing the available protocols." loading="lazy" width="1200">
+        <figcaption><b>Protocols Registry.</b> The library of assembled protocols — the opinions the
+          platform can form.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/create-strategy.png" alt="Create Strategy screen for assembling a new strategy." loading="lazy" width="1200">
+        <figcaption><b>Create Strategy.</b> Where the pieces are assembled into something that can act.
+          This screen has changed substantially since this capture.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/metastack-status.png" alt="MetaStack Status screen showing assembled units and their state." loading="lazy" width="1200">
+        <figcaption><b>MetaStack Status.</b> The assembled units and what each is doing right now.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/screener.png" alt="Screener screen filtering instruments by criteria." loading="lazy" width="1200">
+        <figcaption><b>Screener.</b> Narrowing a large universe down before any ranking happens.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/active-symbols.png" alt="Active Symbols screen listing instruments currently being tracked." loading="lazy" width="1200">
+        <figcaption><b>Active Symbols.</b> What is currently being watched, and its state.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/watchlists.png" alt="Watchlists screen managing groups of symbols." loading="lazy" width="1200">
+        <figcaption><b>Watchlists.</b> Grouping instruments so different strategies can look at
+          different parts of the market.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/risk-controls.png" alt="Risk Controls screen showing limits and safeguards." loading="lazy" width="1200">
+        <figcaption><b>Risk Controls.</b> The limits and safeguards that sit in front of anything
+          automatic. Deliberately a first-class screen, not a settings page.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/news-intel.png" alt="News Intel screen showing news items and their context." loading="lazy" width="1200">
+        <figcaption><b>News Intel.</b> Headlines kept beside the analysis, so an event is visible
+          rather than surprising.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/capability-map.png" alt="Capability Map screen describing what the platform can do." loading="lazy" width="1200">
+        <figcaption><b>Capability Map.</b> The app describing itself — which parts exist and how complete
+          each one is. Most software does not tell you this.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/notes.png" alt="Notes screen." loading="lazy" width="1200">
+        <figcaption><b>Notes.</b> A research record that sits inside the tool instead of in a separate
+          document.</figcaption>
+      </figure>
+
+      <figure role="listitem">
+        <img src="assets/alpha-extra.png" alt="A start-up screen showing a progress checklist of the app's own services as they load." loading="lazy" width="1200">
+        <figcaption><b>Start-up / readiness screen.</b> There is no login — this is the screen shown
+          while the app loads, so you can see at a glance that the database, data providers and
+          services are up before you trust anything on screen.</figcaption>
+      </figure>
+
+    </div>
+
+    <section class="card" id="alpha" aria-labelledby="h-alpha">
+      <h2 id="h-alpha">This is early alpha — here is what that means</h2>
+      <p>
+        The screenshots are honest, and that is partly the point: this is a large surface, some of it
+        unfinished. What has changed since these captures, and what changes next:
+      </p>
+      <ul>
+        <li><b>Looks.</b> Layout, spacing and typography have been substantially reworked, and
+          continue to be.</li>
+        <li><b>Focus.</b> Screens that were research instruments are becoming daily tools — fewer
+          numbers, more decisions.</li>
+        <li><b>Completeness.</b> Some pages visible here are deliberately incomplete, and the app is
+          meant to say so rather than hide it.</li>
+        <li><b>Stability.</b> It runs against demo accounts. It is not offered as something to trade
+          real money with yet.</li>
+      </ul>
+      <p class="note">
+        If a busy-looking screen makes you think “surely that could be simpler” — that is a
+        conversation worth having, and a large part of why this is being shown while it is still
+        rough.
+      </p>
+    </section>
+
+    <section class="card" id="testers" aria-labelledby="h-testers">
+      <h2 id="h-testers">Becoming a tester</h2>
+      <p>
+        Anyone can apply. Testers get an early build, an honest view of what is broken, and a say in
+        what gets fixed first.
+      </p>
+      <p class="note">
+        Ideally you trade, or you have built trading tools, and you are comfortable saying when
+        something is wrong in specific terms rather than generally.
+      </p>
+      <p>
+        There is no application form yet. The fastest route is the Discord invite above — say hello
+        and mention you would like to test. That is the whole application.
+      </p>
+      <p>
+        <a class="cta" href="https://discord.gg/8gRFkhbbfg">Join the Discord</a>
+        <a class="cta secondary" href="https://www.reddit.com/r/TradingCommandSuite/">Ask on Reddit</a>
+      </p>
+    </section>
+
+    <section class="card" id="status-block" aria-labelledby="h-status">
+      <h2 id="h-status">Status of this page</h2>
+      <table class="status">
+        <tr><th>Page purpose</th><td>Show real screens from the early alpha, and invite testers and community.</td></tr>
+        <tr><th>Audience</th><td>Traders and system builders. Terms are defined above; nothing else is assumed.</td></tr>
+        <tr><th>Content status</th><td><b>draft</b> — complete and link-checked; awaiting publication.</td></tr>
+        <tr><th>Validation</th><td>Screenshots are captures of a real build against demo accounts. <b>No performance claim of any kind is made or implied</b> by this page.</td></tr>
+        <tr><th>Last reviewed</th><td>2026-09-29</td></tr>
+        <tr><th>Numbers</th><td>Counts are stated as deliberate floors (<em>“more than 100”</em>) rather than exact figures, so they stay true as the platform grows.</td></tr>
+      </table>
+    </section>
+
+    <section class="card" id="disclaimer" aria-labelledby="h-disclaimer">
+      <h2 id="h-disclaimer">Please read</h2>
+      <p class="note">
+        Trading Command Suite is software for analysis and automation. <b>It does not provide
+        financial, investment, tax or legal advice, and nothing on this page is advice or a
+        recommendation to trade.</b> It is in alpha and is not ready to be relied on with real money.
+        Anything you trade is your decision and your risk. Figures visible in the screenshots come
+        from a demo account and an early build, and are shown to illustrate the interface only.
+      </p>
+    </section>
+
+    <footer class="end">
+      <nav class="cta-row" aria-label="Follow the project">
+        <a class="cta secondary" href="https://discord.gg/8gRFkhbbfg">Discord</a>
+        <a class="cta secondary" href="https://www.reddit.com/r/TradingCommandSuite/">Reddit</a>
+      </nav>
+      <p>Trading Command Suite — early alpha. © 2026. Trading Command Suite and MetaStack are trade
+        marks of the author; no trade mark rights are granted by anything on this page.</p>
+    </footer>
+
+  </main>
+</div>
+<!--
+  WHY THERE IS NO TESTER FORM YET, and what to use when there is one.
+
+  A page hosted on GitHub Pages CANNOT process a form: Pages is static, so there is nothing to
+  receive a submission. A form needs a home with a backend.
+
+    1. DISCORD  🟢 in use now
+       Zero infrastructure. The community already exists, it doubles as the place testers talk to
+       each other, and it costs nothing to run or maintain.
+
+    2. A HOSTED FORM (e.g. a Google Form)
+       Worth adding only when applications need capturing separately from the Discord conversation.
+       ⚠️ Keep applicant details off the public internet.
+
+    3. GITHUB ISSUE FORM  ⚠️ avoid for this
+       GitHub's native forms create a PUBLIC issue and require a GitHub account, so an applicant's
+       contact details would be world-readable. The right tool for a bug report, the wrong one for
+       personal data.
+-->
+</body>
+</html>
