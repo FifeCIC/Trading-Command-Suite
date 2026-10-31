@@ -92,10 +92,33 @@
   </ul>
 
   <h2>Getting it</h2>
-  <p>Source install, not an application package — there is no installer yet. See
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">SETUP.md</a> for the
-    two install tracks (web + API, or full stack with MetaTrader 5) and
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite">the repository</a> for the code.</p>
+  <p>Source install, not an application package — there is no installer yet. Two tracks:</p>
+  <ul>
+    <li><strong>Track A — web + API</strong> (~10 minutes): needs MySQL and Node.js. You get every page,
+        the database, scoring, backtesting and charts.</li>
+    <li><strong>Track B — full stack</strong>: adds Windows, MetaTrader 5 and a broker account, and with it
+        live prices, positions and order placement.</li>
+  </ul>
+  <p>⚠️ MetaTrader 5 is <strong>not</strong> required to run the app — only to trade through it.</p>
+  <p><a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">SETUP.md</a>
+    for the full instructions ·
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki">wiki</a> for how the scoring,
+    risk controls and bot pipeline actually work ·
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions">discussions</a> to ask,
+    vote on what gets built next, or report what the guide got wrong ·
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues">issues</a> for reproducible defects.</p>
+
+  <h2>What is proven, and what is not</h2>
+  <p>The project states this explicitly because the opposite is the norm in trading software.</p>
+  <ul>
+    <li><strong>Proven:</strong> the pipeline runs end to end — scoring, gating, dispatch, and a decision
+        trail from each trade back to the directive that caused it.</li>
+    <li><strong>Not proven:</strong> that any of it is profitable. There is no performance claim here, and
+        backtest output is a simulation, not a forecast.</li>
+    <li><strong>Known failure mode:</strong> plausible output with no error. A guard that cannot see its
+        input has, historically, passed rather than failed — which is why the project prefers
+        <em>CANNOT JUDGE</em> over a confident wrong answer.</li>
+  </ul>
 
   <footer>
     <p>Copyright (C) 2026 Ryan Bayne / FifeCIC. Licensed under the
