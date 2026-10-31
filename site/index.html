@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Command Suite — algorithmic trading &amp; portfolio platform</title>
+<meta name="description" content="Open-source algorithmic trading platform. Not financial advice. Not configured to profit by default. Test on a demo account.">
+<!--
+  Landing page for GitHub Pages. Published by scripts/publish-public-docs.cjs (source: master:/site).
+
+  ⚠️ THE DISCLAIMER HERE IS A SUMMARY AND A LINK, NOT A COPY. The canonical text is DISCLAIMER.md in
+  the repository. Two copies of the same legal text drift, and the copy a user accepted is the one
+  that matters — so this page points at the file rather than restating it.
+
+  ⚠️ The risk block is ABOVE the fold and cannot be dismissed. A warning that can be closed is a
+  warning most readers never see.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfc; --ink: #16181d; --ink-soft: #4b515c;
+    --risk-bg: #fff3f2; --risk-border: #c0362c; --risk-ink: #7d1f18;
+    --link: #12509c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --ink: #e9ecf1; --ink-soft: #a9b2bf;
+      --risk-bg: #2a1413; --risk-border: #ff6b5e; --risk-ink: #ffd9d5;
+      --link: #8fc0ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1.25rem 4rem;
+    background: var(--bg); color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    max-width: 46rem;
+  }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 0.25rem; }
+  h2 { font-size: 1.05rem; margin: 2.25rem 0 0.5rem; }
+  p { margin: 0.6rem 0; }
+  .sub { color: var(--ink-soft); margin-top: 0; }
+  /* The risk block: solid border, strong tint, never an aside. */
+  .risk {
+    margin: 1.5rem 0; padding: 1rem 1.1rem;
+    background: var(--risk-bg);
+    border: 2px solid var(--risk-border);
+    border-radius: 6px;
+  }
+  .risk h2 { margin-top: 0; color: var(--risk-ink); }
+  .risk p { color: var(--risk-ink); }
+  .risk ul { color: var(--risk-ink); margin: 0.5rem 0 0; padding-left: 1.2rem; }
+  .risk li { margin: 0.3rem 0; }
+  a { color: var(--link); }
+  a:focus-visible { outline: 3px solid var(--risk-border); outline-offset: 2px; }
+  ul { padding-left: 1.2rem; }
+  footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--ink-soft); color: var(--ink-soft); font-size: 0.875rem; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Trading Command Suite</h1>
+  <p class="sub">Open-source algorithmic trading &amp; portfolio platform — scoring engine, protocol-gated
+  directive pipeline, automation loop, and a decision-trail audit chain. AGPL-3.0.</p>
+
+  <section class="risk" aria-labelledby="risk-heading">
+    <h2 id="risk-heading">🛑 Read this before you connect an account</h2>
+    <p><strong>This software is not financial advice, and it is not configured to profit by default.</strong></p>
+    <ul>
+      <li>No strategy it ships with has been shown to be profitable.</li>
+      <li>It is pre-release: features are unfinished and behaviour changes without notice.</li>
+      <li>Defects that produce <em>plausible output with no error</em> have existed in this codebase.
+          A number on screen is not evidence that it is the right number.</li>
+      <li><strong>Use a demo account</strong> until you can explain every order the system places.</li>
+    </ul>
+    <p>The full terms are the canonical
+      <a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">financial disclaimer</a>.
+      Connecting a funded account is taken as accepting them.</p>
+  </section>
+
+  <h2>What it is</h2>
+  <p>A self-hosted application. It holds no money, is not a broker, and settles nothing. It connects to
+  brokers and data providers using credentials you supply, and places orders through your own broker
+  and your own MetaTrader 5 terminal.</p>
+
+  <h2>What it is not</h2>
+  <ul>
+    <li>Not a managed service — nobody operates it on your behalf.</li>
+    <li>Not a signal service, and not a recommendation to buy or sell anything.</li>
+    <li>Not validated for live trading against any broker's terms or any regulator's rules.</li>
+  </ul>
+
+  <h2>Getting it</h2>
+  <p>Source install, not an application package — there is no installer yet. See
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">SETUP.md</a> for the
+    two install tracks (web + API, or full stack with MetaTrader 5) and
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite">the repository</a> for the code.</p>
+
+  <footer>
+    <p>Copyright (C) 2026 Ryan Bayne / FifeCIC. Licensed under the
+      <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3.0</a> — no warranty, as set out in
+      sections 15–17. Engineered and maintained by one person; reviews may take time.</p>
+  </footer>
+</main>
+</body>
+</html>

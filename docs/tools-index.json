@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 186,
+  "count": 187,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -293,6 +293,14 @@
       "reaches": [
         "npm"
       ]
+    },
+    {
+      "name": "publish-public-docs.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "publish the financial disclaimer to the wiki, and the landing page to Pages.",
+      "selfTest": true,
+      "reaches": null
     },
     {
       "name": "agent-claim.cjs",

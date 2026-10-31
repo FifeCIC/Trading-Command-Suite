@@ -1,0 +1,3 @@
+# Tells GitHub Pages not to run Jekyll on this folder.
+# The site is plain HTML with no front matter or Liquid; Jekyll would only add a build step that can
+# silently drop files whose names start with an underscore.
