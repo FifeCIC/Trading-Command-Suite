@@ -68,7 +68,7 @@ file and never mentions the running process. Use `build:api`.
 
 The open issues are the honest list. The ones that would change the project most:
 
-- **Packaging** — an installer or container so the app can be run without a developer ([#1147](https://github.com/FifeCIC/Trading-Command-Suite/issues/1147))
+- **Packaging** — an installer or container so the app can be run without a developer ([#808](https://github.com/FifeCIC/Trading-Command-Suite/issues/808))
 - **Live-account safety** — the real-account gate and risk acknowledgement ([#1153](https://github.com/FifeCIC/Trading-Command-Suite/issues/1153))
 - **Data coverage** — more providers verified, more symbols with a confirmed route
 - **Documentation** — a step that confused you is a documentation bug, and you are the only person who

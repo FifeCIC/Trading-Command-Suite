@@ -9,7 +9,7 @@
 >
 > **This is a SOURCE install, not an application package.** There is no installer, no `setup.exe` and
 > no one-click download. You clone the repository and run the stack yourself. Packaging is planned,
-> not built — tracked in issue **#1147**.
+> not built — tracked in issue **#808**.
 >
 > ### Two ways to install — decide before you start
 >

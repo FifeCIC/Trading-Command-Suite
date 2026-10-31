@@ -12,7 +12,7 @@
 > This page summarises the choice; it does not replace them.
 
 This is a **source install**, not an application package. There is no installer yet — packaging is
-tracked in [#1147](https://github.com/FifeCIC/Trading-Command-Suite/issues/1147).
+tracked in [#808](https://github.com/FifeCIC/Trading-Command-Suite/issues/808).
 
 ## Two tracks — decide first
 
