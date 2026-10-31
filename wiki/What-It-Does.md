@@ -18,7 +18,10 @@ Trading Command Suite is a **self-hosted** trading application. It scores market
 through explicit rules, and — if you let it — places orders through your own broker. Everything below
 runs on your machine, against your accounts.
 
-> 🛑 It is **not configured to profit by default** and no strategy it ships has been shown to be
+> � **See it before reading about it:** [18 screens from the alpha](https://fifecic.github.io/Trading-Command-Suite/showcase/)
+> — each captioned in plain language, with a glossary for the words the app uses.
+
+> �🛑 It is **not configured to profit by default** and no strategy it ships has been shown to be
 > profitable. Read the [Financial Disclaimer](Financial-Disclaimer) first.
 
 ---
