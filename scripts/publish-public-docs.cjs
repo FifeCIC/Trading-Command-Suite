@@ -353,8 +353,14 @@ function publishWiki(repo, disclaimerBody, apply) {
   fs.writeFileSync(path.join(tmp, WIKI_PAGE), disclaimerBody, 'utf8');
   const home = path.join(tmp, WIKI_HOME);
   if (!fs.existsSync(home)) {
-    // ⚠️ Only created when absent. A Home page is the wiki's front door and someone may have edited
-    // it; overwriting it would destroy prose this script knows nothing about.
+    // ⚠️ FALLBACK ONLY. Home is normally written from `wiki/Home.md` by the copy loop below, so this
+    // branch runs only for a wiki with no Home page and no source file.
+    //
+    // MEASURED 2026-10-31: the owner created Home by hand to bootstrap the wiki, and it stayed
+    // EMPTY — nothing owned it, and this script deliberately did not touch it. An empty front page
+    // reads as an abandoned project, which is the worst first impression a documentation site can
+    // give. `wiki/Home.md` now exists, so the page is published like every other one and cannot
+    // silently go blank again.
     fs.writeFileSync(
       home,
       ['# Trading Command Suite — wiki', '', '> 🛑 **[Financial Disclaimer](' + WIKI_PAGE.replace(/\.md$/, '') + ')** —',
