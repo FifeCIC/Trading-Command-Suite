@@ -54,6 +54,12 @@
   a { color: var(--link); }
   a:focus-visible { outline: 3px solid var(--risk-border); outline-offset: 2px; }
   ul { padding-left: 1.2rem; }
+  /* Capability cards: one per area. `auto-fit` so it reflows rather than overflowing on narrow panes. */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+  .card { padding: 0.8rem 0.9rem; border: 1px solid var(--ink-soft); border-radius: 6px; }
+  .card h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .card p { margin: 0; font-size: 0.875rem; color: var(--ink-soft); }
+  .next { margin-top: 1rem; font-size: 0.9rem; }
   footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--ink-soft); color: var(--ink-soft); font-size: 0.875rem; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -91,6 +97,22 @@
     <li>Not validated for live trading against any broker's terms or any regulator's rules.</li>
   </ul>
 
+  <h2>What you can do</h2>
+  <ul class="grid">
+    <li class="card"><h3>Score a market</h3><p>Protocols built from directives, each with its own weight. Ten accounts of why a symbol
+      scored what it scored.</p></li>
+    <li class="card"><h3>Trace a decision</h3><p>Every order carries a chain back through the gate, the score and the directive that
+      caused it. Queryable, not a log file.</p></li>
+    <li class="card"><h3>Test before you trust</h3><p>Backtesting and side-by-side A/B comparison. A verdict refuses to name a winner on a
+      sample too small to support one.</p></li>
+    <li class="card"><h3>Run a bot</h3><p>Bind a protocol to a symbol with sizing, stops and limits. Or leave it on
+      <code>manual</code> and watch what it would have done.</p></li>
+    <li class="card"><h3>Watch the plumbing</h3><p>Bridge, providers, database and queue health in one place — and
+      <em>cannot judge</em> stated separately from <em>fine</em>.</p></li>
+    <li class="card"><h3>Understand the numbers</h3><p>A scoring engine, a decision trail and an audit chain, explained in the
+      wiki rather than assumed.</p></li>
+  </ul>
+
   <h2>Getting it</h2>
   <p>Source install, not an application package — there is no installer yet. Two tracks:</p>
   <ul>
@@ -119,6 +141,12 @@
         input has, historically, passed rather than failed — which is why the project prefers
         <em>CANNOT JUDGE</em> over a confident wrong answer.</li>
   </ul>
+
+  <p class="next">Read more: <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/How-It-Works">how
+    the pipeline works</a> · <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Glossary">the
+    vocabulary</a> ·
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/FAQ">questions people actually ask</a> ·
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Troubleshooting">or the traps</a>.</p>
 
   <footer>
     <p>Copyright (C) 2026 Ryan Bayne / FifeCIC. Licensed under the
