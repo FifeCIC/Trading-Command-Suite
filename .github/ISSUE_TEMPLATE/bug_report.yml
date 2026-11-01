@@ -1,0 +1,97 @@
+name: Bug report
+description: Something behaved wrongly, or produced a number you did not believe.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **The fastest way to get this fixed is to make it checkable.**
+
+        This project runs on evidence: *"score 71, threshold 75, dispatched anyway"* is a bug report.
+        *"It behaves oddly"* is not. Numbers and commands make a report fixable in one pass.
+
+        ⚠️ **Not a security problem** — those go to [a private advisory](https://github.com/FifeCIC/Trading-Command-Suite/security/advisories/new), never here.
+
+  - type: textarea
+    id: did
+    attributes:
+      label: What you did
+      description: The exact command, or the exact click path. Copy-paste it rather than describing it.
+      placeholder: |
+        npm --prefix nest run audit:bot-activation
+        then opened /trading/bot-monitor and filtered to active bots
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and why
+      description: The expectation is what tells us whether the code or the docs is wrong.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: The real output, number or screenshot. If a number looks wrong, include the number.
+      placeholder: |
+        score 71, threshold 75, and the order was still dispatched
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducible
+    attributes:
+      label: Is it reproducible?
+      description: |
+        "Once" is still useful — but it changes the priority, so please say so honestly.
+      options:
+        - Every time
+        - Intermittently
+        - Once only
+    validations:
+      required: true
+
+  - type: dropdown
+    id: account-kind
+    attributes:
+      label: Which account was connected?
+      description: |
+        Demo and real accounts take different paths. On a real account the answer is often
+        "the safety gate is not built yet" — see issue #1153.
+      options:
+        - Demo / paper
+        - Real money
+        - Nothing connected (no MT5)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: health
+    attributes:
+      label: Health output (optional but very useful)
+      description: "`curl http://localhost:3201/api/health` — most \"it does nothing\" reports are a degraded provider."
+      render: json
+
+  - type: input
+    id: version
+    attributes:
+      label: Version (optional)
+      description: "`curl http://localhost:3201/api/version`"
+      placeholder: "0.145.0"
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and discussions for this.
+          required: true
+        - label: This is not a security vulnerability (those go to a private advisory).
+          required: true
+        - label: I understand the project is pre-release and runs on demo accounts by design.
+          required: true

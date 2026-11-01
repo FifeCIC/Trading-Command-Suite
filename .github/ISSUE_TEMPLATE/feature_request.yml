@@ -1,0 +1,62 @@
+name: Feature or change request
+description: Something the app should do, or should do differently.
+title: "[idea] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome — and the most useful ones describe a **problem**, not only a solution.
+        A solution with no problem behind it is hard to evaluate and easy to build twice.
+
+        ⚠️ If it is really a question, [Discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) will answer it faster.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What are you unable to do today, and what does that cost you?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What do you have in mind?
+      description: Rough is fine. Say how you would know it worked.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area?
+      options:
+        - Scoring (protocols, directives, weights)
+        - Signals and the queue
+        - Trading (bots, positions, execution)
+        - Portfolio and accounts
+        - Backtesting / comparison lab
+        - Data and providers
+        - UI, accessibility or appearance
+        - Install, packaging or deployment
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What else did you consider? (optional)
+      description: Including "do nothing" — it is a legitimate answer and helps judge urgency.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and discussions for this.
+          required: true
+        - label: This is not a request to make the app profitable — no performance claim is made or accepted here.
+          required: true

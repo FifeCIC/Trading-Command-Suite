@@ -1,0 +1,14 @@
+# Routes people away from the wrong door before they open it.
+# ⚠️ `blank_issues_enabled: false` is deliberate: an unstructured issue costs the reporter more than
+# it costs the maintainer, because it comes back with a question that could have been in the form.
+blank_issues_enabled: false
+contact_links:
+  - name: Question, or "how do I…?"
+    url: https://github.com/FifeCIC/Trading-Command-Suite/discussions
+    about: Discussions gets an answer faster and stays searchable. Issues are for reproducible defects.
+  - name: Security vulnerability
+    url: https://github.com/FifeCIC/Trading-Command-Suite/security/advisories/new
+    about: Report privately. Never open a public issue for a security problem.
+  - name: Read the wiki first
+    url: https://github.com/FifeCIC/Trading-Command-Suite/wiki
+    about: Installing, how the pipeline works, and the traps with the misleading message each one produces.
