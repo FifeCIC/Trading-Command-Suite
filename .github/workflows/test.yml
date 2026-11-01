@@ -60,6 +60,13 @@ jobs:
         # Same cross-platform lockfile reason as frontend — see above.
         run: npm install
 
+      # ⚠️ `nest/package.json`'s `prebuild` also runs three FRONTEND tests
+      # (`node --test ../src/core/{notices,score-display,trade-readiness}.test.js`) and those reach
+      # `src/core/signal-utils.js`, which does `import { createElement } from 'react'`. The root
+      # install above covers that here; the `CI — Build & Lint` workflow's backend job installs
+      # root deps for the same reason (measured 2026-10-31: without them, `npm run build` inside
+      # `nest/` dies with `ERR_MODULE_NOT_FOUND: Cannot find package 'react'` and every run is red).
+
       - name: Generate Prisma client
         working-directory: ./nest
         run: npx prisma generate

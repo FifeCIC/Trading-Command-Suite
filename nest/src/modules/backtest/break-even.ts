@@ -1,121 +1,167 @@
 /**
- * break-even.ts — HOW OFTEN A BRACKET MUST WIN to pay for itself, and the gap to what it actually won.
+ * break-even.ts — HOW OFTEN A RUN'S TRADES MUST WIN to pay for themselves.
  *
- * ── THE QUESTION THIS ANSWERS (2026-10-31) ──────────────────────────────────────────────────────
- * Every "why do the strategies lose?" answer in this repo had been a story: stops too far, entries
- * mistimed, costs too high. All guessable, none checkable. The arithmetic is checkable, and measured
- * across the stored runs it is decisive:
+ * ── DECISION (2026-10-31, primary) ──
+ * WHAT:      The break-even win rate is MEASURED from the run's own trades — avg win, avg loss, one
+ *            division — and takes no cost, bracket, threshold or settings input at all.
+ * WHY:       The first version modelled it from bracket levels plus a cost, and the cost was already
+ *            inside those levels. It overstated the requirement by 9–13 percentage points (88.0%
+ *            where the truth is 74.9%). Measuring cannot make that class of mistake: `pnlPct` is
+ *            net of spread, slippage and commission, so the answer is arithmetic on the data.
+ * INSTEAD OF: Keeping the bracket formula and subtracting the double-counted cost term, which would
+ *            have left the same fragile inference in place and still relied on a cost figure that
+ *            may be unknown on older rows.
+ * REVERSE BY: Reintroducing a `costPct` parameter — `break-even.spec.ts` asserts the function has
+ *            none, and pins 74.9% against the old 88.0%, so a revert fails both.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 105
+ * GUARD:     nest/src/modules/backtest/break-even.spec.ts (17 tests, canaried both directions) —
+ *            every number on the Result page can also be checked by hand from the two averages
+ *            printed beside it, which is the point.
  *
- *   run        stop   target  cost   achieved  needs    gap
- *   1bbf1860   2.49%   1.49%  1.01%    42.3%   88.0%   −45.7pp
- *   568c5552   2.47%   3.50%  0.97%    22.9%   57.7%   −34.8pp
- *   6f8fc678   2.50%   3.47%  1.02%    22.9%   59.0%   −36.1pp
+ * ⚠️ THE HISTORY IS KEPT BECAUSE THE REASON MATTERS MORE THAN THE FIX.
  *
- * Two different failures, both invisible before this number existed:
- *   1. A target SMALLER than the stop (1.49% vs 2.49%) needs an **88%** win rate. No stop-tuning,
- *      trailing rule or directive set realistically reaches that — the bracket is structurally
- *      unprofitable and the only fix is to change the bracket.
- *   2. Even a 1.4:1 bracket needs 58% and the engine achieves 23%. So the bracket is not the whole
- *      story either: the ENTRIES are not predicting direction well enough.
+ * ── WHAT THE FIRST VERSION DID, AND WHY IT WAS WRONG ───────────────────────────────────────────
+ * It solved expectancy from the BRACKET plus the COST:
  *
- * ── THE ARITHMETIC ──────────────────────────────────────────────────────────────────────────────
- * A trade risks `stopPct` and returns `targetPct`, and pays `costPct` (spread + both slippage legs)
- * whichever way it goes. Expectancy per trade, as a percentage of entry:
+ *     p = (stopPct + costPct) / (targetPct + stopPct)
  *
- *     E(p) = p·(target − cost) + (1 − p)·(−stop − cost)
+ * where `stopPct`/`targetPct` were measured from the `stopLoss`/`takeProfit` recorded on each trade
+ * against `entryPrice`. But `entryPrice` is ALREADY `close × (1 + spread/2 + slippage)` — the entry
+ * leg of the cost is baked into the price the trade was opened at. So the distance from entry to the
+ * stop already contained the cost, the distance to the target was already reduced by it, and the
+ * formula then added `costPct` a second time. Measured against the alternative below:
  *
- * Setting E = 0 and solving:
+ *     run        bracket+cost   empirical   overstatement
+ *     1bbf1860       88.0%        74.9%        +13.1pp
+ *     568c5552       57.7%        48.8%         +8.9pp
  *
- *     p·target − p·cost − stop + p·stop − cost + p·cost = 0
- *     p·(target + stop) = stop + cost                     ← the ±p·cost terms cancel
- *     p = (stop + cost) / (target + stop)
+ * ⚠️ THE OWNER ASKED WHETHER THIS WAS *"just playing about with hardcoded maths"*. It was not
+ * hardcoded — but it WAS an inference about costs layered on prices that already contained them,
+ * and the only way to see that was to compute the same answer a second way and compare. Both numbers
+ * are kept above so the next reader can check the arithmetic rather than trust the prose.
  *
- * ⚠️ THE COST CANCELS OUT OF THE DENOMINATOR AND SURVIVES IN THE NUMERATOR, which is why a small
- * cost moves the required win rate so far: at a 2.5/1.5 bracket it is +25 percentage points of win
- * rate for a 1 percentage point of cost. That is the opposite of the intuition "costs are small".
+ * ── WHAT IT DOES NOW: MEASURE, DO NOT MODEL ─────────────────────────────────────────────────────
+ * A trade's `pnlPct` is net of spread, slippage AND commission, as a percentage of entry cost. So
+ * the run already CONTAINS the cost of trading inside two numbers:
  *
- * ⚠️ UNITS. `stopPct`, `targetPct` and `costPct` are ALL percentages of entry price (2.5 = 2.5%).
- * `spread`/`slippage` are stored as FRACTIONS (0.0093 = 0.93%), so the caller converts — and this
- * function takes the converted figure so there is exactly one conversion in the app.
+ *     avgWinPct  — the mean `pnlPct` of trades that made money
+ *     avgLossPct — the mean |`pnlPct`| of trades that lost
+ *
+ * Break-even is then one division, with no cost model, no bracket, no thresholds, nothing to tune:
+ *
+ *     p · avgWin = (1 − p) · avgLoss      →      p = avgLoss / (avgWin + avgLoss)
+ *
+ * ✅ EVERY NUMBER ON SCREEN CAN BE CHECKED BY HAND. The page prints avg win, avg loss and the
+ * required rate; a reader divides the first by their sum and gets the third. Nothing is hidden in a
+ * constant, and there is no setting whose absence changes the answer.
+ *
+ * ⚠️ IT CANNOT BE COMPUTED FOR A ONE-SIDED RUN, AND THAT IS REPORTED RATHER THAN GUESSED. A run with
+ * no winning trades has no `avgWinPct`, so the equation has no solution — "you cannot break even"
+ * and "I cannot compute it" are different statements, and the first is not provable from a sample
+ * that contains no wins.
  */
 
-export interface BreakEvenInput {
-  /** Distance from entry to the stop, as a PERCENTAGE of entry (2.5 = 2.5%). */
-  stopPct: number | null;
-  /** Distance from entry to the target, as a PERCENTAGE of entry. */
-  targetPct: number | null;
-  /** Round-trip cost as a PERCENTAGE of entry — spread + 2 × slippage, already ×100. */
-  costPct: number | null;
+export interface TradeOutcomeInput {
+  /** Every trade's `pnlPct` — net of spread, slippage and commission, as a % of entry cost. */
+  pnlPcts: number[];
 }
 
+export type BreakEvenUnavailable = 'no-trades' | 'no-wins' | 'no-losses';
+
 export interface BreakEvenResult {
-  /** The win rate this bracket needs, as a PERCENTAGE (57.7 = 57.7%). NULL = cannot judge. */
+  /** Mean `pnlPct` of the winning trades, as a percentage. NULL when there were none. */
+  avgWinPct: number | null;
+  /** Mean |`pnlPct`| of the losing trades, as a percentage. NULL when there were none. */
+  avgLossPct: number | null;
+  /** The win rate needed to break even, as a PERCENTAGE (74.9 = 74.9%). NULL = cannot judge. */
   requiredWinRatePct: number | null;
-  /** Why it is null, when it is. Named rather than implied. */
-  unavailable: 'no-bracket' | 'target-below-cost' | null;
-  /** achieved − required, in percentage points. NULL when either side is unknown. */
+  /** Why it is null, when it is. Named, never implied. */
+  unavailable: BreakEvenUnavailable | null;
+  /** achieved − required, in percentage points. The number to act on. */
   gapPp: number | null;
   /** TRUE when the achieved win rate clears the bar. NULL when it cannot be judged. */
   profitable: boolean | null;
+  /** The two counts the averages rest on, so a reader can judge how thin the sample is. */
+  wins: number;
+  losses: number;
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10;
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 /**
- * @param achievedWinRatePct the run's own trade win rate as a PERCENTAGE (22.9 = 22.9%).
+ * @param achievedWinRatePct the run's own trade win rate as a PERCENTAGE (42.3 = 42.3%).
  */
-export function breakEvenWinRate(
-  input: BreakEvenInput,
+export function breakEvenFromOutcomes(
+  input: TradeOutcomeInput,
   achievedWinRatePct: number | null,
 ): BreakEvenResult {
-  const stop = Number(input.stopPct);
-  const target = Number(input.targetPct);
-  const cost = Number(input.costPct);
-
-  // A bracket needs BOTH legs. Without them there is nothing to solve, and 0 would be a claim that
-  // every trade must win.
-  if (!Number.isFinite(stop) || !Number.isFinite(target) || stop <= 0 || target <= 0) {
-    return { requiredWinRatePct: null, unavailable: 'no-bracket', gapPp: null, profitable: null };
-  }
-  const safeCost = Number.isFinite(cost) && cost > 0 ? cost : 0;
-
-  // ⚠️ A TARGET THAT DOES NOT COVER THE COST CANNOT BREAK EVEN AT ANY WIN RATE. The formula would
-  // still return a number (just above 100%), and printing "104% needed" invites a reader to try to
-  // reach it. Naming the real reason is the honest answer.
-  if (target <= safeCost) {
-    return { requiredWinRatePct: null, unavailable: 'target-below-cost', gapPp: null, profitable: null };
+  const pnls = (input?.pnlPcts ?? []).map(Number).filter((n) => Number.isFinite(n));
+  if (!pnls.length) {
+    return {
+      avgWinPct: null, avgLossPct: null, requiredWinRatePct: null,
+      unavailable: 'no-trades', gapPp: null, profitable: null, wins: 0, losses: 0,
+    };
   }
 
-  const required = ((stop + safeCost) / (target + stop)) * 100;
-  const requiredWinRatePct = Math.round(required * 10) / 10;
+  const winPcts = pnls.filter((p) => p > 0);
+  const lossPcts = pnls.filter((p) => p <= 0).map((p) => Math.abs(p));
+
+  const avgWinPct = winPcts.length ? round2(winPcts.reduce((a, b) => a + b, 0) / winPcts.length) : null;
+  const avgLossPct = lossPcts.length ? round2(lossPcts.reduce((a, b) => a + b, 0) / lossPcts.length) : null;
+
+  // ⚠️ A ONE-SIDED RUN HAS NO SOLUTION. Saying "0%" or "100%" would be a fabricated answer to a
+  // question the sample cannot address; the reason is returned instead.
+  if (avgWinPct == null) {
+    return {
+      avgWinPct: null, avgLossPct, requiredWinRatePct: null,
+      unavailable: 'no-wins', gapPp: null, profitable: null, wins: 0, losses: lossPcts.length,
+    };
+  }
+  if (avgLossPct == null) {
+    return {
+      avgWinPct, avgLossPct: null, requiredWinRatePct: null,
+      unavailable: 'no-losses', gapPp: null, profitable: null, wins: winPcts.length, losses: 0,
+    };
+  }
+
+  const requiredWinRatePct = round1((avgLossPct / (avgWinPct + avgLossPct)) * 100);
+
   // ⚠️ `Number(null)` IS 0, so a null achieved rate would read as "0% achieved" and produce a
-  // confident −58.3pp gap. The null check has to happen BEFORE the conversion.
+  // confident negative gap. The null check has to happen BEFORE the conversion.
   const achieved =
     achievedWinRatePct == null || (achievedWinRatePct as unknown) === ''
       ? NaN
       : Number(achievedWinRatePct);
-  // ⚠️ THE GAP IS COMPUTED FROM THE ROUNDED REQUIREMENT, not the raw one. A reader checks
-  // `achieved − required = gap` against the three numbers on screen; deriving the gap from an
-  // unrounded value makes the displayed trio disagree by 0.1pp, and a number that fails its own
-  // arithmetic invites doubt about all three.
-  const gapPp = Number.isFinite(achieved)
-    ? Math.round((achieved - requiredWinRatePct) * 10) / 10
-    : null;
+  // ⚠️ FROM THE ROUNDED REQUIREMENT, so `achieved − required = gap` holds against the numbers a
+  // reader can see. A trio that fails its own subtraction invites doubt about all three.
+  const gapPp = Number.isFinite(achieved) ? round1(achieved - requiredWinRatePct) : null;
 
   return {
+    avgWinPct,
+    avgLossPct,
     requiredWinRatePct,
     unavailable: null,
     gapPp,
-    // ⚠️ A gap of exactly 0 is NOT profitable: it is break-even before any variance. `>` not `>=`.
+    // A gap of exactly 0 is break-even BEFORE variance, not profit. `>` and not `>=`.
     profitable: gapPp == null ? null : gapPp > 0,
+    wins: winPcts.length,
+    losses: lossPcts.length,
   };
 }
 
 /**
- * The median bracket a run's trades actually used, from the levels recorded ON the trades.
+ * `medianBracket()` — the stop/target the trades actually carried, for DISPLAY only.
  *
- * ⚠️ MEASURED FROM THE TRADES, NOT FROM THE REQUEST. The request's `slPct`/`tpPct` are not stored on
- * the run, and a stored run's bracket cannot be recovered from anything else — while every trade
- * carries the `stopLoss`/`takeProfit` the engine actually used (since #R14). Median rather than mean
- * because one trade with a widened stop should not move the number a reader acts on.
+ * ⚠️ IT IS NO LONGER PART OF THE BREAK-EVEN CALCULATION (see the file header: using it there is what
+ * double-counted the cost). It survives because "what bracket did this run use?" is a fair question
+ * and the answer is not otherwise recoverable — `slPct`/`tpPct` are not stored on the run, and the
+ * bot's CURRENT values may have been retuned since.
+ *
+ * ⚠️ THE DISTANCES ARE MEASURED FROM `entryPrice`, WHICH ALREADY CARRIES THE ENTRY COST, so a long's
+ * recorded stop distance reads slightly WIDER than its nominal `slPct` and its target slightly
+ * NARROWER. That is what the trade actually had — but it is not the number an operator typed, and it
+ * must not be presented as one.
  */
 export function medianBracket(
   trades: Array<{ entryPrice?: number | string | null; stopLoss?: number | string | null; takeProfit?: number | string | null }> | null | undefined,
@@ -136,9 +182,5 @@ export function medianBracket(
     const mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
   };
-  return {
-    stopPct: Math.round(med(stops) * 100) / 100,
-    targetPct: Math.round(med(targets) * 100) / 100,
-    sample: stops.length,
-  };
+  return { stopPct: round2(med(stops)), targetPct: round2(med(targets)), sample: stops.length };
 }

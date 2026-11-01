@@ -1,81 +1,118 @@
 /**
  * break-even.spec.ts — canary for the break-even win rate.
  *
- * ⚠️ THE TWO DIRECTIONS THAT MATTER, and both are silent failures if wrong:
- *   • a run that CLEARS the bar must not read as failing (it would send someone to "fix" a bracket
- *     that works, which is how a working configuration gets destroyed);
- *   • a run SHORT of the bar must not read as passing (the whole point — a 42% run against an 88% bar
- *     must never look acceptable).
+ * ⚠️ THE TEST THAT MATTERS MOST IS THE FIRST ONE, and it is a REGRESSION test: the previous
+ * implementation reported 88.0% where the truth is 74.9%, because it added a cost to bracket
+ * distances that already contained it. That mistake was invisible in the shipped tests — they all
+ * asserted the formula rather than the answer — and was only found by computing the same number a
+ * second way and comparing.
  *
- * The numbers are the measured ones: `1bbf1860` (2.49/1.49 at 1.01% cost, 42.3% achieved) needs 88.0%.
+ * So every case here is written from the ANSWER backwards: an avg win, an avg loss, and the win rate
+ * that must follow by one division. If a future edit reintroduces a cost term, these fail.
  */
-import { breakEvenWinRate, medianBracket } from './break-even';
+import { breakEvenFromOutcomes, medianBracket } from './break-even';
 
-describe('breakEvenWinRate', () => {
-  it('reproduces the measured 88.0% for a target SMALLER than the stop', () => {
-    const r = breakEvenWinRate({ stopPct: 2.49, targetPct: 1.49, costPct: 1.01 }, 42.3);
-    expect(r.requiredWinRatePct).toBe(87.9);
-    expect(r.gapPp).toBe(-45.6);
+const outcomes = (wins: number[], losses: number[]) => ({
+  pnlPcts: [...wins, ...losses.map((l) => -Math.abs(l))],
+});
+
+describe('breakEvenFromOutcomes', () => {
+  /**
+   * THE REGRESSION. Measured on run `1bbf1860`: 1,588 trades, avg win +0.97%, avg loss 2.90%,
+   * achieved 42.3%. The old geometric implementation said 88.0%; the answer is 74.9%.
+   */
+  it('reports 74.9% for avg win 0.97 / avg loss 2.90 — NOT the 88.0% the geometric version gave', () => {
+    const r = breakEvenFromOutcomes(outcomes([0.97], [2.9]), 42.3);
+    expect(r.avgWinPct).toBeCloseTo(0.97, 2);
+    expect(r.avgLossPct).toBeCloseTo(2.9, 2);
+    expect(r.requiredWinRatePct).toBe(74.9);
+    expect(r.gapPp).toBe(-32.6);
     expect(r.profitable).toBe(false);
+    // The arithmetic a reader can do by hand: 2.90 / (0.97 + 2.90) = 74.9%.
+    expect(r.requiredWinRatePct).toBeCloseTo((2.9 / (0.97 + 2.9)) * 100, 1);
   });
 
-  it('reproduces the measured 57.7% for a 1.4:1 bracket', () => {
-    const r = breakEvenWinRate({ stopPct: 2.47, targetPct: 3.5, costPct: 0.97 }, 22.9);
-    expect(r.requiredWinRatePct).toBe(57.6);
-    expect(r.gapPp).toBe(-34.7);
+  it('reports 48.8% for avg win 2.99 / avg loss 2.85 — a near-1:1 payoff needs about half', () => {
+    const r = breakEvenFromOutcomes(outcomes([2.99], [2.85]), 22.9);
+    expect(r.requiredWinRatePct).toBe(48.8);
+    expect(r.gapPp).toBe(-25.9);
     expect(r.profitable).toBe(false);
   });
 
   it('reports a run that CLEARS the bar as profitable (the other direction)', () => {
-    // Same 1.4:1 bracket, a win rate above the 57.7% it needs.
-    const r = breakEvenWinRate({ stopPct: 2.47, targetPct: 3.5, costPct: 0.97 }, 62);
+    const r = breakEvenFromOutcomes(outcomes([2.99], [2.85]), 55);
+    expect(r.gapPp).toBe(6.2);
     expect(r.profitable).toBe(true);
-    expect(r.gapPp).toBe(4.4);
   });
 
-  it('treats a gap of exactly zero as NOT profitable — it is break-even before variance', () => {
-    const r = breakEvenWinRate({ stopPct: 2, targetPct: 2, costPct: 1 }, 75);
-    expect(r.requiredWinRatePct).toBeCloseTo(75, 1);
-    expect(r.gapPp).toBeCloseTo(0, 1);
+  it('treats a gap of exactly zero as NOT profitable — break-even before variance', () => {
+    // A 1:1 payoff needs exactly 50%.
+    const r = breakEvenFromOutcomes(outcomes([2], [2]), 50);
+    expect(r.requiredWinRatePct).toBe(50);
+    expect(r.gapPp).toBe(0);
     expect(r.profitable).toBe(false);
   });
 
-  it('charges MORE win rate for MORE cost — the sign of the whole model', () => {
-    const cheap = breakEvenWinRate({ stopPct: 2.5, targetPct: 1.5, costPct: 0.1 }, 50);
-    const dear = breakEvenWinRate({ stopPct: 2.5, targetPct: 1.5, costPct: 1.0 }, 50);
-    expect(dear.requiredWinRatePct!).toBeGreaterThan(cheap.requiredWinRatePct!);
+  it('averages over the real population, not over two representative numbers', () => {
+    // wins +1 and +3 (avg 2); losses 1 and 5 (avg 3) → 3 / (2+3) = 60%.
+    const r = breakEvenFromOutcomes(outcomes([1, 3], [1, 5]), 60);
+    expect(r.avgWinPct).toBe(2);
+    expect(r.avgLossPct).toBe(3);
+    expect(r.requiredWinRatePct).toBe(60);
+    expect(r.wins).toBe(2);
+    expect(r.losses).toBe(2);
   });
 
-  it('refuses a target that does not cover the cost, and says which reason', () => {
-    const r = breakEvenWinRate({ stopPct: 2.5, targetPct: 1.0, costPct: 1.0 }, 90);
+  it('REFUSES a run with no wins instead of inventing a requirement', () => {
+    const r = breakEvenFromOutcomes(outcomes([], [1.01, 2.5]), 0);
     expect(r.requiredWinRatePct).toBeNull();
-    expect(r.unavailable).toBe('target-below-cost');
+    expect(r.unavailable).toBe('no-wins');
+    expect(r.avgWinPct).toBeNull();
+    expect(r.avgLossPct).not.toBeNull();
     expect(r.profitable).toBeNull();
   });
 
-  it('returns null for a missing bracket rather than 0% or 100%', () => {
-    for (const input of [
-      { stopPct: null, targetPct: 3, costPct: 1 },
-      { stopPct: 2, targetPct: null, costPct: 1 },
-      { stopPct: 0, targetPct: 0, costPct: 1 },
-    ]) {
-      const r = breakEvenWinRate(input, 50);
-      expect(r.requiredWinRatePct).toBeNull();
-      expect(r.unavailable).toBe('no-bracket');
-    }
+  it('REFUSES a run with no losses — 100% is not the answer, it is the absence of a question', () => {
+    const r = breakEvenFromOutcomes(outcomes([1, 2], []), 100);
+    expect(r.requiredWinRatePct).toBeNull();
+    expect(r.unavailable).toBe('no-losses');
+    expect(r.avgLossPct).toBeNull();
+  });
+
+  it('REFUSES an empty run', () => {
+    const r = breakEvenFromOutcomes({ pnlPcts: [] }, 0);
+    expect(r.requiredWinRatePct).toBeNull();
+    expect(r.unavailable).toBe('no-trades');
+  });
+
+  it('counts a break-even trade (pnlPct exactly 0) as a LOSS, not a win', () => {
+    // `pnlPct > 0` defines a win; 0 made nothing, so it cannot be evidence of an edge.
+    const r = breakEvenFromOutcomes({ pnlPcts: [2, 0, -2] }, 33.3);
+    expect(r.wins).toBe(1);
+    expect(r.losses).toBe(2);
+    expect(r.avgLossPct).toBe(1);
   });
 
   it('reports the requirement even when the achieved rate is unknown', () => {
-    const r = breakEvenWinRate({ stopPct: 2.5, targetPct: 3.5, costPct: 1 }, null);
-    expect(r.requiredWinRatePct).toBeCloseTo(58.3, 1);
+    const r = breakEvenFromOutcomes(outcomes([1], [3]), null);
+    expect(r.requiredWinRatePct).toBe(75);
     expect(r.gapPp).toBeNull();
     expect(r.profitable).toBeNull();
   });
 
-  it('ignores a nonsense negative cost instead of crediting it', () => {
-    const r = breakEvenWinRate({ stopPct: 2.5, targetPct: 3.5, costPct: -5 }, 50);
-    // A negative cost would LOWER the bar below the no-cost case; it is clamped to 0.
-    expect(r.requiredWinRatePct).toBeCloseTo((2.5 / 6) * 100, 1);
+  it('ignores non-finite pnl values rather than poisoning every average with NaN', () => {
+    const r = breakEvenFromOutcomes({ pnlPcts: [1, Number.NaN, -3, Number.POSITIVE_INFINITY] }, 50);
+    expect(r.avgWinPct).toBe(1);
+    expect(r.avgLossPct).toBe(3);
+    expect(r.requiredWinRatePct).toBe(75);
+  });
+
+  it('needs no cost input at all — the same trades give the same answer whatever the spread', () => {
+    // The point of the rewrite: cost is already inside `pnlPct`. This test exists so that nobody
+    // "improves" the function by adding a cost parameter back.
+    const r = breakEvenFromOutcomes(outcomes([1], [3]), 50);
+    expect(Object.keys(r)).not.toContain('costPct');
+    expect(r.requiredWinRatePct).toBe(75);
   });
 });
 

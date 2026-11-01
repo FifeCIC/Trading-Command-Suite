@@ -174,11 +174,27 @@ function scanText(text) {
   return findings;
 }
 
+/**
+ * ⚠️ BASELINE KEYS MUST BE PLATFORM-NEUTRAL, AND THEY WERE NOT (measured 2026-10-31).
+ *
+ * `path.relative()` returns backslashes on Windows, so every one of the 179 frozen keys was written
+ * as `src\components\x.css::#13141a`. On the Linux CI runner the same file computes
+ * `src/components/x.css::#13141a`, matches nothing, and reports **0 baselined / +1 now** for every
+ * literal in the tree — so `npm run build` inside `nest/` exited 1 and EVERY GitHub Actions run on
+ * master has been red. Locally the identical gate was green, which is the same defect with the
+ * opposite sign: a gate nobody can tell apart from a broken build.
+ *
+ * Fixed at the source: paths are normalised to forward slashes on BOTH sides of the comparison, so a
+ * baseline generated on Windows is valid on Linux and vice versa. A key with a backslash is now
+ * reported as a FINDING rather than silently missing — `--self-test` asserts this in both directions.
+ */
+const normaliseKey = (key) => String(key).replace(/\\/g, '/');
+
 function collectFindings() {
-  const byFile = new Map(); // relative path -> finding[]
+  const byFile = new Map(); // relative path (forward slashes) -> finding[]
   for (const file of walk(SRC).filter((f) => f.endsWith('.css'))) {
     const findings = scanText(fs.readFileSync(file, 'utf8'));
-    if (findings.length) byFile.set(path.relative(REPO_ROOT, file), findings);
+    if (findings.length) byFile.set(normaliseKey(path.relative(REPO_ROOT, file)), findings);
   }
   return byFile;
 }
@@ -198,7 +214,12 @@ function toCounts(byFile) {
 function loadBaseline() {
   if (!fs.existsSync(BASELINE_PATH)) return { entries: {}, note: null };
   const raw = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'));
-  return { entries: raw.entries || {}, note: raw.note || null };
+  // ⚠️ NORMALISED ON READ as well as on write, so a baseline committed from a Windows machine
+  // compares equal on Linux. Without this the CI gate reports every frozen literal as new — see the
+  // note above `normaliseKey`.
+  const entries = {};
+  for (const [key, n] of Object.entries(raw.entries || {})) entries[normaliseKey(key)] = n;
+  return { entries, note: raw.note || null };
 }
 
 function writeBaseline(counts) {
@@ -280,11 +301,39 @@ function selfTest() {
   }
 
   console.log('\n── self-test: real tree, both directions ──');
+  /**
+   * ⚠️ THE BASELINE MUST BE PLATFORM-NEUTRAL (added 2026-10-31 after the same-day defect).
+   *
+   * Every frozen key was written with Windows backslashes, so on the Linux CI runner the lookup found
+   * nothing and the gate reported every literal in the tree as NEW — `npm run build` inside `nest/`
+   * exited 1 and no GitHub Actions run on master could pass, while the identical gate was green on
+   * the only machine anyone ran it on. A baseline is a COMMITTED artefact, so it has to be readable
+   * on a machine that has never seen the tree it was generated from.
+   *
+   * This case fails loudly if a backslash key is ever committed again — including by a future
+   * `--update-baseline` on Windows that forgets the normalisation.
+   */
+  {
+    const committed = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')).entries || {};
+    const backslashed = Object.keys(committed).filter((k) => k.includes('\\'));
+    const ok = backslashed.length === 0;
+    if (!ok) failures++;
+    console.log(
+      `  ${ok ? '✅' : '❌'} ${'baseline keys are platform-neutral'.padEnd(34)} ` +
+        `${backslashed.length} backslash key(s)${ok ? '' : ` — e.g. ${backslashed[0]}`}`,
+    );
+  }
+
   const before = toCounts(collectFindings());
   const beforeKeys = JSON.stringify(before);
 
   const canaryFile = path.join(SRC, '__literal-canary__.css');
-  const canaryKey = `${path.relative(REPO_ROOT, canaryFile)}::#00ff00`;
+  // ⚠️ THE CANARY MUST BUILD ITS KEY THE SAME WAY THE SCANNER DOES. It used `path.relative()` raw,
+  // which on Windows yields backslashes, while `collectFindings()` now normalises to forward slashes
+  // — so after that change the canary looked up a key nobody produced, found nothing, and reported a
+  // WORKING guard as broken. That is the "canary hits the wrong target" failure this repo already has
+  // a rule about, and the honest fix is one key builder rather than two.
+  const canaryKey = normaliseKey(`${path.relative(REPO_ROOT, canaryFile)}::#00ff00`);
 
   try {
     fs.writeFileSync(canaryFile, '.canary { color: #00ff00; }\n', 'utf8');

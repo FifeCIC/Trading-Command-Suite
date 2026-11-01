@@ -13,7 +13,8 @@ import { BacktestPeriodService } from './backtest-period.service';
 import { applyExecutionCosts } from './execution-costs';
 import { computeEquityPath, type EquityPoint, type EquitySummary } from './equity-drawdown';
 import { describeRunDifferences, type RunDifferenceSet } from './run-differences';
-import { breakEvenWinRate, medianBracket } from './break-even';
+import { breakEvenFromOutcomes, medianBracket } from './break-even';
+import { decideEntry } from './entry-side';
 import {
   scoringTotals,
   tradeTotals,
@@ -242,44 +243,58 @@ export interface BacktestRunRequest {
 /**
  * breakEvenFor() — the shape both the fresh-run and stored-run paths return.
  *
- * ⚠️ IT LIVED IN TWO PLACES FOR A MINUTE, which is the defect this repo pays for most often. The
- * fresh path knows `slPct`/`tpPct` from the request and the stored path has to read them off the
- * trades; the CONVERSION of spread/slippage from decimals to percent is the part that must not be
- * written twice — `spread: 0.0093` becoming `0.93` in one caller and `93` in the other is exactly
- * the split-unit failure #980 removed.
+ * ⚠️ IT LIVES IN ONE PLACE BECAUSE THE FIRST VERSION OF THE STATISTIC LIVED IN A FORMULA THAT COULD
+ * BE WRONG TWICE. The fresh path and the stored path see different data (the request versus the
+ * rows), so they must agree on the DERIVATION even though they differ in what they read — and the
+ * derivation is now "average what the trades actually made and lost", which needs no bracket and no
+ * cost model at all. See the header of `break-even.ts` for the 9–13pp error this replaced.
  */
 function breakEvenFor(
   trades: Array<{
     entryPrice?: number | string | null;
     stopLoss?: number | string | null;
     takeProfit?: number | string | null;
+    pnlPct?: number | string | null;
   }>,
   tradeWinRateFraction: number | null,
-  spread: unknown,
-  slippage: unknown,
 ) {
-  const bracket = medianBracket(trades);
-  const costPct =
-    ((Number(spread) || 0) + 2 * (Number(slippage) || 0)) * 100;
   const achieved =
     tradeWinRateFraction == null ? null : Math.round(tradeWinRateFraction * 1000) / 10;
-  const be = breakEvenWinRate(
-    { stopPct: bracket.stopPct, targetPct: bracket.targetPct, costPct },
+  const be = breakEvenFromOutcomes(
+    { pnlPcts: (trades ?? []).map((t) => Number(t.pnlPct)).filter((n) => Number.isFinite(n)) },
     achieved,
   );
+  const bracket = medianBracket(trades);
   return {
-    /** The median stop and target the run's trades actually used, as % of entry. */
+    /** The bracket the trades actually carried. DISPLAY ONLY — not an input to the win rate. */
     bracketStopPct: bracket.stopPct,
     bracketTargetPct: bracket.targetPct,
     bracketSample: bracket.sample,
-    roundTripCostPct: Math.round(costPct * 100) / 100,
-    /** The win rate this bracket needs. NULL when it cannot be judged — see `breakEvenUnavailable`. */
+    /** The two measured averages, so `requiredWinRatePct` can be checked by one division. */
+    avgWinPct: be.avgWinPct,
+    avgLossPct: be.avgLossPct,
+    /** The win rate this run needs. NULL when it cannot be judged — see `breakEvenUnavailable`. */
     breakEvenWinRatePct: be.requiredWinRatePct,
     breakEvenUnavailable: be.unavailable,
     /** achieved − required, in percentage points. The number to act on. */
     breakEvenGapPp: be.gapPp,
     clearsBreakEven: be.profitable,
   };
+}
+
+export interface BacktestResultBracketFields {
+  /**
+   * The stop/target the run was CONFIGURED with, as percentages — `trading_strategy.slPct` /
+   * `tpPct`, the same columns the LIVE order path reads. NULL when the run was not bot-driven.
+   *
+   * ⚠️ A FRESH RUN echoes the request's own values (authoritative). A STORED RUN can only report the
+   * bot's CURRENT values, because `slPct`/`tpPct` were never persisted on `backtestrun` — see
+   * `bracketNominalSource`.
+   */
+  bracketStopNominalPct?: number | null;
+  bracketTargetNominalPct?: number | null;
+  /** Where those two came from, printed verbatim so the reader can judge the staleness. */
+  bracketNominalSource?: string;
 }
 
 export interface TradeRecord {
@@ -577,7 +592,7 @@ export function describeCostDivergence(runs: CostFacts[]): string | null {
   );
 }
 
-export interface BacktestResult {
+export interface BacktestResult extends BacktestResultBracketFields {
   id: string;
   symbol: string;
   protocolId: string;
@@ -1221,24 +1236,21 @@ export class BacktestService {
       /**
        * ── WHICH SIDE, DECIDED BY THE SIGNAL CLASS (#1155, 2026-10-31) ─────────────────────────────
        *
-       * ⚠️ NOT `signal.includes('SELL')` AND NOT `startsWith`. The repo has this exact trap recorded:
-       * `'STRONG_SELL'.startsWith('SELL') === false`, so a prefix test routed the strongest sell signal
-       * to the LONG branch. The four classes are enumerated explicitly, which is also what
-       * `validate-signal-classification.cjs` checks for elsewhere.
-       *
-       * `directionMode` gates WHICH of them may open. 'long' is the default and reproduces the old
-       * behaviour exactly; 'short' and 'both' are a declared experiment, not a silent alteration.
+       * ⚠️ THE DECISION MOVED INTO `decideEntry()` SO IT CAN BE TESTED. It lived here as two inline
+       * booleans, behind Prisma and a bar loader, so the newest money-path code in the repo had no
+       * assertion at all (register row 104 recorded that as 🔴 UNGUARDED). `entry-side.spec.ts` now
+       * pins the four signal classes, both directions, and the `'STRONG_SELL'.startsWith('SELL')`
+       * trap that once routed the strongest sell signal to the LONG branch.
        */
-      const isLongSignal = signal === 'BUY' || signal === 'STRONG_BUY';
-      const isShortSignal = signal === 'SELL' || signal === 'STRONG_SELL';
-      const mayGoLong = directionMode === 'long' || directionMode === 'both';
-      const mayGoShort = directionMode === 'short' || directionMode === 'both';
-      const enterLong = isLongSignal && mayGoLong;
-      const enterShort = isShortSignal && mayGoShort;
+      const decision = decideEntry(signal, directionMode);
+      const enterLong = decision.enter && decision.isLong;
+      const enterShort = decision.enter && !decision.isLong;
 
       if (enterLong || enterShort) {
-        const isLong = enterLong;
-        const side: 1 | -1 = isLong ? 1 : -1;
+        const isLong = decision.isLong;
+        // `side` comes from the same decision — never re-derived — because it multiplies both the
+        // cost function and the P&L, and a wrong sign books a short with a long's result.
+        const side: 1 | -1 = decision.side;
         const future5 = bars[day + 5]?.close;
         const future10 = bars[day + 10]?.close;
         const future20 = bars[day + Math.min(20, bars.length - day - 1)]?.close;
@@ -1593,6 +1605,15 @@ export class BacktestService {
       id: `${symbol}-${Date.now()}`,
       symbol: symbol.toUpperCase(),
       protocolId: protocolId ?? 'unscoped',
+      // ── THE BRACKET THIS RUN ACTUALLY USED (2026-10-31) ────────────────────────────────────────
+      // Echoed from the RESOLVED request, so it is authoritative for a fresh run: `slPct`/`tpPct`
+      // here already carry `pick(request.slPct, bot.slPct)` precedence. A stored run cannot do this
+      // (the columns are not persisted) and reports the bot's current values instead — labelled.
+      bracketStopNominalPct: slPct,
+      bracketTargetNominalPct: tpPct,
+      bracketNominalSource: resolved.drivenBy?.botId
+        ? `request over the bot's own trading_strategy.slPct/tpPct (${resolved.drivenBy.overridden?.length ? `overridden: ${resolved.drivenBy.overridden.join(', ')}` : 'nothing overridden'})`
+        : 'this request’s own slPct/tpPct',
       // #965 item 3 / #843 — a bot-driven run says WHICH bot it resolved and what this run cannot
       // claim (the sizing divergence). Absent on a hand-assembled request, because then there is
       // no bot to have diverged from.
@@ -1675,7 +1696,7 @@ export class BacktestService {
           avgPositionSize: Number(avgPositionSize.toFixed(1)),
           // 2026-10-31 — what this bracket NEEDED versus what it got. Same computation as the stored
           // path (`breakEvenFor`), fed from the trades this run just produced.
-          ...breakEvenFor(trades, tradeWinRate, spread, slippage),
+          ...breakEvenFor(trades, tradeWinRate),
         } : {}),
       },
     };
@@ -1863,6 +1884,31 @@ export class BacktestService {
     });
     if (!run) return null;
     const result = this.formatRunResult(run);
+
+    /**
+     * ── THE BRACKET THE BOT CARRIES, ON THE READ PATH (2026-10-31) ─────────────────────────────
+     * `slPct`/`tpPct` are NOT columns on `backtestrun` — only the resulting prices are, on each
+     * trade. So a stored run cannot say what it was CONFIGURED with, and the owner's question
+     * (*"our VIX bot will I assume yes?"*) could not be answered from a stored run at all.
+     *
+     * ⚠️ THIS IS THE BOT'S CURRENT SETTING, NOT NECESSARILY WHAT THIS RUN USED — and the UI says so
+     * in the tile's sub-line. A bot retuned since the run would otherwise retro-label its whole
+     * history, which is the exact defect `trade-history.controller.ts` records for `slPct`. The
+     * FRESH path (`run()`) is authoritative because it echoes the request's own values; this is the
+     * best available for a stored row, and it is labelled rather than presented as a fact about
+     * the run.
+     */
+    if (run.botId) {
+      const bot = await this.prisma.tradingStrategy.findUnique({
+        where: { id: run.botId },
+        select: { slPct: true, tpPct: true, name: true },
+      });
+      if (bot) {
+        result.bracketStopNominalPct = bot.slPct ?? null;
+        result.bracketTargetNominalPct = bot.tpPct ?? null;
+        result.bracketNominalSource = `trading_strategy.slPct/tpPct for “${bot.name}” as it stands today`;
+      }
+    }
 
     // ── #1134 — RESTORE `measuredPeriod` ON THE READ PATH ──
     // `run()` echoes `measuredPeriod` on the result it RETURNS, but that field has no column, so the
@@ -3115,7 +3161,7 @@ export class BacktestService {
          * run, but every trade carries the levels the engine actually used (since #R14), so the
          * bracket is recoverable for every historical run without a backfill.
          */
-        ...breakEvenFor(runTrades, tradeStats.fraction, run.spread, run.slippage),
+        ...breakEvenFor(runTrades, tradeStats.fraction),
         // ⚠️ NOT `run.maxDrawdown` (#1149 follow-up, measured 2026-10-30).
         //
         // `backtestrun.maxDrawdown` is WRITTEN from `min(returns10d)` — the worst ten-day FORWARD

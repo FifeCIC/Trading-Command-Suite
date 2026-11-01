@@ -3168,39 +3168,85 @@ ull = follow the latest, which is the default. */
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalTrades)}`}><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
                 <div className={`bt-stat ${verdictClass(comparison?.verdicts?.tradeWinRate)}`}><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
                 {/*
+                  ⚠️ WHY THIS TILE EXISTS (owner question, 2026-10-31): *"I want to trust that it's not
+                  just playing about with hardcoded maths … our VIX bot will I assume yes?"*
+
+                  It does, and this is the proof rather than an assurance. `slPct`/`tpPct` are real
+                  columns on `trading_strategy` (`VIX Spike Reversion` = **2 / 4**); a bot-driven run
+                  resolves them via `pick(request.slPct, bot.slPct)` and reports
+                  `drivenBy.overridden: []` when nothing was overridden; the LIVE order path reads the
+                  SAME two columns (`automation-loop.service.ts:2558`,
+                  `trading-strategy.service.ts:1753`). So the lab and the broker are configured by one
+                  setting, not two.
+
+                  ⚠️ IT IS A DIFFERENT NUMBER FROM "Win Rate Needed"'s averages ON PURPOSE: this is
+                  what the operator SET, those are what the trades ACTUALLY did. An EOD exit closes
+                  before either level is reached, so the two legitimately disagree — showing only one
+                  makes the other look like a mystery.
+                */}
+                <div
+                  className="bt-stat"
+                  title={result?.bracketNominalSource
+                    ? `Where this came from: ${result.bracketNominalSource}`
+                    : 'The stop and target this run carried, as configured.'}
+                >
+                  <div className="bt-stat-value">
+                    {result?.bracketStopNominalPct != null
+                      ? `${result.bracketStopNominalPct}% / ${result.bracketTargetNominalPct}%`
+                      : '—'}
+                  </div>
+                  <div>Stop / Target Set</div>
+                  <div className="bt-stat-sub">
+                    {result?.bracketStopNominalPct != null
+                      ? (result.bracketNominalSource?.includes('as it stands today')
+                        ? 'bot’s setting today'
+                        : 'the setting this run used')
+                      : 'not recorded on this run'}
+                  </div>
+                </div>
+                {/*
                   ── THE TWO NUMBERS THAT ANSWER "WHY DOES THIS LOSE?" (2026-10-31) ────────────────
-                  Measured across the stored runs, the achieved win rate alone cannot tell a reader
-                  whether a configuration is near a fix or structurally impossible:
-                    `1bbf1860` stop 2.49 / target 1.49 at 1.01% cost → needs 88.0%, won 42.3%
-                    `568c5552` stop 2.47 / target 3.50 at 0.97% cost → needs 57.7%, won 22.9%
-                  A 42% win rate looks "poor but closeable" on its own; beside an 88% requirement it
-                  is a bracket that cannot pay for itself at any realistic win rate. So the required
-                  rate and the GAP to it are tiles, and the gap is what a reader acts on.
+                  ⚠️ THE SUB-LINE IS THE AUDIT TRAIL, NOT DECORATION. It prints the two measured
+                  averages and the requirement is ONE DIVISION of them:
+                      required% = avgLoss / (avgWin + avgLoss)
+                  So a reader can check the tile by hand, and there is no hidden constant, no cost
+                  model and no bracket setting that can change the answer. That was the point of
+                  rewriting it: the first version mixed bracket levels with a cost that those levels
+                  already contained, and overstated the requirement by 9–13pp.
+
+                  Measured: `1bbf1860` avg win 0.97 / avg loss 2.90 → needs 74.9%, won 42.3% (32.6pp
+                  short). `568c5552` avg win 2.99 / avg loss 2.85 → needs 48.8%, won 22.9%.
                   ⚠️ `breakEvenUnavailable` is rendered, never swallowed: a null requirement is a
-                  refusal ("this target does not even cover the cost"), not a zero.
+                  REFUSAL (a run with no wins has no solution), not a zero.
                 */}
                 {stats.breakEvenWinRatePct != null && (
-                  <div className={`bt-stat ${verdictClass(comparison?.verdicts?.breakEvenWinRatePct)}`} title={`This run's median bracket: stop ${stats.bracketStopPct}%, target ${stats.bracketTargetPct}%, round-trip cost ${stats.roundTripCostPct}%. Needs ${stats.breakEvenWinRatePct}% of trades to win to break even.`}>
+                  <div
+                    className={`bt-stat ${verdictClass(comparison?.verdicts?.breakEvenWinRatePct)}`}
+                    title={`Needed win rate = avg loss ÷ (avg win + avg loss) = ${stats.avgLossPct} ÷ (${stats.avgWinPct} + ${stats.avgLossPct}). Measured from this run's own trades, net of spread, slippage and commission.`}
+                  >
                     <div className="bt-stat-value">{stats.breakEvenWinRatePct}%</div>
                     <div>Win Rate Needed</div>
-                    <div className="bt-stat-sub">{stats.bracketStopPct}% stop · {stats.bracketTargetPct}% target · {stats.roundTripCostPct}% cost</div>
+                    <div className="bt-stat-sub">avg win {stats.avgWinPct}% · avg loss {stats.avgLossPct}%</div>
                   </div>
                 )}
                 {stats.breakEvenGapPp != null && (
-                  <div className={`bt-stat ${stats.clearsBreakEven ? 'is-better' : 'is-worse'}`} title="Achieved trade win rate minus the rate this bracket needs, in percentage points. Negative means the configuration loses by arithmetic, before any judgement about the entries.">
+                  <div
+                    className={`bt-stat ${stats.clearsBreakEven ? 'is-better' : 'is-worse'}`}
+                    title="Achieved trade win rate minus the rate this run needs, in percentage points. Negative means the run loses by arithmetic on its own measured averages — before any judgement about the entries."
+                  >
                     <div className="bt-stat-value">{stats.breakEvenGapPp > 0 ? '+' : '−'}{Math.abs(stats.breakEvenGapPp)}pp</div>
                     <div>Gap to Break-even</div>
                     <div className="bt-stat-sub">{stats.clearsBreakEven ? 'clears it' : 'short of it'}</div>
                   </div>
                 )}
                 {stats.breakEvenWinRatePct == null && stats.breakEvenUnavailable && (
-                  <div className="bt-stat is-worse" title="No break-even win rate can be computed from this run's own bracket and costs.">
+                  <div className="bt-stat is-worse" title="Break-even cannot be computed from this run's trades — the reason is in the sub-line.">
                     <div className="bt-stat-value">—</div>
                     <div>Win Rate Needed</div>
                     <div className="bt-stat-sub">
-                      {stats.breakEvenUnavailable === 'target-below-cost'
-                        ? 'target does not cover the cost'
-                        : 'no stop/target recorded'}
+                      {stats.breakEvenUnavailable === 'no-wins' && 'no winning trades to average'}
+                      {stats.breakEvenUnavailable === 'no-losses' && 'no losing trades to average'}
+                      {stats.breakEvenUnavailable === 'no-trades' && 'this run took no trades'}
                     </div>
                   </div>
                 )}
