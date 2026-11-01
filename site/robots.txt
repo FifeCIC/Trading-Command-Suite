@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fifecic.github.io/Trading-Command-Suite/sitemap.xml

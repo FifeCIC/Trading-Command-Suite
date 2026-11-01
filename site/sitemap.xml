@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Two pages, not twenty. The wiki deliberately has no sitemap of its own: it lives on a different
+  host path (github.com/.../wiki) and listing it here would claim ownership of pages this repo does
+  not serve.
+  ⚠️ Update the <lastmod> dates only when the page content actually changes — a sitemap that lies
+  about freshness is a spam signal, not a ranking one.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://fifecic.github.io/Trading-Command-Suite/</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://fifecic.github.io/Trading-Command-Suite/showcase/</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
