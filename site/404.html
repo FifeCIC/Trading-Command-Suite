@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  ⚠️ <base> IS LOAD-BEARING. GitHub Pages serves this file at whatever path was NOT found, so a
+  relative link like `showcase/` would resolve to /Trading-Command-Suite/typo/path/showcase/ — also
+  not found. That made every escape route on this page dead, which is worse than the default 404.
+  With a base, `./` and `showcase/` resolve against the site root no matter the request path.
+-->
+<base href="/Trading-Command-Suite/">
 <title>Page not found — Trading Command Suite</title>
 <meta name="robots" content="noindex">
 <!--

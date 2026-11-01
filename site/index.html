@@ -76,6 +76,15 @@
   .risk li { margin: 0.3rem 0; }
   a { color: var(--link); }
   a:focus-visible { outline: 3px solid var(--risk-border); outline-offset: 2px; }
+  /* Skip link: visible only when focused, so a keyboard user can bypass the header. */
+  .skip { position: absolute; left: -9999px; top: 0; padding: 0.6rem 1rem;
+          background: var(--ink); color: var(--bg); border-radius: 0 0 6px 0; z-index: 10; }
+  .skip:focus { left: 0; }
+  .start { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0 0; }
+  .cta { display: inline-block; padding: 0.55rem 1rem; border-radius: 6px; font-weight: 600;
+         text-decoration: none; background: var(--ink); color: var(--bg); }
+  .cta.secondary { background: transparent; color: var(--link); border: 1px solid var(--ink-soft); }
+  .cta:focus-visible { outline: 3px solid var(--risk-border); outline-offset: 2px; }
   ul { padding-left: 1.2rem; }
   /* Capability cards: one per area. `auto-fit` so it reflows rather than overflowing on narrow panes. */
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; margin: 1rem 0 0; padding: 0; list-style: none; }
@@ -88,13 +97,17 @@
 </style>
 </head>
 <body>
-<main>
+<a class="skip" href="#main">Skip to content</a>
+<main id="main">
   <h1>Trading Command Suite</h1>
-  <p class="sub">Open-source algorithmic trading &amp; portfolio platform — scoring engine, protocol-gated
-  directive pipeline, automation loop, and a decision-trail audit chain. AGPL-3.0.</p>
+  <p class="sub">An open-source, self-hosted algorithmic trading platform: a scoring engine built
+  from named rules, protocol-gated signals, and a per-trade decision trail you can audit. AGPL-3.0.</p>
 
-  <p class="next"><strong><a href="showcase/">See what it actually looks like →</a></strong> — 18 screens
-  from the alpha, with a plain-language tour of each and a glossary for the words the app uses.</p>
+  <nav class="start" aria-label="Start here">
+    <a class="cta" href="showcase/">See what it looks like &rarr;</a>
+    <a class="cta secondary" href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">Install it</a>
+    <a class="cta secondary" href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">Read the risk terms</a>
+  </nav>
 
   <section class="risk" aria-labelledby="risk-heading">
     <h2 id="risk-heading">🛑 Read this before you connect an account</h2>

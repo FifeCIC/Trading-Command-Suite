@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 187,
+  "count": 193,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -8,9 +8,7 @@
       "category": "analysis",
       "purpose": "WHERE THE PIPELINE ASKS THE DATABASE FOR SOMETHING IT ALREADY HAS.",
       "selfTest": true,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -58,6 +56,16 @@
       "category": "audit",
       "purpose": "what date window can a DEVELOPMENT test actually use?",
       "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "audit-directive-depth.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "M1 (#1166) evidence extractor. REV 3.",
+      "selfTest": false,
       "reaches": [
         "npm"
       ]
@@ -300,7 +308,9 @@
       "category": "generator",
       "purpose": "publish the financial disclaimer to the wiki, and the landing page to Pages.",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "agent-claim.cjs",
@@ -824,6 +834,16 @@
       ]
     },
     {
+      "name": "measure-period-sensitivity.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "does the period knob actually MATTER? (M1, #1166)",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "measure-profit-taking.cjs",
       "where": "nest",
       "category": "tool",
@@ -1025,6 +1045,16 @@
       "reaches": null
     },
     {
+      "name": "why-unregistered.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "is an unregistered directive a DUPLICATE, a RETIREMENT, or a FAULT? (#1169)",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "validate-ab-inputs.cjs",
       "where": "nest",
       "category": "validator",
@@ -1220,6 +1250,28 @@
       "category": "validator",
       "purpose": "INV-GATE-MEMBERSHIP (build-time)",
       "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-directive-id-references.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a seeded protocol or strategy must not name a directive that",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-directive-registration.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "every directive class in the library must be REGISTERED (#1169)",
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"
@@ -1575,6 +1627,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "#803: ONE scoring path, and `active = 0` is a kill switch.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-site-links.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the public site has no build step, so nothing catches a broken link.",
       "selfTest": true,
       "reaches": [
         "prebuild",
