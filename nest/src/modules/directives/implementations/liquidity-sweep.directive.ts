@@ -14,10 +14,48 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 15;
 const WICK_RATIO_THRESHOLD = 0.6; // Wick is 60%+ of total candle range
 const SWEEP_LOOKBACK = 10;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'wickRatioThreshold',
+    label: 'Sweep wick ratio',
+    type: 'number',
+    default: WICK_RATIO_THRESHOLD,
+    min: 0.3,
+    max: 0.95,
+    step: 0.05,
+    unit: 'fraction of range',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 (#1166 method): a stop-run is defined by the WICK dominating the bar. At 0.3 an ordinary bar qualifies; at 0.95 only a pure rejection does.',
+    source: 'liquidity-sweep.directive.ts:WICK_RATIO_THRESHOLD',
+  },
+  {
+    key: 'sweepLookback',
+    label: 'Sweep lookback',
+    type: 'number',
+    default: SWEEP_LOOKBACK,
+    min: 5,
+    max: 80,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01: the swept liquidity is the high/low of this window, so it decides which level was run.',
+    source: 'liquidity-sweep.directive.ts:SWEEP_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class LiquiditySweepDirective implements IDirective {
@@ -32,9 +70,14 @@ export class LiquiditySweepDirective implements IDirective {
   readonly minBars = { '1d': 15 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const wickRatioThreshold = values.wickRatioThreshold as number;
+    const sweepLookback = values.sweepLookback as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -45,8 +88,8 @@ export class LiquiditySweepDirective implements IDirective {
       };
     }
 
-    const recentBars = bars.slice(-SWEEP_LOOKBACK);
-    const sweeps = this.findSweeps(recentBars);
+    const recentBars = bars.slice(-sweepLookback);
+    const sweeps = this.findSweeps(recentBars, wickRatioThreshold);
 
     if (sweeps.length === 0) {
       return {
@@ -92,6 +135,7 @@ export class LiquiditySweepDirective implements IDirective {
 
   private findSweeps(
     bars: DirectiveInput['bars'],
+    wickRatioThreshold: number,
   ): { direction: 'bullish' | 'bearish'; strength: number }[] {
     const sweeps: { direction: 'bullish' | 'bearish'; strength: number }[] = [];
 
@@ -109,7 +153,7 @@ export class LiquiditySweepDirective implements IDirective {
       const lowerWickRatio = lowerWick / range;
       const upperWickRatio = upperWick / range;
 
-      if (lowerWickRatio >= WICK_RATIO_THRESHOLD && bar.close > bar.open) {
+      if (lowerWickRatio >= wickRatioThreshold && bar.close > bar.open) {
         // Check if price swept below recent low
         const recentLow = Math.min(...bars.slice(Math.max(0, i - 5), i).map((b) => b.low));
         const sweptBelow = bar.low < recentLow;
@@ -119,7 +163,7 @@ export class LiquiditySweepDirective implements IDirective {
       }
 
       // Bearish sweep: long upper wick, close near low
-      if (upperWickRatio >= WICK_RATIO_THRESHOLD && bar.close < bar.open) {
+      if (upperWickRatio >= wickRatioThreshold && bar.close < bar.open) {
         const recentHigh = Math.max(...bars.slice(Math.max(0, i - 5), i).map((b) => b.high));
         const sweptAbove = bar.high > recentHigh;
 

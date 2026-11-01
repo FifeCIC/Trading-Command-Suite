@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 193,
+  "count": 196,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -87,6 +87,16 @@
       "purpose": "the filtered-rate check for #825.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "audit-protocol-scrub-safety.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "refuse a protocol scrub that would orphan a symbol.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "audit-schema-drift.cjs",
@@ -329,6 +339,16 @@
       "purpose": "bring scoring_strategy.tradeThreshold onto the live scale.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "apply-protocol-scrub.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "deactivate a reviewed list of protocols, reversibly.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "apply-threshold-column-defaults.cjs",
@@ -946,6 +966,14 @@
       "where": "nest",
       "category": "tool",
       "purpose": "One-off mechanical removal of a directive id from protocols-seed-data.ts.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "repair-starved-bars.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "force a provider import for symbols the refresh service reports as starved (#1179).",
       "selfTest": false,
       "reaches": null
     },

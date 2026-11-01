@@ -12,9 +12,35 @@
 
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 10; // Need at least 2 weeks
 const SURGE_MULTIPLIER = 1.5;
+
+/**
+ * Tunable knob (#1165). The default IS the constant above — BASELINE proves the equality.
+ *
+ * ⚠️ This directive's surge test compares the NEWEST bar against the average for its own WEEKDAY, so
+ * the threshold is a comparison against a like-for-like population rather than a flat average. That
+ * makes it unusually sensitive: 1.5× of a quiet Monday is a different absolute volume from 1.5× of a
+ * busy Friday. The `volume-climax` fixture spikes the last two bars, which is what makes the branch
+ * reachable — a spike anywhere else would be read by nobody here.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'surgeMultiplier',
+    label: 'Weekday surge multiplier',
+    type: 'number',
+    default: SURGE_MULTIPLIER,
+    min: 1.05,
+    max: 4,
+    step: 0.05,
+    unit: '× weekday average',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: 1.5× a weekday average is routine on thin instruments and rare on liquid ones. At 1.05 almost every bar is a "surge" (so the flag stops meaning anything); at 4 only a genuine event qualifies.',
+    source: 'volume-rhythm.directive.ts:17 SURGE_MULTIPLIER',
+  },
+];
 
 @Injectable()
 export class VolumeRhythmDirective implements IDirective {
@@ -30,8 +56,12 @@ export class VolumeRhythmDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const surgeMultiplier = values.surgeMultiplier as number;
+
     const { bars } = input;
     if (bars.length < MIN_BARS) {
       return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.` };
@@ -79,7 +109,7 @@ export class VolumeRhythmDirective implements IDirective {
     const recentDay = new Date(recent.timestamp).getDay();
     const wd = weekdayVolumes[recentDay];
     const weekdayAvg = wd ? wd.sum / wd.count : recent.volume;
-    const isSurge = recent.volume > weekdayAvg * SURGE_MULTIPLIER && recent.volume > 0;
+    const isSurge = recent.volume > weekdayAvg * surgeMultiplier && recent.volume > 0;
 
     if (upDownRatio > 1.2) {
       // Accumulation pattern: up-day volume significantly higher

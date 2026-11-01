@@ -31,6 +31,7 @@ import {
   findSwingLows,
   type StrengthModel,
 } from '../utils/divergence';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MACD_FAST = 12;
 const MACD_SLOW = 26;
@@ -51,6 +52,30 @@ const STRENGTH_MODEL: StrengthModel = {
   indDenominator: (ind1) => Math.max(Math.abs(ind1), 0.0001),
 };
 
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'swingLookback',
+    label: 'Swing lookback',
+    type: 'number',
+    default: SWING_LOOKBACK,
+    min: 2,
+    max: 20,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): a divergence compares TWO swings, so this decides which swings exist. 2 counts minor pullbacks; 20 only major turns.',
+    source: 'macd-divergence.directive.ts:SWING_LOOKBACK',
+  },
+];
+
 @Injectable()
 export class MacdDivergenceDirective implements IDirective {
   readonly id = 'macd-divergence';
@@ -64,9 +89,13 @@ export class MacdDivergenceDirective implements IDirective {
   readonly minBars = { '1d': 52 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const swingLookback = values.swingLookback as number;
+
     const closes = input.bars.map((b) => b.close);
     const lows = input.bars.map((b) => b.low);
     const highs = input.bars.map((b) => b.high);
@@ -81,7 +110,7 @@ export class MacdDivergenceDirective implements IDirective {
     }
 
     const macdResult = macd(closes, MACD_FAST, MACD_SLOW, MACD_SIGNAL);
-    if (macdResult.histogram.length < SWING_LOOKBACK * 2 + 2) {
+    if (macdResult.histogram.length < swingLookback * 2 + 2) {
       return {
         score: 0,
         confidence: 0.1,
@@ -98,8 +127,8 @@ export class MacdDivergenceDirective implements IDirective {
       return macdResult.histogram[hIdx];
     };
 
-    const swingLows = findSwingLows(lows, SWING_LOOKBACK, getHist);
-    const swingHighs = findSwingHighs(highs, SWING_LOOKBACK, getHist);
+    const swingLows = findSwingLows(lows, swingLookback, getHist);
+    const swingHighs = findSwingHighs(highs, swingLookback, getHist);
 
     const bullDiv = checkBullishDivergence(swingLows);
     const bearDiv = checkBearishDivergence(swingHighs);

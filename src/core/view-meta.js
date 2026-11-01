@@ -140,7 +140,7 @@ const VIEW_META = {
   '/trading/strategy-comparison': {
     tier: 'premium',
     review: 'approved',
-    label: 'Trading Strategy Comparison',
+    label: 'Bot Comparison',
     file: 'src/pages/StrategyComparisonPage.jsx',
     css: 'src/pages/strategy-comparison.css',
     api: ['GET /api/trading/strategy-comparison'],
@@ -183,7 +183,7 @@ const VIEW_META = {
   '/trading/strategy-monitor': {
     tier: 'premium',
     review: 'approved',
-    label: 'Strategy Monitor',
+    label: 'Bot Monitor',
     file: 'src/pages/StrategyMonitorPage.jsx',
     css: 'src/pages/strategy-monitor.css',
       api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena', 'GET /api/scoring/gated/thresholds'],

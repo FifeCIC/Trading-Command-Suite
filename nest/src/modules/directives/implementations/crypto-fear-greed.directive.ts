@@ -14,6 +14,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { checkFidelity, lookaheadResult } from '../lookahead';
 
 const API_URL = 'https://api.alternative.me/fng/';
 const CACHE_TTL_MS = 3600_000; // 1 hour
@@ -35,7 +36,7 @@ export class CryptoFearGreedDirective implements IDirective {
   readonly maxScore = 60;
   readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '2.0.1';
+  readonly version = '2.1.0'; // #1139 — refuses to score a historical bar from a live fetch
   readonly requiredDataFeeds = ['fear-greed'];
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
@@ -90,6 +91,26 @@ export class CryptoFearGreedDirective implements IDirective {
     }
 
     const { value, classification } = fng;
+
+    /**
+     * ── LOOKAHEAD GUARD (#1139 item 2) ─────────────────────────────────────────────────────────────
+     * The index is fetched live and cached for an hour; the directive never read `asOf`, so every
+     * historical bar was scored against TODAY's value. A protocol using it could not be judged by its
+     * backtest, and the number it produced was plausible with no error.
+     *
+     * The check is exact — `fetchedAt` vs the bar, with one bar duration as the arrival allowance
+     * (`lookahead.ts`). Live scoring is unaffected: there, the value is fetched during the bar it is
+     * scoring.
+     */
+    const fidelity = checkFidelity(fng.fetchedAt, input.asOf, input.timeframe);
+    if (fidelity !== 'ok') {
+      return lookaheadResult(
+        'the Fear & Greed index',
+        fng.fetchedAt,
+        input.asOf,
+        'The index is fetched live and cached for an hour, so there is no historical value for this bar.',
+      );
+    }
     const deviation = Math.abs(value - 50);
 
     // Contrarian scoring: further from 50 = stronger signal

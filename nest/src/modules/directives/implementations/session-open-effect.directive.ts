@@ -23,6 +23,7 @@ import {
 } from '../interfaces/directive.interface';
 import { MarketSessionsService, type MarketSession } from '../../calendar/market-sessions.service';
 import { zonedWallClockInstant } from '../../../common/utils/session-time';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 30;
 const PRE_OPEN_BARS = 8; // ~2 hours on 15m, ~1 hour on 5m
@@ -35,6 +36,30 @@ interface SessionOpen {
 }
 
 const WINDOW_MINUTES = 30; // How close to the open to be "active"
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'windowMinutes',
+    label: 'Opening window',
+    type: 'number',
+    default: WINDOW_MINUTES,
+    min: 15,
+    max: 240,
+    step: 5,
+    unit: 'minutes',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): "the opening move" is 30 minutes on equities and an hour or more on FX, so a fixed window mis-measures one of them by construction.',
+    source: 'session-open-effect.directive.ts:WINDOW_MINUTES',
+  },
+];
 
 @Injectable()
 export class SessionOpenEffectDirective implements IDirective {
@@ -75,6 +100,7 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly minBars = { '1d': 30 }; // Directional bias at session opens — high signal value
   readonly version = '1.2.0'; // maxScore corrected + no-signal floor 15→0
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   readonly suitability = {
@@ -92,6 +118,9 @@ export class SessionOpenEffectDirective implements IDirective {
   // from session-open directional bias. See 2026-08-11 discussion.
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const windowMinutes = values.windowMinutes as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -122,15 +151,15 @@ export class SessionOpenEffectDirective implements IDirective {
       }
     }
 
-    // Only active within ±WINDOW_MINUTES of the session open
-    if (!nearestOpen || minDist > WINDOW_MINUTES) {
+    // Only active within ±windowMinutes of the session open
+    if (!nearestOpen || minDist > windowMinutes) {
       const nextOpenName = nearestOpen?.label ?? 'next session';
       // #687: the raw minute distance is unreliable (DST-derived opens, next-day
       // wrapping) — state the fact plainly instead of a nonsense minute count.
       return {
         score: 0, // 2026-08-14: no signal = 0, not a constant 15-point floor
         confidence: 0.4,
-        reason: `${nextOpenName} — outside active window (±${WINDOW_MINUTES}min).`,
+        reason: `${nextOpenName} — outside active window (±${windowMinutes}min).`,
         signalClass: 'neutral',
       };
     }

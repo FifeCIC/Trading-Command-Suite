@@ -7,9 +7,34 @@
 
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const ENTROPY_WINDOW = 20;
 const BINS = 8;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'entropyWindow',
+    label: 'Entropy window',
+    type: 'number',
+    default: ENTROPY_WINDOW,
+    min: 10,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): the regime test compares entropy across this window, so it sets how quickly a regime change is noticed — the exit reaction time.',
+    source: 'regime-shift-exit.directive.ts:ENTROPY_WINDOW',
+  },
+];
 
 @Injectable()
 export class RegimeShiftExitDirective implements IDirective {
@@ -23,6 +48,7 @@ export class RegimeShiftExitDirective implements IDirective {
   readonly minBars = { '1d': 40 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
   /**
    * ⚠️ #1020 — THIS DIRECTIVE HAS NO DIRECTION TO OFFER, SO IT SPEAKS THROUGH ITS SCORE.
@@ -41,8 +67,11 @@ export class RegimeShiftExitDirective implements IDirective {
   readonly exitScoreThreshold = 70;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const entropyWindow = values.entropyWindow as number;
+
     const bars = input.bars;
-    if (bars.length < ENTROPY_WINDOW * 2) {
+    if (bars.length < entropyWindow * 2) {
       return { score: 0, confidence: 0.1, reason: `Insufficient data.`, signalClass: 'neutral' };
     }
 

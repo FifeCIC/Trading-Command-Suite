@@ -22,9 +22,48 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const RSI_PERIOD = 14;
-const MIN_BARS = RSI_PERIOD + 2;
+const OVERSOLD_LEVEL = 30;
+
+/**
+ * The bonus ladder is expressed as FRACTIONS of `oversoldLevel`, not as three separate constants.
+ * At the production level of 30 that resolves to 20 and 25 exactly — deep = 30 × 2/3, extreme = 30 × 5/6
+ * — so the default is byte-identical to the pre-parameter scoring (pinned by `directive-parameters.spec.ts`).
+ * Scaling matters because three fixed tiers cannot stay coherent under a tunable gate: at level 20 a
+ * fixed "deep < 20" tier would be unreachable, and the ladder would silently invert.
+ */
+const DEEP_FRACTION = 2 / 3;
+const EXTREME_FRACTION = 5 / 6;
+
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166): RSI-7 found 58 oversold entries on VIX 1h where RSI-14 found 13, and they shared ONE. The period selects a different opportunity set, not a different setting.',
+    source: 'rsi-oversold.directive.ts:26 RSI_PERIOD',
+  },
+  {
+    key: 'oversoldLevel',
+    label: 'Oversold level',
+    type: 'number',
+    default: OVERSOLD_LEVEL,
+    min: 10,
+    max: 40,
+    step: 1,
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 (#1166): the fixed 30 gate fires 0-4 times over 9 months of daily bars on NVDA/SPY/VIX. A gate calibrated for an instrument that oscillates around 50 does not trip on one that trends. Bounded to 10-40 so the derived bonus ladder stays ordered.',
+    source: 'rsi-oversold.directive.ts:140 oversold gate (was `currentRsi < 30`)',
+  },
+];
 
 /** Linear interpolation: map value from [inMin,inMax] to [outMin,outMax], clamped. */
 function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
@@ -43,21 +82,27 @@ export class RsiOversoldDirective implements IDirective {
   readonly maxScore = 140;
   readonly minScore = 1; // 50 base + 80 extreme bonus
   readonly minBars = { '1d': 16 };
-  readonly version = '2.0.1'; // Hybrid scoring
+  readonly version = '2.1.0'; // parameters (M2, #1165)
   readonly readiness = 'ready' as const;
   readonly directionBias = 'bullish' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const oversoldLevel = values.oversoldLevel as number;
+    const deepLevel = oversoldLevel * DEEP_FRACTION;
+    const extremeLevel = oversoldLevel * EXTREME_FRACTION;
     const closes = input.bars.map((b) => b.close);
-    if (closes.length < MIN_BARS) {
+    if (closes.length < rsiPeriod + 2) {
       return {
         score: 0, confidence: 0.1,
-        reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
+        reason: `Insufficient data: need ${rsiPeriod + 2} bars, have ${closes.length}.`,
         signalClass: 'neutral',
       };
     }
 
-    const rsiValues = rsi(closes, RSI_PERIOD);
+    const rsiValues = rsi(closes, rsiPeriod);
     if (rsiValues.length < 2) {
       return {
         score: 0, confidence: 0.1,
@@ -83,18 +128,18 @@ export class RsiOversoldDirective implements IDirective {
     // RSI 70 → base 0 (overbought, no oversold signal)
     // RSI 30 → base 50 (at threshold, max base signal)
     // RSI < 30 → base stays at 50 (bonus takes over below threshold)
-    const baseScore = Math.round(mapRange(currentRsi, 70, 30, 0, 50));
+    const baseScore = Math.round(mapRange(currentRsi, 70, oversoldLevel, 0, 50));
 
     // ── BONUS (threshold-gated, rare events) ─────────────
     let bonusScore = 0;
     let bonusLabel = '';
-    if (currentRsi < 20) {
+    if (currentRsi < extremeLevel) {
       bonusScore = 80;
       bonusLabel = 'extreme oversold (3σ)';
-    } else if (currentRsi < 25) {
+    } else if (currentRsi < deepLevel) {
       bonusScore = 50;
       bonusLabel = 'deep oversold (2σ)';
-    } else if (currentRsi < 30) {
+    } else if (currentRsi < oversoldLevel) {
       bonusScore = 30;
       bonusLabel = 'oversold (1.5σ)';
     }

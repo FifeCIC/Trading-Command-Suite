@@ -13,10 +13,36 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 40;
 const BIN_COUNT = 20;
 const PATTERN_LOOKBACK = 30;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant of the same value, so an instance that
+ * supplies nothing scores byte-identically — asserted by the BASELINE guard, not merely stated here.
+ *
+ * ⚠️ A candlestick parameter is a THRESHOLD ON GEOMETRY. It is only provable against a candle that
+ * sits near the boundary, which is why 'directive-fixtures.ts' carries explicitly shaped bars
+ * (doji-bar, engulfing-bar, harami-bar, three-soldiers, reversal-hammer) rather than more smooth
+ * series: on a uniform-geometry fixture every threshold value gives the same answer.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'patternLookback',
+    label: 'Pattern lookback',
+    type: 'number',
+    default: PATTERN_LOOKBACK,
+    min: 10,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): the lookback is BOTH the sample and the recency-decay constant (`exp(-age/PATTERN_LOOKBACK)`), so it changes which levels count and how fast old touches fade. On the noisy-range fixture the density reads differently at 10 and at 120.',
+    source: 'pattern-density-sr.directive.ts:19 PATTERN_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class PatternDensitySrDirective implements IDirective {
@@ -31,9 +57,13 @@ export class PatternDensitySrDirective implements IDirective {
   readonly minBars = { '1d': 40 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const patternLookback = values.patternLookback as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -44,7 +74,7 @@ export class PatternDensitySrDirective implements IDirective {
       };
     }
 
-    const recentBars = bars.slice(-PATTERN_LOOKBACK);
+    const recentBars = bars.slice(-patternLookback);
     const currentPrice = bars[bars.length - 1].close;
 
     // Find reversal points (local highs and lows)
@@ -91,7 +121,7 @@ export class PatternDensitySrDirective implements IDirective {
     for (const rev of reversals) {
       const binIdx = Math.min(BIN_COUNT - 1, Math.floor((rev.price - priceMin) / binSize));
       bins[binIdx].count++;
-      bins[binIdx].recentWeight += Math.exp(-rev.recency / PATTERN_LOOKBACK); // Recency decay
+      bins[binIdx].recentWeight += Math.exp(-rev.recency / patternLookback); // Recency decay
       bins[binIdx].types.push(rev.type);
     }
 

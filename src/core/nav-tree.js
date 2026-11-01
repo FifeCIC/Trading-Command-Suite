@@ -138,7 +138,7 @@ export const NAV_TREE = {
   trading: {
     label: 'Trading',
     views: [
-      { id: 'strategy-monitor', label: 'Strategy Monitor', icon: '📊' },
+      { id: 'strategy-monitor', label: 'Bot Monitor', icon: '📊' },
       // MOVED from the Automation area 2026-10-02 (owner, Page Walkthrough: "Also move this page to
       // the Trading area"). It scans for fast, score-driven entries, so it belongs with the thing it
       // trades rather than with the machinery that ran it. Its route became /trading/speed-scanner.
@@ -172,7 +172,7 @@ export const NAV_TREE = {
       // build's nav. §9.2 called it "promoted to a first-class area"; this is that move. The
       // education-facing copy stays at /education/mt5-demo-trading.
       { id: 'mt5-trading', label: 'Manual Trading', icon: '📈' },
-      { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
+      { id: 'strategy-comparison', label: 'Bot Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
       // #988 (owner request 2026-09-24) — the statistics page for the ONLY post-entry stop

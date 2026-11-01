@@ -9,7 +9,6 @@ const DIR = 'nest/src/modules/directives/implementations';
 const AUDIT = [
   ['candle-pressure.directive.ts', 100, 100, 'oscillator', 'neutral', '1.0.0', '1.1.0'],
   ['cci.directive.ts', 100, 100, 'oscillator', 'bearish', '2.0.0', '2.0.1'],
-  ['chaikin-money-flow.directive.ts', 100, 100, 'oscillator', 'neutral', '1.0.0', '1.1.0'],
   ['confluence-reversal.directive.ts', 100, 100, 'pattern', 'neutral', '1.0.0', '1.1.0'],
   ['crypto-weekend-effect.directive.ts', 50, 50, 'pattern', 'neutral', '1.0.0', '1.1.0'],
   ['gap-scanner.directive.ts', 100, 90, 'pattern', 'neutral', '1.0.0', '1.1.0'],

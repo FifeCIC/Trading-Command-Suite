@@ -11,6 +11,36 @@ export interface SeedProtocolGroup {
   minMultiplier: number;
   maxMultiplier: number;
   directiveIds: string[];
+  /**
+   * Per-entry directive parameters (#1165, added 2026-11-01).
+   *
+   * ⚠️ WITHOUT THIS, A TUNED PARAMETER CANNOT SURVIVE A REINSTALL. `params` lives on
+   * `protocol_directive_entry`, which is seeded only from the data below — so a value set through
+   * the UI is a change to ONE MACHINE, and the seed discipline rule (`database-seed-discipline`)
+   * says that is lost. Only declare a parameter here when the TUNED value is the intended one for
+   * this protocol; a value equal to the directive's default does not need declaring, and pinning it
+   * would silently survive a later improvement to that default.
+   *
+   * Keys and ranges are validated against the directive's own `params` spec at seed time, so a typo
+   * fails loudly instead of installing a number nothing reads.
+   */
+  directiveParams?: Record<string, Record<string, number | boolean>>;
+  /**
+   * NAMED instances of a directive — a second configuration scored on the same bars (#1165).
+   *
+   * `directiveIds` still names each directive once (that is the primary instance, label `''`). An item
+   * here adds a NAMED instance of a directive already in `directiveIds`; a named instance of a
+   * directive the group does not list would never be scored, so the seed-integrity spec refuses it.
+   *
+   * ⚠️ Instances are AVERAGED into one directive slot at scoring time, so declaring one changes WHICH
+   * view of that directive a protocol reads and NEVER its configured capacity.
+   */
+  directiveInstances?: Array<{
+    directiveId: string;
+    /** Non-empty. `''` is reserved for the primary instance declared by `directiveIds`. */
+    label: string;
+    params?: Record<string, number | boolean>;
+  }>;
 }
 
 export interface SeedProtocol {

@@ -29,12 +29,76 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const FIB_LEVELS = [0.236, 0.382, 0.5, 0.618, 0.786];
 const PROXIMITY_THRESHOLD = 0.005;  // 0.5% — "near" a level
 const BOUNCE_THRESHOLD = 0.002;     // 0.2% — min move to count as bounce
 const SWING_LOOKBACK = 5;           // Bars for swing detection
 const SWING_LOOKAHEAD = 5;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'proximityThreshold',
+    label: 'Level proximity',
+    type: 'number',
+    default: PROXIMITY_THRESHOLD,
+    min: 0.005,
+    max: 0.1,
+    step: 0.005,
+    unit: 'fraction of price',
+    chart: 'proximity',
+    why: 'Measured 2026-11-01 (#1166 method): 2% is a wide band on a 5m chart and narrow on a daily one, so the same level is "in play" or not purely on this number.',
+    source: 'fibonacci-levels.directive.ts:PROXIMITY_THRESHOLD',
+  },
+  {
+    key: 'bounceThreshold',
+    label: 'Bounce confirmation',
+    type: 'number',
+    default: BOUNCE_THRESHOLD,
+    min: 0.002,
+    max: 0.05,
+    step: 0.002,
+    unit: 'fraction of price',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: this separates "price reached the level" from "price bounced off it" — the difference between a touch and a signal.',
+    source: 'fibonacci-levels.directive.ts:BOUNCE_THRESHOLD',
+  },
+  {
+    key: 'swingLookback',
+    label: 'Swing lookback',
+    type: 'number',
+    default: SWING_LOOKBACK,
+    min: 5,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01: the swing high/low is what the retracement is measured FROM, so this window defines the entire level set.',
+    source: 'fibonacci-levels.directive.ts:SWING_LOOKBACK',
+  },
+  {
+    key: 'deepestLevel',
+    label: 'Deepest retracement level',
+    type: 'number',
+    default: FIB_LEVELS[FIB_LEVELS.length - 1],
+    min: 0.5,
+    max: 0.95,
+    step: 0.001,
+    unit: 'ratio',
+    chart: 'series',
+    why: 'The published set stops at 0.786, but 0.786 is itself a BONUS TIER — so a symbol retracing past it is still scored as if it were sitting on it. Anyone who counts the 0.886 or the full 1.0 retracement (a "deep discount" entry) cannot express that here. The value replaces the last level in the set and drives that bonus branch, so raising it changes both which level is nearest and whether the deep-retracement bonus fires.',
+    source: 'fibonacci-levels.directive.ts:34 FIB_LEVELS',
+  },
+];
 
 @Injectable()
 export class FibonacciLevelsDirective implements IDirective {
@@ -48,12 +112,19 @@ export class FibonacciLevelsDirective implements IDirective {
   readonly minBars = { '1d': 12 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly category = 'pattern' as const;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const proximityThreshold = values.proximityThreshold as number;
+    const bounceThreshold = values.bounceThreshold as number;
+    const swingLookback = values.swingLookback as number;
+    const deepestLevel = values.deepestLevel as number;
+
     const { bars } = input;
-    const MIN_BARS = SWING_LOOKBACK + SWING_LOOKAHEAD + 2;
+    const MIN_BARS = swingLookback + SWING_LOOKAHEAD + 2;
 
     if (!bars || bars.length < MIN_BARS) {
       return {
@@ -63,7 +134,7 @@ export class FibonacciLevelsDirective implements IDirective {
       };
     }
 
-    const { swingHigh, swingLow } = this.findRecentSwing(bars);
+    const { swingHigh, swingLow } = this.findRecentSwing(bars, swingLookback);
     if (!swingHigh || !swingLow || swingHigh.price <= swingLow.price) {
       return {
         score: 0, confidence: 0.1,
@@ -77,7 +148,8 @@ export class FibonacciLevelsDirective implements IDirective {
     const range = swingHigh.price - swingLow.price;
 
     // Calculate Fibonacci levels (retracing from high toward low)
-    const levels = FIB_LEVELS.map((ratio) => ({
+    const levelRatios = [...FIB_LEVELS.slice(0, -1), deepestLevel];
+    const levels = levelRatios.map((ratio) => ({
       ratio,
       price: swingHigh.price - range * ratio,
     }));
@@ -105,18 +177,18 @@ export class FibonacciLevelsDirective implements IDirective {
     reasons.push(`Nearest: ${(closestLevel.ratio * 100).toFixed(1)}% at ${closestLevel.price.toFixed(2)}`);
 
     // ── Proximity score ──
-    if (closestDist <= PROXIMITY_THRESHOLD) {
+    if (closestDist <= proximityThreshold) {
       score += 30;
       reasons.push(`Within 0.5% of ${(closestLevel.ratio * 100).toFixed(1)}% level`);
     }
 
     // ── Golden pocket bonus (61.8%) ──
-    if (closestLevel.ratio === 0.618 && closestDist <= PROXIMITY_THRESHOLD) {
+    if (closestLevel.ratio === 0.618 && closestDist <= proximityThreshold) {
       score += 20;
       reasons.push('Golden pocket (61.8%) — key reversal zone');
-    } else if (closestLevel.ratio === 0.786 && closestDist <= PROXIMITY_THRESHOLD) {
+    } else if (closestLevel.ratio === deepestLevel && closestDist <= proximityThreshold) {
       score += 15;
-      reasons.push('Deep retracement (78.6%) — strong reversal potential');
+      reasons.push(`Deep retracement (${(deepestLevel * 100).toFixed(1)}%) — strong reversal potential`);
     }
 
     // ── Bounce detection ──
@@ -125,7 +197,7 @@ export class FibonacciLevelsDirective implements IDirective {
       const prevDist = Math.abs(prevBar.close - closestLevel.price) / closestLevel.price;
       const move = Math.abs(currentPrice - prevBar.close) / prevBar.close;
 
-      if (prevDist <= PROXIMITY_THRESHOLD && move >= BOUNCE_THRESHOLD) {
+      if (prevDist <= proximityThreshold && move >= bounceThreshold) {
         score += 60;
         const direction = currentPrice > prevBar.close ? 'up' : 'down';
         reasons.push(`Bounce ${direction} from ${(closestLevel.ratio * 100).toFixed(1)}% (+60)`);
@@ -172,8 +244,8 @@ export class FibonacciLevelsDirective implements IDirective {
    * Find the most recent significant swing high and low.
    * Uses same algorithm as ZigZag swing detector (#284).
    */
-  private findRecentSwing(bars: any[]): { swingHigh: { price: number; index: number } | null; swingLow: { price: number; index: number } | null } {
-    const lookback = SWING_LOOKBACK;
+  private findRecentSwing(bars: any[], swingLookback: number): { swingHigh: { price: number; index: number } | null; swingLow: { price: number; index: number } | null } {
+    const lookback = swingLookback;
     const lookahead = SWING_LOOKAHEAD;
     const highs: { price: number; index: number }[] = [];
     const lows: { price: number; index: number }[] = [];

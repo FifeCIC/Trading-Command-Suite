@@ -26,6 +26,8 @@ import { useSort, SortableTh } from '../../core/use-sort.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { pickRepeatPair } from '../../core/backtest-totals.js';
 import InfoNote from '../InfoNote';
+import NoticeBlock from '../NoticeBlock';
+import { noticeFromError } from '../../core/notices/from-error.js';
 /**
  * ⚠️ meta-stack-status.css IS IMPORTED FOR ITS .mss-stat-* TILES, not for its page (owner direction
  * 2026-10-29: *"there are other pages with stats that display it better … use existing styling as
@@ -905,11 +907,22 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
           </div>
 
           {window1Err ? (
-            <InfoNote tone="critical" label="The comparison could not be measured">
-              The API answered {window1Err?.status ?? 'with no status'}
-              {window1Err?.message ? ` — ${window1Err.message}` : ''}. The rows above are placeholders,
-              not zeros, and <strong>nothing has been said about this change</strong>.
-            </InfoNote>
+            // ⚠️ MIGRATED TO THE NOTICE REGISTRY (#826 ratchet). This used to print `error.message`
+            // verbatim, which is the wording-only failure the ratchet exists to remove: the status,
+            // the code and the remedy were all discarded, so the reader got the API's bare sentence
+            // with no way to look it up. The honest caveat stays — it is the part a code cannot say.
+            <>
+              <NoticeBlock
+                notice={noticeFromError(window1Err, 'TCS-SYS-007', {
+                  operation: 'compare the two runs bar by bar',
+                })}
+                compact
+              />
+              <InfoNote tone="critical" label="The comparison could not be measured">
+                The rows above are placeholders, not zeros, and{' '}
+                <strong>nothing has been said about this change</strong>.
+              </InfoNote>
+            </>
           ) : (
             !window1Delta && (
               <InfoNote tone="neutral" label="Measuring">
@@ -1039,5 +1052,160 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * RunSettingsDiff — WHAT THE TWO RUNS WERE CONFIGURED WITH, so a P&L difference has a cause on screen.
+ * ==================================================================================================
+ *
+ * ── WHY THIS EXISTS (owner direction, 2026-10-31) ──────────────────────────────────────────────────
+ * Four VIX runs were listed at +76,617 … +141,219 with an identical protocol, symbol, timeframe, trade
+ * count, win rate and profit factor, and NOTHING said why the money moved. The answer was that one
+ * costed a 0.01% spread and another 0.93% — a setting nobody had written down.
+ *
+ * `describeRunDifferences()` computes that answer on the server from the STORED columns. Until this
+ * component existed the payload was returned and **no surface read it**, which is the same as not
+ * having it: a correct diagnostic nobody can see cannot correct anything.
+ *
+ * ── THREE STATES, NEVER TWO ────────────────────────────────────────────────────────────────────────
+ *   changed.length > 0            → the settings that moved, with both values
+ *   changed.length === 0, n > 0   → "nothing differs in N settings" — a real, countable result
+ *   request failed                → NOT "nothing differs". An unread comparison is not a clean one.
+ *
+ * ⚠️ `unrecorded` is surfaced per row. A run stored before a column existed reads NULL, and NULL is
+ * UNKNOWN — printing it as equal to the other side's value would credit a number the run never
+ * recorded. That is the whole reason `describeRunDifferences()` has a three-state rule, and dropping
+ * it here would undo it at the last step.
+ */
+export function RunSettingsDiff({ aId, bId }) {
+  const q = useQuery({
+    queryKey: ['bt-run-settings-diff', aId, bId],
+    /**
+     * ⚠️ ALWAYS BOTH IDS, ALWAYS IN THIS ORDER, and the response's `order` is used to find each column
+     * — the endpoint re-sorts runs by `createdAt desc`, so positional values do NOT arrive in A/B
+     * order. Reading them positionally would print A's settings under B's heading whenever A is the
+     * newer run: plausible output, no error.
+     */
+    queryFn: () => apiPost('/api/backtest/runs/compare', { runIds: [aId, bId] }),
+    enabled: Boolean(aId && bId && aId !== bId),
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  if (!aId || !bId || aId === bId) return null;
+
+  if (q.isLoading) {
+    return <InfoNote tone="neutral" label="Comparing settings">Reading both runs&rsquo; stored settings…</InfoNote>;
+  }
+  if (q.error) {
+    return (
+      <>
+        <NoticeBlock
+          notice={noticeFromError(q.error, 'TCS-SYS-007', { operation: 'compare the two runs’ stored settings' })}
+          compact
+        />
+        <InfoNote tone="critical" label="The settings comparison could not be read">
+          This is <strong>not</strong> &ldquo;the settings are the same&rdquo;: nothing was compared.
+        </InfoNote>
+      </>
+    );
+  }
+
+  const diff = q.data?.differences;
+  if (!diff) {
+    return (
+      <InfoNote tone="warning" label="The settings comparison was not returned">
+        The comparison answered without a settings diff, so nothing is known about what differs. Treat
+        any P&amp;L difference as unexplained until this reads.
+      </InfoNote>
+    );
+  }
+
+  const order = Array.isArray(diff.order) ? diff.order : [];
+  const ia = order.indexOf(aId);
+  const ib = order.indexOf(bId);
+  // ⚠️ Refuse rather than guess a column. If either run is missing from `order` the alignment is
+  // unknown, and an unknown alignment is exactly the failure this order field exists to prevent.
+  const aligned = ia >= 0 && ib >= 0;
+
+  const groupLabel = { scope: 'What was measured', sizing: 'Sizing', costs: 'Fill costs', provenance: 'Provenance' };
+  const total = (diff.changedCount ?? 0) + (diff.sameCount ?? 0);
+
+  const cell = (v) => (v == null ? <em className="bt-sweep-of">not recorded</em> : v);
+
+  if (!aligned) {
+    return (
+      <InfoNote tone="warning" label="Settings differ — column order unknown">
+        {diff.changedCount ?? 0} setting(s) differ out of {total}, but one of these runs is missing from
+        the comparison&rsquo;s run order, so which value belongs to A and which to B cannot be stated.
+        Re-run the comparison rather than reading the values positionally.
+      </InfoNote>
+    );
+  }
+
+  return (
+    <>
+      <InfoNote
+        tone={diff.changedCount > 0 ? 'warning' : 'neutral'}
+        label={diff.changedCount > 0 ? 'Settings that differ' : 'No setting differs'}
+        meta={`${diff.changedCount ?? 0} of ${total} compared`}
+      >
+        {diff.changedCount > 0 ? (
+          <>The two runs were configured differently. These are the stored inputs — a P&amp;L
+            difference has at least one of them behind it, rather than being left to the reader to
+            guess.</>
+        ) : (
+          <>Every one of the {total} recorded settings is <strong>identical</strong> on both sides, so
+            any difference in the results came from the market data or from the run itself — not from a
+            setting. That is a finding, not a clean bill of health: it means the change being tested
+            was not applied.</>
+        )}
+      </InfoNote>
+
+      {diff.changedCount > 0 && (
+        <div className="bt-table-wrap">
+          <table className="bt-table bt-num-sweep">
+            <caption className="sr-only">Settings that differ between run A and run B</caption>
+            <thead>
+              <tr>
+                <th scope="col">Setting</th>
+                <th scope="col">A</th>
+                <th scope="col">B</th>
+              </tr>
+            </thead>
+            <tbody>
+              {diff.changed.map((row) => (
+                <tr key={row.field}>
+                  <td>
+                    {row.label}{' '}
+                    <span className="bt-sweep-of">{groupLabel[row.group] ?? row.group}</span>
+                  </td>
+                  <td className="pb-mono">{cell(row.values?.[ia])}</td>
+                  <td className="pb-mono">{cell(row.values?.[ib])}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {diff.sameCount > 0 && (
+        <details className="bt-scores-details">
+          <summary>{diff.sameCount} setting(s) identical on both sides</summary>
+          <ul>
+            {diff.same.map((row) => (
+              <li key={row.field}>
+                {row.label}:{' '}
+                <span className="pb-mono">
+                  {row.unrecorded ? <em className="bt-sweep-of">not recorded on either run</em> : row.value}
+                </span>{' '}
+                <span className="bt-sweep-of">{groupLabel[row.group] ?? row.group}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   );
 }

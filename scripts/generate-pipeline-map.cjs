@@ -976,7 +976,22 @@ if (argv.includes('--write')) {
     !fs.existsSync(p) || fs.readFileSync(p, 'utf8').trim() !== (i === 0 ? json : md).trim());
   if (stale.length) {
     console.error('[pipeline-map] ✖ stale or missing:');
-    for (const p of stale) console.error(`    ${path.relative(ROOT, p)}`);
+    for (const p of stale) {
+      console.error(`    ${path.relative(ROOT, p)}`);
+      // ⚠️ SAY WHERE IT DIFFERS. "stale" alone cannot be acted on, and it cannot be told apart from
+      // "the generator is not deterministic" — which is the case this message was written for
+      // (measured 2026-11-01: `--write` followed immediately by `--check` failed, with a byte-stable
+      // file in between, so the two passes disagreed with each other rather than with the tree).
+      if (!fs.existsSync(p)) continue;
+      const want = (p === OUT_JSON ? json : md).trim();
+      const have = fs.readFileSync(p, 'utf8').trim();
+      let i = 0;
+      while (i < want.length && i < have.length && want[i] === have[i]) i += 1;
+      const at = (s) => JSON.stringify(s.slice(Math.max(0, i - 60), i + 60));
+      console.error(`      first difference at char ${i} (generated ${want.length}, file ${have.length})`);
+      console.error(`        generated: ${at(want)}`);
+      console.error(`        on disk  : ${at(have)}`);
+    }
     console.error('  Regenerate: node scripts/generate-pipeline-map.cjs --write');
     process.exit(1);
   }

@@ -48,6 +48,7 @@
  */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 /** One stored headline, as `news_item` holds it. Only the fields that carry data are read. */
 export interface NewsEventInput {
@@ -66,6 +67,45 @@ const WINDOW_HOURS = 24;
  * about, not a bigger positive. So volume is capped rather than unbounded.
  */
 const SATURATION_COUNT = 6;
+
+/**
+ * Tunable knobs (#1165). The defaults ARE the constants above — BASELINE proves the equality.
+ *
+ * ⚠️ Both are measurable, but only because the harness now supplies `input.news`. Before that,
+ * this directive abstained on every call (`unmeasured: true`), so NO parameter on it could have
+ * been proven — the same unspecified-input defect that hid `gap-scanner`'s `dayBars`.
+ *
+ * The window is the higher-leverage of the two: a headline outside it turns a measured catalyst
+ * into a measured zero, so window 24h vs 1h flips the score between two very different answers.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'windowHours',
+    label: 'Catalyst window',
+    type: 'number',
+    default: WINDOW_HOURS,
+    min: 1,
+    max: 168,
+    step: 1,
+    unit: 'hours',
+    chart: 'window',
+    why: 'A 24h window is a guess about how long a story stays tradeable, and it is wrong for both ends of the asset range: a 1h chart on an index never sees yesterday\'s headline as live, while a weekly-position currency story can stay relevant for days. The `news-catalyst` fixture set holds a headline ~10h old, so window 1h scores zero and window 24h scores a live catalyst — a visible flip, not a nudge.',
+    source: 'news-catalyst.directive.ts:61 WINDOW_HOURS',
+  },
+  {
+    key: 'saturationCount',
+    label: 'Saturation count',
+    type: 'number',
+    default: SATURATION_COUNT,
+    min: 1,
+    max: 30,
+    step: 1,
+    unit: 'headlines',
+    chart: 'threshold',
+    why: 'How many headlines count as a fully-covered story. This is a taste judgement about feed noise, not a market constant, and it differs by source: a broad newswire saturates in 3, a curated feed in 10. With three in-window headlines, count 6 gives volume 0.5 and count 3 gives 1.0 — 10 points of score apart on the same feed.',
+    source: 'news-catalyst.directive.ts:68 SATURATION_COUNT',
+  },
+];
 
 function ageHours(publishedAt: string | Date | null | undefined, asOf: Date): number | null {
   if (!publishedAt) return null;
@@ -102,10 +142,14 @@ export class NewsCatalystDirective implements IDirective {
   readonly version = '1.0.0';
   readonly readiness = 'alpha' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
   /** ⚠️ THE FEED THIS DEPENDS ON. Named so a missing producer is visible rather than silent. */
   readonly requiredDataFeeds = ['news'];
 
   calculate(input: DirectiveInput & { news?: NewsEventInput[] }): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const windowHours = values.windowHours as number;
+    const saturationCount = values.saturationCount as number;
     const all = input.news;
 
     // ⚠️ NO PRODUCER / NO FEED IS NOT "NO NEWS". One is an absence of EVIDENCE, the other is
@@ -139,22 +183,22 @@ export class NewsCatalystDirective implements IDirective {
 
     const inWindow = relevant
       .map((n) => ({ n, age: ageHours(n?.publishedAt, asOf) }))
-      .filter((x): x is { n: NewsEventInput; age: number } => x.age !== null && x.age <= WINDOW_HOURS);
+      .filter((x): x is { n: NewsEventInput; age: number } => x.age !== null && x.age <= windowHours);
 
     if (inWindow.length === 0) {
       return {
         score: 0,
         confidence: 0.4,
-        reason: `${relevant.length} headline(s) mention ${symbol} but none within ${WINDOW_HOURS}h — no live catalyst`,
+        reason: `${relevant.length} headline(s) mention ${symbol} but none within ${windowHours}h — no live catalyst`,
         signalClass: 'neutral',
       };
     }
 
-    // Volume, saturating — see SATURATION_COUNT.
-    const volume = Math.min(1, inWindow.length / SATURATION_COUNT);
+    // Volume, saturating — see saturationCount.
+    const volume = Math.min(1, inWindow.length / saturationCount);
     // Recency, linear to the window edge.
     const freshest = Math.min(...inWindow.map((x) => x.age));
-    const recency = Math.max(0, 1 - freshest / WINDOW_HOURS);
+    const recency = Math.max(0, 1 - freshest / windowHours);
 
     // Recency dominates volume deliberately: one headline ten minutes old is a live catalyst; six
     // from twenty hours ago is yesterday's story still being indexed.
@@ -164,7 +208,7 @@ export class NewsCatalystDirective implements IDirective {
       score,
       confidence: Math.min(0.85, 0.4 + recency * 0.45),
       reason:
-        `Catalyst live for ${symbol}: ${inWindow.length} headline(s) in ${WINDOW_HOURS}h, ` +
+        `Catalyst live for ${symbol}: ${inWindow.length} headline(s) in ${windowHours}h, ` +
         `freshest ${freshest.toFixed(1)}h old`,
       // ⚠️ NEUTRAL IS THE TRUE ANSWER, not a withheld one — see the header. Do not "fix" this into a
       // direction; the input contains none.

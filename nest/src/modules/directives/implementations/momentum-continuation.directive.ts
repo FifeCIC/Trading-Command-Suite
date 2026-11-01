@@ -15,9 +15,34 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { ema, macd, sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const TREND_PERIOD = 20;
 const MIN_BARS = 40;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'trendPeriod',
+    label: 'Trend period',
+    type: 'number',
+    default: TREND_PERIOD,
+    min: 5,
+    max: 100,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): continuation is judged against the trend this period defines, so it decides whether a pullback is "with trend" or "against" it.',
+    source: 'momentum-continuation.directive.ts:TREND_PERIOD',
+  },
+];
 
 @Injectable()
 export class MomentumContinuationComboDirective implements IDirective {
@@ -31,9 +56,13 @@ export class MomentumContinuationComboDirective implements IDirective {
   readonly minBars = { '1d': 40 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const trendPeriod = values.trendPeriod as number;
+
     const closes = input.bars.map(b => b.close);
     const volumes = input.bars.map(b => b.volume);
 
@@ -42,7 +71,7 @@ export class MomentumContinuationComboDirective implements IDirective {
     }
 
     // 1. Trend alignment
-    const ema20 = ema(closes, TREND_PERIOD);
+    const ema20 = ema(closes, trendPeriod);
     const currentPrice = closes[closes.length - 1];
     const trendEma = ema20[ema20.length - 1];
     const trendAligned = currentPrice > trendEma;
@@ -58,7 +87,7 @@ export class MomentumContinuationComboDirective implements IDirective {
 
     // 3. Volume confirmation
     const recentVol = volumes[volumes.length - 1];
-    const avgVol = sma(volumes.slice(0, -1), TREND_PERIOD);
+    const avgVol = sma(volumes.slice(0, -1), trendPeriod);
     const volumeAligned = avgVol > 0 && recentVol > avgVol;
 
     const conditionsMet = [trendAligned, momentumAligned, volumeAligned].filter(Boolean).length;

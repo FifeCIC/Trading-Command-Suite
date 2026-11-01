@@ -47,7 +47,7 @@ import { NAV_TREE, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 import { filterHiddenViews } from './core/hidden-views.js';
-import { useHiddenViews } from './core/hooks/useHiddenViews.js';
+import { useHiddenRoutes } from './core/hooks/useHiddenRoutes.js';
 
 /**
  * Nav filtering happens twice, and the split is deliberate.
@@ -157,14 +157,14 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   // what the owner has not hidden, so without a stable reference the NAV_STRUCTURE effect below
   // (the one that redirects an area with no first view) would re-run on every render once it is
   // listed as a dependency — which it now must be, because the value is not module-constant.
-  const hiddenViews = useHiddenViews();
+  const hiddenRoutes = useHiddenRoutes();
   const NAV_STRUCTURE = useMemo(
-    () => filterHiddenViews(BASE_NAV_STRUCTURE, hiddenViews),
-    [hiddenViews],
+    () => filterHiddenViews(BASE_NAV_STRUCTURE, hiddenRoutes),
+    [hiddenRoutes],
   );
   const EDITION_NAV_TREE = useMemo(
-    () => filterHiddenViews(BASE_NAV_TREE, hiddenViews),
-    [hiddenViews],
+    () => filterHiddenViews(BASE_NAV_TREE, hiddenRoutes),
+    [hiddenRoutes],
   );
   const { area, view, symbolId, ticker, strategyId } = useParams();
   const location = useLocation();

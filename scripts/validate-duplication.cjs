@@ -331,9 +331,11 @@ function check() {
   const allowed = allowance.pairs ?? {};
   const failures = [];
   const reductions = [];
+  const subThreshold = [];
 
   for (const [key, p] of [...pairs].sort((a, b) => b[1].windows - a[1].windows)) {
-    const cap = allowed[key];
+    const raw = allowed[key];
+    const cap = raw === undefined ? undefined : countOf(raw);
     if (cap === undefined) {
       if (p.windows >= MIN_NEW_PAIR_WINDOWS) {
         failures.push({
@@ -342,6 +344,11 @@ function check() {
           windows: p.windows,
           sample: p.samples[0],
         });
+      } else {
+        // Below the new-pair threshold, so not a failure — but say so. The summary line otherwise
+        // reports a pair count HIGHER than the allowance while claiming "none new", which reads as a
+        // contradiction and trains the reader to ignore it.
+        subThreshold.push({ pair: [p.a, p.b], windows: p.windows });
       }
       continue;
     }
@@ -384,11 +391,16 @@ function check() {
     console.log(`    node scripts/validate-duplication.cjs --update-allowance`);
   }
 
-  const allowedTotal = Object.values(allowed).reduce((s, n) => s + n, 0);
+  const allowedTotal = Object.values(allowed).reduce((s, n) => s + countOf(n), 0);
+  const extra = pairs.size - Object.keys(allowed).length;
+  const subNote = extra > 0
+    ? `, ${extra} sub-threshold pair(s) under the ${MIN_NEW_PAIR_WINDOWS}-block bar ` +
+      `(${subThreshold.reduce((s, p) => s + p.windows, 0)} block(s) — allowed by the rule, not banked)`
+    : '';
   console.log(
     `[${TAG}] \u2705 OK \u2014 ${totalWindows} duplicated block(s) across ${pairs.size} pair(s), ` +
       `none new and none grown (allowance: ${allowedTotal} across ${Object.keys(allowed).length}, ` +
-      `scanned ${files.length} files)\n`,
+      `scanned ${files.length} files${subNote})\n`,
   );
 }
 
@@ -439,6 +451,21 @@ function selfTest() {
   // must stay below it; the constant is what keeps a coincidental idiom from failing a build.
   assert(`new-pair threshold is ${MIN_NEW_PAIR_WINDOWS} (a lone block is not a failure)`, MIN_NEW_PAIR_WINDOWS >= 2);
 
+  // Direction 6 — a cap carrying a REASON must still compare as a NUMBER.
+  //
+  // ⚠️ MEASURED 2026-11-01, on the live tree: a pair's allowance value may be
+  // `"1599 MEASURED 2026-11-01: ..."`. Comparing `windows > cap` against that string coerces to NaN,
+  // both comparisons are false, and the pair can grow without limit while the guard prints ✅ — the
+  // "reports on an artefact it is not testing" shape. `countOf()` exists to close it, and this case
+  // proves it: a reduction must be DETECTED (not silently ignored) and growth must be readable.
+  assert('a reason-carrying cap reads as its leading number', countOf('1447 MEASURED 2026-10-21: why') === 1447);
+  assert('a plain numeric cap still reads', countOf(12) === 12);
+  assert('growth past a reason-carrying cap is DETECTABLE', 1450 > countOf('1447 MEASURED because'));
+  assert(
+    'a raw string comparison is the bug this closes',
+    Number.isNaN(Number('1447 MEASURED because')) && !(1450 > '1447 MEASURED because'),
+  );
+
   const failed = checks.filter((c) => !c.pass);
   for (const c of checks) console.log(`  ${c.pass ? '\u2713' : '\u2716'} ${c.name}`);
   if (failed.length) {
@@ -450,6 +477,19 @@ function selfTest() {
 
 // ── Entry ───────────────────────────────────────────────────────────────────
 
+/**
+ * The tolerated window count for a pair.
+ *
+ * ⚠️ A pair's value may be a NUMBER or a STRING THAT STARTS WITH ONE and carries the reason it was
+ * banked (`"1599 MEASURED 2026-11-01: ..."`). Summing those with `s + n` CONCATENATES them, so the
+ * totals printed as `"1599 MEASURED ...2920"` and the `--update-allowance` delta printed `NaN` —
+ * both statements about direction and size that were simply false. Read the leading count instead.
+ */
+function countOf(value) {
+  const n = Number(String(value).match(/^\d+/)?.[0] ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
 const args = process.argv.slice(2);
 if (args.includes('--self-test')) {
   selfTest();
@@ -457,7 +497,7 @@ if (args.includes('--self-test')) {
   const pairs = findDuplication(collectFiles());
   const hadAllowance = fs.existsSync(ALLOWANCE);
   const before = hadAllowance
-    ? Object.values(JSON.parse(fs.readFileSync(ALLOWANCE, 'utf8')).pairs ?? {}).reduce((s, n) => s + n, 0)
+    ? Object.values(JSON.parse(fs.readFileSync(ALLOWANCE, 'utf8')).pairs ?? {}).reduce((s, n) => s + countOf(n), 0)
     : 0;
   const doc = writeAllowance(pairs);
   const where = path.relative(ROOT, ALLOWANCE);

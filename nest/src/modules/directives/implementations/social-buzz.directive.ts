@@ -23,9 +23,35 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { PrismaService } from '../../../database/prisma.service';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 1;
 const HIGH_BUZZ_THRESHOLD = 50;
+
+/**
+ * Tunable knobs (#1165). The default IS `HIGH_BUZZ_THRESHOLD` — BASELINE proves the equality.
+ *
+ * ⚠️ This knob was UNPROVABLE until the harness seeded `socialMention.findFirst` (2026-11-01): the
+ * proxy stub made the query throw, the directive took its catch branch, and the threshold was never
+ * reached on any fixture. It is provable now only because the seeded row reports 60 mentions, which
+ * sits ABOVE the 50 default — so raising the threshold visibly lowers the volume term instead of
+ * leaving it saturated at both ends.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'highBuzzThreshold',
+    label: 'High-buzz mention count',
+    type: 'number',
+    default: HIGH_BUZZ_THRESHOLD,
+    min: 10,
+    max: 200,
+    step: 5,
+    unit: 'mentions / 24h',
+    chart: 'threshold',
+    why: 'Fifty mentions in a day is a mega-cap number. For a small-cap it is a takeover rumour; for AAPL it is a quiet Tuesday — so a fixed 50 saturates the volume term for one and never fills it for the other. The seeded row (60 mentions) sits just above the default, which makes the trade-off visible: at 200 the same row contributes a fifth of the volume term.',
+    source: 'social-buzz.directive.ts:HIGH_BUZZ_THRESHOLD',
+  },
+];
 
 @Injectable()
 export class SocialBuzzDirective implements IDirective {
@@ -43,12 +69,15 @@ export class SocialBuzzDirective implements IDirective {
   readonly requiredDataFeeds = ['social'];
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   constructor(
     private readonly prisma: PrismaService,
   ) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const highBuzzThreshold = values.highBuzzThreshold as number;
     const symbol = input.symbol;
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
@@ -72,6 +101,12 @@ export class SocialBuzzDirective implements IDirective {
       });
 
       if (!mention) {
+        // ⚠️ MEASURED 2026-11-01: `socialmention` holds **0 rows for every symbol** — the import job
+        // has never run, so this branch fires for EVERY scoring call, not occasionally. The live
+        // breakdown reports it `inSignal: false`, so the zero is currently excluded from the composite
+        // and does not pollute a score. That is an OBSERVATION about today's gate, not a property to
+        // rely on: if the feed is ever populated, this branch's semantics (a measured zero, versus
+        // `unmeasured: true` for a feed that has never produced a row) must be re-decided here.
         return {
           score: 0,
           confidence: 0,
@@ -82,7 +117,7 @@ export class SocialBuzzDirective implements IDirective {
 
       // 1. Mention volume (0-40)
       const totalMentions = mention.totalMentions;
-      const volumeScore = Math.min(40, Math.round((totalMentions / HIGH_BUZZ_THRESHOLD) * 40));
+      const volumeScore = Math.min(40, Math.round((totalMentions / highBuzzThreshold) * 40));
 
       // 2. Sentiment ratio (0-40)
       const sentiment = mention.avgSentiment; // -1 to 1
@@ -113,11 +148,15 @@ export class SocialBuzzDirective implements IDirective {
       };
     } catch (err) {
       this.logger.warn(`Social buzz failed for ${symbol}: ${(err as Error).message}`);
+      // ⚠️ `unmeasured: true` — a FAILED QUERY IS NOT A MEASURED ZERO. Without it this branch is
+      // indistinguishable from "the feed was read and found no buzz", so a database outage would
+      // read as a confident neutral score and be averaged into the composite as if it were data.
       return {
         score: 0,
         confidence: 0,
         reason: `Failed to query social data from DB: ${(err as Error).message}`,
         signalClass: 'neutral',
+        unmeasured: true,
       };
     }
   }

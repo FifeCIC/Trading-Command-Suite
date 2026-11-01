@@ -5,7 +5,7 @@
  * throw: it produces a full, plausible backtest with the sign flipped, and the conclusion drawn from
  * it ("shorting VIX is better") would be an artefact.
  */
-import { decideEntry } from './entry-side';
+import { decideEntry, refuseUnrunnableDirection, type DirectionMode } from './entry-side';
 
 describe('decideEntry', () => {
   it('opens a LONG on BUY and STRONG_BUY, with side +1', () => {
@@ -77,5 +77,35 @@ describe('decideEntry', () => {
       expect(d.enter).toBe(false);
       expect(d.side).toBe(1); // the neutral value; `enter` is the flag that must be checked first
     }
+  });
+});
+
+/**
+ * ── 'both' IS REFUSED BY THE RUN PATH (owner direction, confirmed 2026-11-01) ─────────────────────
+ * *"there needs to be two active strategies"* — never one bot trading both ways, and never one
+ * protocol scored both ways. `decideEntry` above stays correct (and tested) for `'both'`; it is the
+ * RUN that must not accept it. Both directions are asserted so this cannot pass by never running.
+ */
+describe('refuseUnrunnableDirection', () => {
+  it('REFUSES "both" with a message that says what to do instead', () => {
+    let err: Error | undefined;
+    try { refuseUnrunnableDirection('both'); } catch (e) { err = e as Error; }
+    expect(err).toBeInstanceOf(Error);
+    expect(err!.message).toContain('two separate strategies');
+    // The remedy must be in the message — a refusal with no next step is a dead end.
+    expect(err!.message).toContain('Run the window twice');
+  });
+
+  it('does NOT refuse the two modes the app can actually run', () => {
+    expect(() => refuseUnrunnableDirection('long')).not.toThrow();
+    expect(() => refuseUnrunnableDirection('short')).not.toThrow();
+  });
+
+  it('every DirectionMode is classified — a future mode cannot slip through unchecked', () => {
+    const all: DirectionMode[] = ['long', 'short', 'both'];
+    const refused = all.filter((m) => {
+      try { refuseUnrunnableDirection(m); return false; } catch { return true; }
+    });
+    expect(refused).toEqual(['both']);
   });
 });

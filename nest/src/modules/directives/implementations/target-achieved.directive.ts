@@ -8,9 +8,34 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { atr } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const ATR_PERIOD = 14;
 const TARGET_MULTIPLE = 1.5; // 1.5x ATR from recent swing = target
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'atrPeriod',
+    label: 'ATR period',
+    type: 'number',
+    default: ATR_PERIOD,
+    min: 3,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01: the target distance is expressed in ATR, so the period sets what "one ATR" means and therefore how far the target sits.',
+    source: 'target-achieved.directive.ts:ATR_PERIOD',
+  },
+];
 
 @Injectable()
 export class TargetAchievedDirective implements IDirective {
@@ -25,10 +50,14 @@ export class TargetAchievedDirective implements IDirective {
   readonly minBars = { '1d': 24 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const atrPeriod = values.atrPeriod as number;
+
     const bars = input.bars;
-    if (bars.length < ATR_PERIOD + 10) {
+    if (bars.length < atrPeriod + 10) {
       return { score: 0, confidence: 0.1, reason: `Insufficient data.`, signalClass: 'neutral' };
     }
 
@@ -37,7 +66,7 @@ export class TargetAchievedDirective implements IDirective {
     const closes = bars.map((b) => b.close);
     const currentPrice = closes[closes.length - 1];
 
-    const atrValues = atr(highs, lows, closes, ATR_PERIOD);
+    const atrValues = atr(highs, lows, closes, atrPeriod);
     const currentAtr = atrValues[atrValues.length - 1];
 
     // Find recent swing low (potential entry proxy)

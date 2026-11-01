@@ -37,6 +37,21 @@ export interface RunSettingsRow {
   newsExclusion: string | null;
   /** #1155 — which sides the run could open: 'long' | 'short' | 'both'. */
   directionMode: string | null;
+  /**
+   * #1141 — the committed-notional cap the run was measured under (1 = unleveraged), and the mechanism
+   * that chose its window. Neither is derivable from the other fields, and both change what the money
+   * column means, so they belong in the diff rather than in the reader's memory.
+   */
+  maxLeverage: number | null;
+  windowSource: string | null;
+  /**
+   * #1170 — the broker step every size in the run was quantised to (`null` = whole units).
+   * It decides whether a trade happened AT ALL: on US30 a 0.2-unit step is a fill and a 1-unit floor
+   * is zero trades, on the same data.
+   */
+  unitStep: number | null;
+  /** #1143 — the constant unit count for `fixedUnits`; null for every equity-derived model. */
+  fixedUnits: number | null;
   positionModel: string | null;
   /** Account currency. */
   accountSize: number | null;
@@ -72,6 +87,13 @@ export interface RunDifferenceSet {
   same: Array<{ field: string; label: string; group: DiffGroup; value: string; unrecorded: boolean }>;
   changedCount: number;
   sameCount: number;
+  /**
+   * ⚠️ THE RUN IDS IN THE ORDER `values` IS ALIGNED TO. Without this a consumer has to GUESS which
+   * column is A and which is B — and the API sorts runs by `createdAt desc`, not by the order the
+   * caller asked for, so the guess is wrong whenever A is the newer run. A positional array with an
+   * undocumented order is the same defect as printing an age under a timestamp heading.
+   */
+  order: string[];
 }
 
 const iso = (v: Date | string) => {
@@ -107,11 +129,27 @@ const FIELDS: Array<{
   // short run over the same window are the two halves of the same experiment; listing it in `scope`
   // means a comparison can never report "everything the same" between them.
   { field: 'directionMode', label: 'Sides allowed', group: 'scope', read: (r) => asText(r.directionMode) ?? 'long' },
+  // ⚠️ WHICH MECHANISM CHOSE THE WINDOW (#1141/#1132). `startDate`/`endDate` cannot show this: two
+  // `days-range` runs made on different days cover different data with identical-looking dates, and a
+  // `days-range` run is not reproducible the way a `period:<name>` run is. In `scope` because it decides
+  // WHAT was measured, not how big the position was.
+  { field: 'windowSource', label: 'Window mechanism', group: 'scope', read: (r) => asText(r.windowSource) },
 
   { field: 'positionModel', label: 'Position model', group: 'sizing', read: (r) => asText(r.positionModel) },
   { field: 'accountSize', label: 'Account size', group: 'sizing', read: (r) => asMoney(r.accountSize) },
   { field: 'riskPct', label: 'Risk per trade', group: 'sizing', read: (r) => asPctLiteral(r.riskPct) },
+  // ⚠️ THE CAP IS PART OF THE SIZING (#1142/#1141): the same account at 1x and 10x commits different
+  // notional per trade, so two runs that differ only here describe different money.
+  { field: 'maxLeverage', label: 'Notional cap', group: 'sizing', read: (r) => (r.maxLeverage == null ? null : `${r.maxLeverage}×`) },
+  // ⚠️ #1170 — THE STEP IS A SIZING SETTING, and the most consequential one for a CFD: 0.1 vs 1 is
+  // "0.2 lots were bought" vs "every trade was refused". Rendering it as "whole units" rather than
+  // `null` would claim the broker said 1, which it never did.
+  { field: 'unitStep', label: 'Size step', group: 'sizing', read: (r) => (r.unitStep == null ? null : `${r.unitStep} units`) },
   { field: 'fixedAmount', label: 'Fixed amount', group: 'sizing', read: (r) => asMoney(r.fixedAmount) },
+  // ⚠️ #1143 — THE MODEL THAT COMES FROM THE BOT. `fixedUnits` NULL is not "no size": it is "this model
+  // derived its size from equity", which is exactly the 5× difference the issue measured between a live
+  // gold bot ($4,015) and its simulation ($20,074). A pair differing only here is not a like-for-like one.
+  { field: 'fixedUnits', label: 'Constant size', group: 'sizing', read: (r) => (r.fixedUnits == null ? null : `${r.fixedUnits} units`) },
   { field: 'botBaseSize', label: 'Bot lot size', group: 'sizing', read: (r) => asNum(r.botBaseSize) },
 
   { field: 'spread', label: 'Spread (of price)', group: 'costs', read: (r) => asPct(r.spread) },
@@ -124,6 +162,27 @@ const FIELDS: Array<{
 ];
 
 /**
+ * The field names this module compares. EXPORTED for the completeness guard
+ * (`run-differences-coverage.spec.ts`), which fails when `BacktestRun` gains a stored column that is
+ * neither diffed nor declared as deliberately excluded.
+ */
+export const DIFF_FIELD_NAMES: string[] = FIELDS.map((f) => String(f.field));
+// ── DECISION (2026-11-01, primary) ──
+// WHAT:      Every scalar column of `BacktestRun` must be DIFFED or explicitly declared EXCLUDED, and
+//            the comparison states the run order its positional `values` are aligned to.
+// WHY:       `maxLeverage` and `windowSource` were stored on every run from the day they were added
+//            and read by nothing, so a 1× run and a 4× run compared as "everything the same" while
+//            their P&L differed by 15,924.74 (-15,763.42 vs -31,688.16). Nothing failed. A column
+//            that is never diffed is a column that may as well not exist, and a positional array with
+//            an unstated order lets a reader print A's settings under B's heading.
+// INSTEAD OF: Trusting each new column to be remembered. Forgetting is the default, not the exception.
+// REVERSE BY: Deleting `run-differences-coverage.spec.ts` and the `order` field. The consequence is
+//            that the next stored setting can go un-diffed again, so record the reason in row 117.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 117
+// GUARD:     run-differences.spec.ts (per-field detection, canaried both ways) and
+//            run-differences-coverage.spec.ts (column-list completeness, canaried both ways)
+
+/**
  * Compare the settings of 2+ runs. Runs must be passed in the order they should be displayed; each
  * row's `values` is aligned to that order.
  */
@@ -133,8 +192,9 @@ export function describeRunDifferences(rows: RunSettingsRow[]): RunDifferenceSet
 
   if (!Array.isArray(rows) || rows.length < 2) {
     // One run has nothing to differ FROM. Returning an empty diff is honest; returning "all same"
-    // would claim a comparison that was never made.
-    return { changed, same, changedCount: 0, sameCount: 0 };
+    // would claim a comparison that was never made. `order` still reports the row it was given, so a
+    // consumer can tell "one run" from "no runs".
+    return { changed, same, changedCount: 0, sameCount: 0, order: rows.map((r) => r.id) };
   }
 
   for (const f of FIELDS) {
@@ -152,5 +212,5 @@ export function describeRunDifferences(rows: RunSettingsRow[]): RunDifferenceSet
     }
   }
 
-  return { changed, same, changedCount: changed.length, sameCount: same.length };
+  return { changed, same, changedCount: changed.length, sameCount: same.length, order: rows.map((r) => r.id) };
 }

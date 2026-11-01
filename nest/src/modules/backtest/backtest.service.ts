@@ -14,7 +14,9 @@ import { applyExecutionCosts } from './execution-costs';
 import { computeEquityPath, type EquityPoint, type EquitySummary } from './equity-drawdown';
 import { describeRunDifferences, type RunDifferenceSet } from './run-differences';
 import { breakEvenFromOutcomes, medianBracket } from './break-even';
-import { decideEntry } from './entry-side';
+import { decideEntry, refuseUnrunnableDirection } from './entry-side';
+import { applyAffordability } from './affordable-size';
+import { resolveFixedUnits } from './fixed-units';
 import {
   scoringTotals,
   tradeTotals,
@@ -218,7 +220,15 @@ export interface BacktestRunRequest {
    *
    *   'long'  — the historical behaviour, and the DEFAULT. Nothing stored changes meaning.
    *   'short' — SELL / STRONG_SELL only. A like-for-like mirror of the long run on the same window.
-   *   'both'  — either side.
+   *   'both'  — ⚠️ **LEGACY / REFUSED FOR NEW RUNS (owner direction, confirmed 2026-11-01).** It opens
+   *             longs AND shorts from ONE protocol's signal in ONE run. Production cannot do that: the
+   *             standing decision is that long and short are **two active strategies**, never one bot
+   *             trading both ways, and never one protocol scored both ways. A result from 'both'
+   *             therefore describes a configuration that cannot be deployed, which is worse than no
+   *             result — it invites a conclusion nobody can act on. Kept in the union only so the two
+   *             stored runs that used it remain readable; `run()` rejects it.
+   *             **To compare directions, run twice** (long, then short, same window) and use the
+   *             comparison view — that is what the standing decision supports.
    *
    * ⚠️ THIS IS A DECLARED SETTING, NOT AN EDIT TO THE MATHS. The default reproduces the old run
    * exactly, so an existing comparison stays valid, and the two modes can be compared on the frozen
@@ -228,9 +238,29 @@ export interface BacktestRunRequest {
    */
   directionMode?: 'long' | 'short' | 'both';
   /** Position sizing + commission (#50, #269, #271) */
-  positionModel?: 'fixedPercent' | 'fixedDollar' | 'atrEqualRisk' | 'kellyFull' | 'kellyHalf';
+  positionModel?: 'fixedPercent' | 'fixedDollar' | 'fixedUnits' | 'atrEqualRisk' | 'kellyFull' | 'kellyHalf';
   accountSize?: number;      // starting account balance in USD
   riskPct?: number;          // risk % per trade (for fixedPercent/atrEqualRisk model)
+  /**
+   * #1143 — a CONSTANT size in UNITS, for `positionModel: 'fixedUnits'`.
+   *
+   * This is the only model whose size is the BOT'S OWN: the live path sends `trading_strategy.baseSize`
+   * lots, and `units = baseSize × contractSize`, so `0.01` lots of XAUUSD is 1 oz. Every other model
+   * derives a size from equity, which drifts with price — measured: the same gold bot that commits
+   * $4,015 live was simulated at $20,074 (5×) because `fixedDollar`/`fixedPercent` divide by price.
+   *
+   * ⚠️ OMITTED is resolved, not defaulted: when the request also names a `botId`, the size becomes that
+   * bot's own `baseSize × contractSize`. With neither, the run REFUSES — inventing a size is how a
+   * backtest stops describing the bot it claims to test.
+   */
+  fixedUnits?: number;
+  /**
+   * #1142 - committed notional may not exceed `accountSize x maxLeverage`. Default 1 (unleveraged).
+   * Before this existed, `fixedPercent` sized notional as `accountSize x riskPct / slPct` with no
+   * cap, and a min-1-unit floor forced at least one whole unit even when it cost more than the
+   * account - which reported a +1,380% return on $10,000 from a $158,600 position.
+   */
+  maxLeverage?: number;
   fixedAmount?: number;      // fixed $ per trade (for fixedDollar model)
   commission?: number;       // flat commission per trade ($)
   /** ATR equal-risk (#271) */
@@ -318,6 +348,13 @@ export interface TradeRecord {
   protocolId: string;
   // Execution realism (#50)
   positionSize?: number;  // number of shares/contracts
+  /**
+   * #1142 — committed notional (units × cost-adjusted entry price) and its multiple of the account.
+   * Recorded per trade so the money column can be checked against a real account rather than inferred
+   * from `totalPnl`. Absent on runs stored before 2026-11-01 means NOT RECORDED, not zero.
+   */
+  notional?: number;
+  notionalPct?: number;
   commission?: number;    // commission deducted ($)
   /**
    * Excursion — how far the position went against and in favour of the entry before it resolved, as
@@ -400,8 +437,22 @@ export interface BotForBacktest {
  * `gated.signalPct`; `minComposite` is stored as that same percentage. No conversion is applied, and
  * none should be added.
  */
-export function passesBotEntryBar(compositePct: number, minComposite?: number | null): boolean {
-  const bar = Number(minComposite ?? 0);
+/**
+ * The start of a `days`-long window, measured BACK FROM THE NEWEST BAR (#1132).
+ *
+ * ⚠️ Why this is a named function: the defect it fixes was an arithmetic/query mismatch that READ as
+ * correct. MEASURED 2026-11-01 — `days: 20` on VIX 1h ran `orderBy asc` + `take: 140`, which returns the
+ * OLDEST 140 bars, so the window was 2026-08-14 to 08-24: FOUR days in August, while "the last 20 days"
+ * was 2026-10-22 to 10-30. Every day-count run measured the beginning of the history and nothing said so.
+ *
+ * The end is the newest bar, never the process clock — a market closed for the weekend would otherwise
+ * slide the whole window.
+ */
+export function daysRangeStart(newestBarAt: Date, days: number): Date {
+  return new Date(newestBarAt.getTime() - days * 24 * 60 * 60 * 1000);
+}
+
+export function passesBotEntryBar(compositePct: number, minComposite?: number | null): boolean {  const bar = Number(minComposite ?? 0);
   if (!Number.isFinite(bar) || bar <= 0) return true;
   return compositePct >= bar;
 }
@@ -744,6 +795,19 @@ export interface BacktestResult extends BacktestResultBracketFields {
      * run stored without one must say "not recorded" rather than quietly assuming £10,000.
      */
     accountSize?: number | null;
+    /**
+     * #1170 — the broker step every position in this run was quantised to (`volumeStep × contractSize`),
+     * and where that came from. `null` + `'assumed-whole'` is a run sized in whole units because no
+     * broker spec was found — the state that refused every ETF-index and crypto run at a $10k account.
+     * ⚠️ Present on BOTH paths (`run()` and `formatRunResult()`) so a stored run can be read back the
+     * same way it was served; writing it only to the live response is the defect this field caught.
+     */
+    unitStep?: number | null;
+    unitGranularity?: 'broker' | 'assumed-whole';
+    /** Which `symbol_route`/`broker_symbol` row the step came from, e.g. `broker 3 US30`. */
+    unitGranularitySource?: string;
+    /** #1143 — the constant unit count when `positionModel` was `fixedUnits`; null for every other model. */
+    fixedUnits?: number | null;
   };
 }
 
@@ -955,7 +1019,35 @@ export class BacktestService {
     // reason, so the standard is reported and the refusal waits for a SESSION CALENDAR.
     // Tracked in #1149; see `periodHealth` for the three verdicts and the settings that produce them.
     const periodHealthVerdict = request.periodId ? await this.periodVerdict(request.periodId) : null;
-    const period = await this.resolvePeriod(request.periodId);
+    /**
+     * ── WHERE THE WINDOW COMES FROM (#1132) ────────────────────────────────────────────────────────
+     * Three sources, and every run REPORTS which one it used (`windowSource`):
+     *
+     *   `period:<name>`   an explicit `periodId` — a stored, noted window. Authoritative.
+     *   `days-rowlimit`   an explicit `days` count. ⚠️ This is NOT a date range: it becomes
+     *                     `take: days + 120` walking BACK from the newest bar, so the span depends on
+     *                     the timeframe and the caller cannot see the window it measured.
+     *   (default)         neither supplied ⇒ the FROZEN development window, via its seeded
+     *                     `backtest_period` rows. Refuses loudly when that window is not seeded, rather
+     *                     than quietly measuring a row limit while a reader believes it is frozen.
+     *
+     * ⚠️ THE DEFAULT IS THE FROZEN WINDOW ON PURPOSE. Two runs compared across different windows
+     * describe different markets; `compareRuns()` already refuses that case, so the way to make
+     * comparisons meaningful is to make the comparable window the easy one. `request.days` is read
+     * directly (not the destructured default of 365) because "not supplied" must be distinguishable
+     * from "supplied as 365".
+     */
+    const explicitDays = request.days !== undefined && request.days !== null;
+    let period = await this.resolvePeriod(request.periodId);
+    // ⚠️ A LOCAL flag, not instance state: this service is a singleton and two concurrent runs would
+    // otherwise share it. The window is resolved after the symbol is known, which may come from a bot.
+    const needsDevWindow = !period && !explicitDays;
+    if (needsDevWindow && !this.periods) {
+      throw new Error(
+        'No window was supplied and the period service is not wired, so the frozen development '
+        + 'window cannot be resolved. Refusing to run rather than measuring an invisible range.',
+      );
+    }
 
     /**
      * ── #1144 — a LOOP ID resolves BEFORE any work is done ────────────────────────────────────────
@@ -981,11 +1073,17 @@ export class BacktestService {
       newsExclusion = 'none',
       // #1155 — 'long' is the default, so an existing caller's run is byte-for-byte the same.
       directionMode = 'long',
-      // ── Position sizing + commission (#50) ──
+      // POSITION SIZING + COMMISSION (#50)
       positionModel = 'fixedPercent',
       accountSize = 10000,
+      // #1142 - committed notional may not exceed accountSize x maxLeverage. 1 = unleveraged, which is
+      // the only defensible default: a backtest that borrows silently is not measuring the account it says.
+      maxLeverage = 1,
       riskPct = 2.0,
       fixedAmount = 100,
+      // #1143 — a CONSTANT unit count. `undefined` (not a number) matters: it is resolved below from
+      // the bot when one is named, and a default here would silently outrank the bot's own size.
+      fixedUnits: rawFixedUnits,
       commission: rawCommission,
       // ── ATR equal-risk (#271) ──
       atrPeriod = 14,
@@ -1016,9 +1114,38 @@ export class BacktestService {
     if (!symbol) {
       throw new Error('Backtest requires a symbol, or a botId whose bot declares one.');
     }
+
+    // ── The frozen development window, resolved now that the symbol is known (#1132) ──
+    // Symbol may have come from the bot, so this cannot happen where `needsDevWindow` is set. Throws
+    // when the window is not seeded, naming the command — never a silent fall back to a bar count.
+    if (needsDevWindow) {
+      period = await this.periods!.resolveDevWindow(symbol, timeframe);
+    }
+    /** Which mechanism chose the window. Reported on every run so a comparison can state its basis. */
+    const windowSource: string = period
+      ? ((period as { source?: string }).source ?? `period:${(period as { name?: string }).name ?? 'unknown'}`)
+      : 'days-range';
     // 2026-09-08: unscoped and custom-weight backtests previously fell into a
     // second scoring implementation. Require the canonical protocol identity.
     if (!protocolId) throw new Error('Backtest requires protocolId for canonical META.Stack scoring.');
+
+    /**
+     * ── REFUSE 'both' (owner direction, confirmed 2026-11-01) ───────────────────────────────────────
+     * 'both' opens longs AND shorts from ONE protocol's signal inside ONE run. Production cannot do
+     * that: the standing decision is that long and short are **two active strategies** — never one bot
+     * trading both ways, and never one protocol scored both ways. A 'both' result therefore describes a
+     * configuration that cannot be deployed, and a lab that reports on it invites a conclusion nobody
+     * can act on.
+     *
+     * ⚠️ Refused LOUDLY rather than silently coerced to 'long', because coercing would return a
+     * plausible long-only result for a request that asked for something else — the exact failure shape
+     * this repo keeps re-finding. The two stored runs that used 'both' stay readable; nothing re-runs
+     * them.
+     *
+     * The supported way to compare directions: run twice on the same window (long, then short) and use
+     * the comparison view. `entry-side.spec.ts` still covers the primitive.
+     */
+    refuseUnrunnableDirection(directionMode);
 
     /**
      * ── #1144 — which VERSION of this protocol's overrides is in force ────────────────────────────
@@ -1062,6 +1189,31 @@ export class BacktestService {
     // ⚠️ A caller-supplied value ALWAYS wins, so "this run, but at 1% cost" stays one call.
     const brokerSpreadPct = rawSpread === undefined ? await this.measuredSpreadPct(symbol) : null;
 
+    /**
+     * #1170 — WHAT THE SMALLEST TRADEABLE POSITION IS, resolved ONCE per run from the broker's own
+     * symbol spec (`volumeStep × contractSize`). Passed to `applyAffordability()` for every trade, and
+     * reported in the stats so a reader can see whether the sizes were quantised against a real broker
+     * step or against the whole-unit fallback.
+     */
+    const granularity = await this.instrumentGranularity(symbol);
+
+    /**
+     * #1143 — THE BOT'S OWN SIZE, in units. `fixedUnits` is either given outright or derived from the
+     * bot this run names (`baseSize` lots × `contractSize` units per lot), which is exactly the size the
+     * live loop sends to the broker.
+     *
+     * The rule lives in `resolveFixedUnits()` so it can be tested: an explicit number wins, the bot is
+     * second, and with neither the run REFUSES before a single bar is read.
+     */
+    const fixedUnits = positionModel === 'fixedUnits'
+      ? resolveFixedUnits({
+        requested: rawFixedUnits,
+        botBaseSize: resolved.drivenBy?.baseSize,
+        contractSize: granularity.contractSize,
+        symbol,
+      }).units
+      : 0;
+
     const slippage = rawSlippage ?? (isForex ? 0.0001 : isCrypto ? 0.002 : 0.0004); // 0.04% each way
     const spread =
       rawSpread ??
@@ -1076,22 +1228,51 @@ export class BacktestService {
 
     // Load all bars
     //
-    // ⚠️ #986 — TWO DIFFERENT QUESTIONS, two different queries. A day-range run asks "the most
-    // recent N bars" (`take`, walking backwards from the newest). A PERIOD run asks "every bar
-    // between these two instants" (`timestamp` range) — and it must NOT be clamped with `take`,
-    // because `take` returns the FIRST rows in ascending order and would silently drop the END of
-    // the window. The cap below is therefore a refusal, not a truncation.
-    const rows = await this.prisma.marketBar.findMany({
-      where: {
-        symbol: { ticker: symbol.toUpperCase() },
-        timeframe,
-        ...(period ? { timestamp: { gte: period.from, lte: period.to } } : {}),
-      },
-      orderBy: { timestamp: 'asc' },
-      // +1 over the cap so hitting it can be DETECTED — a query capped at exactly N cannot tell
-      // "exactly N" from "more than N".
-      ...(period ? { take: PERIOD_BAR_CAP + 1 } : { take: days + 120 }),
-    });
+    // ⚠️ #986 / #1132 — TWO DIFFERENT QUESTIONS, two different queries, and until 2026-11-01 the
+    // day-range one was BROKEN. It used `orderBy: { timestamp: 'asc' }` together with `take: days + 120`,
+    // which returns the **OLDEST** N bars, not the most recent. MEASURED: `days: 20` on VIX 1h returned
+    // 2026-08-14 → 2026-08-24 while "the last 20 days" was 2026-10-22 → 2026-10-30. So every run built
+    // on `days` measured the beginning of the available history while the caller believed it was looking
+    // at recent conditions — and the span it covered (4 days for "20 days") depended on the timeframe.
+    //
+    // It is now a TRUE date range ending at the newest bar: `timestamp >= newest − days`. That is what
+    // the control says and what a reader assumes. `take` is gone from this branch because a row limit
+    // cannot express a date range.
+    let rows: Array<{ timestamp: Date } & Record<string, unknown>>;
+    if (period) {
+      // A PERIOD run asks "every bar between these two instants" and must NOT be clamped with `take`,
+      // because `take` returns the FIRST rows in ascending order and would silently drop the END of the
+      // window. `take` is used only to DETECT an over-cap window, which is a refusal, not a truncation.
+      rows = await this.prisma.marketBar.findMany({
+        where: {
+          symbol: { ticker: symbol.toUpperCase() },
+          timeframe,
+          timestamp: { gte: period.from, lte: period.to },
+        },
+        orderBy: { timestamp: 'asc' },
+        take: PERIOD_BAR_CAP + 1,
+      });
+    } else {
+      // The newest bar for this symbol/timeframe defines the end of the window; `days` is measured back
+      // from it. Read from `MarketBar` itself, never from the process clock: a market closed for the
+      // weekend would otherwise shift the whole window.
+      const newest = await this.prisma.marketBar.findFirst({
+        where: { symbol: { ticker: symbol.toUpperCase() }, timeframe },
+        orderBy: { timestamp: 'desc' },
+        select: { timestamp: true },
+      });
+      if (!newest) {
+        throw new BadRequestException(
+          `No ${timeframe} bars for ${symbol} — a ${days}-day window cannot be resolved. Import the `
+          + `symbol's history first; refusing to run on an empty range.`,
+        );
+      }
+      const from = daysRangeStart(newest.timestamp, days);
+      rows = await this.prisma.marketBar.findMany({
+        where: { symbol: { ticker: symbol.toUpperCase() }, timeframe, timestamp: { gte: from } },
+        orderBy: { timestamp: 'asc' },
+      });
+    }
 
     /**
      * The bar length in minutes — needed by the gap guard in the trade loop. `0` when the timeframe
@@ -1163,6 +1344,8 @@ export class BacktestService {
 
     const entrySignals: EntrySignal[] = [];
     const trades: TradeRecord[] = [];
+    /** #1142 — trades SKIPPED because the account could not afford one unit. Reported, never silent. */
+    const sizingRefusals: Array<{ at: string; symbol: string; because: string }> = [];
     /**
      * EVERY bar the SEES engine scored, not only the ones that became entries (owner direction,
      * 2026-10-26: *"it needs to be captured for comparison"*).
@@ -1472,11 +1655,20 @@ export class BacktestService {
           // ── Position sizing (#50, #269, #271) — #843: ONE implementation ──
           // The model maths now lives in `trading/position-sizing.ts`, which the LIVE loop also
           // calls. This site keeps what is genuinely its own: ATR is measured HERE (from its own
-          // bars), units are SHARES (so it floors to whole units and keeps its historical
-          // `min 1` floor), and the Kelly no-edge policy stays `size 1` (the live path refuses
-          // instead — each caller owns that policy, see the core's header).
+          // bars), and the Kelly no-edge policy stays `size 1` (the live path refuses instead — each
+          // caller owns that policy, see the core's header).
+          //
+          // ⚠️ THE RESULT IS **NOT** FLOORED HERE (#1170). It used to be `Math.floor(sized.rawSize)`,
+          // which quantised every size to a WHOLE unit before anything knew what the broker accepts —
+          // so on US30 at ≈$45,000 a 0.44-unit request became 0 and the trade was refused. MEASURED
+          // 2026-11-01: 301 signals, 301 refusals, 0 trades. The quantisation now happens once, in
+          // `applyAffordability()`, against the broker's own `volumeStep × contractSize`.
           let positionSize: number;
-          if (positionModel === 'atrEqualRisk') {
+          if (positionModel === 'fixedUnits') {
+            // #1143 — the bot's own size, as a constant. Resolved (and refused if absent) before the
+            // loop, so every trade here is the same unit count the live loop would have sent.
+            positionSize = fixedUnits;
+          } else if (positionModel === 'atrEqualRisk') {
             // ATR-based equal risk (#271): stop = ATR * multiplier, measured from this run's bars.
             const windowBars = bars.slice(Math.max(0, day - windowSize), day + 1);
             const atrValues = this.computeATR(
@@ -1495,11 +1687,11 @@ export class BacktestService {
               atrStopDistance: atrStopDistance > 0 ? atrStopDistance : null,
             });
             positionSize = sized.rawSize != null
-              ? Math.floor(sized.rawSize)
-              : Math.floor((accountSize * (riskPct / 100)) / currentClose); // kept: no ATR history yet
+              ? sized.rawSize
+              : (accountSize * (riskPct / 100)) / currentClose; // kept: no ATR history yet
           } else if (positionModel === 'fixedDollar') {
             const sized = computeSizing({ model: 'fixedDollar', equity: accountSize, entryPrice: entryCost, fixedAmount });
-            positionSize = sized.rawSize != null ? Math.floor(sized.rawSize) : 0;
+            positionSize = sized.rawSize != null ? sized.rawSize : 0;
           } else if (positionModel === 'kellyFull' || positionModel === 'kellyHalf') {
             // Kelly criterion (#269). Neutral 50% prior; the no-edge case keeps its historical
             // `size 1` here (documented divergence — the live path refuses visibly instead).
@@ -1511,7 +1703,7 @@ export class BacktestService {
               slPct,
               kellyCapPct,
             });
-            positionSize = sized.rawSize != null ? Math.floor(sized.rawSize) : 1;
+            positionSize = sized.rawSize != null ? sized.rawSize : 1;
           } else {
             // fixedPercent: risk accountSize * riskPct% on the stop distance (entry as fallback).
             // ⚠️ The fallback denominator is `currentClose`, NOT `entryCost` — preserved exactly
@@ -1528,9 +1720,36 @@ export class BacktestService {
               riskPct,
               stopDistance: stopDistance > 0 ? stopDistance : currentClose,
             });
-            positionSize = sized.rawSize != null ? Math.floor(sized.rawSize) : 0;
+            positionSize = sized.rawSize != null ? sized.rawSize : 0;
           }
-          if (positionSize < 1) positionSize = 1;
+          // ⚠️ #1142 — AFFORDABILITY, NOT A FLOOR. This line used to be `if (positionSize < 1) positionSize = 1;`,
+          // which GUARANTEED one whole unit even when the account could not afford it. On BTC (≈$77,600)
+          // against a $10,000 account that committed 7.76× the account per trade and produced a reported
+          // +1,380% return. The number was arithmetic from a floor, not a result.
+          //
+          // Now the size is clamped to `equity × maxLeverage`, and an unaffordable request is a REFUSAL
+          // that skips the trade — the same answer the live path gets from the broker when a lot is below
+          // its minimum. Refusals are counted and reported, so a reader can see the mechanism instead of
+          // inferring it.
+          const affordability = applyAffordability({
+            requestedUnits: positionSize,
+            pricePerUnit: entryCost,
+            equity: accountSize,
+            maxLeverage,
+            // #1170 — the broker's step, so an index CFD can be bought in 0.1 lots instead of being
+            // refused outright. `null` = unknown → whole units, reported below.
+            unitStep: granularity.unitStep,
+            minUnits: granularity.minUnits,
+          });
+          if (affordability.refused) {
+            sizingRefusals.push({
+              at: currentBar.timestamp.toISOString(),
+              symbol,
+              because: affordability.refusedBecause ?? 'unaffordable',
+            });
+            continue; // no trade — inventing a size is what produced the 1,380%
+          }
+          positionSize = affordability.units;
 
           // ── Commission (#50) ──
           const totalCommission = commission * positionSize; // per-share commission model
@@ -1558,6 +1777,10 @@ export class BacktestService {
             signal,
             protocolId: protocolId ?? 'unscoped',
             positionSize,
+            // #1142 — the committed notional and its multiple of the account, per trade. Recorded so the
+            // money column can be checked against a real account instead of inferred from totalPnl.
+            notional: Number(affordability.notional.toFixed(2)),
+            notionalPct: affordability.notionalPct == null ? undefined : Number(affordability.notionalPct.toFixed(3)),
             commission: Number(totalCommission.toFixed(4)),
             // Excursion, as absolute percentages of the entry price (2026-10-29).
             maxAdversePct: Number(worstPct.toFixed(4)),
@@ -1694,6 +1917,47 @@ export class BacktestService {
           totalCommission: Number(totalCommissionPaid.toFixed(4)),
           netPnl: Number(totalPnl.toFixed(4)),
           avgPositionSize: Number(avgPositionSize.toFixed(1)),
+          // ── #1142 — AFFORDABILITY, made visible ────────────────────────────────────────────────
+          // `sizingRefusals` counts trades SKIPPED because the account could not afford one unit.
+          // ⚠️ Reported even when zero: "no trade was unaffordable" and "this was not measured" must
+          // not render the same, which is why the field is always present with the cap alongside it.
+          notionalCap: Number((accountSize * maxLeverage).toFixed(2)),
+          maxLeverage,
+          /**
+           * #1170 — HOW SMALL a position could be, and where that came from. `unitStep: null` with
+           * `unitGranularity: 'assumed-whole'` is a run whose sizes were quantised against whole units
+           * because no broker spec was found — the state that refused every index CFD and every BTC run
+           * at a $10k account. Always both fields, so "sized in 0.2 lots" and "sized in whole units"
+           * cannot be read as the same run.
+           */
+          unitStep: granularity.unitStep,
+          unitGranularity: granularity.unitStep == null ? 'assumed-whole' : 'broker',
+          unitGranularitySource: granularity.source,
+          /**
+           * #1143 — the CONSTANT size this run held, when the model was `fixedUnits`. Reported on the
+           * live response so a caller can see that `baseSize × contractSize` produced the number it
+           * expected, rather than inferring it from the trade rows.
+           */
+          fixedUnits: positionModel === 'fixedUnits' ? fixedUnits : null,
+          /**
+           * #1132 — WHICH MECHANISM CHOSE THE WINDOW. Always present so a reader never has to infer it:
+           * `period:<name>` = a stored frozen window; `days-range` = an explicit day count, measured
+           * back from the NEWEST bar for this symbol/timeframe.
+           *
+           * ⚠️ Before 2026-11-01 the day path was a ROW LIMIT (`take: days + 120` with an ascending
+           * order), which returned the OLDEST bars: `days: 20` at 1h measured four days in August. Any
+           * run stored before that date on a day count describes the beginning of the history, not a
+           * recent window — `windowFrom`/`windowTo` below are what a reader should trust.
+           */
+          windowSource,
+          windowFrom: bars[windowSize]?.timestamp ?? null,
+          windowTo: bars[bars.length - 1]?.timestamp ?? null,
+          tradesRefusedUnaffordable: sizingRefusals.length,
+          ...(sizingRefusals.length ? { firstSizingRefusals: sizingRefusals.slice(0, 5) } : {}),
+          avgNotionalPct: (() => {
+            const pcts = trades.map((t) => t.notionalPct).filter((v): v is number => typeof v === 'number');
+            return pcts.length ? Number((pcts.reduce((a, b) => a + b, 0) / pcts.length).toFixed(3)) : null;
+          })(),
           // 2026-10-31 — what this bracket NEEDED versus what it got. Same computation as the stored
           // path (`breakEvenFor`), fed from the trades this run just produced.
           ...breakEvenFor(trades, tradeWinRate),
@@ -1750,12 +2014,33 @@ export class BacktestService {
             // differently compared as though they matched. Writing them is additive — no computed
             // figure changes — which is why it was safe to fix without an A/B copy.
             //
-            // ⚠️ `fixedAmount` still has NO column, so a `fixedDollar` run stores its model but not
-            // its amount. Stated here rather than left as a silent gap.
             // ⚠️ `fixedAmount` HAD NO COLUMN UNTIL 2026-10-28 (#1141) — a `fixedDollar` run stored its
             // model and not its amount, so the run could not be reproduced and two runs risking 100 vs
             // 10,000 compared as though they matched. NULL unless the model is `fixedDollar`.
             fixedAmount: positionModel === 'fixedDollar' ? fixedAmount : null,
+            /**
+             * #1141 continued (2026-11-01) — the cap and the window MECHANISM are part of what a run
+             * measured, so they are stored rather than only returned.
+             *
+             * ⚠️ `windowSource` is not derivable from `startDate`/`endDate`. Two `days-range` runs made
+             * on different days cover different data while their stored dates look like ordinary
+             * windows, and a `days-range` run is not comparable with a `period:<name>` run even if the
+             * dates happen to overlap — one is reproducible by anyone, the other only by someone who
+             * runs it on the same day.
+             *
+             * ⚠️ `maxLeverage` is not derivable either: the cap changes how every trade was sized, so
+             * two runs on the same account at 1x and 10x describe different money and the settings diff
+             * could not see it.
+             */
+            maxLeverage,
+            // #1170 — the step every size in this run was quantised to, or NULL when no broker spec was
+            // found and whole units were used. Stored so a later comparison can see that one run bought
+            // 0.2 lots of US30 while the other refused every trade on the same data.
+            unitStep: granularity.unitStep,
+            // #1143 — the constant size, when there was one. NULL means "this model derived its size from
+            // equity", which is a different claim from "the size was not recorded".
+            fixedUnits: positionModel === 'fixedUnits' ? fixedUnits : null,
+            windowSource,
             slippage,
             spread,
             commission,
@@ -1874,6 +2159,68 @@ export class BacktestService {
           'the asset-class default (the run records which value it used).',
       );
       return null;
+    }
+  }
+
+  /**
+   * #1170 — HOW SMALL a position may be on this instrument, in UNITS, from the broker's own spec.
+   *
+   * ── WHY THE BACKTEST NEEDS THIS AT ALL ──────────────────────────────────────────────────────────
+   * The engine sizes in units and used to floor every size to a WHOLE unit, which is right for a share
+   * and wrong for everything else this app trades. MEASURED at a $10,000 account on 2026-11-01:
+   * BTC ≈$58–87k, US30 ≈$45k, USTEC/GER40 ≈$22k — every one of them recorded **zero trades**, because
+   * no whole unit was affordable. A broker happily sells **0.1 lots** of US30, and the bridge says so
+   * (`volumeStep 0.1`, `contractSize 1`); the engine simply had no way to know.
+   *
+   * ── WHERE THE NUMBERS COME FROM ─────────────────────────────────────────────────────────────────
+   * `symbol_route` → `broker_symbol` (the catalogue sync writes `volumeStep`/`contractSize` there), the
+   * same path `measuredSpreadPct()` uses. Stored rather than read from :5000 so a replay works with the
+   * bridge down — a historical run must not depend on a live process being up.
+   *
+   * ⚠️ `null` MEANS UNKNOWN, NOT 1. A symbol with no route, or a broker that did not report the fields,
+   * returns `unitStep: null` and the engine falls back to whole units and REPORTS that it did. Guessing
+   * 1 here would silently re-create the assumption this method exists to remove.
+   */
+  private async instrumentGranularity(symbol: string): Promise<{
+    unitStep: number | null;
+    minUnits: number | null;
+    contractSize: number | null;
+    source: string;
+  }> {
+    const unknown = { unitStep: null, minUnits: null, contractSize: null, source: 'no broker spec' };
+    try {
+      const routes = await (this.prisma as any).symbolRoute.findMany({
+        where: { symbol, enabled: true, provider: 'mt5' },
+        select: { brokerId: true, brokerSymbol: true },
+        orderBy: { brokerId: 'asc' },
+      });
+      for (const r of routes as Array<Record<string, unknown>>) {
+        const venue = Number(r.brokerId);
+        const nativeName = typeof r.brokerSymbol === 'string' && r.brokerSymbol ? r.brokerSymbol : symbol;
+        const row = await (this.prisma as any).brokerSymbol.findFirst({
+          where: { brokerId: venue, name: nativeName },
+          select: { volumeStep: true, volumeMin: true, contractSize: true },
+        });
+        const contractSize = row?.contractSize != null ? Number(row.contractSize) : null;
+        const volumeStep = row?.volumeStep != null ? Number(row.volumeStep) : null;
+        if (contractSize != null && contractSize > 0 && volumeStep != null && volumeStep > 0) {
+          const volumeMin = row?.volumeMin != null ? Number(row.volumeMin) : null;
+          return {
+            // A lot is `contractSize` base units, and orders step by `volumeStep` lots.
+            unitStep: volumeStep * contractSize,
+            minUnits: volumeMin != null && volumeMin > 0 ? volumeMin * contractSize : null,
+            contractSize,
+            source: `broker ${venue} ${nativeName}`,
+          };
+        }
+      }
+      return unknown;
+    } catch (err) {
+      this.logger.warn(
+        `Could not read the unit granularity for ${symbol}: ${(err as Error).message} — sizing falls back `
+          + 'to whole units and the run reports that it did.',
+      );
+      return unknown;
     }
   }
 
@@ -2607,6 +2954,16 @@ export class BacktestService {
         fixedAmount: r.fixedAmount ?? null,
         configVersion: r.configVersion ?? null,
         iteration: r.iteration ?? null,
+        /**
+         * #1141 — the two settings that were persisted but never reached the diff. A row written
+         * before the ALTER reads NULL, which the diff treats as "not recorded" rather than as a
+         * value — the same three-state rule the costs use, because "1×" and "unknown" are answers
+         * to different questions.
+         */
+        maxLeverage: (r as any).maxLeverage ?? null,
+        windowSource: (r as any).windowSource ?? null,
+        unitStep: (r as any).unitStep ?? null,
+        fixedUnits: (r as any).fixedUnits ?? null,
       };
     });
 
@@ -2744,6 +3101,10 @@ export class BacktestService {
         botBaseSize: f.botBaseSize ?? null,
         configVersion: f.configVersion ?? null,
         iteration: f.iteration ?? null,
+        maxLeverage: f.maxLeverage ?? null,
+        windowSource: f.windowSource ?? null,
+        unitStep: f.unitStep ?? null,
+        fixedUnits: f.fixedUnits ?? null,
       })),
     );
 
@@ -3150,6 +3511,20 @@ export class BacktestService {
         tradeWinRate: tradeStats.fraction,
         avgTradePnl: run.avgTradePnl,
         totalPnl: run.totalPnl,
+        /**
+         * #1170 — THE SIZE STEP THIS RUN WAS QUANTISED AGAINST. Added to the READ path as well as the
+         * run response, because a stored run is what the Result step and the A/B tabs render: writing it
+         * only into `run()`'s own stats made it visible for exactly as long as the request that produced
+         * it, which is the "buried ability" shape — measured 2026-11-01, the stored US30 run answered
+         * `stats.unitStep === undefined` while the live response had said `0.1`.
+         *
+         * ⚠️ NULL = the column predates 2026-11-01 OR no broker step was found. Both mean the sizes were
+         * whole units; `unitGranularity` names which, so the two are not silently merged.
+         */
+        unitStep: run.unitStep ?? null,
+        unitGranularity: run.unitStep == null ? 'assumed-whole' : 'broker',
+        /** #1143 — the constant size, on the read path too, so a stored run states what it held. */
+        fixedUnits: run.fixedUnits ?? null,
         /*
          * ── THE BREAK-EVEN WIN RATE (2026-10-31) ────────────────────────────────────────────────
          * What this run's OWN bracket needed, and the gap to what it achieved. Measured across the

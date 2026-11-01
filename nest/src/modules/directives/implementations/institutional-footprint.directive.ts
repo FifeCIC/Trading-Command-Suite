@@ -21,9 +21,47 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const LOOKBACK = 15;
 const VIC_SCALE = 1e-8;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'lookback',
+    label: 'Footprint lookback',
+    type: 'number',
+    default: LOOKBACK,
+    min: 10,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): the footprint is aggregated over this window, so a 20-bar lookback reports the last few hours and a 120-bar one reports the last week.',
+    source: 'institutional-footprint.directive.ts:LOOKBACK',
+  },
+  {
+    key: 'vicScale',
+    label: 'VIC scale',
+    type: 'number',
+    default: VIC_SCALE,
+    min: 1e-9,
+    max: 1e-5,
+    step: 1e-9,
+    unit: 'per volume×range',
+    chart: 'threshold',
+    why: 'The fixed 1e-8 leaves the footprint sigmoid near its floor for real bar sizes, so the composite contributes almost nothing and the 0.4 detection gate rejects nearly every bar — the footprint is effectively disabled. The scale is a unit conversion between instruments, not a market constant, so it belongs per instrument: at the default the gate rejects, at 1e-5 it starts admitting bars and the directive produces bars of footprint as well as an empty result.',
+    source: 'institutional-footprint.directive.ts:27 VIC_SCALE',
+  },
+];
 
 @Injectable()
 export class InstitutionalFootprintDirective implements IDirective {
@@ -38,21 +76,26 @@ export class InstitutionalFootprintDirective implements IDirective {
   readonly minBars = { '1d': 17 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const lookback = values.lookback as number;
+    const vicScale = values.vicScale as number;
+
     const bars = input.bars;
 
-    if (bars.length < LOOKBACK + 2) {
+    if (bars.length < lookback + 2) {
       return {
         score: 0,
         confidence: 0.1,
-        reason: `Insufficient data: need ${LOOKBACK + 2} bars, have ${bars.length}.`,
+        reason: `Insufficient data: need ${lookback + 2} bars, have ${bars.length}.`,
         signalClass: 'neutral',
       };
     }
 
-    const recentBars = bars.slice(-LOOKBACK);
+    const recentBars = bars.slice(-lookback);
     const closes = recentBars.map((b) => b.close);
     const volumes = recentBars.map((b) => b.volume);
 
@@ -77,7 +120,7 @@ export class InstitutionalFootprintDirective implements IDirective {
       const rangeRatio = barRange / Math.max(avgRange, 0.0001);
 
       // VIC for this individual bar
-      const vic = bar.volume * barRange * VIC_SCALE;
+      const vic = bar.volume * barRange * vicScale;
 
       // Footprint: combines volume anomaly and range anomaly
       const footprint = this.calculateFootprint(vic, volumeRatio, rangeRatio);

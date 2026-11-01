@@ -54,6 +54,8 @@
  *  directives for modes 1, 4, 5 (static) and mode 1 (runtime constant-output).
  */
 
+import type { ParamValues, ParamSpec } from '../parameters';
+
 export interface MarketBar {
   timestamp: Date;
   open: number;
@@ -80,6 +82,17 @@ export interface DirectiveInput {
   dayBars?: MarketBar[];
   hourBars?: MarketBar[];
   min15Bars?: MarketBar[];
+  /**
+   * Per-instance configuration, keyed by the directive's own `params` spec keys.
+   *
+   * ⚠️ ABSENT IS THE NORMAL CASE AND IT MEANS "PRODUCTION". A directive resolves this against its
+   * declared `params` (see `parameters.ts`), and every declared default IS the constant the directive
+   * used before parameters existed — so an input with no `params` must produce exactly the output it
+   * produced before M2. `directive-parameters.spec.ts` pins that per directive.
+   *
+   * Keys that are not in the spec are reported by the resolver and ignored, never silently applied.
+   */
+  params?: ParamValues;
 }
 
 export interface DirectiveResult {
@@ -342,10 +355,25 @@ export interface IDirective {
   readonly requiredDataFeeds?: string[];
 
   /**
+   * Tunable knobs this directive exposes, or absent when it has none.
+   *
+   * ⚠️ A SPEC IS A CLAIM, NOT A CAPABILITY (#761). Declaring a parameter here does not make it work —
+   * `directive-parameters.spec.ts` proves, for every declared parameter, that (a) supplying nothing
+   * reproduces the hardcoded constant and (b) changing it actually moves the output. A knob that
+   * cannot move the output must be removed, not shipped: a user will tune it and believe the result.
+   *
+   * Declared defaults MUST equal the constant the directive used before parameters existed.
+   */
+  readonly params?: readonly ParamSpec[];
+
+  /**
    * Evaluate the directive against the provided market data.
    * Must NOT throw — return a neutral/low-confidence result on error.
    * Score should be in range 0 to this.maxScore.
    * Async directives may fetch external data (Finnhub, etc).
+   *
+   * ⚠️ A directive with `params` MUST resolve them from `input.params` via `resolveParams()` rather
+   * than reading its module constants directly, or the declared knob is inert.
    */
   calculate(input: DirectiveInput): DirectiveResult | Promise<DirectiveResult>;
 

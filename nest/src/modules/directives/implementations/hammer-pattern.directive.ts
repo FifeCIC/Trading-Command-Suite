@@ -20,11 +20,64 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 6;
 const MIN_WICK_BODY_RATIO = 2.0; // Lower wick must be ≥ 2× body
 const MAX_UPPER_WICK_RATIO = 0.3; // Upper wick < 30% of body
 const TREND_LOOKBACK = 5;
+
+/**
+ * Tunable knobs (#1165). Defaults are the constants above — the BASELINE guard proves the equality.
+ *
+ * ⚠️ A pattern directive is the case where a parameter can only be proven on a fixture that CONTAINS
+ * the pattern. The conformance set gained `reversal-hammer` for exactly this: a bar with a 3× wick,
+ * a 0.1× upper wick, and a V-shaped run-up before it. Measured 2026-11-01, all three knobs move the
+ * score on that fixture — the wick ratio to 0 (below the threshold), the upper-wick cap to 0 (above
+ * the cap), and the trend lookback from a Hanging Man (18) to a Hammer (71) as it reaches back into
+ * the decline.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'minWickRatio',
+    label: 'Minimum lower wick / body',
+    type: 'number',
+    default: MIN_WICK_BODY_RATIO,
+    min: 1,
+    max: 6,
+    step: 0.5,
+    unit: '×',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 on the reversal-hammer fixture: at 1× a 3× wick scores 20 instead of 18 (it counts as a better rejection), and at 6× the same bar is rejected outright — the threshold decides whether the pattern exists.',
+    source: 'hammer-pattern.directive.ts:24 MIN_WICK_BODY_RATIO',
+  },
+  {
+    key: 'maxUpperWickRatio',
+    label: 'Maximum upper wick / body',
+    type: 'number',
+    default: MAX_UPPER_WICK_RATIO,
+    min: 0.05,
+    max: 0.8,
+    step: 0.05,
+    unit: '×',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: the reversal-hammer bar carries a 0.1× upper wick, so 0.05 rejects it (0 points) while 0.8 still accepts it. A cap calibrated on one timeframe silently rejects the pattern on another.',
+    source: 'hammer-pattern.directive.ts:25 MAX_UPPER_WICK_RATIO',
+  },
+  {
+    key: 'trendLookback',
+    label: 'Trend lookback',
+    type: 'number',
+    default: TREND_LOOKBACK,
+    min: 2,
+    max: 30,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01: the SAME candle scores 18 as a Hanging Man at a 5-bar lookback and 71 as a Hammer at 30 bars, because the lookback decides whether the preceding move reads as up or down. This is the single highest-leverage knob on a reversal pattern.',
+    source: 'hammer-pattern.directive.ts:26 TREND_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class HammerPatternDirective implements IDirective {
@@ -41,9 +94,15 @@ export class HammerPatternDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const minWickBodyRatio = values.minWickRatio as number;
+    const maxUpperWickRatio = values.maxUpperWickRatio as number;
+    const trendLookback = values.trendLookback as number;
+
     if (bars.length < MIN_BARS) {
       return {
       signalClass: 'neutral',
@@ -66,16 +125,16 @@ export class HammerPatternDirective implements IDirective {
     const upperWickRatio = upperWick / body;
 
     // Not a hammer: lower wick too short or upper wick too long
-    if (wickBodyRatio < MIN_WICK_BODY_RATIO) {
+    if (wickBodyRatio < minWickBodyRatio) {
       return {
       signalClass: 'neutral',
       score: 0,
         confidence: 0.2,
-        reason: `No Hammer: lower wick/body ratio ${wickBodyRatio.toFixed(1)} (need ≥ ${MIN_WICK_BODY_RATIO}).`,
+        reason: `No Hammer: lower wick/body ratio ${wickBodyRatio.toFixed(1)} (need ≥ ${minWickBodyRatio}).`,
       };
     }
 
-    if (upperWickRatio > MAX_UPPER_WICK_RATIO) {
+    if (upperWickRatio > maxUpperWickRatio) {
       return {
       signalClass: 'neutral',
       score: 0,
@@ -84,13 +143,18 @@ export class HammerPatternDirective implements IDirective {
       };
     }
 
-    // Determine trend context
-    const lookbackStart = bars[bars.length - 1 - TREND_LOOKBACK];
+    // Determine trend context.
+    // ⚠️ `trendLookback` is TUNED, so the index MUST be clamped to the series: at 30 bars on a
+    // 6-bar input the raw index goes negative and the comparison would read `undefined.close`.
+    // Before parameterisation the constant was 5 and MIN_BARS was 6, so the sub-expression was
+    // safe by arithmetic accident — the same shape #1165 records for `support-resistance-levels`.
+    const lookbackStart =
+      bars[Math.max(0, bars.length - 1 - trendLookback)];
     const priorTrend = curr.close - lookbackStart.close;
     const inDowntrend = priorTrend < 0;
 
     // Hammer quality: stronger wick/body ratio = better signal
-    const quality = Math.min(1, (wickBodyRatio - MIN_WICK_BODY_RATIO) / 4); // 2x–6x → 0–1
+    const quality = Math.min(1, (wickBodyRatio - minWickBodyRatio) / 4); // 2x–6x → 0–1
 
     if (inDowntrend) {
       // Hammer at support = bullish reversal

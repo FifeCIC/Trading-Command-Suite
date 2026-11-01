@@ -19,9 +19,35 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 6;
 const MIN_BODY_RATIO = 0.5; // Body must be ≥ 50% of bar range
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant of the same value, so an instance that
+ * supplies nothing scores byte-identically — asserted by the BASELINE guard, not merely stated here.
+ *
+ * ⚠️ A candlestick parameter is a THRESHOLD ON GEOMETRY. It is only provable against a candle that
+ * sits near the boundary, which is why 'directive-fixtures.ts' carries explicitly shaped bars
+ * (doji-bar, engulfing-bar, harami-bar, three-soldiers, reversal-hammer) rather than more smooth
+ * series: on a uniform-geometry fixture every threshold value gives the same answer.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'minBodyRatio',
+    label: 'Minimum body / range',
+    type: 'number',
+    default: MIN_BODY_RATIO,
+    min: 0.2,
+    max: 0.95,
+    step: 0.05,
+    unit: 'fraction of range',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 (#1166 method): 50% of range is a decisive candle; 95% is almost unattainable. The three-soldiers fixture uses 80% bodies, so the maximum rejects them and the default accepts — the knob decides whether the pattern can ever fire.',
+    source: 'three-soldiers-pattern.directive.ts:24 MIN_BODY_RATIO',
+  },
+];
 
 @Injectable()
 export class ThreeSoldiersPatternDirective implements IDirective {
@@ -37,9 +63,13 @@ export class ThreeSoldiersPatternDirective implements IDirective {
   readonly minBars = { '1d': 6 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const minBodyRatio = values.minBodyRatio as number;
+
     const { bars } = input;
     if (bars.length < MIN_BARS) {
       return {
@@ -80,12 +110,12 @@ export class ThreeSoldiersPatternDirective implements IDirective {
     const br2 = bodyRatio(b2);
     const br3 = bodyRatio(b3);
 
-    if (br1 < MIN_BODY_RATIO || br2 < MIN_BODY_RATIO || br3 < MIN_BODY_RATIO) {
+    if (br1 < minBodyRatio || br2 < minBodyRatio || br3 < minBodyRatio) {
       return {
       signalClass: 'neutral',
       score: 0,
         confidence: 0.3,
-        reason: 'One or more bars has insufficient body ratio (need ≥ ' + (MIN_BODY_RATIO * 100) + '% of range).',
+        reason: 'One or more bars has insufficient body ratio (need ≥ ' + (minBodyRatio * 100) + '% of range).',
       };
     }
 

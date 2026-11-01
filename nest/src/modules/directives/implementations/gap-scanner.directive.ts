@@ -30,11 +30,36 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const GAP_THRESHOLD = 0.5; // % — minimum to classify as a gap
 const SMALL_GAP_MAX = 2.0; // % — small gaps have high fill probability
 const LARGE_GAP_MIN = 2.0; // % — large gaps may gap-and-go
 const EXTREME_GAP = 5.0;   // % — news-driven, unpredictable
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'gapThreshold',
+    label: 'Gap threshold',
+    type: 'number',
+    default: GAP_THRESHOLD,
+    min: 0.1,
+    max: 5,
+    step: 0.1,
+    unit: '% of prior close',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 (#1166 method): 0.5% is a real gap on an index and noise on a small-cap. The gap-up-bar fixture sits at 1.4%, inside the tunable band.',
+    source: 'gap-scanner.directive.ts:GAP_THRESHOLD',
+  },
+];
 
 @Injectable()
 export class GapScannerDirective implements IDirective {
@@ -49,9 +74,13 @@ export class GapScannerDirective implements IDirective {
   readonly minBars = { '1d': 2 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const gapThreshold = values.gapThreshold as number;
+
     const { bars, dayBars } = input;
 
     // Use dayBars from input if available; otherwise fall back to main bars
@@ -72,10 +101,10 @@ export class GapScannerDirective implements IDirective {
     const prevDayClose = dailyBars[dailyBars.length - 2].close;
     const currentOpen = bars[bars.length - 1].open;
 
-    return this.evaluateGap(prevDayClose, currentOpen, bars);
+    return this.evaluateGap(prevDayClose, currentOpen, bars, gapThreshold);
   }
 
-  private evaluateGap(prevClose: number, currentOpen: number, bars: any[]): DirectiveResult {
+  private evaluateGap(prevClose: number, currentOpen: number, bars: any[], gapThreshold: number): DirectiveResult {
     if (prevClose <= 0 || currentOpen <= 0) {
       return { score: 25, confidence: 0.1, reason: 'Invalid price data for gap calculation.', signalClass: 'neutral' };
     }
@@ -84,11 +113,11 @@ export class GapScannerDirective implements IDirective {
     const absGap = Math.abs(gapPct);
 
     // ── No significant gap ──
-    if (absGap < GAP_THRESHOLD) {
+    if (absGap < gapThreshold) {
       return {
         score: 25,
         confidence: 0.5,
-        reason: `No significant gap: ${gapPct.toFixed(2)}% (threshold: ±${GAP_THRESHOLD}%).`,
+        reason: `No significant gap: ${gapPct.toFixed(2)}% (threshold: ±${gapThreshold}%).`,
         signalClass: 'neutral',
       };
     }
@@ -105,7 +134,7 @@ export class GapScannerDirective implements IDirective {
 
     // ── Small gap (0.5-2%) — fade it ──
     if (absGap <= SMALL_GAP_MAX) {
-      const strength = (absGap - GAP_THRESHOLD) / (SMALL_GAP_MAX - GAP_THRESHOLD); // 0→1
+      const strength = (absGap - gapThreshold) / (SMALL_GAP_MAX - gapThreshold); // 0→1
 
       if (gapPct > 0) {
         // Gap UP — fade (sell the rally, gap likely to fill downward)

@@ -9,10 +9,48 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { atr } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const ATR_PERIOD = 14;
 const LOOKBACK_HIGH = 20;
 const MIN_BARS = ATR_PERIOD + LOOKBACK_HIGH;
+
+/**
+ * Tunable knobs (#1165). Defaults ARE the constants above — BASELINE proves the equality.
+ *
+ * ⚠️ This directive measures a dip as a fraction of ATR, so BOTH numbers are horizons: the ATR period
+ * decides what "normal movement" means, and the lookback decides what "the recent high" is. On the
+ * `noisy-range` fixture a 20-bar high is a different high from a 10-bar one, and ATR-14 against ATR-7
+ * divides the same dip by a different denominator — the depth reading moves on unchanged price.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'atrPeriod',
+    label: 'ATR period',
+    type: 'number',
+    default: ATR_PERIOD,
+    min: 3,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): ATR is the denominator of every depth reading, so ATR-7 on a quiet series makes an ordinary dip look deep while ATR-28 makes the same dip look shallow. The tier changes on unchanged price.',
+    source: 'atr-dip.directive.ts:13 ATR_PERIOD',
+  },
+  {
+    key: 'lookbackHigh',
+    label: 'Recent-high lookback',
+    type: 'number',
+    default: LOOKBACK_HIGH,
+    min: 5,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01: the reference high is taken from this window, so widening it from 20 to 120 can turn "2% off the high" into "12% off the high" without any new bar — a different dip entirely.',
+    source: 'atr-dip.directive.ts:14 LOOKBACK_HIGH',
+  },
+];
 
 function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
   const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
@@ -32,22 +70,27 @@ export class AtrDipDirective implements IDirective {
   readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const atrPeriod = values.atrPeriod as number;
+    const lookbackHigh = values.lookbackHigh as number;
     const { bars } = input;
-    if (bars.length < MIN_BARS) {
-      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`, signalClass: 'neutral' };
+    const requiredBars = Math.max(MIN_BARS, atrPeriod + lookbackHigh);
+    if (bars.length < requiredBars) {
+      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${requiredBars} bars, have ${bars.length}.`, signalClass: 'neutral' };
     }
     const highs = bars.map((b) => b.high);
     const lows = bars.map((b) => b.low);
     const closes = bars.map((b) => b.close);
-    const atrValues = atr(highs, lows, closes, ATR_PERIOD);
+    const atrValues = atr(highs, lows, closes, atrPeriod);
     if (atrValues.length === 0) {
       return { score: 0, confidence: 0.1, reason: 'Could not compute ATR.', signalClass: 'neutral' };
     }
     const currentAtr = atrValues[atrValues.length - 1];
     const currentPrice = closes[closes.length - 1];
-    const lookbackSlice = highs.slice(-LOOKBACK_HIGH);
+    const lookbackSlice = highs.slice(-lookbackHigh);
     const recentHigh = Math.max(...lookbackSlice);
     const dipAbsolute = recentHigh - currentPrice;
 

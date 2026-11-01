@@ -11,10 +11,49 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 14;
 const RSI_PERIOD = 37;
 const HARAMI_BODY_RATIO = 0.4; // Inner body must be < 40% of outer body
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant of the same value, so an instance that
+ * supplies nothing scores byte-identically — asserted by the BASELINE guard, not merely stated here.
+ *
+ * ⚠️ A candlestick parameter is a THRESHOLD ON GEOMETRY. It is only provable against a candle that
+ * sits near the boundary, which is why 'directive-fixtures.ts' carries explicitly shaped bars
+ * (doji-bar, engulfing-bar, harami-bar, three-soldiers, reversal-hammer) rather than more smooth
+ * series: on a uniform-geometry fixture every threshold value gives the same answer.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI confirmation period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): RSI is the confirmation filter, so its period decides whether the harami is allowed to score. The 37 default is this port\'s calibration rather than the conventional 14.',
+    source: 'mt5-harami.directive.ts:16 RSI_PERIOD',
+  },
+  {
+    key: 'haramiBodyRatio',
+    label: 'Max inner / outer body',
+    type: 'number',
+    default: HARAMI_BODY_RATIO,
+    min: 0.1,
+    max: 0.9,
+    step: 0.05,
+    unit: 'fraction of outer body',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: 40% is a strict harami; 90% accepts almost any inside bar. The harami-bar fixture is 36% of the mother bar, so 0.1 rejects it and 0.9 accepts it — the threshold is the decision.',
+    source: 'mt5-harami.directive.ts:17 HARAMI_BODY_RATIO',
+  },
+];
 
 @Injectable()
 export class Mt5HaramiDirective implements IDirective {
@@ -32,16 +71,21 @@ export class Mt5HaramiDirective implements IDirective {
   readonly minBars = { '1d': 14 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const haramiBodyRatio = values.haramiBodyRatio as number;
+
     const { bars } = input;
     if (bars.length < MIN_BARS) {
       return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`, signalClass: 'neutral' };
     }
 
     const closes = bars.map((b) => b.close);
-    const rsiValues = rsi(closes, RSI_PERIOD);
+    const rsiValues = rsi(closes, rsiPeriod);
     const latestRsi = rsiValues.length > 0 ? rsiValues[rsiValues.length - 1] : 50;
 
     const prev = bars[bars.length - 2];
@@ -55,7 +99,7 @@ export class Mt5HaramiDirective implements IDirective {
     const currBearish = curr.close < curr.open;
 
     // ─── Bullish Harami ──────────────────────────────────
-    if (prevBearish && currBullish && currBody < prevBody * HARAMI_BODY_RATIO) {
+    if (prevBearish && currBullish && currBody < prevBody * haramiBodyRatio) {
       const insidePrev =
         curr.high < prev.high && curr.low > prev.low;
       const confirmed = latestRsi < 40;
@@ -80,7 +124,7 @@ export class Mt5HaramiDirective implements IDirective {
     }
 
     // ─── Bearish Harami ──────────────────────────────────
-    if (prevBullish && currBearish && currBody < prevBody * HARAMI_BODY_RATIO) {
+    if (prevBullish && currBearish && currBody < prevBody * haramiBodyRatio) {
       const insidePrev =
         curr.high < prev.high && curr.low > prev.low;
       const confirmed = latestRsi > 60;

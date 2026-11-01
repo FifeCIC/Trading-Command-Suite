@@ -15,9 +15,33 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const RSI_PERIOD = 14;
 const MIN_BARS = RSI_PERIOD + 2;
+
+/**
+ * Tunable knob (#1165). The default IS the constant above — BASELINE proves the equality.
+ *
+ * ⚠️ A shorter RSI reaches the overbought tiers on smaller moves, so on the SAME bars RSI-7 can be
+ * in the `> 70` bonus tier while RSI-14 sits in the neutral base band. That is a different reading of
+ * the same market, not a different setting of one — measured on the `noisy-uptrend` fixture.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): RSI-7 clears 70 on a pullback where RSI-14 does not, so the period decides whether the overbought bonus tiers are ever reached. 14 is a daily-chart convention.',
+    source: 'rsi-overbought.directive.ts:19 RSI_PERIOD',
+  },
+];
 
 function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
   const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
@@ -37,13 +61,17 @@ export class RsiOverboughtDirective implements IDirective {
   readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'bearish' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
     const closes = input.bars.map(b => b.close);
-    if (closes.length < MIN_BARS) {
-      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.` };
+    const minBars = Math.max(MIN_BARS, rsiPeriod + 2);
+    if (closes.length < minBars) {
+      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${minBars} bars, have ${closes.length}.` };
     }
-    const rsiValues = rsi(closes, RSI_PERIOD);
+    const rsiValues = rsi(closes, rsiPeriod);
     if (rsiValues.length < 2) {
       return { score: 0, confidence: 0.1, reason: 'Not enough RSI values.' };
     }

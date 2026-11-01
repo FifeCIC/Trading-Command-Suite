@@ -15,10 +15,35 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const LOOKBACK = 30;
 const BINS = 10;
 const ENTROPY_MAX = Math.log2(BINS); // Max possible entropy = log2(N bins)
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'lookback',
+    label: 'Entropy lookback',
+    type: 'number',
+    default: LOOKBACK,
+    min: 10,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): entropy is measured over a window, so the window IS the question — short windows report noise as order, long windows smooth real structure away.',
+    source: 'market-entropy.directive.ts:LOOKBACK',
+  },
+];
 
 @Injectable()
 export class MarketEntropyDirective implements IDirective {
@@ -33,15 +58,19 @@ export class MarketEntropyDirective implements IDirective {
   readonly minBars = { '1d': 30 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const lookback = values.lookback as number;
+
     const bars = input.bars;
-    if (bars.length < LOOKBACK) {
+    if (bars.length < lookback) {
       return {
         score: 0,
         confidence: 0.1,
-        reason: `Insufficient data: need ${LOOKBACK} bars, have ${bars.length}.`,
+        reason: `Insufficient data: need ${lookback} bars, have ${bars.length}.`,
         signalClass: 'neutral',
       };
     }

@@ -81,6 +81,12 @@ const EquityCurveChart = lazy(() => import('../components/backtest/charts/Equity
 const BacktestSettingsInventory = lazy(
   () => import('../components/backtest/BacktestSettingsInventory'),
 );
+/**
+ * 2026-11-01 — the RSI divergence TUNING surface: settings + a live chart, no run, nothing stored.
+ * Lazy for the same reason as the rest: `lightweight-charts` is a large dependency and the main chunk
+ * sits against the PWA precache cap.
+ */
+const ProtocolDirectiveSettings = lazy(() => import('../components/backtest/ProtocolDirectiveSettings.jsx'));
 /** Step 4 of the PROTOCOLS page: the per-protocol directive editor (2026-10-27). */
 const DirectiveSettingsPanel = lazy(() => import('../components/backtest/DirectiveSettingsPanel'));
 /**
@@ -91,6 +97,14 @@ const RunPanel = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunPanel })));
 const RunDiffPanel = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunDiffPanel })));
+/**
+ * WHAT THE TWO RUNS WERE CONFIGURED WITH (#1141). Separate from `RunDiffPanel` because it answers a
+ * different question — that panel differences the SCORES, this one differences the SETTINGS — and it
+ * is the only surface for `POST /api/backtest/runs/compare`'s `differences` payload, which was being
+ * computed and discarded.
+ */
+const RunSettingsDiff = lazy(() =>
+  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunSettingsDiff })));
 /** The per-bar score table, shared with the A/B panels so a protocol run's own reading has one shape. */
 const ScoreSeriesTable = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.ScoreTable })));
@@ -111,11 +125,17 @@ const STEPS = [
   { n: 2, id: 'window', label: 'Instrument & window' },
   { n: 3, id: 'info', label: 'Information sources' },
   { n: 4, id: 'execution', label: 'Costs & sizing', labelForProtocol: 'Scores only' },
-  // ── The four settings audits (owner direction, 2026-10-30: *"Strategy + Protocol + Directive
-  // Overrides + Global Settings should all be separate steps"*). They were four stacked tables and 39
-  // rows under one heading at the bottom of the Costs step, which is the stacking the owner objected
-  // to. One group per step, and each step's lede says what that group decides.
-  { n: 5, id: 'set-strategy', label: 'What the strategy sets' },
+  // ── The settings audits, one group per step ──────────────────────────────────────────────────────
+  // (owner direction, 2026-10-30: *"Strategy + Protocol + Directive Overrides + Global Settings should
+  // all be separate steps"* — they were four stacked tables and 39 rows under one heading.)
+  //
+  // ⚠️ `set-strategy` IS STANDARD-ONLY (owner direction, 2026-11-01: *"there is no strategy within the
+  // protocol process. This step should not be here and the steps do not need to mirror Backtest
+  // Strategies"*). A protocol run scores bars; it has no position size, stop, mode or symbol of its own,
+  // so a "what the strategy sets" audit on that route audits a thing that is not part of the process.
+  // `subjectOnly` removes it from the Protocols rail — the protocols route simply has one step fewer and
+  // the numbers after it close up, which is why every step number below is DERIVED and never literal.
+  { n: 5, id: 'set-strategy', label: 'What the strategy sets', subjectOnly: 'strategy' },
   { n: 6, id: 'set-protocol', label: 'What the protocol sets' },
   { n: 7, id: 'set-overrides', label: 'Directive overrides' },
   { n: 8, id: 'set-global', label: 'Global settings' },
@@ -125,14 +145,29 @@ const STEPS = [
 ];
 
 /**
- * ⚠️ STEP NUMBERS ARE NAMED, NOT LITERAL. Inserting a step renumbers everything after it, and this
- * page once compared `activeStep === 5` / `=== 6` in twenty places — one missed literal renders the
- * Run panel on the Result step with no error. These derive from `STEPS`, so an insertion changes the
- * array and nothing else.
+ * The steps THIS subject actually has, renumbered from 1.
+ *
+ * ⚠️ RENUMBERING RATHER THAN HIDING. A rail that showed "5 · What the strategy sets" greyed out on the
+ * Protocols route would be teaching the reader that a strategy is part of a protocol run. Filtering and
+ * renumbering means the protocol process reads as 10 steps in its own right, not as the strategies
+ * process with a hole in it.
  */
-const STEP_OUTPUTS = STEPS.find((s) => s.id === 'outputs').n;
-const STEP_RUN = STEPS.find((s) => s.id === 'run').n;
-const STEP_RESULT = STEPS.find((s) => s.id === 'result').n;
+function stepsForSubject(subject) {
+  return STEPS
+    .filter((s) => !s.subjectOnly || s.subjectOnly === subject)
+    .map((s, i) => ({ ...s, n: i + 1 }));
+}
+
+/**
+ * ⚠️ STEP NUMBERS ARE NAMED, NOT LITERAL — and now they are PER SUBJECT.
+ *
+ * Inserting a step renumbers everything after it, and this page once compared `activeStep === 5` /
+ * `=== 6` in twenty places — one missed literal renders the Run panel on the Result step with no error.
+ * These were module-level constants derived from one shared list; the Protocols route has one step
+ * fewer (`set-strategy` is not part of a protocol run), so the numbers are now derived from the
+ * subject's own list at render time. Anything that needs a step number must ask `stepNo()`.
+ */
+const stepNo = (steps, id) => steps.find((s) => s.id === id)?.n ?? null;
 
 /**
  * The settings-audit steps, mapped to the inventory group each one renders.
@@ -141,33 +176,36 @@ const STEP_RESULT = STEPS.find((s) => s.id === 'result').n;
  * strategy, protocol, directive-override, settings. `run` is deliberately NOT a step here: those four
  * fields are the Costs form's own inputs, and echoing them as a second editable table is the
  * duplication this split removed.
+ *
+ * ⚠️ A GROUP WHOSE STEP DOES NOT EXIST ON THIS ROUTE IS DROPPED, not rendered with a `null` step that
+ * nothing can ever equal. `buildSettingsSteps()` filters it out.
  */
-const SETTINGS_STEPS = [
+const buildSettingsSteps = (steps) => [
   {
-    step: STEPS.find((s) => s.id === 'set-strategy').n,
+    step: stepNo(steps, 'set-strategy'),
     group: 'strategy',
     title: 'What the strategy sets',
     lede: 'The bot’s own knobs — symbol, timeframe, size, mode — and whether a run reads each one.',
   },
   {
-    step: STEPS.find((s) => s.id === 'set-protocol').n,
+    step: stepNo(steps, 'set-protocol'),
     group: 'protocol',
     title: 'What the protocol sets',
     lede: 'The values the SCORER reads for every bar of the run. These decide the signal, so they decide the trades.',
   },
   {
-    step: STEPS.find((s) => s.id === 'set-overrides').n,
+    step: stepNo(steps, 'set-overrides'),
     group: 'directive-override',
     title: 'Directive overrides',
     lede: 'The per-protocol weights a scorer applies. ⚠️ Only one of these five fields is actually applied per protocol — the rest are inert.',
   },
   {
-    step: STEPS.find((s) => s.id === 'set-global').n,
+    step: stepNo(steps, 'set-global'),
     group: 'settings',
     title: 'Global settings',
     lede: 'Every value the settings registry declares. ⚠️ None of them is read by a backtest run — they belong to the live loop, the scheduler and the log system.',
   },
-];
+].filter((s) => s.step != null);
 /**
  * The result panels the reader can switch on, in the order they render.
  *
@@ -262,12 +300,12 @@ const EXTERNAL_SOURCES = {
   'dilution-impact': {
     name: 'Dilution / share count',
     honest: false,
-    note: 'Reads the CURRENT company-metrics snapshot by symbol — the same value on every historical bar. A backtest that includes this directive is not a replay of it.',
+    note: 'Holds ONE current company-metrics row per symbol with no history, so it now ABSTAINS on a historical bar (returns unmeasured) instead of scoring today’s share count on every bar. A backtest including it under-counts this directive rather than inventing a value.',
   },
   'crypto-fear-greed': {
     name: 'Crypto Fear & Greed',
     honest: false,
-    note: 'Fetched live from alternative.me with a one-hour cache and no `asOf` filter — every historical bar is scored against today’s index value.',
+    note: 'Fetched live from alternative.me with a one-hour cache and no history endpoint, so it now ABSTAINS on a historical bar (returns unmeasured) instead of scoring today’s index value. Live scoring still uses it normally — there the fetch happens during the bar it scores.',
   },
 };
 
@@ -386,6 +424,7 @@ const DIRECTION_LABELS = {
 const SIZING_MODEL_LABELS = {
   fixedPercent: '% of Equity',
   fixedDollar: 'Fixed $',
+  fixedUnits: 'Bot size (units)',
   atrEqualRisk: 'ATR Equal Risk',
   kellyFull: 'Kelly (full)',
   kellyHalf: 'Kelly (half)',
@@ -395,6 +434,12 @@ const SIZING_MODEL_LABELS = {
  * The engine's own floor: `BacktestService.run()` refuses a window with fewer than 100 bars. Used
  * here as the `minBars` sent to `/api/backtest/timeframe-coverage` and as the Bars input's minimum,
  * so the form and the engine cannot disagree about what is runnable.
+ */
+/**
+ * The engine's own floor: `BacktestService.run()` refuses a window with fewer than 100 bars. Used
+ * here as the `minBars` sent to `/api/backtest/timeframe-coverage` and as the minimum number of DAYS
+ * the day-range control accepts — at the coarsest development timeframe (1h, ~24 bars/day) 100 days
+ * clears a 100-bar floor, so the day control cannot express a request the engine would reject.
  */
 const MIN_RUN_BARS = 100;
 
@@ -462,18 +507,35 @@ export default function BacktestPage({ subject: fixedSubject }) {
    * Defaulted to 'protocol' so the page is still valid if rendered without a prop.
    */
   const subject = fixedSubject === 'strategy' ? 'strategy' : 'protocol';
+  /**
+   * ⚠️ THE STEPS AND EVERY STEP NUMBER ARE NOW PER SUBJECT (owner direction, 2026-11-01: *"there is no
+   * strategy within the protocol process … the steps do not need to mirror Backtest Strategies"*).
+   *
+   * The Protocols route has one step fewer and renumbers from 1, so it reads as its own process rather
+   * than as the strategies process with a hole. Every consumer below reads these locals, never the
+   * module list — which is what keeps the twenty-comparison hazard from coming back.
+   */
+  const steps = useMemo(() => stepsForSubject(subject), [subject]);
+  const STEP_OUTPUTS = stepNo(steps, 'outputs');
+  const STEP_RUN = stepNo(steps, 'run');
+  const STEP_RESULT = stepNo(steps, 'result');
+  const SETTINGS_STEPS = useMemo(() => buildSettingsSteps(steps), [steps]);
   const [protocolId, setProtocolId] = useState('');
   const [botId, setBotId] = useState('');
   const [timeframe, setTimeframe] = useState('1h');
 
   // ── Window ───────────────────────────────────────────────────────────────────────────────────
-  // ⚠️ `bars` IS NOT DAYS. `BacktestRunRequest.days` sets `take: days + 120`, a ROW LIMIT walked
-  // back from the newest bar — so 30 "days" on a 1h series is about 30 HOURS. Measured 2026-10-22:
-  // `days: 30` on a 1h protocol produced `period: 2026-08-17 → 2026-08-19`. The control is labelled
-  // "Bars" because that is what it is; a DATED window must come from a stored period.
+  // A stored period is a DATED window; `days` is now ALSO a date range (fixed 2026-11-01, #1132).
+  //
+  // ⚠️ THIS COMMENT USED TO SAY THE OPPOSITE, AND THE CONTROL FOLLOWED IT. `days` was a ROW LIMIT
+  // (`take: days + 120` with an ASCENDING order), so it returned the OLDEST bars: `days: 30` on a 1h
+  // series measured 2026-08-17 → 08-19. The control was therefore labelled "Bars", and it sent
+  // `days: 500` — 500 BARS on the old contract, 500 DAYS on the new one. Renaming it "Days" is what
+  // keeps the label true; leaving it as "Bars" would have silently multiplied the window ~24×.
   const [windowMode, setWindowMode] = useState('period');
   const [periodId, setPeriodId] = useState('');
-  const [bars, setBars] = useState(500);
+  /** Calendar days back from the newest bar. NOT a bar count — see the note above. */
+  const [windowDays, setWindowDays] = useState(30);
 
   const [runId, setRunId] = useState('');
   /**
@@ -638,6 +700,12 @@ ull = follow the latest, which is the default. */
   const [accountSize, setAccountSize] = useState(10000);
   const [riskPct, setRiskPct] = useState(2);
   const [kellyCapPct, setKellyCapPct] = useState(25);
+  /**
+   * #1143 — the constant size for the `fixedUnits` model. LEFT BLANK BY DEFAULT, deliberately: blank
+   * means "use the bot's own `baseSize × contractSize`", which is the size the live loop sends. A
+   * pre-filled number would quietly become a size the bot does not have.
+   */
+  const [fixedUnits, setFixedUnits] = useState('');
   const [atrPeriod, setAtrPeriod] = useState(14);
   const [atrMultiplier, setAtrMultiplier] = useState(1.5);
   /** `Fixed $` sizing needs an amount; the form never sent one and the engine fell back to $100. */
@@ -1218,6 +1286,9 @@ ull = follow the latest, which is the default. */
           kellyCapPct,
           atrPeriod,
           atrMultiplier,
+          // #1143 — sent only when the operator typed a number. Blank lets the API resolve the bot's own
+          // `baseSize × contractSize`; sending 0 would be read as "a size of zero" and refuse the run.
+          ...(positionModel === 'fixedUnits' && Number(fixedUnits) > 0 ? { fixedUnits: Number(fixedUnits) } : {}),
         };
 
       // ⚠️ A PERIOD RUN SENDS NO `symbol`, NO `timeframe` AND NO `days`. The period is AUTHORITATIVE
@@ -1226,7 +1297,7 @@ ull = follow the latest, which is the default. */
       // not.
       const scope = usePeriod
         ? { periodId }
-        : { symbol: marketSymbol, timeframe: marketTimeframe, days: bars };
+        : { symbol: marketSymbol, timeframe: marketTimeframe, days: windowDays };
 
       // ⚠️ ONLY NON-BLANK OVERRIDES ARE SENT. An absent key means "use the subject's own value" —
       // sending `slPct: ''` or `0` would be a decision the operator never made.
@@ -1576,7 +1647,7 @@ ull = follow the latest, which is the default. */
   const symbolReady = subject === 'protocol'
     ? (selectedProtocol?.resolvedSymbols ?? []).length > 0
     : Boolean(selectedBot?.symbol);
-  const windowReady = usePeriod ? Boolean(selectedPeriod) : bars >= MIN_RUN_BARS;
+  const windowReady = usePeriod ? Boolean(selectedPeriod) : windowDays >= MIN_RUN_BARS;
   const instrumentReady = symbolReady && Boolean(marketTimeframe) && windowReady;
 
   // Which outside information sources this subject actually reads. Derived from the protocol's own
@@ -1609,7 +1680,7 @@ ull = follow the latest, which is the default. */
    */
   const stepValid = useMemo(() => {
     const out = {};
-    for (const s of STEPS) {
+    for (const s of steps) {
       if (s.n === 1) out[s.n] = canRunBool;
       else if (s.n === STEP_RESULT) out[s.n] = hasResult;
       else out[s.n] = canRunBool && instrumentReady;
@@ -1619,7 +1690,7 @@ ull = follow the latest, which is the default. */
 
   const stepUnlocked = useMemo(() => {
     const out = {};
-    for (const s of STEPS) {
+    for (const s of steps) {
       // ⚠️ The RESULT step is unlocked by the RESULT, not by the Run step being enterable — the Run
       // step is valid before anything has been run, which made "Result" read Ready with no result.
       out[s.n] = s.n === 1
@@ -1690,11 +1761,11 @@ ull = follow the latest, which is the default. */
    *
    * Derived now, so a future step cannot be half-added again.
    */
-  const maxUnlocked = [...STEPS].reverse().map((s) => s.n).find((n) => stepUnlocked[n]) ?? 1;
+  const maxUnlocked = [...steps].reverse().map((s) => s.n).find((n) => stepUnlocked[n]) ?? 1;
   // Clamping is what makes a step RE-LOCK when its inputs stop being valid — e.g. switching to a
   // protocol with no resolvable symbols while standing on step 5 must not leave step 5 on screen.
   const activeStep = Math.min(step, maxUnlocked);
-  const activeMeta = STEPS.find((s) => s.n === activeStep) ?? STEPS[0];
+  const activeMeta = steps.find((s) => s.n === activeStep) ?? steps[0];
 
   // ── THE SESSION'S CHANGES ────────────────────────────────────────────────────────────────────
   /**
@@ -1745,7 +1816,7 @@ ull = follow the latest, which is the default. */
       derived: true,
       value: usePeriod
         ? (selectedPeriod?.name ?? `period (none stored for ${marketTimeframe || '—'})`)
-        : `last ${bars} bars`,
+        : `last ${windowDays} days`,
     },
     { label: 'News filter', step: 3, value: NEWS_MODE_LABELS[newsExclusion] ?? newsExclusion },
     { label: 'Sides', step: 3, value: DIRECTION_LABELS[directionMode] ?? directionMode },
@@ -1779,6 +1850,9 @@ ull = follow the latest, which is the default. */
       ] : []),
       ...(positionModel === 'fixedDollar' ? [
         { label: 'Fixed $', step: 4, derived: true, value: `$${fixedAmount}` },
+      ] : []),
+      ...(positionModel === 'fixedUnits' ? [
+        { label: 'Size', step: 4, derived: true, value: Number(fixedUnits) > 0 ? `${fixedUnits} units` : "the bot's own size" },
       ] : []),
       ...(positionModel === 'kellyFull' || positionModel === 'kellyHalf' ? [
         { label: 'Kelly cap', step: 4, derived: true, value: `${kellyCapPct}%` },
@@ -1924,7 +1998,7 @@ ull = follow the latest, which is the default. */
 
   const windowLabel = usePeriod && selectedPeriod
     ? `${selectedPeriod.name} · ${fmtDay(selectedPeriod.from)} → ${fmtDay(selectedPeriod.to)}`
-    : `last ${bars} bars · ${marketTimeframe || '—'}`;
+    : `last ${windowDays} days · ${marketTimeframe || '—'}`;
   const onFrozenWindow = usePeriod && selectedPeriod?.name === FROZEN_WINDOW_NAME;
 
   return (
@@ -1955,7 +2029,7 @@ ull = follow the latest, which is the default. */
       <div className="pb-steps">
         <nav className="pb-steps-rail" aria-label="Backtest steps">
           <ol>
-            {STEPS.map((s) => {
+            {steps.map((s) => {
               const unlocked = stepUnlocked[s.n];
               const done = stepDone(s.n);
               const state = !unlocked ? 'locked' : done ? 'done' : 'open';
@@ -2307,8 +2381,10 @@ ull = follow the latest, which is the default. */
             </>
           )}
 
-          {/* Window. A stored period is a DATED window; `bars` is a row count. Both are offered, and
-              each says which it is — conflating them is how "30 days" came to mean 30 hours. */}
+          {/* Window. A stored period is a FROZEN date range; “last N days” is a date range measured back
+              from the newest bar. Only the stored period is SHARED, which is what makes two runs
+              comparable. (The day control used to send a row count — see the note where `windowDays` is
+              declared.) */}
           <div className="ff-field">
             <label className="ff-label" htmlFor="bt-window">Window</label>
             <select
@@ -2318,7 +2394,7 @@ ull = follow the latest, which is the default. */
               onChange={(e) => setWindowMode(e.target.value)}
             >
               <option value="period">Stored period</option>
-              <option value="bars">Last N bars</option>
+              <option value="days">Last N days</option>
             </select>
           </div>
 
@@ -2332,7 +2408,7 @@ ull = follow the latest, which is the default. */
                   </select>
                   <span className="pb-field-note">
                     A stored period is what makes two runs comparable — capture one on{' '}
-                    <strong>Backtest Data</strong>, or switch the Window to “Last N bars”.
+                    <strong>Backtest Data</strong>, or switch the Window to “Last N days”.
                   </span>
                 </>
               ) : (
@@ -2357,22 +2433,25 @@ ull = follow the latest, which is the default. */
             </div>
           ) : (
             <div className="ff-field">
-              <label className="ff-label" htmlFor="bt-bars">Bars</label>
-              {/* ⚠️ THE MINIMUM IS 100 BECAUSE THE ENGINE REFUSES FEWER. `backtest.service.ts`
-                  throws "need 100+ bars" below that, so a form that accepted 30 offered a value the
-                  server would always reject — measured 2026-10-26, a 60-bar run failed before it
-                  started. A control must not be able to express an impossible request. */}
+              <label className="ff-label" htmlFor="bt-bars">Days</label>
+              {/* ⚠️ DAYS, NOT BARS (renamed 2026-11-01, #1132). The engine's `days` is a DATE RANGE now:
+                  `timestamp >= newestBar − days`. It used to be a row limit that returned the OLDEST
+                  bars, which is why this control was labelled "Bars" and sent 500 — on the new contract
+                  that same value means 500 DAYS, so the label had to change with the engine.
+                  The minimum is 100 days because the engine refuses a window under 100 BARS, and at the
+                  coarsest development timeframe (1h, ~24 bars/day) 100 days clears that floor. */}
               <input
                 id="bt-bars"
                 className="ff-input"
                 type="number"
-                min={MIN_RUN_BARS}
-                step={50}
-                value={bars}
-                onChange={(e) => setBars(Math.max(MIN_RUN_BARS, Number(e.target.value) || MIN_RUN_BARS))}
+                min={100}
+                step={10}
+                value={windowDays}
+                onChange={(e) => setWindowDays(Math.max(100, Number(e.target.value) || 100))}
               />
               <span className="pb-field-note">
-                Walked back from the newest bar — not calendar days.
+                Calendar days, counted back from the newest bar — not a bar count. Prefer a
+                <strong> stored period</strong> above: it is the only window two runs can share.
               </span>
             </div>
           )}
@@ -2421,13 +2500,25 @@ ull = follow the latest, which is the default. */
               >
                 <option value="long">↗ Long only — every run before 2026-10-31 did this</option>
                 <option value="short">↘ Short only — the mirror on the same bars</option>
-                <option value="both">↕ Both — take every signal either way</option>
+                {/*
+                  ⚠️ 'both' IS NOT OFFERED (owner direction, confirmed 2026-11-01): *"there needs to be
+                  two active strategies"* — one bot must not trade both ways, and one protocol must not be
+                  scored both ways. The option is rendered ONLY when a stored run already used it, and it
+                  is disabled, so the form can display such a run faithfully without letting anyone
+                  select a configuration production does not have. The API refuses it too.
+                */}
+                {directionMode === 'both' && (
+                  <option value="both" disabled>
+                    ↕ Both — legacy: one bot cannot trade both ways
+                  </option>
+                )}
               </select>
               <span className="pb-field-note">
                 A SIGNAL decides the side: BUY / STRONG_BUY opens a long, SELL / STRONG_SELL opens a
-                short, with the stop above and the target below. Choose <em>Short only</em> to run the
-                same window as a mirror of the long run and compare the two — that is the only way to
-                answer "is this protocol better in the other direction?".
+                short, with the stop above and the target below. To answer "is this protocol better in
+                the other direction?", run the same window twice — once <em>Long only</em>, once
+                <em> Short only</em> — and compare the two runs. Long and short are two strategies, so a
+                single run cannot test both.
               </span>
             </div>
 
@@ -2689,12 +2780,12 @@ ull = follow the latest, which is the default. */
             )}
 
             <PageInfoPopover label="Why the window matters">
-              <strong>A stored period is a DATE RANGE. “Last N bars” is a ROW COUNT.</strong>
+              <strong>A stored period is a FROZEN date range. “Last N days” is a date range measured
+              back from the newest bar.</strong>
               <br />
-              They are not interchangeable: the engine walks backwards from the newest bar, so 30
-              bars on a 1h series covers about 30 hours, not 30 days. A run whose window is a row
-              count cannot be compared with one whose window is a date range — the comparison guard
-              refuses to name a winner across them.
+              Both are dates, but only a stored period is <em>shared</em>: two runs on “last 20 days”
+              started on different days cover different data, so the comparison guard refuses to name a
+              winner across them. A stored period is the same rows for everyone who selects it.
               <br />
               <br />
               <strong>Why {FROZEN_WINDOW_NAME} is the default.</strong> It is frozen so that work done
@@ -2967,6 +3058,7 @@ ull = follow the latest, which is the default. */
                 <select value={positionModel} onChange={e => { setPositionModel(e.target.value); }}>
                   <option value="fixedPercent">% of Equity</option>
                   <option value="fixedDollar">Fixed $</option>
+                  <option value="fixedUnits">Bot size (units)</option>
                   <option value="atrEqualRisk">ATR Equal Risk</option>
                   <option value="kellyFull">Kelly (full)</option>
                   <option value="kellyHalf">Kelly (half)</option>
@@ -2982,6 +3074,18 @@ ull = follow the latest, which is the default. */
                   <input type="number" step="50" min="1" value={fixedAmount} onChange={e => {
                     setFixedAmount(parseFloat(e.target.value) || 100); }} />
                   <span className="bt-field-gloss">Same cash amount on every trade, whatever the price.</span>
+                </label>
+              )}
+              {positionModel === 'fixedUnits' && (
+                <label title="The unit count to hold on every trade. Leave blank to use the bot's own size.">
+                  Size (units)
+                  <input type="number" step="any" min="0" placeholder="the bot's own size" value={fixedUnits}
+                    onChange={e => setFixedUnits(e.target.value)} />
+                  <span className="bt-field-gloss">
+                    <strong>Blank = the bot&rsquo;s own size</strong> — its lot size × the instrument&rsquo;s
+                    contract size, which is exactly what the live loop sends. The only model that does not
+                    drift with price. A complete-strategy run needs a bot to inherit it from.
+                  </span>
                 </label>
               )}
               {(positionModel === 'kellyFull' || positionModel === 'kellyHalf') && (
@@ -3016,12 +3120,21 @@ ull = follow the latest, which is the default. */
                   <span className="bt-field-gloss">
                     Used by % of Equity and ATR sizing. A Complete Strategy&apos;s real size is the
                     <strong> bot&apos;s</strong> setting — this form&apos;s value is what gets simulated,
-                    and the two are only recorded, not reconciled.
+                    and the two are only recorded, not reconciled. Pick <strong>Bot size (units)</strong>{' '}
+                    to simulate the bot&apos;s own position instead (#1143).
                   </span>
                   {committedMultiple != null && (
                     <span className={`bt-field-warn ${committedMultiple > 3 ? 'is-high' : ''}`}>
                       {riskPct}% risk ÷ {effectiveSlPct}% stop ⇒ ≈{committedMultiple.toFixed(1)}× the
-                      account committed per trade. The stop decides the size, not the account.
+                      account requested per trade. The stop decides the size, not the account.
+                      {committedMultiple > 1 && (
+                        <>
+                          {' '}⚠️ That is above 1×, so the run will <strong>cap it at the account</strong>
+                          {' '}(unleveraged) rather than borrow — the recorded
+                          {' '}<code>notionalPct</code> per trade is what was actually committed. Raise
+                          {' '}the stop, lower the risk %, or the cap binds on every trade.
+                        </>
+                      )}
                     </span>
                   )}
                 </label>
@@ -3090,22 +3203,42 @@ ull = follow the latest, which is the default. */
           <InfoNote tone="neutral" label="What this step is">
             {s.lede}
           </InfoNote>
-          <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
-            <BacktestSettingsInventory
-              subject={subject}
-              /*
-                ⚠️ ON THE STRATEGIES ROUTE THE PROTOCOL COMES FROM THE BOT (found 2026-10-30, as soon as
-                this became its own step). `protocolId` is the page's PROTOCOL-page state and is empty
-                here, so the "What the protocol sets" step rendered 0 rows and told the reader to select
-                a protocol that was already selected. A bot names its protocol; that is the one this run
-                scores with.
-              */
-              protocolId={protocolId || selectedBot?.protocolId || ''}
-              botId={botId}
-              group={s.group}
-              showFilters
-            />
-          </Suspense>
+          {/*
+            ⚠️ THE OVERRIDES STEP LISTS THE PROTOCOL'S DIRECTIVES (owner direction, 2026-11-01:
+            *"we should have a list of accordions for all the directives"*). It used to render a flat
+            inventory of five override FIELDS, four of which a run does not read, with a counts strip and
+            a filter toolbar on top — *"It's a bit much to cope with. I don't even think its needed."*
+            One accordion per directive answers "what can I change here" in the protocol's own order, and
+            the directive that has a chart opens into it.
+          */}
+          {s.group === 'directive-override' ? (
+            <Suspense fallback={<p className="pb-none">Loading the protocol’s directives…</p>}>
+              <ProtocolDirectiveSettings
+                protocol={selectedProtocol}
+                symbol={marketSymbol}
+                timeframe={marketTimeframe}
+                days={windowDays}
+                periodId={periodId || undefined}
+              />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<p className="pb-none">Loading the settings inventory…</p>}>
+              <BacktestSettingsInventory
+                subject={subject}
+                /*
+                  ⚠️ ON THE STRATEGIES ROUTE THE PROTOCOL COMES FROM THE BOT (found 2026-10-30, as soon as
+                  this became its own step). `protocolId` is the page's PROTOCOL-page state and is empty
+                  here, so the "What the protocol sets" step rendered 0 rows and told the reader to select
+                  a protocol that was already selected. A bot names its protocol; that is the one this run
+                  scores with.
+                */
+                protocolId={protocolId || selectedBot?.protocolId || ''}
+                botId={botId}
+                group={s.group}
+                showFilters
+              />
+            </Suspense>
+          )}
         </div>
       ))}
 
@@ -3351,6 +3484,17 @@ ull = follow the latest, which is the default. */
               Break-even <strong>{((executionUsed.spread + executionUsed.slippage * 2) * 100).toFixed(2)}%</strong>
               {' '}· slippage {(executionUsed.slippage * 100).toFixed(2)}% each way · spread{' '}
               {(executionUsed.spread * 100).toFixed(2)}% · commission ${executionUsed.commission.toFixed(2)}/unit
+              {/*
+                #1170 — THE SIZE STEP, because it decides whether a trade happened at all. On US30 a
+                0.1-unit step is a fill and a whole-unit floor is 301 refusals and no trades on the
+                same bars. `assumed-whole` is the honest name for "no broker spec was found", so the
+                reader can tell a quantised size from a guessed one.
+              */}
+              {result?.stats?.unitStep != null
+                ? <> · sized in <strong>{result.stats.unitStep}</strong>-unit steps ({result.stats.unitGranularitySource})</>
+                : result?.stats?.unitGranularity === 'assumed-whole'
+                  ? <> · sized in <span className="is-worse">whole units</span> — no broker step was found for this symbol</>
+                  : null}
               {executionUsed.positionModel?.startsWith('kelly') && executionUsed.kellyFraction * 100 > 25 && (
                 <span className="is-worse"> · ⚠ Kelly is aggressive here</span>
               )}
@@ -3430,6 +3574,52 @@ ull = follow the latest, which is the default. */
               all-trades summary live in `components/backtest/TradeTable.jsx`, so the Run step and the
               A/B panels cannot drift apart. `limit={25}` here because this is a post-run glance;
               the A/B panels show 100. */}
+          {/* ── #1142 — UNAFFORDABLE POSITIONS ARE SKIPPED, SO SAY SO ─────────────────────────────
+              The engine no longer inflates a size the account cannot afford (that floor turned
+              $10,000 into a $77,600 position and reported +1,380%). It SKIPS the trade instead — which
+              means a run can legitimately record FEWER trades, or none. Without this note those two
+              outcomes would render identically to "this protocol produced no signals", and a reader
+              would draw the wrong conclusion. Shown above the table because it explains the count. */}
+          {/* ── #1132 — WHICH WINDOW THIS RUN ACTUALLY MEASURED ───────────────────────────────────
+              The engine always reports `windowSource` now, so a reader never has to infer whether two
+              results are like-for-like. `period:<name>` means a stored frozen window; `days-range`
+              means an explicit count. This is the surface that turns a served field into a visible
+              fact — the engine cannot be the only place that knows. */}
+          {result?.stats?.windowSource && (
+            <div className="bt-chart-section">
+              <p className="pb-field-note">
+                {result.stats.windowSource.startsWith('period:')
+                  ? 'Window: '
+                  : '⚠️ Window: '}
+                <strong>{result.stats.windowSource.startsWith('period:')
+                  ? result.stats.windowSource.replace('period:', 'stored period ')
+                  : 'last N days (not a stored period)'}</strong>
+                {result.stats.windowFrom && result.stats.windowTo
+                  ? ` · ${fmtDay(result.stats.windowFrom)} → ${fmtDay(result.stats.windowTo)}`
+                  : ''}
+                {!result.stats.windowSource.startsWith('period:') && (
+                  <> — two runs are comparable only on the same stored period. Prefer one above.</>
+                )}
+              </p>
+            </div>
+          )}
+          {subject === 'strategy' && result?.stats?.tradesRefusedUnaffordable > 0 && (
+            <div className="bt-chart-section">
+              <p className="pb-field-note bt-gap-warning">
+                ⚠️ {result.stats.tradesRefusedUnaffordable.toLocaleString()} trade
+                {result.stats.tradesRefusedUnaffordable === 1 ? '' : 's'} were <strong>skipped as
+                unaffordable</strong>: one unit cost more than the account
+                {typeof result.stats.notionalCap === 'number'
+                  ? ` ($${result.stats.notionalCap.toLocaleString(undefined, { maximumFractionDigits: 0 })} committed at ${result.stats.maxLeverage ?? 1}× leverage)`
+                  : ''}. The live path refuses the same way when a lot is below the broker's minimum.
+                {result.stats.firstSizingRefusals?.[0]?.because
+                  ? ` First: ${result.stats.firstSizingRefusals[0].because}.`
+                  : ''}{' '}
+                The trade count below is <strong>lower than the signal count</strong> because of this,
+                not because the protocol failed to signal.
+              </p>
+            </div>
+          )}
           {subject === 'strategy' && outputs.trades !== false && result?.trades?.length > 0 && (
             <div className="bt-chart-section">
               <h3>Trades <span className="bt-measured-bars">· {Math.min(25, result.trades.length)} of {result.trades.length.toLocaleString()} shown, newest first</span></h3>
@@ -3500,7 +3690,7 @@ ull = follow the latest, which is the default. */
         {activeStep < STEP_RUN && stepValid[activeStep] && stepUnlocked[activeStep + 1] && (
           <div className="pb-step-actions">
             <button type="button" className="ff-btn ff-btn-primary" onClick={() => goToStep(activeStep + 1)}>
-              Continue to step {activeStep + 1} · {STEPS[activeStep].label}
+              Continue to step {activeStep + 1} · {steps[activeStep]?.label}
             </button>
           </div>
         )}
@@ -3670,6 +3860,11 @@ ull = follow the latest, which is the default. */
            biggest movers — with the unmatched-bar counts stated, because comparing the overlap as if
            it were the whole window is how a window mismatch becomes a false "no change". */
         <Suspense fallback={<p className="pb-none">Comparing the two runs…</p>}>
+          {/* ⚠️ THE SETTINGS COME BEFORE THE SCORES IN READING ORDER because they are the CAUSE. A
+              reader who sees "1,204 bars changed" without seeing that the spread moved 0.01% → 0.93%
+              has been given a number with no explanation, which is exactly the state #1141 was filed
+              about. */}
+          <RunSettingsDiff aId={baselineRunId} bId={bRunId} />
           <RunDiffPanel aId={baselineRunId} bId={bRunId} showTrades={subject === 'strategy'} />
         </Suspense>
       )}

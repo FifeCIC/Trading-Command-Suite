@@ -132,7 +132,7 @@ export default function StrategyComparisonPage() {
       <motion.header className="strategycmp-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <h1>
-            Trading Strategy Comparison
+            Bot Comparison
             <PageInfoPopover>
               Every strategy as a column, every criterion as a row, sorted best-first — so the
               worst performer is the last one you scroll to. Compare outcomes, daily P&amp;L,

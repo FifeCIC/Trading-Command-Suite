@@ -19,9 +19,34 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const SMA_PERIOD = 50;
 const MIN_BARS = SMA_PERIOD + 2;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'smaPeriod',
+    label: 'SMA period',
+    type: 'number',
+    default: SMA_PERIOD,
+    min: 5,
+    max: 200,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): price above the 50-day is a medium-term statement; above the 200-day it is a regime statement. The period IS the claim.',
+    source: 'price-above-sma.directive.ts:SMA_PERIOD',
+  },
+];
 
 @Injectable()
 export class PriceAboveSmaDirective implements IDirective {
@@ -37,9 +62,13 @@ export class PriceAboveSmaDirective implements IDirective {
   readonly minBars = { '1d': 52 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const smaPeriod = values.smaPeriod as number;
+
     const closes = input.bars.map(b => b.close);
     if (closes.length < MIN_BARS) {
       return {
@@ -51,7 +80,7 @@ export class PriceAboveSmaDirective implements IDirective {
     }
 
     const currentPrice = closes[closes.length - 1];
-    const sma50 = sma(closes, SMA_PERIOD);
+    const sma50 = sma(closes, smaPeriod);
     if (sma50 === 0) {
       return { score: 0, confidence: 0, reason: 'Could not calculate SMA(50).' };
     }

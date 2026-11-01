@@ -30,6 +30,7 @@ import {
   findSwingLows,
   type StrengthModel,
 } from '../utils/divergence';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const SWING_LOOKBACK = 5;
 const MIN_BARS = SWING_LOOKBACK * 3 + 5;
@@ -50,6 +51,30 @@ const STRENGTH_MODEL: StrengthModel = {
   indDenominator: (ind1) => Math.max(Math.abs(ind1), 1),
 };
 
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'swingLookback',
+    label: 'Swing lookback',
+    type: 'number',
+    default: SWING_LOOKBACK,
+    min: 2,
+    max: 20,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): a divergence compares two swings, so the lookback decides which swings exist and therefore which divergences are reported.',
+    source: 'obv-divergence.directive.ts:SWING_LOOKBACK',
+  },
+];
+
 @Injectable()
 export class ObvDivergenceDirective implements IDirective {
   readonly id = 'obv-divergence';
@@ -63,9 +88,13 @@ export class ObvDivergenceDirective implements IDirective {
   readonly minBars = { '1d': 20 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const swingLookback = values.swingLookback as number;
+
     const closes = input.bars.map((b) => b.close);
     const lows = input.bars.map((b) => b.low);
     const highs = input.bars.map((b) => b.high);
@@ -81,7 +110,7 @@ export class ObvDivergenceDirective implements IDirective {
     }
 
     const obvValues = obv(closes, volumes);
-    if (obvValues.length < SWING_LOOKBACK * 2 + 2) {
+    if (obvValues.length < swingLookback * 2 + 2) {
       return {
         score: 0,
         confidence: 0.1,
@@ -96,8 +125,8 @@ export class ObvDivergenceDirective implements IDirective {
       return obvValues[barIdx];
     };
 
-    const swingLows = findSwingLows(lows, SWING_LOOKBACK, getObv);
-    const swingHighs = findSwingHighs(highs, SWING_LOOKBACK, getObv);
+    const swingLows = findSwingLows(lows, swingLookback, getObv);
+    const swingHighs = findSwingHighs(highs, swingLookback, getObv);
 
     const bullDiv = checkBullishDivergence(swingLows);
     const bearDiv = checkBearishDivergence(swingHighs);

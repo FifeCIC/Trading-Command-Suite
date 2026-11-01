@@ -14,10 +14,62 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { atr } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const WICK_ATR_THRESHOLD = 1.5;   // Wick > 1.5× ATR = significant
 const RETRACE_THRESHOLD = 0.5;     // Retrace > 50% of wick = fakeout
 const VOL_SPIKE_MULTIPLIER = 1.5;  // Volume > 1.5× average = elevated
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant of the same value, so an instance that
+ * supplies nothing scores byte-identically — asserted by the BASELINE guard, not merely stated here.
+ *
+ * ⚠️ A candlestick parameter is a THRESHOLD ON GEOMETRY. It is only provable against a candle that
+ * sits near the boundary, which is why 'directive-fixtures.ts' carries explicitly shaped bars
+ * (doji-bar, engulfing-bar, harami-bar, three-soldiers, reversal-hammer) rather than more smooth
+ * series: on a uniform-geometry fixture every threshold value gives the same answer.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'wickAtrThreshold',
+    label: 'Wick / ATR threshold',
+    type: 'number',
+    default: WICK_ATR_THRESHOLD,
+    min: 0.5,
+    max: 4,
+    step: 0.1,
+    unit: '× ATR',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 (#1166 method): the Stop Guardian reads this as stop-quality EVIDENCE, so the threshold decides how often a wick counts. At 0.5 nearly every bar qualifies; at 4 only an extreme rejection does.',
+    source: 'wick-filter.directive.ts:18 WICK_ATR_THRESHOLD',
+  },
+  {
+    key: 'retraceThreshold',
+    label: 'Fakeout retrace',
+    type: 'number',
+    default: RETRACE_THRESHOLD,
+    min: 0.1,
+    max: 2,
+    step: 0.05,
+    unit: 'fraction of wick',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: the ratio is STRUCTURALLY >= 1 — for a bullish bar it is (close - low)/(open - low) and close > open — so any threshold below 1 is always true when a wick exists, which is why this was inert at its original 0.95 maximum. Above 1.0 it asks whether the wick was retraced by more than its own length, and the long-wick fixture scores 80 at the default against 65 at 2.0.',
+    source: 'wick-filter.directive.ts:19 RETRACE_THRESHOLD',
+  },
+  {
+    key: 'volSpikeMultiplier',
+    label: 'Volume spike multiplier',
+    type: 'number',
+    default: VOL_SPIKE_MULTIPLIER,
+    min: 1.05,
+    max: 4,
+    step: 0.05,
+    unit: '× average',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: elevated volume is the third piece of evidence, so this decides whether it is present at all. 1.5× is routine on thin instruments and rare on liquid ones.',
+    source: 'wick-filter.directive.ts:20 VOL_SPIKE_MULTIPLIER',
+  },
+];
 
 @Injectable()
 export class WickFilterDirective implements IDirective {
@@ -35,9 +87,15 @@ export class WickFilterDirective implements IDirective {
   readonly minBars = { '1d': 10 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const wickAtrThreshold = values.wickAtrThreshold as number;
+    const retraceThreshold = values.retraceThreshold as number;
+    const volSpikeMultiplier = values.volSpikeMultiplier as number;
+
     const bars = input.bars;
     if (bars.length < 10) {
       return { score: 0, confidence: 0.1, reason: 'Insufficient data (need 10+ bars)', signalClass: 'neutral' };
@@ -89,9 +147,9 @@ export class WickFilterDirective implements IDirective {
     let reason = '';
     let signalClass: 'bullish' | 'bearish' | 'neutral' = 'neutral';
 
-    const isSignificantWick = dominantWick > lastAtr * WICK_ATR_THRESHOLD;
-    const isHighRetrace = retraceRatio > RETRACE_THRESHOLD;
-    const isElevatedVol = volRatio > VOL_SPIKE_MULTIPLIER;
+    const isSignificantWick = dominantWick > lastAtr * wickAtrThreshold;
+    const isHighRetrace = retraceRatio > retraceThreshold;
+    const isElevatedVol = volRatio > volSpikeMultiplier;
 
     if (isSignificantWick && isHighRetrace && !isElevatedVol) {
       // ── FAKEOUT: Big wick, retraced, normal volume ──

@@ -14,6 +14,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const SWING_LOOKBACK = 5;
 const MIN_BARS = 30;
@@ -23,6 +24,30 @@ interface SwingPoint {
   price: number;
   type: 'high' | 'low';
 }
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'swingLookback',
+    label: 'Swing lookback',
+    type: 'number',
+    default: SWING_LOOKBACK,
+    min: 2,
+    max: 30,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): a break of structure is a break of a SWING high/low, and this window defines what counts as one.',
+    source: 'market-structure-bos.directive.ts:SWING_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class MarketStructureBosDirective implements IDirective {
@@ -37,9 +62,13 @@ export class MarketStructureBosDirective implements IDirective {
   readonly minBars = { '1d': 30 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const swingLookback = values.swingLookback as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -50,7 +79,7 @@ export class MarketStructureBosDirective implements IDirective {
       };
     }
 
-    const swings = this.findSwingPoints(bars);
+    const swings = this.findSwingPoints(bars, swingLookback);
     if (swings.length < 4) {
       return {
         score: 0,
@@ -115,17 +144,17 @@ export class MarketStructureBosDirective implements IDirective {
     };
   }
 
-  private findSwingPoints(bars: DirectiveInput['bars']): SwingPoint[] {
+  private findSwingPoints(bars: DirectiveInput['bars'], swingLookback: number): SwingPoint[] {
     const swings: SwingPoint[] = [];
 
-    for (let i = SWING_LOOKBACK; i < bars.length - SWING_LOOKBACK; i++) {
+    for (let i = swingLookback; i < bars.length - swingLookback; i++) {
       const currHigh = bars[i].high;
       const currLow = bars[i].low;
 
       // Check if this is a swing high
       let isSwingHigh = true;
       let isSwingLow = true;
-      for (let j = i - SWING_LOOKBACK; j <= i + SWING_LOOKBACK; j++) {
+      for (let j = i - swingLookback; j <= i + swingLookback; j++) {
         if (j === i) continue;
         if (bars[j].high >= currHigh) isSwingHigh = false;
         if (bars[j].low <= currLow) isSwingLow = false;

@@ -13,10 +13,48 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const AVG_PERIOD = 20;
 const SURGE_THRESHOLD = 3.0;
 const MIN_BARS = AVG_PERIOD + 2;
+
+/**
+ * Tunable knobs (#1165). Defaults ARE the constants above — BASELINE proves the equality.
+ *
+ * ⚠️ 3× the average is a genuine spike on a liquid FX major and routine on a small-cap or a crypto
+ * pair, so the same number means "unusual" on one instrument and "Tuesday" on another. The
+ * `volume-climax` fixture sits at ~4.2×, which is above the default and below the maximum — the band
+ * where the threshold actually decides.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'avgPeriod',
+    label: 'Average period',
+    type: 'number',
+    default: AVG_PERIOD,
+    min: 3,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): a 20-bar baseline is a day of 15m bars and a month of dailies, so the same threshold separates "spike" from "normal" on completely different scales across cadences.',
+    source: 'volume-surge.directive.ts:17 AVG_PERIOD',
+  },
+  {
+    key: 'surgeThreshold',
+    label: 'Surge threshold',
+    type: 'number',
+    default: SURGE_THRESHOLD,
+    min: 1.3,
+    max: 6,
+    step: 0.1,
+    unit: '× average',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: the volume-climax fixture sits at ~4.2× average, so lowering the threshold to 1.3 converts it from "no surge" to a scored surge, and raising it to 6 removes it entirely — the tier boundary decides whether the directive ever fires.',
+    source: 'volume-surge.directive.ts:18 SURGE_THRESHOLD',
+  },
+];
 
 @Injectable()
 export class VolumeSurgeDirective implements IDirective {
@@ -32,34 +70,40 @@ export class VolumeSurgeDirective implements IDirective {
   readonly minBars = { '1d': 22 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const avgPeriod = values.avgPeriod as number;
+    const surgeThreshold = values.surgeThreshold as number;
+
     const volumes = input.bars.map(b => b.volume);
     const closes = input.bars.map(b => b.close);
     const opens = input.bars.map(b => b.open);
 
-    if (volumes.length < MIN_BARS) {
-      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${volumes.length}.` };
+    const requiredBars = Math.max(MIN_BARS, avgPeriod + 2);
+    if (volumes.length < requiredBars) {
+      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${requiredBars} bars, have ${volumes.length}.` };
     }
 
     const recentVol = volumes[volumes.length - 1];
-    const avgVol = sma(volumes.slice(0, -1), AVG_PERIOD);
+    const avgVol = sma(volumes.slice(0, -1), avgPeriod);
     if (avgVol <= 0) {
       return { score: 0, confidence: 0, reason: 'Could not calculate average volume.' };
     }
 
     const surgeRatio = recentVol / avgVol;
 
-    if (surgeRatio < SURGE_THRESHOLD) {
+    if (surgeRatio < surgeThreshold) {
       return {
       signalClass: 'neutral',
       score: 0,
         confidence: 0.3,
-        reason: `No volume surge. Current volume ${surgeRatio.toFixed(1)}x average (threshold ${SURGE_THRESHOLD}x).`,
+        reason: `No volume surge. Current volume ${surgeRatio.toFixed(1)}x average (threshold ${surgeThreshold}x).`,
       };
     }
 
-    const magnitude = Math.min(1, (surgeRatio - SURGE_THRESHOLD) / 5); // 3x–8x → 0–1
+    const magnitude = Math.min(1, (surgeRatio - surgeThreshold) / 5); // 3x–8x → 0–1
     const isUpDay = closes[closes.length - 1] > opens[opens.length - 1];
 
     if (isUpDay) {

@@ -10,8 +10,9 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
-// ⚠️ MIN_BARS MUST COVER THE RSI PERIOD. It was 14 with `RSI_PERIOD = 37`, and `rsi()` returns an
+// ⚠️ MIN_BARS MUST COVER THE RSI PERIOD. It was 14 with `rsiPeriod = 37`, and `rsi()` returns an
 // EMPTY array when `closes.length <= period` — so on the 14-37 bar window this directive declares,
 // `latestRsi` fell back to the neutral 50 (line 40), `confirmed` could never be true, and the
 // 90-point confirmed-star branch (#1131) was unreachable. The confident half of the directive could
@@ -19,6 +20,44 @@ import { rsi } from '../utils/indicators';
 const RSI_PERIOD = 37;
 const MIN_BARS = RSI_PERIOD + 1;
 const DOJI_BODY_RATIO = 0.15; // Body < 15% of range = doji-like
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant of the same value, so an instance that
+ * supplies nothing scores byte-identically — asserted by the BASELINE guard, not merely stated here.
+ *
+ * ⚠️ A candlestick parameter is a THRESHOLD ON GEOMETRY. It is only provable against a candle that
+ * sits near the boundary, which is why 'directive-fixtures.ts' carries explicitly shaped bars
+ * (doji-bar, engulfing-bar, harami-bar, three-soldiers, reversal-hammer) rather than more smooth
+ * series: on a uniform-geometry fixture every threshold value gives the same answer.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI confirmation period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): the RSI filter gates the star pattern, and MIN_BARS is derived from this period, so raising it also raises how much history the directive needs before it will speak.',
+    source: 'mt5-star-doji.directive.ts:19 RSI_PERIOD',
+  },
+  {
+    key: 'dojiBodyRatio',
+    label: 'Max star body / range',
+    type: 'number',
+    default: DOJI_BODY_RATIO,
+    min: 0.02,
+    max: 0.6,
+    step: 0.01,
+    unit: 'fraction of range',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: 15% is what makes the middle candle a "star". Raising it to 60% accepts an ordinary candle and stops being a star pattern — the knob decides whether the shape is recognised.',
+    source: 'mt5-star-doji.directive.ts:21 DOJI_BODY_RATIO',
+  },
+];
 
 @Injectable()
 export class Mt5StarDojiDirective implements IDirective {
@@ -35,16 +74,21 @@ export class Mt5StarDojiDirective implements IDirective {
   readonly minBars = { '1d': RSI_PERIOD + 1 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const dojiBodyRatio = values.dojiBodyRatio as number;
+
     const { bars, symbol } = input;
     if (bars.length < MIN_BARS) {
       return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars.`, signalClass: 'neutral' };
     }
 
     const closes = bars.map((b) => b.close);
-    const rsiValues = rsi(closes, RSI_PERIOD);
+    const rsiValues = rsi(closes, rsiPeriod);
     const latestRsi = rsiValues.length > 0 ? rsiValues[rsiValues.length - 1] : 50;
 
     if (bars.length < 3) {
@@ -59,7 +103,7 @@ export class Mt5StarDojiDirective implements IDirective {
     const body2 = Math.abs(c2.close - c2.open);
     const body3 = Math.abs(c3.close - c3.open);
     const range2 = c2.high - c2.low;
-    const isDoji = range2 > 0 && body2 / range2 < DOJI_BODY_RATIO;
+    const isDoji = range2 > 0 && body2 / range2 < dojiBodyRatio;
     const isSmall = body2 < body1 * 0.4 && body2 < body3 * 0.4;
 
     const c1Bearish = c1.close < c1.open;

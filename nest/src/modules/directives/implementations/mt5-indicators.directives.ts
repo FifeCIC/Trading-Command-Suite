@@ -9,6 +9,7 @@
  */
 
 import { Injectable } from '@nestjs/common';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 import {
   DirectiveInput,
   DirectiveResult,
@@ -49,6 +50,43 @@ function clamp(v: number, min: number, max: number): number {
 // 1. Williams %R — Oversold/Overbought oscillator
 // =====================================================================
 
+/**
+ * ⚠️ These three values were INLINE LITERALS (`williamsR(highs, lows, closes, 14)`, `current < -80`,
+ * `current > -20`) and invisible to a named-constant audit — one of the 29 measured in #1166. Raised to a
+ * declared spec so they can be tuned and, more importantly, so they can be TESTED: `directive-parameters
+ * .spec.ts` proves each one moves the output, which an inline literal never could.
+ *
+ * Overbought mirrors oversold (-100 - oversold), so at the default -80 it resolves to -20 exactly.
+ */
+const WILLIAMS_R_PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'period',
+    label: 'Lookback period',
+    type: 'number',
+    default: 14,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166): %R at 7 vs 14 shared 31% of entry events on VIX 1h and 59-72% on daily equities, so the period selects a different opportunity set rather than a different setting.',
+    source: 'mt5-indicators.directives.ts:75 inline literal `williamsR(highs, lows, closes, 14)`',
+  },
+  {
+    key: 'oversold',
+    label: 'Oversold level',
+    type: 'number',
+    default: -80,
+    min: -95,
+    max: -50,
+    step: 1,
+    unit: '%R',
+    chart: 'threshold',
+    why: 'A fixed -80 gate never trips on a symbol that trends; the measured daily-bar event count was 15-18 over 7-10 months. Overbought mirrors this value so the bands stay symmetric.',
+    source: 'mt5-indicators.directives.ts:84 inline literal `current < -80`',
+  },
+];
+
 @Injectable()
 export class WilliamsRDirective implements IDirective {
   readonly id = 'williams-r';
@@ -59,20 +97,24 @@ export class WilliamsRDirective implements IDirective {
   readonly maxScore = 100;
   readonly version = '1.0.0';
   readonly readiness = 'ready' as const;
-
+  readonly params = WILLIAMS_R_PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const period = values.period as number;
+    const oversold = values.oversold as number;
+    const overbought = -100 - oversold;
     const { bars } = input;
     const highs = bars.map((b) => b.high);
     const lows = bars.map((b) => b.low);
     const closes = bars.map((b) => b.close);
-    const MIN = 15;
+    const MIN = period + 1;
 
     if (closes.length < MIN) {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${closes.length}` };
     }
 
-    const wr = williamsR(highs, lows, closes, 14);
+    const wr = williamsR(highs, lows, closes, period);
     const current = wr[wr.length - 1];
     const prev = wr[wr.length - 2];
 
@@ -81,18 +123,18 @@ export class WilliamsRDirective implements IDirective {
     }
 
     // Oversold bounce: %R < -80 and curling up
-    if (current < -80 && current > prev) {
-      const score = clamp(Math.round(60 + Math.abs(current + 80) * 2), 0, this.maxScore);
+    if (current < oversold && current > prev) {
+      const score = clamp(Math.round(60 + Math.abs(current - oversold) * 2), 0, this.maxScore);
       return { score, confidence: 0.7, signalClass: 'bullish', reason: `Williams %R ${current.toFixed(1)} — oversold bounce` };
     }
 
     // Deep oversold
-    if (current < -80) {
+    if (current < oversold) {
       return { score: 45, confidence: 0.5, signalClass: 'bullish', reason: `Williams %R ${current.toFixed(1)} — deep oversold` };
     }
 
     // Overbought
-    if (current > -20) {
+    if (current > overbought) {
       return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: `Williams %R ${current.toFixed(1)} — overbought` };
     }
 

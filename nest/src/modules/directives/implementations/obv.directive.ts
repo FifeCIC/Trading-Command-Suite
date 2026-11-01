@@ -16,9 +16,34 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { obv, sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 12;
 const TREND_LOOKBACK = 5; // Bars to compare OBV vs price trend
+
+/**
+ * Tunable knob (#1165). The default IS the constant above — BASELINE proves the equality.
+ *
+ * ⚠️ OBV has no scale of its own — every reading here is a CHANGE compared over this window — so the
+ * lookback IS the measurement. At 3 bars it reports noise; at 20 it reports the trend. Measured on the
+ * `noisy-uptrend` fixture: the OBV/price agreement (and therefore the reported direction) differs
+ * between the minimum and the maximum.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'trendLookback',
+    label: 'OBV trend lookback',
+    type: 'number',
+    default: TREND_LOOKBACK,
+    min: 3,
+    max: 40,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): the divergence strength is |OBV change| / (avgVolume × lookback), so the window divides the result as well as defining it. At 3 bars ordinary noise reads as a strong divergence; at 40 only a sustained one does.',
+    source: 'obv.directive.ts:21 TREND_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class ObvDirective implements IDirective {
@@ -35,8 +60,12 @@ export class ObvDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const trendLookback = values.trendLookback as number;
+
     const closes = input.bars.map(b => b.close);
     const volumes = input.bars.map(b => b.volume);
 
@@ -50,13 +79,13 @@ export class ObvDirective implements IDirective {
     }
 
     const obvValues = obv(closes, volumes);
-    if (obvValues.length < TREND_LOOKBACK + 1) {
+    if (obvValues.length < trendLookback + 1) {
       return { score: 0, confidence: 0.1, reason: 'Not enough OBV values.' };
     }
 
     // Compare OBV trend vs price trend over lookback
-    const recentObv = obvValues.slice(-TREND_LOOKBACK);
-    const recentPrice = closes.slice(-TREND_LOOKBACK);
+    const recentObv = obvValues.slice(-trendLookback);
+    const recentPrice = closes.slice(-trendLookback);
 
     const obvStart = recentObv[0];
     const obvEnd = recentObv[recentObv.length - 1];
@@ -67,8 +96,8 @@ export class ObvDirective implements IDirective {
     const priceChange = priceEnd - priceStart;
 
     // OBV signal strength
-    const avgVolume = sma(volumes, TREND_LOOKBACK);
-    const obvMomentum = avgVolume > 0 ? Math.abs(obvChange) / (avgVolume * TREND_LOOKBACK) : 0;
+    const avgVolume = sma(volumes, trendLookback);
+    const obvMomentum = avgVolume > 0 ? Math.abs(obvChange) / (avgVolume * trendLookback) : 0;
 
     if (priceChange > 0 && obvChange > 0) {
       // OBV confirming uptrend = accumulation
@@ -82,7 +111,7 @@ export class ObvDirective implements IDirective {
 
     if (priceChange > 0 && obvChange < 0) {
       // Bearish divergence: price up, OBV down = distribution
-      const divergenceStrength = Math.min(1, Math.abs(obvChange) / (avgVolume * TREND_LOOKBACK));
+      const divergenceStrength = Math.min(1, Math.abs(obvChange) / (avgVolume * trendLookback));
       return {
       signalClass: 'neutral',
       score: 20,
@@ -93,7 +122,7 @@ export class ObvDirective implements IDirective {
 
     if (priceChange < 0 && obvChange > 0) {
       // Bullish divergence: price down, OBV up = accumulation on weakness
-      const divergenceStrength = Math.min(1, obvChange / (avgVolume * TREND_LOOKBACK));
+      const divergenceStrength = Math.min(1, obvChange / (avgVolume * trendLookback));
       const score = Math.round(45 + divergenceStrength * 25); // 45–70
       return {
         score,

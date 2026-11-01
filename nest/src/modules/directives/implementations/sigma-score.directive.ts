@@ -17,9 +17,34 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 20;
 const RETURN_PERIOD = 1; // 1-bar returns
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'returnPeriod',
+    label: 'Return period',
+    type: 'number',
+    default: RETURN_PERIOD,
+    min: 1,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): sigma is the return over this period divided by its own volatility, so the period changes both numerator and denominator — a different statistical claim.',
+    source: 'sigma-score.directive.ts:RETURN_PERIOD',
+  },
+];
 
 @Injectable()
 export class SigmaScoreDirective implements IDirective {
@@ -34,9 +59,13 @@ export class SigmaScoreDirective implements IDirective {
   readonly minBars = { '1d': 20 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const returnPeriod = values.returnPeriod as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -51,8 +80,8 @@ export class SigmaScoreDirective implements IDirective {
 
     // Calculate log returns
     const returns: number[] = [];
-    for (let i = RETURN_PERIOD; i < closes.length; i++) {
-      returns.push(Math.log(closes[i] / closes[i - RETURN_PERIOD]));
+    for (let i = returnPeriod; i < closes.length; i++) {
+      returns.push(Math.log(closes[i] / closes[i - returnPeriod]));
     }
 
     if (returns.length < 10) {

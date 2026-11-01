@@ -36,10 +36,48 @@ import {
   findSwingLows,
   type StrengthModel,
 } from '../utils/divergence';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const RSI_PERIOD = 14;
 const SWING_LOOKBACK = 5; // Bars to confirm a swing point
 const MIN_BARS = RSI_PERIOD + SWING_LOOKBACK * 3 + 2;
+
+/**
+ * Tunable knobs (#1165). Defaults ARE the constants above — BASELINE proves the equality.
+ *
+ * ⚠️ A divergence is a comparison between TWO SWINGS, so the swing lookback decides which swings
+ * exist at all: at 2 bars a small pullback is a swing, at 10 only a major one is. That is why this is
+ * the knob #605 needs for TradingView parity — TradingView's default is 5 and every parity test has
+ * to state it. Measured on the `noisy-downtrend` fixture, the detected pair changes between 2 and 10.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): the RSI series is one half of every comparison, so a shorter period reacts at different swing points — a different divergence, not a differently-scored one.',
+    source: 'rsi-divergence.directive.ts:40 RSI_PERIOD',
+  },
+  {
+    key: 'swingLookback',
+    label: 'Swing lookback',
+    type: 'number',
+    default: SWING_LOOKBACK,
+    min: 2,
+    max: 20,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01: this is the TradingView parity knob (#605). At 2 bars minor pullbacks qualify as swings; at 10 only major ones do, so the pair being compared is different and the divergence can disappear entirely.',
+    source: 'rsi-divergence.directive.ts:41 SWING_LOOKBACK',
+  },
+];
 
 /**
  * RSI is BOUNDED 0-100 by construction, so the indicator move is normalised by a
@@ -70,22 +108,27 @@ export class RsiDivergenceDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const swingLookback = values.swingLookback as number;
+
     const closes = input.bars.map((b) => b.close);
     const lows = input.bars.map((b) => b.low);
     const highs = input.bars.map((b) => b.high);
 
-    if (closes.length < MIN_BARS) {
+    if (closes.length < Math.max(MIN_BARS, rsiPeriod + swingLookback * 3 + 2)) {
       return this.insufficient(closes.length);
     }
 
-    const rsiValues = rsi(closes, RSI_PERIOD);
-    if (rsiValues.length < SWING_LOOKBACK * 2 + 2) {
+    const rsiValues = rsi(closes, rsiPeriod);
+    if (rsiValues.length < swingLookback * 2 + 2) {
       return this.insufficient(closes.length);
     }
 
-    // Align RSI with price bars (RSI starts at index RSI_PERIOD)
+    // Align RSI with price bars (RSI starts at index rsiPeriod)
     const rsiOffset = closes.length - rsiValues.length;
     const getRsi = (barIdx: number): number => {
       const rsiIdx = barIdx - rsiOffset;
@@ -94,9 +137,9 @@ export class RsiDivergenceDirective implements IDirective {
     };
 
     // ── Find swing lows (price) ──
-    const swingLows = findSwingLows(lows, SWING_LOOKBACK, getRsi);
+    const swingLows = findSwingLows(lows, swingLookback, getRsi);
     // ── Find swing highs (price) ──
-    const swingHighs = findSwingHighs(highs, SWING_LOOKBACK, getRsi);
+    const swingHighs = findSwingHighs(highs, swingLookback, getRsi);
 
     // ── Check for bullish divergence (last two swing lows) ──
     const bullDiv = checkBullishDivergence(swingLows);

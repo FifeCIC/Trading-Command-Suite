@@ -1,5 +1,5 @@
 /**
- * useHiddenViews — the owner's "hide now" verdicts, as view IDs.
+ * useHiddenRoutes — which routes are withheld from navigation.
  *
  * ⚠️ WHY THIS EXISTS. The Page Walkthrough (`/development/ui-review`) recorded `hide: true` on five
  * pages on 2026-10-02 and **nothing consumed it**. Traced every reader of
@@ -7,19 +7,20 @@
  * two documentation strings. The verdicts were being STORED and never APPLIED — so "hide now" had no
  * effect on the app at all. This hook is the missing consumer.
  *
- * ⚠️ IT FAILS OPEN, DELIBERATELY. A failed or absent fetch returns an empty set, so nothing is
- * hidden. Hiding is a curation convenience, not a gate: if the store cannot be read, showing a page
- * the owner wanted hidden is recoverable, whereas hiding pages because a request failed is not.
+ * ⚠️ ROUTES, NOT VIEW IDS (renamed 2026-11-01 from `useHiddenViews`). A view id is only the last path
+ * segment, so `/settings/settings-education` and `/education/settings-education` share one — hiding
+ * either removed both. The store was always keyed by full route; the filter now agrees with it.
  *
- * Entries are keyed by full route (`/lab/timeline`); the nav filters by view ID (`timeline`), so the
- * last path segment is what goes into the set.
+ * ⚠️ IT FAILS OPEN, DELIBERATELY. A failed or absent fetch still returns `DEFAULT_HIDDEN_ROUTES`,
+ * the curated withheld set — never an empty nav. Hiding is curation, not a gate: showing a withheld
+ * page is recoverable, hiding pages because a request failed is not.
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../api/client';
-import { hiddenViewIdsFrom } from '../hidden-views.js';
+import { hiddenRoutesFrom } from '../hidden-views.js';
 
-export function useHiddenViews() {
+export function useHiddenRoutes() {
   const { data } = useQuery({
     queryKey: ['ui-review-hidden'],
     queryFn: () => apiGet('/api/system/settings/ui-review').catch(() => null),
@@ -27,5 +28,5 @@ export function useHiddenViews() {
   });
 
   // Memoised: a fresh Set each render would retrigger every consumer's dependency on it.
-  return useMemo(() => hiddenViewIdsFrom(data), [data]);
+  return useMemo(() => hiddenRoutesFrom(data), [data]);
 }

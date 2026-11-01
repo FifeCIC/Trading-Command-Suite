@@ -10,9 +10,34 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { cci } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const CCI_PERIOD = 37;
 const MIN_BARS = CCI_PERIOD + 4;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'cciPeriod',
+    label: 'CCI confirmation period',
+    type: 'number',
+    default: CCI_PERIOD,
+    min: 5,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): CCI is the confirmation filter on top of the candle shape, so its period decides whether a valid pattern is allowed through.',
+    source: 'mt5-dark-cloud-piercing.directive.ts:CCI_PERIOD',
+  },
+];
 
 @Injectable()
 export class Mt5DarkCloudPiercingDirective implements IDirective {
@@ -30,9 +55,13 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
   readonly minBars = { '1d': 41 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const; // Dark-cloud and piercing branches are opposite directions.
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const cciPeriod = values.cciPeriod as number;
+
     const closes = input.bars.map(b => b.close);
     const opens = input.bars.map(b => b.open);
     const highs = input.bars.map(b => b.high);
@@ -40,7 +69,7 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
     if (closes.length < MIN_BARS) {
       return { score: 0, confidence: 0.1, reason: `Need ${MIN_BARS} bars.`, signalClass: 'neutral' };
     }
-    const cciValues = cci(highs, lows, closes, CCI_PERIOD);
+    const cciValues = cci(highs, lows, closes, cciPeriod);
     if (cciValues.length < 3) {
       return { score: 0, confidence: 0.1, reason: 'Not enough CCI values.', signalClass: 'neutral' };
     }
@@ -75,8 +104,8 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
         score,
         confidence: cciConfirms ? 0.8 : 0.5,
         reason: cciConfirms
-          ? `Dark Cloud Cover + CCI(${CCI_PERIOD}) confirms bearish reversal (${curCci.toFixed(1)}, declining).`
-          : `Dark Cloud Cover pattern, CCI(${CCI_PERIOD}) = ${curCci.toFixed(1)} — no confirmation.`,
+          ? `Dark Cloud Cover + CCI(${cciPeriod}) confirms bearish reversal (${curCci.toFixed(1)}, declining).`
+          : `Dark Cloud Cover pattern, CCI(${cciPeriod}) = ${curCci.toFixed(1)} — no confirmation.`,
         signalClass: 'bearish',
       };
     }
@@ -87,8 +116,8 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
         score,
         confidence: cciConfirms ? 0.85 : 0.5,
         reason: cciConfirms
-          ? `Piercing Line + CCI(${CCI_PERIOD}) confirms bullish reversal (${curCci.toFixed(1)}, rising).`
-          : `Piercing Line pattern, CCI(${CCI_PERIOD}) = ${curCci.toFixed(1)} — no confirmation.`,
+          ? `Piercing Line + CCI(${cciPeriod}) confirms bullish reversal (${curCci.toFixed(1)}, rising).`
+          : `Piercing Line pattern, CCI(${cciPeriod}) = ${curCci.toFixed(1)} — no confirmation.`,
         signalClass: 'bullish',
       };
     }

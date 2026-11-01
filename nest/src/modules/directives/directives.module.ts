@@ -12,6 +12,16 @@ import { MarketSessionsService } from '../calendar/market-sessions.service';
 
 // Implemented (real math)
 import { RsiOversoldDirective } from './implementations/rsi-oversold.directive';
+// ⚠️ REGISTERED 2026-11-01 (#1169): a protocol preset (protocol-presets.ts:41) and a strategy seed
+// (strategy-seeds.ts 'Forex Session Trader') both name this id, and the class was never instantiated —
+// so that protocol silently scored one fewer directive than it declared. See
+// scripts/validate-directive-id-references.cjs, which now fails the build on a dangling id.
+import { SessionTimingFilterDirective } from './implementations/session-timing-filter.directive';
+// REGISTERED 2026-11-01 (#1169) for the same reason: a strategy seed names price-above-sma-50. It is
+// NOT retired - the retirement pattern in this repo is to stay REGISTERED and return the retired-claim
+// helper (see the seven #879 calendar claims), which this class does not do. It was simply never
+// instantiated.
+import { PriceAboveSma50Directive } from './implementations/momentum-and-macro.directives';
 import { MacdCrossoverDirective } from './implementations/macd-crossover.directive';
 import { EmaStructureDirective } from './implementations/ema-structure.directive';
 import { AtrDipDirective } from './implementations/atr-dip.directive';
@@ -111,6 +121,54 @@ import { AccumulationDistDirective } from './implementations/mt5-indicators.dire
 import { BullsBearsPowerDirective } from './implementations/mt5-indicators.directives';
 import { EaseOfMovementDirective } from './implementations/mt5-indicators.directives';
 import { IchimokuCloudDirective } from './implementations/mt5-indicators.directives';
+
+// ── Directive library wiring (#1169) ────────────────────────────────────────────────────────────
+// ── DECISION (2026-11-01, primary) ──
+// WHAT:      A directive class in `implementations/` is either REGISTERED or DELETED — no third state.
+//            Where two implementations of one indicator existed, the survivor carries a MEASURED
+//            maxScore ceiling (#1131) or a seed reference; the other file is removed.
+// WHY:       50 of 161 classes were reachable by nothing. `audit-directive-depth` ranked two of them
+//            TOP TWO by tunable headroom, and `williams-r` had already been parameterised and given a
+//            BASELINE while unreachable — the parameters tuned nothing, and a protocol that names it
+//            silently scored one directive fewer than it declared. A headroom ranking that recommends
+//            dead code is a plausible number with no error behind it.
+// INSTEAD OF: Registering every unregistered class. Two of them duplicate an id or an indicator, and
+//            registering a duplicate scores one signal twice inside a composite.
+// REVERSE BY: Deleting the `register()` call and recreating the file from git history (`git show
+//            HEAD^:…`). Nothing in the database stores which class files exist, so reversal is a code
+//            revert; the only data effect is `seedToDatabase()` adding/removing `directive` rows.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 111
+// GUARD:     nest/scripts/validate-directive-registration.cjs (prebuild; --self-test canaries both
+//            directions AND the aliased-import case)
+//
+// These classes were written, compiled, conformance-clean and reachable by NOTHING: no `register()`
+// call, so `runAll(filter)` could never resolve them and no protocol could select them. Measured
+// 2026-11-01, 40 NEVER-WIRED classes.
+//
+// ⚠️ Registering is SCORE-NEUTRAL except where a seed already names the id. Four do — `williams-r`
+// (directive-groups.ts) and `bollinger-pct-b`, `donchian-breakout`, `momentum-roc`
+// (strategy-seeds.ts) — and for those the seeded intent was a directive that silently contributed
+// nothing. Registering restores that intent; it is a bug fix, not a knob change.
+//
+// ⚠️ Do NOT register a class that duplicates a live `id` — two instances of one signal inflate a
+// composite's denominator. The duplicates were deleted instead (see the note further down).
+import { CandlePressureDirective } from './implementations/candle-pressure.directive';
+import { FairValueGapDirective } from './implementations/fair-value-gap.directive';
+import { FallingRiskPyramidDirective } from './implementations/falling-risk-pyramid.directive';
+import { FxTimingDirective } from './implementations/fx-timing.directive';
+import { HurstMemoryDirective } from './implementations/hurst-memory.directive';
+import { InstitutionalFootprintDirective } from './implementations/institutional-footprint.directive';
+import { LiquiditySweepDirective } from './implementations/liquidity-sweep.directive';
+import { MarketEntropyDirective } from './implementations/market-entropy.directive';
+import { MarketMemoryZonesDirective } from './implementations/market-memory-zones.directive';
+import { MarketStructureBosDirective } from './implementations/market-structure-bos.directive';
+import { Mt5DarkCloudPiercingDirective } from './implementations/mt5-dark-cloud-piercing.directive';
+import { Mt5EngulfingCciDirective } from './implementations/mt5-engulfing-cci.directive';
+import { PatternDensitySrDirective } from './implementations/pattern-density-sr.directive';
+import { PriceTimeGapDirective } from './implementations/price-time-gap.directive';
+import { RangeContractionDirective } from './implementations/range-contraction.directive';
+import { SigmaScoreDirective } from './implementations/sigma-score.directive';
+import { VolumeBoundaryDirective } from './implementations/volume-boundary.directive';
 // Chandelier Exit — stop-quality evidence for StopGuardianService (#890).
 // This file was written and spec-tested but never imported anywhere, so it could
 // never be registered. See STOP_GUARDIAN_DIRECTIVES in stop-guardian.service.ts.
@@ -184,19 +242,15 @@ import { MarketRegimeDirective } from './implementations/market-regime.directive
 import { PositionSizeKellyDirective } from './implementations/position-size-kelly.directive';
 import { PositionSizeConfidenceDirective } from './implementations/position-size-confidence.directive';
 
-// Seasonality (real implementations — 2026-07-01)
-import { SantaClausRallyDirective } from './implementations/santa-claus-rally.directive';
-import { JanuaryEffectDirective } from './implementations/january-effect.directive';
-import { SellInMayDirective } from './implementations/sell-in-may.directive';
-import { SeptemberSlumpDirective } from './implementations/september-slump.directive';
-import { OctoberReliefDirective } from './implementations/october-relief.directive';
+// Seasonality — the ONE that survived measurement (#879). `monday-effect` stays registered on
+// purpose: it returns an explicit zero with `unmeasured: true`, so a stored protocol reference still
+// resolves. The other seasonal "claims" never reproduced and are DELETED (#1169) rather than left as
+// unreachable files — a class that nothing registers is indistinguishable from one that does not exist,
+// and keeping ten of them is how the registration count drifted to 161 declared / 111 live.
 import { MondayEffectDirective as MondayEffectRealDirective } from './implementations/monday-effect.directive';
-import { FridayDriftDirective } from './implementations/friday-drift.directive';
+// 2026-09-18 — replaces the refuted Friday session-drift claim with a MEASURED weekend gap bias,
+// corrected against the same symbol's weekday gaps so a bar-source skew cannot masquerade as an edge.
 import { WeekendGapBiasDirective } from './implementations/weekend-gap-bias.directive';
-import { TurnaroundTuesdayDirective } from './implementations/turnaround-tuesday.directive';
-import { OpexGammaDirective } from './implementations/opex-gamma.directive';
-import { TripleWitchingDirective } from './implementations/triple-witching.directive';
-import { ElectionCycleDirective } from './implementations/election-cycle.directive';
 
 @Module({
   imports: [ProvidersModule, ResearchModule, MarketDataModule, CalendarModule],
@@ -208,6 +262,8 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     TimezoneService,
     // Implemented
     RsiOversoldDirective,
+    SessionTimingFilterDirective,
+    PriceAboveSma50Directive,
     MacdCrossoverDirective,
     EmaStructureDirective,
     AtrDipDirective,
@@ -291,6 +347,26 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     BullsBearsPowerDirective,
     EaseOfMovementDirective,
     IchimokuCloudDirective,
+    // Never-wired library classes, now registerable (#1169). Each is a SINGLE-class file so its
+    // tuning constants are unambiguous — the depth audit warns that attribution is file-wide in
+    // multi-class files, which is exactly the MT5 indicators file.
+    CandlePressureDirective,
+    FairValueGapDirective,
+    FallingRiskPyramidDirective,
+    FxTimingDirective,
+    HurstMemoryDirective,
+    InstitutionalFootprintDirective,
+    LiquiditySweepDirective,
+    MarketEntropyDirective,
+    MarketMemoryZonesDirective,
+    MarketStructureBosDirective,
+    Mt5DarkCloudPiercingDirective,
+    Mt5EngulfingCciDirective,
+    PatternDensitySrDirective,
+    PriceTimeGapDirective,
+    RangeContractionDirective,
+    SigmaScoreDirective,
+    VolumeBoundaryDirective,
     // Stubs — Macro
     GoldMacroCorrelationDirective,
     GoldRoundNumbersDirective,
@@ -310,22 +386,12 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     MarketRegimeDirective,
     PositionSizeKellyDirective,
     PositionSizeConfidenceDirective,
-    // Seasonality (real)
-    SantaClausRallyDirective,
-    JanuaryEffectDirective,
-    SellInMayDirective,
-    SeptemberSlumpDirective,
-    OctoberReliefDirective,
+    // Seasonality — only the directives that survived measurement are still wired (#879, #1169)
     MondayEffectRealDirective,
-    FridayDriftDirective,
     // 2026-09-18 — replaces the refuted Friday session-drift claim with a MEASURED weekend
     // gap bias, corrected against the same symbol's weekday gaps so a bar-source skew cannot
     // masquerade as an edge. See the class comment and issue #879.
     WeekendGapBiasDirective,
-    TurnaroundTuesdayDirective,
-    OpexGammaDirective,
-    TripleWitchingDirective,
-    ElectionCycleDirective,
     // Stubs — Equity-Specific
     NvdaEarningsMomentumDirective,
     TslaSentimentAmplifierDirective,
@@ -404,6 +470,8 @@ export class DirectivesModule implements OnModuleInit {
     private readonly configService: DirectiveConfigService,
     // Implemented
     private readonly rsi: RsiOversoldDirective,
+    private readonly sessionTimingFilter: SessionTimingFilterDirective,
+    private readonly priceAboveSma50: PriceAboveSma50Directive,
     private readonly macd: MacdCrossoverDirective,
     private readonly ema: EmaStructureDirective,
     private readonly atrDip: AtrDipDirective,
@@ -551,11 +619,55 @@ export class DirectivesModule implements OnModuleInit {
     private readonly spikeHoldConfirmation: SpikeHoldConfirmationDirective,
     private readonly surgeExhaustion: SurgeExhaustionDirective,
     private readonly newsCatalyst: NewsCatalystDirective,
+    // ── #1169 — the never-wired library ──────────────────────────────────────────────────────────
+    // MT5 Q156 indicators. The module has imported these and listed them as providers since the port,
+    // but never injected or registered them, so 14 of the 17 could not score. Three of them
+    // (`bollinger-pct-b`, `donchian-breakout`, `momentum-roc`) are ALSO named by `strategy-seeds.ts`
+    // and `williams-r` by `directive-groups.ts` — the seeded intent was a directive that silently
+    // contributed nothing.
+    private readonly williamsR: WilliamsRDirective,
+    private readonly awesomeOscillator: AwesomeOscillatorDirective,
+    private readonly forceIndex: ForceIndexDirective,
+    private readonly chaikinMf: ChaikinMoneyFlowDirective,
+    private readonly donchianBreakout: DonchianBreakoutDirective,
+    private readonly keltnerChannel: KeltnerChannelDirective,
+    private readonly parabolicSar: ParabolicSARDirective,
+    private readonly adxDiCrossover: ADXDICrossoverDirective,
+    private readonly bollingerPctB: BollingerPctBDirective,
+    private readonly momentumRoc: MomentumROCDirective,
+    private readonly deMarker: DeMarkerDirective,
+    private readonly accumulationDist: AccumulationDistDirective,
+    private readonly bullsBearsPower: BullsBearsPowerDirective,
+    private readonly easeOfMovement: EaseOfMovementDirective,
+    private readonly ichimokuCloud: IchimokuCloudDirective,
+    // Single-class library directives that were reachable by nothing.
+    private readonly candlePressure: CandlePressureDirective,
+    private readonly fairValueGap: FairValueGapDirective,
+    private readonly fallingRiskPyramid: FallingRiskPyramidDirective,
+    private readonly fxTiming: FxTimingDirective,
+    private readonly hurstMemory: HurstMemoryDirective,
+    private readonly institutionalFootprint: InstitutionalFootprintDirective,
+    private readonly liquiditySweep: LiquiditySweepDirective,
+    private readonly marketEntropy: MarketEntropyDirective,
+    private readonly marketMemoryZones: MarketMemoryZonesDirective,
+    private readonly marketStructureBos: MarketStructureBosDirective,
+    private readonly mt5DarkCloudPiercing: Mt5DarkCloudPiercingDirective,
+    private readonly mt5EngulfingCci: Mt5EngulfingCciDirective,
+    private readonly patternDensitySr: PatternDensitySrDirective,
+    private readonly priceTimeGap: PriceTimeGapDirective,
+    private readonly rangeContraction: RangeContractionDirective,
+    private readonly sigmaScore: SigmaScoreDirective,
+    private readonly volumeBoundary: VolumeBoundaryDirective,
+    // ⚠️ `alpha` — registration makes it SELECTABLE and callable; `classifyDirectiveInclusion` keeps
+    // alpha out of the composite, so it cannot raise a protocol's tier. Same rule as the surge family.
+    private readonly weekendGapBias: WeekendGapBiasDirective,
   ) {}
 
   async onModuleInit() {
     // Implemented
     this.directivesService.register(this.rsi);
+    this.directivesService.register(this.sessionTimingFilter);
+    this.directivesService.register(this.priceAboveSma50);
     this.directivesService.register(this.macd);
     this.directivesService.register(this.ema);
     this.directivesService.register(this.atrDip);
@@ -688,11 +800,6 @@ export class DirectivesModule implements OnModuleInit {
     // StochRSI crossover (owner request 2026-09-25). Directional by the %K/%D cross with no score
     // cliff — see the file header for the fault it is built to avoid.
     this.directivesService.register(this.stochRsi);
-    // ⚠️ NOTE, NOT FIXED HERE: `StochasticDirective` is imported, listed in `providers` and
-    // constructor-injected, but has NO `register()` call — the exact shape #890 documented for
-    // `SuperTrendDirective`/`ATRTrailingStopDirective` ("being in providers is not the same as
-    // being registered"). Registering it would change `GET /api/directives`, so it is left for a
-    // separate change rather than slipped in beside an unrelated directive.
     // Q304 — Risk Gates
     this.directivesService.register(this.budgetGate);
     this.directivesService.register(this.liquidityCheck);
@@ -714,6 +821,44 @@ export class DirectivesModule implements OnModuleInit {
     // (`unmeasured: true`) until a producer populates `input.news` from `news_item`. Registered
     // so the surface can show it and so `requiredDataFeeds: ['news']` is queryable.
     this.directivesService.register(this.newsCatalyst);
+
+    // ── #1169 — the never-wired library, now reachable ──────────────────────────────────────────
+    // ⚠️ Registration makes a directive SELECTABLE; it does not attach it to any protocol. The four
+    // ids a seed already names are the exception: those protocols/strategies score one directive more
+    // than they did before, which is the seeded intent finally being honoured.
+    this.directivesService.register(this.williamsR);
+    this.directivesService.register(this.awesomeOscillator);
+    this.directivesService.register(this.forceIndex);
+    this.directivesService.register(this.chaikinMf);
+    this.directivesService.register(this.donchianBreakout);
+    this.directivesService.register(this.keltnerChannel);
+    this.directivesService.register(this.parabolicSar);
+    this.directivesService.register(this.adxDiCrossover);
+    this.directivesService.register(this.bollingerPctB);
+    this.directivesService.register(this.momentumRoc);
+    this.directivesService.register(this.deMarker);
+    this.directivesService.register(this.accumulationDist);
+    this.directivesService.register(this.bullsBearsPower);
+    this.directivesService.register(this.easeOfMovement);
+    this.directivesService.register(this.ichimokuCloud);
+    this.directivesService.register(this.candlePressure);
+    this.directivesService.register(this.fairValueGap);
+    this.directivesService.register(this.fallingRiskPyramid);
+    this.directivesService.register(this.fxTiming);
+    this.directivesService.register(this.hurstMemory);
+    this.directivesService.register(this.institutionalFootprint);
+    this.directivesService.register(this.liquiditySweep);
+    this.directivesService.register(this.marketEntropy);
+    this.directivesService.register(this.marketMemoryZones);
+    this.directivesService.register(this.marketStructureBos);
+    this.directivesService.register(this.mt5DarkCloudPiercing);
+    this.directivesService.register(this.mt5EngulfingCci);
+    this.directivesService.register(this.patternDensitySr);
+    this.directivesService.register(this.priceTimeGap);
+    this.directivesService.register(this.rangeContraction);
+    this.directivesService.register(this.sigmaScore);
+    this.directivesService.register(this.volumeBoundary);
+    this.directivesService.register(this.weekendGapBias);
 
     // ── Seed directive table with latest class defaults (activates stubbed directives) ──
     await this.directivesService.seedToDatabase();

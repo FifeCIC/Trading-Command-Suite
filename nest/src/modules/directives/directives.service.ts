@@ -26,6 +26,15 @@ import {
 } from './interfaces/directive.interface';
 import { ConditionDetectorService } from './condition-detector.service';
 import { getDirectiveSuitability } from './directive-suitability.registry';
+import type { ParamSpec } from './parameters';
+import type { DirectiveInstance } from './directive-groups';
+
+/** One instance's sanitized reading, before the instances of a directive are collapsed. */
+interface InstanceReading {
+  entryId: string;
+  label: string;
+  result: DirectiveResult;
+}
 import { isScoringDemo } from '../../config/scoring-mode';
 
 /**
@@ -199,6 +208,18 @@ export class DirectivesService {
     }
   }
 
+  /**
+   * The tunable knobs a directive exposes, as declared in its `params` spec (M2, #1165).
+   *
+   * Returns `[]` for a directive with no parameters and `null` when the id is unknown — "no knobs" and
+   * "no such directive" must not render the same, or a caller reads a missing directive as untunable.
+   */
+  getParameterSpecs(id: string): readonly ParamSpec[] | null {
+    const directive = this.registry.get(id);
+    if (!directive) return null;
+    return directive.params ?? [];
+  }
+
   /** Per-tick memoization cache keyed by the complete evaluation context. */
   private tickCache = new Map<string, Map<string, DirectiveResult>>();
 
@@ -258,7 +279,37 @@ export class DirectivesService {
     prepare((input as any).min15Bars);
   }
 
-  async runAll(input: DirectiveInput, directiveFilter?: Set<string>): Promise<Map<string, DirectiveResult>> {
+  /**
+   * @param directiveFilter The directive ids this protocol may run (from `DirectiveGroup.directiveIds`).
+   * @param instances Every CONFIGURED INSTANCE of those directives (#1165).
+   *
+   * ── DECISION (2026-11-01, primary — #1165) ──
+   * WHAT:      every instance of a directive is run, then AVERAGED into ONE result keyed by
+   *            DIRECTIVE ID (score = mean, confidence = mean, signalClass only when unanimous).
+   * WHY:       Keying by instance would make `capacityMax += maxScore` run twice, so adding a
+   *            comparison would silently shrink every percentage in the protocol — the
+   *            `INV-STABLE-DENOMINATOR` failure arrived at from the config side. Summing the scores
+   *            instead would turn "add a comparison" into a weight multiplier. A mixed reading is
+   *            `neutral` because averaging a categorical has no meaning and a consensus must be
+   *            reported, not invented.
+   * INSTEAD OF: the issue's proposed shape — results keyed by `protocol_directive_entry.id`.
+   * REVERSE BY: `results.set(perInstance[0].entryId, …)` plus de-duplicating capacity by hand; the
+   *            `directive-instances.spec.ts` key-set test names exactly what would break.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 122
+   * GUARD:     nest/src/modules/directives/directive-instances.spec.ts
+   *
+   * ⚠️ An instance with no configured params passes the SAME input object as before — the `params`
+   * key is ABSENT, not `undefined` — so every protocol that has not configured anything scores
+   * byte-identically (asserted in `entry-params.spec.ts`).
+   *
+   * ⚠️ The instance list is part of the tick-cache fingerprint. A cache key that ignored configuration
+   * is how a knob appears to work while doing nothing.
+   */
+  async runAll(
+    input: DirectiveInput,
+    directiveFilter?: Set<string>,
+    instances?: readonly DirectiveInstance[],
+  ): Promise<Map<string, DirectiveResult>> {
     // Normalize bar timestamps/order BEFORE fingerprinting so the cache key is
     // stable (and order-independent) and every directive receives real Dates in
     // oldest → newest order — see normalizeDirectiveBars for why that matters.
@@ -267,9 +318,19 @@ export class DirectivesService {
     // 2026-09-08: the former symbol+lastTimestamp+length key allowed one
     // protocol/filter or timeframe bundle to poison another. Fingerprint all
     // market/external inputs, the filter, and directive configuration.
-    const cacheKey = this.createEvaluationFingerprint(input, directiveFilter);
+    const cacheKey = this.createEvaluationFingerprint(input, directiveFilter, instances);
     const cached = this.tickCache.get(cacheKey);
     if (cached) return this.cloneResults(cached);
+
+    // Instances grouped by directive id. A directive absent from this map has no configured
+    // instance and runs once with its declared defaults — exactly the pre-#1165 path.
+    const instancesById = new Map<string, DirectiveInstance[]>();
+    for (const inst of instances ?? []) {
+      if (!inst?.directiveId) continue;
+      const list = instancesById.get(inst.directiveId);
+      if (list) list.push(inst);
+      else instancesById.set(inst.directiveId, [inst]);
+    }
 
     const results = new Map<string, DirectiveResult>();
 
@@ -332,27 +393,48 @@ export class DirectivesService {
         // in "live"), so it needs an A/B copy, not an uncomment. See `config/scoring-mode.ts`
         // and issue #610.
 
-        // ── Run the directive (supports async for Finnhub-backed directives) ──
-        let result = await directive.calculate(input);
+        // ── Run the directive — once per CONFIGURED INSTANCE (#1165) ──
+        // An unconfigured directive has no instance list and runs exactly once with the input object
+        // it received before, so this loop costs nothing on the existing path.
+        const configured = instancesById.get(id);
+        const planned = configured && configured.length > 0
+          ? configured
+          : [{ entryId: '', directiveId: id, label: '', params: undefined } as DirectiveInstance];
 
-        // ── Apply time modifiers (timeModifiers) ──
-        if (directive.timeModifiers && directive.timeModifiers.length > 0) {
-          const applied = this.evaluateTimeModifiers(directive.timeModifiers, input.asOf);
-          if (applied.length > 0) {
-            const totalAdjustment = applied.reduce((sum, m) => sum + m.adjustment, 0);
-            const modifierReasons = applied.map((m) => m.reason).join('; ');
-            result = {
-              ...result,
-              score: Math.max(0, result.score + totalAdjustment),
-              reason: result.reason
-                ? `${result.reason}. Time modifiers: ${modifierReasons}`
-                : `Time modifiers applied: ${modifierReasons}`,
-              timeModifiersApplied: applied,
-            };
+        const perInstance: InstanceReading[] = [];
+        for (const inst of planned) {
+          // ⚠️ `params` is spread in ONLY when the entry configured some — `params: undefined` would
+          // still be a key present on the object, and directives that branch on
+          // `hasOwnProperty('params')` must keep seeing the pre-#1165 shape.
+          const configuredParams = inst.params && Object.keys(inst.params).length > 0 ? inst.params : undefined;
+          const instanceInput = configuredParams ? { ...input, params: configuredParams } : input;
+          let result = await directive.calculate(instanceInput);
+
+          // ── Apply time modifiers (timeModifiers) ──
+          if (directive.timeModifiers && directive.timeModifiers.length > 0) {
+            const applied = this.evaluateTimeModifiers(directive.timeModifiers, input.asOf);
+            if (applied.length > 0) {
+              const totalAdjustment = applied.reduce((sum, m) => sum + m.adjustment, 0);
+              const modifierReasons = applied.map((m) => m.reason).join('; ');
+              result = {
+                ...result,
+                score: Math.max(0, result.score + totalAdjustment),
+                reason: result.reason
+                  ? `${result.reason}. Time modifiers: ${modifierReasons}`
+                  : `Time modifiers applied: ${modifierReasons}`,
+                timeModifiersApplied: applied,
+              };
+            }
           }
+
+          perInstance.push({
+            entryId: inst.entryId,
+            label: inst.label ?? '',
+            result: this.sanitizeDirectiveResult(id, directive.maxScore, result),
+          });
         }
 
-        results.set(id, this.sanitizeDirectiveResult(id, directive.maxScore, result));
+        results.set(id, this.aggregateInstances(id, perInstance, directive.maxScore));
       } catch (error) {
         this.logger.error(`Directive ${id} threw: ${String(error)}`);
         results.set(id, {
@@ -414,6 +496,63 @@ export class DirectivesService {
     return this.cloneResults(results);
   }
 
+  /**
+   * Collapse the readings of a directive's instances into ONE result. See `runAll` for why this is an
+   * average rather than a sum.
+   *
+   * A single instance is returned UNCHANGED (same object shape, same reason string) so the
+   * pre-#1165 path — and every recorded baseline — stays byte-identical. The instance detail is added
+   * only when there is more than one, which is also when a reader needs to see the comparison.
+   */
+  private aggregateInstances(
+    id: string,
+    readings: InstanceReading[],
+    maxScore: number,
+  ): DirectiveResult {
+    if (readings.length === 0) {
+      return { score: 0, confidence: 0, reason: `No instance produced a result for ${id}` };
+    }
+    if (readings.length === 1) return readings[0].result;
+
+    const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
+    const scores = readings.map((r) => r.result.score);
+    const classes = readings.map((r) => r.result.signalClass ?? 'neutral');
+    const unanimous = classes.every((c) => c === classes[0]);
+
+    // ⚠️ A MIXED READING IS NEUTRAL, deliberately. Continuing to report the strongest instance's
+    // direction would turn "these disagree" into a signal nobody voted for, and averaging a
+    // categorical has no meaning. `agreement` records which case it was so the surface can say so.
+    const signalClass = unanimous ? classes[0] : 'neutral';
+
+    const detail = readings
+      .map((r) => `${r.label || 'default'}=${r.result.score}`)
+      .join(', ');
+
+    return {
+      score: Math.round(mean(scores)),
+      confidence: mean(readings.map((r) => r.result.confidence)),
+      reason:
+        `${readings.length} instances averaged: ${detail}` +
+        (unanimous ? '' : ` — mixed direction, reported neutral`) +
+        ` → ${Math.round(mean(scores))}/${maxScore}`,
+      signalClass,
+      metadata: {
+        instances: readings.map((r) => ({
+          entryId: r.entryId,
+          label: r.label || 'default',
+          score: r.result.score,
+          confidence: r.result.confidence,
+          signalClass: r.result.signalClass ?? 'neutral',
+          reason: r.result.reason,
+        })),
+        instanceCount: readings.length,
+        agreement: unanimous ? 'unanimous' : 'mixed',
+        // Explicit, because "averaged" is the decision and a reader of a score must be able to see it.
+        aggregation: 'mean',
+      },
+    };
+  }
+
   private cloneResults(source: Map<string, DirectiveResult>): Map<string, DirectiveResult> {
     return new Map([...source].map(([id, result]) => [id, {
       ...result,
@@ -424,7 +563,11 @@ export class DirectivesService {
     }]));
   }
 
-  private createEvaluationFingerprint(input: DirectiveInput, directiveFilter?: Set<string>): string {
+  private createEvaluationFingerprint(
+    input: DirectiveInput,
+    directiveFilter?: Set<string>,
+    instances?: readonly DirectiveInstance[],
+  ): string {
     const directiveIds = directiveFilter
       ? [...directiveFilter].sort()
       : [...this.registry.keys()].sort();
@@ -437,10 +580,21 @@ export class DirectivesService {
       if (value instanceof Set) return [...value].sort();
       return value;
     });
+    // #1165 — configuration is part of the identity of a result. Without this a params edit — or a
+    // second instance being added — would be served the previous tick's cached score, which reads as
+    // "the knob does nothing". Sorted by entry id so two equivalent lists never miss the cache.
+    const instanceKey = instances && instances.length > 0
+      ? JSON.stringify(
+          [...instances]
+            .map(i => [i.entryId, i.directiveId, i.label ?? '', i.params ?? null])
+            .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+        )
+      : '';
     return createHash('sha256')
       .update(normalized)
       .update(JSON.stringify(directiveIds))
       .update(JSON.stringify(directiveConfig))
+      .update(instanceKey)
       .digest('hex');
   }
 

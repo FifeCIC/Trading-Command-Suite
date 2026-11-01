@@ -214,7 +214,7 @@ export default function StrategyMonitorPage() {
     <div className="sm-page">
       <motion.header className="sm-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Strategy Monitor</h1>
+          <h1>Bot Monitor</h1>
           <p className="sm-subtitle">
             {overview.active} active · {overview.trading} trading · {overview.scoring} scoring · avg score {overview.avgScore}
           </p>

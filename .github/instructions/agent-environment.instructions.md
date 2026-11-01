@@ -299,6 +299,32 @@ verify health. Until one build succeeds the repo has **no launchable API build**
 build is not optional — it is the unblock, and the one case where the batching rule's "commit now
 if another agent is blocked" spirit applies to a BUILD rather than a commit.
 
+⚠️ **A CONCURRENT `build:api` KILLS YOUR IN-FLIGHT REQUEST AND REPORTS NOTHING — observed 2026-11-01.**
+`build-api.ps1` stops every `dist/src/main.js` process as its first step, so an API request that is
+*mid-flight* when another agent builds simply never answers: `curl` returns an **empty body**, the client
+sees a dropped connection, and the server log ends on the last line your request wrote with **no error,
+no stack trace and no shutdown line**. It reads exactly like "the endpoint crashed the server".
+
+Measured three times in one session while `POST /api/backtest/run` was running; the same request
+succeeded on retry, and a control run succeeded in between. The confirmation is
+**`nest/logs/console-build-api.log`** — it records the build's own API start, and its timestamp lands in
+the window your request died in. **Check that file's mtime before concluding a route is broken**, and do
+not attribute the death to the code you were exercising without it.
+
+⚠️ **AND IT HAPPENS WHEN THAT LOG HAS NOT MOVED, SO THE LOG IS NOT THE ONLY SIGNATURE — measured twice more
+on 2026-11-01 (a fourth and fifth death).** Both times the API exited with an **empty stderr**, no stack
+trace, and a last stdout line that was ordinary traffic — while another agent's `node`/`npm`/`tsc` process
+had started within the previous ~30s. Check with:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Select-Object ProcessId, CreationDate, CommandLine | Format-Table -AutoSize
+```
+
+Treat "another agent started a node process just before my request vanished" as the leading hypothesis,
+and **say you could not isolate it** rather than blaming the endpoint. Recovery is the same either way:
+start the API again and re-issue the request once.
+
 Other useful forms:
 
 ```powershell

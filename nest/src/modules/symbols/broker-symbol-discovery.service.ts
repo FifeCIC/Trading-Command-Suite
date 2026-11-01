@@ -170,6 +170,10 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
           r.digits,
           r.volumeMin,
           r.volumeMax,
+          // #1170/#1143 — written so the backtester can size in the broker's own units without a
+          // live bridge. A run replayed next week must not depend on :5000 being up.
+          r.volumeStep,
+          r.contractSize,
           onboarded.has(r.name) ? 1 : 0,
         );
       }
@@ -182,8 +186,8 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
       // what makes "no longer offered" derivable rather than guessed.
       await this.prisma.$executeRawUnsafe(
         `INSERT INTO broker_symbol
-           (id, brokerId, name, path, assetClass, tradeMode, digits, volumeMin, volumeMax, registered)
-         VALUES ${chunk.map(() => '(?,?,?,?,?,?,?,?,?,?)').join(',')}
+           (id, brokerId, name, path, assetClass, tradeMode, digits, volumeMin, volumeMax, volumeStep, contractSize, registered)
+         VALUES ${chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?)').join(',')}
          AS new
          ON DUPLICATE KEY UPDATE
            path = new.path,
@@ -192,6 +196,8 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
            digits = new.digits,
            volumeMin = new.volumeMin,
            volumeMax = new.volumeMax,
+           volumeStep = new.volumeStep,
+           contractSize = new.contractSize,
            registered = new.registered,
            lastSeenAt = UTC_TIMESTAMP(3)`,
         ...params,

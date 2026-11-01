@@ -12,11 +12,68 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const VOLUME_MA_PERIOD = 20;
 // ⚠️ +2, not +1. The comparison now needs the last COMPLETE bar plus the 20 before it — the newest
 // bar is excluded because it is still accumulating (see the note in calculate()).
 const MIN_BARS = VOLUME_MA_PERIOD + 2;
+
+/** The three volume-ratio tiers. Defaults are the constants this directive has always used. */
+const SURGE_RATIO = 2.0;
+const ELEVATED_RATIO = 1.3;
+
+/**
+ * Tunable knobs (#1165). Defaults are the constants above — BASELINE proves the equality.
+ *
+ * ⚠️ `surgeRatio` and `elevatedRatio` were unmeasurable on the original fixture set: five of seven
+ * series held CONSTANT volume, so the last complete bar was exactly 1.00× its own average and every
+ * tier comparison landed in the "normal" branch. The `mean-reverting` fixture now carries a genuine
+ * volume surge (2.37× its 20-bar average, measured 2026-11-01), which is what makes the tiers
+ * provable — 88 at the default, 100 when `surgeRatio` is raised past it, and 100 when
+ * `elevatedRatio` is raised past it. A knob nobody can test is a knob a user will tune blind.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'averagePeriod',
+    label: 'Average period',
+    type: 'number',
+    default: VOLUME_MA_PERIOD,
+    min: 3,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): a 20-bar average is a month of daily hours but 20 hours intraday, so the same threshold means "unusual today" on one cadence and "unusual this month" on another. The surge fixture moves 89 → 92 between a 20- and a 5-bar window.',
+    source: 'volume-confirmation.directive.ts:23 VOLUME_MA_PERIOD',
+  },
+  {
+    key: 'surgeRatio',
+    label: 'Surge threshold',
+    type: 'number',
+    default: SURGE_RATIO,
+    min: 1.2,
+    max: 4,
+    step: 0.1,
+    unit: '× average',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: 2× average is a genuine surge on a liquid FX pair and routine on a small-cap, so the tier boundary decides whether the same volume is confirmation or noise (fixture: 89 at 2×, 100 when raised to 4×).',
+    source: 'volume-confirmation.directive.ts:78 `ratio >= 2.0`',
+  },
+  {
+    key: 'elevatedRatio',
+    label: 'Above-average threshold',
+    type: 'number',
+    default: ELEVATED_RATIO,
+    min: 0.8,
+    max: 1.8,
+    step: 0.05,
+    unit: '× average',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: at 0.8× a merely normal bar scores 55+, at 1.3× it scores 30 — the lower tier boundary moves ordinary bars out of "confirmation" entirely.',
+    source: 'volume-confirmation.directive.ts:82 `ratio >= 1.3`',
+  },
+];
 
 @Injectable()
 export class VolumeConfirmationDirective implements IDirective {
@@ -32,14 +89,20 @@ export class VolumeConfirmationDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
-    if (bars.length < MIN_BARS) {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const averagePeriod = values.averagePeriod as number;
+    const surgeRatio = values.surgeRatio as number;
+    const elevatedRatio = values.elevatedRatio as number;
+
+    if (bars.length < Math.max(MIN_BARS, averagePeriod + 2)) {
       return {
         score: 0,
         confidence: 0.1,
-        reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`,
+        reason: `Insufficient data: need ${Math.max(MIN_BARS, averagePeriod + 2)} bars, have ${bars.length}.`,
         signalClass: 'neutral',
       };
     }
@@ -57,7 +120,7 @@ export class VolumeConfirmationDirective implements IDirective {
     // Now: the last FINISHED bar, against the 20 finished bars before it.
     const volumes = bars.map((b) => b.volume);
     const currentVolume = volumes[volumes.length - 2];
-    const avgVolume = sma(volumes.slice(0, -2), VOLUME_MA_PERIOD);
+    const avgVolume = sma(volumes.slice(0, -2), averagePeriod);
 
     if (avgVolume <= 0) {
       return {
@@ -73,13 +136,13 @@ export class VolumeConfirmationDirective implements IDirective {
     let score: number;
     let reason: string;
 
-    if (ratio >= 2.0) {
+    if (ratio >= surgeRatio) {
       // Very high volume — strong confirmation
-      score = 85 + Math.min(15, (ratio - 2) * 10);
+      score = 85 + Math.min(15, (ratio - surgeRatio) * 10);
       reason = `Strong volume surge: ${ratio.toFixed(2)}x average (${currentVolume.toLocaleString()} vs avg ${Math.round(avgVolume).toLocaleString()}).`;
-    } else if (ratio >= 1.3) {
+    } else if (ratio >= elevatedRatio) {
       // Above-average volume — good confirmation
-      score = 55 + (ratio - 1.3) * 43;
+      score = 55 + (ratio - elevatedRatio) * 43;
       reason = `Above-average volume: ${ratio.toFixed(2)}x (${currentVolume.toLocaleString()} vs avg ${Math.round(avgVolume).toLocaleString()}).`;
     } else if (ratio >= 0.8) {
       // Normal volume — neutral

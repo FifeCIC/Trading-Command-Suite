@@ -24,10 +24,55 @@ import {
   IDirective,
   MarketBar,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const PROXIMITY_THRESHOLD = 0.003; // 0.3% — price within this % of level = "active"
-const BOUNCE_THRESHOLD = 0.001; // 0.1% — min move away from level to count as bounce
+// ⚠️ `BOUNCE_THRESHOLD = 0.001` was DELETED 2026-11-01 (#1165): the bounce logic below never reads it,
+// so it governed nothing and its parameter could not move any fixture. The bounce test that DOES exist
+// is momentum-based (see the bounce-detection block). When a distance-based rule is added it returns as
+// a real parameter, with a fixture that proves it.
+// ⚠️ PROMOTED from a method-local to module scope 2026-11-01 (#1165). It was declared inside
+// mergeNearbyLevels() and was therefore invisible to every operator and to the audit; a merge
+// distance that decides how many levels exist is configuration, not an implementation detail.
+const MERGE_THRESHOLD = 0.001; // 0.1% — levels closer than this merge into one zone
 const CONFLUENCE_BONUS = 1.3; // 30% bonus when 2+ levels at same price zone
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'proximityThreshold',
+    label: 'Level proximity',
+    type: 'number',
+    default: PROXIMITY_THRESHOLD,
+    min: 0.001,
+    max: 0.05,
+    step: 0.001,
+    unit: 'fraction of price',
+    chart: 'proximity',
+    why: 'Measured 2026-11-01 (#1166 method): micro levels are by definition tight, so a percentage calibrated on a daily chart is far too wide intraday.',
+    source: 'micro-sr-levels.directive.ts:PROXIMITY_THRESHOLD',
+  },
+  {
+    key: 'mergeThreshold',
+    label: 'Level merge distance',
+    type: 'number',
+    default: MERGE_THRESHOLD,
+    min: 0.001,
+    max: 0.05,
+    step: 0.001,
+    unit: 'fraction of price',
+    chart: 'proximity',
+    why: 'Measured 2026-11-01: nearby levels are merged into one zone, so this controls how many levels the directive reports and how strong each looks.',
+    source: 'micro-sr-levels.directive.ts:MERGE_THRESHOLD',
+  },
+];
 
 @Injectable()
 export class MicroSrLevelsDirective implements IDirective {
@@ -42,9 +87,14 @@ export class MicroSrLevelsDirective implements IDirective {
   readonly minBars = { '1d': 2, '1h': 10, '15m': 10, '5m': 5 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const proximityThreshold = values.proximityThreshold as number;
+    const mergeThreshold = values.mergeThreshold as number;
+
     const { bars, dayBars, hourBars, min15Bars } = input;
 
     if (!bars || bars.length < 5) {
@@ -186,7 +236,7 @@ export class MicroSrLevelsDirective implements IDirective {
     }
 
     // ── Deduplicate & merge nearby levels (within 0.1%) ──
-    const merged = this.mergeNearbyLevels(levels, currentPrice);
+    const merged = this.mergeNearbyLevels(levels, currentPrice, mergeThreshold);
 
     // ── Score proximity ─────────────────────────────────
     const nearestSupport = merged
@@ -204,7 +254,7 @@ export class MicroSrLevelsDirective implements IDirective {
     if (nearestSupport) {
       const distPct =
         (currentPrice - nearestSupport.price) / nearestSupport.price;
-      const proxScore = this.proximityScore(Math.abs(distPct));
+      const proxScore = this.proximityScore(Math.abs(distPct), proximityThreshold);
       const confluenceMultiplier =
         nearestSupport.confluenceCount >= 2 ? CONFLUENCE_BONUS : 1.0;
 
@@ -215,14 +265,14 @@ export class MicroSrLevelsDirective implements IDirective {
           ? recentBars[recentBars.length - 1].close - bars[bars.length - 4].close
           : 0;
 
-      if (Math.abs(distPct) <= PROXIMITY_THRESHOLD && momentum > 0) {
+      if (Math.abs(distPct) <= proximityThreshold && momentum > 0) {
         // Bounce off support = bullish
         score += Math.round(proxScore * confluenceMultiplier);
         signalClass = 'bullish';
         reasons.push(
           `Near support ${nearestSupport.labels.join(' / ')} (${(distPct * 100).toFixed(2)}%) with bullish momentum`,
         );
-      } else if (Math.abs(distPct) <= PROXIMITY_THRESHOLD * 2) {
+      } else if (Math.abs(distPct) <= proximityThreshold * 2) {
         // Near support but no momentum yet — neutral-positive
         score += Math.round(proxScore * 0.5 * confluenceMultiplier);
         reasons.push(
@@ -235,18 +285,18 @@ export class MicroSrLevelsDirective implements IDirective {
     if (nearestResistance) {
       const distPct =
         (nearestResistance.price - currentPrice) / currentPrice;
-      const proxScore = this.proximityScore(Math.abs(distPct));
+      const proxScore = this.proximityScore(Math.abs(distPct), proximityThreshold);
       const confluenceMultiplier =
         nearestResistance.confluenceCount >= 2 ? CONFLUENCE_BONUS : 1.0;
 
-      if (Math.abs(distPct) <= PROXIMITY_THRESHOLD && signalClass !== 'bullish') {
+      if (Math.abs(distPct) <= proximityThreshold && signalClass !== 'bullish') {
         // Near resistance = bearish (unless already bouncing off support)
         score += Math.round(proxScore * confluenceMultiplier);
         if (signalClass === 'neutral') signalClass = 'bearish';
         reasons.push(
           `Near resistance ${nearestResistance.labels.join(' / ')} (${(distPct * 100).toFixed(2)}%)`,
         );
-      } else if (Math.abs(distPct) <= PROXIMITY_THRESHOLD * 2) {
+      } else if (Math.abs(distPct) <= proximityThreshold * 2) {
         reasons.push(
           `Approaching resistance ${nearestResistance.labels.join(' / ')} (${(distPct * 100).toFixed(2)}%)`,
         );
@@ -258,7 +308,7 @@ export class MicroSrLevelsDirective implements IDirective {
     if (confluentZones.length > 0) {
       const zone = confluentZones[0];
       const distPct = Math.abs(currentPrice - zone.price) / zone.price;
-      if (distPct <= PROXIMITY_THRESHOLD * 3) {
+      if (distPct <= proximityThreshold * 3) {
         reasons.push(
           `Confluence zone at ${zone.price.toFixed(1)} (${zone.confluenceCount} levels)`,
         );
@@ -339,11 +389,11 @@ export class MicroSrLevelsDirective implements IDirective {
   }
 
   /**
-   * Proximity score: 100 when exactly at level, decaying to 0 at PROXIMITY_THRESHOLD.
+   * Proximity score: 100 when exactly at level, decaying to 0 at proximityThreshold.
    */
-  private proximityScore(distPct: number): number {
-    if (distPct >= PROXIMITY_THRESHOLD) return 0;
-    return Math.round(100 * (1 - distPct / PROXIMITY_THRESHOLD));
+  private proximityScore(distPct: number, proximityThreshold: number): number {
+    if (distPct >= proximityThreshold) return 0;
+    return Math.round(100 * (1 - distPct / proximityThreshold));
   }
 
   /**
@@ -366,15 +416,15 @@ export class MicroSrLevelsDirective implements IDirective {
   private mergeNearbyLevels(
     levels: SrLevel[],
     currentPrice: number,
+    mergeThreshold: number,
   ): MergedLevel[] {
-    const MERGE_THRESHOLD = 0.001; // 0.1%
     const sorted = [...levels].sort((a, b) => a.price - b.price);
     const merged: MergedLevel[] = [];
 
     for (const level of sorted) {
       const matched = merged.find(
         (m) =>
-          Math.abs(m.price - level.price) / currentPrice < MERGE_THRESHOLD,
+          Math.abs(m.price - level.price) / currentPrice < mergeThreshold,
       );
       if (matched) {
         matched.labels.push(level.label);

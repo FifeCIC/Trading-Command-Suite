@@ -9,9 +9,34 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { cci } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const CCI_PERIOD = 20;
 const MIN_BARS = CCI_PERIOD + 3;
+
+/**
+ * Tunable knobs (#1165). The default IS the constant above — BASELINE proves the equality.
+ *
+ * ⚠️ The period is the highest-leverage knob on any oscillator, and it is measurable: CCI-20 and
+ * CCI-10 disagree on the `noisy-range` fixture because the two windows normalise by different
+ * mean-deviations, so the same bar reads -120 on one and -60 on the other — one clears the deep
+ * oversold tier, the other does not.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'cciPeriod',
+    label: 'CCI period',
+    type: 'number',
+    default: CCI_PERIOD,
+    min: 5,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): the fixed 20 is a 20-bar normalisation, so on a 1h chart a 10-bar move barely registers and on a daily chart 20 days is a month. The same bar scores in different tiers at period 10 vs 20 on the noisy-range fixture.',
+    source: 'cci.directive.ts:13 CCI_PERIOD',
+  },
+];
 
 function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
   const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
@@ -31,15 +56,19 @@ export class CciDirective implements IDirective {
   readonly minBars = { '1d': 23 };
   readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const cciPeriod = values.cciPeriod as number;
     const highs = input.bars.map(b => b.high);
     const lows = input.bars.map(b => b.low);
     const closes = input.bars.map(b => b.close);
-    if (closes.length < MIN_BARS) {
-      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.` };
+    const minBars = Math.max(MIN_BARS, cciPeriod + 3);
+    if (closes.length < minBars) {
+      return { score: 0, confidence: 0.1, reason: `Insufficient data: need ${minBars} bars, have ${closes.length}.` };
     }
-    const cciValues = cci(highs, lows, closes, CCI_PERIOD);
+    const cciValues = cci(highs, lows, closes, cciPeriod);
     if (cciValues.length < 2) {
       return { score: 0, confidence: 0.1, reason: 'Not enough CCI values.' };
     }

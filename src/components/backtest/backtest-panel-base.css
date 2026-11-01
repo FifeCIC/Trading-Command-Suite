@@ -355,3 +355,96 @@
   padding-left: 0.5rem;
   color: var(--ink-soft);
 }
+
+/* ── RSI divergence preview panel (2026-11-01) ────────────────────────────────────────────────────
+   The chart is the product; the controls exist to drive it. So the layout gives the chart the wide
+   column and keeps the settings in a narrow rail that does not reflow when a label wraps (a control
+   that moves under the pointer while dragging is its own defect). */
+.bt-div-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  margin: 0.5rem 0;
+}
+@media (max-width: 900px) {
+  .bt-div-panel { grid-template-columns: minmax(0, 1fr); }
+}
+
+.bt-div-controls { display: flex; flex-direction: column; gap: 0.5rem; }
+.bt-div-controls label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.74rem; color: var(--ink-soft); }
+.bt-div-controls input[type="number"] { width: 100%; }
+.bt-div-label { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }
+
+/* The badge is the honesty marker: what the RUN reads vs what only this chart reads. */
+.bt-div-badge {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.bt-div-badge.is-honoured { color: var(--color-profit); border-color: var(--color-profit); }
+.bt-div-badge.is-preview { color: var(--text-dim); border-style: dashed; }
+
+.bt-div-toggles { border: 1px solid var(--line); border-radius: 4px; padding: 0.35rem 0.5rem; margin: 0; }
+.bt-div-toggles legend { font-size: 0.66rem; color: var(--ink-soft); padding: 0 0.25rem; }
+.bt-div-toggle { flex-direction: row !important; align-items: center; gap: 0.35rem !important; }
+
+.bt-div-view { min-width: 0; }
+.bt-div-chart-canvas { width: 100%; }
+.bt-div-legend { margin: 0.35rem 0 0; line-height: 1.6; }
+.bt-div-key { font-weight: 600; }
+
+/* ── Directive accordions — step 6, "Directive overrides" (2026-11-01) ────────────────────────────
+   One row per DIRECTIVE, not per setting. The row is a button so the whole line is the target, which
+   matters because the label carries three right-aligned facts and aiming at a caret alone would be a
+   needle. Collapsed by default except what the reader opens: a protocol can carry 15 directives and
+   expanding them all would rebuild the wall of text this replaced. */
+.bt-directive-list { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.bt-directive-item {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+}
+.bt-directive-item.is-open { border-color: var(--accent); }
+
+.bt-directive-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+.bt-directive-head:hover { background: var(--bg-elev); }
+.bt-directive-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.bt-directive-caret { color: var(--ink-soft); width: 0.7rem; flex: 0 0 auto; }
+.bt-directive-name { font-weight: 600; }
+.bt-directive-group { color: var(--ink-soft); font-size: 0.7rem; }
+/* The right-hand facts sit at the far edge so the names form a column the eye can run down. */
+.bt-directive-max { margin-left: auto; color: var(--ink-soft); font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+.bt-directive-tag {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px dashed var(--line);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.bt-directive-tag.is-live { border-style: solid; border-color: var(--color-profit); color: var(--color-profit); }
+
+.bt-directive-body { padding: 0 0.6rem 0.6rem; border-top: 1px solid var(--line); }
+.bt-directive-inert { margin: 0.35rem 0 0; font-size: 0.7rem; color: var(--ink-soft); }

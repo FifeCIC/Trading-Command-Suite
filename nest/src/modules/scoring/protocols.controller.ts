@@ -8,11 +8,19 @@
  */
 
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
 import { DirectiveConfigService } from './directive-config.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
+import { ProtocolDbService } from './protocol-db.service';
+import {
+  ParamValidationError,
+  defaultParams,
+  resolveParams,
+  validateSupplied,
+} from '../directives/parameters';
 import { resolveDirectiveCatalog } from '../strategies/strategies.controller';
 import {
   resolveAdaptiveTarget,
@@ -55,6 +63,7 @@ export class ProtocolsController {
     private readonly directivesService: DirectivesService,
     private readonly configService: DirectiveConfigService,
     private readonly schedulerService: ScoringSchedulerService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   /** Record a protocol run event — called by ScoringScheduler */
@@ -483,6 +492,45 @@ export class ProtocolsController {
     try {
       const existing = await (this.prisma as any).protocol.findUnique({ where: { slug: body.slug } });
 
+      // ── DECISION (2026-11-01, directives area) ──
+      // WHAT:      the install endpoint REFUSES a `directiveIds` entry no registered class answers to.
+      // WHY:       `runAll` skips an unresolvable id, so the protocol scores one directive fewer than
+      //            its own configuration claims — plausible numbers, no error. The seed path has been
+      //            guarded since #1169; this path could create exactly the entry that guard prevents.
+      // INSTEAD OF: warning and installing anyway (which leaves the silent hole in place).
+      // REVERSE BY: deleting this block and accepting that a protocol may name a phantom directive.
+      // REGISTER:  docs/SETTLED-DECISIONS.md row 120
+      // GUARD:     nest/src/modules/scoring/protocols-seed-integrity.spec.ts (seed path) —
+      //            the install path is proven live: the request returns success:false and nothing is written.
+      //
+      // ── UNKNOWN-DIRECTIVE GUARD (#1169/#1165, added 2026-11-01) ──────────────────────────────
+      // Same shape as the direction guard below, and for the same reason: a protocol composition
+      // that CANNOT resolve is a lie that produces plausible numbers. `runAll` skips an id it cannot
+      // find, so a protocol naming a deleted or misspelled directive scores one fewer directive than
+      // its own configuration says it does, with no error anywhere.
+      //
+      // The SEED path has been guarded since #1169 (`validate-directive-id-references.cjs`, in
+      // prebuild) — but the INSTALL path was not, so an API call could create exactly the entry the
+      // seed validator exists to prevent. Measured 2026-11-01: this endpoint created entries for ANY
+      // string, including ones no class answers to.
+      if (body.groups && body.groups.length > 0) {
+        const unknown: string[] = [];
+        for (const g of body.groups) {
+          for (const directiveId of g.directiveIds ?? []) {
+            if (!this.directivesService.get(directiveId)) unknown.push(directiveId);
+          }
+        }
+        if (unknown.length > 0) {
+          return {
+            success: false,
+            error:
+              `Unknown directive(s): ${[...new Set(unknown)].join(', ')} — no registered class answers to ` +
+              `these ids, so they would install as entries that can never score. Register the class or ` +
+              `remove the id.`,
+          };
+        }
+      }
+
       // Direction-contract guard (#620): reject composition that would be
       // silently excluded at scoring time. A `bearish` directive must not be
       // added to a LONG_ONLY protocol (and a `bullish` one to SHORT_ONLY).
@@ -564,14 +612,60 @@ export class ProtocolsController {
             },
           });
 
+          // ⚠️ THIS DELETE IS WHY PARAMS AND NAMED INSTANCES MUST BE CARRIED FORWARD (#1165, measured
+          // 2026-11-01). Re-saving a protocol from the UI deletes every entry in the group and
+          // re-creates it, so a tuned `params` value — and any second configuration of a directive —
+          // would be silently destroyed by an unrelated edit to the group's composition. Both are
+          // read BEFORE the delete and re-applied afterwards.
+          const priorRows = await (this.prisma as any).protocolDirectiveEntry.findMany({
+            where: { groupId: dg.id },
+            select: { directiveId: true, instanceLabel: true, params: true, maxScore: true },
+          });
+          const prior = new Map<string, { params: any; maxScore: number }>();
+          for (const row of priorRows) {
+            if (row.params && typeof row.params === 'object') {
+              prior.set(`${row.directiveId}\u0000${row.instanceLabel ?? ''}`, { params: row.params, maxScore: row.maxScore });
+            }
+          }
+
           // Delete old directive entries, re-insert
           await (this.prisma as any).protocolDirectiveEntry.deleteMany({ where: { groupId: dg.id } });
           for (const directiveId of g.directiveIds) {
+            const carried = prior.get(`${directiveId}\u0000`);
             await (this.prisma as any).protocolDirectiveEntry.create({
               data: {
                 groupId: dg.id,
                 directiveId,
+                instanceLabel: '',
                 maxScore: g.directiveMaxScores?.[directiveId] ?? 100,
+                ...(carried ? { params: carried.params } : {}),
+              },
+            });
+          }
+
+          // NAMED instances (#1165). The body may declare them, and any that existed before are
+          // re-created when their directive is still in the group — a group edit must not silently
+          // delete a comparison the owner configured unless they removed the directive itself.
+          const namedFromBody = new Map<string, any>();
+          for (const inst of (g as any).directiveInstances ?? []) {
+            if (inst?.directiveId && inst.label) {
+              namedFromBody.set(`${inst.directiveId}\u0000${inst.label}`, inst);
+            }
+          }
+          const namedFromPrior = priorRows
+            .filter((r: any) => (r.instanceLabel ?? '') !== '' && g.directiveIds.includes(r.directiveId))
+            .map((r: any) => `${r.directiveId}\u0000${r.instanceLabel}`);
+          for (const key of new Set<string>([...namedFromBody.keys(), ...namedFromPrior])) {
+            const [directiveId, instanceLabel] = key.split('\u0000');
+            const carried = prior.get(key);
+            const declared = namedFromBody.get(key);
+            await (this.prisma as any).protocolDirectiveEntry.create({
+              data: {
+                groupId: dg.id,
+                directiveId,
+                instanceLabel,
+                maxScore: declared?.maxScore ?? carried?.maxScore ?? g.directiveMaxScores?.[directiveId] ?? 100,
+                ...(declared?.params ? { params: declared.params } : carried ? { params: carried.params } : {}),
               },
             });
           }
@@ -679,6 +773,19 @@ export class ProtocolsController {
             id: de.directiveId,
             name: impl?.name ?? de.directiveId,
             maxScore: impl?.maxScore ?? de.maxScore ?? 100,
+            // #1165 — the ENTRY's own override, so the surface can show what will actually run
+            // rather than the class default. `null` = "declared defaults", the pre-#1165 behaviour.
+            maxScoreOverride: de.maxScore ?? 100,
+            params: de.params ?? null,
+            // The DECLARED spec for this directive, so an editor can render one control per knob
+            // without a bespoke form per directive — and without an N+1 fetch per row. `[]` means the
+            // directive declares nothing to tune, which a surface must render as "nothing to tune",
+            // never as an empty form.
+            paramSpec: this.directivesService.getParameterSpecs(de.directiveId) ?? [],
+            // Which configured instance this row is. `''` is the primary; a named instance is a
+            // second configuration of the same directive, AVERAGED with the primary at scoring time.
+            instanceLabel: de.instanceLabel ?? '',
+            entryId: de.id,
             description: impl?.description ?? '',
             active: de.active ?? true,
           };
@@ -708,20 +815,170 @@ export class ProtocolsController {
   async removeProtocolDirective(
     @Param('slug') slug: string,
     @Param('directiveId') directiveId: string,
+    @Query('instanceLabel') instanceLabel?: string,
   ) {
     if (!this.prisma.isAvailable) return { success: false, error: 'Database not available' };
     try {
       const protocol = await (this.prisma as any).protocol.findUnique({ where: { slug } });
       if (!protocol) return { success: false, error: `Protocol "${slug}" not found` };
+      // #1165 — removing a NAMED instance must not remove the directive. Absent ⇒ the primary
+      // instance, which is every entry that existed before instances were possible.
       const entry = await (this.prisma as any).protocolDirectiveEntry.findFirst({
-        where: { directiveId, group: { protocolId: protocol.id } },
+        where: { directiveId, instanceLabel: instanceLabel ?? '', group: { protocolId: protocol.id } },
       });
-      if (!entry) return { success: false, error: `Directive "${directiveId}" not linked to "${slug}"` };
+      if (!entry) {
+        return {
+          success: false,
+          error:
+            instanceLabel === undefined
+              ? `Directive "${directiveId}" not linked to "${slug}"`
+              : `Directive "${directiveId}" has no instance "${instanceLabel}" in "${slug}"`,
+        };
+      }
       await (this.prisma as any).protocolDirectiveEntry.delete({ where: { id: entry.id } });
-      return { success: true, directiveId, protocolSlug: slug, message: 'Directive removed from protocol' };
+      // Group membership changed — the scorer's cached config must not keep serving the old list.
+      this.protocolDb.clearCache();
+      return { success: true, directiveId, instanceLabel: instanceLabel ?? '', protocolSlug: slug, message: 'Directive removed from protocol' };
     } catch (err) {
       this.logger.error(`Failed to remove directive ${directiveId} from ${slug}: ${String(err)}`);
       return { success: false, error: String(err) };
+    }
+  }
+
+  /**
+   * POST /api/scoring/protocols/:slug/directives/:directiveId/instances
+   * Add a NAMED instance of a directive already in the protocol (#1165).
+   *
+   * This is the only way a second configuration comes into existence: the constraint on
+   * `(groupId, directiveId, instanceLabel)` permits it, and the scorer AVERAGES the instances into one
+   * directive slot. Adding one therefore changes WHICH view of the directive the protocol reads and
+   * never its configured capacity — see `INV-STABLE-DENOMINATOR`.
+   */
+  @Post(':slug/directives/:directiveId/instances')
+  async addProtocolDirectiveInstance(
+    @Param('slug') slug: string,
+    @Param('directiveId') directiveId: string,
+    @Body() body: { instanceLabel?: string; params?: Record<string, number | boolean>; maxScore?: number },
+  ) {
+    if (!this.prisma.isAvailable) return { success: false, error: 'Database not available' };
+
+    const instanceLabel = String(body.instanceLabel ?? '').trim();
+    // `''` is the PRIMARY instance, which already exists for every linked directive. An empty label
+    // here would be an attempt to create a second primary, which the constraint refuses with a raw
+    // 1062 — so refuse it first, in words.
+    if (!instanceLabel) {
+      return {
+        success: false,
+        error: 'instanceLabel is required — the empty label is the PRIMARY instance, which already exists. Provide a name such as "fast" or "period-9".',
+      };
+    }
+    if (instanceLabel.length > 60) {
+      return { success: false, error: 'instanceLabel must be 60 characters or fewer.' };
+    }
+    if (!this.directivesService.get(directiveId)) {
+      return { success: false, error: `Unknown directive "${directiveId}" — no registered class answers to that id.` };
+    }
+
+    try {
+      const protocol = await (this.prisma as any).protocol.findUnique({
+        where: { slug },
+        include: { directiveGroups: { include: { directives: { select: { directiveId: true, maxScore: true } } } } },
+      });
+      if (!protocol) return { success: false, error: `Protocol "${slug}" not found` };
+
+      const primary = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+        where: { directiveId, instanceLabel: '', group: { protocolId: protocol.id } },
+        include: { group: true },
+      });
+      if (!primary) {
+        return {
+          success: false,
+          error: `Directive "${directiveId}" is not in protocol "${slug}" — add the directive first, then a second instance of it.`,
+        };
+      }
+
+      const specs = this.directivesService.getParameterSpecs(directiveId) ?? [];
+      if (body.params) {
+        if (!specs.length) {
+          return { success: false, error: `Directive "${directiveId}" declares no tunable parameters — an instance of it would be an exact duplicate of the primary.` };
+        }
+        validateSupplied(directiveId, specs, body.params);
+      }
+
+      // ── DECISION (2026-11-01, primary — #1165) ──
+      // WHAT:      an instance that is CONFIGURED IDENTICALLY to the primary is REFUSED.
+      // WHY:       Instances are averaged, so a duplicate is not a harmless no-op — it pulls the mean
+      //            toward the primary's own value, i.e. it silently HALVES that directive's weight. A
+      //            control that looks like "add a comparison" and behaves as "reduce this directive's
+      //            influence" is the worst kind of knob. MEASURED the same day: the first version of
+      //            this endpoint accepted `{"instanceLabel":"dup"}` with no params on a directive with
+      //            no tunables, which produced exactly that.
+      // INSTEAD OF: allowing it and relying on the averaging being "obviously" a no-op. It is not.
+      // REVERSE BY: deleting this block — a duplicate instance then halves the directive's weight.
+      // REGISTER:  docs/SETTLED-DECISIONS.md row 122
+      // GUARD:     nest/src/modules/directives/directive-instances.spec.ts (identical instances
+      //            average to the same score) — the runtime refusal is proven live.
+      // `{}` and `null` behave identically (both = "declared defaults"), so they must compare equal.
+      // Without this, a caller sending `params: {}` slips past the duplicate check while producing an
+      // instance identical to the primary — the exact silent weight-halving this refuses.
+      const norm = (p: any) => (p && typeof p === 'object' && Object.keys(p).length > 0 ? p : null);
+      const primaryParams = norm(primary.params);
+      const requestedParams = norm(body.params);
+      const sameParams = JSON.stringify(primaryParams) === JSON.stringify(requestedParams);
+      const sameMax = (body.maxScore ?? primary.maxScore) === primary.maxScore;
+      if (sameParams && sameMax) {
+        return {
+          success: false,
+          error:
+            `An instance of "${directiveId}" configured identically to the primary would be an exact ` +
+            `duplicate — and because instances are AVERAGED, it would silently halve that directive's ` +
+            `weight. Supply different params` +
+            (specs.length ? ` (${specs.map((s) => s.key).join(', ')})` : '') +
+            ` or a different maxScore.`,
+        };
+      }
+
+      // Refuse a duplicate LABEL in words, before the database does it in a stack trace. The unique
+      // key on (groupId, directiveId, instanceLabel) is the real guard; this only makes the refusal
+      // readable. Measured 2026-11-01: without this, a repeated label returned the raw
+      // `PrismaClientKnownRequestError … Unique constraint failed` text to the caller.
+      const existing = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+        where: { directiveId, instanceLabel, groupId: primary.groupId },
+        select: { id: true },
+      });
+      if (existing) {
+        return {
+          success: false,
+          error: `Directive "${directiveId}" already has an instance "${instanceLabel}" in this protocol. Choose another label or edit the existing instance.`,
+        };
+      }
+
+      const created = await (this.prisma as any).protocolDirectiveEntry.create({
+        data: {
+          groupId: primary.groupId,
+          directiveId,
+          instanceLabel,
+          maxScore: body.maxScore ?? primary.maxScore,
+          active: true,
+          ...(body.params ? { params: body.params } : {}),
+        },
+      });
+
+      this.protocolDb.clearCache();
+
+      return {
+        success: true,
+        directiveId,
+        instanceLabel,
+        entryId: created.id,
+        protocolSlug: slug,
+        paramsUsed: body.params ?? defaultParams(specs),
+        note: 'Instances of one directive are AVERAGED into a single directive slot when scoring — adding one changes the view, never the protocol\u2019s configured capacity.',
+      };
+    } catch (err) {
+      const message = err instanceof ParamValidationError ? err.message : String(err);
+      this.logger.warn(`Refused directive instance for ${slug}/${directiveId}: ${message}`);
+      return { success: false, error: message };
     }
   }
 
@@ -729,11 +986,24 @@ export class ProtocolsController {
   async updateProtocolDirective(
     @Param('slug') slug: string,
     @Param('directiveId') directiveId: string,
-    @Body() body: { active?: boolean; maxScore?: number },
+    @Body() body: {
+      active?: boolean;
+      maxScore?: number;
+      params?: Record<string, number | boolean> | null;
+      /**
+       * Which configured instance to address (#1165). Absent ⇒ `''`, the primary instance, which is
+       * every entry that existed before instances were possible — so an unchanged caller addresses
+       * exactly what it addressed before. A named instance is a second configuration of the same
+       * directive.
+       */
+      instanceLabel?: string;
+    },
   ) {
     if (!this.prisma.isAvailable) {
       return { success: false, error: 'Database not available' };
     }
+
+    const instanceLabel = body.instanceLabel ?? '';
 
     try {
       const protocol = await (this.prisma as any).protocol.findUnique({
@@ -744,10 +1014,13 @@ export class ProtocolsController {
         return { success: false, error: `Protocol "${slug}" not found` };
       }
 
-      // Find the directive entry across all groups of this protocol
+      // Find the CONFIGURED INSTANCE across all groups of this protocol (#1165).
+      // A directive may hold several instances, so the selector must name WHICH one — otherwise this
+      // would silently edit the first match, which is the same class of defect as the id collapse.
       const entry = await (this.prisma as any).protocolDirectiveEntry.findFirst({
         where: {
           directiveId,
+          instanceLabel,
           group: { protocolId: protocol.id },
         },
         include: { group: true },
@@ -755,9 +1028,17 @@ export class ProtocolsController {
 
       if (!entry) {
         // Directive not linked to this protocol — return an informative error
+        const others = await (this.prisma as any).protocolDirectiveEntry.findMany({
+          where: { directiveId, group: { protocolId: protocol.id } },
+          select: { instanceLabel: true },
+        });
         return {
           success: false,
-          error: `Directive "${directiveId}" is not linked to protocol "${slug}". It may need to be added via the protocol upsert endpoint.`,
+          error:
+            others.length > 0
+              ? `Directive "${directiveId}" has no instance "${instanceLabel}" in protocol "${slug}" — ` +
+                `existing instance(s): ${others.map((o: any) => o.instanceLabel || '(primary)').join(', ')}.`
+              : `Directive "${directiveId}" is not linked to protocol "${slug}". It may need to be added via the protocol upsert endpoint.`,
         };
       }
 
@@ -768,22 +1049,63 @@ export class ProtocolsController {
       if (body.maxScore !== undefined) {
         updateData.maxScore = body.maxScore;
       }
+      // Declared once, used by both the write validation and the resolution echo below.
+      const specs = this.directivesService.getParameterSpecs(directiveId) ?? [];
+      if (body.params !== undefined) {
+        // #1165 — VALIDATE AT THE WRITE BOUNDARY, THROW, AND REFUSE. An unknown key or an
+        // out-of-range value is not clamped here: silently storing a different number than the
+        // caller asked for is the surprise `validateSupplied()` exists to prevent. The read path
+        // (`resolveParams()`) clamps instead, because scoring must not die on stale data.
+        if (!specs.length) {
+          return {
+            success: false,
+            error: `Directive "${directiveId}" declares no tunable parameters — nothing to store.`,
+          };
+        }
+        if (body.params === null) {
+          // NULL means "use the declared defaults", which is exactly the pre-#1165 behaviour.
+          //
+          // ⚠️ `Prisma.DbNull`, NOT `null`. Prisma distinguishes an SQL NULL from a JSON `null`
+          // document on a Json column, and a plain `null` writes the LATTER — measured 2026-11-01:
+          // after a reset, `JSON_TYPE(params)` read `NULL` while `params IS NULL` was false. Both
+          // read as unset to the scorer, so behaviour was right, but a column holding two spellings
+          // of "nothing" makes `WHERE params IS NULL` quietly wrong for the next reader.
+          updateData.params = Prisma.DbNull;
+        } else {
+          validateSupplied(directiveId, specs, body.params);
+          updateData.params = body.params;
+        }
+      }
 
       await (this.prisma as any).protocolDirectiveEntry.update({
         where: { id: entry.id },
         data: updateData,
       });
 
+      // ⚠️ The scorer reads groups from a cache in ProtocolDbService. Without this a params (or
+      // group) edit is served the OLD configuration until the cache expires — the knob looks inert.
+      this.protocolDb.clearCache();
+
       return {
         success: true,
         directiveId,
+        instanceLabel,
         protocolSlug: slug,
         active: body.active !== undefined ? body.active : entry.active,
         maxScore: body.maxScore !== undefined ? body.maxScore : entry.maxScore,
+        // Echo the RESOLVED values so a caller sees what will actually run, not what was sent.
+        paramsUsed:
+          body.params === undefined
+            ? (entry.params ?? null)
+            : body.params === null
+              ? defaultParams(specs)
+              : resolveParams(directiveId, specs, body.params).values,
       };
     } catch (err) {
-      this.logger.error(`Failed to update directive ${directiveId} for protocol ${slug}: ${String(err)}`);
-      return { success: false, error: String(err) };
+      // A ParamValidationError carries every problem, not just the first — surface it as a refusal.
+      const message = err instanceof ParamValidationError ? err.message : String(err);
+      this.logger.warn(`Refused directive params for ${slug}/${directiveId}: ${message}`);
+      return { success: false, error: message };
     }
   }
 }

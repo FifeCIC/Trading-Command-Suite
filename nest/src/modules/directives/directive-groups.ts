@@ -39,8 +39,41 @@ export interface DirectiveGroup {
   isRiskGate: boolean;
   minMultiplier: number;
   maxMultiplier: number;
+  /**
+   * The DISTINCT directive ids in this group — one entry per directive, never a repeat (#1165).
+   *
+   * ⚠️ A group may hold SEVERAL CONFIGURED INSTANCES of one directive (`directiveInstances`), and
+   * this list must still name it ONCE. The scorer accumulates `capacityMax += maxScore` per result in
+   * this list, so a repeat here inflates the protocol's configured capacity and therefore shifts every
+   * percentage — the `INV-STABLE-DENOMINATOR` failure, arrived at from the config side.
+   */
   directiveIds: string[];
   directiveMaxScores?: Record<string, number>;
+  /**
+   * Every CONFIGURED INSTANCE of every directive in the group (#1165).
+   *
+   * One item per `protocol_directive_entry` row. A directive with one entry appears once with
+   * `label: ''`; a directive with two entries appears twice. Absent ⇒ the pre-#1165 behaviour exactly
+   * (each directive runs once, with its declared defaults).
+   *
+   * ⚠️ Instances are AVERAGED into one directive slot by `DirectivesService.runAll`, not summed. That
+   * is the aggregation decision (register row 122): adding a comparison must not change the protocol's
+   * scale, and it must not be able to inflate a composite by adding instances of a directional
+   * directive. The previous keying — `directiveParams`, a map by directive id — could not express a
+   * second instance at all.
+   */
+  directiveInstances?: DirectiveInstance[];
+}
+
+/** One configured instance of a directive: the unit the scorer can address and report. */
+export interface DirectiveInstance {
+  /** `protocol_directive_entry.id` — stable identity of the CONFIGURED instance. */
+  entryId: string;
+  directiveId: string;
+  /** `''` is the primary instance; a named instance is a second configuration of the same directive. */
+  label: string;
+  /** Absent or null ⇒ the directive's declared defaults, which is the pre-#1165 behaviour exactly. */
+  params?: Record<string, number | boolean> | null;
 }
 
 export const DIRECTIVE_GROUPS: DirectiveGroup[] = [

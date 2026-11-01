@@ -23,10 +23,53 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { rsi, sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const RSI_PERIOD = 14;
 const VOL_PERIOD = 20;
 const MIN_BARS = Math.max(RSI_PERIOD, VOL_PERIOD) + 5;
+
+/**
+ * Tunable knobs, SHARED by both classes in this file (#1165). Defaults ARE the constants above —
+ * BASELINE proves the equality for both.
+ *
+ * ⚠️ These two knobs are defined ONCE and read by `VwapConfluenceSimpleDirective` and
+ * `VwapConfluenceBandsDirective`, because they always carried the same constants and a divergence
+ * between the two would be a bug nobody would notice — the two variants differ in how they SCORE a
+ * confluence, not in what they measure. Declaring the spec once makes that explicit.
+ *
+ * Measured 2026-11-01: the RSI period is one of the three confluence conditions, so a 7-period RSI
+ * satisfies it at different bars from a 14-period one; the volume period sets the "is this volume
+ * significant" baseline the confluence is judged against.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): RSI is one of the confluence conditions, so its period decides on which bars that condition is satisfied — a shorter period crosses the level sooner and more often.',
+    source: 'vwap-confluence.directive.ts:27 RSI_PERIOD',
+  },
+  {
+    key: 'volPeriod',
+    label: 'Volume baseline period',
+    type: 'number',
+    default: VOL_PERIOD,
+    min: 3,
+    max: 80,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01: "volume above its baseline" is the second confluence condition, and this period IS the baseline. A 20-bar baseline on a 15m chart is five hours; on a daily chart it is a month.',
+    source: 'vwap-confluence.directive.ts:28 VOL_PERIOD',
+  },
+];
 
 /** Cumulative VWAP from highs, lows, closes, volumes */
 function computeVwap(highs: number[], lows: number[], closes: number[], volumes: number[]): number {
@@ -68,15 +111,21 @@ export class VwapConfluenceSimpleDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const volPeriod = values.volPeriod as number;
+
     const closes = input.bars.map((b) => b.close);
     const highs = input.bars.map((b) => b.high);
     const lows = input.bars.map((b) => b.low);
     const volumes = input.bars.map((b) => b.volume);
 
-    if (closes.length < MIN_BARS) {
-      return { score: 0, confidence: 0.1, reason: `Need ${MIN_BARS} bars, have ${closes.length}.`, signalClass: 'neutral' };
+    const requiredBars = Math.max(MIN_BARS, Math.max(rsiPeriod, volPeriod) + 5);
+    if (closes.length < requiredBars) {
+      return { score: 0, confidence: 0.1, reason: `Need ${requiredBars} bars, have ${closes.length}.`, signalClass: 'neutral' };
     }
 
     const lastClose = closes[closes.length - 1];
@@ -88,13 +137,13 @@ export class VwapConfluenceSimpleDirective implements IDirective {
     const vwapNearness = Math.max(0, 1 - Math.abs(distPct) / 2); // 0-2% → 1-0
 
     // ── RSI check ──
-    const rsiValues = rsi(closes, RSI_PERIOD);
+    const rsiValues = rsi(closes, rsiPeriod);
     const lastRsi = rsiValues.length > 0 ? rsiValues[rsiValues.length - 1] : 50;
     const rsiOk = lastRsi > 40 && lastRsi < 65; // Not oversold, not overbought — "just right"
     const rsiScore = lastRsi > 35 && lastRsi < 60 ? 1 : Math.max(0, 1 - Math.abs(lastRsi - 47) / 30);
 
     // ── Volume check ──
-    const recentVols = volumes.slice(-VOL_PERIOD);
+    const recentVols = volumes.slice(-volPeriod);
     const avgVol = recentVols.reduce((a, b) => a + b, 0) / recentVols.length;
     const lastVol = volumes[volumes.length - 1];
     const volRatio = avgVol > 0 ? lastVol / avgVol : 1;
@@ -144,15 +193,22 @@ export class VwapConfluenceBandsDirective implements IDirective {
   readonly maxScore = 110;
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const volPeriod = values.volPeriod as number;
+
     const closes = input.bars.map((b) => b.close);
     const highs = input.bars.map((b) => b.high);
     const lows = input.bars.map((b) => b.low);
     const volumes = input.bars.map((b) => b.volume);
 
-    if (closes.length < MIN_BARS) {
-      return { score: 0, confidence: 0.1, reason: `Need ${MIN_BARS} bars, have ${closes.length}.`, signalClass: 'neutral' };
+    const requiredBars = Math.max(MIN_BARS, Math.max(rsiPeriod, volPeriod) + 5);
+    if (closes.length < requiredBars) {
+      return { score: 0, confidence: 0.1, reason: `Need ${requiredBars} bars, have ${closes.length}.`, signalClass: 'neutral' };
     }
 
     const lastClose = closes[closes.length - 1];
@@ -166,7 +222,7 @@ export class VwapConfluenceBandsDirective implements IDirective {
     const deviation = (lastClose - vwapVal) / sigma; // How many σ from VWAP
 
     // ── RSI confirmation ──
-    const rsiValues = rsi(closes, RSI_PERIOD);
+    const rsiValues = rsi(closes, rsiPeriod);
     const lastRsi = rsiValues.length > 0 ? rsiValues[rsiValues.length - 1] : 50;
 
     if (deviation <= -2.0) {

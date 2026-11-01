@@ -25,6 +25,7 @@ import {
 import {
   DIRECTIVE_GROUPS,
   DirectiveGroup,
+  DirectiveInstance,
 } from '../directives/directive-groups';
 import { classifyDirectiveInclusion, isDirectiveReady } from '../directives/directive-inclusion';
 import { computeMarketStatus } from '../directives/market-status';
@@ -618,11 +619,20 @@ export class ProtocolGatingService {
 
     const directionMode = protocolConfig?.directionMode ?? 'LONG_ONLY';
 
-    // 1. Collect directive IDs from active protocol groups (#389)
+    // 1. Collect directive IDs and INSTANCES from active protocol groups (#389, #1165)
     const protocolDirectiveIds = new Set<string>();
+    // #1165 — every configured instance, so two configurations of one directive can be scored on the
+    // same bars. `runAll` AVERAGES the instances of a directive into one result keyed by directive id,
+    // which is what keeps `capacityMax` a property of the configuration: adding an instance changes
+    // the view of one slot and never the protocol's scale (see `INV-STABLE-DENOMINATOR` and register
+    // row 121). The aggregation rule therefore lives in ONE place, not here.
+    const protocolDirectiveInstances: DirectiveInstance[] = [];
     for (const group of activeGroups) {
       for (const directiveId of group.directiveIds) {
         protocolDirectiveIds.add(directiveId);
+      }
+      for (const inst of group.directiveInstances ?? []) {
+        if (inst && inst.directiveId) protocolDirectiveInstances.push(inst);
       }
     }
 
@@ -635,7 +645,11 @@ export class ProtocolGatingService {
     );
 
     // 2. Run ONLY directives in the active protocol (not all 100+ registered directives)
-    const allResults = await this.directivesService.runAll(input, protocolDirectiveIds);
+    const allResults = await this.directivesService.runAll(
+      input,
+      protocolDirectiveIds,
+      protocolDirectiveInstances.length ? protocolDirectiveInstances : undefined,
+    );
 
     // 3. Group results with maxScore from directive registry
     const groups = new Map<string, { results: DirectiveResult[]; config: DirectiveGroup; maxScores: Map<string, number> }>();

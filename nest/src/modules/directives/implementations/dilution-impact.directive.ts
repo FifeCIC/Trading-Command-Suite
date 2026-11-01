@@ -23,6 +23,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { checkFidelity, lookaheadResult } from '../lookahead';
 import { PrismaService } from '../../../database/prisma.service';
 import { ResearchImportService } from '../../research/research-import.service';
 
@@ -40,7 +41,7 @@ export class DilutionImpactDirective implements IDirective {
   readonly maxScore = 60;
   readonly minScore = 1;
   readonly minBars = { '1d': 1 }; // Risk penalty — lower ceiling
-  readonly version = '1.3.0';
+  readonly version = '1.4.0'; // #1139 — refuses to score a historical bar from a current snapshot
   readonly readiness = 'ready' as const;
   readonly category = 'structural' as const;
   readonly directionBias = 'neutral' as const;
@@ -91,10 +92,10 @@ export class DilutionImpactDirective implements IDirective {
             unmeasured: true,
           };
         }
-        return this.scoreMetrics(retryMetrics);
+        return this.scoreMetrics(retryMetrics, input);
       }
 
-      return this.scoreMetrics(metrics);
+      return this.scoreMetrics(metrics, input);
     } catch (err) {
       this.logger.warn(`Dilution impact failed for ${symbol}: ${(err as Error).message}`);
       return {
@@ -107,7 +108,53 @@ export class DilutionImpactDirective implements IDirective {
     }
   }
 
-  private scoreMetrics(metrics: any): DirectiveResult {
+  private scoreMetrics(metrics: any, input: DirectiveInput): DirectiveResult {
+    /**
+     * ── LOOKAHEAD GUARD (#1139 item 2) ────────────────────────────────────────────────────────────
+     * `companyMetric` holds ONE current row per symbol, with no date predicate on the read, so every
+     * historical bar was scored against today's share count. `fetchedAt` exists on the table (checked
+     * with `db-schema.cjs`), which makes the test exact rather than a guess: if the snapshot was
+     * observed after the bar — plus that bar's own duration as the arrival allowance — the row did not
+     * exist yet and using it is lookahead.
+     *
+     * Live is unaffected: there the snapshot is refreshed during the bar it scores.
+     */
+    const fidelity = checkFidelity(metrics?.fetchedAt, input.asOf, input.timeframe);
+    if (fidelity !== 'ok') {
+      return lookaheadResult(
+        'the company metrics snapshot',
+        metrics?.fetchedAt,
+        input.asOf,
+        'companyMetric keeps one current row per symbol with no history, so the share count at this bar cannot be recovered.',
+      );
+    }
+    /**
+     * ── ZERO SHARES IS A MISSING READING, NOT "NO DILUTION" (measured 2026-11-01) ────────────────
+     * MEASURED: **all 194 rows** in `companyMetric` hold `sharesOutstanding = 0` with
+     * `shareChange3m = 0` and `shareChange12m = 0`, so every symbol scored the full
+     * **60/60 — "No dilution concern"**. The directive was a constant `+60` in every composite that
+     * carried it: an empty import read as a clean bill of health, which is the "silence looks like
+     * information" failure in its purest form.
+     *
+     * A company has no zero share count. Zero therefore means the provider returned nothing, and the
+     * honest answer is UNMEASURED — never full marks. This is checked BEFORE the penalty maths so a
+     * partial import (real share count, zero changes) still scores: that case is a genuine reading.
+     */
+    const sharesOutstanding = Number(metrics?.sharesOutstanding);
+    if (!Number.isFinite(sharesOutstanding) || sharesOutstanding <= 0) {
+      return {
+        score: 0,
+        confidence: 0,
+        signalClass: 'neutral',
+        unmeasured: true,
+        reason:
+          `UNMEASURED — the provider returned no share count for ${input.symbol} (shares outstanding `
+          + `${metrics?.sharesOutstanding ?? 'missing'}). A zero here is a MISSING reading, not "no dilution": `
+          + `scoring it would award the full ${this.maxScore}/${this.maxScore} to every bar, which is a `
+          + `verdict no data supports.`,
+      };
+    }
+
     let penalty3m = 0;
     let penalty12m = 0;
     let penaltySeverity = 0;

@@ -650,6 +650,12 @@ export class Mt5Adapter implements IProviderAdapter {
     digits: number | null;
     volumeMin: number | null;
     volumeMax: number | null;
+    /**
+     * #1170/#1143 — the two fields that decide whether a SIZE is tradeable: the increment the broker
+     * accepts, and how many base units one lot is. `null` is UNKNOWN, never 1.
+     */
+    volumeStep: number | null;
+    contractSize: number | null;
   }> | null> {
     const key = brokerId ?? this.symbolRouter?.primaryBrokerId() ?? 0;
     try {
@@ -666,6 +672,10 @@ export class Mt5Adapter implements IProviderAdapter {
         digits: typeof s.digits === 'number' ? s.digits : null,
         volumeMin: typeof s.volumeMin === 'number' ? s.volumeMin : null,
         volumeMax: typeof s.volumeMax === 'number' ? s.volumeMax : null,
+        // ⚠️ `null` when the bridge omits them, NOT 1. A default of 1 would silently re-invent the
+        // whole-unit assumption that made four instruments untestable (#1170).
+        volumeStep: typeof s.volumeStep === 'number' ? s.volumeStep : null,
+        contractSize: typeof s.contractSize === 'number' ? s.contractSize : null,
       }));
     } catch (error) {
       this.logger.warn(`MT5: symbol list for broker ${key} failed — ${(error as Error).message}`);

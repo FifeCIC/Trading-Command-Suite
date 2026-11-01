@@ -22,11 +22,66 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const GAP_LOOKBACK = 30;
 const MIN_GAP_RATIO = 0.003; // Minimum gap as fraction of price (0.3%)
 const VIC_SCALE = 1e-8; // Scaling factor for VIC normalization
 const MEMORY_DECAY = 0.9; // Daily decay factor for gap memory
+
+/**
+ * Tunable knobs (#1169 wiring → #1165 parameters).
+ *
+ * ⚠️ Every default here IS the constant above, so an instance that supplies nothing scores
+ * byte-identically to the pre-parameterisation build — that equality is asserted by the BASELINE
+ * guard in `directive-parameters.spec.ts`, not merely claimed here.
+ *
+ * Measured 2026-11-01 on the conformance fixtures: widening the lookback from 8 to 80 moves the gap
+ * count from 5 to 46 on the choppy fixture and 8 to 69 on the mean-reverting one, so the period
+ * selects a different OPPORTUNITY SET rather than re-tuning one. `minGapRatio` at 0.001 vs 0.03
+ * changes that count again — the threshold decides what counts as a gap at all.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'gapLookback',
+    label: 'Gap lookback',
+    type: 'number',
+    default: GAP_LOOKBACK,
+    min: 8,
+    max: 80,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): the same bar series holds 5 gaps over 8 bars and 46 over 80 (choppy fixture), so the lookback changes WHICH gaps are visible rather than how one is scored.',
+    source: 'price-time-gap.directive.ts:27 GAP_LOOKBACK',
+  },
+  {
+    key: 'minGapRatio',
+    label: 'Minimum gap',
+    type: 'number',
+    default: MIN_GAP_RATIO,
+    min: 0.001,
+    max: 0.03,
+    step: 0.001,
+    unit: 'fraction of price',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: 0.3% of price is a forex-scale gap and is large for an index, so the same threshold flags very different things per instrument — the count changes at 0.1% and at 3%.',
+    source: 'price-time-gap.directive.ts:28 MIN_GAP_RATIO',
+  },
+  {
+    key: 'vicScale',
+    label: 'VIC scale',
+    type: 'number',
+    default: VIC_SCALE,
+    min: 1e-9,
+    max: 1e-5,
+    step: 1e-9,
+    unit: 'per volume×move',
+    chart: 'threshold',
+    why: 'The fixed 1e-8 lands the normalising sigmoid at ~0.12 for real bar sizes, and at that point on the curve it barely moves whatever the volume does — so the composite is inert in practice. The scale is a unit conversion, not a market constant: it depends on the instrument\'s price and volume units, so it belongs to the instrument. The fixture set spans both ends: at the default the composite sits near the floor, at 1e-5 it saturates.',
+    source: 'price-time-gap.directive.ts:29 VIC_SCALE',
+  },
+];
 
 interface Gap {
   startIndex: number; // Index of bar before gap
@@ -51,20 +106,25 @@ export class PriceTimeGapDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const lookback = values.gapLookback as number;
+    const minGapRatio = values.minGapRatio as number;
+    const vicScale = values.vicScale as number;
 
-    if (bars.length < GAP_LOOKBACK + 2) {
+    if (bars.length < lookback + 2) {
       return {
         score: 0,
         confidence: 0.1,
-        reason: `Insufficient data: need ${GAP_LOOKBACK + 2} bars, have ${bars.length}.`,
+        reason: `Insufficient data: need ${lookback + 2} bars, have ${bars.length}.`,
         signalClass: 'neutral',
       };
     }
 
-    const gaps = this.findGaps(bars);
+    const gaps = this.findGaps(bars, lookback, minGapRatio, vicScale);
     if (gaps.length === 0) {
       return {
         score: 0,
@@ -144,9 +204,9 @@ export class PriceTimeGapDirective implements IDirective {
     };
   }
 
-  private findGaps(bars: DirectiveInput['bars']): Gap[] {
+  private findGaps(bars: DirectiveInput['bars'], lookback: number, minGapRatio: number, vicScale: number): Gap[] {
     const gaps: Gap[] = [];
-    const recent = bars.slice(-GAP_LOOKBACK - 1);
+    const recent = bars.slice(-lookback - 1);
 
     for (let i = 1; i < recent.length; i++) {
       const prevBar = recent[i - 1];
@@ -157,16 +217,16 @@ export class PriceTimeGapDirective implements IDirective {
         const gapSize = currBar.low - prevBar.high;
         const gapRatio = gapSize / prevBar.close;
 
-        if (gapRatio >= MIN_GAP_RATIO) {
-          const vic = this.calculateVIC(prevBar, currBar, gapSize, 'up');
+        if (gapRatio >= minGapRatio) {
+          const vic = this.calculateVIC(prevBar, currBar, gapSize, 'up', vicScale);
           const footprint = this.normalizeVIC(vic);
           gaps.push({
-            startIndex: bars.length - GAP_LOOKBACK + i - 2,
+            startIndex: bars.length - lookback + i - 2,
             gapSize,
             direction: 'up',
             vic,
             footprint,
-            age: GAP_LOOKBACK - i,
+            age: lookback - i,
           });
         }
       }
@@ -176,16 +236,16 @@ export class PriceTimeGapDirective implements IDirective {
         const gapSize = prevBar.low - currBar.high;
         const gapRatio = gapSize / prevBar.close;
 
-        if (gapRatio >= MIN_GAP_RATIO) {
-          const vic = this.calculateVIC(prevBar, currBar, gapSize, 'down');
+        if (gapRatio >= minGapRatio) {
+          const vic = this.calculateVIC(prevBar, currBar, gapSize, 'down', vicScale);
           const footprint = this.normalizeVIC(vic);
           gaps.push({
-            startIndex: bars.length - GAP_LOOKBACK + i - 2,
+            startIndex: bars.length - lookback + i - 2,
             gapSize,
             direction: 'down',
             vic,
             footprint,
-            age: GAP_LOOKBACK - i,
+            age: lookback - i,
           });
         }
       }
@@ -204,13 +264,14 @@ export class PriceTimeGapDirective implements IDirective {
     currBar: { volume: number; open: number },
     gapSize: number,
     _direction: 'up' | 'down',
+    vicScale: number,
   ): number {
     const avgVolume = (prevBar.volume + currBar.volume) / 2;
     const priceChange = gapSize;
 
     // VIC: higher when volume is high AND price change is large
     // Division by price level normalizes across instruments
-    const vic = avgVolume * priceChange * VIC_SCALE;
+    const vic = avgVolume * priceChange * vicScale;
 
     return vic;
   }

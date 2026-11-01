@@ -19,6 +19,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const LOOKBACK = 50;
 const MIN_BARS = 20;
@@ -30,6 +31,30 @@ interface EnvelopeResult extends DirectiveResult {
   isAnomalous: boolean;
   percentileBands: { p50: number; p85: number; p95: number; p99: number };
 }
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'lookback',
+    label: 'Envelope lookback',
+    type: 'number',
+    default: LOOKBACK,
+    min: 5,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): the envelope is built from the volatility of this window, so it defines both the band width and how quickly it adapts.',
+    source: 'volatility-envelope.directive.ts:LOOKBACK',
+  },
+];
 
 @Injectable()
 export class VolatilityEnvelopeDirective implements IDirective {
@@ -44,9 +69,13 @@ export class VolatilityEnvelopeDirective implements IDirective {
   readonly minBars = { '1d': 20 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const lookback = values.lookback as number;
+
     const bars = input.bars;
 
     if (bars.length < MIN_BARS) {
@@ -58,7 +87,7 @@ export class VolatilityEnvelopeDirective implements IDirective {
       } as DirectiveResult;
     }
 
-    const recent = bars.slice(-Math.min(LOOKBACK, bars.length));
+    const recent = bars.slice(-Math.min(lookback, bars.length));
     const ranges = recent.map((b) => (b.high - b.low) / b.close); // Normalize as % of price
 
     const currentBar = bars[bars.length - 1];

@@ -22,6 +22,24 @@
 
 export type DirectionMode = 'long' | 'short' | 'both';
 
+/**
+ * ── DECISION (2026-11-01, primary) ──
+ * WHAT:      `'long'` and `'short'` are TWO ACTIVE STRATEGIES. `'both'` is not a mode of one — it is
+ *            refused on the run path, and no surface may offer it.
+ * WHY:       A protocol's direction is part of its identity, so a side-flip is a different strategy
+ *            with its own protocol, bot and record. `'both'` scores one protocol both ways and trades
+ *            one run both ways in the same pass — the two things the architecture forbids.
+ * INSTEAD OF: Treating direction as a run setting, which is how `directionMode: 'both'` reached a UI
+ *            dropdown. ⚠️ The owner had decided this long before; a search of the register, `docs/`,
+ *            the roadmap and the open issue tracker on 2026-11-01 found the rule written down
+ *            NOWHERE, so there was nothing for an agent to trip over. That is the real defect this
+ *            decision fixes — an unrecorded rule is indistinguishable from no rule.
+ * REVERSE BY: Delete `refuseUnrunnableDirection` and its call in `backtest.service.ts`. Nothing is
+ *            stored or migrated, so reversal is a pure revert.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 113
+ * GUARD:     nest/src/modules/backtest/entry-side.spec.ts
+ */
+
 /** The four signal classes the gating pipeline emits. Enumerated, never substring-matched. */
 export const LONG_SIGNALS = ['BUY', 'STRONG_BUY'] as const;
 export const SHORT_SIGNALS = ['SELL', 'STRONG_SELL'] as const;
@@ -60,4 +78,33 @@ export function decideEntry(signal: string, directionMode: DirectionMode): Entry
 
   const isLong = isLongSignal;
   return { enter: true, isLong, side: isLong ? 1 : -1, blockedBy: null };
+}
+
+/**
+ * `'both'` is not a configuration this app can run — refuse it, do not coerce it.
+ *
+ * ── WHY THIS IS A SEPARATE, PURE FUNCTION ────────────────────────────────────────────────────────
+ * Owner direction, confirmed 2026-11-01: *"The decision to not try to score both ways within a single
+ * protocol or trade both ways within a single bot was made ages ago: there needs to be two active
+ * strategies."* `'both'` does exactly those two forbidden things at once — one protocol's signal,
+ * opened long on BUY and short on SELL, inside one run. A result from it describes a configuration
+ * that cannot be deployed, which is worse than no result.
+ *
+ * ⚠️ **Refused, never silently coerced to `'long'`.** Coercion would return a plausible long-only
+ * result for a request that asked for something else — the failure shape this repo keeps re-finding.
+ *
+ * Kept separate from `decideEntry` because that primitive is still correct (and still tested) for
+ * `'both'`; it is the RUN PATH that must not accept it. `'both'` remains in the union only so the two
+ * stored runs that used it stay readable.
+ *
+ * Living here rather than in the service means it can be asserted in both directions with no Prisma,
+ * no bar loader and no DI — which is why it is a function and not a line inside `run()`.
+ */
+export function refuseUnrunnableDirection(mode: DirectionMode): void {
+  if (mode !== 'both') return;
+  throw new Error(
+    'directionMode "both" is not a configuration the app can run: long and short are two separate '
+    + 'strategies, not one run trading both ways. Run the window twice — once "long", once "short" — '
+    + 'and compare the two runs.',
+  );
 }

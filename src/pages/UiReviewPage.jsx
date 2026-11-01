@@ -222,7 +222,16 @@ export default function UiReviewPage() {
     return true;
   });
 
-  const hiddenWanted = rows.filter((r) => entries[r.key]?.hide === true).length;
+  /**
+   * ⚠️ SPLIT, BECAUSE ONLY ONE HALF CAN ACT (measured 2026-11-01). `filterHiddenViews` removes a
+   * page from the nav by view id, so a `hide: true` on a view that is not a sidebar entry changes
+   * nothing. Eight of the owner's nine verdicts were exactly that, and nothing said so — the
+   * summary showed "9 marked hide" while only one page had ever disappeared. Counting them together
+   * reports an intention as an effect.
+   */
+  const hiddenWanted = rows.filter((r) => entries[r.key]?.hide === true);
+  const hiddenInNav = hiddenWanted.filter((r) => r.navOrder !== null).length;
+  const hiddenInert = hiddenWanted.length - hiddenInNav;
 
   /**
    * Applied-status tallies — the headline number for *"how well did agentic AI follow my instructions"*.
@@ -261,7 +270,14 @@ export default function UiReviewPage() {
         <span><b>{rows.length}</b> pages</span>
         <span><b>{answered}</b> answered</span>
         <span><b>{rows.length - answered}</b> to go</span>
-        <span><b>{hiddenWanted}</b> marked hide</span>
+        <span title="Marked hide AND a sidebar entry — these actually disappear">
+          <b>{hiddenInNav}</b> hidden from the sidebar
+        </span>
+        {hiddenInert > 0 ? (
+          <span title="Marked hide, but not a sidebar entry — hiding cannot change anything for these">
+            <b>{hiddenInert}</b> marked but not in the sidebar
+          </span>
+        ) : null}
         <span title="First round of comments: applied, out of those judged so far">
           <b>{oldApplied}</b> of {oldJudged.length} old changes applied
         </span>
@@ -397,8 +413,18 @@ export default function UiReviewPage() {
                     </select>
                   </td>
                   <td>
+                    {/* ⚠️ Disabled for rows that are NOT sidebar entries. Hiding works by removing a
+                        view id from the navigation, so on a detail route the switch is a no-op that
+                        still looks like a decision. Offering a control that cannot act is how eight
+                        verdicts went inert without anyone noticing (2026-11-01). */}
                     <select
                       aria-label={`Hide ${r.label} now`}
+                      disabled={r.navOrder === null}
+                      title={
+                        r.navOrder === null
+                          ? 'Not a sidebar entry — this page is reached from another page, so there is nothing to hide'
+                          : 'Hide this page from the sidebar'
+                      }
                       value={e.hide === true ? 'Y' : e.hide === false ? 'N' : ''}
                       onChange={(ev) => save(r.key, { hide: ev.target.value === '' ? null : ev.target.value === 'Y' })}
                     >

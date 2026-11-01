@@ -10,9 +10,10 @@
 
 import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { DirectiveGroup } from '../directives/directive-groups';
+import { DirectiveGroup, DirectiveInstance } from '../directives/directive-groups';
 import { DirectivesService } from '../directives/directives.service';
 import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
+import { validateSupplied } from '../directives/parameters';
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
 
 /**
@@ -398,12 +399,45 @@ export class ProtocolDbService implements OnModuleInit {
       const groups: DirectiveGroup[] = protocol.directiveGroups.map((dg: any) => {
         const directiveMaxScores: Record<string, number> = {};
         const directiveIds: string[] = [];
+        const directiveInstances: DirectiveInstance[] = [];
 
         for (const entry of dg.directives) {
-          directiveIds.push(entry.directiveId);
+          // ── DECISION (2026-11-01, primary — #1165) ──
+          // WHAT:      `directiveIds` holds each directive ONCE even when the group holds several
+          //            configured instances of it; every entry is recorded in `directiveInstances`.
+          // WHY:       The scorer accumulates `capacityMax += maxScore` once per id in this list. A
+          //            repeat therefore inflates the protocol's configured capacity and shifts every
+          //            percentage — `INV-STABLE-DENOMINATOR` broken from the config side, which is
+          //            invisible in the UI and looks like a normal score. MEASURED 2026-11-01: the
+          //            allowance for two entries of one directive was added to the schema in the same
+          //            change, so the scorer had to stop being able to see a repeat at all.
+          // INSTEAD OF: letting the scorer's `seenDirectiveIds` guard catch it. That guard is for a
+          //            directive listed in TWO GROUPS (a config fault it reports as an error); using it
+          //            for a legitimate second instance would log a warning on correct data.
+          // REVERSE BY: `directiveIds.push(entry.directiveId)` without the dedupe — correct again only
+          //            once nothing can hold two instances.
+          // REGISTER:  docs/SETTLED-DECISIONS.md row 122
+          // GUARD:     nest/src/modules/directives/directive-instances.spec.ts
+          if (!directiveIds.includes(entry.directiveId)) {
+            directiveIds.push(entry.directiveId);
+          }
           if (entry.maxScore !== 100) {
             directiveMaxScores[entry.directiveId] = entry.maxScore;
           }
+          // #1165 — a configured entry supplies its own parameters. `null` (the default for every
+          // entry) is LEFT OUT so the scorer passes no `params` at all and the directive runs exactly
+          // as before.
+          //
+          // ⚠️ Keyed by (directiveId, instanceLabel) from here on. Before instances existed this was a
+          // map by directive id, which could not express a second configuration at all.
+          directiveInstances.push({
+            entryId: entry.id,
+            directiveId: entry.directiveId,
+            label: entry.instanceLabel ?? '',
+            params: entry.params && typeof entry.params === 'object'
+              ? (entry.params as Record<string, number | boolean>)
+              : null,
+          });
         }
 
         return {
@@ -416,6 +450,7 @@ export class ProtocolDbService implements OnModuleInit {
           maxMultiplier: dg.maxMultiplier,
           directiveIds,
           ...(Object.keys(directiveMaxScores).length > 0 ? { directiveMaxScores } : {}),
+          ...(directiveInstances.length > 0 ? { directiveInstances } : {}),
         };
       });
 
@@ -939,20 +974,52 @@ export class ProtocolDbService implements OnModuleInit {
           });
           groups++;
 
+          // ── The PRIMARY instance of each directive (label '') ──
           for (const did of group.directiveIds) {
             // maxScore is single-sourced from the directive class (2026-08-13 refactor).
             // The seed file no longer carries per-protocol directiveMaxScores overrides.
             const maxScore = this.directivesService.get(did)?.maxScore ?? 100;
-            await (this.prisma as any).protocolDirectiveEntry.upsert({
-              where: { groupId_directiveId: { groupId: dg.id, directiveId: did } },
-              create: {
-                groupId: dg.id,
-                directiveId: did,
-                maxScore,
-                active: true,
-              },
-              update: { maxScore },
-            });
+
+            // ── DECISION (2026-11-01, directives area) ──
+            // WHAT:      a seed may DECLARE per-entry parameters, validated at seed time; declared
+            //            values converge on update and an undeclared tuning is left untouched.
+            // WHY:       `params` is seeded only from this data, so a UI tuning is a change to ONE
+            //            MACHINE and is lost on reinstall (database-seed-discipline). Validating here
+            //            rather than storing blindly keeps a typo'd key from installing a number no
+            //            directive reads — silence by construction.
+            // INSTEAD OF: converging EVERY parameter on every re-seed, which would clobber a
+            //            deliberate tuning the seed does not mention (#833's destructive direction).
+            // REVERSE BY: removing the `...(declaredParams ? …)` spread — params then survive only by
+            //            never being re-seeded.
+            // REGISTER:  docs/SETTLED-DECISIONS.md row 120
+            // GUARD:     nest/src/modules/scoring/protocols-seed-integrity.spec.ts
+            const declaredParams = group.directiveParams?.[did];
+            if (declaredParams) {
+              validateSupplied(did, this.directivesService.getParameterSpecs(did) ?? [], declaredParams);
+            }
+
+            await this.upsertEntry(dg.id, did, '', maxScore, declaredParams);
+            entries++;
+          }
+
+          // ── NAMED instances of a directive (#1165) ──
+          // A second configuration of a directive is the reason this table stopped being unique on
+          // (groupId, directiveId). It is seeded from the same place as everything else, because a
+          // value that only exists in the database is lost on reinstall — the same rule that made
+          // `directiveParams` necessary.
+          for (const inst of group.directiveInstances ?? []) {
+            if (!inst?.directiveId || !inst.label) continue;
+            // A named instance of a directive that is not in this group would never be scored.
+            if (!group.directiveIds.includes(inst.directiveId)) continue;
+            const maxScore = this.directivesService.get(inst.directiveId)?.maxScore ?? 100;
+            if (inst.params) {
+              validateSupplied(
+                inst.directiveId,
+                this.directivesService.getParameterSpecs(inst.directiveId) ?? [],
+                inst.params,
+              );
+            }
+            await this.upsertEntry(dg.id, inst.directiveId, inst.label, maxScore, inst.params);
             entries++;
           }
         }
@@ -962,6 +1029,39 @@ export class ProtocolDbService implements OnModuleInit {
     }
     this.logger.log(`Seeded ${protocols} protocols, ${groups} groups, ${entries} entries to DB`);
     return { seeded: protocols, groups, entries };
+  }
+
+  /**
+   * Upsert ONE configured instance of a directive.
+   *
+   * ⚠️ Keyed on `(groupId, directiveId, instanceLabel)`, not `(groupId, directiveId)`. The old key
+   * cannot express a second instance, and it is the constraint whose widening (#1165) makes the whole
+   * feature possible. `''` is the primary instance and reproduces the old key exactly.
+   *
+   * `update` deliberately omits `params` unless the seed declares them: converging an undeclared value
+   * would clobber a deliberate tuning on every re-seed (#833's destructive direction).
+   */
+  private async upsertEntry(
+    groupId: string,
+    directiveId: string,
+    instanceLabel: string,
+    maxScore: number,
+    declaredParams: Record<string, number | boolean> | null | undefined,
+  ): Promise<void> {
+    await (this.prisma as any).protocolDirectiveEntry.upsert({
+      where: {
+        groupId_directiveId_instanceLabel: { groupId, directiveId, instanceLabel },
+      },
+      create: {
+        groupId,
+        directiveId,
+        instanceLabel,
+        maxScore,
+        active: true,
+        ...(declaredParams ? { params: declaredParams } : {}),
+      },
+      update: { maxScore, ...(declaredParams ? { params: declaredParams } : {}) },
+    });
   }
 
   /** Check if any protocol needs EURUSD data for its directives. */

@@ -170,6 +170,17 @@
   min-width: 160px;
 }
 
+/* ⚠️ A DISABLED CONTROL MUST NOT READ AS A BROKEN ONE. The Hide column is disabled for views that
+   are not sidebar entries (there is nothing for the verdict to remove), and an unexplained greyed
+   <select> looks like a render fault. `not-allowed` plus faint text says "cannot be chosen here",
+   and the element keeps its `title`, so the reason is still available on hover and to screen
+   readers through the aria-label. */
+.uir-table select:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 /* Agent-reported applied-status. ⚠️ READ-ONLY by design — the owner asked for an indicator, not a
    control: *"I meant an indicator for agentic AI - not a menu for the user to select."* Agents set the
    value through the API; this only shows it.

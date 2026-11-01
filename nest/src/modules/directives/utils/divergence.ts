@@ -74,19 +74,49 @@ export interface StrengthModel {
 }
 
 /**
- * Prices at local minima: a low strictly below every low within `lookback` bars.
+ * How a pivot is searched. Added 2026-11-01 for the chart-preview work.
+ *
+ * ⚠️ EVERY FIELD IS OPTIONAL AND DEFAULTS TO TODAY'S BEHAVIOUR, so the three divergence
+ * directives that already call these functions are unchanged. The reason the asymmetry exists at all
+ * is parity with the source indicator (`RSIDivLE`), which has SEPARATE `lbL` (pivot lookback left) and
+ * `lbR` (pivot lookback right) inputs — a confirmed pivot needs `lbR` bars to its right, but the
+ * comparison window to its left is a different question and Pine lets it be a different number. Our
+ * single symmetric `lookback` could not express that, so the two knobs were effectively welded together.
+ */
+export interface PivotOptions {
+  /** Bars to the LEFT that must not undercut the pivot. Defaults to the symmetric `lookback`. */
+  leftLookback?: number;
+  /** Bars to the RIGHT that must not undercut the pivot. Defaults to the symmetric `lookback`. */
+  rightLookback?: number;
+}
+
+/** How far apart the two pivots of a divergence may be, in bars. Omitted = no constraint. */
+export interface PivotGap {
+  /** Minimum bars between the two pivots. */
+  min: number;
+  /** Maximum bars between the two pivots. */
+  max: number;
+}
+
+/**
+ * Prices at local minima: a low strictly below every low within the lookback window.
  * The indicator value at each of those bars is carried along.
+ *
+ * ⚠️ `opts` is OPTIONAL and its defaults reproduce the original symmetric search exactly.
  */
 export function findSwingLows(
   lows: number[],
   lookback: number,
   getIndicator: (index: number) => number,
+  opts: PivotOptions = {},
 ): SwingPoint[] {
+  const left = Math.max(1, opts.leftLookback ?? lookback);
+  const right = Math.max(1, opts.rightLookback ?? lookback);
   const swings: SwingPoint[] = [];
-  for (let i = lookback; i < lows.length - lookback; i++) {
+  for (let i = left; i < lows.length - right; i++) {
     const current = lows[i];
     let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
+    for (let j = i - left; j <= i + right; j++) {
       if (j === i) continue;
       if (lows[j] < current) {
         isSwing = false;
@@ -104,17 +134,20 @@ export function findSwingLows(
   return swings;
 }
 
-/** Prices at local maxima: a high strictly above every high within `lookback` bars. */
+/** Prices at local maxima: a high strictly above every high within the lookback window. */
 export function findSwingHighs(
   highs: number[],
   lookback: number,
   getIndicator: (index: number) => number,
+  opts: PivotOptions = {},
 ): SwingPoint[] {
+  const left = Math.max(1, opts.leftLookback ?? lookback);
+  const right = Math.max(1, opts.rightLookback ?? lookback);
   const swings: SwingPoint[] = [];
-  for (let i = lookback; i < highs.length - lookback; i++) {
+  for (let i = left; i < highs.length - right; i++) {
     const current = highs[i];
     let isSwing = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
+    for (let j = i - left; j <= i + right; j++) {
       if (j === i) continue;
       if (highs[j] > current) {
         isSwing = false;
@@ -132,16 +165,25 @@ export function findSwingHighs(
   return swings;
 }
 
+/** Is the distance between the two pivots inside the declared window? No gap declared = always. */
+function withinGap(prev: SwingPoint, last: SwingPoint, gap?: PivotGap): boolean {
+  if (!gap) return true;
+  const distance = last.index - prev.index;
+  return distance >= gap.min && distance <= gap.max;
+}
+
 /**
  * Bullish divergence: price makes a LOWER low while the indicator makes a HIGHER low.
  * Compares only the last two swing lows — a divergence older than that is stale.
  */
 export function checkBullishDivergence(
   swingLows: SwingPoint[],
+  gap?: PivotGap,
 ): DivergencePair | null {
   if (swingLows.length < 2) return null;
   const prev = swingLows[swingLows.length - 2];
   const last = swingLows[swingLows.length - 1];
+  if (!withinGap(prev, last, gap)) return null;
   if (last.price < prev.price && last.indicatorValue > prev.indicatorValue) {
     return {
       price1: prev.price,
@@ -161,11 +203,75 @@ export function checkBullishDivergence(
  */
 export function checkBearishDivergence(
   swingHighs: SwingPoint[],
+  gap?: PivotGap,
 ): DivergencePair | null {
   if (swingHighs.length < 2) return null;
   const prev = swingHighs[swingHighs.length - 2];
   const last = swingHighs[swingHighs.length - 1];
+  if (!withinGap(prev, last, gap)) return null;
   if (last.price > prev.price && last.indicatorValue < prev.indicatorValue) {
+    return {
+      price1: prev.price,
+      price2: last.price,
+      ind1: prev.indicatorValue,
+      ind2: last.indicatorValue,
+      index: last.index,
+    };
+  }
+  return null;
+}
+
+/**
+ * Hidden (a.k.a. "support/resistance") BULLISH divergence — added 2026-11-01 for source parity.
+ *
+ * Pine `RSIDivLE`:
+ *   oscLL = osc[lbR] < valuewhen(plFound, osc[lbR], 1)   // indicator LOWER low
+ *   priceHL = low[lbR] > valuewhen(plFound, low[lbR], 1) // price HIGHER low
+ *   hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound
+ *
+ * ⚠️ IT IS THE OPPOSITE PAIRING TO REGULAR BULLISH, and that is the whole point: a regular divergence
+ * says "momentum is weakening against the new extreme" (a reversal), while a hidden one says the pullback
+ * was shallow — momentum IMPROVED while price merely retested (a continuation). They are not the same
+ * signal with a different sign, so they are a separate predicate rather than a flag on the regular one.
+ *
+ * ⚠️ Our directives did NOT implement hidden divergence at all before this — the four Pine toggles
+ * (`plotBull` / `plotHiddenBull` / `plotBear` / `plotHiddenBear`) had no counterpart, so half of the
+ * indicator's detection surface was absent. Nothing calls this yet; it exists so the chart can show
+ * what the source shows, and so a directive can adopt it deliberately rather than by accident.
+ */
+export function checkHiddenBullish(
+  swingLows: SwingPoint[],
+  gap?: PivotGap,
+): DivergencePair | null {
+  if (swingLows.length < 2) return null;
+  const prev = swingLows[swingLows.length - 2];
+  const last = swingLows[swingLows.length - 1];
+  if (!withinGap(prev, last, gap)) return null;
+  if (last.price > prev.price && last.indicatorValue < prev.indicatorValue) {
+    return {
+      price1: prev.price,
+      price2: last.price,
+      ind1: prev.indicatorValue,
+      ind2: last.indicatorValue,
+      index: last.index,
+    };
+  }
+  return null;
+}
+
+/**
+ * Hidden BEARISH divergence — the mirror of `checkHiddenBullish`.
+ * Pine: price makes a LOWER high while the indicator makes a HIGHER high (a weak retest, continuing down).
+ */
+export function checkHiddenBearish(
+  swingHighs: SwingPoint[],
+  gap?: PivotGap,
+): DivergencePair | null {
+  if (swingHighs.length < 2) return null;
+  const prev = swingHighs[swingHighs.length - 2];
+  const last = swingHighs[swingHighs.length - 1];
+  if (!withinGap(prev, last, gap)) return null;
+  if (last.price < prev.price && last.indicatorValue > prev.indicatorValue) {
     return {
       price1: prev.price,
       price2: last.price,

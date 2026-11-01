@@ -16,10 +16,49 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 6; // Need context bars for trend detection
 const DOJI_BODY_RATIO = 0.10; // Body must be < 10% of total range
 const TREND_LOOKBACK = 5; // Bars to determine prior trend
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant of the same value, so an instance that
+ * supplies nothing scores byte-identically — asserted by the BASELINE guard, not merely stated here.
+ *
+ * ⚠️ A candlestick parameter is a THRESHOLD ON GEOMETRY. It is only provable against a candle that
+ * sits near the boundary, which is why 'directive-fixtures.ts' carries explicitly shaped bars
+ * (doji-bar, engulfing-bar, harami-bar, three-soldiers, reversal-hammer) rather than more smooth
+ * series: on a uniform-geometry fixture every threshold value gives the same answer.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'dojiBodyRatio',
+    label: 'Max body / range',
+    type: 'number',
+    default: DOJI_BODY_RATIO,
+    min: 0.02,
+    max: 0.5,
+    step: 0.01,
+    unit: 'fraction of range',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01 (#1166 method): 10% of range is a textbook doji on a daily chart and almost never happens on 1m bars, where noise alone exceeds it. The doji-bar fixture sits on the boundary, so the threshold decides whether the pattern is detected at all.',
+    source: 'doji-pattern.directive.ts:21 DOJI_BODY_RATIO',
+  },
+  {
+    key: 'trendLookback',
+    label: 'Trend lookback',
+    type: 'number',
+    default: TREND_LOOKBACK,
+    min: 2,
+    max: 30,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01: the prior trend decides whether a doji is read as indecision or exhaustion, and this window IS that trend. On the doji-bar fixture a 2-bar lookback reads the run-up while 20 reads the decline.',
+    source: 'doji-pattern.directive.ts:22 TREND_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class DojiPatternDirective implements IDirective {
@@ -34,10 +73,15 @@ export class DojiPatternDirective implements IDirective {
   readonly minBars = { '1d': 6 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly category = 'pattern' as const;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const dojiBodyRatio = values.dojiBodyRatio as number;
+    const trendLookback = values.trendLookback as number;
+
     const { bars } = input;
     if (bars.length < MIN_BARS) {
       return {
@@ -59,19 +103,19 @@ export class DojiPatternDirective implements IDirective {
     const bodyRatio = body / range;
 
     // Not a Doji — body too large relative to range
-    if (bodyRatio >= DOJI_BODY_RATIO) {
+    if (bodyRatio >= dojiBodyRatio) {
       return { score: 0, confidence: 0.2, reason: 'No Doji pattern: body is ' + (bodyRatio * 100).toFixed(1) + '% of range (threshold <10%).' };
     }
 
     // Determine prior trend using lookback closes
-    const lookbackStart = bars[bars.length - 1 - TREND_LOOKBACK];
-    const recentCloses = bars.slice(-TREND_LOOKBACK).map(b => b.close);
+    const lookbackStart = bars[bars.length - 1 - trendLookback];
+    const recentCloses = bars.slice(-trendLookback).map(b => b.close);
     const avgClose = recentCloses.reduce((a, b) => a + b, 0) / recentCloses.length;
     const priorTrend = current.close - lookbackStart.close;
     const inDowntrend = priorTrend < 0;
 
     // Doji quality: smaller body = stronger signal
-    const quality = 1 - (bodyRatio / DOJI_BODY_RATIO); // 0 to 1
+    const quality = 1 - (bodyRatio / dojiBodyRatio); // 0 to 1
 
     if (inDowntrend) {
       // Doji at support after decline = bullish reversal

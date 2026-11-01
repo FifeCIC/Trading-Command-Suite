@@ -14,7 +14,7 @@
  * INDETERMINATE classes (a `signalClass` assigned from a variable or call) are NOT listed and are
  * treated as direction-capable: "cannot judge" must never be silently read as "neutral".
  *
- * Scanner: 161 directive(s) — 42 neutral-only, 118 directional, 1 indeterminate.
+ * Scanner: 144 directive(s) — 32 neutral-only, 111 directional, 1 indeterminate.
  */
 export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
   'basic-weekly-rhythm',
@@ -25,35 +25,25 @@ export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
   'dilution-impact',
   'doji-pattern',
   'earnings-implementation',
-  'election-cycle',
   'engulfing-pattern',
-  'friday-drift',
   'friday-positioning',
   'fx-timing',
   'hammer-pattern',
   'institutional-timing',
   'isa-reset',
-  'january-effect',
   'liquidity-check',
   'ma-crossover',
   'monday-effect',
   'news-catalyst-strength',
   'obv',
-  'october-relief',
-  'opex-gamma',
   'position-size-confidence',
   'position-size-kelly',
   'price-above-sma',
   'rollover-risk',
-  'santa-claus-rally',
-  'sell-in-may',
-  'september-slump',
   'session-timing-filter',
   'spy-month-end-rebalancing',
   'spy-options-expiry',
   'time-stop',
-  'triple-witching',
-  'turnaround-tuesday',
   'volatility-envelope',
   'volatility-tools',
   'volume-confirmation',
@@ -62,8 +52,8 @@ export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
 ]);
 
 export const DIRECTIVE_CAPABILITY_COUNTS = {
-  total: 161,
-  neutralOnly: 42,
-  directional: 118,
+  total: 144,
+  neutralOnly: 32,
+  directional: 111,
   indeterminate: 1,
 } as const;

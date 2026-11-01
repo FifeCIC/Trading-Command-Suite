@@ -77,6 +77,10 @@ const INSTRUMENT = (name: string, path: string | null = `Nasdaq\\${name}`, trade
   digits: 2,
   volumeMin: 1,
   volumeMax: 1000,
+  // #1170 — present on every real catalogue row; the fixture carries them so the positional
+  // assertions below mean what they claim.
+  volumeStep: 0.01,
+  contractSize: 100,
 });
 
 describe('BrokerSymbolDiscoveryService — a broker that cannot be reached', () => {
@@ -155,9 +159,28 @@ describe('BrokerSymbolDiscoveryService — a broker that answers', () => {
 
     await service.syncBroker(2);
 
-    // params are flat: 10 values per row, assetClass is index 4 within each row
+    // params are flat: 12 values per row, assetClass is index 4 within each row
     expect(rawCalls[0].params[4]).toBe('Nasdaq');
-    expect(rawCalls[0].params[14]).toBeNull();
+    expect(rawCalls[0].params[16]).toBeNull();
+  });
+
+  it('writes volumeStep and contractSize, so the backtest can size in broker units offline', async () => {
+    // ⚠️ #1170/#1143. The bridge reports both; before this the sync dropped them, so the backtester
+    // had no idea that 0.01 lots of XAUUSD is 1 oz and sized in whole units instead. The consequence
+    // was four instruments recorded ZERO trades at a $10k account. `null` must survive as `null` —
+    // defaulting to 1 would re-create the whole-unit assumption this column exists to remove.
+    const { service, rawCalls } = makeHarness({ instruments: [INSTRUMENT('XAUUSD')] });
+
+    await service.syncBroker(2);
+
+    const sql = rawCalls[0].sql;
+    expect(sql.split('VALUES')[0]).toContain('volumeStep');
+    expect(sql.split('VALUES')[0]).toContain('contractSize');
+    expect(sql).toContain('volumeStep = new.volumeStep');
+    expect(sql).toContain('contractSize = new.contractSize');
+    // Index 9 and 10 of each row, straight through from the instrument payload.
+    expect(rawCalls[0].params[9]).toBe(0.01);
+    expect(rawCalls[0].params[10]).toBe(100);
   });
 
   it('never writes firstSeenAt — re-seeding must not rewrite first sighting', async () => {
@@ -180,9 +203,10 @@ describe('BrokerSymbolDiscoveryService — a broker that answers', () => {
     const result = await service.syncBroker(2);
 
     expect(result.registered).toBe(1);
-    // registered is the 10th value of each row (index 9, then 19)
-    expect(rawCalls[0].params[9]).toBe(0); // GRML — not onboarded, the discovery backlog
-    expect(rawCalls[0].params[19]).toBe(1); // EURUSD — already known
+    // registered is the 11th value of each row (index 11, then 23) — 12 values per row since
+    // volumeStep/contractSize were added (#1170).
+    expect(rawCalls[0].params[11]).toBe(0); // GRML — not onboarded, the discovery backlog
+    expect(rawCalls[0].params[23]).toBe(1); // EURUSD — already known
   });
 
   it('counts tradeable as tradeMode === 4, not as "listed"', async () => {

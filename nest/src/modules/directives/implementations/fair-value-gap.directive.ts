@@ -17,6 +17,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 5;
 const FVG_LOOKBACK = 20;
@@ -30,6 +31,30 @@ interface FairValueGap {
   mitigated: boolean;
 }
 
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'fvgLookback',
+    label: 'FVG lookback',
+    type: 'number',
+    default: FVG_LOOKBACK,
+    min: 5,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): an unfilled gap older than the lookback stops counting as a live imbalance, so the window decides how much structure is in play.',
+    source: 'fair-value-gap.directive.ts:FVG_LOOKBACK',
+  },
+];
+
 @Injectable()
 export class FairValueGapDirective implements IDirective {
   readonly id = 'fair-value-gap';
@@ -42,11 +67,15 @@ export class FairValueGapDirective implements IDirective {
   readonly minBars = { '1d': 7 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly category = 'pattern' as const;
   readonly directionBias = 'neutral' as const;
   readonly suitability = { regimeType:'any' as const, volatilityLevel:'high' as const, instrumentTypes:['stocks','crypto','indices'] as const, minTimeframe:'M15', preferredSessions:['US','London'] as const };
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const fvgLookback = values.fvgLookback as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS + 2) {
       return {
@@ -57,7 +86,7 @@ export class FairValueGapDirective implements IDirective {
       };
     }
 
-    const gaps = this.findFVGs(bars);
+    const gaps = this.findFVGs(bars, fvgLookback);
     if (gaps.length === 0) {
       return {
         score: 0,
@@ -119,9 +148,9 @@ export class FairValueGapDirective implements IDirective {
     };
   }
 
-  private findFVGs(bars: DirectiveInput['bars']): FairValueGap[] {
+  private findFVGs(bars: DirectiveInput['bars'], fvgLookback: number): FairValueGap[] {
     const gaps: FairValueGap[] = [];
-    const start = Math.max(0, bars.length - FVG_LOOKBACK - 2);
+    const start = Math.max(0, bars.length - fvgLookback - 2);
 
     for (let i = start + 1; i < bars.length - 1; i++) {
       const prev = bars[i - 1];

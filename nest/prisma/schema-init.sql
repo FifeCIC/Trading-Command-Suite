@@ -189,6 +189,10 @@ CREATE TABLE `BacktestRun` (
     `configVersion` INTEGER NULL,
     `newsExclusion` VARCHAR(16) NOT NULL DEFAULT 'none',
     `directionMode` VARCHAR(8) NOT NULL DEFAULT 'long',
+    `maxLeverage` DOUBLE NULL,
+    `unitStep` DOUBLE NULL,
+    `fixedUnits` DOUBLE NULL,
+    `windowSource` VARCHAR(60) NULL,
     `scoresJson` LONGTEXT NULL,
     `winRate` DOUBLE NOT NULL,
     `totalPnl` DOUBLE NOT NULL,
@@ -2062,9 +2066,11 @@ CREATE TABLE `protocol_directive_entry` (
     `groupId` VARCHAR(36) NOT NULL,
     `directiveId` VARCHAR(100) NOT NULL,
     `maxScore` INTEGER NOT NULL DEFAULT 100,
+    `params` JSON NULL,
+    `instanceLabel` VARCHAR(60) NOT NULL DEFAULT '',
     `active` BOOLEAN NOT NULL DEFAULT true,
 
-    UNIQUE INDEX `protocol_directive_entry_groupId_directiveId_key`(`groupId`, `directiveId`),
+    UNIQUE INDEX `protocol_directive_entry_groupId_directiveId_instanceLabel_key`(`groupId`, `directiveId`, `instanceLabel`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -2301,6 +2307,8 @@ CREATE TABLE `broker_symbol` (
     `digits` INTEGER NULL,
     `volumeMin` DOUBLE NULL,
     `volumeMax` DOUBLE NULL,
+    `volumeStep` DOUBLE NULL,
+    `contractSize` DOUBLE NULL,
     `registered` BOOLEAN NOT NULL DEFAULT false,
     `spreadPct` DOUBLE NULL,
     `spreadAbs` DOUBLE NULL,

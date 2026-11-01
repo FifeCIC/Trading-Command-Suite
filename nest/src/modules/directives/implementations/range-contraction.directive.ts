@@ -15,10 +15,48 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 30;
 const CONTRACTION_LOOKBACK = 20;
 const RANGE_RATIO_THRESHOLD = 0.7; // Current range < 70% of max = contraction
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'contractionLookback',
+    label: 'Contraction lookback',
+    type: 'number',
+    default: CONTRACTION_LOOKBACK,
+    min: 5,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): contraction is this window against the prior one, so it sets the timescale of the squeeze.',
+    source: 'range-contraction.directive.ts:CONTRACTION_LOOKBACK',
+  },
+  {
+    key: 'rangeRatioThreshold',
+    label: 'Contraction ratio',
+    type: 'number',
+    default: RANGE_RATIO_THRESHOLD,
+    min: 0.2,
+    max: 0.95,
+    step: 0.05,
+    unit: 'ratio of prior range',
+    chart: 'threshold',
+    why: 'Measured 2026-11-01: 0.7 means "30% tighter than before" — a real threshold a user would want to move. At 0.2 only a near-collapse qualifies.',
+    source: 'range-contraction.directive.ts:RANGE_RATIO_THRESHOLD',
+  },
+];
 
 @Injectable()
 export class RangeContractionDirective implements IDirective {
@@ -33,9 +71,14 @@ export class RangeContractionDirective implements IDirective {
   readonly minBars = { '1d': 30 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const contractionLookback = values.contractionLookback as number;
+    const rangeRatioThreshold = values.rangeRatioThreshold as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -46,7 +89,7 @@ export class RangeContractionDirective implements IDirective {
       };
     }
 
-    const recentBars = bars.slice(-CONTRACTION_LOOKBACK);
+    const recentBars = bars.slice(-contractionLookback);
     const ranges = recentBars.map((b) => (b.high - b.low) / b.close);
 
     const maxRange = Math.max(...ranges);
@@ -57,7 +100,7 @@ export class RangeContractionDirective implements IDirective {
     }
 
     const contractionRatio = currentRange / maxRange;
-    const isContracting = contractionRatio < RANGE_RATIO_THRESHOLD;
+    const isContracting = contractionRatio < rangeRatioThreshold;
 
     if (!isContracting) {
       const avgRange = ranges.reduce((a, b) => a + b, 0) / ranges.length;
@@ -73,7 +116,7 @@ export class RangeContractionDirective implements IDirective {
     // How long has the contraction persisted?
     let consecutiveContractions = 0;
     for (let i = ranges.length - 1; i >= 0; i--) {
-      if (ranges[i] / maxRange < RANGE_RATIO_THRESHOLD) {
+      if (ranges[i] / maxRange < rangeRatioThreshold) {
         consecutiveContractions++;
       } else {
         break;
@@ -81,7 +124,7 @@ export class RangeContractionDirective implements IDirective {
     }
 
     // Determine breakout direction bias from preceding trend
-    const olderBars = bars.slice(-50, -CONTRACTION_LOOKBACK);
+    const olderBars = bars.slice(-50, -contractionLookback);
     let trendBias: 'bullish' | 'bearish' | 'neutral' = 'neutral';
 
     if (olderBars.length >= 10) {

@@ -17,6 +17,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const MIN_BARS = 30;
 const ZONE_LOOKBACK = 25;
@@ -27,6 +28,30 @@ interface MemoryZone {
   type: 'impulse' | 'swing' | 'volume';
   direction: 'up' | 'down';
 }
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'zoneLookback',
+    label: 'Zone lookback',
+    type: 'number',
+    default: ZONE_LOOKBACK,
+    min: 20,
+    max: 250,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): a "memory zone" is where price previously reacted, and this window decides which history is remembered.',
+    source: 'market-memory-zones.directive.ts:ZONE_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class MarketMemoryZonesDirective implements IDirective {
@@ -41,9 +66,13 @@ export class MarketMemoryZonesDirective implements IDirective {
   readonly minBars = { '1d': 30 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const zoneLookback = values.zoneLookback as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return {
@@ -54,7 +83,7 @@ export class MarketMemoryZonesDirective implements IDirective {
       };
     }
 
-    const zones = this.findMemoryZones(bars);
+    const zones = this.findMemoryZones(bars, zoneLookback);
     if (zones.length === 0) {
       return {
         score: 0,
@@ -104,9 +133,9 @@ export class MarketMemoryZonesDirective implements IDirective {
     };
   }
 
-  private findMemoryZones(bars: DirectiveInput['bars']): MemoryZone[] {
+  private findMemoryZones(bars: DirectiveInput['bars'], zoneLookback: number): MemoryZone[] {
     const zones: MemoryZone[] = [];
-    const start = Math.max(0, bars.length - ZONE_LOOKBACK);
+    const start = Math.max(0, bars.length - zoneLookback);
 
     const volumes = bars.slice(start).map((b) => b.volume);
     const avgVolume = volumes.reduce((a, b) => a + b, 0) / Math.max(1, volumes.length);

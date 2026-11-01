@@ -286,6 +286,27 @@ model BacktestRun {
   //
   // DEFAULT 'long' matches every run made before this column, which was long-only by construction.
   directionMode String  @default("long") @db.VarChar(8)
+
+  /// #1142 — the committed-notional cap this run used, as a multiple of `accountSize` (1 = unleveraged).
+  /// ⚠️ Stored because a run must be able to say what CAP it was measured under: two runs sized against
+  /// the same account with 1x and 10x leverage are not comparable, and before this column the only
+  /// record of the cap was the person's memory of the form.
+  maxLeverage  Float?
+  /// #1170 — the broker's smallest tradeable increment in UNITS (`volumeStep × contractSize`), as used
+  /// to quantise every position in this run. ⚠️ NULL means NO broker spec was found and whole units were
+  /// used. That is a fact about the run's money — an index CFD refused for 0 trades vs one bought in 0.2
+  /// lots — not a missing value to default away, and `compareRuns()` reports it as unrecorded.
+  unitStep     Float?
+  /// #1143 — the CONSTANT size this run used, in units, when `positionModel` was `fixedUnits`
+  /// (`baseSize × contractSize`, i.e. the bot's own lot size expressed as units). ⚠️ NULL for every other
+  /// model — that records "this run did not hold a constant size", not a missing value.
+  fixedUnits   Float?
+  /// #1132 — which mechanism chose the window: `period:<name>` (a stored/frozen window) or `days-range`
+  /// (an explicit count measured back from the newest bar). ⚠️ A comparison across two different window
+  /// MECHANISMS is not like-for-like even when the dates happen to overlap, and `compareRuns()` cannot
+  /// see that from `startDate`/`endDate` alone — two `days-range` runs on different days describe
+  /// different data while looking identical in the dates column.
+  windowSource String? @db.VarChar(60)
   // ⚠️ ADDED 2026-10-26 (#1143) — THE SCORING OUTPUT THIS RUN PRODUCED. `run()` calls the canonical
   // SEES path (`fullScore()` → `ProtocolGatingService.scoreWithGating`, guarded by
   // `validate-single-scoring-path.cjs`) once per bar and then DISCARDED it, keeping only the BUY bars
@@ -2677,11 +2698,31 @@ model ProtocolDirectiveEntry {
   groupId      String   @db.VarChar(36)
   directiveId  String   @db.VarChar(100)  // matches directive registry ID
   maxScore     Int      @default(100)     // per-directive maxScore override
+  // Per-ENTRY directive parameters (#1165, added 2026-11-01 by ALTER TABLE — never `db push`, #769).
+  // NULL means "use the directive's declared defaults", which is exactly the pre-#1165 behaviour, so
+  // an entry that has never been configured scores byte-identically. Supplied values are validated at
+  // the write boundary by `validateSupplied()` (unknown key or out-of-range value is REFUSED, not
+  // clamped) and resolved on the read path by `resolveParams()`, which never throws.
+  params       Json?
+  /// Which CONFIGURED INSTANCE of this directive the row is (#1165).
+  ///
+  /// `''` is the PRIMARY instance and is what every pre-#1165 row becomes, so the old
+  /// `UNIQUE(groupId, directiveId)` is preserved exactly as the special case
+  /// `UNIQUE(groupId, directiveId, '')`. A named instance (e.g. `'fast'`, `'slow'`) is a SECOND
+  /// configuration of the same directive scored on the same bars.
+  ///
+  /// WARNING: NOT a display label. Instances of one directive are AVERAGED into one directive slot
+  /// when scoring (see `DirectivesService.runAll`), so adding an instance changes WHICH view of a
+  /// directive you get and never the protocol's configured capacity — `INV-STABLE-DENOMINATOR`
+  /// would otherwise break the moment someone added a comparison.
+  instanceLabel String  @default("") @db.VarChar(60)
   active       Boolean  @default(true)    // toggle on/off from Configure Directives page
 
   group        ProtocolDirectiveGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  @@unique([groupId, directiveId])
+  // Was `@@unique([groupId, directiveId])` — widened 2026-11-01 (#1165) by ALTER TABLE, never
+  // `db push`. See docs/SETTLED-DECISIONS.md row 122.
+  @@unique([groupId, directiveId, instanceLabel])
   @@map("protocol_directive_entry")
 }
 
@@ -2985,6 +3026,18 @@ model StrategyRegistry {
     digits      Int?
     volumeMin   Float?
     volumeMax   Float?
+  // ⚠️ ADDED 2026-11-01 (#1170/#1143) — THE TWO FIELDS THAT DECIDE WHETHER A SIZE IS TRADEABLE AT ALL.
+  //
+  // `volumeStep` is the INCREMENT the broker accepts (0.01 lots on FX, 0.1 on index CFDs, 1 on a
+  // share), and `contractSize` is how many base units one lot is (EURUSD 100000, XAUUSD 100, US30 1).
+  // Together they define what "one position" means — and neither reached the app before this, so the
+  // backtester sized in WHOLE units and refused four instruments outright at a $10k account (BTC at
+  // ~$58k, US30 ~$45k, USTEC/GER40 ~$22k) rather than buying 0.1 lots as a broker would.
+  //
+  // ⚠️ NULL = the bridge did not report it. That is UNKNOWN, never "1" and never "whole units": a
+  // default of 1 would re-invent the very assumption this column exists to remove.
+  volumeStep    Float?
+  contractSize  Float?
     registered  Boolean  @default(false)
   // ⚠️ ADDED 2026-10-28 (#1147) — THE BROKER'S OWN SPREAD, which nothing in this app had ever stored.
   //

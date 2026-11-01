@@ -86,7 +86,7 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
     instrumentTypes: ['stocks', 'crypto'],
     minTimeframe: 'H1', preferredSessions: ['US', 'London'],
   },
-  'bollinger-percent-b': {
+  'bollinger-pct-b': {
     regimeType: 'any', volatilityLevel: 'normal',
     instrumentTypes: ['stocks', 'crypto'],
     minTimeframe: 'M15', preferredSessions: ['US', 'London'],
@@ -147,11 +147,6 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
     regimeType: 'ranging', volatilityLevel: 'any',
     instrumentTypes: ['stocks', 'crypto'],
     minTimeframe: 'M15', preferredSessions: ['US', 'London'],
-  },
-  'accumulation-distribution': {
-    regimeType: 'trending', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'H1', preferredSessions: ['US', 'London'],
   },
   'accumulation-dist': {
     regimeType: 'trending', volatilityLevel: 'any',
@@ -217,12 +212,7 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
     instrumentTypes: ['stocks', 'crypto', 'forex'],
     minTimeframe: 'H1', preferredSessions: ['US', 'London'],
   },
-  'bears-power': {
-    regimeType: 'trending', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'crypto', 'forex'],
-    minTimeframe: 'M15', preferredSessions: ['US', 'London'],
-  },
-  'bulls-power': {
+  'bulls-bears-power': {
     regimeType: 'trending', volatilityLevel: 'any',
     instrumentTypes: ['stocks', 'crypto', 'forex'],
     minTimeframe: 'M15', preferredSessions: ['US', 'London'],
@@ -535,55 +525,13 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
   },
 
   // ── Seasonality: Calendar-Based ──
-  'santa-claus-rally': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'january-effect': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'sell-in-may': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US', 'London'],
-  },
-  'september-slump': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'october-relief': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'friday-drift': {
+  // ⚠️ #1169 — only the seasonal directives that still exist are listed. The ten "calendar claim"
+  // directives tested under #879 did not reproduce and were DELETED; leaving their suitability rows
+  // behind would keep a removed directive looking like a supported capability.
+  'weekend-gap-bias': {
     regimeType: 'any', volatilityLevel: 'any',
     instrumentTypes: ['stocks', 'indices', 'forex'],
     minTimeframe: 'D1', preferredSessions: ['US', 'London'],
-  },
-  'turnaround-tuesday': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'opex-gamma': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'triple-witching': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
-  'election-cycle': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
   },
 };
 

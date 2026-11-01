@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { devTestPeriodName } from './dev-test-window';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
@@ -684,6 +685,49 @@ export class BacktestPeriodService {
    * fallback would measure a different window while reporting the requested one — the exact defect
    * `resolveBotDrivenRequest` refuses for `botId`.
    */
+  /**
+   * The FROZEN DEVELOPMENT WINDOW for one symbol+timeframe (#1132 option A).
+   *
+   * ⚠️ WHY A LOOKUP BY NAME RATHER THAN A HARD-CODED DATE RANGE. `backtest_period` is per-symbol and
+   * per-timeframe (`symbolId`/`timeframe` NOT NULL), so a global window cannot be one row — the seeder
+   * writes one row per pair. Reading the rows keeps the seeded window and the windows a run actually
+   * measured as ONE mechanism; hard-coding the dates here would be a second source that drifts from
+   * `dev-test-window.ts`.
+   *
+   * ⚠️ THROWS when the window is not seeded, and names the command that seeds it. The alternative —
+   * falling back to `days` — is exactly the defect this whole change removes: `days` is a ROW LIMIT
+   * (`take: days + 120`) that walks back from the newest bar, so the window it measures is invisible
+   * and timeframe-dependent. A run must never silently measure one thing while the caller asked for a
+   * frozen window.
+   */
+  async resolveDevWindow(symbol: string, timeframe: string) {
+    const name = devTestPeriodName();
+    const row = await this.prisma.backtestPeriod.findFirst({
+      where: { name, symbol: { ticker: symbol.toUpperCase() }, timeframe },
+      include: { symbol: { select: { ticker: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!row) {
+      throw new BadRequestException(
+        `The frozen development window (${name}) is not seeded for ${symbol} ${timeframe}. `
+        + `Seed it with: npm --prefix nest run seed:dev-window (then --apply) — and re-run. `
+        + `Refusing to fall back to a bar count: that would measure an invisible, `
+        + `timeframe-dependent window while reporting a frozen one.`,
+      );
+    }
+    return {
+      id: row.id,
+      name: row.name,
+      symbol: row.symbol.ticker,
+      timeframe: row.timeframe,
+      from: row.fromDate,
+      to: row.toDate,
+      note: row.note ?? null,
+      /** How the window was chosen — travels with the run so a comparison can state its basis. */
+      source: `period:${row.name}` as const,
+    };
+  }
+
   async resolveForRun(periodId: string) {
     const period = await this.prisma.backtestPeriod.findUnique({
       where: { id: periodId },

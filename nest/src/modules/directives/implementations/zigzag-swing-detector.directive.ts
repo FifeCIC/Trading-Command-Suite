@@ -28,6 +28,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 interface SwingPoint {
   index: number;
@@ -40,6 +41,30 @@ const DEFAULT_LOOKBACK = 5;     // Bars to look back for swing detection
 const DEFAULT_LOOKAHEAD = 5;    // Bars to look forward
 const MIN_DEVIATION_PCT = 0.4;  // Min 0.4% price move to count as a swing
 const PROXIMITY_PCT = 0.3;      // Within 0.3% of a swing level = active zone
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'defaultLookback',
+    label: 'ZigZag lookback',
+    type: 'number',
+    default: DEFAULT_LOOKBACK,
+    min: 2,
+    max: 40,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): ZigZag sensitivity IS this number — small values report every wiggle as a swing, large values only structural turns.',
+    source: 'zigzag-swing-detector.directive.ts:DEFAULT_LOOKBACK',
+  },
+];
 
 @Injectable()
 export class ZigZagSwingDetectorDirective implements IDirective {
@@ -54,22 +79,26 @@ export class ZigZagSwingDetectorDirective implements IDirective {
   readonly minBars = { '1d': 5 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const defaultLookback = values.defaultLookback as number;
+
     const { bars } = input;
 
-    if (!bars || bars.length < DEFAULT_LOOKBACK + DEFAULT_LOOKAHEAD + 2) {
+    if (!bars || bars.length < defaultLookback + DEFAULT_LOOKAHEAD + 2) {
       return {
         score: 0,
         confidence: 0,
-        reason: `Need ${DEFAULT_LOOKBACK + DEFAULT_LOOKAHEAD + 2}+ bars, have ${bars?.length ?? 0}.`,
+        reason: `Need ${defaultLookback + DEFAULT_LOOKAHEAD + 2}+ bars, have ${bars?.length ?? 0}.`,
         signalClass: 'neutral',
       };
     }
 
     const currentPrice = bars[bars.length - 1].close;
-    const swings = this.findSwings(bars);
+    const swings = this.findSwings(bars, defaultLookback);
 
     if (swings.length < 2) {
       return {
@@ -187,8 +216,8 @@ export class ZigZagSwingDetectorDirective implements IDirective {
    * A swing low:  bar i's low  < all lows  in the same windows.
    * Filtered by minimum % deviation from the previous swing.
    */
-  private findSwings(bars: any[]): SwingPoint[] {
-    const lookback = DEFAULT_LOOKBACK;
+  private findSwings(bars: any[], defaultLookback: number): SwingPoint[] {
+    const lookback = defaultLookback;
     const lookahead = DEFAULT_LOOKAHEAD;
     const rawSwings: SwingPoint[] = [];
 

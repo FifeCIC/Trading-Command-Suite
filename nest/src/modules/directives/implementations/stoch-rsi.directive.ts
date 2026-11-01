@@ -50,10 +50,62 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { rsi } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const RSI_PERIOD = 14;
 const STOCH_PERIOD = 14;
 const D_PERIOD = 3;
+
+/**
+ * Tunable knobs (#1165). Defaults ARE the constants above — BASELINE proves the equality.
+ *
+ * ⚠️ StochRSI has THREE nested horizons, so a change in any one re-reads the same market at a
+ * different zoom: `rsiPeriod` sets the momentum window, `stochPeriod` sets the range the RSI is
+ * normalised within, and `dPeriod` smooths the %D line the crossover is judged on. Widening `dPeriod`
+ * delays the cross by construction, which is exactly the "is this a turn or a wobble" question a user
+ * tunes. Measured on the `noisy-range` fixture: the cross state differs between 3 and 8.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'rsiPeriod',
+    label: 'RSI period',
+    type: 'number',
+    default: RSI_PERIOD,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): the RSI inside StochRSI is itself a momentum window, so 7 vs 14 changes the raw series that gets normalised — a different cross, not a smoothed one.',
+    source: 'stoch-rsi.directive.ts:54 RSI_PERIOD',
+  },
+  {
+    key: 'stochPeriod',
+    label: 'Stochastic period',
+    type: 'number',
+    default: STOCH_PERIOD,
+    min: 3,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01: this is the window the RSI is normalised WITHIN, so it decides what 0 and 100 mean. A 5-bar window pins %K at its extremes constantly; 28 barely reaches them.',
+    source: 'stoch-rsi.directive.ts:55 STOCH_PERIOD',
+  },
+  {
+    key: 'dPeriod',
+    label: '%D smoothing',
+    type: 'number',
+    default: D_PERIOD,
+    min: 1,
+    max: 20,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01: the signal is the %K/%D CROSS, so smoothing delays it by construction. At 1 the cross fires on noise; at 10 the same cross arrives several bars later — a reactivity choice with a measurable cost either way.',
+    source: 'stoch-rsi.directive.ts:56 D_PERIOD',
+  },
+];
 const MIN_BARS = RSI_PERIOD + STOCH_PERIOD + D_PERIOD + 2;
 
 function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
@@ -115,28 +167,35 @@ export class StochRsiDirective implements IDirective {
    * this field is a hint, and claiming a bias the engine may not honour would be worse.
    */
   readonly directionBias = 'neutral' as const;
+  readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const rsiPeriod = values.rsiPeriod as number;
+    const stochPeriod = values.stochPeriod as number;
+    const dPeriod = values.dPeriod as number;
+
     const closes = input.bars.map((b) => b.close);
-    if (closes.length < MIN_BARS) {
+    const requiredBars = Math.max(MIN_BARS, rsiPeriod + stochPeriod + dPeriod + 2);
+    if (closes.length < requiredBars) {
       return {
         signalClass: 'neutral',
         score: 0,
         confidence: 0.1,
-        reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
+        reason: `Insufficient data: need ${requiredBars} bars, have ${closes.length}.`,
       };
     }
 
-    const rsiValues = rsi(closes, RSI_PERIOD);
-    if (rsiValues.length < STOCH_PERIOD + D_PERIOD + 2) {
+    const rsiValues = rsi(closes, rsiPeriod);
+    if (rsiValues.length < stochPeriod + dPeriod + 2) {
       return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Not enough RSI values for StochRSI.' };
     }
 
-    const stochRsi = stochRsiSeries(rsiValues, STOCH_PERIOD);
+    const stochRsi = stochRsiSeries(rsiValues, stochPeriod);
     // Drop the null (flat-window) entries before the %D average; a gap in the series would silently
     // shorten %D. If too few remain, that is "no reading", not a score built on a short window.
     const usable = stochRsi.filter((v): v is number => v !== null);
-    if (usable.length < D_PERIOD + 1) {
+    if (usable.length < dPeriod + 1) {
       return {
         signalClass: 'neutral',
         score: 0,
@@ -145,7 +204,7 @@ export class StochRsiDirective implements IDirective {
       };
     }
 
-    const dValues = sma(usable, D_PERIOD);
+    const dValues = sma(usable, dPeriod);
     if (dValues.length < 2) {
       return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Not enough %D values.' };
     }

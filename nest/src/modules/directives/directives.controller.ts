@@ -5,6 +5,7 @@ import { DirectiveConfigService } from '../scoring/directive-config.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { DIRECTIVE_GROUPS, SHORT_DIRECTIVE_GROUPS, BTC_SPEED_GROUPS } from './directive-groups';
+import { ParamValidationError, defaultParams, resolveParams, validateSupplied } from './parameters';
 
 @ApiTags('directives')
 @Controller('directives')
@@ -218,11 +219,11 @@ export class DirectivesController {
       // MT5 ported
       'mt5-engulfing': 'predictive', 'mt5-harami': 'predictive', 'mt5-star-doji': 'predictive',
       'mt5-hammer': 'predictive', 'williams-r': 'predictive', 'awesome-oscillator': 'predictive',
-      'force-index': 'predictive', 'chaikin-money-flow': 'predictive', 'donchian-breakout': 'predictive',
+      'force-index': 'predictive', 'chaikin-mf': 'predictive', 'donchian-breakout': 'predictive',
       'keltner-channel': 'predictive', 'supertrend': 'predictive', 'parabolic-sar': 'predictive',
       'adx-di-crossover': 'predictive', 'bollinger-pct-b': 'predictive', 'atr-trailing-stop': 'predictive',
       'momentum-roc': 'predictive', 'demarker': 'predictive', 'accumulation-dist': 'predictive',
-      'bulls-power': 'predictive', 'bears-power': 'predictive', 'ease-of-movement': 'predictive',
+      'bulls-bears-power': 'predictive', 'ease-of-movement': 'predictive',
       'ichimoku-cloud': 'predictive',
       // Risk gates — block/reduce, don't generate bullish signals
       'budget-gate': 'risk-gate', 'liquidity-check': 'risk-gate', 'rollover-risk': 'risk-gate',
@@ -231,12 +232,11 @@ export class DirectivesController {
       // Exit signals — fire when it's time to exit, not entry
       'momentum-exhaustion': 'exit', 'target-achieved': 'exit', 'regime-shift-exit': 'exit',
       'time-stop': 'exit',
-      // Calendar / temporal — time-based, not price-based
-      'monday-effect': 'calendar', 'friday-drift': 'calendar', 'turnaround-tuesday': 'calendar',
-      'session-open-effect': 'calendar', 'santa-claus-rally': 'calendar',
-      'january-effect': 'calendar', 'sell-in-may': 'calendar', 'september-slump': 'calendar',
-      'october-relief': 'calendar', 'opex-gamma': 'calendar', 'triple-witching': 'calendar',
-      'election-cycle': 'calendar', 'crypto-weekend-effect': 'calendar',
+      // Calendar / temporal — time-based, not price-based. ⚠️ #1169 — the ten seasonal "claim"
+      // directives (#879) did not reproduce and were deleted, so they are no longer categorised
+      // here: a row for a directive that does not exist reads as a supported capability.
+      'monday-effect': 'calendar', 'weekend-gap-bias': 'calendar',
+      'session-open-effect': 'calendar', 'crypto-weekend-effect': 'calendar',
       // Macro regime — describe market conditions, not tradable signals
       'dxy-regime': 'regime', 'market-regime': 'regime',
       // Symbol-specific — designed for one symbol, won't fire on SPY
@@ -560,10 +560,25 @@ export class DirectivesController {
   @ApiOperation({ summary: 'Test a single directive against live/historical bars for a symbol' })
   async testDirective(
     @Param('id') id: string,
-    @Body() body: { symbol: string; timeframe?: string; barCount?: number },
+    @Body() body: { symbol: string; timeframe?: string; barCount?: number; params?: Record<string, number | boolean | null> },
   ) {
-    const { symbol, timeframe = '1d', barCount = 100 } = body;
+    const { symbol, timeframe = '1d', barCount = 100, params } = body;
     if (!symbol) return { error: 'symbol is required' };
+
+    // Parameters are validated HERE, at the write boundary, and REFUSED rather than clamped — a human
+    // is present, and silently storing a different number than they asked for is the surprise this
+    // split exists to prevent. (The read path inside the directive clamps instead, because scoring
+    // must not throw on every bar.)
+    const specs = this.directivesService.getParameterSpecs(id);
+    if (specs === null) return { error: `Directive "${id}" not found` };
+    if (params) {
+      try {
+        validateSupplied(id, specs, params);
+      } catch (err) {
+        if (err instanceof ParamValidationError) return { error: err.message, problems: err.problems };
+        throw err;
+      }
+    }
 
     // Look up symbol in DB to get DB id for bar fetch
     const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: symbol.toUpperCase() } }).catch(() => null);
@@ -574,7 +589,17 @@ export class DirectivesController {
     if (!bars || bars.length === 0) return { error: `No ${timeframe} bars available for ${symbol}` };
 
     // Run the single directive
-    const result = await this.directivesService.runSingle(id, { symbol: symbol.toUpperCase(), bars });
+    // ⚠️ `asOf` and `timeframe` are passed because the bars are HISTORICAL. Without them a directive
+    // that checks whether its data existed at the bar (lookahead.ts, #1139) reports `unknown` and
+    // abstains for the wrong reason — the diagnostic would then say "cannot judge" when the real
+    // answer is "you are testing a past bar with present-day data".
+    const result = await this.directivesService.runSingle(id, {
+      symbol: symbol.toUpperCase(),
+      bars,
+      params,
+      asOf: bars[bars.length - 1]?.timestamp,
+      timeframe,
+    });
     if (!result) return { error: `Directive "${id}" not found or failed to execute` };
 
     return {
@@ -593,8 +618,38 @@ export class DirectivesController {
         volume: b.volume,
       })),
       result,
+      paramsUsed: params ? resolveParams(id, specs, params).values : defaultParams(specs),
+      paramsWarnings: params ? resolveParams(id, specs, params).warnings : [],
     };
   }
+
+  /**
+   * GET /api/directives/:id/params — the tunable knobs, their defaults and their CHART ROLE.
+   *
+   * ⚠️ `parameterised` is the field that matters: an empty `params` array means "this directive has no
+   * knobs", while an `error` means "no such directive". Collapsing them would let a UI render a
+   * "not tunable" message for a directive that does not exist, which is the opposite conclusion.
+   *
+   * This is the surface M4 (#1167) builds its controls AND its chart from: a `series` knob reshapes a
+   * line, a `threshold` knob moves a guide line, a `window` knob brackets the time axis, and a `none`
+   * knob has no chart and needs the dynamic/temporal visual instead.
+   */
+  @Get(':id/params')
+  @ApiOperation({ summary: 'Tunable parameters for a directive, with defaults and chart roles' })
+  getParams(@Param('id') id: string) {
+    const idLower = id.toLowerCase();
+    const specs = this.directivesService.getParameterSpecs(idLower);
+    if (specs === null) return { error: `Directive "${id}" not found` };
+    return {
+      directiveId: idLower,
+      parameterised: specs.length > 0,
+      params: specs,
+      defaults: defaultParams(specs),
+      // Knobs a chart cannot draw — the set that needs the dynamic/temporal visual.
+      needsDynamicVisual: specs.filter((s: { chart: string }) => s.chart === 'none').map((s: { key: string }) => s.key),
+    };
+  }
+
 
   /**
    * POST /api/directives/:id/stub — mark a directive as alpha (inactive in composites).

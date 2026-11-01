@@ -23,33 +23,63 @@ The app is slowly moving away from a confused "Trading Strategies" area toward a
 Once a signal is produced it is **queued to a specific bot**; the bot decides *whether* to execute
 based on money/risk/position reality — it does **not** re-derive the signal.
 
-### ⚠️ 1b. THERE ARE THREE TABLES CALLED "STRATEGY" — measured 2026-09-18
+### ⚠️ 1a. DIRECTION IS PART OF A STRATEGY'S IDENTITY — never a mode of one
+
+**Long and short are TWO ACTIVE STRATEGIES.** A protocol declares a direction, so flipping the side
+makes a *different* strategy with its own protocol, its own bot and its own record.
+
+**Forbidden by construction:** one bot trading both ways · one protocol scored both ways · any
+"both" / "either side" / "hedged" option inside a single run or a single bot. If a surface offers that,
+the surface is wrong — not the pipeline.
+
+> ⚠️ **This rule was decided long before 2026-11-01 and was written down NOWHERE.** A search of the
+> register, `docs/`, the roadmap data and the open issue tracker that day found `trade both ways`,
+> `both ways`, `long and short` and `hedged mode` mentioned **zero** times — so an agent re-derived the
+> forbidden shape from scratch and shipped `directionMode: "both"` as a Backtest Lab option. An
+> unrecorded rule is indistinguishable from no rule. Register row **113**; guarded by
+> `refuseUnrunnableDirection()` (`nest/src/modules/backtest/entry-side.ts`), which the run path calls.
+>
+> To compare directions: **run twice** — once long, once short, same window — and compare the runs.
+
+### ⚠️ 1b. THERE ARE THREE TABLES CALLED "STRATEGY" — measured 2026-09-18, re-measured 2026-11-01
 
 This is the most confusing thing in the codebase, and the §1 table above does not warn about it.
 Three separate Prisma models, all meaning something different, all named "strategy":
 
 | Prisma model | Table | Rows | What it ACTUALLY is |
 |---|---|---|---|
-| `Strategy` | `strategy` | 29 | A named container: `{name, description, version, config}`. **This is the "strategy" in the §1 sense** — the idea, with its own name and id |
-| `TradingStrategy` | `trading_strategy` | 26 | **A BOT.** The execution policy. Named `TradingStrategy` because it predates this document |
-| `ScoringStrategy` | `scoring_strategy` | 27 | Scoring + trade params for a protocol path (`protocolId`, `watchlistName`, `tradeThreshold`, `gateConfig`) |
+| `Strategy` | `strategy` | 37 | A named container: `{name, description, version, config}`. **This is the "strategy" in the §1 sense** — the idea, with its own name and id |
+| `TradingStrategy` | `trading_strategy` | 40 | **A BOT.** The execution policy. Named `TradingStrategy` because it predates this document |
+| `ScoringStrategy` | `scoring_strategy` | 31 | Scoring + trade params for a protocol path (`protocolId`, `watchlistName`, `tradeThreshold`, `gateConfig`) |
+
+> ⚠️ **Row counts re-measured 2026-11-01** (previously stated 29 / 26 / 27 on 2026-09-18). They drift —
+> every row is a protocol, a bot or a scoring path that someone added. Read them, do not quote them.
+> `strategy` and `trading_strategy` have both grown faster than `scoring_strategy`, so the three numbers
+> moving together is not evidence that they are the same thing.
 
 **How it got this way.** `Strategy` is the ORIGINAL top-level entity — it owns `directives`,
 `scores`, `signals` and `versions` by relation. The META.Stack refactor moved directives under
-**Protocol** (`directive.strategyId` is now **0 of 101 populated**) and introduced `TradingStrategy`
+**Protocol** (`directive.strategyId` is now **0 of 111 populated**, re-measured 2026-11-01) and introduced `TradingStrategy`
 for the execution layer. The old table was never retired, and the UI began calling the NEW rows
 "strategies".
 
-**What still uses `strategy`.** `score.strategyId` is **4471 of 4494 populated and joins
-`strategy.id`** — checked against `scoring_strategy.id`, which matches **0**. The scoring pipeline
-still writes scores against a `strategy` row.
+**What still uses `strategy`.** `score.strategyId` is **6479 of 6479 populated and joins
+`strategy.id`** (re-measured 2026-11-01; the 2026-09-18 figure was 4471 of 4494) — checked against
+`scoring_strategy.id`, which matches **0**. The scoring pipeline still writes scores against a `strategy`
+row. `directive.strategyId` remains **0 of 111** populated, so the META.Stack move is complete on the
+directive side and not on the score side.
 
-**Where the 29 rows come from — measured:**
+**Where the 37 rows come from — measured 2026-11-01:**
 
 | Kind | Count | Example name |
 |---|---|---|
-| Auto-generated, one per protocol | **28** | `Signals Workbench → cac-speed-v1` |
+| Auto-generated, one per protocol | **36** | `Signals Workbench — cac-speed-v1` |
 | Hand-named | **1** | `Conviction Dip Accumulation` |
+
+> ⚠️ **The separator is an EM DASH (`—`, UTF-8 `E2 80 94`), not an arrow.** Verified with `HEX()`. This
+> document previously wrote `→`, which means anyone grepping for the arrow finds **zero rows and no
+> error** — the silent-empty-result failure this repo keeps re-finding. If you need to match generated
+> names, match `Signals Workbench%`, not the punctuation.
 
 So the owner's question — *"strategies ARE generated when certain other things are made?"* — is
 **correct**: a `strategy` row is created per protocol for scoring. That is why listing them feels
@@ -70,9 +100,14 @@ config:      { "weights": {}, "entryThreshold": 60, "watchThreshold": 40, "defen
    different ideas. Say which you mean.
 2. **`TradingStrategy` is a bot**, despite the name. Do not treat the model name as evidence of what
    the row is.
-3. Four Trading-menu views are labelled "strategy" but render BOTS: `strategy-monitor`,
-   `trading-strategies`, `strategy-comparison`, `strategy-library`. Use "Trading Bots" for the
-   execution layer, per §5.
+3. **Two Trading-menu views are labelled "strategy" but render BOTS:** `strategy-monitor` and
+   `strategy-comparison`. Both read `/api/trading/strategies` / `/api/trading/strategy-comparison`, i.e.
+   `trading_strategy` rows. **Renamed 2026-11-01** to **Bot Monitor** and **Bot Comparison** in
+   `src/core/nav-tree.js`.
+   ⚠️ **This rule previously also listed `strategy-library`, and that was WRONG.** That page's primary
+   query is `/api/directives` — it is a **directive** library that cross-references which bot runs each
+   directive; renaming it "Trading Bots" would have been incorrect. `trading-strategies` is no longer a
+   nav entry at all. Verify a page's data source before renaming it on the strength of its id.
 4. **NOT DECIDED:** whether the auto-generated per-protocol `strategy` rows should exist at all, or
    whether a strategy should only come into being when a human names one. Raise it; do not assume
    either answer.

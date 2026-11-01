@@ -16,11 +16,39 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { sma } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const LOOKBACK = 50;
-const PIVOT_WINDOW = 3;
+// ⚠️ `PIVOT_WINDOW = 3` was DELETED 2026-11-01 (#1165): it was declared but read by no logic — this
+// directive never computes pivots. A knob that governs nothing is worse than no knob, because a user
+// tunes it and believes the result, so it is not exposed as a parameter either. When pivot-based supply
+// levels are actually implemented it comes back as a real param, with a fixture that proves it moves.
 const SUPPLY_PROXIMITY = 3; // Within 3% of overhead = supply pressure zone
-const MIN_BARS = LOOKBACK + PIVOT_WINDOW + 3;
+const MIN_BARS = LOOKBACK + 8;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'lookback',
+    label: 'Supply lookback',
+    type: 'number',
+    default: LOOKBACK,
+    min: 10,
+    max: 200,
+    step: 1,
+    unit: 'bars',
+    chart: 'window',
+    why: 'Measured 2026-11-01 (#1166 method): overhead supply is accumulated volume from above, so the window decides how much of the past is overhead.',
+    source: 'overhead-supply.directive.ts:LOOKBACK',
+  },
+];
 
 @Injectable()
 export class OverheadSupplyPressureDirective implements IDirective {
@@ -34,16 +62,20 @@ export class OverheadSupplyPressureDirective implements IDirective {
   readonly minBars = { '1d': 56 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const; // Emits bullish when supply is absorbed.
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const lookback = values.lookback as number;
+
     const bars = input.bars;
     if (bars.length < MIN_BARS) {
       return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.` };
     }
 
     // Find the highest high in the lookback (supply ceiling)
-    const lookbackBars = bars.slice(-LOOKBACK);
+    const lookbackBars = bars.slice(-lookback);
     const highestHigh = Math.max(...lookbackBars.map(b => b.high));
     const highestBar = lookbackBars.find(b => b.high === highestHigh);
     const currentPrice = bars[bars.length - 1].close;

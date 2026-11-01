@@ -2262,6 +2262,72 @@ button.nav-active {
 .dp-ok { border: 1px solid var(--line); border-left: 3px solid var(--accent); color: var(--ink); }
 .dp-warn { border: 1px solid var(--line); border-left: 3px solid var(--ink-soft); color: var(--ink); }
 .dp-error { border: 1px solid var(--danger); color: var(--ink); }
+
+/* ── Directive parameters & instances (#1165, 2026-11-01) ─────────────────────────────────────── */
+/* A <details> keeps expand/collapse keyboard-operable and screen-reader-announced without any JS
+   state, so there is no aria-expanded to keep in sync. */
+.dp-tune { border: 1px solid var(--line); border-radius: 5px; }
+.dp-tune-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+.dp-tune-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dp-tune[open] > .dp-tune-head { border-bottom: 1px solid var(--line); }
+.dp-tune-body {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.6rem;
+}
+.dp-inst {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.dp-inst-head { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+/* The parameter grid: one labelled field per knob. `auto-fill` so a two-knob directive does not leave
+   a stretched input, and the 44px min-height keeps every control a legal tap target. */
+.dp-params {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.45rem;
+}
+.dp-param { display: grid; gap: 0.15rem; align-content: start; }
+.dp-param-label { font-size: 0.7rem; color: var(--ink-soft); }
+.dp-input--wide { width: 100%; font-family: inherit; font-variant-numeric: normal; }
+.dp-inst-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.dp-btn {
+  min-height: 44px;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.dp-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dp-btn:disabled { border-color: var(--line); color: var(--color-muted); cursor: not-allowed; }
+.dp-btn--ghost { border-color: var(--line); color: var(--ink-soft); }
+.dp-btn--danger { border-color: var(--danger); color: var(--danger); }
+.dp-add {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+  .dp-params { grid-template-columns: 1fr; }
+}
 .bt-ab-panel { display: grid; gap: 0.6rem; }
 .bt-log-tail {
   max-height: 22rem;

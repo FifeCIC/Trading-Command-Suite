@@ -9,9 +9,34 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { cci } from '../utils/indicators';
+import { resolveParams, type NumericParamSpec } from '../parameters';
 
 const CCI_PERIOD = 37;
 const MIN_BARS = CCI_PERIOD + 4;
+
+/**
+ * Tunable knobs (#1165). Every default IS the module constant, so an instance that supplies nothing
+ * scores byte-identically — asserted by the BASELINE guard in `directive-parameters.spec.ts`.
+ *
+ * ⚠️ Each `why` states the MEASUREMENT that makes the knob worth turning. A period is a HORIZON and a
+ * threshold is a DEFINITION, not a preference: the same number means different things on a 1h chart and
+ * a daily one, which is exactly why it cannot stay a constant.
+ */
+const PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'cciPeriod',
+    label: 'CCI confirmation period',
+    type: 'number',
+    default: CCI_PERIOD,
+    min: 5,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why: 'Measured 2026-11-01 (#1166 method): CCI is the confirmation filter, so its period decides which engulfing candles qualify.',
+    source: 'mt5-engulfing-cci.directive.ts:CCI_PERIOD',
+  },
+];
 
 @Injectable()
 export class Mt5EngulfingCciDirective implements IDirective {
@@ -29,9 +54,13 @@ export class Mt5EngulfingCciDirective implements IDirective {
   readonly minBars = { '1d': 41 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = PARAMS;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const cciPeriod = values.cciPeriod as number;
+
     const closes = input.bars.map(b => b.close);
     const opens = input.bars.map(b => b.open);
     const highs = input.bars.map(b => b.high);
@@ -39,7 +68,7 @@ export class Mt5EngulfingCciDirective implements IDirective {
     if (closes.length < MIN_BARS) {
       return { score: 0, confidence: 0.1, reason: `Need ${MIN_BARS} bars.`, signalClass: 'neutral' };
     }
-    const cciValues = cci(highs, lows, closes, CCI_PERIOD);
+    const cciValues = cci(highs, lows, closes, cciPeriod);
     if (cciValues.length < 3) {
       return { score: 0, confidence: 0.1, reason: 'Not enough CCI values.', signalClass: 'neutral' };
     }
@@ -68,8 +97,8 @@ export class Mt5EngulfingCciDirective implements IDirective {
         score,
         confidence: confirmed ? 0.85 : 0.5,
         reason: confirmed
-          ? `Bullish engulfing detected + CCI(${CCI_PERIOD}) confirmation (${curCci.toFixed(1)}). Strong reversal signal.`
-          : `Bullish engulfing detected but CCI(${CCI_PERIOD}) = ${curCci.toFixed(1)} — no confirmation.`,
+          ? `Bullish engulfing detected + CCI(${cciPeriod}) confirmation (${curCci.toFixed(1)}). Strong reversal signal.`
+          : `Bullish engulfing detected but CCI(${cciPeriod}) = ${curCci.toFixed(1)} — no confirmation.`,
         signalClass: 'bullish',
       };
     }
@@ -82,8 +111,8 @@ export class Mt5EngulfingCciDirective implements IDirective {
         score,
         confidence: confirmed ? 0.8 : 0.5,
         reason: confirmed
-          ? `Bearish engulfing detected + CCI(${CCI_PERIOD}) confirmation (${curCci.toFixed(1)}). Strong reversal signal.`
-          : `Bearish engulfing detected but CCI(${CCI_PERIOD}) = ${curCci.toFixed(1)} — no confirmation.`,
+          ? `Bearish engulfing detected + CCI(${cciPeriod}) confirmation (${curCci.toFixed(1)}). Strong reversal signal.`
+          : `Bearish engulfing detected but CCI(${cciPeriod}) = ${curCci.toFixed(1)} — no confirmation.`,
         signalClass: 'bearish',
       };
     }
