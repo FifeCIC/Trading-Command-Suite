@@ -324,6 +324,45 @@ entry only — see the two shapes above.
 **A full handoff missing any of the three is incomplete and the Librarian should reject it rather
 than silently infer the content.** A Note missing its QA entry is equally incomplete.
 
+## 🌐 THE PUBLIC SURFACES — the fourth obligation (added 2026-11-01, owner request)
+
+> Owner, 2026-11-01: *"the handoff process needs to have clarity on the github pages, wiki and
+> conversations. The handoffs could be used to ensure they all stay updated or well wired to one
+> another so that information is shared from the one source which is usually the app."*
+
+The three pages above are **internal**. Three more surfaces are **public**, they are read by people
+who will never open this repo, and they drift independently:
+
+| Surface | Lives at | Written by |
+|---|---|---|
+| **GitHub Pages** | `site/` → `fifecic.github.io/Trading-Command-Suite/` | hand-authored HTML + `site/showcase/` |
+| **Wiki** | the repo's wiki git | `scripts/publish-public-docs.cjs`, **generated** from `wiki/*.md` + the `docs/` seeds in `WIKI_SEED` |
+| **Discussions** | the repo's Discussions | humans and agents; roadmap and poll posts |
+
+**The rule: the app is the source; every one of these is a claim about it.**
+
+So a handoff must say, in one line, whether the change it describes **contradicts a public page** —
+and if it does, which page:
+
+```markdown
+## Public surfaces
+
+- **Affects:** wiki `Installing` (setup steps changed) · none (site, discussions)
+- **Do not edit the wiki page.** Edit `wiki/Installing.md`, then
+  `node scripts/publish-public-docs.cjs --apply`
+```
+
+⚠️ **Never edit a wiki page in the browser.** Every seeded page carries a banner saying it is
+generated, and the next publish run overwrites it — so a fix made there is silently reverted, which
+is worse than not making it. The fix always lands in the repository file.
+
+⚠️ **A handoff that says "wiki updated" without naming the file is not evidence.** Name the file, or
+say `none`.
+
+**What triggers an entry:** a changed install step, a changed count, a changed capability, a renamed
+view, a decision that reverses something a public page states, or a disclaimer/risk change. Cosmetic
+page styling does not.
+
 ## 📊 DIAGRAMS — REQUIRED WHEN DATA FLOW CHANGES
 
 A handoff that changes **data flow, ordering, a contract, or system boundaries MUST include a
