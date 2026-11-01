@@ -772,9 +772,42 @@ export const CURRENT_SLICE = [
                        becomes readable, and the opportunity path is measured earning capacity where the
                        signal has no reading) ── */
                         'BOTH SCORES ARE KEPT PER BAR, NOT ONLY THE ONE THAT CLASSIFIES (2026-10-27, no issue) — `fullScore()` already returned `gated.signalPct`, `opportunityPct`, `opportunityScore`, `opportunityMax` and `riskMultiplier`, but `scoreSeries` stored only `signalPct` under the name `score`, so a two-score system read as a one-score system in tab A (the owner read the single "SCORE" column and asked where the other score was). The per-bar record now carries all five beside `score` — kept as the signal alias so rows stored before today still render — and `RunComparisonPanels.jsx` prints seven columns (Bar · Signal % · Opportunity % · Opp points · Risk × · Signal · Passed) with the two questions named under the table; an older run reads "—", never `0`, in the opportunity columns. ⚠️ MEASURED, NOT EXPLAINED: run `ca0cc8c0` (`spy-speed-v1`, US500 1h, 170 bars) stores `2026-09-12 | signalPct 0 | opportunityPct 25.9 (206 of 795) | NO_DATA` beside `signalPct 1.3 | opportunityPct 32.0 (251 of 795) | HOLD`, so the ADDITIVE path earns a quarter of configured capacity on a bar where the DIRECTIONAL score has no reading — the same SHAPE batch #34 recorded for the ladder (#776), and the cause here is undiagnosed with no tracking issue. No NEW endpoint: both existing routes (`POST /api/backtest/run`, `GET /api/backtest/results/:runId`) carry the widened `scoreSeries` entry and are registered as CHANGED.',
-                                          ]
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-10-27 (batch #40: 1 handoff — ONE POINT IS NOT A CURVE. A protocol run now places no trades, so `GET /api/backtest/equity/:runId` returns exactly ONE point — the endpoint working as designed — and `EquityCurveChart` built its breakeven line from `[points[0], points[last]]`, i.e. `[t, t]`. `lightweight-charts` asserts strictly ascending UNIQUE time, so the assertion threw and the error boundary replaced the whole Result step with "Something went wrong rendering this view" on EVERY protocol run: a scores-only change landing the same day silently made the Lab unrenderable. `ascUnique()` now guards all three `setData` calls (last value per timestamp wins) and the zero line is drawn only with two DISTINCT times; `BacktestPage` mounts the Equity section only at ≥2 points and explains the absence at exactly one. No endpoint changed and none was added — the defect was a consumer assumption about a shape the contract never promised more of.)';
 
+                                            /* ── batch #41 — 2026-10-27 to 2026-10-27 (the A/B comparison becomes auditable: a durable
+                                               baseline, ONE server implementation of the totals and the verdict, and a stated pair of
+                                               compared runs rather than an assumed one) ── */
+                                                'THE ACCEPTED BASELINE IS THE SERVER\'S, NOT THE BROWSER\'S (2026-10-27, no issue) — the A-baseline began the day in `localStorage` (`bt.baseline.<protocol>`) and ended it as a settings key family: `backtest.baseline.<protocol>.runId` / `.acceptedAt` in `global_setting`, read through `GET /api/system/settings/registry/family?key=…` and written by `PUT` / `DELETE /api/system/settings/registry/:key`. One baseline per protocol scope, accepting replaces, and `SettingsResolverService.clear(key)` is a SINGLE-key delete that refuses an undeclared key or a secret — because `clearFamily()` derives its prefix assuming a `:` and would delete 0 rows for this dot-style family, a trap documented AT the family rather than silently relied upon. A baseline whose run was deleted is a REPORTED state ("this accepted baseline run no longer exists" + a Clear control) and a read failure is "could not be READ — unknown, not empty", never a table of dashes. Files: `settings-registry.ts` (family), `settings-resolver.service.ts` (`clear`), `settings-registry.controller.ts` (unowned key answers 400, not a 500 that reads like an outage), `use-backtest-baseline.js` (replaces the deleted `backtest-baseline.js` and migrates the browser key ONCE). ⚠️ ONE SUBJECT, TWO HANDOFFS 37 MINUTES APART: the earlier file describes the browser-local version as `partial` — that is SUPERSEDED, not an open gap, and no `isBaseline` column was needed.',
+                                                'THE TOTALS AND THE DIRECTION COUNTS ARE NAMED, AND THE PROTOCOLS VIEW STOPS PRETENDING TO TRADE (2026-10-27, no issue) — both A/B views gained a **Score totals** table (Σ / highest / lowest for Signal %, Opportunity % and Opp points) and the difference tab shows per-score A→B totals with Δ plus improved / worsened / unchanged counts that always sum to the bars compared (`skipped` names the shortfall). A pair whose scores are identical prints "No bar\'s signal score moved" instead of ten zero rows, and the Protocols view renders NO trade field (`showTrades={subject === \'strategy\'}` on all four panels) because a scores-only run could only ever print 0 or —. ⚠️ THE TREE MOVED UNDER THIS HANDOFF: it names `src/core/backtest-totals.js` as the home of the arithmetic, but that file now exports only `pickRepeatPair` — `scoringTotals` lives in `nest/src/modules/backtest/score-maths.ts` and is SERVED as `totals` on `GET /api/backtest/results/:runId`, so the panel and an agent cannot hold two implementations.',
+                                                'THE A/B VERDICT LEAVES THE BROWSER, AND THE WINDOW POPULATION BECOMES VISIBLE (2026-10-27, #1132) — `score-maths.ts` is the ONE implementation of the totals, the instant-keyed join and the multi-window verdict; `POST /api/backtest/repeat-check` takes `{ windows:[{aId,bId,label?}] }` (1..10 — ONE window is accepted and answers `cannot-judge`, a bare array is 400) and returns per window `{bars, barsA, barsB, onlyA, onlyB, deltaSignalSum, scores{signal,opportunity,points}, capacityA, capacityB, capacityNote?}` plus `verdict` and `counted{total,usable,blocked,moved,flat,partial}`. Three "plausible number, no error" gaps were closed by exercising it as an agent would: `bars` is the INTERSECTION (924 reported while one side scored 2,000 bars and the other 1,722), `capacity: null` conflated `moved-during-run` with `not-recorded`, and a run with scores but no per-bar instant was offered for selection — `hasInstants` (a string check on the already-loaded `scoresJson`, not a parse, so a list request stays cheap) now excludes it — ⚠️ though the handoff\'s own "Deliberately unchanged" section says that flag was DECLINED, the TREE has it (`hasInstants` in `backtest.service.ts`), so the tree is what is recorded. ⚠️ STILL OPEN #1132: `backtestrun` records NO configuration snapshot, so the capacity check compares TOTALS per side (+20 on one directive and −20 on another reads as identical), and no run carries an iteration/experiment provenance — a REPEATED verdict proves the change moved the same way, not that it was the only change. Files: `score-maths.ts` (+ spec), `backtest.controller.ts`, `backtest.service.ts`, `RunComparisonPanels.jsx`, `src/core/backtest-totals.js` (selection only).',
+                                                'THREE PANELS BECOME ONE TABLE STYLE, AND THE COLUMNS SORT (2026-10-27, no issue) — Current performance (A), Backtesting results (B) and Completed runs share `.bt-panel-head`, `.bt-table-wrap` and `.bt-facts-table`, and the tabular columns sort through `useSort()` / `SortableTh` in `src/core/use-sort.jsx`: the button sits INSIDE the `<th>` so the column keeps its semantics and a screen reader hears the order, nulls always sort last, and Completed runs defaults to Created ▼ (the run a reader is looking for). Tables stay `.bt-table` from `src/core/tables.css` — a second table style is the duplication that file exists to prevent — and labelled two-column fact rows carry no sort control, because sorting them would reorder values against the labels beside them.',
+                                                'THE PROTOCOLS VIEW CARRIES NO TRADE MATERIAL, AND THE CHART RENDERERS ARE GROUPED BY TECHNOLOGY (2026-10-27, no issue) — step 6 on `/lab/backtest` gates the bracket-trade stats, the `executionUsed` costs line, the trades table, the price chart and `ReplayPlayer` on `subject === \'strategy\'`, so a scores-only surface can no longer be read as a trading one. The chart components split into `src/components/backtest/charts/` (lightweight-charts only, with an `index.js` docblock stating the rule) and `src/components/backtest/replay/` (hand-drawn SVG), so the two renderers cannot be confused; `duplication-allowance.json` and `css-literal-baseline.json` were RE-KEYED only — same counts, new paths, nothing banked. ⚠️ `ReplayPlayer` still draws no trade entries or exits (#819 OPEN) and the remaining `lightweight-charts` importers across `pages/` and `components/` are the backlog for the same grouping, not the pattern to copy. No route or API change.',
+                                                'ONE COMPONENT FOR EVERY ANNOTATING SENTENCE (2026-10-27, #1152 follow-on) — `<InfoNote>` (`tone` neutral/info/success/warning/critical, a mandatory `label`, `icon`, `meta`, `role`) replaces six ad-hoc paragraph styles on the backtest page. The tone is applied to the BORDER and the LABEL only, because the body must stay `--ink` (`.app-notice--warning` colours its body amber and violates the WCAG note in `ui-standards`), and `label` is what makes five kinds of statement scannable — how this works / what this cannot claim / data gaps / state confirmed / the reading. A FAILURE still belongs to `NoticeBlock` with its stable code. The superseded CSS (`.pb-guard*`, `.bt-panel-note`, `.bt-compare-legend*`, `.bt-execution-info`, `.bt-period`, `.bt-measured-period`) was DELETED rather than left unused, and `/appearance/info` renders the REAL component as the written reference so the next agent copies a pattern instead of inventing one (settled-decisions row 100). ⚠️ The `bt-panel-note` remaining inside `RepeatCheck` is a `<form>` control row, not an annotation — converting it would put a form inside a note.',
+                                            /* ── batch #42 — 2026-10-28 to 2026-10-29 (provenance, measured spreads, and a
+                                               trade-based result panel: a run joins its loop and the override version that
+                                               scored it, the spread is the broker's own measurement, and every trade carries
+                                               what it did and how long it held) ── */
+                                                'THE GATE CHAIN GAINS A THIRD LINK, AND A FAILED FETCH STOPS BEING REPORTED AS AN EMPTY REGISTRY (2026-10-28, #800 CLOSED; #782 measured OPEN) — `db:check` is now three gates: schema safety, protocol references (`validate-protocol-refs.cjs`: every canonical table\'s `protocolId` must resolve to `protocol.slug`, `watchlist` the declared uuid exception, 11 historical `backtestrun.protocolId = \'default\'` rows baselined) and raw-managed DDL (`validate-raw-managed-ddl.cjs`: each checked-in CREATE still describes the live table, column names both directions, types deliberately not compared). The Ladder and Symbols Ladder no longer turn a failed fetch into "no protocols": `useProtocolData` returns `loaded / isError / error / retry`, the prune effect is gated on POSITIVE evidence, a failure renders "Could not load protocols — the request failed … [Retry]", and a `queryFn` that resolves a failure to [] is now a build failure (`validate-query-empty-fallback.cjs`, 58 baselined sites, 56 after Symbols Ladder dropped 3 → 1). `src/core/api/scoring-hooks.js` was DELETED (imported by nothing, held 4 swallowed sites) — verified absent. `backtestrun.fixedAmount` also became a COLUMN (#1141 advanced): a `fixedDollar` run now stores the stake it used (NULL unless that model), where it previously stored the model and not the amount, so two runs risking 100 and 10,000 compared as though they matched. The same day\'s THIRD landing found `averageReturn10d` / `maxReturn10d` were never stored and hardcoded to null, blanking two of twelve Result stats on every run; both are columns now, written on create and read from the row, and rows stored before them still serve null rather than a back-filled guess. ⚠️ #782 remains OPEN: the 56 baselined sites still print "nothing here" during an outage, the highest risk being the pages whose empty state prunes or overwrites user state.',
+                                                'A RUN NOW KNOWS WHICH LOOP IT BELONGS TO AND WHICH OVERRIDE VERSION SCORED IT (2026-10-28, #1144 CLOSED) — `backtest_experiment` (protocolId, label, goal, windowLabel, status, createdBy) plus `backtestrun.experimentId` (FK, ON DELETE SET NULL), `.iteration` (1-based, assigned MAX+1 by the API — a caller-supplied number could collide and make "iteration 3" ambiguous) and `.configVersion`; `protocol_directive_change` is an append-only log with a monotonic PER-PROTOCOL version, written by `SettingsResolverService` at the ONE choke point for every `protocol:<slug>:<dir>:<field>` write/reset/delete, and joined to a run by `configVersion`. Routes: NEW `POST/GET /api/backtest/experiments`, `GET/PATCH /api/backtest/experiments/:id` (status only — `goal` and `windowLabel` are the criteria the attempt is judged against and are NOT editable), `GET /api/scoring/protocols/:slug/directive-changes` (an empty list is version 0, a real state, not a failure); `GET /api/backtest/runs` gained `experimentId` / `iteration` / `configVersion` and the Completed-runs table prints `Iter` / `Cfg` with `—` for a one-off or a pre-column run. ⚠️ `protocol_directive_entry` is still written and never read and is deliberately NOT part of the log — it holds a CURRENT value, so adding it would create a second source of truth. A UI that OPENS a loop is deferred to the Strategies work; the API is complete and verified.',
+                                                'EXECUTION COSTS ARE APPLIED AS FRACTIONS OF PRICE, IN ONE TESTED MODULE (2026-10-28, #1146 measured OPEN) — spread and slippage were added to the close as ABSOLUTE PRICE UNITS while their own labels promise fractions (`0.01 = 1%`), so every instrument not priced near 1.00 was under-charged: ~17x too little on VIX at ~17.00 and effectively zero on BTC (measured: the same window at a nominal 3% and at 0.04% differed by 0.18pp per trade, because 0.03 / 17.00 = 0.176%). `execution-costs.ts` is now the ONE place a backtest applies them (`close × (1 + spread/2 + slippage)`) with `roundTripCost()` as the figure the Costs panel\'s break-even must agree with — an inline expression twice in a row can be "fixed" one of the two times, which is what happened. VIX 5m, slPct/tpPct 5: a TP trade nets 1.90% (5% bracket − 3.1% round trip), where the old arithmetic left ≈ +4.81%. ⚠️ THE TREE HAS MOVED: `applyExecutionCosts` now takes a fifth `side` parameter (2026-10-31, #1155 measured OPEN) because a short sells at the bid and buys back at the ask — the long-only shape would have CREDITED half the spread to every short. ⚠️ #1146 remains OPEN, and the honest cost makes the 1%-spread + 1%-slippage stock/index default charge 3% a side, so a 1%-target geometry measures `winRate 0.0%`; no stored run was re-costed (a re-run is the honest correction).',
+                                                'THE BROKER\'S OWN SPREAD NOW PRICES THE BACKTEST (2026-10-29, #1148 measured OPEN) — `captureSpreads(brokerId)` reads live quotes for the symbols `symbol_route` already points at and stores `(ask−bid)/mid × 100` on `broker_symbol.spreadPct` beside `.spreadAbs` and `.spreadQuotedAt`; it runs at the end of every catalogue sync, cannot fail the sync, and never writes 0 for "unknown" (NULL = never measured, 0 = a genuinely measured zero — the demo feed quotes `bid == ask` on FX). `BacktestService.measuredSpreadPct()` resolves symbol → route → measured spread, and a caller-supplied spread WINS so an edited form still overrides the measurement. Routes: NEW `POST /api/broker-symbols/spread-sync`, `GET /api/broker-symbols/spreads` (measured rows only) and `GET /api/broker-symbols/spread?symbol=` (points, ticks, `tickSize`, `eatsShareOfOnePctMove`, `quotedAt`) — one call because a percentage alone cannot be reasoned about. Two display defects were produced by the step and fixed in it: a fraction printed as a percentage ("eats 1% of a 1% move" for a 0.93% spread) and a break-even computed from the form default (0.10%) instead of the spread the engine would use (0.930%). Measured 2026-10-29: VIX 0.009297 (0.930%, break-even 1.01%), US500 0.000052%. ⚠️ #1148 remains OPEN: capture runs on sync and on demand, not on bridge connect, and a symbol routed to two brokers takes the FIRST enabled MT5 quote — it is not an average, and the venue is not chosen per run.',
+                                                'THE RESULT PANEL BECOMES TRADE-BASED, AND AN EOD EXIT STOPS BOOKING ITSELF AT ITS OWN ENTRY (2026-10-29, no issue) — one row per closed trade with `P&L` and `P&L %`, an all-trades `tradeTotals` summary served by the API (attached on BOTH the live run and the stored read, so the two cannot disagree), stat tiles, and the per-bar score tables collapsed rather than removed. Per-trade excursion (`maxAdversePct` / `maxFavourablePct` / `barsHeld` / `spansGap`) is accumulated from the bars the loop already walks, and an optional tightening `stopPlan { lockAtPct, trailPct, stepPct, tightenPct }` simulates a stop that only ever tightens, with a `TRAIL` exit reason — tested on bar N from bars up to N−1, because OHLC cannot order an intra-bar high against an intra-bar low. NEW `POST /api/backtest/stop-sweep` is the first-order screen (over a 1,027-trade run the inflection is between 1.5% and 2.0%, below which winners are destroyed). ⚠️ THE DEFECT THIS EXPOSED was worse than the panel: `EOD` exits kept the ENTRY close and instant, so 2,124 of 34,313 stored trades (6.2%) were zero-move round trips at about −1.0% — after the fix the same window re-runs 0 of 43 sharing a stamp and an EOD average hold of 1,007.6 min. ⚠️ The owner was right that a sleeping PC skews the data: the VIX 5m window has 63.9% bar coverage, 11 holes over 6 h (longest 111.3 h) and 464 of 1,027 trades (45.2%) cross a hole > 1 h, so `barsHeld` / `avgBarsHeld` is the gap-immune hold and the clock average is printed beside it with the contaminated count named. Nothing backfills stored runs; gap-crossing trades are FLAGGED, not excluded.',
+
+                                            /* ── batch #43 — 2026-10-30 to 2026-10-31 (the Lab stops reporting numbers that
+                                               cannot be read: drawdown as a currency fall of the ACCOUNT, the win rate a run
+                                               needs MEASURED from its own trades, and a comparison that names the settings
+                                               which differed) ── */
+                                                'BACKTEST DRAWDOWN IS A CURRENCY FALL OF THE ACCOUNT, NOT A PERCENTAGE OF THE PEAK P&L (2026-10-30, #1149 measured OPEN) — `computeEquityPath()` (`nest/src/modules/backtest/equity-drawdown.ts`, 10 tests) replays a run\'s trades in EXIT order into a cumulative P&L path and measures the worst peak-to-trough fall. Contract: `maxDrawdownAmount` is CURRENCY and always present; `maxDrawdownPct` is a percentage of `accountSize` and is `null` with `maxDrawdownPctBasis: \'unavailable\'` when the run recorded no capital (NEVER 0); the peak starts at `max(0, running max)`, so a monotonic loser reports its real amount instead of the old `peak > 0` guard\'s exact 0. Measured: `7f00cfb8` now 161068.36 / 1610.68% where it served 8,867.70%, and `e844b4cd` 12419.46 / 124.19% with `peakEquity` 0. `backtestrun.maxDrawdown` still stores `min(returns10d)` — a ten-day FORWARD return — and is served ONLY as `maxDrawdown10d` / "Worst Return (10d)"; the column rename is deliberately not done. The same landing carried a page-down P0: `KeyboardShortcutsHelp.jsx` referenced an undeclared `FREE_EDITION` (deleted with the free edition, register row 96), which is legal at PARSE time, so `vite build` and `tsc` both passed and the module threw `ReferenceError` at module evaluation — replacing EVERY page with "App Failed to Load" on a green build.',
+                                                'THE WIN RATE A RUN NEEDS IS MEASURED FROM ITS OWN TRADES, AND THE SETTING IS SHOWN BESIDE IT (2026-10-31, no issue; #1163 measured OPEN) — `breakEvenFromOutcomes()` (`nest/src/modules/backtest/break-even.ts`) is ONE division, `avgLoss / (avgWin + avgLoss)`, with no cost, bracket or threshold input; the same day\'s earlier `breakEvenWinRate()` charged a cost inside bracket distances that ALREADY contained it and overstated the requirement by 9-13pp (88.0 where the trades measure 74.9 — pinned by a spec assertion, and another asserts the function has no `costPct` key so the model cannot creep back). Served on `GET /api/backtest/results/:runId` as `breakEvenWinRatePct` / `breakEvenGapPp` / `breakEvenUnavailable`, beside `bracketStopNominalPct` / `bracketTargetNominalPct` — the bot\'s CURRENT `trading_strategy.slPct`/`tpPct` with a verbatim source label, because `backtestrun` carries no `slPct`/`tpPct` column and a backfilled one would be empty for every historical row. The same landing gave the trade loop a declared `directionMode` in place of `const isLong = true`: `decideEntry()` enumerates the four signal classes (never a substring match — `\'STRONG_SELL\'.startsWith(\'SELL\')` is false, so a prefix test routed the strongest sell LONG) and returns `side`, which multiplies BOTH `applyExecutionCosts()` and the P&L. ⚠️ THE TREE HAS SINCE NARROWED THAT MODE (2026-11-01, register row 113): `long` and `short` are two strategies, `both` is REFUSED on the run path by `refuseUnrunnableDirection()`, and no surface may offer it. ⚠️ MEASURED AND NOT EXPLAINED: run `568c5552` on a 2% stop returns `avgLossPct` 2.85 — losses are not limited to the configured stop (gap crossings and EOD exits are candidates), so every expectancy figure is computed from losses the setting does not explain; no issue tracks it.',
+                                                'A COMPARISON NAMES THE SETTINGS THAT DIFFER BEFORE IT SHOWS THE RESULTS, ON A PAGE OF ITS OWN (2026-10-31, #1154 and #1155 filed) — `describeRunDifferences()` (`nest/src/modules/backtest/run-differences.ts`, 18 declared settings across scope / sizing / costs / provenance, `null` reported as `unrecorded` and never equal to a value) feeds `differences: { changed[], same[] }` on `POST /api/backtest/runs/compare`; `RunSettingsDiff` renders the changed rows and a "same on every run" line ABOVE the metrics table, because "what did I change" is answered before "what happened". Completed runs moved off `/lab/backtest-strategies` (11 steps and 4 reference tabs) to NEW `/lab/backtest-runs`, which IMPORTS `BacktestRunsPanel` rather than copying it, so the A/B baseline pinning, the #1132 cross-window refusal and the delete guard keep one implementation. The blind spot was MEASURED: four VIX 5m runs at +76,617 … +141,219 with identical protocol, symbol, timeframe, trade count, win rate and profit factor, where only `spread` and `slippage` differed. ⚠️ No "pre-fix cost model" badge was added — the cost fix landed 2026-10-29 00:37:56 and no timestamp can decide which runs were charged under the old form (#1154).',
+                                            /* ── batch #44 — 2026-11-01 to 2026-11-01 (the directive library becomes measurable, configurable
+                                               and registration-complete, and the two honesty fixes on the money path) ── */
+                                                'DIRECTIVE DEPTH IS MEASURED BEFORE IT IS TUNED (2026-11-01, #1166 measured OPEN) — two re-runnable tools under `scripts/`: `audit-directive-depth.cjs` extracts what the library hardcodes (file-scoped constants AND class-scoped score calibrations, so a file holding several directives is flagged rather than mis-attributed) and `measure-period-sensitivity.cjs` answers whether the period knob matters by calling the same indicator functions the directives import, applying each directive own threshold and varying only the period (20-assertion `--self-test`, canaried seven ways). The DECISION is thresholds before periods (register row 109): a gate that never trips contributes nothing however well it scores, ADX-14 vs ADX-7 shared 0% of entry triggers, and RSI-oversold recall across a 2x period change was 7.7%. ⚠️ THE COUNTS IN THIS HANDOFF WERE STALE WITHIN HOURS: it published 161 implementations / 112 files / 110 named + 29 inline constants / 93 calibrations / 20 HIGH + 59 MID, measured before #1169 deleted 10 retired and 6 duplicate classes the same day. The TREE now measures 144 directives across 95 files, 115 tuning constants (22 exposed as parameters, 93 unturned), 88 score calibrations, 0 unregistered, 18 HIGH / 55 MID / 71 NONE. Classic defaults match published values; only `ma-crossover` (10/30) deviates and is deliberately left alone.',
+                                                'A DIRECTIVE KNOB IS DECLARED, AND THE DECLARATION IS PROVEN BY BEHAVIOUR (2026-11-01, #1165 measured OPEN — two landings, 11:30 then 13:51) — `parameters.ts` defines `ParamSpec` and a TWO-PATH resolver: `validateSupplied()` at the write boundary (throws, names EVERY problem — unknown key, out of range, wrong type) and `resolveParams()` on the read path (clamps, warns, never throws, because scoring must not die on stale data). Declared defaults ARE the constants they replaced, proven byte-identical to `git show HEAD:` on five fixtures per directive BEFORE each baseline was recorded, and `directive-parameters.spec.ts` derives its directive list from `directives.module.ts` and enforces three `prebuild` guards: BASELINE (no params == recorded output), LIVENESS (min/max must move the output) and SCORE BOUNDS (0..maxScore at every parameter extreme). Six registered classes expose knobs — `rsi-oversold`, `adx`, `mfi`, `stochastic`, `support-resistance-levels`, `williams-r` — and every spec carries a required `chart` role (`series` | `threshold` | `band` | `window` | `proximity` | `none`), so the SPEC rather than the UI decides how a knob renders; `none` marks a knob that needs the dynamic/temporal visual (#1167). NEW `GET /api/directives/:id/params` serves the specs, the defaults and `needsDynamicVisual`. The SCORE BOUNDS guard made two unclamped `support-resistance` expressions REACHABLE (a proximity knob produced -14) and both are now clamped — a bug fix that only alters values the old fixed constant could never produce. Register row 110.',
+                                                'THE DIRECTIVE LIBRARY IS REGISTRATION-COMPLETE, AND A PROTOCOL ENTRY CAN CARRY ITS OWN PARAMETERS (2026-11-01, #1169 CLOSED — two landings, 16:30 then 19:35) — registration has THREE parts (provider entry, constructor parameter, `register(this.x)` in `DirectivesModule.onModuleInit`); a class with only the first is imported but not registered, so `/api/directives/:id/test` answers "not found". `scripts/lib/directive-registry.cjs` is now the ONE definition of "is this class registered" (the register() act, then the constructor parameter, then the declared name through the import table, which resolves ALIASED imports) and four tools consume it; `nest/scripts/validate-directive-registration.cjs` fails `prebuild` for any `IDirective` class in `implementations/` without a `register()` call, and `validate-directive-id-references.cjs` fails when a seeded protocol or strategy names an id that cannot resolve. Final state measured 2026-11-01: 144 declared classes, 144 registered, 0 unreachable; 34 wired, 10 retired seasonal classes deleted, 6 duplicate implementations removed. `protocol_directive_entry.params json NULL` (ALTER TABLE, never `db push`) carries per-entry overrides, mapped to `DirectiveGroup.directiveParams`, passed as the third argument of `DirectivesService.runAll` and included in the tick-cache key; PATCH refuses an unknown key or an out-of-range value and clears the protocol cache. ⚠️ TWO GUARDS HAD BEEN REPORTING OK ON A BROKEN TREE: the earlier registration test matched the IMPORT line (25 unregistered, then 51 under the exact test) and the RETIRED verdict scanned the whole file — both now assert on SYNTHETIC rows. Register rows 107 and 111.',
+                                                'A PRESENT-DAY SOURCE CANNOT SCORE A HISTORICAL BAR, AND LONG AND SHORT ARE WRITTEN DOWN AS TWO STRATEGIES (2026-11-01, #1139 measured OPEN) — `lookahead.ts` `checkFidelity()` decides whether the data a directive reads existed at the evaluated bar (observed-after-evaluated, ONE bar duration as the arrival allowance, `unknown` abstains), and `crypto-fear-greed` / `dilution-impact` return `unmeasured` on a historical bar instead of scoring the present-day value; live scoring still uses them normally. `dilution-impact` also treats a zero share count as MISSING, which had made it a constant 60/60 off all 194 zero rows in `companyMetric`. `POST /api/directives/:id/test` now passes `asOf` and `timeframe`, without which the diagnostic answered "cannot judge" when the real answer was "you are testing a past bar with present-day data". Separately the long-and-short rule was WRITTEN DOWN FOR THE FIRST TIME — it existed nowhere in the repo, which is why `both` got rebuilt: row 113 records that `long` and `short` are two active strategies, `refuseUnrunnableDirection()` refuses `both` on the run path, `decideEntry()` still supports and tests it, and the Backtest Lab no longer offers it (a disabled option renders only for a stored run that used it). Register row 112.',
+                                                'A BACKTEST POSITION IS AFFORDABLE OR IT IS REFUSED (2026-11-01, #1142 measured OPEN) — `applyAffordability()` caps a position at `accountSize x maxLeverage` (default 1, unleveraged) and REFUSES a trade whose one unit costs more than the account, replacing `if (positionSize < 1) positionSize = 1` — the floor that fabricated a $77,600 position on a $10,000 account and let a stored run report +$138,058.50. Each trade records `notional` / `notionalPct`; the run carries `notionalCap`, `maxLeverage`, `tradesRefusedUnaffordable`, `avgNotionalPct` and `firstSizingRefusals`, and the Lab warns above the trade table when trades were refused, so a lower count is never mistaken for "no signals". Register row 114. Stored runs keep their historical numbers. ⚠️ Whole-unit sizing makes BTC / US30 / USTEC / GER40 untestable at the default account (#1170), equity still does not compound (#1176), and `maxLeverage` is reported but not persisted (#1141).',
+                                                                  ]
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-11-01 (batch #44: 7 handoffs — THE DIRECTIVE LIBRARY BECOMES MEASURABLE, CONFIGURABLE AND REGISTRATION-COMPLETE. #1166: two re-runnable audit tools and the decision thresholds-before-periods (rows 107/109). #1165: `parameters.ts` declares a typed spec proven by BASELINE + LIVENESS + SCORE BOUNDS guards; six registered classes expose knobs and every spec carries a `chart` role (row 110), served by NEW `GET /api/directives/:id/params`. #1169: 144 of 144 classes registered under one shared rule, a `prebuild` gate fails an unregistered class, and `protocol_directive_entry.params` carries per-entry overrides (row 111). #1139: `lookahead.ts` makes `crypto-fear-greed` and `dilution-impact` ABSTAIN on a historical bar (row 112) and `refuseUnrunnableDirection()` keeps `both` off the run path (row 113). #1142: `applyAffordability()` caps notional at `equity x maxLeverage` and refuses an unaffordable trade (row 114). ⚠️ OPEN measured 2026-11-01: #1139 (companyMetric is 194 zero rows; the classification and three producers are unbuilt), #1142 (fixes 1-2 in, fix 3 is #1176), #1165 (multi-instance blocked by UNIQUE(groupId, directiveId)), #1166 (external references for 18 HIGH / 55 MID rows), #1167 (all UI controls), #1170, #1176 and #1141.)'
 export const CURRENT_ROUTE_CONTRACTS = [
 
       {
@@ -930,6 +963,227 @@ export const CURRENT_ROUTE_CONTRACTS = [
         status: 'active',
       },
   
+      /* — batch #44 — new/changed endpoints (2026-11-01, 7 handoffs) — */
+      {
+        route: 'GET /api/directives/:id/params',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'DirectivesController',
+        contract: 'NEW (#1165 measured OPEN). Returns `{ directiveId, parameterised, params[], defaults, needsDynamicVisual }` — every spec carries a required `chart` role (`series` | `threshold` | `band` | `window` | `proximity` | `none`) so the UI derives the rendering instead of guessing. `parameterised: false` with an empty `params` array means "this directive has no knobs" while an `error` means "no such directive"; collapsed, a UI would report "not tunable" for a directive that does not exist. `needsDynamicVisual` lists the `chart: none` knobs that need the dynamic/temporal surface (#1167).',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/directives/:id/test',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'DirectivesController',
+        contract: 'CHANGED (#1139 and #1165 measured OPEN). Accepts optional `params`, REFUSES an unknown key or an out-of-range value with `Invalid parameters for directive "…"` plus `problems`, and echoes `paramsUsed` / `paramsWarnings` — what was actually resolved, not what was sent. It also passes `asOf` (the last bar) and `timeframe`, because without them a lookahead-aware directive answered `unknown` and abstained for the WRONG reason; a historical bar served by a present-day source now returns `result.unmeasured` with score 0 instead of today value.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/scoring/protocols/:slug/directives',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'ProtocolsController',
+        contract: 'CHANGED (#1169 CLOSED). Each entry now returns its stored `params` (or `null` for "declared defaults") beside `maxScoreOverride`, so a reader can see the configuration an entry actually runs without a second call. Before this the payload could not distinguish "configured with defaults" from "never configured", and two instances of one directive were still collapsed by a `Set<string>`.',
+        status: 'active',
+      },
+      {
+        route: 'PATCH /api/scoring/protocols/:slug/directives/:directiveId',
+        method: 'PATCH',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController',
+        contract: 'CHANGED (#1165 measured OPEN, #1169 CLOSED). Body accepts `params` in addition to `active` / `maxScore`: `validateSupplied()` REFUSES an unknown key or an out-of-range value (named in the response, never clamped) and `params: null` clears the override back to declared defaults, which is byte-identical to a never-configured entry. The protocol cache is cleared on every accepted write, so the next scoring tick reads the new configuration instead of a cached one.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1142 measured OPEN). The `if (positionSize < 1) positionSize = 1` floor is gone: `applyAffordability()` caps units at `accountSize x maxLeverage` (default 1, unleveraged), REFUSES a trade whose one unit costs more than the account and counts it, and every trade records `notional` / `notionalPct`. Stats gain `notionalCap`, `maxLeverage`, `tradesRefusedUnaffordable`, `avgNotionalPct` and `firstSizingRefusals`. A stored run had reported +$138,058.50 on a $10,000 account; stored runs keep their numbers, new runs are physical.',
+        status: 'active',
+      },
+      /* — batch #43 — new/changed endpoints (2026-10-30 to 2026-10-31, 4 handoffs) — */
+      {
+        route: 'GET /api/backtest/equity/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1149 measured OPEN). `summary` is now `computeEquityPath()` output: `maxDrawdownAmount` in CURRENCY (always present — the worst peak-to-trough fall on a realisation-ordered path), `maxDrawdownPct` as a percentage of `accountSize`, and `maxDrawdownPctBasis` `capital` | `unavailable` — `null`, never 0, when the run recorded no capital; `peakEquity` starts at max(0, running max) so a monotonic loser reports its loss. Before this the payload divided by the peak CUMULATIVE P&L (8,867.70% on one run) with a `peak > 0` guard that made a never-positive run report exactly 0. The path is still DERIVED per read, so every stored run gains the correction with no backfill.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/results/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (no issue; #1149 measured OPEN). Carries the corrected drawdown block (`maxDrawdownAmount` / `maxDrawdownPct` / `maxDrawdownPctBasis`) and the MEASURED break-even set: `breakEvenWinRatePct` = avgLoss / (avgWin + avgLoss), `breakEvenGapPp`, `breakEvenUnavailable` — no cost, bracket or threshold input can move it, where the same-day cost-in-bracket form overstated the requirement by 9-13pp. `bracketStopNominalPct` / `bracketTargetNominalPct` report the bot\'s CURRENT `trading_strategy.slPct`/`tpPct` with a source label, never a stored run setting, because the run carries no `slPct`/`tpPct` column. `backtestrun.maxDrawdown` (which holds `min(returns10d)`) is served ONLY as `maxDrawdown10d` and must not be read as a trade drawdown.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/runs/compare',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1154 and #1155 filed). The response gains `differences: { changed[], same[] }` produced by `describeRunDifferences()` — 18 STORED settings across scope / sizing / costs / provenance — so the reason a P&L moved is named before the metrics are read. A `null` column is reported as `unrecorded` and never compares equal to a value. Measured blind spot it closes: four VIX 5m runs at +76,617 … +141,219 with identical protocol, symbol, timeframe, trade count, win rate and profit factor, where only `spread` and `slippage` differed — the page showed no reason at all.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (2026-10-31; #1155 measured OPEN, #1154 filed). Body accepts `directionMode` (`long` | `short` | `both`) in place of the hardcoded `const isLong = true`: `decideEntry()` enumerates the four signal classes — never a substring match, because `\'STRONG_SELL\'.startsWith(\'SELL\')` is false — and returns `side`, which multiplies BOTH `applyExecutionCosts()` and the P&L. ⚠️ THE TREE HAS SINCE NARROWED THIS (2026-11-01, register row 113): `both` is refused on the run path by `refuseUnrunnableDirection()`, because `long` and `short` are two strategies and no surface may offer a third mode.',
+        status: 'active',
+      },
+
+      /* — batch #42 — new/changed endpoints (2026-10-28 to 2026-10-29, 6 handoffs) — */
+      {
+        route: 'POST /api/backtest/experiments',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'NEW (#1144). Body `{ protocolId, label, goal, windowLabel?, createdBy? }` → the experiment row with `status: running`. Before this a tuning series was an unordered pile of runs: nothing could say which attempt a run was, so "the number moved" could not be read as progress. `goal` and `windowLabel` are the criteria the attempt is judged against and are deliberately not editable afterwards.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/experiments',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'NEW (#1144). `?protocolId=` optional; returns `{ experiments: [...] }` newest first. The list is the index of loops; a run is joined to one by `experimentId`.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/experiments/:id',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'NEW (#1144). One experiment plus every run in it ordered by `iteration` — the audit trail of a single attempt. A missing id answers 404, never `200 { error }`, the rule introduced for `results/:runId` in batch #41.',
+        status: 'active',
+      },
+      {
+        route: 'PATCH /api/backtest/experiments/:id',
+        method: 'PATCH',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'NEW (#1144). Body `{ status }` — one of running | stopped | accepted | abandoned; anything else is 400. Closing a loop is the only mutation: `goal` and `windowLabel` are not editable because rewriting the criteria after the fact would rewrite history — start a new experiment instead.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/scoring/protocols/:slug/directive-changes',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController / SettingsResolverService',
+        contract: 'NEW (#1144). The readable half of `protocol_directive_change`: `{ slug, version, changes[] }` newest first (`?limit=`, 1..200, default 50). `BacktestRun.configVersion` is the join key into this list, so a run can say WHICH configuration scored it. An empty `changes` is version 0 — "no override has ever been recorded" — a real state and NOT a failure; a failing read is a 500, not an empty list.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/broker-symbols/spread-sync',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BrokerSymbolsController / BrokerSymbolDiscoveryService',
+        contract: 'NEW (#1148). Captures live bid/ask for the symbols `symbol_route` already points at and stores `(ask−bid)/mid × 100` on `broker_symbol.spreadPct` + `.spreadQuotedAt` (+ `.spreadAbs`); `?brokerId=` limits it to one broker, otherwise every configured MT5 broker. Runs at the end of a catalogue sync and cannot fail it; never writes 0 for "unknown" — NULL means never measured.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/broker-symbols/spreads',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BrokerSymbolsController',
+        contract: 'NEW (#1148). `?brokerId=` optional; up to 200 MEASURED rows `{ brokerId, name, assetClass, spreadPct, spreadQuotedAt }` ordered broker then name. An unmeasured symbol is absent rather than 0 — the two states are not the same thing and collapsing them renders a never-quoted symbol as a perfect fill.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/broker-symbols/spread',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BrokerSymbolsController / symbols.spread-geometry',
+        contract: 'NEW (#1148). `?symbol=` (required) → points, ticks, `tickSize`, `eatsShareOfOnePctMove` and `quotedAt` for the first enabled MT5 route. One call because the percentage alone cannot be reasoned about; the FRACTION is returned raw and the UI formats it once (a double ×100 printed "eats 1% of a 1% move" for a 0.93% spread).',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/stop-sweep',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / score-maths.stopSweep',
+        contract: 'NEW (2026-10-29, no issue). Body `{ runId, candidates?: number[] }` (default `[0.25,0.5,0.75,1,1.5,2,3,5]`, max 20) → first-order rows of stops / would-stop / winners cut / losers saved / est. net plus `measured`. A run stored before excursion existed answers `measured: 0` and `rows: []` — not a table of zeros. First-order only: it cannot see the path a surviving trade took; the exact answer is a re-run with `stopPlan`.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1144; 2026-10-29 excursion + `stopPlan`). Accepts `experimentId` (the API assigns `iteration = MAX+1` and records `configVersion`; a caller-supplied number is never trusted) and `stopPlan { lockAtPct, trailPct, stepPct, tightenPct }`; records `maxAdversePct` / `maxFavourablePct` / `barsHeld` / `spansGap` per trade and returns `tradeTotals`. Every cost is applied through `execution-costs.applyExecutionCosts`, as a FRACTION of price.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/runs',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1144). Every row carries `experimentId`, `iteration` and `configVersion` beside `hasScores` / `hasInstants`. `null` is a one-off run (or a run stored before the column) and is printed as `—`, never as "iteration 1" — the ambiguity the columns exist to remove.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/results/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (2026-10-29). Serves `tradeTotals` (the same `score-maths.tradeTotals` the live run response uses, so the two cannot disagree), every trade carries `maxAdversePct` / `maxFavourablePct` / `barsHeld` / `spansGap`, and `averageReturn10d` / `maxReturn10d` are read from the row instead of hardcoded null — they blanked two of twelve Result stats on every run.',
+        status: 'active',
+      },
+      /* — batch #41 — new/changed endpoints (2026-10-27, 9 handoffs) — */
+      {
+        route: 'POST /api/backtest/repeat-check',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / score-maths.ts',
+        contract: 'NEW (#1132). Body `{ windows:[{ aId, bId, label? }] }`, 1..10 windows — ONE is accepted and answers `cannot-judge` ("a repeat needs at least two windows"), while an empty body or a bare array is 400. Returns `windows[]` (`{label, aId, bId, bars, barsA, barsB, onlyA, onlyB, deltaSignalSum, scores{signal,opportunity,points}, capacityA, capacityB, capacityNote?, blocked?, reason?}`) plus `verdict` (`repeated | did-not-repeat | no-change | cannot-judge`) and `counted{total, usable, blocked, moved, flat, partial}`. Before this the maths existed only in the browser, so an agent driving adjust → re-test → decide had to re-derive totals and verdicts from ~400 KB payloads.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/results/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1132). Now carries a `totals` block (`scoringTotals`: sum / highest / lowest / mean per score, plus `capacity{value,distinct,reason}`), every `scoreSeries` entry carries `time` (the bar instant) beside `date`, and a missing run answers 404 instead of `200 { error }` — measured 2026-10-27: the old shape made every reader that branches on the HTTP status render a run whose fields were all `undefined`.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/runs',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1132). Every row carries `hasScores` (`scoresJson != null && !== \'\'`) and `hasInstants` (a string check for `"time"` inside the already-loaded `scoresJson`, deliberately not a parse). The pair lets a selector offer only runs that can actually be joined per bar — a run with scores but no instant cannot be differenced, and offering it produced "cannot be compared" while measurable runs sat unused.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/equity/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (no issue). A missing run answers 404 instead of `200 { error }`. `getEquityCurve()` still signals absence in the payload; the HTTP status now agrees with it, so a caller that checks only the status cannot render an empty curve as a real one.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/replay/:runId',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (no issue). A missing run answers 404 instead of `200 { error }` — the same rule as `results/:runId`, so a deleted run cannot answer success.',
+        status: 'active',
+      },
+      {
+        route: 'DELETE /api/system/settings/registry/:key',
+        method: 'DELETE',
+        permission: 'Authenticated operator access',
+        owner: 'SettingsRegistryController / SettingsResolverService',
+        contract: 'NEW (no issue). Removes ONE stored row and returns the row count (`deleted: 0` is not an error). Refuses an undeclared key, or one matching no family, with 400 — an unowned key would otherwise surface as a 500 that reads like an outage. Secret settings are refused by `clear(key)`, and this is the un-accept path for the `backtestBaseline` family, whose dot-style keys `clearFamily()` cannot target.',
+        status: 'active',
+      },
       /* — batch #39 — new/changed endpoints (2026-10-27, 1 handoff) — */
       {
         route: 'POST /api/backtest/run',

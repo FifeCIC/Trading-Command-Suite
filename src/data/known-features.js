@@ -773,4 +773,76 @@ export const KNOWN_FEATURES = {
   //    columns. Its new facts land as qa-bt-023 and a slice. Nothing to seed: the key set is
   //    unchanged, so the `capability` table is not touched (uiSurfaces: 0 is a FINDING, not a blank
   //    — not applicable here, because no row is added).
+
+  // ── batch #41 (2026-10-27) — 6 capabilities from 9 handoffs (1 was a Note — panel-controls
+  //    light-mode contrast — so it carries no capability; 2 more were SUPERSEDED by a later file in
+  //    the same batch and land ONCE, in the FINAL state: the accepted A-baseline moved localStorage
+  //    → `global_setting` 37 minutes later, and the repeat maths moved browser → `score-maths.ts`
+  //    94 minutes later). Theme: the A/B comparison becomes something a reader can AUDIT — the
+  //    baseline is durable, the totals and the verdict are served by ONE implementation, and which
+  //    two runs were compared is stated rather than assumed.
+  //    uiSurfaces: 0 is a FINDING, not a blank (0 of these). `devCompletion: 'partial'` only where a
+  //    measured-OPEN issue names the remainder: #1132 (no config fingerprint, no iteration
+  //    provenance) — the baseline, totals, panel-consistency and view-split capabilities are
+  //    complete, and #819 is separate replay work, not unfinished view separation.
+  //    The panel-consistency handoff declares "3 panels on 2 routes"; the count here is the 2 routes
+  //    the panels sit on, matching its neighbours in this file.
+    'Durable backtest A/B baseline': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Backtest score totals and A→B direction counts': { dataPersistence: 'derived', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Server-side A/B backtest verdict': { dataPersistence: 'derived', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Backtest Lab panel consistency + sortable tables': { dataPersistence: 'none', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Backtest view separation and chart-technology grouping': { dataPersistence: 'none', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'InfoNote — one sentence style for annotations': { dataPersistence: 'none', uiSurfaces: 3, pipelineIntegration: 'none', devCompletion: 'complete' },
+
+  // ── batch #42 (2026-10-28 to 2026-10-29) — 4 capabilities from 6 handoffs. Theme: a backtest now
+  //    says WHICH ATTEMPT it was, WHAT IT COST, and WHAT EACH TRADE DID — a run joins its loop and
+  //    the override version that scored it, the spread is the broker's own measurement, and the
+  //    result panel became trade-based with per-trade excursion and a stop screen.
+  //    TWO RECONCILIATIONS, both deliberate. (1) The 800/782/1141 file and the DDL-gate file are the
+  //    SAME subject one day apart — the protocol-reference gate, then the raw-managed DDL gate on top
+  //    of it — so they land as ONE row under the later, broader name; #800 is measured CLOSED and #782
+  //    is measured OPEN at 56 baselined query sites, so the row is partial. (2) 'Backtest execution-
+  //    cost model' (#1146) is NOT a new row: it is the UNIT of the cost model batch #36 already
+  //    seeded ('Backtest Lab — asset-class cost modelling') — same persistence columns, same Costs &
+  //    sizing surface, same trading pipeline — so it lands as qa-bt-034 and a slice rather than as a
+  //    THIRD cost row beside #36's two.
+  //    uiSurfaces: 0 is a FINDING, not a blank (0 of these).
+  //    `devCompletion: 'partial'` only where a measured-OPEN issue names the remainder: #1148 (its own
+  //    issue is OPEN — capture runs on sync not connect, and a multi-routed symbol takes the first
+  //    venue), #782 + #769 (the gate chain and its missing migration history), #1142 (`totalPnl` is
+  //    still not a return). #1144 is CLOSED, and its row is partial only because the UI that OPENS a
+  //    loop is deferred to the Strategies work — the API that records and reads one is complete.
+    'Backtest loop provenance (experiment → iteration → override version)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Data-integrity gates (protocol references, raw-managed DDL, honest query failures)': { dataPersistence: 'none', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Broker-measured execution cost': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Trade-based backtest results with realised P&L, excursion and a stop screen': { dataPersistence: 'stored', uiSurfaces: 4, pipelineIntegration: 'trading', devCompletion: 'partial' },
+
+  // ── batch #43 (2026-10-30 to 2026-10-31) — 3 capabilities from 4 handoffs. Theme: the Lab stops
+  //    reporting numbers that cannot be read — drawdown becomes a CURRENCY fall of the account, the
+  //    win rate a run needs is MEASURED from its own trades, and a comparison names the settings that
+  //    differed before the results are shown.
+  //    ONE SUBJECT, TWO FILES A DAY APART: `break-even-win-rate` (02:03) and `break-even-measured-and-
+  //    ci-fix` (23:34) are the SAME mechanism. The later supersedes the earlier — the cost-inside-
+  //    bracket form overstated the requirement by 9-13pp (88.0 where the trades measure 74.9) — so
+  //    only the MEASURED row is seeded. The drawdown handoff's QA entry was already recorded as
+  //    qa-bt-025 on 2026-10-30, so only its capability and slice are new in this batch.
+  //    uiSurfaces: 0 is a FINDING, not a blank (0 of these). No `partial` row: every open remainder
+  //    (#1149, #1155, #1154, #1163) is a SEPARATE mechanism with its own gap line, not a hole in one
+  //    of these three.
+    'Backtest drawdown measurement': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Break-even win rate, measured from trades': { dataPersistence: 'derived', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Backtest run comparison — settings diff': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+
+  // ── batch #44 (2026-11-01) — 5 capabilities from 7 handoffs (all 7 full; two issue numbers landed
+  //    TWICE — #1165 11:30 → 13:51 and #1169 16:30 → 19:35 — and each pair is recorded as its FINAL
+  //    state, so this is 5 MECHANISMS, not 7 files). Theme: the directive library becomes measured,
+  //    configurable, registration-complete and honest about what it cannot score.
+  //    uiSurfaces: 0 is a FINDING, not a blank (3 of these: #1165, #1166, #1169 — the controls and the
+  //    chart-role surface are #1167). Only #1169 is CLOSED; #1139, #1142, #1165 and #1166 are measured
+  //    OPEN on 2026-11-01, so their rows are `partial` and each remainder is a gap line.
+    'Lookahead Honesty for External-Data Directives': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Affordable Position Sizing in Backtests': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Per-Directive Parameterisation with Chart Roles': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Directive Depth Audit and Period-Sensitivity Measurement': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Directive Library Wiring and Per-Entry Parameters': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };
