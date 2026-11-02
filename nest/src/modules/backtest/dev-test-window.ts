@@ -48,5 +48,28 @@ export const DEV_TEST_TIMEFRAMES = ['5m', '15m', '1h'] as const;
 /** The traded symbols the coverage measurement was taken against. */
 export const DEV_TEST_SYMBOLS = ['XAUUSD', 'XAGUSD', 'VIX', 'SPY', 'US500', 'BTC', 'EURUSD'] as const;
 
+/**
+ * ── SYMBOLS ADDED WITH A RESTRICTED TIMEFRAME SET (2026-11-02) ──────────────────────────────────
+ * The matrix above seeds EVERY development timeframe for every symbol, which is correct only where
+ * the coverage measurement proved all of them. A symbol whose 5m bars begin mid-window cannot be
+ * declared at 5m without the period row asserting a window the data cannot fill — so it is declared
+ * here with the timeframes it CAN cover, measured, rather than left out entirely.
+ *
+ * NVDA measured 2026-11-02 inside `dev-window-v1` (2026-09-09 → 2026-10-20):
+ *   `1d` 30 bars, Sep 09 → Oct 20 — FULL coverage
+ *   `1h` 291 bars, Sep 09 → Oct 20 — FULL coverage
+ *   `15m` starts Sep 14 · `5m` starts Sep 21 — INCOMPLETE, so deliberately NOT declared
+ *
+ * ⚠️ Do not add a pair here without measuring it first. A period row that over-claims coverage is
+ * the same defect as a fabricated statistic: it reports a window that was never measured.
+ */
+export const DEV_TEST_EXTRA_SYMBOLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  NVDA: ['1d', '1h'],
+  // USDJPY measured 2026-11-02 inside the window: `1h` 648 bars, Sep 09 → Oct 21 — FULL coverage.
+  // `5m` (7,860) and `15m` (2,554) both END at Oct 14, i.e. eight trading days short, so they are
+  // deliberately NOT declared. Tokyo USDJPY Session runs 1h, so the coverage that matters is here.
+  USDJPY: ['1h'],
+});
+
 /** The `backtest_period.name` a seeded row carries, e.g. `dev-window-v1`. */
 export const devTestPeriodName = (version: string = DEV_TEST_WINDOW.version): string => version;

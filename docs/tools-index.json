@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 203,
+  "count": 204,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -363,6 +363,14 @@
       "where": "nest",
       "category": "tool",
       "purpose": "align live column defaults with schema.prisma.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "baseline-three-protocols.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "the shipped three, measured on the canonical window.",
       "selfTest": false,
       "reaches": null
     },
