@@ -858,8 +858,10 @@ morning. The NY afternoon contributes less to Cable than to EURUSD.
     assetClasses: ['Forex Majors', 'Commodities'],
     difficulty: 'Intermediate',
     timeframe: '1H / 4H',
-    status: 'supported',
-    tcsProtocol: 'usdcad-oil-v1',
+    // ⚠️ 2026-11-02 — demoted 'supported' → 'partial' because the protocol that implements it is no
+    // longer in the shipped seed. The link to 'usdcad-oil-v1' is REMOVED, not forgotten. It still
+    // exists in this installation's database, so the strategy runs here — both return if it re-ships.
+    status: 'partial',
 
     overview: `
 The Canadian dollar is a petrocurrency — Canada is the world's 4th-largest
@@ -1075,8 +1077,10 @@ are filtered out when DXY is strongly rising.
     assetClasses: ['Commodities', 'Precious Metals'],
     difficulty: 'Intermediate',
     timeframe: '4H / Daily',
-    status: 'supported',
-    tcsProtocol: 'gold-macro-v1',
+    // ⚠️ 2026-11-02 — demoted 'supported' → 'partial' because the protocol that implements it is no
+    // longer in the shipped seed. The link to 'gold-macro-v1' is REMOVED, not forgotten. It still
+    // exists in this installation's database, so the strategy runs here — both return if it re-ships.
+    status: 'partial',
 
     overview: `
 Trade gold on the 4H and daily timeframes using the three macro drivers

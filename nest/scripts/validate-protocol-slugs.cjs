@@ -64,14 +64,18 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Keyed by the EXACT seed key. One entry, with the reason and the decision it records. */
-const BASELINE = {
-  '060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d':
-    'SETTLED 2026-09-11 (docs/SETTLED-DECISIONS.md) — an abandoned placeholder protocol, ' +
-    'active: 0 with 0 groups in both the seed and the DB, referenced by nothing. Left in place ' +
-    'deliberately: deleting a protocol row is a data decision, not a lint fix. Adding a key like ' +
-    'this is still a failure — see the guard header.',
-};
+/**
+ * Keyed by the EXACT seed key. EMPTY as of 2026-11-02.
+ *
+ * ⚠️ The one entry that lived here (`060ed261-…`, an abandoned UUID-keyed placeholder) was removed
+ * because the seed no longer ships it: the 2026-11-02 packaging split reduced the shipped protocol
+ * seed to three slugs, and a placeholder identified by a raw UUID is not something a public
+ * installation should receive. The history is kept in `docs/SETTLED-DECISIONS.md` and in this guard's
+ * header; the ALLOWANCE is gone because it no longer excuses anything. The guard's own rule demanded
+ * exactly this — *"a baselined entry that no longer exists in the seed also fails, so the allowance
+ * cannot rot"* — and the self-test still proves both directions using a synthetic entry.
+ */
+const BASELINE = {};
 
 /**
  * classifySeedKeys() — PURE. No filesystem, so `--self-test` can canary it in BOTH directions.
@@ -82,14 +86,14 @@ const BASELINE = {
  * `staleBaseline` is the anti-rot half: a baselined key that is no longer in the seed means the
  * allowance outlived the thing it excused.
  */
-function classifySeedKeys(keys) {
+function classifySeedKeys(keys, baseline = BASELINE) {
   const offenders = [];
   for (const key of keys) {
     // UUID FIRST, then slug. Order matters — see UUID_RE above.
     const isUuid = UUID_RE.test(key);
     const isSlug = !isUuid && SLUG_RE.test(key);
     if (isSlug) continue;
-    if (Object.prototype.hasOwnProperty.call(BASELINE, key)) continue;
+    if (Object.prototype.hasOwnProperty.call(baseline, key)) continue;
     offenders.push({
       key,
       reason: isUuid
@@ -98,7 +102,7 @@ function classifySeedKeys(keys) {
     });
   }
   const present = new Set(keys);
-  const staleBaseline = Object.keys(BASELINE).filter((k) => !present.has(k));
+  const staleBaseline = Object.keys(baseline).filter((k) => !present.has(k));
   return { offenders, staleBaseline, checked: keys.length };
 }
 
@@ -148,33 +152,47 @@ function selfTest() {
   check('an UPPERCASE key is an offender', classifySeedKeys(['GoldScalp']).offenders.length, 1);
   check('a key with a SPACE is an offender', classifySeedKeys(['gold scalp']).offenders.length, 1);
 
-  // ── Direction 2: it must NOT fire on the correct forms, or on the settled one ──
+  // ── Direction 2: it must NOT fire on the correct forms ──
   check('a plain slug passes', classifySeedKeys(['gold-scalp-v1']).offenders.length, 0);
   check('a slug with digits passes', classifySeedKeys(['hourly-3dir-v1']).offenders.length, 0);
   check('an EMPTY key list is not an error', classifySeedKeys([]).offenders.length, 0);
+
+  // ── Direction 3: the baseline mechanism, proven with a SYNTHETIC entry ──
+  // ⚠️ The real BASELINE is empty since 2026-11-02 (the seeded placeholder it excused is no longer
+  // shipped), so the mechanism is exercised with a fabricated baseline. Deleting these cases would
+  // leave the anti-rot half untested the moment someone adds a real entry back.
+  const SYNTH = { '060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d': 'self-test only' };
   check(
-    'the BASELINED UUID passes (it is a settled decision, not a lint fix)',
-    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d']).offenders.length,
+    'a BASELINED UUID passes',
+    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d'], SYNTH).offenders.length,
     0,
   );
-
-  // ── Direction 3: the anti-rot half ──
+  check(
+    'an UNBASELINED UUID is an offender',
+    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d']).offenders.length,
+    1,
+  );
   check(
     'a baselined key that is GONE is reported (the allowance cannot rot)',
-    classifySeedKeys(['gold-scalp-v1']).staleBaseline,
+    classifySeedKeys(['gold-scalp-v1'], SYNTH).staleBaseline,
     ['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d'],
   );
   check(
     'a baselined key that is PRESENT is not stale',
-    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d', 'gold-scalp-v1']).staleBaseline,
+    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d', 'gold-scalp-v1'], SYNTH).staleBaseline,
     [],
   );
 
   // ── Direction 4: the READER — proves the shape assumption against the real seed ──
   // Without this, a reformat could make `readSeedKeys` return [] and the guard would report OK on
   // a file it never parsed. That is the failure mode this repo keeps re-finding.
+  //
+  // ⚠️ NAMES A KEY, does not COUNT keys. The count was `> 10` until 2026-11-02, when the packaging
+  // split deliberately reduced the shipped seed to three — a floor expressed as a number turns a
+  // deliberate content change into a failed guard. A named key proves the parser reads the real file
+  // whatever the file's size.
   const keys = readSeedKeys();
-  const readOk = keys.length > 10 && keys.includes('signals-workbench');
+  const readOk = keys.length >= 1 && keys.includes('xau-speed-v1');
   if (!readOk) failed++;
   console.log(
     `[self-test] ${readOk ? 'PASS' : 'FAIL'}  readSeedKeys parses the real seed` +

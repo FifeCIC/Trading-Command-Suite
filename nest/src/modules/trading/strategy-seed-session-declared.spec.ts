@@ -30,7 +30,18 @@ describe('every seeded bot DECLARES its session slot (#982)', () => {
   it('the seed is non-trivial — a gate that inspects nothing must ERROR, not pass', () => {
     // Same rule as every audit script in this repo: a validator that reads an empty set and
     // reports OK is worse than no validator.
-    expect(DEFAULT_TRADING_STRATEGIES.length).toBeGreaterThan(30);
+    //
+    // ⚠️ NAMES the packaged bots instead of counting. This was `length > 30` until 2026-11-02, when
+    // the packaging split deliberately reduced the shipped bot seed to the three the app ships — a
+    // floor expressed as a number turns a deliberate content change into a failed gate, while a
+    // named set still proves the import resolved and the array parsed.
+    expect(DEFAULT_TRADING_STRATEGIES.length).toBeGreaterThan(0);
+    const shipped = DEFAULT_TRADING_STRATEGIES.map((s) => s.name);
+    expect(shipped).toEqual(expect.arrayContaining([
+      'Silver Speed Scalp',
+      'Tech Giants - NVDA',
+      'Tokyo USDJPY Session',
+    ]));
   });
 
   it('no seeded bot has an UNFILLED (or unreadable) session slot', () => {

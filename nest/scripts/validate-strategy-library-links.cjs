@@ -70,10 +70,19 @@ const SEED_FILE = path.join(NEST_ROOT, 'src', 'modules', 'scoring', 'protocols-s
  * If a file is reshaped so the regexes stop matching, the counts collapse — and a check that
  * silently witnesses an empty list would report OK while verifying nothing. Lower a floor only
  * with a fresh measurement, never to silence a red build.
+ *
+ * ⚠️ MIN_SEED_SLUGS lowered 40 → 3 on 2026-11-02, WITH the measurement: the packaging split reduced
+ * `protocols-seed-data.ts` from 48 entries to the three the app ships
+ * (`xau-speed-v1`, `momentum-stock-v1`, `forex-session-v1`). The floor is a PARSE guard, so it is
+ * paired with `PACKAGED_SLUGS` below — a floor alone would pass on a file that parsed to the wrong
+ * three, and a count alone cannot tell "deliberately small" from "regexes stopped matching".
  */
 const MIN_ENTRIES = 8;
-const MIN_SEED_SLUGS = 40;
+const MIN_SEED_SLUGS = 3;
 const MIN_LINKS = 3;
+
+/** The slugs the public package ships. Named, so a mis-parse cannot look like a small seed. */
+const PACKAGED_SLUGS = ['xau-speed-v1', 'momentum-stock-v1', 'forex-session-v1'];
 
 const failures = [];
 function fail(message, hint) {
@@ -151,6 +160,15 @@ function scan(librarySrc, seedSrc) {
     throw new ParseError(
       `parsed only ${seedSlugs.size} protocol slug(s) (expected >= ${MIN_SEED_SLUGS})`,
       'the seed was reshaped; a list this short means the parse is wrong, not that the app has fewer protocols',
+    );
+  }
+  // ⚠️ The floor only proves the parse returned SOME slugs. This proves it returned the RIGHT ones —
+  // a regex that matched three arbitrary keys would satisfy a count and still verify nothing.
+  const missingPackaged = PACKAGED_SLUGS.filter((s) => !seedSlugs.has(s));
+  if (missingPackaged.length) {
+    throw new ParseError(
+      `shipped seed is missing packaged slug(s): ${missingPackaged.join(', ')}`,
+      'either the seed was re-cut without updating PACKAGED_SLUGS, or the parse is wrong — check both',
     );
   }
 
