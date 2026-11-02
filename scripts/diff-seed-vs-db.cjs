@@ -57,6 +57,8 @@ const DB_ARGS = ['-u', 'tradingcs', '-ptradingcs_dev_2026', 'tradingcs', '-N', '
 
 const onlyIdx = process.argv.indexOf('--protocol');
 const ONLY = onlyIdx >= 0 ? process.argv[onlyIdx + 1] : null;
+/** `--strict` restores the pre-packaging rule that seed and database must hold the same set. */
+const STRICT = process.argv.includes('--strict');
 
 // ── seed side ────────────────────────────────────────────────────────────────
 
@@ -284,6 +286,12 @@ const slugs = [...new Set([...seed.keys(), ...db.keys()])].sort();
 const problems = [];
 /** Known-benign findings, listed separately so they do not mask real drift. */
 const acknowledged = [];
+/**
+ * Protocols in the database that the shipped seed does not carry. EXPECTED since the 2026-11-02
+ * packaging split — the database is deliberately a superset. Reported, never failed, unless
+ * `--strict` asks for the old exact-equality behaviour.
+ */
+const parked = [];
 
 for (const slug of slugs) {
   if (ONLY && slug !== ONLY) continue;
@@ -292,7 +300,27 @@ for (const slug of slugs) {
   const dbGroups = db.get(slug);
 
   if (!seedGroups) {
-    problems.push({ kind: 'PROTOCOL-ONLY-IN-DB', slug, detail: `${dbGroups.size} groups — the seeder cannot delete a protocol` });
+    // ── DECISION (2026-11-02, packaging split) ──
+    // WHAT:      A protocol present in the database but NOT in the shipped seed is PARKED, not
+    //            drift, and no longer fails this gate. The count is reported.
+    // WHY:       The public package ships three protocols (`xau-speed-v1`, `momentum-stock-v1`,
+    //            `forex-session-v1`). This installation's database deliberately keeps all 50 —
+    //            the seeder is upsert-only, so an absent entry simply stays. Before the split the
+    //            two sides were the same set and equality was the right assertion; afterwards the
+    //            database is a SUPERSET by design, so equality would fail on correct behaviour and
+    //            the check would be turned off by whoever hit it.
+    //            What still matters is the other direction: everything the SEED claims must be true
+    //            in the database, because that is what a fresh install will reproduce.
+    // INSTEAD OF: Deleting the 47 rows from the database, which would destroy this machine's
+    //            library, or `--acknowledge`ing 47 rows forever, which is an allowlist that grows.
+    // REVERSE BY: `--strict` on the command line restores exact equality for anyone who wants it.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 128
+    // GUARD:     the exit code itself — SEED-ONLY-IN-DB and any placement difference still fail.
+    if (STRICT) {
+      problems.push({ kind: 'PROTOCOL-ONLY-IN-DB', slug, detail: `${dbGroups.size} groups — the seeder cannot delete a protocol` });
+    } else {
+      parked.push(slug);
+    }
     continue;
   }
   if (!dbGroups) {
@@ -398,7 +426,14 @@ if (db.size === 0 && seed.size > 0) {
 console.log(`\n  drift: ${problems.length} difference(s)` + (problems.length ? ` — ${Object.entries(byKind).map(([k, n]) => `${k} ${n}`).join(', ')}` : ''));
 
 if (!problems.length) {
-  if (acknowledged.length) {
+  if (parked.length) {
+    console.log(
+      `\n  ✅ every protocol the SEED declares matches the database. ` +
+        `${parked.length} protocol(s) exist only in the database and are NOT shipped — expected after the ` +
+        '2026-11-02 packaging split; a fresh install receives only the seeded set.',
+    );
+    console.log(`     parked: ${parked.join(', ')}`);
+  } else if (acknowledged.length) {
     console.log(`\n  ✅ seed and database agree exactly. ${acknowledged.length} known-benign item(s) acknowledged:`);
     for (const a of acknowledged) console.log(`      · ${a}`);
     console.log('');
