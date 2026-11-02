@@ -26,10 +26,10 @@
       "how": "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '"
     },
     "protocolSeedEntries": {
-      "label": "Protocols in the seed file",
+      "label": "Protocols in the seed (shipping + parked)",
       "value": 48,
       "unit": "",
-      "source": "nest/src/modules/scoring/protocols-seed-data.ts",
+      "source": "nest/src/modules/scoring/protocols-seed-data.ts + nest/prisma/seed-parked/protocols-*.json (2 file(s))",
       "how": "curl -s localhost:3201/api/scoring/protocols | jq length"
     },
     "providerAdapters": {
@@ -48,14 +48,14 @@
     },
     "validators": {
       "label": "Backend build-time validators",
-      "value": 40,
+      "value": 42,
       "unit": "",
       "source": "nest/scripts/validate-*.cjs (run in prebuild)",
       "how": "Get-ChildItem nest/scripts/validate-*.cjs"
     },
     "version": {
       "label": "Application version",
-      "value": "0.149.0",
+      "value": "0.150.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

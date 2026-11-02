@@ -44,6 +44,7 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
@@ -163,19 +164,71 @@ function factDirectiveFiles() {
   };
 }
 
+/**
+ * Read the protocol slugs parked by `scripts/split-seed-packaging.cjs`.
+ *
+ * The parked files are an ARRAY of `{ key, text }` verbatim source snippets, not a slug→protocol
+ * map, so deduping by object key would count array INDICES ("0".."44") — a number that is right by
+ * accident and would stay right after the format changed underneath it. Read `entry.key`.
+ *
+ * Takes `dir` explicitly so `--self-test` can canary the failure below without touching the repo.
+ */
+function parkedProtocolSlugs(dir = path.join(REPO_ROOT, 'nest', 'prisma', 'seed-parked')) {
+  const slugs = new Set();
+  const files = [];
+  if (!fs.existsSync(dir)) return { slugs, files };
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.startsWith('protocols-') || !name.endsWith('.json')) continue;
+    files.push(name);
+    const parsed = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
+    const entries = Array.isArray(parsed)
+      ? parsed
+      : Object.entries(parsed).map(([k, v]) => ({ key: k, ...v }));
+    for (const entry of entries) {
+      // A verifier that cannot read its input must ERROR, never pass. An entry with no readable
+      // slug would otherwise contribute a POSITION, and positions make the count meaningless.
+      if (!entry || typeof entry.key !== 'string' || !entry.key) {
+        throw new Error(
+          `parked seed entry in ${name} has no readable protocol slug — cannot count it. ` +
+            `Expected an array of { key, text } (or a slug-keyed object).`,
+        );
+      }
+      slugs.add(entry.key);
+    }
+  }
+  return { slugs, files };
+}
+
 function factProtocolSeedEntries() {
   const src = read('nest/src/modules/scoring/protocols-seed-data.ts');
   // The seed is an object literal keyed by protocol slug, entries at two-space indent:
   //   export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   //     "btc-speed-v1": {
   // The indent is load-bearing — it is what distinguishes a protocol entry from a nested group.
-  const n = (src.match(/^ {2}"[^"]+": \{/gm) || []).length;
+  const slugs = new Set();
+  for (const m of src.matchAll(/^ {2}"([^"]+)": \{/gm)) slugs.add(m[1]);
+
+  // ── 2026-11-02, commit 6576b31c: the seed was DELIBERATELY split for packaging ──
+  // The shipping seed now carries 3 protocols and 45 sit verbatim in nest/prisma/seed-parked/,
+  // because the public package must not ship the author's whole library. That is a content
+  // decision, not a broken pattern — but the floor below could not tell them apart, so it threw
+  // and turned `prebuild` red for the whole repo. The same commit repointed two sibling guards
+  // (validate-protocol-slugs, validate-strategy-library-links) from counts to names; this one
+  // was missed. Counting BOTH places keeps the guard's real purpose — "did the pattern stop
+  // matching?" — while surviving any future split, and deduping by slug means the two snapshot
+  // files written minutes apart (equal content) cannot inflate the total.
+  const parked = parkedProtocolSlugs();
+  for (const slug of parked.slugs) slugs.add(slug);
+
+  const n = slugs.size;
   return {
     id: 'protocolSeedEntries',
-    label: 'Protocols in the seed file',
+    label: 'Protocols in the seed (shipping + parked)',
     value: must(n, 20, 'protocol seed entries'),
     unit: '',
-    source: 'nest/src/modules/scoring/protocols-seed-data.ts',
+    source:
+      'nest/src/modules/scoring/protocols-seed-data.ts' +
+      (parked.files.length ? ` + nest/prisma/seed-parked/protocols-*.json (${parked.files.length} file(s))` : ''),
     how: 'curl -s localhost:3201/api/scoring/protocols | jq length',
   };
 }
@@ -426,6 +479,45 @@ async function selfTest() {
     threw = true;
   }
   ok('the floor guard THROWS on an implausibly low count', threw);
+
+  // Direction 4: the PARKED-SEED reader must THROW on an entry it cannot name.
+  // Added 2026-11-02 with the packaging split (6576b31c). The parked files are an array of
+  // { key, text }, so a naive `Object.keys()` count returns array INDICES — a number that is
+  // right by accident today and would survive the format changing underneath it. This proves the
+  // reader refuses a position, and that the repo's real parked file still yields real slugs.
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-facts-canary-'));
+  let namelessThrew = false;
+  try {
+    fs.writeFileSync(
+      path.join(tmpDir, 'protocols-CANARY.json'),
+      JSON.stringify([{ key: 'a-real-slug', text: 'x' }, { text: 'no key here' }]),
+      'utf8',
+    );
+    parkedProtocolSlugs(tmpDir);
+  } catch {
+    namelessThrew = true;
+  }
+  ok('the parked-seed reader THROWS on an entry with no slug', namelessThrew);
+
+  const canaryDir = path.join(tmpDir, 'good');
+  fs.mkdirSync(canaryDir);
+  fs.writeFileSync(
+    path.join(canaryDir, 'protocols-CANARY.json'),
+    JSON.stringify([{ key: 'slug-one', text: 'x' }, { key: 'slug-two', text: 'y' }]),
+    'utf8',
+  );
+  const good = parkedProtocolSlugs(canaryDir);
+  ok(
+    'the parked-seed reader returns SLUGS, not array positions',
+    good.slugs.size === 2 && good.slugs.has('slug-one') && good.slugs.has('slug-two'),
+  );
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+
+  const real = parkedProtocolSlugs();
+  ok(
+    'the repo parked seed yields real slugs (not indices)',
+    real.slugs.size === 0 || ![...real.slugs].every((s) => /^\d+$/.test(s)),
+  );
 
   let mismatchThrew = false;
   try {
