@@ -87,7 +87,7 @@ describe('INV-MTF-BUNDLE — higher-timeframe inputs reach the directives that d
       // A real reading, not the data-starved zero. This is what the twelve bundle-less
       // call sites were failing to produce.
       expect(result.score).toBeGreaterThan(0);
-      expect(result.reason).not.toMatch(/insufficient higher-timeframe/i);
+      expect(result.reason).not.toMatch(/insufficient higher-timeframe|no timeframe could be judged/i);
     });
 
     it('refuses to score rather than falling back to base bars when the bundle is absent', () => {
@@ -95,7 +95,12 @@ describe('INV-MTF-BUNDLE — higher-timeframe inputs reach the directives that d
       // The directive must SAY it is data-starved. Silently scoring BASE was the failure:
       // a plausible number with no error anywhere.
       expect(result.score).toBe(0);
-      expect(result.reason).toMatch(/insufficient higher-timeframe/i);
+      // ⚠️ The WORDING is not the contract; the refusal is. The reason was rephrased to
+      // "No timeframe could be judged — the EMA(50) trend test needs 50 bars per timeframe…"
+      // (more specific: it names the requirement and the per-timeframe bar counts). Pinning the
+      // exact phrasing made a better message look like a regression, so both are accepted and
+      // the invariant stays: score 0 PLUS a reason that explains the missing higher-timeframe data.
+      expect(result.reason).toMatch(/insufficient higher-timeframe|no timeframe could be judged/i);
     });
 
     it('scores a full three-timeframe bundle higher than a single-timeframe one', () => {

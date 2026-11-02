@@ -41,6 +41,7 @@ const EXCLUDED: Record<string, string> = {
   winRate: 'result (signal win rate)',
   totalPnl: 'result',
   profitFactor: 'result',
+  tradeProfitFactor: 'result (trade-based profit factor, #126) — derived from the exits, not an input',
   sharpeRatio: 'result',
   maxDrawdown: 'result',
   averageReturn10d: 'result',

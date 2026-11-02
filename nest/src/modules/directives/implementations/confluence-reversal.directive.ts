@@ -82,7 +82,11 @@ export class ConfluenceReversalComboDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly params = PARAMS;
-  readonly directionBias = 'neutral' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'neutral'). Emits ONLY 'bullish', so declaring neutral made a
+  // SHORT_ONLY protocol include it as capacity it can never earn (measured: 63 such instances sit
+  // in 18 active protocols). Declaring the side lets inclusion arithmetic exclude it correctly.
+  // Zero active-protocol impact measured before the change. Guard: directive-guard.cjs MODE 5.
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { values } = resolveParams(this.id, this.params, input.params);

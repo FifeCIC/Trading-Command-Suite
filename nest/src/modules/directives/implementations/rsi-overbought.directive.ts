@@ -100,7 +100,7 @@ export class RsiOverboughtDirective implements IDirective {
       signalClass: totalScore >= 60 ? 'bearish' : 'neutral',
       score: totalScore,
       confidence: Number((bonusScore > 0 ? Math.min(0.95, 0.5 + (bonusScore / 80) * 0.4 + (curlingDown ? 0.1 : 0)) : Math.max(0.15, 0.3 + (baseScore / 50) * 0.2)).toFixed(2)),
-      reason: `RSI(14)=${currentRsi.toFixed(1)} ${curlingDown ? '↓' : '↑'}: ${parts.join(' ')}=${totalScore}/${this.maxScore}`,
+      reason: `RSI(${rsiPeriod})=${currentRsi.toFixed(1)} ${curlingDown ? '↓' : '↑'}: ${parts.join(' ')}=${totalScore}/${this.maxScore}`,
       metadata: { baseScore, bonusScore, bonusLabel, curlBonus, currentRsi },
     };
   }

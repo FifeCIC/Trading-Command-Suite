@@ -17,6 +17,7 @@ import { breakEvenFromOutcomes, medianBracket } from './break-even';
 import { decideEntry, refuseUnrunnableDirection } from './entry-side';
 import { applyAffordability } from './affordable-size';
 import { resolveFixedUnits } from './fixed-units';
+import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeProfitFactorOf } from './profit-factor';
 import {
   scoringTotals,
   tradeTotals,
@@ -54,6 +55,28 @@ import {
  * very slow, and the error message says so.
  */
 export const PERIOD_BAR_CAP = 20_000;
+
+/**
+ * How many rows of `scoreSeries` a run returns by DEFAULT.
+ *
+ * ⚠️ A default, not a contract. It exists so a 1m run (24,291 bars) does not ship ~4 MB of JSON to a
+ * browser table — but it also silently truncated the sample for anyone MEASURING the score
+ * distribution, while the run still reported the full window. `fullScoreSeries: true` opts out.
+ * See the field of the same purpose on `BacktestRunRequest`.
+ */
+export const MAX_SCORE_SERIES_ROWS = 2_000;
+
+/**
+ * Apply the `scoreSeries` cap. Pure, so both directions are testable without the engine.
+ *
+ * ⚠️ WHY THIS IS A FUNCTION AND NOT AN INLINE `slice(-2000)`. The inline form was a literal in the
+ * response object, so the only way to check it was to run a whole backtest; the property that
+ * matters ("a caller that MEASURES gets every bar, a caller that RENDERS gets 2,000") had no test at
+ * all. See `score-series-cap.spec.ts`.
+ */
+export function capScoreSeries<T>(series: T[], full?: boolean): T[] {
+  return full ? series : series.slice(-MAX_SCORE_SERIES_ROWS);
+}
 
 /**
  * #819 — how many bars the replay endpoint returns in one call. Capped because a 5m window over
@@ -164,6 +187,32 @@ export interface BacktestRunRequest {
    * be look-ahead. See the block in the trade loop.
    */
   stopPlan?: StopPlan;
+  /**
+   * ── THE FULL SCORED SERIES, ON REQUEST (2026-11-02) ────────────────────────────────────────
+   *
+   * `scoreSeries` is capped at the last `MAX_SCORE_SERIES_ROWS` (2,000) in the RESPONSE, because it
+   * is rendered as a per-bar table and a 24,291-bar 1m run would ship ~4 MB of JSON to a browser.
+   *
+   * ⚠️ THAT CAP BLOCKED A MEASUREMENT, WHICH IS WHY THIS OPTION EXISTS. Suitability work needs the
+   * WHOLE window's score distribution to answer "do high scores beat low scores on forward returns"
+   * — and 2,000 rows of a 5m run is 7 days, not the 42 in `dev-window-v1`. Truncating the series
+   * therefore silently narrowed the sample while the run still reported the full window, which is
+   * the plausible-output-no-error shape this repo keeps paying for. A caller that measures must be
+   * able to ask for everything; a caller that renders must keep the cap.
+   *
+   * Default `false` — the UI and every existing caller keep exactly today's behaviour.
+   */
+  fullScoreSeries?: boolean;
+  /**
+   * #1185 — WHICH LEG of a paired bot to measure. Required when the bot holds more than one
+   * subscription, because `trading_strategy.protocolId` can only name one and silently measuring the
+   * primary (long) leg would report half a strategy under the whole bot's name.
+   *
+   * Run once per leg to compare them; there is no "both" mode, because two legs on one symbol in one
+   * netting account cannot both be held (`resolveAbArmAccounts` refuses the same account on two A/B
+   * arms for exactly this reason).
+   */
+  legProtocolId?: string;
   /**
    * #986 — run against a STORED PERIOD (a named, noted window) instead of a bar count.
    *
@@ -771,7 +820,14 @@ export interface BacktestResult extends BacktestResultBracketFields {
      * names, because `backtestrun.maxDrawdown` once answered all three.
      */
     maxDrawdown10d: number | null;
-    profitFactor: number;
+    /**
+     * ⚠️ SIGNAL-based, not trade-based: computed from the forward return of every entry SIGNAL, so
+     * it is IDENTICAL for any two runs with the same entries and different exits. NULL when no
+     * signal lost — never a fabricated `grossProfit / 1` (decision 2026-11-02, register row 126).
+     */
+    profitFactor: number | null;
+    /** Trade-based profit factor over the trades that closed, so an exit change IS visible. */
+    tradeProfitFactor?: number | null;
     sharpeApproximation: number;
     // bracket trade stats
     totalTrades?: number;
@@ -859,10 +915,65 @@ export class BacktestService {
       );
     }
 
-    // The decision itself is a PURE function (`mergeBotConfig`, above) so precedence and the
-    // caveats are testable without a database or the scoring stack. This method's job is only to
-    // load the bot and to refuse when it cannot be loaded.
-    const merged = mergeBotConfig(request, bot);
+    /**
+     * ── A PAIRED BOT HAS TWO LEGS, AND `mergeBotConfig` CAN ONLY PICK ONE (#1185) ───────────────
+     *
+     * `trading_strategy.protocolId` is a single column, so a bot holding a LONG protocol and a SHORT
+     * protocol resolves to its PRIMARY leg — the long one. Backtesting such a bot therefore measured
+     * half of the strategy while reporting the whole bot's name, which is the plausible-output-no-error
+     * shape this repo keeps paying for.
+     *
+     * ⚠️ IT REFUSES INSTEAD OF GUESSING, and when a leg IS named it is validated against the bot's own
+     * subscriptions. Choosing "the long leg" silently is what it used to do; a wrong-but-plausible
+     * result is worse than a refusal that names the legs, because a result gets believed.
+     */
+    const subs: Array<{ protocolId: string; role: string }> = await (this.prisma as any).strategyProtocol
+      .findMany({ where: { strategyId: bot.id }, select: { protocolId: true, role: true }, orderBy: { sortOrder: 'asc' } })
+      .catch(() => []);
+
+    if (request.legProtocolId) {
+      const leg = subs.find((s) => s.protocolId === request.legProtocolId);
+      if (!leg) {
+        throw new Error(
+          `"${bot.name}" has no leg "${request.legProtocolId}". Its legs are: ` +
+          `${subs.length ? subs.map(s => `${s.protocolId} as ${s.role}`).join(', ') : '(none — the bot has no subscription)'}. ` +
+          `Refusing rather than measuring a protocol the bot is not subscribed to.`,
+        );
+      }
+    } else if (subs.length > 1) {
+      throw new Error(
+        `Bot "${bot.name}" holds ${subs.length} protocol legs ` +
+        `(${subs.map(s => `${s.protocolId} as ${s.role}`).join(', ')}), so ONE run cannot describe it. ` +
+        `Pass \`legProtocolId\` to measure one leg, and run once per leg to compare them. ` +
+        `Refusing rather than silently measuring the bot's primary leg as if it were the whole strategy (#1185).`,
+      );
+    }
+
+    // A named leg IS the protocol for this run. `mergeBotConfig` then records it as an override, so
+    // the result says which leg it measured instead of only which bot.
+    //
+    // ⚠️ AND IT MUST ALSO SET THE DIRECTION. `run()` defaults `directionMode` to `'long'`, so a
+    // backtest of a SHORT leg ran with the wrong side and every SELL was discarded — MEASURED
+    // 2026-11-02 on `forex-session-v1-short` / USDJPY / 1h: **80 sell signals (45 SELL + 35
+    // STRONG_SELL), 47 bars with score ≥ 10, and 0 entries**, which reads on screen as "this leg
+    // never signals" rather than "the run was pointed the wrong way". `entry-side.ts` already settles
+    // that long and short are two runs, not one — this makes the leg's own role supply that value.
+    const legRole = request.legProtocolId
+      ? subs.find((s) => s.protocolId === request.legProtocolId)?.role
+      : undefined;
+    const legDirection: 'long' | 'short' | undefined =
+      legRole === 'short' ? 'short' : legRole ? 'long' : undefined;
+
+    const merged = mergeBotConfig(
+      {
+        ...request,
+        ...(request.legProtocolId ? { protocolId: request.legProtocolId } : {}),
+        // An explicit caller value wins — the override is recorded either way.
+        ...(legDirection && !request.directionMode ? { directionMode: legDirection } : {}),
+      },
+      bot,
+    );
+
     this.logger.log(
       `Bot-driven backtest: ${bot.name} (${bot.id}) -> protocol=${merged.request.protocolId ?? 'NONE'} ` +
         `symbol=${merged.request.symbol} tf=${merged.request.timeframe ?? '(default)'} ` +
@@ -1371,7 +1482,12 @@ export class BacktestService {
 
       // Canonical historical evaluation: ticker, protocol, and window are all
       // explicit. Never call rankAll here; it reads current DB state.
-      const result = await this.fullScore(symbol, window, protocolId);
+      //
+      // ⚠️ `timeframe` is the 4th argument because live scoring passes it: `speed-scan.service.ts`
+      // sends `loadedTimeframe` to `scoreWithGating()`, and it reaches the directives as
+      // `input.timeframe`. Omitting it here scored every historical bar with an undefined cadence
+      // while the live tick was scored with the real one — see the note on `fullScore()`.
+      const result = await this.fullScore(symbol, window, protocolId, timeframe);
       // ⚠️ `composite` IS `gated.signalPct` — a PERCENTAGE of configured capacity, not a raw score
       // (see `fullScore()`). That is why the bar below is a direct comparison and not a conversion:
       // the live loop does exactly this, against the same number, in the same unit.
@@ -1799,7 +1915,25 @@ export class BacktestService {
     const maxReturn10d = returns10d.length ? Math.max(...returns10d) : 0;
     const maxDrawdown10d = returns10d.length ? Math.min(...returns10d) : 0;
     const grossProfit = returns10d.filter((r) => r > 0).reduce((a, b) => a + b, 0);
-    const grossLoss = Math.abs(returns10d.filter((r) => r < 0).reduce((a, b) => a + b, 0)) || 1;
+    // ── DECISION (2026-11-02) ──
+    // WHAT:      `grossLoss` is no longer coerced to 1 when there are no losing signals, and the
+    //            resulting `profitFactor` is NULL rather than a fabricated number.
+    // WHY:       `|| 1` made `profitFactor` equal `grossProfit` whenever nothing lost — an
+    //            arbitrary denominator dressed as a ratio. Measured 2026-11-02 during an A/B of
+    //            stop plans: `btc-speed-v1` carried a stored profit factor of **956.87**, which is
+    //            not a profit factor at all and cannot be compared with 1.4. NULL says "no losing
+    //            sample", which is the true statement, and matches the rule the same file applies
+    //            to `tradeWinRate` (#1021) and `maxReturn10d` (#1134).
+    // INSTEAD OF: Leaving the `|| 1` fallback and documenting it. A number that reads as a ratio
+    //            while being an absolute value is the "plausible number, no error" failure this
+    //            project treats as the expensive one.
+    // REVERSE BY: Restore `|| 1` and drop the null guard in both stats sites.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 126
+    // GUARD:     nest/src/modules/backtest/profit-factor.spec.ts
+    const grossLossRaw = Math.abs(returns10d.filter((r) => r < 0).reduce((a, b) => a + b, 0));
+    // The computation lives in `profit-factor.ts` so the spec exercises the code that runs, not a
+    // copy of it. `returns10d` is the SIGNAL population — see the note on that function.
+    const signalProfitFactor = signalProfitFactorOf(returns10d);
     const stdDev = Math.sqrt(returns10d.reduce((s, r) => s + (r - avgReturn10d) ** 2, 0) / (returns10d.length || 1));
 
     const winRate = entrySignals.length ? profitable / entrySignals.length : 0;
@@ -1819,6 +1953,16 @@ export class BacktestService {
     const grossPnlTotal = trades.reduce((s, t) => s + t.pnl + (t.commission ?? 0), 0);
     const totalCommissionPaid = trades.reduce((s, t) => s + (t.commission ?? 0), 0);
     const tradePnls = trades.map(t => t.pnl);
+    // ── TRADE-BASED PROFIT FACTOR (2026-11-02) ──
+    // `profitFactor` above is computed from `returns10d` — the forward return of every ENTRY
+    // SIGNAL — so it is IDENTICAL for any two runs with the same entries and different exits.
+    // Measured: six stop-plan arms moved net P&L from +63.29 to −657.54 and every one reported
+    // profitFactor 0.72. That makes the signal-based figure unable to judge the one class of
+    // change it is most often asked about, which is how to exit.
+    //
+    // `tradeProfitFactor` is the textbook definition over the trades that actually closed, and
+    // lives in `profit-factor.ts` so the spec can guard the real implementation.
+    const tradeProfitFactor = tradeProfitFactorOf(trades);
     const maxTradeDrawdown = tradePnls.length ? Math.min(...tradePnls) : 0;
     const avgPositionSize = trades.length
       ? trades.reduce((s, t) => s + (t.positionSize ?? 1), 0) / trades.length
@@ -1863,7 +2007,13 @@ export class BacktestService {
       totalDays,
       timeframe,
       entrySignals: entrySignals.slice(-200),
-      scoreSeries: scoreSeries.slice(-2000),
+      /**
+       * ⚠️ THE CAP WAS A LITERAL AND IT SILENTLY NARROWED A MEASUREMENT. 2,000 rows of a 5m run is
+       * 7 days, while the run reports the 42-day window — so a suitability measurement saw a fifth of
+       * the window and had no way to tell. `capScoreSeries()` is pure and tested; see
+       * `BacktestRunRequest.fullScoreSeries`.
+       */
+      scoreSeries: capScoreSeries(scoreSeries, request.fullScoreSeries),
       trades: doBrackets ? trades : undefined,
       execution: {
         slippage: Number(slippage.toFixed(6)),
@@ -1899,7 +2049,9 @@ export class BacktestService {
         // came from. That is the split-unit defect #980 removed, in its absence form.
         maxReturn10d: returns10d.length ? Number(maxReturn10d.toFixed(2)) : null,
         maxDrawdown10d: returns10d.length ? Number(maxDrawdown10d.toFixed(2)) : null,
-        profitFactor: Number((grossProfit / grossLoss).toFixed(2)),
+        profitFactor: signalProfitFactor === null ? null : Number(signalProfitFactor.toFixed(2)),
+        // Trade-based, so an exit change is visible. See the DECISION at the computation site.
+        tradeProfitFactor: tradeProfitFactor === null ? null : Number(tradeProfitFactor.toFixed(2)),
         sharpeApproximation: Number(sharpeApproximation.toFixed(2)),
         ...(doBrackets ? {
           totalTrades: trades.length,
@@ -2055,7 +2207,14 @@ export class BacktestService {
             scoresJson: JSON.stringify(scoreSeries.slice(-2000)),
             winRate: Number(winRate.toFixed(4)),
             totalPnl: Number(totalPnl.toFixed(4)),
-            profitFactor: Number((grossProfit / grossLoss).toFixed(4)),
+            // ⚠️ NULL, not a fabricated ratio — see the DECISION at the computation site. A stored
+            // run with no losing signal used to carry `grossProfit / 1`, which read as a profit
+            // factor of 956.87 on `btc-speed-v1` and is not comparable with 1.4.
+            profitFactor: signalProfitFactor === null ? null : Number(signalProfitFactor.toFixed(4)),
+            // Trade-based, so a stored run can be compared on its exits. Not yet a column on
+            // `backtestrun` (the fresh-run response carries it); recorded as the follow-up in
+            // docs/SETTLED-DECISIONS.md row 126.
+            tradeProfitFactor: tradeProfitFactor === null ? null : Number(tradeProfitFactor.toFixed(4)),
             sharpeRatio: Number(sharpeApproximation.toFixed(4)),
             maxDrawdown: Number(maxDrawdown10d.toFixed(4)),
             // ⚠️ #1134 follow-up — PERSISTED, not discarded. These were computed on every run and never
@@ -2816,7 +2975,10 @@ export class BacktestService {
       signalWinRatePct: number;
       /** Account currency, 4dp. */
       totalPnl: number;
-      profitFactor: number;
+      /** SIGNAL-based — see `BacktestResult.stats.profitFactor`. NULL when no signal lost. */
+      profitFactor: number | null;
+      /** Trade-based, so an exit change is visible. NULL when there was no losing trade. */
+      tradeProfitFactor?: number | null;
       sharpeRatio: number;
       /** Percent. NOT currency, and NOT scaled — see the method header. */
       maxDrawdownPct: number;
@@ -3644,7 +3806,7 @@ export class BacktestService {
       }));
 
       // Use inline protocol-gated scoring
-      const { composite: score, signal } = await this.fullScore(symbol, window, protocolId);
+      const { composite: score, signal } = await this.fullScore(symbol, window, protocolId, timeframe);
 
       const currentClose = window[window.length - 1].close;
 
@@ -3691,6 +3853,23 @@ export class BacktestService {
     symbol: string,
     bars: MarketBar[],
     protocolId: string,
+    /**
+     * The cadence of `bars`. ⚠️ REACHES THE DIRECTIVES AS `input.timeframe`, AND THE BACKTEST USED TO
+     * OMIT IT (fixed 2026-11-02).
+     *
+     * Live scoring has always passed it — `speed-scan.service.ts` sends `loadedTimeframe` as
+     * `scoreWithGating()`'s 6th argument. The backtest passed five arguments, so every historical bar
+     * was scored with `input.timeframe === undefined` while the live tick was scored with the real
+     * cadence. MEASURED consequence: `spy-day-v1` on SPY peaked at **28.7** in a backtest at BOTH 5m
+     * and 1h, against **92.9** in the live `score_snapshot` for the same protocol and symbol — so a
+     * backtest could not reproduce a score the live system actually produces, which is precisely what
+     * a backtest is for.
+     *
+     * The directive that cares is `liquidity-check`, which sits in the protocol's RISK group and is a
+     * hard gate: it uses `timeframe` to size its staleness window. Undefined cadence made the
+     * freshness verdict guess.
+     */
+    timeframe?: string,
   ): Promise<{
     composite: number;
     signal: string;
@@ -3717,7 +3896,17 @@ export class BacktestService {
     const bundle = symId
       ? await this.loadTfBundle(symId, protocolId)
       : { dayBars: [], hourBars: [], min15Bars: [] };
-    const gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId, bundle);
+    const gated = await this.protocolGating.scoreWithGating(
+      symbol,
+      bars,
+      protocolId,
+      bundle,
+      // ⚠️ `weightStrategy` is the argument live passes positionally here, so it must be supplied
+      // before `timeframe` or the cadence would land in the weight strategy and silently select
+      // `maxscore-weighted` for every backtest.
+      'group-weighted',
+      timeframe,
+    );
     return {
       composite: gated.signalPct,
       signal: gated.signal,

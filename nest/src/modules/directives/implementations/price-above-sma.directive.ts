@@ -1,10 +1,10 @@
 /**
  * Price Above SMA Directive
  * =========================
- * Scores based on price position relative to SMA(50).
+ * Scores based on price position relative to a simple moving average (default period 50, tunable).
  *
- * Above SMA(50) = bullish intermediate uptrend.
- * Below SMA(50) = bearish for longs.
+ * Above it = bullish intermediate uptrend.
+ * Below it = bearish for longs.
  * Within 1% of SMA = whipsaw zone penalty.
  *
  * Differs from ema-structure: uses SMA not EMA, single MA not dual.
@@ -82,7 +82,7 @@ export class PriceAboveSmaDirective implements IDirective {
     const currentPrice = closes[closes.length - 1];
     const sma50 = sma(closes, smaPeriod);
     if (sma50 === 0) {
-      return { score: 0, confidence: 0, reason: 'Could not calculate SMA(50).' };
+      return { score: 0, confidence: 0, reason: `Could not calculate SMA(${smaPeriod}).` };
     }
 
     const distancePct = ((currentPrice - sma50) / sma50) * 100;
@@ -93,7 +93,7 @@ export class PriceAboveSmaDirective implements IDirective {
       signalClass: 'neutral',
       score: 35,
         confidence: 0.2,
-        reason: `Price ${currentPrice.toFixed(2)} within 1% of SMA(50) ${sma50.toFixed(2)}. Whipsaw risk — neutral score.`,
+        reason: `Price ${currentPrice.toFixed(2)} within 1% of SMA(${smaPeriod}) ${sma50.toFixed(2)}. Whipsaw risk — neutral score.`,
       };
     }
 
@@ -104,7 +104,7 @@ export class PriceAboveSmaDirective implements IDirective {
       return {
         score,
         confidence: 0.5 + strength * 0.3,
-        reason: `Price ${currentPrice.toFixed(2)} is ${distancePct.toFixed(1)}% above SMA(50) ${sma50.toFixed(2)}. Bullish intermediate trend.`,
+        reason: `Price ${currentPrice.toFixed(2)} is ${distancePct.toFixed(1)}% above SMA(${smaPeriod}) ${sma50.toFixed(2)}. Bullish intermediate trend.`,
       };
     }
 
@@ -114,7 +114,7 @@ export class PriceAboveSmaDirective implements IDirective {
     return {
       score,
       confidence: 0.45 + strength * 0.15,
-      reason: `Price ${currentPrice.toFixed(2)} is ${Math.abs(distancePct).toFixed(1)}% below SMA(50) ${sma50.toFixed(2)}. Bearish trend — reduced long score.`,
+      reason: `Price ${currentPrice.toFixed(2)} is ${Math.abs(distancePct).toFixed(1)}% below SMA(${smaPeriod}) ${sma50.toFixed(2)}. Bearish trend — reduced long score.`,
     };
   }
 }

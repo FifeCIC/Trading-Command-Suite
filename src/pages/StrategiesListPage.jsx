@@ -103,6 +103,64 @@ function ProtocolChips({ strategies }) {
   );
 }
 
+/**
+ * LegResults — what EACH LEG of a paired bot actually did (#1185).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * WHY THE CHIPS WERE NOT ENOUGH
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * `ProtocolChips` above already shows one chip per subscription, so the fact that a bot holds a long
+ * protocol and a short protocol was visible. What was NOT visible is the thing the pair exists for:
+ * which leg earned and which leg gave it back. Two chips that both say "long"/"short" cannot tell an
+ * operator whether to keep the short leg or drop it.
+ *
+ * ⚠️ `trades: 0` and "cannot judge" are different sentences here, and the card keeps them apart:
+ *   · no trades      → `—` with "never fired" in the title (information)
+ *   · unattributed   → counted separately, never folded into a leg (a trade closed before
+ *                      2026-11-02 has no leg and saying so is the honest answer)
+ *   · unpaired bot   → `—`, because one leg is not a pair and a lone number would imply a comparison
+ *
+ * ⚠️ Combined is shown BESIDE the legs, not instead of them: "the strategy made +9.10" is the number
+ * a reader wants, and "+7.40 long / +1.70 short" is the number that explains it.
+ */
+function LegResults({ legs }) {
+  if (!legs || !legs.paired) return <span className={styles.tdMuted}>—</span>;
+
+  const fmtPnl = (v) => (v === null || v === undefined ? '?' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`);
+  const toneOf = (v) => (v > 0 ? 'var(--risk-normal)' : v < 0 ? 'var(--risk-critical)' : 'var(--ink-soft)');
+
+  return (
+    <span className={styles.legStack}>
+      {legs.legs.map((leg) => (
+        <span
+          key={leg.protocolId}
+          className={styles.legRow}
+          title={
+            leg.trades === 0
+              ? `${leg.protocolId} (${leg.role}) — never fired in the closed-trade history`
+              : `${leg.protocolId} (${leg.role}) — ${leg.trades} closed, ${leg.wins} won, ${leg.winRate}% win rate`
+          }
+        >
+          <em className={styles.legRole}>{String(leg.role || '?').toUpperCase().slice(0, 1)}</em>
+          <span className={styles.legTrades}>{leg.trades === 0 ? '—' : leg.trades}</span>
+          <span className={styles.legPnl} style={{ color: toneOf(leg.totalPnl) }}>
+            {leg.trades === 0 ? '' : fmtPnl(leg.totalPnl)}
+          </span>
+        </span>
+      ))}
+      <span className={styles.legCombined} title="Both legs together">
+        Σ <span style={{ color: toneOf(legs.combined.totalPnl) }}>{fmtPnl(legs.combined.totalPnl)}</span>
+      </span>
+      {legs.unattributed?.trades > 0 && (
+        // Named, not hidden: these closed before leg attribution existed and are NOT a leg.
+        <span className={styles.legUnattributed} title={legs.unattributed.because}>
+          ? {legs.unattributed.trades}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function StrategiesListPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [filter, setFilter] = useState('all'); // all | active | trading | scoring | faulty
@@ -146,6 +204,23 @@ export default function StrategiesListPage() {
     }
     return map;
   }, [positions]);
+
+  // ── Per-leg results (#1185) ──
+  //
+  // A separate, non-blocking read: the list must render whether or not this answers, because it is
+  // enrichment rather than the page's subject. `apiGet` resolves on 4xx, so the `.catch` covers a
+  // transport failure only — and a missing payload renders `—` per bot rather than an error banner.
+  const { data: legData } = useQuery({
+    queryKey: ['strategy-legs'],
+    queryFn: () => apiGet('/api/trading/strategy-legs').catch(() => ({ bots: [] })),
+    refetchInterval: 120_000,
+  });
+
+  const legsById = useMemo(() => {
+    const map = {};
+    for (const b of (legData?.bots || [])) map[b.strategyId] = b;
+    return map;
+  }, [legData]);
 
   // ── Filter ──
   const filtered = useMemo(() => filterStrategies(strategies, filter), [strategies, filter]);
@@ -249,6 +324,7 @@ export default function StrategiesListPage() {
                 <th scope="col">Symbol</th>
                 <th scope="col">Watchlist</th>
                 <th scope="col">Protocols</th>
+                <th scope="col" title="Per-leg closed-trade results: trades and P&L for each leg of a paired bot, then the combined total">Legs</th>
                 <th scope="col" className={styles.thNum}>Broker</th>
                 <th scope="col" className={styles.thNum}>Score</th>
                 <th scope="col" className={styles.thNum}>Pos</th>
@@ -285,6 +361,7 @@ export default function StrategiesListPage() {
                     <td><strong>{s.symbol || '—'}</strong></td>
                     <td className={styles.tdMuted}>{s.watchlistName || '—'}</td>
                     <td><ProtocolChips strategies={s} /></td>
+                    <td><LegResults legs={legsById[s.id]} /></td>
                     <td className={styles.tdNum}>{s.brokerId || '—'}</td>
                     <td className={styles.tdNum}>
                       {s.lastComposite != null ? (

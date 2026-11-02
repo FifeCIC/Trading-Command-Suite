@@ -50,7 +50,11 @@ export class EarningsProximityDirective implements IDirective {
   readonly requiredDataFeeds = ['earnings'];
   readonly readiness = 'alpha' as const; // demoted beta→alpha 2026-08-15 — mock-first: reads input.earningsDate which nothing writes
   readonly category = 'pattern' as const;
-  readonly directionBias = 'bullish' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'bullish'). The code emits BOTH directions, so `neutral` is
+  // accurate (interface doc: a dynamic two-sided directive declares neutral). The old value
+  // excluded it from SHORT_ONLY protocols that could have used it. Zero active-protocol impact
+  // measured before the change. Guard: directive-guard.cjs MODE 5.
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for earnings date on the input symbol data

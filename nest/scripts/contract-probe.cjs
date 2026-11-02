@@ -1253,7 +1253,160 @@ async function main() {
     }
   }
 
-  // ── INV-EXIT-VERDICT-ALIVE (#1016) ─────────────────────────────────────
+  // ── INV-BACKTEST-BUDGET (#1182) ────────────────────────────────────────
+  //
+  // ⚠️ WHY A BUDGET ON A BACKTEST, AND WHY IT IS A SYMPTOM GUARD.
+  //
+  // #1182 measured a 1h protocol run at **214 s for 548 bars (426 ms/bar)**. The cause turned out to
+  // be a per-bar read of the protocol's whole 365-day `score_snapshot` distribution — 118,360 rows,
+  // 601 ms, re-read on every bar — which no unit test can see, because every unit test stubs the
+  // database and the defect IS the database. The scoring maths was correct throughout; only the cost
+  // was wrong, which is exactly the class this repo keeps paying for: plausible output, no error.
+  //
+  // So this asserts the SYMPTOM (wall time on a fixed canonical arm) rather than the cause. If the
+  // cause moves — a different per-bar query, a per-bar write, a chatty directive — this still fires.
+  // A cause guard would inherit whatever was wrong with today's theory.
+  //
+  // ⚠️ The budget is deliberately loose (30 s against a measured ~7.5 s) because the failure being
+  // guarded is 214 s: nearly 30× the budget. A tight budget would fire on a slow morning and get
+  // allowlisted, and an allowlisted guard is worse than none.
+  //
+  // ⚠️ A missing protocol or missing bars is reported SKIP, not a failure. On a clean clone this arm
+  // may have no bars; that is a data state, not a performance regression, and a guard that fails
+  // whenever a symbol has not been imported is one nobody keeps switched on.
+  {
+    const INV = 'INV-BACKTEST-BUDGET';
+    const NAME = 'a canonical 1h backtest scores 548 bars within 30s';
+    const BUDGET_MS = 30000;
+    if (!apiUp) {
+      record(INV, NAME, true, apiSkipReason || 'API not reachable', true);
+    } else {
+      // Generous give-up so a REGRESSED run still completes and is measured, rather than aborting
+      // and losing the number. The predecessor of this guard took 214 s; timing it out at 60 s
+      // would report "timeout" and hide the magnitude.
+      const t0 = Date.now();
+      let res;
+      try {
+        res = await request('POST', `${API}/api/backtest/run`, {
+          symbol: 'USDJPY',
+          protocolId: 'forex-session-v1',
+          timeframe: '1h',
+          directionMode: 'long',
+          newsExclusion: 'none',
+        }, 600000);
+      } catch (err) {
+        record(INV, NAME, false,
+          `did not respond — ${err.message}. A backtest that never returns is the worst form of this ` +
+          'regression: the Backtesting Protocols view sits on "Run" with no error. See #1182.');
+        res = null;
+      }
+      if (res) {
+        const ms = Date.now() - t0;
+        // ⚠️ 201, not 200 — `POST /api/backtest/run` is a create and Nest returns 201. Measured, not
+        // assumed: the first version of this guard tested `!== 200` and reported a HEALTHY 7.5 s run
+        // as "skipped — HTTP 201", i.e. it would have passed forever without ever measuring
+        // anything. Accept both so the guard cannot be silently disarmed by a status-code change.
+        if (res.status !== 200 && res.status !== 201) {
+          record(INV, NAME, true,
+            `skipped — HTTP ${res.status} from the run (the arm needs USDJPY 1h bars and the ` +
+            `forex-session-v1 protocol; this is a DATA state, not a performance result)`, true);
+        } else {
+          let bars = 0;
+          try {
+            const body = JSON.parse(res.body);
+            // `scoreSeries` is truncated to the last 2000 in the RESPONSE, so it is a floor, not a
+            // count. Reported for the per-bar figure only; the budget is on wall time.
+            bars = Array.isArray(body.scoreSeries) ? body.scoreSeries.length : 0;
+          } catch { /* a body we cannot parse still got measured — report the time */ }
+          const perBar = bars ? `${(ms / bars).toFixed(1)} ms/bar over the last ${bars} scored bars` : 'bar count unavailable';
+          const ok = ms <= BUDGET_MS;
+          record(INV, NAME, ok, ok
+            ? `${ms}ms (budget ${BUDGET_MS}ms) — ${perBar}. Measured 7.5s after the #1182 fix, 214s before it.`
+            : `${ms}ms EXCEEDS the ${BUDGET_MS}ms budget — ${perBar}. ` +
+              'The pre-fix figure was 214s/548 bars and the cause was a per-bar read of the whole ' +
+              '365-day score_snapshot distribution (#1182). Check for a per-bar QUERY or WRITE before ' +
+              'assuming the maths got slower: ' +
+              '`SELECT SUM_ROWS_EXAMINED FROM performance_schema...` is unavailable to this user, so ' +
+              'sample `information_schema.processlist` during a run instead.');
+        }
+      }
+    }
+  }
+
+  // ── INV-PRICE-CONTINUITY (#1177) ───────────────────────────────────────
+  //
+  // ⚠️ WHY A SYMPTOM GUARD AND NOT AN INGEST RULE.
+  //
+  // #1177: `BTC`'s stored bars included **233 rows priced $34–$36.60** — MetaQuotes' Nasdaq ETF that
+  // happens to be called `BTC` — alongside real Bitcoin bars at $58k–$87k, in the SAME
+  // `(symbolId, timeframe)` namespace. Nothing failed: every reader took the array it was given, and
+  // a backtest of "BTC" mixed the two. **Measured 2026-11-02: 233 of 54,508 rows (0.43%)**, one of
+  // them inside the `binance` 5m series that a same-day analysis had read.
+  //
+  // A write-time rule would be better, but it has to know WHICH provider is authoritative per symbol —
+  // and that is exactly the thing that was wrong. So this asserts the OBSERVABLE: an instrument's own
+  // price series must be internally plausible. A single symbol whose 90-day range spans more than
+  // `MAX_RANGE_RATIO` is not a volatile instrument, it is two instruments sharing a ticker.
+  //
+  // ⚠️ The threshold is deliberately loose (20x). Real 90-day ranges in this book are ~1.5x (BTC
+  // 58.6k→86.6k is 1.48x); a 20x range cannot be one instrument, and a genuinely wild instrument would
+  // still be far below it. A tight bound would fire on a real move and get allowlisted.
+  {
+    const INV = 'INV-PRICE-CONTINUITY';
+    const NAME = 'no symbol\u2019s stored bars span an implausible price range (mixed series)';
+    const MAX_RANGE_RATIO = 20;
+    const MIN_BARS = 50;
+    if (!prisma) {
+      record(INV, NAME, true, 'database not reachable via Prisma', true);
+    } else {
+      try {
+        const rows = await prisma.$queryRawUnsafe(
+          `SELECT s.ticker,
+                  b.timeframe,
+                  COUNT(*) AS n,
+                  MIN(b.close) AS mn,
+                  MAX(b.close) AS mx,
+                  MIN(b.provider) AS prov_min,
+                  MAX(b.provider) AS prov_max
+             FROM marketbar b
+             JOIN symbol s ON s.id = b.symbolId
+            WHERE b.timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 90 DAY)
+            GROUP BY s.ticker, b.timeframe
+           HAVING COUNT(*) >= ${MIN_BARS} AND MIN(b.close) > 0
+            ORDER BY (MAX(b.close) / MIN(b.close)) DESC
+            LIMIT 12`,
+        );
+        const bad = (rows || [])
+          .map((r) => ({ ...r, ratio: Number(r.mx) / Number(r.mn) }))
+          .filter((r) => r.ratio > MAX_RANGE_RATIO);
+        if (bad.length === 0) {
+          const worst = (rows || [])[0];
+          record(INV, NAME, true,
+            worst
+              ? `widest 90-day range is ${Number(worst.mx).toFixed(2)}/${Number(worst.mn).toFixed(2)} = ` +
+                `${(Number(worst.mx) / Number(worst.mn)).toFixed(2)}x on ${worst.ticker} ${worst.timeframe} ` +
+                `(ceiling ${MAX_RANGE_RATIO}x).`
+              : 'no series had enough bars to judge — NOT a pass, an empty check.');
+        } else {
+          record(INV, NAME, false,
+            bad.map((r) =>
+              `${r.ticker} ${r.timeframe}: ${Number(r.mn).toFixed(2)} → ${Number(r.mx).toFixed(2)} = ` +
+              `${r.ratio.toFixed(0)}x over ${Number(r.n)} bars` +
+              (r.prov_min !== r.prov_max ? ` (providers ${r.prov_min}/${r.prov_max})` : ''),
+            ).join('; ') +
+            `. Two instruments are sharing one ticker — a backtest of that symbol measures both. ` +
+            `See #1177 (a bare 'BTC' matched a Nasdaq ETF at ~$35.86 on an MT5 catalogue while real ` +
+            `Bitcoin sat in the same table at $82k).`);
+        }
+      } catch (err) {
+        // A check that cannot read its input must ERROR, never pass.
+        record(INV, NAME, false,
+          `could not read marketbar — ${err.message}. This is reported as a FAILURE, not a skip: a ` +
+          'verifier that inspects nothing and reports OK is worse than no verifier.');
+      }
+    }
+  }
+
   //
   // ⚠️ WHY THIS IS A LIVE CHECK AND NOT A UNIT TEST.
   //
@@ -1271,6 +1424,7 @@ async function main() {
   //
   // ⚠️ An empty book is NOT a failure and is reported SKIP. No bot holding a position is a normal
   // state, and a guard that fails whenever the book is empty is a guard everyone switches off.
+  // ── INV-EXIT-VERDICT-ALIVE (#1016) ─────────────────────────────────────
   {
     const INV = 'INV-EXIT-VERDICT-ALIVE';
     const NAME = 'the exit verdict is alive for every open position';

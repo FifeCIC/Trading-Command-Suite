@@ -49,7 +49,13 @@ export class CciDirective implements IDirective {
   readonly name = 'Commodity Channel Index';
   readonly category = 'oscillator' as const;
   readonly description = 'Hybrid: continuous base + deep oversold bonuses + crossover bonus.';
-  readonly directionBias = 'bearish' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'bearish'). The code emits BOTH 'bullish' and 'bearish'
+  // literals, so `neutral` is the accurate declaration and the interface doc's rule for a dynamic
+  // two-sided directive. Measured before changing: this correction alters inclusion in ZERO active
+  // protocols (`cci` appears in none where the two differ), so it is a correctness fix, not a maths
+  // change. The old value silently EXCLUDED it from LONG_ONLY protocols that could have used it.
+  // Guard: nest/scripts/directive-guard.cjs MODE 5, now an ERROR.
+  readonly directionBias = 'neutral' as const;
   readonly priority = 50;
   readonly maxScore = 100;
   readonly minScore = 1;

@@ -161,7 +161,7 @@ export class RsiOversoldDirective implements IDirective {
     return {
       score: totalScore,
       confidence: Number(confidence.toFixed(2)),
-      reason: `RSI(14)=${currentRsi.toFixed(1)} ${curling ? '↑' : '↓'}: ${parts.join(' ')}`,
+      reason: `RSI(${rsiPeriod})=${currentRsi.toFixed(1)} ${curling ? '↑' : '↓'}: ${parts.join(' ')}`,
       signalClass,
       metadata: { baseScore, bonusScore, bonusLabel, curlBonus, currentRsi },
     };

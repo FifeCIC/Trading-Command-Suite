@@ -67,14 +67,53 @@ const DIST_DIR = path.join(NEST_ROOT, 'dist', 'src', 'modules', 'directives', 'i
 
 // ── Config ────────────────────────────────────────────────────────────────
 
-/** Input fields the engine is KNOWN to write. Anything else read off `input` is suspicious. */
+/**
+ * Input fields the engine is KNOWN to write. Anything else read off `input` is suspicious.
+ *
+ * ⚠️ `params` added 2026-11-02 (#1165). The allowlist was written before directives could be
+ * tuned, so MODE 4 reported **~60 directives** as "reads input.params — no known producer writes
+ * this field". They were all false positives: `DirectivesService.runAll()` spreads the configured
+ * values in at `directives.service.ts:410` (`{ ...input, params: configuredParams }`), the type
+ * declares it (`interfaces/directive.interface.ts:95`), and `POST /api/directives/:id/test`
+ * accepts it from the caller (`directives.controller.ts:563`).
+ *
+ * ⚠️ THIS IS NOT AN EXEMPTION WIDENED TO SILENCE A WARNING. The writer was located and read
+ * before the entry was added — the alternative (a directive reading a field nothing writes) is a
+ * real defect, and it is what this allowlist exists to catch. Two things keep it honest:
+ *   • the field only ever reaches `calculate()` when an entry CONFIGURED it, so `params` is absent
+ *     (not `undefined`) on every untuned directive — the tick-cache and shape contract depend on it;
+ *   • `directive-parameters.spec.ts` fails if a directive reads a param it did not declare.
+ * A genuinely unproduced field still shows up, which is why the remaining MODE 4 hits must be read
+ * individually rather than assumed clean.
+ */
 const KNOWN_INPUT_FIELDS = new Set([
   'bars', 'symbol', 'ticker', 'dayBars', 'hourBars', 'min15Bars',
   'price', 'eurusdValue', 'dxyValue', 'accountId', 'account', 'quote', 'timestamp', 'asOf',
+  'params',
 ]);
 
-/** Confession patterns — a `ready` directive containing any of these is a red flag. */
-const CONFESSION_PATTERNS = [
+/**
+ * Input fields that are a WHOLE EXTERNAL FACTOR on their own, so two directives reading the same one
+ * are measuring the same thing twice.
+ *
+ * Measured 2026-11-02: `dxy-regime` and `gold-macro-correlation` both compute their base with
+ * `mapRange(input.dxyValue, …)` — at DXY 103 they returned **38/100 and 38/125** on the same tick,
+ * i.e. one variable carrying 225 of a protocol's 1130 capacity (20%). Two protocols carried both
+ * (both inactive, so no live impact), and a protocol composed that day did until it was noticed.
+ *
+ * Recorded as an ADVISORY rather than an error: whether a factor should be counted twice is a
+ * composition decision, not a code fault — but it must be a decision, not an accident.
+ */
+const EXCLUSIVE_INPUT_FIELDS = new Map([
+  ['dxyValue', 'the dollar index'],
+  ['eurusdValue', 'EURUSD'],
+  ['news', 'the news feed'],
+]);
+
+/** field -> directive ids reading it, so the advisory can name the pair (filled during the scan). */
+const sharedInputs = new Map();
+
+/** Confession patterns — a `ready` directive containing any of these is a red flag. */const CONFESSION_PATTERNS = [
   /\bmock\b/i,
   /not connected/i,
   /connect\s+(?:a\s+)?(?:the\s+)?(?:[a-z]+\s+)*(?:feed|api)/i,
@@ -269,19 +308,53 @@ function staticCheckFile(file) {
       if (!KNOWN_INPUT_FIELDS.has(f)) {
         report(file, id, 4, 'WARN', `reads input.${f} - no known producer writes this field (verify it is injected)`);
       }
+      // Collect for the shared-input advisory below.
+      if (EXCLUSIVE_INPUT_FIELDS.has(f)) {
+        if (!sharedInputs.has(f)) sharedInputs.set(f, new Set());
+        sharedInputs.get(f).add(id);
+      }
     }
 
     // MODE 5 — signalClass vs directionBias
-    const emitsBullish = /signalClass\s*:\s*['"]bullish['"]/.test(cls.body);
-    const emitsBearish = /signalClass\s*:\s*['"]bearish['"]/.test(cls.body);
-    if (bias === 'neutral' && (emitsBullish || emitsBearish)) {
-        report(file, id, 5, 'WARN', `directionBias='neutral' but emits ${emitsBullish && emitsBearish ? 'both bullish & bearish' : emitsBullish ? 'bullish' : 'bearish'} - verify direction logic`);
+    //
+    // ⚠️ NARROWED 2026-11-02. This used to warn on ANY `neutral` bias that emitted a direction,
+    // which made it fire on 17 directives — and 9 of those were CORRECT. The interface doc says so
+    // explicitly (`interfaces/directive.interface.ts` L47): *"A `neutral` directionBias is valid for
+    // a dynamic two-sided directive; it requires mirror tests proving bullish/bearish input symmetry."*
+    // So the defect is not "neutral emitted a direction" — it is a NEUTRAL directive that emits only
+    // ONE direction, because that means it is really one-sided and a protocol of the opposite kind
+    // silently gets nothing from it. Two-sided stays silent; one-sided is flagged as the real mismatch.
+    //
+    // This is the same principle as the allowlist above: a guard that fires on healthy directives
+    // gets ignored, and an ignored guard is worse than none.
+    // ⚠️ DETECTION IS WHOLE-BODY LITERAL PRESENCE, not `signalClass:`-anchored. Measured
+    // 2026-11-02: an anchored regex (`/signalClass\s*:\s*'bearish'/`) reported `dxy-regime` as
+    // "emits ONLY bullish" when it plainly emits bearish — via a TERNARY
+    // (`signalClass = totalScore >= 65 ? 'bullish' : totalScore <= 35 ? 'bearish' : 'neutral'`).
+    // The anchored form only sees object-literal returns. This now matches the same rule the
+    // generated `NEUTRAL_ONLY_DIRECTIVES` set uses ("class contains no 'bullish'/'bearish'
+    // literal"), so the guard and the registry cannot disagree about the same class.
+    // Comments are stripped first, so a literal inside a comment cannot excuse a one-sided class.
+    const bodyNoComments = stripComments(cls.body);
+    const emitsBullish = /'bullish'/.test(bodyNoComments) || /"bullish"/.test(bodyNoComments);
+    const emitsBearish = /'bearish'/.test(bodyNoComments) || /"bearish"/.test(bodyNoComments);
+    const twoSided = emitsBullish && emitsBearish;
+    if (bias === 'neutral' && twoSided) {
+      // Deliberate: valid per the interface contract. No finding. The mirror-symmetry requirement
+      // is the spec's business (`directive-parameters.spec.ts`), not a static scan's.
+    } else if (bias === 'neutral' && (emitsBullish || emitsBearish)) {
+      // ⚠️ ERROR, not WARN, since 2026-11-02. `directionBias` is not decoration: `directive-inclusion.ts`
+      // EXCLUDES 'bearish' from LONG_ONLY and 'bullish' from SHORT_ONLY. A declaration that disagrees
+      // with the code therefore either throws away a working directive or counts capacity that can
+      // never be earned. All nine instances were corrected the same day, so this can be an error
+      // without baselining anything — and an error is what stops instance ten.
+      report(file, id, 5, 'ERROR', `directionBias='neutral' but emits ONLY ${emitsBullish ? 'bullish' : 'bearish'} - declare the real side or the inclusion rules will miscount it`);
     }
     if (bias === 'bullish' && emitsBearish) {
-      report(file, id, 5, 'WARN', `directionBias='bullish' but emits 'bearish'`);
+      report(file, id, 5, 'ERROR', `directionBias='bullish' but emits 'bearish' - the declaration drives INCLUSION, so it silently removes this directive from SHORT_ONLY protocols`);
     }
     if (bias === 'bearish' && emitsBullish) {
-      report(file, id, 5, 'WARN', `directionBias='bearish' but emits 'bullish'`);
+      report(file, id, 5, 'ERROR', `directionBias='bearish' but emits 'bullish' - the declaration drives INCLUSION, so it silently removes this directive from LONG_ONLY protocols`);
     }
 
     // MODE 3 — constant floor: a no-signal guard branch returning a literal non-zero score
@@ -842,6 +915,26 @@ async function main() {
     staticCheckFile(path.join(IMPL_DIR, f));
   }
   console.log(`[guard] static scan complete: ${files.length} files.\n`);
+
+  // ── Shared-input advisory ────────────────────────────────────────────────────
+  // Two directives that read the SAME external factor weight it twice in any protocol that carries
+  // both. Not an error: whether a factor should be double-counted is a composition decision — but it
+  // has to be a decision. Measured 2026-11-02: dxy-regime + gold-macro-correlation both read
+  // `input.dxyValue` and returned 38/100 and 38/125 on one tick.
+  const shared = [...sharedInputs].filter(([, ids]) => ids.size > 1);
+  if (shared.length) {
+    console.log('[guard] SHARED-INPUT advisory (not a fault — a composition fact):');
+    for (const [field, ids] of shared) {
+      console.log(
+        `         input.${field} (${EXCLUSIVE_INPUT_FIELDS.get(field)}) is read by ` +
+          `${ids.size} directives: ${[...ids].sort().join(', ')}`,
+      );
+      console.log(
+        '         → a protocol containing more than one of them counts that factor more than once.',
+      );
+    }
+    console.log('');
+  }
   console.log(
     `[guard] mode 9 maxScore reachability: ${maxScoreStats.judged} judged, ` +
     `${maxScoreStats.manual.length} manual (dynamic arithmetic — cannot judge)` +

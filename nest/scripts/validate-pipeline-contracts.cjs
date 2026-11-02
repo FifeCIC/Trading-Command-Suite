@@ -550,6 +550,13 @@ const PROBE_ENFORCED = {
   // /api/system/health-dashboard 504'd at 32s against a 30s gateway timeout — the Health page
   // rendered a permanent loading skeleton and NOTHING objected for a whole session (#841).
   'INV-ENDPOINT-BUDGET': 'scripts/contract-probe.cjs',
+  // A backtest's COST, which no unit test can see: every unit test stubs the database, and the
+  // #1182 defect WAS the database — a per-bar read re-fetching 118,360 `score_snapshot` rows
+  // (601 ms) on each of 548 bars, making a 1h run take 214 s while the scoring maths stayed
+  // entirely correct. Asserted as WALL TIME on a fixed canonical arm, deliberately a SYMPTOM
+  // guard: three plausible causes were investigated and refuted before the real one was found,
+  // so a cause guard would have inherited a wrong theory (#1182).
+  'INV-BACKTEST-BUDGET': 'scripts/contract-probe.cjs',
 };
 
 /**

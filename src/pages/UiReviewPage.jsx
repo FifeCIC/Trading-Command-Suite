@@ -7,6 +7,7 @@ import { noticeFromError } from '../core/notices/from-error.js';
 // the two matched failed the build with [MISSING_EXPORT].
 import VIEW_META from '../core/view-meta.js';
 import { NAV_TREE } from '../core/nav-tree.js';
+import { VISIBILITY, effectiveVisibility } from '../core/hidden-views.js';
 import './ui-review.css';
 
 /**
@@ -206,7 +207,7 @@ export default function UiReviewPage() {
   // ⚠️ `e.keen` is kept in this test even though the column is gone: entries answered ONLY on the old
   // keenness scale still hold a verdict, and dropping them would silently shrink the "answered" count
   // and make the walkthrough look less complete than it is.
-  const isAnswered = (e) => Boolean(e && (e.importance || e.keen || e.uiScore || e.note || e.noteNew || e.hide === true || e.hide === false));
+  const isAnswered = (e) => Boolean(e && (e.importance || e.keen || e.uiScore || e.note || e.noteNew || e.visibility || e.hide === true || e.hide === false));
 
   const answered = rows.filter((r) => isAnswered(entries[r.key])).length;
 
@@ -223,15 +224,20 @@ export default function UiReviewPage() {
   });
 
   /**
-   * ⚠️ SPLIT, BECAUSE ONLY ONE HALF CAN ACT (measured 2026-11-01). `filterHiddenViews` removes a
-   * page from the nav by view id, so a `hide: true` on a view that is not a sidebar entry changes
-   * nothing. Eight of the owner's nine verdicts were exactly that, and nothing said so — the
-   * summary showed "9 marked hide" while only one page had ever disappeared. Counting them together
-   * reports an intention as an effect.
+   * ⚠️ TWO SEPARATE QUESTIONS, TWO SEPARATE COUNTS (2026-11-02). "Not finished" and "member perk"
+   * used to share one `hide` boolean, so the summary could not tell a page that was withheld because
+   * it was broken from one withheld because it is the thing people will pay for. Counting them apart
+   * is the whole reason the control changed.
+   *
+   * ⚠️ And the nav split still matters: a verdict on a route that is not a sidebar entry cannot act,
+   * so it is reported separately rather than folded into the headline number.
    */
-  const hiddenWanted = rows.filter((r) => entries[r.key]?.hide === true);
-  const hiddenInNav = hiddenWanted.filter((r) => r.navOrder !== null).length;
-  const hiddenInert = hiddenWanted.length - hiddenInNav;
+  const visOf = (r) => effectiveVisibility({ entries }, r.key);
+  const withheldRows = rows.filter((r) => visOf(r) === VISIBILITY.WITHHELD);
+  const memberRows = rows.filter((r) => visOf(r) === VISIBILITY.MEMBER);
+  const withheldInNav = withheldRows.filter((r) => r.navOrder !== null).length;
+  const memberInNav = memberRows.filter((r) => r.navOrder !== null).length;
+  const inertVerdicts = (withheldRows.length - withheldInNav) + (memberRows.length - memberInNav);
 
   /**
    * Applied-status tallies — the headline number for *"how well did agentic AI follow my instructions"*.
@@ -270,12 +276,15 @@ export default function UiReviewPage() {
         <span><b>{rows.length}</b> pages</span>
         <span><b>{answered}</b> answered</span>
         <span><b>{rows.length - answered}</b> to go</span>
-        <span title="Marked hide AND a sidebar entry — these actually disappear">
-          <b>{hiddenInNav}</b> hidden from the sidebar
+        <span title="Withheld: built but not ready — nobody sees it this release">
+          <b>{withheldInNav}</b> withheld
         </span>
-        {hiddenInert > 0 ? (
-          <span title="Marked hide, but not a sidebar entry — hiding cannot change anything for these">
-            <b>{hiddenInert}</b> marked but not in the sidebar
+        <span title="Member-only pages — hidden from the sidebar until an entitlement is present">
+          <b>{memberInNav}</b> member-only
+        </span>
+        {inertVerdicts > 0 ? (
+          <span title="Verdict recorded on a route that is not a sidebar entry — it cannot change the navigation">
+            <b>{inertVerdicts}</b> not in the sidebar
           </span>
         ) : null}
         <span title="First round of comments: applied, out of those judged so far">
@@ -317,7 +326,7 @@ export default function UiReviewPage() {
             <th scope="col">Page</th>
             <th scope="col">Edition</th>
             <th scope="col">Importance</th>
-            <th scope="col">Hide now</th>
+            <th scope="col" title="Withheld = not ready for anyone · Member = entitlement required · Public = everyone">Visibility</th>
             {/* Replaced the `Keen` column 2026-10-06 — see UI_SCORE above for why the stored values
                 were not carried over. */}
             <th
@@ -413,24 +422,27 @@ export default function UiReviewPage() {
                     </select>
                   </td>
                   <td>
-                    {/* ⚠️ Disabled for rows that are NOT sidebar entries. Hiding works by removing a
-                        view id from the navigation, so on a detail route the switch is a no-op that
-                        still looks like a decision. Offering a control that cannot act is how eight
-                        verdicts went inert without anyone noticing (2026-11-01). */}
+                    {/* ⚠️ THREE STATES, NOT A YES/NO (owner direction, 2026-11-02). `hide` conflated
+                        "not ready" with "member perk", and the reason for a hidden page was lost the
+                        moment it was recorded. Withheld = not ready for anyone; Member = finished but
+                        behind an entitlement; Public = everyone.
+                        ⚠️ Still disabled for rows that are not sidebar entries: the navigation is the
+                        only thing this decision can act on, and a control that cannot act reads as a
+                        decision that was made (eight verdicts went inert exactly that way, 2026-11-01). */}
                     <select
-                      aria-label={`Hide ${r.label} now`}
+                      aria-label={`Visibility for ${r.label}`}
                       disabled={r.navOrder === null}
                       title={
                         r.navOrder === null
-                          ? 'Not a sidebar entry — this page is reached from another page, so there is nothing to hide'
-                          : 'Hide this page from the sidebar'
+                          ? 'Not a sidebar entry — this page is reached from another page, so its visibility cannot change the navigation'
+                          : 'Withheld = not ready · Member = entitlement required · Public = everyone'
                       }
-                      value={e.hide === true ? 'Y' : e.hide === false ? 'N' : ''}
-                      onChange={(ev) => save(r.key, { hide: ev.target.value === '' ? null : ev.target.value === 'Y' })}
+                      value={visOf(r)}
+                      onChange={(ev) => save(r.key, { visibility: ev.target.value })}
                     >
-                      <option value="">—</option>
-                      <option value="N">No</option>
-                      <option value="Y">Yes</option>
+                      <option value={VISIBILITY.PUBLIC}>Public</option>
+                      <option value={VISIBILITY.MEMBER}>Member</option>
+                      <option value={VISIBILITY.WITHHELD}>Withheld</option>
                     </select>
                   </td>
                   <td>

@@ -74,7 +74,7 @@ import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style
 // ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Replacing local predicates here because
 // `score.signal === 'SELL'` misses `STRONG_SELL`, which dispatched a BUY on the strongest bearish
 // signal. See `signal-direction.ts`.
-import { signalToSide, directionToSide } from '../../common/utils/signal-direction';
+import { signalToSide, directionToSide, resolveEffectiveRole } from '../../common/utils/signal-direction';
 // ⚠️ #882 — the ONE freshness bound, shared with the queue sweep (signal-queue.service.ts).
 // The consumer gate must refuse what the sweep expires; a second literal here would drift.
 import { getMaxSignalAgeMinutes, signalAgeMinutes } from '../../common/utils/signal-freshness';
@@ -842,6 +842,11 @@ export class AutomationLoopService implements OnModuleInit {
           provider: brokerId, status: 'open', origin: 'strategy',
           source: 'meta-stack',
           scoringStrategyId: strategyId,
+          // #1185 — WHICH LEG. Without this a bot holding a long and a short leg produces two
+          // trades that are indistinguishable once closed, which is the whole reason "summarise the
+          // strategy per leg and combined" was impossible.
+          legProtocolId: protocolId,
+          legRole: await this.resolveLegRole(strategyId, protocolId),
           // #1018 — RECORD THE OWNER ON THE ROW, not only on the position. This was omitted, so
           // `trade.magic` was NULL on every open row and the ONLY remaining owner key was a
           // `scoringStrategyId` that holds slugs as well as UUIDs. Measured 2026-09-29: 150 of 318
@@ -3069,8 +3074,57 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   /** #615 — restore persisted layer flags. */
-  private async restoreLayerFlags() {
-    if (!this.prisma.isAvailable) return;
+  /**
+   * Which LEG of a paired bot is this? (#1185)
+   *
+   * A bot may hold TWO subscriptions — a LONG protocol and a SHORT protocol — as one strategy. The
+   * closed trade must say which leg produced it, or "per-leg and combined P&L" cannot be computed;
+   * `trade` had no protocol reference at all before this.
+   *
+   * ⚠️ RESOLVED FROM THE SUBSCRIPTION, not from the signal's direction. The direction says which way
+   * this order goes; the role says which leg was PERMITTED to take it. They normally agree, but the
+   * attribution must survive a case where they are momentarily out of step — a leg is a property of
+   * the CONFIGURATION, and a trade is attributed to the configuration that allowed it.
+   *
+   * ⚠️ `resolveEffectiveRole` is the SAME authority the queue used, so a trade cannot be attributed
+   * to a leg the queue would have refused. A second, parallel permission check here would be a
+   * second source of truth for one fact — the defect this repo keeps re-finding.
+   *
+   * Unreadable → `undefined`, which records NULL. NULL renders as UNKNOWN, never as `long`: a wrong
+   * leg is worse than an absent one, because it silently moves P&L between legs.
+   */
+  private readonly legRoleCache = new Map<string, { at: number; role: 'long' | 'short' | 'both' | null }>();
+
+  private async resolveLegRole(
+    strategyId: string,
+    protocolId?: string,
+  ): Promise<'long' | 'short' | 'both' | undefined> {
+    if (!protocolId) return undefined;
+    const key = `${strategyId}|${protocolId}`;
+    const cached = this.legRoleCache.get(key);
+    if (cached && Date.now() - cached.at < 60_000) return cached.role ?? undefined;
+    try {
+      const rows = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT sp.role, ts.requireDirection
+           FROM strategy_protocol sp
+           JOIN trading_strategy ts ON ts.id = sp.strategyId
+          WHERE sp.strategyId = ? AND sp.protocolId = ?
+          LIMIT 1`,
+        strategyId,
+        protocolId,
+      );
+      const role = rows?.length
+        ? resolveEffectiveRole(rows[0].role, rows[0].requireDirection)
+        : null;
+      this.legRoleCache.set(key, { at: Date.now(), role });
+      return role ?? undefined;
+    } catch {
+      // Unreadable — record nothing rather than guess a leg.
+      return undefined;
+    }
+  }
+
+  private async restoreLayerFlags() {    if (!this.prisma.isAvailable) return;
     try {
       // #849 — resolved rather than read raw. Each default reproduces the state initialiser exactly, so
       // this is behaviour-neutral; the gain is that "what is the default" is now answerable in one file,

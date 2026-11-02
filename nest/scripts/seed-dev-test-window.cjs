@@ -46,6 +46,47 @@ try {
 const { DEV_TEST_WINDOW: WIN, DEV_TEST_TIMEFRAMES: TFS, DEV_TEST_SYMBOLS: SYMBOLS } = W;
 const NAME = W.devTestPeriodName();
 
+/**
+ * ── TARGETING (2026-11-02) ──────────────────────────────────────────────────────────────────────
+ * `POST /api/backtest/run` refuses a symbol the frozen window is not seeded for, and its message
+ * tells the caller to run this seeder — but this seeder could only write the fixed
+ * `SYMBOLS × TFS` matrix, so it could not seed the symbol the guard had just named. Measured
+ * 2026-11-02 while measuring NVDA: the run refused with *"not seeded for NVDA 1d. Seed it with:
+ * npm --prefix nest run seed:dev-window"* and there was no way to comply.
+ *
+ * `--ticker` and `--timeframes` narrow the matrix instead of extending it. The DATES are never
+ * parameters: the window is frozen, and a per-run date would let one measurement silently use a
+ * different window from the next, which is the thing #1132 forbids.
+ *
+ * ⚠️ NARROWING CANNOT OVER-CLAIM COVERAGE. A blanket seed writes `5m` rows for a symbol whose 5m
+ * bars start mid-window, so the period asserts a window the data cannot fill. Targeting one
+ * timeframe avoids that; the caller is responsible for having measured the coverage first.
+ */
+function listArg(flag) {
+  const i = process.argv.indexOf(flag);
+  if (i < 0) return null;
+  const raw = process.argv[i + 1];
+  if (!raw || raw.startsWith('--')) return [];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+const TARGET_TICKERS = listArg('--ticker');
+const TARGET_TFS = listArg('--timeframes');
+
+/**
+ * The default set is the fixed matrix PLUS any symbol declared with a restricted timeframe list
+ * (`DEV_TEST_EXTRA_SYMBOLS`). Without this, a symbol added with measured partial coverage would be
+ * created by a one-off flag and lost on the next reinstall — the exact drift
+ * `database-seed-discipline` exists to prevent.
+ */
+const EXTRA = W.DEV_TEST_EXTRA_SYMBOLS || {};
+const DEFAULT_PAIRS = [
+  ...SYMBOLS.flatMap((t) => TFS.map((tf) => ({ ticker: t, timeframe: tf }))),
+  ...Object.entries(EXTRA).flatMap(([t, tfs]) => tfs.map((tf) => ({ ticker: t, timeframe: tf }))),
+];
+const PAIRS = TARGET_TICKERS && TARGET_TICKERS.length
+  ? TARGET_TICKERS.flatMap((t) => (TARGET_TFS && TARGET_TFS.length ? TARGET_TFS : TFS).map((tf) => ({ ticker: t, timeframe: tf })))
+  : DEFAULT_PAIRS;
+
 const NOTE =
   `CANONICAL DEVELOPMENT TESTING WINDOW (${WIN.version}). Frozen: ${WIN.from} to ${WIN.to}. ` +
   'Development comparisons must run inside this window so past and future work is measured on the ' +
@@ -61,16 +102,20 @@ const toDate = new Date(`${WIN.to}T23:59:59Z`);
 
 (async () => {
   console.log(`[dev-window-seed] ${NAME} · ${WIN.from} → ${WIN.to}`);
-  console.log(`[dev-window-seed] ${SYMBOLS.length} symbol(s) × ${TFS.length} timeframe(s) = ${SYMBOLS.length * TFS.length} row(s)`);
+  console.log(`[dev-window-seed] ${PAIRS.length} (symbol, timeframe) pair(s) to reconcile`);
+  if (TARGET_TICKERS || TARGET_TFS) {
+    console.log(`[dev-window-seed] TARGETED: ${PAIRS.map((p) => `${p.ticker}/${p.timeframe}`).join(', ')}`);
+  }
   console.log(`[dev-window-seed] mode: ${CHECK ? 'CHECK' : APPLY ? 'APPLY' : 'DRY RUN'}\n`);
 
+  const ALL_TICKERS = [...new Set(PAIRS.map((pair) => pair.ticker))];
   const symbols = await prisma.symbol.findMany({
-    where: { ticker: { in: SYMBOLS } },
+    where: { ticker: { in: ALL_TICKERS } },
     select: { id: true, ticker: true },
   });
   const byTicker = new Map(symbols.map((s) => [s.ticker, s.id]));
 
-  const missingSymbols = SYMBOLS.filter((t) => !byTicker.has(t));
+  const missingSymbols = ALL_TICKERS.filter((t) => !byTicker.has(t));
   if (missingSymbols.length) {
     // A missing symbol is a finding: the window's coverage claim names these tickers, so a gap means
     // the measurement and the database disagree.
@@ -86,9 +131,9 @@ const toDate = new Date(`${WIN.to}T23:59:59Z`);
   let duplicates = 0;
   const problems = [];
 
-  for (const ticker of SYMBOLS) {
-    const symbolId = byTicker.get(ticker);
-    for (const timeframe of TFS) {
+  for (const { ticker, timeframe } of PAIRS) {
+    {
+      const symbolId = byTicker.get(ticker);
       const existing = await prisma.backtestPeriod.findMany({
         where: { name: NAME, symbolId, timeframe },
         select: { id: true, fromDate: true, toDate: true, note: true },

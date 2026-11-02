@@ -54,6 +54,24 @@ import {
 } from './rarity-bands';
 
 /**
+ * How long the rarity distribution read is reused (#1182).
+ *
+ * ⚠️ THE DISTRIBUTION IS PROTOCOL-WIDE HISTORY, NOT A PROPERTY OF THIS BAR. `computeRarity()` used to
+ * re-read it on EVERY `scoreWithGating()` call, which is once per bar in a backtest. MEASURED
+ * 2026-11-02 on `forex-session-v1` (118,360 snapshots in the window): **601 ms per read**, and a
+ * 548-bar USDJPY 1h run spent ~165 s of its 192 s waiting on 548 identical reads of a table that
+ * cannot change between two bars a second apart. That was the whole of #1182.
+ *
+ * 60 s is chosen to be far shorter than any live scoring cadence that matters (a tick sees a
+ * distribution at most one minute old, which is immaterial against a 365-day window) and long enough
+ * that a multi-minute backtest reads it a handful of times rather than hundreds.
+ *
+ * ⚠️ This caches ONLY the row read. `rarityPercentile()` and `RARITY_BANDS` are untouched, so the
+ * percentile for a given composite is computed by exactly the same code from exactly the same values.
+ */
+const RARITY_HISTORY_TTL_MS = 60_000;
+
+/**
  * Weighting Systems
  * =================
  * ⚠️ READ THE CURRENT RULE FIRST — this header used to describe a formula the
@@ -1780,6 +1798,42 @@ export class ProtocolGatingService {
   }
 
   /**
+   * The protocol's ascending rarity distribution, read at most once per `RARITY_HISTORY_TTL_MS`.
+   *
+   * ⚠️ Keyed by PROTOCOL ONLY — not by symbol. The query has never filtered on `symbol`, so the
+   * distribution is protocol-wide; keying it by symbol would multiply the reads by the number of
+   * symbols scored and return the same array each time.
+   *
+   * The array is returned to callers and passed to `rarityPercentile()`, which reads it without
+   * mutating, so one cached array is safe to share across calls.
+   *
+   * ⚠️ Declared OPTIONAL and created on first use rather than as a plain field initialiser. A field
+   * initialiser runs in the constructor, so anything that borrows this prototype without constructing
+   * the service (the specs for this class do exactly that) would find `undefined` here and throw
+   * inside the `try` in `computeRarity` — which SWALLOWS the error and returns "no rarity". That is a
+   * failure that looks like a data condition, not a bug.
+   */
+  private rarityHistoryCache?: Map<string, { at: number; scores: number[] }>;
+
+  private async rarityHistory(protocolId: string): Promise<number[]> {
+    const cache = (this.rarityHistoryCache ??= new Map<string, { at: number; scores: number[] }>());
+    const cached = cache.get(protocolId);
+    if (cached && Date.now() - cached.at < RARITY_HISTORY_TTL_MS) return cached.scores;
+
+    const history = await this.prisma.scoreSnapshot.findMany({
+      where: {
+        protocolId,
+        snappedAt: { gte: new Date(Date.now() - 365 * 86400000) },
+      },
+      select: { composite: true },
+      orderBy: { composite: 'asc' },
+    });
+    const scores = history.map(h => h.composite);
+    cache.set(protocolId, { at: Date.now(), scores });
+    return scores;
+  }
+
+  /**
    * Compute rarity percentile for a composite score against historical data.
    */
   private async computeRarity(
@@ -1788,22 +1842,14 @@ export class ProtocolGatingService {
     composite: number,
   ): Promise<RarityInfo | undefined> {
     try {
-      const history = await this.prisma.scoreSnapshot.findMany({
-        where: {
-          protocolId,
-          snappedAt: { gte: new Date(Date.now() - 365 * 86400000) },
-        },
-        select: { composite: true },
-        orderBy: { composite: 'asc' },
-      });
+      const scores = await this.rarityHistory(protocolId);
 
       // ONE threshold for both rarity paths (#1126 consolidation). Below it there is no band, and
       // order sizing stays at the bot's base size.
-      if (history.length < RARITY_MIN_SAMPLES) {
+      if (scores.length < RARITY_MIN_SAMPLES) {
         return undefined;
       }
 
-      const scores = history.map(h => h.composite);
       // ⚠️ Was a strictly-below count, so a score at the window maximum scored (n-1)/n — 97 at
       // n=30 — and `black-swan` (>=99) was unreachable below ~67 samples. The highest score ever
       // recorded was therefore reported as `cyclical` and sized at 2.5×. See rarityPercentile().

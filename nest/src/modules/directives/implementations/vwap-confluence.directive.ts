@@ -110,7 +110,11 @@ export class VwapConfluenceSimpleDirective implements IDirective {
   readonly minBars = { '1d': 5 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'neutral' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'neutral'). This class emits ONLY 'bullish', so declaring neutral
+  // let a SHORT_ONLY protocol count its maxScore as capacity it can never earn. Zero active-protocol
+  // impact measured before the change. Guard: directive-guard.cjs MODE 5.
+  // NB `vwap-confluence-bands` emits BOTH and correctly stays neutral — do not "harmonise" them.
+  readonly directionBias = 'bullish' as const;
   readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {

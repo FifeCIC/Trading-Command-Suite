@@ -66,6 +66,24 @@ export interface SeedTradingStrategy {
    */
   requireDirection?: 'BUY' | 'SELL' | null;
   /**
+   * ── ADDITIONAL DIRECTION LEGS (#1185, shape B, 2026-11-02) ────────────────────────────────────
+   *
+   * A bot may hold TWO subscriptions — a long protocol and a short protocol — and be summarised as
+   * ONE strategy. `protocolId` above is the bot's primary (long) leg; anything here is created in
+   * addition, with its own direction role.
+   *
+   * ⚠️ WHY THIS IS DECLARED IN THE SEED AND NOT WRITTEN BY HAND. `strategy_protocol` is a
+   * subscription table with no seeder for extra rows, so a second leg created directly in the
+   * database is lost on reinstall — and the paired bot would silently become a single-leg bot that
+   * only ever goes long. That is the failure `database-seed-discipline` exists to prevent, and it
+   * applies exactly here because the short leg is the whole point of the pair.
+   *
+   * ⚠️ THE LEG MUST BE A DIFFERENT PROTOCOL. The queue's unique key is
+   * `(strategyId, protocolId, symbol)` with no role in it, so two subscriptions of the SAME protocol
+   * collapse to one row (asserted in `signal-queue-paired-legs.spec.ts`).
+   */
+  legs?: Array<{ protocolId: string; role: 'long' | 'short' | 'both' }>;
+  /**
    * Position time-stop in HOURS (#773). null/absent = NO LIMIT.
    *
    * Carried by this seeder because it is a SLOT-RELEASING control: #773 measured 11 auto
@@ -124,6 +142,11 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     minComposite: 10,
     sessionWindow: ['london'],
     style: 'Tick Scalp',
+    // #1185 — THE PAIR. This bot holds a LONG protocol and its SHORT counterpart as ONE strategy.
+    // The short leg is a different protocol on purpose: the queue's unique key is
+    // `(strategyId, protocolId, symbol)` with no role in it, so one protocol used two ways could
+    // never hold two queue rows (`signal-queue-paired-legs.spec.ts`).
+    legs: [{ protocolId: 'xau-speed-v1-short', role: 'short' }],
     // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —
     // rows store raw progress halves so any threshold can be re-applied to them later.
     exhaustionObserveEnabled: true,
@@ -146,6 +169,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: ['asian'],
     maxHoldHours: 12,
     style: 'Swing',
+    // #1185 — the pair, as above.
+    legs: [{ protocolId: 'forex-session-v1-short', role: 'short' }],
   },
   {
     name: 'Tech Giants - NVDA',
@@ -164,5 +189,8 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     requireDirection: 'BUY',
     maxHoldHours: 24,
     style: 'Swing / Momentum',
+    // #1185 — the pair. `requireDirection: 'BUY'` above stays: it resolves this bot's PRIMARY leg to
+    // role 'long', and a subscription's own role outranks it, so the short leg below is unaffected.
+    legs: [{ protocolId: 'momentum-stock-v1-short', role: 'short' }],
   },
 ];

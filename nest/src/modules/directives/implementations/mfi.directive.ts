@@ -66,7 +66,13 @@ export class MfiDirective implements IDirective {
   readonly minBars = { '1d': 17 };
   readonly version = '2.1.0';
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'neutral' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'neutral'). Emits ONLY 'bullish' (`total >= 60 ? 'bullish' :
+  // 'neutral'`) — there is no bearish branch. Declaring the side is what stops a SHORT_ONLY
+  // protocol counting its 105 as earnable. Zero active-protocol impact measured before the change.
+  // ⚠️ The MISSING BEARISH BRANCH is a separate question and was NOT added: an MFI is symmetric in
+  // principle, but adding the branch moves scores and needs the maths-change path. Tracked on #1181.
+  // Guard: directive-guard.cjs MODE 5.
+  readonly directionBias = 'bullish' as const;
   readonly params = PARAMS;
 
   calculate(input: DirectiveInput): DirectiveResult {

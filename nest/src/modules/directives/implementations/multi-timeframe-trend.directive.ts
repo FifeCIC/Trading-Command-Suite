@@ -23,13 +23,29 @@ import {
   MarketBar,
 } from '../interfaces/directive.interface';
 
+// ── DECISION (2026-11-02, measured on btc-scalp-v1) ──
+// WHAT:      MIN_BARS is DERIVED from EMA_SLOW, not declared separately.
+// WHY:       The hand-written 20 let loadHigherTfBundle() fetch 30 daily / 20 hourly / 20 15m bars
+//            while the trend test needs EMA50, so BOTH alignment tests were false on every timeframe
+//            and the directive still reported "Perfect bearish - all timeframes aligned down" at its
+//            maximum 120. The direction came only from the !aboveVwap && !aboveEma50 fallback, i.e.
+//            "price is below the mean", which is not trend.
+// INSTEAD OF: a separate constant that must be remembered whenever the EMA period changes.
+// REVERSE BY: declaring MIN_BARS by hand again - multi-timeframe-trend.spec.ts fails below EMA_SLOW.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 125   ISSUE: #1180
+// GUARD:     multi-timeframe-trend.spec.ts (5 tests, canaried both ways)
+//
+/** The slow EMA — the trend test's own definition, and therefore the real minimum-bar requirement. */
+const EMA_SLOW = 50;
+
 const ALIGNMENT_PERFECT = 120;
 const ALIGNMENT_TWO_OF_THREE = 80;
 const ALIGNMENT_WEAK = 40;
 const ALIGNMENT_NONE = 0;
 
-// Minimum bars required per timeframe for reliable EMA/ADX computation
-const MIN_BARS = 20;
+// Minimum bars required per timeframe for reliable EMA/ADX computation.
+// ⚠️ Cannot be lower than the slow EMA: below it the trend test cannot run at all.
+const MIN_BARS = EMA_SLOW;
 
 @Injectable()
 export class MultiTimeframeTrendDirective implements IDirective {
@@ -37,11 +53,11 @@ export class MultiTimeframeTrendDirective implements IDirective {
   readonly name = 'Multi-Timeframe Trend Alignment';
   readonly category = 'oscillator' as const;
   readonly description =
-    'Scores trend alignment across daily, hourly, and 15M timeframes using EMA structure, ADX strength, and VWAP position. Higher confidence when all timeframes agree.';
+    'Scores trend alignment across daily, hourly, and 15M timeframes using EMA structure, ADX strength, and position vs an ANCHORED VWAP (cumulative from the first bar of the supplied window — not a session VWAP). Higher confidence when all timeframes agree.';
   readonly priority = 80;
   readonly maxScore = 120;
   readonly minScore = 1;
-  readonly minBars = { '1d': 20, '1h': 20, '15m': 20 };
+  readonly minBars = { '1d': MIN_BARS, '1h': MIN_BARS, '15m': MIN_BARS };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
@@ -59,11 +75,20 @@ export class MultiTimeframeTrendDirective implements IDirective {
     ).length;
 
     if (availableCount === 0) {
+      // ⚠️ NAME THE REAL CAUSE. "Need dayBars, hourBars, or min15Bars on DirectiveInput" is true only
+      // when they were NOT SUPPLIED. When they were supplied but too few, that message sends the reader
+      // to the input mapper when the fix is the bar count — measured 2026-11-02, and it is the same
+      // "cannot judge vs no data" collapse the directive contract forbids.
+      const causes = [dayTrend, hourTrend, min15Trend]
+        .map((t) => t.unavailableReason)
+        .filter(Boolean)
+        .join(' | ');
       return {
         score: 0,
         confidence: 0,
         reason:
-          'Insufficient higher-timeframe data. Need dayBars, hourBars, or min15Bars on DirectiveInput.',
+          `No timeframe could be judged — the EMA(${EMA_SLOW}) trend test needs ${MIN_BARS} bars per timeframe. ` +
+          (causes || 'Need dayBars, hourBars, or min15Bars on DirectiveInput.'),
         signalClass: 'neutral',
       };
     }
@@ -139,13 +164,13 @@ export class MultiTimeframeTrendDirective implements IDirective {
     const details = [
       dayTrend.available
         ? `1D: ${dayTrend.direction}${dayTrend.strengthLabel ? ` (${dayTrend.strengthLabel})` : ''}`
-        : '1D: N/A',
+        : `1D: N/A${dayTrend.unavailableReason ? ` (${dayTrend.unavailableReason})` : ''}`,
       hourTrend.available
         ? `1H: ${hourTrend.direction}${hourTrend.strengthLabel ? ` (${hourTrend.strengthLabel})` : ''}`
-        : '1H: N/A',
+        : `1H: N/A${hourTrend.unavailableReason ? ` (${hourTrend.unavailableReason})` : ''}`,
       min15Trend.available
         ? `15M: ${min15Trend.direction}${min15Trend.strengthLabel ? ` (${min15Trend.strengthLabel})` : ''}`
-        : '15M: N/A',
+        : `15M: N/A${min15Trend.unavailableReason ? ` (${min15Trend.unavailableReason})` : ''}`,
     ].join(' | ');
 
     return {
@@ -167,6 +192,9 @@ export class MultiTimeframeTrendDirective implements IDirective {
     if (!bars || bars.length < MIN_BARS) {
       return {
         available: false,
+        unavailableReason: !bars || bars.length === 0
+          ? `${label}: no bars supplied`
+          : `${label}: only ${bars.length} bars — needs ${MIN_BARS}`,
         direction: 'neutral',
         strengthLabel: null,
         adx: null,
@@ -181,7 +209,7 @@ export class MultiTimeframeTrendDirective implements IDirective {
     // EMA alignment
     const ema9 = this.ema(closes, 9);
     const ema21 = this.ema(closes, 21);
-    const ema50 = this.ema(closes, 50);
+    const ema50 = this.ema(closes, EMA_SLOW);
 
     const ema9Last = ema9[ema9.length - 1];
     const ema21Last = ema21[ema21.length - 1];
@@ -318,6 +346,25 @@ export class MultiTimeframeTrendDirective implements IDirective {
     closes: number[],
     volumes: number[],
   ): (number | null)[] {
+    // ── DECISION (2026-11-02, primary) — ANCHORED VWAP, not a session VWAP. ──
+    // WHAT:      Cumulative from the FIRST BAR OF THE SUPPLIED WINDOW. It never resets at a
+    //            session boundary, because `analyzeTrend()` receives one flat bar array per
+    //            timeframe and nothing here knows where a session starts.
+    // WHY:       Measured today on identical data, a session anchor would move the 1D verdict —
+    //            price sits *below* a short cumulative average and *at or above* a long one, so
+    //            the same market reads bearish on 60 bars and neutral on 100+. That is a change to
+    //            what every protocol using this directive scores, so it is a MATHS change and
+    //            needs a copied configuration and an A/B before it can land
+    //            (maths-change-requires-abi.instructions.md). The misleading part was never the
+    //            arithmetic — it was calling an anchored measure "VWAP" and letting a reader assume
+    //            the session-anchored one. That is fixed in `description` below, which is what a
+    //            user actually sees.
+    // INSTEAD OF: Session-anchored VWAP in place (the in-place maths edit the rule forbids).
+    // REVERSE BY: Nothing to reverse — no number moved. To make it session-anchored, add a session
+    //            boundary input and an A/B pair; do not just reset the accumulators here.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 129. Issue #1181.
+    // GUARD:     none — a docstring is not enforceable. 🔴 UNGUARDED, stated. The observable that
+    //            matters is that `description` states the anchor, so the user is not misled.
     const result: (number | null)[] = [];
     let cumPv = 0;
     let cumV = 0;
@@ -336,4 +383,9 @@ interface TrendAnalysis {
   direction: 'bullish' | 'bearish' | 'neutral';
   strengthLabel: string | null;
   adx: number | null;
+  /**
+   * Why a timeframe could not be judged. Rendered in the reason so "N/A" always carries its cause —
+   * "not enough bars" and "no data for this timeframe" must not read identically.
+   */
+  unavailableReason?: string;
 }

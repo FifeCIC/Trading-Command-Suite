@@ -320,6 +320,13 @@ model BacktestRun {
   winRate      Float
   totalPnl     Float
   profitFactor Float
+  // ── ADDED 2026-11-02 (#125) ──
+  // `profitFactor` above is SIGNAL-based (forward return of every entry signal), so it is
+  // identical for two runs with the same entries and different exits — measured: six stop-plan
+  // arms moved net P&L from +63.29 to −657.54 and all reported 0.72. This column is the
+  // TRADE-based factor, the one a stop or exit comparison must read.
+  // NULL = no losing trade to divide by, or no trades. Never a fabricated denominator.
+  tradeProfitFactor Float?
   sharpeRatio  Float
   maxDrawdown  Float
   // ⚠️ ADDED 2026-10-28 (#1134 follow-up) — the two FORWARD-RETURN aggregates `run()` has always
@@ -1155,6 +1162,27 @@ model Trade {
   /// A verdict must not depend on a mutable display string. This column is the attribution.
   /// NULL means "not an A/B trade" (or a row written before this column existed).
   abTestSide        String?  @db.VarChar(1)
+  /// ── WHICH LEG OF A PAIRED BOT (#1185, shape B, 2026-11-02) ───────────────────────────────
+  ///
+  /// A bot may hold TWO subscriptions — a LONG protocol and a SHORT protocol — as one strategy
+  /// (#714's design, proven by `signal-queue-paired-legs.spec.ts`). To summarise such a strategy
+  /// "per leg and combined" the closed trade has to say which leg produced it, and WITHOUT these
+  /// columns it cannot: `trade` had no protocol reference at all, so two legs' results were
+  /// indistinguishable once the position closed.
+  ///
+  /// ⚠️ Same lesson as `abTestSide` two fields up: attribution must not be inferred from
+  /// `brokerComment`, because that string is rewritten by reconciliation and is editable by hand.
+  /// These are the attribution.
+  ///
+  /// `legProtocolId` is a protocol SLUG (the same value `trading_strategy.protocolId` and
+  /// `strategy_signal_queue.protocolId` hold). `legRole` is the subscription's direction permission
+  /// ('long' | 'short' | 'both') copied at entry — deliberately stored rather than later re-joined,
+  /// because the subscription can be edited after the trade.
+  ///
+  /// NULL on both means "not attributed" (a single-leg bot, or a row written before this existed),
+  /// which renders as unknown — never as `long`.
+  legProtocolId     String?  @db.VarChar(100)
+  legRole           String?  @db.VarChar(10)
   openedAt          DateTime @default(now())
   closedAt          DateTime?
   createdAt         DateTime @default(now())

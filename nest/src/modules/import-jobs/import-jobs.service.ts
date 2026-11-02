@@ -102,12 +102,45 @@ export class ImportJobsService {
 
         // Store real bars in database
         let stored = 0;
+        /** Bars whose raw timestamp had to move onto the cadence boundary. */
+        let misaligned = 0;
+        /** Bars rejected for being stamped ahead of now (#832). */
+        let impossible = 0;
+        /** Bars with an unparseable timestamp — bad input, never a duplicate. */
+        let invalid = 0;
         for (const bar of bars) {
+          // ── ALIGNMENT (#783 class, fixed here 2026-11-02) ──
+          // This path stored `new Date(bar.timestamp)` RAW while `importBars()` — the other
+          // writer in this same service — has aligned since #783. Measured 2026-11-02: after a
+          // repair run through `POST /api/imports/refresh/:symbolId`, `import-bars-alignment
+          // .spec.ts` failed with 1h/4h offsets of [0, 2, 3, 4, 5, 6, 7, 8, 17, 18, 20, 30]
+          // minutes and QQQ holding two daily boundaries. Unaligned rows defeat the unique key
+          // `(symbolId, timeframe, timestamp)`, so the same bar is stored twice under two
+          // timestamps and every reader sees a series with phantom bars.
+          //
+          // ⚠️ THE FIX IS THE SHARED FUNCTION, not a second implementation — a copy of the
+          // rounding rule here would drift from the one `timeframe.spec.ts` pins.
+          const aligned = alignBarTimestamp(bar.timestamp, timeframe, providerId);
+          if (!aligned) {
+            invalid++;
+            this.logger.warn(`Bar rejected for ${symbol.ticker} ${timeframe}: unparseable timestamp ${String(bar.timestamp)}`);
+            continue;
+          }
+          if (new Date(bar.timestamp).getTime() !== aligned.getTime()) {
+            misaligned++;
+          }
+          // An open-stamped bar cannot describe a period that has not started (#832). Rejecting
+          // is safe: the spurious row duplicates the in-progress bucket.
+          if (isBarFutureStamped(aligned)) {
+            impossible++;
+            continue;
+          }
+
           const existingBar = await this.prisma.marketBar.findFirst({
             where: {
               symbolId,
               timeframe,
-              timestamp: new Date(bar.timestamp),
+              timestamp: aligned,
             },
           });
 
@@ -130,7 +163,7 @@ export class ImportJobsService {
                 symbolId,
                 provider: providerId,
                 timeframe,
-                timestamp: new Date(bar.timestamp),
+                timestamp: aligned,
                 open: bar.open,
                 high: bar.high,
                 low: bar.low,
@@ -140,6 +173,15 @@ export class ImportJobsService {
             });
           }
           stored++;
+        }
+        if (misaligned > 0) {
+          this.logger.log(`Aligned ${misaligned} ${timeframe} bar(s) for ${symbol.ticker} onto the cadence boundary`);
+        }
+        if (impossible > 0) {
+          this.logger.warn(`Rejected ${impossible} ${timeframe} bar(s) for ${symbol.ticker}: stamped ahead of now (#832)`);
+        }
+        if (invalid > 0) {
+          this.logger.warn(`Rejected ${invalid} ${timeframe} bar(s) for ${symbol.ticker}: unparseable timestamp`);
         }
 
         // Update provider health

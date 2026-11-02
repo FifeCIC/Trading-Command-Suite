@@ -24,7 +24,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
     opts: { active?: boolean; missing?: boolean; available?: boolean } = {},
   ) => ({
     isAvailable: opts.available !== false,
-    symbolProtocolAssignment: { findFirst: jest.fn(async () => null) },
+    symbolProtocolAssignment: { findMany: jest.fn(async () => []) },
     protocol: {
       findFirst: jest.fn(async () => (opts.missing ? null : { active: opts.active ?? true })),
     },
@@ -45,10 +45,110 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
 
   it('the DB assignment path still wins and carries its own active flag (#803 control)', async () => {
     const prisma = prismaWith();
-    prisma.symbolProtocolAssignment.findFirst = jest.fn(async () => ({
-      protocol: { slug: 'xau-speed-v1', active: true },
-    }));
+    prisma.symbolProtocolAssignment.findMany = jest.fn(async () => [
+      { protocol: { slug: 'xau-speed-v1', active: true } },
+    ]);
     expect(await resolveProtocolForSymbol('XAUUSD', prisma)).toEqual({ slug: 'xau-speed-v1', active: true });
+  });
+
+  // ── #1181 — `priority` alone does not ORDER, and an inactive winner SKIPS the symbol ──
+  /**
+   * ⚠️ THE DEFECT THESE TESTS PIN (measured 2026-11-02, #1181).
+   *
+   * `symbol_protocol_assignment` is unique on `(symbol, protocolId)`, NOT on `(symbol, priority)`,
+   * so two protocols can claim one symbol at the same priority. Measured: EURUSD
+   * (`probe-1dir-v1` + `forex-session-v1`) and XAGUSD (`probe-1dir-rsi` + `xau-speed-v1`, the
+   * latter INACTIVE), all at `priority = 0`.
+   *
+   * Two separate faults followed:
+   *   1. Ordering by `priority` alone left the winner to physical row order. It was STABLE in
+   *      practice (25/25 identical calls) — which is exactly why it needed a guard: a
+   *      stable-but-undefined answer passes review, then changes on a rebuild with no error.
+   *   2. Because the caller SKIPS a symbol whose resolved protocol is inactive, a symbol with a
+   *      perfectly good ACTIVE protocol assigned could vanish from the screener. On XAGUSD the
+   *      right answer was only reached because `probe-…` sorts before `xau-…` — alphabetical luck.
+   *
+   * The resolver now orders by `priority` then `protocolId` AND prefers an active protocol.
+   *
+   * ⚠️ CANARY (measured): dropping `{ protocolId: 'asc' }` fails the determinism assertion;
+   * dropping the `find(active)` preference fails the preference assertion. Restores verified
+   * byte-identical.
+   */
+  const tiedPrisma = (
+    rows: Array<{ slug: string; active: boolean | number; protocolId?: string; priority?: number }>,
+  ) => {
+    const findMany = jest.fn(async () =>
+      rows.map((r) => ({
+        protocolId: r.protocolId ?? r.slug,
+        priority: r.priority ?? 0,
+        protocol: { slug: r.slug, active: r.active },
+      })),
+    );
+    return { isAvailable: true, symbolProtocolAssignment: { findMany }, findMany };
+  };
+
+  it('orders by priority AND a unique key — priority alone is not unique (#1181)', async () => {
+    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1', active: true }]);
+    await resolveProtocolForSymbol('EURUSD', prisma as any);
+    const args = prisma.findMany.mock.calls[0][0];
+    expect(Array.isArray(args.orderBy)).toBe(true);
+    expect(args.orderBy.length).toBeGreaterThanOrEqual(2);
+    expect(args.orderBy[0]).toEqual({ priority: 'asc' });
+  });
+
+  it('the second sort key is a UNIQUE column, so the tie cannot fall through (#1181)', async () => {
+    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1', active: true }]);
+    await resolveProtocolForSymbol('EURUSD', prisma as any);
+    const second = prisma.findMany.mock.calls[0][0].orderBy[1];
+    // Unique-or-near-unique identifiers only. A non-unique column (e.g. `symbol`) would leave the
+    // same tie in place while looking like it had been fixed.
+    expect(Object.keys(second)).toHaveLength(1);
+    expect(['id', 'protocolId']).toContain(Object.keys(second)[0]);
+  });
+
+  it('the same query shape is used on every call — no per-call variation (#1181)', async () => {
+    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1', active: true }]);
+    await resolveProtocolForSymbol('EURUSD', prisma as any);
+    await resolveProtocolForSymbol('EURUSD', prisma as any);
+    expect(prisma.findMany.mock.calls[0][0]).toEqual(prisma.findMany.mock.calls[1][0]);
+  });
+
+  it('PREFERS the active protocol when a tie would otherwise pick the inactive one (#1181)', async () => {
+    // The real XAGUSD shape, in the order `priority, protocolId` returns it: the inactive one first.
+    const prisma = tiedPrisma([
+      { slug: 'xau-speed-v1', active: 0 },
+      { slug: 'probe-1dir-rsi', active: 1 },
+    ]);
+    expect(await resolveProtocolForSymbol('XAGUSD', prisma)).toEqual({
+      slug: 'probe-1dir-rsi',
+      active: true,
+    });
+  });
+
+  it('prefers active EVEN when the inactive protocol has the better priority (#1181)', async () => {
+    // An inactive protocol can never score, so honouring its priority only produces a silent skip.
+    const prisma = tiedPrisma([
+      { slug: 'retired-v1', active: false, priority: 0 },
+      { slug: 'live-v1', active: true, priority: 5 },
+    ]);
+    expect(await resolveProtocolForSymbol('XAGUSD', prisma)).toEqual({ slug: 'live-v1', active: true });
+  });
+
+  it('falls back to the inactive entry when NOTHING is active, so the skip stays visible (#1181)', async () => {
+    // Returning null here would read as "no protocol assigned" — a different, wrong diagnosis.
+    const prisma = tiedPrisma([{ slug: 'retired-v1', active: false }]);
+    expect(await resolveProtocolForSymbol('XAGUSD', prisma)).toEqual({ slug: 'retired-v1', active: false });
+  });
+
+  it('ignores a row whose protocol relation is missing, rather than crashing (#1181)', async () => {
+    const prisma = {
+      isAvailable: true,
+      symbolProtocolAssignment: {
+        findMany: jest.fn(async () => [{ protocolId: 'x', priority: 0, protocol: null }]),
+      },
+    };
+    // No resolvable row → falls through to the hardcoded map / null, never a TypeError.
+    expect(await resolveProtocolForSymbol('UNKNOWN_SYMBOL_XYZ', prisma as any)).toBeNull();
   });
 
   // ── storeSnapshot: the write point refuses inactive protocols ──

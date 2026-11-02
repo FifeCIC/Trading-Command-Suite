@@ -44,7 +44,10 @@ export class InsiderActivityDirective implements IDirective {
   readonly version = '1.2.1';
   readonly requiredDataFeeds = ['insider'];
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'neutral' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'neutral'). Emits ONLY 'bullish'. A neutral declaration let a
+  // SHORT_ONLY protocol count it as capacity it can never earn. Zero active-protocol impact
+  // measured before the change. Guard: directive-guard.cjs MODE 5.
+  readonly directionBias = 'bullish' as const;
 
   constructor(
     private readonly prisma: PrismaService,

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 204,
+  "count": 206,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -87,6 +87,16 @@
       "purpose": "the filtered-rate check for #825.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "audit-protocol-faults.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "every fault CLASS this project has found, checked across ALL",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "audit-protocol-scrub-safety.cjs",
@@ -1032,6 +1042,16 @@
       "where": "repo",
       "category": "tool",
       "purpose": "STEP 3d (#1024's untested question).",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "report-symbol-priority-ties.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "which symbols have MORE THAN ONE protocol at the same",
       "selfTest": true,
       "reaches": [
         "npm"

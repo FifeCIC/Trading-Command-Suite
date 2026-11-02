@@ -3354,6 +3354,18 @@ const QA_CHECKLIST = [
     versionNote: '2026-09-16 — #841 (found by losing the Health page for a session)',
   },
   {
+    id: 'qa-contract-037',
+    invariant: 'INV-BACKTEST-BUDGET',
+    area: 'Pipeline Contracts',
+    system: 'Contract probe',
+    name: 'A canonical 1h backtest scores its bars within 30s',
+    procedure: 'From `nest/` run `node scripts/contract-probe.cjs` and read the `INV-BACKTEST-BUDGET` line. It times a real `POST /api/backtest/run` for `forex-session-v1` / USDJPY / 1h over `dev-window-v1` (548 scored bars). A non-200/201 is reported SKIP because absent bars are a data state, not a regression — so to exercise it the arm must have bars.',
+    expected: 'PASS in roughly 6-8 s (~11-14 ms/bar). Before the #1182 fix the same arm took **214 s (426 ms/bar)**. A FAIL means a backtest became cost-bound again: check for a per-bar QUERY or WRITE before assuming the maths got slower. ⚠️ `performance_schema` is denied to the `tradingcs` MySQL user, so measure with `SHOW GLOBAL STATUS` deltas (`Questions`, `Com_select`, `Innodb_rows_read`) or by sampling `information_schema.processlist` during a run. ⚠️ `scoreSeries` in the RESPONSE is truncated to the last 2000 rows, so it is a floor on the bar count, not the count — a 8,559-bar 5m run reports 2000. See also **#1183**: the remaining 5m cost is per-bar writes to live tables, which this guard does not cover.',
+    category: 'Contract',
+    priority: 'high',
+    versionNote: '2026-11-02 — #1182 (a 1h backtest took 214 s because a per-bar read re-fetched 118,360 score_snapshot rows)',
+  },
+  {
     id: 'qa-infra-003',
     area: 'Infra / Providers',
     system: 'MT5 bridge clock',

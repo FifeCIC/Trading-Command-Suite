@@ -1,6 +1,7 @@
 import { Controller, Get, Patch, Post, Delete, Param, Query, Body, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
+import { DIRECTIVE_DIRECTION } from './directive-capabilities.generated';
 import { DirectiveConfigService } from '../scoring/directive-config.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
@@ -299,6 +300,21 @@ export class DirectivesController {
       runs: st?.count ?? null,
       bias: st ? (st.bullishCount > st.bearishCount ? 'bullish' : st.bearishCount > st.bullishCount ? 'bearish' : 'neutral') : null,
       directionBias: (d as any).directionBias || 'neutral',
+      // ── DIRECTION CAPABILITY — derived from the class's own source literals, not declared ──
+      // Answers "can this directive contribute to the side I am building for?". Measured
+      // 2026-11-02: 10 directives declare a bias their code does not do, and 12 can express only
+      // ONE side (11 bullish-only, 1 bearish-only), so inside an opposite-direction protocol their
+      // maxScore is capacity that can never be earned. `directionBias` above stays exactly as it
+      // was (a declaration, and other callers read it); this is the fact beside it.
+      // `sharedInputs` names external factors the directive reads alone — two directives listing
+      // the same factor measure it twice in one protocol.
+      ...(() => {
+        const cap = DIRECTIVE_DIRECTION[d.id];
+        return {
+          direction: cap?.direction ?? 'unknown',
+          sharedInputs: cap?.sharedInputs ?? [],
+        };
+      })(),
     };
     });
   }
@@ -588,6 +604,42 @@ export class DirectivesController {
     const bars = await this.marketData.getBars(dbSym.id, timeframe, barCount).catch(() => null);
     if (!bars || bars.length === 0) return { error: `No ${timeframe} bars available for ${symbol}` };
 
+    /**
+     * ⚠️ A KNOB CAN ASK FOR MORE BARS THAN THE PIPELINE EVER SUPPLIES — say so, HERE.
+     *
+     * This endpoint fetches `barCount` (300 by default), so a period knob near its `max` works fine
+     * here and returns a healthy score. In PRODUCTION the directive is handed the largest `minBars`
+     * its protocol declares — `price-above-sma` declares 52 — and at `smaPeriod: 200` it evaluates
+     * `sma()` over 52 bars, gets 0, and returns `score 0, "Could not calculate SMA(200)"`.
+     *
+     * Measured 2026-11-02 on SPY 1d:
+     *   barCount 52,  smaPeriod  50 → score 35   (the pipeline's reality)
+     *   barCount 52,  smaPeriod 200 → score 0    "Could not calculate SMA(200)"
+     *   barCount 300, smaPeriod 200 → score 69   (this endpoint's default — and never production)
+     *
+     * A diagnostic that supplies different inputs from production does not test the directive; it
+     * tests a directive nobody runs. That is why the sweep of these knobs earlier in the session
+     * reported them all as working. The warning below is the minimum honest fix: it does not change
+     * any score, and it names the knob, the requirement and the production bar count.
+     */
+    const horizonWarnings: string[] = [];
+    const minBarsForTf = (this.directivesService.get(id)?.minBars ?? {}) as Record<string, number>;
+    const productionBars = minBarsForTf[timeframe];
+    if (params && Number.isFinite(productionBars)) {
+      for (const spec of specs) {
+        if (!/period|lookback|window|length/i.test(spec.key)) continue;
+        const supplied = params[spec.key];
+        if (typeof supplied === 'number' && supplied > productionBars) {
+          horizonWarnings.push(
+            `"${spec.key}" is ${supplied} but this directive declares minBars ${productionBars} for ` +
+              `${timeframe}. In the live pipeline it would be handed only ${productionBars} bars, so it ` +
+              `would abstain (or compute from a truncated window). This test used ${bars.length} bars, ` +
+              `which production does not supply — set barCount to ${productionBars} to see the real result.`,
+          );
+        }
+      }
+    }
+
     // Run the single directive
     // ⚠️ `asOf` and `timeframe` are passed because the bars are HISTORICAL. Without them a directive
     // that checks whether its data existed at the bar (lookahead.ts, #1139) reports `unknown` and
@@ -620,6 +672,13 @@ export class DirectivesController {
       result,
       paramsUsed: params ? resolveParams(id, specs, params).values : defaultParams(specs),
       paramsWarnings: params ? resolveParams(id, specs, params).warnings : [],
+      /**
+       * Knobs whose value cannot be honoured at the bar count PRODUCTION supplies. Empty is the
+       * normal case; a non-empty list means this test result is not the result the pipeline would
+       * produce. Never merged into `paramsWarnings`: that array means "your value was adjusted",
+       * which is a different claim.
+       */
+      horizonWarnings,
     };
   }
 

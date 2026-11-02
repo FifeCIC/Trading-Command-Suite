@@ -43,7 +43,9 @@ export class TargetAchievedDirective implements IDirective {
   readonly name = 'Target Achieved';
   readonly description = 'Checks if price has reached ATR-based or swing-based profit targets.';
   readonly category = 'structural' as const;
-  readonly directionBias = 'bullish' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'bullish'). Emits BOTH directions — `neutral` is accurate.
+  // Zero active-protocol impact measured before the change. Guard: directive-guard.cjs MODE 5.
+  readonly directionBias = 'neutral' as const;
   readonly priority = 60;
   readonly maxScore = 100;
   readonly minScore = 1;

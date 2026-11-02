@@ -114,23 +114,106 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
  *
  * ⚠️ It FAILS OPEN. An absent or unreadable payload yields just the defaults — which are still the
  * curated decision — rather than an empty set or an error. Hiding is curation, not a gate.
+ *
+ * ⚠️ MEMBER-ONLY ROUTES ARE FOLDED IN when `entitledRoutes` does not contain them. The nav only ever
+ * asks one question — "may this be in the sidebar right now?" — so withheld and not-yet-entitled
+ * member pages can travel through the SAME filter. One implementation, one place to be wrong.
  */
-export function resolveHiddenRoutes(reviewConfig) {
-  const routes = new Set(DEFAULT_HIDDEN_ROUTES);
-  const explicitlyShown = new Set();
-  const entries = reviewConfig?.entries || {};
-  for (const [route, entry] of Object.entries(entries)) {
-    const key = String(route).startsWith('/') ? String(route) : `/${route}`;
-    if (entry?.hide === true) routes.add(key);
-    else if (entry?.hide === false) explicitlyShown.add(key);
-  }
-  for (const route of explicitlyShown) routes.delete(route);
-  return routes;
+export function resolveHiddenRoutes(reviewConfig, entitledRoutes) {
+  return resolveAccess(reviewConfig, entitledRoutes).hidden;
 }
 
-/** The withheld routes from a review-store payload: defaults merged with every `hide: true` entry. */
+/** The withheld routes from a review-store payload: defaults merged with every verdict. */
 export function hiddenRoutesFrom(reviewConfig) {
   return resolveHiddenRoutes(reviewConfig);
+}
+
+// ────────────────────────────────────────────────────────────────────────────────────────────────
+// VISIBILITY — three states, not one bit.
+//
+// ⚠️ WHY THE BOOLEAN HAD TO GO (owner direction, 2026-11-02). "Should we delete this page?" and
+// "is this page a member perk?" are different questions, and `hide: true` answered both with one
+// bit. That is how an unfinished page gets shipped as a paid feature: the intent is recorded as
+// "hidden", the reason is lost, and later nobody can tell a broken page from a business decision.
+//
+//   withheld — built but NOT READY. Nobody should see it this release.
+//   member   — built, WORKING, and deliberately behind an entitlement.
+//   public   — visible to everyone (the default).
+//
+// ⚠️ `hide` IS STILL READ AS A FALLBACK, on purpose. The owner has 60-odd stored verdicts; silently
+// dropping them because the field moved would lose real curation, and "hide: true" maps cleanly
+// onto "withheld". New writes use `visibility` only.
+// ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The three visibility states a page can be in. */
+export const VISIBILITY = Object.freeze({
+  PUBLIC: 'public',
+  MEMBER: 'member',
+  WITHHELD: 'withheld',
+});
+
+const VISIBILITY_VALUES = new Set(Object.values(VISIBILITY));
+
+/** Normalise a store key to a leading-slash route, so `lab/x` and `/lab/x` are one thing. */
+function routeKey(route) {
+  const s = String(route);
+  return s.startsWith('/') ? s : `/${s}`;
+}
+
+/**
+ * Map ONE stored entry to a visibility, or null when undecided.
+ *
+ * ⚠️ Extracted 2026-11-02 because two callers needed it and they disagreed. `recordedVisibility`
+ * looks an entry up by normalised route while `resolveAccess` iterates the raw keys, and a store key
+ * saved without a leading slash (`lab/x`) matched in one and not the other — the verdict vanished
+ * silently. One mapping function means the two can no longer drift.
+ */
+function visibilityFromEntry(entry) {
+  if (!entry) return null;
+  if (VISIBILITY_VALUES.has(entry.visibility)) return entry.visibility;
+  // Legacy boolean. `hide: false` is an explicit KEEP, which is `public`.
+  if (entry.hide === true) return VISIBILITY.WITHHELD;
+  if (entry.hide === false) return VISIBILITY.PUBLIC;
+  return null;
+}
+
+/** The visibility recorded for ONE route, or null when nobody has decided yet. */
+export function recordedVisibility(reviewConfig, route) {
+  return visibilityFromEntry(reviewConfig?.entries?.[routeKey(route)]);
+}
+
+/**
+ * The effective visibility for ONE route, applying the curated defaults to undecided pages.
+ *
+ * ⚠️ "Undecided" is not "public". A route in `DEFAULT_HIDDEN_ROUTES` that nobody has ruled on is
+ * withheld; everything else undecided is public. That is what makes a fresh install match the
+ * curation without needing a store row for all ~130 pages.
+ */
+export function effectiveVisibility(reviewConfig, route) {
+  return recordedVisibility(reviewConfig, route)
+    || (DEFAULT_HIDDEN_ROUTES.has(routeKey(route)) ? VISIBILITY.WITHHELD : VISIBILITY.PUBLIC);
+}
+
+/**
+ * Split the store into what is withheld and what is member-only.
+ *
+ * `hidden` folds member routes in when there is no entitlement for them — so a single call to
+ * `filterHiddenViews` still answers "may this be in the navigation right now?", which is the only
+ * question the nav asks. One filter, one implementation (see `filterHiddenViews`).
+ */
+export function resolveAccess(reviewConfig, entitledRoutes) {
+  const withheld = new Set(DEFAULT_HIDDEN_ROUTES);
+  const member = new Set();
+  for (const [raw, entry] of Object.entries(reviewConfig?.entries || {})) {
+    const key = routeKey(raw);
+    const v = visibilityFromEntry(entry);
+    if (v === VISIBILITY.WITHHELD) { withheld.add(key); member.delete(key); }
+    else if (v === VISIBILITY.MEMBER) { withheld.delete(key); member.add(key); }
+    else if (v === VISIBILITY.PUBLIC) { withheld.delete(key); member.delete(key); }
+  }
+  const hidden = new Set(withheld);
+  for (const route of member) if (!entitledRoutes?.has(route)) hidden.add(route);
+  return { withheld, member, hidden };
 }
 
 /** True when an area still has at least one real (non-header) view. */

@@ -139,12 +139,45 @@ export async function resolveProtocolForSymbol(symbol: string, prisma: any): Pro
   // Try DB first — join to Protocol table to get the slug (NOT the UUID) + active status
   try {
     if (prisma.isAvailable) {
-      const assignment = await prisma.symbolProtocolAssignment.findFirst({
+      const assignment = await prisma.symbolProtocolAssignment.findMany({
         where: { symbol },
-        orderBy: { priority: 'asc' },
+        // ── DECISION (2026-11-02, primary) — prefer the protocol that can actually SCORE (#1181). ──
+        // WHAT:      Fetch every assignment, ordered `priority` then `protocolId` (both deterministic
+        //            to the extent the data allows), then PREFER the first entry whose protocol is
+        //            `active`. Only if none is active does the highest-priority entry win.
+        // WHY:       The table is unique on `(symbol, protocolId)`, NOT on `(symbol, priority)`, so
+        //            two protocols can claim one symbol at the same priority — measured on EURUSD
+        //            and XAGUSD (both `priority = 0`). Ordering by `priority` alone left the winner
+        //            to physical row order: stable in practice (25/25 identical calls), undefined by
+        //            contract. Worse, on XAGUSD the tie included an INACTIVE protocol, and because
+        //            the caller SKIPS a symbol whose resolved protocol is inactive, a symbol with a
+        //            perfectly good active protocol assigned could drop out of the screener with no
+        //            error. Preferring `active` closes that, and stops the outcome depending on
+        //            alphabetical luck (`probe-…` sorted before `xau-…`).
+        // INSTEAD OF: A unique key on `(symbol, priority)`. It states the intent better but rejects
+        //            the data as it stands and forces a priority decision per symbol.
+        // REVERSE BY: Taking `rows[0]` unconditionally (drop the `find(active)` step) — one line.
+        // IMPACT:    Speed-scan ONLY (the "Best Symbol" panel / Auto-Switch). The canonical scoring
+        //            path scores EVERY symbol a protocol is assigned to and never calls this function,
+        //            so no score, signal or gate moves.
+        // REGISTER:  docs/SETTLED-DECISIONS.md row 130. Issue #1181.
+        // GUARD:     single-scoring-path.spec.ts — preference order, inactive fallback and
+        //            determinism; `npm --prefix nest run db:symbol-priority-ties` reports the data.
+        orderBy: [{ priority: 'asc' }, { protocolId: 'asc' }],
         include: { protocol: { select: { slug: true, active: true } } },
       });
-      if (assignment?.protocol?.slug) return { slug: assignment.protocol.slug, active: assignment.protocol.active };
+
+      const rows = Array.isArray(assignment) ? assignment : [];
+      // Prefer a protocol that can score. An inactive protocol is still returned when it is the
+      // only candidate, so the caller's skip stays VISIBLE ("Protocol … is inactive (active = 0) —
+      // not scored") rather than the symbol silently disappearing from the scan.
+      // ⚠️ `Boolean(...)` on purpose: this column arrives as tinyint(1) through raw reads and as a
+      // boolean through Prisma, and `=== true` silently fails on the numeric form.
+      const withSlug = rows.filter((r: any) => typeof r?.protocol?.slug === 'string' && r.protocol.slug);
+      const chosen = withSlug.find((r: any) => Boolean(r.protocol.active)) ?? withSlug[0];
+      if (chosen) {
+        return { slug: chosen.protocol.slug, active: Boolean(chosen.protocol.active) };
+      }
     }
   } catch { /* DB may not have table yet */ }
 

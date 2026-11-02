@@ -44,6 +44,23 @@ export interface TradeRecord {
    * stranded-trade reaper, which silently removed reaped A/B trades from the verdict.
    */
   abTestSide?: 'A' | 'B';
+  /**
+   * ── WHICH LEG OF A PAIRED BOT (#1185, 2026-11-02) ─────────────────────────────────────────────
+   *
+   * A bot may hold TWO subscriptions — a LONG protocol and a SHORT protocol — as ONE strategy
+   * (#714's design, proven by `signal-queue-paired-legs.spec.ts`). "Summarise the strategy per leg
+   * and combined" needs each closed trade to name its leg, and `trade` had no protocol reference at
+   * all, so two legs' results were indistinguishable after the close.
+   *
+   * ⚠️ Stored, not re-joined. The subscription's role can be edited after the trade, and
+   * `brokerComment` is rewritten by reconciliation — so both values are copied at entry, exactly as
+   * `abTestSide` above is.
+   *
+   * `undefined` means NOT ATTRIBUTED (a single-leg bot, or an older row). It must render as unknown,
+   * never as `long`.
+   */
+  legProtocolId?: string;
+  legRole?: 'long' | 'short' | 'both';
   openedAt?: Date;
   /** MT5 broker fields for traceability */
   ticket?: number;
@@ -90,6 +107,9 @@ export class TradeRecorderService {
           source: trade.source ?? null,
           abTestId: trade.abTestId ?? null,
           abTestSide: trade.abTestSide ?? null,
+          // #1185 — the LEG that produced this trade. Copied, never re-joined later.
+          legProtocolId: trade.legProtocolId ?? null,
+          legRole: trade.legRole ?? null,
           openedAt: trade.openedAt || new Date(),
           closedAt: trade.status === 'closed' ? new Date() : null,
           // MT5 traceability (#446, #616)

@@ -86,7 +86,9 @@ export class PanicExhaustionAbsorptionDirective implements IDirective {
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly params = PARAMS;
-  readonly directionBias = 'bullish' as const;
+  // ⚠️ CORRECTED 2026-11-02 (was 'bullish'). Emits BOTH directions — `neutral` is accurate.
+  // Zero active-protocol impact measured before the change. Guard: directive-guard.cjs MODE 5.
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { values } = resolveParams(this.id, this.params, input.params);

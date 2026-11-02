@@ -176,7 +176,7 @@ export class RsiDivergenceDirective implements IDirective {
     return {
       score: neutralScore,
       confidence: 0.3,
-      reason: `No RSI divergence detected. RSI(14)=${lastRsi.toFixed(1)}.`,
+      reason: `No RSI divergence detected. RSI(${rsiPeriod})=${lastRsi.toFixed(1)}.`,
       signalClass: 'neutral',
     };
   }

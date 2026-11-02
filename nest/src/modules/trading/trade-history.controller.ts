@@ -37,6 +37,98 @@ export class TradeHistoryController {
    * broker `position` rows (with 64-bit brokerTicket), reconciled `trade`
    * rows, and recent stop adjustments. Backs the Position Lifecycle Monitor.
    */
+  /**
+   * GET /api/trading/strategy-legs?strategyId=<uuid>
+   *
+   * ── PER-LEG AND COMBINED RESULTS FOR A PAIRED BOT (#1185, shape B) ────────────────────────────
+   *
+   * A bot may hold TWO subscriptions — a long protocol and a short protocol — as ONE strategy. This
+   * answers, for one bot: what did EACH leg do, and what did they do together.
+   *
+   * ⚠️ THE LEG COMES FROM `trade.legProtocolId`, NOT from a re-join. `trade` carried no protocol
+   * reference at all before 2026-11-02, so two legs' closed trades were indistinguishable and the
+   * only way to split them would have been to parse `brokerComment` — which reconciliation rewrites.
+   * The column is the attribution, the same reasoning as `abTestSide`.
+   *
+   * ⚠️ THREE DISTINCT OUTCOMES, never collapsed (development-philosophy §7):
+   *   · a leg with trades      → real numbers
+   *   · a leg with NO trades   → `trades: 0`, which is information ("it never fired")
+   *   · trades with NULL leg   → `unattributed`, counted separately and named, because a bot that
+   *                              traded before this column existed is not a bot that traded nothing
+   *                              and must not be silently folded into a leg.
+   *
+   * ⚠️ `exitPrice != null` is the honest test for a scorable trade. `pnl` stores 0 for an unpriced
+   * exit, so filtering on `pnl` aggregates fabricated zeros as results (#884, measured: 103 of 155
+   * closed rows had `exitPrice=NULL, pnl=0`).
+   */
+  @Get('strategy-legs')
+  async getStrategyLegs(@Query('strategyId') strategyId?: string) {
+    const bots = await (this.prisma as any).tradingStrategy.findMany({
+      where: strategyId ? { id: strategyId } : {},
+      select: {
+        id: true, name: true, symbol: true, active: true,
+        protocols: { select: { protocolId: true, role: true, sortOrder: true }, orderBy: { sortOrder: 'asc' } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const closed = await this.prisma.trade.findMany({
+      where: {
+        origin: 'strategy',
+        status: 'closed',
+        exitPrice: { not: null },
+        ...(strategyId ? { scoringStrategyId: strategyId } : {}),
+      },
+      select: { scoringStrategyId: true, legProtocolId: true, legRole: true, pnl: true },
+    });
+
+    const pnlOf = (rows: Array<{ pnl: number | null }>) => {
+      const n = rows.length;
+      if (n === 0) return { trades: 0, wins: 0, winRate: null as number | null, totalPnl: 0, avgPnl: null as number | null };
+      const total = rows.reduce((s, r) => s + Number(r.pnl ?? 0), 0);
+      const wins = rows.filter((r) => Number(r.pnl ?? 0) > 0).length;
+      return {
+        trades: n,
+        wins,
+        winRate: Math.round((wins / n) * 1000) / 10,
+        totalPnl: Math.round(total * 100) / 100,
+        avgPnl: Math.round((total / n) * 100) / 100,
+      };
+    };
+
+    return {
+      generatedAt: new Date().toISOString(),
+      note:
+        'Per-leg results for paired bots. `trades: 0` means the leg never fired; `unattributed` ' +
+        'counts trades closed before leg attribution existed and is NOT a leg.',
+      bots: bots.map((bot: any) => {
+        const mine = closed.filter((t) => t.scoringStrategyId === bot.id);
+        const legs = (bot.protocols ?? []).map((sub: any) => {
+          const rows = mine.filter((t) => t.legProtocolId === sub.protocolId);
+          return {
+            protocolId: sub.protocolId,
+            role: sub.role,
+            sortOrder: sub.sortOrder,
+            ...pnlOf(rows),
+          };
+        });
+        const unattributedRows = mine.filter((t) => !t.legProtocolId);
+        return {
+          strategyId: bot.id,
+          name: bot.name,
+          symbol: bot.symbol,
+          active: bot.active,
+          paired: legs.length > 1,
+          legs,
+          combined: pnlOf(mine),
+          unattributed: unattributedRows.length > 0
+            ? { ...pnlOf(unattributedRows), because: 'closed before leg attribution existed (pre-2026-11-02)' }
+            : { trades: 0 },
+        };
+      }),
+    };
+  }
+
   @Get('position-lifecycle')
   async getPositionLifecycle() {
     const [positions, trades, adjustments] = await Promise.all([

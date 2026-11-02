@@ -19,6 +19,10 @@ import {
   resolveHiddenRoutes,
   hiddenRoutesFrom,
   filterHiddenViews,
+  recordedVisibility,
+  effectiveVisibility,
+  resolveAccess,
+  VISIBILITY,
 } from './hidden-views.js';
 import { NAV_TREE, getNavStructure } from './nav-tree.js';
 
@@ -136,4 +140,57 @@ test('an empty withheld set returns the tree untouched (no accidental rebuild)',
 
 test('hiddenRoutesFrom is the store-facing alias and returns routes', () => {
   assert.ok(hiddenRoutesFrom({ entries: { '/lab/timeline': { hide: true } } }).has('/lab/timeline'));
+});
+
+// ── VISIBILITY: three states, one filter ────────────────────────────────────────────────────────
+
+test('legacy hide verdicts still resolve — the owner has 60+ of them', () => {
+  // ⚠️ A FORMAT CHANGE MUST NOT DESTROY REAL CURATION. `hide: false` is an explicit KEEP.
+  assert.equal(recordedVisibility({ entries: { '/a/b': { hide: true } } }, '/a/b'), VISIBILITY.WITHHELD);
+  assert.equal(recordedVisibility({ entries: { '/a/b': { hide: false } } }, '/a/b'), VISIBILITY.PUBLIC);
+  assert.equal(recordedVisibility({ entries: { '/a/b': { hide: null } } }, '/a/b'), null);
+});
+
+test('an explicit visibility wins over a stale hide value', () => {
+  const cfg = { entries: { '/lab/x': { hide: true, visibility: 'member' } } };
+  assert.equal(recordedVisibility(cfg, '/lab/x'), VISIBILITY.MEMBER);
+});
+
+test('undecided is not public when the route is in the curated withheld set', () => {
+  assert.equal(effectiveVisibility(null, '/appearance/forms'), VISIBILITY.WITHHELD);
+  assert.equal(effectiveVisibility(null, '/signals/signals-overview'), VISIBILITY.PUBLIC);
+});
+
+test('member routes are hidden from the nav without an entitlement, shown with one', () => {
+  const cfg = { entries: { '/lab/backtest': { visibility: 'member' } } };
+  assert.ok(resolveAccess(cfg).hidden.has('/lab/backtest'), 'no entitlement -> hidden');
+  assert.equal(resolveAccess(cfg, new Set(['/lab/backtest'])).hidden.has('/lab/backtest'), false, 'entitled -> visible');
+});
+
+test('member and withheld are counted separately — a perk is not a defect', () => {
+  const cfg = {
+    entries: {
+      '/lab/backtest': { visibility: 'member' },
+      '/lab/charts-lab': { visibility: 'withheld' },
+      '/signals/signals-overview': { visibility: 'public' },
+    },
+  };
+  const { withheld, member } = resolveAccess(cfg);
+  assert.ok(member.has('/lab/backtest'));
+  assert.equal(withheld.has('/lab/backtest'), false);
+  assert.ok(withheld.has('/lab/charts-lab'));
+  assert.equal(member.has('/lab/charts-lab'), false);
+});
+
+test('switching a route member -> public removes it from both sets', () => {
+  const cfg = { entries: { '/trading/calculators': { visibility: 'public' } } };
+  const { withheld, member, hidden } = resolveAccess(cfg);
+  assert.equal(withheld.has('/trading/calculators'), false, 'public must beat the curated default');
+  assert.equal(member.has('/trading/calculators'), false);
+  assert.equal(hidden.has('/trading/calculators'), false);
+});
+
+test('switching a route public -> withheld beats an explicit keep', () => {
+  const cfg = { entries: { '/research/screener': { hide: false, visibility: 'withheld' } } };
+  assert.ok(resolveAccess(cfg).hidden.has('/research/screener'));
 });

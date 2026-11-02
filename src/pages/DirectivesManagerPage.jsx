@@ -58,6 +58,12 @@ function hydrateFromApi(raw) {
     avgScore: raw.avgScore ?? null,
     runs: raw.runs ?? null,
     bias: raw.directionBias ?? null,
+    // ── What the code ACTUALLY does, derived from its own literals (server-side) ──
+    // `bias` above is a DECLARATION and can be wrong; measured 2026-11-02, ten directives declare
+    // something their source does not do. Both are shown, side by side, so the disagreement is
+    // visible instead of being discovered by a score that never moves.
+    direction: raw.direction ?? 'unknown',
+    sharedInputs: Array.isArray(raw.sharedInputs) ? raw.sharedInputs : [],
     classification: raw.classification ?? 'unknown',
     performance: raw.performance ?? 'unknown',
     readiness: raw.readiness ?? 'alpha',
@@ -71,11 +77,32 @@ function toneForStatus(status) {
   return 'muted'
 }
 
+/**
+ * Presentation for the DIRECTION capability.
+ *
+ * ⚠️ The distinction this renders is the whole point: `one-sided` and `none` are *capacity that can
+ * never be earned* in a protocol of the other (or either) direction. A directive that can only be
+ * bullish is 100% dead weight inside a SHORT_ONLY protocol, and until this column existed nothing
+ * said so — you found out by watching a score stay flat.
+ *
+ * Colours are existing tokens/hues already used on this page (green bullish, red bearish,
+ * slate neutral) so no new palette is introduced.
+ */
+const DIRECTION_CAPABILITY = {
+  both: { label: 'both ways', color: '#22c55e', title: 'Emits bullish AND bearish — usable in any protocol direction' },
+  'bullish-only': { label: 'long only', color: '#f59e0b', title: 'Emits ONLY bullish — contributes nothing to a SHORT_ONLY protocol' },
+  'bearish-only': { label: 'short only', color: '#f59e0b', title: 'Emits ONLY bearish — contributes nothing to a LONG_ONLY protocol' },
+  none: { label: 'no direction', color: '#94a3b8', title: 'Emits neither — its capacity can never carry direction, only weight' },
+  indeterminate: { label: 'judge?', color: '#a78bfa', title: 'signalClass comes from a variable — cannot be judged statically, so it is NOT written off' },
+  unknown: { label: 'unknown', color: '#64748b', title: 'No capability record — the generated map has no entry for this id' },
+}
+
 export default function DirectivesManagerPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [readinessFilter, setReadinessFilter] = useState('all') // 'all' | 'ready' | 'beta' | 'alpha'
+  const [directionFilter, setDirectionFilter] = useState('all') // 'all' | 'one-sided' | 'none' | 'mismatch'
   const [expandedRows, setExpandedRows] = useState(() => new Set())
   const queryClient = useQueryClient()
 
@@ -132,8 +159,21 @@ export default function DirectivesManagerPage() {
     if (readinessFilter !== 'all') {
       result = result.filter((item) => item.readiness === readinessFilter)
     }
+    // Direction capability filter. 'mismatch' compares the DECLARATION against the CODE, which is
+    // the only place both are known — that is why it lives here and not in the API.
+    if (directionFilter === 'one-sided') {
+      result = result.filter((item) => item.direction === 'bullish-only' || item.direction === 'bearish-only')
+    } else if (directionFilter === 'none') {
+      result = result.filter((item) => item.direction === 'none')
+    } else if (directionFilter === 'mismatch') {
+      result = result.filter((item) => {
+        const declared = item.bias === 'bullish' ? 'long' : item.bias === 'bearish' ? 'short' : 'both'
+        const actual = item.direction === 'bullish-only' ? 'long' : item.direction === 'bearish-only' ? 'short' : item.direction === 'both' ? 'both' : null
+        return actual !== null && declared !== actual
+      })
+    }
     return result
-  }, [allDirectives, query, readinessFilter])
+  }, [allDirectives, query, readinessFilter, directionFilter])
 
   const selected = useMemo(() => {
     const first = filtered[0] ?? null
@@ -230,6 +270,47 @@ export default function DirectivesManagerPage() {
               );
             })}
           </div>
+          {/* Direction-capability filter — the question a composer actually has: can this directive
+              contribute to the side I am building for? Kept beside the readiness filter and styled
+              identically so it reads as one control group, not a new system. */}
+          <div className="directives-readiness-filters" style={{ display: 'flex', gap: '0.35rem', marginLeft: '0.75rem' }}>
+            {[
+              ['all', 'ANY DIRECTION', '#94a3b8'],
+              ['one-sided', 'ONE-SIDED', '#f59e0b'],
+              ['none', 'NO DIRECTION', '#94a3b8'],
+              ['mismatch', 'DECLARED≠CODE', '#f59e0b'],
+            ].map(([key, label, color]) => (
+              <button
+                key={key}
+                onClick={() => setDirectionFilter(key)}
+                aria-pressed={directionFilter === key}
+                title={
+                  key === 'one-sided'
+                    ? 'Directives that can emit only ONE side — dead capacity inside an opposite-direction protocol'
+                    : key === 'none'
+                      ? 'Directives that can never carry direction at all'
+                      : key === 'mismatch'
+                        ? 'Errors: the declared directionBias disagrees with what the code emits'
+                        : 'Every directive'
+                }
+                style={{
+                  background: directionFilter === key ? `${color}18` : 'transparent',
+                  color,
+                  border: `1px solid ${color}40`,
+                  // 44px minimum tap target (accessibility policy) — vertical padding plus line-height.
+                  padding: '8px 10px',
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  fontWeight: directionFilter === key ? 700 : 500,
+                  cursor: 'pointer',
+                  opacity: directionFilter === key ? 1 : 0.6,
+                  lineHeight: 1.75,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="directives-toolbar-stats" role="status" aria-live="polite">
           <span><strong>{filtered.length}</strong> shown</span>
@@ -256,6 +337,7 @@ export default function DirectivesManagerPage() {
                 <th>Category</th>
                 <th>Status</th>
                 <th>BIAS</th>
+                <th title="What the code actually emits, derived from its own literals. 'BIAS' beside it is a declaration and can disagree.">Direction</th>
                 <th>Protocols</th>
                 <th>Weighting</th>
                 <th>Test</th>
@@ -300,6 +382,30 @@ export default function DirectivesManagerPage() {
                         </span>
                       </td>
                       <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? '#22c55e' : item.bias === 'bearish' ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
+                      {(() => {
+                        const cap = DIRECTION_CAPABILITY[item.direction] || DIRECTION_CAPABILITY.unknown;
+                        const declared = item.bias === 'bullish' ? 'long' : item.bias === 'bearish' ? 'short' : 'both';
+                        const actual = item.direction === 'bullish-only' ? 'long' : item.direction === 'bearish-only' ? 'short' : item.direction === 'both' ? 'both' : null;
+                        // A disagreement between what is DECLARED and what the code DOES is the thing
+                        // worth flagging — it is a displayed claim that is false, not a preference.
+                        const mismatch = actual !== null && declared !== actual && item.direction !== 'none' && item.direction !== 'unknown';
+                        return (
+                          <td>
+                            <span
+                              title={cap.title + (item.sharedInputs.length ? ` · shares ${item.sharedInputs.join(', ')} with other directives` : '')}
+                              style={{ color: cap.color, fontSize: '0.76rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+                            >
+                              {cap.label}
+                            </span>
+                            {mismatch && (
+                              <span title={`Declared "${item.bias}" but the code emits ${item.direction}. The declaration is what protocols filter on.`} style={{ marginLeft: '0.3rem', color: '#f59e0b', fontSize: '0.72rem' }} aria-label="declaration disagrees with code">⚠</span>
+                            )}
+                            {item.sharedInputs.length > 0 && (
+                              <span title={`Reads ${item.sharedInputs.join(', ')} on its own. Two directives sharing a factor measure it twice in one protocol.`} style={{ marginLeft: '0.3rem', color: '#a78bfa', fontSize: '0.72rem' }} aria-label="shares an external factor">⇄</span>
+                            )}
+                          </td>
+                        );
+                      })()}
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
                         {item.protocolCount || '—'}
                       </td>

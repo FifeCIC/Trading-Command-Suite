@@ -2456,6 +2456,53 @@ export class TradingStrategyService {
    *
    * Idempotent: converging an already-correct row writes nothing and is reported as `unchanged`.
    */
+  /**
+   * Ensure ONE subscription exists with the given role (#1185).
+   *
+   * ⚠️ IDEMPOTENT and role-correcting, for the same reason the primary subscription is: a bot whose
+   * short leg was written with the wrong role routes as if it were going long, and nothing throws —
+   * the defect measured 2026-09-17. Returns what it did so a dry run can report it.
+   */
+  private async ensureLegSubscription(
+    strategyId: string,
+    protocolId: string,
+    role: string,
+    sortOrder: number,
+    dryRun: boolean,
+  ): Promise<{ created: boolean; corrected: boolean }> {
+    const existing = await (this.prisma as any).strategyProtocol
+      .findFirst({ where: { strategyId, protocolId } })
+      .catch(() => null);
+    if (!existing) {
+      if (!dryRun) {
+        try {
+          await (this.prisma as any).strategyProtocol.create({
+            data: { strategyId, protocolId, role, sortOrder },
+          });
+        } catch (err) {
+          this.logger.warn(`Could not subscribe leg ${protocolId}: ${(err as Error).message}`);
+          return { created: false, corrected: false };
+        }
+      }
+      return { created: true, corrected: false };
+    }
+    if (existing.role !== role) {
+      if (!dryRun) {
+        try {
+          await (this.prisma as any).strategyProtocol.update({
+            where: { id: existing.id },
+            data: { role },
+          });
+        } catch (err) {
+          this.logger.warn(`Could not correct leg role for ${protocolId}: ${(err as Error).message}`);
+          return { created: false, corrected: false };
+        }
+      }
+      return { created: false, corrected: true };
+    }
+    return { created: false, corrected: false };
+  }
+
   async seedDefaults(strategies: Array<{
     name: string; symbol: string; protocolId: string;
     brokerId: string; mode: string; timeframe: string;
@@ -2470,6 +2517,12 @@ export class TradingStrategyService {
      * Required for SHORT_ONLY protocols so a seeded short bot cannot open longs.
      */
     requireDirection?: string | null;
+    /**
+     * #1185 — additional direction legs, created as extra `strategy_protocol` subscriptions.
+     * `protocolId` above is the primary (long) leg; a pair declares its short leg here.
+     * ⚠️ Must be a DIFFERENT protocol — the queue's unique key carries no role.
+     */
+    legs?: Array<{ protocolId: string; role: string }>;
     /**
      * Whether the bot starts enabled. Absent = true (the historical behaviour).
      *
@@ -2708,6 +2761,15 @@ export class TradingStrategyService {
             }
           }
         }
+
+        // #1185 — the ADDITIONAL legs (e.g. a short protocol paired to this bot's long one).
+        for (const [legIndex, leg] of ((s as any).legs ?? []).entries()) {
+          const legResult = await this.ensureLegSubscription(
+            existing.id, leg.protocolId, leg.role, legIndex + 1, dryRun,
+          );
+          if (legResult.created) subscriptionsRepaired++;
+          if (legResult.corrected) rolesCorrected++;
+        }
         continue;
       }
 
@@ -2807,6 +2869,15 @@ export class TradingStrategyService {
           });
         } catch (subErr) {
           this.logger.warn(`Could not subscribe ${s.name} to ${s.protocolId}: ${(subErr as Error).message}`);
+        }
+
+        // #1185 — the ADDITIONAL legs, on a freshly created bot.
+        for (const [legIndex, leg] of ((s as any).legs ?? []).entries()) {
+          const legResult = await this.ensureLegSubscription(
+            createdBot.id, leg.protocolId, leg.role, legIndex + 1, dryRun,
+          );
+          if (legResult.created) subscriptionsRepaired++;
+          if (legResult.corrected) rolesCorrected++;
         }
 
         created++;

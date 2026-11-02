@@ -224,3 +224,92 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     ]
   },
 };
+
+/**
+ * ── THE SHORT LEG OF EACH SHIPPED PROTOCOL (#1185, shape B, 2026-11-02) ────────────────────────
+ *
+ * The owner's design: one bot holding a LONG protocol and a SHORT protocol, summarised as ONE
+ * strategy.
+ *
+ * 🛑 **A SHORT LEG IS NOT A COPY.** The first version of this code derived each short leg as a plain
+ * copy of its long counterpart with `directionMode` flipped — and `validate-protocol-directions.cjs`
+ * refused the build with six conflicts:
+ *
+ *     xau-speed-v1-short (SHORT_ONLY) contains rsi-oversold (bullish)
+ *     forex-session-v1-short (SHORT_ONLY) contains ema-structure (bullish)
+ *     momentum-stock-v1-short (SHORT_ONLY) contains rsi-oversold (bullish) …
+ *
+ * The direction contract (mirrored from `directive-inclusion.ts`) is: **bullish → LONG_ONLY only,
+ * bearish → SHORT_ONLY only, neutral → either.** A bullish directive inside a SHORT_ONLY protocol is
+ * "added" in the seed and then silently dropped at scoring time, so the pair would have looked like
+ * two legs of one strategy while actually scoring different directive sets. The gate caught it before
+ * anything shipped — which is the difference between a declared pair and a real one.
+ *
+ * So the short leg is DERIVED WITH SUBSTITUTIONS: a bullish directive is replaced by its bearish
+ * mirror where one exists, and dropped where none does. Everything else — groups, weights,
+ * multipliers, neutral and undirected directives — is copied verbatim, so the two legs remain the
+ * same strategy taken both ways.
+ *
+ * ⚠️ `BULLISH_DIRECTIVES` is declared here rather than imported: the directive classes are Nest
+ * providers and a seed-data file cannot instantiate them. The guard is the build —
+ * `validate-protocol-directions.cjs` runs in `prebuild` and fails on any bullish id inside a
+ * SHORT_ONLY protocol, so this list going stale is a red build, not a silent drift.
+ * Measured 2026-11-02 from the compiled classes: 11 bullish, 2 bearish, 94 neutral, 37 undirected
+ * (undirected is treated as direction-capable and is allowed in both).
+ */
+const BULLISH_DIRECTIVES = new Set([
+  'earnings-momentum', 'earnings-proximity', 'ema-structure', 'falling-risk-pyramid',
+  'momentum-continuation-combo', 'momentum-exhaustion', 'panic-exhaustion-absorption',
+  'rsi-oversold', 'target-achieved', 'three-soldiers-pattern', 'volume-surge',
+]);
+
+/** Bullish id → its bearish mirror, or `null` when there is no honest mirror (so it is dropped). */
+const SHORT_LEG_SUBSTITUTION: Record<string, string | null> = {
+  // The only true mirror in the registry today: oversold↔overbought is one threshold read from the
+  // other side. Everything else below has no bearish counterpart, so the short leg runs WITHOUT it
+  // rather than with a directive that would be dropped at scoring time anyway.
+  'rsi-oversold': 'rsi-overbought',
+  'ema-structure': null,
+  'earnings-momentum': null,
+  'earnings-proximity': null,
+  'momentum-continuation-combo': null,
+  'momentum-exhaustion': null,
+  'panic-exhaustion-absorption': null,
+  'falling-risk-pyramid': null,
+  'target-achieved': null,
+  'three-soldiers-pattern': null,
+  'volume-surge': null,
+};
+
+for (const slug of [...Object.keys(PROTOCOL_SEED_DATA)]) {
+  const base = PROTOCOL_SEED_DATA[slug];
+  if (!base || base.directionMode === 'SHORT_ONLY') continue; // idempotent: never `-short-short`
+
+  const groups: SeedProtocolGroup[] = base.groups.map((g) => {
+    const ids = new Set<string>();
+    for (const directiveId of g.directiveIds) {
+      if (!BULLISH_DIRECTIVES.has(directiveId)) { ids.add(directiveId); continue; }
+      const mirror = SHORT_LEG_SUBSTITUTION[directiveId];
+      if (mirror) ids.add(mirror);
+    }
+    const next: SeedProtocolGroup = { ...g, directiveIds: [...ids] };
+    if (g.directiveInstances) {
+      // Named instances of a bullish directive go for the same reason: they would be dropped at
+      // scoring time and the pair would silently differ.
+      next.directiveInstances = g.directiveInstances.filter(
+        (inst) => !BULLISH_DIRECTIVES.has(inst.directiveId),
+      );
+    }
+    return next;
+  });
+
+  PROTOCOL_SEED_DATA[`${slug}-short`] = {
+    ...base,
+    name: `${base.name} (Short)`,
+    description:
+      `SHORT leg of ${base.name}. Same groups, weights and multipliers; bullish directives are ` +
+      `substituted or dropped because a SHORT_ONLY protocol may not contain one (#1185).`,
+    directionMode: 'SHORT_ONLY',
+    groups,
+  };
+}
