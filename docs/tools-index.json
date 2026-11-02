@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 196,
+  "count": 203,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -321,6 +321,14 @@
       "reaches": [
         "docs"
       ]
+    },
+    {
+      "name": "ab-stop-plan.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "measure a tightening stop against the SAME window, one declared difference.",
+      "selfTest": false,
+      "reaches": null
     },
     {
       "name": "agent-claim.cjs",
@@ -854,6 +862,14 @@
       ]
     },
     {
+      "name": "measure-packaging-candidates.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "the evidence behind \"which 2-3 strategies ship?\".",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
       "name": "measure-period-sensitivity.cjs",
       "where": "repo",
       "category": "tool",
@@ -946,6 +962,14 @@
       "reaches": null
     },
     {
+      "name": "rank-strategies-scale-free.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "rank backtests on metrics that survive a sizing change.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
       "name": "reconcile-signal-opportunity.cjs",
       "where": "nest",
       "category": "tool",
@@ -978,6 +1002,14 @@
       "reaches": null
     },
     {
+      "name": "repair-unaligned-bars.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "snap off-boundary bars onto their cadence, merging duplicates.",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
       "name": "replay-exit-counterfactual.cjs",
       "where": "repo",
       "category": "tool",
@@ -1005,6 +1037,16 @@
       "selfTest": false,
       "reaches": [
         "npm"
+      ]
+    },
+    {
+      "name": "split-seed-packaging.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "keep only a chosen set in the SHIPPED seed, leave the rest local.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
       ]
     },
     {
@@ -1273,6 +1315,17 @@
       ]
     },
     {
+      "name": "validate-directive-bar-requirement.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a directive that refuses below N bars must DECLARE N.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
       "name": "validate-directive-group-kind.cjs",
       "where": "nest",
       "category": "validator",
@@ -1288,6 +1341,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "a seeded protocol or strategy must not name a directive that",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-directive-reason-labels.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "a directive's REASON must not name a number it no longer uses.",
       "selfTest": true,
       "reaches": [
         "prebuild",

@@ -29,7 +29,7 @@
       "label": "Protocols in the seed (shipping + parked)",
       "value": 48,
       "unit": "",
-      "source": "nest/src/modules/scoring/protocols-seed-data.ts + nest/prisma/seed-parked/protocols-*.json (2 file(s))",
+      "source": "nest/src/modules/scoring/protocols-seed-data.ts + nest/prisma/seed-parked/protocols-*.json (1 file(s))",
       "how": "curl -s localhost:3201/api/scoring/protocols | jq length"
     },
     "providerAdapters": {

@@ -1,0 +1,177 @@
+[
+  {
+    "name": "FTSE Index Tick Scalp",
+    "protocolId": "ftse-speed-v1",
+    "text": "{\r\n    name: 'FTSE Index Tick Scalp',\r\n    symbol: 'UK100',\r\n\r\n    magic: 234100,\r\n    protocolId: 'ftse-speed-v1',\r\n    // brokerId is a broker TYPE, not an instance — routing is driven by\r\n    // symbol_route (UK100 -> broker 3 / Pepperstone :5001). See the audit note\r\n    // at the top of this file.\r\n    brokerId: 'mt5',\r\n    // AUTO (2026-09-10): was 'semi-auto', which requires a UI click and meant\r\n    // ZERO Pepperstone trades ever occurred. This is the only auto bot routing\r\n    // to Pepperstone, so it is the proof path for multi-broker execution.\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    // ⚠️ 0.1 IS THE BROKER FLOOR, NOT A PREFERENCE (2026-09-15). Every index symbol\r\n    // has `volumeMin 0.1` on BOTH bridges, so the 0.01 this shipped with made the order\r\n    // IMPOSSIBLE: `ORDER REJECTED UK100 BUY ×0.01 — Volume 0.01 below UK100 minimum (0.1)`\r\n    // appears repeatedly in the API log. The \"proof path for multi-broker execution\"\r\n    // named in the comment above had never executed a single trade because of it.\r\n    // FX/metals are unaffected (their floor IS 0.01) — check the broker before changing.\r\n    baseSize: 0.1,\r\n    slPct: 0.4,\r\n    tpPct: 0.6,\r\n    // 65 -> 10 (2026-09-15): rescaled onto the post-ADR-011 percentage scale.\r\n    // See the RESCALED block in common/utils/style-thresholds.ts for the derivation.\r\n    minComposite: 10,\r\n    sessionWindow: ['london'],\r\n    style: 'Tick Scalp',\r\n  }"
+  },
+  {
+    "name": "DAX Index Tick Scalp",
+    "protocolId": "dax-speed-v1",
+    "text": "{\r\n    name: 'DAX Index Tick Scalp',\r\n    symbol: 'GER40',\r\n\r\n    magic: 234101,\r\n    protocolId: 'dax-speed-v1',\r\n    brokerId: 'mt5',\r\n    // semi-auto -> auto (2026-09-15): same reason the FTSE bot was flipped on 09-10.\r\n    // Paper/dev runs exist to GENERATE DATA; a bot awaiting a click generates none.\r\n    // Also baseSize 0.01 -> 0.1 (GER40's broker floor).\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.1,\r\n    slPct: 0.4,\r\n    tpPct: 0.6,\r\n    minComposite: 10,\r\n    sessionWindow: ['london'],\r\n    style: 'Tick Scalp',\r\n  }"
+  },
+  {
+    "name": "CAC Index Tick Scalp",
+    "protocolId": "cac-speed-v1",
+    "text": "{\r\n    name: 'CAC Index Tick Scalp',\r\n    symbol: 'FRA40',\r\n\r\n    magic: 234102,\r\n    protocolId: 'cac-speed-v1',\r\n    brokerId: 'mt5',\r\n    // semi-auto -> auto and 0.01 -> 0.1 (FRA40's broker floor) — 2026-09-15.\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.1,\r\n    slPct: 0.4,\r\n    tpPct: 0.6,\r\n    minComposite: 10,\r\n    sessionWindow: ['london'],\r\n    style: 'Tick Scalp',\r\n  }"
+  },
+  {
+    "name": "Dow Index Tick Scalp",
+    "protocolId": "dow-speed-v1",
+    "text": "{\r\n    // Wired 2026-09-25. US30 was a DEAD ROUTE with three stacked faults and this bot is\r\n    // the piece that did not exist: the symbol_route row (broker 3 / Pepperstone) and the\r\n    // symbol_protocol_assignment had both existed since 2026-09-15, but `dow-speed-v1` was\r\n    // inactive, NO watchlist fed it, and no bot consumed it — so US30 was never scored once.\r\n    //\r\n    // ⚠️ WHY THE BARS HAD STOPPED, and it is the same cause. `bar-refresh` builds its set from\r\n    // positions / active-strategies / forex-floor / protocol-symbols, so an INACTIVE protocol\r\n    // takes its symbols out of the refresh set. Activating `dow-speed-v1` is therefore the\r\n    // single change that fixes BOTH the stale feed and the missing scoring. See\r\n    // nest/resolve-us30.sql, which recorded this chain when it retired the DJI30 duplicate.\r\n    //\r\n    // sessionWindow is `us`, NOT `london` like the FTSE/DAX/CAC peers — the Dow is a US index.\r\n    // baseSize 0.1 is the broker floor for index symbols on BOTH bridges (see the FTSE note).\r\n    name: 'Dow Index Tick Scalp',\r\n    symbol: 'US30',\r\n\r\n    magic: 234103,\r\n    protocolId: 'dow-speed-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.1,\r\n    slPct: 0.4,\r\n    tpPct: 0.6,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    style: 'Tick Scalp',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "Gold Scalp M5",
+    "protocolId": "xau-speed-m5",
+    "text": "{\r\n    // ═══════════════════════════════════════════════════════════════════════════════════════\r\n    // ⚠️ THE GOLD GROUP `mode` AND `maxHoldHours` WERE DB-ONLY. THIS FILE WAS BEHIND REALITY.\r\n    //\r\n    // All four gold bots ran as `mode: 'auto'` and held a time-stop, but this file said\r\n    // `semi-auto` and declared no `maxHoldHours`. That is #833's drift, and it BIT on 2026-09-23:\r\n    // the moment `seedDefaults()` learned to converge, the first live re-seed\r\n    //   • flipped five bots to `semi-auto`, which stops them dispatching at all\r\n    //     (`automation-loop.service.ts` Gate 2 — \"auto bots only; manual/semi-auto stay for the\r\n    //     UI buttons\"), and\r\n    //   • wrote `null` over four gold time-stops and Tokyo USDJPY's, removing the slot-releasing\r\n    //     control #773 exists to provide.\r\n    //\r\n    // Both were reverted by hand and are now recorded HERE, because convergence is only safe in\r\n    // one direction: seed → database. Enabling it while the seed lagged simply deleted the\r\n    // deliberate changes. **Reconcile the seed to reality BEFORE trusting a convergent seeder.**\r\n    // ═══════════════════════════════════════════════════════════════════════════════════════\r\n    name: 'Gold Scalp M5',\r\n    symbol: 'XAUUSD',\r\n\r\n    magic: 234105,\r\n    protocolId: 'xau-speed-m5',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 0.3,\r\n    tpPct: 0.5,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 4,\r\n    style: 'Scalp',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "Gold Day-Trade M15",
+    "protocolId": "xau-speed-m15",
+    "text": "{\r\n    name: 'Gold Day-Trade M15',\r\n    symbol: 'XAUUSD',\r\n\r\n    magic: 234106,\r\n    protocolId: 'xau-speed-m15',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 0.02,\r\n    slPct: 0.5,\r\n    tpPct: 1.0,\r\n    minComposite: 10,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 24,\r\n    style: 'Day Trade',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "Gold Swing 1H",
+    "protocolId": "xau-speed-1h",
+    "text": "{\r\n    name: 'Gold Swing 1H',\r\n    symbol: 'XAUUSD',\r\n\r\n    magic: 234107,\r\n    protocolId: 'xau-speed-1h',\r\n    brokerId: 'mt5',\r\n    mode: 'auto', // DB-only value — see the block note above 'Gold Scalp M5'\r\n    timeframe: '1h',\r\n    // ⚠️ 0.05 -> 0.02 (2026-09-22), on the owner's instruction: \"we moved to 0.01 because my\r\n    // real money will not afford 0.1 sized lots\". The LOT NUMBER is not the risk — this is:\r\n    //\r\n    //     risk = lots x contractSize x price x slPct\r\n    //\r\n    // Measured at 0.05 with this 1.5% stop: **£245.22 per trade**, on a £1,376 account. At\r\n    // 0.02 it is £98.09, inside the owner's stated £100 ceiling. XAUUSD's floor is 0.01, so\r\n    // 0.02 is comfortably reachable. Full audit over all 26 active bots: only this bot and\r\n    // Gold Position 4H exceeded £100 — every FX, index, silver and VIX bot was already fine.\r\n    baseSize: 0.02,\r\n    slPct: 1.5,\r\n    tpPct: 3.0,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 72,\r\n    style: 'Swing',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "Gold Position 4H",
+    "protocolId": "xau-speed-4h",
+    "text": "{\r\n    name: 'Gold Position 4H',\r\n    symbol: 'XAUUSD',\r\n\r\n    magic: 234108,\r\n    protocolId: 'xau-speed-4h',\r\n    brokerId: 'mt5',\r\n    mode: 'auto', // DB-only value — see the block note above 'Gold Scalp M5'\r\n    timeframe: '4h',\r\n    // ⚠️ 0.1 -> 0.01 (2026-09-22), owner instruction. At 0.1 with this 3% stop the measured\r\n    // risk was **£980.88 per trade — 71% of a £1,376 account in a single position.** That was\r\n    // the real exposure problem; the 0.1 lot number was only its symptom.\r\n    //\r\n    // At the XAUUSD floor of 0.01 it is £130.89 — still above the owner's £100 ceiling, and\r\n    // it CANNOT go lower because 0.01 is the broker's minimum volume. The only route under\r\n    // £100 on this bot is a tighter `slPct`, which is a STOP decision rather than a sizing\r\n    // one, so it is left untouched here deliberately. Flagged on the handoff rather than\r\n    // silently tightened.\r\n    baseSize: 0.01,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 8,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 120,\r\n    style: 'Position',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "London EURUSD Macro",
+    "protocolId": "eurusd-macro-v1",
+    "text": "{\r\n    name: 'London EURUSD Macro',\r\n    symbol: 'EURUSD',\r\n\r\n    magic: 234110,\r\n    protocolId: 'eurusd-macro-v1',\r\n    brokerId: 'mt5',\r\n    // semi-auto -> auto (2026-09-15) for data generation.\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 0.02,\r\n    slPct: 0.5,\r\n    tpPct: 1.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['london'],\r\n    style: 'Day Trade',\r\n  }"
+  },
+  {
+    "name": "US SPY Speed",
+    "protocolId": "spy-speed-v1",
+    "text": "{\r\n    name: 'US SPY Speed',\r\n    // ⚠️ SPX500 -> US500 (2026-09-15). `SPX500` is not a ticker either broker offers: it\r\n    // had ZERO bars ever (`BROKER-HAS-NO-SYMBOL` in scripts/audit-bot-activation.cjs;\r\n    // `got 0 candles for SPX500` on every refresh). Its own twin row `US500` exists, has\r\n    // bars, and is now routed to Pepperstone. The fix is the ticker, not the strategy —\r\n    // see nest/fix-symbol-tickers.sql (which could not apply the rename because a US500\r\n    // row already exists).\r\n    symbol: 'US500',\r\n\r\n    magic: 234111,\r\n    // ⚠️ spy-day-v1 -> spy-speed-v1 (2026-09-25). The bot was subscribed to `spy-day-v1`, whose\r\n    // ONLY watchlist (spy-day-index) holds `[\"SPY\"]` — a different instrument. So the bot sat on\r\n    // US500 consuming signals generated for SPY, and `syncQueues()` routes on\r\n    // `sub.protocolId !== rec.protocolId`, so every US500 record scored under `spy-speed-v1`\r\n    // was dropped. TWO independent declarations already said this was wrong:\r\n    //   • symbol_protocol_assignment (PRIMARY source)  US500 -> spy-speed-v1\r\n    //   • speed-scan.service.ts fallback map           US500 -> spy-speed-v1\r\n    // ...and the bot's own name is \"US SPY Speed\", which is `spy-speed-v1`'s tradingStyle.\r\n    // The subscription was the only artefact that disagreed. Measured: US500 has NEVER traded.\r\n    //\r\n    // ⚠️ LEFT ALONE DELIBERATELY, and they are inconsistent with a 5s–30s tick-scalp protocol:\r\n    // `timeframe: '1h'`, `slPct: 3.0`, `tpPct: 6.0`, `style: 'Position'` are the values of a\r\n    // POSITION bot. The FTSE/DAX/CAC peers run 5m / 0.4 / 0.6. Realigning those is a MATHS\r\n    // change (SL/TP and cadence decide how much a tradeable symbol trades) and is left for the\r\n    // owner rather than edited in place — the wiring fix above is what makes the bot reachable.\r\n    protocolId: 'spy-speed-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '1h',\r\n    baseSize: 0.1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 9,\r\n    sessionWindow: ['us'],\r\n    style: 'Position',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "USTEC QQQ Speed",
+    "protocolId": "qqq-speed-v1",
+    "text": "{\r\n    name: 'USTEC QQQ Speed',\r\n    symbol: 'USTEC',\r\n\r\n    magic: 234140,\r\n    protocolId: 'qqq-speed-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    // 0.1 = the Pepperstone NAS100 volume floor (verified 2026-10-12), not a preference —\r\n    // the same lesson as the FTSE bot's 0.01→0.1 change.\r\n    baseSize: 0.1,\r\n    slPct: 1.0,\r\n    tpPct: 1.0,\r\n    // Bar 10 with a measured all-time ceiling of 25.8% (#840) — same bar as its FTSE/DAX/CAC\r\n    // peers. Raise from measured outcomes, never by intuition.\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    style: 'Tick Scalp',\r\n  }"
+  },
+  {
+    "name": "VIX Spike Reversion",
+    "protocolId": "vix-spike-v1",
+    "text": "{\r\n    name: 'VIX Spike Reversion',\r\n    symbol: 'VIX',\r\n\r\n    magic: 234141,\r\n    // ⚠️ NOT the same protocol as the existing short bot: `vix-spike-v1` is LONG_ONLY\r\n    // mean-reversion (1m–5m, ceiling 20.8%); `vix-short-v1` is SHORT_ONLY. Two protocols, two\r\n    // bots — the ladder watches vix-spike-v1, which previously had no subscriber.\r\n    protocolId: 'vix-spike-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.1,\r\n    slPct: 2.0,\r\n    tpPct: 4.0,\r\n    minComposite: 10,\r\n    sessionWindow: 'all-hours',\r\n    style: 'Scalp',\r\n  }"
+  },
+  {
+    "name": "Gold Macro Position",
+    "protocolId": "gold-macro-v1",
+    "text": "{\r\n    name: 'Gold Macro Position',\r\n    symbol: 'XAUUSD',\r\n\r\n    magic: 234142,\r\n    protocolId: 'gold-macro-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    // The protocol is 1d–1w trend/position (avg hold: days to weeks).\r\n    timeframe: '1d',\r\n    baseSize: 0.01,\r\n    slPct: 2.5,\r\n    tpPct: 5.0,\r\n    // ⚠️ Bar 5, NOT 7+. The protocol's measured ALL-TIME ceiling is 6.4% (#840) — below the\r\n    // Position style gate (7) — so a higher bar would starve it forever. Raise from measured\r\n    // outcomes (#772 doctrine), never by intuition.\r\n    minComposite: 5,\r\n    sessionWindow: 'all-hours',\r\n    style: 'Trend Following / Position',\r\n    // ⚠️ `maxHoldHours` DELIBERATELY ABSENT — absent means NO LIMIT. A days-to-weeks thesis\r\n    // must not carry the 12h time-stop the intraday families use.\r\n  }"
+  },
+  {
+    "name": "VIX Spike Short (demo proof #772)",
+    "protocolId": "vix-short-v1",
+    "text": "{\r\n    name: 'VIX Spike Short (demo proof #772)',\r\n    symbol: 'VIX',\r\n\r\n    magic: 234112,\r\n    protocolId: 'vix-short-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    // ⚠️ 0.01 -> 0.1 (2026-09-15): VIX's broker floor is 0.1, so the short path this bot\r\n    // exists to PROVE could never execute — `ORDER REJECTED VIX SELL ×0.01 — Volume 0.01\r\n    // below VIX minimum (0.1)` in the API log. #772's \"first demo short\" was blocked by\r\n    // size, not by the strategy.\r\n    baseSize: 0.1,\r\n    slPct: 2.0,\r\n    tpPct: 4.0,\r\n    minComposite: 0,\r\n    sessionWindow: 'all-hours',\r\n    // Must be SELL — vix-short-v1 is SHORT_ONLY. The API create() path also sets\r\n    // this; the seeder previously had no such field, so a seeded short bot would\r\n    // have been created without a declared direction.\r\n    requireDirection: 'SELL',\r\n    style: 'Scalp',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "Sydney AUDUSD Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Sydney AUDUSD Session',\r\n    symbol: 'AUDUSD',\r\n\r\n    magic: 234113,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: ['asian'],\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "Sydney AUDJPY Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Sydney AUDJPY Session',\r\n    symbol: 'AUDJPY',\r\n\r\n    magic: 234114,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "GBPUSD Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'GBPUSD Session',\r\n    symbol: 'GBPUSD',\r\n\r\n    magic: 234115,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "London EURGBP Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'London EURGBP Session',\r\n    symbol: 'EURGBP',\r\n\r\n    magic: 234116,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: ['london'],\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "London GBPJPY Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'London GBPJPY Session',\r\n    symbol: 'GBPJPY',\r\n\r\n    magic: 234117,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: ['london'],\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "Zurich EURCHF Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Zurich EURCHF Session',\r\n    symbol: 'EURCHF',\r\n\r\n    magic: 234118,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n    // #995 exhaustion OBSERVER (display-only, acts on nothing): threshold 20 is PROVISIONAL —\r\n    // rows store raw progress halves so any threshold can be re-applied to them later.\r\n    exhaustionObserveEnabled: true,\r\n    exhaustionDecelPct: 20,\r\n  }"
+  },
+  {
+    "name": "Zurich USDCHF Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Zurich USDCHF Session',\r\n    symbol: 'USDCHF',\r\n\r\n    magic: 234119,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: ['london'],\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "Tokyo EURJPY Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Tokyo EURJPY Session',\r\n    symbol: 'EURJPY',\r\n\r\n    magic: 234120,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "Wellington NZDUSD Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Wellington NZDUSD Session',\r\n    symbol: 'NZDUSD',\r\n\r\n    magic: 234121,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: ['asian'],\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "Wellington NZDJPY Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'Wellington NZDJPY Session',\r\n    symbol: 'NZDJPY',\r\n\r\n    magic: 234122,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    // 0.1, not 0.01: NZDJPY's MetaQuotes floor is 0.1 (measured 2026-09-15). Every\r\n    // other FX pair's floor is 0.01.\r\n    baseSize: 0.1,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "EURCAD Macro Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'EURCAD Macro Session',\r\n    symbol: 'EURCAD',\r\n\r\n    magic: 234123,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n    // ── THE ONE SEEDED ALLOCATION (#894) ────────────────────────────────────────────────────────\r\n    //\r\n    // This bot carries an allocation so the rating's risk condition is EXERCISABLE end to end:\r\n    // with no value set anywhere, `realisedPct`/`maxDrawdownPct` are null for every bot and the\r\n    // mechanism cannot be demonstrated or measured against live data at all.\r\n    //\r\n    // Why THIS bot: it holds the largest realised sample in the table (8 priced closes when this\r\n    // was written), so it is the first that could ever reach the policy floor.\r\n    //\r\n    // Why 100: the same order as this bot's own numbers — `baseSize` 0.01 with a 1% stop, and\r\n    // realised closes of roughly ±1 — so the percentages it produces are readable rather than\r\n    // absurd. It is NOT a recommendation for any other bot: every other entry OMITS this key\r\n    // deliberately, which the seeder treats as \"no opinion\", so an operator's value is never\r\n    // overwritten. A guessed default applied to all 27 bots would rate them against a fiction.\r\n    allocationAmount: 100,\r\n  }"
+  },
+  {
+    "name": "GBPCAD Macro Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'GBPCAD Macro Session',\r\n    symbol: 'GBPCAD',\r\n\r\n    magic: 234124,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5m',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "USDCAD Forex Session",
+    "protocolId": "forex-session-v1",
+    "text": "{\r\n    name: 'USDCAD Forex Session',\r\n    symbol: 'USDCAD',\r\n\r\n    magic: 234125,\r\n    protocolId: 'forex-session-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '5s',\r\n    baseSize: 0.01,\r\n    slPct: 1,\r\n    tpPct: 1,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: true,\r\n    style: 'Session / Mean Reversion',\r\n  }"
+  },
+  {
+    "name": "Hourly Triple-Directive Control",
+    "protocolId": "hourly-3dir-v1",
+    "text": "{\r\n    // A/B CONTROL — deliberately `manual` and `active: false`. It has NO\r\n    // `strategy_protocol` subscription (see #833), which is the documented property of a\r\n    // bot that can never receive a queued signal; here that is intended, but it should be\r\n    // declared rather than discovered.\r\n    name: 'Hourly Triple-Directive Control',\r\n    symbol: 'EURUSD',\r\n\r\n    magic: 234126,\r\n    protocolId: 'hourly-3dir-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'manual',\r\n    timeframe: '1h',\r\n    baseSize: 0.01,\r\n    slPct: 1.5,\r\n    tpPct: 3,\r\n    minComposite: 9,\r\n    sessionWindow: 'all-hours',\r\n    maxHoldHours: 12,\r\n    active: false,\r\n  }"
+  },
+  {
+    "name": "BTC Investment Monitor",
+    "protocolId": "btc-speed-v1",
+    "text": "{\r\n    name: 'BTC Investment Monitor',\r\n    symbol: 'BTC',\r\n\r\n    magic: 234127,\r\n    protocolId: 'btc-speed-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'manual',\r\n    timeframe: '1h',\r\n    // ⚠️ 0.01 is UNVERIFIED for crypto — check the broker's volume floor when\r\n    // execution lands (FTSE shipped 0.01 against a 0.1 floor and could never trade).\r\n    baseSize: 0.01,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    // Seeded target for btc-speed-v1 after the 2026-09-15 rescale\r\n    // (inspect-scoring-strategy-thresholds.cjs: SEEDED['btc-speed-v1'] = 10).\r\n    minComposite: 10,\r\n    // 24/7 — ungated. session-window.ts maps 'always'/'24-7' to null, and this is\r\n    // the only instrument that trades when FX is closed.\r\n    sessionWindow: 'all-hours',\r\n    // btc-speed-v1 is LONG_ONLY — declared so the subscription role comes from a\r\n    // statement rather than the protocol-name heuristic.\r\n    requireDirection: 'BUY',\r\n    style: 'Monitor / Position',\r\n  }"
+  },
+  {
+    "name": "Tech Giants - MSFT",
+    "protocolId": "momentum-stock-v1",
+    "text": "{\r\n    name: 'Tech Giants - MSFT',\r\n    symbol: 'MSFT',\r\n\r\n    magic: 234129,\r\n    protocolId: 'momentum-stock-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    requireDirection: 'BUY',\r\n    maxHoldHours: 24,\r\n    style: 'Swing / Momentum',\r\n  }"
+  },
+  {
+    "name": "Tech Giants - AAPL",
+    "protocolId": "momentum-stock-v1",
+    "text": "{\r\n    name: 'Tech Giants - AAPL',\r\n    symbol: 'AAPL',\r\n\r\n    magic: 234130,\r\n    protocolId: 'momentum-stock-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    requireDirection: 'BUY',\r\n    maxHoldHours: 24,\r\n    style: 'Swing / Momentum',\r\n  }"
+  },
+  {
+    "name": "Tech Giants - AMZN",
+    "protocolId": "momentum-stock-v1",
+    "text": "{\r\n    name: 'Tech Giants - AMZN',\r\n    symbol: 'AMZN',\r\n\r\n    magic: 234131,\r\n    protocolId: 'momentum-stock-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    requireDirection: 'BUY',\r\n    maxHoldHours: 24,\r\n    style: 'Swing / Momentum',\r\n  }"
+  },
+  {
+    "name": "Tech Giants - GOOGL",
+    "protocolId": "momentum-stock-v1",
+    "text": "{\r\n    name: 'Tech Giants - GOOGL',\r\n    symbol: 'GOOGL',\r\n\r\n    magic: 234132,\r\n    protocolId: 'momentum-stock-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    requireDirection: 'BUY',\r\n    maxHoldHours: 24,\r\n    style: 'Swing / Momentum',\r\n  }"
+  },
+  {
+    "name": "Tech Giants - TSLA",
+    "protocolId": "momentum-stock-v1",
+    "text": "{\r\n    name: 'Tech Giants - TSLA',\r\n    symbol: 'TSLA',\r\n\r\n    magic: 234133,\r\n    protocolId: 'momentum-stock-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    requireDirection: 'BUY',\r\n    maxHoldHours: 24,\r\n    style: 'Swing / Momentum',\r\n  }"
+  },
+  {
+    "name": "Tech Giants - AVGO",
+    "protocolId": "momentum-stock-v1",
+    "text": "{\r\n    name: 'Tech Giants - AVGO',\r\n    symbol: 'AVGO',\r\n\r\n    magic: 234134,\r\n    protocolId: 'momentum-stock-v1',\r\n    brokerId: 'mt5',\r\n    mode: 'auto',\r\n    timeframe: '15m',\r\n    baseSize: 1,\r\n    slPct: 3.0,\r\n    tpPct: 6.0,\r\n    minComposite: 10,\r\n    sessionWindow: ['us'],\r\n    requireDirection: 'BUY',\r\n    maxHoldHours: 24,\r\n    style: 'Swing / Momentum',\r\n  }"
+  }
+]
