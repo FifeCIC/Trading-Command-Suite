@@ -198,6 +198,11 @@ export class VolatilityToolsDirective implements IDirective {
   readonly maxScore = 90;
   readonly version = '2.0.0';
   readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real ATR(14) math, signalClass neutralised, reachable maxScore
+  // Declared 2026-11-02: calculate() refuses below 20 bars and said so in its reason, but the
+  // requirement was only in the method body — so the caller never knew to fetch them and the
+  // directive abstained while its 90 kept sitting in the denominator. `minBars` is the only
+  // channel that reaches the loader (`getRequiredBars()`). In an active protocol since 2026-08-15.
+  readonly minBars = { '1d': 20 };
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -580,17 +585,46 @@ export class SpyMonthEndRebalancingDirective implements IDirective {
 @Injectable()
 export class SpyQqqRelativeStrengthDirective implements IDirective {
   readonly id = 'spy-qqq-relative-strength';
-  readonly name = 'SPY/QQQ Relative Strength';
+  // ⚠️ The display name now lives BELOW the DECISION block that explains the change (2026-11-02).
+  // The old literal was left here during that edit and became a duplicate `name` member, which made
+  // the whole backend fail to compile — removed here so the intended rename is the only declaration.
   readonly description = 'Symbol vs broad market momentum as relative strength proxy.';
   readonly priority = 42;
   readonly maxScore = 70;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real 5d/20d momentum-acceleration math (name is aspirational: uses own bars, not SPY/QQQ)
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real 5d/20d momentum-acceleration math
+  /**
+   * ⚠️ DECISION (2026-11-02, primary) — the name and reason stop naming symbols it never reads.
+   *
+   * WHAT:      Display name was 'SPY/QQQ Relative Strength' and the reason read
+   *            `SPY/QQQ RS proxy: 5d …` — but this directive reads `input.bars`, i.e. the
+   *            PROTOCOL'S OWN SYMBOL. It has never opened SPY or QQQ. Sitting in a VIX protocol
+   *            it printed "SPY/QQQ" about VIX.
+   * WHY:       The owner's standing direction (2026-11-02): *"we shouldn't mix up symbol names
+   *            like sp500 and vix within a strategy — that will cause a lot of confusion."*
+   *            A reason string naming another instrument is the same defect class as printing
+   *            `RSI(14)` while computing `RSI(30)`: a claim about what the number means that the
+   *            arithmetic does not support.
+   * INSTEAD OF: Renaming the id to `relative-strength`. The id is a load-bearing key written into
+   *            score breakdowns and protocol entries; a half-done migration orphans them silently.
+   * REVERSE BY: Restoring `readonly name = 'SPY/QQQ Relative Strength'` and the `SPY/QQQ RS proxy:`
+   *            reason prefix — two lines, no schema, no data.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 129. Issue #1181.
+   * GUARD:     momentum-and-macro.spec.ts — the reason and the display name must not match SPY|QQQ,
+   *            and 20 bars must not yield a NaN score. Canaried both ways. The PERIOD half of this
+   *            class is guarded by nest/scripts/validate-directive-reason-labels.cjs; the CLASS of
+   *            "a reason naming a foreign symbol" is still 🔴 unguarded beyond these instances.
+   */
+  readonly name = 'Relative Strength (own trend)';
+  // ⚠️ `21`, not 20. The guard said `< 20` but the body reads `closes[closes.length - 21]`, so at
+  // exactly 20 bars that index is -1 → undefined → ret20 NaN → score NaN. A NaN in a composite is
+  // not a small error: it propagates. minBars is also what makes the caller fetch 21.
+  readonly minBars = { '1d': 21 };
 
   calculate(input: DirectiveInput): DirectiveResult {
 
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
+    if (closes.length < 21) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 21+ bars, have ${closes.length}` };
     const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
     const ret20 = (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100;
     const acceleration = ret5 - (ret20 / 4);
@@ -612,7 +646,7 @@ export class SpyQqqRelativeStrengthDirective implements IDirective {
       signalClass,
       score: total,
       confidence: Number((0.25 + Math.abs(acceleration) * 0.06).toFixed(2)),
-      reason: `SPY/QQQ RS proxy: 5d ${ret5.toFixed(1)}% vs 20d ${ret20.toFixed(1)}%, accel=${acceleration.toFixed(1)}%, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      reason: `Relative strength: 5d ${ret5.toFixed(1)}% vs 20d ${ret20.toFixed(1)}%, accel=${acceleration.toFixed(1)}%, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
       metadata: { baseScore, bonusScore, bonusLabel, ret5, ret20, acceleration },
     };
 
@@ -1098,6 +1132,10 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly maxScore = 70;
   readonly version = '3.0.0';
   readonly readiness = 'ready' as const;
+  // Declared 2026-11-02: calculate() refuses below 15 bars (it needs the previous 5-bar return,
+  // i.e. index -11). The requirement lived only in the method body, so every caller fetched
+  // whatever it liked and the 70 kept counting against a directive that could not measure.
+  readonly minBars = { '1d': 15 };
 
   /**
    * ⚠️ HONESTY CONTRACT (rewritten 2026-09-10).
@@ -1417,6 +1455,10 @@ export class MeanReversionDirective implements IDirective {
   readonly maxScore = 105;
   readonly version = '2.0.0';
   readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real Bollinger sigma-distance mean reversion math
+  // Declared 2026-11-02: calculate() refuses below 30 bars and said so in its reason, but nothing
+  // told the caller to fetch them. Bollinger(20,2) needs 20; the 30 is the directive's own choice
+  // of a warm-up, and it is the number it refuses below — so it is the number it declares.
+  readonly minBars = { '1d': 30 };
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -1515,8 +1557,24 @@ export class ResistanceLevelsStrategyDirective implements IDirective {
 @Injectable()
 export class Sp500RegimeDirective implements IDirective {
   readonly id = 'sp500-regime';
-  readonly name = 'S&P 500 Regime Filter';
-  readonly description = 'Market regime proxy: bull/correction/bear/recovery from price vs SMA200.';
+  /**
+   * ⚠️ NAMED AS AN OVERLAY BECAUSE IT READS A DIFFERENT INSTRUMENT (2026-11-02, #1181).
+   *
+   * WHAT:      The reason now says `SPX context (index overlay, NOT the traded symbol): …`, and
+   *            the display name carries `(index overlay)`.
+   * WHY:       Sitting in `vix-spike-v1` / `vix-short-v1`, a bare `SP500 regime:` reason read as
+   *            though the protocol traded SPX. The owner's direction (2026-11-02): protocols must
+   *            be obviously purpose-built for THEIR symbol. This directive still MEASURES the S&P
+   *            500 — that is correct, VIX is derived from SPX options — but the number belongs to
+   *            the index, not to the protocol's instrument, and the label now says so.
+   * INSTEAD OF: Removing it from the VIX protocols. It is their MANDATORY risk gate, and a gate
+   *            that abstains is a silent pass on a money path (#1180's lesson).
+   * REVERSE BY: Restoring the `SP500 regime:` prefix and the bare display name — two strings.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 129.
+   * GUARD:     none — 🔴 unguarded, stated.
+   */
+  readonly name = 'S&P 500 Regime Filter (index overlay)';
+  readonly description = 'Market regime proxy: bull/correction/bear/recovery from price vs SMA200. Reads the S&P 500 as CONTEXT for the protocol\'s own symbol (VIX is derived from SPX options) — this directive does not trade, and never reports, the protocol\'s symbol.';
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
@@ -1547,6 +1605,19 @@ export class Sp500RegimeDirective implements IDirective {
    * `vix-short-v1`'s description states the gate is mandatory.
    */
   readonly category = 'structural' as const;
+
+  /**
+   * ⚠️ DECLARED BECAUSE THE CODE REFUSES BELOW 200 (#1180 sibling, measured 2026-11-02).
+   *
+   * `calculate()` returns `unmeasured` under 200 bars, but this class declared NO `minBars` — and
+   * `minBars` is the ONLY thing that tells the caller how many bars to fetch (`getRequiredBars()` →
+   * `loadHigherTfBundle()`). So the pipeline supplied whatever the protocol's OTHER directives
+   * needed, and this gate reported `Insufficient data: need 200 bars, have 72 — unmeasured` on EVERY
+   * pass in `vix-spike-v1` and `vix-short-v1`, where its own seed calls it a MANDATORY risk gate.
+   *
+   * A requirement that lives only in the method body is a requirement the pipeline cannot honour.
+   */
+  readonly minBars = { '1d': 200 };
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -1583,7 +1654,7 @@ export class Sp500RegimeDirective implements IDirective {
       signalClass,
       score: total,
       confidence: Number((0.3 + Math.abs(devPct) * 0.03).toFixed(2)),
-      reason: `SP500 regime: ${devPct.toFixed(1)}% vs SMA200, SMA200 ${slopeDir ? 'rising' : 'falling'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      reason: `SPX context (index overlay, NOT the traded symbol): ${devPct.toFixed(1)}% vs SMA200, SMA200 ${slopeDir ? 'rising' : 'falling'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
       metadata: { baseScore, bonusScore, bonusLabel, devPct, slope200, slopeDir },
     };
 
