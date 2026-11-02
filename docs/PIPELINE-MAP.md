@@ -215,9 +215,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:182` — `calculate()` → `dist`
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:186` — `calculate()` → `dist`
   - `((currentPrice-nearestSupport)/currentPrice)*100`
-- `nest/src/modules/directives/implementations/panic-exhaustion.directive.ts:109` — `calculate()` → `panicDrop`
+- `nest/src/modules/directives/implementations/panic-exhaustion.directive.ts:111` — `calculate()` → `panicDrop`
   - `((panicStart-panicEnd)/panicStart)*100`
 - `nest/src/modules/paper-trading/paper-trading.service.ts:281` — `updateDrawdown()` → `drawdown`
   - `this.peakEquity>0?((this.peakEquity-equity)/this.peakEquity)*100:0`
@@ -256,7 +256,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 7 sites — `(V1-V2)/V1`
 
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:173` — `calculate()` → `depth`
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:177` — `calculate()` → `depth`
   - `(OVERSOLD-currentRsi)/OVERSOLD`
 - `nest/src/modules/directives/implementations/falling-risk-pyramid.directive.ts:150` — `calculate()` → `drawdownFromHigh`
   - `(recentHigh-currentPrice)/recentHigh`
@@ -611,9 +611,9 @@ Identical after normalisation: variable names differ, the computation does not.
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:182` — `calculate()` → `dist`
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:186` — `calculate()` → `dist`
   - `((currentPrice-nearestSupport)/currentPrice)*100`
-- `nest/src/modules/directives/implementations/panic-exhaustion.directive.ts:109` — `calculate()` → `panicDrop`
+- `nest/src/modules/directives/implementations/panic-exhaustion.directive.ts:111` — `calculate()` → `panicDrop`
   - `((panicStart-panicEnd)/panicStart)*100`
 - `nest/src/modules/paper-trading/paper-trading.service.ts:281` — `updateDrawdown()` → `drawdown`
   - `this.peakEquity>0?((this.peakEquity-equity)/this.peakEquity)*100:0`
@@ -647,7 +647,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `((lastClose-shortExit)/lastClose)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:182` — `calculate()` → `dist`
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:186` — `calculate()` → `dist`
   - `((currentPrice-nearestSupport)/currentPrice)*100`
 - … and 30 more
 
@@ -658,7 +658,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - guarded by: `se===0`
 - `nest/src/modules/directives/implementations/bollinger-squeeze.directive.ts:98` — `calculate()` → `percentile`
   - `(currentBW-minBW)/bwRange`
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:173` — `calculate()` → `depth`
+- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:177` — `calculate()` → `depth`
   - `(OVERSOLD-currentRsi)/OVERSOLD`
 - `nest/src/modules/directives/implementations/ema-structure.directive.ts:46` — `calculate()` → `priceSep`
   - `(currentPrice-currentEma20)/currentEma20`

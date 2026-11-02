@@ -98,6 +98,16 @@ const HELD = {
       'EXPLICIT values from the bridge and never used the default. ' +
       'Evidence: nest/scripts/measure-future-lead-bound.cjs, measure-broker-clock-offset.cjs.',
   },
+  'INV-PRICE-CONTINUITY': {
+    issue: '#1177',
+    reason:
+      'The BTC half is FIXED (233 rows priced $34–$36.60 — a Nasdaq ETF sharing the bare ticker — were ' +
+      'deleted 2026-11-02). The WTI half is OPEN and is a DATA DECISION, not a repair: every `mt5` WTI ' +
+      'bar is $3.25–$4.28 across six timeframes (3,292 rows) while `yahoo` WTI is $75–$106. That is ' +
+      'natural gas under a crude-oil ticker. Deleting it is right for `WTI` but destroys real nat-gas ' +
+      'history that may deserve its own symbol, so it is held rather than taken here. Held, NOT ' +
+      'ignored: the check exists and passes the moment either side is resolved.',
+  },
 };
 
 function request(method, url, body, timeoutMs = 15000) {

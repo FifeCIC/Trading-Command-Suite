@@ -9,6 +9,11 @@ Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanB
 
 **[Website](https://fifecic.github.io/Trading-Command-Suite/) · [Screenshots](https://fifecic.github.io/Trading-Command-Suite/showcase/) · [Wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki) · [Discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) · [Issues](https://github.com/FifeCIC/Trading-Command-Suite/issues) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)**
 
+> ### 🌐 [Open the project website →](https://fifecic.github.io/Trading-Command-Suite/)
+>
+> What it does, screenshots of every area, and the install steps — as a page rather than a file.
+> **Wiki:** [github.com/FifeCIC/Trading-Command-Suite/wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki)
+
 **Licensed under [AGPL-3.0](LICENSE).** Copyright (C) 2026 Ryan Bayne / FifeCIC.
 
 This is an open-source project and you get the full benefit of it — use it, run it, read it, fork it,
