@@ -145,6 +145,35 @@ describe('seedDefaults — CONVERGENCE (#833)', () => {
     expect(r.updated).toBe(0);
   });
 
+  // ⚠️ MEASURED 2026-11-03 — `POST /seed?dryRun=true` CREATED three bots. Every write on the
+  // UPDATE branch was guarded but the CREATE branch was not, so the one path a dry run exists to
+  // preview was the one path it actually performed. It was triggered by something ordinary:
+  // the seeder matches bots by NAME, so RENAMING a seeded bot makes it look absent, and the "dry
+  // run" then inserted a duplicate of each — 58 bots where 55 were expected, with the originals
+  // alive alongside their renames. A diagnostic that reports a change and causes it is worse than
+  // no diagnostic. These two cases lock both halves.
+  it('a DRY RUN creates NO bot and NO subscription — it only reports the would-be create', async () => {
+    const { svc, calls } = harness({ existing: null });
+
+    const r = await svc.seedDefaults([SEEDED], { dryRun: true });
+
+    expect(calls.create).toHaveLength(0);
+    expect(calls.subCreate).toHaveLength(0);
+    expect(calls.update).toHaveLength(0);
+    expect(r.created).toBe(1);
+    expect(r.dryRun).toBe(true);
+  });
+
+  it('the SAME input WITHOUT dry run does create, so the guard is not just skipping silently', async () => {
+    const { svc, calls } = harness({ existing: null });
+
+    const r = await svc.seedDefaults([SEEDED]);
+
+    expect(calls.create).toHaveLength(1);
+    expect(calls.subCreate).toHaveLength(1);
+    expect(r.created).toBe(1);
+  });
+
   it('does not flap on a numeric string vs a number (would rewrite every run)', async () => {
     const { svc, calls } = harness({
       existing: { ...MATCHING_ROW, baseSize: '0.02' },
@@ -153,6 +182,44 @@ describe('seedDefaults — CONVERGENCE (#833)', () => {
 
     await svc.seedDefaults([SEEDED]);
 
+    expect(calls.update).toHaveLength(0);
+  });
+
+  /**
+   * ⚠️ THE DEFECT THIS PINS, MEASURED 2026-11-03. The `simTsl` observer slot was added to the
+   * `create` data block but NOT to the convergence `desired` object. Breaking the stored values and
+   * re-seeding reported `unchanged: 3` and left `simTslEnabled = 0` — a seeder that can INSERT a slot
+   * but can never REPAIR one. That is database-seed-discipline §3 exactly, and it would have made the
+   * whole arming vanish the first time anyone re-seeded.
+   */
+  it('CONVERGES a declared observer slot — a seed field in `create` but not here can never repair', async () => {
+    const withObserver = { ...SEEDED, simTsl: { enabled: true, activationPct: 1, distancePct: 0.5 } };
+    const { svc, calls } = harness({
+      // The stored row has the observer OFF — the drift a re-seed must be able to fix.
+      existing: { ...MATCHING_ROW, simTslEnabled: false, simTslActivationPct: null, simTslDistancePct: null },
+      subscription: { id: 'sub-1', role: 'long' },
+    });
+
+    const r = await svc.seedDefaults([withObserver as any]);
+
+    expect(calls.update).toHaveLength(1);
+    expect(calls.update[0].data.simTslEnabled).toBe(true);
+    expect(calls.update[0].data.simTslActivationPct).toBe(1);
+    expect(calls.update[0].data.simTslDistancePct).toBe(0.5);
+    expect(r.changes[0].fields).toEqual(
+      expect.arrayContaining(['simTslEnabled', 'simTslActivationPct', 'simTslDistancePct']),
+    );
+  });
+
+  it('writes NOTHING for a bot whose seed declares no observer — absence is "no opinion"', async () => {
+    const { svc, calls } = harness({
+      existing: { ...MATCHING_ROW, simTslEnabled: true, simTslActivationPct: 9, simTslDistancePct: 9 },
+      subscription: { id: 'sub-1', role: 'long' },
+    });
+
+    await svc.seedDefaults([SEEDED]); // SEEDED has no `simTsl`
+
+    // A slot the seed does not mention must be left ALONE, not cleared — the #833 rule.
     expect(calls.update).toHaveLength(0);
   });
 });

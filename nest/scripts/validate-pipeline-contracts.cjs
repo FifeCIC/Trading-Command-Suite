@@ -557,6 +557,14 @@ const PROBE_ENFORCED = {
   // guard: three plausible causes were investigated and refuted before the real one was found,
   // so a cause guard would have inherited a wrong theory (#1182).
   'INV-BACKTEST-BUDGET': 'scripts/contract-probe.cjs',
+  // #1176 — a backtest must declare which balance it sized from. Two modes produce different money
+  // figures from identical signals, so an undeclared mode makes every reported P&L ambiguous.
+  'INV-BACKTEST-EQUITY-MODE': 'scripts/contract-probe.cjs',
+  // #1181 — an arbitrary winner between two active protocols at the same priority is a policy nobody
+  // wrote. The resolver is deterministic now; this asserts the DATA can be read as an intent.
+  'INV-SYMBOL-PRIORITY-TIE': 'scripts/contract-probe.cjs',
+  // #1183 — a simulation must leave the live tables alone. Measured on the COUNTERS, not the code path.
+  'INV-BACKTEST-NO-WRITES': 'scripts/contract-probe.cjs',
 };
 
 /**

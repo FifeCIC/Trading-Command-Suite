@@ -190,6 +190,8 @@ import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import UiReviewPage from '../pages/UiReviewPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
 import BlockedSignalsPage from '../pages/BlockedSignalsPage.jsx';
+// #1190 — the trend READING experiment. Development because it is an experiment first.
+import TrendReadingPage from '../pages/TrendReadingPage.jsx';
 // Performance Change (2026-09-28) — the CHANGE lens over the same stored data: period over period,
 // not a running total. Sits beside Blocked Signals because both answer a question from the DB.
 import PerformanceChangePage from '../pages/PerformanceChangePage.jsx';
@@ -384,6 +386,7 @@ export const VIEW_COMPONENTS = {
   'ui-review': UiReviewPage,
   'diagrams': DiagramsPage,
   'blocked-signals': BlockedSignalsPage,
+  'trend-reading': TrendReadingPage,
   'performance-change': PerformanceChangePage,
   'meta-stack-explorer': MetaStackExplorerPage,
   'file-inventory': FileInventoryPage,

@@ -41,6 +41,7 @@ import { Mt5HammerDirective } from './implementations/mt5-hammer.directive';
 import { ObvDirective } from './implementations/obv.directive';
 // Implemented momentum
 import { MfiDirective } from './implementations/mfi.directive';
+import { MfiOverboughtDirective } from './implementations/mfi-overbought.directive';
 import { AdxDirective } from './implementations/adx.directive';
 import { StochasticDirective } from './implementations/stochastic.directive';
 import { StochRsiDirective } from './implementations/stoch-rsi.directive';
@@ -270,6 +271,7 @@ import { WeekendGapBiasDirective } from './implementations/weekend-gap-bias.dire
     VolumeConfirmationDirective,
     // Implemented — Momentum
     MfiDirective,
+    MfiOverboughtDirective,
     AdxDirective,
     StochasticDirective,
     StochRsiDirective,
@@ -478,6 +480,7 @@ export class DirectivesModule implements OnModuleInit {
     private readonly volume: VolumeConfirmationDirective,
     // Implemented — Momentum
     private readonly mfi: MfiDirective,
+    private readonly mfiOverbought: MfiOverboughtDirective,
     private readonly adx: AdxDirective,
     private readonly stochastic: StochasticDirective,
     private readonly stochRsi: StochRsiDirective,
@@ -674,6 +677,9 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.volume);
     // Implemented — Momentum
     this.directivesService.register(this.mfi);
+    // The BEARISH mirror of mfi — additive, so `mfi` keeps its performance history untouched.
+    // @see mfi-overbought.directive.ts
+    this.directivesService.register(this.mfiOverbought);
     this.directivesService.register(this.adx);
     this.directivesService.register(this.stochastic);
     this.directivesService.register(this.rsiOverbought);

@@ -1753,5 +1753,32 @@
     "long-gap-series": "6dcef1d1e8a75c9b",
     "long-range-tightening": "6dcef1d1e8a75c9b",
     "long-ceiling-zone": "6dcef1d1e8a75c9b"
+  },
+  "mfi-overbought": {
+    "decline-bounce": "733b234b952c18c3",
+    "mild-decline": "733b234b952c18c3",
+    "uptrend": "733b234b952c18c3",
+    "downtrend": "dffc7b6b8ab5281f",
+    "choppy": "d6b11682d6e767a4",
+    "reversal-hammer": "ba4c3db3cf6a687e",
+    "mean-reverting": "da65b2c85951d2e2",
+    "noisy-uptrend": "15e473831c99dfaa",
+    "noisy-downtrend": "c6cbd214414b5242",
+    "noisy-range": "91191de23cd129dc",
+    "volume-climax": "b50cb8702b26e366",
+    "volume-drought": "f0618c09c13398b0",
+    "range-compression": "296debebc4c97525",
+    "doji-bar": "e7d8a0a70b31b350",
+    "engulfing-bar": "76fd99ef5f45716d",
+    "harami-bar": "dffc7b6b8ab5281f",
+    "three-soldiers": "dd9c69671acf2155",
+    "gap-up-bar": "70e389aaaf99f8d4",
+    "long-wick": "c30ff9ca2deed3df",
+    "volatility-burst": "f4192dbec661949b",
+    "long-rally-pullback": "6f851dce304a68bb",
+    "long-crash-and-base": "5e173513c4ad8ff2",
+    "long-gap-series": "36b174eb15b122a4",
+    "long-range-tightening": "2d4fc1aa4999d33d",
+    "long-ceiling-zone": "b376bfc96d043534"
   }
 }

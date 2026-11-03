@@ -6,7 +6,7 @@
   "facts": {
     "directiveFiles": {
       "label": "Directive implementation files",
-      "value": 93,
+      "value": 94,
       "unit": "",
       "source": "nest/src/modules/directives/**/*.directive.ts",
       "how": "curl -s localhost:3201/api/directives | jq length   # the registered set; files are a lower bound"
@@ -20,7 +20,7 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 121,
+      "value": 122,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
       "how": "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '"
@@ -55,7 +55,7 @@
     },
     "version": {
       "label": "Application version",
-      "value": "0.150.0",
+      "value": "0.152.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

@@ -38,9 +38,9 @@ describe('every seeded bot DECLARES its session slot (#982)', () => {
     expect(DEFAULT_TRADING_STRATEGIES.length).toBeGreaterThan(0);
     const shipped = DEFAULT_TRADING_STRATEGIES.map((s) => s.name);
     expect(shipped).toEqual(expect.arrayContaining([
-      'Silver Speed Scalp',
-      'Tech Giants - NVDA',
-      'Tokyo USDJPY Session',
+      'Silver Speed Scalp Bot',
+      'Tech Giants NVDA Bot',
+      'Tokyo USDJPY Session Bot',
     ]));
   });
 

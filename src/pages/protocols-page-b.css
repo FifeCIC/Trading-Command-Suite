@@ -111,6 +111,17 @@
    dot states follow the status button: green = in the loop and able to act now; orange =
    enabled but the market is closed (standby); grey = off; muted = hours not known yet. */
 .prb-item-name { font-weight: 600; font-size: 0.82rem; color: var(--ink); padding-right: 20px; }
+/* ── Focus rank (#1187) — "this is one of the few we are actually working on". ──
+   Inline before the name, not a corner chip: the corner already carries symbol and health counts,
+   and a rank is read as part of the title ("★2 Gold Speed Scalp V1"), not as a statistic about it.
+   ⚠️ `--accent`, not a risk colour. A risk token here would read as a warning about the protocol,
+   and rank is an attention order, not a verdict. */
+.prb-focus-chip {
+  display: inline-block; margin-right: 5px; padding: 0 4px;
+  font-size: 0.58rem; font-weight: 700; line-height: 1.5;
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 3px; vertical-align: 1px; cursor: help;
+}
 .prb-active-dot { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; }
 .prb-active-dot.on { background: var(--risk-normal, #2ecc91); }
 .prb-active-dot.standby { background: var(--risk-high, #ff8c42); }

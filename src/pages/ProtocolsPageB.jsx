@@ -86,7 +86,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   const [selected, setSelected] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
   const [directionFilter, setDirectionFilter] = useState('All');
-  const [sortOrder, setSortOrder] = useState('active-first');
+  const [sortOrder, setSortOrder] = useState('focus-first');
   const [searchQuery, setSearchQuery] = useState('');
   const [usageFilter, setUsageFilter] = useState('all');
   const [hideInactive, setHideInactive] = useState(false);
@@ -257,7 +257,24 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     // Hide inactive
     if (hideInactive) list = list.filter(p => p.active !== false);
     // Sort
-    if (sortOrder === 'active-first') {
+    //
+    // ⚠️ `focus-first` is the DEFAULT (#1187). The owner, 2026-11-03: *"I want our focus ones to be
+    // more prominent in much of our other work and when I do manual testing."* With every protocol
+    // activated on the same day, `active-first` separates nothing — it leaves the list in whatever
+    // order the API returned, and a manual test starts by scrolling past 45 protocols nobody is
+    // working on. Focus rank is the only thing that distinguishes them.
+    //
+    // Ranked protocols come first by rank; everything else follows in name order inside the same
+    // list, so the tail is still predictable rather than arbitrary.
+    if (sortOrder === 'focus-first') {
+      const rank = (p) => (p.focusRank == null ? Number.MAX_SAFE_INTEGER : p.focusRank);
+      list.sort((a, b) => {
+        const ra = rank(a);
+        const rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    } else if (sortOrder === 'active-first') {
       list.sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0));
     } else if (sortOrder === 'inactive-first') {
       list.sort((a, b) => (a.active ? 1 : 0) - (b.active ? 1 : 0));
@@ -374,6 +391,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
         <label className="prb-filter-label">
           Order:
           <select className="prb-filter-select" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+            <option value="focus-first">Focus first</option>
             <option value="active-first">Active first</option>
             <option value="inactive-first">Inactive first</option>
             <option value="az">A → Z</option>
@@ -413,7 +431,17 @@ export default function ProtocolsPageB({ initialProtocolId }) {
               {/* The dot is position-absolute (top-right) so a long name can never
                   push it around; the chips sit in their own bottom-right corner so
                   the title row reads as ONE line of text. */}
-              <div className="prb-item-name">{p.name}</div>
+              <div className="prb-item-name">
+                {p.focusRank != null && (
+                  <span
+                    className="prb-focus-chip"
+                    title={`Focus protocol #${p.focusRank} — one of the few under active work. Rank is a reading order, not a quality score; see the Focus column in the detail panel.`}
+                  >
+                    ★{p.focusRank}
+                  </span>
+                )}
+                {p.name}
+              </div>
               <span className={`prb-active-dot ${run.key}`} title={run.title} aria-hidden="true" />
               {(extra > 0 || issues.length > 0) && (
                 <div className="prb-item-corner">
@@ -442,7 +470,14 @@ export default function ProtocolsPageB({ initialProtocolId }) {
             <>
               <div className="prb-detail-head">
                 <div className="prb-detail-title">
-                  <h2>{selectedProto.name}</h2>
+                  <h2>
+                    {selectedProto.focusRank != null && (
+                      <span className="prb-focus-chip" title="One of the protocols under active work — see Focus rank below">
+                        ★{selectedProto.focusRank}
+                      </span>
+                    )}
+                    {selectedProto.name}
+                  </h2>
                   <code className="prb-detail-id">{selectedProto.id}</code>
                 </div>
                 <div className="prb-head-actions">
@@ -601,6 +636,13 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directionMode || 'LONG'}</span><span className="prb-stat-lbl">Direction</span></div>
                 {selectedProto.recommendedTimeframe && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.recommendedTimeframe}</span><span className="prb-stat-lbl">Timeframe</span></div>}
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directiveCount}</span><span className="prb-stat-lbl">Directives</span></div>
+                {/* #1187 — the rank as a STAT, and `—` rather than a hidden row when absent: an
+                    absent row and "not a focus protocol" must not look the same, because the reader
+                    is asking whether this one is under work. */}
+                <div className="prb-stat" title="Ordering among the protocols under active work. Not a quality score, and nothing in scoring, gating or sizing reads it.">
+                  <span className="prb-stat-val">{selectedProto.focusRank != null ? `★ ${selectedProto.focusRank}` : '—'}</span>
+                  <span className="prb-stat-lbl">Focus</span>
+                </div>
                 <div className="prb-stat"><span className="prb-stat-val">{directiveConfig?.totalWeight != null ? directiveConfig.totalWeight.toLocaleString() : (selectedProto.maxScore?.toLocaleString() ?? 'N/A')}</span><span className="prb-stat-lbl">Total Weight</span></div>
               </div>
 

@@ -555,3 +555,150 @@
   font-size: var(--text-sm);
   color: var(--color-loss);
 }
+
+/* ── Story: theory + track record (#1189) ───────────────────────────────────────────────────
+   Two blocks side by side on a wide pane, stacked on a narrow one. The pairing IS the point: the
+   theory is a CLAIM about what this strategy is for, the track record is EVIDENCE of what it did.
+   Separating them across a page lets a reader see one without the other, which is how a strategy
+   ends up defended or dismissed on half its story. */
+
+.story {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+.storyBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.storyHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.storyTitle {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.storyCount {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.storyText {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+/* An ABSENT theory must not look like a present one that happens to be short. Muted + italic reads
+   as "nothing was said here", which is the fact. */
+.storyEmpty {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ── Theory-kind badge — the claim's TYPE, in a word, so the reader knows what they are reading.
+   `control` is deliberately the most muted of the four: it is a valid kind, and it is the one that
+   predicts nothing. */
+.kindBadge {
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.kind_asymmetry {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.kind_participation {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.kind_regime {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.kind_control {
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+
+/* ── Track record list ─────────────────────────────────────────────────────────────────────── */
+
+.trackList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trackItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.trackTop {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.trackKind {
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+.trackStatus {
+  text-transform: lowercase;
+}
+
+.trackWhen {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ONE sentence, and it is the observation. No truncation: a headline that is cut is a headline the
+   reader cannot check against the numbers. */
+.trackHeadline {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* Where the number came from — named, never inferred. Small, because it is provenance not content. */
+.trackSource {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+}

@@ -50,6 +50,32 @@ export interface SeedProtocol {
   tradingStyle: string | null;
   recommendedTimeframe: string | null;
   derivedFrom?: string | null;
+  /**
+   * Focus rank — 1 is the first protocol to look at (#1187, owner request 2026-11-03).
+   *
+   * ⚠️ PRESENTATION ONLY. Nothing in scoring, gating, sizing or execution reads it, and nothing
+   * should: a rank that changed what a protocol SCORES would make the number depend on the
+   * operator's attention. It exists so the few protocols under active work sort to the top of
+   * lists and carry a badge, which stops a manual test being run against a protocol nobody is
+   * working on.
+   *
+   * ⚠️ It is NOT `active`. `active = 0` is a kill switch for score writes (#803), and on
+   * 2026-11-03 the owner activated every protocol — so `active` separates nothing and cannot be
+   * used to answer "which are mine?".
+   */
+  focusRank?: number;
+  /**
+   * THEORY (#689) — the written intent: what this protocol is FOR, what a good day looks like, and
+   * its known weakness. Prose a human reads.
+   *
+   * ⚠️ SEEDED since 2026-11-03. It was DB-only before this: the seeder READ `protocol.theory` and
+   * never WROTE it, so 9 protocols' prose had no path through a clean install and would have been
+   * lost. Measured the same day: 9 of 54 protocols had any theory text at all.
+   *
+   * ⚠️ Not every protocol needs one, but a protocol with NO theory and a database row claiming
+   * otherwise is the prose form of this repo's worst bug. Empty is honest; invented is not.
+   */
+  theory?: string | null;
   avgHoldTime: string | null;
   winRateTarget: string | null;
   idealFor: string | null;
@@ -63,6 +89,15 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Tick Scalp",
     "recommendedTimeframe": "5s–30s",
+    // FOCUS 2 of 3 (#1187). Ranked by MEASURED evidence, not preference: this arm has no positive
+    // backtest on record yet, but it is the one carrying the live XAGUSD position that moved straight
+    // into profit, which no other arm has. The short leg inherits this rank from the spread below.
+    "focusRank": 2,
+    // #689 THEORY — the prose written 2026-08-26 and until 2026-11-03 stored ONLY in the database.
+    // It lives here now because a re-seed must restore it (database-seed-discipline: a value that is
+    // not in the seed does not survive a reinstall). Copied verbatim from
+    // `scripts/db/protocol-theory-seed.sql` — do not paraphrase it here, or the two copies drift.
+    "theory": "The gold speed family — one directive set scored across four timeframes (M5 scalps, M15 day trades, 1H swings, 4H positions). The strategy intended inside the structure: catch fast directional gold moves with momentum/velocity directives tuned to gold's volatility profile, with volume confirmation as the honesty check. A good day: a clean directional push with volume behind it — the rarity percentile then marks it as exceptional (the family's all-time best hit rarity 100). Known ceiling: signal pct tops out around 77% because several directives are mutually exclusive by design (they cannot all fire on the same bar — that is intended, not a bug). The four timeframe siblings differ only in bar data, which is how one strategy is stress-tested across holding periods.",
     "avgHoldTime": "Seconds to a few minutes",
     "winRateTarget": "65–75%",
     "idealFor": "XTrend gold speed trading during London/NY overlap (12:00–16:00 GMT). Avoid first 5min after major news — spreads widen dramatically.",
@@ -119,6 +154,12 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Day Trade / Swing",
     "recommendedTimeframe": "5m–1d",
+    // FOCUS 3 of 3 (#1187). Ranked last of the three on MEASURED evidence: its NVDA baseline is
+    // −2,878 on the canonical window, the only arm of the three that is negative. It stays in the
+    // focus set because the owner wants a stock strategy and NVDA is the instrument, not because the
+    // numbers justify prominence. Do not read rank 3 as "about to be dropped".
+    "focusRank": 3,
+    "theory": "Momentum stocks — the names that carry a narrative, where price is driven by expectation rather than book value. Technical group reads trend continuation; sentiment group reads whether the narrative is still being believed. A good day: a leader holds structure after a gap and continues, and the sentiment layer does not contradict it. Known weakness: these names reverse hard on the first doubt, so the protocol is long-only by design and its ceiling on a quiet tape is low — a flat day should read as flat, not as a failure.",
     "avgHoldTime": "Hours to days",
     "winRateTarget": "55–65%",
     "idealFor": "High-momentum stocks: NVDA, MSTR, PLTR, AVGO, COIN, MARA, RIOT, HOOD, RKLB, ASTS, SOFI. Score the wishlist, trade the top 1-2 signals. Never hold through earnings without confirmation.",
@@ -175,6 +216,14 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Session / Mean Reversion",
     "recommendedTimeframe": "5m",
+    // FOCUS 1 of 3 (#1187). Ranked first on MEASURED evidence: USDJPY 1h is the only arm of the
+    // three with a positive canonical baseline — 316 trades, 72% win rate, trade profit factor 3.47,
+    // +9,728.72 net. Rank follows the number, not the enthusiasm; if the evidence moves, move this.
+    "focusRank": 1,
+    // #689 THEORY — written 2026-08-26, DB-only until 2026-11-03, and the text one re-seed DESTROYED
+    // before the `update` clause was made conditional. Verbatim from
+    // `scripts/db/protocol-theory-seed.sql`.
+    "theory": "Session-timed forex for the major pairs. Targets London/NY session trends: technical group for trend structure, sentiment group for cross-pair context, and session timing as the timing layer. This is the most active protocol in the app (hundreds of actionable snapshots per week). A good day: a major pair trending through a session with clean structure and no conflicting sentiment. Known weakness: session-open-effect is zero outside its 30-minute window, so for most of the day that directive's maxScore sits unpaid in the denominator — typical scores cap near 50% and only reach the high band inside the open window. If this protocol ever feels too quiet outside sessions, that is the timing layer working as designed, not a fault.",
     "avgHoldTime": "Minutes to hours",
     "winRateTarget": "60–70%",
     "idealFor": "Forex pairs during London/NY session overlap. Mean-reverting within daily ranges, trend-following on session breaks.",
@@ -311,5 +360,28 @@ for (const slug of [...Object.keys(PROTOCOL_SEED_DATA)]) {
       `substituted or dropped because a SHORT_ONLY protocol may not contain one (#1185).`,
     directionMode: 'SHORT_ONLY',
     groups,
+    /**
+     * ⚠️ The short leg gets its OWN theory, not the parent's, and it is GENERATED so every future
+     * pair carries it. Measured 2026-11-03: all three derived short legs had `theory = NULL` while
+     * two of the three parents had real prose — so half of every pair was silent about what it was
+     * for. A pair with one explained half reads as one strategy that happens to have two engines.
+     *
+     * The wording deliberately does NOT claim the short side is the mirror of the long: it is a
+     * different behaviour (a forced move) rather than the same behaviour inverted, and saying so is
+     * the point of having two protocols instead of one with a direction flag.
+     */
+    theory:
+      `SHORT leg of ${base.name}. Same groups, weights and multipliers; bullish directives are ` +
+      `substituted (rsi-oversold → rsi-overbought) or dropped, so this leg reads the DOWN-side of ` +
+      `the same question rather than the mirror of the long. Theory: it harvests the FAST, forced ` +
+      `move — liquidation, stop cascades, panic — which is a different behaviour from the slow ` +
+      `grind the long leg waits for (#1185). If both legs win at the same rate and at the same ` +
+      `speed, there is no asymmetry and this is one strategy split in two.`,
+    // ⚠️ The short leg keeps the PARENT's focus rank on purpose (#1187): a pair is one strategy, so
+    // "show me my focus protocols" must not return half of a pair. Two rows on one rank is fine HERE
+    // — this column orders a LIST, and the sort tiebreaks on `slug`, so it is deterministic. That is
+    // the opposite of `symbol_protocol_assignment.priority`, where a tie was a real ambiguity because
+    // the resolver returned a single winner (#1181).
+    focusRank: base.focusRank,
   };
 }

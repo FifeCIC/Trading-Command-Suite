@@ -207,6 +207,33 @@ export class TradingStrategyController {
     return this.service.getSignalQueue(id);
   }
 
+  /**
+   * TRACK RECORD (#1189) — observations recorded against one strategy.
+   *
+   * The factual half of a complete strategy: its theory says what it is FOR, its track record says
+   * what it has DONE. Deliberately its own resource rather than a field, because the answer grows.
+   */
+  @Get(':id/track-record')
+  async getTrackRecord(
+    @Param('id') id: string,
+    @Query('kind') kind?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.service.getTrackRecord(id, { kind, status });
+  }
+
+  /** POST /api/trading/strategies/:id/track-record — record one observation. */
+  @Post(':id/track-record')
+  async addTrackRecord(@Param('id') id: string, @Body() body: any) {
+    return this.service.addTrackRecord(id, body);
+  }
+
+  /** PATCH /api/trading/strategies/:id/track-record/:recordId — settle or annotate one. */
+  @Patch(':id/track-record/:recordId')
+  async updateTrackRecord(@Param('recordId') recordId: string, @Body() body: any) {
+    return this.service.updateTrackRecord(recordId, body);
+  }
+
   @Post(':id/evaluate')
   async evaluate(@Param('id') id: string) {
     try {

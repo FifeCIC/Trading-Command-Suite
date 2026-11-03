@@ -112,6 +112,40 @@ const TRADING = '/api/trading/strategies';
 const BOT_PERF = '/api/trading/bot-performance';
 
 /**
+ * THEORY KINDS (#1189) — what kind of claim a strategy's prose is making.
+ *
+ * ⚠️ `control` is a FIRST-CLASS kind, not a missing value. A strategy with no directional thesis is
+ * a legitimate design ("buy and hold the leaders, see what happens"), and labelling it "control" is
+ * honest in a way that a blank field is not: blank reads as an oversight and gets filled in with
+ * invented reasoning later. This badge exists so the reader can tell a measured claim from a
+ * declared one from an experiment with no claim at all.
+ *
+ * The five values must match `theoryKind` on `trading_strategy` (VarChar(20)) and the union in
+ * `strategy-seed-data.ts`. Adding one here without adding it there makes a strategy unlabelable.
+ */
+const THEORY_KINDS = {
+  asymmetry: { label: 'Asymmetry', hint: 'It behaves differently up than down — the two legs are not mirrors.' },
+  participation: { label: 'Participation', hint: 'It predicts no direction; it decides whether to be in the market at all.' },
+  regime: { label: 'Regime', hint: 'One instrument, two clocks — the same symbol behaves differently in different sessions.' },
+  control: { label: 'Control — no thesis', hint: 'Deliberately predicts nothing. It is here to produce a comparison, not a claim.' },
+};
+
+/** Track-record kinds — where the observation came from. Kept beside THEORY_KINDS, same reason. */
+const TRACK_KINDS = {
+  contrast: 'Contrast',
+  live: 'Live A/B',
+  data: 'Data',
+  behaviour: 'Behaviour',
+};
+
+const TRACK_STATUS = {
+  noticed: { label: 'noticed', hint: 'Recorded. Not yet re-tested.' },
+  testing: { label: 'testing', hint: 'A falsifiable claim exists and is being measured.' },
+  settled: { label: 'settled', hint: 'The question is answered. Do not re-open without a reason.' },
+};
+
+
+/**
  * ⚠️ #870 — the four enforcement levels MOVED to `core/bot-rule-enforcement.jsx`, which the create
  * form also imports. Do not re-declare them here.
  */
@@ -755,6 +789,11 @@ export default function ViewStrategyPage() {
 
   const bot = botQuery.data || null;
   const botName = bot?.name ?? null;
+  // Track record (#1189) — inlined by `findOne`, newest first. ⚠️ Defaulted to `[]` rather than
+  // assumed present: an older API returns the bot without this key, and a `.length` on undefined
+  // would throw the whole page — the failure would look like "this strategy is broken" instead of
+  // "the API predates the field".
+  const trackRecord = Array.isArray(bot?.trackRecord) ? bot.trackRecord : [];
   const rules = useMemo(
     () => (Array.isArray(rulesQuery.data?.all) ? rulesQuery.data.all : []),
     [rulesQuery.data],
@@ -1035,6 +1074,76 @@ export default function ViewStrategyPage() {
           </p>
         )}
       </header>
+
+      {/* THE THEORY AND THE TRACK RECORD (#1189) — the two halves of a COMPLETE strategy.
+          Theory: what this strategy is FOR (a claim, written by a human). Track record: what it has
+          actually DONE (observations, with their numbers). They sit together on purpose: a claim
+          without an observation is a hope, and an observation without a claim is trivia, and the
+          owner's goal was that the pair of them is what tells one strategy from another.
+
+          ⚠️ BOTH RENDER WHEN ABSENT, saying so. An empty section and a missing section must not look
+          the same (development-philosophy §7) — "no theory recorded" is information; a gap is not. */}
+      <section className={styles.story} aria-label="Theory and track record">
+        <div className={styles.storyBlock}>
+          <div className={styles.storyHead}>
+            <h2 className={styles.storyTitle}>Theory</h2>
+            {bot.theoryKind && THEORY_KINDS[bot.theoryKind] && (
+              <span
+                className={`${styles.kindBadge} ${styles[`kind_${bot.theoryKind}`] || ''}`}
+                title={THEORY_KINDS[bot.theoryKind].hint}
+              >
+                {THEORY_KINDS[bot.theoryKind].label}
+              </span>
+            )}
+          </div>
+          {bot.theory ? (
+            <p className={styles.storyText}>{bot.theory}</p>
+          ) : (
+            <p className={`${styles.storyText} ${styles.storyEmpty}`}>
+              No theory recorded. This strategy has not been described in terms of what it is for —
+              treat anything it does as unexplained rather than as expected.
+            </p>
+          )}
+        </div>
+
+        <div className={styles.storyBlock}>
+          <div className={styles.storyHead}>
+            <h2 className={styles.storyTitle}>Track record</h2>
+            <span className={styles.storyCount}>
+              {trackRecord.length === 0 ? 'none' : `${trackRecord.length} observation${trackRecord.length === 1 ? '' : 's'}`}
+            </span>
+          </div>
+          {trackRecord.length === 0 ? (
+            <p className={`${styles.storyText} ${styles.storyEmpty}`}>
+              Nothing observed yet. An observation is one sentence plus the numbers behind it, and it
+              is recorded whenever this strategy is compared, measured or watched.
+            </p>
+          ) : (
+            <ul className={styles.trackList}>
+              {trackRecord.slice(0, 8).map((r) => (
+                <li key={r.id} className={styles.trackItem}>
+                  <div className={styles.trackTop}>
+                    <span className={`${styles.trackKind} ${styles[`track_${r.kind}`] || ''}`}>
+                      {TRACK_KINDS[r.kind] || r.kind}
+                    </span>
+                    <span
+                      className={styles.trackStatus}
+                      title={TRACK_STATUS[r.status]?.hint || ''}
+                    >
+                      {TRACK_STATUS[r.status]?.label || r.status}
+                    </span>
+                    <time className={styles.trackWhen} dateTime={r.observedAt}>
+                      {String(r.observedAt).slice(0, 10)}
+                    </time>
+                  </div>
+                  <p className={styles.trackHeadline}>{r.headline}</p>
+                  {r.source && <p className={styles.trackSource}>{r.source}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
 
       {/* WHERE THE BOT'S ORDERS ACTUALLY GO — the account is chosen per SYMBOL (symbol_route),
           not per bot, and nothing on this page said which bridge fills them or how to move them

@@ -55,6 +55,15 @@ function readModelColumns(schemaText) {
   if (!modelMatch) {
     return { error: 'Could not find `model TradingStrategy` in schema.prisma' };
   }
+  // ⚠️ A RELATION IS NOT A COLUMN, and the first version of this skip was a HAND-WRITTEN LIST —
+  // so every new relation on the model appeared as an "UNDECLARED COLUMN" and demanded a
+  // behavioural declaration for something that has no column at all. Measured 2026-11-03: adding
+  // `trackRecord StrategyTrackRecord[]` (#1189) produced exactly that finding. The list is now
+  // derived from the schema's own `model` declarations, so a new relation is skipped automatically
+  // and a new COLUMN still is not. Closing the class, not the instance.
+  const MODEL_NAMES = new Set(
+    [...schemaText.matchAll(/^model\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/gm)].map((m) => m[1]),
+  );
   const body = modelMatch[1];
   const fields = [];
   const seen = new Set();
@@ -67,10 +76,7 @@ function readModelColumns(schemaText) {
     const [, name, type] = m;
     // Relations / block attributes are not columns.
     if (name.startsWith('@@')) continue;
-    if (/^(StrategyEvaluation|StrategyProtocol)/.test(type)) continue;
-    if (['DateTime'].includes(type) && name.endsWith('At')) {
-      // createdAt / updatedAt ARE columns — keep them, they are declared non-behavioural.
-    }
+    if (MODEL_NAMES.has(type.replace(/[[\]?]/g, ''))) continue;
     if (seen.has(name)) continue;
     seen.add(name);
     fields.push(name);

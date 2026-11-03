@@ -214,6 +214,28 @@ export interface BacktestRunRequest {
    */
   legProtocolId?: string;
   /**
+   * ── HOW EQUITY FEEDS SIZING (#1176, 2026-11-02) ────────────────────────────────────────────────
+   *
+   * `'flat'` (default) sizes every trade from the STARTING balance, exactly as the engine always has.
+   * `'compound'` sizes each trade from the RUNNING balance, which is what a live account does.
+   *
+   * ⚠️ BOTH ARE KEPT, AND THE MODE IS RECORDED ON THE RUN, because they answer different questions and
+   * neither is a "fixed" version of the other:
+   *
+   *   · FLAT keeps the trades INDEPENDENT, so signal win rate and the break-even win rate describe the
+   *     SIGNALS. That is what a protocol comparison needs.
+   *   · COMPOUND makes the money figures match a real account — but each trade's size then depends on
+   *     the trades before it, so win rate becomes partly a property of the ORDER the signals arrived
+   *     in, and the break-even figure describes one particular ordering.
+   *
+   * `describeRunDifferences()` exists so a run says what it measured; a compounding run and a flat run
+   * are not comparable, and `equityMode` on the result is what makes that visible instead of inferred.
+   *
+   * ⚠️ DEFAULT `'flat'` IS BIT-FOR-BIT TODAY'S BEHAVIOUR. Compounding is a change to the money path, so
+   * it lands as a caller's choice against an unchanged baseline rather than replacing it.
+   */
+  equityMode?: 'flat' | 'compound';
+  /**
    * #986 — run against a STORED PERIOD (a named, noted window) instead of a bar count.
    *
    * ⚠️ WITHOUT THIS THE ENGINE CANNOT REACH THE PAST. `days` sets `take: days + 120`, a ROW LIMIT
@@ -781,6 +803,13 @@ export interface BacktestResult extends BacktestResultBracketFields {
     positionModel: string;
     accountSize: number;
     riskPct: number;
+    /** #1176 — which balance every trade was sized from. Two modes are NOT comparable. */
+    equityMode?: 'flat' | 'compound';
+    /** #1176 — the balance after the last closed trade, and the change in %. Present in BOTH
+     *  modes: in `flat` the P&L still lands on the account, it is just never re-invested. */
+    endingEquity?: number;
+    /** `null` when `accountSize` is 0/absent, so a percentage is undefined rather than infinite. */
+    equityChangePct?: number | null;
     fixedAmount: number;
     atrPeriod?: number;
     atrMultiplier?: number;
@@ -1184,6 +1213,10 @@ export class BacktestService {
       newsExclusion = 'none',
       // #1155 — 'long' is the default, so an existing caller's run is byte-for-byte the same.
       directionMode = 'long',
+      // #1176 — 'flat' is the default so an existing caller's run is byte-for-byte the same. See the
+      // field comment on `BacktestRunRequest.equityMode` for why BOTH modes are kept rather than
+      // replacing the flat one.
+      equityMode = 'flat',
       // POSITION SIZING + COMMISSION (#50)
       positionModel = 'fixedPercent',
       accountSize = 10000,
@@ -1469,6 +1502,19 @@ export class BacktestService {
      */
     const scoreSeries: NonNullable<BacktestResult['scoreSeries']> = [];
     const windowSize = 100;
+
+    /**
+     * #1176 — the balance each trade is sized from.
+     *
+     * `flat` keeps it at `accountSize` for the whole run (today's behaviour, and what keeps the trades
+     * INDEPENDENT so win rate and break-even describe the signals). `compound` adds each closed trade's
+     * `netPnl` to it, which is what a live account does — at the cost of making every trade's size
+     * depend on the ones before it.
+     *
+     * ⚠️ It is fed by REALISED P&L only (`netPnl`, after commission), not by unrealised movement, so the
+     * curve describes closed results rather than marking to market.
+     */
+    let runningEquity = accountSize;
 
     for (let day = windowSize; day < bars.length; day++) {
       const window = bars.slice(day - windowSize, day);
@@ -1780,6 +1826,11 @@ export class BacktestService {
           // 2026-11-01: 301 signals, 301 refusals, 0 trades. The quantisation now happens once, in
           // `applyAffordability()`, against the broker's own `volumeStep × contractSize`.
           let positionSize: number;
+
+          // #1176 — WHICH BALANCE this trade is sized from. `flat` = the starting balance for every
+          // trade (the trades stay independent); `compound` = the running balance (a live account, but
+          // each size then depends on the trades before it). Resolved per trade, not per run.
+          const sizingEquity = equityMode === 'compound' ? runningEquity : accountSize;
           if (positionModel === 'fixedUnits') {
             // #1143 — the bot's own size, as a constant. Resolved (and refused if absent) before the
             // loop, so every trade here is the same unit count the live loop would have sent.
@@ -1797,23 +1848,23 @@ export class BacktestService {
             const atrStopDistance = currentAtr * atrMultiplier;
             const sized = computeSizing({
               model: 'atrEqualRisk',
-              equity: accountSize,
+              equity: sizingEquity,
               entryPrice: entryCost,
               riskPct,
               atrStopDistance: atrStopDistance > 0 ? atrStopDistance : null,
             });
             positionSize = sized.rawSize != null
               ? sized.rawSize
-              : (accountSize * (riskPct / 100)) / currentClose; // kept: no ATR history yet
+              : (sizingEquity * (riskPct / 100)) / currentClose; // kept: no ATR history yet
           } else if (positionModel === 'fixedDollar') {
-            const sized = computeSizing({ model: 'fixedDollar', equity: accountSize, entryPrice: entryCost, fixedAmount });
+            const sized = computeSizing({ model: 'fixedDollar', equity: sizingEquity, entryPrice: entryCost, fixedAmount });
             positionSize = sized.rawSize != null ? sized.rawSize : 0;
           } else if (positionModel === 'kellyFull' || positionModel === 'kellyHalf') {
             // Kelly criterion (#269). Neutral 50% prior; the no-edge case keeps its historical
             // `size 1` here (documented divergence — the live path refuses visibly instead).
             const sized = computeSizing({
               model: positionModel,
-              equity: accountSize,
+              equity: sizingEquity,
               entryPrice: entryCost,
               tpPct,
               slPct,
@@ -1831,7 +1882,7 @@ export class BacktestService {
             const stopDistance = isLong ? currentClose - slPrice : slPrice - currentClose;
             const sized = computeSizing({
               model: 'fixedPercent',
-              equity: accountSize,
+              equity: sizingEquity,
               entryPrice: entryCost,
               riskPct,
               stopDistance: stopDistance > 0 ? stopDistance : currentClose,
@@ -1850,7 +1901,7 @@ export class BacktestService {
           const affordability = applyAffordability({
             requestedUnits: positionSize,
             pricePerUnit: entryCost,
-            equity: accountSize,
+            equity: sizingEquity,
             maxLeverage,
             // #1170 — the broker's step, so an index CFD can be bought in 0.1 lots instead of being
             // refused outright. `null` = unknown → whole units, reported below.
@@ -1904,6 +1955,14 @@ export class BacktestService {
             barsHeld: barsWalked,
             spansGap,
           });
+
+          // #1176 — feed the closed result back into the balance. In `compound` mode this also
+          // becomes the next trade's SIZING base; in `flat` mode it is still the account balance,
+          // just never re-invested. Accruing it in both keeps `endingEquity` a statement about the
+          // money rather than about the mode.
+          // ⚠️ `netPnl` (after commission) — a curve built from gross P&L would grow faster than
+          // any account could.
+          runningEquity += netPnl;
         }
       }
     }
@@ -2022,6 +2081,14 @@ export class BacktestService {
         positionModel,
         accountSize,
         riskPct,
+        // #1176 — the mode is RECORDED, because a compounding run and a flat run are not comparable.
+        // Without this a reader cannot tell which money figures they are looking at, and
+        // `describeRunDifferences()` would have to infer it.
+        equityMode,
+        endingEquity: Number(runningEquity.toFixed(2)),
+        equityChangePct: accountSize > 0
+          ? Number((((runningEquity - accountSize) / accountSize) * 100).toFixed(2))
+          : null,
         fixedAmount,
         ...(positionModel === 'atrEqualRisk' ? {
           atrPeriod,
@@ -3906,6 +3973,23 @@ export class BacktestService {
       // `maxscore-weighted` for every backtest.
       'group-weighted',
       timeframe,
+      // ── #1183 — THIS IS A SIMULATION, SO NOTHING MAY BE PERSISTED. ──
+      //
+      // `scoreWithGating()` persists at the end of every evaluation: one `score_snapshot` row, one
+      // `Score` row, and +1 to `protocol.adaptiveTargetSamples`. Called once per bar, one 548-bar
+      // run added **+320 to all three** (measured 2026-11-02). Two consequences, only one of them
+      // about speed:
+      //   · CORRECTNESS — `computeRarity()` percentiles the live composite against the protocol's
+      //     last 365 days of `score_snapshot`, so a backtest feeds its own synthetic bars into the
+      //     distribution the next backtest is measured against. The second run percentiles against
+      //     scores the first run invented.
+      //   · CORRECTNESS — `adaptiveTargetMax` is monotonic, so a historical peak above the stored
+      //     one permanently raises the LIVE protocol's target and never comes back down.
+      //   · SPEED — after #1182 removed the per-bar rarity READ, writing became the binding cost of
+      //     a 5m run (11.2 queries/bar over 8,559 bars).
+      //
+      // The run does not lose data: `fullScoreSeries` returns every bar it scored.
+      { simulation: true },
     );
     return {
       composite: gated.signalPct,

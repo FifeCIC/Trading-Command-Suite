@@ -64,8 +64,11 @@ const EXCLUSIVE_INPUTS = ['dxyValue', 'eurusdValue', 'news'];
  */
 function directionOf(body, classification) {
   if (classification === 'indeterminate') return 'indeterminate';
-  const bull = /'bullish'|"bullish"/.test(body);
-  const bear = /'bearish'|"bearish"/.test(body);
+  // Same rule as `classifyClass`: a literal inside a comment is a claim ABOUT the code, not the
+  // code. Measured 2026-11-03 — `mfi-overbought` was reported `both` because its doc quoted `mfi`.
+  const code = stripComments(body);
+  const bull = /'bullish'|"bullish"/.test(code);
+  const bear = /'bearish'|"bearish"/.test(code);
   if (bull && bear) return 'both';
   if (bull) return 'bullish-only';
   if (bear) return 'bearish-only';
@@ -73,10 +76,35 @@ function directionOf(body, classification) {
 }
 
 /**
+ * Strip comments before scanning for literals.
+ *
+ * ⚠️ ADDED 2026-11-03 after the map said `mfi-overbought` was `both` when it emits ONLY bearish.
+ * The cause was documentation: its class comment explains the mirror by quoting `mfi`'s branch
+ * (`total >= 60 ? 'bullish' : 'neutral'`), and the scanner matched that quoted literal as if the
+ * class could emit it.
+ *
+ * That is the WORST direction for this error to point. The scanner is deliberately conservative for
+ * NEUTRAL-ONLY (a literal in a reason string marks a class direction-capable rather than over-claim
+ * the neutral set), but here the same conservatism made a ONE-SIDED class look TWO-SIDED — so
+ * inclusion arithmetic would count its 105 as earnable in a LONG_ONLY protocol, which is exactly the
+ * dead capacity this map exists to expose.
+ *
+ * A comment is a claim ABOUT code, never code. Strip it before judging the code.
+ */
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+}
+
+/**
  * Classify one `@Injectable()` block. Exported shape is intentionally plain so `--self-test` can
  * feed it synthetic source without touching the filesystem.
  */
 function classifyClass(body) {
+  // ⚠️ COMMENTS ARE STRIPPED FIRST (2026-11-03). A class comment that QUOTES another directive's
+  // literal must not make this class look like it emits it — see `stripComments()`. Measured: the
+  // unstripped scan called `mfi-overbought` (bearish only) a `both` directive because its
+  // documentation explained the mirror by quoting `mfi`'s bullish branch.
+  body = stripComments(body);
   // Order matters. A direction literal ANYWHERE decides it: `signalClass: up ? 'bearish' : 'neutral'`
   // has an identifier condition, so testing "is every assignment literal?" first would file a
   // direction-emitting class as indeterminate. Conservative in the safe direction too — the word
@@ -103,8 +131,11 @@ function scan(dir = SRC) {
       detail[id] = {
         direction: directionOf(part, classification),
         // Reads of an external factor this directive can use entirely on its own. Detected the same
-        // way the guard does it, so the published list and the warning cannot disagree.
-        sharedInputs: EXCLUSIVE_INPUTS.filter((f) => new RegExp(`input\\.${f}\\b|\\(input as any\\)\\.${f}\\b`).test(part)),
+        // way the guard does it, so the published list and the warning cannot disagree. Comments are
+        // stripped so documentation that MENTIONS a factor does not register as reading it.
+        sharedInputs: EXCLUSIVE_INPUTS.filter((f) =>
+          new RegExp(`input\\.${f}\\b|\\(input as any\\)\\.${f}\\b`).test(stripComments(part)),
+        ),
       };
     }
   }
@@ -210,6 +241,18 @@ function main() {
       if (!ok) failures++;
       console.log(`  ${ok ? '✔' : '✖'} direction ${expected.padEnd(14)} got ${actual.padEnd(14)} — ${body}`);
     }
+    // Comments must not decide a class's direction. Measured 2026-11-03: `mfi-overbought` (bearish
+    // only) was reported `both` because its doc quoted `mfi`'s bullish branch.
+    const quoted = `/**\n * mirror of mfi, which does total >= 60 ? 'bullish' : 'neutral'\n */\nexport class X { signalClass: total >= 60 ? 'bearish' : 'neutral' }`;
+    if (directionOf(quoted, 'directional') !== 'bearish-only') {
+      failures++;
+      console.log('  ✖ a BULLISH literal inside a comment must not make a class two-sided');
+    }
+    if (classifyClass(`/** mentions 'bullish' only in prose */\nexport class Y { return { signalClass: 'neutral' } }`) !== 'neutral-only') {
+      failures++;
+      console.log('  ✖ a direction word inside a comment must not mark a neutral class directional');
+    }
+
     // Ternary form is the one an anchored regex missed in the guard (2026-11-02).
     if (directionOf("signalClass = s >= 65 ? 'bullish' : s <= 35 ? 'bearish' : 'neutral'", 'directional') !== 'both') {
       failures++;

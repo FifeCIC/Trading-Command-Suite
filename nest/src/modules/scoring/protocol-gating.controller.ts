@@ -491,6 +491,17 @@ export class ProtocolGatingController {
       adaptiveTargetActive?: boolean;
       adaptiveTargetMax?: number | null;
       adaptiveTargetSamples?: number;
+      /**
+       * #1187 — the focus rank, or `null` for a protocol nobody is actively working on.
+       *
+       * ⚠️ PRESENTATION ONLY. Nothing in scoring, gating, sizing or execution reads it, and nothing
+       * should: a rank that changed what a protocol SCORES would make the number depend on the
+       * operator's attention. `1` is the first thing to look at.
+       *
+       * ⚠️ NOT `active`. On 2026-11-03 the owner activated every protocol, so `active` no longer
+       * separates "the ones we are shipping" from the rest — this does.
+       */
+      focusRank?: number | null;
       // Set after construction by async resolveSymbols() below
       resolvedSymbols?: string[];
     }> = [];
@@ -506,9 +517,14 @@ export class ProtocolGatingController {
     // Adaptive Target state for every protocol in ONE query — the Ladder badges cards from
     // this, so it must not be a per-protocol round trip.
     const adaptiveBySlug = new Map<string, { enabled: boolean; max: number | null; samples: number }>();
+    // #1187 — focus ranks ride the SAME query. One extra column on a read that already runs, rather
+    // than a second round trip for a field that only orders a list.
+    const focusBySlug = new Map<string, number>();
     try {
       const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
-        `SELECT slug, adaptiveTargetEnabled AS e, adaptiveTargetMax AS m, adaptiveTargetSamples AS s FROM protocol`,
+        `SELECT slug, adaptiveTargetEnabled AS e, adaptiveTargetMax AS m, adaptiveTargetSamples AS s,
+                focusRank AS f
+           FROM protocol`,
       );
       for (const r of rows ?? []) {
         adaptiveBySlug.set(String(r.slug), {
@@ -516,6 +532,7 @@ export class ProtocolGatingController {
           max: r.m == null ? null : Number(r.m),
           samples: Number(r.s ?? 0),
         });
+        if (r.f != null) focusBySlug.set(String(r.slug), Number(r.f));
       }
     } catch {
       // Column may not exist on an older DB — Adaptive Target simply reads as off.
@@ -631,6 +648,9 @@ export class ProtocolGatingController {
         })(),
         adaptiveTargetMax: adaptiveBySlug.get(id)?.max ?? null,
         adaptiveTargetSamples: adaptiveBySlug.get(id)?.samples ?? 0,
+        // #1187 — `null`, never `undefined`, so a caller can distinguish "not a focus protocol"
+        // from "the field was not sent". Presence of a number is the whole signal.
+        focusRank: focusBySlug.get(id) ?? null,
         // Placeholder — populated below by resolveSymbols()
         resolvedSymbols: [] as string[],
       });
@@ -728,6 +748,22 @@ export class ProtocolGatingController {
         (proto as any).resolvedSymbols = [];
       }
     }
+
+    // ── Focus first (#1187) ──
+    //
+    // The owner's ask: *"I want our focus ones to be more prominent in much of our other work and
+    // when I do manual testing."* Sorting here means every consumer of this list — the Ladder, the
+    // protocol pickers, the create forms — gets the same order without each one re-implementing it.
+    //
+    // ⚠️ Sorted LAST, after `resolvedSymbols` is attached, so a downstream consumer cannot receive a
+    // list that is focus-ordered but has no symbols. The tiebreak is `id` (the slug), so a LONG and
+    // its SHORT leg — which share a rank on purpose — have a stable, reproducible order.
+    protocols.sort((a, b) => {
+      const fa = a.focusRank ?? Number.MAX_SAFE_INTEGER;
+      const fb = b.focusRank ?? Number.MAX_SAFE_INTEGER;
+      if (fa !== fb) return fa - fb;
+      return String(a.id).localeCompare(String(b.id));
+    });
 
     return { protocols, count: protocols.length };
   }

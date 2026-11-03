@@ -14,7 +14,7 @@
  *   OUTPUT: trade placed via broker adapter, recorded to Trade table
  *   NEVER:  computes directive scores, applies risk gates, or decides direction
  */
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Mt5TradingService } from './mt5-trading.service';
 import { ConditionDetectorService } from '../directives/condition-detector.service';
@@ -103,6 +103,17 @@ export interface StrategySummary {
    * added to the schema but not to this list.
    */
   magic?: number | null;
+  /**
+   * ── NARRATIVE FLAGS (#1189) ─────────────────────────────────────────────────────────────────
+   * The theory PROSE is deliberately not carried on the list payload — the list is a table, prose
+   * does not fit, and shipping a few hundred chars per row for 67 rows to render one badge is the
+   * wrong trade. These two flags are the fact the table needs; the prose is one click away on the
+   * bot page. ⚠️ Named here as well as in the mapper because the mapper maps fields ONE AT A TIME.
+   */
+  theoryKind?: string | null;
+  hasTheory?: boolean;
+  /** null means the count could NOT be read — never the same thing as 0. */
+  trackRecordCount?: number | null;
   /**
    * ── OBSERVER SLOTS (#936 sim-TSL, #995 up-move exhaustion) ───────────────────────────────
    * ⚠️ SAME DEFECT CLASS AS `magic` ABOVE, measured live 2026-10-09 while enabling #995:
@@ -385,6 +396,27 @@ export class TradingStrategyService {
       );
     }
 
+    // ── Track-record counts (#1189) — ONE grouped query for the whole list ────────────────────
+    // ⚠️ Same best-effort contract as the watchlist block above, and for the same reason: a
+    // narrative count must never be able to blank the strategies table. A strategy with no count
+    // renders as 0, which is the fact; a FAILED query renders as null so the UI can say "cannot
+    // judge" instead of "none" — collapsing those two is the defect the track record exists to
+    // document in the first place.
+    const trackCounts = new Map<string, number>();
+    let trackCountsUnavailable = false;
+    try {
+      const grouped = await this.prisma.strategyTrackRecord.groupBy({
+        by: ['strategyId'],
+        _count: { _all: true },
+      });
+      for (const g of grouped) trackCounts.set(g.strategyId, g._count._all);
+    } catch (e) {
+      trackCountsUnavailable = true;
+      this.logger.warn(
+        `Track-record counts failed; the list will report "cannot judge": ${(e as Error)?.message}`,
+      );
+    }
+
     return strategies.map((s) => {
       const lastEval = s.evaluations?.[0];
       // Prefer the subscription protocols; fall back to the legacy single link.
@@ -444,6 +476,15 @@ export class TradingStrategyService {
         // reason: a field the engine reads off this summary is invisible if the summary drops it.
         exitBeforeUtc: (s as any).exitBeforeUtc ?? null,
         maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
+        // #1189 — THE NARRATIVE FLAGS. ⚠️ This mapper is a HAND-WRITTEN FIELD LIST, so a column not
+        // named here silently vanishes from the strategies list — that is exactly how `magic` was
+        // lost (#1018). `theory` itself is deliberately NOT carried: the list is a table, prose does
+        // not fit, and shipping a few hundred chars per row for 67 rows to render one badge is the
+        // wrong trade. `hasTheory` is the fact the table needs; the prose is one click away.
+        theoryKind: (s as any).theoryKind ?? null,
+        hasTheory: Boolean((s as any).theory && String((s as any).theory).trim().length > 0),
+        // null = the count could not be read (≠ 0, which is a real "nothing observed yet").
+        trackRecordCount: trackCountsUnavailable ? null : (trackCounts.get(s.id) ?? 0),
         lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
         lastSignal: lastEval?.signal ?? null,
         lastComposite: lastEval?.composite ?? null,
@@ -509,6 +550,92 @@ export class TradingStrategyService {
           orderBy: { evaluatedAt: 'desc' },
           take: 20,
         },
+        // TRACK RECORD (2026-11-03) — the factual half of a complete strategy, beside the theory
+        // (which is prose on the row itself). Newest first, capped: this is a reading surface, and a
+        // strategy accumulating hundreds of observations wants its own page, not a giant detail call.
+        trackRecord: {
+          orderBy: { observedAt: 'desc' },
+          take: 50,
+        },
+      },
+    });
+  }
+
+  /**
+   * getTrackRecord() — the observations recorded against ONE strategy.
+   *
+   * WHY a separate endpoint when `findOne` already inlines the newest 50: the strategy page shows the
+   * recent list, and a reader who wants the full history (or a filter by kind/status) needs a call
+   * that is not bounded by the detail payload. Same rows, different window.
+   */
+  async getTrackRecord(id: string, filters?: { kind?: string; status?: string }) {
+    return this.prisma.strategyTrackRecord.findMany({
+      where: {
+        strategyId: id,
+        ...(filters?.kind ? { kind: filters.kind } : {}),
+        ...(filters?.status ? { status: filters.status } : {}),
+      },
+      orderBy: { observedAt: 'desc' },
+      take: 500,
+    });
+  }
+
+  /**
+   * addTrackRecord() — record one observation.
+   *
+   * ⚠️ `headline` is capped at 300 chars by the column, so it is validated HERE rather than allowing
+   * a database error to surface as a 500. The rule the cap enforces: one plain sentence. A paragraph
+   * belongs in `detail`, and the numbers belong in `numbers` where a reader can re-check them —
+   * prose that carries its own arithmetic is the thing this table exists to stop.
+   */
+  async addTrackRecord(
+    id: string,
+    body: {
+      kind: string;
+      headline: string;
+      detail?: string | null;
+      numbers?: any;
+      source?: string | null;
+      status?: string;
+      theoryRef?: string | null;
+      issue?: number | null;
+      observedAt?: string;
+    },
+  ) {
+    const KINDS = ['contrast', 'live', 'data', 'behaviour'];
+    if (!KINDS.includes(body.kind)) {
+      throw new BadRequestException(`kind must be one of: ${KINDS.join(', ')}`);
+    }
+    if (!body.headline || body.headline.length > 300) {
+      throw new BadRequestException('headline is required and must be 300 characters or fewer');
+    }
+    const bot = await this.prisma.tradingStrategy.findUnique({ where: { id }, select: { id: true } });
+    if (!bot) throw new NotFoundException(`strategy ${id} not found`);
+    return this.prisma.strategyTrackRecord.create({
+      data: {
+        strategyId: id,
+        kind: body.kind,
+        headline: body.headline,
+        detail: body.detail ?? null,
+        numbers: body.numbers ?? undefined,
+        source: body.source ?? null,
+        status: body.status ?? 'noticed',
+        theoryRef: body.theoryRef ?? null,
+        issue: body.issue ?? null,
+        ...(body.observedAt ? { observedAt: new Date(body.observedAt) } : {}),
+      },
+    });
+  }
+
+  async updateTrackRecord(recordId: string, body: { status?: string; detail?: string; theoryRef?: string }) {
+    const row = await this.prisma.strategyTrackRecord.findUnique({ where: { id: recordId } });
+    if (!row) throw new NotFoundException(`track record ${recordId} not found`);
+    return this.prisma.strategyTrackRecord.update({
+      where: { id: recordId },
+      data: {
+        ...(body.status !== undefined ? { status: body.status } : {}),
+        ...(body.detail !== undefined ? { detail: body.detail } : {}),
+        ...(body.theoryRef !== undefined ? { theoryRef: body.theoryRef } : {}),
       },
     });
   }
@@ -2668,6 +2795,30 @@ export class TradingStrategyService {
         if ((s as any).exhaustionDecelPct !== undefined) {
           desired.exhaustionDecelPct = (s as any).exhaustionDecelPct;
         }
+        // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, same optional contract as #995 above.
+        //
+        // ⚠️ This must be in the CONVERGENCE path as well as the `create` path. Measured
+        // 2026-11-03: with the block present only on `create`, breaking the DB value and re-seeding
+        // reported `unchanged: 3` and left `simTslEnabled = 0` — a seeder that can INSERT a slot but
+        // can never REPAIR one, which is the database-seed-discipline §3 failure exactly.
+        //
+        // ⚠️ Converging this is safe in a way `active` is not: it arms an OBSERVER that writes
+        // `sim_tsl_event` rows and places no order, so the worst case of a stray seed run is extra
+        // measurement, not an unexpected trade. `active` keeps its one-way rule below.
+        if ((s as any).simTsl?.enabled !== undefined) {
+          desired.simTslEnabled = (s as any).simTsl.enabled;
+          desired.simTslActivationPct = (s as any).simTsl.activationPct ?? null;
+          desired.simTslDistancePct = (s as any).simTsl.distancePct ?? null;
+        }
+        // THEORY + KIND (2026-11-03) — the narrative half, on the same optional contract: absent
+        // means "no opinion", declared means "converge". ⚠️ Present in BOTH this path and the
+        // `create` block, or a re-seed could insert a theory and never repair one.
+        if ((s as any).theory !== undefined) {
+          desired.theory = (s as any).theory;
+        }
+        if ((s as any).theoryKind !== undefined) {
+          desired.theoryKind = (s as any).theoryKind;
+        }
         // ── `active` converges ONE WAY ONLY: `false` yes, `true` no ──────────────────────
         // DECISION (2026-10-14, primary)
         // WHAT:       On UPDATE a seeded `active: false` IS written; a seeded `active: true`
@@ -2773,6 +2924,19 @@ export class TradingStrategyService {
         continue;
       }
 
+      // ── DRY RUN STOPS HERE ──────────────────────────────────────────────────────────────────────
+      // ⚠️ MEASURED 2026-11-03: `POST /seed?dryRun=true` CREATED three bots. Every write in the
+      // update branch above is guarded, but this create branch was not — so the one code path a
+      // "dry run" exists to preview was the one path it performed. The trigger is ordinary: the
+      // seeder matches bots by NAME, so RENAMING a seeded bot makes it look absent, and the dry run
+      // then reported `created: 3` and actually inserted them — 58 bots where 55 were expected, with
+      // the three originals alive alongside their renames. A diagnostic that mutates is worse than
+      // no diagnostic: it reports the change and causes it.
+      if (dryRun) {
+        created++;
+        continue;
+      }
+
       // Create or find scoring strategy
       let scoringId: string | null = null;
       try {
@@ -2837,6 +3001,22 @@ export class TradingStrategyService {
             ...((s as any).exhaustionDecelPct !== undefined
               ? { exhaustionDecelPct: (s as any).exhaustionDecelPct }
               : {}),
+            // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, on the same terms as #995 above: present
+            // only when the seed declares it. ⚠️ This arms an OBSERVER, not a trailing stop — the
+            // recorder writes `action: 'recorded'` and places nothing. Without this block a fresh
+            // install would carry `simTslEnabled = 0` and the measurement would silently not exist,
+            // which is the same "configured, armed and blind" defect #936 records.
+            ...((s as any).simTsl?.enabled !== undefined
+              ? {
+                  simTslEnabled: (s as any).simTsl.enabled,
+                  simTslActivationPct: (s as any).simTsl.activationPct ?? null,
+                  simTslDistancePct: (s as any).simTsl.distancePct ?? null,
+                }
+              : {}),
+            // THEORY + KIND (2026-11-03) — the narrative half of a complete strategy. ⚠️ `undefined`
+            // means the seed has no opinion and the slot is left alone; declared means converge.
+            ...((s as any).theory !== undefined ? { theory: (s as any).theory } : {}),
+            ...((s as any).theoryKind !== undefined ? { theoryKind: (s as any).theoryKind } : {}),
           },
         });
 

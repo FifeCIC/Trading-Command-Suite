@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.150.0",
+  "version": "0.152.0",
   "description": "",
   "author": "",
   "private": true,
@@ -30,6 +30,7 @@
     "db:symbol-priority-ties": "node scripts/report-symbol-priority-ties.cjs",
     "audit:protocol-faults": "node scripts/audit-protocol-faults.cjs",
     "audit:protocol-faults:strict": "node scripts/audit-protocol-faults.cjs --strict",
+    "health:protocols": "node scripts/audit-protocol-health.cjs",
     "db:pnl-integrity": "node scripts/validate-pnl-integrity.cjs",
     "db:schema-drift": "node scripts/audit-schema-drift.cjs",
     "db:schema-drift:self-test": "node scripts/audit-schema-drift.cjs --self-test",

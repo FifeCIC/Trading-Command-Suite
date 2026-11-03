@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (113 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (116 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 121 CREATE TABLE statements.
+-- SCALE: 122 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -1339,6 +1339,8 @@ CREATE TABLE `trading_strategy` (
     `exhaustionDecelPct` DOUBLE NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
     `updatedAt` DATETIME(3) NOT NULL,
+    `theory` TEXT NULL,
+    `theoryKind` VARCHAR(20) NULL,
 
     UNIQUE INDEX `trading_strategy_magic_key`(`magic`),
     INDEX `trading_strategy_scoringStrategyId_idx`(`scoringStrategyId`),
@@ -2017,6 +2019,7 @@ CREATE TABLE `protocol` (
     `theory` TEXT NULL,
     `derivedFrom` VARCHAR(100) NULL,
     `isDefault` BOOLEAN NOT NULL DEFAULT false,
+    `focusRank` INTEGER NULL,
     `seasonalAffinity` JSON NULL,
     `highestScore` DOUBLE NULL,
     `adaptiveTargetEnabled` BOOLEAN NOT NULL DEFAULT false,
@@ -2342,6 +2345,27 @@ CREATE TABLE `broker_symbol_sync` (
     PRIMARY KEY (`brokerId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `strategy_track_record` (
+    `id` VARCHAR(36) NOT NULL,
+    `strategyId` VARCHAR(36) NOT NULL,
+    `observedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `kind` VARCHAR(20) NOT NULL,
+    `headline` VARCHAR(300) NOT NULL,
+    `detail` TEXT NULL,
+    `numbers` JSON NULL,
+    `source` VARCHAR(300) NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'noticed',
+    `theoryRef` VARCHAR(120) NULL,
+    `issue` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `updatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+
+    INDEX `strategy_track_record_strategyId_observedAt_idx`(`strategyId`, `observedAt`),
+    INDEX `strategy_track_record_status_idx`(`status`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `Directive` ADD CONSTRAINT `Directive_strategyId_fkey` FOREIGN KEY (`strategyId`) REFERENCES `Strategy`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -2437,4 +2461,7 @@ ALTER TABLE `protocol_directive_entry` ADD CONSTRAINT `protocol_directive_entry_
 
 -- AddForeignKey
 ALTER TABLE `symbol_protocol_assignment` ADD CONSTRAINT `symbol_protocol_assignment_protocolId_fkey` FOREIGN KEY (`protocolId`) REFERENCES `protocol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `strategy_track_record` ADD CONSTRAINT `strategy_track_record_strategyId_fkey` FOREIGN KEY (`strategyId`) REFERENCES `trading_strategy`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 

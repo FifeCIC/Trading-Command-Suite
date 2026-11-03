@@ -106,9 +106,23 @@ Add to `src/core/view-meta.js`, keyed by the FULL route path:
   },
 ```
 
-### 4c. Regenerate the editions mirrors — required after ANY nav-tree change
+### 4c. ~~Regenerate the editions mirrors~~ — OBSOLETE (measured 2026-11-03)
+
 ```powershell
-node scripts/generate-free-map.cjs; node scripts/generate-free-manifest.cjs; node scripts/generate-free-registry.cjs
+# node scripts/generate-free-map.cjs        ← DOES NOT EXIST
+# node scripts/generate-free-manifest.cjs   ← DOES NOT EXIST
+# node scripts/generate-free-registry.cjs   ← DOES NOT EXIST
+```
+
+⚠️ **These three files were deleted when the free edition was cancelled (2026-10-28,
+`docs/SETTLED-DECISIONS.md` row 96).** Running this step fails with `Cannot find module`, which
+reads like a broken repo but is just a stale instruction. There is **one build** now, so there is no
+editions mirror to regenerate.
+
+**The gate that DOES exist** — run this instead, and expect `0 without metadata`:
+
+```powershell
+node scripts/verify-view-meta-routes.cjs
 ```
 
 ### 5. Build and Verify

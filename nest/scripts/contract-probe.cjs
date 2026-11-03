@@ -1049,6 +1049,58 @@ async function main() {
     }
   }
 
+  // ── INV-SYMBOL-PRIORITY-TIE (#1181) ────────────────────────────────────
+  //
+  // ⚠️ WHY THIS IS NOT JUST A REPORT ANY MORE.
+  //
+  // `symbol_protocol_assignment` is unique on `(symbol, protocolId)`, NOT on `(symbol, priority)`, so
+  // two protocols may legitimately claim a symbol at the SAME priority. `resolveProtocolForSymbol()`
+  // now breaks the tie deterministically — `priority`, then `protocolId`, preferring an ACTIVE row
+  // (settled in speed-scan.service.ts, register row 130) — so the answer can no longer change with
+  // physical row order. What it CAN still be is ARBITRARY: if two protocols are active at the same
+  // winning priority, the one scoring that symbol is decided by a UUID string comparison.
+  //
+  // That is a policy nobody wrote, so it is worth a build-time complaint rather than a bug report
+  // later. A tie BELOW the winning priority is not flagged: it cannot affect the outcome, and a
+  // guard that fires on harmless conditions gets allowlisted.
+  //
+  // `npm --prefix nest run db:symbol-priority-ties` prints the same thing with more detail on demand.
+  if (!prisma) {
+    record('INV-SYMBOL-PRIORITY-TIE', 'no symbol has two ACTIVE protocols at the winning priority', true, 'skipped — no database connection', true);
+  } else {
+    try {
+      const rows = await prisma.$queryRawUnsafe(
+        `SELECT a.symbol AS symbol, a.priority AS priority, p.slug AS slug
+           FROM symbol_protocol_assignment a
+           JOIN protocol p ON p.id = a.protocolId
+          WHERE p.active = 1
+          ORDER BY a.symbol ASC, a.priority ASC, p.slug ASC`,
+      );
+      const bySymbol = new Map();
+      for (const r of rows) {
+        const s = String(r.symbol).toUpperCase();
+        if (!bySymbol.has(s)) bySymbol.set(s, []);
+        bySymbol.get(s).push({ priority: Number(r.priority), slug: String(r.slug) });
+      }
+      const ties = [];
+      for (const [symbol, list] of bySymbol) {
+        const min = Math.min(...list.map((x) => x.priority));
+        const atMin = list.filter((x) => x.priority === min);
+        if (atMin.length > 1) ties.push(`${symbol} @${min}: ${atMin.map((x) => x.slug).join(' | ')}`);
+      }
+      record('INV-SYMBOL-PRIORITY-TIE', 'no symbol has two ACTIVE protocols at the winning priority',
+        ties.length === 0,
+        ties.length === 0
+          ? `${bySymbol.size} symbol(s) assigned; every one has a single active protocol at its winning priority`
+          : `ARBITRARY WINNER: ${ties.join('; ')} — both are active at the same priority, so which one ` +
+            'scores the symbol is decided by a UUID comparison rather than by intent. Give one of them a ' +
+            'distinct priority in `nest/prisma/seed-symbol-onboarding.ts` (the seed is the durable home; a ' +
+            'DB-only edit is lost on reinstall). See #1181.');
+    } catch (err) {
+      record('INV-SYMBOL-PRIORITY-TIE', 'no symbol has two ACTIVE protocols at the winning priority', true, `skipped — ${err.message}`, true);
+    }
+  }
+
   // ── INV-SEED-DB-CONSISTENT (GATE 3: STATE) ─────────────────────────────
   //
   // ⚠️ ADDED 2026-09-11 — this is the check the build gates CANNOT make.
@@ -1294,6 +1346,25 @@ async function main() {
       // Generous give-up so a REGRESSED run still completes and is measured, rather than aborting
       // and losing the number. The predecessor of this guard took 214 s; timing it out at 60 s
       // would report "timeout" and hide the magnitude.
+      //
+      // #1183 — read the live-table counters BEFORE the run, so INV-BACKTEST-NO-WRITES below can
+      // compare them without a second backtest. A failure here is not fatal: the write guard reports
+      // SKIP rather than inventing a pass.
+      let beforeCounters = null;
+      try {
+        const rows = await prisma.$queryRawUnsafe(
+          `SELECT adaptiveTargetSamples AS s, adaptiveTargetMax AS m
+             FROM protocol WHERE slug = 'forex-session-v1'`,
+        );
+        beforeCounters = {
+          samples: Number(rows?.[0]?.s ?? 0),
+          max: Number(rows?.[0]?.m ?? 0),
+          // The WINDOW START for the write guard below. A timestamp is what makes attribution
+          // possible: a global count either side of the run cannot tell a simulated bar from a live
+          // tick, and comparing those two numbers was this guard's first, false-positive version.
+          atIso: new Date().toISOString().replace('T', ' ').replace('Z', ''),
+        };
+      } catch { /* the write guard will report SKIP */ }
       const t0 = Date.now();
       let res;
       try {
@@ -1322,11 +1393,12 @@ async function main() {
             `forex-session-v1 protocol; this is a DATA state, not a performance result)`, true);
         } else {
           let bars = 0;
+          let parsedBody = null;
           try {
-            const body = JSON.parse(res.body);
+            parsedBody = JSON.parse(res.body);
             // `scoreSeries` is truncated to the last 2000 in the RESPONSE, so it is a floor, not a
             // count. Reported for the per-bar figure only; the budget is on wall time.
-            bars = Array.isArray(body.scoreSeries) ? body.scoreSeries.length : 0;
+            bars = Array.isArray(parsedBody.scoreSeries) ? parsedBody.scoreSeries.length : 0;
           } catch { /* a body we cannot parse still got measured — report the time */ }
           const perBar = bars ? `${(ms / bars).toFixed(1)} ms/bar over the last ${bars} scored bars` : 'bar count unavailable';
           const ok = ms <= BUDGET_MS;
@@ -1338,6 +1410,103 @@ async function main() {
               'assuming the maths got slower: ' +
               '`SELECT SUM_ROWS_EXAMINED FROM performance_schema...` is unavailable to this user, so ' +
               'sample `information_schema.processlist` during a run instead.');
+
+          // ── INV-BACKTEST-EQUITY-MODE (#1176) ──
+          // A run's money figures are meaningless without the balance they were SIZED from. A
+          // compounding run and a flat run produce different `netPnl` for the SAME signals (measured
+          // 2026-11-03: 16,347 vs 9,728 on 316 identical trades), so the mode is what tells a reader
+          // which of the two numbers they are looking at. This ride-along costs no extra run.
+          {
+            const INV2 = 'INV-BACKTEST-EQUITY-MODE';
+            const mode = parsedBody?.execution?.equityMode;
+            record(INV2, 'a backtest declares the balance it sized from, defaulting to flat', mode === 'flat',
+              mode === 'flat'
+                ? "execution.equityMode = 'flat' — a caller that asked for nothing compounds nothing."
+                : `execution.equityMode = ${JSON.stringify(mode)} — a caller that did not request ` +
+                  "compounding must get 'flat'. #1176.");
+          }
+
+          // ── INV-BACKTEST-NO-WRITES (#1183) ──
+          //
+          // A backtest is a HISTORICAL SIMULATION. It must leave the live tables alone, and this
+          // measures the COUNTERS rather than the code path, so it survives any refactor of how
+          // scoring is invoked.
+          //
+          // ⚠️ WHY IT MATTERS BEYOND TIDINESS: `computeRarity()` percentiles a live composite against
+          // the protocol's last 365 days of `score_snapshot`, and `adaptiveTargetMax` is MONOTONIC.
+          // A run that writes pollutes its own history and can permanently raise a live protocol's
+          // target — measured 2026-11-02 at +320 rows on each of three counters for ONE 548-bar run.
+          //
+          // ⚠️ A GLOBAL DELTA CANNOT BE USED, and the first version of this guard made exactly that
+          // mistake: it compared whole-table counts either side of the run and FAILED on correct code
+          // (`adaptiveTargetSamples +6, score_snapshot +27, Score +47`) because the LIVE automation
+          // loop scored its own symbols during the same few seconds. A guard that cannot tell the
+          // simulator from a live tick is a false positive generator, and a false positive gets the
+          // guard allowlisted — which is worse than no guard.
+          //
+          // So it attributes to the run's OWN symbol + protocol, and separates by MAGNITUDE, which is
+          // what actually differs: a backtest writes ~1 row per scored bar (hundreds), a live tick
+          // writes at most a row or two for the same pair in a 2-minute window. `NOISE_FLOOR` is
+          // ~20× the observed live noise and ~1/27th of the expected defect, so neither end is close.
+          //
+          // ⚠️ The counters are read either side of the run the BUDGET guard above already performs,
+          // so this costs no extra backtest. A run that could not be timed (SKIP above) is not
+          // measured here either — reporting a pass on a run that did not happen is the defect this
+          // whole file exists to avoid.
+          {
+            const INV3 = 'INV-BACKTEST-NO-WRITES';
+            const NAME3 = 'a backtest leaves score_snapshot, Score and protocol.adaptiveTarget* untouched';
+            // A live tick for the same (symbol, protocol) is possible inside this window, so the
+            // comparison is against a floor rather than an exact zero. Stated, not hidden.
+            const NOISE_FLOOR = 20;
+            const SYM = 'USDJPY';
+            const PROTO = 'forex-session-v1';
+            const pairCounts = async (since) => {
+              const snap = await prisma.$queryRawUnsafe(
+                `SELECT COUNT(*) AS n FROM score_snapshot
+                  WHERE protocolId = ? AND symbol = ? AND snappedAt >= ?`,
+                PROTO, SYM, since,
+              );
+              const sc = await prisma.$queryRawUnsafe(
+                `SELECT COUNT(*) AS n FROM Score s
+                   JOIN symbol sym ON sym.id = s.symbolId
+                  WHERE s.strategyId = ? AND sym.ticker = ? AND s.timestamp >= ?`,
+                PROTO, SYM, since,
+              );
+              return { snapshots: Number(snap?.[0]?.n ?? 0), scores: Number(sc?.[0]?.n ?? 0) };
+            };
+            let measured = null;
+            try {
+              if (beforeCounters?.atIso) {
+                measured = await pairCounts(beforeCounters.atIso);
+                // The adaptive peak has no timestamp of its own, so its delta cannot be windowed.
+                // It is read for the message only; the two timestamped tables carry the verdict.
+                measured.adaptiveSamplesDelta = (await prisma.$queryRawUnsafe(
+                  `SELECT adaptiveTargetSamples AS s FROM protocol WHERE slug = ?`, PROTO,
+                ))?.[0]?.s;
+                measured.adaptiveSamplesDelta = Number(measured.adaptiveSamplesDelta ?? 0) - beforeCounters.samples;
+              }
+            } catch (err) {
+              record(INV3, NAME3, true, `skipped — could not read the counters: ${err.message}`, true);
+            }
+            if (measured) {
+              const barsScored = Number(parsedBody?.measuredPeriod?.bars ?? bars ?? 0);
+              const offending = [
+                measured.snapshots > NOISE_FLOOR ? `score_snapshot +${measured.snapshots}` : null,
+                measured.scores > NOISE_FLOOR ? `Score +${measured.scores}` : null,
+                measured.adaptiveSamplesDelta > NOISE_FLOOR ? `adaptiveTargetSamples +${measured.adaptiveSamplesDelta}` : null,
+              ].filter(Boolean);
+              record(INV3, NAME3, offending.length === 0, offending.length === 0
+                ? `wrote ${measured.snapshots} score_snapshot + ${measured.scores} Score row(s) for ${SYM}/${PROTO} ` +
+                  `against ${barsScored} bars scored — under the ${NOISE_FLOOR}-row noise floor, i.e. live ticks only. ` +
+                  'The run\'s own scoreSeries still carries its bars, so nothing a reader of the RUN loses.'
+                : `THE RUN WROTE TO LIVE TABLES: ${offending.join(', ')} for ${SYM}/${PROTO} against ` +
+                  `${barsScored} bars scored. A simulated bar is not market history: it corrupts ` +
+                  '`computeRarity()` (which percentiles live composites against `score_snapshot`) and can ' +
+                  'permanently raise the monotonic `adaptiveTargetMax`. Check that `fullScore()` passes ' +
+                  '`{ simulation: true }` to `scoreWithGating()`. #1183.');
+            }
+          }
         }
       }
     }

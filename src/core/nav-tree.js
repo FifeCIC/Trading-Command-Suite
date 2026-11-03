@@ -459,6 +459,10 @@ export const NAV_TREE = {
       // is an EXPERIMENT first: does seeing the exit reasons help, or is it noise? Register row 36
       // constrains how it may be framed (a thin funnel is not a fault), not whether it exists.
       { id: 'blocked-signals', label: 'Blocked Signals', icon: '🚦' },
+      // #1190 — the trend READING experiment (owner, 2026-11-03: *"do this as an experimental feature"*).
+      // Development because it is an experiment first: does seeing the fitted line and the invalidation
+      // level help you judge a score, or is it noise? Observation only — nothing in scoring reads it.
+      { id: 'trend-reading', label: 'Trend Reading', icon: '📐' },
       // 2026-09-28 — the CHANGE view. Every trading page rendered a snapshot; only PerformanceLab
       // had a time axis. This is Development because it is an EXPERIMENT first: does seeing the
       // period-over-period delta help you judge a system, or is it noise? Read-only by design —

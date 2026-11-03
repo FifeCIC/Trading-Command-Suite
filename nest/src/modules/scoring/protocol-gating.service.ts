@@ -567,7 +567,34 @@ export class ProtocolGatingService {
      * See the note at the NO_DATA exit for the full reasoning — the short version is that #758
      * stopped a phantom row being COUNTED and accidentally stopped real ticks being RECORDED.
      */
-    opts: { persistNoData?: boolean } = {},
+    /**
+     * ⚠️ `simulation` — this call is a HISTORICAL REPLAY, so nothing may be written to the live
+     * tables (#1183).
+     *
+     * OFF by default, because every existing caller is a live tick and the unsafe direction is the
+     * one that writes. The backtest opts in.
+     *
+     * WHY IT HAS TO EXIST: a backtest scores hundreds to thousands of bars by calling this method
+     * once per bar, and this method persists — `storeSnapshot()` writes a `score_snapshot` row, a
+     * `Score` row, and folds the composite into `protocol.adaptiveTargetSamples` (monotonic, so it
+     * never comes back down). MEASURED 2026-11-02: ONE 548-bar backtest added **+320 to all three**
+     * counters.
+     *
+     * TWO COSTS, and the first is a correctness bug rather than untidiness:
+     *   · `computeRarity()` percentiles the current composite against the last 365 days of
+     *     `score_snapshot` for the protocol. A backtest writes synthetic *historical* rows into that
+     *     same distribution, so the second run percentiles against scores the first run invented —
+     *     a lookahead leak the simulation cannot see, and a rarity figure (which drives sizing
+     *     bands) that describes the simulator's own output.
+     *   · `adaptiveTargetMax` is monotonic, so a historical bar above the stored peak permanently
+     *     raises the LIVE protocol's target. Latent today (`adaptiveTargetEnabled = 0` on all three
+     *     shipped protocols) but wrong the moment it is switched on.
+     *
+     * ⚠️ The backtest does NOT lose its data by setting this: the run's own `scoreSeries` carries
+     * every bar it scored (see `fullScoreSeries`). The live tables are a HISTORY; the run response
+     * is the RESULT, and they are different things.
+     */
+    opts: { persistNoData?: boolean; simulation?: boolean } = {},
   ): Promise<GatedScore> {
     // Scoring REQUIRES a protocol — the unscoped 'default' pipeline was removed
     // (2026-08-22). Without a protocol, scoring would run every directive as a
@@ -1214,7 +1241,7 @@ export class ProtocolGatingService {
 
             },
           },
-          { skipRaritySnapshot: true },
+          { skipRaritySnapshot: true, simulation: opts.simulation },
         );
       }
 
@@ -1494,7 +1521,7 @@ export class ProtocolGatingService {
         signalAtEarnable,
 
       },
-    });
+    }, { simulation: opts.simulation });
 
     return {
       symbol,
@@ -2057,8 +2084,22 @@ export class ProtocolGatingService {
         selected: string;
       };
     },
-    opts: { skipRaritySnapshot?: boolean } = {},
+    opts: { skipRaritySnapshot?: boolean; simulation?: boolean } = {},
   ): void {
+    // ── #1183 — A SIMULATION NEVER WRITES. Gated FIRST, at the one write point. ──
+    //
+    // `storeSnapshot()` is the single place `Score` and `score_snapshot` rows are created and the
+    // single caller of `observeAdaptiveTargetPeak()`, so refusing here closes the class for every
+    // writer rather than each of them remembering. That is the same argument #803 used for the
+    // `active = 0` kill switch immediately below, and it is deliberately ABOVE that check: a
+    // simulation must not even reach the lookup.
+    //
+    // ⚠️ This does NOT discard the run's data. The backtest keeps every bar it scored in its own
+    // `scoreSeries`; the live tables are a HISTORY of what the market did, and a simulated bar is
+    // not that. Mixing them corrupts `computeRarity()` (which percentiles today's composite against
+    // that history) and can permanently raise a protocol's monotonic `adaptiveTargetMax`.
+    if (opts.simulation) return;
+
     (async () => {
       // Canonical-symbol guard — only persist symbols this protocol resolves.
       const canonical = await this.isCanonicalProtocolSymbol(protocolId, symbol);

@@ -131,7 +131,30 @@ function classifyProtocol(p) {
 
   if (!active) return out; // a retired protocol scoring nothing is the correct state
 
-  if (assigned > 0 && stale > 0 && !grace) {
+  // ── FEED LIVENESS GATE (added 2026-11-03) ────────────────────────────────────────────────────
+  // MEASURED: with both MT5 bridges down, only 4 of 48 symbols had a bar inside 30 minutes (crypto),
+  // while EURUSD sat 21.8h old and the indices 20.5 DAYS old. Every protocol then scored HOLD with a
+  // frozen composite — four protocols returned the IDENTICAL value on every tick — and this audit
+  // dutifully reported 8 high-severity "cannot become a signal" findings that were entirely dead
+  // feed. A protocol cannot be faulted for failing to read a market whose data stopped arriving, so
+  // when its OWN assigned symbols have no recent bar the data-dependent classes are withheld and a
+  // single STALE-DATA fact is reported instead. DIRECTION-STARVED still fires: that one is computed
+  // from CONFIG and needs no bars.
+  const feedAge = p.feedAgeMinutes == null ? null : Number(p.feedAgeMinutes);
+  const feedDead = feedAge != null && Number.isFinite(feedAge) && feedAge > STALE_FEED_MINUTES;
+  if (feedDead) {
+    out.push({
+      cls: 'STALE-DATA',
+      severity: 'low',
+      slug: p.slug,
+      detail:
+        `newest bar across its assigned symbols is ${Math.round(feedAge)} min old ` +
+        `(> ${STALE_FEED_MINUTES} min) — no direction can be expected from a dead feed, so the ` +
+        `data-dependent classes are withheld rather than reported as protocol faults`,
+    });
+  }
+
+  if (assigned > 0 && stale > 0 && !grace && !feedDead) {
     out.push({
       cls: 'STALE-SCORE',
       severity: 'critical',
@@ -139,7 +162,7 @@ function classifyProtocol(p) {
       detail: `${stale} of ${assigned} assigned symbol(s) produced NO snapshot in the window — the protocol is active but the score has stopped`,
     });
   }
-  if (entries > 0 && rows === 0 && !grace) {
+  if (entries > 0 && rows === 0 && !grace && !feedDead) {
     out.push({
       cls: 'NO-SNAPSHOTS',
       severity: 'critical',
@@ -147,7 +170,7 @@ function classifyProtocol(p) {
       detail: 'active with directive entries but zero snapshots in the window',
     });
   }
-  if (rows >= 20 && directional === 0) {
+  if (rows >= 20 && directional === 0 && !feedDead) {
     // ⚠️ Deliberately NOT a finding. Kept as a computed value so the report can say so out loud.
     // Measured 2026-11-02: `xau-speed-m15` tripped this on a 4h window with 0 of 85 directional,
     // and had emitted 24 STRONG_BUY in 24h. A quiet window is not a fault; the long-horizon
@@ -167,7 +190,7 @@ function classifyProtocol(p) {
   // 24h, not the window: a burst-signalling protocol is healthy, and the 4h window called it broken.
   const rows24 = Number(p.snapshotRows24h) || 0;
   const dir24 = Number(p.directionalRows24h) || 0;
-  if (rows24 >= 20 && dir24 === 0) {
+  if (rows24 >= 20 && dir24 === 0 && !feedDead) {
     out.push({
       cls: 'NO-DIRECTION-24H',
       severity: 'high',
@@ -176,7 +199,7 @@ function classifyProtocol(p) {
     });
   }
   // QUIET is the healthy-but-silent state, named so it is not mistaken for broken.
-  if (rows === 0 && Number(p.scoredTicks) > 0 && !grace) {
+  if (rows === 0 && Number(p.scoredTicks) > 0 && !grace && !feedDead) {
     out.push({
       cls: 'QUIET',
       severity: 'low',
@@ -277,6 +300,39 @@ const ENTRY_THRESHOLD = 6;
 const ENTRY_THRESHOLD_SOURCE = 'nest/src/modules/scoring/protocol-gating.service.ts (ENTRY_THRESHOLD)';
 
 /**
+ * How old a protocol's newest bar may be before its feed is treated as DEAD.
+ *
+ * 30 minutes because the finest scored timeframe here is 1m and the audit's shortest window is 4h:
+ * a symbol with no bar inside 30 minutes has missed at least 30 consecutive bars, which is a feed
+ * failure, not a quiet market. Measured 2026-11-03 (both MT5 bridges down): crypto sat at 2-3 min
+ * while EURUSD was 1,309 min and the index CFDs 29,537 min old — there is no overlap between a live
+ * feed and a dead one at this threshold.
+ */
+const STALE_FEED_MINUTES = 30;
+
+/**
+ * `watchlist.symbols` holds TWO shapes in the same column: a plain comma-separated string
+ * (`"XAUUSD"`) and a JSON array (`'["AUDUSD","EURUSD"]'`). Splitting naively leaves `["TSLA"]`,
+ * which matches no ticker — that silently produced a NULL feed age for every JSON-shaped watchlist
+ * and let four dead-feed protocols be reported as failing anyway.
+ */
+function splitWatchlistSymbols(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return [];
+  if (s.startsWith('[')) {
+    try {
+      const arr = JSON.parse(s);
+      if (Array.isArray(arr)) {
+        return arr.map((x) => (typeof x === 'string' ? x : x && x.ticker)).filter(Boolean);
+      }
+    } catch {
+      // fall through to the plain-text form
+    }
+  }
+  return s.replace(/[[\]"']/g, '').split(/[,\n;|]/).map((x) => x.trim()).filter(Boolean);
+}
+
+/**
  * The four signal labels that carry a DIRECTION.
  *
  * ⚠️ `STRONG_BUY` / `STRONG_SELL` are SEPARATE values, not prefixes of `BUY` / `SELL`. Measured
@@ -302,9 +358,26 @@ function readNeutralOnlySet(filePath) {
   // quoted words from the DOC COMMENT, which made the set wrong while looking plausible.
   const start = src.indexOf('new Set<string>(');
   if (start < 0) throw new Error(`NEUTRAL_ONLY_DIRECTIVES set not found in ${p} — refusing to judge`);
-  const body = src.slice(start);
+  // ⚠️ BOUND the slice at the set's own closing `])`. Slicing to END OF FILE (the 2026-11-03 form)
+  // also swallowed every quoted id in DIRECTIVE_DIRECTION and DIRECTIVE_CAPABILITY_COUNTS below it,
+  // so all 145 directives looked neutral-only, allowedDirCapacity came out 0 for EVERY protocol,
+  // and this audit reported "cannot signal in any market" for the whole system. The pure classifier
+  // self-tested fine throughout — the bug was in the PARSER, which no self-test exercised.
+  const end = src.indexOf('])', start);
+  if (end < 0) throw new Error(`NEUTRAL_ONLY_DIRECTIVES set is not closed in ${p} — refusing to judge`);
+  const body = src.slice(start, end);
   const ids = new Set([...body.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]));
   if (ids.size === 0) throw new Error(`parsed 0 neutral-only ids from ${p} — refusing to judge`);
+
+  // Cross-check against the file's OWN declared count. A parser that silently over-matches cannot
+  // disagree with the number the generator wrote, so this turns a plausible-looking wrong set into
+  // an error instead of a catastrophic finding.
+  const declared = /neutralOnly:\s*(\d+)/.exec(src);
+  if (declared && Number(declared[1]) !== ids.size) {
+    throw new Error(
+      `parsed ${ids.size} neutral-only ids but the file declares ${declared[1]} — parser is wrong, refusing to judge`,
+    );
+  }
   return ids;
 }
 
@@ -375,6 +448,20 @@ function selfTest() {
   ok('QUIET is LOW severity — it is a state, not a fault', one({ snapshotRows: 0, directionalRows24h: 24 }).every((f) => f.cls !== 'QUIET' || f.severity === 'low'));
   ok('QUIET does not fire when the protocol is not ticking at all', !one({ snapshotRows: 0, scoredTicks: 0 }).some((f) => f.cls === 'QUIET'));
 
+  // STALE-DATA — a dead feed must not be reported as a failing protocol. Added 2026-11-03 after both
+  // bridges went down and every protocol was reported "cannot become a signal" on frozen bars.
+  ok(
+    'a DEAD feed suppresses NO-DIRECTION-24H and reports STALE-DATA instead',
+    one({ directionalRows24h: 0, feedAgeMinutes: 1309 }).every((f) => f.cls === 'STALE-DATA'),
+  );
+  ok('a LIVE feed still reports NO-DIRECTION-24H', one({ directionalRows24h: 0, feedAgeMinutes: 2 }).some((f) => f.cls === 'NO-DIRECTION-24H'));
+  ok('a DEAD feed suppresses STALE-SCORE (the score stopped because the data did)', one({ staleSymbols: 2, feedAgeMinutes: 1309 }).every((f) => f.cls === 'STALE-DATA'));
+  ok('a DEAD feed suppresses QUIET', one({ snapshotRows: 0, scoredTicks: 10, feedAgeMinutes: 1309 }).every((f) => f.cls === 'STALE-DATA'));
+  ok('a feed EXACTLY at the threshold is still live, not dead', one({ directionalRows24h: 0, feedAgeMinutes: STALE_FEED_MINUTES }).some((f) => f.cls === 'NO-DIRECTION-24H'));
+  ok('an UNKNOWN feed age does not suppress findings (cannot judge is not "fine")', one({ directionalRows24h: 0 }).some((f) => f.cls === 'NO-DIRECTION-24H'));
+  ok('a DEAD feed does NOT suppress DIRECTION-STARVED — that is computed from config, not bars', one({ allowedDirCapacity: 10, signalDenominator: 1000, feedAgeMinutes: 1309 }).some((f) => f.cls === 'DIRECTION-STARVED'));
+  ok('STALE-DATA is LOW severity — a dead feed is an environment fact, not a protocol fault', one({ directionalRows24h: 0, feedAgeMinutes: 1309 }).every((f) => f.cls !== 'STALE-DATA' || f.severity === 'low'));
+
   // DIRECTION-STARVED — structural, no window involved.
   ok(
     'DIRECTION-STARVED fires when direction-capable capacity is below the entry threshold',
@@ -388,6 +475,59 @@ function selfTest() {
     'DIRECTION-STARVED cannot judge without a breakdown (no keys) and must not pass silently as ok',
     one({}).every((f) => f.cls !== 'DIRECTION-STARVED'),
   );
+
+  // ── THE PARSER, not just the classifier (added 2026-11-03) ──────────────────────────────────
+  // The pure classifier self-tested fine while the PARSER was reading the whole file, so every
+  // protocol's capacity came out 0 and the audit claimed the entire system could not signal. A
+  // guard that only tests the function it was written for leaves the input path unguarded.
+  {
+    const os = require('os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-faults-'));
+    const synthetic = [
+      'export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([',
+      "  'neutral-a',",
+      "  'neutral-b',",
+      ']);',
+      'export const DIRECTIVE_CAPABILITY_COUNTS = { neutralOnly: 2 };',
+      'export const DIRECTIVE_DIRECTION = {',
+      "  'directional-x': { direction: 'bullish' },",
+      '};',
+    ].join('\n');
+    const good = path.join(dir, 'good.ts');
+    fs.writeFileSync(good, synthetic);
+    const parsed = readNeutralOnlySet(good);
+    ok('the neutral-only PARSER reads the set body and nothing after it', parsed.size === 2 && parsed.has('neutral-a') && parsed.has('neutral-b'));
+    ok('the parser does NOT swallow ids from DIRECTIVE_DIRECTION below the set', !parsed.has('directional-x'));
+
+    const mismatched = path.join(dir, 'bad.ts');
+    fs.writeFileSync(mismatched, synthetic.replace('neutralOnly: 2', 'neutralOnly: 9'));
+    let threw = false;
+    try { readNeutralOnlySet(mismatched); } catch { threw = true; }
+    ok('the parser REFUSES a set that disagrees with the file\'s declared count', threw);
+
+    const missing = path.join(dir, 'missing.ts');
+    fs.writeFileSync(missing, 'export const X = 1;');
+    let threw2 = false;
+    try { readNeutralOnlySet(missing); } catch { threw2 = true; }
+    ok('the parser refuses a file with no set at all rather than returning empty', threw2);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
+  // ── watchlist.symbols holds TWO shapes in ONE column ─────────────────────────────────────────
+  // Measured 2026-11-03: some rows are plain text ("XAUUSD"), others a JSON array
+  // ('["AUDUSD","EURUSD"]'). Splitting naively leaves '["TSLA"]', which matches no ticker, so every
+  // JSON-shaped watchlist produced a NULL feed age and four dead-feed protocols were still reported
+  // as failing. Both shapes must resolve to the same ticker list.
+  {
+    const plain = splitWatchlistSymbols('XAUUSD');
+    const json = splitWatchlistSymbols('["AUDUSD","EURUSD","USDJPY"]');
+    ok('a plain-text watchlist parses to its single ticker', plain.length === 1 && plain[0] === 'XAUUSD');
+    ok('a JSON-array watchlist parses to every ticker', json.length === 3 && json.includes('EURUSD'));
+    ok('a JSON-array watchlist yields NO bracketed token', json.every((s) => !s.includes('[') && !s.includes('"')));
+    ok('a multi-symbol plain-text watchlist still splits', splitWatchlistSymbols('A,B;C').length === 3);
+    ok('an empty watchlist yields nothing rather than a fake ticker', splitWatchlistSymbols('').length === 0 && splitWatchlistSymbols(null).length === 0);
+    ok('a malformed JSON array falls back to text instead of throwing', splitWatchlistSymbols('["A"').length === 1);
+  }
 
   // ...and STAY SILENT when it should not.
   ok('a healthy protocol produces NO findings', one({}).length === 0);
@@ -568,8 +708,53 @@ function main() {
   }).filter((f) => Number(f.rows) >= 0);
 
   const unable = [...capacity].filter(([, c]) => c.unable).map(([slug]) => slug);
+
+  // ── FEED AGE, per protocol, from the UNION of both symbol sources ────────────────────────────
+  // A protocol's symbols come from `symbol_protocol_assignment` OR `watchlist.symbols` (a plain
+  // comma-separated string, NOT json). Reading only the assignment table left every watchlist-fed
+  // protocol with a NULL feed age, so the liveness gate could not fire and the dead-feed protocols
+  // it exists to excuse were reported as failing anyway.
+  const barAgeBySymbol = new Map(
+    parseTsv(query(`
+      SELECT sy.ticker AS ticker,
+             TIMESTAMPDIFF(MINUTE, MAX(m.timestamp), UTC_TIMESTAMP()) AS ageMinutes
+      FROM symbol sy JOIN marketbar m ON m.symbolId = sy.id
+      GROUP BY sy.ticker
+    `, conn)).map((r) => [String(r.ticker).toUpperCase(), Number(r.ageMinutes)]),
+  );
+  const feedAge = new Map();
+  {
+    const symsByProtocol = new Map();
+    const addSym = (slug, sym) => {
+      const k = String(slug);
+      if (!symsByProtocol.has(k)) symsByProtocol.set(k, new Set());
+      const s = String(sym || '').trim().toUpperCase();
+      if (s) symsByProtocol.get(k).add(s);
+    };
+    for (const a of assignments) addSym(a.slug, a.symbol);
+    for (const w of parseTsv(query(`
+      SELECT pu.slug AS slug, w.symbols AS symbols
+      FROM watchlist w JOIN protocol pu ON pu.id = w.protocolId
+    `, conn))) {
+      for (const s of splitWatchlistSymbols(w.symbols)) addSym(w.slug, s);
+    }
+    for (const p of protocols) {
+      const syms = symsByProtocol.get(String(p.slug));
+      if (!syms || syms.size === 0) continue; // no symbols: cannot judge, so do not suppress
+      const ages = [...syms].map((s) => barAgeBySymbol.get(s)).filter((n) => Number.isFinite(n));
+      // NEWEST bar across the protocol's symbols (min age) — one live symbol is enough to score.
+      if (ages.length) feedAge.set(p.slug, Math.min(...ages));
+    }
+  }
+
   const findings = sortFindings([
-    ...protocols.flatMap((p) => classifyProtocol({ ...p, ...(capacity.get(p.slug) || {}) })),
+    ...protocols.flatMap((p) =>
+      classifyProtocol({
+        ...p,
+        ...(capacity.get(p.slug) || {}),
+        feedAgeMinutes: feedAge.has(p.slug) ? feedAge.get(p.slug) : null,
+      }),
+    ),
     ...classifyAssignments(assignments),
     ...classifyFeeds(feeds),
   ]);

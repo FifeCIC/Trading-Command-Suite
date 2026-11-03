@@ -14,7 +14,7 @@
  * INDETERMINATE classes (a `signalClass` assigned from a variable or call) are NOT listed and are
  * treated as direction-capable: "cannot judge" must never be silently read as "neutral".
  *
- * Scanner: 144 directive(s) — 32 neutral-only, 111 directional, 1 indeterminate.
+ * Scanner: 145 directive(s) — 33 neutral-only, 112 directional, 0 indeterminate.
  */
 export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
   'basic-weekly-rhythm',
@@ -39,6 +39,7 @@ export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
   'position-size-confidence',
   'position-size-kelly',
   'price-above-sma',
+  'regime-shift-exit',
   'rollover-risk',
   'session-timing-filter',
   'spy-month-end-rebalancing',
@@ -52,14 +53,14 @@ export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
 ]);
 
 export const DIRECTIVE_CAPABILITY_COUNTS = {
-  total: 144,
-  neutralOnly: 32,
-  directional: 111,
-  indeterminate: 1,
-  both: 99,
-  bullishOnly: 11,
-  bearishOnly: 1,
-  neither: 32,
+  total: 145,
+  neutralOnly: 33,
+  directional: 112,
+  indeterminate: 0,
+  both: 97,
+  bullishOnly: 13,
+  bearishOnly: 2,
+  neither: 33,
 } as const;
 
 /**
@@ -99,7 +100,7 @@ export const DIRECTIVE_DIRECTION: Readonly<Record<string, {
   'bulls-bears-power': { direction: 'both', sharedInputs: [] },
   'cad-usd-oil-correlation': { direction: 'both', sharedInputs: ['dxyValue', 'eurusdValue'] },
   'candle-pressure': { direction: 'both', sharedInputs: [] },
-  'cci': { direction: 'both', sharedInputs: [] },
+  'cci': { direction: 'bullish-only', sharedInputs: [] },
   'chaikin-mf': { direction: 'both', sharedInputs: [] },
   'chandelier-exit': { direction: 'both', sharedInputs: [] },
   'confluence-reversal-combo': { direction: 'bullish-only', sharedInputs: [] },
@@ -151,6 +152,7 @@ export const DIRECTIVE_DIRECTION: Readonly<Record<string, {
   'market-structure-bos': { direction: 'both', sharedInputs: [] },
   'mean-reversion': { direction: 'both', sharedInputs: [] },
   'mfi': { direction: 'bullish-only', sharedInputs: [] },
+  'mfi-overbought': { direction: 'bearish-only', sharedInputs: [] },
   'micro-sr-levels': { direction: 'both', sharedInputs: [] },
   'midweek-momentum': { direction: 'both', sharedInputs: [] },
   'momentum-continuation-combo': { direction: 'bullish-only', sharedInputs: [] },
@@ -183,12 +185,12 @@ export const DIRECTIVE_DIRECTION: Readonly<Record<string, {
   'price-action': { direction: 'both', sharedInputs: [] },
   'price-time-gap': { direction: 'both', sharedInputs: [] },
   'range-contraction': { direction: 'both', sharedInputs: [] },
-  'regime-shift-exit': { direction: 'indeterminate', sharedInputs: [] },
+  'regime-shift-exit': { direction: 'none', sharedInputs: [] },
   'resistance-levels-strategy': { direction: 'both', sharedInputs: [] },
   'rollover-risk': { direction: 'none', sharedInputs: [] },
   'rsi-divergence': { direction: 'both', sharedInputs: [] },
   'rsi-overbought': { direction: 'bearish-only', sharedInputs: [] },
-  'rsi-oversold': { direction: 'both', sharedInputs: [] },
+  'rsi-oversold': { direction: 'bullish-only', sharedInputs: [] },
   'session-open-effect': { direction: 'both', sharedInputs: [] },
   'session-timing-filter': { direction: 'none', sharedInputs: [] },
   'sigma-score': { direction: 'both', sharedInputs: [] },

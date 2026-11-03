@@ -1826,6 +1826,25 @@ model TradingStrategy {
   // scoringStrategy ScoringStrategy? @relation(fields: [scoringStrategyId], references: [id])
   evaluations StrategyEvaluation[]
   protocols   StrategyProtocol[]
+  trackRecord StrategyTrackRecord[]
+
+  // ── TRACK-RECORD FRAMING (2026-11-03, owner request) ──────────────────────────────────────
+  //
+  // `theory` is the INTENT — the prose a human reads to understand what this complete strategy is
+  // for. It mirrors `protocol.theory` (#689) deliberately: one word for one idea, so the pair of
+  // concepts (intent vs evidence) is learned once. A LONG+SHORT pair is ONE strategy, so its
+  // rationale belongs on the BOT, not split across two protocol rows.
+  //
+  // ⚠️ `theoryKind` exists so "no thesis" is SAYABLE. `control` means deliberately no directional
+  // thesis — it is a valid, visible answer, not a blank. The four kinds are the entire vocabulary:
+  //   asymmetry     — the instrument moves differently up than down; each leg harvests one behaviour
+  //   participation — no direction predicted; take whichever side is currently winning
+  //   regime        — same instrument, two clocks; each leg owns a session behaviour
+  //   control       — no thesis; exists to prove the machinery works
+  // Manufacturing a plausible-sounding theory for a strategy that has none is the prose form of
+  // this repo's worst bug: a confident claim with nothing behind it, which stops anyone looking.
+  theory        String?  @db.Text
+  theoryKind    String?  @db.VarChar(20)
 
   @@index([scoringStrategyId])
   @@map("trading_strategy")
@@ -2656,6 +2675,23 @@ model Protocol {
   theory               String?  @db.Text  // #689 — written intent: target behaviour, why these groups, what a good day looks like
   derivedFrom          String?  @db.VarChar(100)  // Parent protocol slug — links variants for A/B testing
   isDefault            Boolean  @default(false)
+  // ── FOCUS RANK (2026-11-03, owner request) — "which of these am I actually working on?" ──
+  //
+  // NULL = not a focus protocol, which is every protocol except the handful the owner has
+  // chosen to ship and tune. An INTEGER rather than a boolean because the owner asked for
+  // "some form of priority status": 1 is the first thing to look at, 2 next, and a tie is
+  // expressible without a second column.
+  //
+  // ⚠️ It orders SURFACES, not trading. Nothing in scoring, gating, sizing or execution reads
+  // this column, and nothing should: a focus rank that changed what a protocol SCORES would
+  // make the number depend on the operator's attention. Its only job is to put the few
+  // protocols under active work at the top of lists and to badge them, so a manual test is not
+  // performed against a scrubbed-out protocol by mistake.
+  //
+  // ⚠️ `active` is NOT the same question and must not be conflated with it: `active = 0` is a
+  // kill switch for score writes (#803). When the owner activated every protocol on 2026-11-03,
+  // `active` stopped distinguishing anything — which is exactly the gap this column fills.
+  focusRank            Int?
   seasonalAffinity     Json?                                      // monthly weights + date ranges
   highestScore         Float?                                     // #600 — peak composite ever recorded (survives Score pruning)
   // ── Adaptive Target (2026-09-10) — "realistic ceiling" ──
@@ -3116,3 +3152,45 @@ model StrategyRegistry {
 
     @@map("broker_symbol_sync")
   }
+
+/// A strategy's TRACK RECORD — factual behaviour and the evidence for it (2026-11-03).
+///
+/// ⚠️ THREE HOMES, ONE MEANING EACH. Do not confuse them:
+///   · `trading_strategy.theory`  — what the strategy INTENDS. Prose, human, rarely changes.
+///   · `strategy_track_record`    — what it ACTUALLY DID, as one plain sentence + the numbers.
+///   · `src/data/theories.js`     — a falsifiable CLAIM with a named refutation test.
+/// The lifecycle is noticed → testing → settled, and `theoryRef` / `issue` are the outward links
+/// when an entry graduates. Nothing is ever edited into a decision: the entry stays, the links grow.
+///
+/// ⚠️ `headline` is REQUIRED and must be one sentence a non-specialist can read. The owner's words:
+/// *"some people like things put into a more contextual reading approach rather than the
+/// scientific/maths/algorithms"*. `numbers` carries the same fact in structured form so the
+/// sentence stays CHECKABLE rather than merely persuasive.
+model StrategyTrackRecord {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  strategyId  String   @db.VarChar(36)
+  observedAt  DateTime @default(now()) @db.DateTime(3)
+  /// contrast | live | data | behaviour
+  kind        String   @db.VarChar(20)
+  /// ONE plain sentence. Prose first; the numbers are the proof, not the message.
+  headline    String   @db.VarChar(300)
+  detail      String?  @db.Text
+  /// The measurement behind the sentence, structured so a reader can re-check it.
+  numbers     Json?
+  /// How it was produced — a script, an endpoint, a pair of run ids. Named, never inferred.
+  source      String?  @db.VarChar(300)
+  /// noticed | testing | settled
+  status      String   @default("noticed") @db.VarChar(20)
+  /// id in src/data/theories.js once the observation became a falsifiable claim.
+  theoryRef   String?  @db.VarChar(120)
+  issue       Int?
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime(3)
+
+  strategy    TradingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([strategyId, observedAt])
+  @@index([status])
+  @@map("strategy_track_record")
+}
+

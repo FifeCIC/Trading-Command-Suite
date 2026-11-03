@@ -124,6 +124,15 @@ export const BOT_RULES: BotRule[] = [
     summary: 'Free text for humans.' },
   { field: 'version', label: 'Version', stage: 'identity', enforcement: 'display-only', enforcedBy: null,
     summary: 'Semver tag used by the A/B snapshot machinery (#295).' },
+  // #1189 — the narrative half of a complete strategy. ⚠️ `display-only` and NOT `none`: `none` would
+  // say "nothing reads it", which is false — the bot page renders it, and an operator reads it before
+  // deciding whether to trust the bot. What is TRUE is that no scoring, gating, sizing or dispatch
+  // path branches on either field. Do not promote these to `live` without a caller that branches on
+  // them; a rule claiming enforcement it does not have is the defect this registry exists to catch.
+  { field: 'theory', label: 'Theory', stage: 'identity', enforcement: 'display-only', enforcedBy: null,
+    summary: 'Prose: what this strategy is FOR, what a good day looks like, its known weakness. Seeded (conditional), rendered on the bot page.', },
+  { field: 'theoryKind', label: 'Theory kind', stage: 'identity', enforcement: 'display-only', enforcedBy: null,
+    summary: 'asymmetry | participation | regime | control — what TYPE of claim the theory makes. `control` means it predicts nothing, deliberately.', },
 
   // ── scope ──────────────────────────────────────────────────────────────────────────────────
   { field: 'symbol', label: 'Symbol', stage: 'scope', enforcement: 'live',

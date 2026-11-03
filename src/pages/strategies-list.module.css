@@ -96,6 +96,28 @@
   color: var(--ink);
 }
 
+/* ── Theory + track record markers (#1189) ────────────────────────────────────────────────────
+   The KIND of claim a bot makes, shown only where a theory exists — the fleet-wide absence is
+   counted in the header instead of printed on every row. `control` is dashed because it predicts
+   nothing: a deliberate design, and it must not read as a measured claim. */
+.chipTheory {
+  border: 1px dashed var(--border-strong);
+  color: var(--ink-soft);
+}
+
+.chipTheoryClaim {
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+}
+
+/* Observations recorded against this bot. Tabular figures so the column of counts lines up. */
+.chipObs {
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
 .detailDesc { font-size: 0.72rem; color: var(--ink-soft); margin: 0 0 0.5rem; }
 .detailGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 1rem; font-size: 0.7rem; color: var(--ink-soft); }
 .detailGrid strong { color: var(--ink); }

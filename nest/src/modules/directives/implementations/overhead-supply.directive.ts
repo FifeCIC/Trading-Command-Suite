@@ -59,7 +59,17 @@ export class OverheadSupplyPressureDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 100;
   readonly minScore = 1;
-  readonly minBars = { '1d': 56 };
+  /**
+   * ⚠️ FIXED 2026-11-03 — was the literal `56`, while the guard below refuses below `MIN_BARS`
+   * (`LOOKBACK + 8` = 58). Measured consequence: **71 ticks** of `Insufficient data: need 58 bars,
+   * have 56` in `xau-short-m15`, i.e. 100 maxScore of permanent dead capacity in an active protocol.
+   *
+   * This is the exact class `validate-directive-bar-requirement.cjs` exists for, and it did NOT
+   * catch it: the declared value looked plausible and the internal requirement is a SUM of a named
+   * constant, which the static scan does not evaluate. So the declaration now DERIVES from the same
+   * constant — a literal here can never disagree with the guard again.
+   */
+  readonly minBars = { '1d': MIN_BARS };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
   readonly params = PARAMS;

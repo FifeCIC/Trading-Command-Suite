@@ -933,6 +933,18 @@ export class ProtocolDbService implements OnModuleInit {
             winRateTarget: config.winRateTarget,
             idealFor: config.idealFor,
             derivedFrom: (config as any).derivedFrom ?? null,
+            // #1187 — FOCUS RANK. Converged in BOTH clauses on purpose.
+            //
+            // ⚠️ Why this is seeded and `active` is not (the DECISION above): `active` is a
+            // per-protocol kill switch the operator flips while working, so seeding it would revert
+            // their choice. `focusRank` answers "which protocols are we shipping and tuning", which
+            // is a property of the PACKAGE, not of a working session — and the owner's requirement is
+            // that it survives a reinstall. `?? null` means a protocol that stops declaring a rank
+            // has it CLEARED on re-seed, which is the same seed→database convergence rule as #833.
+            focusRank: config.focusRank ?? null,
+            // A NEW row gets the declared theory, or NULL when the seed has no opinion — there is
+            // nothing to preserve on insert. See the `update` clause for why that one is conditional.
+            theory: config.theory ?? null,
             isDefault: true,
           },
           update: {
@@ -945,6 +957,25 @@ export class ProtocolDbService implements OnModuleInit {
             winRateTarget: config.winRateTarget,
             idealFor: config.idealFor,
             derivedFrom: (config as any).derivedFrom ?? null,
+            // ⚠️ In the `update` clause too — an upsert that omits it here can insert a rank but can
+            // never REPAIR one (database-seed-discipline §3).
+            focusRank: config.focusRank ?? null,
+            // #689 THEORY — seeded since 2026-11-03, and ⚠️ CONDITIONAL, unlike `focusRank`.
+            //
+            // `theory: config.theory ?? null` was written here first and DESTROYED PROSE. Measured
+            // the same day: one re-seed nulled `forex-session-v1` (735 chars) and `xau-speed-v1`
+            // (773 chars), because those two carry their theory in the DATABASE and their seed entry
+            // does not declare it — and `?? null` coerces "not declared" into "write NULL". Nothing
+            // errored; the Theories panel simply went blank on two live protocols, which is this
+            // repo's signature failure (plausible output, no error). Recovered from
+            // `scripts/db/protocol-theory-seed.sql`, which held the original text.
+            //
+            // The rule that was misapplied: `?? null` is the #833 convergence rule for a column the
+            // seed OWNS. `theory` is not owned here — most protocols' prose was authored directly in
+            // the database and has no seed entry at all. So: DECLARED converges, OMITTED is left
+            // alone. `undefined` is Prisma's "do not touch"; `null` is a deliberate instruction to
+            // clear, and only a seed that says `"theory": null` should ever do that.
+            ...(config.theory !== undefined ? { theory: config.theory } : {}),
           },
         });
         protocols++;

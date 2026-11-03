@@ -52,6 +52,7 @@ import { PaperTradingModule } from './modules/paper-trading/paper-trading.module
 import { AIModule } from './modules/ai/ai.module';
 import { WatchlistsModule } from './modules/watchlists/watchlists.module';
 import { SuitabilityModule } from './modules/suitability/suitability.module';
+import { TrendReadModule } from './modules/trend/trend-read.module';
 import { PlannerModule } from './modules/planner/planner.module';
 import { DiversificationModule } from './modules/diversification/diversification.module';
 import { ArchitectureModule } from './modules/architecture/architecture.module';
@@ -116,6 +117,8 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     AIModule,
     WatchlistsModule,
     SuitabilityModule,
+    // #1190 — the trend READING experiment. Observation only; nothing in scoring imports it.
+    TrendReadModule,
     PlannerModule,
     DiversificationModule,
     ArchitectureModule,

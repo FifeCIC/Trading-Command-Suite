@@ -269,7 +269,7 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
 // referenced in .github/instructions/database-seed-discipline.instructions.md:
 // they need their own seeder, not an entry here.
 
-const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string }> = [
+const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: number }> = [
   { symbol: 'UK100', protocolSlug: 'ftse-speed-v1' },
   { symbol: 'GER40', protocolSlug: 'dax-speed-v1' },
   { symbol: 'FRA40', protocolSlug: 'cac-speed-v1' },
@@ -323,6 +323,43 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string }> = [
   { symbol: 'US500', protocolSlug: 'spy-speed-v1' },
   { symbol: 'XAGUSD', protocolSlug: 'probe-1dir-rsi' },
   { symbol: 'EURUSD', protocolSlug: 'probe-1dir-v1' },
+
+  // ── XAUUSD: two protocols, priorities made EXPLICIT (#1181) ──
+  //
+  // Both rows existed in the database only — XAUUSD appeared nowhere in this file — and both sat at
+  // `priority = 0`. `symbol_protocol_assignment` is unique on `(symbol, protocolId)`, NOT on
+  // `(symbol, priority)`, so two protocols claiming one symbol at one priority leaves the winner to
+  // physical row order. `npm --prefix nest run db:symbol-priority-ties` reported it as the only
+  // DECISIVE tie in the database, and it is decisive in the sense that matters: the resolver prefers
+  // an ACTIVE row, both are active, so the answer fell through to alphabetical luck.
+  //
+  // Measured 2026-11-03 (7-day snapshot counts): `xau-speed-v1` 7,980 · `xau-short-m15` 39. The
+  // long/xau protocol is what actually reports on gold, so it takes 0 and the short variant is
+  // reachable at 1.
+  { symbol: 'XAUUSD', protocolSlug: 'xau-speed-v1', priority: 0 },
+  { symbol: 'XAUUSD', protocolSlug: 'xau-short-m15', priority: 1 },
+
+  // ── PAIRED LEGS: the SHORT half of each shipped strategy (#1185) ──  //
+  // A paired bot subscribes to TWO protocols on ONE symbol — a LONG leg and a SHORT leg — and
+  // `strategy_protocol.role` decides which side each may act on. The bot's own `symbol` supplies
+  // the instrument; the PROTOCOL still has to be assigned to that symbol, because scoring resolves
+  // symbols from `symbol_protocol_assignment` (path 1 of `getSymbolsForProtocol`) and has no idea
+  // a bot exists.
+  //
+  // ⚠️ Measured 2026-11-03, and this is why the three rows below exist: the derived `-short`
+  // protocols were `active = 1` with **zero** assignments and no linked watchlist, so they scored
+  // **0 snapshots** while their long counterparts scored 22k–126k. `INV-NO-SYMBOL-GUESSING` caught
+  // it ("WIRED TO NOTHING") — an active protocol resolving to no symbols is indistinguishable in the
+  // UI from a quiet market, and the SHORT side of every paired bot was decorative.
+  //
+  // `priority: 2`, not 0 or 1. `symbol_protocol_assignment` is unique on `(symbol, protocolId)`,
+  // NOT on `(symbol, priority)`, so a leg placed at a level already in use creates a fresh priority
+  // TIE — the ambiguity #1181 settled. `npm --prefix nest run db:symbol-priority-ties` reported
+  // XAGUSD as a LATENT tie at 1 (`probe-1dir-rsi` | `xau-speed-v1-short`) when this said 1, so the
+  // level is chosen per symbol from what the reporter shows, not guessed.
+  { symbol: 'XAGUSD', protocolSlug: 'xau-speed-v1-short', priority: 2 },
+  { symbol: 'NVDA', protocolSlug: 'momentum-stock-v1-short', priority: 1 },
+  { symbol: 'USDJPY', protocolSlug: 'forex-session-v1-short', priority: 1 },
   // VIX short assignment is deliberately NOT added yet. Per #772, nothing is
   // assigned until the first demo short has actually executed (Step 2), so the
   // short path is not spread across more protocols before it is proven once.
@@ -437,12 +474,16 @@ async function main() {
       console.log(`  ! protocol ${a.protocolSlug} not found — skipping assignment for ${a.symbol}`);
       continue;
     }
+    // `priority` rides in BOTH clauses: an `update: {}` cannot repair a wrong priority on an
+    // existing row, it can only insert one (database-seed-discipline §3). Only asserted when the
+    // entry declares it, so the 30-odd existing single-protocol symbols keep their column default.
+    const priority = typeof a.priority === 'number' ? { priority: a.priority } : {};
     await prisma.symbolProtocolAssignment.upsert({
       where: { symbol_protocolId: { symbol: a.symbol, protocolId: proto.id } },
-      update: {},
-      create: { symbol: a.symbol, protocolId: proto.id },
+      update: priority,
+      create: { symbol: a.symbol, protocolId: proto.id, ...priority },
     });
-    console.log(`  ✓ assignment ${a.symbol} -> ${a.protocolSlug}`);
+    console.log(`  ✓ assignment ${a.symbol} -> ${a.protocolSlug}${a.priority != null ? ` (priority ${a.priority})` : ''}`);
   }
 
   console.log('\nDone.');

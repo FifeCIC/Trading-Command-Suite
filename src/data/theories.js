@@ -537,6 +537,61 @@ export const THEORIES = [
     area: 'trading',
     issue: 1120,
   },
+  // ── Observation surfaces ─────────────────────────────────────────────────────────────────────
+  {
+    id: 'trend-reading-separates-trend-from-noise',
+    raisedAt: '2026-11-03',
+    statement:
+      'A two-family trend READ (R² of a least-squares fit, plus ADX) classifies a live series into trending / ranging / indeterminate WELL ENOUGH that a human looking at the same chart agrees with it — and it does so without labelling a flat or choppy series as a trend.',
+    predictedDirection:
+      'On a mixed sample of symbols and cadences, the verdicts SPREAD across all four classes rather than clustering on `trending`. Specifically: at least 20% of readings are `ranging`, and at least one reading is `indeterminate` (both families inside, or on opposite sides of, their bands).',
+    measure: 'verdict',
+    unit: 'classification (trending-up | trending-down | ranging | indeterminate), with r2 (0..1) and adx (0..100) reported per reading',
+    window:
+      'One snapshot, 2026-11-03, 12 symbols (XAUUSD, USDJPY, NVDA, SPY, QQQ, EURUSD, BTC, VIX, WTI, TSLA, AAPL, GBPJPY) on 1h with 200 bars each, via `GET /api/trend/read`.',
+    status: 'testing',
+    evidence: {
+      basis: 'measurement',
+      n: 12,
+      result:
+        'DISTRIBUTION: ranging 5 · trending-down 3 · trending-up 2 · indeterminate 2. So the two conditions in `predictedDirection` hold (5/12 = 42% ranging, 2 indeterminate). ⚠️ **And the disagreement flag fired, which is the more interesting result**: SPY (r² 0.31, ADX 27.7), BTC (r² 0.64, ADX 22.9) and TSLA (r² 0.49, ADX 15.7) had families pointing different ways — clean-ish line with no directional movement, or movement with no line. That is the case a single-number "trend score" would have hidden. ⚠️ WHAT THIS DOES NOT SHOW: whether a HUMAN agrees. n=12 readings is a distribution check, not a validity check, and no chart was compared side by side.',
+      measuredAt: '2026-11-03',
+      source: '`GET /api/trend/read?symbol=…&timeframe=1h&bars=200`, 12 live calls against `marketbar`',
+    },
+    falsification:
+      'Re-run across a larger sample and, critically, compare each reading to the chart. It is refuted if (a) the verdicts cluster on `trending` — the tool then labels everything a trend and is worthless, or (b) a human consistently judges the opposite direction, or (c) `indeterminate` never appears, since that would mean the two families are not independent.',
+    decision:
+      'BUILT AS AN OBSERVATION AND DELIBERATELY NOT WIRED INTO SCORING. `nest/src/modules/trend/**` is imported by nothing in the scoring, gating, sizing or execution paths, and that is a condition of the experiment rather than an accident: a reading that moved a score would be a maths change, which needs a copied configuration and a monitored A/B under the owner\'s rule. ⚠️ NEXT, and it is the owner\'s to judge: open `/development/trend-reading` on the focus symbols (★1 `forex-session-v1` USDJPY, ★2 `xau-speed-v1` XAGUSD, ★3 `momentum-stock-v1` NVDA) and say whether the line and the invalidation match how you would read the same chart. Until that happens the status stays `testing` — a classification distribution is not evidence that the classification is RIGHT.',
+    area: 'scoring',
+    issue: 1188,
+  },
+  {
+    id: 'usdjpy-entry-threshold-starves-the-arm',
+    raisedAt: '2026-11-03',
+    statement:
+      'The `minComposite` entry bar of 10 is starving `Tokyo USDJPY Session` — the signal population it rejects is profitable, so lowering the bar raises total profit even as the win rate falls.',
+    predictedDirection:
+      'Lowering `minComposite` on the SAME bot and window raises `netPnl` and `totalTrades`, and LOWERS `tradeWinRate`. If netPnl falls while trades rise, this is refuted — the gate is doing real work.',
+    measure: 'stats.netPnl, stats.totalTrades, stats.tradeWinRate, stats.tradeProfitFactor',
+    unit: 'account currency (USD) for netPnl; count for trades; % for the win rate',
+    window:
+      'One CONTRAST (docs/GLOSSARY.md) on 2026-11-03: bot-driven runs for `Tokyo USDJPY Session` on the `forex-session-v1` LONG leg, 1h, default backtest window, one declared difference per run.',
+    status: 'supported',
+    evidence: {
+      basis: 'measurement',
+      n: 4,
+      result:
+        'BASELINE `minComposite: 10` — 38 trades, **84% win**, net **+2,438.15**, trade PF **32.24**. VARIANT `minComposite: 5` — **316 trades**, **73% win**, net **+17,412.47**, trade PF 7.82. So **8.3× the trades produced 7.1× the net P&L** while the win rate fell 11 points. ⚠️ `minComposite` 5, 3 and 0 returned BYTE-IDENTICAL results (316 trades, +17,412.47), which means every signal in this window already clears 5 — the gate is effectively **binary** (10, or off) and there is no finer setting to tune between them. ⚠️ A SECOND contrast on the same arm refuted an exit hypothesis in the same sitting: adding `stopPlan: { lockAtPct: 1.0, trailPct: 0.5 }` left the trade count IDENTICAL at 38 (same entries) and cut the win rate 84% → 29%, net +2,438 → **−334.91**. The edge depends on letting winners reach the 3% target; a 0.5% trail closes them at +0.35% average.',
+      measuredAt: '2026-11-03',
+      source: '`POST /api/backtest/run` ×6 (bot-driven, `legProtocolId: forex-session-v1`), script `scripts/run-contrast.cjs`',
+    },
+    falsification:
+      'Re-run the contrast at `minComposite: 5` on a DIFFERENT window (the window is 42 days and one regime). It is refuted if the extra trades are unprofitable out of sample — a lower bar admitting more trades is only good if those trades carry an edge. ⚠️ Also check the live record before acting: the bot has only **5 live trades** (80% win, +40.18), so live agrees with the backtest but on a sample far too small to confirm a 7× claim.',
+    decision:
+      'RECORDED, NOT APPLIED — this is a maths change and the owner\'s rule forbids an in-place edit of a value with performance history. `minComposite` stays at 10 on the live bot. ⚠️ The sanctioned path is a COPIED configuration (a variant bot or a `-v2` protocol) run alongside, which cannot be done for free here: two bots on one netting account can hold only one position per symbol, so the copy would compete with the baseline rather than run in parallel. ⚠️ What was applied instead: the three focus bots were ACTIVATED (owner instruction) so live sample accumulates, and the trailing-stop idea is now settled — do not re-propose it for this arm.',
+    area: 'trading',
+    issue: 1188,
+  },
 ];
 
 export default THEORIES;

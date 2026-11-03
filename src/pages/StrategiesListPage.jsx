@@ -41,6 +41,66 @@ const STATUS_COLORS = {
 const MAX_PROTOCOL_CHIPS = 3;
 
 /**
+ * THEORY_KIND_LABEL (#1189) — the short form shown on a table row.
+ *
+ * ⚠️ Short on purpose: the row already carries a name, a type, a symbol, a watchlist, up to three
+ * protocol chips, leg results and two numbers. `Control — no thesis` is right on the bot page and
+ * far too long here, so the LIST says `Control` and the page it links to says the rest.
+ */
+const THEORY_KIND_LABEL = {
+  asymmetry: 'Asymmetry',
+  participation: 'Participation',
+  regime: 'Regime',
+  control: 'Control',
+};
+
+/**
+ * TheoryMark — what TYPE of claim this bot makes, and how much has been observed.
+ *
+ * ⚠️ RENDERS NOTHING when the bot has no theory, and that is a deliberate asymmetry with the rest
+ * of this page: `chipFaulty` above is loud because a bot with no subscription SILENTLY does nothing,
+ * whereas a bot with no theory still trades exactly as designed — it is merely unexplained. The
+ * fleet-wide count lives in the header. What must NOT happen is "no theory" and "very short theory"
+ * looking alike, so the chip is only drawn when the prose is non-empty (`hasTheory`).
+ */
+function TheoryMark({ strategy }) {
+  const kind = strategy.theoryKind ? THEORY_KIND_LABEL[strategy.theoryKind] : null;
+  const count = strategy.trackRecordCount;
+  const obsTitle =
+    count === null || count === undefined
+      ? 'Track record could not be read — this is NOT "nothing observed".'
+      : `${count} observation${count === 1 ? '' : 's'} recorded against this bot.`;
+
+  if (!strategy.hasTheory && (count === null || count === undefined || count === 0)) return null;
+
+  return (
+    <>
+      {strategy.hasTheory && (
+        <span
+          className={`${styles.chip} ${kind === 'Control' ? styles.chipTheory : styles.chipTheoryClaim}`}
+          title={
+            kind
+              ? `${kind} — this is the kind of claim the bot's theory makes. Read it on the bot page.`
+              : 'This bot has a theory, but no kind declared.'
+          }
+        >
+          {kind || 'Theory'}
+        </span>
+      )}
+      {(count !== null && count !== undefined) && count > 0 ? (
+        <span className={`${styles.chip} ${styles.chipObs}`} title={obsTitle}>
+          {count} obs
+        </span>
+      ) : count === null ? (
+        <span className={`${styles.chip} ${styles.chipObs}`} title={obsTitle}>
+          obs ?
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
  * ProtocolChips — ONE CHIP PER SUBSCRIPTION, because a bot can serve MANY protocols.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -123,7 +183,13 @@ function ProtocolChips({ strategies }) {
  * ⚠️ Combined is shown BESIDE the legs, not instead of them: "the strategy made +9.10" is the number
  * a reader wants, and "+7.40 long / +1.70 short" is the number that explains it.
  */
-function LegResults({ legs }) {
+function LegResults({ legs, unavailable }) {
+  if (unavailable) {
+    // ⚠️ NOT `?` — that glyph already means "unattributed trades" inside a healthy cell, and two
+    // meanings for one mark in one column is how "cannot judge" gets read as "nothing there".
+    // `—` is also wrong: it says "this bot has no leg", which is a claim about the bot.
+    return <span className={styles.tdMuted} title="Leg results could not be loaded">⚠</span>;
+  }
   if (!legs || !legs.paired) return <span className={styles.tdMuted}>—</span>;
 
   const fmtPnl = (v) => (v === null || v === undefined ? '?' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`);
@@ -189,6 +255,18 @@ export default function StrategiesListPage() {
     return strategies.filter(isFaultyStrategy);
   }, [strategies]);
 
+  // #1189 — the narrative tally for the header. `observations` is null when ANY row reported an
+  // unreadable count: a partial sum would understate the fleet and read as a fact.
+  const theoryTally = useMemo(() => {
+    if (!strategies?.length) return null;
+    const withTheory = strategies.filter((s) => s.hasTheory).length;
+    const counts = strategies.map((s) => s.trackRecordCount);
+    const observations = counts.some((c) => c === null || c === undefined)
+      ? null
+      : counts.reduce((a, c) => a + (c || 0), 0);
+    return { total: strategies.length, withTheory, observations };
+  }, [strategies]);
+
   // ── Portfolio cross-ref ──
   const { data: positions = [] } = useQuery({
     queryKey: ['strategies-list-positions'],
@@ -208,11 +286,13 @@ export default function StrategiesListPage() {
   // ── Per-leg results (#1185) ──
   //
   // A separate, non-blocking read: the list must render whether or not this answers, because it is
-  // enrichment rather than the page's subject. `apiGet` resolves on 4xx, so the `.catch` covers a
-  // transport failure only — and a missing payload renders `—` per bot rather than an error banner.
-  const { data: legData } = useQuery({
+  // enrichment rather than the page's subject. It is NOT wrapped in `.catch()` — that would make a
+  // transport failure render `—`, which is the same mark as "this bot has no leg" (a claim about the
+  // bot rather than about the request, #782 / §7 of the dev philosophy). `isError` renders `?`
+  // instead, so "cannot judge" never wears the face of "nothing there".
+  const { data: legData, isError: legsUnavailable } = useQuery({
     queryKey: ['strategy-legs'],
-    queryFn: () => apiGet('/api/trading/strategy-legs').catch(() => ({ bots: [] })),
+    queryFn: () => apiGet('/api/trading/strategy-legs'),
     refetchInterval: 120_000,
   });
 
@@ -262,6 +342,20 @@ export default function StrategiesListPage() {
           <p className={styles.subtitle}>
             {isError ? 'Could not load bots' : `${strategies.length} bots — trading, scoring, and monitoring`}
           </p>
+          {/* #1189 — the narrative tally. An ABSENT theory is a fact about the fleet, and a per-row
+              "no theory" badge on 60+ rows is noise nobody reads. Counting it once here keeps the
+              absence visible without spending a column on it. ⚠️ When the counts could not be read
+              the line says so and shows no number — `null` (cannot judge) must never render as `0`
+              (nothing observed), because those are different facts. */}
+          {!isError && theoryTally && (
+            <p className={styles.subtitle}>
+              {theoryTally.withTheory} of {theoryTally.total} have a theory
+              {' · '}
+              {theoryTally.observations == null
+                ? 'track record unavailable'
+                : `${theoryTally.observations} observation${theoryTally.observations === 1 ? '' : 's'} recorded`}
+            </p>
+          )}
         </div>
         <div className={styles.filterBar}>
           {['all', 'active', 'trading', 'scoring', 'faulty'].map(f => (
@@ -351,6 +445,7 @@ export default function StrategiesListPage() {
                         <span className={styles.cardDot} style={{ background: isActive ? STATUS_COLORS.active : STATUS_COLORS.disabled }} />
                         <strong>{s.name}</strong>
                       </span>
+                      <TheoryMark strategy={s} />
                       <StrategyFaultBadge strategy={s} className={styles.rowFault} />
                     </td>
                     <td>
@@ -361,7 +456,7 @@ export default function StrategiesListPage() {
                     <td><strong>{s.symbol || '—'}</strong></td>
                     <td className={styles.tdMuted}>{s.watchlistName || '—'}</td>
                     <td><ProtocolChips strategies={s} /></td>
-                    <td><LegResults legs={legsById[s.id]} /></td>
+                    <td><LegResults legs={legsById[s.id]} unavailable={legsUnavailable} /></td>
                     <td className={styles.tdNum}>{s.brokerId || '—'}</td>
                     <td className={styles.tdNum}>
                       {s.lastComposite != null ? (

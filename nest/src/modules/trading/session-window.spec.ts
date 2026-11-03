@@ -105,7 +105,7 @@ describe('auditNameVsWindow — the name/window ambiguity is REPORTED (#759)', (
     // stops flagging, the fault becomes invisible again.
     const bots: Array<[string, string]> = [
       ['Sydney AUDUSD Session', 'asian'],
-      ['Tokyo USDJPY Session', 'asian'],
+      ['Tokyo USDJPY Session Bot', 'asian'],
       ['Wellington NZDUSD Session', 'asian'],
     ];
     for (const [name, win] of bots) {
@@ -132,7 +132,7 @@ describe('auditNameVsWindow — the name/window ambiguity is REPORTED (#759)', (
   it('reports a city name with NO window as ungated, not ambiguous', () => {
     // A city name alone is not a fault — the bot simply has no clock. Saying
     // "ambiguous" here would cry wolf on every city-named bot in the list.
-    const a = auditNameVsWindow('Tokyo USDJPY Session', null);
+    const a = auditNameVsWindow('Tokyo USDJPY Session Bot', null);
     expect(a.agreement).toBe('consistent');
     expect(a.cityWord).toBe('tokyo');
     expect(a.note).toMatch(/UNGATED/);
@@ -154,8 +154,8 @@ describe('auditNameVsWindow — the name/window ambiguity is REPORTED (#759)', (
 
   it('reads a JSON-array window the same way as a bare string', () => {
     // The column is written by humans and by seeds, in both shapes.
-    expect(auditNameVsWindow('Tokyo USDJPY Session', ['asian']).agreement).toBe('ambiguous');
-    expect(auditNameVsWindow('Tokyo USDJPY Session', '["asian"]').agreement).toBe('ambiguous');
+    expect(auditNameVsWindow('Tokyo USDJPY Session Bot', ['asian']).agreement).toBe('ambiguous');
+    expect(auditNameVsWindow('Tokyo USDJPY Session Bot', '["asian"]').agreement).toBe('ambiguous');
     expect(parseSessionWindow('["asian"]')).toEqual(['asian']);
   });
 

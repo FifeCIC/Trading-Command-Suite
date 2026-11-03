@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 206,
+  "count": 209,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -93,6 +93,16 @@
       "where": "nest",
       "category": "audit",
       "purpose": "every fault CLASS this project has found, checked across ALL",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "audit-protocol-health.cjs",
+      "where": "nest",
+      "category": "audit",
+      "purpose": "the five questions the owner asked, answered per protocol.",
       "selfTest": true,
       "reaches": [
         "npm"
@@ -416,6 +426,16 @@
       "selfTest": true,
       "reaches": [
         "npm"
+      ]
+    },
+    {
+      "name": "canary-689-theory-seed.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "Canary for the #689 theory seeding — BOTH directions, as required.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
       ]
     },
     {
@@ -1066,6 +1086,14 @@
       "reaches": [
         "npm"
       ]
+    },
+    {
+      "name": "run-contrast.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "a CONTRAST run (docs/GLOSSARY.md).",
+      "selfTest": false,
+      "reaches": null
     },
     {
       "name": "split-seed-packaging.cjs",

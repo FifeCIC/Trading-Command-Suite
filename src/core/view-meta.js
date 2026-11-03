@@ -5,6 +5,17 @@
  */
 
 const VIEW_META = {
+  // #1190 — the trend READING experiment. `review: 'pending'` because the owner has not looked at
+  // it yet; it becomes 'approved' when they have, and claiming otherwise would be a claim without
+  // an observation behind it.
+  '/development/trend-reading': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Trend Reading',
+    file: 'src/pages/TrendReadingPage.jsx',
+    css: 'src/pages/trend-reading.css',
+    api: ['GET /api/trend/read', 'GET /api/trend/readable'],
+  },
   '/dashboard': {
     tier: 'free',
     review: 'approved',
