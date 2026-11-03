@@ -19,7 +19,23 @@ export const EXPERIENCE_LEVELS = ['beginner', 'experienced', 'expert'];
 
 export const EXPERIENCE_MATRIX = {
   // ── Navigation: entire sidebar pages ──────────────
+  // ⚠️ ADMISSION RULE FOR `beginner: false` (2026-11-03): a page earns it when the owner's own UI
+  // score is ≤3 out of 10 AND he did not mark it high-importance in the Page Walkthrough. A weak score
+  // says "this page needs work"; an explicit IMPORTANCE OF H says "you still need it", and hiding one
+  // of those is a fix avoided rather than a first impression protected. That is why `market-context`
+  // (score 2, importance H), `dual-protocol-inspector` (3, H) and `trade-journal` (3, H) are NOT in
+  // this list despite scoring low — they need improving, not hiding.
+  // ⚠️ These are LEVEL-scoped, never withheld: the owner's `hide: false` keeps stay intact, and an
+  // Expert install still sees every one of them.
   nav: {
+    // ⚠️ ADDED 2026-11-03 from the owner's own Page Walkthrough scores — all four are pages he also
+    // marked `hide: false`, so withholding them outright would have overruled a decision he made
+    // deliberately. Level-scoping is the compromise: a first-time reader does not meet them, and an
+    // Expert install keeps every one.
+    'stock-investigation':   { beginner: false, experienced: true, expert: true },  // score 1/10, medium
+    'personal-finances':     { beginner: false, experienced: true, expert: true },  // score 1/10, medium
+    'trading-styles':        { beginner: false, experienced: true, expert: true },  // score 2/10, medium
+    'position-lifecycle':    { beginner: false, experienced: true, expert: true },  // score 3/10, medium
     // Trading
     'market-context':        { beginner: true,  experienced: true,  expert: true },
     'positions-monitor':     { beginner: true,  experienced: true,  expert: true },

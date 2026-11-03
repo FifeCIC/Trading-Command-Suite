@@ -46,8 +46,9 @@ import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
-import { filterHiddenViews } from './core/hidden-views.js';
+import { filterHiddenViews, filterByExperience } from './core/hidden-views.js';
 import { useHiddenRoutes } from './core/hooks/useHiddenRoutes.js';
+import { usePreferences } from './core/hooks/usePreferences.js';
 
 /**
  * Nav filtering happens twice, and the split is deliberate.
@@ -158,13 +159,21 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   // (the one that redirects an area with no first view) would re-run on every render once it is
   // listed as a dependency — which it now must be, because the value is not module-constant.
   const hiddenRoutes = useHiddenRoutes();
+  // ⚠️ THE EXPERIENCE LEVEL IS NOW HONOURED, NOT JUST STORED (2026-11-03). `EXPERIENCE_MATRIX.nav`
+  // declared per-level visibility since 2026-09 and its only consumer was deleted on 2026-09-23
+  // ("nothing imported it"), so three settings screens wrote a value that changed no page. A reader
+  // who says "beginner" now gets 72 of the 87 visible entries instead of all of them.
+  // ⚠️ `getExperienceLevel` already defaults to 'beginner'; a mature install can set Expert under
+  // Appearance → User preferences to see everything, which is the documented escape hatch.
+  const { prefs } = usePreferences();
+  const experienceLevel = prefs?.experienceLevel || 'beginner';
   const NAV_STRUCTURE = useMemo(
-    () => filterHiddenViews(BASE_NAV_STRUCTURE, hiddenRoutes),
-    [hiddenRoutes],
+    () => filterByExperience(filterHiddenViews(BASE_NAV_STRUCTURE, hiddenRoutes), experienceLevel),
+    [hiddenRoutes, experienceLevel],
   );
   const EDITION_NAV_TREE = useMemo(
-    () => filterHiddenViews(BASE_NAV_TREE, hiddenRoutes),
-    [hiddenRoutes],
+    () => filterByExperience(filterHiddenViews(BASE_NAV_TREE, hiddenRoutes), experienceLevel),
+    [hiddenRoutes, experienceLevel],
   );
   const { area, view, symbolId, ticker, strategyId } = useParams();
   const location = useLocation();

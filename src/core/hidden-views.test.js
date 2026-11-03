@@ -19,6 +19,7 @@ import {
   resolveHiddenRoutes,
   hiddenRoutesFrom,
   filterHiddenViews,
+  filterByExperience,
   recordedVisibility,
   effectiveVisibility,
   resolveAccess,
@@ -140,6 +141,47 @@ test('an empty withheld set returns the tree untouched (no accidental rebuild)',
 
 test('hiddenRoutesFrom is the store-facing alias and returns routes', () => {
   assert.ok(hiddenRoutesFrom({ entries: { '/lab/timeline': { hide: true } } }).has('/lab/timeline'));
+});
+
+// ── EXPERIENCE LEVEL: the third reason a view is absent ────────────────────────────────────────
+
+test('a beginner loses the views the matrix marks beginner:false', () => {
+  const tree = { scoring: [{ id: 'live-ordering-stack' }, { id: 'symbols-ladder' }] };
+  const out = filterByExperience(tree, 'beginner');
+  assert.deepEqual(out.scoring.map((v) => v.id), ['symbols-ladder']);
+});
+
+test('an expert loses nothing, and gets the SAME object back', () => {
+  // Identity matters: a fresh object with identical contents re-triggers every consumer's memo.
+  const tree = { scoring: [{ id: 'live-ordering-stack' }] };
+  assert.equal(filterByExperience(tree, 'expert'), tree);
+});
+
+test('an undeclared view stays visible at every level — the matrix covers 39 of 108', () => {
+  const tree = { misc: [{ id: 'a-view-nobody-classified' }] };
+  for (const level of ['beginner', 'experienced', 'expert']) {
+    assert.deepEqual(filterByExperience(tree, level).misc.map((v) => v.id), ['a-view-nobody-classified']);
+  }
+});
+
+test('an unknown or missing level is a no-op rather than a blanket hide', () => {
+  const tree = { scoring: [{ id: 'live-ordering-stack' }] };
+  assert.equal(filterByExperience(tree, 'wizard'), tree);
+  assert.equal(filterByExperience(tree, undefined), tree);
+});
+
+test('the LEVEL filter does not empty any real area', () => {
+  // A level that removed an entire area would delete a navigation section for a beginner.
+  const before = Object.keys(getNavStructure());
+  const after = Object.keys(filterByExperience(getNavStructure(), 'beginner'));
+  const lost = before.filter((area) => !after.includes(area));
+  assert.deepEqual(lost, [], `areas emptied by the beginner level: ${lost.join(', ')}`);
+});
+
+test('the two filters compose: withheld AND too-advanced both disappear', () => {
+  const tree = { scoring: [{ id: 'live-ordering-stack' }, { id: 'symbols-ladder' }] };
+  const out = filterByExperience(filterHiddenViews(tree, new Set(['/scoring/symbols-ladder'])), 'beginner');
+  assert.deepEqual(out.scoring ?? [], []);
 });
 
 // ── VISIBILITY: three states, one filter ────────────────────────────────────────────────────────

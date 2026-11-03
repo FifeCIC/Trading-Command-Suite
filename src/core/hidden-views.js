@@ -1,7 +1,6 @@
 /**
  * hidden-views.js — the owner's "hide now" verdicts, applied to navigation.
  * ========================================================================
- *
  * ⚠️ WHY THIS EXISTS. The Page Walkthrough (`/development/ui-review`) recorded `hide: true` on five
  * pages on 2026-10-02 and **nothing consumed it**. Traced every reader of
  * `/api/system/settings/ui-review`: the settings service/controller, the walkthrough page itself,
@@ -18,6 +17,10 @@
  * convenience, not a gate: if the store cannot be read, showing a page that was withheld is
  * recoverable, whereas hiding pages because a request failed is not.
  */
+
+// ⚠️ A one-way dependency: hidden-views -> experience-levels. `experience-levels.js` imports nothing,
+// so this cannot become a cycle — which matters, because the nav is on the render path of every page.
+import { EXPERIENCE_LEVELS, isNavVisible } from './experience-levels.js';
 
 /**
  * Views withheld from navigation for everyone by default, unless someone explicitly un-hides them.
@@ -222,20 +225,25 @@ function areaHasViews(views) {
 }
 
 /**
- * Filter the withheld routes out of a nav tree.
+ * Filter a nav tree by a predicate, preserving both shapes and never leaving a dangling header.
  *
- * Section headers left with nothing real after them are dropped, so hiding the last view of a
- * group cannot leave a dangling heading.
+ * ⚠️ ONE IMPLEMENTATION FOR EVERY "MAY THIS BE SHOWN?" RULE (2026-11-03). There are now three
+ * reasons a view is absent from the sidebar — the owner withheld it, it is member-only and unentitled,
+ * or it is too advanced for the reader's experience level — and the first two already travelled
+ * through this function. A second copy for the third would drift: the array/object shape handling
+ * below was once wrong and every area vanished (measured 2026-10-02, 14 in / 0 out).
+ *
+ * Returns the ORIGINAL tree when nothing is filtered, so a caller cannot trigger a needless re-render
+ * by holding a fresh object that happens to contain the same views.
  */
-export function filterHiddenViews(tree, hiddenRoutes) {
-  if (!hiddenRoutes || hiddenRoutes.size === 0) return tree;
+function filterNavTree(tree, isHidden) {
   const out = {};
+  let changed = false;
   for (const [areaId, area] of Object.entries(tree)) {
     // ⚠️ TWO SHAPES, AND BOTH ARE LIVE — do not assume one. `NAV_TREE` is
     // `{ area: { label, views } }` (the top nav), but `getNavStructure()` is `{ area: [views] }`
     // (the left rail). Reading `area.views` on the ARRAY form yields `undefined`, so `kept` is
-    // empty and every area is dropped — measured 2026-10-02: **14 areas in, 0 out**, i.e. the
-    // whole navigation would vanish the moment a hide verdict existed.
+    // empty and every area is dropped — measured 2026-10-02: **14 areas in, 0 out**.
     const isArray = Array.isArray(area);
     const views = isArray ? area : area?.views;
     if (!Array.isArray(views)) {
@@ -245,7 +253,7 @@ export function filterHiddenViews(tree, hiddenRoutes) {
       continue;
     }
 
-    const kept = views.filter((v) => v.kind === 'section-header' || !hiddenRoutes.has(`/${areaId}/${v.id}`));
+    const kept = views.filter((v) => v.kind === 'section-header' || !isHidden(areaId, v));
     const cleaned = [];
     for (let i = 0; i < kept.length; i++) {
       const v = kept[i];
@@ -254,14 +262,45 @@ export function filterHiddenViews(tree, hiddenRoutes) {
         // this check used to ask "is there a real view anywhere after this header?", so
         // `[headerA, headerB, viewUnderB]` kept headerA even though its own group was now empty —
         // leaving a dangling heading, which is the exact thing the comment below promises to
-        // prevent. Hiding the last view of one group produced it. `hidden-views.test.js` pins it.
+        // prevent. `hidden-views.test.js` pins it.
         const nextHeader = kept.findIndex((x, j) => j > i && x.kind === 'section-header');
         const groupEnd = nextHeader === -1 ? kept.length : nextHeader;
-        if (!kept.slice(i + 1, groupEnd).some((x) => x.kind !== 'section-header')) continue;
+        if (!kept.slice(i + 1, groupEnd).some((x) => x.kind !== 'section-header')) { changed = true; continue; }
       }
       cleaned.push(v);
     }
+    if (cleaned.length !== views.length) changed = true;
     if (areaHasViews(cleaned)) out[areaId] = isArray ? cleaned : { ...area, views: cleaned };
+    else changed = true;
   }
-  return out;
+  return changed ? out : tree;
+}
+
+/**
+ * Filter the withheld routes out of a nav tree.
+ *
+ * Section headers left with nothing real after them are dropped, so hiding the last view of a
+ * group cannot leave a dangling heading.
+ */
+export function filterHiddenViews(tree, hiddenRoutes) {
+  if (!hiddenRoutes || hiddenRoutes.size === 0) return tree;
+  return filterNavTree(tree, (areaId, v) => hiddenRoutes.has(`/${areaId}/${v.id}`));
+}
+
+/**
+ * Hide the views the EXPERIENCE MATRIX marks as too advanced for this reader.
+ *
+ * ⚠️ WHY THIS EXISTS (2026-11-03). `EXPERIENCE_MATRIX.nav` has declared per-level visibility since
+ * 2026-09, and **nothing has consumed it** since `getFilteredNavStructure()` was deleted on
+ * 2026-09-23 because "nothing imported it". So the setting was written in three places and honoured
+ * in none: a self-identified beginner was shown all 87 visible pages, including the deepest
+ * diagnostics. This is the third answer to "may this be shown?" and it is the ONLY one that can
+ * respect the owner's 71 explicit `hide: false` keeps while still giving a new user a short list.
+ *
+ * ⚠️ The matrix declares 39 of 108 views. Anything undeclared is VISIBLE at every level
+ * (`isNavVisible` returns true) — so this cannot hide a page nobody classified.
+ */
+export function filterByExperience(tree, level) {
+  if (!level || !EXPERIENCE_LEVELS.includes(level)) return tree;
+  return filterNavTree(tree, (_areaId, v) => !isNavVisible(v.id, level));
 }
