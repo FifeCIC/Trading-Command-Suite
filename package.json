@@ -4,6 +4,10 @@
   "private": true,
   "license": "AGPL-3.0",
   "type": "module",
+  "//overrides": "Security pins for TRANSITIVE packages, 2026-11-03. mermaid pulls dompurify; the advisory is a SAFE_FOR_TEMPLATES bypass fixed in 3.4.17. ⚠️ An override, not `npm audit fix`: that rewrote the whole lockfile (46 package versions here, 126 in nest/, incl. rolldown and jest 30.4->30.5) which is an unreviewed dependency upgrade, not a security patch. Remove an entry once the parent requires the patched version itself.",
+  "overrides": {
+    "dompurify": "3.4.17"
+  },
   "scripts": {
     "audit:basis-outcomes": "node scripts/measure-label-basis-outcomes.cjs",
     "audit:basis-outcomes:self-test": "node scripts/measure-label-basis-outcomes.cjs --self-test",
