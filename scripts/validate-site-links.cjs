@@ -94,6 +94,49 @@ function hasAnchor(p, frag) {
   return needle.test(html);
 }
 
+/**
+ * Every `data-fact` value rendered on the site, as written in the HTML.
+ *
+ * ⚠️ WHY THIS IS A GUARD AND NOT A BUILD-TIME SUBSTITUTION. The landing page states counts
+ * (directives, adapters, models, glossary). Those are the kind of number that is correct on the day
+ * it is typed and quietly wrong six weeks later — and a stale count on a public page is a false
+ * claim, which is the failure this project keeps closing elsewhere. Substituting at publish time
+ * would make the checked file differ from the committed one; checking instead means the page is
+ * always the truth, and a drift FAILS THE BUILD naming the fact and both numbers.
+ *
+ * Pure: takes the html text and a facts map, so `--self-test` can drive it without disk.
+ */
+function collectFactValues(html) {
+  const out = [];
+  const re = /data-fact="([^"]+)"[^>]*>([^<]*)</g;
+  let m;
+  while ((m = re.exec(html)) !== null) out.push({ key: m[1], raw: String(m[2]).trim() });
+  return out;
+}
+
+function factsErrors(rel, html, facts) {
+  const errors = [];
+  for (const { key, raw } of collectFactValues(html)) {
+    const fact = facts[key];
+    if (!fact) {
+      errors.push(`${rel}: data-fact="${key}" is not a key in docs/generated-facts.json`);
+      continue;
+    }
+    const shown = Number(raw.replace(/[^0-9.-]/g, ''));
+    if (raw === '' || !Number.isFinite(shown)) {
+      errors.push(`${rel}: data-fact="${key}" has no number ("${raw}") — a blank fact reads as zero`);
+      continue;
+    }
+    if (shown !== fact.value) {
+      errors.push(
+        `${rel}: ${key} shows ${shown} but the generated facts say ${fact.value}` +
+          ' — regenerate with `node scripts/docs-facts.cjs --write`, or correct the page',
+      );
+    }
+  }
+  return errors;
+}
+
 function checkSite() {
   if (!fs.existsSync(SITE)) {
     console.error('[site-links] cannot run: site/ does not exist');
@@ -109,6 +152,16 @@ function checkSite() {
   })(SITE);
 
   const errors = [];
+  // ⚠️ An unreadable facts file must ERROR, never pass. "Inspected nothing and reported OK" is the
+  // exact shape of a guard that is worse than no guard.
+  let facts = {};
+  const factsPath = path.resolve(__dirname, '..', 'docs', 'generated-facts.json');
+  try {
+    facts = JSON.parse(fs.readFileSync(factsPath, 'utf8')).facts || {};
+  } catch (err) {
+    console.error(`[site-links] cannot run: unreadable ${factsPath} — ${err.message}`);
+    return 2;
+  }
   for (const file of files) {
     const rel = path.relative(SITE, file);
     const html = fs.readFileSync(file, 'utf8');
@@ -138,6 +191,9 @@ function checkSite() {
         errors.push(`${rel}: "${ref.raw}" — target file has no id="${ref.frag}"`);
       }
     }
+
+    // Numbers must agree with the generated facts (see `factsErrors`).
+    errors.push(...factsErrors(rel, html, facts));
   }
 
   if (errors.length === 0) {
@@ -190,6 +246,17 @@ function selfTest() {
   check('external and mailto refs are skipped, never fetched',
     collectRefs('<a href="https://x.test/y">a</a><a href="mailto:a@b.c">b</a>', dir).every((r) => r.kind === 'external'));
 
+  // ── Facts: the numbers on the public page ──
+  const facts = { directiveFiles: { value: 94 } };
+  check('a fact matching the generated value PASSES',
+    factsErrors('p.html', '<span class="fact-value" data-fact="directiveFiles">94</span>', facts).length === 0);
+  check('a DRIFTED fact is DETECTED',
+    factsErrors('p.html', '<span class="fact-value" data-fact="directiveFiles">95</span>', facts).length === 1);
+  check('an unknown fact key is DETECTED',
+    factsErrors('p.html', '<span class="fact-value" data-fact="no-such-fact">1</span>', facts).length === 1);
+  check('a blank fact value is DETECTED',
+    factsErrors('p.html', '<span class="fact-value" data-fact="directiveFiles"></span>', facts).length === 1);
+
   fs.rmSync(dir, { recursive: true, force: true });
   console.log(`\n[site-links] ${fail === 0 ? 'PASSED' : 'FAILED'} — ${fail} failure(s)`);
   return fail === 0 ? 0 : 1;
@@ -200,4 +267,4 @@ if (require.main === module) {
   process.exit(argv.includes('--self-test') ? selfTest() : checkSite());
 }
 
-module.exports = { collectRefs, targetExists, hasAnchor };
+module.exports = { collectRefs, targetExists, hasAnchor, collectFactValues, factsErrors };

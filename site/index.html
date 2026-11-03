@@ -7,8 +7,8 @@
 <meta name="description" content="Open-source, self-hosted algorithmic trading platform. Scoring engine, protocol-gated signals, per-trade decision trail, backtesting lab. AGPL-3.0. Not financial advice — test on a demo account.">
 <link rel="canonical" href="https://fifecic.github.io/Trading-Command-Suite/">
 <link rel="icon" href="showcase/assets/logo.png" type="image/png">
-<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
 <!--
   ⚠️ og:image and og:url MUST be absolute. A relative `showcase/assets/logo.png` resolves fine in a
   browser and resolves to nothing in a link preview — so every share on Discord, Reddit or X would
@@ -29,184 +29,417 @@
 <meta name="twitter:image" content="https://fifecic.github.io/Trading-Command-Suite/social-card.png">
 <meta name="twitter:image:alt" content="The scoring ladder: protocols ranked by composite score, with each directive's contribution">
 <!--
-  Landing page for GitHub Pages. Published by scripts/publish-public-docs.cjs (source: master:/site).
+  Landing page for GitHub Pages. Published from master:/site.
 
-  ⚠️ THE DISCLAIMER HERE IS A SUMMARY AND A LINK, NOT A COPY. The canonical text is DISCLAIMER.md in
-  the repository. Two copies of the same legal text drift, and the copy a user accepted is the one
-  that matters — so this page points at the file rather than restating it.
+  ⚠️ IT BORROWS THE APP'S OWN PALETTE — black (#000) with the teal accent (#14b8b9) — because the
+  page was previously a light, single-column document that did not look like the product. Colours here
+  are copied from `src/index.css`, and the accent is the app's WCAG-boosted value (5.3:1 on black), so
+  "matching the app" and "readable" are the same choice rather than a compromise. Dark only: the app
+  is dark-first, and a light variant of this page would be a different product's identity.
 
-  ⚠️ The risk block is ABOVE the fold and cannot be dismissed. A warning that can be closed is a
-  warning most readers never see.
+  ⚠️ NO CDN, NO FONTS, NO TRACKERS, NO FRAMEWORK. This must render from the repository alone: a
+  project that asks people to self-host should not phone out from its own front page. Every image is a
+  real screenshot that ships in `site/showcase/assets/`.
+
+  ⚠️ THE DISCLAIMER IS A SUMMARY AND A LINK, NOT A COPY. The canonical text is DISCLAIMER.md in the
+  repository. Two copies of the same legal text drift, and the copy a user accepted is the one that
+  matters.
+
+  ⚠️ THE RISK BLOCK IS ABOVE THE FOLD AND CANNOT BE DISMISSED — it sits directly under the hero, before
+  any feature claim. A warning that can be closed is a warning most readers never see.
+
+  ⚠️ EVERY `data-fact` VALUE IS CHECKED against docs/generated-facts.json by
+  scripts/validate-site-links.cjs in `prebuild`. Change the page and not the facts and the build fails,
+  naming both numbers. Do not "just update the HTML".
 -->
 <style>
   :root {
-    color-scheme: light dark;
-    --bg: #fbfbfc; --ink: #16181d; --ink-soft: #4b515c;
-    --risk-bg: #fff3f2; --risk-border: #c0362c; --risk-ink: #7d1f18;
-    --link: #12509c;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1216; --ink: #e9ecf1; --ink-soft: #a9b2bf;
-      --risk-bg: #2a1413; --risk-border: #ff6b5e; --risk-ink: #ffd9d5;
-      --link: #8fc0ff;
-    }
+    color-scheme: dark;
+    --bg: #000000;
+    --panel: #0a0d11;
+    --panel-2: #11161c;
+    --ink: #e5e7eb;
+    --ink-soft: #a1a9b5;
+    --accent: #14b8b9;      /* the app's accent, already boosted for AA body text on black */
+    --accent-soft: #2dd4bf;
+    --border: #242b34;
+    --risk: #ff6b5e;
+    --risk-bg: #1c0f0e;
+    --risk-ink: #ffd9d5;
+    --radius: 12px;
+    --max: 74rem;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    margin: 0; padding: 2rem 1.25rem 4rem;
-    background: var(--bg); color: var(--ink);
-    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    max-width: 46rem;
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 0.25rem; }
-  h2 { font-size: 1.05rem; margin: 2.25rem 0 0.5rem; }
-  p { margin: 0.6rem 0; }
-  .sub { color: var(--ink-soft); margin-top: 0; }
-  /* The risk block: solid border, strong tint, never an aside. */
-  .risk {
-    margin: 1.5rem 0; padding: 1rem 1.1rem;
-    background: var(--risk-bg);
-    border: 2px solid var(--risk-border);
-    border-radius: 6px;
+  img { max-width: 100%; display: block; }
+  a { color: var(--accent-soft); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 1.25rem; }
+  .skip { position: absolute; left: -9999px; }
+  .skip:focus { left: 1rem; top: 1rem; z-index: 50; background: var(--accent); color: #06222a;
+                padding: 0.6rem 1rem; border-radius: 8px; font-weight: 700; }
+
+  /* ── Header: sticky, thin, one obvious action ─────────────────────────────────────────────── */
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
   }
-  .risk h2 { margin-top: 0; color: var(--risk-ink); }
-  .risk p { color: var(--risk-ink); }
-  .risk ul { color: var(--risk-ink); margin: 0.5rem 0 0; padding-left: 1.2rem; }
-  .risk li { margin: 0.3rem 0; }
-  a { color: var(--link); }
-  a:focus-visible { outline: 3px solid var(--risk-border); outline-offset: 2px; }
-  /* Skip link: visible only when focused, so a keyboard user can bypass the header. */
-  .skip { position: absolute; left: -9999px; top: 0; padding: 0.6rem 1rem;
-          background: var(--ink); color: var(--bg); border-radius: 0 0 6px 0; z-index: 10; }
-  .skip:focus { left: 0; }
-  .start { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0 0; }
-  .cta { display: inline-block; padding: 0.55rem 1rem; border-radius: 6px; font-weight: 600;
-         text-decoration: none; background: var(--ink); color: var(--bg); }
-  .cta.secondary { background: transparent; color: var(--link); border: 1px solid var(--ink-soft); }
-  .cta:focus-visible { outline: 3px solid var(--risk-border); outline-offset: 2px; }
-  ul { padding-left: 1.2rem; }
-  /* Capability cards: one per area. `auto-fit` so it reflows rather than overflowing on narrow panes. */
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; margin: 1rem 0 0; padding: 0; list-style: none; }
-  .card { padding: 0.8rem 0.9rem; border: 1px solid var(--ink-soft); border-radius: 6px; }
-  .card h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
-  .card p { margin: 0; font-size: 0.875rem; color: var(--ink-soft); }
-  .next { margin-top: 1rem; font-size: 0.9rem; }
-  footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--ink-soft); color: var(--ink-soft); font-size: 0.875rem; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .top .wrap { display: flex; align-items: center; gap: 1rem; min-height: 60px; }
+  .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .brand img { width: 26px; height: 26px; border-radius: 6px; }
+  .top nav { margin-left: auto; display: flex; align-items: center; gap: 1.1rem; font-size: 0.9rem; }
+  .top nav a { color: var(--ink-soft); }
+  .top nav a:hover { color: var(--ink); }
+  /* ⚠️ 44px, not 40: the smallest comfortable touch target. Measured 2026-11-03 — at the old padding
+     the GitHub button was 40px tall, which is above the WCAG 2.2 minimum (24px) but below the size
+     that is actually easy to hit on a phone. */
+  .ghost { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.9rem;
+           border: 1px solid var(--border); border-radius: 8px; color: var(--ink) !important; }
+  .ghost:hover { border-color: var(--accent); text-decoration: none; }
+
+  /* ── Hero: copy on the left, a REAL screenshot on the right ───────────────────────────────── */
+  .hero { padding: 4rem 0 2.5rem; position: relative; overflow: hidden; }
+  .hero::before {
+    /* A single teal glow behind the product shot. Cheap (one radial gradient), no image, no JS. */
+    content: ""; position: absolute; inset: -20% 0 auto 40%; height: 34rem;
+    background: radial-gradient(60% 60% at 50% 40%, rgba(20,184,185,0.20), transparent 70%);
+    pointer-events: none;
+  }
+  .hero .wrap { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 3rem; align-items: center; }
+  h1 { font-size: clamp(2rem, 4.2vw, 3.1rem); line-height: 1.08; margin: 0 0 1rem; letter-spacing: -0.02em; }
+  h1 .teal { color: var(--accent-soft); }
+  .lede { font-size: clamp(1rem, 1.6vw, 1.15rem); color: var(--ink-soft); margin: 0 0 1.6rem; max-width: 34rem; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+  .cta {
+    display: inline-block; padding: 0.7rem 1.15rem; border-radius: 9px; font-weight: 650;
+    background: var(--accent); color: #04252a; border: 1px solid var(--accent);
+  }
+  .cta:hover { background: var(--accent-soft); text-decoration: none; }
+  .cta.secondary { background: transparent; color: var(--ink); border-color: var(--border); }
+  .cta.secondary:hover { border-color: var(--accent); text-decoration: none; }
+  .micro { margin: 1.1rem 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+  .shot-frame {
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    background: var(--panel); box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  }
+  .shot-frame img { width: 100%; height: auto; }
+  .shot-cap { font-size: 0.78rem; color: var(--ink-soft); padding: 0.55rem 0.8rem; border-top: 1px solid var(--border); }
+
+  /* ── Risk: an unmissable strip, not a wall ─────────────────────────────────────────────────── */
+  .risk { border-top: 1px solid #4a1d18; border-bottom: 1px solid #4a1d18; background: var(--risk-bg); padding: 1.35rem 0; }
+  .risk .wrap { display: grid; grid-template-columns: 2rem 1fr; gap: 1rem; }
+  .risk-icon { font-size: 1.4rem; line-height: 1.2; }
+  .risk h2 { margin: 0 0 0.4rem; font-size: 1rem; color: var(--risk-ink); letter-spacing: 0.01em; }
+  .risk p, .risk li { color: var(--risk-ink); font-size: 0.9rem; }
+  .risk p { margin: 0 0 0.4rem; }
+  .risk ul { margin: 0.4rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.25rem; }
+  .risk strong { color: #fff; }
+
+  /* ── Numbers ───────────────────────────────────────────────────────────────────────────────── */
+  section { padding: 3.5rem 0; }
+  .eyebrow { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.5rem; }
+  h2 { font-size: clamp(1.3rem, 2.4vw, 1.75rem); margin: 0 0 0.6rem; letter-spacing: -0.01em; }
+  .section-sub { color: var(--ink-soft); margin: 0 0 1.8rem; max-width: 44rem; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1px; margin: 0; padding: 0; list-style: none;
+           background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .facts li { background: var(--panel); padding: 1.15rem 1.25rem; }
+  .fact-value { display: block; font-size: 1.9rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; color: var(--accent-soft); }
+  .fact-label { display: block; font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.45rem; }
+
+  /* ── Feature cards ─────────────────────────────────────────────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+  .card { padding: 1.4rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+  .card:hover { border-color: #35404d; }
+  .card h3 { margin: 0 0 0.5rem; font-size: 1.02rem; }
+  .card p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+  .icon { width: 30px; height: 30px; margin-bottom: 0.9rem; color: var(--accent); }
+
+  /* ── Screenshot gallery ────────────────────────────────────────────────────────────────────── */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+  .gallery figure { margin: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--panel); }
+  .gallery figcaption { padding: 0.6rem 0.85rem; font-size: 0.82rem; color: var(--ink-soft); border-top: 1px solid var(--border); }
+
+  /* ── Install tracks ────────────────────────────────────────────────────────────────────────── */
+  .tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem; }
+  .track { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 1.3rem; background: var(--panel); }
+  .track h3 { margin: 0 0 0.3rem; font-size: 1rem; }
+  .track .tag { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+  .track p { color: var(--ink-soft); font-size: 0.9rem; margin: 0.5rem 0 0; }
+
+  /* ── Honesty pair ──────────────────────────────────────────────────────────────────────────── */
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+  .pair article { border: 1px solid var(--border); border-radius: var(--radius); padding: 1.3rem; background: var(--panel); }
+  .pair h3 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+  .pair ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft); font-size: 0.9rem; }
+  .pair li { margin: 0.35rem 0; }
+  .yes h3 { color: var(--accent-soft); }
+  .no h3 { color: var(--risk); }
+
+  /* ── Footer ────────────────────────────────────────────────────────────────────────────────── */
+  footer { border-top: 1px solid var(--border); padding: 2.5rem 0 3rem; color: var(--ink-soft); font-size: 0.86rem; }
+  footer .cols { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+  footer h4 { margin: 0 0 0.6rem; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); }
+  footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+  footer a { color: var(--ink-soft); }
+  footer a:hover { color: var(--accent-soft); }
+  .aside { color: var(--ink-soft); font-style: italic; }
+
+  @media (max-width: 860px) {
+    .hero { padding-top: 2.5rem; }
+    .hero .wrap { grid-template-columns: 1fr; gap: 2rem; }
+    .top nav a:not(.ghost) { display: none; }   /* one action stays: GitHub */
+    footer .cols { grid-template-columns: 1fr 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="showcase/assets/logo.png" alt="" width="26" height="26">Trading Command Suite</a>
+    <nav aria-label="Main">
+      <a href="#what">What it does</a>
+      <a href="#numbers">Numbers</a>
+      <a href="#screens">Screenshots</a>
+      <a href="#install">Install</a>
+      <a class="ghost" href="https://github.com/FifeCIC/Trading-Command-Suite">GitHub</a>
+    </nav>
+  </div>
+</header>
+
 <main id="main">
-  <h1>Trading Command Suite</h1>
-  <p class="sub">An open-source, self-hosted algorithmic trading platform: a scoring engine built
-  from named rules, protocol-gated signals, and a per-trade decision trail you can audit. AGPL-3.0.</p>
 
-  <nav class="start" aria-label="Start here">
-    <a class="cta" href="showcase/">See what it looks like &rarr;</a>
-    <a class="cta secondary" href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">Install it</a>
-    <a class="cta secondary" href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">Read the risk terms</a>
-  </nav>
-
-  <section class="risk" aria-labelledby="risk-heading">
-    <h2 id="risk-heading">🛑 Read this before you connect an account</h2>
-    <p><strong>This software is not financial advice, and it is not configured to profit by default.</strong></p>
-    <ul>
-      <li>No strategy it ships with has been shown to be profitable.</li>
-      <li>It is pre-release: features are unfinished and behaviour changes without notice.</li>
-      <li>Defects that produce <em>plausible output with no error</em> have existed in this codebase.
-          A number on screen is not evidence that it is the right number.</li>
-      <li><strong>Use a demo account</strong> until you can explain every order the system places.</li>
-    </ul>
-    <p>The full terms are the canonical
-      <a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">financial disclaimer</a>.
-      Connecting a funded account is taken as accepting them.</p>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div>
+        <h1 id="hero-title">A scoring engine you can <span class="teal">audit</span>, not a black box.</h1>
+        <p class="lede">Open-source, self-hosted algorithmic trading. Protocols are built from named
+        directives, each with its own weight — and every order carries a trail back to the rule that
+        caused it.</p>
+        <div class="cta-row">
+          <a class="cta" href="showcase/">See what it looks like &rarr;</a>
+          <a class="cta secondary" href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">Install it</a>
+        </div>
+        <p class="micro">AGPL-3.0 · runs on your machine · no telemetry · alpha, and honest about it</p>
+      </div>
+      <figure class="shot-frame">
+        <img src="showcase/assets/scoring-ladder.png" width="1600" height="1000"
+             alt="The scoring ladder: protocols ranked by composite score, with each directive's contribution beside it.">
+        <figcaption class="shot-cap">The scoring ladder — every protocol's composite, and what earned it.</figcaption>
+      </figure>
+    </div>
   </section>
 
-  <h2>What it is</h2>
-  <p>A self-hosted application. It holds no money, is not a broker, and settles nothing. It connects to
-  brokers and data providers using credentials you supply, and places orders through your own broker
-  and your own MetaTrader 5 terminal.</p>
+  <!-- ⚠️ Above the fold, before any claim, and not dismissible. See the note in <head>. -->
+  <section class="risk" aria-labelledby="risk-heading">
+    <div class="wrap">
+      <div class="risk-icon" aria-hidden="true">🛑</div>
+      <div>
+        <h2 id="risk-heading">Read this before you connect an account</h2>
+        <p><strong>This software is not financial advice, and it is not configured to profit by default.</strong></p>
+        <ul>
+          <li>No strategy it ships with has been shown to be profitable. It is pre-release: behaviour changes without notice.</li>
+          <li>Defects that produce <em>plausible output with no error</em> have existed here. A number on screen is not evidence it is the right number.</li>
+          <li><strong>Use a demo account</strong> until you can explain every order the system places.</li>
+        </ul>
+        <p>The full terms are the canonical
+          <a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">financial disclaimer</a>.
+          Connecting a funded account is taken as accepting them.</p>
+      </div>
+    </div>
+  </section>
 
-  <h2>What it is not</h2>
-  <ul>
-    <li>Not a managed service — nobody operates it on your behalf.</li>
-    <li>Not a signal service, and not a recommendation to buy or sell anything.</li>
-    <li>Not validated for live trading against any broker's terms or any regulator's rules.</li>
-  </ul>
+  <section id="numbers" aria-labelledby="numbers-title">
+    <div class="wrap">
+      <p class="eyebrow">By the numbers</p>
+      <h2 id="numbers-title">Measured from the repository, on every build</h2>
+      <p class="section-sub">Taken from the code by <code>docs-facts.cjs</code> and checked by the build — not typed from memory.</p>
+      <ul class="facts">
+        <li><span class="fact-value" data-fact="directiveFiles">94</span><span class="fact-label">directive implementations</span></li>
+        <li><span class="fact-value" data-fact="providerAdapters">14</span><span class="fact-label">provider adapters</span></li>
+        <li><span class="fact-value" data-fact="prismaModels">122</span><span class="fact-label">database models</span></li>
+        <li><span class="fact-value" data-fact="glossaryEntries">99</span><span class="fact-label">glossary entries</span></li>
+      </ul>
+    </div>
+  </section>
 
-  <h2>What you can do</h2>
-  <ul class="grid">
-    <li class="card"><h3>Score a market</h3><p>Protocols built from directives, each with its own weight. Ten accounts of why a symbol
-      scored what it scored.</p></li>
-    <li class="card"><h3>Trace a decision</h3><p>Every order carries a chain back through the gate, the score and the directive that
-      caused it. Queryable, not a log file.</p></li>
-    <li class="card"><h3>Test before you trust</h3><p>Backtesting and side-by-side A/B comparison. A verdict refuses to name a winner on a
-      sample too small to support one.</p></li>
-    <li class="card"><h3>Run a bot</h3><p>Bind a protocol to a symbol with sizing, stops and limits. Or leave it on
-      <code>manual</code> and watch what it would have done.</p></li>
-    <li class="card"><h3>Watch the plumbing</h3><p>Bridge, providers, database and queue health in one place — and
-      <em>cannot judge</em> stated separately from <em>fine</em>.</p></li>
-    <li class="card"><h3>Understand the numbers</h3><p>A scoring engine, a decision trail and an audit chain, explained in the
-      wiki rather than assumed.</p></li>
-  </ul>
+  <section id="what" aria-labelledby="what-title">
+    <div class="wrap">
+      <p class="eyebrow">What it does</p>
+      <h2 id="what-title">Three things it does that most trading tools don't</h2>
+      <p class="section-sub">A self-hosted application: it holds no money, is not a broker and settles
+      nothing. It connects to brokers and data providers with credentials you supply, and places orders
+      through your own MetaTrader 5 terminal.</p>
+      <div class="cards">
+        <article class="card">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 19V5M4 19h16" stroke-linecap="round"/><path d="M8 16v-5M12 16V8M16 16v-3" stroke-linecap="round"/></svg>
+          <h3>Score a market</h3>
+          <p>Protocols built from directives, each with its own weight. Ten accounts of why a symbol
+          scored what it scored — not one number and a shrug.</p>
+        </article>
+        <article class="card">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="12" r="2.2"/><circle cx="6" cy="18" r="2.2"/><path d="M8 7l8 4M16 13l-8 4" stroke-linecap="round"/></svg>
+          <h3>Trace a decision</h3>
+          <p>Every order carries a chain back through the gate, the score and the directive that caused
+          it. Queryable, not a log file you grep at midnight.</p>
+        </article>
+        <article class="card">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Test before you trust</h3>
+          <p>Backtesting and side-by-side A/B comparison. A verdict refuses to name a winner on a
+          sample too small to support one.</p>
+        </article>
+      </div>
+      <p class="aside" style="margin-top:1.6rem">No projected returns, no up-and-to-the-right chart.
+      Every claim on this page is checkable in the repository.</p>
+    </div>
+  </section>
 
-  <h2>Getting it</h2>
-  <p>Source install, not an application package — there is no installer yet. Two tracks:</p>
-  <ul>
-    <li><strong>Track A — web + API</strong> (~10 minutes): needs MySQL and Node.js. You get every page,
-        the database, scoring, backtesting and charts.</li>
-    <li><strong>Track B — full stack</strong>: adds Windows, MetaTrader 5 and a broker account, and with it
-        live prices, positions and order placement.</li>
-  </ul>
-  <p>⚠️ MetaTrader 5 is <strong>not</strong> required to run the app — only to trade through it.</p>
-  <p><a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">SETUP.md</a>
-    for the full instructions ·
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki">wiki</a> for how the scoring,
-    risk controls and bot pipeline actually work ·
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions">discussions</a> to ask,
-    vote on what gets built next, or report what the guide got wrong ·
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues">issues</a> for reproducible defects.</p>
+  <section id="screens" aria-labelledby="screens-title">
+    <div class="wrap">
+      <p class="eyebrow">Screenshots</p>
+      <h2 id="screens-title">What it actually looks like</h2>
+      <p class="section-sub">Unretouched captures from a running installation.
+        <a href="showcase/">All 18 screens &rarr;</a></p>
+      <div class="gallery">
+        <figure>
+          <img loading="lazy" src="showcase/assets/protocols-ladder.png" width="1600" height="1000" alt="Protocols ladder, ranked by score">
+          <figcaption>Protocols, ranked — and why</figcaption>
+        </figure>
+        <figure>
+          <img loading="lazy" src="showcase/assets/signals.png" width="1600" height="1000" alt="Signal queue with the gate decision for each">
+          <figcaption>Signals, with the gate's decision</figcaption>
+        </figure>
+        <figure>
+          <img loading="lazy" src="showcase/assets/risk-controls.png" width="1600" height="1000" alt="Risk controls page">
+          <figcaption>Risk controls — caps you can see</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
 
-  <h2>What is proven, and what is not</h2>
-  <p>The project states this explicitly because the opposite is the norm in trading software.</p>
-  <ul>
-    <li><strong>Proven:</strong> the pipeline runs end to end — scoring, gating, dispatch, and a decision
-        trail from each trade back to the directive that caused it.</li>
-    <li><strong>Not proven:</strong> that any of it is profitable. There is no performance claim here, and
-        backtest output is a simulation, not a forecast.</li>
-    <li><strong>Known failure mode:</strong> plausible output with no error. A guard that cannot see its
-        input has, historically, passed rather than failed — which is why the project prefers
-        <em>CANNOT JUDGE</em> over a confident wrong answer.</li>
-  </ul>
+  <section id="install" aria-labelledby="install-title">
+    <div class="wrap">
+      <p class="eyebrow">Getting it</p>
+      <h2 id="install-title">Source install, two tracks</h2>
+      <p class="section-sub">There is no installer yet. Choose how far you want to go — the first track
+      is ten minutes, the second is where trading actually happens.</p>
+      <div class="tracks">
+        <article class="track">
+          <span class="tag">Track A · ~10 minutes</span>
+          <h3>Web + API</h3>
+          <p>Needs MySQL and Node.js. You get every page, the database, scoring, backtesting and charts.</p>
+        </article>
+        <article class="track">
+          <span class="tag">Track B · full stack</span>
+          <h3>Adds live trading</h3>
+          <p>Adds Windows, MetaTrader 5 and a broker account — live prices, positions and order
+          placement. MetaTrader 5 is <strong>not</strong> required to run the app, only to trade through it.</p>
+        </article>
+      </div>
+      <p style="margin-top:1.5rem"><a class="cta secondary" href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md">Read SETUP.md</a>
+        &nbsp; <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Installing">or the wiki install guide</a></p>
+    </div>
+  </section>
 
-  <p class="next">Read more: <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/How-It-Works">how
-    the pipeline works</a> · <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Glossary">the
-    vocabulary</a> ·
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/FAQ">questions people actually ask</a> ·
-    <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Troubleshooting">or the traps</a>.</p>
+  <section id="proof" aria-labelledby="proof-title">
+    <div class="wrap">
+      <p class="eyebrow">Honesty</p>
+      <h2 id="proof-title">What is proven, and what is not</h2>
+      <p class="section-sub">Stated explicitly, because the opposite is the norm in trading software.</p>
+      <div class="pair">
+        <article class="yes">
+          <h3>Proven</h3>
+          <ul>
+            <li>The pipeline runs end to end: scoring, gating, dispatch.</li>
+            <li>A decision trail exists from each trade back to the directive that caused it.</li>
+            <li>Guards fail the build when a settled rule is broken again.</li>
+          </ul>
+        </article>
+        <article class="no">
+          <h3>Not proven</h3>
+          <ul>
+            <li>That any of it is profitable. There is no performance claim here.</li>
+            <li>That backtest output predicts anything — it is a simulation, not a forecast.</li>
+            <li>That a number on screen is right: plausible output with no error is this project's known failure mode.</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
 
-  <h2>Where to talk about it</h2>
-  <p>No mailing list, no newsletter. One place per kind of thing, so an answer stays findable:</p>
-  <ul class="grid">
-    <li class="card"><h3>Discussions</h3><p>Questions, ideas and polls. The <a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions/1160">roadmap post</a>
-      is where priorities are argued about.</p></li>
-    <li class="card"><h3>Reddit</h3><p>Progress notes and screenshots at
-      <a href="https://www.reddit.com/r/TradingCommandSuite/">r/TradingCommandSuite</a>.</p></li>
-    <li class="card"><h3>Discord</h3><p>Where testers talk to each other, and the fastest way to get a
-      question answered: <a href="https://discord.gg/8gRFkhbbfg">join the Discord</a>.</p></li>
-  </ul>
-
-  <footer>
-    <p>Copyright (C) 2026 Ryan Bayne / FifeCIC. Licensed under the
-      <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3.0</a> — no warranty, as set out in
-      sections 15–17. Engineered and maintained by one person; reviews may take time.</p>
-    <p><a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions">Discussions</a> ·
-      <a href="https://www.reddit.com/r/TradingCommandSuite/">Reddit</a> ·
-      <a href="https://discord.gg/8gRFkhbbfg">Discord</a> ·
-      <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues">Issues</a></p>
-  </footer>
+  <section id="talk" aria-labelledby="talk-title">
+    <div class="wrap">
+      <p class="eyebrow">Where to talk about it</p>
+      <h2 id="talk-title">One place per kind of thing</h2>
+      <p class="section-sub">No mailing list, no newsletter — so an answer stays findable.</p>
+      <div class="cards">
+        <article class="card">
+          <h3>Discussions</h3>
+          <p>Questions, ideas and polls. The
+          <a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions/1160">roadmap post</a>
+          is where priorities are argued about.</p>
+        </article>
+        <article class="card">
+          <h3>Discord</h3>
+          <p>Where testers talk to each other, and the fastest way to get an answer:
+          <a href="https://discord.gg/8gRFkhbbfg">join the Discord</a>.</p>
+        </article>
+        <article class="card">
+          <h3>Reddit</h3>
+          <p>Progress notes and screenshots at
+          <a href="https://www.reddit.com/r/TradingCommandSuite/">r/TradingCommandSuite</a>.</p>
+        </article>
+      </div>
+    </div>
+  </section>
 </main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <h4>Trading Command Suite</h4>
+        <p>Copyright (C) 2026 Ryan Bayne / FifeCIC. Licensed under the
+          <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3.0</a> — no warranty, as set
+          out in sections 15–17. Engineered and maintained by one person; reviews may take time.</p>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/FifeCIC/Trading-Command-Suite">Source</a></li>
+          <li><a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki">Wiki</a></li>
+          <li><a href="showcase/">Screenshots</a></li>
+          <li><a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">Disclaimer</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions">Discussions</a></li>
+          <li><a href="https://discord.gg/8gRFkhbbfg">Discord</a></li>
+          <li><a href="https://www.reddit.com/r/TradingCommandSuite/">Reddit</a></li>
+          <li><a href="https://github.com/FifeCIC/Trading-Command-Suite/issues">Issues</a></li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin:0">Not financial advice. Test on a demo account.</p>
+  </div>
+</footer>
 </body>
 </html>
