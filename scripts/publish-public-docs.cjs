@@ -491,6 +491,9 @@ function publishWiki(repo, disclaimerBody, apply) {
     `[Source · AGPL-3.0](https://github.com/${repo}) · ` +
       `[Issues](https://github.com/${repo}/issues) · ` +
       `[Discussions](https://github.com/${repo}/discussions)`,
+    // ⚠️ The author's own sites, in the footer rather than only on the landing page: someone who
+    // reads a wiki page and wants the person behind it should not have to guess a domain.
+    'Built by [Ryan Bayne](https://ryanbayne.uk) · [FifeCIC](https://fifecic.scot)',
     ...(siteUrl ? ['', `[Website](${siteUrl})`] : []),
     '',
     '🛑 **Not financial advice.** The app ships unconfigured and is not set up to make money for you.' +

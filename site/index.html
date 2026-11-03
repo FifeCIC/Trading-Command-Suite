@@ -78,7 +78,11 @@
     font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  img { max-width: 100%; display: block; }
+  /* ⚠️ `height: auto` IS LOAD-BEARING, not tidiness. Every screenshot carries width/height attributes
+     so the browser can reserve space before the image loads; without this rule the attribute height
+     is applied while `max-width: 100%` shrinks the width, and the picture renders SQUASHED-TALL.
+     Measured 2026-11-03 on the gallery: 1600x1000 sources drawn at roughly 4:3 instead of 16:10. */
+  img { max-width: 100%; height: auto; display: block; }
   a { color: var(--accent-soft); text-decoration: none; }
   a:hover { text-decoration: underline; }
   a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
@@ -167,6 +171,7 @@
   /* ── Screenshot gallery ────────────────────────────────────────────────────────────────────── */
   .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
   .gallery figure { margin: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--panel); }
+  .gallery img { width: 100%; height: auto; }   /* the explicit form of the global rule above */
   .gallery figcaption { padding: 0.6rem 0.85rem; font-size: 0.82rem; color: var(--ink-soft); border-top: 1px solid var(--border); }
 
   /* ── Install tracks ────────────────────────────────────────────────────────────────────────── */
@@ -238,7 +243,7 @@
         <p class="micro">AGPL-3.0 · runs on your machine · no telemetry · alpha, and honest about it</p>
       </div>
       <figure class="shot-frame">
-        <img src="showcase/assets/scoring-ladder.png" width="1600" height="1000"
+        <img src="showcase/assets/scoring-ladder.png" width="1891" height="904"
              alt="The scoring ladder: protocols ranked by composite score, with each directive's contribution beside it.">
         <figcaption class="shot-cap">The scoring ladder — every protocol's composite, and what earned it.</figcaption>
       </figure>
@@ -318,15 +323,15 @@
         <a href="showcase/">All 18 screens &rarr;</a></p>
       <div class="gallery">
         <figure>
-          <img loading="lazy" src="showcase/assets/protocols-ladder.png" width="1600" height="1000" alt="Protocols ladder, ranked by score">
+          <img loading="lazy" src="showcase/assets/protocols-ladder.png" width="1889" height="896" alt="Protocols ladder, ranked by score">
           <figcaption>Protocols, ranked — and why</figcaption>
         </figure>
         <figure>
-          <img loading="lazy" src="showcase/assets/signals.png" width="1600" height="1000" alt="Signal queue with the gate decision for each">
+          <img loading="lazy" src="showcase/assets/signals.png" width="1898" height="908" alt="Signal queue with the gate decision for each">
           <figcaption>Signals, with the gate's decision</figcaption>
         </figure>
         <figure>
-          <img loading="lazy" src="showcase/assets/risk-controls.png" width="1600" height="1000" alt="Risk controls page">
+          <img loading="lazy" src="showcase/assets/risk-controls.png" width="1903" height="899" alt="Risk controls page">
           <figcaption>Risk controls — caps you can see</figcaption>
         </figure>
       </div>
@@ -415,6 +420,8 @@
     <div class="cols">
       <div>
         <h4>Trading Command Suite</h4>
+        <p>Built by <a href="https://ryanbayne.uk">Ryan Bayne</a> ·
+          <a href="https://fifecic.scot">FifeCIC</a></p>
         <p>Copyright (C) 2026 Ryan Bayne / FifeCIC. Licensed under the
           <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3.0</a> — no warranty, as set
           out in sections 15–17. Engineered and maintained by one person; reviews may take time.</p>
