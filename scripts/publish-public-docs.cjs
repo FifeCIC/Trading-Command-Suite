@@ -130,6 +130,10 @@ const WIKI_SECTIONS = [
   {
     title: 'Start here',
     items: [
+      // ⚠️ FIRST, and labelled by what it does rather than what it is called. A reader arriving from
+      // a search result or a Discord link needs one decision — "what am I here for?" — before a page
+      // called `Home` means anything to them. The page itself is `wiki/Start-Here.md`.
+      { page: 'Start-Here', label: 'Choose your path' },
       { page: 'Home', label: 'Home' },
       { page: 'Installing', label: 'Installing and running' },
       { page: 'What-It-Does', label: 'What it does' },
